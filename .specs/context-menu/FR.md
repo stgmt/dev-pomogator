@@ -2,7 +2,7 @@
 
 ## FR-1: {Название}
 
-NSS content generation. The `generateNss()` exported function SHALL produce a Nilesoft Shell `.nss` script containing entries for "Claude Code (YOLO + TUI)", "Claude Code (YOLO)", and "Claude Code". The YOLO+TUI entry SHALL appear before the YOLO entry. The NSS SHALL reference the global path `~/.dev-pomogator/scripts/launch-claude-tui.ps1` and SHALL NOT contain project-specific hardcoded paths.
+NSS content generation. The `generateNss()` exported function SHALL produce a Nilesoft Shell `.nss` script containing exactly ONE entry — "Claude Code (YOLO + TUI)", elevated (`admin=true`), launching with `-Yolo` (changed 2026-07-01 per owner request: the plain/non-elevated/non-Yolo variants were removed — admin + `--dangerously-skip-permissions` + TUI is the only mode actually used, and a smaller menu surface is less to drift or break). The NSS SHALL reference the global path `~/.dev-pomogator/scripts/launch-claude-tui.ps1` and SHALL NOT contain project-specific hardcoded paths.
 
 **Связанные AC:** [AC-1](ACCEPTANCE_CRITERIA.md#ac-1-fr-1)
 **Use Case:** [UC-1](USE_CASES.md#uc-1-название)

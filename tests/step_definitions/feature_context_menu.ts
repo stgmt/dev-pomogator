@@ -175,14 +175,11 @@ Then(/^the context-menu postinstall combined output should be non-empty$/, funct
   }
 });
 
-Then(/^the NSS "YOLO \+ TUI" entry index should be less than the "Claude Code \(YOLO\)" entry index$/, function (this: V4World) {
-  const nss = this.lastStdout;
-  const tuiIndex = nss.indexOf('YOLO + TUI');
-  const yoloIndex = nss.indexOf("title='Claude Code (YOLO)'");
-  if (tuiIndex === -1) throw new Error('YOLO + TUI entry not found in NSS');
-  if (yoloIndex === -1) throw new Error("Claude Code (YOLO) entry not found in NSS");
-  if (tuiIndex >= yoloIndex) {
-    throw new Error(`Expected YOLO+TUI (index ${tuiIndex}) to appear before plain YOLO (index ${yoloIndex})`);
+Then(/^the NSS content should contain exactly (\d+) "item\(" entry$/, function (this: V4World, expectedStr: string) {
+  const expected = parseInt(expectedStr, 10);
+  const actual = (this.lastStdout.match(/item\(/g) || []).length;
+  if (actual !== expected) {
+    throw new Error(`Expected exactly ${expected} "item(" entries in the NSS but found ${actual}.\nNSS:\n${this.lastStdout}`);
   }
 });
 
@@ -340,19 +337,21 @@ Then(/^the fixture should be unchanged$/, function (this: G8World) {
   }
 });
 
-Then(/^the NSS "Claude Code \(YOLO\)" entry command should reference "launch-claude-tui\.ps1"$/, function (this: V4World) {
-  const match = this.lastStdout.match(/title='Claude Code \(YOLO\)'[^)]*args='([^']*)'/);
+Then(/^the NSS "([^"]+)" entry command should reference "launch-claude-tui\.ps1"$/, function (this: V4World, title: string) {
+  const escaped = title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const match = this.lastStdout.match(new RegExp(`title='${escaped}'[^)]*args='([^']*)'`));
   if (!match || !match[1].includes('launch-claude-tui.ps1')) {
-    throw new Error(`Expected the "Claude Code (YOLO)" NSS entry args to reference launch-claude-tui.ps1, got:\n${match ? match[1] : '(entry not found)'}`);
+    throw new Error(`Expected the "${title}" NSS entry args to reference launch-claude-tui.ps1, got:\n${match ? match[1] : '(entry not found)'}`);
   }
 });
 
-Then(/^the NSS "Claude Code \(YOLO\)" entry command should not call claude directly$/, function (this: V4World) {
-  const match = this.lastStdout.match(/title='Claude Code \(YOLO\)'[^)]*cmd='([^']*)'/);
+Then(/^the NSS "([^"]+)" entry command should not call claude directly$/, function (this: V4World, title: string) {
+  const escaped = title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const match = this.lastStdout.match(new RegExp(`title='${escaped}'[^)]*cmd='([^']*)'`));
   if (!match) {
-    throw new Error('Expected to find the "Claude Code (YOLO)" NSS entry');
+    throw new Error(`Expected to find the "${title}" NSS entry`);
   }
   if (match[1].trim() === 'claude' || match[1].includes('cmd /k claude')) {
-    throw new Error(`Expected the "Claude Code (YOLO)" entry NOT to call claude directly, got cmd='${match[1]}'`);
+    throw new Error(`Expected the "${title}" entry NOT to call claude directly, got cmd='${match[1]}'`);
   }
 });

@@ -3,12 +3,12 @@ Feature: CTXMENU001_Context_Menu_Setup
   Exported functions: generateNss, copyLaunchScript, bundledLaunchScriptPath.
 
   @feature1
-  Scenario: CTXMENU001_01 generateNss produces NSS with all three Claude Code entries
+  Scenario: CTXMENU001_01 generateNss produces a single elevated YOLO+TUI entry
     Given the context-menu postinstall module is imported
     When generateNss is called
     Then the NSS content should contain "Claude Code (YOLO + TUI)"
-    And the NSS content should contain "Claude Code (YOLO)"
-    And the NSS content should contain "Claude Code"
+    And the NSS content should contain "admin=true"
+    And the NSS content should contain "-Yolo"
     And the NSS content should contain "launch-claude-tui.ps1"
 
   @feature1 @manual
@@ -31,10 +31,10 @@ Feature: CTXMENU001_Context_Menu_Setup
     And the launch script should not contain "-s 0.3"
 
   @feature1
-  Scenario: CTXMENU001_05 YOLO+TUI entry appears before plain YOLO entry in NSS
+  Scenario: CTXMENU001_05 generateNss produces exactly one menu entry
     Given the context-menu postinstall module is imported
     When generateNss is called
-    Then the NSS "YOLO + TUI" entry index should be less than the "Claude Code (YOLO)" entry index
+    Then the NSS content should contain exactly 1 "item(" entry
 
   @feature2
   Scenario: CTXMENU001_06 postinstall exits 0 and produces non-empty output via tsx integration
@@ -111,8 +111,8 @@ Feature: CTXMENU001_Context_Menu_Setup
     Then the fixture should be unchanged
 
   @feature6
-  Scenario: CTXMENU001_17 raw NSS YOLO entries route through launch-claude-tui.ps1 not bare claude
+  Scenario: CTXMENU001_17 the single NSS entry routes through launch-claude-tui.ps1 not bare claude
     Given the context-menu postinstall module is imported
     When generateNss is called
-    Then the NSS "Claude Code (YOLO)" entry command should reference "launch-claude-tui.ps1"
-    And the NSS "Claude Code (YOLO)" entry command should not call claude directly
+    Then the NSS "Claude Code (YOLO + TUI)" entry command should reference "launch-claude-tui.ps1"
+    And the NSS "Claude Code (YOLO + TUI)" entry command should not call claude directly
