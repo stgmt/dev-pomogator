@@ -204,7 +204,7 @@ Options:
 - **Edit item** — modify existing entry (title, args, flags)
 - **Remove item** — delete an entry
 - **List items** — show current configuration
-- **Reset** — restore to default (YOLO + normal)
+- **Reset** — restore to default (single admin+YOLO+TUI entry, see Default Configuration)
 - **Submenu** — convert flat items into a grouped submenu
 
 ### 3. Generate new .nss content
@@ -237,51 +237,44 @@ Tell the user:
 
 ## Default Configuration
 
-The auto-generated NSS file (via `tools/context-menu/postinstall.ts`) creates **6 entries**: 3 standard + 3 in an "Admin" submenu. The admin submenu uses `admin=true` so Nilesoft Shell triggers UAC at click time, launching Claude Code elevated (required for Hyper-V cmdlets, ADK installs, modifying files in `C:\Program Files\`, etc.).
+Changed 2026-07-01 (owner request): the auto-generated NSS file (via `tools/context-menu/postinstall.ts` `generateNss()`) now creates **exactly ONE entry** — elevated (`admin=true`), YOLO (`--dangerously-skip-permissions` via `-Yolo`), paired with the TUI test-runner pane. The other variants (non-elevated, plain non-Yolo, the separate "Admin" submenu wrapper) were removed — one launch mode is what's actually used, and a smaller menu surface is less to drift or break. If you need a different mode back (e.g. a non-elevated entry for a machine without admin rights), add it back as an explicit `item(...)` line in `generateNss()` — don't restore the old 6-entry layout wholesale without being asked.
 
 ```nss
-// Standard (non-elevated) entries — for normal coding sessions
-item(type='dir|back' sep='top' title='Claude Code (YOLO + TUI)' image='@app.dir\imports\claude-icon.ico' cmd='powershell.exe' args='-ExecutionPolicy Bypass -File "<launchScript>" -Yolo -ProjectDir "@sel.dir"')
-item(type='dir|back' where=package.exists("WindowsTerminal") title='Claude Code (YOLO)' image='@app.dir\imports\claude-icon.ico' cmd='wt.exe' args='-d "@sel.dir\." -- cmd /k claude --dangerously-skip-permissions')
-item(type='dir|back' where=package.exists("WindowsTerminal") title='Claude Code' image='@app.dir\imports\claude-icon.ico' cmd='wt.exe' args='-d "@sel.dir\." -- cmd /k claude')
-
-// Elevated (admin) submenu — required for system-level operations
-menu(type='dir|back' sep='bottom' title='Claude Code (Admin)' image='@app.dir\imports\claude-icon.ico')
-{
-    item(admin=true title='Claude Code (YOLO + TUI)' image='@app.dir\imports\claude-icon.ico' cmd='powershell.exe' args='-ExecutionPolicy Bypass -File "<launchScript>" -Yolo -ProjectDir "@sel.dir"')
-    item(where=package.exists("WindowsTerminal") admin=true title='Claude Code (YOLO)' image='@app.dir\imports\claude-icon.ico' cmd='wt.exe' args='-d "@sel.dir\." -- cmd /k claude --dangerously-skip-permissions')
-    item(where=package.exists("WindowsTerminal") admin=true title='Claude Code' image='@app.dir\imports\claude-icon.ico' cmd='wt.exe' args='-d "@sel.dir\." -- cmd /k claude')
-}
+item(type='dir|back' admin=true title='Claude Code (YOLO + TUI)' image='@app.dir\imports\claude-icon.ico' cmd='powershell.exe' args='-ExecutionPolicy Bypass -File "<launchScript>" -Yolo -ProjectDir "@sel.dir"')
 ```
 
-### When to use the Admin submenu
+`admin=true` makes Nilesoft Shell trigger UAC at click time — every launch runs elevated (required for Hyper-V cmdlets, ADK installs, modifying files in `C:\Program Files\`, etc., and is simply the mode the owner always uses).
 
-Use the **Admin** entries whenever the upcoming Claude Code session will need to:
-- Run Hyper-V cmdlets (`Get-VM`, `New-VM`, `Restore-VMSnapshot`, `Checkpoint-VM`, `Set-VMFirmware`, etc.)
-- Install/modify software via `winget` system-wide
-- Edit files under `C:\Program Files\`, `C:\Windows\`, registry HKLM
-- Run `Enable-WindowsOptionalFeature`, `Stop-Service`, `Set-ItemProperty HKLM:\...`
+### Workspace trust auto-grant (FR-7)
 
-Standard entries are sufficient for normal coding, file editing in user space, and most non-system tasks.
+`-Yolo` means `claude --dangerously-skip-permissions`, which Claude Code refuses to run on a directory it has never interactively trusted (hard exit 1: `Ignoring N permissions.allow entries ... this workspace has not been trusted`) — bypass mode can't show the trust dialog itself. `launch-claude-tui.ps1`'s `Ensure-WorkspaceTrust` function works around this by atomically writing `hasTrustDialogAccepted: true` into `~/.claude.json` for that exact directory **before** invoking `claude`. Two real-world quirks this had to account for (found by testing against a REAL `~/.claude.json`, not a hand-written fixture — see `audit-reports/context-menu-cross-user-analysis.md` G8 for the full incident):
+
+- `~/.claude.json` can contain a property with an **empty string name** (seen under `clientDataCacheSlots.*`). `ConvertFrom-Json` hard-throws on that; `-AsHashtable` fixes it but doesn't exist on Windows PowerShell 5.1 — the actual interpreter `powershell.exe` resolves to (NOT `pwsh`). The script auto-detects the PS major version and falls back to `System.Web.Script.Serialization.JavaScriptSerializer` on 5.1.
+- Claude Code keys `projects` by a **forward-slash** path (`E:/repos/...`) even on Windows; `Resolve-Path` returns backslashes. The dict key is normalized before use.
+- The write uses `[System.IO.File]::WriteAllText` with an explicit no-BOM `UTF8Encoding` — `Set-Content -Encoding UTF8` on PS 5.1 always prepends a BOM, which would break Claude Code's own `JSON.parse` on its next startup.
+
+If you ever touch `Ensure-WorkspaceTrust`, re-test it against a fixture that mirrors these quirks (empty key + forward-slash existing entries), run through the REAL `powershell.exe`, not just `pwsh` — a fixture-only/pwsh-only test will not catch any of the three.
 
 ## Logs
 
-Every invocation of `launch-claude-tui.ps1` (the "YOLO + TUI" entry) is appended to:
+Every invocation of `launch-claude-tui.ps1` (the only entry) is appended to:
 
 ```
 ~/.dev-pomogator/logs/context-menu-launch.log
 ```
 
-Each entry records the timestamp, the args received, the resolved project dir, the detected Python, the launch command, and — on failure — the error message and stack trace. If a right-click launch misbehaves, read this file first. An **empty/absent** log after a click means the script itself never ran (the `.ps1` is missing at the global path — see Step 5b), not a launch error.
+Each entry records the timestamp, the args received, the resolved project dir, the detected Python, the launch command, the trust-grant outcome, and `claude`'s own exit code once the pane closes — and on failure, the error message and stack trace. If a right-click launch misbehaves, read this file first. An **empty/absent** log after a click means the script itself never ran (the `.ps1` is missing at the global path — see Step 5b), not a launch error.
 
 ## Troubleshooting
 
 | Problem | Solution |
 |---------|----------|
-| First entry "Claude Code (YOLO + TUI)" does nothing | `launch-claude-tui.ps1` missing at `~/.dev-pomogator/scripts/` — run Step 5b. Confirm: `Test-Path "$HOME\.dev-pomogator\scripts\launch-claude-tui.ps1"` |
+| Menu entry does nothing | `launch-claude-tui.ps1` missing at `~/.dev-pomogator/scripts/` — run Step 5b. Confirm: `Test-Path "$HOME\.dev-pomogator\scripts\launch-claude-tui.ps1"` |
+| Window flashes and closes with "this workspace has not been trusted" on a NEW directory | This is exactly the bug FR-7 fixes — confirm the installed `launch-claude-tui.ps1` actually matches the plugin's current source (`/pomogator-doctor` check `C-CTXM` catches and offers to fix this: `tools/context-menu/postinstall.ts` is a once-run installer, editing the source never updates the already-installed copy) |
+| Edited `postinstall.ts`/`launch-claude-tui.ps1` but the menu still behaves like before | The installed copies are stale — re-run `npx tsx tools/context-menu/postinstall.ts` (or `/pomogator-doctor` → confirm the `C-CTXM` fix-action) to redeploy, then force a fresh Explorer restart (`Stop-Process -Force -Name explorer; Start-Process explorer.exe`) to rule out shell-level NSS caching before assuming the code itself is still wrong |
 | Launch fails but no log written | Script never ran → `.ps1` absent at global path (Step 5b). If log exists, read the ERROR line |
 | EPERM on write | Use elevated copy pattern (see File Permissions) |
-| Menu not updating | Ctrl+ПКМ desktop → Shell → Reload |
+| Menu not updating | Ctrl+ПКМ desktop → Shell → Reload, or force-restart Explorer (see above) |
 | Icon not showing | Verify `claude-icon.ico` exists in imports dir |
 | `wt.exe` not found | `winget install Microsoft.WindowsTerminal` |
 | UAC not appearing | Run elevated copy from interactive terminal |
