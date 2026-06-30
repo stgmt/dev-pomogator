@@ -6,6 +6,9 @@
 |----|------|-----------|-----------|--------|
 | [FR-1](FR.md#fr-1-название) | {Название} | [AC-1](ACCEPTANCE_CRITERIA.md#ac-1-fr-1) | @feature1 | Draft |
 | [FR-2](FR.md#fr-2-название) | {Название} | [AC-2](ACCEPTANCE_CRITERIA.md#ac-2-fr-2) | @feature2 | Draft |
+| [FR-3](FR.md#fr-3-название) | {Название} | [AC-3](ACCEPTANCE_CRITERIA.md#ac-3-fr-3) | @feature3 | Draft |
+| [FR-4](FR.md#fr-4-название) | {Название} | [AC-4](ACCEPTANCE_CRITERIA.md#ac-4-fr-4) | @feature4 | Draft |
+| [FR-5](FR.md#fr-5-название) | {Название} | [AC-5](ACCEPTANCE_CRITERIA.md#ac-5-fr-5) | @feature5 | Draft |
 | [FR-6](FR.md#fr-6-context-menu-launch-entries-log-every-invocation) | Universal launch logging | [AC-6](ACCEPTANCE_CRITERIA.md#ac-6-fr-6) | @feature6 | Draft |
 | [FR-7](FR.md#fr-7-trust-auto-grant-before-bypass-permissions-launch) | Trust auto-grant for YOLO entries | [AC-7](ACCEPTANCE_CRITERIA.md#ac-7-fr-7) | @feature7 | Draft |
 
