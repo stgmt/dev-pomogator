@@ -217,3 +217,84 @@ Feature: CEGATE001 Claim-Evidence Gate
     Given the transcript records TaskCreate/TaskUpdate calls and a latest TodoWrite list
     When the gate counts the agent's open declared work
     Then it replays the task ids to their final status and counts pending plus in-progress, failing open to zero on a missing transcript
+
+  # 2026-06-30: reconciled against the CURRENT vitest twin (claim-evidence-gate.test.ts) — these 13
+  # scenarios cover it() blocks that had no feature twin (FR-15/FR-17/FR-9b/FR-20/FR-22/FR-26/FR-28).
+
+  # @feature26
+  Scenario: CEGATE001_43 Game-guard facts compute from REAL tool_use shapes, not literals
+    Given a set of real Edit, Write, door apply_spec_change, set_spec_status and Read tool_use records
+    When the game-guard facts are computed from those real inputs
+    Then gateSelfEdit and selfMarkedBlockedOrBacklog report true only for genuine gate-own mutations and false for reads or unrelated edits
+
+  # @feature28
+  Scenario: CEGATE001_44 The session mandate keeps genuine prompts and drops every hook-injection class
+    Given a transcript mixing two genuine user prompts with a census banner, skill content, a compact summary, a system task-notification and a slash-command message
+    When the gate extracts the session's full mandate
+    Then it returns only the two genuine prompts in order, and an empty transcript yields an empty mandate
+
+  # @feature28
+  Scenario: CEGATE001_45 A big paste keeps the buried ask via a head plus tail clamp
+    Given a prompt that pastes several kilobytes of log noise between a framing head and the real ask at the tail
+    When the gate extracts the session's full mandate
+    Then the returned prompt keeps both the head and the tail ask, elides the bulky middle with an omitted-chars marker, and stays bounded in length
+
+  # @feature11
+  Scenario: CEGATE001_46 A multi-line gate block-reason is skipped whole, the real prompt survives
+    Given the latest messages are a genuine user prompt followed by a multi-line gate block-reason warning
+    When the gate extracts the user's intent prompt
+    Then it returns the genuine prompt, not any line of the gate's own block-reason
+
+  # @feature9
+  Scenario: CEGATE001_47 A done-but-not-run census alone does not arm the Дальше gate, but a done-but-red one still does
+    Given the census shows only doneUnrun work in one turn and only doneRed work in another, both with an open FR.md edit and no Дальше section
+    When the gate evaluates each turn
+    Then the doneUnrun-only turn stays quiet while the doneRed turn still blocks
+
+  # @feature15
+  Scenario: CEGATE001_48 The no-token demand names every accepted env var and the aipomogator endpoint
+    Given an open-work count for the no-token demand
+    When the gate builds the no-token demand message
+    Then it names AUTO_COMMIT_API_KEY, OPENROUTER_API_KEY, CLAIM_GATE_JUDGE_KEY, the aipomogator endpoint and the open-work count
+
+  # @feature15
+  Scenario: CEGATE001_49 Any one judge token resolves an endpoint; no token anywhere resolves none
+    Given env snapshots each carrying a different single judge token, and one snapshot carrying none
+    When the gate resolves the judge endpoint for each
+    Then every single-token snapshot resolves an endpoint while the tokenless snapshot resolves null
+
+  # @feature17
+  Scenario: CEGATE001_50 A Дальше block arms the judge even when openWork is zero, including on analysis-only
+    Given an arming input with a Дальше block present and openWork at zero, plain and with analysis-only set
+    When the gate decides whether the judge is armed
+    Then both cases arm the judge regardless of openWork or analysis-only
+
+  # @feature17
+  Scenario: CEGATE001_51 No Дальше block with openWork zero stays unarmed, but openWork alone still arms unless analysis-only
+    Given an arming input with no Дальше block, varying openWork and analysis-only
+    When the gate decides whether the judge is armed
+    Then zero openWork stays unarmed, positive openWork arms it, and analysis-only suppresses that arming
+
+  # @feature17
+  Scenario: CEGATE001_52 A disabled judge or no gray signal is never armed
+    Given an arming input with a Дальше block and open work, but the judge disabled or the gray signal absent
+    When the gate decides whether the judge is armed
+    Then neither case arms the judge
+
+  # @feature9
+  Scenario: CEGATE001_53 Live open-work for an uncensused spec counts only top-level real tasks
+    Given a TASKS.md with a top-level open task, an in-progress task, an indented sub-item, a done task and a template placeholder, for a spec absent from the census
+    When the gate counts that spec's live open work
+    Then it counts only the two genuine top-level tasks, counts zero once the spec is in the census, and fails open to zero on a missing census or file
+
+  # @feature20
+  Scenario: CEGATE001_54 A works-done claim that names the gate itself is still evaluated, not free-passed
+    Given a works-done claim that mentions "claim-evidence-gate" by name with no executor tool this turn, and the same claim with an executor
+    When the gate evaluates each turn
+    Then the unbacked claim still blocks despite naming the gate, while the executor-backed claim approves
+
+  # @feature22
+  Scenario: CEGATE001_55 The gate offers the task of the most recently edited spec, ignoring test-authoring edits
+    Given a sequence of door edits across two specs ending with one spec last, then ending with the other last, then one ending on a .feature-only edit, then no edits at all
+    When the gate determines the most recently edited spec
+    Then it returns the spec truly edited last, treats a .feature-only edit as not taking ownership, and returns null when nothing was edited
