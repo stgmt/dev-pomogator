@@ -363,6 +363,47 @@ Then('every engine CLI is allowed and the generic reader stays a violation', fun
   );
 });
 
+// ── SPECGEN004_505 — grep-pattern carve-out, FALSE-POSITIVE FIX (P21-7) ────────
+// touchesSpecs() is a flat substring test; a stream/pattern grep whose PATTERN
+// or SCOPE text happens to contain '.specs/' was wrongly denied (real incident:
+// `git status -s | grep -vE '\.specs/'` — a pipe-consumer filtering its OWN
+// stdout, never reading a .specs/ file). Scoped to grep/egrep/fgrep/rg ONLY —
+// `node -e`/`python -c` stay denied (MUST_DENY above, unaffected).
+const MUST_ALLOW_PATTERN = [
+  "grep -rn '.specs/' src/", // .specs/ is the PATTERN, src/ is the real path
+  "git status -s | grep -vE '\\.specs/'", // the reported false positive — pipe consumer, pattern only
+  "git log --oneline | grep '.specs/'", // another stream-consumer form
+];
+const STILL_DENIED_OPERAND = [
+  'grep -rn X .specs/demo', // .specs/demo is the PATH operand here — unchanged from MUST_DENY
+];
+interface PatternCarveWorld extends F39World {
+  patternAllowed?: string[];
+  patternDenied?: string[];
+}
+Given('the spec-access-guard grep-pattern carve-out', function (this: PatternCarveWorld) {
+  this.patternAllowed = [];
+  this.patternDenied = [];
+});
+When('a pattern-position grep, a piped stream grep, and a path-operand grep all run over the specs path text', function (this: PatternCarveWorld) {
+  const allowed = (command: string): boolean =>
+    violationOf({ tool_name: 'Bash', tool_input: { command } }) === null;
+  for (const cmd of MUST_ALLOW_PATTERN) if (allowed(cmd)) this.patternAllowed!.push(cmd);
+  for (const cmd of STILL_DENIED_OPERAND) if (!allowed(cmd)) this.patternDenied!.push(cmd);
+});
+Then('only the path-operand grep stays a violation and the pattern-position and piped forms are allowed', function (this: PatternCarveWorld) {
+  assert.deepEqual(
+    this.patternAllowed!,
+    MUST_ALLOW_PATTERN,
+    'a grep whose .specs/ text is confined to the pattern/stream position must be allowed — this is the false-positive fix',
+  );
+  assert.deepEqual(
+    this.patternDenied!,
+    STILL_DENIED_OPERAND,
+    'a grep with .specs/ as a real PATH operand must stay denied — the carve-out is not a blanket pass',
+  );
+});
+
 // ── SPECGEN004_135 — MCP server repo-root robust vs unresolved ${…} (P17-6) ────
 import { resolveRepoRoot } from '../../tools/spec-mcp-server/server.ts';
 

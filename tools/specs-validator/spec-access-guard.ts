@@ -18,12 +18,26 @@
  * executable is an ENGINE CLI (spec-verdict / validate-spec / audit-spec /
  * spec-status / corpus-health / collision-probe / spec-form-parsers /
  * scaffold-spec / anchor-integrity) is ALLOWED even with `.specs/` arguments —
- * those ARE the backing of the door. Generic readers/writers (cat/sed/grep/awk/
- * `node -e`/heredoc) touching `.specs/` are violations.
+ * those ARE the backing of the door. Generic readers/writers (cat/sed/awk/
+ * `node -e`/heredoc) touching `.specs/` are violations. A THIRD carve-out
+ * (P21-7) allows a grep/egrep/fgrep/rg invocation whose `.specs/` text is
+ * confined to the search PATTERN or a piped stream-consumer position — it
+ * never reads a `.specs/` file — while a grep with `.specs/` as a real PATH
+ * operand stays denied; see `isSpecSearchPatternOnly` below.
  *
  * NFR-Performance-10: the `.specs/` path filter runs BEFORE any other work.
  * NFR-Reliability-11: SOFT tier — any internal error → fail-open (exit 0).
  * FR-39d: registered LIVE in both manifests + protected by the meta-guard.
+ *
+ * This hook is the ONLY spec-read blocker that reaches PLUGIN USERS — a Claude
+ * Code plugin's own `settings.json` honours only the `agent`/`subagentStatusLine`
+ * keys, it CANNOT ship `permissions` (verified against the official plugin docs,
+ * 2026-06-30). The dogfood repo's `.claude/settings.json` additionally carries a
+ * native `permissions.deny Read/Edit/Write(./.specs/**)` as an OS/tool-layer
+ * extra (catches Read/Edit/Write/Grep/Glob and Bash-recognized readers like
+ * `cat`/`head`/`tail`/`sed` even before this hook runs) — but that is DOGFOOD-ONLY
+ * and never weakens this hook's own deny logic, which stays the sole protection
+ * everywhere else.
  *
  * @see .specs/spec-generator-v4/FR.md FR-39
  */
@@ -151,6 +165,83 @@ function isSpecVcsPlumbingOnly(rawCmd: string): boolean {
   return true;
 }
 
+/**
+ * P21-7 grep-pattern carve-out: `touchesSpecs()` is a flat substring test, so a
+ * stream/pattern grep whose SEARCH TEXT happens to contain `.specs/` was wrongly
+ * denied — it never reads a `.specs/` file, it merely searches FOR that string
+ * (`git status -s | grep -vE '\.specs/'`, `grep -rn '.specs/' src/`). This carve-out
+ * recognizes that shape: EVERY `.specs/`-bearing token in the command must sit in
+ * a provably-safe grep-family slot — the positional PATTERN (first non-flag arg,
+ * or the value of `-e`/`--regexp=`) — never a PATH operand, a `-f`/`--file=` value
+ * (grep READS that file), or a redirect target.
+ *
+ * SCOPED TO THE GREP FAMILY ONLY (grep/egrep/fgrep/rg) — do NOT generalize "the
+ * `-e` value is safe" to interpreters. `node -e "...readFileSync('.specs/…')"` is
+ * INLINE CODE via a same-spelled `-e` flag, not a search pattern, and MUST stay
+ * denied: this function bails out (false) the instant a non-grep-family segment
+ * mentions `.specs/`, before any flag-aware parsing runs — so `node -e` and
+ * `python -c` never reach the pattern-slot logic at all.
+ *
+ * Conservative by construction (fail toward DENY, the safe direction, on anything
+ * not explicitly proven safe): a redirect (`>`/`<`/`2>`) touching `.specs/` denies
+ * the whole segment outright; a bundled short-flag cluster containing `f` (e.g.
+ * `-rnf`, which may bundle `-f`/file-mode) denies the whole segment rather than
+ * risk misclassifying its value as a pattern.
+ */
+const GREP_FAMILY = new Set(['grep', 'egrep', 'fgrep', 'rg']);
+function isSpecSearchPatternOnly(rawCmd: string): boolean {
+  const cmd = rawCmd.replace(/(^|\s)#.*$/gm, '$1'); // strip comments-to-EOL
+  const segments = cmd.split(/&&|\|\||[|;&\n()]+/).map((s) => s.trim()).filter(Boolean);
+  if (segments.length === 0) return false;
+  for (const seg of segments) {
+    if (!touchesSpecs(seg)) continue; // this segment doesn't mention .specs/ — fine
+    // A redirect/leak target touching .specs/ is never safe, grep or not.
+    const redirect = seg.match(/[<>].*$/);
+    if (redirect && touchesSpecs(redirect[0])) return false;
+    const argv = seg.replace(/[<>].*$/, '').trim().split(/\s+/).filter(Boolean);
+    if (argv.length === 0) return false;
+    const exe = argv[0].replace(/\\/g, '/').split('/').pop()!;
+    if (!GREP_FAMILY.has(exe)) return false; // non-grep segment mentions .specs/ → not provably safe
+    let sawPatternSlot = false; // the positional pattern slot (-e value, or first bare arg) consumed
+    for (let i = 1; i < argv.length; i++) {
+      const tok = argv[i];
+      if (tok === '--') continue;
+      if (tok === '-e') {
+        sawPatternSlot = true;
+        i++; // skip the pattern VALUE — safe regardless of content
+        continue;
+      }
+      if (tok.startsWith('--regexp=')) {
+        sawPatternSlot = true;
+        continue; // inline pattern value — safe regardless of content
+      }
+      if (tok === '-f' || tok.startsWith('--file=')) {
+        const val = tok === '-f' ? argv[++i] : tok.slice('--file='.length);
+        if (touchesSpecs(val)) return false; // grep READS this file — a real access
+        continue;
+      }
+      if (tok.startsWith('-') && !tok.startsWith('--')) {
+        // bundled short flags, e.g. -rnf may bundle -f (file-mode) — don't guess.
+        if (tok.length > 2 && tok.includes('f')) return false;
+        if (touchesSpecs(tok)) return false;
+        continue;
+      }
+      if (tok.startsWith('-')) {
+        if (touchesSpecs(tok)) return false; // unrecognized long flag carrying .specs/
+        continue;
+      }
+      // First non-flag positional is the PATTERN (safe regardless of content);
+      // every subsequent one is a PATH operand (a real `.specs/` read denies).
+      if (!sawPatternSlot) {
+        sawPatternSlot = true;
+        continue;
+      }
+      if (touchesSpecs(tok)) return false;
+    }
+  }
+  return true;
+}
+
 function invokesEngineCli(rawCmd: string): boolean {
   const cmd = rawCmd.replace(/(^|\s)#.*$/gm, '$1'); // strip comments-to-EOL
   // Per PIPELINE SEGMENT — the engine must be in COMMAND position, never a
@@ -209,6 +300,9 @@ export function violationOf(data: PreToolUseInput): { tool: string; detail: stri
     if (invokesEngineCli(cmd)) return null;
     // P21-2: git VCS plumbing over specs (commit door-written changes) is ALLOWED.
     if (isSpecVcsPlumbingOnly(cmd)) return null;
+    // P21-7: a grep/egrep/fgrep/rg whose .specs/ text is confined to the search
+    // PATTERN (incl. piped stream-consumers) never reads a .specs/ file — ALLOWED.
+    if (isSpecSearchPatternOnly(cmd)) return null;
     return { tool: 'Bash', detail: cmd.slice(0, 120) };
   }
   return null;

@@ -452,6 +452,11 @@
   "permissions": {
     "allow": [
       "mcp__dev-pomogator-specs__*"
+    ],
+    "deny": [
+      "Read(./.specs/**)",
+      "Edit(./.specs/**)",
+      "Write(./.specs/**)"
     ]
   }
 }
