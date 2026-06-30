@@ -71,43 +71,85 @@ function Ensure-WorkspaceTrust {
     param([string]$Dir)
     $claudeJsonPath = Join-Path $homeDir '.claude.json'
     if (-not (Test-Path $claudeJsonPath)) {
-        Write-LaunchLog "trust: $claudeJsonPath not found, skipping auto-grant"
+        Write-LaunchLog "trust: ${claudeJsonPath} not found, skipping auto-grant"
         return
     }
+
+    # Claude Code keys ~/.claude.json "projects" by a FORWARD-slash path even on Windows
+    # (confirmed against a real file: 8/8 existing keys use "E:/repos/..." style, 0 use "\").
+    # Resolve-Path returns backslash paths on Windows — normalize before using as the dict key,
+    # otherwise the write lands under a key Claude Code never looks up (silent no-op: the grant
+    # "succeeds" but the directory is still reported untrusted on the next launch).
+    $dirKey = $Dir -replace '\\', '/'
+
+    # ~/.claude.json can contain a property with an EMPTY string name (seen in the wild nested
+    # under clientDataCacheSlots.*.data.cedar_lagoon). ConvertFrom-Json hard-throws on that
+    # ("...only supported using the -AsHashTable switch"), and -AsHashtable does not exist on
+    # Windows PowerShell 5.1 — which is what 'powershell.exe' actually is (confirmed: 5.1.26100),
+    # the exact interpreter the NSS menu launches via cmd='powershell.exe'. Without this, every
+    # real-world call silently failed at the catch block below and never granted trust at all.
+    # JavaScriptSerializer (System.Web.Extensions, ships with .NET Framework / Windows) parses
+    # into a plain Dictionary<string,object> and tolerates arbitrary key names including "".
+    # PowerShell 6+ (pwsh, used by the Docker BDD tests) gets the native -AsHashtable path instead
+    # — cleaner, no JSON unicode-escaping side effect, and avoids loading System.Web.Extensions.
+    $isCore = $PSVersionTable.PSVersion.Major -ge 6
+    $obj = $null
     try {
         $raw = Get-Content -Path $claudeJsonPath -Raw -Encoding UTF8
-        $obj = $raw | ConvertFrom-Json
+        if ($isCore) {
+            $obj = $raw | ConvertFrom-Json -AsHashtable
+        } else {
+            Add-Type -AssemblyName System.Web.Extensions
+            $jss = New-Object System.Web.Script.Serialization.JavaScriptSerializer
+            $jss.MaxJsonLength = 104857600  # 100MB — ~/.claude.json can grow large with history/cache
+            $obj = $jss.DeserializeObject($raw)
+        }
     } catch {
-        Write-LaunchLog "trust: ERROR could not parse $claudeJsonPath, skipping auto-grant: $($_.Exception.Message)"
+        Write-LaunchLog "trust: ERROR could not parse ${claudeJsonPath}, skipping auto-grant: $($_.Exception.Message)"
+        return
+    }
+    if (-not ($obj -is [System.Collections.IDictionary])) {
+        Write-LaunchLog "trust: ${claudeJsonPath} did not parse to an object, skipping auto-grant"
         return
     }
 
-    if (-not $obj.PSObject.Properties['projects']) {
-        $obj | Add-Member -NotePropertyName 'projects' -NotePropertyValue ([PSCustomObject]@{})
+    if (-not $obj.ContainsKey('projects') -or -not ($obj['projects'] -is [System.Collections.IDictionary])) {
+        $obj['projects'] = if ($isCore) { @{} } else { $jss.DeserializeObject('{}') }
     }
-    $projectsProp = $obj.PSObject.Properties['projects']
-    $entryProp = $projectsProp.Value.PSObject.Properties[$Dir]
+    $projects = $obj['projects']
 
-    if ($entryProp -and $entryProp.Value.PSObject.Properties['hasTrustDialogAccepted'] -and $entryProp.Value.hasTrustDialogAccepted -eq $true) {
-        Write-LaunchLog "trust: already granted for $Dir"
+    $existing = $null
+    if ($projects.ContainsKey($dirKey)) { $existing = $projects[$dirKey] }
+    if ($existing -is [System.Collections.IDictionary] -and $existing.ContainsKey('hasTrustDialogAccepted') -and $existing['hasTrustDialogAccepted'] -eq $true) {
+        Write-LaunchLog "trust: already granted for $dirKey"
         return
     }
 
-    if (-not $entryProp) {
-        $projectsProp.Value | Add-Member -NotePropertyName $Dir -NotePropertyValue ([PSCustomObject]@{ hasTrustDialogAccepted = $true })
-    } elseif ($entryProp.Value.PSObject.Properties['hasTrustDialogAccepted']) {
-        $entryProp.Value.hasTrustDialogAccepted = $true
-    } else {
-        $entryProp.Value | Add-Member -NotePropertyName 'hasTrustDialogAccepted' -NotePropertyValue $true
+    if (-not ($existing -is [System.Collections.IDictionary])) {
+        # Build via the same Deserialize path that produced $obj, not New-Object — a New-Object'd
+        # Dictionary[string,object] picks up a PowerShell PSParameterizedProperty adapter member
+        # that trips JavaScriptSerializer.Serialize() into a false "circular reference detected"
+        # (confirmed live: New-Object path throws, DeserializeObject/@{} path does not).
+        $existing = if ($isCore) { @{} } else { $jss.DeserializeObject('{}') }
+        $projects[$dirKey] = $existing
     }
+    $existing['hasTrustDialogAccepted'] = $true
 
     # Atomic write: temp file + rename (atomic-config-save rule) — never a direct in-place write,
     # so a concurrent right-click on a different directory can't race-corrupt the shared file.
+    # WriteAllText with an explicit no-BOM UTF8Encoding, NOT Set-Content -Encoding UTF8 — Windows
+    # PowerShell 5.1's "UTF8" always prepends a BOM (confirmed live: PS7's UTF8 does not, but 5.1's
+    # does), and the real ~/.claude.json has no BOM. A BOM-prefixed rewrite would make Claude
+    # Code's own `JSON.parse(readFileSync(path,'utf8'))` throw on its NEXT startup — confirmed via
+    # Node that a leading BOM breaks plain JSON.parse — turning this fix into a worse outage than
+    # the bug it patches.
     $tempFile = "$claudeJsonPath.tmp.$PID"
     try {
-        ($obj | ConvertTo-Json -Depth 50) | Set-Content -Path $tempFile -Encoding UTF8 -NoNewline
+        $serialized = if ($isCore) { $obj | ConvertTo-Json -Depth 50 } else { $jss.Serialize($obj) }
+        $noBomUtf8 = New-Object System.Text.UTF8Encoding $false
+        [System.IO.File]::WriteAllText($tempFile, $serialized, $noBomUtf8)
         Move-Item -Path $tempFile -Destination $claudeJsonPath -Force
-        Write-LaunchLog "trust granted for $Dir"
+        Write-LaunchLog "trust granted for $dirKey"
     } catch {
         Write-LaunchLog "trust: ERROR writing ${claudeJsonPath}: $($_.Exception.Message)"
         try { Remove-Item -Path $tempFile -ErrorAction SilentlyContinue } catch {}
