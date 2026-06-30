@@ -6,11 +6,15 @@
 |----|------|-----------|-----------|--------|
 | [FR-1](FR.md#fr-1-название) | {Название} | [AC-1](ACCEPTANCE_CRITERIA.md#ac-1-fr-1) | @feature1 | Draft |
 | [FR-2](FR.md#fr-2-название) | {Название} | [AC-2](ACCEPTANCE_CRITERIA.md#ac-2-fr-2) | @feature2 | Draft |
+| [FR-6](FR.md#fr-6-context-menu-launch-entries-log-every-invocation) | Universal launch logging | [AC-6](ACCEPTANCE_CRITERIA.md#ac-6-fr-6) | @feature6 | Draft |
+| [FR-7](FR.md#fr-7-trust-auto-grant-before-bypass-permissions-launch) | Trust auto-grant for YOLO entries | [AC-7](ACCEPTANCE_CRITERIA.md#ac-7-fr-7) | @feature7 | Draft |
 
 ## Functional Requirements
 
 - [FR-1: {Название}](FR.md#fr-1-название)
 - [FR-2: {Название}](FR.md#fr-2-название)
+- [FR-6: Context-menu launch entries log every invocation](FR.md#fr-6-context-menu-launch-entries-log-every-invocation)
+- [FR-7: Trust auto-grant before bypass-permissions launch](FR.md#fr-7-trust-auto-grant-before-bypass-permissions-launch)
 
 ## Non-Functional Requirements
 
@@ -23,6 +27,8 @@
 
 - [AC-1 (FR-1): {Название}](ACCEPTANCE_CRITERIA.md#ac-1-fr-1)
 - [AC-2 (FR-2): {Название}](ACCEPTANCE_CRITERIA.md#ac-2-fr-2)
+- [AC-6 (FR-6): Universal launch logging](ACCEPTANCE_CRITERIA.md#ac-6-fr-6)
+- [AC-7 (FR-7): Trust auto-grant for YOLO entries](ACCEPTANCE_CRITERIA.md#ac-7-fr-7)
 
 ## Verification Matrix (CHK)
 
@@ -35,6 +41,8 @@
 |--------|-------------|-------------------|---------------------|--------|-------|
 | CHK-FR1-01 | FR-1 covered by AC-1 via @feature1 | FR-1, AC-1, @feature1 | BDD scenario | Draft | — |
 | CHK-FR2-01 | FR-2 covered by AC-2 via @feature2 | FR-2, AC-2, @feature2 | BDD scenario | Draft | — |
+| CHK-FR6-01 | FR-6 (universal logging) covered by AC-6 via @feature6 | FR-6, AC-6, @feature6 | BDD scenario | Draft | CTXMENU001_13/_14/_17 |
+| CHK-FR7-01 | FR-7 (trust auto-grant) covered by AC-7 via @feature7 | FR-7, AC-7, @feature7 | BDD scenario | Draft | CTXMENU001_15/_16 |
 
 ## Verification Process
 
@@ -56,8 +64,8 @@
 
 ## Summary Counts
 
-- Total CHKs: 0
+- Total CHKs: 4
 - Verified: 0
 - In Progress: 0
-- Draft: 0
+- Draft: 4
 - Blocked: 0

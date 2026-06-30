@@ -66,16 +66,19 @@ export function generateNss(): string {
 // Reload: Ctrl+Right-click desktop → Shell → Reload
 
 // Standard (non-elevated) entries
+// FR-6/FR-7: every entry routes through launch-claude-tui.ps1 (not bare wt.exe/claude) so every
+// launch is logged AND a YOLO ("-Yolo") launch auto-grants workspace trust before invoking claude
+// --dangerously-skip-permissions — otherwise claude hard-fails on a directory it has never seen.
 item(type='dir|back' sep='top' title='Claude Code (YOLO + TUI)' image='@app.dir\\imports\\claude-icon.ico' cmd='powershell.exe' args='-ExecutionPolicy Bypass -File "${launchScript}" -Yolo -ProjectDir "@sel.dir"')
-item(type='dir|back' where=package.exists("WindowsTerminal") title='Claude Code (YOLO)' image='@app.dir\\imports\\claude-icon.ico' cmd='wt.exe' args='-d "@sel.dir\\." -- cmd /k claude --dangerously-skip-permissions')
-item(type='dir|back' where=package.exists("WindowsTerminal") title='Claude Code' image='@app.dir\\imports\\claude-icon.ico' cmd='wt.exe' args='-d "@sel.dir\\." -- cmd /k claude')
+item(type='dir|back' where=package.exists("WindowsTerminal") title='Claude Code (YOLO)' image='@app.dir\\imports\\claude-icon.ico' cmd='powershell.exe' args='-ExecutionPolicy Bypass -File "${launchScript}" -Yolo -NoTui -ProjectDir "@sel.dir"')
+item(type='dir|back' where=package.exists("WindowsTerminal") title='Claude Code' image='@app.dir\\imports\\claude-icon.ico' cmd='powershell.exe' args='-ExecutionPolicy Bypass -File "${launchScript}" -NoTui -ProjectDir "@sel.dir"')
 
 // Elevated (admin) submenu — required for Hyper-V cmdlets, ADK installs, system file edits
 menu(type='dir|back' sep='bottom' title='Claude Code (Admin)' image='@app.dir\\imports\\claude-icon.ico')
 {
     item(admin=true title='Claude Code (YOLO + TUI)' image='@app.dir\\imports\\claude-icon.ico' cmd='powershell.exe' args='-ExecutionPolicy Bypass -File "${launchScript}" -Yolo -ProjectDir "@sel.dir"')
-    item(where=package.exists("WindowsTerminal") admin=true title='Claude Code (YOLO)' image='@app.dir\\imports\\claude-icon.ico' cmd='wt.exe' args='-d "@sel.dir\\." -- cmd /k claude --dangerously-skip-permissions')
-    item(where=package.exists("WindowsTerminal") admin=true title='Claude Code' image='@app.dir\\imports\\claude-icon.ico' cmd='wt.exe' args='-d "@sel.dir\\." -- cmd /k claude')
+    item(where=package.exists("WindowsTerminal") admin=true title='Claude Code (YOLO)' image='@app.dir\\imports\\claude-icon.ico' cmd='powershell.exe' args='-ExecutionPolicy Bypass -File "${launchScript}" -Yolo -NoTui -ProjectDir "@sel.dir"')
+    item(where=package.exists("WindowsTerminal") admin=true title='Claude Code' image='@app.dir\\imports\\claude-icon.ico' cmd='powershell.exe' args='-ExecutionPolicy Bypass -File "${launchScript}" -NoTui -ProjectDir "@sel.dir"')
 }
 `;
 }

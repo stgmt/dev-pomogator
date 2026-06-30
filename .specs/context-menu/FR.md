@@ -41,3 +41,17 @@ Launch script split ratio artifact. `scripts/launch-claude-tui.ps1` SHALL contai
 >
 > Связанные UC, AC и User Stories также должны быть помечены `> OUT OF SCOPE — см. FR-N`.
 
+## FR-6: Context-menu launch entries log every invocation
+
+Every context-menu launch entry — the existing `.ps1`-routed entries AND the raw `wt.exe`-direct NSS entries ("Claude Code (YOLO)", "Claude Code", and their Admin-submenu mirrors) — SHALL append an invocation record (timestamp, resolved project directory, claude flags used) to `~/.dev-pomogator/logs/context-menu-launch.log` before invoking `claude`. WHEN the launched `claude` process exits non-zero THEN the log entry SHALL record "ERROR" plus the observed exit code, so a failed right-click leaves a diagnosable trace regardless of which menu entry triggered it. Today only the `.ps1`-routed "YOLO + TUI" entry logs (`scripts/launch-claude-tui.ps1`); the raw NSS entries call `claude` directly with zero diagnostics — this requirement closes that gap by routing every entry through the same logged script.
+
+**Связанные AC:** [AC-6](ACCEPTANCE_CRITERIA.md#ac-6-fr-6)
+**Use Case:** [UC-1](USE_CASES.md#uc-1-название)
+
+## FR-7: Trust auto-grant before bypass-permissions launch
+
+WHEN a context-menu entry launches `claude --dangerously-skip-permissions` (a "YOLO" entry) AND the target directory has not yet been interactively trusted by Claude Code (`~/.claude.json` → `projects["<dir>"].hasTrustDialogAccepted` is `false` or absent) THEN the launcher SHALL atomically write `hasTrustDialogAccepted: true` for that exact directory into `~/.claude.json` (temp-file + atomic rename) BEFORE invoking `claude`, so the launch does not hard-fail with `Ignoring N permissions.allow entries ... this workspace has not been trusted` (confirmed Claude Code behavior — see RESEARCH.md). The plain "Claude Code" entries (no `--dangerously-skip-permissions`) SHALL NOT auto-grant trust — they SHALL preserve Claude Code's normal interactive trust-dialog flow untouched.
+
+**Связанные AC:** [AC-7](ACCEPTANCE_CRITERIA.md#ac-7-fr-7)
+**Use Case:** [UC-1](USE_CASES.md#uc-1-название)
+

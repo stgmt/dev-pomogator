@@ -26,7 +26,8 @@
 #>
 param(
     [string]$ProjectDir,
-    [switch]$Yolo
+    [switch]$Yolo,
+    [switch]$NoTui
 )
 
 # --- Logging (must be the first executable code; keeps right-click launch diagnosable) ---
@@ -44,16 +45,90 @@ function Write-LaunchLog {
     try { Add-Content -Path $script:LaunchLogFile -Value "[$ts] $Message" -Encoding UTF8 } catch {}
 }
 
+# FR-7: atomically grant workspace trust for $Dir before a --dangerously-skip-permissions launch.
+# Claude Code hard-fails (exit 1, "Ignoring N permissions.allow entries ... this workspace has
+# not been trusted") when --dangerously-skip-permissions targets a directory whose trust dialog
+# was never interactively accepted — it cannot show that dialog in bypass mode. The user already
+# chose the "YOLO" entry (already opting out of permission friction), so granting trust for that
+# exact directory is consistent with, not an expansion of, that choice. Only called when -Yolo.
+# Never called for the plain "Claude Code" entry — that one keeps Claude Code's normal trust flow.
+function Ensure-WorkspaceTrust {
+    param([string]$Dir)
+    $claudeJsonPath = Join-Path $homeDir '.claude.json'
+    if (-not (Test-Path $claudeJsonPath)) {
+        Write-LaunchLog "trust: $claudeJsonPath not found, skipping auto-grant"
+        return
+    }
+    try {
+        $raw = Get-Content -Path $claudeJsonPath -Raw -Encoding UTF8
+        $obj = $raw | ConvertFrom-Json
+    } catch {
+        Write-LaunchLog "trust: ERROR could not parse $claudeJsonPath, skipping auto-grant: $($_.Exception.Message)"
+        return
+    }
+
+    if (-not $obj.PSObject.Properties['projects']) {
+        $obj | Add-Member -NotePropertyName 'projects' -NotePropertyValue ([PSCustomObject]@{})
+    }
+    $projectsProp = $obj.PSObject.Properties['projects']
+    $entryProp = $projectsProp.Value.PSObject.Properties[$Dir]
+
+    if ($entryProp -and $entryProp.Value.PSObject.Properties['hasTrustDialogAccepted'] -and $entryProp.Value.hasTrustDialogAccepted -eq $true) {
+        Write-LaunchLog "trust: already granted for $Dir"
+        return
+    }
+
+    if (-not $entryProp) {
+        $projectsProp.Value | Add-Member -NotePropertyName $Dir -NotePropertyValue ([PSCustomObject]@{ hasTrustDialogAccepted = $true })
+    } elseif ($entryProp.Value.PSObject.Properties['hasTrustDialogAccepted']) {
+        $entryProp.Value.hasTrustDialogAccepted = $true
+    } else {
+        $entryProp.Value | Add-Member -NotePropertyName 'hasTrustDialogAccepted' -NotePropertyValue $true
+    }
+
+    # Atomic write: temp file + rename (atomic-config-save rule) — never a direct in-place write,
+    # so a concurrent right-click on a different directory can't race-corrupt the shared file.
+    $tempFile = "$claudeJsonPath.tmp.$PID"
+    try {
+        ($obj | ConvertTo-Json -Depth 50) | Set-Content -Path $tempFile -Encoding UTF8 -NoNewline
+        Move-Item -Path $tempFile -Destination $claudeJsonPath -Force
+        Write-LaunchLog "trust granted for $Dir"
+    } catch {
+        Write-LaunchLog "trust: ERROR writing ${claudeJsonPath}: $($_.Exception.Message)"
+        try { Remove-Item -Path $tempFile -ErrorAction SilentlyContinue } catch {}
+    }
+}
+
 # Launch Claude Code alone (no TUI pane). Used when Python or the TUI module is unavailable —
-# e.g. any project that is not dev-pomogator itself. Honors -Yolo. The TUI is a dev-pomogator
-# convenience; the Claude pane is the thing every user actually needs to launch.
+# e.g. any project that is not dev-pomogator itself — or when -NoTui is passed directly (the raw
+# "Claude Code (YOLO)" / "Claude Code" NSS entries route here, FR-6). Honors -Yolo (FR-7 trust
+# auto-grant + --dangerously-skip-permissions). Routes claude through a tiny generated .cmd so the
+# pane can log claude's own exit code after the user closes/exits it (FR-6) — wt.exe itself is
+# fire-and-forget and cannot report the exit code of what it spawned.
 function Start-ClaudeOnly {
     param([string]$Dir)
     if ($Yolo) {
-        wt.exe -d $Dir claude --dangerously-skip-permissions
-    } else {
-        wt.exe -d $Dir claude
+        Ensure-WorkspaceTrust -Dir $Dir
     }
+    Write-LaunchLog "launching claude-only (Yolo=$Yolo) dir=$Dir"
+
+    $launcherDir = Join-Path $env:TEMP 'dev-pomogator-launch'
+    if (-not (Test-Path $launcherDir)) { New-Item -ItemType Directory -Path $launcherDir -Force | Out-Null }
+    $claudeOnlyLauncher = Join-Path $launcherDir 'claude-only-pane.cmd'
+    $claudeCmd = if ($Yolo) { 'claude --dangerously-skip-permissions' } else { 'claude' }
+    $logFileEscaped = $script:LaunchLogFile
+    @"
+@echo off
+$claudeCmd
+set CM_EXIT=%ERRORLEVEL%
+if not "%CM_EXIT%"=="0" (
+  echo [%date% %time%] ERROR: claude exited with code %CM_EXIT% (dir=$Dir) >> "$logFileEscaped"
+) else (
+  echo [%date% %time%] claude exited 0 (dir=$Dir) >> "$logFileEscaped"
+)
+"@ | Set-Content -Path $claudeOnlyLauncher -Encoding ASCII
+
+    wt.exe -d $Dir cmd /k $claudeOnlyLauncher
 }
 
 Write-LaunchLog '=== launch-claude-tui.ps1 invoked ==='
@@ -74,6 +149,16 @@ try {
     }
     $ProjectDir = (Resolve-Path $ProjectDir).Path
     Write-LaunchLog "resolved ProjectDir: $ProjectDir"
+
+    # -NoTui (FR-6): the raw "Claude Code (YOLO)" / "Claude Code" NSS entries route here instead
+    # of calling wt.exe + claude directly, so they get the same logging + trust auto-grant as the
+    # "YOLO + TUI" entry, without ever attempting the TUI split-pane.
+    if ($NoTui) {
+        Write-LaunchLog "NoTui requested -> launching Claude Code only"
+        Start-ClaudeOnly $ProjectDir
+        Write-LaunchLog 'launch OK (claude-only, -NoTui)'
+        exit 0
+    }
 
     # --- Generate session prefix (8 hex chars) ---
     $sessionPrefix = -join ((1..8) | ForEach-Object { '{0:x}' -f (Get-Random -Maximum 16) })
@@ -144,12 +229,22 @@ try {
     $launcherDir = Join-Path $env:TEMP 'dev-pomogator-launch'
     if (-not (Test-Path $launcherDir)) { New-Item -ItemType Directory -Path $launcherDir -Force | Out-Null }
 
+    if ($Yolo) {
+        Ensure-WorkspaceTrust -Dir $ProjectDir
+    }
+
     $claudeLauncher = Join-Path $launcherDir 'claude-pane.cmd'
     @"
 @echo off
 set TEST_STATUSLINE_SESSION=$sessionPrefix
 set TEST_STATUSLINE_PROJECT=$ProjectDir
 $(if ($Yolo) { 'claude --dangerously-skip-permissions' } else { 'claude' })
+set CM_EXIT=%ERRORLEVEL%
+if not "%CM_EXIT%"=="0" (
+  echo [%date% %time%] ERROR: claude exited with code %CM_EXIT% (dir=$ProjectDir) >> "$script:LaunchLogFile"
+) else (
+  echo [%date% %time%] claude exited 0 (dir=$ProjectDir) >> "$script:LaunchLogFile"
+)
 "@ | Set-Content -Path $claudeLauncher -Encoding ASCII
 
     $tuiLauncher = Join-Path $launcherDir 'tui-pane.cmd'

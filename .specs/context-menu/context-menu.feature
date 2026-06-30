@@ -1,4 +1,3 @@
-@windows-only
 Feature: CTXMENU001_Context_Menu_Setup
   Windows right-click context menu integration for Claude Code via Nilesoft Shell.
   Exported functions: generateNss, copyLaunchScript, bundledLaunchScriptPath.
@@ -83,3 +82,37 @@ Feature: CTXMENU001_Context_Menu_Setup
     Given the context-menu postinstall module is imported
     When generateNss is called
     Then the NSS content should contain the global path home/.dev-pomogator/scripts/launch-claude-tui.ps1
+
+  @feature6
+  Scenario: CTXMENU001_13 every launch entry logs invocation regardless of TUI/NoTui/Yolo combination
+    Given pwsh is available
+    When the launch-claude-tui.ps1 script is invoked with -NoTui and a project dir
+    Then a log file should be created at ~/.dev-pomogator/logs/context-menu-launch.log
+    And the log should contain "launch-claude-tui.ps1 invoked"
+    And the log should contain the resolved project dir
+
+  @feature6
+  Scenario: CTXMENU001_14 failed claude launch is logged with ERROR and exit code
+    Given pwsh is available and wt.exe is unavailable
+    When the launch-claude-tui.ps1 script is invoked with -NoTui and a project dir
+    Then the log should contain "ERROR"
+
+  @feature7
+  Scenario: CTXMENU001_15 -Yolo launch on an untrusted directory auto-grants trust before invoking claude
+    Given pwsh is available and a temporary ~/.claude.json fixture with no entry for the target directory
+    When the launch-claude-tui.ps1 script is invoked with -Yolo -NoTui and the target directory
+    Then the fixture should have hasTrustDialogAccepted true for the target directory
+    And the log should contain "trust granted"
+
+  @feature7
+  Scenario: CTXMENU001_16 plain non-Yolo launch never writes to claude.json
+    Given pwsh is available and a temporary ~/.claude.json fixture with no entry for the target directory
+    When the launch-claude-tui.ps1 script is invoked with -NoTui and the target directory
+    Then the fixture should be unchanged
+
+  @feature6
+  Scenario: CTXMENU001_17 raw NSS YOLO entries route through launch-claude-tui.ps1 not bare claude
+    Given the context-menu postinstall module is imported
+    When generateNss is called
+    Then the NSS "Claude Code (YOLO)" entry command should reference "launch-claude-tui.ps1"
+    And the NSS "Claude Code (YOLO)" entry command should not call claude directly

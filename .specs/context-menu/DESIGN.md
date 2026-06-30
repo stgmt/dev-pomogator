@@ -4,6 +4,8 @@
 
 - [FR-1: {Название}](FR.md#fr-1-название)
 - [FR-2: {Название}](FR.md#fr-2-название)
+- [FR-6: Context-menu launch entries log every invocation](FR.md#fr-6-context-menu-launch-entries-log-every-invocation)
+- [FR-7: Trust auto-grant before bypass-permissions launch](FR.md#fr-7-trust-auto-grant-before-bypass-permissions-launch)
 
 ## Компоненты
 
@@ -41,15 +43,15 @@
 > each `### Decision:` block must include **Rationale:**, **Trade-off:**, **Alternatives considered:** with ≥2 `- {alt}` bullets.
 > Files without any `### Decision:` heading pass unblocked — section is optional but strongly recommended for Phase 2.
 
-### Decision: {short, specific title — the outcome, not the question}
+### Decision: Auto-grant workspace trust before YOLO-flagged launches instead of failing or double-prompting
 
-**Rationale:** {Why this choice is better for the current context}
+**Rationale:** The user already explicitly selected a context-menu entry literally labeled "YOLO" (`--dangerously-skip-permissions`), which already opts out of Claude Code's interactive permission prompts. Programmatically setting `hasTrustDialogAccepted: true` for that one directory is consistent with — not an expansion of — the consent already implied by choosing that entry, and turns a guaranteed first-click failure (confirmed: every dev-pomogator user's first YOLO right-click into a fresh directory hard-fails per Anthropic's own documented trust-gate behavior — see RESEARCH.md) into a working single click.
 
-**Trade-off:** {What we give up — be honest, name the specific downside}
+**Trade-off:** This silently flips a security-relevant flag in `~/.claude.json` without a per-directory confirmation dialog — a misclick onto the wrong folder gets that folder auto-trusted too. Mitigated by scoping strictly to the exact directory Nilesoft passes via `@sel.dir`, and by never touching trust state for the plain (non-YOLO) entries (FR-7, NFR Security).
 
 **Alternatives considered:**
-- {Alt 1} — rejected because {specific reason tied to this project, not generic}
-- {Alt 2} — rejected because {specific reason}
+- Fall back to a plain (non-bypass) `claude` launch on first use so the real interactive trust dialog renders, then ask the user to re-click YOLO — rejected because it doubles the click count for every first-time directory, defeating the point of a one-click "YOLO" entry
+- Leave the hard failure as-is but print a clearer in-console explanation instead of relying on Claude Code's own one-liner — kept as a secondary safety net (FR-6 logging covers diagnosability) but rejected as the primary fix because it still requires two separate manual actions on every new directory
 
 ## BDD Test Infrastructure (ОБЯЗАТЕЛЬНО)
 

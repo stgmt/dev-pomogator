@@ -16,6 +16,47 @@ const REPO_ROOT = process.env.APP_DIR || process.cwd();
 const POSTINSTALL_SCRIPT = path.join(REPO_ROOT, 'tools', 'context-menu', 'postinstall.ts');
 const LAUNCH_SCRIPT = path.join(REPO_ROOT, 'scripts', 'launch-claude-tui.ps1');
 
+// ============================================================================
+// G8 (FR-6/FR-7) helpers — drive the REAL launch-claude-tui.ps1 via real pwsh,
+// isolated from the real ~/.claude.json by redirecting USERPROFILE/HOME to a
+// per-scenario temp "fake home" directory (no mocks — real script, real fs).
+// ============================================================================
+
+interface G8World extends V4World {
+  g8FakeHome?: string;
+  g8ClaudeJsonPath?: string;
+  g8LogPath?: string;
+  g8TargetDir?: string;
+}
+
+function pwshAvailable(): boolean {
+  const probe = spawnSync('pwsh', ['-NoProfile', '-Command', '$PSVersionTable.PSVersion.Major'], {
+    encoding: 'utf-8',
+    timeout: 5000,
+  });
+  return probe.status === 0;
+}
+
+function runLaunchScript(world: G8World, extraArgs: string[]): void {
+  const fakeHome = world.g8FakeHome ?? path.join(world.tempDir, 'fake-home');
+  fs.mkdirSync(fakeHome, { recursive: true });
+  world.g8FakeHome = fakeHome;
+  world.g8LogPath = path.join(fakeHome, '.dev-pomogator', 'logs', 'context-menu-launch.log');
+
+  const result = spawnSync(
+    'pwsh',
+    ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', LAUNCH_SCRIPT, ...extraArgs],
+    {
+      encoding: 'utf-8',
+      timeout: 15000,
+      env: { ...process.env, USERPROFILE: fakeHome, HOME: fakeHome, CONTEXT_MENU_NONINTERACTIVE: '1' },
+    },
+  );
+  world.lastExitCode = result.status;
+  world.lastStdout = result.stdout || '';
+  world.lastStderr = result.stderr || '';
+}
+
 // Lazily imported real module (import guard prevents side effects)
 let postinstallModule: typeof import('../../tools/context-menu/postinstall.ts') | null = null;
 async function getPostinstall() {
@@ -209,5 +250,109 @@ Then(/^the NSS content should contain the global path home\/\.dev-pomogator\/scr
   const nss = this.lastStdout.replace(/\\/g, '/');
   if (!nss.includes(expectedPath)) {
     throw new Error(`Expected NSS to contain global path "${expectedPath}"\nNSS (normalized):\n${nss.slice(0, 500)}`);
+  }
+});
+
+// ============================================================================
+// G8 (FR-6 universal logging / FR-7 trust auto-grant) — CTXMENU001_13..17
+// ============================================================================
+
+Given(/^pwsh is available$/, function (this: V4World) {
+  if (!pwshAvailable()) return 'pending';
+});
+
+Given(/^pwsh is available and wt\.exe is unavailable$/, function (this: V4World) {
+  if (!pwshAvailable()) return 'pending';
+  // wt.exe genuinely does not exist outside Windows — true on Docker/Linux by construction;
+  // on a Windows host with wt.exe installed this scenario would need PATH manipulation, which
+  // we do not attempt here (consistent with the existing CTXMENU001_10 sibling scenario).
+  if (process.platform === 'win32') return 'pending';
+});
+
+Given(/^pwsh is available and a temporary ~\/\.claude\.json fixture with no entry for the target directory$/, function (this: G8World) {
+  if (!pwshAvailable()) return 'pending';
+  const fakeHome = path.join(this.tempDir, 'fake-home');
+  fs.mkdirSync(fakeHome, { recursive: true });
+  this.g8FakeHome = fakeHome;
+  this.g8TargetDir = path.join(this.tempDir, 'target-project');
+  fs.mkdirSync(this.g8TargetDir, { recursive: true });
+  this.g8ClaudeJsonPath = path.join(fakeHome, '.claude.json');
+  fs.writeFileSync(
+    this.g8ClaudeJsonPath,
+    JSON.stringify({ projects: { 'C:/Users/x/unrelated-repo': { hasTrustDialogAccepted: true } } }),
+    'utf-8',
+  );
+});
+
+When(/^the launch-claude-tui\.ps1 script is invoked with -NoTui and a project dir$/, function (this: G8World) {
+  const dir = this.g8TargetDir ?? this.tempDir;
+  runLaunchScript(this, ['-NoTui', '-ProjectDir', dir]);
+});
+
+When(/^the launch-claude-tui\.ps1 script is invoked with -Yolo -NoTui and the target directory$/, function (this: G8World) {
+  runLaunchScript(this, ['-Yolo', '-NoTui', '-ProjectDir', this.g8TargetDir!]);
+});
+
+When(/^the launch-claude-tui\.ps1 script is invoked with -NoTui and the target directory$/, function (this: G8World) {
+  runLaunchScript(this, ['-NoTui', '-ProjectDir', this.g8TargetDir!]);
+});
+
+Then(/^a log file should be created at ~\/\.dev-pomogator\/logs\/context-menu-launch\.log$/, function (this: G8World) {
+  if (!this.g8LogPath || !fs.existsSync(this.g8LogPath)) {
+    throw new Error(`Expected log file to exist at: ${this.g8LogPath}\nstdout: ${this.lastStdout}\nstderr: ${this.lastStderr}`);
+  }
+});
+
+Then(/^the log should contain "([^"]+)"$/, function (this: G8World, expected: string) {
+  const logContent = this.g8LogPath && fs.existsSync(this.g8LogPath) ? fs.readFileSync(this.g8LogPath, 'utf-8') : '';
+  if (!logContent.includes(expected)) {
+    throw new Error(`Expected log to contain "${expected}" but got:\n${logContent}\nstderr: ${this.lastStderr}`);
+  }
+});
+
+Then(/^the log should contain the resolved project dir$/, function (this: G8World) {
+  const logContent = this.g8LogPath && fs.existsSync(this.g8LogPath) ? fs.readFileSync(this.g8LogPath, 'utf-8') : '';
+  const dir = this.g8TargetDir ?? this.tempDir;
+  const normalizedLog = logContent.replace(/\\/g, '/');
+  const normalizedDir = fs.realpathSync(dir).replace(/\\/g, '/');
+  if (!normalizedLog.includes(normalizedDir) && !normalizedLog.includes(dir.replace(/\\/g, '/'))) {
+    throw new Error(`Expected log to contain project dir "${dir}" but got:\n${logContent}`);
+  }
+});
+
+Then(/^the fixture should have hasTrustDialogAccepted true for the target directory$/, function (this: G8World) {
+  const raw = fs.readFileSync(this.g8ClaudeJsonPath!, 'utf-8');
+  const obj = JSON.parse(raw);
+  const dir = fs.realpathSync(this.g8TargetDir!);
+  const entry = obj.projects?.[dir] ?? obj.projects?.[this.g8TargetDir!];
+  if (!entry || entry.hasTrustDialogAccepted !== true) {
+    throw new Error(`Expected ~/.claude.json to have hasTrustDialogAccepted:true for "${dir}" but got:\n${raw}`);
+  }
+});
+
+Then(/^the fixture should be unchanged$/, function (this: G8World) {
+  const raw = fs.readFileSync(this.g8ClaudeJsonPath!, 'utf-8');
+  const obj = JSON.parse(raw);
+  const dir = fs.realpathSync(this.g8TargetDir!);
+  const entry = obj.projects?.[dir] ?? obj.projects?.[this.g8TargetDir!];
+  if (entry) {
+    throw new Error(`Expected ~/.claude.json to have NO entry for "${dir}" (non-Yolo launch must never write trust) but got:\n${raw}`);
+  }
+});
+
+Then(/^the NSS "Claude Code \(YOLO\)" entry command should reference "launch-claude-tui\.ps1"$/, function (this: V4World) {
+  const match = this.lastStdout.match(/title='Claude Code \(YOLO\)'[^)]*args='([^']*)'/);
+  if (!match || !match[1].includes('launch-claude-tui.ps1')) {
+    throw new Error(`Expected the "Claude Code (YOLO)" NSS entry args to reference launch-claude-tui.ps1, got:\n${match ? match[1] : '(entry not found)'}`);
+  }
+});
+
+Then(/^the NSS "Claude Code \(YOLO\)" entry command should not call claude directly$/, function (this: V4World) {
+  const match = this.lastStdout.match(/title='Claude Code \(YOLO\)'[^)]*cmd='([^']*)'/);
+  if (!match) {
+    throw new Error('Expected to find the "Claude Code (YOLO)" NSS entry');
+  }
+  if (match[1].trim() === 'claude' || match[1].includes('cmd /k claude')) {
+    throw new Error(`Expected the "Claude Code (YOLO)" entry NOT to call claude directly, got cmd='${match[1]}'`);
   }
 });
