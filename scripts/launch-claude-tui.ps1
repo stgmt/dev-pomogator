@@ -45,6 +45,21 @@ function Write-LaunchLog {
     try { Add-Content -Path $script:LaunchLogFile -Value "[$ts] $Message" -Encoding UTF8 } catch {}
 }
 
+# FR-6: shared batch snippet that logs claude's own exit code after it closes. Used by BOTH the
+# claude-only pane and the TUI-split claude pane so the two launchers don't duplicate the same
+# ERRORLEVEL-check block.
+function Get-ClaudeExitLogBatch {
+    param([string]$Dir)
+    @"
+set CM_EXIT=%ERRORLEVEL%
+if not "%CM_EXIT%"=="0" (
+  echo [%date% %time%] ERROR: claude exited with code %CM_EXIT% (dir=$Dir) >> "$script:LaunchLogFile"
+) else (
+  echo [%date% %time%] claude exited 0 (dir=$Dir) >> "$script:LaunchLogFile"
+)
+"@
+}
+
 # FR-7: atomically grant workspace trust for $Dir before a --dangerously-skip-permissions launch.
 # Claude Code hard-fails (exit 1, "Ignoring N permissions.allow entries ... this workspace has
 # not been trusted") when --dangerously-skip-permissions targets a directory whose trust dialog
@@ -116,16 +131,10 @@ function Start-ClaudeOnly {
     if (-not (Test-Path $launcherDir)) { New-Item -ItemType Directory -Path $launcherDir -Force | Out-Null }
     $claudeOnlyLauncher = Join-Path $launcherDir 'claude-only-pane.cmd'
     $claudeCmd = if ($Yolo) { 'claude --dangerously-skip-permissions' } else { 'claude' }
-    $logFileEscaped = $script:LaunchLogFile
     @"
 @echo off
 $claudeCmd
-set CM_EXIT=%ERRORLEVEL%
-if not "%CM_EXIT%"=="0" (
-  echo [%date% %time%] ERROR: claude exited with code %CM_EXIT% (dir=$Dir) >> "$logFileEscaped"
-) else (
-  echo [%date% %time%] claude exited 0 (dir=$Dir) >> "$logFileEscaped"
-)
+$(Get-ClaudeExitLogBatch -Dir $Dir)
 "@ | Set-Content -Path $claudeOnlyLauncher -Encoding ASCII
 
     wt.exe -d $Dir cmd /k $claudeOnlyLauncher
@@ -239,12 +248,7 @@ try {
 set TEST_STATUSLINE_SESSION=$sessionPrefix
 set TEST_STATUSLINE_PROJECT=$ProjectDir
 $(if ($Yolo) { 'claude --dangerously-skip-permissions' } else { 'claude' })
-set CM_EXIT=%ERRORLEVEL%
-if not "%CM_EXIT%"=="0" (
-  echo [%date% %time%] ERROR: claude exited with code %CM_EXIT% (dir=$ProjectDir) >> "$script:LaunchLogFile"
-) else (
-  echo [%date% %time%] claude exited 0 (dir=$ProjectDir) >> "$script:LaunchLogFile"
-)
+$(Get-ClaudeExitLogBatch -Dir $ProjectDir)
 "@ | Set-Content -Path $claudeLauncher -Encoding ASCII
 
     $tuiLauncher = Join-Path $launcherDir 'tui-pane.cmd'
