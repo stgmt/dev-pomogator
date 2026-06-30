@@ -2,6 +2,7 @@ import type { CheckDefinition } from '../types.js';
 import { bunCheck } from './bun.js';
 import { claudeBinPriorityCheck } from './claude-bin-priority.js';
 import { claudeMemPluginCheck } from './claude-mem-plugin.js';
+import { contextMenuCheck } from './context-menu.js';
 import { dockerCheck } from './docker.js';
 import { envExampleCheck } from './env-example.js';
 import { envVarsCheck } from './env-vars.js';
@@ -34,6 +35,7 @@ export const phase2Checks: CheckDefinition[] = [
   claudeBinPriorityCheck,
   statuslineCheck,
   statuslineWidgetsCheck,
+  contextMenuCheck,
 ];
 
 export const phase3Checks: CheckDefinition[] = [bunCheck, pythonCheck, dockerCheck, meridianCheck];
@@ -50,6 +52,7 @@ export {
   bunCheck,
   claudeBinPriorityCheck,
   claudeMemPluginCheck,
+  contextMenuCheck,
   dockerCheck,
   envExampleCheck,
   envVarsCheck,
