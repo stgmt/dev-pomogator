@@ -20,7 +20,10 @@
     "ensure-marksman",
     "ensure-up",
     "health-check",
+    "install-claude-mem",
+    "install-hook",
     "install_native_statusline",
+    "mcp-bootstrap",
     "patch_bun_runner",
     "session-summary-hook",
     "statusline_session_start",
@@ -28,6 +31,7 @@
   ],
   "PreToolUse": [
     "build_guard",
+    "ce_slash_guard",
     "extension-json-meta-guard",
     "form-guards-dispatch",
     "guard",
@@ -35,6 +39,7 @@
     "plan-gate",
     "spec-access-guard",
     "spec-conformance-guard",
+    "steer",
     "test_guard"
   ],
   "PostToolUse": [
