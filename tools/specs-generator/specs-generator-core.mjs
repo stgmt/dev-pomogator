@@ -2961,16 +2961,22 @@ function commandAuditSpec(argv) {
       // Backlog specs are never-built scaffolding (rule bdd-only-tests §backlog) — never ERROR.
       const isBacklog = /[\\/]backlog[\\/]/.test(targetDir);
       const scaffoldSeverity = claimsDone && !isBacklog ? 'ERROR' : 'INFO';
+      // FIXTURES.md is a CONDITIONALLY-required doc (only when DESIGN declares TEST_DATA_ACTIVE,
+      // per the FIXTURES_CONSISTENCY contract). A TEST_DATA_NONE spec with a leftover stub
+      // FIXTURES.md is an UNUSED optional doc ("delete it"), not a blocking gap — never ERROR.
+      const designForScaffold = getFileContent('DESIGN.md');
+      const testDataActive = !!(designForScaffold && /TEST_DATA_ACTIVE/i.test(designForScaffold));
       for (const fileName of SCAFFOLD_SCAN_DOCS) {
         const scaffoldContent = getFileContent(fileName);
         if (!scaffoldContent) continue;
+        const docSeverity = fileName === 'FIXTURES.md' && !testDataActive ? 'INFO' : scaffoldSeverity;
         for (const hit of scanDocumentForScaffold(scaffoldContent, scaffoldSentinels)) {
           findings.push({
             check: 'SCAFFOLD_INCOMPLETE',
             category: 'LOGIC_GAPS',
-            severity: scaffoldSeverity,
+            severity: docSeverity,
             message: `${fileName}:${hit.line} unfilled scaffold sentinel ${hit.sentinel}`,
-            details: `Document still carries a verbatim template placeholder — fill it via the matching autofiller (discovery-forms / requirements-chk-matrix / task-board-forms) or through the MCP door (${claimsDone ? 'spec claims done → ERROR gate' : 'early phase → INFO only, scaffold GREEN at birth'}).`,
+            details: `Document still carries a verbatim template placeholder — fill it via the matching autofiller (discovery-forms / requirements-chk-matrix / task-board-forms) or through the MCP door (${docSeverity === 'ERROR' ? 'spec claims done → ERROR gate (verdict RED)' : 'INFO only — early phase, unused optional doc, or scaffold GREEN at birth'}).`,
           });
         }
       }
