@@ -1885,7 +1885,7 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   _Requirements: [FR-57](FR.md#fr-57)_
   **Done When:**
   - [ ] ONE модуль извлекает литеральные сентинелы дословно из `tools/specs-generator/templates/*.template` (брейс-плейсхолдеры + `TBD-1`/`TBD-2` + незаполненные якоря `#fr-N-название`), вырезает fenced+inline код, не флагает строчно-однословные токены/JSON-скобки; возвращает {file, line, sentinel}
-  - [ ] `validate-spec` PLACEHOLDER и новая audit-категория ОБА зовут ЭТОТ классификатор (verify-divergent-contracts) — один источник правды
+  - [ ] audit-категория зовёт классификатор как ЕДИНСТВЕННЫЙ источник ERROR-гейта; `validate-spec` сохраняет широкий `PLACEHOLDER`-WARNING-предфильтр (ловит строчные токены, которые точный гейт пропускает); оба слоя согласны, что дословный сентинел — заглушка (verify-divergent-contracts)
   - [ ] регресс-тест: набор сентинелов ⊇ актуальных плейсхолдеров каждого `*.template` (ловит дрейф при правке шаблона)
   - [ ] @feature57 SPECGEN004_470 / _471 / _475 переходят Red→Green
 

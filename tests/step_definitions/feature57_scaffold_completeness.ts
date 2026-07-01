@@ -218,7 +218,7 @@ Then(/^the scaffold-sentinel set contains every current template placeholder$/, 
   for (const s of again) assert.ok(this.sentinels!.has(s), `drift: sentinel missing ${s}`);
 });
 
-Then(/^validate-spec PLACEHOLDER and audit SCAFFOLD_INCOMPLETE both resolve to the one classifier$/, function (this: ScaffoldWorld) {
+Then(/^validate-spec PLACEHOLDER and audit SCAFFOLD_INCOMPLETE agree that a real template sentinel is a stub$/, function (this: ScaffoldWorld) {
   // Concrete cross-check: a doc carrying a real sentinel is flagged by BOTH the validate CLI
   // (PLACEHOLDER) and the audit CLI (SCAFFOLD_INCOMPLETE) — the two tiers agree on "is a stub".
   const slug = 'fr57-bdd-both';

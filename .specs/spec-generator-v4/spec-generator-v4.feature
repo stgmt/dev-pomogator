@@ -3136,7 +3136,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Given the scaffold-sentinel set is derived from the specs-generator templates directory
     When the scaffold-sentinel set is compared against the current template placeholders
     Then the scaffold-sentinel set contains every current template placeholder
-    And validate-spec PLACEHOLDER and audit SCAFFOLD_INCOMPLETE both resolve to the one classifier
+    And validate-spec PLACEHOLDER and audit SCAFFOLD_INCOMPLETE agree that a real template sentinel is a stub
 
   @feature57
   Scenario: SPECGEN004_476 a placeholder FIXTURES.md is reported once through the unified classifier
