@@ -38,8 +38,10 @@ function loadTemplate(): string {
     process.exit(2);
   }
   const md = readFileSync(TEMPLATE_PATH, 'utf-8');
-  // Extract template body inside ``` code fence
-  const m = md.match(/```\n([\s\S]*?)```/);
+  // Extract template body inside the ``` code fence. `[^\n]*` tolerates a CRLF `\r` and/or a
+  // language tag on the opening fence (`` ```\r\n `` / `` ```md\n ``) — a bare `\n` match is
+  // CRLF-fragile and silently fails on a Windows-authored template checked out on Linux.
+  const m = md.match(/```[^\n]*\n([\s\S]*?)```/);
   if (!m) {
     console.error('MERGE_PROMPT template missing code fence in references file.');
     process.exit(2);
