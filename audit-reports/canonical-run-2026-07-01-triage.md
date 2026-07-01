@@ -56,38 +56,36 @@ different spec's fixture↔check drift requiring a design decision.
 
 - **Symptom:** `expected undefined to be true` — the SessionStart hook emitted a banner
   (`additionalContext`) instead of `suppressOutput: true`.
-- **Root cause:** `buildHookOutput` is silent **iff** `critical===0 && warnings===0`, else it emits a
-  banner — and this contract is itself **tested and intentional** (`feature_pomogator_doctor.ts:517-527`),
-  so it must NOT change. The real cause is that newer environment checks fire warnings against both
-  the "valid" fixture and a bare home. Local (Windows) repro on a bare home fired 6:
-  `C-CMEM` (claude-mem not installed), `C-CTXM` (Windows menu), `C-MCPA` + `C11` (MCP not configured),
-  `C-NSL` (statusline not set), `C17` (session-pilot server not on :3456). The `temp-home-builder`
-  "valid" fixture only satisfies the auto-commit/config/hooks checks; the 6 environment checks were
-  added later and were never taught to gate out for an isolated/bare home → the fixture and the
-  check-set drifted (rule: `verify-divergent-contracts`).
-- **Why not fixed here:** the fix is a **relevance-gating change across ~6 checks** (or a
-  quiet-mode check-subset), with real cross-scenario risk (other scenarios assert those same checks
-  *do* warn), and it is only faithfully verifiable in Docker/Linux (the noisy check-set differs from
-  Windows). It belongs to the `pomogator-doctor` spec (`@feature17`/`@feature10`), not to the
-  spec-generator-v4 backlog. This is scoped follow-up work, not a mechanical fix.
-
-### Actionable fix mechanism (for the follow-up)
-
-Each `CheckDefinition` carries an optional `gate?(ctx) => { relevant, reason? }`
-(`engine/types.ts:126`); a `false` gate moves the check to `gatedOut` (never warns). The fix
-is to give the 6 environment checks a gate that returns `relevant:false` for a bare/isolated
-home (no `~/.dev-pomogator/config.json` ⇒ `ctx.config === null`), and to make the "valid"
-fixture path either satisfy or gate them. **Deeper relevance bug surfaced while probing:** `C11`
-warned `2 referenced MCP server(s) not configured: context7, octocode` even though the fixture's
-`projectRoot` is a bare temp dir — i.e. it read MCP references from the **developer's** real
-config, not `ctx.projectRoot`. So the follow-up is a per-check relevance audit (source each
-check off `ctx`, not ambient machine state), not a one-liner — and each of the 6 checks has its
-own "does-warn-when-misconfigured" scenario that must stay green (run the full `pomogator-doctor`
-feature in Docker to confirm no regression).
+- **Root cause:** the SessionStart quiet path (`runQuiet` → `buildHookOutput`) emits a banner
+  whenever `warnings > 0` **or** `critical > 0`. Both fixtures are non-empty for reasons the
+  contract deems "OK":
+  - **05 bare home:** `C3` is **critical** `config.json not found` (an *uninstalled* home) plus
+    warnings `C-NSL`/`C-CMEM`/`C14`/`C17`/`C25`.
+  - **04 valid fixture:** config present (0 critical) but the *optional / self-healing* components
+    aren't set up → warnings `C-NSL` (statusline), `C-CMEM` (claude-mem), `C14` (.gitignore),
+    `C17` (session-pilot :3456), `C25` (pre-commit).
+  (An earlier Windows probe also listed `C11`/`C-MCPA` — a **probe artefact**: it passed the wrong
+  option key `projectDir` instead of `projectRoot`, so `collectReferencedMcpServers` defaulted
+  `projectRoot` to the real repo and read its `mcp__context7__`/`mcp__octocode__` refs. With the
+  correct key those MCP checks are quiet on a bare home.)
+- **Docker baseline:** full `pomogator-doctor` feature = **26 scenarios, 24 passed, only 04/05
+  failed** — the "does-warn-when-misconfigured" scenarios all live on interactive (`runDoctor`)
+  paths, not the quiet path.
+- **Fix (implemented + Docker-verified):** the entire change lives in `runQuiet` (`engine/index.ts`)
+  — **zero check edits, zero interactive-path risk**. SessionStart nags only on a **critical** issue
+  in an **installed** home; an uninstalled/bare home (no `~/.dev-pomogator/config.json`) and
+  warnings-only both `suppressOutput`. `buildHookOutput`'s banner-on-warning contract
+  (`feature_pomogator_doctor.ts:517-527`, interactive) is untouched, `C3`'s critical branches
+  (corrupt config, canonical carve-out) are untouched, and `homeDir` is resolved identically to
+  `executeChecks`. **Docker after: `30 scenarios (30 passed)`** (POMOGATORDOCTOR001 + 002 — 04/05
+  green, the 24 prior-green + 002 "false-critical" scenarios all still green). Branch
+  `fix/doctor-quiet-suppress-noncritical` (PR #80).
 
 ## Ownership
 
-- Classes 1 & 2: fixed + pushed this session (branches above). PRs pending the filtered Docker green.
-- Class 3: no code change — needs a clean canonical re-run to clear.
-- Class 4: a scoped `pomogator-doctor` task — relevance-gate the environment checks for
-  isolated/bare homes (or restrict quiet-mode to critical-eligible checks), Docker-verified.
+- Class 1: fixed + Docker-verified (2/2) — PR #79 (`fix/fr57-core-portable-lazy-import`).
+- Class 2: fixed + Docker-verified (5/5) — PR #78 (`fix/sro-crlf-fence-regex`).
+- Class 3: no code change — needs a clean canonical re-run to clear (artifact is correct in HEAD).
+- Class 4: fixed + Docker-verified (30/30) — PR #80 (`fix/doctor-quiet-suppress-noncritical`).
+
+All 10 canonical failures are now resolved (9 fixed across 3 PRs; 1 is a no-op re-run).
