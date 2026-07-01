@@ -1169,6 +1169,12 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     When each documented engine CLI and a generic reader run over the specs tree
     Then every engine CLI is allowed and the generic reader stays a violation
 
+  @FR-39
+  Scenario: SPECGEN004_505 the grep-pattern carve-out allows a stream or pattern-scoped search that merely mentions the specs path
+    Given the spec-access-guard grep-pattern carve-out
+    When a pattern-position grep, a piped stream grep, and a path-operand grep all run over the specs path text
+    Then only the path-operand grep stays a violation and the pattern-position and piped forms are allowed
+
   @FR-32
   Scenario: SPECGEN004_143 get_spec_status (view coverage) scopes to one spec while a bare call stays corpus-wide
     Given a graph holding scenarios from two different specs
@@ -3087,3 +3093,60 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Given the SPECGEN003 form-guards log is seeded with 3 DENY and 3 other events and the ack file is cleared
     When validate-specs.ts is invoked as a SPECGEN003 UserPromptSubmit hook event
     Then the SPECGEN003 conformance summary mentions at least 3 unresolved DENY
+
+  # ── FR-57: scaffold-completeness audit (stub-detection gate) ──────────────
+
+  @feature57
+  Scenario: SPECGEN004_470 the scaffold classifier flags a verbatim template sentinel in prose
+    Given a scaffold-sentinel fixture document with one unfilled template placeholder in prose outside code
+    When the scaffold-sentinel classifier scans the fixture document
+    Then the scaffold classifier reports exactly one finding naming that placeholder and its line
+
+  @feature57
+  Scenario: SPECGEN004_471 the scaffold classifier ignores lowercase single-token braces and code spans
+    Given a scaffold-sentinel fixture document with lowercase single-token braces, a fenced code block, an inline code span, and an empty JSON brace
+    When the scaffold-sentinel classifier scans the fixture document
+    Then the scaffold classifier reports zero findings
+
+  @feature57
+  Scenario: SPECGEN004_472 audit emits SCAFFOLD_INCOMPLETE ERROR for a claims-done spec with a stub README
+    Given an isolated claims-done spec fixture whose README.md is an unfilled scaffold
+    When audit-spec runs on that spec fixture
+    Then the audit findings contain check "SCAFFOLD_INCOMPLETE" with severity "ERROR"
+    And the SCAFFOLD_INCOMPLETE finding names README.md with a line and a sentinel
+
+  @feature57
+  Scenario: SPECGEN004_473 a fresh scaffold spec keeps SCAFFOLD_INCOMPLETE at INFO not ERROR
+    Given an isolated freshly-scaffolded spec fixture with default placeholders and no test run
+    When audit-spec runs on that spec fixture
+    Then every SCAFFOLD_INCOMPLETE finding has severity "INFO"
+    And spec-verdict on that spec fixture does not turn RED because of SCAFFOLD_INCOMPLETE
+
+  @feature57
+  Scenario: SPECGEN004_474 spec-verdict flips RED then GREEN across the stub-vs-filled fixture
+    Given a claims-done spec fixture with stub README, TASKS and FIXTURES prose
+    When spec-verdict runs on the stub fixture
+    Then the spec-verdict verdict is "RED" with SCAFFOLD_INCOMPLETE in the gap list
+    Given the same fixture with its README, TASKS and FIXTURES prose filled in
+    When spec-verdict runs on the filled fixture
+    Then the SCAFFOLD_INCOMPLETE category is absent from the gap list
+
+  @feature57
+  Scenario: SPECGEN004_475 one classifier is shared by validate-spec and audit and covers every template placeholder
+    Given the scaffold-sentinel set is derived from the specs-generator templates directory
+    When the scaffold-sentinel set is compared against the current template placeholders
+    Then the scaffold-sentinel set contains every current template placeholder
+    And validate-spec PLACEHOLDER and audit SCAFFOLD_INCOMPLETE both resolve to the one classifier
+
+  @feature57
+  Scenario: SPECGEN004_476 a placeholder FIXTURES.md is reported once through the unified classifier
+    Given a claims-done spec fixture with TEST_DATA_ACTIVE and a placeholder FIXTURES.md
+    When audit-spec runs on that spec fixture
+    Then the placeholder FIXTURES.md is reported exactly once and not by a separate FIXTURES_CONSISTENCY placeholder branch
+
+  @feature57
+  Scenario: SPECGEN004_477 templates fixtures and backlog specs are excluded from the scaffold gate
+    Given a scaffold-sentinel scan over a templates file, a __fixtures__ document, and a backlog spec document
+    When the scaffold-sentinel classifier evaluates those documents
+    Then the templates file and the __fixtures__ document yield no findings
+    And the backlog spec document yields at most an INFO finding never an ERROR

@@ -775,3 +775,21 @@ WHEN `coverage.ts bucketByResult` / `task-census.ts` вычисляют резу
 **Требование:** [FR-56](FR.md#fr-56)
 
 WHEN вызывается MCP-тул `get_scenario_trace(scenario_id)` THEN он SHALL вернуть свежайший результат и, если failed/stale, упавший шаг + текст ошибки + run_id/time/source + путь к куску прогона — «где упало» одним вызовом; WHEN кусок, на который ссылается `trace_id`, удалён ротацией истории THEN `get_scenario_trace` SHALL ЛИБО найти запинённый (исключённый из ротации) кусок актуального сценария, ЛИБО деградировать мягко («трейс истёк — перепрогони»), не падая на отсутствующем куске; WHEN тул добавлен THEN он SHALL быть вписан в реестр тулов `buildToolRegistry` (`tools/spec-mcp-server/`) И покрыт `@feature56` BDD-сценарием; WHEN строится спек-граф THEN цепочка трассировки SHALL продлеваться spec→FR→scenario→result→trace→logs (указатель на трейс на `ScenarioNode`, у которого `lastResult` уже есть), а `get_trace`/coverage-путь SHALL доставать деталь падения.
+
+## AC-57.1
+
+**Требование:** [FR-57](FR.md#fr-57)
+
+WHEN спека claims-done (lifecycle GREEN от реального ПОЛНОГО прогона ИЛИ фаза Finalization `stop_confirmed`) AND любой её документ вне блоков кода дословно содержит scaffold-сентинел из `templates/*.template` THEN `audit-spec` SHALL эмитить находку `SCAFFOLD_INCOMPLETE` severity=ERROR с полями `{file, line, sentinel, hint}` AND `spec-verdict` SHALL включить её в gap list → verdict=RED.
+
+## AC-57.2
+
+**Требование:** [FR-57](FR.md#fr-57)
+
+WHEN спека свежесоздана / в ранней фазе / её тесты не прогонялись AND содержит scaffold-плейсхолдеры THEN `SCAFFOLD_INCOMPLETE` SHALL иметь severity=INFO (не ERROR) → verdict НЕ краснеет от плейсхолдеров (инвариант «scaffold GREEN at birth» сохранён); WHEN проза документа дописана (сентинелов вне кода не осталось) THEN категория SHALL исчезнуть → затронутый гейт verdict SHALL стать GREEN.
+
+## AC-57.3
+
+**Требование:** [FR-57](FR.md#fr-57)
+
+WHEN классификатор сканирует документ THEN он SHALL вырезать fenced+inline код перед матчем AND НЕ флагать строчно-однословные токены (`{int}`/`{string}`/`{slug}`), JSON-скобки и EARS-примеры внутри кода; WHEN документ — сам `templates/*.template`, лежит под `__fixtures__/**`, либо под `.specs/backlog/**` THEN он SHALL быть исключён (backlog — максимум INFO); WHEN и `validate-spec`, и новая audit-категория проверяют плейсхолдеры THEN обе SHALL звать ОДИН классификатор (не расходиться), AND регресс-тест SHALL держать набор сентинелов ⊇ актуальных плейсхолдеров шаблонов.
