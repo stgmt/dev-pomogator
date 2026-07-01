@@ -210,6 +210,15 @@ This block enumerates the spec-doc edits applied as part of the v3→v4 transiti
 | `tests/step_definitions/feature43_legacy_triage.ts` | create | SPECGEN004_156 binds the real computeLegacyTriage ([FR-43](FR.md#fr-43)) |
 | `tools/spec-graph/builder.ts` | edit | P18-2: skipDirs += `archive` so `.specs/archive/` retired specs leave the live graph ([FR-43](FR.md#fr-43)) |
 
+## Phase 30 — FR-57 scaffold-completeness audit (stub-detection gate, 2026-07-01)
+
+| Path | Action | Reason |
+|------|--------|--------|
+| `tools/spec-graph/scaffold-sentinels.ts` | create | Единый классификатор scaffold-сентинелов, извлекаемых дословно из `templates/*.template` (вырез fenced+inline кода + отсев строчных токенов/JSON-скобок + номера строк); ЕДИНСТВЕННЫЙ источник для validate-spec PLACEHOLDER и новой audit-категории ([FR-57](FR.md#fr-57)) |
+| `tools/specs-generator/specs-generator-core.mjs` | edit | Новая audit-категория `SCAFFOLD_INCOMPLETE` (phase-gated ERROR/INFO) через классификатор; `validate-spec` PLACEHOLDER и FIXTURES_CONSISTENCY-плейсхолдер-ветка сведены на тот же классификатор ([FR-57](FR.md#fr-57)) |
+| `tools/spec-graph/__tests__/scaffold-sentinels.test.ts` | create | Юнит: сентинел-матч + вырез кода + строчные токены + дрейф-регресс (сентинелы ⊇ шаблонных) + исключения templates/__fixtures__/backlog ([FR-57](FR.md#fr-57)) |
+| `tests/step_definitions/feature57_scaffold_completeness.ts` | create | Биндит SPECGEN004_470..477 на реальный классификатор + audit-spec + spec-verdict (real-engine, без моков) ([FR-57](FR.md#fr-57)) |
+
 ## Total counts
 
 | Phase | Files |
@@ -225,4 +234,5 @@ This block enumerates the spec-doc edits applied as part of the v3→v4 transiti
 | Cross-phase docs | 4 (all edit; `dist/installer/extensions.js` удалён — v2 без installer) |
 | Round 3 patch (v3→v4 transition) | 12 (all edit; 9 v4-spec files + 3 SKILL.md frontmatter) |
 | Phase 18 (FR-43 legacy-triage) | 7 (6 create + 1 edit; classifier + LLM judge + dogfood + 2 unit + BDD step; legacy-v3 archived) |
-| **Total** | **123 rows (~89 create + 34 edit; +7 Phase-18 FR-43 traced 2026-06-11)** |
+| Phase 30 (FR-57 scaffold-completeness) | 4 (3 create + 1 edit; classifier + engine edit + unit + BDD step) |
+| **Total** | **127 rows (~92 create + 35 edit; +4 Phase-30 FR-57 traced 2026-07-01)** |

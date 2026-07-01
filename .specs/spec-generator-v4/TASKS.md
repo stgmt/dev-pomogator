@@ -1876,3 +1876,45 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   **Done When:**
   - [ ] компакция/ротация держит оверлей в размере «свежайшая запись на сценарий» (или ограниченное окно) — файл не растёт безгранично; verified на синтетике с дублями по `scenario_id`
   - [ ] чтение переклички (`coverage.ts`/`task-census.ts`) укладывается в текущий бюджет латентности на КАЖДЫЙ UserPromptSubmit — ограниченный скан (компакция или индекс), не полный проход растущего append-only (FR-56c ПЕРФ)
+
+## Phase 30 — Аудит дописанности прозы (FR-57: scaffold-плейсхолдеры рубят вердикт, 2026-07-01)
+
+Источник: `audit-reports/spec-generator-stub-detection-gap-handoff.md` (симптом §1-2, root cause §3, точки внедрения §4, DoD §5). Реюз готовой логики: умный отсев из `countSpecStatusPlaceholders` (`specs-generator-core.mjs:515` — вырез fenced+inline кода + отсев строчных токенов/JSON-скобок) + номера строк из `listPlaceholders` (:413) — не третий детектор. Раскрывает FR-57a..f. TDD Red→Green.
+
+- [ ] P30-1: единый классификатор scaffold-сентинелов из шаблонов + регресс на дрейф (FR-57a) — id: p30-sentinel-classifier — Status: TODO | Est: 240m
+  _Requirements: [FR-57](FR.md#fr-57)_
+  **Done When:**
+  - [ ] ONE модуль извлекает литеральные сентинелы дословно из `tools/specs-generator/templates/*.template` (брейс-плейсхолдеры + `TBD-1`/`TBD-2` + незаполненные якоря `#fr-N-название`), вырезает fenced+inline код, не флагает строчно-однословные токены/JSON-скобки; возвращает {file, line, sentinel}
+  - [ ] `validate-spec` PLACEHOLDER и новая audit-категория ОБА зовут ЭТОТ классификатор (verify-divergent-contracts) — один источник правды
+  - [ ] регресс-тест: набор сентинелов ⊇ актуальных плейсхолдеров каждого `*.template` (ловит дрейф при правке шаблона)
+  - [ ] @feature57 SPECGEN004_470 / _471 / _475 переходят Red→Green
+
+- [ ] P30-2: audit-категория SCAFFOLD_INCOMPLETE, phase-gated severity, гейтит вердикт (FR-57b/c) — id: p30-audit-category — Status: TODO | Est: 300m
+  _depends: p30-sentinel-classifier_
+  _Requirements: [FR-57](FR.md#fr-57)_
+  **Done When:**
+  - [ ] `audit-spec` эмитит SCAFFOLD_INCOMPLETE на каждый документ с сентинелом вне кода, поля {file, line, sentinel, hint}; severity=ERROR если спека claims-done (lifecycle GREEN от ПОЛНОГО прогона ИЛИ Finalization `stop_confirmed`), иначе INFO
+  - [ ] инвариант «scaffold GREEN at birth» сохранён: свежесозданная спека с плейсхолдерами НЕ краснеет — planted-fixture тест
+  - [ ] ERROR-находка попадает в spec-verdict gap list → verdict RED; дописанная проза → категория ушла → GREEN
+  - [ ] @feature57 SPECGEN004_472 / _473 / _474 переходят Red→Green
+
+- [ ] P30-3: поглотить узкую FIXTURES_CONSISTENCY-плейсхолдер-ветку в единый классификатор (FR-57d) — id: p30-fold-fixtures — Status: TODO | Est: 90m
+  _depends: p30-audit-category_
+  _Requirements: [FR-57](FR.md#fr-57)_
+  **Done When:**
+  - [ ] placeholder-`FIXTURES.md`-под-`TEST_DATA_ACTIVE` идёт через классификатор FR-57a; `FIXTURES.md` не репортится дважды; хардкод-сентинелы удалены из отдельной ветки
+  - [ ] @feature57 SPECGEN004_476 Red→Green
+
+- [ ] P30-4: исключения templates/__fixtures__/backlog + мета-док (FR-57e, H1 anti-over-generalization) — id: p30-exclusions — Status: TODO | Est: 90m
+  _depends: p30-audit-category_
+  _Requirements: [FR-57](FR.md#fr-57)_
+  **Done When:**
+  - [ ] классификатор не флагает сами `templates/*.template` и `__fixtures__/**`; `.specs/backlog/**` максимум INFO (никогда ERROR); planted-fixture на каждый класс исключения
+  - [ ] @feature57 SPECGEN004_477 Red→Green
+
+- [ ] P30-5: прогон по реальному корпусу + трассировка FILE_CHANGES (FR-57f) — id: p30-corpus-run — Status: TODO | Est: 120m
+  _depends: p30-audit-category, p30-fold-fixtures, p30-exclusions_
+  _Requirements: [FR-57](FR.md#fr-57)_
+  **Done When:**
+  - [ ] `spec-verdict`/`corpus-health` прогнан по всему `.specs/` — залогировано, сколько claims-done спек всплыло недописанными (ожидаемо >1), список приложен к отчёту
+  - [ ] новые файлы (классификатор + тесты + step-def) есть в FILE_CHANGES.md с implements-ссылкой на FR-57; UNCOVERED_FR / TASK_UNTESTED / UNTAGGED_SCENARIO по спеке остаются 0

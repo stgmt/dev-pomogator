@@ -279,6 +279,19 @@
 - Print findings only, no resolve loop (rejected) — leaves the user to fix by hand with no guided options or audit trail; the resolve half of the feature would be missing.
 - Block-only on CRITICAL, auto-fix the rest (rejected) — WARNING/INFO findings still have trade-offs (which doc to edit); a uniform explain-before-edit is simpler and safer than a severity-split fix policy.
 
+### Decision: Scaffold-completeness gate — reuse the existing classifier, phase-gate the severity, exact-sentinel for the RED tier
+
+**Требование:** [FR-57](FR.md#fr-57)
+
+**Rationale:** Placeholder detection already exists twice but toothless — `validate-spec` emits a broad `PLACEHOLDER` WARNING that is pre-filter (never gates the smart verdict, per `no-structural-valid`), and `audit-spec` catches only `FIXTURES.md` under `TEST_DATA_ACTIVE` (WARNING, 2 hardcoded sentinels). The reusable smart classifier `countSpecStatusPlaceholders` (`specs-generator-core.mjs:515`) already strips fenced+inline code and drops lowercase-single-token/JSON braces; `listPlaceholders` (:413) already yields line numbers. So the fix promotes this existing logic into ONE classifier feeding BOTH validate and a NEW verdict-gating `audit-spec` category — not a third detector. Severity is phase-gated: ERROR only when the spec claims verified-completion (lifecycle GREEN from a full run OR Finalization `stop_confirmed`), INFO otherwise — preserving the deliberately-fixed «scaffold GREEN at birth» invariant (a fresh scaffold is all placeholders by design and must not go RED). This dimension is ORTHOGONAL to traceability: `forbid-root-artifacts` was GREEN with `UNCOVERED_FR`/`TASK_UNTESTED`/`UNTAGGED_SCENARIO` all 0 while its prose stayed stub.
+
+**Trade-off:** A verdict-gating ERROR means a false positive blocks a legitimate spec, so the RED tier uses EXACT template sentinels (precise by construction) rather than the broad heuristic — the heuristic false-positives on camelCase tokens (`{installCommand}`, proven by a real classifier run this session). Cost: the sentinel set must track template edits, mitigated by a drift regression test asserting sentinels ⊇ current template placeholders.
+
+**Alternatives considered:**
+- Broad heuristic (`countSpecStatusPlaceholders`) as the RED gate (rejected) — false-positives on camelCase instructional tokens; blocking a legit spec is worse than a missed WARNING. Kept for the WARNING tier only.
+- Promote validate's `PLACEHOLDER` WARNING to ERROR in place (rejected) — validate-spec is pre-filter by design, not the health verdict, and it lacks phase-gating so it would RED every fresh scaffold (re-breaking the templates-fix invariant).
+- New TDD-ordering enforcement (rejected / out of scope) — «Red test written before the code» is not statically provable; only the FR→task→scenario chain existence is enforced (already held by the FR-37b invariants), which FR-57 dogfoods rather than duplicates.
+
 ## BDD Test Infrastructure (ОБЯЗАТЕЛЬНО)
 
 **Classification:** TEST_DATA_ACTIVE
