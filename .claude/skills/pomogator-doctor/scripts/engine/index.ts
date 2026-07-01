@@ -1,3 +1,4 @@
+import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { allChecks } from './checks/index.js';
@@ -46,6 +47,19 @@ export async function runQuiet(
 ): Promise<HookOutput> {
   try {
     const report = await runDoctor({ ...options, quiet: true }, checks);
+    // SessionStart is minimally intrusive: it nags ONLY on a CRITICAL issue in an INSTALLED
+    // environment. Two quiet cases (scenarios POMOGATORDOCTOR001_04 / _05):
+    //  - an uninstalled/bare home (no ~/.dev-pomogator/config.json) has nothing actionable to
+    //    report — "config not found" there is expected, not an error;
+    //  - warnings alone come from optional / self-healing components (native statusline,
+    //    claude-mem, .gitignore, pre-commit, session-pilot server) that the interactive
+    //    /pomogator-doctor surfaces — they must not banner at every session start.
+    // The banner-on-warning contract of buildHookOutput itself is unchanged (interactive path).
+    const homeDir = options.homeDir ?? os.homedir();
+    const installed = fs.existsSync(path.join(homeDir, '.dev-pomogator', 'config.json'));
+    if (!installed || report.summary.critical === 0) {
+      return { continue: true, suppressOutput: true };
+    }
     return buildHookOutput(report);
   } catch {
     return { continue: true, suppressOutput: true };
