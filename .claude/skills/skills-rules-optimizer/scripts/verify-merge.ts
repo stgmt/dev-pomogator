@@ -46,7 +46,9 @@ function loadTemplate(): string {
     process.exit(2);
   }
   const md = readFileSync(TEMPLATE_PATH, 'utf-8');
-  const m = md.match(/```\n([\s\S]*?)```/);
+  // `[^\n]*` tolerates a CRLF `\r` / language tag on the opening fence — a bare `\n` match is
+  // CRLF-fragile and silently fails on a Windows-authored template checked out on Linux.
+  const m = md.match(/```[^\n]*\n([\s\S]*?)```/);
   if (!m) {
     console.error('SCORER_PROMPT template missing code fence в references file.');
     process.exit(2);
