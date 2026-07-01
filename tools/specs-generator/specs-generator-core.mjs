@@ -2,12 +2,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
-import {
-  extractTemplateSentinels,
-  scanDocumentForScaffold,
-  SCAFFOLD_SCAN_DOCS,
-  isBacklogSpecPath,
-} from './scaffold-sentinels.mjs';
+// NOTE: the scaffold-sentinels classifier (FR-57) is lazy-imported inside commandAuditSpec,
+// NOT statically here, so `specs-generator-core.mjs` stays SINGLE-FILE PORTABLE: `scaffold-spec`
+// (and any consumer that copies core.mjs standalone — e.g. the arch-decision e2e fixture) must
+// load without the sibling on disk. Same lazy pattern as validate-spec → ../anchor-integrity.
 
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const DATE_ONLY_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -1789,7 +1787,7 @@ function commandListSpecs(argv) {
   return 0;
 }
 
-function commandAuditSpec(argv) {
+async function commandAuditSpec(argv) {
   const options = parseArgs(argv, [
     { flag: '-Path', key: 'inputPath', type: 'string', required: true },
     { flag: '-VerboseOutput', key: 'verboseOutput', type: 'boolean', default: false },
@@ -2941,6 +2939,10 @@ function commandAuditSpec(argv) {
   // (Finalization stop_confirmed) — a fresh scaffold stays INFO so it is GREEN at birth.
   log('INFO', 'Running SCAFFOLD_INCOMPLETE check...');
   try {
+    // Lazy sibling load (see top-of-file note): keeps core.mjs single-file portable. A
+    // standalone-copied core.mjs with no sibling → catch below fail-soft-skips the check.
+    const { extractTemplateSentinels, scanDocumentForScaffold, SCAFFOLD_SCAN_DOCS, isBacklogSpecPath } =
+      await import('./scaffold-sentinels.mjs');
     const scaffoldSentinels = extractTemplateSentinels(path.join(SCRIPT_DIR, 'templates'));
     if (scaffoldSentinels.size > 0) {
       let claimsDone = false;
