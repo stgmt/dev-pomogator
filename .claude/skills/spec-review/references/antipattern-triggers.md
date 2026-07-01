@@ -2,10 +2,15 @@
 
 Default trigger list для категории #3 — используется когда target проект НЕ имеет `.claude/rules/antipatterns/*.md` каталога. Если каталог существует, его triggers имеют приоритет (read-and-merge).
 
+> **MCP-rails (FR-39):** Step 1 reads `.claude/rules/…` (NOT `.specs/`) → ordinary
+> Read/Glob. Step 2 scans the SPEC and MUST go through the read door — never a raw
+> `grep` of `.specs/`.
+
 ## Detection algorithm
 
 ```bash
 # Step 1: проверить существование antipatterns каталога в target проекте
+# (.claude/rules/ is NOT .specs/ → ordinary Read/Glob is fine here)
 if [ -d ".claude/rules/antipatterns" ]; then
   # Read each rule file и извлечь trigger patterns из ## Trigger / ## Антипаттерн / ## Запрещено секций
   for rule in .claude/rules/antipatterns/*.md; do
@@ -15,9 +20,12 @@ if [ -d ".claude/rules/antipatterns" ]; then
 else
   # Use default trigger list ниже
 fi
+```
 
-# Step 2: для каждого trigger pattern — grep по spec
-grep -nE "{pattern}" .specs/{slug}/{FR,DESIGN,TASKS,FILE_CHANGES}.md
+```
+# Step 2 (MCP-rails): scan the SPEC through the read door, not grep over .specs/
+#   for doc in FR.md DESIGN.md TASKS.md FILE_CHANGES.md:
+#     read_spec_doc({ spec: "{slug}", doc }) → match each {pattern} against the content
 ```
 
 ## Default trigger list

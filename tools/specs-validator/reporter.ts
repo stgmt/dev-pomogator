@@ -152,6 +152,23 @@ function buildReportContent(
   return lines.join('\n');
 }
 
+/** Batch-24 module-level accumulator (printWarnings is called per-spec). */
+const AGGREGATED_NOT_COVERED: MatchResult[] = [];
+const AGGREGATED_ORPHAN: MatchResult[] = [];
+
+/** Flush aggregated coverage gaps into a single summary line. */
+export function flushWarnings(): void {
+  const notCovered = AGGREGATED_NOT_COVERED.slice();
+  const orphan = AGGREGATED_ORPHAN.slice();
+  AGGREGATED_NOT_COVERED.length = 0;
+  AGGREGATED_ORPHAN.length = 0;
+  if (notCovered.length === 0 && orphan.length === 0) return;
+  console.log(
+    `[specs-validator] coverage gaps: ${notCovered.length} NOT_COVERED + ${orphan.length} ORPHAN ` +
+      `(SPECS_VALIDATOR_VERBOSE=1 for full list; details in ~/.dev-pomogator/logs/specs-validator.log)`,
+  );
+}
+
 /**
  * Print warnings to stdout for NOT_COVERED and ORPHAN tags
  */
@@ -164,19 +181,29 @@ export function printWarnings(results: MatchResult[]): void {
     return;
   }
 
+  // Batch-23 → Batch-24: aggregate across per-spec calls, flush at end.
+  // printWarnings is called PER SPEC by the hook, so the per-call slug
+  // count is always 0 or 1. Move to module-level accumulator so a SINGLE
+  // summary line surfaces at flushWarnings() time covering all specs.
+  const verbose = process.env.SPECS_VALIDATOR_VERBOSE === '1';
+  if (!verbose) {
+    AGGREGATED_NOT_COVERED.push(...notCovered);
+    AGGREGATED_ORPHAN.push(...orphan);
+    return;
+  }
   console.log('');
   console.log('[specs-validator] Обнаружены проблемы покрытия:');
 
   for (const result of notCovered) {
-    const source = result.mdSource 
-      ? `${result.mdSource.file}:${result.mdSource.line}` 
+    const source = result.mdSource
+      ? `${result.mdSource.file}:${result.mdSource.line}`
       : 'unknown';
     console.log(`  ⚠️  NOT_COVERED: ${result.tag} в ${source} не имеет Scenario`);
   }
 
   for (const result of orphan) {
-    const source = result.featureSource 
-      ? `${result.featureSource.file}:${result.featureSource.line}` 
+    const source = result.featureSource
+      ? `${result.featureSource.file}:${result.featureSource.line}`
       : 'unknown';
     console.log(`  ⚠️  ORPHAN: ${result.tag} в ${source} не имеет требования`);
   }

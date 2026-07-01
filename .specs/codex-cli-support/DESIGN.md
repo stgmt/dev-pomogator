@@ -34,7 +34,7 @@
 
 ## Где лежит реализация
 
-- App-код: `src/config/schema.ts`, `src/index.ts`, `src/installer/index.ts`, `src/installer/extensions.ts`, `src/installer/shared.ts`, `src/installer/memory.ts`, `src/updater/index.ts`, `src/updater/github.ts`
+- App-код: ~~`src/config/schema.ts`~~ (removed in v2 migration), ~~`src/index.ts`~~ (removed in v2 migration), ~~`src/installer/index.ts`~~ (removed in v2 migration), ~~`src/installer/extensions.ts`~~ (removed in v2 migration), `.claude/skills/skills-rules-optimizer/scripts/shared.ts`, ~~`src/installer/memory.ts`~~ (removed in v2 — no canonical replacement), ~~`src/updater/index.ts`~~ (removed in v2 migration), `src/updater/github.ts`
 - Wiring: `extensions/*/extension.json`, `extensions/specs-workflow/tools/mcp-setup/setup-mcp.py`, `install`, `install.ps1`, `install.sh`, `README.md`
 - Tests: `tests/e2e/`, `tests/features/`, `tests/fixtures/`
 
@@ -43,15 +43,10 @@
 - `src/installer/codex.ts`
 - `src/installer/codex-hook-dispatch.ts`
 - `src/installer/codex-support-matrix.ts`
-- `src/config/schema.ts`
-- `src/index.ts`
-- `src/installer/index.ts`
-- `src/installer/extensions.ts`
-- `src/installer/shared.ts`
-- `src/installer/memory.ts`
-- `src/updater/index.ts`
+- `.claude/skills/skills-rules-optimizer/scripts/shared.ts`
+- ~~`src/installer/memory.ts`~~ (removed in v2 — no canonical replacement)
 - `src/updater/github.ts`
-- `src/constants.ts`
+- `.claude/skills/pomogator-doctor/scripts/engine/constants.ts`
 - `install`
 - `install.ps1`
 - `install.sh`

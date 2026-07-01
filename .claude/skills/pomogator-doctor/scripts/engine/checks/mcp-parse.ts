@@ -14,7 +14,9 @@ export function readMcpConfigs(ctx: CheckContext): Map<string, McpServerConfig> 
   const result = new Map<string, McpServerConfig>();
   const paths = [
     path.join(ctx.projectRoot, '.mcp.json'),
-    path.join(ctx.homeDir, '.claude', 'mcp.json'),
+    // Canonical user-global MCP config is ~/.claude.json (NOT ~/.claude/mcp.json, which
+    // Claude Code never creates) — the latter made every globally-registered MCP invisible.
+    path.join(ctx.homeDir, '.claude.json'),
   ];
   for (const p of paths) {
     try {
@@ -29,6 +31,16 @@ export function readMcpConfigs(ctx: CheckContext): Map<string, McpServerConfig> 
     }
   }
   return result;
+}
+
+/**
+ * Live-but-config-invisible MCP servers: plugin-bundled tools (`mcp__plugin_<plugin>_<srv>__`),
+ * claude.ai connectors (`mcp__claude_ai_*__`) and the built-in `claude-in-chrome` are provided via
+ * plugin/connector manifests, NOT via .mcp.json / ~/.claude.json. readMcpConfigs cannot see them,
+ * so they must not be reported as "missing" (the C11 false over-report fix).
+ */
+export function isPluginProvidedMcp(name: string): boolean {
+  return name.startsWith('plugin_') || name.startsWith('claude_ai_') || name === 'claude-in-chrome';
 }
 
 export const mcpParseCheck: CheckDefinition = {
@@ -55,7 +67,9 @@ export const mcpParseCheck: CheckDefinition = {
       ];
     }
     const configured = readMcpConfigs(ctx);
-    const missing = Array.from(referenced).filter((n) => !configured.has(n));
+    const missing = Array.from(referenced).filter(
+      (n) => !configured.has(n) && !isPluginProvidedMcp(n),
+    );
     if (missing.length === 0) {
       return [
         {
@@ -79,7 +93,7 @@ export const mcpParseCheck: CheckDefinition = {
         severity: 'warning',
         reinstallable: false,
         message: `${missing.length} referenced MCP server(s) not configured: ${missing.join(', ')}`,
-        hint: `Add missing server(s) to .mcp.json or ~/.claude/mcp.json`,
+        hint: `Add missing server(s) to .mcp.json or ~/.claude.json`,
         durationMs: 0,
         details: { missing, referencedCount: referenced.size },
       },

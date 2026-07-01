@@ -14,7 +14,7 @@
 | [FR-8](FR.md#fr-8-unified-mode-display-feature8) | Unified mode display | [AC-7](ACCEPTANCE_CRITERIA.md#ac-7-fr-8-unified-mode-display-feature8) | @feature8 | PLUGIN008_04: Unified mode display | Draft |
 | [FR-9](FR.md#fr-9-маркер-источника-в-phase-3-feature9) | Маркер источника в Phase 3 | [AC-8](ACCEPTANCE_CRITERIA.md#ac-8-fr-9-маркер-источника-в-phase-3-feature9) | @feature9 | PLUGIN008_05: Source markers | Draft |
 | [FR-10](FR.md#fr-10-дедупликация-insights-с-session-findings-feature9) | Дедупликация insights с session | [AC-9](ACCEPTANCE_CRITERIA.md#ac-9-fr-10-дедупликация-при-совпадении-с-session-feature9) | @feature9 | PLUGIN008_05: Source markers | Draft |
-| -- | Пропуск Phase -0.5 в Cursor | [AC-10](ACCEPTANCE_CRITERIA.md#ac-10-fr-1fr-9-пропуск-phase--05-в-cursor-feature10) | @feature10 | (implicit -- absence test) | Draft |
+| -- | Пропуск Phase -0.5 в Cursor | [AC-10](ACCEPTANCE_CRITERIA.md#ac-10-fr-1fr-9-пропуск-phase-05-в-cursor-feature10) | @feature10 | (implicit -- absence test) | Draft |
 
 ## Functional Requirements
 
@@ -49,4 +49,4 @@
 - [AC-7 (FR-8): Unified mode display](ACCEPTANCE_CRITERIA.md#ac-7-fr-8-unified-mode-display-feature8) @feature8
 - [AC-8 (FR-9): Маркер источника в Phase 3](ACCEPTANCE_CRITERIA.md#ac-8-fr-9-маркер-источника-в-phase-3-feature9) @feature9
 - [AC-9 (FR-10): Дедупликация при совпадении с session](ACCEPTANCE_CRITERIA.md#ac-9-fr-10-дедупликация-при-совпадении-с-session-feature9) @feature9
-- [AC-10 (FR-1..FR-9): Пропуск Phase -0.5 в Cursor](ACCEPTANCE_CRITERIA.md#ac-10-fr-1fr-9-пропуск-phase--05-в-cursor-feature10) @feature10
+- [AC-10 (FR-1..FR-9): Пропуск Phase -0.5 в Cursor](ACCEPTANCE_CRITERIA.md#ac-10-fr-1fr-9-пропуск-phase-05-в-cursor-feature10) @feature10

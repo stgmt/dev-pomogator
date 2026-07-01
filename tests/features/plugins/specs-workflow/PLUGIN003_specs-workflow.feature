@@ -13,7 +13,7 @@ Feature: PLUGIN003 Specs Workflow Extension
     And file content should not be empty
     And SKILL.md frontmatter should contain "name: create-spec"
 
-  Scenario: Tools are installed
+  Scenario: specs-workflow tools are installed
     When dev-pomogator installs specs-workflow
     Then specs-generator folder should exist in PROJECT/.dev-pomogator/tools/
     And scaffold-spec.ts should exist

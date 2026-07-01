@@ -33,9 +33,9 @@ N/A — рефактор не требует новых сервисов / БД 
 
 ### 📋 `create-integration-test`
 
-> Создать `tests/e2e/specs-management-skill-migration.test.ts` — integration test driving FR-4/FR-6/FR-7/FR-11 verification через `runInstaller(updateMode=true)` + filesystem assertions.
+> Создать ~~`tests/e2e/specs-management-skill-migration.test.ts`~~ → skill `.claude/skills/create-spec/` + `tests/e2e/create-specs-bdd-enforcement.test.ts` — integration test driving FR-4/FR-6/FR-7/FR-11 verification через `runInstaller(updateMode=true)` + filesystem assertions.
 
-- **files:** `tests/e2e/specs-management-skill-migration.test.ts` *(create)*
+- **files:** ~~`tests/e2e/specs-management-skill-migration.test.ts`~~ → skill `.claude/skills/create-spec/` + `tests/e2e/create-specs-bdd-enforcement.test.ts` *(create)*
 - **changes:**
   - Импортировать `runInstaller`, `appPath`, `homePath`, `setupCleanState` из `tests/e2e/helpers.ts`
   - Реализовать SPECMGT001_06 (hard cutover removes 4 rules), SPECMGT001_07 (manifest empty), SPECMGT001_08 (CLAUDE.md cleaned), SPECMGT001_09 (hook produces identical findings — diff fixture sample-spec before/after), SPECMGT001_14 (user-overrides backup)
@@ -105,7 +105,7 @@ N/A — рефактор не требует новых сервисов / БД 
   - Step 0 Jira → ссылка на `jira-mode.md` (не дублировать)
   - Step 3 (USER_STORIES) → reference на existing `discovery-forms` skill
   - TOC если файл >100 строк
-- **refs:** [FR-1](FR.md#fr-1-skill-structure-with-progressive-disclosure-feature1), [FR-2](FR.md#fr-2-reference-file-naming-convention-phasen-m_descriptive-feature2), [FR-5](FR.md#fr-5-research-workflow-extracted-as-standalone-skill-and-invoked-by-create-spec-feature5)
+- **refs:** [FR-1](FR.md#fr-1-skill-structure-with-progressive-disclosure-feature1), [FR-2](FR.md#fr-2-reference-file-naming-convention-phasenmdescriptive-feature2), [FR-5](FR.md#fr-5-research-workflow-extracted-as-standalone-skill-and-invoked-by-create-spec-feature5)
 - **deps:** `write-create-spec-skill-md`
 - **_features:_** @feature1, @feature2, @feature5
 

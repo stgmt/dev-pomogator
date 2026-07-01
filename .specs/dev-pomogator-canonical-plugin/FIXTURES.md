@@ -125,6 +125,6 @@ F-7 (isolated ~/.claude) — independent, used in parallel
 
 - **Cleanup порядок**: tmp project и isolated home независимы — могут cleanup в любом порядке.
 - **Idempotency**: F-1..F-4 immutable static fixtures — copy не модифицирует source. F-5..F-8 unique per-scenario, нет shared state.
-- **Cross-platform**: F-3 marker block использует forward slashes (per existing personal-pomogator FR-1.13). Тесты на Windows/Linux/Mac должны давать одинаковый результат.
+- **Cross-platform**: F-3 marker block использует forward slashes (per existing [personal-pomogator](../personal-pomogator/FR.md) FR-1.13). Тесты на Windows/Linux/Mac должны давать одинаковый результат.
 - **Self-guard concern**: Тесты могут случайно зацепить dev-pomogator dogfood install в репо. Mitigation: F-7 isolated home + run тестов в Docker (existing `scripts/docker-test.sh`).
 - **Fixture maintenance**: фикстура v1 — статический снимок старого формата (`src/` удалён в этой миграции); обновлять F-1 manifest content только если меняется детект v1 в `tools/migrate-v1-to-v2/migrate-v1-to-v2.ts`.

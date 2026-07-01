@@ -15,7 +15,7 @@
 | Path | Action | Reason |
 |------|--------|--------|
 | `.claude/skills/skills-rules-optimizer/SKILL.md` | edit | Updated mission + workflow audit→detect→merge→ratchet→apply; envelope handling steps |
-| `.claude/skills/skills-rules-optimizer/scripts/shared.ts` | edit | Add `Asset` interface, `SkillAuditEntry`, `OverlapPair`, `parseFrontmatterFlexible()`; [FR-8](FR.md#fr-8-unified-scoring-engine-для-rules--skills) |
+| `.claude/skills/skills-rules-optimizer/scripts/shared.ts` | edit | Add `Asset` interface, `SkillAuditEntry`, `OverlapPair`, `parseFrontmatterFlexible()`; [FR-8](FR.md#fr-8-unified-scoring-engine-для-rules-skills) |
 | `.claude/skills/skills-rules-optimizer/scripts/audit-rules.ts` | rename | Extracted from current audit.ts (verbatim logic); [FR-9](FR.md#fr-9-backward-compatibility-для-rules-side) |
 | `.claude/skills/skills-rules-optimizer/scripts/audit.ts` | edit | Convert to dispatcher (route by `--dir` to rules or skills pipeline); [FR-1](FR.md#fr-1-audit-skills-directory), [FR-9](FR.md#fr-9-backward-compatibility-для-rules-side) |
 | `.claude/skills/skills-rules-optimizer/scripts/audit-skills.ts` | create | NEW: SKILL.md scanning, frontmatter validation, tools coverage; [FR-1](FR.md#fr-1-audit-skills-directory), [FR-2](FR.md#fr-2-frontmatter-validation-per-anthropic-spec), [FR-3](FR.md#fr-3-allowed-tools-coverage-check) |
@@ -39,7 +39,7 @@
 
 | Path | Action | Reason |
 |------|--------|--------|
-| `extensions/suggest-rules/extension.json` | edit | `skills.rules-optimizer` → `skills.skills-rules-optimizer` (path + name); `skillFiles.skills-rules-optimizer` (расширенный файл-список); bump version 1.9.0 → 1.10.0; [FR-9](FR.md#fr-9-backward-compatibility-для-rules-side) |
+| `.claude-plugin/plugin.json` | edit | Skill auto-registered via the `./.claude/skills` glob after the rules-optimizer → skills-rules-optimizer rename; manifest version bump (canonical v2 manifest; replaced `extensions/suggest-rules/extension.json`, removed after v2.0); [FR-9](FR.md#fr-9-backward-compatibility-для-rules-side) |
 | `.claude/commands/suggest-rules.md` | edit | Phase 6.2: `audit.ts --dir .claude/rules` (existing) + `audit.ts --dir .claude/skills` (NEW); aggregate report includes skill findings; [FR-9](FR.md#fr-9-backward-compatibility-для-rules-side) |
 | `CLAUDE.md` | edit | Replace `rules-optimizer` mentions с `skills-rules-optimizer` (если есть); per `claude-md-glossary` rule |
 

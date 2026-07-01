@@ -130,7 +130,7 @@
 **Given** target project где включён `claude-mem-health` extension
 **When** installer registers claude-mem MCP server
 
-**Then** `src/installer/memory.ts:registerClaudeMemMcp` SHALL:
+**Then** ~~`src/installer/memory.ts:registerClaudeMemMcp`~~ (removed in v2 — no canonical replacement) SHALL:
 - Писать ТОЛЬКО в `~/.claude.json` (HOME global)
 - НЕ писать в project `.mcp.json`
 - Поведение уже корректное, spec фиксирует как invariant (BDD test PERSO_84 защищает от регрессии)
@@ -149,3 +149,13 @@
 5. **Verification**: run `git status --porcelain` и assert 0 dev-pomogator paths, Read `.gitignore` и assert marker block absent, Read `.claude/settings.local.json` и assert empty / no dev-pomogator hooks
 
 **And** skill SHALL NOT execute destructive commands без user confirmation на каждом critical шаге.
+
+## UC-13: Auto-install MCP and configure auth @feature11
+
+**Given** a user with dev-pomogator installed and no Context7/Octocode entries in `~/.claude.json`
+**When** a new Claude Code session starts
+
+**Then** the `mcp-bootstrap` SessionStart hook SHALL:
+- Add `context7` + `octocode` to `~/.claude.json` top-level `mcpServers` (user scope, all projects), keyless
+- Emit a warning that Context7 needs an API key and Octocode needs GitHub auth, with instructions
+- On a later session, once the user pastes a key in chat and the agent (skill `configure-mcp`) writes it via `set-mcp-key`, AND Octocode has `gh auth`/token, the warning SHALL disappear — confirmed by a REAL check, not blindly

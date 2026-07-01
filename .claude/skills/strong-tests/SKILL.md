@@ -208,7 +208,7 @@ Primary (TS + Python — covered in detail below). Other stacks (Java / C# / Go 
 
 **Skill does NOT do heavy auto-detection.** For polyglot repositories (e.g., C# + Go like lm-saas), auto-detection picks one stack based on first match — обычно not what caller wants. Instead skill exposes **enumerated framework list** через `AskUserQuestion` pattern, calling-side (AI agent или user) picks.
 
-Established pattern in 9 dev-pomogator skills using `AskUserQuestion` для enumerated selection: `discovery-forms`, `hyperv-test-runner`, `docker-optimize`, `install-diagnostics`, `run-tests`, `fewer-permission-prompts`, `dev-pomogator-uninstall`, `simplify`, `dedup-tests`.
+Established pattern in 8 dev-pomogator skills using `AskUserQuestion` для enumerated selection: `discovery-forms`, `docker-optimize`, `install-diagnostics`, `run-tests`, `fewer-permission-prompts`, `dev-pomogator-uninstall`, `simplify`, `dedup-tests`.
 
 **Caller-side invocation pattern:**
 
@@ -498,6 +498,23 @@ Eight smells caught by Audit mode. Full BAD/GOOD + grep regexes in [`references/
 
 Severity score = 100 − Σ(severity_weight × count_i). Strength rating: ≥85 GOOD, 60-84 FAIR, <60 WEAK.
 
+### Canonical verdict (FR-35a producer handoff, P19-5)
+
+The honesty side-channel (`.dev-pomogator/.test-quality.json`) speaks a 3-value vocabulary —
+`STRONG | WEAK | FAKE-POSITIVE-RISK`. When this audit feeds the producer (run-tests Step 5b →
+`tools/spec-graph/test-quality-producer.ts`), map the internal rating to it **per test-id**:
+
+| Internal signal | Canonical verdict |
+|---|---|
+| Strength rating GOOD (≥85), no fake-positive smell | `STRONG` |
+| FAIR / WEAK (<85) | `WEAK` |
+| any fake-positive smell fired (#11 Trivial Input, #12 Self-Challenge, ALWAYS_TRUE, mock-only assert) | `FAKE-POSITIVE-RISK` |
+
+Emit a grades map `{ "<testId e.g. SPECGEN004_140>": "<canonical>" }` keyed by the test's
+DOMAIN_CODE_NN id (the same id the `.feature` scenario carries) so the producer can join
+test → scenario → task. A passing-but-fake test MUST read FAKE-POSITIVE-RISK, never STRONG —
+that is the whole point of the gate.
+
 ---
 
 ## 5. The 12-Point Self-Eval Checklist
@@ -526,7 +543,7 @@ Run as the final step in every mode. Emit Markdown table with PASS/FAIL/N_A + Ev
 
 ---
 
-## 6. Four execution modes
+## 6. Five execution modes
 
 ### 6.1 Greenfield mode (new code → strong tests)
 
@@ -843,6 +860,55 @@ Legitimate use cases:
 - Explicit deferred (`covered in follow-up spec spec-XXX`)
 
 **Detection scope** (v0.1.0): TypeScript + Python через ast-grep catalog. C# / Go / Rust — roadmap.
+
+---
+
+### 6.5 BDD scenario authoring mode (test-author — FR-TA1)
+
+Author a REAL `@featureN` cucumber scenario + step-def for a spec task that lacks its own
+(the `TASK_NO_OWN_SCENARIO` gap). The output MUST be a STRONG test — one that FAILS if the task's
+code is broken — never a fake-green scenario that always passes. Proven end-to-end in the W0
+skeleton (`SPECGEN004_185` / `gherkin-parser-impl`, tag-inheritance via the real `parseGherkin`).
+
+**Recipe — author → run → green → flip (never flip first):**
+
+1. **Identify**: the task's FR (→ the `@featureN` tag), the behaviour its Done-When describes, and
+   the implementing module (`get_trace` + grep the real code).
+2. **Drift-check FIRST**: is that behaviour already covered by an existing scenario that just isn't
+   cited? If yes → cite it in the task's Done-When (reconcile); do NOT author a duplicate. (Most v4
+   "missing scenario" tasks are already vitest-covered — see `audit-reports/v4-dogfood-retrospective.md`.)
+3. **Author the scenario** in `.specs/<slug>/<slug>.feature` — the ONLY file cucumber runs. NEVER
+   `tests/features/*.feature` (never executed → fake-green). Real `@featureN` tag (a tag LINE, not a
+   `#` comment), `Scenario: SPECGEN004_NN <behaviour>`, real Given/When/Then. Via the MCP door
+   (`apply_spec_change`) under enforce; the door's strength layer refuses stub/placeholder steps.
+4. **Author the step-def** in `tests/step_definitions/featureN_<desc>.ts`: import + call the REAL
+   engine module (NO mock, NO inline copy of production logic), assert on its real output. 1:1 with
+   the scenario. Apply §2 pre-write + §5 12-point self-eval (esp. #2 specificity, #9 no
+   parallel-impl, #12 self-challenge "this assertion fails if prod did X").
+5. **Run the FULL cucumber suite** (not `--tags`): one full run verifies the new scenario AND keeps
+   `.last-test-run.ndjson` complete. A tag-only run overwrites the ndjson and collapses coverage
+   (observed 185→3). Cucumber runs SERIALIZE — author one, full-run, flip; not a parallel batch.
+6. **Only after green**: flip the task's Done-When via the door to cite the green `SPECGEN004_NN`
+   (the door refuses a pre-green flip — `TASK_NO_OWN_SCENARIO` / honesty gate).
+7. **Mutation gutcheck (depth — not fake-green)**: break the task's impl → confirm the scenario goes
+   RED → restore. A scenario that stays green on broken code is FAKE-POSITIVE-RISK, not STRONG. The
+   eval harness (FR-TA3) automates this fails-on-broken check.
+8. **Mutation COVERAGE (breadth — the dogfood lesson)**: a gutcheck proves ONE scenario isn't
+   fake-green, but a set of TIGHT scenarios can still leave whole branches **NoCoverage** — unkillable
+   by ANY scenario because none reaches them. Run `npm run mutation:bdd` (skill `stryker-mutation`) and
+   read the NoCoverage list; author a scenario **per uncovered branch** (return-type taxonomy, language
+   variants, suppression, chains). Dogfood 2026-06-20: the `detect-invariant` `@feature7` set killed
+   ~98% of COVERED mutants yet had 139 NoCoverage (Map/Iterable return-types, Python `for-in`) — the
+   fix was ADD a scenario per branch, NOT tighten `.includes`→`.toEqual` (assertions were already
+   tight). **Strong BDD = tight assertions (depth) AND a scenario per branch (breadth).** Probe with a
+   quick in-process `scan()`-style call to see which branch a fixture reaches before authoring (see
+   `audit-reports/stryker-bdd-mutation-finding.md`).
+
+**Never**: fabricate a scenario for a genuinely-unbuilt task (flag it `_waived:` / honest status);
+author in `tests/features/`; flip before green; copy production logic into the step-def.
+
+The `test-author` subagent (`.claude/agents/test-author.md`, FR-TA2) runs this recipe in a task's
+scope; spec-generator-v4 auto-invokes it on a `TASK_NO_OWN_SCENARIO` finding (FR-TA4).
 
 ---
 

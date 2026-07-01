@@ -7,7 +7,7 @@
 - [FR-3: Test Discovery](FR.md#fr-3-test-discovery-feature3)
 - [FR-4: State Persistence](FR.md#fr-4-state-persistence-feature4)
 - [FR-5: Configurable Error Patterns](FR.md#fr-5-configurable-error-patterns-feature5)
-- [FR-6: Auto-Run & Keybinding Launch](FR.md#fr-6-auto-run--keybinding-launch-feature6)
+- [FR-6: Auto-Run & Keybinding Launch](FR.md#fr-6-auto-run-keybinding-launch-feature6)
 - [FR-7: Screenshot/SVG Export](FR.md#fr-7-screenshotsvg-export-feature7)
 
 ## Компоненты

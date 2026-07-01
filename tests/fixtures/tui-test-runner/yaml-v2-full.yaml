@@ -15,8 +15,8 @@ duration_ms: 12000
 error_message: ""
 log_file: ".dev-pomogator/.test-status/test.abc12345.log"
 suites:
-  - name: "auth.test.ts"
-    file: "tests/auth.test.ts"
+  - name: "auth.steps.ts"
+    file: "tests/auth.steps.ts"
     status: "running"
     passed: 3
     failed: 1
@@ -31,7 +31,7 @@ suites:
         status: "failed"
         duration_ms: 45
         error: "AssertionError: Expected 401, received 200"
-        stack: "at Object.<anonymous> (tests/auth.test.ts:42:5)"
+        stack: "at Object.<anonymous> (tests/auth.steps.ts:42:5)"
       - name: "should refresh token"
         status: "passed"
         duration_ms: 200

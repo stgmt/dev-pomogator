@@ -18,14 +18,14 @@
 > Создать манифест расширения и core module с конфигом, state, LLM, utils.
 
 - [ ] Создать `extensions/prompt-suggest/extension.json` — platforms=["claude"], hooks (Stop + UserPromptSubmit), toolFiles @feature1 @feature2
-  _Requirements: [FR-1](FR.md#fr-1-stop-hook--генерация-подсказки), [FR-2](FR.md#fr-2-submit-hook--инжекция-подсказки-через-)_
+  _Requirements: [FR-1](FR.md#fr-1-stop-hook-генерация-подсказки-feature1), [FR-2](FR.md#fr-2-submit-hook-инжекция-подсказки-через-feature2)_
 
 - [ ] Создать `extensions/prompt-suggest/tools/prompt-suggest/prompt_suggest_core.ts` — типы, loadConfig, state CRUD (atomic write), JSONL парсер, callSuggestionLLM, redactSecrets, log @feature1 @feature3 @feature5
-  _Requirements: [FR-1](FR.md#fr-1-stop-hook--генерация-подсказки), [FR-3](FR.md#fr-3-auto-detect-api), [FR-4](FR.md#fr-4-ttl-для-state-file), [FR-5](FR.md#fr-5-fail-open), [FR-7](FR.md#fr-7-silence--пустой-ответ-llm)_
+  _Requirements: [FR-1](FR.md#fr-1-stop-hook-генерация-подсказки-feature1), [FR-3](FR.md#fr-3-auto-detect-api-feature3), [FR-4](FR.md#fr-4-ttl-для-state-file-feature4), [FR-5](FR.md#fr-5-fail-open-feature5), [FR-7](FR.md#fr-7-silence-пустой-ответ-llm-feature7)_
   _Leverage: `extensions/auto-commit/tools/auto-commit/auto_commit_stop.ts` (redactSecrets), `extensions/auto-commit/tools/auto-commit/auto_commit_core.ts` (atomic write)_
 
 - [ ] Создать `extensions/prompt-suggest/tools/prompt-suggest/prompt_suggest_prompt.md` — адаптация v2 промпта @feature6
-  _Requirements: [FR-6](FR.md#fr-6-системный-промпт-v2)_
+  _Requirements: [FR-6](FR.md#fr-6-системный-промпт-v2-feature6)_
   _Leverage: [Claude Code v2 prompt](https://github.com/Piebald-AI/claude-code-system-prompts/blob/main/system-prompts/agent-prompt-prompt-suggestion-generator-v2.md)_
 
 - [ ] Verify: extension.json валиден, core.ts компилируется, prompt.md соответствует v2
@@ -35,7 +35,7 @@
 > Реализовать Stop hook: stdin → parse → LLM → state + systemMessage.
 
 - [ ] Создать `extensions/prompt-suggest/tools/prompt-suggest/prompt_suggest_stop.ts` — Stop hook с полным flow @feature1 @feature7 @feature8 @feature9
-  _Requirements: [FR-1](FR.md#fr-1-stop-hook--генерация-подсказки), [FR-7](FR.md#fr-7-silence--пустой-ответ-llm), [FR-8](FR.md#fr-8-stop_hook_active-guard), [FR-9](FR.md#fr-9-systemmessage-с--emoji)_
+  _Requirements: [FR-1](FR.md#fr-1-stop-hook-генерация-подсказки-feature1), [FR-7](FR.md#fr-7-silence-пустой-ответ-llm-feature7), [FR-8](FR.md#fr-8-stophookactive-guard-feature8), [FR-9](FR.md#fr-9-systemmessage-с-emoji-feature9)_
   _Leverage: `extensions/auto-simplify/tools/auto-simplify/simplify_stop.ts` (stdin pattern, fail-open)_
 
 - [ ] Verify: сценарии @feature1, @feature7, @feature8, @feature9 — ручная проверка через Claude Code
@@ -45,7 +45,7 @@
 > Реализовать Submit hook: "+" → additionalContext.
 
 - [ ] Создать `extensions/prompt-suggest/tools/prompt-suggest/prompt_suggest_submit.ts` — Submit hook с TTL check @feature2 @feature4
-  _Requirements: [FR-2](FR.md#fr-2-submit-hook--инжекция-подсказки-через-), [FR-4](FR.md#fr-4-ttl-для-state-file)_
+  _Requirements: [FR-2](FR.md#fr-2-submit-hook-инжекция-подсказки-через-feature2), [FR-4](FR.md#fr-4-ttl-для-state-file-feature4)_
   _Leverage: `extensions/suggest-rules/tools/learnings-capture/capture.ts` (UserPromptSubmit pattern)_
 
 - [ ] Verify: сценарии @feature2, @feature4 — ручная проверка через Claude Code

@@ -5,6 +5,41 @@
 
 set -o pipefail
 
+# ── Docker socket fix (FR-8, 2026-06-25): in this WSL the unix socket /run/docker.sock is created under
+# a STALE group (GID 1001 ≠ the docker group 989) on every boot → "permission denied" each session. The
+# daemon ALSO listens on tcp://127.0.0.1:2375 (localhost-only, already enabled in docker.service ExecStart)
+# — that transport has NO socket-group dependency and needs NO sudo. Default to it; respect an explicit
+# DOCKER_HOST if the caller set one. This makes the suite run without ever touching socket perms.
+export DOCKER_HOST="${DOCKER_HOST:-tcp://127.0.0.1:2375}"
+
+# ── WSL shim: docker живёт только внутри WSL (нет Docker Desktop на хосте) ──
+# Если docker-демон недостижим с хоста, но wsl.exe предлагает рабочий — пере-
+# запускаем ЭТОТ ЖЕ скрипт внутри WSL из того же репо через /mnt/<диск>.
+# Относительные bind-mounts compose (./.dev-pomogator/.docker-status, ./reports)
+# резолвятся против /mnt/c/... и пишут СКВОЗЬ маунт в Windows-worktree —
+# statusline-YAML и persistent log оказываются в тех же файлах, /run-tests и
+# TUI не замечают разницы. Guard-переменная исключает рекурсию; WSLENV
+# пробрасывает session/skip-build внутрь WSL.
+if [ -z "${DEV_POMOGATOR_WSL_SHIM:-}" ] && ! docker info >/dev/null 2>&1; then
+  # Reachability check via the TCP endpoint (the unix socket fails on a group mismatch — see above).
+  if command -v wsl.exe >/dev/null 2>&1 && wsl.exe -e bash -lc "DOCKER_HOST='${DOCKER_HOST}' docker info" >/dev/null 2>&1; then
+    # --cd принимает ТОЛЬКО Windows-форму пути (C:/...); Linux-форма (/mnt/c/...)
+    # даёт Wsl/ERROR_PATH_NOT_FOUND. pwd -W в Git Bash выдаёт ровно C:/...
+    WIN_PWD=$(pwd -W 2>/dev/null || pwd)
+    case "$WIN_PWD" in
+      [A-Za-z]:/*)
+        echo "[docker-test] docker недоступен на хосте — выполняю сьют внутри WSL (--cd $WIN_PWD)"
+        export DEV_POMOGATOR_WSL_SHIM=1
+        export WSLENV="${WSLENV:+$WSLENV:}DEV_POMOGATOR_WSL_SHIM/u:DOCKER_HOST/u:TEST_STATUSLINE_SESSION/u:SKIP_BUILD/u:SKIP_BUILD_CHECK/u"
+        exec wsl.exe --cd "$WIN_PWD" -e bash scripts/docker-test.sh "$@"
+        ;;
+      *)
+        echo "[docker-test] WARN: WSL docker найден, но pwd -W дал не-Windows путь '$WIN_PWD' — продолжаю на хосте (упадёт ниже с внятной ошибкой)"
+        ;;
+    esac
+  fi
+fi
+
 # Persistent log: defense-in-depth against silent output loss in long-running
 # background Bash tasks (see .specs/fix-bg-output-loss/RESEARCH.md). The log
 # file survives harness capture drops, docker compose -T buffering, and
@@ -36,9 +71,22 @@ cleanup() {
 trap cleanup EXIT INT TERM
 
 # Pre-flight: kill orphaned devpom-test containers from previous runs
-# (exec replaces bash → old trap is lost → containers linger)
+# (exec replaces bash → old trap is lost → containers linger).
+# ONLY genuine zombies (started >30 min ago — full suite takes ~10): a blanket
+# kill of every devpom-test-* murders a LIVE parallel session's run mid-flight
+# («Error waiting for container: Canceled», наблюдалось 2026-06-06 при двух
+# одновременных сессиях на одной машине).
+ORPHAN_AGE_SECS=1800
+NOW_EPOCH=$(date +%s)
 for cid in $(docker ps -q --filter "name=devpom-test-" 2>/dev/null); do
-  echo "[docker-test] Killing orphaned container: $(docker inspect --format '{{.Name}}' "$cid" 2>/dev/null)"
+  started=$(docker inspect --format '{{.State.StartedAt}}' "$cid" 2>/dev/null)
+  started_epoch=$(date -d "$started" +%s 2>/dev/null || echo "$NOW_EPOCH")
+  age=$((NOW_EPOCH - started_epoch))
+  if [ "$age" -lt "$ORPHAN_AGE_SECS" ]; then
+    echo "[docker-test] Skipping live container ($(docker inspect --format '{{.Name}}' "$cid" 2>/dev/null), age ${age}s < ${ORPHAN_AGE_SECS}s) — likely a parallel session's run"
+    continue
+  fi
+  echo "[docker-test] Killing orphaned container: $(docker inspect --format '{{.Name}}' "$cid" 2>/dev/null) (age ${age}s)"
   docker stop "$cid" 2>/dev/null || true
   docker rm "$cid" 2>/dev/null || true
 done

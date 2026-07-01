@@ -1,6 +1,8 @@
 # Use Cases
 
-## UC-1: Agent traces requirement to test result end-to-end (happy path)
+## UC-1
+
+**Agent traces requirement to test result end-to-end (happy path)**
 
 AI agent работает над feature, нужно понять состояние FR-001 — спека ↔ тесты ↔ результат.
 
@@ -13,7 +15,9 @@ AI agent работает над feature, нужно понять состоян
 
 ---
 
-## UC-2: Developer edits FR, gets immediate conformance feedback
+## UC-2
+
+**Developer edits FR, gets immediate conformance feedback**
 
 Developer modifies `### FR-001: Login` heading to clarify wording.
 
@@ -28,7 +32,9 @@ Developer modifies `### FR-001: Login` heading to clarify wording.
 
 ---
 
-## UC-3: Developer migrates dev-pomogator from vitest pseudo-BDD to cucumber-js (Phase 0)
+## UC-3
+
+**Developer migrates dev-pomogator from vitest pseudo-BDD to cucumber-js (Phase 0)**
 
 dev-pomogator team migrates own BDD tests as Phase 0 prerequisite for v4.
 
@@ -44,7 +50,9 @@ dev-pomogator team migrates own BDD tests as Phase 0 prerequisite for v4.
 
 ---
 
-## UC-4: Existing v3 user upgrades to v4 (Phase 5 migration)
+## UC-4
+
+**Existing v3 user upgrades to v4 (Phase 5 migration)**
 
 Team has 25 specs in v3 format, wants to use v4 graph features.
 
@@ -61,7 +69,9 @@ Team has 25 specs in v3 format, wants to use v4 graph features.
 
 ---
 
-## UC-5: Maintainer designs new major feature using architecture-research-workflow (Phase 6)
+## UC-5
+
+**Maintainer designs new major feature using architecture-research-workflow (Phase 6)**
 
 Maxim wants to design v5 spec-generator features. Invokes new skill standalone.
 
@@ -81,7 +91,9 @@ Maxim wants to design v5 spec-generator features. Invokes new skill standalone.
 
 ---
 
-## UC-6: Developer adds untagged Scenario during red-phase TDD
+## UC-6
+
+**Developer adds untagged Scenario during red-phase TDD**
 
 Developer writes failing test FIRST, before defining FR.
 
@@ -97,7 +109,9 @@ Developer writes failing test FIRST, before defining FR.
 
 ---
 
-## UC-7: Two Claude Code sessions on same project (Phase 4)
+## UC-7
+
+**Two Claude Code sessions on same project (Phase 4)**
 
 Developer opens two terminals: one for feature work, one for debugging session.
 
@@ -113,7 +127,9 @@ Developer opens two terminals: one for feature work, one for debugging session.
 
 ---
 
-## UC-8: Developer in devcontainer hits bind-mount file-watch issue
+## UC-8
+
+**Developer in devcontainer hits bind-mount file-watch issue**
 
 Developer uses VS Code Remote-Containers on Docker Desktop Windows.
 
@@ -129,7 +145,9 @@ Developer uses VS Code Remote-Containers on Docker Desktop Windows.
 
 ---
 
-## UC-9: Agent attempts to write malformed spec (HARD-block edge case)
+## UC-9
+
+**Agent attempts to write malformed spec (HARD-block edge case)**
 
 Agent generates new FR but introduces duplicate ID by accident.
 
@@ -144,7 +162,9 @@ Agent generates new FR but introduces duplicate ID by accident.
 
 ---
 
-## UC-10: User runs cucumber-js test, agent uses fresh NDJSON
+## UC-10
+
+**User runs cucumber-js test, agent uses fresh NDJSON**
 
 Developer triggers test run, then agent investigates.
 
@@ -158,7 +178,9 @@ Developer triggers test run, then agent investigates.
 
 ---
 
-## UC-17: Lightweight cross-spec reconcile during Phase 2 / Phase 3 of create-spec
+## UC-17
+
+**Lightweight cross-spec reconcile during Phase 2 / Phase 3 of create-spec**
 
 Spec author runs `create-spec` workflow on a new feature; create-spec invokes lightweight reconcile twice (at STOP #2 gate and STOP #3 gate).
 
@@ -174,7 +196,9 @@ Spec author runs `create-spec` workflow on a new feature; create-spec invokes li
 
 ---
 
-## UC-18: Heavyweight reconcile during Phase 3+ Audit
+## UC-18
+
+**Heavyweight reconcile during Phase 3+ Audit**
 
 After STOP #3 (Finalization confirmed), Phase 3+ Audit dispatches 9 categories including the new CROSS_SPEC_CONSISTENCY category.
 
@@ -191,7 +215,9 @@ After STOP #3 (Finalization confirmed), Phase 3+ Audit dispatches 9 categories i
 
 ---
 
-## UC-19: Resolve loop on user demand
+## UC-19
+
+**Resolve loop on user demand**
 
 Spec author has reconcile YAML; invokes `/cross-spec-resolve` to walk through findings interactively.
 
@@ -207,7 +233,9 @@ Spec author has reconcile YAML; invokes `/cross-spec-resolve` to walk through fi
 
 ---
 
-## UC-20: Architectural fork resolution (Path A/B/C)
+## UC-20
+
+**Architectural fork resolution (Path A/B/C)**
 
 Resolve encounters an `impl-drift/architectural-decision-vs-reality` finding (spec claims architecture X, code shape shows Y).
 
@@ -224,7 +252,9 @@ Resolve encounters an `impl-drift/architectural-decision-vs-reality` finding (sp
 
 ---
 
-## UC-21: Cross-spec stale-state correction via foreign-spec edit
+## UC-21
+
+**Cross-spec stale-state correction via foreign-spec edit**
 
 Reconcile detects `cross-spec/stale-spec-outstanding-but-done` (spec A's README/CHANGELOG claims a gap that is actually closed by code in another sprint).
 

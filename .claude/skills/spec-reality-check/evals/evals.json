@@ -415,6 +415,20 @@
       },
       "expected_hook_outcome": "permit",
       "category": "hook-parsed"
+    },
+    {
+      "id": 32,
+      "name": "v2-fc-v1-layout-drift-isolated",
+      "prompt": "Isolated fc-v1-layout-drift fixture: edit row on src/old_v1_module.ts (absent), repo has a .claude-plugin/plugin.json marker + no src/ dir → canonical-plugin v1->v2 layout drift. Expect EXACTLY 1 ERROR FC_V1_LAYOUT_DRIFT, total=1. Must NOT be generic FC_EDIT_MISSING (reserved for non-plugin repos / present src/ — see v2-code-drift-no-git).",
+      "fixture": "tests/fixtures/spec-reality-check/v2/fc-v1-layout-drift",
+      "setup": { "create_files": [".claude-plugin/plugin.json"], "git_init_empty": true },
+      "expected_total": 1,
+      "expected_error": 1,
+      "expected_warning": 0,
+      "expected_info": 0,
+      "expected_codes": ["FC_V1_LAYOUT_DRIFT"],
+      "forbidden_codes": ["FC_EDIT_MISSING", "FC_CREATE_EXISTS", "FC_DELETE_MISSING", "CODE_DRIFT_SKIPPED", "NARRATIVE_PATH_MISSING", "TASKS_FC_CONSISTENCY"],
+      "category": "fc-checks-isolated"
     }
   ]
 }

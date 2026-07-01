@@ -85,6 +85,42 @@ function buildNdjsonStream(opts: {
   return lines.join('\n');
 }
 
+describe('parseNdjson — real cucumber output (regression: worst-of-steps + Windows uris)', () => {
+  // The other fixtures inject `testStepResult.status` into `testCaseFinished` —
+  // a field real cucumber-js does NOT emit. These build the REAL shape: the
+  // status lives only in per-step `testStepFinished`, and `testCaseFinished`
+  // carries no status. Before the fix these scenarios all reported PASSED.
+  const realStream = (uri: string, scenarioLine: number, stepStatuses: string[]): string => {
+    const L: string[] = [];
+    L.push(env({ gherkinDocument: { uri, feature: { children: [{ scenario: { id: 'sc', location: { line: scenarioLine } } }] } } }));
+    L.push(env({ pickle: { id: 'pk', uri, name: 'X', tags: [], astNodeIds: ['sc'], steps: stepStatuses.map((_, i) => ({ id: `ps${i}`, text: `step ${i}` })) } }));
+    L.push(env({ testCase: { id: 'tc', pickleId: 'pk', testSteps: stepStatuses.map((_, i) => ({ id: `ts${i}`, pickleStepId: `ps${i}` })) } }));
+    L.push(env({ testCaseStarted: { id: 'tcs', testCaseId: 'tc', timestamp: { seconds: 1, nanos: 0 } } }));
+    for (let i = 0; i < stepStatuses.length; i++) {
+      L.push(env({ testStepFinished: { testCaseStartedId: 'tcs', testStepId: `ts${i}`, testStepResult: { status: stepStatuses[i] } } }));
+    }
+    L.push(env({ testCaseFinished: { testCaseStartedId: 'tcs', timestamp: { seconds: 2, nanos: 0 } } }));
+    return L.join('\n');
+  };
+
+  it('an UNDEFINED step makes the scenario UNDEFINED, not PASSED', () => {
+    const patch = parseNdjson(realStream('t.feature', 7, ['PASSED', 'UNDEFINED', 'SKIPPED']));
+    expect(patch.byLocation.get('t.feature:7')!.lastResult).toBe('UNDEFINED');
+  });
+  it('a PENDING step makes the scenario PENDING, not PASSED', () => {
+    const patch = parseNdjson(realStream('t.feature', 9, ['PASSED', 'PENDING', 'SKIPPED']));
+    expect(patch.byLocation.get('t.feature:9')!.lastResult).toBe('PENDING');
+  });
+  it('all-PASSED steps make the scenario PASSED', () => {
+    const patch = parseNdjson(realStream('t.feature', 11, ['PASSED', 'PASSED']));
+    expect(patch.byLocation.get('t.feature:11')!.lastResult).toBe('PASSED');
+  });
+  it('normalises Windows backslash uris to a POSIX location key', () => {
+    const patch = parseNdjson(realStream('.specs\\foo\\bar.feature', 3, ['UNDEFINED']));
+    expect(patch.byLocation.has('.specs/foo/bar.feature:3')).toBe(true);
+  });
+});
+
 describe('parseNdjson — result extraction from canonical envelopes', () => {
   it('returns PASSED with duration for a clean run', () => {
     const stream = buildNdjsonStream({
@@ -162,6 +198,82 @@ describe('parseNdjson — result extraction from canonical envelopes', () => {
     const patch = parseNdjson('');
     expect(patch.byLocation.size).toBe(0);
   });
+
+  it('worst-of-merge on key collision: a later PASSED must NOT hide an earlier FAILED', () => {
+    // Two Scenario-Outline example rows resolve to the SAME scenario line (s1→5).
+    // pk1 FAILED, pk2 PASSED, pk2 finishes LAST. A plain last-writer set would let the
+    // PASSED overwrite the FAILED (false-green); worst-of-merge keeps FAILED.
+    const stream = [
+      { gherkinDocument: { uri: 'f.feature', feature: { children: [{ scenario: { id: 's1', location: { line: 5 } } }] } } },
+      { pickle: { id: 'pk1', uri: 'f.feature', astNodeIds: ['s1'], steps: [{ id: 'ps1', text: 'a step' }] } },
+      { pickle: { id: 'pk2', uri: 'f.feature', astNodeIds: ['s1'], steps: [{ id: 'ps2', text: 'a step' }] } },
+      { testCase: { id: 'tc1', pickleId: 'pk1', testSteps: [{ id: 'ts1', pickleStepId: 'ps1' }] } },
+      { testCase: { id: 'tc2', pickleId: 'pk2', testSteps: [{ id: 'ts2', pickleStepId: 'ps2' }] } },
+      { testCaseStarted: { id: 'tcs1', testCaseId: 'tc1' } },
+      { testStepFinished: { testCaseStartedId: 'tcs1', testStepId: 'ts1', testStepResult: { status: 'FAILED', message: 'boom' } } },
+      { testCaseFinished: { testCaseStartedId: 'tcs1' } },
+      { testCaseStarted: { id: 'tcs2', testCaseId: 'tc2' } },
+      { testStepFinished: { testCaseStartedId: 'tcs2', testStepId: 'ts2', testStepResult: { status: 'PASSED' } } },
+      { testCaseFinished: { testCaseStartedId: 'tcs2' } },
+    ].map((o) => JSON.stringify(o)).join('\n');
+    const patch = parseNdjson(stream);
+    const fields = patch.byLocation.get('f.feature:5');
+    expect(fields?.lastResult).toBe('FAILED');
+    expect(fields?.failingStep?.errorMessage).toBe('boom');
+  });
+
+  it('a testCaseFinished explicit status may RAISE but must not HIDE a FAILED step', () => {
+    // An explicit PASSED on testCaseFinished must not overwrite the worst-of-steps
+    // FAILED (false-green). Explicit can only promote severity, never lower it.
+    const stream = [
+      { gherkinDocument: { uri: 'f.feature', feature: { children: [{ scenario: { id: 's1', location: { line: 7 } } }] } } },
+      { pickle: { id: 'pk1', uri: 'f.feature', astNodeIds: ['s1'], steps: [{ id: 'ps1', text: 'a' }] } },
+      { testCase: { id: 'tc1', pickleId: 'pk1', testSteps: [{ id: 'ts1', pickleStepId: 'ps1' }] } },
+      { testCaseStarted: { id: 'tcs1', testCaseId: 'tc1' } },
+      { testStepFinished: { testCaseStartedId: 'tcs1', testStepId: 'ts1', testStepResult: { status: 'FAILED', message: 'x' } } },
+      { testCaseFinished: { testCaseStartedId: 'tcs1', testStepResult: { status: 'PASSED' } } },
+    ].map((o) => JSON.stringify(o)).join('\n');
+    expect(parseNdjson(stream).byLocation.get('f.feature:7')?.lastResult).toBe('FAILED');
+  });
+
+  // Property-style (manual generator, no fast-check dep): a scenario's result is the
+  // WORST-severity step status — never a lower one (the false-green class). Severity:
+  // FAILED>AMBIGUOUS>UNDEFINED>PENDING>SKIPPED>PASSED.
+  const SEV = ['PASSED', 'SKIPPED', 'PENDING', 'UNDEFINED', 'AMBIGUOUS', 'FAILED'];
+  function streamForSteps(statuses: string[]): string {
+    return [
+      { gherkinDocument: { uri: 'f.feature', feature: { children: [{ scenario: { id: 's1', location: { line: 3 } } }] } } },
+      { pickle: { id: 'pk1', uri: 'f.feature', astNodeIds: ['s1'], steps: statuses.map((_, i) => ({ id: 'ps' + i, text: 's' + i })) } },
+      { testCase: { id: 'tc1', pickleId: 'pk1', testSteps: statuses.map((_, i) => ({ id: 'ts' + i, pickleStepId: 'ps' + i })) } },
+      { testCaseStarted: { id: 'tcs1', testCaseId: 'tc1' } },
+      ...statuses.map((s, i) => ({ testStepFinished: { testCaseStartedId: 'tcs1', testStepId: 'ts' + i, testStepResult: { status: s } } })),
+      { testCaseFinished: { testCaseStartedId: 'tcs1' } },
+    ].map((o) => JSON.stringify(o)).join('\n');
+  }
+
+  it('INVARIANT worst-of-steps: scenario result = max-severity step, over many step combos + orders', () => {
+    // Cover every ordered pair + a few triples; the order must NOT matter.
+    const combos: string[][] = [];
+    for (const a of SEV) for (const b of SEV) combos.push([a, b]);
+    combos.push(['PASSED', 'FAILED', 'PASSED'], ['SKIPPED', 'PASSED', 'PENDING'], ['PASSED', 'UNDEFINED', 'PASSED', 'PASSED']);
+    for (const steps of combos) {
+      const want = steps.reduce((w, s) => (SEV.indexOf(s) > SEV.indexOf(w) ? s : w), 'PASSED');
+      const got = parseNdjson(streamForSteps(steps)).byLocation.get('f.feature:3')?.lastResult;
+      expect(got, `steps=[${steps.join(',')}] → worst should be ${want}, got ${got}`).toBe(want);
+    }
+  });
+
+  it('clamps a negative duration (clock skew: finish timestamp before start) to 0', () => {
+    const stream = [
+      { gherkinDocument: { uri: 'f.feature', feature: { children: [{ scenario: { id: 's1', location: { line: 9 } } }] } } },
+      { pickle: { id: 'pk1', uri: 'f.feature', astNodeIds: ['s1'], steps: [{ id: 'ps1', text: 'a' }] } },
+      { testCase: { id: 'tc1', pickleId: 'pk1', testSteps: [{ id: 'ts1', pickleStepId: 'ps1' }] } },
+      { testCaseStarted: { id: 'tcs1', testCaseId: 'tc1', timestamp: { seconds: 10, nanos: 0 } } },
+      { testStepFinished: { testCaseStartedId: 'tcs1', testStepId: 'ts1', testStepResult: { status: 'PASSED' } } },
+      { testCaseFinished: { testCaseStartedId: 'tcs1', timestamp: { seconds: 9, nanos: 0 } } },
+    ].map((o) => JSON.stringify(o)).join('\n');
+    expect(parseNdjson(stream).byLocation.get('f.feature:9')?.durationMs).toBe(0);
+  });
 });
 
 describe('applyTestResults — mutates only matching scenarios', () => {
@@ -204,5 +316,42 @@ describe('applyTestResults — mutates only matching scenarios', () => {
     const patch = parseNdjson(stream);
     const applied = applyTestResults([scen('SCEN-a', 'a.feature', 3)], patch);
     expect(applied).toBe(0);
+  });
+
+  it('matches a relative-keyed scenario against an ABSOLUTE file:// uri (suffix fallback)', () => {
+    // Some cucumber invocations emit absolute uris; the graph keys scenarios relative.
+    // Without the suffix fallback the exact lookup misses → every result is dropped →
+    // scenarios falsely read not_run (the windows-path incident class).
+    const s = scen('SCEN-a', 'dir/a.feature', 3);
+    const stream = buildNdjsonStream({
+      uri: 'file:///D:/repo/dir/a.feature',
+      scenarioId: 'sc-1',
+      scenarioLine: 3,
+      pickleId: 'pk-1',
+      pickleName: 'A',
+      testCaseId: 'tc-1',
+      testCaseStartedId: 'tcs-1',
+      status: 'PASSED',
+    });
+    const applied = applyTestResults([s], parseNdjson(stream));
+    expect(applied).toBe(1);
+    expect(s.lastResult).toBe('PASSED');
+  });
+
+  it('does NOT suffix-match a different file with a colliding tail', () => {
+    // `/notdir/a.feature` must not satisfy a scenario keyed `dir/a.feature` (the
+    // `/`-anchored suffix prevents `…notdir/a.feature` false matches).
+    const s = scen('SCEN-a', 'dir/a.feature', 3);
+    const stream = buildNdjsonStream({
+      uri: 'file:///D:/repo/xdir/a.feature',
+      scenarioId: 'sc-1',
+      scenarioLine: 3,
+      pickleId: 'pk-1',
+      pickleName: 'A',
+      testCaseId: 'tc-1',
+      testCaseStartedId: 'tcs-1',
+      status: 'PASSED',
+    });
+    expect(applyTestResults([s], parseNdjson(stream))).toBe(0);
   });
 });

@@ -2,7 +2,7 @@
 
 ## AC-1 (FR-1): CompactBar рендеринг @feature1
 
-**Требование:** [FR-1](FR.md#fr-1-compactbar-виджет)
+**Требование:** [FR-1](FR.md#fr-1-compactbar-виджет-feature1)
 
 WHEN TUI is in compact mode AND YAML status file exists with state "running" THEN CompactBar SHALL display progress line with framework name, passed/failed/skipped counts, progress bar percentage, and elapsed duration.
 
@@ -12,7 +12,7 @@ WHEN TUI is in compact mode AND YAML status file is corrupted THEN CompactBar SH
 
 ## AC-2 (FR-2): Toggle compact/full @feature2
 
-**Требование:** [FR-2](FR.md#fr-2-toggle-compactfull-mode)
+**Требование:** [FR-2](FR.md#fr-2-toggle-compactfull-mode-feature2)
 
 WHEN user presses `M` key THEN TUI SHALL toggle between compact and full mode.
 
@@ -22,7 +22,7 @@ WHEN TUI switches from compact to full THEN TabbedContent SHALL be visible AND C
 
 ## AC-3 (FR-3): Stop tests @feature3
 
-**Требование:** [FR-3](FR.md#fr-3-stop-tests)
+**Требование:** [FR-3](FR.md#fr-3-stop-tests-feature3)
 
 WHEN user presses `X` AND YAML status file contains valid PID AND process is running THEN TUI SHALL send termination signal to that PID.
 
@@ -32,7 +32,7 @@ IF process with PID is already dead THEN TUI SHALL update status to "stopped" wi
 
 ## AC-4 (FR-4): Auto-compact @feature4
 
-**Требование:** [FR-4](FR.md#fr-4-auto-compact-при-малом-terminal-height)
+**Требование:** [FR-4](FR.md#fr-4-auto-compact-при-малом-terminal-height-feature4)
 
 WHEN terminal height drops below 15 rows AND TUI is in full mode THEN TUI SHALL automatically switch to compact mode.
 
@@ -40,9 +40,9 @@ WHEN terminal height increases above 15 rows AND TUI was auto-compacted THEN TUI
 
 ## AC-5 (FR-5): Выпиливание statusline @feature5
 
-**Требование:** [FR-5](FR.md#fr-5-выпилить-statusline-render-из-test-statusline)
+**Требование:** [FR-5](FR.md#fr-5-выпилить-statusline-render-из-test-statusline-feature5)
 
-WHEN test-statusline extension is installed THEN `statusline_render.cjs`, `statusline_render.sh`, and `statusline_wrapper.js` SHALL NOT be present in `.dev-pomogator/tools/test-statusline/`.
+WHEN [test-statusline](../test-statusline/FR.md) extension is installed THEN `statusline_render.cjs`, `statusline_render.sh`, and `statusline_wrapper.js` SHALL NOT be present in `.dev-pomogator/tools/test-statusline/`.
 
 WHEN test-statusline extension is installed THEN `statusline_session_start.ts` and `test_runner_wrapper.*` SHALL still be present and functional.
 
@@ -50,7 +50,7 @@ IF user had `statusLine` configured in `~/.claude/settings.json` by dev-pomogato
 
 ## AC-6 (FR-6): Idle indicator @feature1
 
-**Требование:** [FR-6](FR.md#fr-6-idle-indicator-в-compact-mode)
+**Требование:** [FR-6](FR.md#fr-6-idle-indicator-в-compact-mode-feature1)
 
 WHEN TUI is in compact mode AND no YAML status file exists THEN CompactBar SHALL display "no test runs" with dim styling.
 
@@ -60,7 +60,7 @@ WHEN TUI is in compact mode AND YAML file is corrupted (invalid YAML) THEN Compa
 
 ## AC-7 (FR-7): Docker session propagation @feature14
 
-**Требование:** [FR-7](FR.md#fr-7-docker-session-propagation)
+**Требование:** [FR-7](FR.md#fr-7-docker-session-propagation-feature14)
 
 WHEN `docker-test.sh` is invoked AND `session.env` exists at `.dev-pomogator/.test-status/session.env` THEN Docker container SHALL receive `-e TEST_STATUSLINE_SESSION={prefix}` with the session prefix value from `session.env`.
 
@@ -72,7 +72,7 @@ WHEN wrapper runs with `TEST_STATUSLINE_SESSION` set AND `TEST_STATUS_DIR` point
 
 ## AC-8 (FR-8): Dual-directory YAML reader @feature15
 
-**Требование:** [FR-8](FR.md#fr-8-dual-directory-yaml-reader)
+**Требование:** [FR-8](FR.md#fr-8-dual-directory-yaml-reader-feature15)
 
 WHEN TUI is launched AND primary status file does not exist at `--status-file` path THEN YamlReader SHALL scan fallback directories for any `status.*.yaml` file (not limited to same filename as primary).
 
@@ -84,7 +84,7 @@ WHEN launcher builds TUI arguments THEN `--fallback-dir` SHALL include the `.doc
 
 ## AC-9 (FR-9): TUI Stop hook @feature16
 
-**Требование:** [FR-9](FR.md#fr-9-tui-stop-hook-session-cleanup)
+**Требование:** [FR-9](FR.md#fr-9-tui-stop-hook-session-cleanup-feature16)
 
 WHEN Claude Code session ends (Stop event) AND `tui.pid` exists in `.test-status/` or `.docker-status/` THEN Stop hook SHALL read the PID and send SIGTERM signal.
 
@@ -96,7 +96,7 @@ WHEN SessionStart hook runs for a new session AND `tui.pid` exists from a previo
 
 ## AC-10 (FR-10): Docker session passing @feature14
 
-**Требование:** [FR-10](FR.md#fr-10-docker-session-passing)
+**Требование:** [FR-10](FR.md#fr-10-docker-session-passing-feature14)
 
 WHEN `docker-test.sh` runs THEN `TEST_STATUSLINE_SESSION` SHALL be passed to Docker container via `-e` flag if session is known.
 

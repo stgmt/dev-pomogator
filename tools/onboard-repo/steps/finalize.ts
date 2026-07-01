@@ -10,7 +10,7 @@
  */
 
 import * as path from 'node:path';
-import * as fsExtra from 'fs-extra';
+import fsExtra from 'fs-extra';
 import type { OnboardingJson, Phase0State, CommandBlock, BaselineTestResult } from '../lib/types.ts';
 import { validateOrThrow } from '../lib/schema-validator.ts';
 import { mergeRecon } from '../lib/subagent-merge.ts';

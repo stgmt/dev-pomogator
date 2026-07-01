@@ -74,7 +74,6 @@ Per user decision Q2C, ALL `specs-workflow/*.md` rules migrate to `create-spec/r
 - Текущий мини-skill (расширяется): `.claude/skills/create-spec/SKILL.md`
 - Новые references: `.claude/skills/create-spec/references/*.md`
 - Extension manifest: `extensions/specs-workflow/extension.json` — обновить `ruleFiles.claude` (удалить запись), `skills`/`skillFiles` (расширить)
-- Installer: `src/installer/extensions.ts` — `getExtensionRules()` / `getExtensionSkills()` уже резолвят source paths относительно package root (см. `extension-layout.md` rule)
 - CLAUDE.md глоссарий: обновить таблицу Rules (удалить specs-management строку), таблицу Triggered
 
 ## Выводы

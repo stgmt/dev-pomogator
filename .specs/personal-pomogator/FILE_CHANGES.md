@@ -47,8 +47,8 @@
 
 | Path | Action | Reason |
 |------|--------|--------|
-| `src/installer/claude.ts` | edit | Wire self-guard + gitignore writer + settings.local routing + collision detection + mcp-security. New helper `collectManagedPaths`. [FR-1, FR-2, FR-3, FR-4, FR-7, FR-10](FR.md) |
-| `src/installer/shared.ts` | edit | [FR-5](FR.md#fr-5-loud-fail-setupglobalscripts-feature4): loud-fail в `copyBundledScript`, post-install verify в `setupGlobalScripts`, [FR-6](FR.md#fr-6-fail-soft-hook-wrapper-feature5): bootstrap copy, `makePortableTsxCommand` → bootstrap path |
+| ~~`src/installer/claude.ts`~~ (removed in v2 — no canonical replacement) | edit | Wire self-guard + gitignore writer + settings.local routing + collision detection + mcp-security. New helper `collectManagedPaths`. [FR-1, FR-2, FR-3, FR-4, FR-7, FR-10](FR.md) |
+| `.claude/skills/skills-rules-optimizer/scripts/shared.ts` | edit | [FR-5](FR.md#fr-5-loud-fail-setupglobalscripts-feature4): loud-fail в `copyBundledScript`, post-install verify в `setupGlobalScripts`, [FR-6](FR.md#fr-6-fail-soft-hook-wrapper-feature5): bootstrap copy, `makePortableTsxCommand` → bootstrap path |
 | `src/updater/hook-migration.ts` | edit | Consistent с FR-2: обновить migration чтобы таргетил `.claude/settings.local.json` не `.claude/settings.json` |
 | `src/index.ts` | edit | [FR-8](FR.md#fr-8-per-project-uninstall-command-feature7): CLI command parsing `uninstall --project [--dry-run]` |
 | `scripts/build-check-update.js` | edit | [FR-6](FR.md#fr-6-fail-soft-hook-wrapper-feature5): добавить `tsx-runner-bootstrap.cjs` в dist/ copy list |
@@ -59,7 +59,6 @@
 
 | Path | Action | Reason |
 |------|--------|--------|
-| `tests/e2e/personal-pomogator.test.ts` | create | Integration тесты 1:1 с .feature через runInstaller helpers. 33 scenarios PERSO_10..93 |
 | `tests/e2e/helpers.ts` | edit | Добавить helper `createFakeDevPomogatorRepo(targetDir)` для PERSO_30..33 self-guard tests (если не можем reuse initGitRepo) |
 | `tests/features/plugins/personal-pomogator/PERSO001_personal-pomogator.feature` | create | Симлинк или копия `.specs/personal-pomogator/personal-pomogator.feature` для specs-validator (если нужно separate tests/features path) |
 
@@ -70,6 +69,24 @@
 | `CLAUDE.md` | edit | Architecture секция: settings.local.json routing, MCP force-global, uninstall skill. Rules таблица: новые rule если создадим. Per `.claude/rules/claude-md-glossary.md` |
 | `.claude/rules/updater-managed-cleanup.md` | edit | Упомянуть gitignore marker block в scope cleanup + settings.local.json stripping при uninstall |
 
+## Implementation: global MCP bootstrap (FR-16) @feature11
+
+| Path | Action | Reason |
+|------|--------|--------|
+| `tools/mcp-setup/mcp-auth-detect.ts` | create | [FR-16](FR.md#fr-16-global-mcp-bootstrap-feature11): pure auth predicates (Context7 key / Octocode token + `gh auth status`) reused by hook + doctor |
+| `tools/mcp-setup/mcp-bootstrap.ts` | create | [FR-16](FR.md#fr-16-global-mcp-bootstrap-feature11): SessionStart hook — install both servers into user-scope `~/.claude.json` + warn-until-configured |
+| `tools/mcp-setup/set-mcp-key.ts` | create | [FR-16](FR.md#fr-16-global-mcp-bootstrap-feature11): atomic key writer into `~/.claude.json` + real post-check |
+| `tools/mcp-setup/print-mcp-status.ts` | create | [FR-16](FR.md#fr-16-global-mcp-bootstrap-feature11): read-only auth status reporter for the configure-mcp skill |
+| `.claude/skills/configure-mcp/SKILL.md` | create | [FR-16](FR.md#fr-16-global-mcp-bootstrap-feature11): agent assistant — ask/acquire key, validate, write |
+| `.claude/skills/pomogator-doctor/scripts/engine/checks/mcp-auth.ts` | create | [FR-16](FR.md#fr-16-global-mcp-bootstrap-feature11): doctor C-MCPA auth check + configure-mcp fix-action |
+| `tests/step_definitions/feature_global_mcp_bootstrap.ts` | create | [FR-16](FR.md#fr-16-global-mcp-bootstrap-feature11): step-defs driving the real bootstrap/writer/detect/doctor code |
+| `.claude-plugin/hooks.json` | edit | [FR-16](FR.md#fr-16-global-mcp-bootstrap-feature11): register mcp-bootstrap on SessionStart (distribution) |
+| `.claude/settings.json` | edit | [FR-16](FR.md#fr-16-global-mcp-bootstrap-feature11): register mcp-bootstrap on SessionStart (dogfood) |
+| `.claude/skills/pomogator-doctor/scripts/engine/index.ts` | edit | [FR-16](FR.md#fr-16-global-mcp-bootstrap-feature11): add runQuiet/runVerbose (revive the dead SessionStart banner) |
+| `.claude/skills/pomogator-doctor/scripts/engine/checks/index.ts` | edit | [FR-16](FR.md#fr-16-global-mcp-bootstrap-feature11): register mcpAuthCheck |
+| `.claude/skills/pomogator-doctor/scripts/engine/checks/mcp-parse.ts` | edit | [FR-16](FR.md#fr-16-global-mcp-bootstrap-feature11): exclude plugin-provided servers from the missing list |
+| `.claude/skills/pomogator-doctor/SKILL.md` | edit | [FR-16](FR.md#fr-16-global-mcp-bootstrap-feature11): C-MCPA fix-action step |
+
 ## Summary counts
 
 - **Spec files**: 15 (create через scaffold-spec.ts)
@@ -77,7 +94,7 @@
 - **New extension files**: 2 (extension.json + SKILL.md)
 - **Modified src files**: 5 (claude.ts, shared.ts, hook-migration.ts, index.ts, build-check-update.js)
 - **Modified extensions**: 1 (setup-mcp.py)
-- **Tests**: 1 new file (personal-pomogator.test.ts), 1 edit (helpers.ts)
+- **Tests**: ~~1 new file (personal-pomogator.test.ts)~~ (DEFERRED — never created), 1 edit (helpers.ts)
 - **Docs**: 2 edits (CLAUDE.md, updater-managed-cleanup.md)
 
 **Total: 33 files** (15 spec + 7 new src + 2 new ext + 5 modified src + 1 modified ext + 2 tests + 2 docs — 1 overlap на tests/features symlink if decided против = 33)

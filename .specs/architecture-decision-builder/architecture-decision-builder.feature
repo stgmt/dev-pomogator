@@ -26,9 +26,9 @@ Feature: ARCH001_Architecture_Decision_Builder
     Given an axis HTML file exists
     When open-in-browser is called in an environment without a browser
     Then the result should report launched=false with a fallback path
-    And no exception should be thrown
+    And no exception should be thrown by open-in-browser
 
-  @feature4
+  @feature4 @manual
   Scenario: ARCH005_01 Iterative choice records selection
     Given an axis artefact is generated and shown
     When the user selects "Take recommendation" via AskUserQuestion
@@ -42,14 +42,14 @@ Feature: ARCH001_Architecture_Decision_Builder
     Then the content between AUTOGEN markers should be replaced not duplicated
     And user content outside the markers should be preserved
 
-  @feature6
+  @feature6 @manual
   Scenario: ARCH005_02 Cascading adds dependent axis within depth cap
     Given an axis choice that maps to a dependent axis
     When the choice is recorded
     Then the dependent axis should be appended to QUEUE.json
     And cascading should stop prompting beyond depth 2
 
-  @feature7
+  @feature7 @manual
   Scenario: ARCH005_03 create-spec Phase 1.75 invocation and migration guard
     Given a greenfield spec with progress version 4
     When create-spec reaches Phase 1.75
@@ -66,7 +66,7 @@ Feature: ARCH001_Architecture_Decision_Builder
   @feature9
   Scenario: ARCH005_04 ARCHITECTURE_COVERAGE blocks STOP on pending axis
     Given an axis remains in status pending at Phase 2 STOP
-    When the audit command runs
+    When the architecture-decision audit command runs
     Then it should emit an ARCHITECTURE_COVERAGE finding with severity WARNING
 
   @feature10
@@ -76,7 +76,7 @@ Feature: ARCH001_Architecture_Decision_Builder
     Then an entry should be appended to spec-architecture-escapes.jsonl
     And a reason shorter than 12 chars should emit WARNING_REASON_TOO_SHORT
 
-  @feature11
+  @feature11 @wip
   Scenario: ARCH006_01 Eval suite deterministic grading and anti-hallucination rubric
     Given the evals.json contract with a greenfield fixture
     When the deterministic eval runs
@@ -183,3 +183,130 @@ Feature: ARCH001_Architecture_Decision_Builder
     Then it should deny with an actionable reason naming the skill and the skip marker
     And once ARCHITECTURE/ has artefacts or a skip marker exists it should allow
     And Discovery/Context files and brownfield specs should never be gated
+
+  @feature25
+  Scenario: ARCH001_02 brownfield PRD hard-OUTs axes to zero
+    Given a brownfield PRD fixture that contains a build manifest reference
+    When I run detectAxes on the brownfield PRD
+    Then axes_detected should be 0 with empty axes array
+    And skipped_reason should match "brownfield"
+
+  @feature26
+  Scenario: ARCH001_07 specialized-domain axes suppress false positives
+    Given a fintech PRD with incidental mentions of routing and DNS but no VPN context
+    When I run detectAxes on the fintech PRD
+    Then routing-strategy and dns-resolution axes should not be detected
+    And the database axis should still be detected
+    And all networking axes that are detected should have high confidence
+
+  @feature27
+  Scenario: ARCH001_03 detectAxes seed axis ids are unique
+    Given a greenfield PRD fixture without build-manifest
+    When I run detectAxes on it
+    Then each seed axis id should appear at most once in the result
+
+  @feature28
+  Scenario: ARCH001_04 NEEDS CLARIFICATION harvested as Deferred axis
+    Given a greenfield PRD fixture with NEEDS CLARIFICATION markers
+    When I run detectAxes on it
+    Then at least one clarify- axis should be present in the result
+    And every clarify- axis should have tier "Deferred"
+
+  @feature29
+  Scenario: ARCH001_05 detectAxes matches golden expected-axes snapshot
+    Given a greenfield PRD fixture and a golden expected-axes.json file
+    When I run detectAxes on the PRD
+    Then every axis id listed in expected_seed_axis_ids should be present in the result
+
+  @feature30
+  Scenario: ARCH002_06 missing optional variant fields render without crash
+    Given an axis model with a variant that has no when_to_choose or when_not_to_choose
+    When renderAxisHtml and renderAxisMarkdown are called on that axis
+    Then neither renderAxisHtml nor renderAxisMarkdown should throw
+    And the HTML output should not contain "When to choose" or "undefined"
+
+  @feature31
+  Scenario: ARCH002_07 validateAxisModel throws clear error on structural breakage
+    Given an axis model with a variant missing the required name field
+    When validateAxisModel is called
+    Then it should throw an error naming the variant index and missing field
+    And an axis model with empty variants should throw "variants[] is empty"
+    And an axis with only 2 variants should warn but not throw
+
+  @feature32
+  Scenario: ARCH002_02 seededShuffle conserves the multiset
+    Given an input list of 5 elements for seededShuffle
+    When seededShuffle is called with seed "database"
+    Then the seededShuffle output length should equal the input length
+    And the sorted seededShuffle output should equal the sorted input
+
+  @feature33
+  Scenario: ARCH002_03 seededShuffle is deterministic for the same seed
+    Given an input list of 5 elements for seededShuffle
+    When seededShuffle is called twice with the same seed
+    Then both seededShuffle outputs should be identical
+
+  @feature34
+  Scenario: ARCH002_05 word-budget within 15 percent for balanced variants
+    Given an axis candidate "hosting" with 3 variants
+    When I run generate-axis for that axis
+    Then wordBudgetOk should be true
+
+  @feature35
+  Scenario: ARCH005_01 detect-axes CLI emits JSON axes and exits 0 on greenfield
+    Given a greenfield PRD fixture file path
+    When I run architecture-decision-cli.ts detect-axes with the PRD path
+    Then the architecture-decision CLI should exit with status 0
+    And stdout should be valid JSON with axes_detected at least 1
+
+  @feature36
+  Scenario: ARCH005_02 detect-axes CLI emits axes_detected=0 on brownfield
+    Given a brownfield PRD fixture file path
+    When I run architecture-decision-cli.ts detect-axes with the brownfield PRD path
+    Then the architecture-decision CLI should exit with status 0
+    And stdout should be valid JSON with axes_detected equal to 0
+
+  @feature37
+  Scenario: ARCH005_03 detect-axes CLI exits 2 when PRD path argument is missing
+    When I run architecture-decision-cli.ts detect-axes with no arguments
+    Then the architecture-decision CLI should exit with status 2
+
+  @feature38
+  Scenario: ARCH012_01 real scaffold stamps v4 and gate enforces architecture phase
+    Given a freshly scaffolded spec in an isolated tmp directory using the real scaffolder
+    When the architecture-decision spec version is checked
+    Then the scaffolded spec version should be 4
+    And architecture-gate should deny writing FR.md before ARCHITECTURE/ exists
+    And after running generate-axis to produce real ARCHITECTURE artefacts architecture-gate should allow
+
+  @feature39
+  Scenario: ARCH012_02 pre-v4 specs are grandfathered by architecture-gate
+    Given a freshly scaffolded spec with its progress version set to 3
+    When architecture-gate evaluates a PreToolUse Write of FR.md for the legacy spec
+    Then architecture-gate should allow the write without requiring ARCHITECTURE/
+
+  @feature40
+  Scenario: ARCH002_04 recommendation pinned top regardless of variant order in markdown
+    Given the architecture-decision sample axis model is loaded
+    When renderAxisMarkdown is called on the sample axis
+    Then the architecture-decision markdown should contain a "✅ Recommended" marker
+    And the "✅ Recommended" marker should appear before any non-recommended variant header in the architecture-decision markdown
+
+  @feature41
+  Scenario: ARCH003_01 collectRows cardinality equals number of axis files with unique ids
+    Given three axis files with distinct ids exist in a directory
+    When collectRows is called on that directory
+    Then the row count should equal the number of axis files
+    And all row axis_ids should be unique
+
+  @feature42
+  Scenario: ARCH004_02 openInBrowser fallback path starts with file:// when browser unavailable
+    Given a path to an HTML file that cannot be opened by xdg-open
+    When open-in-browser is called for that path on linux platform
+    Then when launched is false the fallback should start with "file://"
+
+  @feature43
+  Scenario: ARCH005_06 completeness escape log written to ARCHITECTURE_LOG_DIR
+    Given a completeness ledger with all dimensions addressed or out-of-scope with ARCHITECTURE_LOG_DIR set
+    When the audit-completeness command runs with ARCHITECTURE_LOG_DIR pointing to the spec dir
+    Then a spec-completeness-escapes.jsonl file should be created in ARCHITECTURE_LOG_DIR

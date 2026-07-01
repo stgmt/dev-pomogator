@@ -12,7 +12,7 @@ WHEN any reference file is read THEN the system SHALL contain no nested `referen
 
 ## AC-2 (FR-2) @feature2
 
-**Требование:** [FR-2](FR.md#fr-2-reference-file-naming-convention-phasen-m_descriptive-feature2)
+**Требование:** [FR-2](FR.md#fr-2-reference-file-naming-convention-phasenmdescriptive-feature2)
 
 IF a reference file is bound to a workflow phase THEN its filename SHALL match `phase[0-9]+(\.[0-9]+)?_[a-z][a-z0-9-]+\.md`.
 
@@ -46,7 +46,7 @@ IF user has modified a managed rule file before update THEN the system SHALL bac
 
 ## AC-5 (FR-5) @feature5
 
-**Требование:** [FR-5](FR.md#fr-5-research-workflow-extracted-as-standalone-skill-feature5)
+**Требование:** [FR-5](FR.md#fr-5-research-workflow-extracted-as-standalone-skill-and-invoked-by-create-spec-feature5)
 
 WHEN user issues a research prompt ("исследуй X", "find Y", "погугли Z") OUTSIDE a spec context THEN the system SHALL trigger `research-workflow` skill independently.
 
@@ -128,7 +128,7 @@ WHEN any of the 7 PreToolUse guard hooks runs against valid input before migrati
 
 ## AC-12 (FR-12) — OUT OF SCOPE
 
-> OUT OF SCOPE — см. [FR-12](FR.md#fr-12-cursor-support--out-of-scope). Cursor support was previously removed from dev-pomogator. No acceptance criteria required.
+> OUT OF SCOPE — см. [FR-12](FR.md#fr-12-cursor-support-out-of-scope). Cursor support was previously removed from dev-pomogator. No acceptance criteria required.
 
 ---
 

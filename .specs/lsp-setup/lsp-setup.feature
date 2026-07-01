@@ -1,4 +1,4 @@
-# Source: tests/features/core/CORE003_claude-installer.feature (паттерн installer tests)
+# Source: ~~tests/features/core/CORE003_claude-installer.feature~~ (паттерн installer tests) — DELETED
 Feature: LSP001 LSP Setup Extension
   As a developer using dev-pomogator
   I want LSP servers automatically installed and configured

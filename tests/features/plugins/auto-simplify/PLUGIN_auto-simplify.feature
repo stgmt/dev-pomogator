@@ -1,77 +1,58 @@
-# Source: tests/features/plugins/auto-commit/PLUGIN006_auto-commit.feature
 Feature: Auto-Simplify Stop Hook
   As a developer using Claude Code
-  I want automatic code quality review on significant file changes
-  So that I don't forget to review code before finishing
+  I want automatic code-quality review on significant file changes
+  So that I do not forget to review code before finishing
 
-  Background:
-    Given dev-pomogator is installed
+  # Drives the REAL tools/auto-simplify/simplify_stop.ts via tests/step_definitions/feature_auto_simplify_stop.ts
+  # (spawned through the plugin bootstrap launcher; diff size via the hook's SIMPLIFY_DIFF_OVERRIDE test
+  # hook = files * 10 lines; real .simplify-marker.json fixtures keyed by the real hashFileList). The two
+  # original file-inspection cases (substantial module / executable bit) were dropped as anti-patterns.
 
-  # @feature1
-  Scenario: No uncommitted changes — approve stop
-    Given no files have been modified
-    When the Stop hook fires
-    Then the hook outputs approve "{}"
-    And exit code is 0
+  @feature1
+  Scenario: AUTOSIMPLIFY_01 disabled via env approves the stop
+    Given the auto-simplify hook is disabled via env
+    When the auto-simplify Stop hook fires
+    Then the auto-simplify hook approves the stop
 
-  # @feature2
-  Scenario: Changes below threshold — approve stop
-    Given 3 lines have been changed across 1 file
-    And SIMPLIFY_MIN_LINES is 10
-    When the Stop hook fires
-    Then the hook outputs approve "{}"
-    And log contains "Below threshold"
+  @feature2
+  Scenario: AUTOSIMPLIFY_02 empty stdin approves the stop
+    Given the auto-simplify hook receives empty stdin
+    When the auto-simplify Stop hook fires
+    Then the auto-simplify hook approves the stop
 
-  # @feature3
-  Scenario: Changes above threshold, first time — block stop
-    Given 25 lines have been changed across 3 files
-    And no marker file exists
-    When the Stop hook fires
-    Then the hook outputs block with reason containing "/simplify"
-    And a marker file is created with current diff hash
+  @feature3
+  Scenario: AUTOSIMPLIFY_03 a change below the line threshold approves the stop
+    Given an auto-simplify change below the line threshold
+    When the auto-simplify Stop hook fires
+    Then the auto-simplify hook approves the stop
 
-  # @feature4
-  Scenario: Same diff hash on second call — approve (dedup)
-    Given 25 lines have been changed across 3 files
-    And marker file exists with same diff hash
-    When the Stop hook fires
-    Then the hook outputs approve "{}"
-    And log contains "already reviewed"
+  @feature4
+  Scenario: AUTOSIMPLIFY_04 a change above the threshold with no marker blocks and writes a marker
+    Given an auto-simplify change above the threshold with no marker
+    When the auto-simplify Stop hook fires
+    Then the auto-simplify hook blocks the stop citing the simplify skill
+    And the auto-simplify marker file is created with the current diff hash
 
-  # @feature5
-  Scenario: Different hash within cooldown — approve
-    Given 30 lines have been changed across 4 files
-    And marker file exists with different hash from 1 minute ago
-    And SIMPLIFY_COOLDOWN_MINUTES is 5
-    When the Stop hook fires
-    Then the hook outputs approve "{}"
-    And log contains "Cooldown active"
+  @feature5
+  Scenario: AUTOSIMPLIFY_05 a marker with the same diff hash approves the stop (dedup)
+    Given an auto-simplify marker whose hash matches the current change
+    When the auto-simplify Stop hook fires
+    Then the auto-simplify hook approves the stop
 
-  # @feature6
-  Scenario: Max retries exceeded — approve
-    Given 20 lines have been changed across 2 files
-    And marker file shows 2 previous attempts
-    And SIMPLIFY_MAX_RETRIES is 2
-    When the Stop hook fires
-    Then the hook outputs approve "{}"
-    And log contains "Max retries"
+  @feature6
+  Scenario: AUTOSIMPLIFY_06 a different hash inside the cooldown window approves the stop
+    Given an auto-simplify marker with a different hash within the cooldown window
+    When the auto-simplify Stop hook fires
+    Then the auto-simplify hook approves the stop
 
-  # @feature7
-  Scenario: Git error — fail-open approve
-    Given git is not available or repo is corrupted
-    When the Stop hook fires
-    Then the hook outputs approve "{}"
-    And exit code is 0
+  @feature7
+  Scenario: AUTOSIMPLIFY_07 the max retry count approves the stop (loop protection)
+    Given an auto-simplify marker that has hit the max retry count
+    When the auto-simplify Stop hook fires
+    Then the auto-simplify hook approves the stop
 
-  # @feature8
-  Scenario: Disabled via env — approve
-    Given SIMPLIFY_ENABLED is "false"
-    When the Stop hook fires
-    Then the hook outputs approve "{}"
-
-  # @feature9
-  Scenario: Corrupted marker file — treat as fresh
-    Given 20 lines have been changed across 2 files
-    And marker file contains invalid JSON
-    When the Stop hook fires
-    Then the hook outputs block with reason containing "/simplify"
+  @feature8
+  Scenario: AUTOSIMPLIFY_08 a corrupted marker is treated as fresh and blocks
+    Given an auto-simplify marker file containing invalid JSON
+    When the auto-simplify Stop hook fires
+    Then the auto-simplify hook blocks the stop citing the simplify skill

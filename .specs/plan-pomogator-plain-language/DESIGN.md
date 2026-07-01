@@ -5,7 +5,7 @@
 ## Реализуемые требования
 
 - [FR-1: Template содержит секцию "Простыми словами" первой](FR.md#fr-1-template-содержит-секцию-простыми-словами-первой-feature1)
-- [FR-2: REQUIRED_SECTIONS массив содержит новую запись первой](FR.md#fr-2-required_sections-массив-содержит-новую-запись-первой-feature2) `[VERIFIED: TypeScript const, not env var]`
+- [FR-2: REQUIRED_SECTIONS массив содержит новую запись первой](FR.md#fr-2-requiredsections-массив-содержит-новую-запись-первой-feature2) `[VERIFIED: TypeScript const, not env var]`
 - [FR-3: validateHumanSummarySection функция проверяет non-empty content](FR.md#fr-3-validatehumansummarysection-функция-проверяет-non-empty-content-feature3)
 - [FR-4: Fixture valid.plan.md содержит новую секцию первой](FR.md#fr-4-fixture-validplanmd-содержит-новую-секцию-первой-feature4)
 - [FR-5: Правило plan-pomogator.md содержит Two-Stage Workflow секцию](FR.md#fr-5-правило-plan-pomogatormd-содержит-two-stage-workflow-секцию-feature5)

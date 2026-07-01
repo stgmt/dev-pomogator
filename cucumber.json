@@ -1,10 +1,61 @@
 {
   "default": {
-    "paths": [".specs/spec-generator-v4/spec-generator-v4.feature"],
-    "import": ["tests/step_definitions/**/*.ts", "tests/hooks/**/*.ts"],
+    "paths": [
+      ".specs/spec-generator-v4/spec-generator-v4.feature",
+      ".specs/answer-simple/answer-simple.feature",
+      ".specs/skill-listing-budget/skill-listing-budget.feature",
+      ".specs/native-statusline/native-statusline.feature",
+      ".specs/tests-create-update/tests-create-update.feature",
+      ".specs/spec-reality-check/spec-reality-check.feature",
+      ".specs/spec-variant-matrix/spec-variant-matrix.feature",
+      ".specs/skills-rules-optimizer/skills-rules-optimizer.feature",
+      ".specs/tui-test-runner/tui-test-runner.feature",
+      ".specs/pomogator-doctor/pomogator-doctor.feature",
+      ".specs/strong-tests/strong-tests.feature",
+      ".specs/tui-test-runner-v2/tui-test-runner-v2.feature",
+      ".specs/auto-capture/auto-capture.feature",
+      ".specs/verify-generic-scope-fix/verify-generic-scope-fix.feature",
+      ".specs/create-specs-bdd-enforcement/create-specs-bdd-enforcement.feature",
+      ".specs/dev-pomogator-canonical-plugin/dev-pomogator-canonical-plugin.feature",
+      ".specs/onboard-repo-phase0/onboard-repo-phase0.feature",
+      ".specs/forbid-root-artifacts/forbid-root-artifacts.feature",
+      ".specs/worktree-setup/worktree-setup.feature",
+      ".specs/architecture-decision-builder/architecture-decision-builder.feature",
+      ".specs/spec-workflow-feature-steps-validation/spec-workflow-feature-steps-validation.feature",
+      ".specs/bg-task-guard/bg-task-guard.feature",
+      ".specs/spec-workflow-md-validation/spec-workflow-md-validation.feature",
+      ".specs/personal-pomogator/personal-pomogator.feature",
+      ".specs/test-statusline/test-statusline.feature",
+      ".specs/bdd-only-migration/bdd-only-migration.feature",
+      ".specs/fix-bg-output-loss/fix-bg-output-loss.feature",
+      ".specs/spec-phase-gate/spec-phase-gate.feature",
+      ".specs/context-menu/context-menu.feature",
+      "tests/features/plugins/reqnroll-ce-guard/CEGUARD001_reqnroll-ce-guard.feature",
+      ".specs/specs-workflow-jira-mode/specs-workflow-jira-mode.feature",
+      "tests/features/plugins/suggest-rules/PLUGIN008_deep-insights.feature",
+      "tests/features/plugins/auto-simplify/PLUGIN_auto-simplify.feature",
+      "tests/features/plugins/test-quality/PLUGIN014_test-quality.feature",
+      "tests/features/plugins/spec-status/HSCMD001_spec-status.feature",
+      "tests/features/plugins/specs-workflow/PLUGIN006_specs-generator.feature",
+      "tests/features/plugins/plan-pomogator/PLUGIN007_plan-validator.feature",
+      "tests/features/plugins/devcontainer/PLUGIN012_devcontainer.feature",
+      "tests/features/plugins/claim-evidence-gate/CEGATE001_claim-evidence-gate.feature"
+    ],
+    "import": [
+      "tests/step_definitions/**/*.ts",
+      "tests/hooks/**/*.ts"
+    ],
+    "tags": "not @wip and not @manual and not @windows-only",
     "format": [
       "message:.dev-pomogator/.last-test-run.ndjson",
       "progress-bar"
+    ],
+    "publishQuiet": true
+  },
+  "stryker-bdd": {
+    "import": [
+      "tests/step_definitions/feature_strong_tests.ts",
+      "tests/hooks/before-after.ts"
     ],
     "publishQuiet": true
   }

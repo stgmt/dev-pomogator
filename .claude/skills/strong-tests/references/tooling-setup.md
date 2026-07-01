@@ -245,3 +245,37 @@ Standard tier: ≥50%. Experimental tier: ≥30% (per OutSight tiering).
 | go-mutesting | Stable | 10-30min | Less polished output; manual JSON conversion |
 
 For SLOW tools on large codebases: invoke with `--paths-to-mutate <single-file>` (mutmut) / `--mutate <single-file>` (Stryker) per NFR-P1 in spec NFR.md.
+
+## Stryker operational gotchas (TS + vitest — learned 2026-06-15, dev-pomogator v4 sweep)
+
+Hit while mutation-testing a large, regex/generic-heavy TS subsystem in Docker. Each cost
+a Docker cycle to diagnose — check these first:
+
+- **Partition by coverage for FREE before mutating.** `grep` which `*.test.ts` actually
+  imports each source file. An un-imported file yields only NoCoverage mutants — a
+  coverage fact you get from the grep, not a mutation result. Mutate only the
+  import-covered set; report the rest as "no unit test" (often the bigger finding). On the
+  v4 corpus this was 44 of 120 files import-covered, 61 with zero importing test.
+- **`Error: spawn ps ENOENT`** right after the dry run → the Docker test image lacks
+  `procps`. Stryker walks/kills its test-runner process tree via `ps --ppid`. Fix: add
+  `procps` to the image (tiny). The exit-1 looks like a crash, NOT a threshold result.
+- **`ignoreStatic: true` is near-mandatory for big sweeps.** Static mutants (top-level
+  const/regex) force a FULL re-run each and dominate wall-clock — one 16-file dir went
+  ~1h20m → ~12m. The score then reflects in-FUNCTION logic, the more useful signal.
+- **`Failed to parse source for import analysis … invalid JS syntax … JSX … .tsx`** at
+  the dry run → vite's import scanner choked on Stryker's INSTRUMENTED output of a
+  generics-heavy file (e.g. an MCP-server / Zod-schema file with many `<T>`). NOT
+  reproducible by `esbuild.transformSync` (ts OR tsx loader) on the original or
+  instrumented copy — a Stryker+vite interaction. Isolate by per-dir bisection (a batch
+  WITH the file crashes, a batch WITHOUT it runs); the file is un-mutatable until you
+  pre-bundle it (esbuild → JSX-free) or bump Stryker/vite. Document it, move on.
+- **Repeated rebuilds corrupt the BuildKit cache** (`failed to prepare extraction
+  snapshot … parent snapshot does not exist`). Once a good image exists, reuse it
+  (`SKIP_BUILD=1`-style) for same-code runs; otherwise `docker builder prune -f` + retry.
+- **Sweep big targets PER DIRECTORY** via the CLI `--mutate '<dir>'` override, not
+  all-at-once — it isolates a crashing file fast. Keep the vitest `include` corpus-wide so
+  a cross-dir kill (a mutant in dir A killed by a test in dir B) still counts.
+- **Watcher/CLI files have an honest low ceiling.** A `main()` CLI run as a subprocess and
+  async chokidar event-handlers are un-killable by Stryker (subprocess boundary / flaky
+  events). Exclude `main()` with `// Stryker disable all : reason` (NOT the whole mutator
+  class) and accept the watcher residual — don't chase a % the tool structurally can't reach.

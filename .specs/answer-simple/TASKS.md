@@ -23,8 +23,8 @@ N/A — фича не требует новых сервисов, БД, env vars
 
 (BDD foundation already in place, verified in DESIGN.md Evidence: vitest 4.1.0 в package.json:65 + 50+ existing vitest e2e tests в tests/e2e/. Pattern documented в .claude/rules/extension-test-quality.md)
 
-- [ ] .feature файл уже создан в `.specs/answer-simple/answer-simple.feature` (5 scenarios PLUGIN017_01..05 — mapping 1:1 с FR-1..FR-5) -- @feature1, @feature2, @feature3 — Status: DONE | Est: 0m
-  _Requirements: [FR-1](FR.md#fr-1-always-apply-шаблон-самопроверки-агента-перед-отправкой-ответа), [FR-2](FR.md#fr-2-slash-команда-answer-simple-для-ручного-аудита-черновика), [FR-3](FR.md#fr-3-extension-следует-конвенциям-extension-layout), [FR-4](FR.md#fr-4-триггер-инцидента-—-запрет-нового-вопроса-при-сигнале-непонимания), [FR-5](FR.md#fr-5-миграция-существующего-rule-с-обновлением-claude-md-глоссария)_
+- [ ] .feature файл уже создан в `.specs/answer-simple/answer-simple.feature` (5 scenarios PLUGIN017_01..05 — mapping 1:1 с FR-1..FR-5) -- @feature1, @feature2, @feature3 — id: t01 — Status: DONE | Est: 0m
+  _Requirements: [FR-1](FR.md#fr-1-always-apply-шаблон-самопроверки-агента-перед-отправкой-ответа), [FR-2](FR.md#fr-2-slash-команда-answer-simple-для-ручного-аудита-черновика), [FR-3](FR.md#fr-3-extension-следует-конвенциям-extension-layout), [FR-4](FR.md#fr-4-триггер-инцидента-запрет-нового-вопроса-при-сигнале-непонимания), [FR-5](FR.md#fr-5-миграция-существующего-rule-с-обновлением-claudemd-глоссария)_
   **Done When:**
   - [x] .feature содержит 5 scenarios mapping 1:1 с FR-1..FR-5
   - [x] Background содержит preconditions "extension установлен + rule присутствует + skill присутствует"
@@ -34,7 +34,7 @@ N/A — фича не требует новых сервисов, БД, env vars
 
 > Реализовать код, чтобы BDD сценарии PLUGIN017_03/04 (slash-команда) и PLUGIN017_05 (installer) начали проходить.
 
-- [ ] Создать `extensions/answer-simple/extension.json` manifest -- @feature3 — Status: TODO | Est: 30m
+- [ ] Создать `extensions/answer-simple/extension.json` manifest -- @feature3 — id: t02 — Status: TODO | Est: 30m
   _Requirements: [FR-3](FR.md#fr-3-extension-следует-конвенциям-extension-layout)_
   **Done When:**
   - [ ] Файл `extensions/answer-simple/extension.json` создан
@@ -44,7 +44,7 @@ N/A — фича не требует новых сервисов, БД, env vars
   - [ ] Manifest НЕ содержит `tools`, `toolFiles`, `hooks` (extension чисто declarative)
   - [ ] @feature3 scenario PLUGIN017_05 (installer) проходит из Red в Green после этого + следующих task
 
-- [ ] Создать `.claude/skills/answer-simple/SKILL.md` -- @feature2 — Status: TODO | Est: 60m
+- [ ] Создать `.claude/skills/answer-simple/SKILL.md` -- @feature2 — id: t03 — Status: TODO | Est: 60m
   _Requirements: [FR-2](FR.md#fr-2-slash-команда-answer-simple-для-ручного-аудита-черновика)_
   **Done When:**
   - [ ] SKILL.md содержит frontmatter `name: answer-simple`, `description: <triggers RU+EN с примерами invocation>`, `allowed-tools: Read`
@@ -54,7 +54,7 @@ N/A — фича не требует новых сервисов, БД, env vars
   - [ ] 1-2 example input/output блока показывающих жаргонный→чистый transform и "Проблем не найдено" case
   - [ ] @feature2 scenarios PLUGIN017_03, PLUGIN017_04 переходят из Red в Green
 
-- [ ] Verify: extension-layout validator проходит -- @feature3 — Status: TODO | Est: 5m
+- [ ] Verify: extension-layout validator проходит -- @feature3 — id: t04 — Status: TODO | Est: 5m
   _Requirements: [FR-3](FR.md#fr-3-extension-следует-конвенциям-extension-layout)_
   **Done When:**
   - [ ] `npx tsx extensions/_shared/extension-layout-validate.ts` exit 0 (no violations)
@@ -64,35 +64,35 @@ N/A — фича не требует новых сервисов, БД, env vars
 
 > Атомарная 3-step миграция: file move + CLAUDE.md edit + memory edit. Всё в одном commit, никаких промежуточных состояний.
 
-- [ ] Создать `.claude/rules/answer-simple/clear-questions-to-user.md` (copy текущего rule) -- @feature3 — Status: TODO | Est: 10m
-  _Requirements: [FR-5](FR.md#fr-5-миграция-существующего-rule-с-обновлением-claude-md-глоссария)_
+- [ ] Создать `.claude/rules/answer-simple/clear-questions-to-user.md` (copy текущего rule) -- @feature3 — id: t05 — Status: TODO | Est: 10m
+  _Requirements: [FR-5](FR.md#fr-5-миграция-существующего-rule-с-обновлением-claudemd-глоссария)_
   **Done When:**
   - [ ] Директория `.claude/rules/answer-simple/` создана
   - [ ] Файл `.claude/rules/answer-simple/clear-questions-to-user.md` создан с content byte-for-byte равным source
 
-- [ ] Удалить старый `.claude/rules/clear-questions-to-user.md` -- @feature3 — Status: TODO | Est: 5m
-  _Requirements: [FR-5](FR.md#fr-5-миграция-существующего-rule-с-обновлением-claude-md-глоссария)_
+- [ ] Удалить старый `.claude/rules/clear-questions-to-user.md` -- @feature3 — id: t06 — Status: TODO | Est: 5m
+  _Requirements: [FR-5](FR.md#fr-5-миграция-существующего-rule-с-обновлением-claudemd-глоссария)_
   _depends: previous task (copy first, then delete — never delete before copy verified)_
   **Done When:**
   - [ ] Файл удалён
   - [ ] grep `clear-questions-to-user` в `.claude/rules/*.md` (не в `answer-simple/`) returns no matches
 
-- [ ] Обновить CLAUDE.md глоссарий-строку -- @feature3 — Status: TODO | Est: 10m
-  _Requirements: [FR-5](FR.md#fr-5-миграция-существующего-rule-с-обновлением-claude-md-глоссария)_
+- [ ] Обновить CLAUDE.md глоссарий-строку -- @feature3 — id: t07 — Status: TODO | Est: 10m
+  _Requirements: [FR-5](FR.md#fr-5-миграция-существующего-rule-с-обновлением-claudemd-глоссария)_
   **Done When:**
   - [ ] Строка `clear-questions-to-user` в always-apply rules таблице CLAUDE.md теперь указывает на `.claude/rules/answer-simple/clear-questions-to-user.md`
   - [ ] Нет orphan строки на старый путь `.claude/rules/clear-questions-to-user.md`
 
-- [ ] Обновить memory cross-reference в feedback_no-jargon-questions-to-user.md -- @feature3 — Status: TODO | Est: 5m
-  _Requirements: [FR-5](FR.md#fr-5-миграция-существующего-rule-с-обновлением-claude-md-глоссария)_
+- [ ] Обновить memory cross-reference в feedback_no-jargon-questions-to-user.md -- @feature3 — id: t08 — Status: TODO | Est: 5m
+  _Requirements: [FR-5](FR.md#fr-5-миграция-существующего-rule-с-обновлением-claudemd-глоссария)_
   **Done When:**
   - [ ] Memory body содержит обновлённую ссылку на новый rule path `.claude/rules/answer-simple/clear-questions-to-user.md`
   - [ ] Старая ссылка `.claude/rules/clear-questions-to-user.md` не присутствует
 
 ## Phase 3: Integration Tests + Refactor (Red → Green → Refactor)
 
-- [ ] Создать `tests/e2e/answer-simple.test.ts` с 5 it'ами mapping 1:1 с PLUGIN017_01..05 -- @feature1, @feature2, @feature3 — Status: TODO | Est: 90m
-  _Requirements: [FR-1](FR.md#fr-1-always-apply-шаблон-самопроверки-агента-перед-отправкой-ответа), [FR-2](FR.md#fr-2-slash-команда-answer-simple-для-ручного-аудита-черновика), [FR-3](FR.md#fr-3-extension-следует-конвенциям-extension-layout), [FR-4](FR.md#fr-4-триггер-инцидента-—-запрет-нового-вопроса-при-сигнале-непонимания), [FR-5](FR.md#fr-5-миграция-существующего-rule-с-обновлением-claude-md-глоссария)_
+- [ ] Создать `tests/e2e/answer-simple.test.ts` с 5 it'ами mapping 1:1 с PLUGIN017_01..05 -- @feature1, @feature2, @feature3 — id: t09 — Status: TODO | Est: 90m
+  _Requirements: [FR-1](FR.md#fr-1-always-apply-шаблон-самопроверки-агента-перед-отправкой-ответа), [FR-2](FR.md#fr-2-slash-команда-answer-simple-для-ручного-аудита-черновика), [FR-3](FR.md#fr-3-extension-следует-конвенциям-extension-layout), [FR-4](FR.md#fr-4-триггер-инцидента-запрет-нового-вопроса-при-сигнале-непонимания), [FR-5](FR.md#fr-5-миграция-существующего-rule-с-обновлением-claudemd-глоссария)_
   **Done When:**
   - [ ] Test файл создан с `describe('PLUGIN017_answer-simple', ...)` (per .claude/rules/extension-test-quality.md naming)
   - [ ] 5 it'ов с CODE_NN convention: `it('PLUGIN017_01: ...')` ... `it('PLUGIN017_05: ...')` (1:1 mapping с .feature scenarios)
@@ -103,8 +103,8 @@ N/A — фича не требует новых сервисов, БД, env vars
   - [ ] Test PLUGIN017_03 (slash-команда) — integration test через `runInstaller()` + проверка `.claude/skills/answer-simple/SKILL.md` existence + content assertions
   - [ ] Все измеримые тесты (PLUGIN017_03, PLUGIN017_05) проходят `/run-tests` локально (green)
 
-- [ ] Final verification -- @feature1, @feature2, @feature3 — Status: TODO | Est: 15m
-  _Requirements: [FR-1](FR.md#fr-1-always-apply-шаблон-самопроверки-агента-перед-отправкой-ответа), [FR-2](FR.md#fr-2-slash-команда-answer-simple-для-ручного-аудита-черновика), [FR-3](FR.md#fr-3-extension-следует-конвенциям-extension-layout), [FR-4](FR.md#fr-4-триггер-инцидента-—-запрет-нового-вопроса-при-сигнале-непонимания), [FR-5](FR.md#fr-5-миграция-существующего-rule-с-обновлением-claude-md-глоссария)_
+- [ ] Final verification -- @feature1, @feature2, @feature3 — id: t10 — Status: TODO | Est: 15m
+  _Requirements: [FR-1](FR.md#fr-1-always-apply-шаблон-самопроверки-агента-перед-отправкой-ответа), [FR-2](FR.md#fr-2-slash-команда-answer-simple-для-ручного-аудита-черновика), [FR-3](FR.md#fr-3-extension-следует-конвенциям-extension-layout), [FR-4](FR.md#fr-4-триггер-инцидента-запрет-нового-вопроса-при-сигнале-непонимания), [FR-5](FR.md#fr-5-миграция-существующего-rule-с-обновлением-claudemd-глоссария)_
   **Done When:**
   - [ ] `validate-spec.ts -Path .specs/answer-simple` → 0 errors (warnings allowed только для optional Phase 3 placeholder files если применимо)
   - [ ] `audit-spec.ts -Path .specs/answer-simple` → 0 P0 findings

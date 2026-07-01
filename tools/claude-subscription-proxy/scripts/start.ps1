@@ -4,19 +4,39 @@ $ErrorActionPreference = "Stop"
 $repoRoot = Split-Path -Parent $PSScriptRoot
 Set-Location $repoRoot
 
+# Reuse the existing Windows Claude login: mount the host's .claude into the container.
+# Host-native path (C:\Users\<you>\.claude) so Docker Desktop resolves it reliably.
+$credsDir = Join-Path $env:USERPROFILE ".claude"
+$env:CLAUDE_CREDS_DIR = $credsDir
+if (-not (Test-Path (Join-Path $credsDir ".credentials.json"))) {
+  Write-Host "WARN: $credsDir\.credentials.json not found — the proxy needs a Claude login."
+  Write-Host "      Run 'claude login' once on Windows (you likely already have), then re-run this script."
+}
+
 # Stop any host-running meridian (npm-installed) on the same port to avoid
 # "port already in use" — happens if you previously ran `meridian` directly.
-$pid = (Get-NetTCPConnection -LocalPort 3456 -ErrorAction SilentlyContinue).OwningProcess
-if ($pid) {
-  $proc = Get-Process -Id $pid -ErrorAction SilentlyContinue
+# NOTE: do NOT use $pid — it is a read-only automatic PowerShell variable (this script's
+# own PID); assigning to it throws "Cannot overwrite variable PID" and aborts the script.
+$portPid = (Get-NetTCPConnection -LocalPort 3456 -ErrorAction SilentlyContinue).OwningProcess
+if ($portPid) {
+  $proc = Get-Process -Id $portPid -ErrorAction SilentlyContinue
   if ($proc -and $proc.ProcessName -ne "com.docker.backend") {
-    Write-Host "Stopping host process on :3456 ($($proc.ProcessName), pid $pid)"
-    Stop-Process -Id $pid -Force
+    Write-Host "Stopping host process on :3456 ($($proc.ProcessName), pid $portPid)"
+    Stop-Process -Id $portPid -Force
     Start-Sleep -Seconds 1
   }
 }
 
-docker compose up -d --build
+# A pinned container_name means `up` errors with a name conflict if a stopped container
+# already exists (created under a different compose project / CWD). Reuse it via `docker
+# start` (fast, no rebuild/downtime — stateless, creds are mounted); build+create only when
+# none exists. Handles fresh / stopped / running uniformly, no conflict.
+docker start claude-proxy-meridian 2>$null | Out-Null
+if ($LASTEXITCODE -eq 0) {
+  Write-Host "Reusing existing container (docker start)."
+} else {
+  docker compose up -d --build
+}
 Write-Host ""
 Write-Host "Waiting for /health..."
 $ok = $false

@@ -1,5 +1,7 @@
 # Field Verification — strong-tests v0.4.0 on lm-saas/AiPomogator + new-api-modified
 
+> **Note (2026-06-01):** Items marked PLANNED below were previously incorrectly marked PASS. Audit identified discrepancy — see `.specs/spec-generator-v4/NEEDS_HUMAN_REVIEW_PACKET.md` items #5, #6.
+
 > End-to-end audit of `strong-tests` skill — production install via dev-pomogator installer + detector smoke + Stryker.NET baseline on real-world target repos. Dogfooding на dev-pomogator завершён ранее (56.83% kill rate); этот документ — first production validation.
 
 ## Summary
@@ -239,6 +241,8 @@ AiPomogator.Tests/ — Reqnroll BDD integration tests. Scenarios предпол�
 
 - Spec: `.specs/strong-tests/` (parent directory)
 - Skill: `.claude/skills/strong-tests/SKILL.md`
-- Tests: `tests/e2e/strong-tests-jit.test.ts` (9 integration tests) + `tests/e2e/detect-invariant-candidates-unit.test.ts` (47 unit tests)
+- Tests: ~~`tests/e2e/strong-tests-jit.test.ts`~~ (planned, not implemented — 9 integration tests claimed but file does not exist) + `tests/e2e/detect-invariant-candidates-unit.test.ts` (47 unit tests)
 - Manifest: `extensions/test-quality/extension.json` v1.3.0
 - Prior dogfood: `reports/mutation/mutation.html` (Stryker baseline на dev-pomogator/detect-invariant-candidates.ts — 56.83% kill rate, see commit 56a46f7 + iteration improvements)
+
+<!-- TODO(v4.x): implement strong-tests-jit + strong-tests aggregate test files OR remove .feature scenarios -->

@@ -2,7 +2,7 @@
 name: variant-matrix-build
 description: Phase-2 sub-skill that detects polymorphic FRs (shared pipeline + per-variant dispatch) and populates variant matrix artifacts — AC Decision Table, Gherkin Scenario Outline + Examples, per-variant tasks. Invoked by create-spec Phase 2 step 4c. Returns JSON summary. Mirrors requirements-chk-matrix shape.
 disable-model-invocation: true
-allowed-tools: Read, Write, Edit, Bash, AskUserQuestion
+allowed-tools: mcp__dev-pomogator-specs__read_spec_doc, mcp__dev-pomogator-specs__list_spec_docs, mcp__dev-pomogator-specs__apply_spec_change, mcp__dev-pomogator-specs__propose_spec_change, Bash, AskUserQuestion
 ---
 
 # variant-matrix-build
@@ -37,6 +37,15 @@ Driver: Stocktaking MR / Warehouse Transfer (QA Лилия Михайлова, 2
 
 ## Execution
 
+> **MCP-rails (FR-39/40):** every spec read goes through `read_spec_doc` /
+> `list_spec_docs` and every WRITE to ACCEPTANCE_CRITERIA.md / `{slug}.feature` /
+> TASKS.md goes through `apply_spec_change({ spec, doc, content | old_string/new_string })`
+> — the mutation door validates the form contracts (AC Decision-Table shape, the
+> feature/task shapes) BEFORE the disk write, so a malformed row is refused with
+> findings instead of silently landing. Never a raw `Read`/`Write`/`Edit`/`grep` of
+> `.specs/`. The detection CLI below is an ENGINE CLI (carve-out allowed under enforce);
+> reading FR.md for inspection uses `read_spec_doc`.
+
 ### Step 1: Detect polymorphic FRs
 
 ```bash
@@ -45,12 +54,13 @@ npx tsx tools/specs-generator/variant-matrix/variant-matrix-cli.ts <spec-path>
 
 Returns JSON `{findings: [...]}`. Если findings содержит `code: AC_DECISION_TABLE_MISSING` для каждого polymorphic FR — переходить к Step 2. Если detection вернул пусто или все FRs hardOut → skill exits с `{frs_with_matrix: 0, ...}` (no-op fallback).
 
-Также можно использовать direct module import в TypeScript context:
+Для inspection FR-содержимого (а не CLI-детекта) — через MCP read door:
 
-```ts
-import { detectPolymorphicFRs } from 'tools/specs-generator/variant-matrix/trigger-phrases.ts';
-const result = detectPolymorphicFRs(frContent);
 ```
+read_spec_doc({ spec: "{slug}", doc: "FR.md" })   → lines `^## FR-[0-9]+`
+```
+
+(`list_spec_docs({ spec })` first if unsure which docs exist.)
 
 ### Step 2: Spec author enumerates variants per FR
 
@@ -62,7 +72,7 @@ const result = detectPolymorphicFRs(frContent);
 
 ### Step 3: Emit AC Decision Table
 
-В ACCEPTANCE_CRITERIA.md для соответствующего AC раздела (`## AC-N (FR-N)`) вставить:
+Через `apply_spec_change({ spec, doc: "ACCEPTANCE_CRITERIA.md", old_string, new_string })` (MCP-rails — не raw Edit) для соответствующего AC раздела (`## AC-N (FR-N)`) вставить, anchoring `old_string` на существующий AC-заголовок:
 
 ```markdown
 **Variant Axis:** {axis}
@@ -79,7 +89,7 @@ const result = detectPolymorphicFRs(frContent);
 
 ### Step 4: Emit Gherkin Scenario Outline + Examples
 
-В `{slug}.feature` файле вставить:
+Через `apply_spec_change({ spec, doc: "{slug}.feature", old_string, new_string })` вставить:
 
 ```gherkin
 @feature{N} @variant-matrix
@@ -99,7 +109,7 @@ Examples table должна matchить AC table (1:1 для covered rows; exclu
 
 ### Step 5: Emit per-variant tasks в TASKS.md
 
-В Phase 2 (или соответствующем) разделе TASKS.md добавить:
+Через `apply_spec_change({ spec, doc: "TASKS.md", old_string, new_string })` в Phase 2 (или соответствующем) разделе TASKS.md добавить:
 
 ```markdown
 - [ ] T-{N}-{variant1}: Implement variant {variant1} call-site mapping -- @feature{N} — Status: TODO | Est: 30m

@@ -22,7 +22,7 @@ WHEN installer пропустил write по idempotency THEN install report SHA
 
 ## AC-3 (FR-3)
 
-**Требование:** [FR-3](FR.md#fr-3-bump-существующего-значения--10)
+**Требование:** [FR-3](FR.md#fr-3-bump-существующего-значения-10)
 
 WHEN `~/.claude/settings.json` содержит `skillListingBudgetFraction` как число в диапазоне `[0, 1.0)` AND installer запускается THEN installer SHALL атомарно поднять значение до `1.0`.
 
@@ -44,6 +44,6 @@ IF ключ был invalid (битый JSON / wrong type / out of range / string
 
 ## AC-5 (FR-5)
 
-**Требование:** [FR-5: OUT OF SCOPE](FR.md#fr-5-out-of-scope--нет-doctor-проверки-нет-подсчёта-нет-per-skill-логики)
+**Требование:** [FR-5: OUT OF SCOPE](FR.md#fr-5-out-of-scope-нет-doctor-проверки-нет-подсчёта-нет-per-skill-логики)
 
 > OUT OF SCOPE — нет behavioral acceptance criterion. FR-5 фиксирует решение НЕ реализовывать перечисленные подходы (doctor-проверка, computed fraction, per-skill disable). Связанные тесты тоже отсутствуют (нет такого функционала). Этот AC существует только для traceability — `LINK_VALIDITY` audit ожидает парную AC для каждой FR-N.

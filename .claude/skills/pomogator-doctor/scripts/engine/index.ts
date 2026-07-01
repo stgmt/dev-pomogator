@@ -3,8 +3,9 @@ import path from 'node:path';
 import { allChecks } from './checks/index.js';
 import { DOCTOR_SCHEMA_VERSION } from './constants.js';
 import { acquireLock, LockHeldError } from './lock.js';
+import { buildHookOutput, formatChalk } from './reporter.js';
 import { executeChecks } from './runner.js';
-import type { CheckDefinition, DoctorOptions, DoctorReport } from './types.js';
+import type { CheckDefinition, DoctorOptions, DoctorReport, HookOutput } from './types.js';
 
 export { LockHeldError } from './lock.js';
 export type {
@@ -32,6 +33,32 @@ export async function runDoctor(
   } finally {
     lock.release();
   }
+}
+
+/**
+ * Quiet mode for the SessionStart hook: run all checks and return the one-line banner payload
+ * (silent when everything is OK, ≤100-char warning otherwise). Fail-open — any error (incl. a held
+ * lock from a concurrent run) yields a silent continue so a session is never blocked.
+ */
+export async function runQuiet(
+  options: DoctorOptions = {},
+  checks: CheckDefinition[] = allChecks,
+): Promise<HookOutput> {
+  try {
+    const report = await runDoctor({ ...options, quiet: true }, checks);
+    return buildHookOutput(report);
+  } catch {
+    return { continue: true, suppressOutput: true };
+  }
+}
+
+/** Verbose mode for `/pomogator-doctor`: full severity-grouped chalk report as a string. */
+export async function runVerbose(
+  options: DoctorOptions = {},
+  checks: CheckDefinition[] = allChecks,
+): Promise<string> {
+  const report = await runDoctor(options, checks);
+  return formatChalk(report);
 }
 
 export function lockPathFor(homeDir: string): string {

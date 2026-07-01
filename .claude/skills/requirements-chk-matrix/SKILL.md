@@ -5,10 +5,12 @@ description: >
   in REQUIREMENTS.md and populates ## Key Decisions with Rationale + Trade-off + Alternatives
   blocks in DESIGN.md. Called by create-spec Phase 2 (Requirements + Design)
   step 4b. Preserves Jira trace lines byte-for-byte. Returns JSON summary of CHKs and decisions.
-allowed-tools: Read, Write, Edit, Bash, AskUserQuestion
+allowed-tools: mcp__dev-pomogator-specs__read_spec_doc, mcp__dev-pomogator-specs__list_spec_docs, mcp__dev-pomogator-specs__apply_spec_change, mcp__dev-pomogator-specs__propose_spec_change, Bash, AskUserQuestion
 ---
 
 # Requirements CHK Matrix
+
+> **spec-authoring-steer compliance:** when writing a full `{ content }` document via `apply_spec_change`, include `[skip-spec-steer: requirements-chk-matrix autofill]` in the `reason` — this marks the write as sanctioned automation so the steer hook does not flag it as hand-authoring (targeted `old_string`/`new_string` edits need no marker).
 
 ## Mission
 
@@ -30,23 +32,33 @@ Both outputs pass form-guards `requirements-chk-guard` and `design-decision-guar
 
 - `FR.md` — enumerate every `## FR-N:` heading; extract the title + any `@featureN` tag on the heading line.
 - `ACCEPTANCE_CRITERIA.md` — enumerate `## AC-N (FR-N)` headings; pair with matching FR.
-- `{slug}.feature` — read `# @featureN` comments above scenarios; map scenario IDs.
+- `{slug}.feature` — read REAL Gherkin `@featureN` tag lines above scenarios (canonical since 2026-06-06; legacy `# @featureN` comments may still exist in old files — read both, but WRITE only real tags: comments are invisible to the spec-graph parser).
 - `USE_CASES.md` — extract `## UC-N:` for CHK traces that span user-journey level.
 - `DESIGN.md` — read existing components/algorithm sections to derive Key Decisions.
 - `JIRA_SOURCE.md` (if present) — verbatim Jira quotes must be preserved.
 
 ## Execution
 
+> **MCP-rails (FR-39/40):** every spec read goes through `read_spec_doc` /
+> `list_spec_docs` and every WRITE to REQUIREMENTS.md / DESIGN.md goes through
+> `apply_spec_change({ spec, doc, content | old_string/new_string })` — the
+> mutation door validates form contracts (the v3 CHK/Decision shapes) BEFORE the
+> disk write, so a malformed row is refused with findings instead of silently
+> landing. Never a raw `Read`/`Write`/`Edit`/`grep` of `.specs/`.
+
 ### Step 1 — Parse FR / AC / feature / UC
 
-Run reused FR-parsing logic:
+Read each doc through the MCP read door (MCP-rails FR-39 — never a raw
+`grep`/`Read` of `.specs/`), then extract the headers from the returned content:
 
-```bash
-grep -E "^## FR-[0-9]+" .specs/{slug}/FR.md
-grep -E "^## AC-[0-9]+ \\(FR-" .specs/{slug}/ACCEPTANCE_CRITERIA.md
-grep -E "^# @feature[0-9]+" .specs/{slug}/{slug}.feature
-grep -E "^## UC-[0-9]+" .specs/{slug}/USE_CASES.md
 ```
+read_spec_doc({ spec: "{slug}", doc: "FR.md" })                  → lines `^## FR-[0-9]+`
+read_spec_doc({ spec: "{slug}", doc: "ACCEPTANCE_CRITERIA.md" }) → lines `^## AC-[0-9]+ \(FR-`
+read_spec_doc({ spec: "{slug}", doc: "{slug}.feature" })         → lines `^# @feature[0-9]+`
+read_spec_doc({ spec: "{slug}", doc: "USE_CASES.md" })           → lines `^## UC-[0-9]+`
+```
+
+(`list_spec_docs({ spec })` first if you're unsure which of the four docs exist.)
 
 Build in-memory maps:
 - `FRs: { N → title }` from FR.md.
@@ -67,9 +79,9 @@ For each FR-N, emit at least one CHK row. Format:
 | `Status` | `Draft` initially (lifecycle: `Draft → In Progress → Verified → Blocked`). |
 | `Notes` | `—` or short hint (e.g. `regression PLUGIN010_03`). |
 
-If an FR has multiple ACs, emit `CHK-FR{n}-02`, `-03`, etc. If an FR relates to non-functional concerns (NFR), emit an additional `CHK-FR{n}-NFR` row with `Verification Method: Manual review` or `Integration test`.
+If an FR has multiple ACs, emit `CHK-FR{n}-02`, `-03`, etc. If an FR relates to non-functional concerns (NFR), emit an additional row with the SAME numeric id scheme (`CHK-FR{n}-{next nn}`) — `Verification Method: Manual review` or `Integration test`, and mark the NFR linkage in `Notes` (e.g. `NFR-Performance-1`). **NEVER `CHK-FR{n}-NFR`** — the guard contract `CHK_ID_VALID = /^CHK-FR\d+-\d{2}$/` (spec-form-parsers.ts) rejects letter suffixes and `requirements-chk-guard` will DENY the Write (caught in the 2026-06-07 creation-pipeline review: the skill used to instruct the very format its own guard blocks).
 
-Write via Edit: anchor on existing `## Verification Matrix` if present, else append after `## Functional Requirements` section.
+Write via `apply_spec_change({ spec, doc: "REQUIREMENTS.md", old_string, new_string })` (MCP-rails — not a raw Edit): anchor `old_string` on the existing `## Verification Matrix` heading if present (place rows under it), else anchor on `## Functional Requirements` to append the section after it. The mutation door re-checks the CHK form (`CHK_ID_VALID`) before the disk write, so a bad row is refused, not silently landed.
 
 ### Step 3 — Append Verification Process and Summary Counts
 

@@ -37,3 +37,7 @@
 ## US-9: Developer который хочет убрать dev-pomogator @feature9
 
 Как **developer который решил избавиться от dev-pomogator в проекте**, я хочу сказать Claude Code "удали dev-pomogator" и получить безопасное, корректное удаление — через skill-инструкции для AI агента (safety checks → dev-pomogator source repo refuse → CLI-first dry-run → manual fallback → post-verification). Без риска что AI агент удалит что-то лишнее или пропустит что-то важное из managed state.
+
+## US-10: Developer которому нужны Context7/Octocode во всех проектах @feature11
+
+Как **разработчик, который хочет чтобы Context7 (документация библиотек) и Octocode (поиск кода на GitHub) были доступны во всех моих проектах**, я хочу чтобы dev-pomogator сам поставил оба MCP-сервера глобально и напоминал настроить их (ключ Context7, GitHub-доступ Octocode), пока я этого не сделаю — а после настройки напоминание исчезало, и проверка была реальной, не на глаз.

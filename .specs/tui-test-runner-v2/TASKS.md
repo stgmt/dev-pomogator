@@ -85,11 +85,11 @@
 
 - [ ] Обновить __main__.py — добавить CLI args --run, --filter, auto-start tests при запуске @feature6
   _files: `extensions/tui-test-runner/tools/tui-test-runner/tui/__main__.py` (edit)_
-  _Requirements: [FR-6](FR.md#fr-6-auto-run--keybinding-launch-feature6)_
+  _Requirements: [FR-6](FR.md#fr-6-auto-run-keybinding-launch-feature6)_
   _Leverage: `D:\repos\zoho\tools\tui-test-explorer\__main__.py` (197 LOC — адаптация)_
 - [ ] Обновить launcher.ts — --run/--filter passthrough, single instance PID lock @feature6
   _files: `extensions/tui-test-runner/tools/tui-test-runner/launcher.ts` (edit)_
-  _Requirements: [FR-6](FR.md#fr-6-auto-run--keybinding-launch-feature6)_
+  _Requirements: [FR-6](FR.md#fr-6-auto-run-keybinding-launch-feature6)_
 - [ ] Verify: сценарии @feature6 (PLUGIN013_17, 18) переходят из Red в Green
 
 ## Phase 6: AI Test Analyst (Green) @feature1

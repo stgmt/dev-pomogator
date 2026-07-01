@@ -4,29 +4,29 @@
 
 | ID | Name | Linked AC | @featureN | Status |
 |----|------|-----------|-----------|--------|
-| [FR-1](FR.md#fr-1-skill-bundle-layout-feature1) | Skill bundle layout | [AC-1](ACCEPTANCE_CRITERIA.md#ac-1-fr-1) | @feature1 | Draft |
-| [FR-2](FR.md#fr-2-file_changes-verification-checks-feature2) | FILE_CHANGES verification checks | [AC-2](ACCEPTANCE_CRITERIA.md#ac-2-fr-2) | @feature2 | Draft |
-| [FR-3](FR.md#fr-3-narrative-path-verification-feature3) | Narrative path verification | [AC-3](ACCEPTANCE_CRITERIA.md#ac-3-fr-3) | @feature3 | Draft |
-| [FR-4](FR.md#fr-4-code-drift-detection-via-git-log-feature4) | Code-drift detection via git log | [AC-4](ACCEPTANCE_CRITERIA.md#ac-4-fr-4) | @feature4 | Draft |
-| [FR-5](FR.md#fr-5-tasksfile_changes-consistency-feature5) | TASKS↔FILE_CHANGES consistency | [AC-5](ACCEPTANCE_CRITERIA.md#ac-5-fr-5) | @feature5 | Draft |
-| [FR-6](FR.md#fr-6-three-output-formats-feature6) | Three output formats | [AC-6](ACCEPTANCE_CRITERIA.md#ac-6-fr-6) | @feature6 | Draft |
-| [FR-7](FR.md#fr-7-pretooluse-hook-on-exitplanmode-feature7) | PreToolUse hook on ExitPlanMode | [AC-7](ACCEPTANCE_CRITERIA.md#ac-7-fr-7) | @feature7 | Draft |
-| [FR-8](FR.md#fr-8-hook-fail-open-on-exception-feature8) | Hook fail-open on exception | [AC-8](ACCEPTANCE_CRITERIA.md#ac-8-fr-8) | @feature8 | Draft |
-| [FR-9](FR.md#fr-9-extension-manifest-wiring-feature9) | Extension manifest wiring | [AC-9](ACCEPTANCE_CRITERIA.md#ac-9-fr-9) | @feature9 | Draft |
-| [FR-10](FR.md#fr-10-test-coverage-feature10) | Test coverage | [AC-10](ACCEPTANCE_CRITERIA.md#ac-10-fr-10) | @feature10 | Draft |
-| [FR-11](FR.md#fr-11-applied-on-canonical-plugin-spec-feature11) | Applied on canonical-plugin spec | [AC-11](ACCEPTANCE_CRITERIA.md#ac-11-fr-11) | @feature11 | Draft |
-| [FR-12](FR.md#fr-12-spec-review-category-15-integration-feature12) | spec-review category 15 integration | [AC-12](ACCEPTANCE_CRITERIA.md#ac-12-fr-12) | @feature12 | Draft |
-| [FR-13](FR.md#fr-13-create-spec-phase-3-integration-feature13) | create-spec Phase 3 integration | [AC-13](ACCEPTANCE_CRITERIA.md#ac-13-fr-13) | @feature13 | Draft |
-| [FR-14](FR.md#fr-14-graceful-file_changes-parser-fallback-feature14) | Graceful FILE_CHANGES parser fallback | [AC-14](ACCEPTANCE_CRITERIA.md#ac-14-fr-14) | @feature14 | Draft |
-| [FR-15](FR.md#fr-15-bug-fix-plan-gate-phase-25--already-shipped-feature15) | Bug fix plan-gate Phase 2.5 | [AC-15](ACCEPTANCE_CRITERIA.md#ac-15-fr-15) | @feature15 | Verified |
+| [FR-1](FR.md#fr-1-skill-bundle-layout-feature1) | Skill bundle layout | [AC-1](ACCEPTANCE_CRITERIA.md#ac-1-fr-1-feature1) | @feature1 | Draft |
+| [FR-2](FR.md#fr-2-filechanges-verification-checks-feature2) | FILE_CHANGES verification checks | [AC-2](ACCEPTANCE_CRITERIA.md#ac-2-fr-2-feature2) | @feature2 | Draft |
+| [FR-3](FR.md#fr-3-narrative-path-verification-feature3) | Narrative path verification | [AC-3](ACCEPTANCE_CRITERIA.md#ac-3-fr-3-feature3) | @feature3 | Draft |
+| [FR-4](FR.md#fr-4-code-drift-detection-via-git-log-feature4) | Code-drift detection via git log | [AC-4](ACCEPTANCE_CRITERIA.md#ac-4-fr-4-feature4) | @feature4 | Draft |
+| [FR-5](FR.md#fr-5-tasksfilechanges-consistency-feature5) | TASKS↔FILE_CHANGES consistency | [AC-5](ACCEPTANCE_CRITERIA.md#ac-5-fr-5-feature5) | @feature5 | Draft |
+| [FR-6](FR.md#fr-6-three-output-formats-feature6) | Three output formats | [AC-6](ACCEPTANCE_CRITERIA.md#ac-6-fr-6-feature6) | @feature6 | Draft |
+| [FR-7](FR.md#fr-7-pretooluse-hook-on-exitplanmode-feature7) | PreToolUse hook on ExitPlanMode | [AC-7](ACCEPTANCE_CRITERIA.md#ac-7-fr-7-feature7) | @feature7 | Draft |
+| [FR-8](FR.md#fr-8-hook-fail-open-on-exception-feature8) | Hook fail-open on exception | [AC-8](ACCEPTANCE_CRITERIA.md#ac-8-fr-8-feature8) | @feature8 | Draft |
+| [FR-9](FR.md#fr-9-extension-manifest-wiring-feature9) | Extension manifest wiring | [AC-9](ACCEPTANCE_CRITERIA.md#ac-9-fr-9-feature9) | @feature9 | Draft |
+| [FR-10](FR.md#fr-10-test-coverage-feature10) | Test coverage | [AC-10](ACCEPTANCE_CRITERIA.md#ac-10-fr-10-feature10) | @feature10 | Draft |
+| [FR-11](FR.md#fr-11-applied-on-canonical-plugin-spec-feature11) | Applied on canonical-plugin spec | [AC-11](ACCEPTANCE_CRITERIA.md#ac-11-fr-11-feature11) | @feature11 | Draft |
+| [FR-12](FR.md#fr-12-spec-review-category-15-integration-feature12) | spec-review category 15 integration | [AC-12](ACCEPTANCE_CRITERIA.md#ac-12-fr-12-feature12) | @feature12 | Draft |
+| [FR-13](FR.md#fr-13-create-spec-phase-3-integration-feature13) | create-spec Phase 3 integration | [AC-13](ACCEPTANCE_CRITERIA.md#ac-13-fr-13-feature13) | @feature13 | Draft |
+| [FR-14](FR.md#fr-14-graceful-filechanges-parser-fallback-feature14) | Graceful FILE_CHANGES parser fallback | [AC-14](ACCEPTANCE_CRITERIA.md#ac-14-fr-14-feature14) | @feature14 | Draft |
+| [FR-15](FR.md#fr-15-bug-fix-plan-gate-phase-25-already-shipped-feature15) | Bug fix plan-gate Phase 2.5 | [AC-15](ACCEPTANCE_CRITERIA.md#ac-15-fr-15-feature15) | @feature15 | Verified |
 
 ## Functional Requirements
 
 - [FR-1: Skill bundle layout](FR.md#fr-1-skill-bundle-layout-feature1)
-- [FR-2: FILE_CHANGES verification checks](FR.md#fr-2-file_changes-verification-checks-feature2)
+- [FR-2: FILE_CHANGES verification checks](FR.md#fr-2-filechanges-verification-checks-feature2)
 - [FR-3: Narrative path verification](FR.md#fr-3-narrative-path-verification-feature3)
 - [FR-4: Code-drift detection via git log](FR.md#fr-4-code-drift-detection-via-git-log-feature4)
-- [FR-5: TASKS↔FILE_CHANGES consistency](FR.md#fr-5-tasksfile_changes-consistency-feature5)
+- [FR-5: TASKS↔FILE_CHANGES consistency](FR.md#fr-5-tasksfilechanges-consistency-feature5)
 - [FR-6: Three output formats](FR.md#fr-6-three-output-formats-feature6)
 - [FR-7: PreToolUse hook on ExitPlanMode](FR.md#fr-7-pretooluse-hook-on-exitplanmode-feature7)
 - [FR-8: Hook fail-open on exception](FR.md#fr-8-hook-fail-open-on-exception-feature8)
@@ -35,8 +35,8 @@
 - [FR-11: Applied on canonical-plugin spec](FR.md#fr-11-applied-on-canonical-plugin-spec-feature11)
 - [FR-12: spec-review category 15 integration](FR.md#fr-12-spec-review-category-15-integration-feature12)
 - [FR-13: create-spec Phase 3 integration](FR.md#fr-13-create-spec-phase-3-integration-feature13)
-- [FR-14: Graceful FILE_CHANGES parser fallback](FR.md#fr-14-graceful-file_changes-parser-fallback-feature14)
-- [FR-15: Bug fix plan-gate Phase 2.5](FR.md#fr-15-bug-fix-plan-gate-phase-25--already-shipped-feature15)
+- [FR-14: Graceful FILE_CHANGES parser fallback](FR.md#fr-14-graceful-filechanges-parser-fallback-feature14)
+- [FR-15: Bug fix plan-gate Phase 2.5](FR.md#fr-15-bug-fix-plan-gate-phase-25-already-shipped-feature15)
 
 ## Non-Functional Requirements
 
@@ -47,21 +47,21 @@
 
 ## Acceptance Criteria
 
-- [AC-1 (FR-1): Skill bundle layout](ACCEPTANCE_CRITERIA.md#ac-1-fr-1)
-- [AC-2 (FR-2): FILE_CHANGES verification checks](ACCEPTANCE_CRITERIA.md#ac-2-fr-2)
-- [AC-3 (FR-3): Narrative path verification](ACCEPTANCE_CRITERIA.md#ac-3-fr-3)
-- [AC-4 (FR-4): Code-drift detection](ACCEPTANCE_CRITERIA.md#ac-4-fr-4)
-- [AC-5 (FR-5): TASKS↔FC consistency](ACCEPTANCE_CRITERIA.md#ac-5-fr-5)
-- [AC-6 (FR-6): Three output formats](ACCEPTANCE_CRITERIA.md#ac-6-fr-6)
-- [AC-7 (FR-7): PreToolUse hook](ACCEPTANCE_CRITERIA.md#ac-7-fr-7)
-- [AC-8 (FR-8): Hook fail-open](ACCEPTANCE_CRITERIA.md#ac-8-fr-8)
-- [AC-9 (FR-9): Extension manifest wiring](ACCEPTANCE_CRITERIA.md#ac-9-fr-9)
-- [AC-10 (FR-10): Test coverage](ACCEPTANCE_CRITERIA.md#ac-10-fr-10)
-- [AC-11 (FR-11): Applied on canonical-plugin](ACCEPTANCE_CRITERIA.md#ac-11-fr-11)
-- [AC-12 (FR-12): spec-review integration](ACCEPTANCE_CRITERIA.md#ac-12-fr-12)
-- [AC-13 (FR-13): create-spec integration](ACCEPTANCE_CRITERIA.md#ac-13-fr-13)
-- [AC-14 (FR-14): Parser fallback](ACCEPTANCE_CRITERIA.md#ac-14-fr-14)
-- [AC-15 (FR-15): plan-gate bug fix](ACCEPTANCE_CRITERIA.md#ac-15-fr-15)
+- [AC-1 (FR-1): Skill bundle layout](ACCEPTANCE_CRITERIA.md#ac-1-fr-1-feature1)
+- [AC-2 (FR-2): FILE_CHANGES verification checks](ACCEPTANCE_CRITERIA.md#ac-2-fr-2-feature2)
+- [AC-3 (FR-3): Narrative path verification](ACCEPTANCE_CRITERIA.md#ac-3-fr-3-feature3)
+- [AC-4 (FR-4): Code-drift detection](ACCEPTANCE_CRITERIA.md#ac-4-fr-4-feature4)
+- [AC-5 (FR-5): TASKS↔FC consistency](ACCEPTANCE_CRITERIA.md#ac-5-fr-5-feature5)
+- [AC-6 (FR-6): Three output formats](ACCEPTANCE_CRITERIA.md#ac-6-fr-6-feature6)
+- [AC-7 (FR-7): PreToolUse hook](ACCEPTANCE_CRITERIA.md#ac-7-fr-7-feature7)
+- [AC-8 (FR-8): Hook fail-open](ACCEPTANCE_CRITERIA.md#ac-8-fr-8-feature8)
+- [AC-9 (FR-9): Extension manifest wiring](ACCEPTANCE_CRITERIA.md#ac-9-fr-9-feature9)
+- [AC-10 (FR-10): Test coverage](ACCEPTANCE_CRITERIA.md#ac-10-fr-10-feature10)
+- [AC-11 (FR-11): Applied on canonical-plugin](ACCEPTANCE_CRITERIA.md#ac-11-fr-11-feature11)
+- [AC-12 (FR-12): spec-review integration](ACCEPTANCE_CRITERIA.md#ac-12-fr-12-feature12)
+- [AC-13 (FR-13): create-spec integration](ACCEPTANCE_CRITERIA.md#ac-13-fr-13-feature13)
+- [AC-14 (FR-14): Parser fallback](ACCEPTANCE_CRITERIA.md#ac-14-fr-14-feature14)
+- [AC-15 (FR-15): plan-gate bug fix](ACCEPTANCE_CRITERIA.md#ac-15-fr-15-feature15)
 
 ## Verification Matrix (CHK)
 

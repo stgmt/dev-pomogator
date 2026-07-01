@@ -9,7 +9,7 @@
 | [FR-3](FR.md#fr-3-ac-decision-table-обязательна-per-polymorphic-fr) | AC Decision Table | [AC-3](ACCEPTANCE_CRITERIA.md#ac-3-fr-3) | @feature5 | Draft |
 | [FR-4](FR.md#fr-4-gherkin-scenario-outline-в-feature-11-с-ac) | Gherkin Scenario Outline | [AC-4](ACCEPTANCE_CRITERIA.md#ac-4-fr-4) | @feature5 | Draft |
 | [FR-5](FR.md#fr-5-tasksmd-per-variant) | TASKS.md per-variant | [AC-3](ACCEPTANCE_CRITERIA.md#ac-3-fr-3) | @feature5 | Draft |
-| [FR-6](FR.md#fr-6-audit-category-variant_coverage-8-я-категория) | Audit category VARIANT_COVERAGE | [AC-3](ACCEPTANCE_CRITERIA.md#ac-3-fr-3), [AC-4](ACCEPTANCE_CRITERIA.md#ac-4-fr-4), [AC-6](ACCEPTANCE_CRITERIA.md#ac-6-fr-6) | @feature5,6 | Draft |
+| [FR-6](FR.md#fr-6-audit-category-variantcoverage-8-я-категория) | Audit category VARIANT_COVERAGE | [AC-3](ACCEPTANCE_CRITERIA.md#ac-3-fr-3), [AC-4](ACCEPTANCE_CRITERIA.md#ac-4-fr-4), [AC-6](ACCEPTANCE_CRITERIA.md#ac-6-fr-6) | @feature5,6 | Draft |
 | [FR-7](FR.md#fr-7-escape-hatch-с-audit-log) | Escape hatch с audit log | [AC-5](ACCEPTANCE_CRITERIA.md#ac-5-fr-7) | @feature6,7 | Draft |
 | [FR-8](FR.md#fr-8-phase-2-sub-skill-variant-matrix-build) | Phase 2 sub-skill variant-matrix-build | [AC-1](ACCEPTANCE_CRITERIA.md#ac-1-fr-1), [AC-3](ACCEPTANCE_CRITERIA.md#ac-3-fr-3), [AC-4](ACCEPTANCE_CRITERIA.md#ac-4-fr-4) | @feature2,3,5 | Draft |
 
@@ -20,10 +20,10 @@
 - [FR-3: AC Decision Table обязательна per polymorphic FR](FR.md#fr-3-ac-decision-table-обязательна-per-polymorphic-fr)
 - [FR-4: Gherkin Scenario Outline в .feature 1:1 с AC](FR.md#fr-4-gherkin-scenario-outline-в-feature-11-с-ac)
 - [FR-5: TASKS.md per-variant](FR.md#fr-5-tasksmd-per-variant)
-- [FR-6: Audit category VARIANT_COVERAGE (8-я категория)](FR.md#fr-6-audit-category-variant_coverage-8-я-категория)
+- [FR-6: Audit category VARIANT_COVERAGE (8-я категория)](FR.md#fr-6-audit-category-variantcoverage-8-я-категория)
 - [FR-7: Escape hatch с audit log](FR.md#fr-7-escape-hatch-с-audit-log)
 - [FR-8: Phase 2 sub-skill variant-matrix-build](FR.md#fr-8-phase-2-sub-skill-variant-matrix-build)
-- [FR-9: PreToolUse form-guard на Write/Edit FR.md — OUT OF SCOPE](FR.md#fr-9-pretoolusable-form-guard-на-writeedit-frmd--out-of-scope)
+- [FR-9: PreToolUse form-guard на Write/Edit FR.md — OUT OF SCOPE](FR.md#fr-9-pretooluse-form-guard-на-writeedit-frmd-out-of-scope)
 
 ## Non-Functional Requirements
 

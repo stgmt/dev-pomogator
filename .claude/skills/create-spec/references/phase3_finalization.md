@@ -5,7 +5,7 @@
 
 ## Step 0 (Jira-mode)
 
-Если `.specs/{slug}/JIRA_SOURCE.md` существует — выполнить Step 0 из [`jira-mode.md`](jira-mode.md) для Phase 3: reproduction steps → mapping к implementation tasks (порядок tasks отражает порядок видео); error evidence → каждый task содержит `_Jira: <file>:<line>_`; directives enumeration → каждый scope-member-FR имеет green-task с `_Jira:_` reference.
+Если `JIRA_SOURCE.md` присутствует (проверка через `list_spec_docs({spec})`; MCP-rails, не raw `ls`) — выполнить Step 0 из [`jira-mode.md`](jira-mode.md) для Phase 3: reproduction steps → mapping к implementation tasks (порядок tasks отражает порядок видео); error evidence → каждый task содержит `_Jira: <file>:<line>_`; directives enumeration → каждый scope-member-FR имеет green-task с `_Jira:_` reference.
 
 **Каждая task в TASKS.md ОБЯЗАНА содержать `_Jira:_` строку** в теле блока (в пределах 20 строк после `### 📋 \`task-id\``). Format — см. [`jira-mode.md`](jira-mode.md).
 
@@ -33,6 +33,8 @@
 
    **Why not enforced:** test extension может не быть установлен в target repo (per `.dev-pomogator/installed-extensions.json` selection). Recommendation soft-fails, не блокирует workflow.
 
+   **Step 1d: Вызвать `Skill("cross-spec-reconcile")` (mode=light)** (FR-17) — повторный дешёвый mechanical проход на финализации (спека уже наполнена): file existence, terminology drift, RUNTIME_IDENTIFIER_DRIFT. Ловит расхождения с другими спеками + дрейф spec↔impl до STOP. CRITICAL hard-conflict subset → блокирующий AskUserQuestion; WARNING/INFO → `<system-reminder>`. Полный full-mode (LLM-semantic) — в Phase 3+ Audit (категория `CROSS_SPEC_CONSISTENCY`, см. `phase3plus_audit-cross-spec-consistency.md`).
+
    Структура TASKS.md:
 
    - **Phase -1 (Infrastructure):** Если DESIGN.md упоминает БД, docker, .env, secrets — добавить Phase -1: Infrastructure Prerequisites. Env vars пометить `[VERIFIED: source]`.
@@ -59,7 +61,11 @@
 
 2. **Сгенерировать README.md** (Краткое описание + Ключевые идеи + Где лежит реализация + Где читать дальше).
 
-3. **Финальная валидация** через `validate-spec.ts -Path ".specs/{feature}"` — должно быть 0 errors.
+3. **Финальная валидация** — ДВА уровня (FR-37a/d, правило `no-structural-valid.md`):
+   - pre-filter: `validate-spec.ts -Path ".specs/{feature}"` — 0 errors (структура/ссылки);
+   - **вердикт**: `npx tsx tools/specs-generator/spec-verdict.ts -Path ".specs/{feature}" --no-semantic` —
+     GREEN (audit + traceability + conformance над одним графом). Голый «validate-spec: 0 errors»
+     НЕ репортится как «спека валидна» — это pre-filter, не здоровье.
 
 ## Правила TDD-порядка в TASKS.md
 

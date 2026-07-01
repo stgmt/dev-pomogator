@@ -2,7 +2,7 @@
 
 ## Контекст
 
-В этой сессии 2026-05-23 при ручном аудите спеки `.specs/dev-pomogator-canonical-plugin/` обнаружено: FILE_CHANGES.md ссылается на ≥3 несуществующих файла (`bin/postinstall.js`, `src/installer/install-user-scope.ts`, `src/installer/git-exclude.ts`); exhaustive grep по cursor-refs дал 59 vs заявленных в FILE_CHANGES 39 (undercount 51%). Существующий `audit-spec.ts FILE_CHANGES_VERIFY` покрывает только `action=edit` на missing file; нет покрытия `action=create` drift, `action=delete` drift, narrative refs, code-drift через git history, TASKS↔FILE_CHANGES consistency. Verify запускается только вручную — нет авто-триггера. Цель этой спеки — закрыть gap новым skill'ом который автоматически проверяет реальность утверждений спеки против файловой системы и git history.
+В этой сессии 2026-05-23 при ручном аудите спеки `.specs/dev-pomogator-canonical-plugin/` обнаружено: FILE_CHANGES.md ссылается на ≥3 несуществующих файла (`bin/postinstall.js`, ~~`src/installer/install-user-scope.ts`~~ (removed in v2 migration), ~~`src/installer/git-exclude.ts`~~ (removed in v2 migration)); exhaustive grep по cursor-refs дал 59 vs заявленных в FILE_CHANGES 39 (undercount 51%). Существующий `audit-spec.ts FILE_CHANGES_VERIFY` покрывает только `action=edit` на missing file; нет покрытия `action=create` drift, `action=delete` drift, narrative refs, code-drift через git history, TASKS↔FILE_CHANGES consistency. Verify запускается только вручную — нет авто-триггера. Цель этой спеки — закрыть gap новым skill'ом который автоматически проверяет реальность утверждений спеки против файловой системы и git history.
 
 ## Источники
 
@@ -12,7 +12,7 @@
 - Existing skills как pattern: `.claude/skills/create-spec/SKILL.md` (multi-line EN+RU triggers), `.claude/skills/strong-tests/SKILL.md`, `.claude/skills/verify-generic-scope-fix/SKILL.md`
 - Existing PreToolUse hook: `extensions/scope-gate/tools/scope-gate/scope-gate-guard.ts` (stdin JSON parsing, `permissionDecision: "deny"` output, fail-open exception handling)
 - Existing host-safe test pattern: `tests/e2e/mcp-config.test.ts` (os.tmpdir() isolation)
-- Existing locks: `extensions/_shared/scope-gate-marker-store.ts`, `src/doctor/lock.ts`
+- Existing locks: `extensions/_shared/scope-gate-marker-store.ts`, `.claude/skills/pomogator-doctor/scripts/engine/lock.ts`
 
 ## Технические находки
 

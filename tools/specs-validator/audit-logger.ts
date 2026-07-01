@@ -64,10 +64,10 @@ export interface AuditEntry {
   raw: string;
 }
 
-export function readRecentEvents(withinHours = 24): AuditEntry[] {
+export function readRecentEvents(withinHours = 24, logFile = LOG_FILE): AuditEntry[] {
   try {
-    if (!fs.existsSync(LOG_FILE)) return [];
-    const content = fs.readFileSync(LOG_FILE, 'utf-8');
+    if (!fs.existsSync(logFile)) return [];
+    const content = fs.readFileSync(logFile, 'utf-8');
     const lines = content.split('\n').filter((l) => l.trim());
     const cutoff = new Date(Date.now() - withinHours * 60 * 60 * 1000);
     const entries: AuditEntry[] = [];

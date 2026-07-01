@@ -5,10 +5,10 @@
 ### v0.1.0 (docker-test.sh)
 
 - [FR-1: Persistent log для docker-test.sh output](FR.md#fr-1-persistent-log-для-docker-testsh-output)
-- [FR-2: Обновить rule `no-blocking-on-tests`](FR.md#fr-2-обновить-rule-no-blocking-on-tests--запрет-naked--tail-в-bg)
-- [FR-3: Directory lifecycle](FR.md#fr-3-directory-lifecycle--dev-pomogatordocker-status-создаётся-безопасно)
-- [FR-4: Gitignore verification](FR.md#fr-4-log-rotation--gitignore--не-коммитить-test-run-log)
-- [FR-5: Exit code preservation](FR.md#fr-5-exit-code-preservation--regression-guard)
+- [FR-2: Обновить rule `no-blocking-on-tests`](FR.md#fr-2-обновить-rule-no-blocking-on-tests-запрет-naked-tail-в-bg)
+- [FR-3: Directory lifecycle](FR.md#fr-3-directory-lifecycle-dev-pomogatordocker-status-создаётся-безопасно)
+- [FR-4: Gitignore verification](FR.md#fr-4-log-rotation-gitignore-не-коммитить-test-run-log)
+- [FR-5: Exit code preservation](FR.md#fr-5-exit-code-preservation-regression-guard)
 
 ### v0.2.0 (generic non-docker)
 

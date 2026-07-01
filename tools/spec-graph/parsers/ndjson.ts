@@ -72,6 +72,24 @@ function normalizeStatus(raw: unknown): TestStatus {
   return 'UNKNOWN';
 }
 
+/**
+ * Cucumber status severity (higher = worse). A scenario's result is the
+ * worst-severity status across its steps — FAILED > AMBIGUOUS > UNDEFINED >
+ * PENDING > SKIPPED > PASSED. Used to avoid collapsing non-green scenarios to
+ * PASSED just because no step explicitly FAILED.
+ */
+function statusSeverity(s: TestStatus): number {
+  switch (s) {
+    case 'FAILED': return 6;
+    case 'AMBIGUOUS': return 5;
+    case 'UNDEFINED': return 4;
+    case 'PENDING': return 3;
+    case 'SKIPPED': return 2;
+    case 'PASSED': return 1;
+    default: return 0; // UNKNOWN
+  }
+}
+
 /** Convert a duration envelope `{seconds, nanos}` to milliseconds. */
 function durationToMs(d: unknown): number | undefined {
   if (!d || typeof d !== 'object') return undefined;
@@ -101,6 +119,21 @@ export function parseNdjson(source: string): TestResultPatch {
   /** gherkinDocument.uri → map astNodeId → line. */
   const astLineByNodeId = new Map<string, number>();
 
+  /**
+   * pickleStepId → step text. Populated from `pickle.steps[]`. Cucumber Messages
+   * embed the human-readable Gherkin step text inside the pickle envelope, so
+   * we capture it once and never need to walk the Gherkin AST.
+   */
+  const pickleStepText = new Map<string, string>();
+
+  /**
+   * testStepId → pickleStepId. Populated from `testCase.testSteps[]`. The
+   * `testStepFinished` envelope only carries `testStepId`, so this two-hop
+   * lookup (`testStepId` → `pickleStepId` → step text) is the canonical way to
+   * recover the failing step's text from a Cucumber Messages stream.
+   */
+  const testStepToPickleStep = new Map<string, string>();
+
   const byLocation = new Map<string, ScenarioResultFields>();
   /** testCaseId → tentative result accumulated during the run. */
   const testCaseResult = new Map<string, ScenarioResultFields & { startTs?: string }>();
@@ -115,19 +148,25 @@ export function parseNdjson(source: string): TestResultPatch {
     }
 
     // gherkinDocument — index ast node ids to their line numbers
+    type GherkinScenario = { id?: string; location?: { line?: number } };
     const doc = env.gherkinDocument as
-      | { feature?: { children?: Array<{ scenario?: { id?: string; location?: { line?: number } } }> } }
+      | { feature?: { children?: Array<{ scenario?: GherkinScenario; rule?: { children?: Array<{ scenario?: GherkinScenario }> } }> } }
       | undefined;
     if (doc?.feature?.children) {
+      const indexScenario = (sc?: GherkinScenario): void => {
+        if (sc?.id && typeof sc.location?.line === 'number') astLineByNodeId.set(sc.id, sc.location.line);
+      };
+      // Index top-level scenarios AND scenarios nested under a `Rule:` — else a
+      // Rule-wrapped scenario's result never maps (its astLine is unknown).
       for (const ch of doc.feature.children) {
-        if (ch.scenario?.id && typeof ch.scenario.location?.line === 'number') {
-          astLineByNodeId.set(ch.scenario.id, ch.scenario.location.line);
-        }
+        indexScenario(ch.scenario);
+        if (ch.rule?.children) for (const rc of ch.rule.children) indexScenario(rc.scenario);
       }
       continue;
     }
 
-    // pickle — links pickleId to scenario name + tags + AST nodes
+    // pickle — links pickleId to scenario name + tags + AST nodes,
+    // and indexes each pickleStep's text for failingStep recovery.
     const pickle = env.pickle as
       | {
           id?: string;
@@ -135,6 +174,7 @@ export function parseNdjson(source: string): TestResultPatch {
           name?: string;
           tags?: Array<{ name: string }>;
           astNodeIds?: string[];
+          steps?: Array<{ id?: string; text?: string }>;
         }
       | undefined;
     if (pickle?.id) {
@@ -143,17 +183,38 @@ export function parseNdjson(source: string): TestResultPatch {
         .find((l): l is number => typeof l === 'number');
       pickles.set(pickle.id, {
         name: pickle.name ?? '',
-        uri: pickle.uri ?? '',
+        // Cucumber on Windows emits backslash uris (`.specs\\foo.feature`); the
+        // SpecGraph keys scenarios by POSIX path, so normalise here or the
+        // `${uri}:${line}` join never matches and every result is dropped.
+        uri: (pickle.uri ?? '').replace(/\\/g, '/'),
         astLine,
         tags: (pickle.tags ?? []).map((t) => t.name),
       });
+      for (const step of pickle.steps ?? []) {
+        if (step.id && typeof step.text === 'string') {
+          pickleStepText.set(step.id, step.text);
+        }
+      }
       continue;
     }
 
-    // testCase — links testCaseId to pickleId
-    const testCase = env.testCase as { id?: string; pickleId?: string } | undefined;
+    // testCase — links testCaseId to pickleId, and indexes each testStepId →
+    // pickleStepId so that `testStepFinished.testStepId` can be resolved back
+    // to the human-readable Gherkin step text via `pickleStepText`.
+    const testCase = env.testCase as
+      | {
+          id?: string;
+          pickleId?: string;
+          testSteps?: Array<{ id?: string; pickleStepId?: string }>;
+        }
+      | undefined;
     if (testCase?.id && testCase.pickleId) {
       testCaseToPickle.set(testCase.id, testCase.pickleId);
+      for (const ts of testCase.testSteps ?? []) {
+        if (ts.id && ts.pickleStepId) {
+          testStepToPickleStep.set(ts.id, ts.pickleStepId);
+        }
+      }
       continue;
     }
 
@@ -173,10 +234,15 @@ export function parseNdjson(source: string): TestResultPatch {
       continue;
     }
 
-    // testStepFinished — captures the FIRST failing step's message
+    // testStepFinished — captures the FIRST failing step's message and resolves
+    // its Gherkin step text via `testStepId → pickleStepId → pickleStepText`.
+    // The two-hop lookup is the canonical Cucumber Messages way: testStepFinished
+    // only ships `testStepId`, which is local to the testCase envelope; we cross-
+    // reference it back through `testCase.testSteps[]` → `pickle.steps[].text`.
     const stepFinished = env.testStepFinished as
       | {
           testCaseStartedId?: string;
+          testStepId?: string;
           testStepResult?: { status?: string; message?: string };
         }
       | undefined;
@@ -185,9 +251,20 @@ export function parseNdjson(source: string): TestResultPatch {
       if (tcId) {
         const acc = testCaseResult.get(tcId) ?? { lastResult: 'UNKNOWN' as TestStatus };
         const status = normalizeStatus(stepFinished.testStepResult.status);
+        // Scenario result = worst-severity step status (cucumber semantics).
+        // Without this, UNDEFINED / PENDING scenarios collapse to PASSED in the
+        // testCaseFinished fallback because only FAILED was ever tracked.
+        if (statusSeverity(status) > statusSeverity(acc.lastResult)) acc.lastResult = status;
         if (status === 'FAILED' && !acc.failingStep) {
+          let stepText = '';
+          if (stepFinished.testStepId) {
+            const pickleStepId = testStepToPickleStep.get(stepFinished.testStepId);
+            if (pickleStepId) {
+              stepText = pickleStepText.get(pickleStepId) ?? '';
+            }
+          }
           acc.failingStep = {
-            step: '',
+            step: stepText,
             errorMessage: stepFinished.testStepResult.message ?? '',
           };
         }
@@ -206,17 +283,26 @@ export function parseNdjson(source: string): TestResultPatch {
         const acc = testCaseResult.get(tcId) ?? { lastResult: 'UNKNOWN' as TestStatus };
         // The full pass/fail of a testCase is the worst-of testStepFinished —
         // but cucumber-js v12 also re-emits status in this envelope when present.
-        const explicit = (env.testCaseFinished as { testStepResult?: { status?: string } }).testStepResult?.status;
-        if (explicit) acc.lastResult = normalizeStatus(explicit);
-        else if (acc.failingStep) acc.lastResult = 'FAILED';
-        else acc.lastResult = acc.lastResult === 'UNKNOWN' ? 'PASSED' : acc.lastResult;
+        const explicit = normalizeStatus((env.testCaseFinished as { testStepResult?: { status?: string } }).testStepResult?.status);
+        // The explicit testCase-level status may only RAISE severity — never LOWER it.
+        // A blind `acc.lastResult = explicit` let an explicit PASSED hide a FAILED step
+        // (the false-green class). Worst-of-steps stays authoritative; explicit only
+        // promotes (e.g. a testCase FAILED with no per-step FAILED captured), and is the
+        // sole signal when no steps were observed at all.
+        if (explicit !== 'UNKNOWN' && statusSeverity(explicit) > statusSeverity(acc.lastResult)) {
+          acc.lastResult = explicit;
+        } else if (acc.lastResult === 'UNKNOWN') {
+          acc.lastResult = 'PASSED'; // no steps observed and no explicit status
+        }
 
         if (tcFinished.timestamp && acc.startTs) {
           const endMs =
             (tcFinished.timestamp.seconds ?? 0) * 1000 +
             Math.round((tcFinished.timestamp.nanos ?? 0) / 1_000_000);
           const startMs = new Date(acc.startTs).getTime();
-          if (Number.isFinite(startMs)) acc.durationMs = endMs - startMs;
+          // Clamp to ≥0: a clock skew (finish timestamp < start) must not store a
+          // negative duration.
+          if (Number.isFinite(startMs)) acc.durationMs = Math.max(0, endMs - startMs);
         }
         testCaseResult.set(tcId, acc);
       }
@@ -238,7 +324,15 @@ export function parseNdjson(source: string): TestResultPatch {
       durationMs: acc.durationMs,
       failingStep: acc.failingStep ?? null,
     };
-    byLocation.set(key, fields);
+    // Worst-of-merge on key collision. A Scenario Outline's example rows can resolve
+    // to the SAME `${uri}:astLine` (they share the Outline's scenario line); a plain
+    // last-writer `set` would let a later PASSED example HIDE an earlier FAILED one —
+    // the exact false-green this ingester must never emit. Keep the worst-severity
+    // result (and its failingStep) so a FAILED row always wins.
+    const prev = byLocation.get(key);
+    if (!prev || statusSeverity(fields.lastResult) > statusSeverity(prev.lastResult)) {
+      byLocation.set(key, fields);
+    }
   }
 
   return { byLocation };
@@ -263,9 +357,25 @@ export function applyTestResults(
   patch: TestResultPatch,
 ): number {
   let applied = 0;
+  // Suffix fallback for cucumber invocations that emit ABSOLUTE file:// uris
+  // (`file:///D:/repo/.specs/x.feature`) while the graph keys scenarios by a
+  // repo-RELATIVE path (`.specs/x.feature`). Exact lookup misses → every result
+  // is dropped → all scenarios read not_run → tasks falsely DONE_UNTESTED (the
+  // windows-path incident class). The `/`-anchored suffix keeps it from matching
+  // `…notspecs/x.feature`. Built lazily, only when an exact lookup misses.
+  let keys: string[] | null = null;
   for (const s of scenarios) {
-    const key = `${s.file}:${s.line}`;
-    const fields = patch.byLocation.get(key);
+    const exactKey = `${s.file}:${s.line}`;
+    let fields = patch.byLocation.get(exactKey);
+    if (!fields) {
+      if (keys === null) keys = [...patch.byLocation.keys()];
+      // The graph's relative path has no leading `./` (path.relative never adds one),
+      // so a raw `/<relpath>:line` suffix matches the tail of an absolute uri key
+      // (`…/<repo>/.specs/x.feature:5`) without mangling the leading dot of `.specs`.
+      const suffix = `/${s.file}:${s.line}`;
+      const hit = keys.find((k) => k.endsWith(suffix));
+      if (hit) fields = patch.byLocation.get(hit);
+    }
     if (!fields) continue;
     s.lastResult = fields.lastResult;
     s.lastRunAt = fields.lastRunAt;

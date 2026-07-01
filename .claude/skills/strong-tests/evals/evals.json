@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "rubric": "A test is STRONG iff it PASSES on the good impl AND FAILS on the broken impl (mutation-resistant). PASS on both = FAKE-POSITIVE-RISK. FAIL on good = BROKEN. The eval gates test-author / strong-tests §6.5 output: a scenario that survives a real mutation of its target is NOT a deliverable.",
+  "cases": [
+    {
+      "id": "merge-unique-by-key",
+      "good": "tests/fixtures/test-author/good/merge-unique.ts",
+      "broken": "tests/fixtures/test-author/broken/merge-unique.ts",
+      "broken_desc": "dedups by object identity instead of business key (OutSight-AI / session-pilot duplicate-rows bug class)",
+      "export": "mergeUnique",
+      "candidates": [
+        { "test": "tests/fixtures/test-author/candidates/strong.ts", "expect": "STRONG" },
+        { "test": "tests/fixtures/test-author/candidates/fake-green.ts", "expect": "FAKE-POSITIVE-RISK" }
+      ]
+    }
+  ]
+}

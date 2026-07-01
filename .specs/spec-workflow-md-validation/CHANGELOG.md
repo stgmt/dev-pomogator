@@ -31,7 +31,7 @@ All notable changes to this feature will be documented in this file.
 
 ### Deviations from original plan
 - Cursor `.mdc` rule file replaced by `.claude/skills/create-spec/references/specs-validation.md` (single source of truth inside the `create-spec` skill bundle, no Cursor-specific duplication)
-- `src/installer/memory.ts copyValidateSpecsScript()` not added — generic `toolFiles` flow handles installation
+- ~~`src/installer/memory.ts` copyValidateSpecsScript()~~ (removed in v2 — no canonical replacement) not added — generic `toolFiles` flow handles installation
 
 ### Notes
 - Spec docs framework lagged behind code throughout implementation (TASKS not checked, CHANGELOG stuck in "[Unreleased]") — finalized at this version after a `git checkout`-driven `.specs/` recovery on 2026-05-23 (see incident in tests/setup/ensure-docker.ts header)

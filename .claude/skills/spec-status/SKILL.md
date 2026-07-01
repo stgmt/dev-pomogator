@@ -7,12 +7,15 @@ description: >
   with an evidence path, audits test-body quality (STRONG / WEAK / FAKE-POSITIVE-RISK),
   reads test-result recency, and separates environmental blockers from real failures.
   Triggers (RU): «статус спеки», «честный статус», «проверь готовность спеки»,
-  «что реально сделано», «AC проверены?», «перед тем как сказать готово».
-  Triggers (EN): «spec status», «honest status check», «before claiming done»,
-  «is this spec actually finished», «verify AC evidence», «what is really done».
+  «что реально сделано», «AC проверены?», «перед тем как сказать готово»,
+  «все ли требования реализованы», «ревью реализации по спеке», «какие FR готовы»,
+  «покрытие требований», «что осталось по спеке». Triggers (EN): «spec status»,
+  «honest status check», «before claiming done», «is this spec actually finished»,
+  «verify AC evidence», «what is really done», «are all requirements implemented»,
+  «per-FR implementation review», «which FRs are done».
   Do NOT use for: writing/scaffolding a spec (use create-spec), running tests
   (use /run-tests), or general progress questions answerable from .progress.json alone.
-allowed-tools: Bash, Read, Glob, Grep, Agent
+allowed-tools: Bash, Read, Glob, Grep, Agent, mcp__dev-pomogator-specs__read_spec_doc, mcp__dev-pomogator-specs__list_spec_docs, mcp__dev-pomogator-specs__get_spec_status
 ---
 
 # spec-status — honest, sub-agent-verified spec status
@@ -104,6 +107,40 @@ Merge sub-agent JSON + base progress + git + `deterministic.blockers` into markd
 End with the combined structured JSON (SCHEMA §3) in a trailing fenced block for
 programmatic consumers.
 
+### 5b. Per-FR implementation roll-up («все ли требования реализованы»)
+
+Когда вопрос — про ПОКРЫТИЕ ТРЕБОВАНИЙ (не статус одной фичи), добавь срез по
+каждому FR из ОДНОГО графа: для каждого FR-узла спеки посчитай tested-by
+сценарии (green / без прогона) и задачи (DONE / открытые) и выведи класс:
+
+- **DONE** — все сценарии зелёные, задачи закрыты;
+- **PARTIAL** — назови ПРИЧИНУ (открытые задачи / непрогнанные сценарии);
+- **NO-SCEN** — реализовано+vitest, но 0 BDD-сценариев → невидимо tested-by
+  слою графа (класс пойман 2026-06-07 на FR-23/28; закрытие = сценарий,
+  привязанный к РЕАЛЬНОМУ коду — он же ловит реальные баги: SPECGEN004_122
+  на первом прогоне вскрыл prod-несовпадение поля finding_code);
+- **SPEC-ONLY** — красная волна (задумано).
+
+Механика: buildGraphFromCwd → FR-узлы спеки → рёбра tested-by + Task.refs.
+Сверь полноту через MCP-дверь (MCP-rails FR-39 — НЕ raw `grep`/`Read` по `.specs/`;
+под enforce блок): `read_spec_doc({ spec, doc: "FR.md" })` → посчитай строки
+`^## FR-` в `content` == числу строк среза. Отчёт обязан идти классами с
+причинами, не «всё ок».
+
+### 6. Acknowledge the conformance summary (FR-20, B4)
+
+After rendering, run ONE Bash call:
+
+```bash
+npx tsx tools/specs-validator/ack-summary.ts
+```
+
+This stamps `~/.dev-pomogator/state/last-summary-ack.json` atomically — the
+threshold-only `📊 Spec conformance: N unresolved DENY …` line at prompt time
+goes silent until a NEW deny arrives. /spec-status IS the «show me everything»
+surface, so viewing it = acknowledging the backlog. Skipping this step leaves
+the prompt-time line repeating — that is the v3 noise FR-20 removes.
+
 ## Honesty rules (do not violate)
 
 - A passing/“done” claim requires an evidence path; absence of evidence → `claimed-only`.
@@ -124,3 +161,14 @@ programmatic consumers.
 - Deterministic helpers: `tests/e2e/spec-status.test.ts` (HSCMD001_01..05 + invariants).
 - Sub-agent orchestration is LLM behaviour → manual-verify: run `/spec-status` on a
   real spec and confirm the Agent is invoked and its JSON parses (HSCMD001_AGENT).
+
+## FR-37d guard — никогда не отмывать структурный pass как здоровье
+
+Этот скилл (и любой агент, репортящий здоровье спеки) **ОБЯЗАН** цитировать
+СМАРТ-вердикт — `npx tsx tools/specs-generator/spec-verdict.ts -Path .specs/<slug>`
+(conformance + coverage + audit + traceability + semantic над одним графом) и его
+gap list. **ЗАПРЕЩЕНО** заявлять «valid / clean / done» на основании одного лишь
+`validate-spec: 0 errors` — структурный pass это pre-filter, не вердикт. Этот
+гард кодирует реальный инцидент 2026-06-05 (false green: structural «valid» при
+10 audit-P0 и 1256 smart-находках). Правило:
+`.claude/rules/spec-verdict/no-structural-valid.md` (FR-37d).

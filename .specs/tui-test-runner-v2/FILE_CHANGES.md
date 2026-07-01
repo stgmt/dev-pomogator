@@ -36,14 +36,14 @@
 
 | Path | Action | Reason |
 |------|--------|--------|
-| `extensions/tui-test-runner/tools/tui-test-runner/tui/app.py` | edit | [FR-6](FR.md#fr-6-auto-run--keybinding-launch-feature6), [FR-7](FR.md#fr-7-screenshotsvg-export-feature7) Auto-run, screenshot, state restore |
-| `extensions/tui-test-runner/tools/tui-test-runner/tui/__main__.py` | edit | [FR-6](FR.md#fr-6-auto-run--keybinding-launch-feature6) CLI args --run, --filter |
+| `extensions/tui-test-runner/tools/tui-test-runner/tui/app.py` | edit | [FR-6](FR.md#fr-6-auto-run-keybinding-launch-feature6), [FR-7](FR.md#fr-7-screenshotsvg-export-feature7) Auto-run, screenshot, state restore |
+| `extensions/tui-test-runner/tools/tui-test-runner/tui/__main__.py` | edit | [FR-6](FR.md#fr-6-auto-run-keybinding-launch-feature6) CLI args --run, --filter |
 
 ## Node.js — Launcher (FR-6)
 
 | Path | Action | Reason |
 |------|--------|--------|
-| `extensions/tui-test-runner/tools/tui-test-runner/launcher.ts` | edit | [FR-6](FR.md#fr-6-auto-run--keybinding-launch-feature6) --run/--filter passthrough |
+| `extensions/tui-test-runner/tools/tui-test-runner/launcher.ts` | edit | [FR-6](FR.md#fr-6-auto-run-keybinding-launch-feature6) --run/--filter passthrough |
 
 ## Extension Manifest
 

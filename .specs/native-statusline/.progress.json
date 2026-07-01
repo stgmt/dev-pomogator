@@ -1,0 +1,28 @@
+{
+  "version": 4,
+  "featureSlug": "native-statusline",
+  "createdAt": "2026-06-04T02:36:54.264Z",
+  "currentPhase": "Complete",
+  "phases": {
+    "Discovery": {
+      "completedAt": "2026-06-04T02:41:46.419Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-06-04T02:41:46.419Z"
+    },
+    "Context": {
+      "completedAt": "2026-06-04T02:43:14.343Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-06-04T02:43:14.343Z"
+    },
+    "Requirements": {
+      "completedAt": "2026-06-04T03:17:32.506Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-06-04T03:17:32.506Z"
+    },
+    "Finalization": {
+      "completedAt": "2026-06-04T03:37:06.359Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-06-04T03:37:06.359Z"
+    }
+  }
+}

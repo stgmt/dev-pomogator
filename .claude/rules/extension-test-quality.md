@@ -9,7 +9,7 @@
 - **describe**: `DOMAIN_CODE: Description` (например `CTXMENU001: Context Menu Setup`)
 - **it**: `CODE_NN: description` (например `CTXMENU001_01: postinstall generates valid NSS`)
 - **Feature Scenario**: `Scenario: CODE_NN description` (один-к-одному с it)
-- **@featureN**: `// @featureN` перед it-блоком, `# @featureN` перед Scenario
+- **@featureN**: `// @featureN` перед it-блоком; перед Scenario — **НАСТОЯЩИЙ Gherkin-тег `@featureN`** (строка тега над сценарием). **НЕ `# @featureN`** — это комментарий: парсер спек-графа его не видит, сценарий остаётся UNTAGGED, tested-by рёбра не строятся, get_trace пуст (инцидент 2026-06-06 — это правило само учило псевдо-тегам; vitest на тег-строку не реагирует, она безвредна для обоих раннеров)
 
 ## 1:1 Mapping
 

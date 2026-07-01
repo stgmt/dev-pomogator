@@ -1,93 +1,54 @@
-# Source: new feature, domain code PLUGIN016 (next free after PLUGIN015)
+# Rewritten 2026-06-17 from aspirational agent-behaviour to verifiable artifact-structure — the
+# vitest (PLUGIN016) is the real contract (see .claude/rules/gotchas/verify-divergent-contracts.md).
 Feature: PLUGIN016 Tests Create Update Skill
-  As a developer using dev-pomogator
-  I want AI agent to follow test quality rules automatically
-  So that tests catch real bugs instead of being false positives
 
   Background:
-    Given dev-pomogator is installed
-    And test-quality extension is enabled
+    Given the tests-create-update skill and its compliance hook are present in the repo
 
-  # @feature1 — Anti-pattern detection
-  Scenario: PLUGIN016_01 AI shall flag pathExists-only assertion
-    Given test checks fs.pathExists without content validation
-    When AI runs compliance check
-    Then it shall flag "existence-only" with line reference
-    And suggest stat + readFile + toContain
+  @feature1
+  Scenario: PLUGIN016_01 SKILL.md has valid frontmatter (name + allowed-tools)
+    Given the tests-create-update SKILL.md
+    Then it declares "name: tests-create-update" and an "allowed-tools" field
 
-  # @feature1
-  Scenario: PLUGIN016_02 AI shall flag source scan assertion
-    Given test reads source file and checks toContain('functionName')
-    When AI runs compliance check
-    Then it shall flag "source scan / unit-only"
-    And suggest spawnSync integration approach
+  @feature2
+  Scenario: PLUGIN016_02 SKILL.md carries the Assertion Selection Table
+    Given the tests-create-update SKILL.md
+    Then it contains an "Assertion Selection Table" with BAD and GOOD columns
 
-  # @feature1
-  Scenario: PLUGIN016_03 AI shall flag weak toBeDefined assertion
-    Given test uses expect(x).toBeDefined() without value check
-    When AI runs compliance check
-    Then it shall flag "weak assertion"
-    And suggest .toBe(expectedValue) or .toEqual(structure)
+  @feature1
+  Scenario: PLUGIN016_03 SKILL.md enumerates all the NEVER anti-pattern rules
+    Given the tests-create-update SKILL.md
+    Then it lists every catalogued "NEVER" anti-pattern rule
 
-  # @feature2 — Assertion selection
-  Scenario: PLUGIN016_04 AI shall use content validation for file checks
-    When AI creates test that verifies file installation
-    Then assertion shall include readFile + content length + toContain
-    And shall NOT use pathExists alone
+  @feature5
+  Scenario: PLUGIN016_04 SKILL.md carries the compliance report template
+    Given the tests-create-update SKILL.md
+    Then it contains the compliance checklist items and an "X/16 PASS" line
 
-  # @feature2
-  Scenario: PLUGIN016_05 AI shall use body check for API responses
-    When AI creates test that verifies API endpoint
-    Then assertion shall include status code AND body structure check
-    And shall NOT use res.ok alone
+  @feature1
+  Scenario: PLUGIN016_05 the skill is installed in the repo tree
+    Then the file .claude/skills/tests-create-update/SKILL.md exists
 
-  # @feature3 — No silent skip
-  Scenario: PLUGIN016_06 AI shall not use early return in tests
-    When AI creates test with conditional logic
-    Then it shall use expect(condition, 'message').toBe(true)
-    And shall NOT use if (!condition) return
+  @feature8
+  Scenario: PLUGIN016_06 the plugin registry wires compliance_check as PostToolUse(Write|Edit)
+    Then the plugin hooks register compliance_check on PostToolUse with matcher "Write|Edit"
 
-  # @feature4 — Integration-first
-  Scenario: PLUGIN016_07 AI shall use runInstaller for E2E tests
-    When AI creates test for installer functionality
-    Then it shall call runInstaller() and check file system results
-    And shall NOT import function and call with hardcoded args
+  @feature8
+  Scenario: PLUGIN016_07 compliance_check.ts exists and exports the scanner
+    Then tools/test-quality/compliance_check.ts is non-trivial and contains scanAntiPatterns and isTestFile
 
-  # @feature5 — Compliance report
-  Scenario: PLUGIN016_08 AI shall output compliance table
-    When AI finishes creating or updating a test
-    Then it shall output markdown table with 7 rules
-    And each rule shall show PASS or FAIL with details
+  @feature1
+  Scenario: PLUGIN016_08 the scanner detects the existence-only pattern
+    Then the compliance scanner flags a pathExists-only call as an "existence-only" violation
 
-  # @feature6 — Multi-language
-  Scenario: PLUGIN016_09 AI shall use FluentAssertions for C# projects
-    Given project uses xUnit and FluentAssertions
-    When AI creates C# test
-    Then assertions shall use Should() syntax
-    And shall NOT use Assert.NotNull alone
+  @feature1
+  Scenario: PLUGIN016_09 the scanner detects the weak-assertion pattern
+    Then the compliance scanner flags a lone toBeDefined as a "weak-assertion" violation
 
-  # @feature7 — Unsafe JSON (C#)
-  Scenario: PLUGIN016_10 AI shall use TryGetProperty for JSON parsing
-    Given C# test parses JSON response
-    When AI writes JSON field access
-    Then it shall use TryGetProperty with Assert.Fail fallback
-    And shall NOT use chained GetProperty()
+  @feature8
+  Scenario: PLUGIN016_10 isTestFile recognises the test-file patterns
+    Then the compliance hook classifies test.ts, test.cs and Steps.cs as test files
 
-  # @feature1
-  Scenario: PLUGIN016_11 AI shall flag empty catch blocks in C# tests
-    Given C# test has catch { } without logging
-    When AI runs compliance check
-    Then it shall flag "silent skip"
-    And suggest catch with output.WriteLine
-
-  # @feature8 — Auto-trigger
-  Scenario: PLUGIN016_12 Hook triggers compliance check on test file write
-    When Claude writes a file matching tests/e2e/*.test.ts
-    Then PostToolUse hook shall run anti-pattern scan
-    And output compliance report if issues found
-
-  # @feature8
-  Scenario: PLUGIN016_13 Hook skips already-checked file in same session
-    Given hook already checked tests/e2e/foo.test.ts in this session
-    When Claude edits tests/e2e/foo.test.ts again
-    Then hook shall skip (cooldown)
+  @feature8
+  Scenario: PLUGIN016_11 the hook has a per-session cooldown
+    Then the compliance hook's cooldown logic returns true for a recent timestamp

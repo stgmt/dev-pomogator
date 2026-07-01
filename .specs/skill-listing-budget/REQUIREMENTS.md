@@ -6,17 +6,17 @@
 |----|------|-----------|-----------|--------|
 | [FR-1](FR.md#fr-1-запись-skilllistingbudgetfraction-10-в-claudesettingsjson) | Write 1.0 atomically | [AC-1](ACCEPTANCE_CRITERIA.md#ac-1-fr-1) | @feature1 | Draft |
 | [FR-2](FR.md#fr-2-идемпотентность-повторных-запусков) | Idempotent no-op when already 1.0 | [AC-2](ACCEPTANCE_CRITERIA.md#ac-2-fr-2) | @feature2 | Draft |
-| [FR-3](FR.md#fr-3-bump-существующего-значения--10) | Bump existing < 1.0 to 1.0 | [AC-3](ACCEPTANCE_CRITERIA.md#ac-3-fr-3) | @feature3 | Draft |
+| [FR-3](FR.md#fr-3-bump-существующего-значения-10) | Bump existing < 1.0 to 1.0 | [AC-3](ACCEPTANCE_CRITERIA.md#ac-3-fr-3) | @feature3 | Draft |
 | [FR-4](FR.md#fr-4-install-report-includes-change-line) | Install report line | [AC-4](ACCEPTANCE_CRITERIA.md#ac-4-fr-4) | @feature4 | Draft |
-| [FR-5](FR.md#fr-5-out-of-scope--нет-doctor-проверки-нет-подсчёта-нет-per-skill-логики) | OUT OF SCOPE — нет doctor/подсчёта | [AC-5](ACCEPTANCE_CRITERIA.md#ac-5-fr-5) | — | Out of Scope |
+| [FR-5](FR.md#fr-5-out-of-scope-нет-doctor-проверки-нет-подсчёта-нет-per-skill-логики) | OUT OF SCOPE — нет doctor/подсчёта | [AC-5](ACCEPTANCE_CRITERIA.md#ac-5-fr-5) | — | Out of Scope |
 
 ## Functional Requirements
 
 - [FR-1: Запись `skillListingBudgetFraction: 1.0` в `~/.claude/settings.json`](FR.md#fr-1-запись-skilllistingbudgetfraction-10-в-claudesettingsjson)
 - [FR-2: Идемпотентность повторных запусков](FR.md#fr-2-идемпотентность-повторных-запусков)
-- [FR-3: Bump существующего значения < 1.0](FR.md#fr-3-bump-существующего-значения--10)
+- [FR-3: Bump существующего значения < 1.0](FR.md#fr-3-bump-существующего-значения-10)
 - [FR-4: Install report includes change line](FR.md#fr-4-install-report-includes-change-line)
-- [FR-5: OUT OF SCOPE — нет doctor/подсчёта](FR.md#fr-5-out-of-scope--нет-doctor-проверки-нет-подсчёта-нет-per-skill-логики)
+- [FR-5: OUT OF SCOPE — нет doctor/подсчёта](FR.md#fr-5-out-of-scope-нет-doctor-проверки-нет-подсчёта-нет-per-skill-логики)
 
 ## Non-Functional Requirements
 

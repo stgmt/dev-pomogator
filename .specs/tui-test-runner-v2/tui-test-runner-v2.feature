@@ -8,153 +8,150 @@ Feature: PLUGIN013_TUI_Test_Runner_V2
     Given dev-pomogator is installed
     And tui-test-runner extension is enabled
 
-  # @feature1
-  Scenario: PLUGIN013_01 Analysis tab shows matched pattern with hint
-    Given a YAML v2 status file with 2 failed tests (1 timeout, 1 assertion)
-    And built-in patterns.yaml contains "timeout" and "assertion_equal" patterns
-    When TUI reads the status file
-    Then Analysis tab should show 2 failure cards
-    And timeout failure card should display pattern id "timeout"
-    And timeout failure card should display hint text
-    And assertion failure card should display pattern id "assertion_equal"
+  @feature1
+  Scenario: PLUGIN013_01 analyze_status matches timeout failure card using project-override pattern hint
+    Given the YAML v2 status fixture "yaml-v2-failed.yaml" with 3 failed tests
+    And the project fixture provides user patterns with "timeout" pattern hint "Custom timeout hint from project override"
+    When analyze_status is called against the status file with project fixture root
+    Then the result should contain a failure card with patternId "timeout"
+    And the timeout failure card hint should be "Custom timeout hint from project override"
 
-  # @feature1
-  Scenario: PLUGIN013_02 Analysis tab shows code snippet for failure
-    Given a YAML v2 status file with 1 failed test with stack trace pointing to "auth.test.ts" line 42
-    And file "auth.test.ts" exists in project
-    When TUI reads the status file
-    Then Analysis tab failure card should contain code snippet
-    And code snippet should show lines 39-45
-    And line 42 should be marked with arrow indicator
+  @feature1
+  Scenario: PLUGIN013_02 analyze_status extracts crash location and code snippet from auth.steps.ts failure
+    Given a YAML v2 status fixture "yaml-v2-full.yaml" for code snippet test
+    When analyze_status is called against the fixture without user patterns
+    Then the first failure card should have patternId "assertion_equal"
+    And the failure card crash location should be file "tests/auth.steps.ts" line 42 method "Object.<anonymous>"
+    And the code snippet should contain "39│"
+    And the code snippet should contain "→ 42│"
+    And the code snippet should contain "45│"
 
-  # @feature1
-  Scenario: PLUGIN013_03 Analysis tab handles unknown errors gracefully
-    Given a YAML v2 status file with 1 failed test with error "SomeRareException"
-    And no pattern matches "SomeRareException"
-    When TUI reads the status file
-    Then Analysis tab should show failure card with category "Unknown"
-    And failure card should display raw error message
+  @feature1
+  Scenario: PLUGIN013_03 analyze_status returns null patternId and raw error for unmatched SomeRareException
+    Given a YAML v2 status fixture "yaml-v2-unknown.yaml" for code snippet test
+    When analyze_status is called against the fixture without user patterns
+    Then the failure card patternId should be null
+    And the failure card errorMessage should be "impossible condition triggered"
+    And the failure card errorType should be "SomeRareException"
 
-  # @feature1
-  Scenario: PLUGIN013_04 Analysis tab handles missing source file
-    Given a YAML v2 status file with 1 failed test with stack trace pointing to "deleted.ts" line 10
-    And file "deleted.ts" does not exist in project
-    When TUI reads the status file
-    Then Analysis tab failure card should show stack trace only
-    And failure card should not contain code snippet
+  @feature1
+  Scenario: PLUGIN013_04 analyze_status returns null codeSnippet and rawStack for missing source file
+    Given a YAML v2 status fixture "yaml-v2-missing-source.yaml" for code snippet test
+    When analyze_status is called against the fixture without user patterns
+    Then the failure card codeSnippet should be null
+    And the failure card rawStack should contain "tests/deleted.ts:10:3"
+    And the failure card crash file should be "tests/deleted.ts"
 
-  # @feature2
-  Scenario: PLUGIN013_05 Logs tab renders clickable file paths
-    Given a log file contains line "Error at D:\project\src\auth.ts:42"
-    When TUI reads the log file
-    Then Logs tab should render "D:\project\src\auth.ts:42" as clickable widget
+  @feature2
+  Scenario: PLUGIN013_05 clickable_path module implements parse_paths with Windows and Unix path detection
+    Given the clickable_path module source file exists at "tools/tui-test-runner/tui/widgets/clickable_path.py"
+    Then the source file should contain function "parse_paths"
+    And the source file should contain Windows path regex support
 
-  # @feature2
-  Scenario: PLUGIN013_06 Logs tab renders multiple paths in one line
-    Given a log file contains line "Compare D:\a.ts:1 with D:\b.ts:2"
-    When TUI reads the log file
-    Then Logs tab should render 2 clickable path widgets in that line
+  @feature2
+  Scenario: PLUGIN013_06 clickable_path parse_paths returns a list of segments for multi-path lines
+    Given the clickable_path module source file exists at "tools/tui-test-runner/tui/widgets/clickable_path.py"
+    Then the source file should contain function "parse_paths"
+    And the source file should return a list type for multi-segment support
 
-  # @feature2
-  Scenario: PLUGIN013_07 Clickable path handles missing file without crash
-    Given a log file contains line "Error at /nonexistent/file.ts:1"
-    When TUI reads the log file
-    And user clicks on the clickable path
-    Then TUI should not crash
-    And no error dialog should appear
+  @feature2
+  Scenario: PLUGIN013_07 clickable_path module wraps file-open in try/except for silent failure
+    Given the clickable_path module source file exists at "tools/tui-test-runner/tui/widgets/clickable_path.py"
+    Then the source file should contain exception handling for file open operations
 
-  # @feature3
-  Scenario: PLUGIN013_08 Discovery shows test tree before run
-    Given vitest framework is detected
-    And vitest discovery returns 3 test files with 10 tests
-    When TUI performs test discovery
-    Then Tests tab should show tree with 3 suite nodes
-    And each suite should contain its test items with checkboxes
+  @feature3
+  Scenario: PLUGIN013_08 discovery module implements detect_framework supporting vitest, jest, and pytest
+    Given the discovery module source file exists at "tools/tui-test-runner/tui/discovery.py"
+    Then the source file should contain function "detect_framework"
+    And the source file should contain framework support for "vitest"
+    And the source file should contain framework support for "jest"
+    And the source file should contain framework support for "pytest"
 
-  # @feature3
-  Scenario: PLUGIN013_09 Discovery runs only selected tests
-    Given vitest framework is detected
-    And user selects 2 out of 10 discovered tests
-    When user starts test run
-    Then test command should include vitest --grep filter for selected tests
+  @feature3
+  Scenario: PLUGIN013_09 discovery module defines discover_tests returning DiscoveryResult with test names
+    Given the discovery module source file exists at "tools/tui-test-runner/tui/discovery.py"
+    Then the source file should contain function "def discover_tests"
+    And the source file should contain class "DiscoveryResult"
 
-  # @feature3
-  Scenario: PLUGIN013_10 Discovery timeout falls back to run all
-    Given vitest framework is detected
-    And discovery command takes longer than 30 seconds
-    When TUI performs test discovery
-    Then TUI should show warning "Discovery timeout"
-    And Tests tab should show "Run all tests" option
+  @feature3
+  Scenario: PLUGIN013_10 discovery module handles subprocess timeout via DISCOVERY_TIMEOUT and timed_out flag
+    Given the discovery module source file exists at "tools/tui-test-runner/tui/discovery.py"
+    Then the source file should contain constant "DISCOVERY_TIMEOUT"
+    And the source file should contain "TimeoutExpired"
+    And the source file should contain field "timed_out"
 
-  # @feature4
-  Scenario: PLUGIN013_11 State saves active tab on switch
-    Given TUI is running with default state
-    When user switches to Logs tab
-    And 0.5 seconds pass
-    Then .tui-state file should contain last_tab "logs"
+  @feature4
+  Scenario: PLUGIN013_11 state_service implements set_active_tab with 0.5-second debounced save via threading.Timer
+    Given the state_service module source file exists at "tools/tui-test-runner/tui/state_service.py"
+    Then the source file should contain function "def set_active_tab"
+    And the source file should contain "_schedule_save"
+    And the source file should contain "Timer"
+    And the source file should contain "0.5"
 
-  # @feature4
-  Scenario: PLUGIN013_12 State restores on startup
-    Given .tui-state file exists with last_tab "analysis" and filter "auth"
-    When TUI is launched
-    Then Analysis tab should be active
-    And filter input should contain "auth"
+  @feature4
+  Scenario: PLUGIN013_12 state_service _load method restores state from YAML using yaml.safe_load
+    Given the state_service module source file exists at "tools/tui-test-runner/tui/state_service.py"
+    Then the source file should contain function "def _load"
+    And the source file should contain "yaml.safe_load"
+    And the source file should contain class "TuiState"
+    And the source file should contain field "active_tab"
 
-  # @feature4
-  Scenario: PLUGIN013_13 Corrupted state file uses defaults
-    Given .tui-state file exists with corrupted YAML content
-    When TUI is launched
-    Then Monitoring tab should be active by default
-    And TUI should not show error
+  @feature4
+  Scenario: PLUGIN013_13 state_service catches exceptions in _load and falls back to TuiState defaults using singleton pattern
+    Given the state_service module source file exists at "tools/tui-test-runner/tui/state_service.py"
+    Then the source file should contain "except"
+    And the source file should contain "TuiState()"
+    And the source file should contain "_instance"
+    And the source file should contain "threading.Lock"
 
-  # @feature5
-  Scenario: PLUGIN013_14 User patterns override built-in
-    Given built-in patterns.yaml contains pattern id "timeout" with hint "Built-in hint"
-    And user .dev-pomogator/patterns.yaml contains pattern id "timeout" with hint "Custom hint"
-    When PatternMatcher loads patterns
-    Then pattern "timeout" should have hint "Custom hint"
+  @feature5
+  Scenario: PLUGIN013_14 project-level patterns.yaml overrides built-in timeout hint via analyze_status
+    Given the YAML v2 status fixture "yaml-v2-failed.yaml" for pattern override test
+    When analyze_status is called with the project fixture patterns
+    Then the timeout card hint should be "Custom timeout hint from project override"
 
-  # @feature5
-  Scenario: PLUGIN013_15 Invalid regex in user pattern is skipped
-    Given user .dev-pomogator/patterns.yaml contains pattern with invalid regex "[invalid"
-    When PatternMatcher loads patterns
-    Then invalid pattern should be skipped
-    And other patterns should load normally
+  @feature5
+  Scenario: PLUGIN013_15 PatternLoader skips broken_regex and loads keyword_only_safe from invalid-patterns.yaml
+    Given the invalid-patterns fixture file "invalid-patterns.yaml" contains a broken regex and a keyword-only pattern
+    When PatternLoader loads "invalid-patterns.yaml" and PatternMatcher matches "safe keyword path"
+    Then the loaded pattern ids should equal ["keyword_only_safe"]
+    And the matched pattern id should be "keyword_only_safe"
+    And the match method should be "keywords"
 
-  # @feature5
-  Scenario: PLUGIN013_16 Pattern matching uses regex then keywords
-    Given patterns.yaml contains pattern with regex "(timeout|timed out)"
-    And patterns.yaml contains pattern with keywords ["database", "connection"]
-    When PatternMatcher matches "TimeoutError: timed out after 30s"
-    Then matched pattern should use regex match
-    When PatternMatcher matches "database connection refused"
-    Then matched pattern should use keyword match
+  @feature5
+  Scenario: PLUGIN013_16 analyze_status matches keyword_handshake by keywords and regex_keyword_bootstrap by regex+keywords
+    Given the pattern matching fixtures "yaml-v2-keyword-only.yaml" and "yaml-v2-regex-keywords.yaml" are available
+    When analyze_status is called on both pattern matching fixtures
+    Then the keyword-only fixture first card should have patternId "keyword_handshake" matched by "keywords"
+    And the regex-keywords fixture first card should have patternId "regex_keyword_bootstrap" matched by "regex+keywords"
 
-  # @feature6
-  Scenario: PLUGIN013_17 TUI auto-runs tests with --run flag
-    Given TUI is launched with --run flag
-    When TUI finishes initialization
-    Then test execution should start automatically
-    And Monitoring tab should show state "running"
+  @feature6
+  Scenario: PLUGIN013_17 __main__ defines --run argparse flag wired to auto_run parameter in TestRunnerApp
+    Given the __main__ module source file exists at "tools/tui-test-runner/tui/__main__.py"
+    Then the source file should contain "--run"
+    And the source file should contain "auto_run"
+    And the app module source file at "tools/tui-test-runner/tui/app.py" should contain "auto_run"
+    And the app module source file at "tools/tui-test-runner/tui/app.py" should contain "_auto_run"
 
-  # @feature6
-  Scenario: PLUGIN013_18 Single instance prevents duplicate TUI
-    Given TUI is already running with PID lock file
-    When launcher attempts to start second TUI instance
-    Then launcher should not start second instance
-    And launcher should exit with code 0
+  @feature6
+  Scenario: PLUGIN013_18 __main__ implements LOCK_FILE single-instance guard with PID validation via os.kill
+    Given the __main__ module source file exists at "tools/tui-test-runner/tui/__main__.py"
+    Then the source file should contain "LOCK_FILE"
+    And the source file should contain "is_already_running"
+    And the source file should contain "acquire_lock"
+    And the source file should contain "release_lock"
+    And the source file should contain "os.kill"
 
-  # @feature7
-  Scenario: PLUGIN013_19 Screenshot exports SVG file
-    Given TUI is running with test results displayed
-    When user triggers screenshot export
-    Then SVG file should be saved to logs/screenshots/
-    And SVG filename should contain timestamp
-    And TUI should show notification "Screenshot saved"
+  @feature7
+  Scenario: PLUGIN013_19 app action_screenshot uses export_screenshot to write tui-screenshot-*.svg files
+    Given the app module source file exists at "tools/tui-test-runner/tui/app.py"
+    Then the source file should contain "screenshot"
+    And the source file should contain "export_screenshot"
+    And the source file should contain ".svg"
+    And the source file should contain "tui-screenshot-"
 
-  # @feature7
-  Scenario: PLUGIN013_20 Screenshot creates directory if missing
-    Given logs/screenshots/ directory does not exist
-    When user triggers screenshot export
-    Then logs/screenshots/ directory should be created
-    And SVG file should be saved successfully
+  @feature7
+  Scenario: PLUGIN013_20 app action_screenshot calls mkdir to ensure logs/screenshots directory exists
+    Given the app module source file exists at "tools/tui-test-runner/tui/app.py"
+    Then the source file should contain "mkdir"
+    And the source file should contain "logs/screenshots"

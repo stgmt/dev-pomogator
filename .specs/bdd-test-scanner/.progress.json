@@ -1,0 +1,28 @@
+{
+  "version": 4,
+  "featureSlug": "bdd-test-scanner",
+  "createdAt": "2026-06-29T03:18:10.608Z",
+  "currentPhase": "Requirements",
+  "phases": {
+    "Discovery": {
+      "completedAt": "2026-06-29T03:23:25.952Z",
+      "stopConfirmed": false,
+      "stopConfirmedAt": null
+    },
+    "Context": {
+      "completedAt": "2026-06-29T03:23:25.952Z",
+      "stopConfirmed": false,
+      "stopConfirmedAt": null
+    },
+    "Requirements": {
+      "completedAt": null,
+      "stopConfirmed": false,
+      "stopConfirmedAt": null
+    },
+    "Finalization": {
+      "completedAt": null,
+      "stopConfirmed": false,
+      "stopConfirmedAt": null
+    }
+  }
+}

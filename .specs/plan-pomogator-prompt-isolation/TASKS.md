@@ -33,9 +33,9 @@
 > Реализовать fix для prompt-capture.ts, чтобы тесты PLUGIN007_43_01..03 стали Green.
 
 - [x] Переименовать `conversation_id` → `session_id` в `HookInput` interface (line 31 файла `extensions/plan-pomogator/tools/plan-pomogator/prompt-capture.ts`) -- @feature1
-  _Requirements: [FR-1](FR.md#fr-1-prompt-capture-использует-session_id-из-hook-input-feature1)_
+  _Requirements: [FR-1](FR.md#fr-1-prompt-capture-использует-sessionid-из-hook-input-feature1)_
 - [x] В main() (line 88) заменить `const sessionId = input.conversation_id || 'default';` на `const sessionId = input.session_id; if (!sessionId) return;` -- @feature1 @feature2
-  _Requirements: [FR-1](FR.md#fr-1-prompt-capture-использует-session_id-из-hook-input-feature1), [FR-2](FR.md#fr-2-prompt-capture-не-пишет-defaultjson-при-отсутствии-session_id-feature2)_
+  _Requirements: [FR-1](FR.md#fr-1-prompt-capture-использует-sessionid-из-hook-input-feature1), [FR-2](FR.md#fr-2-prompt-capture-не-пишет-defaultjson-при-отсутствии-sessionid-feature2)_
 - [x] В main() после `if (!prompt) return;` (line 86) добавить `if (/^<task-notification\b/i.test(prompt)) return;` -- @feature3
   _Requirements: [FR-3](FR.md#fr-3-prompt-capture-фильтрует-task-notification-псевдо-промпты-feature3)_
 - [x] Verify: тесты PLUGIN007_43_01, PLUGIN007_43_02, PLUGIN007_43_03 переходят из Red в Green
@@ -53,7 +53,7 @@
 - [x] Использовать `real.slice(-MAX_PROMPT_DISPLAY)` вместо `data.prompts.slice(...)` в map block -- @feature5
   _Requirements: [FR-5](FR.md#fr-5-plan-gate-formatpromptsfromfile-фильтрует-task-notification-на-чтении-feature5)_
 - [x] Изменить `function formatPromptsFromFile(...)` на `export function formatPromptsFromFile(...)` для импорта в тестах -- @feature5 @feature7
-  _Requirements: [FR-5](FR.md#fr-5-plan-gate-formatpromptsfromfile-фильтрует-task-notification-на-чтении-feature5), [FR-7](FR.md#fr-7-регрессионные-тесты-покрывают-fr-1fr-5-интеграционно-feature7)_
+  _Requirements: [FR-5](FR.md#fr-5-plan-gate-formatpromptsfromfile-фильтрует-task-notification-на-чтении-feature5), [FR-7](FR.md#fr-7-регрессионные-тесты-покрывают-fr-1fr-5-интеграционно)_
 - [x] Verify: тесты PLUGIN007_43_04, PLUGIN007_43_05 переходят из Red в Green
 
 ## Phase 3: Refactor & Polish

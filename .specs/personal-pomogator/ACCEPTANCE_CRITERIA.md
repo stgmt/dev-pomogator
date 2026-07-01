@@ -91,7 +91,7 @@
 - WHEN `~/.claude.json` не существует THEN script SHALL create it с empty `{"mcpServers": {}}` structure AND add our entries.
 - IF project `.mcp.json` exists THEN script SHALL NOT modify it (no project writes at all).
 - WHEN script writes THEN console output SHALL contain `"[INFO] Writing MCP servers to global config"`.
-- WHEN `src/installer/memory.ts:registerClaudeMemMcp` runs THEN claude-mem SHALL register only в `~/.claude.json` (invariant test, no behavior change).
+- WHEN ~~`src/installer/memory.ts:registerClaudeMemMcp`~~ (removed in v2 — no canonical replacement) runs THEN claude-mem SHALL register only в `~/.claude.json` (invariant test, no behavior change).
 
 ## AC-10 (FR-10) @feature8
 
@@ -119,7 +119,7 @@
 
 ## AC-12 (FR-12) @feature10
 
-**Требование:** [FR-12: Updater syncs `_shared/` utilities](FR.md#fr-12-updater-syncs-_shared_-utilities-feature10)
+**Требование:** [FR-12: Updater syncs `_shared/` utilities](FR.md#fr-12-updater-syncs-shared-utilities-feature10)
 
 - WHEN updater runs AND `extensions/_shared/hook-utils.ts` was modified upstream THEN target `.dev-pomogator/tools/_shared/hook-utils.ts` SHALL contain identical bytes after update completes.
 - WHEN a file was added to upstream `_shared/.manifest.json` THEN target SHALL contain the new file after next update.
@@ -155,3 +155,17 @@
 - WHEN migration empties a hookName array (e.g. all `Stop` entries were dev-pomogator) THEN that key SHALL be deleted from `settings.hooks`, not left as `[]`.
 - WHEN migration empties the entire `hooks` object THEN it SHALL be deleted from settings, not left as `{}`.
 - WHEN team entries existed alongside dev-pomogator entries THEN every team entry SHALL be preserved bit-for-bit identical (matcher, hooks array structure, timeout, etc.).
+
+## AC-16 (FR-16) @feature11
+
+**Требование:** [FR-16: Global MCP bootstrap](FR.md#fr-16-global-mcp-bootstrap-feature11)
+
+- WHEN the SessionStart hook `mcp-bootstrap` runs AND `~/.claude.json` has no `context7`/`octocode` entry THEN it SHALL add both to top-level `mcpServers` (user scope), never to a project `.mcp.json`.
+- IF an entry for a server already exists THEN the hook SHALL leave it untouched (idempotent, no clobber).
+- IF Context7 has no non-empty API key OR Octocode has no GitHub auth (token or `gh auth status` exit 0) THEN the hook SHALL emit an `additionalContext` warning naming what is unconfigured and how to fix it.
+- WHEN both Context7 and Octocode are configured (real check) THEN the hook SHALL return `{continue:true, suppressOutput:true}` so the warning disappears.
+- IF `DEV_POMOGATOR_MCP_SETUP=off` THEN the hook SHALL install nothing and emit no warning.
+- WHEN `set-mcp-key` writes a non-empty secret for a server THEN the secret SHALL be stored in that server's `env` in `~/.claude.json` AND a re-read real-check SHALL report the server configured.
+- WHEN `set-mcp-key` is given an empty secret THEN it SHALL refuse (no write).
+- WHEN the doctor MCP-auth check `C-MCPA` runs AND a referenced/present server is unconfigured THEN it SHALL report severity `warning` with a `configure-mcp` fix-action; otherwise `ok`.
+- WHEN the doctor `mcp-parse` (C11) computes missing servers THEN plugin-provided names (`plugin_*`, `claude_ai_*`, `claude-in-chrome`) SHALL be excluded from the missing list.

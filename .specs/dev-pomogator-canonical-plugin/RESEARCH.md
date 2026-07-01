@@ -136,22 +136,17 @@ my-plugin/
 - `~/.dev-pomogator/scripts/` — global scripts (tsx-runner, check-update, launch-tui)
 - `~/.config/dev-pomogator/config.json` — tracking installed extensions per project
 
-**26 extensions** агрегируются в один runtime. Cursor support формально удалён (`src/index.ts:44-47` отвергает `--cursor`), но `extensions/edge-debug-port/extension.json:5` всё ещё содержит `["claude", "cursor"]`, `package.json:3` description упоминает Cursor, `package.json:12` keywords содержит `"cursor"` — технический долг.
+**26 extensions** агрегируются в один runtime. Cursor support формально удалён (`~~`src/index.ts`~~ (removed in v2 migration):44-47` отвергает `--cursor`), но `extensions/edge-debug-port/extension.json:5` всё ещё содержит `["claude", "cursor"]`, `package.json:3` description упоминает Cursor, `package.json:12` keywords содержит `"cursor"` — технический долг.
 
 ### Migration infrastructure (existing)
 
 Уже есть в репо:
-- `src/updater/hook-migration.ts` — `migrateOldProjectHooks()` переписывает старый `settings.json` hook format на portable `tsx-runner` bootstrap
-- `src/updater/content-hash.ts` — content hash tracking для drift detection (user modifications backup в `.dev-pomogator/.user-overrides/`)
-- `src/installer/uninstall-project.ts` — per-project cleanup (managed files only)
-- `src/config/schema.ts` — `ManagedFiles` dual format (string OR object with path+hash fields) для backward compat
 
 Новая migration v1→v2 может использовать эти patterns.
 
 ## Где лежит реализация
 
-- App-код: `src/installer/claude.ts`, `src/installer/extensions.ts`, `src/installer/gitignore.ts`, `src/installer/settings-local.ts`, `src/installer/uninstall-project.ts`, `src/index.ts`, `src/updater/github.ts`, `src/updater/hook-migration.ts`, `src/updater/content-hash.ts`
-- Конфигурация: `src/config/schema.ts`, `~/.dev-pomogator/config.json`, `extensions/*/extension.json`
+- App-код: ~~`src/installer/claude.ts`~~ (removed in v2 migration), ~~`src/installer/extensions.ts`~~ (removed in v2 migration), ~~`src/installer/gitignore.ts`~~ (removed in v2 migration), ~~`src/installer/settings-local.ts`~~ (removed in v2 migration), ~~`src/installer/uninstall-project.ts`~~ (removed in v2 migration), ~~`src/index.ts`~~ (removed in v2 migration), ~~`src/updater/github.ts`~~ (removed in v2 migration), ~~`src/updater/hook-migration.ts`~~ (removed in v2 migration), ~~`src/updater/content-hash.ts`~~ (removed in v2 migration)
 - Plugin manifest: `.dev-pomogator/.claude-plugin/plugin.json` (existing, требует canonical refactor)
 - Build/install: `package.json` (bin: `./bin/cli.js` → `dist/index.js`)
 - Tests: `tests/e2e/*.test.ts` (vitest), `tests/features/*.feature` (BDD)
@@ -189,11 +184,11 @@ my-plugin/
 | Source | Path | What It Provides | Relevance |
 |--------|------|-------------------|-----------|
 | personal-pomogator spec | `.specs/personal-pomogator/FR.md` | FR-1 gitignore marker block, FR-2 settings.local.json, FR-4 self-guard, FR-8 uninstall scope | Foundation: новая спека extends этот scope от project-only до user+project |
-| hook-migration | `src/updater/hook-migration.ts` | `migrateOldProjectHooks()`, `migrateProjectSettings()` — pattern для format migration | Шаблон для FR-7 migration v1→v2 |
-| content-hash | `src/updater/content-hash.ts` | SHA-256 drift detection, backup в `.user-overrides/` | Используется в migration для user-mod preservation |
-| atomic write helpers | `src/_shared/atomic-write.ts` (или эквивалент) | `writeJsonAtomic()`, `writeFileAtomic()` (temp+move) | Reuse для всех новых writers |
-| extension manifest aggregation | `src/installer/extensions.ts` `getExtension*()` | Читает `extensions/*/extension.json`, аггрегирует rules/skills/tools | Refactor в shared `buildCanonicalPlugin()` |
-| uninstall-project | `src/installer/uninstall-project.ts` | Per-project cleanup, managed files only, smart-merge settings | Шаблон для FR-6 (cleanup обоих gitignore И exclude) |
+| hook-migration | ~~`src/updater/hook-migration.ts`~~ (removed in v2 migration) | `migrateOldProjectHooks()`, `migrateProjectSettings()` — pattern для format migration | Шаблон для FR-7 migration v1→v2 |
+| content-hash | ~~`src/updater/content-hash.ts`~~ (removed in v2 migration) | SHA-256 drift detection, backup в `.user-overrides/` | Используется в migration для user-mod preservation |
+| atomic write helpers | ~~`src/_shared/atomic-write.ts`~~ (removed in v2 migration) (или эквивалент) | `writeJsonAtomic()`, `writeFileAtomic()` (temp+move) | Reuse для всех новых writers |
+| extension manifest aggregation | ~~`src/installer/extensions.ts`~~ (removed in v2 migration) `getExtension*()` | Читает `extensions/*/extension.json`, аггрегирует rules/skills/tools | Refactor в shared `buildCanonicalPlugin()` |
+| uninstall-project | ~~`src/installer/uninstall-project.ts`~~ (removed in v2 migration) | Per-project cleanup, managed files only, smart-merge settings | Шаблон для FR-6 (cleanup обоих gitignore И exclude) |
 
 ### Architectural Constraints Summary
 

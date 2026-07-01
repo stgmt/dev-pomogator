@@ -11,8 +11,8 @@
 | `dist/global-dir-guard.cjs` | create | Бандл guard скрипта |
 | `uninstall.ps1` | edit | [FR-1](FR.md#fr-1-uninstall-маркер-feature2) — запись маркера перед удалением |
 | `uninstall.sh` | create | [FR-1](FR.md#fr-1-uninstall-маркер-feature2) — bash версия uninstaller с маркером |
-| `src/installer/claude.ts` | edit | [FR-4](FR.md#fr-4-re-registration-sessionstart-hook-feature1) — добавить guard hook в project settings |
-| `src/installer/shared.ts` | edit | Экспортировать `recoveryScriptsList` для переиспользования в guard |
+| ~~`src/installer/claude.ts`~~ (removed in v2 — no canonical replacement) | edit | [FR-4](FR.md#fr-4-re-registration-sessionstart-hook-feature1) — добавить guard hook в project settings |
+| `.claude/skills/skills-rules-optimizer/scripts/shared.ts` | edit | Экспортировать `recoveryScriptsList` для переиспользования в guard |
 | `tests/e2e/global-dir-guard.test.ts` | create | BDD тесты для guard |
 | `tests/features/plugins/global-dir-guard/global-dir-guard.feature` | create | BDD feature сценарии |
 | `extensions/context-menu/tools/context-menu/postinstall.ts` | edit | Баг `@sel.path` → `@sel.dir` (уже применён) |

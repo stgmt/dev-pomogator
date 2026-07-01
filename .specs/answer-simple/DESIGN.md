@@ -5,8 +5,8 @@
 - [FR-1: Always-apply self-check template](FR.md#fr-1-always-apply-шаблон-самопроверки-агента-перед-отправкой-ответа)
 - [FR-2: Slash /answer-simple draft audit](FR.md#fr-2-slash-команда-answer-simple-для-ручного-аудита-черновика)
 - [FR-3: Extension follows extension-layout](FR.md#fr-3-extension-следует-конвенциям-extension-layout)
-- [FR-4: Incident trigger no-new-question branch](FR.md#fr-4-триггер-инцидента-—-запрет-нового-вопроса-при-сигнале-непонимания)
-- [FR-5: Rule migration with glossary update](FR.md#fr-5-миграция-существующего-rule-с-обновлением-claude-md-глоссария)
+- [FR-4: Incident trigger no-new-question branch](FR.md#fr-4-триггер-инцидента-запрет-нового-вопроса-при-сигнале-непонимания)
+- [FR-5: Rule migration with glossary update](FR.md#fr-5-миграция-существующего-rule-с-обновлением-claudemd-глоссария)
 
 ## Компоненты
 

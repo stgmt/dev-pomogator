@@ -75,9 +75,9 @@ AI НЕ выдумывает требования. Только формализ
 
 **Когда применять:** EARS формулировки типа `WHEN (X OR Y) AND NOT Z THEN system SHALL ...`
 
-**Пруф:** адаптировано из MC/DC coverage criterion (DO-178C, ISO 29119-4) — universal technique, применимо к любым complex boolean AC, независимо от домена. Источник: [§22 RESEARCH.md](RESEARCH.md#22-white-box-unit-test-techniques-из-unit-testmd).
+**Пруф:** адаптировано из MC/DC coverage criterion (DO-178C, ISO 29119-4) — universal technique, применимо к любым complex boolean AC, независимо от домена. Источник: [§20 RESEARCH.md](RESEARCH.md#20-white-box-unit-test-techniques-из-unit-testmd).
 
-**Связанные AC:** [AC-1](ACCEPTANCE_CRITERIA.md#ac-1-fr-1)
+**Связанные AC:** [AC-1](ACCEPTANCE_CRITERIA.md#ac-1-fr-1-качество-требований-по-ieee-29148-incose-feature1)
 
 ---
 
@@ -119,7 +119,7 @@ REQ-NNN → ATP-NNN-X → SYS-NNN → STP-NNN-X → ARCH-NNN → ITP-NNN-X → M
 
 Скрипт `build-matrix` парсит `Parent Requirements` / `Parent System Components` / `Parent Architecture Modules` из конкретных секций файлов (section-scoped regex).
 
-**Связанные AC:** [AC-2](ACCEPTANCE_CRITERIA.md#ac-2-fr-2)
+**Связанные AC:** [AC-2](ACCEPTANCE_CRITERIA.md#ac-2-fr-2-детерминированная-coverage-validation-feature2)
 
 ---
 
@@ -176,7 +176,7 @@ UTP:  UTP-[0-9]{3}-[A-Z]              # UTP-001-A
 UTS:  UTS-[0-9]{3}-[A-Z][0-9]+        # UTS-001-A1
 ```
 
-**Связанные AC:** [AC-3](ACCEPTANCE_CRITERIA.md#ac-3-fr-3)
+**Связанные AC:** [AC-3](ACCEPTANCE_CRITERIA.md#ac-3-fr-3-id-based-трассируемость-feature3)
 
 ---
 
@@ -275,7 +275,7 @@ UTS:  UTS-[0-9]{3}-[A-Z][0-9]+        # UTS-001-A1
 - Memory Management (DO-178C / ISO 26262): no dynamic alloc after init, bounded loops, max stack depth
 - Single Entry/Exit (DO-178C Level A): exactly one return per function
 
-**Связанные AC:** [AC-4](ACCEPTANCE_CRITERIA.md#ac-4-fr-4)
+**Связанные AC:** [AC-4](ACCEPTANCE_CRITERIA.md#ac-4-fr-4-трёхуровневый-design-ieee-1016-ieee-42010-do-178c-feature4)
 
 ---
 
@@ -347,7 +347,7 @@ Trace запускается **4 раза** — после КАЖДОЙ пары
 - **exit 1** = gaps found → AI получает конкретный список, исправляет, coverage re-run
 - Переход к следующему уровню БЛОКИРУЕТСЯ пока предыдущий level не 100%
 
-**Связанные AC:** [AC-5](ACCEPTANCE_CRITERIA.md#ac-5-fr-5)
+**Связанные AC:** [AC-5](ACCEPTANCE_CRITERIA.md#ac-5-fr-5-paired-generation-progressive-traceability-feature5)
 
 ---
 
@@ -409,4 +409,30 @@ Trace запускается **4 раза** — после КАЖДОЙ пары
 - `|` в markdown table rows интерпретирован как PowerShell pipeline operator
 - Bash-версия (`build-matrix.sh`) работает корректно на тех же данных
 
-**Связанные AC:** [AC-6](ACCEPTANCE_CRITERIA.md#ac-6-fr-6)
+**Связанные AC:** [AC-6](ACCEPTANCE_CRITERIA.md#ac-6-fr-6-cross-platform-script-safety-feature6)
+
+## FR-006: [TBD title]
+
+[TBD description — replace with actual requirement text]
+
+### Citations
+
+- **.specs\spec-workflow-vmodel\RESEARCH.md:1804:2592** — `- **FR-006**: System MUST authenticate users via [NEEDS CLARIFICATION: auth meth`
+
+
+## FR-007: [TBD title]
+
+[TBD description — replace with actual requirement text]
+
+### Citations
+
+- **.specs\spec-workflow-vmodel\RESEARCH.md:1804:2593** — `- **FR-007**: System MUST retain user data for [NEEDS CLARIFICATION: retention p`
+
+
+## FR-021: [TBD title]
+
+[TBD description — replace with actual requirement text]
+
+### Citations
+
+- **.specs\spec-workflow-vmodel\RESEARCH.md:1804:1804** — `- 71 REQ с Rationale: `"US1, FR-021: Traceable identifiers..."` (backward trace)`

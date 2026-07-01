@@ -2,14 +2,14 @@
 
 ## Реализуемые требования
 
-- [FR-1: Skill workflow — mechanical reach analysis per variant](FR.md#fr-1-skill-workflow--mechanical-reach-analysis-per-variant)
-- [FR-2: PreToolUse hook — block commit without fresh verification](FR.md#fr-2-pretooluse-hook--block-commit-without-fresh-verification)
-- [FR-3: Escape hatch with audit trail](FR.md#fr-3-escape-hatch-with-audit-trail)
-- [FR-4: Docs/test dampening — anti-over-application](FR.md#fr-4-docstest-dampening--anti-over-application)
-- [FR-5: Marker invalidation — diff-hash pin + TTL](FR.md#fr-5-marker-invalidation--diff-hash-pin--ttl)
+- [FR-1: Skill workflow — mechanical reach analysis per variant](FR.md#fr-1-skill-workflow-mechanical-reach-analysis-per-variant-feature1)
+- [FR-2: PreToolUse hook — block commit without fresh verification](FR.md#fr-2-pretooluse-hook-block-commit-without-fresh-verification-feature1)
+- [FR-3: Escape hatch with audit trail](FR.md#fr-3-escape-hatch-with-audit-trail-feature3)
+- [FR-4: Docs/test dampening — anti-over-application](FR.md#fr-4-docstest-dampening-anti-over-application-feature4)
+- [FR-5: Marker invalidation — diff-hash pin + TTL](FR.md#fr-5-marker-invalidation-diff-hash-pin-ttl-feature2)
 - [FR-6: Weighted suspicionScore heuristic](FR.md#fr-6-weighted-suspicionscore-heuristic)
-- [FR-7: Fail-loud on unreachable variant](FR.md#fr-7-fail-loud-on-unreachable-variant--explicit-counter-h3)
-- [FR-8: Skill frontmatter — disable-model-invocation pattern](FR.md#fr-8-skill-frontmatter--disable-model-invocation-pattern)
+- [FR-7: Fail-loud on unreachable variant](FR.md#fr-7-fail-loud-on-unreachable-variant-explicit-counter-h3-feature1)
+- [FR-8: Skill frontmatter — disable-model-invocation pattern](FR.md#fr-8-skill-frontmatter-disable-model-invocation-pattern-feature5)
 - [FR-9: Integration with dev-pomogator extension system](FR.md#fr-9-integration-with-dev-pomogator-extension-system)
 
 ## Архитектура (text diagram)
@@ -84,7 +84,7 @@
   - `.claude/skills/verify-generic-scope-fix/SKILL.md` + `scripts/analyze-diff.ts`
   - `.dev-pomogator/tools/scope-gate/{scope-gate-guard,score-diff,marker-store}.ts`
   - `.claude/rules/scope-gate/{when-to-verify,escape-hatch-audit}.md`
-  - Hook registration в `.claude/settings.local.json` (per personal-pomogator contract)
+  - Hook registration в `.claude/settings.local.json` (per [personal-pomogator](../personal-pomogator/FR.md) contract)
 
 ## Директории и файлы
 

@@ -16,6 +16,7 @@
  */
 
 import { isV3Spec } from './phase-constants.ts';
+import { readStdin } from '../_shared/stdin.ts';
 import { parseChkRows, extractSpecInfo, extractWriteContent } from './spec-form-parsers.ts';
 import { logEvent } from './audit-logger.ts';
 
@@ -25,12 +26,6 @@ const TARGET_FILE = 'REQUIREMENTS.md';
 interface PreToolUseInput {
   tool_name?: string;
   tool_input?: { file_path?: string; content?: string; new_string?: string };
-}
-
-async function readStdin(): Promise<string> {
-  let buf = '';
-  for await (const chunk of process.stdin) buf += chunk.toString();
-  return buf;
 }
 
 function deny(reason: string, filepath: string): never {

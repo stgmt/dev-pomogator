@@ -2,7 +2,7 @@
 name: create-spec
 description: |
   Creates and manages feature specifications under .specs/{slug}/ via 13-file scaffold + 4-phase STOP-confirmed workflow (Discovery → Context → Requirements+Design → Finalization) + Phase 3+ Audit. EN triggers: "create / make / draft / write / sketch / outline specs", "spec out X", "scaffold a spec", "update / show / status specs". RU triggers: "создай / сделай / набросай / напиши / опиши спеки", "новые спеки для X", "спеки по фиче", "обнови / покажи / статус спеков". Matches terse phrasings like "ок спеки по фиче сделай". Invokes Skill("research-workflow") during Phase 1 step 5 for technical research. Do NOT use for plan-pomogator development plans, read-only spec viewing, or non-spec workflows.
-allowed-tools: Read, Write, Edit, Glob, Grep, Bash, AskUserQuestion, Skill, Agent, WebFetch, WebSearch
+allowed-tools: mcp__dev-pomogator-specs__read_spec_doc, mcp__dev-pomogator-specs__list_spec_docs, mcp__dev-pomogator-specs__read_attachment, mcp__dev-pomogator-specs__apply_spec_change, mcp__dev-pomogator-specs__propose_spec_change, mcp__dev-pomogator-specs__create_spec, mcp__dev-pomogator-specs__delete_spec_doc, mcp__dev-pomogator-specs__rename_spec_doc, Read, Write, Edit, Glob, Grep, Bash, AskUserQuestion, Skill, Agent, WebFetch, WebSearch
 argument-hint: "<feature-slug>"
 ---
 
@@ -12,7 +12,7 @@ argument-hint: "<feature-slug>"
 
 ## Структура спецификации
 
-Каждая спека располагается в `.specs/{feature-slug}/` и содержит до 15 файлов: README, USER_STORIES, USE_CASES, RESEARCH, REQUIREMENTS, FR, NFR, ACCEPTANCE_CRITERIA, DESIGN, TASKS, FILE_CHANGES, CHANGELOG, FIXTURES, `*_SCHEMA.md`, `{slug}.feature`. Полный список см. `references/phase1_discovery.md`.
+Каждая спека располагается в `.specs/{feature-slug}/`. Scaffold создаёт 15 файлов: README, USER_STORIES, USE_CASES, RESEARCH, REQUIREMENTS, FR, NFR, ACCEPTANCE_CRITERIA, DESIGN, TASKS, FILE_CHANGES, CHANGELOG, `{slug}.feature` (эти **13 — обязательный минимум полноты**, его проверяет валидатор) + FIXTURES и `*_SCHEMA.md` (создаются scaffold-ом, но для статуса «ПОЛНАЯ» опциональны). Полный список см. `references/phase1_discovery.md`.
 
 ## Скрипты-инструменты
 
@@ -27,6 +27,21 @@ argument-hint: "<feature-slug>"
 
 `.progress.json` создаётся ТОЛЬКО через `spec-status.ts`. ЗАПРЕЩЕНО создавать его через Write tool, вручную или напрямую. Аргумент `-Path` ОБЯЗАН указывать на `.specs/<feature>/`.
 
+## MCP-rails: писать спеки через сервер, не Write/Edit напрямую (FR-40/FR-42)
+
+create-spec — это ДВЕРЬ (юзер входит сюда как сейчас), но запись документов идёт через MCP-мутации `dev-pomogator-specs`, не через сырой Write/Edit по `.specs/` (слойный контракт FR-42c: тонкий скилл оркестрирует, толстый сервер валидирует ДО записи):
+
+| Нужно | MCP-тул | Параметры |
+|-------|---------|-----------|
+| Новая спека (scaffold, рождается verdict-GREEN) | `create_spec` | `{ slug }` |
+| Создать/переписать любой `*.md`/`*.feature` | `apply_spec_change` | `{ spec, doc, content, reason }` |
+| Точечная правка | `apply_spec_change` | `{ spec, doc, old_string, new_string, reason }` |
+| Переименовать/переместить doc (anchors-aware) | `rename_spec_doc` | `{ spec, doc, to_doc, reason, rewrite_inbound? }` |
+| Проверить без записи (dry-run, те же гейты) | `propose_spec_change` | `{ spec, doc, content\|old/new, reason }` |
+| Прочитать цельный документ / перечень | `read_spec_doc` / `list_spec_docs` | `{ spec[, doc] }` |
+
+Сервер валидирует form-контракты + якоря (delta-only) + conformance ДО касания диска и отказывает с findings list — НЕ переписывай эту логику в скилле. `.progress.json` НЕ мутабелен через MCP (single-writer — `spec-status.ts`).
+
 ## Phase navigation
 
 | Phase | Reference | Что делает |
@@ -39,7 +54,7 @@ argument-hint: "<feature-slug>"
 | **3. Finalization** | [`references/phase3_finalization.md`](references/phase3_finalization.md) | TASKS (TDD-порядок), README, CHANGELOG; вызывает `Skill("task-board-forms")` |
 | **3+. Audit (entry)** | [`references/phase3plus_audit-overview.md`](references/phase3plus_audit-overview.md) | Workflow аудита + dispatch к 7 категориям + AUDIT_REPORT.md |
 
-Sub-skill ecosystem (вызываются через `Skill(...)`): `discovery-forms` (Phase 1 step 3), `requirements-chk-matrix` (Phase 2 step 4b), `task-board-forms` (Phase 3 step 1b), `research-workflow` (Phase 1 step 5), `architecture-decision-builder` (Phase 1.75, greenfield only — enumerate + per-axis).
+Sub-skill ecosystem (вызываются через `Skill(...)`): `discovery-forms` (Phase 1 step 3), `requirements-chk-matrix` (Phase 2 step 4b), `variant-matrix-build` (Phase 2 step 4c), `cross-spec-reconcile` (Phase 2 step 4e + Phase 3 step 1d light, Phase 3+ Audit `CROSS_SPEC_CONSISTENCY` full — FR-17), `task-board-forms` (Phase 3 step 1b), `research-workflow` (Phase 1 step 5), `architecture-decision-builder` (Phase 1.75, greenfield only — enumerate + per-axis).
 
 > **Pre-STOP semantic check:** before each `ConfirmStop` (#1/#2/#3), run `Skill("spec-review")` to catch external-claim drift, name collisions, antipattern violations, and 10 other categories that `audit-spec.ts` does not detect. See [`.claude/skills/spec-review/SKILL.md`](../spec-review/SKILL.md).
 

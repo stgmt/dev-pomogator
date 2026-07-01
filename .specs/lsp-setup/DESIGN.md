@@ -7,7 +7,7 @@
 - [FR-3: Runtime Detection](FR.md#fr-3-runtime-detection-feature5)
 - [FR-4: Plugin Installation](FR.md#fr-4-claude-code-plugin-installation-feature7)
 - [FR-5: LSP Usage Rule](FR.md#fr-5-lsp-usage-rule-feature6)
-- [FR-6: ENABLE_LSP_TOOL](FR.md#fr-6-enable_lsp_tool-environment-variable-feature1)
+- [FR-6: ENABLE_LSP_TOOL](FR.md#fr-6-enablelsptool-environment-variable-feature1)
 - [FR-7: Verification Report](FR.md#fr-7-verification-report-feature2-feature3-feature4)
 - [FR-8: Idempotent Installation](FR.md#fr-8-idempotent-installation-feature1)
 - [FR-9: Update Support](FR.md#fr-9-update-support-feature1)
@@ -180,11 +180,11 @@ const LSP_SERVERS: LspServer[] = [
 
 | Что переиспользуем | Откуда | Зачем |
 |---------------------|--------|-------|
-| envRequirements injection | `src/installer/claude.ts` (существует) | ENABLE_LSP_TOOL=1 автоматически |
+| envRequirements injection | ~~`src/installer/claude.ts`~~ (removed in v2 — no canonical replacement) (существует) | ENABLE_LSP_TOOL=1 автоматически |
 | postInstall hook execution | `src/installer/extensions.ts` (существует) | Запуск setup-lsp.ts |
 | Extension manifest format | `extensions/auto-commit/extension.json` | Шаблон для envRequirements |
-| Tool installation flow | `src/installer/claude.ts` (существует) | Copy tools → .dev-pomogator/tools/ |
-| Rule installation flow | `src/installer/claude.ts` (существует) | Copy rules → .claude/rules/ |
+| Tool installation flow | ~~`src/installer/claude.ts`~~ (removed in v2 — no canonical replacement) (существует) | Copy tools → .dev-pomogator/tools/ |
+| Rule installation flow | ~~`src/installer/claude.ts`~~ (removed in v2 — no canonical replacement) (существует) | Copy rules → .claude/rules/ |
 
 ## BDD Test Infrastructure
 

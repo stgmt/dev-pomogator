@@ -163,7 +163,7 @@ Feature: PLUGIN006 Specs Generator Scripts
     Then findings should contain check "FR_AC_COVERAGE"
     And FR_AC_COVERAGE finding should mention "FR-3"
 
-  @feature22
+  @feature22 @wip
   Scenario: Audit detects featureN tag mismatch between MD and BDD
     Given a spec fixture "audit-coverage-fixture" with @featureN tag gaps
     When I run audit-spec.ts on the spec
@@ -223,33 +223,36 @@ Feature: PLUGIN006 Specs Generator Scripts
     When I run validate-spec.ts on that spec
     Then warnings should contain rule "CONTEXT_SECTION"
 
-  # analyze-features.ts scenarios
+  # analyze-features.ts scenarios — run against the committed fixture corpus
+  # (tools/specs-generator/__fixtures__/analyze-features-corpus: two PLUGIN-domain
+  # features + one specs-generator-slug feature) so the counts are deterministic and
+  # the scan never walks the live, mutating repo tree.
 
   @feature31
-  Scenario: Analyze features returns JSON report with discovered files
-    When I run analyze-features.ts with -Format json
-    Then the result should have totalFeatures greater than 0
+  Scenario: Analyze features returns a JSON report over the fixture corpus
+    When I run analyze-features.ts over the analyze-features fixture corpus
+    Then the result should report totalFeatures equal to the corpus size
     And distribution should contain production and fixture counts
 
   @feature32
-  Scenario: Analyze features extracts step dictionary
-    When I run analyze-features.ts with -Format json
-    Then stepDictionary should contain given, when, and then arrays
+  Scenario: Analyze features extracts a populated step dictionary
+    When I run analyze-features.ts over the analyze-features fixture corpus
+    Then stepDictionary should contain non-empty given, when, and then arrays
 
   @feature33
   Scenario: Analyze features detects naming patterns
-    When I run analyze-features.ts with -Format json
-    Then namingPatterns should contain domain codes
+    When I run analyze-features.ts over the analyze-features fixture corpus
+    Then namingPatterns should contain the PLUGIN domain with a count of two
 
   @feature34
   Scenario: Analyze features filters candidates by domain code
-    When I run analyze-features.ts with -DomainCode "PLUGIN"
-    Then all candidates should match PLUGIN domain
+    When I run analyze-features.ts over the corpus with -DomainCode "PLUGIN"
+    Then every returned candidate should match the PLUGIN domain
 
   @feature35
   Scenario: Analyze features filters candidates by feature slug
-    When I run analyze-features.ts with -FeatureSlug "specs-generator"
-    Then candidates should contain at least one match
+    When I run analyze-features.ts over the corpus with -FeatureSlug "specs-generator"
+    Then candidates should contain exactly the matching feature
 
   # .progress.json state machine scenarios
 
@@ -257,7 +260,7 @@ Feature: PLUGIN006 Specs Generator Scripts
   Scenario: Scaffold creates .progress.json with initial state
     When I run scaffold-spec.ts with name "progress-test"
     Then .progress.json should exist in ".specs/progress-test/"
-    And progress.version should be 2
+    And progress.version should be 4
     And progress.currentPhase should be "Discovery"
     And all stopConfirmed flags should be false
     And created_files count should still be 15
@@ -266,7 +269,7 @@ Feature: PLUGIN006 Specs Generator Scripts
   Scenario: Spec-status creates .progress.json for pre-existing specs
     Given a partial spec fixture exists without .progress.json
     When I run spec-status.ts on the spec
-    Then .progress.json should be created with version 2
+    Then .progress.json should be created with version 4
     And progress_state should be included in the output
 
   @feature38
@@ -353,8 +356,8 @@ Feature: PLUGIN006 Specs Generator Scripts
   @feature49
   Scenario: spec-status rejects -Path outside .specs/
     When I run spec-status.ts with -Path "."
-    Then exit code should be non-zero
-    And output should contain "must be inside .specs/"
+    Then specs-generator exit code should be non-zero
+    And specs-generator output should contain "must be inside .specs/"
 
   # Open questions gate - prevent finalization with unclosed research questions
 

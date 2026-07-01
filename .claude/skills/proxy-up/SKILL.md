@@ -25,8 +25,12 @@ Triggered by any of:
 
 ## Conventions
 
-- **Default proxy infra location**: `D:/repos/claude-proxy-infra/` on Windows,
-  `~/repos/claude-proxy-infra/` on macOS/Linux. Override via env var
+- **Proxy infra location**: ships INSIDE the dev-pomogator plugin at
+  `<plugin-root>/tools/claude-subscription-proxy/` (Dockerfile + compose +
+  `scripts/`). `CLAUDE_PLUGIN_ROOT` is injected only for hook execution, NOT
+  for skill-driven Bash — so resolve `$PROXY_DIR` defensively (override env →
+  plugin-root env → installed plugin cache glob → repo dogfood → external
+  clone). The exact chain is in the START path below. Override with
   `CLAUDE_PROXY_INFRA_PATH` if installed elsewhere.
 - **Default port**: `3456`. Override via `PROXY_PORT` in the infra `.env`.
 - **Health endpoint**: `GET http://127.0.0.1:3456/health` returns JSON with
@@ -44,16 +48,23 @@ Triggered by any of:
 
 ## START path — proxy is down
 
-1. Resolve infra dir:
+1. Resolve infra dir defensively (the proxy infra ships in the plugin tree;
+   `CLAUDE_PLUGIN_ROOT` is absent in skill-driven Bash, so probe each location):
    ```bash
-   PROXY_DIR="${CLAUDE_PROXY_INFRA_PATH:-D:/repos/claude-proxy-infra}"
-   test -d "$PROXY_DIR" || echo "Infra not installed at $PROXY_DIR"
+   # override env → plugin-root env → installed plugin cache → repo dogfood → external clone
+   PROXY_DIR="${CLAUDE_PROXY_INFRA_PATH:-}"
+   [ -d "$PROXY_DIR/scripts" ] || PROXY_DIR="${CLAUDE_PLUGIN_ROOT:-}/tools/claude-subscription-proxy"
+   [ -d "$PROXY_DIR/scripts" ] || PROXY_DIR="$(ls -d "$HOME"/.claude/plugins/cache/*/dev-pomogator/*/tools/claude-subscription-proxy 2>/dev/null | sort -V | tail -1)"
+   [ -d "$PROXY_DIR/scripts" ] || PROXY_DIR="tools/claude-subscription-proxy"
+   [ -d "$PROXY_DIR/scripts" ] || PROXY_DIR="$HOME/repos/claude-proxy-infra"
+   [ -d "$PROXY_DIR/scripts" ] || echo "Proxy infra not found (plugin tree / cache / repo / clone all missing)"
    ```
-2. If not installed: tell user to clone:
+2. If still not found (no plugin install, no clone): clone the standalone infra
+   as a last resort, then point `CLAUDE_PROXY_INFRA_PATH` at it:
    ```bash
-   git clone <claude-proxy-infra-url> "$PROXY_DIR"
+   git clone <claude-proxy-infra-url> "$HOME/repos/claude-proxy-infra"
    ```
-3. If installed, run start script:
+3. If found, run start script:
    - Windows: `powershell -ExecutionPolicy Bypass -File "$PROXY_DIR/scripts/start.ps1"`
    - Unix: `bash "$PROXY_DIR/scripts/start.sh"`
 4. Wait for healthcheck (script does this internally with 30s timeout).

@@ -61,6 +61,78 @@ CACHE_TTL_CLAUDE = 8.0
 _MTIME_TTL = 2.0
 
 
+# ── Headless-session filter ───────────────────────────────────────────────────
+# Hide programmatic Claude sessions (Claude Agent SDK / `claude -p`, e.g. a
+# LangGraph pipeline) from the worktree dashboard. They are real sessions but
+# not human worktree work: a single eval/fan-out run spawns hundreds of them at
+# a container cwd (e.g. /app), which flood the list, all read LIVE (just written),
+# and overload render.
+#
+# Discriminator (data-verified, 100% clean on real host: 338/338 SDK sessions vs
+# 0 in every interactive worktree dir): the JSONL carries `entrypoint:"cli"` for
+# interactive CLI sessions and `entrypoint:"sdk-ts"` (any `sdk-*`) for SDK ones.
+# We hide ONLY sessions we can POSITIVELY identify as `sdk-*`; unknown/missing
+# entrypoint defaults to SHOW — never hide a session we can't prove is headless
+# (that would hide real devcontainer work, the exact thing the user warned about).
+# Override: SP_SHOW_HEADLESS=1 re-includes them (debugging).
+_headless_cache: dict = {}  # str(path) -> bool (session origin is immutable per file)
+_HEAD_WINDOW = 64 * 1024
+_DEEP_CAP = 2 * 1024 * 1024  # bound deep scan; real SDK entrypoint sits ≤ ~1.1MB in
+
+# Markers. Claude Code writes compact JSON (no spaces), but allow optional
+# whitespace around ':' so the detector is robust to any serializer variant.
+_MARK_PERM = re.compile(rb'"type"\s*:\s*"permission-mode"')  # interactive UI line — at top
+_MARK_MODE = re.compile(rb'"type"\s*:\s*"mode"')             # interactive mode line — at top
+_MARK_CLI = re.compile(rb'"entrypoint"\s*:\s*"cli"')         # interactive CLI entrypoint
+_MARK_SDK = re.compile(rb'"entrypoint"\s*:\s*"sdk')          # SDK / `claude -p` (sdk-ts, ...)
+
+
+def _hide_headless() -> bool:
+    """Read env each call so tests/runtime toggles take effect without restart."""
+    return os.environ.get("SP_SHOW_HEADLESS") != "1"
+
+
+def _detect_headless(jsonl_path) -> bool:
+    """True iff session is programmatic SDK / `claude -p` (vs interactive CLI).
+
+    Interactive CLI sessions write a `permission-mode`/`mode` UI-state line at the
+    very top (real data: byte offset <250) and `entrypoint:"cli"`. SDK/headless
+    sessions never emit the UI lines and carry `entrypoint:"sdk-*"` — but that
+    field can sit up to ~1.1MB in when the first message is huge (eval prompts
+    embedding source.json). So: a cheap 64KB head resolves the common case
+    (interactive markers OR shallow sdk); only when the head is marker-less do we
+    read deeper to positively find `entrypoint:"sdk`. A file with NO entrypoint
+    anywhere (minimal/legacy/unknown) defaults to SHOW — never hide on a guess.
+    """
+    try:
+        with open(jsonl_path, "rb") as f:
+            head = f.read(_HEAD_WINDOW)
+            if _MARK_PERM.search(head) or _MARK_MODE.search(head) or _MARK_CLI.search(head):
+                return False  # interactive — show
+            if _MARK_SDK.search(head):
+                return True   # headless — hide (shallow case)
+            # Ambiguous: no markers in head. Could be a deep-entrypoint SDK session
+            # (huge first message) OR a minimal session with no entrypoint at all.
+            rest = f.read(_DEEP_CAP - _HEAD_WINDOW)
+        blob = head + rest
+        if _MARK_SDK.search(blob):
+            return True       # headless confirmed deeper in
+        return False          # entrypoint:"cli" deep, or no entrypoint → show
+    except OSError:
+        return False          # unreadable → don't hide (safe default)
+
+
+def _is_headless_session(jsonl_path) -> bool:
+    """Cached wrapper for `_detect_headless` (session origin never changes)."""
+    key = str(jsonl_path)
+    cached = _headless_cache.get(key)
+    if cached is not None:
+        return cached
+    val = _detect_headless(jsonl_path)
+    _headless_cache[key] = val
+    return val
+
+
 def discover_repos() -> list[Path]:
     """Find git **main** worktrees (not linked worktrees) under scan roots.
 
@@ -153,6 +225,8 @@ def claude_sessions_for(worktree_path: str) -> dict:
             if not match:
                 continue
             for jsonl in proj_dir.glob("*.jsonl"):
+                if _hide_headless() and _is_headless_session(jsonl):
+                    continue  # skip SDK / `claude -p` sessions (keep /api/claude consistent with index)
                 try:
                     stat = jsonl.stat()
                     if stat.st_mtime > last_mtime:
@@ -273,6 +347,8 @@ def _claude_jsonls_lightweight(worktree_path: str) -> list[dict]:
             if not match:
                 continue
             for jsonl in proj_dir.glob("*.jsonl"):
+                if _hide_headless() and _is_headless_session(jsonl):
+                    continue  # skip SDK / `claude -p` sessions (not human worktree work)
                 try:
                     st = jsonl.stat()
                     age = int(now - st.st_mtime)
@@ -580,6 +656,8 @@ def build_session_index() -> dict:
             # Match jsonls for this exact encoded dir (no fuzzy — orphan is exact)
             jsonls_for_dir: list[dict] = []
             for jsonl in proj_dir.glob("*.jsonl"):
+                if _hide_headless() and _is_headless_session(jsonl):
+                    continue  # skip SDK / `claude -p` sessions (LangGraph fan-out flood)
                 try:
                     st = jsonl.stat()
                     age = int(now_ts - st.st_mtime)

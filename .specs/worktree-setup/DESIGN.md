@@ -4,12 +4,12 @@
 
 - [FR-1: Atomic worktree+branch creation](FR.md#fr-1-atomic-worktreebranch-creation-from-main)
 - [FR-2: Full installer bootstrap with global config registration](FR.md#fr-2-full-installer-bootstrap-with-global-config-registration)
-- [FR-3: Self-heal hint for orphan worktrees](FR.md#fr-3-self-heal-hint-for-orphan-worktrees-via-tsx-runner-bootstrapcjs)
+- [FR-3: Self-heal hint for orphan worktrees](FR.md#fr-3-self-heal-hint-for-orphan-worktrees-via-tsx-runnerjs)
 - [FR-4: PR creation via three-layer config resolution](FR.md#fr-4-pr-creation-via-three-layer-config-resolution)
 - [FR-5: gh authentication pre-flight](FR.md#fr-5-gh-authentication-pre-flight-check)
 - [FR-6: worktree-doctor.cjs standalone diagnostic](FR.md#fr-6-worktree-doctorcjs-standalone-diagnostic)
 - [FR-7: session-pilot integration contract](FR.md#fr-7-session-pilot-integration-contract)
-- [FR-8: Invocation-from-sibling warn flow](FR.md#fr-8-invocation-from-sibling-worktree--warn--offer-continue)
+- [FR-8: Invocation-from-sibling warn flow](FR.md#fr-8-invocation-from-sibling-worktree-warn-offer-continue)
 - [FR-10: Local env/config file synchronization](FR.md#fr-10-local-envconfig-file-synchronization-into-fresh-worktree)
 - [FR-11: Build and dependency synchronization](FR.md#fr-11-build-and-dependency-synchronization)
 - [FR-12: DevContainer integration](FR.md#fr-12-devcontainer-integration)
@@ -32,7 +32,6 @@
 - Self-heal patch: `~/.dev-pomogator/scripts/tsx-runner.js` (existing file — insert block after `resolveScriptPath()` at line 107)
 - Audit log: `~/.dev-pomogator/orphan-worktrees.jsonl` (создаётся first write, append-only)
 - Env config: `~/.dev-pomogator/worktree-setup.env` (создаётся skill-ом, key=value format)
-- Wiring через installer: `extensions/_meta/` или `src/installer/extensions.ts` — register `worktree-doctor.cjs` and updated `tsx-runner.js` как managed files
 
 ## Директории и файлы
 
@@ -117,7 +116,7 @@
 - Hardcode `stgmt/dev-pomogator` — rejected because dev-pomogator is shipped via `npx` to third parties; any maintainer-specific literal would break their workflow. Documented as P0 in REVIEW_NOTES.md round 1.
 - Single Layer 2 only (no env) — rejected because every invocation would re-spawn `gh repo view` × ~5ms × N runs, adding latency without benefit when answer is stable across runs.
 
-### Decision: Standalone worktree-doctor.cjs instead of porting full pomogator-doctor
+### Decision: Standalone worktree-doctor.cjs instead of porting full [pomogator-doctor](../pomogator-doctor/FR.md)
 
 **Rationale:** Full `/pomogator-doctor` (17 checks) lives in `.dev-pomogator/tools/pomogator-doctor/` — exactly the gitignored location that is missing in orphan worktrees (chicken-and-egg). A standalone CJS in global `~/.dev-pomogator/scripts/` works regardless of worktree-local state. Scope deliberately narrow (6 checks) to keep size <300 LOC and execution <200ms full / <50ms quick.
 

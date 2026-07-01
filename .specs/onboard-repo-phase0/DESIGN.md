@@ -17,8 +17,8 @@
 - [FR-13: Delivered as extension](FR.md#fr-13-delivered-as-dev-pomogator-extension-feature13)
 - [FR-14: Scratch file](FR.md#fr-14-scratch-file-для-крупных-репо-feature14)
 - [FR-15: Dual-render](FR.md#fr-15-dual-render-из-single-source-of-truth-feature15)
-- [FR-16: Manual refresh](FR.md#fr-16-manual-refresh-через---refresh-onboarding-feature4)
-- [FR-17: Ignore files](FR.md#fr-17-respect-cursorignore--aiderignore--gitignore-feature2)
+- [FR-16: Manual refresh](FR.md#fr-16-manual-refresh-через-refresh-onboarding-feature4)
+- [FR-17: Ignore files](FR.md#fr-17-respect-cursorignore-aiderignore-gitignore-feature2)
 - [FR-18: Commands via skill-ref](FR.md#fr-18-commands-via-skill-reference-не-hardcode-feature3-feature15)
 - [FR-19: SHA-256 managed](FR.md#fr-19-managed-files-tracking-через-sha-256)
 - [FR-20: Schema validation](FR.md#fr-20-json-schema-validation-onboardingjson)
@@ -271,7 +271,7 @@ Phase 0 зависит от нескольких **внешних** инстру
 |---------|----------|--------|-------|
 | Claude Code Explore subagent | [VERIFIED: available in Claude Code 2.x] | Internal tool (Agent tool, subagent_type=Explore) | Core dependency для FR-7 parallel recon |
 | `repomix` CLI | [VERIFIED: public npm package yamadashy/repomix] | https://github.com/yamadashy/repomix | Optional (fallback if missing) |
-| `/run-tests` skill | [VERIFIED: existing in dev-pomogator tui-test-runner extension] | `.claude/skills/run-tests/SKILL.md` | Core dependency для FR-5 |
+| `/run-tests` skill | [VERIFIED: existing in dev-pomogator [tui-test-runner](../tui-test-runner/FR.md) extension] | `.claude/skills/run-tests/SKILL.md` | Core dependency для FR-5 |
 | `git` CLI | [VERIFIED: required for dev-pomogator] | `package.json engines` + README | Fallback если unavailable: mtime-based invalidation |
 | `ajv` (JSON Schema validation) | [VERIFIED: public npm package] | https://ajv.js.org/ | New dependency — add to extensions/onboard-repo/package.json OR root package.json |
 

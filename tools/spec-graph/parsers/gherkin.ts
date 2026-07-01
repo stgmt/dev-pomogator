@@ -31,8 +31,11 @@ import type {
   ScenarioStep,
   Edge,
 } from '../types.ts';
+import { specOf } from '../coverage.ts';
 
 const SPEC_TAG_RE = /^@((?:FR|NFR|AC)[A-Za-z0-9._-]+)$/;
+/** FR-36c: `@featureN` ↔ `FR-N` same-spec convention → a REAL tested-by edge. */
+const FEATURE_TAG_RE = /^@feature(\d+)$/i;
 
 /** Lower-case ASCII slug, used in derived Scenario ids. */
 function slugifyName(name: string): string {
@@ -51,6 +54,12 @@ interface GherkinFeatureChild {
     tags?: Array<{ name: string }>;
     steps?: Array<{ keyword: string; text: string }>;
     examples?: unknown[];
+  };
+  // A `Rule:` groups its own scenarios under `rule.children` — they must be
+  // flattened or Rule-wrapped scenarios are silently dropped (no node → no coverage).
+  rule?: {
+    tags?: Array<{ name: string }>;
+    children: GherkinFeatureChild[];
   };
 }
 
@@ -87,22 +96,47 @@ export function parseGherkin(source: string, relativePath: string): ParserOutput
 
   const featureTags: string[] = (doc.feature.tags ?? []).map((t) => t.name);
 
+  // FR-36a: nodes/edges inside `.specs/<slug>/` carry the spec-qualified
+  // composite key DIRECTLY from the parser (the parser knows the file path —
+  // no builder-side rewrite needed). Files outside `.specs/` stay bare.
+  const slug = specOf(relativePath);
+  const qualify = (id: string): string => (slug ? `${slug}:${id}` : id);
+
   const nodes: ScenarioNode[] = [];
   const edges: Edge[] = [];
+  const edgeSeen = new Set<string>();
+  const pushEdge = (e: Edge): void => {
+    const key = `${e.from}|${e.to}|${e.type}`;
+    if (edgeSeen.has(key)) return;
+    edgeSeen.add(key);
+    edges.push(e);
+  };
   const anchors: ParserOutput['anchors'] = [];
   const seenIds = new Map<string, number>();
 
+  // Flatten top-level scenarios AND scenarios nested under a `Rule:`. A Rule-wrapped
+  // scenario inherits feature + rule + scenario tags. Without this the whole Rule block
+  // is invisible to the graph (no node) and to coverage (no result) — a silent honesty hole.
+  const entries: Array<{ scenario: NonNullable<GherkinFeatureChild['scenario']>; ruleTags: string[] }> = [];
   for (const child of doc.feature.children) {
-    const scenario = child.scenario;
-    if (!scenario) continue;
-
+    if (child.scenario) {
+      entries.push({ scenario: child.scenario, ruleTags: [] });
+    } else if (child.rule?.children) {
+      const ruleTags = (child.rule.tags ?? []).map((t) => t.name);
+      for (const rc of child.rule.children) {
+        if (rc.scenario) entries.push({ scenario: rc.scenario, ruleTags });
+      }
+    }
+  }
+  for (const { scenario, ruleTags } of entries) {
     const scenarioTags: string[] = (scenario.tags ?? []).map((t) => t.name);
-    const tags = [...featureTags, ...scenarioTags];
+    const tags = [...featureTags, ...ruleTags, ...scenarioTags];
 
     let baseId = `SCEN-${slugifyName(scenario.name)}`;
     const seen = seenIds.get(baseId) ?? 0;
     seenIds.set(baseId, seen + 1);
-    const scenarioId = seen === 0 ? baseId : `${baseId}-${seen + 1}`;
+    const bareScenarioId = seen === 0 ? baseId : `${baseId}-${seen + 1}`;
+    const scenarioId = qualify(bareScenarioId);
 
     const line = scenario.location.line;
     const steps: ScenarioStep[] = (scenario.steps ?? []).map((s) => ({
@@ -118,17 +152,32 @@ export function parseGherkin(source: string, relativePath: string): ParserOutput
       tags,
       steps,
     };
+    if (slug) node.spec = slug;
     nodes.push(node);
+    // FR-36b: anchor aliases stay BARE + file-local — markdown links and
+    // Marksman resolve within a file, never via the composite key.
     anchors.push({
-      alias: scenarioId,
-      canonicalId: scenarioId,
+      alias: bareScenarioId,
+      canonicalId: bareScenarioId,
       location: { file: relativePath, line },
     });
 
     for (const tag of tags) {
       const m = tag.match(SPEC_TAG_RE);
       if (m) {
-        edges.push({ from: m[1], to: scenarioId, type: 'tested-by' });
+        // Same-spec convention: a bare `@FR-N` tag points at THIS spec's FR.
+        // Slug-less files keep the bare endpoint — the builder resolves it
+        // when exactly one spec defines the local id (unambiguous).
+        pushEdge({ from: qualify(m[1]), to: scenarioId, type: 'tested-by' });
+        continue;
+      }
+      // FR-36c: `@featureN` ↔ `FR-N` is the repo-wide convention the coverage
+      // layer already maps by hand — build the REAL tested-by edge so
+      // get_trace works via edges, not a tag-scan. Same-spec ONLY: a slug-less
+      // `@featureN` has no resolvable target spec (skip is honest).
+      const f = tag.match(FEATURE_TAG_RE);
+      if (f && slug) {
+        pushEdge({ from: `${slug}:FR-${f[1]}`, to: scenarioId, type: 'tested-by' });
       }
     }
   }

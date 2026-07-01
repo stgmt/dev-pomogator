@@ -15,7 +15,7 @@
 - [x] Создать `.specs/create-specs-bdd-enforcement/create-specs-bdd-enforcement.feature` с 6 сценариями SBDE001_01..06 (PendingStep stubs) -- @feature1 @feature2 @feature3 @feature4 @feature5 @feature6 @feature7 @feature8 @feature9
   _Source: DESIGN.md "BDD Test Infrastructure"_ (уже создан при Phase 2 Requirements)
 - [x] Создать step definitions (vitest describe/it, mapped 1:1 с .feature Scenarios) в `tests/e2e/create-specs-bdd-enforcement.test.ts` — заглушки с `expect(true).toBe(false)` чтобы были Red
-  _Requirements: [AC-9](ACCEPTANCE_CRITERIA.md#ac-9-fr-9)_
+  _Requirements: [AC-9](ACCEPTANCE_CRITERIA.md#ac-9-fr-9-feature9)_
 - [x] Создать fixture folders в `tests/fixtures/bdd-enforcement/`: 6 парных mini-projects + multi-folder-features
   _Source: DESIGN.md "Test Data & Fixtures"_
 - [x] Verify: SBDE001_01..06 FAIL (Red) при прогоне `/run-tests tests/e2e/create-specs-bdd-enforcement.test.ts`
@@ -26,7 +26,7 @@
   _Requirements: [FR-8](FR.md#fr-8-shared-bdd-framework-detectorts-module-переиспользует-steps-validatordetectorts-feature8)_
   _Leverage: `extensions/specs-workflow/tools/steps-validator/detector.ts` (import без дублирования)_
 - [x] Заполнить 6 detection pairs: C#/Reqnroll, C#/SpecFlow, TS/Cucumber.js, TS/Playwright BDD, Python/Behave, Python/pytest-bdd -- @feature8
-  _Requirements: [AC-8](ACCEPTANCE_CRITERIA.md#ac-8-fr-8)_
+  _Requirements: [AC-8](ACCEPTANCE_CRITERIA.md#ac-8-fr-8-feature8)_
 - [x] Добавить fallback с `suggestedFrameworks` по detected language -- @feature8
 - [x] Verify: SBDE001_01 (positive detection Reqnroll) и часть SBDE001_06 (fallback Python) переходят в Green
 
@@ -42,10 +42,10 @@
 ## Phase 3: Validator Severity Upgrade (Green)
 
 - [x] В `commandValidateSpec()` BDD_INFRA rule (lines ~925-960) сменить severity WARNING → ERROR для missing Classification -- @feature7
-  _Requirements: [FR-7](FR.md#fr-7-validator-bdd_infra-rule-severity-upgrade-warning--error-feature7)_
+  _Requirements: [FR-7](FR.md#fr-7-validator-bddinfra-rule-severity-upgrade-warning-error-feature7)_
 - [x] Добавить rule `BDD_INFRA_CLASSIFICATION_COMPLETE`: проверить `**TEST_FORMAT:**` matches `BDD|UNIT`; если BDD → require `**Framework:**` + `**Install Command:**` + `**Evidence:**` -- @feature7
 - [x] Если TEST_FORMAT=UNIT → require непустую Risks секцию (escape hatch justification) -- @feature7
-  _Requirements: [AC-7](ACCEPTANCE_CRITERIA.md#ac-7-fr-7)_
+  _Requirements: [AC-7](ACCEPTANCE_CRITERIA.md#ac-7-fr-7-feature7)_
 - [x] Update specs-validation.md rule table (source + installed) с новыми правилами -- @feature7
 - [x] Verify: валидатор выдаёт ERROR (exit 1) на DESIGN.md без Classification
 
@@ -61,13 +61,13 @@
 ## Phase 5: scaffold-spec -TestFormat Flag + Templates (Green)
 
 - [x] В `scaffold-spec.ts` wrapper принимать `-TestFormat [bdd|unit|auto]`, default `auto`, валидировать значения, передавать в core -- @feature4
-  _Requirements: [FR-4](FR.md#fr-4-scaffold-spects-поддерживает--testformat-flag-feature4)_
+  _Requirements: [FR-4](FR.md#fr-4-scaffold-spects-поддерживает-testformat-flag-feature4)_
 - [x] В `commandScaffoldSpec()` branch на `testFormat`: `auto`/`bdd`/`unit` -- @feature4
 - [x] `unit` mode: создавать `SCENARIOS.md` вместо `.feature` с header «DOC ONLY» -- @feature4
 - [x] Update `templates/DESIGN.md.template` — новые поля `**TEST_DATA:**`, `**TEST_FORMAT:**`, `**Framework:**`, `**Install Command:**`, `**Evidence:**` в секции `## BDD Test Infrastructure` -- @feature1
-  _Requirements: [AC-1](ACCEPTANCE_CRITERIA.md#ac-1-fr-1)_
+  _Requirements: [AC-1](ACCEPTANCE_CRITERIA.md#ac-1-fr-1-feature1)_
 - [x] Update `templates/TASKS.md.template` — conditional Phase 0 bootstrap block (3 tasks: install-bdd-framework → bootstrap-bdd-hooks → bootstrap-bdd-fixtures-config) -- @feature6
-  _Requirements: [FR-6](FR.md#fr-6-tasksmd-phase-0-bootstrap-block-install--hooks--fixtures-config-feature6)_
+  _Requirements: [FR-6](FR.md#fr-6-tasksmd-phase-0-bootstrap-block-install-hooks-fixtures-config-feature6)_
 - [x] Verify: SBDE001_04 (escape hatch), SBDE001_05 (C# bootstrap), SBDE001_06 (Python bootstrap) переходят в Green
 
 ## Phase 6: Rules Update (Green)
@@ -75,7 +75,7 @@
 - [x] Update `.claude/rules/specs-workflow/specs-management.md` + `extensions/specs-workflow/rules/claude/specs-management.md` (source + installed): Phase 1.5 detect step + Phase 2 Step 6.1a/b/c split + Pre-flight Checklist addition -- @feature2
   _Requirements: [FR-2](FR.md#fr-2-phase-15-project-context-детектит-bdd-framework-в-target-test-projects-feature2)_
 - [x] Create `.claude/rules/specs-workflow/bdd-enforcement.md` + `extensions/specs-workflow/rules/claude/bdd-enforcement.md`: BDD default principle, framework decision tree, install+bootstrap recipes per framework, escape hatch semantics, cross-reference на `.specs/create-specs-bdd-enforcement/` -- @feature6
-  _Requirements: [FR-6](FR.md#fr-6-tasksmd-phase-0-bootstrap-block-install--hooks--fixtures-config-feature6)_
+  _Requirements: [FR-6](FR.md#fr-6-tasksmd-phase-0-bootstrap-block-install-hooks-fixtures-config-feature6)_
 
 ## Phase 7: Manifest + Refactor & Polish
 

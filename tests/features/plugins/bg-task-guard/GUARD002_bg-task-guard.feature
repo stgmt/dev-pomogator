@@ -216,3 +216,17 @@ Feature: GUARD002 Background Task Guard
     And YAML status with passed=33 total=769 but percent=56 (33/769=4.3% not 56%)
     When Stop hook executes
     Then hook should block but NOT show mismatched 56% (partial read detected)
+
+  # @feature5
+  Scenario: GUARD002_36 Stop hook escalates a hung task to the human within the escalation window
+    Given marker file exists with a hung task and timestamp 4 minutes ago
+    And YAML status with state running and 0% progress
+    When Stop hook executes
+    Then hook should block and instruct the agent to ask the user via AskUserQuestion
+
+  # @feature5
+  Scenario: GUARD002_37 Stop hook allows the stop for a hung task past the escalation window (headless-safe)
+    Given marker file exists with a hung task and timestamp 7 minutes ago
+    And YAML status with state running and 0% progress
+    When Stop hook executes
+    Then hook should allow the stop so a human-less run recovers

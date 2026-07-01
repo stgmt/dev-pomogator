@@ -119,15 +119,29 @@ function collectFilesRecursive(dirPath, matcher, skipDir) {
   }
 
   const walk = (currentDir) => {
-    for (const entry of fs.readdirSync(currentDir, { withFileTypes: true })) {
+    // A recursive walk of a live tree races with concurrent mutation (tests/users
+    // creating+deleting files mid-scan) and can hit unreadable entries — readdir then
+    // throws ENOENT/EACCES. Skip the offending dir/entry instead of aborting the whole
+    // scan (this is what crashed analyze-features → exit 1 under the parallel Docker suite).
+    let entries;
+    try {
+      entries = fs.readdirSync(currentDir, { withFileTypes: true });
+    } catch {
+      return; // dir vanished mid-walk or unreadable — skip it, don't crash the scan
+    }
+    for (const entry of entries) {
       const fullPath = path.join(currentDir, entry.name);
-      if (entry.isDirectory()) {
-        if (typeof skipDir === 'function' && skipDir(entry.name, fullPath)) {
-          continue;
+      try {
+        if (entry.isDirectory()) {
+          if (typeof skipDir === 'function' && skipDir(entry.name, fullPath)) {
+            continue;
+          }
+          walk(fullPath);
+        } else if (!matcher || matcher(fullPath, entry)) {
+          results.push(fullPath);
         }
-        walk(fullPath);
-      } else if (!matcher || matcher(fullPath, entry)) {
-        results.push(fullPath);
+      } catch {
+        continue; // a single entry raced away / unreadable — skip, keep scanning
       }
     }
   };
@@ -231,7 +245,13 @@ function createLogger({ logsDir, logFile, verboseOutput }) {
 }
 
 function createCommandContext(options) {
-  const repoRoot = findRepoRoot(SCRIPT_DIR);
+  // SPECS_GENERATOR_ROOT lets callers point the generator at a FOREIGN corpus
+  // root (fixture dirs in tests, other repos' .specs/ — FR-37/P14-5 verdict
+  // runs). Default behaviour (this repo's root from the script location) is
+  // unchanged when the env var is unset.
+  const repoRoot = process.env.SPECS_GENERATOR_ROOT
+    ? path.resolve(process.env.SPECS_GENERATOR_ROOT)
+    : findRepoRoot(SCRIPT_DIR);
   const logsDir = path.join(SCRIPT_DIR, 'logs');
   const logFile = options.logFile || path.join(logsDir, `specs-generator-${formatDateOnly()}.log`);
   const log = createLogger({
@@ -417,19 +437,23 @@ function listPlaceholders(content, lines) {
 }
 
 function replaceLiteralAll(content, searchValue, replacementValue) {
-  return content.split(searchValue).join(String(replacementValue));
+  // P16-6 CRLF-safe: match the inserted value's line endings to the document's,
+  // so a CRLF template + a multi-line LF value (from JSON -Values) — or the
+  // reverse — never produces a file with mixed EOLs. Single-line values are a
+  // no-op. EOL detected from the document (CRLF if it contains any \r\n).
+  let value = String(replacementValue);
+  if (content.includes('\r\n')) value = value.replace(/\r?\n/g, '\r\n');
+  else if (content.includes('\n')) value = value.replace(/\r\n/g, '\n');
+  return content.split(searchValue).join(value);
 }
 
-function toAnchorSlug(header) {
-  let slug = header.toLowerCase();
-  slug = slug.replace(/[\*_`\[\]\(\)]/g, '');
-  slug = slug.replace(/@feature\d+/g, '');
-  slug = slug.replace(/[^\w\s-]/g, '');
-  slug = slug.trim();
-  slug = slug.replace(/\s+/g, '-');
-  slug = slug.replace(/-+/g, '-');
-  slug = slug.replace(/-+$/g, '');
-  return slug;
+// Delegates to the single marksmanSlug source of truth (FR-34a) so the validator
+// checks links the way Marksman actually resolves them (the old local impl used
+// ASCII `\w`, silently stripping Cyrillic headings → wrong anchors). The leading
+// `@featureN` strip is kept defensively (markdown spec headings never carry it,
+// but feature-tag prose lines might be passed in).
+function toAnchorSlug(header, marksmanSlug) {
+  return marksmanSlug(header.replace(/@feature\d+/g, ''));
 }
 
 function countMatches(text, pattern, flags = 'g') {
@@ -837,7 +861,13 @@ function commandFillTemplate(argv) {
   return 0;
 }
 
-function commandValidateSpec(argv) {
+async function commandValidateSpec(argv) {
+  // FR-34: the single marksmanSlug source + the anchor checker live in
+  // ../anchor-integrity. Load them LAZILY (only the validate path needs them) so
+  // core.mjs stays self-contained for scaffold/analyze/etc. — ARCH012 copies core.mjs
+  // alone into a tmp repo and a top-level import would crash with ERR_MODULE_NOT_FOUND.
+  const { marksmanSlug } = await import('../anchor-integrity/marksman-slug.mjs');
+  const { checkLinks } = await import('../anchor-integrity/check.mjs');
   const options = parseArgs(argv, [
     { flag: '-Path', key: 'inputPath', type: 'string', required: true },
     { flag: '-ErrorsOnly', key: 'errorsOnly', type: 'boolean', default: false },
@@ -945,12 +975,15 @@ function commandValidateSpec(argv) {
 
     if (fileName === 'FR.md') {
       log('INFO', 'Checking FR_FORMAT rule...');
-      if (!/## FR-(\d+):/i.test(content)) {
+      // Accept BOTH the colon form (`## FR-N: Title`) and the migrated short form
+      // (`## FR-N`, title relocated to a body line per FR-7c). Line-anchored so a
+      // `### FR-001:` example in prose can't accidentally satisfy the check.
+      if (!/^#{2,6}\s+FR-\d+\b/im.test(content)) {
         errors.push({
           file: fileName,
           line: 0,
           rule: 'FR_FORMAT',
-          message: 'No FR-N headers found. Expected format: ## FR-N: {Название}',
+          message: 'No FR-N headers found. Expected format: ## FR-N (short) or ## FR-N: {Название}',
         });
         fileHasErrors = true;
         log('ERROR', `${fileName}: No FR-N headers found`);
@@ -959,12 +992,13 @@ function commandValidateSpec(argv) {
 
     if (fileName === 'USE_CASES.md') {
       log('INFO', 'Checking UC_FORMAT rule...');
-      if (!/## UC-(\d+):/i.test(content)) {
+      // Accept both `## UC-N: Title` and the migrated short form `## UC-N` (FR-7c).
+      if (!/^#{2,6}\s+UC-\d+\b/im.test(content)) {
         errors.push({
           file: fileName,
           line: 0,
           rule: 'UC_FORMAT',
-          message: 'No UC-N headers found. Expected format: ## UC-N: {Название}',
+          message: 'No UC-N headers found. Expected format: ## UC-N (short) or ## UC-N: {Название}',
         });
         fileHasErrors = true;
         log('ERROR', `${fileName}: No UC-N headers found`);
@@ -1195,7 +1229,7 @@ function commandValidateSpec(argv) {
         continue;
       }
 
-      const anchor = toAnchorSlug(match[2]);
+      const anchor = toAnchorSlug(match[2], marksmanSlug);
       if (anchor) {
         anchorIndex[markdownFile].push(anchor);
       }
@@ -1235,6 +1269,30 @@ function commandValidateSpec(argv) {
         }
       }
     });
+  }
+
+  // Same-file anchors `[t](#a)` — the gap CROSS_REF_LINKS never covered. Delegate
+  // to the anchor-integrity engine (check.mjs), which skips code spans/fences and
+  // infers the fix slug. We emit only same-file findings (targetRaw === '') here;
+  // cross-file is already handled by the loop above. (FR-34c)
+  try {
+    const filesForCheck = markdownFiles.map((markdownFile) => ({
+      file: markdownFile,
+      content: safeReadLines(path.join(targetDir, markdownFile)).join('\n'),
+    }));
+    for (const b of checkLinks(filesForCheck)) {
+      if (b.targetRaw !== '') continue; // same-file only
+      const fix = b.currentSlug ? ` → fix to #${b.currentSlug}` : ' (ambiguous — see anchor-fix skill)';
+      warnings.push({
+        file: b.file,
+        line: b.line,
+        rule: 'CROSS_REF_LINKS',
+        message: `Broken same-file anchor: [${b.linkText}](#${b.brokenAnchor}) does not resolve in the Marksman LSP${fix}`,
+      });
+      log('WARN', `${b.file} line ${b.line}: same-file anchor '#${b.brokenAnchor}' unresolved${fix}`);
+    }
+  } catch (anchorErr) {
+    log('WARN', `same-file anchor check skipped: ${anchorErr instanceof Error ? anchorErr.message : String(anchorErr)}`);
   }
 
   log('INFO', 'CROSS_REF_LINKS check complete');
@@ -1764,10 +1822,10 @@ function commandAuditSpec(argv) {
 
   log('INFO', 'Running FR_AC_COVERAGE check...');
   if (frContent && acContent) {
-    const frIds = [...frContent.matchAll(/## FR-(\d+):/g)].map((match) => `FR-${match[1]}`);
+    const frIds = [...frContent.matchAll(/^## FR-(\d+):/gm)].map((match) => `FR-${match[1]}`);
     const acRefs = [
-      ...acContent.matchAll(/## AC-\d+\s*\(FR-(\d+)\)/g),
-      ...acContent.matchAll(/## AC-\d+\s*\(FR-(\d+)\):/g),
+      ...acContent.matchAll(/^## AC-\d+\s*\(FR-(\d+)\)/gm),
+      ...acContent.matchAll(/^## AC-\d+\s*\(FR-(\d+)\):/gm),
     ].map((match) => `FR-${match[1]}`);
     const allAcRefs = [...new Set(acRefs)];
 
@@ -1850,7 +1908,7 @@ function commandAuditSpec(argv) {
   log('INFO', 'Running REQUIREMENTS_TRACEABILITY check...');
   const requirementsContent = getFileContent('REQUIREMENTS.md');
   if (requirementsContent && frContent) {
-    const frIds = [...frContent.matchAll(/## FR-(\d+):/g)].map((match) => `FR-${match[1]}`);
+    const frIds = [...frContent.matchAll(/^## FR-(\d+):/gm)].map((match) => `FR-${match[1]}`);
 
     for (const frId of frIds) {
       if (!requirementsContent.includes(frId)) {
@@ -1871,7 +1929,7 @@ function commandAuditSpec(argv) {
   log('INFO', 'Running TASKS_FR_REFS check...');
   const tasksContent = getFileContent('TASKS.md');
   if (tasksContent && frContent) {
-    const frIds = [...frContent.matchAll(/## FR-(\d+):/g)].map((match) => `FR-${match[1]}`);
+    const frIds = [...frContent.matchAll(/^## FR-(\d+):/gm)].map((match) => `FR-${match[1]}`);
     const taskRefs = [...new Set((tasksContent.match(/FR-\d+/g) || []))];
     const unreferencedFrs = frIds.filter((frId) => !taskRefs.includes(frId));
 
@@ -1894,7 +1952,7 @@ function commandAuditSpec(argv) {
   // =========================================================================
   log('INFO', 'Running AC_TAG_SYNC check...');
   if (frContent && acContent) {
-    const frSections = [...frContent.matchAll(/## FR-(\d+):.*$/gm)];
+    const frSections = [...frContent.matchAll(/^## FR-(\d+):.*$/gm)];
     for (const frMatch of frSections) {
       const frNum = frMatch[1];
       const frLine = frMatch[0];
@@ -2038,7 +2096,7 @@ function commandAuditSpec(argv) {
 
   log('INFO', 'Running LINK_VALIDITY check...');
   if (requirementsContent && frContent) {
-    const frIds = [...frContent.matchAll(/## FR-(\d+):/g)].map((match) => match[1]);
+    const frIds = [...frContent.matchAll(/^## FR-(\d+):/gm)].map((match) => match[1]);
     for (const frNum of frIds) {
       const frId = `FR-${frNum}`;
       const linkPattern = new RegExp(`\\[${escapeRegExp(frId)}[^\\]]*\\]\\(FR\\.md#[^)]+\\)`);
@@ -2056,7 +2114,10 @@ function commandAuditSpec(argv) {
   }
 
   if (tasksContent && frContent) {
-    const frIds = [...frContent.matchAll(/## FR-(\d+):/g)].map((match) => match[1]);
+    // ^-anchored (m): an inline mention like «`### FR-001: Login` → anchors…»
+    // in FR.md prose is an EXAMPLE, not a requirement heading — unanchored
+    // matching produced false LINK_VALIDITY errors off example strings.
+    const frIds = [...frContent.matchAll(/^## FR-(\d+):/gm)].map((match) => match[1]);
     for (const frNum of frIds) {
       const frId = `FR-${frNum}`;
       const linkPattern = new RegExp(`\\[${escapeRegExp(frId)}[^\\]]*\\]\\([^)]+\\)`);
@@ -2075,9 +2136,13 @@ function commandAuditSpec(argv) {
   }
 
   if (frContent && acContent) {
-    const frNums = [...frContent.matchAll(/## FR-(\d+):/g)].map((match) => match[1]);
+    // ^-anchored for the same reason as the TASKS check above: a quoted
+    // `## FR-1: Title` inside a blockquote/example must not define a section.
+    const frNums = [...frContent.matchAll(/^## FR-(\d+):/gm)].map((match) => match[1]);
     for (const frNum of frNums) {
-      const sectionMatch = frContent.match(new RegExp(`## FR-${frNum}:.*?(?=## FR-\\d+:|$)`, 's'));
+      const sectionMatch = frContent.match(
+        new RegExp(`(?:^|\\n)## FR-${frNum}:.*?(?=\\n## FR-\\d+:|$)`, 's'),
+      );
       if (sectionMatch && !/\[AC-\d+[^\]]*\]\(ACCEPTANCE_CRITERIA\.md#[^)]+\)/.test(sectionMatch[0])) {
         findings.push({
           check: 'LINK_VALIDITY',
@@ -2092,10 +2157,10 @@ function commandAuditSpec(argv) {
   }
 
   if (acContent && frContent) {
-    const acHeaders = [...acContent.matchAll(/## AC-(\d+)\s*\(FR-(\d+)\)/g)];
+    const acHeaders = [...acContent.matchAll(/^## AC-(\d+)\s*\(FR-(\d+)\)/gm)];
     for (const match of acHeaders) {
       const [, acNum, frNum] = match;
-      const sectionMatch = acContent.match(new RegExp(`## AC-${acNum}\\s*\\(FR-${frNum}\\).*?(?=## AC-\\d+|$)`, 's'));
+      const sectionMatch = acContent.match(new RegExp(`(?:^|\\n)## AC-${acNum}\\s*\\(FR-${frNum}\\).*?(?=\\n## AC-\\d+|$)`, 's'));
       const frLinkPattern = new RegExp(`\\[FR-${frNum}[^\\]]*\\]\\(FR\\.md#[^)]+\\)`);
       if (sectionMatch && !frLinkPattern.test(sectionMatch[0])) {
         findings.push({
@@ -2196,9 +2261,20 @@ function commandAuditSpec(argv) {
     const tasksLines = getFileLines('TASKS.md');
     const frWithMarkers = {};
     let currentFr = null;
+    let inFence = false;
 
     for (const line of frLines) {
-      const headerMatch = line.match(/## (FR-\d+[a-z]?):/i);
+      // Same false-positive class as LINK_VALIDITY (fixed 2026-06-06):
+      // ^-anchored header tracking (a quoted `## FR-7: Title` example in
+      // prose must not flip the section), fenced blocks skipped, and
+      // markers never matched inside inline code spans (`PARTIAL` as an
+      // enum literal is code, not an implementation status).
+      if (/^\s*```/.test(line)) {
+        inFence = !inFence;
+        continue;
+      }
+      if (inFence) continue;
+      const headerMatch = line.match(/^#{2,3} (FR-\d+[a-z]?):/i) || line.match(/^#{2,3} (FR-\d+[a-z]?)\s*$/i);
       if (headerMatch) {
         currentFr = headerMatch[1];
       }
@@ -2207,8 +2283,13 @@ function commandAuditSpec(argv) {
         continue;
       }
 
+      const noCode = line.replace(/`[^`]*`/g, '');
       for (const marker of partialMarkers) {
-        if (new RegExp(escapeRegExp(marker), 'i').test(line)) {
+        // Word-boundary match (Unicode-aware — markers include Cyrillic like «НЕ РЕАЛИЗОВАНО»),
+        // NOT a raw substring: a substring match false-fired on 'deferred' inside 'deferred-work'
+        // (FR-49 incident 2026-06-14) and would also catch 'PARTIAL' inside 'PARTIALLY' etc.
+        // Reject when the marker is glued to a letter/digit/underscore/hyphen on either side.
+        if (new RegExp(`(?<![\\p{L}\\p{N}_-])${escapeRegExp(marker)}(?![\\p{L}\\p{N}_-])`, 'iu').test(noCode)) {
           frWithMarkers[currentFr] = marker;
           break;
         }
@@ -2263,7 +2344,7 @@ function commandAuditSpec(argv) {
 
   log('INFO', 'Running FR_SPLIT_CONSISTENCY check...');
   if (frContent) {
-    const allFrIds = [...frContent.matchAll(/## FR-(\d+)([a-z])?:/gi)].map((match) => ({
+    const allFrIds = [...frContent.matchAll(/^## FR-(\d+)([a-z])?:/gim)].map((match) => ({
       full: `FR-${match[1]}${match[2] || ''}`,
       num: Number(match[1]),
       suffix: match[2] || '',
@@ -2311,7 +2392,7 @@ function commandAuditSpec(argv) {
   log('INFO', 'Running BDD_SCENARIO_SCOPE check...');
   if (frContent && featureContent) {
     const domainTerms = ['batch', 'serial', 'IN', 'OUT', 'inbound', 'outbound', 'create', 'update', 'delete', 'rollback', 'cancel', 'approve', 'reject'];
-    const frSections = [...frContent.matchAll(/## (FR-\d+[a-z]?):.*?(?=## FR-\d|$)/gis)];
+    const frSections = [...frContent.matchAll(/(?:^|\n)## (FR-\d+[a-z]?):.*?(?=\n## FR-\d|$)/gis)];
 
     for (const section of frSections) {
       const frText = section[0];
@@ -2377,7 +2458,7 @@ function commandAuditSpec(argv) {
 
   log('INFO', 'Running OUT_OF_SCOPE_PROPAGATION check...');
   if (frContent) {
-    const frSections = [...frContent.matchAll(/## (FR-\d+[a-z]?):.*?(?=## FR-\d|$)/gis)];
+    const frSections = [...frContent.matchAll(/(?:^|\n)## (FR-\d+[a-z]?):.*?(?=\n## FR-\d|$)/gis)];
     const oosFrEntries = [];
 
     for (const section of frSections) {
@@ -2935,6 +3016,10 @@ function commandAnalyzeFeatures(argv) {
   const EXCLUDED_DIRS = new Set([
     'node_modules', 'bin', 'obj', '.git', 'dist', 'build', 'out',
     '.dev-pomogator', '.vs', '.idea', 'packages', 'TestResults',
+    // Mutation-testing scratch + tool output: .stryker-tmp holds full repo COPIES
+    // (sandbox-*/) that otherwise duplicate every .feature (392 vs ~46 real); reports/
+    // coverage carry no source features. The real .specs/ stays included (type:'spec').
+    '.stryker-tmp', 'reports', 'coverage',
   ]);
   const skipDir = (name) => EXCLUDED_DIRS.has(name);
 
@@ -3511,15 +3596,19 @@ function main() {
   }
 }
 
-try {
-  const exitCode = main();
-  process.exit(exitCode);
-} catch (error) {
-  if (error instanceof CliError) {
-    process.stderr.write(`${error.message}\n`);
-    process.exit(error.exitCode);
-  }
+(async () => {
+  try {
+    // `main()` returns a number for sync commands, a Promise<number> for the async
+    // validate-spec path (which lazy-loads ../anchor-integrity) — await handles both.
+    const exitCode = await main();
+    process.exit(exitCode);
+  } catch (error) {
+    if (error instanceof CliError) {
+      process.stderr.write(`${error.message}\n`);
+      process.exit(error.exitCode);
+    }
 
-  process.stderr.write(`${error?.stack || error?.message || String(error)}\n`);
-  process.exit(1);
-}
+    process.stderr.write(`${error?.stack || error?.message || String(error)}\n`);
+    process.exit(1);
+  }
+})();

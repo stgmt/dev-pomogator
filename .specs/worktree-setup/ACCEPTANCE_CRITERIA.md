@@ -26,7 +26,7 @@ IF the projectPath registered by the installer is an ANCESTOR of the new worktre
 
 ## AC-3 (FR-3)
 
-**Требование:** [FR-3](FR.md#fr-3-self-heal-hint-for-orphan-worktrees-via-tsx-runner-bootstrapcjs)
+**Требование:** [FR-3](FR.md#fr-3-self-heal-hint-for-orphan-worktrees-via-tsx-runnerjs)
 
 WHEN `tsx-runner.js` is invoked by any hook AND target script path starts with `.dev-pomogator/` AND `fs.existsSync(<resolved-script-path>)` returns false (checked AFTER `resolveScriptPath()` at line 107, BEFORE strategy iteration) THEN the runner SHALL append exactly one JSON line to `~/.dev-pomogator/orphan-worktrees.jsonl` with fields `ts`, `worktree_path`, `missing_script`, `hook_event`, `session_id`, then `process.exit(0)` to silently no-op the hook.
 
@@ -80,7 +80,7 @@ WHEN doctor is invoked with `--quick` flag THEN ONLY Check #3 (tools dir existen
 
 **Требование:** [FR-7](FR.md#fr-7-session-pilot-integration-contract)
 
-WHEN session-pilot indexer scans worktrees (existing behavior) THEN indexer SHALL invoke `~/.dev-pomogator/scripts/worktree-doctor.cjs --quick` for each worktree AND set field `tools_present: true` if exit 0, else `false`.
+WHEN [session-pilot](../session-pilot/FR.md) indexer scans worktrees (existing behavior) THEN indexer SHALL invoke `~/.dev-pomogator/scripts/worktree-doctor.cjs --quick` for each worktree AND set field `tools_present: true` if exit 0, else `false`.
 
 WHEN session-pilot serves `GET /api/claude` THEN response JSON SHALL contain `tools_present: boolean` for each worktree row.
 
@@ -90,7 +90,7 @@ IF `worktree_path` is not in indexer whitelist THEN server SHALL respond 403 wit
 
 ## AC-8 (FR-8)
 
-**Требование:** [FR-8](FR.md#fr-8-invocation-from-sibling-worktree--warn--offer-continue)
+**Требование:** [FR-8](FR.md#fr-8-invocation-from-sibling-worktree-warn-offer-continue)
 
 WHEN skill detects `process.cwd()` is not equal to the first `worktree <path>` line of `git worktree list --porcelain` (i.e., invocation from sibling worktree, not main) THEN skill SHALL print a warning line identifying current vs main paths AND invoke AskUserQuestion with options `Continue from main` / `Abort`.
 

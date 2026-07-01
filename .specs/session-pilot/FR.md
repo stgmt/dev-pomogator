@@ -9,7 +9,7 @@
 Endpoint returns all git worktrees from configured repos + per-row `claude_max_mtime` (cheap stat, no JSONL parse). Bound by ThreadPoolExecutor parallel git stat.
 
 **Связанные AC:** [AC-1](ACCEPTANCE_CRITERIA.md#ac-1-fr-1)
-**Use Case:** [UC-1](USE_CASES.md#uc-1)
+**Use Case:** [UC-1](USE_CASES.md#uc-1-open-dashboard-and-see-all-worktrees-with-last-activity-feature1-feature2-feature12-feature18)
 
 ## FR-2: GET /api/claude?path= — JSONL preview with last message
 
@@ -18,7 +18,7 @@ Endpoint returns all git worktrees from configured repos + per-row `claude_max_m
 Returns top-5 JSONL session previews for a worktree path: last_message + last_message_role + last_message_ts + msg_count + max_mtime + ETag. Cold response <300ms, includes 5 most-recently modified JSONL files.
 
 **Связанные AC:** [AC-2](ACCEPTANCE_CRITERIA.md#ac-2-fr-2)
-**Use Case:** [UC-1](USE_CASES.md#uc-1)
+**Use Case:** [UC-1](USE_CASES.md#uc-1-open-dashboard-and-see-all-worktrees-with-last-activity-feature1-feature2-feature12-feature18)
 
 ## FR-3: ETag/304 conditional response on /api/claude
 
@@ -27,7 +27,7 @@ Returns top-5 JSONL session previews for a worktree path: last_message + last_me
 GET /api/claude supports `If-None-Match: W/"<mtime>"`. Server compares against current max_mtime; match → 304 Not Modified with 0-byte body within 5ms.
 
 **Связанные AC:** [AC-3](ACCEPTANCE_CRITERIA.md#ac-3-fr-3)
-**Use Case:** [UC-2](USE_CASES.md#uc-2)
+**Use Case:** [UC-2](USE_CASES.md#uc-2-reload-dashboard-quickly-via-swr-cache-feature9)
 
 ## FR-4: POST /api/launch — cross-platform native terminal spawn
 
@@ -48,7 +48,7 @@ POST endpoint accepts JSON `{worktree_path, mode: 'resume'|'fresh', uuid?}`. Spa
 5-second idempotency lock per `(worktree_path, uuid)` — повторный клик в течение 5s не плодит дубли. Persistence terminate at user's discretion. Response shape unchanged: `{ok: true, method: <label>, pid: int}` или `{ok: false, error: "no terminal found", tried: [...]}` если ни один candidate не сработал.
 
 **Связанные AC:** [AC-4](ACCEPTANCE_CRITERIA.md#ac-4-fr-4)
-**Use Case:** [UC-3](USE_CASES.md#uc-3)
+**Use Case:** [UC-3](USE_CASES.md#uc-3-launch-claude-resume-in-a-new-native-terminal-window-feature4-feature21)
 
 ## FR-5: GET /api/message — single message by index
 
@@ -57,7 +57,7 @@ POST endpoint accepts JSON `{worktree_path, mode: 'resume'|'fresh', uuid?}`. Spa
 GET `/api/message?path=&session=&index=` returns N-th message + neighbors. Special index keywords: `last`, `first`. Out-of-range → 404.
 
 **Связанные AC:** [AC-5](ACCEPTANCE_CRITERIA.md#ac-5-fr-5)
-**Use Case:** [UC-4](USE_CASES.md#uc-4)
+**Use Case:** [UC-4](USE_CASES.md#uc-4-inspect-full-last-message-in-modal-feature5-feature10)
 
 ## FR-6: GET /api/git-status — worktree dirty/ahead/behind
 
@@ -66,7 +66,7 @@ GET `/api/message?path=&session=&index=` returns N-th message + neighbors. Speci
 Per-worktree git status `{added, deleted, ahead, behind}` via `git status --short` + `git rev-list --left-right HEAD...@{upstream}`. ccmanager-style display.
 
 **Связанные AC:** [AC-6](ACCEPTANCE_CRITERIA.md#ac-6-fr-6)
-**Use Case:** [UC-5](USE_CASES.md#uc-5)
+**Use Case:** [UC-5](USE_CASES.md#uc-5-view-per-worktree-git-status-feature6)
 
 ## FR-7: GET /api/health — idempotent autostart probe
 
@@ -75,7 +75,7 @@ Per-worktree git status `{added, deleted, ahead, behind}` via `git status --shor
 `200 {"status":"ok", "version": "0.4.0", "uptime_sec": int, "platform": "win32"|"linux"|"darwin"}` for autostart probe — клиент (PowerShell installer на Windows / bash installer на POSIX / SessionStart hook на любой ОС) ждёт сервер до 2s после spawn. <5ms regardless of cache. `platform` field exposes detected OS для debugging cross-platform issues.
 
 **Связанные AC:** [AC-7](ACCEPTANCE_CRITERIA.md#ac-7-fr-7)
-**Use Case:** [UC-6](USE_CASES.md#uc-6)
+**Use Case:** [UC-6](USE_CASES.md#uc-6-sessionstart-autostart-after-windows-reboot-feature7-feature13)
 
 ## FR-8: Frontend Tabulator — multi-sort + virtual scroll + filter
 
@@ -84,7 +84,7 @@ Per-worktree git status `{added, deleted, ahead, behind}` via `git status --shor
 Vendored Tabulator.js: multi-key shift+click sort, virtual DOM (500+ rows), frozen Repo+Branch columns, vi-style `/` filter via `setFilter()`.
 
 **Связанные AC:** [AC-8](ACCEPTANCE_CRITERIA.md#ac-8-fr-8)
-**Use Case:** [UC-7](USE_CASES.md#uc-7)
+**Use Case:** [UC-7](USE_CASES.md#uc-7-multi-key-shiftclick-sort-feature8)
 
 ## FR-9: Pagination strategy — top-20 priority + lazy rest
 
@@ -93,7 +93,7 @@ Vendored Tabulator.js: multi-key shift+click sort, virtual DOM (500+ rows), froz
 After /api/index, frontend sorts by `claude_max_mtime DESC`, splits into priority (top 20) + rest. 4 parallel workers drain priority first. Strategy chosen via Phase 4 benchmark documented in DESIGN.md.
 
 **Связанные AC:** [AC-9](ACCEPTANCE_CRITERIA.md#ac-9-fr-9)
-**Use Case:** [UC-1](USE_CASES.md#uc-1)
+**Use Case:** [UC-1](USE_CASES.md#uc-1-open-dashboard-and-see-all-worktrees-with-last-activity-feature1-feature2-feature12-feature18)
 
 ## FR-10: Modal viewer for last message
 
@@ -102,7 +102,7 @@ After /api/index, frontend sorts by `claude_max_mtime DESC`, splits into priorit
 Click "Last message" cell → native `<dialog>` + marked.js render + [Prev]/[Next] buttons re-fetch /api/message ± 1. ESC closes.
 
 **Связанные AC:** [AC-10](ACCEPTANCE_CRITERIA.md#ac-10-fr-10)
-**Use Case:** [UC-4](USE_CASES.md#uc-4)
+**Use Case:** [UC-4](USE_CASES.md#uc-4-inspect-full-last-message-in-modal-feature5-feature10)
 
 ## FR-11: 3-button Action column
 
@@ -113,7 +113,7 @@ Per row: [▶ Resume] [✨ Fresh] [📂 VSCode]. Resume/Fresh spawn новое n
 Кнопка Zellij Web из v0.2 удалена (мы больше не используем Zellij на любой ОС).
 
 **Связанные AC:** [AC-11](ACCEPTANCE_CRITERIA.md#ac-11-fr-11)
-**Use Case:** [UC-3](USE_CASES.md#uc-3)
+**Use Case:** [UC-3](USE_CASES.md#uc-3-launch-claude-resume-in-a-new-native-terminal-window-feature4-feature21)
 
 ## FR-12: Idle time human-readable format
 
@@ -122,7 +122,7 @@ Per row: [▶ Resume] [✨ Fresh] [📂 VSCode]. Resume/Fresh spawn новое n
 `relativeTime(epoch)`: <60s → "just now"; <60min → Intl.RelativeTimeFormat 'minutes'; <24h → 'hours'; >24h → "Nd Nh Nm". No "1777m" anywhere.
 
 **Связанные AC:** [AC-12](ACCEPTANCE_CRITERIA.md#ac-12-fr-12)
-**Use Case:** [UC-1](USE_CASES.md#uc-1)
+**Use Case:** [UC-1](USE_CASES.md#uc-1-open-dashboard-and-see-all-worktrees-with-last-activity-feature1-feature2-feature12-feature18)
 
 ## FR-13: SessionStart hook idempotent autostart (cross-platform)
 
@@ -142,7 +142,7 @@ Both scripts share idempotency contract:
 4. Poll `http://127.0.0.1:8083/api/health` until 200 (timeout 2s) → exit 0.
 
 **Связанные AC:** [AC-13](ACCEPTANCE_CRITERIA.md#ac-13-fr-13)
-**Use Case:** [UC-8](USE_CASES.md#uc-8)
+**Use Case:** [UC-8](USE_CASES.md#uc-8-spawn-fresh-claude-in-new-worktree-feature11-feature21)
 
 ## FR-14: SWR client cache via localStorage
 
@@ -151,7 +151,7 @@ Both scripts share idempotency contract:
 `localStorage["session_pilot_v1_<id>"] = {mtime, etag, data}`. Page load: instant render from cache → fetch /api/index → mtime compare per row → skip unchanged → fetch with If-None-Match for stale.
 
 **Связанные AC:** [AC-14](ACCEPTANCE_CRITERIA.md#ac-14-fr-14)
-**Use Case:** [UC-9](USE_CASES.md#uc-9)
+**Use Case:** [UC-9](USE_CASES.md#uc-9-install-on-fresh-windows-machine-feature15-feature16-feature17)
 
 ## FR-15: Cross-platform installation scripts
 
@@ -179,7 +179,7 @@ bash extensions/session-pilot/install.sh
 Shared idempotency: re-run detects existing install + alive server → exit 0 без модификации настроек. Detection: settings.json hook entry already present AND `/api/health` returns 200.
 
 **Связанные AC:** [AC-15](ACCEPTANCE_CRITERIA.md#ac-15-fr-15)
-**Use Case:** [UC-10](USE_CASES.md#uc-10)
+**Use Case:** [UC-10](USE_CASES.md#uc-10-diagnose-missing-live-indicator-feature3-feature19-feature20)
 
 ## FR-16: Skill uses mcp__claude-in-chrome__* for browser
 
@@ -188,7 +188,7 @@ Shared idempotency: re-run detects existing install + alive server → exit 0 б
 Skill scenarios use `mcp__claude-in-chrome__navigate / screenshot / read_page` for browser automation. Forbids PowerShell desktop captures (per rule `mcp-chrome-only.md`).
 
 **Связанные AC:** [AC-16](ACCEPTANCE_CRITERIA.md#ac-16-fr-16)
-**Use Case:** [UC-3](USE_CASES.md#uc-3)
+**Use Case:** [UC-3](USE_CASES.md#uc-3-launch-claude-resume-in-a-new-native-terminal-window-feature4-feature21)
 
 ## FR-17: Cross-platform Claude path encoding
 
@@ -208,7 +208,7 @@ Skill scenarios use `mcp__claude-in-chrome__navigate / screenshot / read_page` f
 Encoder reads `sys.platform`, identifies canonical variant first (= production lookup path), then appends defensive cross-platform fallbacks (rarely hit but cheap to include in scan). Diagnostic CLI `--diagnose-livecycle` dumps generated variants + per-variant scan result, so unforeseen encodings (e.g. new IDE-injected worktree paths) surface immediately.
 
 **Связанные AC:** [AC-17](ACCEPTANCE_CRITERIA.md#ac-17-fr-17)
-**Use Case:** [UC-1](USE_CASES.md#uc-1), [UC-11](USE_CASES.md#uc-11)
+**Use Case:** [UC-1](USE_CASES.md#uc-1-open-dashboard-and-see-all-worktrees-with-last-activity-feature1-feature2-feature12-feature18), [UC-11](USE_CASES.md#uc-11-edge-jsonl-written-to-unexpected-encoding-feature14)
 
 ## FR-18: Dedicated competitor analysis artifact
 
@@ -217,7 +217,7 @@ Encoder reads `sys.platform`, identifies canonical variant first (= production l
 `COMPETITIVE_ANALYSIS.md` ≥1500 words: per-tool feature list, master matrix, "Features WE LACK" priority backlog, "Features WE HAVE that they lack" differentiation. ≥3 sources cited per feature claim.
 
 **Связанные AC:** [AC-18](ACCEPTANCE_CRITERIA.md#ac-18-fr-18)
-**Use Case:** [UC-7](USE_CASES.md#uc-7)
+**Use Case:** [UC-7](USE_CASES.md#uc-7-multi-key-shiftclick-sort-feature8)
 
 ## FR-19: Diagnostic CLI --diagnose-livecycle
 
@@ -226,7 +226,7 @@ Encoder reads `sys.platform`, identifies canonical variant first (= production l
 `python server.py --diagnose-livecycle <path>` dumps encoding variants + base dirs scanned + per-JSONL match (path/mtime/age/size) + verdict 🟢/⚪/❌.
 
 **Связанные AC:** [AC-19](ACCEPTANCE_CRITERIA.md#ac-19-fr-19)
-**Use Case:** [UC-11](USE_CASES.md#uc-11)
+**Use Case:** [UC-11](USE_CASES.md#uc-11-edge-jsonl-written-to-unexpected-encoding-feature14)
 
 ## FR-20: Configurable LIVE threshold
 
@@ -235,7 +235,7 @@ Encoder reads `sys.platform`, identifies canonical variant first (= production l
 `RUNNING_THRESHOLD_SEC = int(os.environ.get("LIVE_THRESHOLD_SEC", "300"))`. Default 300s (Claude Code batches JSONL writes every 2-3 min). Override via env var.
 
 **Связанные AC:** [AC-20](ACCEPTANCE_CRITERIA.md#ac-20-fr-20)
-**Use Case:** [UC-1](USE_CASES.md#uc-1)
+**Use Case:** [UC-1](USE_CASES.md#uc-1-open-dashboard-and-see-all-worktrees-with-last-activity-feature1-feature2-feature12-feature18)
 
 ## FR-26: Per-session rows (expand 1-row-per-cwd to 1-row-per-JSONL-uuid)
 
@@ -270,7 +270,7 @@ Current row granularity = **per encoded cwd directory**. Multiple JSONLs (sessio
 **Edge case — git worktrees without Claude history (Source C from FR-24)**: emit row with `session_uuid: null`. Resume button disabled, Fresh button still enabled (spawns bare claude → creates new session).
 
 **Связанные AC:** [AC-26](ACCEPTANCE_CRITERIA.md#ac-26-fr-26)
-**Use Case:** [UC-16](USE_CASES.md#uc-16)
+**Use Case:** [UC-16](USE_CASES.md#uc-16-resume-specific-session-when-multiple-claude-sessions-share-same-cwd-feature26)
 
 ## FR-25: Process-based "open window" indicator — separate signal from JSONL-mtime LIVE
 
@@ -310,7 +310,7 @@ Current LIVE indicator (FR-20 / KD-6 / `claude_running_now`) shows **«writing J
 - Process running but cwd is NOT a `~/.claude/projects/*` decoded match (e.g. running from `C:\Program Files\Claude\` itself) → don't emit row (это Claude Code desktop app, not CLI session).
 
 **Связанные AC:** [AC-25](ACCEPTANCE_CRITERIA.md#ac-25-fr-25)
-**Use Case:** [UC-15](USE_CASES.md#uc-15)
+**Use Case:** [UC-15](USE_CASES.md#uc-15-find-open-claude-windows-even-when-theyre-idle-waiting-for-user-feature25)
 
 ## FR-24: UNION model — all git worktrees AND all Claude sessions, merged & deduplicated
 
@@ -365,7 +365,7 @@ Total rows = A ∪ B ∪ C. Dedup: if A and C describe the same cwd, A wins (has
 - Orphan cwd starts with `C:\Users\<user>\.claude\` (Claude Code's own state dir) → filter out (these are session-pilot's own meta-projects, not user work).
 
 **Связанные AC:** [AC-24](ACCEPTANCE_CRITERIA.md#ac-24-fr-24)
-**Use Case:** [UC-14](USE_CASES.md#uc-14)
+**Use Case:** [UC-14](USE_CASES.md#uc-14-resume-orphan-claude-session-cwd-not-in-git-repo-feature24)
 
 ## FR-23: Taskbar / Dock launcher installer (`create-launcher`)
 
@@ -400,7 +400,7 @@ Per-OS sibling scripts which create a **pin-able launcher entry** на taskbar (
 **Windows standalone-app identity (v0.5)**: the `.lnk` no longer targets the browser directly — it targets a hidden `pwsh -File launch.ps1` so single-instance is enforced on every click (see FR-27). The shortcut carries a generated `session-pilot.ico` (System.Drawing, drawn at install into `%LOCALAPPDATA%\session-pilot\`) instead of the browser icon, and an explicit AppUserModelID `ClaudeCode.SessionPilot` (set via `IShellLink`+`IPropertyStore`) so the dashboard reads as its own pinnable taskbar app, not "Edge". Best-effort consolidation between the pinned `.lnk` and the running Edge `--app` window via matching AppUserModelID — perfect single-button merge is not guaranteed (Chromium owns the window's identity).
 
 **Связанные AC:** [AC-23](ACCEPTANCE_CRITERIA.md#ac-23-fr-23)
-**Use Case:** [UC-13](USE_CASES.md#uc-13)
+**Use Case:** [UC-13](USE_CASES.md#uc-13-one-click-taskbar-launcher-для-dashboard-feature23)
 
 ## FR-27: Single-instance dashboard window (Windows)
 
@@ -417,13 +417,13 @@ Launching the dashboard MUST be single-instance: a click on the launcher/shortcu
 Stale/dead windows naturally don't match (their process is gone), so a crashed window doesn't block a fresh launch.
 
 **Связанные AC:** [AC-27](ACCEPTANCE_CRITERIA.md#ac-27-fr-27)
-**Use Case:** [UC-13](USE_CASES.md#uc-13)
+**Use Case:** [UC-13](USE_CASES.md#uc-13-one-click-taskbar-launcher-для-dashboard-feature23)
 
 ## FR-22: On-demand worktree bootstrap skill (`session-pilot-bootstrap`)
 
 > @feature22
 
-Standalone Claude Code skill `session-pilot-bootstrap` (slash-command form: `/sp-bootstrap` или `/sp-bootstrap-worktree`) который **пользователь вызывает вручную** когда оказался в orphan worktree (worktree без `.dev-pomogator/tools/` install state). НЕ auto-fire — пользователь решает когда нужен bootstrap. Сценарий мотивации: hooks (auto-commit / simplify / dedup / tui / prompt-suggest / capture / bg-task-guard / test-spec-gate) падают с `ERR_MODULE_NOT_FOUND` на stop event'ах потому что `.dev-pomogator/tools/*.ts` gitignored AND installer ни разу в этом worktree не запускался.
+Standalone Claude Code skill `session-pilot-bootstrap` (slash-command form: `/sp-bootstrap` или `/sp-bootstrap-worktree`) который **пользователь вызывает вручную** когда оказался в orphan worktree (worktree без `.dev-pomogator/tools/` install state). НЕ auto-fire — пользователь решает когда нужен bootstrap. Сценарий мотивации: hooks (auto-commit / simplify / dedup / tui / [prompt-suggest](../prompt-suggest/FR.md) / capture / [bg-task-guard](../bg-task-guard/FR.md) / test-spec-gate) падают с `ERR_MODULE_NOT_FOUND` на stop event'ах потому что `.dev-pomogator/tools/*.ts` gitignored AND installer ни разу в этом worktree не запускался.
 
 **Trigger phrases** (skill description):
 - RU: «забутстрапь worktree», «поставь dev-pomogator в этот worktree», «почини hooks в worktree», «инициализируй worktree», «сделай orphan worktree рабочим».
@@ -454,7 +454,7 @@ Standalone Claude Code skill `session-pilot-bootstrap` (slash-command form: `/sp
 **Relation к session-pilot family**: skill живёт в `.claude/skills/session-pilot-bootstrap/` (sibling к `.claude/skills/session-pilot/` который служит dashboard verification scenarios). Оба skill'а под session-pilot family — управляют lifecycle worktrees. Bootstrap closes "no-tools" failure mode; dashboard closes "no-session" failure mode.
 
 **Связанные AC:** [AC-22](ACCEPTANCE_CRITERIA.md#ac-22-fr-22)
-**Use Case:** [UC-12](USE_CASES.md#uc-12)
+**Use Case:** [UC-12](USE_CASES.md#uc-12-bootstrap-orphan-worktree-via-skill-feature22)
 
 ## FR-21: OS detection + platform-dispatched module architecture
 
@@ -488,4 +488,4 @@ macOS handler dispatches Terminal.app vs iTerm2 via running-process check.
 Single test entry `tests/test_terminal_launcher.py` parametrizes по `(platform, sub_handler)` через `monkeypatch.setattr(sys, "platform", "linux")` + `monkeypatch.setattr(shutil, "which", lambda n: "/usr/bin/" + n if n == "gnome-terminal" else None)`. Each handler returns same response shape `{ok, method, pid}` или `{ok: false, error, tried: [...]}`.
 
 **Связанные AC:** [AC-21](ACCEPTANCE_CRITERIA.md#ac-21-fr-21)
-**Use Case:** [UC-3](USE_CASES.md#uc-3), [UC-12](USE_CASES.md#uc-12)
+**Use Case:** [UC-3](USE_CASES.md#uc-3-launch-claude-resume-in-a-new-native-terminal-window-feature4-feature21), [UC-12](USE_CASES.md#uc-12-bootstrap-orphan-worktree-via-skill-feature22)

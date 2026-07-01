@@ -1,6 +1,6 @@
 # Strong-Tests Schema
 
-JSON schemas for the data shapes produced and consumed by the `strong-tests` skill. These shapes are stable contracts that `tests/e2e/strong-tests.test.ts` asserts against and that `scripts/run-mutation.ts` produces.
+JSON schemas for the data shapes produced and consumed by the `strong-tests` skill. These shapes are stable contracts that ~~`tests/e2e/strong-tests.test.ts`~~ (planned, not implemented) would assert against and that `scripts/run-mutation.ts` produces.
 
 ## run-mutation.ts stdout JSON
 

@@ -16,7 +16,7 @@
     покрывающими все 4 feature-группы: PreToolUse hook (11 сценариев), phase status injection (3),
     audit checks (5), specs-management rules (4).
     **files:** `.specs/spec-phase-gate/spec-phase-gate.feature` (create)
-    _Requirements: [FR-1](FR.md#fr-1-pretooluse-hook-блокирует-запись-в-файлы-будущих-фаз) thru [FR-14](FR.md#fr-14-правило-ac-scope-match)_
+    _Requirements: [FR-1](FR.md#fr-1-pretooluse-hook-блокирует-запись-в-файлы-будущих-фаз-feature1) thru [FR-14](FR.md#fr-14-правило-ac-scope-match-feature4)_
     **DONE** -- .feature файл уже создан
 
 - [x] create-step-definitions @feature1 @feature2 @feature3 @feature4
@@ -24,7 +24,7 @@
     Создать step definitions (заглушки с PendingStepException / throw "Not implemented")
     для всех Given/When/Then шагов из spec-phase-gate.feature.
     **files:** `tests/features/step_definitions/spec-phase-gate.steps.ts` (create)
-    _Requirements: [FR-1](FR.md#fr-1-pretooluse-hook-блокирует-запись-в-файлы-будущих-фаз) thru [FR-14](FR.md#fr-14-правило-ac-scope-match)_
+    _Requirements: [FR-1](FR.md#fr-1-pretooluse-hook-блокирует-запись-в-файлы-будущих-фаз-feature1) thru [FR-14](FR.md#fr-14-правило-ac-scope-match-feature4)_
 
 - [x] verify-all-red
   **description:**
@@ -43,7 +43,7 @@
     Создать shared module `phase-constants.ts`, извлечённый из `validate-specs.ts:71-91`.
     Экспортирует: `PHASE_FILES`, `PHASE_ORDER`, `STOP_LABELS`, `PhaseState`, `ProgressState`, `readProgressState()`.
     **files:** `extensions/specs-workflow/tools/specs-validator/phase-constants.ts` (create)
-    _Requirements: [FR-2](FR.md#fr-2-hook-читает-состояние-из-progressjson)_
+    _Requirements: [FR-2](FR.md#fr-2-hook-читает-состояние-из-progressjson-feature1)_
     _Leverage: `extensions/specs-workflow/tools/specs-validator/validate-specs.ts` (lines 46-91, 205-214)_
 
 - [x] create-phase-gate-hook @feature1
@@ -52,7 +52,7 @@
     check .specs/ path -> read .progress.json -> map filename to phase -> gate decision -> deny (exit 2) or allow (exit 0).
     Fail-open на любой ошибке (exit 0 + stderr).
     **files:** `extensions/specs-workflow/tools/specs-validator/phase-gate.ts` (create)
-    _Requirements: [FR-1](FR.md#fr-1-pretooluse-hook-блокирует-запись-в-файлы-будущих-фаз), [FR-3](FR.md#fr-3-hook-возвращает-deny-с-exit-code-2-при-блокировке), [FR-4](FR.md#fr-4-hook-работает-в-режиме-fail-open), [FR-5](FR.md#fr-5-hook-пропускает-файлы-вне-specs), [FR-6](FR.md#fr-6-feature-файл-привязан-к-фазе-requirements)_
+    _Requirements: [FR-1](FR.md#fr-1-pretooluse-hook-блокирует-запись-в-файлы-будущих-фаз-feature1), [FR-3](FR.md#fr-3-hook-возвращает-deny-с-exit-code-2-при-блокировке-feature1), [FR-4](FR.md#fr-4-hook-работает-в-режиме-fail-open-feature1), [FR-5](FR.md#fr-5-hook-пропускает-файлы-вне-specs-feature1), [FR-6](FR.md#fr-6-feature-файл-привязан-к-фазе-requirements-feature1)_
     _Leverage: `extensions/specs-workflow/tools/specs-validator/phase-constants.ts`, stdin pattern from `validate-specs.ts:127-149`_
 
 - [x] register-hook-extension-json @feature1
@@ -61,14 +61,14 @@
     - `hooks.claude[]`: `{ "event": "PreToolUse", "matcher": "Write|Edit", "command": "npx tsx .dev-pomogator/tools/specs-validator/phase-gate.ts" }`
     - `toolFiles[]`: добавить `tools/specs-validator/phase-constants.ts`, `tools/specs-validator/phase-gate.ts`
     **files:** `extensions/specs-workflow/extension.json` (edit)
-    _Requirements: [FR-1](FR.md#fr-1-pretooluse-hook-блокирует-запись-в-файлы-будущих-фаз), [FR-14](FR.md#fr-14-правило-ac-scope-match)_
+    _Requirements: [FR-1](FR.md#fr-1-pretooluse-hook-блокирует-запись-в-файлы-будущих-фаз-feature1), [FR-14](FR.md#fr-14-правило-ac-scope-match-feature4)_
 
 - [x] register-hook-settings-json @feature1
   **description:**
     Добавить PreToolUse hook в `.claude/settings.json` (dev-repo copy):
     `hooks.PreToolUse[]: { "matcher": "Write|Edit", "command": "npx tsx .dev-pomogator/tools/specs-validator/phase-gate.ts" }`
     **files:** `.claude/settings.json` (edit)
-    _Requirements: [FR-1](FR.md#fr-1-pretooluse-hook-блокирует-запись-в-файлы-будущих-фаз)_
+    _Requirements: [FR-1](FR.md#fr-1-pretooluse-hook-блокирует-запись-в-файлы-будущих-фаз-feature1)_
 
 - [x] verify-phase1-green @feature1
   **description:**
@@ -89,7 +89,7 @@
     Заменить inline constants в `validate-specs.ts` (lines 46-91, 205-214) на import из `phase-constants.ts`.
     Убедиться что существующая функциональность не сломана.
     **files:** `extensions/specs-workflow/tools/specs-validator/validate-specs.ts` (edit)
-    _Requirements: [FR-7](FR.md#fr-7-userpromptsubmit-hook-инжектирует-статус-фазы)_
+    _Requirements: [FR-7](FR.md#fr-7-userpromptsubmit-hook-инжектирует-статус-фазы-feature2)_
     _Leverage: `extensions/specs-workflow/tools/specs-validator/phase-constants.ts`_
 
 - [x] add-phase-status-injection @feature2
@@ -98,14 +98,14 @@
     `[specs-validator] SPEC: <slug> | Phase: <phase> | STOP #N not confirmed`.
     Список allowed/blocked файлов. Graceful fallback при ошибке чтения .progress.json.
     **files:** `extensions/specs-workflow/tools/specs-validator/validate-specs.ts` (edit)
-    _Requirements: [FR-7](FR.md#fr-7-userpromptsubmit-hook-инжектирует-статус-фазы)_
+    _Requirements: [FR-7](FR.md#fr-7-userpromptsubmit-hook-инжектирует-статус-фазы-feature2)_
 
 - [x] update-create-spec-command @feature2
   **description:**
     Добавить в `.claude/skills/create-spec/SKILL.md` phase-aware инструкцию:
     "Перед записью файла проверь phase status в начале промпта. Не пиши файлы заблокированных фаз."
     **files:** `.claude/skills/create-spec/SKILL.md` (edit)
-    _Requirements: [FR-7](FR.md#fr-7-userpromptsubmit-hook-инжектирует-статус-фазы)_
+    _Requirements: [FR-7](FR.md#fr-7-userpromptsubmit-hook-инжектирует-статус-фазы-feature2)_
 
 - [x] verify-phase2-green @feature2
   **description:**
@@ -126,7 +126,7 @@
     Сканировать FR.md на маркеры ("НЕ РЕАЛИЗОВАНО", "NOT IMPLEMENTED", "PARTIAL", "TODO: implement").
     Cross-ref с TASKS.md checkboxes. ERROR если task `[x]` но FR имеет маркер.
     **files:** `extensions/specs-workflow/tools/specs-generator/audit-checks.ts` (edit)
-    _Requirements: [FR-8](FR.md#fr-8-audit-обнаруживает-partial-implementation)_
+    _Requirements: [FR-8](FR.md#fr-8-audit-обнаруживает-partial-implementation-feature3)_
 
 - [x] add-task-atomicity-check @feature3
   **description:**
@@ -134,7 +134,7 @@
     Парсить TASKS.md task descriptions. Считать `files:` entries в каждой задаче.
     WARNING если count > 3. Также WARNING если задача references >1 FR.
     **files:** `extensions/specs-workflow/tools/specs-generator/audit-checks.ts` (edit)
-    _Requirements: [FR-9](FR.md#fr-9-audit-проверяет-task-fr-atomicity)_
+    _Requirements: [FR-9](FR.md#fr-9-audit-проверяет-task-fr-atomicity-feature3)_
 
 - [x] add-fr-split-and-ac-scope-checks @feature3
   **description:**
@@ -142,7 +142,7 @@
     FR_SPLIT: найти FR-Na паттерн, проверить наличие siblings. INFO level.
     AC_SCOPE: проверить что AC ссылается ровно на 1 FR. WARNING если >1 или 0.
     **files:** `extensions/specs-workflow/tools/specs-generator/audit-checks.ts` (edit)
-    _Requirements: [FR-10](FR.md#fr-10-audit-проверяет-fr-split-consistency), [FR-11](FR.md#fr-11-audit-проверяет-bdd-scenario-scope-gap)_
+    _Requirements: [FR-10](FR.md#fr-10-audit-проверяет-fr-split-consistency-feature3), [FR-11](FR.md#fr-11-audit-проверяет-bdd-scenario-scope-gap-feature3)_
 
 - [x] verify-phase3-green @feature3
   **description:**
@@ -164,14 +164,14 @@
     2. Task Completion Integrity: task `[x]` запрещён если FR содержит "НЕ РЕАЛИЗОВАНО"/"TODO"/"STUB".
     3. AC Scope Match: AC покрывает scope ровно одного FR.
     **files:** `.claude/skills/create-spec/references/specs-validation.md` (edit)
-    _Requirements: [FR-12](FR.md#fr-12-правило-fr-variant-decomposition), [FR-13](FR.md#fr-13-правило-task-completion-integrity), [FR-14](FR.md#fr-14-правило-ac-scope-match)_
+    _Requirements: [FR-12](FR.md#fr-12-правило-fr-variant-decomposition-feature4), [FR-13](FR.md#fr-13-правило-task-completion-integrity-feature4), [FR-14](FR.md#fr-14-правило-ac-scope-match-feature4)_
 
 - [x] mirror-rules-to-pomogator-copy @feature4
   **description:**
     Зеркалировать те же 3 правила в N/A (consolidated into create-spec skill bundle)
     для консистентности обеих копий.
     **files:** N/A (consolidated into create-spec skill bundle) (edit)
-    _Requirements: [FR-12](FR.md#fr-12-правило-fr-variant-decomposition), [FR-13](FR.md#fr-13-правило-task-completion-integrity), [FR-14](FR.md#fr-14-правило-ac-scope-match)_
+    _Requirements: [FR-12](FR.md#fr-12-правило-fr-variant-decomposition-feature4), [FR-13](FR.md#fr-13-правило-task-completion-integrity-feature4), [FR-14](FR.md#fr-14-правило-ac-scope-match-feature4)_
 
 - [x] verify-phase4-green @feature4
   **description:**
@@ -193,7 +193,7 @@
     - Bump версию extension (patch increment)
     - Убедиться что `hooks.claude` содержит PreToolUse hook entry
     **files:** `extensions/specs-workflow/extension.json` (edit)
-    _Requirements: [FR-14](FR.md#fr-14-правило-ac-scope-match)_
+    _Requirements: [FR-14](FR.md#fr-14-правило-ac-scope-match-feature4)_
 
 - [x] final-e2e-verification
   **description:**

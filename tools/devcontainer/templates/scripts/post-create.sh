@@ -96,15 +96,14 @@ else
     fi
 fi
 
-# MCP servers setup (oculos, desktop, context7, octocode)
-# v2: dev-pomogator ships as a Claude Code plugin — mcp-setup lives in the plugin
-# tree, not the v1 `.dev-pomogator/tools/` install path (which no longer exists).
+# MCP servers setup (context7, octocode) — global user-scope install via the SAME node
+# bootstrap that runs on SessionStart (no Python dependency; deps-absent-safe via bootstrap.cjs).
 echo "Setting up MCP servers..."
-MCP_SETUP="${CLAUDE_PLUGIN_ROOT:-}/tools/mcp-setup/setup-mcp.py"
-if [ -n "${CLAUDE_PLUGIN_ROOT:-}" ] && [ -f "$MCP_SETUP" ]; then
-    python3 "$MCP_SETUP" --platform claude --force 2>&1 || echo "[WARN] MCP setup failed"
+MCP_BOOTSTRAP="${CLAUDE_PLUGIN_ROOT:-}/tools/_shared/bootstrap.cjs"
+if [ -n "${CLAUDE_PLUGIN_ROOT:-}" ] && [ -f "$MCP_BOOTSTRAP" ]; then
+    echo '{}' | node -e "require(require('path').join(process.env.CLAUDE_PLUGIN_ROOT,'tools','_shared','bootstrap.cjs'))" -- "tools/mcp-setup/mcp-bootstrap.ts" 2>&1 || echo "[WARN] MCP setup failed"
 else
-    echo "[INFO] MCP setup skipped (dev-pomogator plugin path not resolved; v2 devcontainer MCP integration TBD)"
+    echo "[INFO] MCP setup skipped (dev-pomogator plugin path not resolved)"
 fi
 
 # Docker check

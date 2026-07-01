@@ -12,21 +12,21 @@
 ## Phase 1: Code Cleanup (Green)
 
 - [x] Удалить Cursor Hooks JSON section из memory.ts @feature1 @feature2
-  - Refs: [FR-1](FR.md#fr-1-remove-cursor-only-functions-from-memoryts)
+  - Refs: [FR-1](FR.md#fr-1-remove-cursor-only-functions-from-memoryts-feature1)
 - [x] Удалить installCursorHooks из memory.ts @feature1
-  - Refs: [FR-1](FR.md#fr-1-remove-cursor-only-functions-from-memoryts)
+  - Refs: [FR-1](FR.md#fr-1-remove-cursor-only-functions-from-memoryts-feature1)
 - [x] Удалить copy helpers из memory.ts @feature2
-  - Refs: [FR-2](FR.md#fr-2-remove-dead-helper-functions-from-memoryts)
+  - Refs: [FR-2](FR.md#fr-2-remove-dead-helper-functions-from-memoryts-feature2)
 - [x] Удалить areCursorHooksInstalled из memory.ts @feature1
-  - Refs: [FR-1](FR.md#fr-1-remove-cursor-only-functions-from-memoryts)
+  - Refs: [FR-1](FR.md#fr-1-remove-cursor-only-functions-from-memoryts-feature1)
 - [x] Удалить unused imports @feature2
-  - Refs: [FR-2](FR.md#fr-2-remove-dead-helper-functions-from-memoryts)
+  - Refs: [FR-2](FR.md#fr-2-remove-dead-helper-functions-from-memoryts-feature2)
 - [x] Обновить комментарий isClaudeMemRepoCloned @feature5
-  - Refs: [FR-5](FR.md#fr-5-update-outdated-comments)
+  - Refs: [FR-5](FR.md#fr-5-update-outdated-comments-feature5)
 - [x] Удалить CursorHooksJson и updateCursorHooksForProject из updater/index.ts @feature3
-  - Refs: [FR-3](FR.md#fr-3-remove-dead-cursor-code-from-updaterindexts)
+  - Refs: [FR-3](FR.md#fr-3-remove-dead-cursor-code-from-updaterindexts-feature3)
 - [x] Упростить .cursor ternary в updater/index.ts @feature4
-  - Refs: [FR-4](FR.md#fr-4-simplify-unreachable-ternary-branches)
+  - Refs: [FR-4](FR.md#fr-4-simplify-unreachable-ternary-branches-feature4)
 
 ## Phase 2: Verify
 

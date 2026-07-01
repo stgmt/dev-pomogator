@@ -7,7 +7,10 @@ services:
         CACHEBUST: ${CACHEBUST:-1}
     image: dev-pomogator-test:local
     env_file:
-      - .env.test
+      # Machine-local optional config (никогда не коммитился, генератора нет) —
+      # required:false чтобы свежая машина не падала на ".env.test not found".
+      - path: .env.test
+        required: false
     environment:
       - HOME=/home/testuser
       - DEV_POMOGATOR_TEST_IN_DOCKER=1

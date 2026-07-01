@@ -26,7 +26,7 @@
 - [ ] Создать 6 test file стабов с `describe.skip` блоками: doctor-core, doctor-entry, doctor-reinstall, doctor-output, doctor-gating, doctor-reliability
   _Source: FILE_CHANGES.md "BDD step definitions"_
 - [ ] Наполнить pending scenarios 01..15 из pomogator-doctor.feature — `it.skip('POMOGATORDOCTOR001_XX ...', () => { throw new Error('pending') })`
-- [ ] Создать integration test-entrypoint `tests/e2e/pomogator-doctor.test.ts` stub
+- [ ] Создать integration test-entrypoint ~~`tests/e2e/pomogator-doctor.test.ts`~~ → `tests/e2e/doctor-{core,entry,gating,output,reinstall,reliability}.test.ts` (split layout) stub
   _Source: FILE_CHANGES.md_
 - [ ] Убедиться `/run-tests` (через wrapper) показывает 15 failing scenarios (Red state)
   _Rule: centralized-test-runner_
@@ -53,44 +53,44 @@
 - [ ] Создать `src/doctor/types.ts` — CheckResult / DoctorOptions / DoctorReport / HookOutput interfaces
   _Requirements: [FR-19](FR.md#fr-19-reinstallable-classification-meta-feature2)_
   _Config: см. SCHEMA.md_
-- [ ] Создать `src/doctor/lock.ts` — acquire/release с `fs.writeFile(path, pid, {flag:'wx'})`, stale lock cleanup
+- [ ] Создать `.claude/skills/pomogator-doctor/scripts/engine/lock.ts` — acquire/release с `fs.writeFile(path, pid, {flag:'wx'})`, stale lock cleanup
   _Requirements: [NFR-R-4](NFR.md#reliability)_
   _Leverage: rule atomic-update-lock_
-- [ ] Создать `src/doctor/runner.ts` — orchestrator: loadConfig + per-ext gating + concurrent pool + global timeout
-  _Requirements: [FR-21](FR.md#fr-21-perextension-driving-feature11), [NFR-P-3](NFR.md#performance), [NFR-P-4](NFR.md#performance)_
+- [ ] Создать `.claude/skills/pomogator-doctor/scripts/engine/runner.ts` — orchestrator: loadConfig + per-ext gating + concurrent pool + global timeout
+  _Requirements: [FR-21](FR.md#fr-21-per-extension-driving-feature11), [NFR-P-3](NFR.md#performance), [NFR-P-4](NFR.md#performance)_
   _Leverage: `src/config/index.ts:loadConfig`_
 - [ ] Создать `src/doctor/index.ts` — publi API `runDoctor(options)`
-  _Requirements: [FR-16](FR.md#fr-16-cli-flag-devpomogator-doctor-feature8)_
+  _Requirements: [FR-16](FR.md#fr-16-cli-flag-dev-pomogator-doctor-feature8)_
 - [ ] Verify: doctor-reliability.test.ts scenarios 13 (corrupt config), 14 (concurrent lock), 15 (fail-soft) → Green
   @feature2 @feature8 @feature4
 
 ## Phase 2: Filesystem + binary checks (Green)
 
-- [ ] `src/doctor/checks/node-version.ts` — FR-1, process.versions.node semver check
+- [ ] `.claude/skills/pomogator-doctor/scripts/engine/checks/node-version.ts` — FR-1, process.versions.node semver check
   _Requirements: [FR-1](FR.md#fr-1-node-version-check-feature1)_
   @feature1
-- [ ] `src/doctor/checks/git.ts` — FR-2, spawnSync git --version
+- [ ] `.claude/skills/pomogator-doctor/scripts/engine/checks/git.ts` — FR-2, spawnSync git --version
   _Requirements: [FR-2](FR.md#fr-2-git-presence-check-feature1)_
   @feature1
-- [ ] `src/doctor/checks/pomogator-home.ts` — FR-3 (C3/C4/C5 combined)
-  _Requirements: [FR-3](FR.md#fr-3-devpomogator-structure-check-feature2)_
+- [ ] `.claude/skills/pomogator-doctor/scripts/engine/checks/pomogator-home.ts` — FR-3 (C3/C4/C5 combined)
+  _Requirements: [FR-3](FR.md#fr-3-dev-pomogator-structure-check-feature2)_
   _Leverage: config.installedExtensions iteration_
   @feature2
-- [ ] `src/doctor/checks/hooks-registry.ts` — FR-4, diff settings.local.json vs config.managed.hooks
+- [ ] `.claude/skills/pomogator-doctor/scripts/engine/checks/hooks-registry.ts` — FR-4, diff settings.local.json vs config.managed.hooks
   _Requirements: [FR-4](FR.md#fr-4-hooks-registry-sync-check-feature2)_
   _Rule: no-unvalidated-manifest-paths для path validation_
   @feature2
-- [ ] `src/doctor/checks/env-vars.ts` — FR-5, dual location (process.env + settings.local.json → env)
+- [ ] `.claude/skills/pomogator-doctor/scripts/engine/checks/env-vars.ts` — FR-5, dual location (process.env + settings.local.json → env)
   _Requirements: [FR-5](FR.md#fr-5-env-requirements-check-dual-location-feature3)_
   _Leverage: `src/installer/env-setup.ts:getMissingRequiredEnv`_
   @feature3
-- [ ] `src/doctor/checks/env-example.ts` — FR-6, fs.exists .env.example
+- [ ] `.claude/skills/pomogator-doctor/scripts/engine/checks/env-example.ts` — FR-6, fs.exists .env.example
   _Requirements: [FR-6](FR.md#fr-6-envexample-presence-check-feature2)_
   @feature2
-- [ ] `src/doctor/checks/version-match.ts` — FR-11, semver compare package.json vs config.json
+- [ ] `.claude/skills/pomogator-doctor/scripts/engine/checks/version-match.ts` — FR-11, semver compare package.json vs config.json
   _Requirements: [FR-11](FR.md#fr-11-version-match-check-feature2)_
   @feature2
-- [ ] `src/doctor/checks/gitignore-block.ts` — FR-12, find MARKER_BEGIN/END block
+- [ ] `.claude/skills/pomogator-doctor/scripts/engine/checks/gitignore-block.ts` — FR-12, find MARKER_BEGIN/END block
   _Requirements: [FR-12](FR.md#fr-12-managed-gitignore-block-check-feature2)_
   _Leverage: `src/installer/gitignore.ts:MARKER_BEGIN/END`_
   @feature2
@@ -99,31 +99,31 @@
 
 ## Phase 3: Extension-gated checks (Green)
 
-- [ ] `src/doctor/checks/bun.ts` — FR-7, gated by installedExtensions.dependencies.binaries.includes('bun')
+- [ ] `.claude/skills/pomogator-doctor/scripts/engine/checks/bun.ts` — FR-7, gated by installedExtensions.dependencies.binaries.includes('bun')
   _Requirements: [FR-7](FR.md#fr-7-bun-binary-check-extension-gated-feature11)_
-  _Leverage: `src/installer/memory.ts:checkBunInstalled`_
+  _Leverage: ~~`src/installer/memory.ts:checkBunInstalled`~~ (removed in v2 — no canonical replacement)_
   @feature11
-- [ ] `src/doctor/checks/python.ts` — FR-8, gated, per-extension pythonPackages iteration
-  _Requirements: [FR-8](FR.md#fr-8-python--perextension-packages-check-extension-gated-feature11)_
-  _Leverage: `src/installer/memory.ts:pipInstall` для hint text_
+- [ ] `.claude/skills/pomogator-doctor/scripts/engine/checks/python.ts` — FR-8, gated, per-extension pythonPackages iteration
+  _Requirements: [FR-8](FR.md#fr-8-python-per-extension-packages-check-extension-gated-feature11)_
+  _Leverage: ~~`src/installer/memory.ts:pipInstall`~~ (removed in v2 — no canonical replacement) для hint text_
   @feature11
-- [ ] `src/doctor/checks/docker.ts` — FR-14, gated by devcontainer extension
-  _Requirements: [FR-14](FR.md#fr-14-docker--devcontainer-cli-check-extension-gated-feature11)_
+- [ ] `.claude/skills/pomogator-doctor/scripts/engine/checks/docker.ts` — FR-14, gated by devcontainer extension
+  _Requirements: [FR-14](FR.md#fr-14-docker-devcontainer-cli-check-extension-gated-feature11)_
   @feature11
 - [ ] Verify: doctor-gating.test.ts scenarios 11 (gating) + 03 (missing key) + 12 (settings.local.json fallback) → Green
   @feature11 @feature3
 
 ## Phase 4: MCP checks + plugin-loader (Green)
 
-- [ ] `src/doctor/checks/mcp-parse.ts` — FR-9, grep rules/skills + diff configs
+- [ ] `.claude/skills/pomogator-doctor/scripts/engine/checks/mcp-parse.ts` — FR-9, grep rules/skills + diff configs
   _Requirements: [FR-9](FR.md#fr-9-mcp-servers-parse-check-feature4)_
   @feature4
-- [ ] `src/doctor/checks/mcp-probe.ts` — FR-10, Full probe (stdio spawn / http fetch + initialize + tools/list, AbortController 3s, SIGKILL)
+- [ ] `.claude/skills/pomogator-doctor/scripts/engine/checks/mcp-probe.ts` — FR-10, Full probe (stdio spawn / http fetch + initialize + tools/list, AbortController 3s, SIGKILL)
   _Requirements: [FR-10](FR.md#fr-10-mcp-full-probe-check-feature4), [NFR-R-5](NFR.md#reliability)_
   _External: MCP protocol [VERIFIED: Anthropic MCP spec]_
   @feature4
-- [ ] `src/doctor/checks/plugin-loader.ts` — FR-13, 4-state detection (OK-physical / OK-dynamic / BROKEN-missing / STALE-orphan)
-  _Requirements: [FR-13](FR.md#fr-13-commandsskills-pluginloader-check-feature10)_
+- [ ] `.claude/skills/pomogator-doctor/scripts/engine/checks/plugin-loader.ts` — FR-13, 4-state detection (OK-physical / OK-dynamic / BROKEN-missing / STALE-orphan)
+  _Requirements: [FR-13](FR.md#fr-13-commandsskills-plugin-loader-check-feature10)_
   _Note: DESIGN.md External Service Verification помечает `~/.claude/plugins/` формат как `[UNVERIFIED]` — ПЕРЕД implementation проверить на живом user install_
   @feature10
 - [ ] Verify: doctor-core scenarios 06 (timeout+SIGKILL) + 09 (plugin-loader) → Green
@@ -131,23 +131,22 @@
 
 ## Phase 5: Reporter + reinstall + CLI wiring (Green)
 
-- [ ] `src/doctor/reporter.ts` — chalk formatter с traffic-light группами (🟢🟡🔴)
-  _Requirements: [FR-20](FR.md#fr-20-trafficlight-grouped-output-feature9), [NFR-U-2](NFR.md#usability), [NFR-U-3](NFR.md#usability)_
+- [ ] `.claude/skills/pomogator-doctor/scripts/engine/reporter.ts` — chalk formatter с traffic-light группами (🟢🟡🔴)
+  _Requirements: [FR-20](FR.md#fr-20-traffic-light-grouped-output-feature9), [NFR-U-2](NFR.md#usability), [NFR-U-3](NFR.md#usability)_
   _Leverage: `src/installer/status.ts` chalk pattern reference_
   @feature9
-- [ ] `src/doctor/reporter.ts` (second PR) — JSON formatter с redaction для env values
+- [ ] `.claude/skills/pomogator-doctor/scripts/engine/reporter.ts` (second PR) — JSON formatter с redaction для env values
   _Requirements: [FR-24](FR.md#fr-24-json-output-mode-feature8), [FR-25](FR.md#fr-25-env-values-redaction-in-json-feature8), [NFR-S-1](NFR.md#security), [NFR-S-2](NFR.md#security)_
   @feature8
-- [ ] `src/doctor/reporter.ts` (third PR) — hook JSON payload formatter для SessionStart
+- [ ] `.claude/skills/pomogator-doctor/scripts/engine/reporter.ts` (third PR) — hook JSON payload formatter для SessionStart
   _Requirements: [FR-17](FR.md#fr-17-sessionstart-hook-feature4)_
   _Reuse: extensions/claude-mem-health/tools/claude-mem-health/health-check.ts writeOutput pattern_
   @feature4
-- [ ] `src/doctor/reinstall.ts` — AskUserQuestion prompt + spawn('npx', ['dev-pomogator'], {stdio:'inherit', shell:false})
+- [ ] `.claude/skills/pomogator-doctor/scripts/engine/reinstall.ts` — AskUserQuestion prompt + spawn('npx', ['dev-pomogator'], {stdio:'inherit', shell:false})
   _Requirements: [FR-18](FR.md#fr-18-reinstall-integration-feature2), [NFR-S-3](NFR.md#security)_
   @feature2
-- [ ] Edit `src/index.ts` — парсинг --doctor/--json/--quiet/--extension flags → routing к runDoctor
-  _Requirements: [FR-16](FR.md#fr-16-cli-flag-devpomogator-doctor-feature8), [FR-23](FR.md#fr-23-exit-codes-feature8)_
-  _Existing flags pattern: --status, --update (src/index.ts:50)_
+  _Requirements: [FR-16](FR.md#fr-16-cli-flag-dev-pomogator-doctor-feature8), [FR-23](FR.md#fr-23-exit-codes-feature8)_
+  _Existing flags pattern: --status, --update (~~`src/index.ts`~~ (removed in v2 migration):50)_
   @feature8
 - [ ] Verify: doctor-reinstall (02, 07, 09) + doctor-output (08, 10) + doctor-entry scenarios → Green
   @feature2 @feature8 @feature9
@@ -162,7 +161,7 @@
   _Reuse: extensions/claude-mem-health/tools/claude-mem-health/health-check.ts pattern_
   _Rule: ts-import-extensions (`.ts` specifiers для imports)_
 - [ ] Создать `extensions/pomogator-doctor/claude/commands/pomogator-doctor.md` — slash command markdown с frontmatter `allowed-tools: [Bash, AskUserQuestion]` + инструкции Claude-у spawn `dev-pomogator --doctor`
-  _Requirements: [FR-15](FR.md#fr-15-slash-command-pomogatordoctor-feature1)_
+  _Requirements: [FR-15](FR.md#fr-15-slash-command-pomogator-doctor-feature1)_
   _Reuse: существующие slash commands frontmatter pattern_
 - [ ] Edit extension.json для 6 extensions — добавить `dependencies` поле (claude-mem-health, bun-oom-guard, devcontainer, forbid-root-artifacts, mcp-setup, tui-test-runner)
   _Requirements: [FR-22](FR.md#fr-22-extensionjson-dependencies-schema-feature11)_
@@ -189,12 +188,12 @@
 
 ### Fix existing check: hooks-registry (Phase 8.1) — FR-31, AC-31
 
-- [ ] Edit `src/doctor/checks/hooks-registry.ts` — заменить `ctx.config?.managed?.[ctx.projectRoot]?.hooks` на aggregation `installedExtensions[*].managed[projectRoot]?.hooks` (union per event)
+- [ ] Edit `.claude/skills/pomogator-doctor/scripts/engine/checks/hooks-registry.ts` — заменить `ctx.config?.managed?.[ctx.projectRoot]?.hooks` на aggregation `installedExtensions[*].managed[projectRoot]?.hooks` (union per event)
   _Requirements: [FR-31](FR.md#fr-31-hooks-registry-path-correction-feature2)_
   _Evidence: live run показал false-positive critical на всех installations — `RESEARCH.md` секция `Post-Launch Edge Cases`_
   @feature2
 - [ ] Добавить duplicate detection — если одна и та же command string появляется ≥2 раз в union → warning
-  _Requirements: [AC-31](ACCEPTANCE_CRITERIA.md#ac-31-fr-31)_
+  _Requirements: [AC-31](ACCEPTANCE_CRITERIA.md#ac-31-fr-31-feature2)_
   @feature2
 - [ ] Test migration: existing scenarios 02, 17 должны продолжать работать. Scenarios 25, 26 — Green
   @feature2
@@ -205,7 +204,7 @@
   _Requirements: [FR-26](FR.md#fr-26-hook-command-integrity-check-feature12)_
   @feature12
 - [ ] Parser для 3 hook форматов (string/object/array) — reference к `.claude/rules/gotchas/installer-hook-formats.md`
-  _Requirements: [AC-26](ACCEPTANCE_CRITERIA.md#ac-26-fr-26)_
+  _Requirements: [AC-26](ACCEPTANCE_CRITERIA.md#ac-26-fr-26-feature12)_
   @feature12
 - [ ] Regex extractors для: (a) tsx-runner pattern `node -e "..." -- "PATH"`, (b) shell pattern `bash PATH.sh`, (c) direct node `node PATH.js`
   @feature12
@@ -234,17 +233,16 @@
 
 ### Fix existing check: plugin-loader (Phase 8.4) — FR-28, AC-28
 
-- [ ] Edit `src/doctor/checks/plugin-loader.ts` — если `manifest === null` AND current projectRoot ∈ `installedExtensions[*].projectPaths` → severity=critical (не silent ok)
+- [ ] Edit `.claude/skills/pomogator-doctor/scripts/engine/checks/plugin-loader.ts` — если `manifest === null` AND current projectRoot ∈ `installedExtensions[*].projectPaths` → severity=critical (не silent ok)
   _Requirements: [FR-28](FR.md#fr-28-plugin-manifest-presence-for-installed-projects-feature10)_
   @feature10
 - [ ] Hint: "plugin manifest missing — Claude Code cannot load commands/skills; run reinstall"
-  _Requirements: [AC-28](ACCEPTANCE_CRITERIA.md#ac-28-fr-28)_
+  _Requirements: [AC-28](ACCEPTANCE_CRITERIA.md#ac-28-fr-28-feature10)_
 - [ ] Verify: scenario 22 — Green
   @feature10
 
 ### Installer change: pomogator-doctor self-install (Phase 8.5) — FR-29, AC-29
 
-- [ ] Edit `src/installer/extensions.ts` — добавить `pomogator-doctor` в list of extensions устанавливаемых по умолчанию при любом `npx dev-pomogator` (нет opt-in flag)
   _Requirements: [FR-29](FR.md#fr-29-pomogator-doctor-self-install-in-all-projectpaths-feature12)_
   @feature12
 - [ ] Обновить `extensions/pomogator-doctor/extension.json` → category="infrastructure", `alwaysInstall: true`
@@ -255,15 +253,14 @@
 
 ### CLI flag: --all-projects (Phase 8.6) — FR-30, AC-30
 
-- [ ] Edit `src/doctor/runner.ts` — добавить экспорт `executeChecksAllProjects(options, checks)` который использует `p-limit(4)` по `installedExtensions[*].projectPaths` deduplicated
-  _Requirements: [FR-30](FR.md#fr-30-allprojects-flag-feature8)_
+- [ ] Edit `.claude/skills/pomogator-doctor/scripts/engine/runner.ts` — добавить экспорт `executeChecksAllProjects(options, checks)` который использует `p-limit(4)` по `installedExtensions[*].projectPaths` deduplicated
+  _Requirements: [FR-30](FR.md#fr-30-all-projects-flag-feature8)_
   @feature8
-- [ ] Edit `src/doctor/reporter.ts` — новый mode `"all-projects"`: per-project section headers + aggregate summary + top-level exit code = max
+- [ ] Edit `.claude/skills/pomogator-doctor/scripts/engine/reporter.ts` — новый mode `"all-projects"`: per-project section headers + aggregate summary + top-level exit code = max
   @feature8
-- [ ] Edit `src/index.ts` — parse `--all-projects` flag, route to `executeChecksAllProjects`
   @feature8
 - [ ] JSON mode: output `{"projects": {<path>: CheckResult[]}, "aggregate": {...}}`
-  _Requirements: [FR-24](FR.md#fr-24-json-output-mode-feature8) + [AC-30](ACCEPTANCE_CRITERIA.md#ac-30-fr-30)_
+  _Requirements: [FR-24](FR.md#fr-24-json-output-mode-feature8) + [AC-30](ACCEPTANCE_CRITERIA.md#ac-30-fr-30-feature8)_
   @feature8
 - [ ] Verify: scenario 24 — Green
   @feature8
@@ -271,12 +268,11 @@
 ### Installer change: write top-level config.version (Phase 8.7) — FR-32, AC-32
 
 - [ ] Edit `src/config/index.ts` — writer функции (`saveConfig`, `updateConfig`) SHALL include top-level `version: packageVersion` key
-  _Requirements: [FR-32](FR.md#fr-32-configjson-toplevel-version-field-feature2)_
+  _Requirements: [FR-32](FR.md#fr-32-configjson-top-level-version-field-feature2)_
   @feature2
-- [ ] Edit `src/installer/index.ts` — передавать `version` явно при initial config write
   @feature2
-- [ ] Edit `src/doctor/checks/version-match.ts` — update hint если `ctx.config?.version` отсутствует: severity=warning, hint="lacks top-level version"
-  _Requirements: [AC-32](ACCEPTANCE_CRITERIA.md#ac-32-fr-32)_
+- [ ] Edit `.claude/skills/pomogator-doctor/scripts/engine/checks/version-match.ts` — update hint если `ctx.config?.version` отсутствует: severity=warning, hint="lacks top-level version"
+  _Requirements: [AC-32](ACCEPTANCE_CRITERIA.md#ac-32-fr-32-feature2)_
   @feature2
 - [ ] Migration: первый install после upgrade автоматически добавит field (backfill logic через `if (!config.version) config.version = pkg.version`)
 - [ ] Verify: scenario 27 — Green
@@ -284,15 +280,15 @@
 
 ### MCP probe retune (Phase 8.8) — FR-33, AC-33
 
-- [ ] Edit `src/doctor/constants.ts` — `DOCTOR_TIMEOUTS.PROBE_MS = 10_000` (было 3_000)
-  _Requirements: [FR-33](FR.md#fr-33-mcp-probe-timeout--error-categorization-feature4)_
+- [ ] Edit `.claude/skills/pomogator-doctor/scripts/engine/constants.ts` — `DOCTOR_TIMEOUTS.PROBE_MS = 10_000` (было 3_000)
+  _Requirements: [FR-33](FR.md#fr-33-mcp-probe-timeout-error-categorization-feature4)_
   @feature4
-- [ ] Edit `src/doctor/checks/mcp-probe.ts` — error categorization:
+- [ ] Edit `.claude/skills/pomogator-doctor/scripts/engine/checks/mcp-probe.ts` — error categorization:
   - timeout → severity=warning (was critical)
   - spawn `ENOENT` → severity=critical + PATH-specific hint
   - spawn `EACCES` → severity=critical + permission hint
   - exit-before-handshake → severity=critical + exit code in hint
-  _Requirements: [AC-33](ACCEPTANCE_CRITERIA.md#ac-33-fr-33)_
+  _Requirements: [AC-33](ACCEPTANCE_CRITERIA.md#ac-33-fr-33-feature4)_
   @feature4
 - [ ] Edit `fake-mcp-server.ts` fixture → добавить preset `"nonexistent"` для testing ENOENT path
   @feature4
@@ -326,7 +322,7 @@
 
 ### Full re-verification (Phase 8.11)
 
-- [ ] Integration E2E `tests/e2e/pomogator-doctor.test.ts` — add case "webapp-like broken install detected without false-positives"
+- [ ] Integration E2E ~~`tests/e2e/pomogator-doctor.test.ts`~~ → `tests/e2e/doctor-{core,entry,gating,output,reinstall,reliability}.test.ts` (split layout) — add case "webapp-like broken install detected without false-positives"
   _Rule: integration-tests-first_
 - [ ] Regression run: `/run-tests --grep pomogator-doctor` — все 31 scenario GREEN
 - [ ] Manual verification: `cd webapp && dev-pomogator --doctor` → expected 21+ critical findings из C20/C21, reinstall offer, no false-positive C6
@@ -337,13 +333,12 @@
 
 ## Phase 7: Refactor + E2E + docs
 
-- [ ] Full E2E integration test `tests/e2e/pomogator-doctor.test.ts` — install → doctor → verify report
+- [ ] Full E2E integration test ~~`tests/e2e/pomogator-doctor.test.ts`~~ → `tests/e2e/doctor-{core,entry,gating,output,reinstall,reliability}.test.ts` (split layout) — install → doctor → verify report
   _Leverage: `tests/e2e/helpers.ts:runInstaller`_
   _Rule: integration-tests-first_
 - [ ] Refactor: remove duplication, inline constants, extract shared helpers
 - [ ] Edit `README.md` — добавить раздел "Doctor Command" с onboarding examples
 - [ ] Edit `CLAUDE.md` — добавить `/pomogator-doctor` в таблицу Commands
-- [ ] Optional: edit `src/updater/index.ts` — post-update вызов `runDoctor({quiet:true})` для warning если что-то сломалось после update
 - [ ] Verify: все 15 BDD scenarios GREEN через `/run-tests --grep pomogator-doctor`
 - [ ] Verify: exit codes соответствуют FR-23 (manual CI pipeline test)
 - [ ] Verify: chalk output respects NO_COLOR (NFR-U-3 — manual env test)
@@ -354,7 +349,7 @@
 
 - [ ] Все 43 операции из FILE_CHANGES.md выполнены
 - [ ] 15 BDD scenarios GREEN
-- [ ] Integration test `tests/e2e/pomogator-doctor.test.ts` GREEN
+- [ ] Integration test ~~`tests/e2e/pomogator-doctor.test.ts`~~ → `tests/e2e/doctor-{core,entry,gating,output,reinstall,reliability}.test.ts` (split layout) GREEN
 - [ ] `npm run lint` 0 errors
 - [ ] `npm run build` успешно
 - [ ] 6 extension.json обновлены с dependencies field

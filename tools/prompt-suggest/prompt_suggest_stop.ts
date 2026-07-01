@@ -176,5 +176,11 @@ main()
     approve();
   })
   .finally(() => {
-    process.exit(0);
+    // Do NOT call process.exit(0) here: it force-closes undici's still-closing socket handle
+    // mid-teardown → the libuv UV_HANDLE_CLOSING assertion (async.c:94) on Windows (exit 127,
+    // AFTER the JSON was already written). Instead set the code and let the event loop drain
+    // (the LLM call sends `Connection: close`, so the socket closes cleanly), with an unref'd
+    // watchdog as a safety net so a wedged handle can't hang the Stop hook.
+    process.exitCode = 0;
+    setTimeout(() => process.exit(0), 2000).unref();
   });

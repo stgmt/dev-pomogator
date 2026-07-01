@@ -4,7 +4,7 @@
 >
 > See also: `.claude/skills/tests-create-update/SKILL.md` for write-time prevention of these same patterns. Rule 10 in `tests-create-update` covers `MISSING_AWAIT` specifically.
 
-## Part A — 8 anti-patterns to detect in existing tests
+## Part A — 9 anti-patterns to detect in existing tests
 
 ### 1. PERMISSIVE_MATCHING — `toBeDefined()` / `NotNull` only
 
@@ -253,6 +253,34 @@ it('saves user to db', async () => {
 or pytest equivalent for `asyncio.run` missing in async test funcs.
 
 **Self-eval items violated:** #2 (Assertion specificity), #12 (Self-challenge).
+
+---
+
+### 9. FAKE_FIXTURE — fixture fabricates a field the real producer never emits
+
+**Severity:** HIGH (15pt). **Source:** spec-generator-v4 FR-32 (2026-06-03) — 359 green tests while the NDJSON parser was broken on real cucumber output (Windows uris dropped + UNDEFINED/PENDING collapsed to PASSED).
+
+A fixture that injects a field the external tool does NOT emit makes the parser read the fabricated field and skip its real logic. Green forever; broken on the first real artifact. This is the *worst* fake-positive: the test proves a contract the producer doesn't have.
+
+**BAD:**
+```typescript
+// real cucumber-js puts status ONLY in per-step testStepFinished;
+// this fabricates testCaseFinished.testStepResult.status → the parser's
+// worst-of-steps logic is never exercised, so the bug ships green
+env({ testCaseFinished: { testCaseStartedId: 'tcs', testStepResult: { status } } });
+```
+
+**GOOD:**
+```typescript
+// mirror the REAL shape: status lives in per-step testStepFinished;
+// testCaseFinished carries no status
+steps.forEach((s, i) => lines.push(env({ testStepFinished: { testStepId: `ts${i}`, testStepResult: { status: s } } })));
+lines.push(env({ testCaseFinished: { testCaseStartedId: 'tcs', timestamp: { seconds: 2 } } })); // no status
+```
+
+**Detection:** for any fixture of external-tool output, capture one REAL sample (`tool --format=… > sample`) and diff the keys; any fixture-only key is a fake. Then run the feature against the real artifact and reconcile with the tool's own summary (numbers must match exactly).
+
+**Self-eval items violated:** #4 (Realistic inputs), #12 (Self-challenge). See rule `.claude/rules/testing/verify-against-real-artifact.md`.
 
 ---
 

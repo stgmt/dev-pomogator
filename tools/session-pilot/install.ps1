@@ -141,6 +141,25 @@ if (-not $healthy) {
 }
 Write-Ok "Server alive: http://127.0.0.1:8083"
 
+# -- Step 6: Create Desktop launcher shortcut (best-effort) -------------------
+# So users who install pomogator get a working "Session Pilot" desktop icon that
+# self-locates THIS checkout (no hardcoded path). create-launcher.ps1 ends with
+# `exit`, so invoke it as a CHILD process to avoid terminating this installer.
+Write-Step "Creating Desktop launcher shortcut"
+$createLauncher = Join-Path $PSScriptRoot 'create-launcher.ps1'
+if (Test-Path $createLauncher) {
+  $psForLauncher = (Get-Command 'pwsh.exe' -ErrorAction SilentlyContinue).Source
+  if (-not $psForLauncher) { $psForLauncher = 'powershell.exe' }
+  try {
+    & $psForLauncher -NoProfile -ExecutionPolicy Bypass -File $createLauncher -NoReveal | Out-Host
+    Write-Ok "Desktop shortcut 'Session Pilot' created (points to this checkout)"
+  } catch {
+    Write-Warn "Could not create Desktop shortcut: $_ — run tools/session-pilot/create-launcher.ps1 manually"
+  }
+} else {
+  Write-Warn "create-launcher.ps1 not found next to install.ps1 — skipping Desktop shortcut"
+}
+
 Write-Host ""
 Write-Host "Session Pilot v0.3 installed." -ForegroundColor Green
 Write-Host "Dashboard: http://127.0.0.1:8083" -ForegroundColor Cyan

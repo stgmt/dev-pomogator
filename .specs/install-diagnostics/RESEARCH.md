@@ -12,7 +12,7 @@
 - npm verbose debug logs из `%LOCALAPPDATA%\npm-cache\_logs\` (rotated, max 10) — пойманы 2 файла с матчинг таймстампами
 - Inspection of `_npx/eade2dc1c54870ea/` — npx hash-папка для `github:stgmt/dev-pomogator`
 - Source code: `dist/index.js`, `dist/installer/index.js` (через `git show HEAD:`), `bin/cli.js`
-- Existing test: `tests/e2e/claude-installer.test.ts`, helpers `runInstaller()`, `getInstallLogPath()`
+- Existing test: ~~`tests/e2e/claude-installer.test.ts`~~, helpers `runInstaller()`, `getInstallLogPath()`
 
 ## Технические находки
 
@@ -62,17 +62,12 @@ npm verbose code 2
 4. npm install запускает `prepare` script: `npm run build` = `tsc && node scripts/build-check-update.js`
 5. **`tsc` падает с TypeScript ошибками**:
    ```
-   src/updater/index.ts(21,61): error TS2307: Cannot find module '../utils/path-safety.js'
-   src/updater/index.ts(23,33): error TS2307: Cannot find module '../installer/plugin-json.js'
-   src/updater/index.ts(545,50): error TS2339: Property 'installedShared' does not exist on type 'Config'
+   ~~`src/updater/index.ts`~~ (removed in v2 migration)(21,61): error TS2307: Cannot find module '../utils/path-safety.js'
+   ~~`src/updater/index.ts`~~ (removed in v2 migration)(23,33): error TS2307: Cannot find module '../installer/plugin-json.js'
+   ~~`src/updater/index.ts`~~ (removed in v2 migration)(545,50): error TS2339: Property 'installedShared' does not exist on type 'Config'
    ... (multiple TS errors)
    src/updater/shared-sync.ts(26,38): error TS2307: Cannot find module '../utils/path-safety.js'
    ```
-6. **Почему tsc падает**: на github HEAD (cad11b2) код в `src/updater/index.ts` импортирует:
-   - `../utils/path-safety.js` — файл `src/utils/path-safety.ts` есть **локально** на машине разработчика, но **НЕ закоммичен в git** (untracked)
-   - `../installer/plugin-json.js` — файл `src/installer/plugin-json.ts` есть **локально**, но **НЕ закоммичен** (untracked)
-   - `installedShared` field on Config — добавлено в `src/config/schema.ts` локально, но изменение **НЕ закоммичено**
-7. github HEAD имеет ИСПОЛЬЗОВАНИЕ этих сущностей в `src/updater/index.ts` (commit 2b22919 "force _shared/ recovery + publish FR-12") но не имеет ОПРЕДЕЛЕНИЯ
 8. tsc → exit 2 → prepare script fails → npm install exits 2 → npm exec exits 2
 9. **Bin `dev-pomogator` так и не извлечён**, потому что reify откатился до завершения unpack
 10. npx не находит bin → silent exit with code 2
@@ -135,10 +130,10 @@ Output (релевантные строки):
 > dev-pomogator@1.5.0 build
 > tsc && node scripts/build-check-update.js
 
-src/updater/index.ts(21,61): error TS2307: Cannot find module '../utils/path-safety.js'
-src/updater/index.ts(23,33): error TS2307: Cannot find module '../installer/plugin-json.js'
-src/updater/index.ts(141,56): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string'.
-src/updater/index.ts(545,50): error TS2339: Property 'installedShared' does not exist on type 'Config'.
+~~`src/updater/index.ts`~~ (removed in v2 migration)(21,61): error TS2307: Cannot find module '../utils/path-safety.js'
+~~`src/updater/index.ts`~~ (removed in v2 migration)(23,33): error TS2307: Cannot find module '../installer/plugin-json.js'
+~~`src/updater/index.ts`~~ (removed in v2 migration)(141,56): error TS2345: Argument of type 'unknown' is not assignable to parameter of type 'string'.
+~~`src/updater/index.ts`~~ (removed in v2 migration)(545,50): error TS2339: Property 'installedShared' does not exist on type 'Config'.
 ... (multiple TS errors)
 src/updater/shared-sync.ts(26,38): error TS2307: Cannot find module '../utils/path-safety.js'
 
@@ -170,13 +165,12 @@ npm error git dep preparation failed
 - **Install report**: `dist/installer/report.ts:19` → пишется в `finally` блоке `install()` (`dist/installer/index.js:227`)
 - **Diagnostic skill**: `.claude/skills/install-diagnostics/SKILL.md` (создан в текущей session) — содержит 4 mode (A/B/C/D) для классификации failure modes
 - **Helper для regression тестов**: `tests/e2e/helpers.ts` → `runInstallerViaNpx()` (добавляется в Phase 0 этого спека)
-- **BDD сценарии**: `tests/features/core/CORE003_claude-installer.feature` → CORE003_18 (Linux), CORE003_19 (Windows TDD red)
-- **Integration тесты**: `tests/e2e/claude-installer.test.ts` → 2 новых `describe.skipIf()` блока
+- **BDD сценарии**: ~~`tests/features/core/CORE003_claude-installer.feature`~~ → CORE003_18 (Linux), CORE003_19 (Windows TDD red)
+- **Integration тесты**: ~~`tests/e2e/claude-installer.test.ts`~~ → 2 новых `describe.skipIf()` блока
 
 ## Выводы
 
 1. Silent install failure = **дев-pomogator-specific bug**: 3 untracked файла в локальной dev-pomogator репозитории заставляют github HEAD-checkout НЕ компилироваться. Это НЕ npm bug, не Windows-specific bug, не upstream issue
-2. Bug **легко исправить** в dev-pomogator: `git add src/utils/path-safety.ts src/installer/plugin-json.ts src/config/schema.ts && git commit -m "fix(updater): commit missing path-safety, plugin-json, installedShared"`
 3. EPERM на Windows — **симптом**, не корень. После prepare failure, Windows reify rollback не может удалить busy файлы. На Linux нет EPERM, но та же tsc ошибка приводит к exit 2
 4. **CORE003_18 (Linux) и CORE003_19 (Windows) ОБА failing-by-design** на текущем github HEAD. После commit-а missing файлов оба теста должны зелёным
 5. Skill `install-diagnostics` правильно классифицирует this bug pattern: needs to be updated с Mode A=Win EPERM → Mode A=tsc prepare failure (untracked source files)
@@ -184,9 +178,6 @@ npm error git dep preparation failed
 
 ## Action Items (для разработчика, не часть этой спеки)
 
-- [ ] Закоммитить `src/utils/path-safety.ts` и `src/installer/plugin-json.ts` (untracked)
-- [ ] Закоммитить изменения в `src/config/schema.ts` (добавление `installedShared` поля)
-- [ ] Закоммитить изменения в `src/updater/index.ts` и `src/updater/shared-sync.ts` если они есть
 - [ ] После commit & push: re-run CORE003_18 и CORE003_19 — оба должны PASS
 - [ ] Удалить TDD red comments из тестов и feature scenarios после fix-а
 - [ ] Обновить skill `.claude/skills/install-diagnostics/SKILL.md` Mode A description: добавить "проверь uncommitted source files" как первый шаг диагностики
@@ -211,8 +202,8 @@ npm error git dep preparation failed
 |--------|------|-------------------|-----------|
 | Existing helper | `tests/e2e/helpers.ts:35-55` (`runInstaller`) | spawnSync('node', ['dist/index.js', ...args]) pattern | Reference impl for `runInstallerViaNpx()` |
 | Existing helper | `tests/e2e/helpers.ts:1198` (`getInstallLogPath`) | Returns `~/.dev-pomogator/logs/install.log` path | Reused in `runInstallerViaNpx()` for mtime check |
-| Existing test | `tests/e2e/claude-installer.test.ts` | `describe('CORE003: ...')` with `beforeAll(setupCleanState)` | Insertion point for new describe blocks |
-| Existing feature | `tests/features/core/CORE003_claude-installer.feature` | 17+ scenarios CORE003_01..CORE003_CMEM | Insertion point for CORE003_18/19 |
+| Existing test | ~~`tests/e2e/claude-installer.test.ts`~~ | `describe('CORE003: ...')` with `beforeAll(setupCleanState)` | Insertion point for new describe blocks |
+| Existing feature | ~~`tests/features/core/CORE003_claude-installer.feature`~~ | 17+ scenarios CORE003_01..CORE003_CMEM | Insertion point for CORE003_18/19 |
 | Diagnostic skill | `.claude/skills/install-diagnostics/SKILL.md` | 4-mode classification (A=Win EPERM, B=missing dist, C=installer crash, D=top error) | Referenced from FAIL message of CORE003_19 |
 | Existing scaffold | `extensions/specs-workflow/tools/specs-generator/scaffold-spec.ts` | Generates 13-file structure | Used in `scaffold-spec` task |
 

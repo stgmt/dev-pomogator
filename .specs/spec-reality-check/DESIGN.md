@@ -3,10 +3,10 @@
 ## Реализуемые требования
 
 - [FR-1: Skill bundle layout](FR.md#fr-1-skill-bundle-layout-feature1)
-- [FR-2: FILE_CHANGES verification checks](FR.md#fr-2-file_changes-verification-checks-feature2)
+- [FR-2: FILE_CHANGES verification checks](FR.md#fr-2-filechanges-verification-checks-feature2)
 - [FR-3: Narrative path verification](FR.md#fr-3-narrative-path-verification-feature3)
 - [FR-4: Code-drift detection via git log](FR.md#fr-4-code-drift-detection-via-git-log-feature4)
-- [FR-5: TASKS↔FC consistency](FR.md#fr-5-tasksfile_changes-consistency-feature5)
+- [FR-5: TASKS↔FC consistency](FR.md#fr-5-tasksfilechanges-consistency-feature5)
 - [FR-6: Three output formats](FR.md#fr-6-three-output-formats-feature6)
 - [FR-7: PreToolUse hook on ExitPlanMode](FR.md#fr-7-pretooluse-hook-on-exitplanmode-feature7)
 - [FR-8: Hook fail-open](FR.md#fr-8-hook-fail-open-on-exception-feature8)
@@ -15,8 +15,8 @@
 - [FR-11: Applied on canonical-plugin](FR.md#fr-11-applied-on-canonical-plugin-spec-feature11)
 - [FR-12: spec-review integration](FR.md#fr-12-spec-review-category-15-integration-feature12)
 - [FR-13: create-spec integration](FR.md#fr-13-create-spec-phase-3-integration-feature13)
-- [FR-14: Parser fallback](FR.md#fr-14-graceful-file_changes-parser-fallback-feature14)
-- [FR-15: plan-gate bug fix](FR.md#fr-15-bug-fix-plan-gate-phase-25--already-shipped-feature15)
+- [FR-14: Parser fallback](FR.md#fr-14-graceful-filechanges-parser-fallback-feature14)
+- [FR-15: plan-gate bug fix](FR.md#fr-15-bug-fix-plan-gate-phase-25-already-shipped-feature15)
 
 ## Компоненты
 

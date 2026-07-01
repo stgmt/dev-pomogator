@@ -45,7 +45,7 @@ interface AntiPatternMatch {
 
 const MARKER_FILENAME = '.compliance-marker.json';
 const MARKER_DIR = '.dev-pomogator';
-const COOLDOWN_MINUTES = 30;
+export const COOLDOWN_MINUTES = 30;
 const MAX_RETRIES = 1;
 
 const TEST_PATTERNS = [
@@ -68,7 +68,7 @@ function log(level: 'INFO' | 'DEBUG' | 'ERROR', message: string): void {
 // Test file detection
 // ---------------------------------------------------------------------------
 
-function isTestFile(filePath: string): boolean {
+export function isTestFile(filePath: string): boolean {
   const normalized = filePath.replace(/\\/g, '/');
   return TEST_PATTERNS.some(p => p.test(normalized));
 }
@@ -77,7 +77,7 @@ function isTestFile(filePath: string): boolean {
 // Anti-pattern scanners
 // ---------------------------------------------------------------------------
 
-function scanAntiPatterns(content: string, filePath: string): AntiPatternMatch[] {
+export function scanAntiPatterns(content: string, filePath: string): AntiPatternMatch[] {
   const matches: AntiPatternMatch[] = [];
   const lines = content.split('\n');
   const isTs = filePath.endsWith('.ts') || filePath.endsWith('.js');
@@ -337,11 +337,18 @@ async function main(): Promise<void> {
   );
 }
 
-main()
-  .catch((err) => {
-    log('ERROR', `Unhandled: ${err instanceof Error ? err.message : String(err)}`);
-    approve();
-  })
-  .finally(() => {
-    process.exit(0);
-  });
+// Only run as CLI entry-point; when imported by tests, skip main()
+const isDirectRun =
+  process.argv[1]?.endsWith('compliance_check.ts') ||
+  process.argv[1]?.endsWith('compliance_check.js');
+
+if (isDirectRun) {
+  main()
+    .catch((err) => {
+      log('ERROR', `Unhandled: ${err instanceof Error ? err.message : String(err)}`);
+      approve();
+    })
+    .finally(() => {
+      process.exit(0);
+    });
+}

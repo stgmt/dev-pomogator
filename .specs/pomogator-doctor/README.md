@@ -18,8 +18,7 @@
 
 - **App-код (shared core)**: `src/doctor/` — index, runner, reporter, reinstall, types, lock + 14 checks
 - **Extension**: `extensions/pomogator-doctor/` — extension.json, doctor-hook.ts (SessionStart), slash command
-- **CLI wiring**: `src/index.ts` (edit) — `--doctor`, `--json`, `--quiet`, `--extension <name>` flags
-- **Tests**: `tests/features/plugins/pomogator-doctor/` + `tests/e2e/pomogator-doctor.test.ts`
+- **Tests**: `tests/features/plugins/pomogator-doctor/` + `tests/e2e/doctor-{core,entry,gating,output,reinstall,reliability}.test.ts` (split layout) [was: ~~`tests/e2e/pomogator-doctor.test.ts`~~]
 - **Fixtures**: `tests/fixtures/pomogator-doctor/` — temp-home-builder, fake-mcp-server, dotenv fixtures, env-snapshot/child-registry hooks
 
 ## Где читать дальше

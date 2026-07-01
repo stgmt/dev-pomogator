@@ -25,7 +25,6 @@ All notable changes to this feature will be documented in this file.
 - **BREAKING:** Custom `.gitignore` writer удалён. Canonical install не пишет в проект (cache живёт в `~/.claude/plugins/cache/`); `.gitignore` модификации больше не нужны.
 - **BREAKING:** `.git/info/exclude` writer удалён. Тот же reason — canonical install не трогает project files.
 - **BREAKING:** Custom config fields `installScope` и `gitignoreMarker` в `~/.dev-pomogator/config.json` удалены. Anthropic mechanism handles scope через `--scope` flag canonical install.
-- **BREAKING:** `src/installer/install-user-scope.ts` (старый v2 design) удалён — canonical Anthropic install handles user-scope automatically.
 - **BREAKING:** `npm i -g dev-pomogator` install path выпиливается. `package.json` остаётся для build tooling и legacy migration utility, не для install.
 
 ### Fixed

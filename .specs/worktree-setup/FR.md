@@ -5,7 +5,7 @@
 Skill SHALL create a new git worktree at a sibling path `<main-parent>/<main-basename>-<slug>` on a new local branch `feat/<slug>` via a single `git worktree add -b feat/<slug> <path>` invocation (atomic — branch and worktree created together off current HEAD of main). Slug validation: kebab-case, length 1–50, regex `^[a-z][a-z0-9-]*[a-z0-9]$`. Pre-flight: if branch `feat/<slug>` already exists (verified via `git show-ref --verify --quiet refs/heads/feat/<slug>` exit 0), skill SHALL offer reuse path via UC-4 idempotency flow instead of failing. Additionally, skill SHALL pre-flight the target DIRECTORY: if `<main-parent>/<main-basename>-<slug>` already exists on disk AND is NOT a registered git worktree (not present in `git worktree list --porcelain`), skill SHALL refuse with error `Target path <path> already exists and is not a worktree — remove it or choose a different slug` and exit code 2, rather than letting `git worktree add` fail with an opaque message. An existing path that IS a registered worktree routes to the UC-4 reuse flow.
 
 **Связанные AC:** [AC-1](ACCEPTANCE_CRITERIA.md#ac-1-fr-1)
-**Use Cases:** [UC-1](USE_CASES.md#uc-1-happy-path), [UC-3](USE_CASES.md#uc-3-skill-invoked-from-inside-a-sibling-worktree-not-main--warn--offer-continue), [UC-4](USE_CASES.md#uc-4-idempotent-re-run-on-existing-worktree-path)
+**Use Cases:** [UC-1](USE_CASES.md#uc-1-happy-path-create-worktreebranchbootstrap-from-main), [UC-3](USE_CASES.md#uc-3-skill-invoked-from-inside-a-sibling-worktree-not-main-warn-offer-continue), [UC-4](USE_CASES.md#uc-4-idempotent-re-run-on-existing-worktree-path)
 **User Stories:** US-1
 
 ## FR-2: Full installer bootstrap with global config registration
@@ -15,7 +15,7 @@ After worktree creation, skill SHALL invoke `node <main>/bin/cli.js --claude --a
 The installer MUST target the NEW worktree, not an ancestor repository. `installClaude()` resolves its target via `findRepoRoot()` (`src/utils/repo.ts:13-36`), which returns the TOPMOST git root walking up the tree (comment: "install into the outermost project"). For a sibling worktree (`<main-parent>/<main-basename>-<slug>`) whose parent is not itself a git repo, this resolves to the worktree correctly; but if the worktree lands nested under another git repository, `findRepoRoot()` would resolve to that ancestor and the installer would populate the wrong tree. Therefore skill SHALL verify the registered projectPath equals the new worktree path exactly; IF the registered path is an ANCESTOR of (or otherwise not equal to) the worktree, skill SHALL refuse with `Installer resolved to <resolved-root>, not the worktree <worktree-path> — worktree is nested under another git repo; create it as a sibling of main` rather than silently bootstrapping the wrong root.
 
 **Связанные AC:** [AC-2](ACCEPTANCE_CRITERIA.md#ac-2-fr-2)
-**Use Case:** [UC-1](USE_CASES.md#uc-1-happy-path), [UC-6](USE_CASES.md#uc-6-bootstrap-fails-midway--doctor-reports-specific-failure)
+**Use Case:** [UC-1](USE_CASES.md#uc-1-happy-path-create-worktreebranchbootstrap-from-main), [UC-6](USE_CASES.md#uc-6-bootstrap-fails-midway-doctor-reports-specific-failure)
 **User Stories:** US-1
 
 ## FR-3: Self-heal hint for orphan worktrees via tsx-runner.js
@@ -44,7 +44,7 @@ After successful resolution, skill SHALL: `git -C <new-worktree> remote add orig
 Without `--pr` flag, skill SHALL NOT touch env file, remote config, or invoke any `gh`/`git push` commands.
 
 **Связанные AC:** [AC-4](ACCEPTANCE_CRITERIA.md#ac-4-fr-4)
-**Use Case:** [UC-5](USE_CASES.md#uc-5-pr-creation-flag--env-first--investigate--ask-any-repo-any-user)
+**Use Case:** [UC-5](USE_CASES.md#uc-5-pr-creation-flag-env-first-investigate-ask-any-repo-any-user)
 **User Stories:** US-3
 
 ## FR-5: gh authentication pre-flight check
@@ -52,7 +52,7 @@ Without `--pr` flag, skill SHALL NOT touch env file, remote config, or invoke an
 When skill is invoked with `--pr=draft`, skill SHALL invoke `gh auth status` BEFORE `git worktree add`. If exit code is non-zero, skill SHALL refuse with hint "Run `gh auth login` first. Skill will not create worktree until gh is authenticated." and exit cleanly without any git/installer side effects. This pre-flight ordering prevents leaving a half-created worktree if gh is misconfigured.
 
 **Связанные AC:** [AC-5](ACCEPTANCE_CRITERIA.md#ac-5-fr-5)
-**Use Case:** [UC-5](USE_CASES.md#uc-5-pr-creation-flag--env-first--investigate--ask-any-repo-any-user)
+**Use Case:** [UC-5](USE_CASES.md#uc-5-pr-creation-flag-env-first-investigate-ask-any-repo-any-user)
 **User Stories:** US-3
 
 ## FR-6: worktree-doctor.cjs standalone diagnostic
@@ -69,7 +69,7 @@ Skill SHALL install `worktree-doctor.cjs` to `~/.dev-pomogator/scripts/` (manage
 Doctor SHALL support `--quick` flag: only Check #3 (tools dir) + Check #6 (is dev-pomogator repo); used by session-pilot integration to avoid >50ms per row. Output: plain-text `key=value` lines + final `status=OK|TOOLS_MISSING|...` line. Skill invokes doctor after FR-2 bootstrap completes; prints `Doctor: 🟢 OK` or `Doctor: 🔴 <status>` line.
 
 **Связанные AC:** [AC-6](ACCEPTANCE_CRITERIA.md#ac-6-fr-6)
-**Use Case:** [UC-1](USE_CASES.md#uc-1-happy-path), [UC-6](USE_CASES.md#uc-6-bootstrap-fails-midway--doctor-reports-specific-failure)
+**Use Case:** [UC-1](USE_CASES.md#uc-1-happy-path-create-worktreebranchbootstrap-from-main), [UC-6](USE_CASES.md#uc-6-bootstrap-fails-midway-doctor-reports-specific-failure)
 **User Stories:** US-4, US-5 (quick mode)
 
 ## FR-7: session-pilot integration contract
@@ -90,7 +90,7 @@ This spec defines the integration contract; **implementation of session-pilot-si
 When skill detects current CWD is not the main worktree path (compared via `git worktree list --porcelain` first entry), skill SHALL print a warning identifying current and main paths, then prompt via AskUserQuestion with options "Continue from main" / "Abort". On "Continue from main", skill SHALL root ALL subsequent operations (`git worktree add`, `node bin/cli.js`) at main worktree path regardless of invocation CWD — new sibling created relative to main, never chained off the current sibling. On "Abort", skill SHALL exit cleanly with hint to `cd <main>` first.
 
 **Связанные AC:** [AC-8](ACCEPTANCE_CRITERIA.md#ac-8-fr-8)
-**Use Case:** [UC-3](USE_CASES.md#uc-3-skill-invoked-from-inside-a-sibling-worktree-not-main--warn--offer-continue)
+**Use Case:** [UC-3](USE_CASES.md#uc-3-skill-invoked-from-inside-a-sibling-worktree-not-main-warn-offer-continue)
 **User Stories:** US-1 (edge case AC)
 
 ## FR-10: Local env/config file synchronization into fresh worktree
@@ -102,7 +102,7 @@ Skill SHALL NOT byte-copy `.devcontainer/.env`. Instead, IF main contains `.devc
 IF a copied file's contents match a secret pattern (`password`, `secret`, `api[_-]?key`, `token`, `BEGIN (RSA |EC |DSA )?PRIVATE KEY` — same set as `Test-SensitiveContent` in `launch-worktree.ps1`) THEN skill SHALL emit exactly one stderr WARNING line naming the file and SHALL NOT print or log the secret value itself; the copy still proceeds (user chose the copy strategy). IF a target env file already exists in the new worktree THEN skill SHALL skip it (no overwrite), preserving worktree-local edits and keeping re-runs idempotent. Env-sync is best-effort: a per-file failure (permission denied, file locked) SHALL emit a stderr warning and continue, never aborting worktree creation. Each action SHALL be recorded as one env-sync audit JSONL line (see SCHEMA) with `action` ∈ `copied|regenerated|skipped|warned`.
 
 **Связанные AC:** [AC-10](ACCEPTANCE_CRITERIA.md#ac-10-fr-10)
-**Use Case:** [UC-1](USE_CASES.md#uc-1-happy-path)
+**Use Case:** [UC-1](USE_CASES.md#uc-1-happy-path-create-worktreebranchbootstrap-from-main)
 **User Stories:** US-1
 
 ## FR-11: Build and dependency synchronization
@@ -112,7 +112,7 @@ After FR-10 env-sync and before FR-6 doctor verification, skill SHALL ensure the
 IF the user passes `--skip-build` THEN skill SHALL skip both `npm install` and `npm run build`, and SHALL print the exact manual commands (`cd <worktree> && npm install && npm run build`) so the user can run them later. Build/deps-sync is best-effort: IF `npm install` or `npm run build` exits non-zero THEN skill SHALL print the failure and the retry command and CONTINUE (no rollback of the worktree, consistent with NFR-R3) — the worktree is preserved for debugging. The time spent in `npm install`/`npm run build` is excluded from the skill performance budget (NFR-P5), same as installer time.
 
 **Связанные AC:** [AC-11](ACCEPTANCE_CRITERIA.md#ac-11-fr-11)
-**Use Case:** [UC-1](USE_CASES.md#uc-1-happy-path), [UC-6](USE_CASES.md#uc-6-bootstrap-fails-midway--doctor-reports-specific-failure)
+**Use Case:** [UC-1](USE_CASES.md#uc-1-happy-path-create-worktreebranchbootstrap-from-main), [UC-6](USE_CASES.md#uc-6-bootstrap-fails-midway-doctor-reports-specific-failure)
 **User Stories:** US-1, US-4
 
 ## FR-12: DevContainer integration
@@ -126,7 +126,7 @@ The skill SHALL integrate with the `devcontainer` extension in two complementary
 Both halves keep the existing `launch-worktree.ps1` workflow intact (coexistence — see DESIGN); the skill reuses its port allocation and rebuild logic rather than duplicating it.
 
 **Связанные AC:** [AC-12](ACCEPTANCE_CRITERIA.md#ac-12-fr-12)
-**Use Case:** [UC-1](USE_CASES.md#uc-1-happy-path)
+**Use Case:** [UC-1](USE_CASES.md#uc-1-happy-path-create-worktreebranchbootstrap-from-main)
 **User Stories:** US-1
 
 ## FR-9: Out of Scope (explicit)

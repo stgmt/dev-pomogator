@@ -136,7 +136,7 @@ System validates format across all locales.
 
 - Detection module: `tools/specs-generator/variant-matrix/trigger-phrases.ts`
 - Audit library: `tools/specs-generator/variant-matrix/audit.ts`
-- Skill: [`extensions/specs-workflow/.claude/skills/variant-matrix-build/SKILL.md`](../../../../extensions/specs-workflow/.claude/skills/variant-matrix-build/SKILL.md)
+- Skill: [`.claude/skills/variant-matrix-build/SKILL.md`](../../variant-matrix-build/SKILL.md)
 - Trigger map: [`.claude/rules/specs-workflow/variant-matrix/when-to-build-matrix.md`](../../../../.claude/rules/specs-workflow/variant-matrix/when-to-build-matrix.md)
 - Escape hatch audit: [`.claude/rules/specs-workflow/variant-matrix/escape-hatch-audit.md`](../../../../.claude/rules/specs-workflow/variant-matrix/escape-hatch-audit.md)
 - Reference incident: Stocktaking MR / Warehouse Transfer (QA Лилия Михайлова, 2026-04-27)

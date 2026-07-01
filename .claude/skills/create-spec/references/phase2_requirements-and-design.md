@@ -84,12 +84,18 @@ ls ~/.claude/projects/${encoded}/memory/feedback_*.md 2>/dev/null
 
 Перед `spec-status -ConfirmStop Requirements`:
 
-```bash
-# Найти все absolute paths и file references в spec, verify existence
-grep -roE "(~|/|\.\.?\/|[A-Z]:[\\/])[a-zA-Z0-9._\\/-]+" .specs/{slug}/ | \
-  awk -F: '{print $3}' | sort -u | \
-  while read p; do [ -e "$(echo $p | sed "s|^~|$HOME|")" ] || echo "MISSING: $p"; done
+MCP-rails (FR-39 — no raw `grep` of `.specs/`): pull the spec text through the
+read door, extract path-like references, then verify each on disk:
+
 ```
+list_spec_docs({ spec: "{slug}" })           # md + feature + .progress.json
+# for each doc: read_spec_doc({ spec, doc }) → regex the returned content for
+#   (~|/|\.\.?/|[A-Z]:[\\/])[a-zA-Z0-9._\\/-]+   path-like tokens
+```
+
+For every extracted path `p`, the existence check is on the TARGET (code/config,
+outside `.specs/`), so it stays a plain shell test:
+`[ -e "$(echo $p | sed "s|^~|$HOME|")" ] || echo "MISSING: $p"`.
 
 Каждый `MISSING:` — либо truly missing (P0 — wrong claim) либо futur creation (OK если в FILE_CHANGES.md action=create). Если последнее — добавить в FILE_CHANGES.
 
@@ -99,16 +105,24 @@ grep -roE "(~|/|\.\.?\/|[A-Z]:[\\/])[a-zA-Z0-9._\\/-]+" .specs/{slug}/ | \
 
 Для каждой loaded в CL-1 memory:
 - Extract forbidden literals / required patterns (e.g., memory "no-hardcoded-stgmt" → forbidden `stgmt/`)
-- grep `.specs/{slug}/` на forbidden literals
+- Scan the spec for each forbidden literal **through the MCP read door** (MCP-rails
+  FR-39 — no raw `grep` of `.specs/`): `list_spec_docs` then `read_spec_doc` each
+  doc and substring-match the literal in the returned content
 - Если match — P0 finding, must fix
 
 ```bash
-# Пример для no-hardcoded-* memories
+# Extracting the literals from memory files is fine via grep — the memory dir
+# (~/.claude/projects/.../memory/) is NOT .specs/, so it is not gated:
 for memo in ~/.claude/projects/$(pwd | sed 's|[/:]|-|g')/memory/feedback_no-hardcoded-*.md; do
-  literal=$(grep -oE 'literal[s]? `[^`]+`' "$memo" | head -1 | sed 's/.*`\(.*\)`.*/\1/')
-  [ -n "$literal" ] && grep -rn "$literal" .specs/{slug}/ && echo "VIOLATION: $literal mentioned in $memo"
+  grep -oE 'literal[s]? `[^`]+`' "$memo" | head -1 | sed 's/.*`\(.*\)`.*/\1/'
 done
+# Then match each extracted literal against the spec docs via read_spec_doc
+# (above) — NOT `grep -rn "$literal" .specs/{slug}/`.
 ```
+
+> ⚠️ **Coverage note:** the read-door loop covers `*.md`/`*.feature`/`.progress.json`;
+> a literal hardcoded in a spec `.yaml`/`.json` artifact is out of this step's
+> reach (engine-side reconcile/audit owns that). Don't treat md/feature as total.
 
 ### CL-8: Cross-reference consistency
 
@@ -124,7 +138,7 @@ done
 
 ## Step 0 (Jira-mode)
 
-Если `.specs/{slug}/JIRA_SOURCE.md` существует — выполнить Step 0 из [`jira-mode.md`](jira-mode.md) для Phase 2: extract CRITICAL imperatives → FR; scope enumeration → каждый member получает FR или `[WAIVED]`; exclusions → `## Out of Scope`; errors → reference `{file}:{line}`; UI observations → точные тексты в AC; config values → NFR boundaries.
+Если `JIRA_SOURCE.md` присутствует (проверка через `list_spec_docs({spec})`; MCP-rails, не raw `ls`) — выполнить Step 0 из [`jira-mode.md`](jira-mode.md) для Phase 2: extract CRITICAL imperatives → FR; scope enumeration → каждый member получает FR или `[WAIVED]`; exclusions → `## Out of Scope`; errors → reference `{file}:{line}`; UI observations → точные тексты в AC; config values → NFR boundaries.
 
 Format Jira trace в FR/AC/BDD/Tasks — см. [`jira-mode.md`](jira-mode.md).
 
@@ -141,6 +155,8 @@ Format Jira trace в FR/AC/BDD/Tasks — см. [`jira-mode.md`](jira-mode.md).
 5. **Step 4b: Вызвать `Skill("requirements-chk-matrix")`** — skill строит CHK traceability matrix в REQUIREMENTS.md (`CHK-FR{n}-{nn}` rows + Verification Process + Summary Counts) И populates `## Key Decisions` блоки в DESIGN.md с Rationale/Trade-off/Alternatives considered. Hook `requirements-chk-guard` enforces CHK format; `design-decision-guard` enforces Key Decisions format.
 
 6. **Step 4c: Вызвать `Skill("variant-matrix-build")`** — skill детектит polymorphic FRs (shared pipeline + per-variant dispatch) через `trigger-phrases.ts` (mechanical regex EN+RU). Если detection возвращает ≥1 polymorphic FR с `hardOut: false`, skill populates AC Decision Table в `ACCEPTANCE_CRITERIA.md`, `Scenario Outline` + `Examples:` block в `.feature` файле, и per-variant tasks в `TASKS.md`. Возвращает JSON `{frs_with_matrix, ac_rows, examples_rows, tasks_emitted, escape_hatches, files_touched}`. Phase 3+ Audit category `VARIANT_COVERAGE` блокирует STOP #3 если matrix incomplete (severity ≥ WARNING). Trigger map + hard-OUT signals — см. `.claude/rules/specs-workflow/variant-matrix/when-to-build-matrix.md`. Escape hatch `[skip-variant-matrix: <reason ≥8 chars>]` в FR body — JSONL audit log в `.claude/logs/spec-variant-matrix-escapes.jsonl`.
+
+6a. **Step 4e: Вызвать `Skill("cross-spec-reconcile")` (mode=light)** — mechanical-only cross-spec проход (file existence, terminology drift, RUNTIME_IDENTIFIER_DRIFT via grep), budget ≤5s для 30-spec corpus. Ловит конфликты с ДРУГИМИ спеками и дрейф spec↔impl рано, на генерации. CRITICAL из hard-conflict subset (`cross-spec/contradictory-fr` / `module-ownership-conflict` / `runtime-identifier-drift`) — блокирующий AskUserQuestion; WARNING/INFO — в контекст как `<system-reminder>`. Полный full-mode проход — в Phase 3+ Audit (категория `CROSS_SPEC_CONSISTENCY`). См. `.claude/skills/cross-spec-reconcile/SKILL.md`.
 
 7. **Заполнить DESIGN.md** — при ручном редактировании дополнить `## Key Decisions` из skill-output; hook `design-decision-guard` блокирует decisions без Alternatives.
 
@@ -181,7 +197,7 @@ Format Jira trace в FR/AC/BDD/Tasks — см. [`jira-mode.md`](jira-mode.md).
    - Пометить непроверенные: `[UNVERIFIED]`
 
 10. **Step 5c: Multimodal re-verification (ОБЯЗАТЕЛЬНО в Jira-mode):** Для каждого AC, содержащего ссылку `Screenshot: {filename}` или `Video: {filename}:{timestamp}`:
-   - Прочитать attachment из `.specs/{slug}/attachments/{filename}` (если присутствует локально) через Read tool (multimodal)
+   - Прочитать attachment через MCP-дверь (FR-39/P19-6 — НЕ raw Read; под enforce raw `.specs/**` блокируется): `read_attachment({ spec: "{slug}", path: "attachments/{filename}" })` → вернёт `{ base64, mime }` для multimodal-анализа. (`list_spec_docs({spec}).attachments[]` — инвентарь доступных вложений.)
    - Применить правило `.claude/rules/pomogator/screenshot-driven-verification.md`: описать что ВИДНО, сравнить с ОЖИДАНИЕМ AC, вывести `CONFIRMED` / `DENIED` с обоснованием
    - Если file отсутствует локально → пометить AC `[EVIDENCE_MISSING: run /jira-intake-resync]` и не утверждать детали UI от головы.
 

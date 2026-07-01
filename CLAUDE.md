@@ -7,8 +7,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | Command | Description |
 |---------|-------------|
 | `npm run lint` | ESLint on `.claude/` and `tools/` |
-| `npm test` | E2E tests via Docker (isolated, safe) |
-| `npm run test:all` | E2E + TUI tests via Docker |
+| `npm test` | E2E tests via Docker — **WSL-only**: авто-уход в WSL через `scripts/_docker-wsl.sh` (Docker Desktop не нужен; запуск на хосте невозможен, `tests/setup/ensure-docker.ts`) |
+| `npm run test:all` | E2E + TUI tests via Docker (WSL-only, см. `scripts/_docker-wsl.sh`) |
 | `npx tsx tools/plan-pomogator/validate-plan.ts <path>` | Validate plan structure |
 | `npx tsx tools/specs-generator/scaffold-spec.ts -Name "feature"` | Scaffold spec structure |
 | `npx tsx tools/specs-generator/validate-spec.ts -Path ".specs/feature"` | Validate spec formats |
@@ -18,7 +18,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | `npx tsx tools/migrate-v1-to-v2/migrate-v1-to-v2.ts --global` | Migration v1 → v2 cleanup (project + global v1 artifacts) |
 | `/reflect` | Просмотр и управление очередью автозахваченных сигналов |
 | `/simplify` | Стоковый Claude Code review (код + спеки + тесты через правило simplify-extended, auto-trigger на Stop) |
-| `/pomogator-doctor` | Диагностика окружения: 17 проверок в 🟢🟡🔴 группах (canonical skill, не deprecated CLI) |
+| `/pomogator-doctor` | Диагностика окружения: 18 проверок в 🟢🟡🔴 группах (canonical skill, не deprecated CLI) |
 | `/worktree <slug> [--pr=draft] [--skip-build] [--devcontainer]` | Создать готовый git worktree: ветка + bootstrap + env-sync + build + doctor + опц. draft PR / devcontainer (skill `worktree-setup`, спека `.specs/worktree-setup/`) |
 
 ## Distribution (v2.0 canonical)
@@ -45,6 +45,8 @@ dev-pomogator distributed как canonical Claude Code marketplace plugin (per A
 - **pomogator-doctor**: canonical skill (.claude/skills/pomogator-doctor/) с self-contained engine в scripts/engine/ (24 files); SessionStart hook в scripts/doctor-hook.ts.
 - **Migration**: `tools/migrate-v1-to-v2/migrate-v1-to-v2.ts` — standalone cleanup script для existing v1 users (--project / --global / both flags).
 
+> **🧭 Discipline index — start here for «как репо держит спеки/тесты честными?»:** [`.claude/spec-generator-discipline.md`](.claude/spec-generator-discipline.md) — единая карта, связывающая каждый принцип (трассируемость через спек-граф · статус из улик / анти-фейк-грин · детерминированные гейты через MCP-дверь · свежий агент на фазу · мутационная стойкость · честный стоп · BDD-миграция) с его FR + правилом + инструментом. Каноническое здоровье спеки = `spec-verdict.ts` (смарт-вердикт, не голый структурный pass).
+
 ## Rules
 
 ### Always-apply
@@ -53,11 +55,15 @@ dev-pomogator distributed как canonical Claude Code marketplace plugin (per A
 |------|-------------|------|
 | plan-pomogator | Единый формат планов разработки (9 секций: Context + Extracted Requirements → трёхфазная валидация + prompt-capture) | `.claude/rules/plan-pomogator/plan-pomogator.md` |
 | plan-freshness | Каждый план с нуля; запрет копирования File Changes/Requirements из предыдущих планов; Phase 3 cross-ref валидация | `.claude/rules/plan-pomogator/plan-freshness.md` |
+| claims-need-evidence | Внешние/технические факты в плане ОБЯЗАНЫ нести метку-пруф `[src:<url>]`/`[ref:<file:line>]`/`[cmd:<вывод>]` или быть в секции «🔎 Источники / Пруфы»; иначе фантазия. Enforce: `validate-plan.ts` Phase 4 `validateEvidence` (warning). Инцидент 2026-06-20: план Stryker+BDD на непроверенных фактах | `.claude/rules/plan-pomogator/claims-need-evidence.md` |
 | ts-import-extensions | В `tools/**/*.ts` relative imports ОБЯЗАНЫ использовать `.ts` расширение; `.js` спецификаторы ломают Node 22.6+ native strip-types | `.claude/rules/ts-import-extensions.md` |
 | jira-smart-commit-one-line | Smart Commit парсится только если ключ Jira и команда в первой строке, одна строка | `.claude/rules/jira-smart-commit-one-line.md` |
 | atomic-config-save | Конфиги через temp file + atomic move, не прямой writeJson | `.claude/rules/atomic-config-save.md` |
 | atomic-update-lock | Lock через `flag: 'wx'` (O_EXCL), не exists-check + write | `.claude/rules/atomic-update-lock.md` |
 | claude-md-glossary | CLAUDE.md = глоссарий/индекс на rules; при добавлении/удалении правил обновлять таблицу | `.claude/rules/claude-md-glossary.md` |
+| verify-status-against-code | Verify статус (ls/grep/test) перед планированием/работой из спеки/TASKS/README/правила; status docs drift от кода. `npm run check:status-drift` ловит «помечено TODO/`[ ]` но файл существует» | `.claude/rules/verify-status-against-code-before-acting.md` |
+| no-unverified-blocker | Прежде чем заявить «заблокировано/жду/не могу тронуть/чужая сессия» — предъяви улику (`git diff`/`git log`/`ls`) в том же сообщении; непроверенный блокер = отмазка, которой обманывают и юзера, и Stop-судью. shared-tree ≠ «не трогать любой M-файл». Инцидент 2026-06-18: 34 хода фейк-блокера на cucumber.json (1 строка той же фичи) | `.claude/rules/no-unverified-blocker.md` |
+| no-structural-valid | «Spec valid/clean/done» ТОЛЬКО по смарт-вердикту `spec-verdict.ts` (audit+traceability+conformance+coverage+semantic над одним графом); голый `validate-spec: 0 errors` — pre-filter, не здоровье (FR-37d, инцидент false-green 2026-06-05) | `.claude/rules/spec-verdict/no-structural-valid.md` |
 | clear-questions-to-user | Перед каждым ответом/вопросом — шаблон самопроверки: (1) что я понял бытовым языком, (2) черновик, (3) самооценка "поймёт?", (4) ответ = микроистория с 5 опорными точками (откуда пришли → что юзер сказал → что сделал и почему → где сейчас → дальше), (5) переписать если не прошло. При "не понял" — СТОП, прогнать шаблон заново. Часть extension `answer-simple` (skill для on-demand аудита) | `.claude/rules/answer-simple/clear-questions-to-user.md` |
 | self-improving | Real-time детекция ситуаций для новых rules/skills/hooks (триггеры T2/T3/T4/T6 + automation hints) | `.claude/rules/suggest-rules/self-improving.md` |
 | simplify-extended | При /simplify проверять спеки (нечёткие FR, reuse) и тесты (setup duplication, naming); различать systemic vs one-off issues (extension: auto-simplify) | `.claude/rules/auto-simplify/simplify-extended.md` |
@@ -68,16 +74,26 @@ dev-pomogator distributed как canonical Claude Code marketplace plugin (per A
 | verify-render-target | Перед редактированием render/statusline кода — проверить какой файл реально вызывается (compact_bar.py, не statusline_render.cjs) | `.claude/rules/pomogator/verify-render-target.md` |
 | screenshot-driven-verification | КАЖДЫЙ скриншот реально анализировать: описать что видно, сравнить с ожиданием, формат CONFIRMED/DENIED | `.claude/rules/pomogator/screenshot-driven-verification.md` |
 | no-blocking-on-tests | Docker тесты 7-12 мин; НИКОГДА не блокировать сессию; run_in_background + продолжать работу; запрет naked `\| tail` в bg (используй `\| tee <path> \| tail -N`) | `.claude/rules/pomogator/no-blocking-on-tests.md` |
+| no-host-bdd-runs | ЛЮБОЙ cucumber/BDD-прогон ТОЛЬКО в Docker (`docker-bdd.sh`), на хосте — НИЧЕГО (строгая директива владельца): хостовый прогон даёт ложные красные (Linux-only сценарии) + перезаписывает канон артефактами изоляции. PreToolUse `test_guard` (ветка host-bdd) денаит ЛЮБОЙ host `run-bdd.mjs`/`cucumber.js` (full/`--name`/`--tags`/`--dry-run`) → docker-bdd.sh; docker-обёртка + prose → allow. Runtime-страховка в `run-bdd.mjs` (отказ вне Docker). Инцидент 2026-06-24 | `.claude/rules/pomogator/no-host-bdd-runs.md` |
 | post-edit-verification | После КАЖДОГО изменения кода: build, copy installed, /run-tests background, screenshot если UI | `.claude/rules/pomogator/post-edit-verification.md` |
 | post-merge-cleanup | После влитого PR (mergedAt non-null): удалить свой worktree (`--force`) + локальную (`-D` для squash) + удалённую ветку + `git fetch origin main:main`; перед merge на красном сьюте доказать что падения предсуществующие | `.claude/rules/pomogator/post-merge-cleanup.md` |
 | one-feature-one-pr | 1 фича = 1 PR в идеале; не дробить связные слои («foundation / part 2 / benchmark») если кусок не имеет самостоятельной ценности; шаги плана — work breakdown, не PR boundaries; self-check перед `gh pr create`: ревьюер поймёт за один заход без предшествующих PR? | `.claude/rules/pomogator/one-feature-one-pr.md` |
+| finish-the-deploy-dont-hand-off | Доделал код — сам пересобери/рестартни/перевыкати ЛОКАЛЬНО и коммить+пуш на фича-ветке (не `main`/`master`); запрет «скажи — пересоберу/закоммичу». Спрашивай только: `main`/`master` напрямую, `force-push`, прод, снос данных. Инцидент reel-agent-api; та же ловля механически в судье claim-evidence-gate | `.claude/rules/pomogator/finish-the-deploy-dont-hand-off.md` |
 | skill-allowed-tools-audit | При создании/модификации skill — проверь что allowed-tools покрывает ВСЕ инструменты workflow | `.claude/rules/checklists/skill-allowed-tools-audit.md` |
 | docker-no-git-repo | Docker тесты без .git — git команды fail, использовать env override | `.claude/rules/gotchas/docker-no-git-repo.md` |
+| no-git-add-all-shared-tree | `git add -A` запрещён — параллельные сессии делят дерево; только явные пути (инцидент 12220e5) | `.claude/rules/gotchas/no-git-add-all-shared-tree.md` |
 | proactive-investigation | Не спрашивай разрешение исследовать — делай сам; каждое утверждение с evidence; [UNVERIFIED] для непроверяемого | `.claude/rules/plan-pomogator/proactive-investigation.md` |
 | cross-scope-coverage | При multi-scope фичах: coverage matrix scope×variant, gap report, [OUT_OF_SCOPE] для пропусков | `.claude/rules/plan-pomogator/cross-scope-coverage.md` |
 | spec-test-sync | При тестах в File Changes — спеки обязательны; при багфиксе — BDD .feature обязателен | `.claude/rules/plan-pomogator/spec-test-sync.md` |
 | integration-tests-first | Тесты ОБЯЗАНЫ быть интеграционными (runInstaller/spawnSync); unit допустим как доп, не как замена | `.claude/rules/integration-tests-first.md` |
+| bdd-only-tests | Полный переезд на BDD: новые не-BDD тест-файлы (`*.test.ts`/`*_test.py`/`*Tests.cs`…) запрещены PreToolUse-хуком `bdd-only-test-guard` (поэтапно — Write нового деним, Edit существующего/`.feature`/step-defs/fixtures разрешён; escape `BDD_ONLY_SKIP=1` логируется). Цель — ноль `*.test.ts` | `.claude/rules/bdd-only/bdd-only-tests.md` |
+| spec-authoring-via-subskills | Форм-документы спеки (USER_STORIES/RESEARCH/REQUIREMENTS/DESIGN/TASKS) заполнять скилами-автозаполнителями (discovery-forms/requirements-chk-matrix/task-board-forms), не ручной построчной писаниной через `apply_spec_change` (дерётся с якорной паутиной + форм-стражами). Enforce: PreToolUse-хук `spec-authoring-steer` (shadow/enforce, маркер `[skip-spec-steer:]` в `reason`; 3 скила+3 фазовых агента помечены). Инцидент 2026-06-29 (bdd-test-scanner) | `.claude/rules/spec-authoring-via-subskills.md` |
 | output-invariants-first | Для функций возвращающих коллекцию — тесты на инварианты (uniqueness/cardinality/conservation), не только per-input; N×M loops red-flag; mutation testing не заменяет integration | `.claude/rules/testing/output-invariants-first.md` |
+| verify-against-real-artifact | Парсер/ингестер внешнего вывода: фикстуры зеркалят РЕАЛЬНЫЙ вывод producer'а (без выдуманных полей — fake-positive); перед DONE — прогон против реального артефакта + сверка с независимым ground-truth; smoke на рукодельных данных ничего не доказывает | `.claude/rules/testing/verify-against-real-artifact.md` |
+| cucumber-expression-parens | cucumber-js STRING-шаг = Cucumber Expression: `( )` это «опциональный текст», а не литеральная скобка — строковый шаг с `(view coverage)` НЕ матчит литеральные скобки в `.feature` → UNDEFINED. Литеральный `(`/`)`/`{`/`}`/`/` в тексте шага → step-def ОБЯЗАН быть RegExp с экранированием (`\(...\)`). Зелёный vitest ≠ связка: только Docker-cucumber-прогон её доказывает (сверять `lastResult===PASSED` по slug-id `specgen004-NN`, не по отсутствию в fail-list). Инцидент 2026-06-28: SPECGEN004_143 при слиянии get_coverage→get_spec_status(view) | `.claude/rules/testing/cucumber-expression-parens.md` |
+| dead-integration-guard | Диф добавляет установщик/скачиваемый бинарь/рантайм-зависимость → требуется рантайм-потребитель (не флаг/тест) + e2e против реального артефакта (silent-skip в Docker = FAIL). «Installed ≠ integrated». Под-класс: plugin-distributed код (hook/MCP/.lsp) с импортом non-`node:` пакета падает у юзеров (нет `node_modules`) → обязательно запустить **deps-absent** (спрятать `node_modules`, запустить реальным лаунчером); фикс = bundle / lazy-import+fail-open / builtins-only. Инциденты: FR-7 Marksman; MCP + test-quality hook (`@cucumber/gherkin`/`sdk` отсутствуют у юзеров) | `.claude/rules/testing/dead-integration-guard.md` |
+| rollup-completeness-all-not-any | Rollup/census completeness-вердикт = ВСЕ юниты complete (AND), не ЛЮБОЙ (OR); один done среди open ≠ COMPLETE (false-green); «done» юнит требует evidence, не флаг. Инцидент: fr-census сам false-green'нул FR-43 | `.claude/rules/gotchas/rollup-completeness-all-not-any.md` |
+| enforce-spec-door-bash-workflow | Под `SPEC_ACCESS_ENFORCE` guard денаит Bash с `.specs/` в тексте (pipe/heredoc/redirect); engine-CLI через `> файл-вне-.specs` (не `\| tail`), контент спек через `scripts/spec-door.ts`/MCP-дверь, скрипты через Write, git над .specs в одиночку | `.claude/rules/gotchas/enforce-spec-door-bash-workflow.md` |
 | tui-debug-verification | TUI/statusline изменения: screenshot второго монитора + cross-verify YAML age + container; SKIP_BUILD запрещён после wrapper changes | `.claude/rules/pomogator/tui-debug-verification.md` |
 | onboarding-artifact-ai-centric | `.specs/.onboarding.json` — AI-first artifact: обязательны rules_index/skills_registry/hooks_registry/mcp_servers/boundaries/gotchas/glossary/verification. Generic project metadata без AI-specific секций — violation | `.claude/rules/onboard-repo/onboarding-artifact-ai-centric.md` |
 | commands-via-skill-reference | `.onboarding.json.commands.*` обязаны ссылаться на skill-обёртку через `via_skill` если она существует; `forbidden_if_skill_present=true + via_skill set` требует non-empty `raw_pattern_to_block` (AJV custom keyword) | `.claude/rules/onboard-repo/commands-via-skill-reference.md` |

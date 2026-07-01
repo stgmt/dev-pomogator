@@ -2,7 +2,7 @@
 
 ## AC-1 (FR-1) @feature1
 
-**Требование:** [FR-1](FR.md#fr-1-skill-workflow--mechanical-reach-analysis-per-variant)
+**Требование:** [FR-1](FR.md#fr-1-skill-workflow-mechanical-reach-analysis-per-variant-feature1)
 
 WHEN user invokes `/verify-generic-scope-fix` AND staged diff содержит added variants в enum/switch/array
 THEN skill SHALL execute 5-step workflow (parseAddedVariants → reach analysis per variant → classify traced/unreachable/conditional → write marker → output report)
@@ -14,7 +14,7 @@ IF any variant classified `unreachable` THEN skill SHALL set `should_ship: false
 
 ## AC-2 (FR-2) @feature1
 
-**Требование:** [FR-2](FR.md#fr-2-pretooluse-hook--block-commit-without-fresh-verification)
+**Требование:** [FR-2](FR.md#fr-2-pretooluse-hook-block-commit-without-fresh-verification-feature1)
 
 WHEN `tool_name === "Bash"` AND `tool_input.command` matches `/^\s*git\s+commit\b/` AND `suspicionScore(git diff --cached) >= 2` AND no fresh matching marker exists AND no escape-hatch в commit message
 THEN hook SHALL emit to stdout JSON `{hookSpecificOutput: {hookEventName: "PreToolUse", permissionDecision: "deny", permissionDecisionReason: <string>}}` where `permissionDecisionReason` follows format specified в [SCHEMA.md "PreToolUse Hook Output (deny form)"](verify-generic-scope-fix_SCHEMA.md#pretooluse-hook-output-deny-form)
@@ -28,7 +28,7 @@ IF `tool_name !== "Bash"` OR command не matches git commit/push pattern THEN h
 
 ## AC-3 (FR-3) @feature3
 
-**Требование:** [FR-3](FR.md#fr-3-escape-hatch-with-audit-trail)
+**Требование:** [FR-3](FR.md#fr-3-escape-hatch-with-audit-trail-feature3)
 
 WHEN commit message содержит regex match `/\[skip-scope-verify:\s*([^\]]+)\]/i` OR environment variable `SCOPE_GATE_SKIP === "1"`
 THEN hook SHALL append line to `{cwd}/.claude/logs/scope-gate-escapes.jsonl` в формате `{"ts": ISO8601, "diff_sha256": <string>, "reason": <captured reason>, "session_id": <string>, "cwd": <string>}`
@@ -40,7 +40,7 @@ IF extracted reason length < 8 chars THEN hook SHALL дополнительно 
 
 ## AC-4 (FR-4) @feature4
 
-**Требование:** [FR-4](FR.md#fr-4-docstest-dampening--anti-over-application)
+**Требование:** [FR-4](FR.md#fr-4-docstest-dampening-anti-over-application-feature4)
 
 WHEN `git diff --cached --name-only` возвращает только files matching `/\.(md|txt|rst)$/i` OR только files под `/(docs?|tests?|__tests__|spec)\//i`
 THEN hook SHALL `process.exit(0)` сразу после name-only check (short-circuit, без score computation).
@@ -52,7 +52,7 @@ THEN hook SHALL subtract 2 points per `.md/.txt/.rst` file AND subtract 1 point 
 
 ## AC-5 (FR-5) @feature2
 
-**Требование:** [FR-5](FR.md#fr-5-marker-invalidation--diff-hash-pin--ttl)
+**Требование:** [FR-5](FR.md#fr-5-marker-invalidation-diff-hash-pin-ttl-feature2)
 
 IF marker file существует AND (`marker.diff_sha256 !== sha256(current git diff --cached)` OR `Date.now() - marker.timestamp > 1800000` (30 minutes in ms) OR `marker.session_id !== data.session_id`)
 THEN hook SHALL treat marker as absent AND proceed с verification check (leading to either escape hatch check OR deny per AC-2).
@@ -74,7 +74,7 @@ IF diff empty OR diff parse fails THEN function SHALL return `{score: 0, reasons
 
 ## AC-7 (FR-7) @feature1
 
-**Требование:** [FR-7](FR.md#fr-7-fail-loud-on-unreachable-variant--explicit-counter-h3)
+**Требование:** [FR-7](FR.md#fr-7-fail-loud-on-unreachable-variant-explicit-counter-h3-feature1)
 
 WHEN skill reach-analysis classifies any variant как `unreachable`
 THEN skill SHALL write marker с `should_ship: false` AND skill output SHALL explicitly say "DO NOT SHIP — variant <name> structurally no-op through <gate function>".
@@ -86,7 +86,7 @@ THEN hook SHALL deny commit с permissionDecisionReason "Previous skill run clas
 
 ## AC-8 (FR-8) @feature5
 
-**Требование:** [FR-8](FR.md#fr-8-skill-frontmatter--disable-model-invocation-pattern)
+**Требование:** [FR-8](FR.md#fr-8-skill-frontmatter-disable-model-invocation-pattern-feature5)
 
 WHEN SKILL.md parsed by Claude Code skill loader
 THEN frontmatter SHALL содержать field `disable-model-invocation: true`

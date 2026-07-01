@@ -11,7 +11,7 @@
 | [FR-5](FR.md#fr-5-gh-authentication-pre-flight-check) | gh auth pre-flight | [AC-5](ACCEPTANCE_CRITERIA.md#ac-5-fr-5) | @feature5 | Draft |
 | [FR-6](FR.md#fr-6-worktree-doctorcjs-standalone-diagnostic) | worktree-doctor.cjs diagnostic | [AC-6](ACCEPTANCE_CRITERIA.md#ac-6-fr-6) | @feature6 | Draft |
 | [FR-7](FR.md#fr-7-session-pilot-integration-contract) | session-pilot integration contract | [AC-7](ACCEPTANCE_CRITERIA.md#ac-7-fr-7) | @feature7 | Draft |
-| [FR-8](FR.md#fr-8-invocation-from-sibling-worktree--warn--offer-continue) | Invocation-from-sibling warn flow | [AC-8](ACCEPTANCE_CRITERIA.md#ac-8-fr-8) | @feature8 | Draft |
+| [FR-8](FR.md#fr-8-invocation-from-sibling-worktree-warn-offer-continue) | Invocation-from-sibling warn flow | [AC-8](ACCEPTANCE_CRITERIA.md#ac-8-fr-8) | @feature8 | Draft |
 | [FR-10](FR.md#fr-10-local-envconfig-file-synchronization-into-fresh-worktree) | Local env/config file sync into worktree | [AC-10](ACCEPTANCE_CRITERIA.md#ac-10-fr-10) | @feature9 | Draft |
 | [FR-11](FR.md#fr-11-build-and-dependency-synchronization) | Build & dependency sync (npm install + build) | [AC-11](ACCEPTANCE_CRITERIA.md#ac-11-fr-11) | @feature10 | Draft |
 | [FR-12](FR.md#fr-12-devcontainer-integration) | DevContainer integration (--devcontainer up + post-create build) | [AC-12](ACCEPTANCE_CRITERIA.md#ac-12-fr-12) | @feature11 | Draft |
@@ -26,7 +26,7 @@
 - [FR-5: gh authentication pre-flight](FR.md#fr-5-gh-authentication-pre-flight-check)
 - [FR-6: worktree-doctor.cjs standalone diagnostic](FR.md#fr-6-worktree-doctorcjs-standalone-diagnostic)
 - [FR-7: session-pilot integration contract](FR.md#fr-7-session-pilot-integration-contract)
-- [FR-8: Invocation-from-sibling warn flow](FR.md#fr-8-invocation-from-sibling-worktree--warn--offer-continue)
+- [FR-8: Invocation-from-sibling warn flow](FR.md#fr-8-invocation-from-sibling-worktree-warn-offer-continue)
 - [FR-10: Local env/config file synchronization](FR.md#fr-10-local-envconfig-file-synchronization-into-fresh-worktree)
 - [FR-11: Build and dependency synchronization](FR.md#fr-11-build-and-dependency-synchronization)
 - [FR-12: DevContainer integration](FR.md#fr-12-devcontainer-integration)

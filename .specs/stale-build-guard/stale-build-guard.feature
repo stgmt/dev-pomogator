@@ -6,7 +6,7 @@ Feature: GUARD001_Stale_Build_Guard
 
   # @feature1
   Scenario: GUARD001_01 deny when TypeScript src newer than dist
-    Given src/index.ts has been modified after last build
+    Given ~~`src/index.ts`~~ (removed in v2 migration) has been modified after last build
     And dist/index.js exists but is older than src/
     When build_guard hook receives a Bash command with "test_runner_wrapper --framework vitest"
     Then hook SHALL deny with exit code 2
@@ -58,7 +58,7 @@ Feature: GUARD001_Stale_Build_Guard
 
   # @feature5
   Scenario: GUARD001_09 allow with SKIP_BUILD_CHECK bypass
-    Given src/index.ts has been modified after last build
+    Given ~~`src/index.ts`~~ (removed in v2 migration) has been modified after last build
     And SKIP_BUILD_CHECK=1 is set in environment
     When build_guard hook receives a Bash command with "test_runner_wrapper --framework vitest"
     Then hook SHALL allow with exit code 0

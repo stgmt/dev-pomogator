@@ -8,7 +8,7 @@
 | T01 | .feature → tests/features/core/CORE023_skill-listing-budget.feature | TODO | — | Phase 0 | 10m |
 | T02 | step definitions (vitest describe/it stubs) | TODO | T01 | Phase 0 | 20m |
 | T03 | Implement src/installer/skill-budget.ts | TODO | T02 | Phase 1 | 45m |
-| T04 | Wire ensureSkillListingBudget() в src/installer/claude.ts | TODO | T03 | Phase 1 | 15m |
+| T04 | Wire ensureSkillListingBudget() в ~~`src/installer/claude.ts`~~ (removed in v2 — no canonical replacement) | TODO | T03 | Phase 1 | 15m |
 | T05 | InstallReport.recordSkillBudget() + render | TODO | T03 | Phase 1 | 20m |
 | T06 | Integration test tests/e2e/skill-listing-budget.test.ts | TODO | T03,T04,T05 | Phase 1 | 60m |
 | T07 | Verify all CORE023 scenarios Red→Green | TODO | T06 | Phase 1 | 15m |
@@ -29,7 +29,7 @@ N/A — фича не требует новых сервисов / БД / env va
 > Framework `vitest` уже установлен (BDD foundation already in place, verified в DESIGN.md Evidence: `tests/e2e/settings-protection.test.ts` использует тот же pattern).
 > TEST_DATA_ACTIVE — temp HOME isolation через inline beforeEach/afterEach по аналогии с `settings-protection.test.ts`. Отдельный hook файл не нужен (inline pattern достаточен).
 
-- [ ] T01: Скопировать `.specs/skill-listing-budget/skill-listing-budget.feature` → `tests/features/core/CORE023_skill-listing-budget.feature` -- @feature1 @feature2 @feature3 @feature4 — Status: TODO | Est: 10m
+- [ ] T01: Скопировать `.specs/skill-listing-budget/skill-listing-budget.feature` → `tests/features/core/CORE023_skill-listing-budget.feature` -- @feature1 @feature2 @feature3 @feature4 — id: t01 — Status: TODO | Est: 10m
   _Requirements: [FR-1](FR.md#fr-1-запись-skilllistingbudgetfraction-10-в-claudesettingsjson)_
   _Source: DESIGN.md "BDD Test Infrastructure" — TEST_FORMAT=BDD, Framework=vitest_
   **Done When:**
@@ -37,8 +37,8 @@ N/A — фича не требует новых сервисов / БД / env va
   - [ ] Содержит ровно 8 Scenario блоков (CORE023_01..CORE023_08)
   - [ ] `@featureN` теги расставлены 1:1 с AC-{N}
 
-- [ ] T02: Создать step definitions (vitest describe/it stubs) — Status: TODO | Est: 20m
-  _Requirements: [FR-1](FR.md#fr-1-запись-skilllistingbudgetfraction-10-в-claudesettingsjson), [FR-2](FR.md#fr-2-идемпотентность-повторных-запусков), [FR-3](FR.md#fr-3-bump-существующего-значения--10), [FR-4](FR.md#fr-4-install-report-includes-change-line)_
+- [ ] T02: Создать step definitions (vitest describe/it stubs) — id: t02 — Status: TODO | Est: 20m
+  _Requirements: [FR-1](FR.md#fr-1-запись-skilllistingbudgetfraction-10-в-claudesettingsjson), [FR-2](FR.md#fr-2-идемпотентность-повторных-запусков), [FR-3](FR.md#fr-3-bump-существующего-значения-10), [FR-4](FR.md#fr-4-install-report-includes-change-line)_
   _Source: DESIGN.md "Существующие hooks" — pattern из `tests/e2e/settings-protection.test.ts`_
   _Reuse: `tests/fixtures/pomogator-doctor/temp-home-builder.ts` для temp HOME isolation_
   **Done When:**
@@ -53,8 +53,8 @@ N/A — фича не требует новых сервисов / БД / env va
 
 > Реализовать код чтобы все 8 BDD сценариев перешли в Green.
 
-- [ ] T03: Implement `src/installer/skill-budget.ts` -- @feature1 @feature2 @feature3 — Status: TODO | Est: 45m
-  _Requirements: [FR-1](FR.md#fr-1-запись-skilllistingbudgetfraction-10-в-claudesettingsjson), [FR-2](FR.md#fr-2-идемпотентность-повторных-запусков), [FR-3](FR.md#fr-3-bump-существующего-значения--10)_
+- [ ] T03: Implement `src/installer/skill-budget.ts` -- @feature1 @feature2 @feature3 — id: t03 — Status: TODO | Est: 45m
+  _Requirements: [FR-1](FR.md#fr-1-запись-skilllistingbudgetfraction-10-в-claudesettingsjson), [FR-2](FR.md#fr-2-идемпотентность-повторных-запусков), [FR-3](FR.md#fr-3-bump-существующего-значения-10)_
   **Done When:**
   - [ ] Экспортирована `ensureSkillListingBudget(homeDir?, report?): Promise<void>`
   - [ ] Использует `readJsonSafe` + `writeJsonAtomic` из `src/utils/atomic-json.ts`
@@ -62,7 +62,7 @@ N/A — фича не требует новых сервисов / БД / env va
   - [ ] CORE023_01, CORE023_03, CORE023_04 переходят в Green
   - [ ] `npm run build` проходит без ошибок
 
-- [ ] T04: Wire в `src/installer/claude.ts` -- @feature1 — Status: TODO | Est: 15m
+- [ ] T04: Wire в ~~`src/installer/claude.ts`~~ (removed in v2 — no canonical replacement) -- @feature1 — id: t04 — Status: TODO | Est: 15m
   _Requirements: [FR-1](FR.md#fr-1-запись-skilllistingbudgetfraction-10-в-claudesettingsjson)_
   **Done When:**
   - [ ] Import `ensureSkillListingBudget` из `./skill-budget.js` (per `.claude/rules/ts-import-extensions.md` — `.js` спецификатор в src/ т.к. tsc-compiled)
@@ -70,14 +70,14 @@ N/A — фича не требует новых сервисов / БД / env va
   - [ ] Используется текущий `homeDir` + текущий `report` instance
   - [ ] CORE023_02 (preserve other keys) переходит в Green
 
-- [ ] T05: InstallReport `recordSkillBudget()` + render -- @feature4 — Status: TODO | Est: 20m
+- [ ] T05: InstallReport `recordSkillBudget()` + render -- @feature4 — id: t05 — Status: TODO | Est: 20m
   _Requirements: [FR-4](FR.md#fr-4-install-report-includes-change-line)_
   **Done When:**
   - [ ] `InstallReport.recordSkillBudget(line: string)` сохраняет строку
   - [ ] Render output (stdout + `last-update-report.md` если existing) включает строку ровно один раз
   - [ ] CORE023_07 (one line only) переходит в Green
 
-- [ ] T06: Integration tests `tests/e2e/skill-listing-budget.test.ts` -- @feature1 @feature2 @feature3 @feature4 — Status: TODO | Est: 60m
+- [ ] T06: Integration tests `tests/e2e/skill-listing-budget.test.ts` -- @feature1 @feature2 @feature3 @feature4 — id: t06 — Status: TODO | Est: 60m
   _Requirements: все_
   _Reuse: `tests/e2e/settings-protection.test.ts` (точно тот же шаблон temp HOME + settings.json manipulation)_
   **Done When:**
@@ -87,7 +87,7 @@ N/A — фича не требует новых сервисов / БД / env va
   - [ ] Минимум 1 e2e тест запускает реальный installer через `runInstaller()` (per `.claude/rules/integration-tests-first.md`)
   - [ ] Все 8 тестов GREEN
 
-- [ ] T07: Verify all CORE023 scenarios Red→Green — Status: TODO | Est: 15m
+- [ ] T07: Verify all CORE023 scenarios Red→Green — id: t07 — Status: TODO | Est: 15m
   **Done When:**
   - [ ] `/run-tests skill-listing-budget` → 8 passed, 0 failed
   - [ ] `npm run build` clean
@@ -95,7 +95,7 @@ N/A — фича не требует новых сервисов / БД / env va
 
 ## Phase 2: Refactor & Polish
 
-- [ ] T08: Refactor + final validation — Status: TODO | Est: 30m
+- [ ] T08: Refactor + final validation — id: t08 — Status: TODO | Est: 30m
   **Done When:**
   - [ ] `validate-spec.ts -Path .specs/skill-listing-budget` → 0 errors (warnings про `{old}`/`{raw}` placeholder в EARS — acceptable, документация шаблона)
   - [ ] `audit-spec.ts -Path .specs/skill-listing-budget` → 0 critical findings

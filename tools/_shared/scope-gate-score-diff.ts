@@ -6,7 +6,11 @@
  * verified by /verify-generic-scope-fix before commit.
  *
  * Spec: .specs/verify-generic-scope-fix/FR.md#fr-6 + FR-4 dampening
- * Calibration: tests/fixtures/scope-gate/stocktaking-diff.patch → score >= 4 (regression pin)
+ * Calibration: tests/fixtures/scope-gate/stocktaking-diff.patch → score 4 (+1 filename, +3 guard
+ *   enum-item). A structural expansion in a guard file weighs +3 (vs +2 non-guard). Pre-#46 it
+ *   reached 4 via a comma-churn over-count (the previous-last array line gaining a trailing comma
+ *   was wrongly counted as a 2nd item → 5); that bug is fixed (isCommaChurn) and the +3 guard
+ *   weight now carries the regression pin instead.
  */
 
 export interface ScoreResult {
@@ -152,6 +156,21 @@ function isEnumLikeItem(
   return enumContext;
 }
 
+/**
+ * True when an added line is merely an EXISTING item that gained a trailing comma
+ * (e.g. `-  'orange'` → `+  'orange',`) because new items were inserted after it.
+ * That is array-insertion churn, NOT a new enum member. Counting it inflated the score
+ * by +2 per insertion block — a false positive on non-guard files (SCOPEGATE001_20):
+ * adding N items scored (N+1)×2 instead of N×2. We exclude it by pairing the added line
+ * with a removed line of identical content modulo the trailing comma.
+ */
+function isCommaChurn(line: { content: string }, hunk: ParsedHunk): boolean {
+  const norm = (s: string): string => s.trim().replace(/,\s*$/, '');
+  const added = norm(line.content);
+  if (!added) return false;
+  return hunk.lines.some((l) => l.kind === 'del' && norm(l.content) === added);
+}
+
 /** Is the added line a `case X:` statement inside a switch block? */
 function isSwitchCase(
   line: { kind: string; content: string },
@@ -228,12 +247,19 @@ export function scoreDiff(unifiedDiff: string, opts: ScoreOptions = {}): ScoreRe
         const line = hunk.lines[i];
         if (line.kind !== 'add') continue;
 
-        if (isEnumLikeItem(line, hunk, i)) {
-          score += 2;
-          reasons.push(`+2 enum-item:${file.path}:${line.lineNumber}`);
+        // A structural expansion (enum/switch) inside a GUARD/policy file is the highest-signal
+        // event the gate exists for — the PRODUCTS-20218 incident was exactly an enum item added
+        // to a guard service. Weight it +3 (vs +2 in a non-guard file) so a real guard-file
+        // expansion clears the regression pin (>=4 with the +1 filename) WITHOUT relying on the
+        // old comma-churn over-count. Filename alone still scores +1 (< threshold), so this does
+        // NOT broaden the gate to flag non-structural guard-file edits.
+        const structuralPts = isGuardFile ? 3 : 2;
+        if (isEnumLikeItem(line, hunk, i) && !isCommaChurn(line, hunk)) {
+          score += structuralPts;
+          reasons.push(`+${structuralPts} enum-item:${file.path}:${line.lineNumber}`);
         } else if (isSwitchCase(line, hunk, i)) {
-          score += 2;
-          reasons.push(`+2 switch-case:${file.path}:${line.lineNumber}`);
+          score += structuralPts;
+          reasons.push(`+${structuralPts} switch-case:${file.path}:${line.lineNumber}`);
         }
       }
 

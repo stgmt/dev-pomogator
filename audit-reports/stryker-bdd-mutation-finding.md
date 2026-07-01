@@ -1,0 +1,150 @@
+# Finding: can Stryker mutation-test BDD (cucumber) scenarios, and can BDD replace the vitest mutation surface?
+
+**Date:** 2026-06-20
+**Trigger:** owner request — "make Stryker track BDD tests, default for all users, automate hard at all levels." Motivated by the BDD-migration finding that `detect-invariant-candidates-unit.test.ts` must stay vitest *because Stryker's `--related` traces vitest, not cucumber* (so BDD-only-covered code gets no mutation protection).
+
+---
+
+## ⚠️ UPDATE 2026-06-20 (W1) — the official cucumber-runner SUPERSEDES the PoC conclusion below
+
+The PoC (command-runner) conclusion ("BDD weak ~20%, slow 2.5h, cannot replace vitest") was **a measurement artifact**. Re-run with the OFFICIAL `@stryker-mutator/cucumber-runner` + `coverageAnalysis:'perTest'` + `concurrency:'100%'` on the SAME file [cmd:npx stryker run stryker.bdd.config.mjs → reports/mutation-bdd/mutation.json]:
+
+| Metric | PoC (command-runner) | **Official cucumber-runner (perTest, 24 cores)** |
+|---|---|---|
+| Time (788 mutants) | ~2.5h (serial) | **13 min** (~11× faster; ignoreStatic would cut more — 331 static = 67% of time) |
+| Mutation score | "~20%" (first-20 sample, exit-code-only) | **79.25%** (killed 568, survived 10, **noCoverage 139**, timeout 1, runtimeErr 23) |
+| Of COVERED mutants | — | **~98% killed** (568 / 579) |
+
+**Corrected conclusions:**
+1. **The BDD scenarios are NOT coarse/weak.** Where a scenario reaches the code, it kills ~98% of mutants — TIGHTER than vitest's ~52% on this file. The PoC's "20%" was the command-runner (no per-test coverage, exit-code only) sampling the first ~20 mutants (unrepresentative static regex consts).
+2. **The real weakness is COVERAGE GAPS, not assertion granularity.** 139 NoCoverage mutants sit in branches the 6 `@feature7` scenarios never exercise — Python `for-in` detection (L120), return-type branches (L80-82), composition-chains. So **W4's fix is to ADD scenarios for the uncovered branches**, NOT to rewrite `.includes`→`.toEqual` (the assertions are already tight).
+3. **Speed is solved by the runner + parallelism**, not by narrowing — exactly the owner's instinct. cucumber-runner loaded the tsx step-defs fine (`testRunnerNodeArgs:['--import','tsx']`); dry-run 6 scenarios in 12s.
+4. `detect-invariant-candidates-unit.test.ts` could in principle move to BDD once the 139-gap is closed — but **not urgent**; revisit at L1, do not blind-delete.
+
+### W4 action — the SPECIFIC missing scenarios (from reading the NoCoverage lines)
+
+The 139 NoCoverage mutants cluster in three branches the 6 `@feature7` scenarios never exercise
+[ref:.claude/skills/strong-tests/scripts/detect-invariant-candidates.ts]:
+1. **`suggestInvariants` Dict/Map branch** [ref:detect-invariant-candidates.ts:80] — a function whose
+   returnType matches `dict|Map|Dict` → invariants `coverage`+`no-leak`. No scenario passes a Map-returning function.
+2. **`suggestInvariants` Iterator/Iterable branch** [ref:detect-invariant-candidates.ts:81] → `idempotence`+`monotonicity`.
+3. **`nestedLoopCount` Python `for-in`** [ref:detect-invariant-candidates.ts:120] + **Python indent-based
+   `findFunctionEndLine`** [ref:detect-invariant-candidates.ts:148] — a Python function with nested
+   `for … in …` loops → `nxm-overlap`. The existing Python scenario (TESTQUAL001_07) only tests suppression.
+
+So W4 = author ONE scenario per branch (in-process `scan()` + `suggestInvariants` assertions, the tight
+style already proven at ~98% kill), then re-run `npm run mutation:bdd` and confirm the NoCoverage count
+(and the score) climbs. NOT "rewrite `.includes`→`.toEqual`" — the assertions are already tight.
+
+### W4 RESULT — full re-measure after the 3 added scenarios (2026-06-20)
+
+Re-ran the full file after adding TESTQUAL001_34/35/36 [cmd:npm run mutation:bdd → reports/mutation-bdd/mutation.json; host, 14m46s]:
+
+| Metric | W1 (6 scenarios) | **W4 (+3 coverage scenarios)** |
+|---|---|---|
+| **Total mutation score** | 79.25% (→80.87% w/ id fix) | **82.82%** |
+| **Of COVERED mutants** | ~98% | **94.88%** |
+| NoCoverage (the coverage gap) | **139** | **91** (↓48 — the 3 scenarios closed ~48 uncovered mutants) |
+| killed / timeout / survived / errors | 568 / 1 / 10 / 23 | **592 / 1 / 32 / 25** |
+
+**Conclusions confirmed by real numbers:**
+1. **Target massively exceeded.** The ≥45% goal (FR-4 hypothesis) is met at **82.82% total** — and the hypothesis "BDD is weak" is refuted: covered-score **94.88%** means where a scenario reaches the code it kills ~95% of mutants.
+2. **The diagnosis was right.** Adding scenarios for uncovered branches (not rewriting assertions) is what moved the needle — NoCoverage fell 139→91 and total score rose ~3.5pts. The remaining 91 NoCoverage are deeper branches (further coverage work, not assertion tightening).
+3. **The 32 survivors must be TRIAGED, not blindly chased — some are equivalent mutants.** Investigated the `findFunctionEndLine` Python-EOF fallback [ref:detect-invariant-candidates.ts:160] `return Math.min(lines.length - 1, startLine + fallbackOffset)`: the two survivors there (`Math.min`→`Math.max`, `length - 1`→`length + 1`) are **equivalent mutants**. The fallback only fires when a Python function runs to EOF, so `startLine + 40` already exceeds the file length; the result feeds `lines.slice(i, endLine + 1)` [ref:detect-invariant-candidates.ts:289], and `Array.prototype.slice` **clamps** an over-large end index — so over-counting `endLine` yields an identical body slice and is unobservable [cmd:node -e slice-clamp proof → body(orig)==body(max)? true; body(orig)==body(+2)? true]. No test can kill them. The honest move per strong-tests §6.5 is to triage survivors into (a) equivalent (annotate / `// Stryker disable` with rationale) vs (b) genuinely-killable (add a tight branch-reaching scenario) — NOT to author impossible tests against equivalent mutants. The remaining survivors need the same per-mutant triage before counting them as "test debt".
+4. **Speed solved on the host too** — 14m46s for 741 mutants without Docker; perTest + 100% concurrency is the lever, exactly as designed.
+
+### W4 survivor triage (all 32, from reports/mutation-bdd/mutation.json)
+
+| Lines | Mutants | Class | Verdict |
+|---|---|---|---|
+| 43–64, 120/122/151/156 | Regex consts | Stryker Regex-mutator | **Not a real test-debt cluster.** Two reasons, both evidenced: (a) the flip-diff found regex mutants heavily among the 48 run-to-run FLIPPERS → their "survived" is the proven runner nondeterminism, not a stable gap; (b) the Regex mutator makes sub-token tweaks that still match the fixture inputs (high equivalent rate — also why the skill-mutation vitest config reverted this mutator). Resolve any individual one on demand with `verify-kill`; do not treat as assertion debt. |
+| 123 | ArrayDeclaration | nestedLoopCount TS `?? []` fallback | **Equivalent** — `verify-kill` → SURVIVED [cmd:verify-kill kill-123.json → SURVIVED]. The `?? []` fallback fires only at 0 matches; the mutant bumps 0→1, but `nestedFor >= 2` gates nxm-overlap, so 0 vs 1 never changes the kind. No test can observe it. |
+| 160:12, 160:21 | 2 (min→max, ±1) | Python EOF-fallback | **Proven equivalent** — `Array.slice` clamps over-large end [cmd above]. Annotate, don't chase. |
+| findFunctionEndLine Python indent-loop | Block/Logical/Conditional/Equality/Method | Python indent-loop | **Was equivalent-for-fixture → now FIXED.** `verify-kill` batch (blank-skip `===`→`!==`, off-by-one `i-1`→`i+1`, boundary `<=`→`<`) → all 3 SURVIVED [cmd:verify-kill kill-python-cluster.json → killed 0/3]. Root cause (probed): TESTQUAL001_36's fixture runs to **EOF**, so the de-indent return (L157) is dead — only the slice-clamp fallback (L159, proven-equivalent) decides endLine; the mutants were equivalent FOR THAT FIXTURE, not loose assertions [cmd:scan() probe → EOF & de-indent fixtures both endLine 6]. Fix = a fixture where the function de-indents (function + trailing top-level statement) so L157 fires, asserting the exact endLine: added scenario **TESTQUAL001_37**, which deterministically KILLS the off-by-one [cmd:verify-kill kill-offbyone-37.json → KILLED]. |
+| 81:7 | ConditionalExpression | suggestInvariants Iterator branch | **FALSE survivor** — `verify-kill.ts` proves TESTQUAL001_35 KILLS the `→false` mutant deterministically [cmd:verify-kill kill-81.json → KILLED]. The flaky aggregate mislabeled it; NOT test debt. |
+| 71:7 | ConditionalExpression | detectStack `.go` branch | Genuine coverage gap — scenarios call `scan(content, stack)`, not `detectStack(path)`, so the `.go` branch is never exercised. Needs a detectStack-driving scenario, or accept as out-of-scope. |
+| 123:38 | 1 ArrayDeclaration | suggestInvariants array | Possibly killable (assert exact array). |
+| 299:20 | 1 StringLiteral | composition-chain rationale | **KILLED** (commit d99682d) — tightened TESTQUAL001_11 to assert the rationale text; proven via inject+restore. |
+
+**Triage complete (via `verify-kill`, deterministic) — the 32 "survivors" are NOT a wall of weak tests:**
+- 299 → KILLED (W4 tightened assertion).
+- 81 → FALSE survivor (the flaky aggregate lied) → deterministically KILLED by TESTQUAL001_35.
+- findFunctionEndLine cluster → equivalent FOR the EOF fixture → now genuinely KILLED via the new de-indent scenario TESTQUAL001_37.
+- 123 + 160 → equivalent mutants (nxm `>=2` threshold can't see 0→1; `Array.slice` clamps the over-large end).
+- regex-const block (43–64, …) → dominated by the proven runner flakiness (regex mutants were among the 48 flippers) + Regex-mutator equivalents — not assertion debt.
+- 71 → genuine `.go` coverage gap (no scenario drives `detectStack(path)`); out-of-scope here or a future scenario.
+
+**Net real test improvement this pass: TESTQUAL001_37 — one deterministically-proven new kill.** The scary survivor count was mostly the runner bug + equivalents, not weak BDD tests. The durable take-away: gate on `verify-kill` (deterministic), not the cucumber-runner aggregate.
+
+### ⚠️ Flakiness finding — the aggregate score is NON-DETERMINISTIC under concurrency:100%
+
+The post-kill confirm-run (commit d99682d, a **purely additive** +9/−0 assertion that can only kill MORE, never fewer [cmd:git show d99682d --numstat → 9 0]) returned a WORSE aggregate, not better:
+
+| Run | total | covered | killed | survived | no-cov | errors | time |
+|---|---|---|---|---|---|---|---|
+| W4 re-measure | conc 100% | 82.82% | 94.88% | 592 | **32** | 91 | 25 | 14m46s |
+| post-kill confirm (additive-only change) | conc 100% | 77.90% | 89.26% | 556 | **67** | 91 | 26 | 10m27s |
+| determinism probe (lower-concurrency) | **conc 6** | 68.39% | 78.37% | 488 | **135** | 91 | 26 | 15m39s |
+
+A +9/−0 test change CANNOT raise the survivor count by 35 — so the swing is **run-to-run nondeterminism** in the cucumber-runner + `coverageAnalysis:perTest` measurement. **The lower-concurrency hypothesis is REFUTED:** `--concurrency 6` made it WORSE (135 survived), not stable — so it is NOT resource contention from high parallelism. The diagnostic shape: **NoCoverage is rock-stable at 91 across all three runs** while killed/survived swing wildly (592/556/488 killed) — so the perTest **coverage map is deterministic**; it's the per-mutant **kill OUTCOME** that flakes (the same covering scenario kills a mutant in one run and lets it survive in another). That points to **order/state-dependent scenario outcomes**. Two module-level mutable-state candidates (read, not yet pinned to flipping mutants): (a) the step-def `world` [ref:tests/step_definitions/feature_strong_tests.ts:43] — but a `Before` hook resets it per scenario [ref:tests/step_definitions/feature_strong_tests.ts:46], so it should be isolated for the per-test-filtered runs stryker does, which WEAKENS this; (b) the PRODUCTION-side `astGrepCache` [ref:.claude/skills/strong-tests/scripts/detect-invariant-candidates.ts:138] — module-level cache in the very file being mutated, a more plausible culprit. **Root cause is NOT proven** — pinning it requires the mutant-diff investigation below (the three runs' `mutation.json` were each overwritten, so the specific flipping mutants weren't captured). What IS deterministic and confirmed in every run: **299:20 is killed** [cmd:node mutation.json scan → 299 still survives? false].
+
+**Localized (2026-06-20, evidence):** the nondeterminism is in **stryker's cucumber-runner perTest layer, NOT the test code or the detector**:
+- **Tests are deterministic without mutation** — the strong-tests runtime scenarios run 3× back-to-back gave an identical `9 passed / 17 undefined` every time [cmd:cucumber ×3 → run1/2/3 all "9 passed"]. So the scenarios themselves don't flake.
+- **The `astGrepCache` hypothesis is disproven for this** — a crafted hash-collision pair (same length + first 200 chars, different functions) did NOT corrupt `scan(X)` after `scan(Y)`: fresh and polluted both returned `fn:fx` correctly [cmd:prove-cache.mjs fresh==polluted]. In-process `scan()` is stable; the module cache isn't the vector.
+- A 4th full run (the flip-diff run A) gave yet another number — **40 survived (81.70%)** — so at `concurrency:100%` the count ranges 32/40/67 across identical-code runs.
+
+Conclusion: with deterministic tests + deterministic `scan()`, the only remaining variable is **how stryker's `@stryker-mutator/cucumber-runner` attributes per-test coverage and detects kills**.
+
+### PROVEN root cause (2026-06-20) — the cucumber-runner reuses state across mutants
+
+**Smoking-gun empirical proof:** two byte-identical full runs, diffed per-mutant by status [cmd:diff-mutants.mjs runA runB] → **48 mutants FLIPPED verdict** (run A 40 survived → run B 70 survived), **bidirectionally** (most Killed→Survived, several Survived→Killed), scattered across ~18 different lines (7, 9, 13, 15, 17–19, 21, 23, 24, 32, 33, 37, 50, + regex consts). 48 verdict changes on identical code is impossible from anything deterministic — it is a global execution-level race in the runner.
+
+**The mechanism, from reading the runner source** [ref:node_modules/@stryker-mutator/cucumber-runner/dist/src/cucumber-test-runner.js:74]: the runner **caches and reuses `this.supportCodeLibrary` across `mutantRun` calls** (`if (this.supportCodeLibrary) config.support = this.supportCodeLibrary; … this.supportCodeLibrary = (await runCucumber(config)).support`), and reports through a **singleton** `StrykerFormatter.instance.reportedTestResults` [ref:node_modules/@stryker-mutator/cucumber-runner/dist/src/cucumber-test-runner.js:90]. So within a long-lived worker process, support-code/hook/formatter state from one mutant's run bleeds into the next; with `failFast` (L63) the first-failing-scenario short-circuit makes the recorded verdict depend on scenario execution order, which the reused support library does not stabilise. Net effect: the SAME covering scenario records a kill for a mutant in one run and a pass in another → 48 flips.
+
+**Corroborating dose-response:** if the cause is per-worker state reuse, then FEWER workers (more mutants per worker → more bleed) should mean MORE false survivors. Observed exactly: `--concurrency 6` (788/6 ≈ 131 mutants/worker) → **135 survived**, vs `concurrency 100%` = 24 workers (788/24 ≈ 33 mutants/worker) → **32–70 survived**. The false-survivor count rises with reuse depth per worker — a predicted-and-confirmed signature of the `supportCodeLibrary` reuse, and the reason "lower concurrency to stabilise" backfires.
+
+**This is a runner-level defect, NOT a test-quality or detector problem** (both proven deterministic above). Practical consequences for FR-2:
+1. **Do NOT gate on the cucumber-runner aggregate score** — it is provably non-deterministic (32/40/67/70 survivors across four identical-code runs; 48 per-run flips).
+2. **The trustworthy, deterministic unit is inject+restore** (output-invariants-first): hand-mutate the line → run only the covering scenario → MUST FAIL → restore → MUST PASS. That is how 299:20 was verified, and it does not touch the flaky aggregate.
+3. **Upstream:** the `supportCodeLibrary`/singleton-formatter reuse is worth a `@stryker-mutator/cucumber-runner` bug report; a fresh-process-per-mutant (or per-mutant support reset) would remove the race at the cost of speed.
+
+**Implication for FR-2 ("automate hard, default-on"):** the aggregate BDD mutation *score* is NOT a stable blocking-gate metric — it ranged 68–83% / 32–135 survivors across three runs of essentially identical code, and concurrency tuning does NOT fix it. A reliable BDD mutation gate needs the **kill-outcome determinism** fixed first (isolate per-scenario state so a scenario's pass/fail doesn't depend on run order), OR the gate must be built on the **deterministic inject+restore unit** (output-invariants-first) rather than the aggregate — that, not the flaky score, is the trustworthy unit of "did this scenario get stronger". This corrects the earlier W4 "82.82% confirmed" framing: 82.82% was the LUCKIEST of three samples of a noisy metric, not a fixed number.
+
+Everything below is the SUPERSEDED PoC record (kept for history).
+
+---
+
+## What was built (proof-of-concept)
+
+- `stryker.bdd.config.mjs` — Stryker's built-in **`command` test runner** (no plugin; `@stryker-mutator/core` ships it) running cucumber via `cucumber.bdd-mutation.json`, `coverageAnalysis: 'off'`, `concurrency: 1` (command writes a fixed temp path → parallel runs would race it → fake-green kills).
+- `cucumber.bdd-mutation.json` — scoped to `strong-tests.feature` `@feature7` (the 6 detect-invariant behavioural scenarios), **throwaway `message:` format** (clobber-safe — never touches the canonical `.last-test-run.ndjson`).
+- Target: `.claude/skills/strong-tests/scripts/detect-invariant-candidates.ts` — the SAME file `stryker.config.mjs` mutation-tests via **vitest** (~49-52% kill), so the kill-rate delta is apples-to-apples.
+- Runs on the **host** (cucumber does NOT load `tests/setup/ensure-docker.ts` — that guards vitest only; cucumber has run on host all session). Stryker sandboxes the project copy, so real `.specs` is safe.
+
+## Measured result (decisive)
+
+| Dimension | BDD (cucumber, command runner) | vitest twin (same file) |
+|---|---|---|
+| **Kill rate** | **~20%** (at 20/741 mutants: 16 survived, 4 killed) | **~49-52%** |
+| **Speed** | **~8s/run × 741 mutants ≈ 2.5 h for ONE file** | minutes (perTest coverage) |
+| Plumbing | ✅ works — cucumber exit code kills mutants | ✅ |
+
+**Plumbing works. The premise does not.** "Stryker *can* run BDD" ≠ "BDD *can replace* the vitest mutation surface":
+
+1. **BDD kills < half what vitest kills.** Coarse behavioural scenarios (6 paths) don't reach the file's 12+ regex heuristics / return-type alternations the way 30+ fine-grained `scan()` unit tests do. Retiring the vitest twin would *lower* mutation coverage from ~52% → ~20%.
+2. **BDD mutation is fundamentally slow, and NOT fixable by import-scoping.** Scoping the cucumber `import` from 107 step-def files to the 2 needed files changed runtime **8.0s → 6.9s** (negligible). The cost is **scenario execution** — the scenarios spawn `detect-invariant-candidates.ts` as a tsx subprocess (~1s each), not step-def compilation. A default-on BDD mutation gate across the codebase would be **days**.
+
+## Implication for the L1 gate-switch (delete vitest twins)
+
+**Do NOT blindly delete vitest twins.** Mutation-surface tests (e.g. `detect-invariant-candidates-unit.test.ts`) and the Stryker `mutate` targets stay vitest — BDD cannot protect them. This is the **3b "keep-as-scratch" bucket** in the rollout memory.
+
+## Realistic options (owner decision — the literal "default-on, automate-hard" form is ruled out by the data)
+
+1. **Opt-in scoped tool** — `npm run mutation:bdd -- <file> <@featureN>` to check "do my BDD scenarios kill mutants in this file" on demand. Cheap, honest, but not "default for everyone".
+2. **Speed up first** — only viable by rewriting the scenarios' step-defs to call the code **in-process** (not spawn) — but that changes what the scenarios test (CLI/hook behaviour → unit behaviour). Large effort, semantic change.
+3. **Hybrid (recommended)** — vitest stays the primary, fast mutation surface where it's strong; add a **scoped BDD mutation check only for production code that has NO vitest test** (the exact gap that motivated the request). Closes "BDD-only code is now mutation-checked" without degrading what works, and without pretending to a days-long default gate.
+
+## Artifacts
+
+- `stryker.bdd.config.mjs`, `cucumber.bdd-mutation.json` (PoC — host run)
+- Experiment log: `.dev-pomogator/.tmp/stryker-bdd.out` (stopped at 20/741 — trend decisive)

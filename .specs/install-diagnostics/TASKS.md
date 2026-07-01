@@ -15,12 +15,12 @@ CORE003_18 (Linux) и CORE003_19 (Windows) добавляются как failing
 
 - [x] Добавить helper `runInstallerViaNpx()` + interface `NpxInstallResult` в `tests/e2e/helpers.ts` после `runInstaller()` (~строка 55)
   _Source: DESIGN.md "Компоненты" > "runInstallerViaNpx()"_
-  _Requirements: [FR-3](FR.md#fr-3-runinstallerviapnpx-helper-api-feature3)_
-- [ ] Добавить BDD scenario `CORE003_18` в `tests/features/core/CORE003_claude-installer.feature` после CORE003_CMEM с тегом `# @feature18` -- @feature18
+  _Requirements: [FR-3](FR.md#fr-3-runinstallervianpx-helper-api-feature3)_
+- [ ] Добавить BDD scenario `CORE003_18` в ~~`tests/features/core/CORE003_claude-installer.feature`~~ после CORE003_CMEM с тегом `# @feature18` -- @feature18
   _Requirements: [FR-1](FR.md#fr-1-linux-npx-install-regression-coverage-feature1)_
-- [ ] Добавить BDD scenario `CORE003_19` в `tests/features/core/CORE003_claude-installer.feature` с тегом `# @feature19` и комментом TDD red -- @feature19
+- [ ] Добавить BDD scenario `CORE003_19` в ~~`tests/features/core/CORE003_claude-installer.feature`~~ с тегом `# @feature19` и комментом TDD red -- @feature19
   _Requirements: [FR-2](FR.md#fr-2-windows-npx-install-regression-coverage-feature2)_
-- [ ] Добавить `describe.skipIf(process.platform !== 'linux')('CORE003_18: ...', ...)` блок в `tests/e2e/claude-installer.test.ts` перед `afterAll` основного describe -- @feature18
+- [ ] Добавить `describe.skipIf(process.platform !== 'linux')('CORE003_18: ...', ...)` блок в ~~`tests/e2e/claude-installer.test.ts`~~ перед `afterAll` основного describe -- @feature18
   _Hooks: beforeAll создаёт result через runInstallerViaNpx, afterAll удаляет tempDir/tempCache_
   _Requirements: [FR-1](FR.md#fr-1-linux-npx-install-regression-coverage-feature1)_
 - [ ] Добавить `describe.skipIf(process.platform !== 'win32')('CORE003_19: ...', ...)` блок с identical assertions + TDD red comment -- @feature19
@@ -51,7 +51,7 @@ CORE003_18 (Linux) и CORE003_19 (Windows) добавляются как failing
 
 - [ ] Запустить `validate-spec.ts -Path ".specs/install-diagnostics"` — должен вернуть 0 ERRORS
 - [ ] Запустить `audit-spec.ts -Path ".specs/install-diagnostics"` — должен показать @feature1..@feature5 cross-refs
-- [ ] Verify: `tests/features/core/CORE003_claude-installer.feature` содержит CORE003_18 и CORE003_19 с тегами @feature18/@feature19
+- [ ] Verify: ~~`tests/features/core/CORE003_claude-installer.feature`~~ содержит CORE003_18 и CORE003_19 с тегами @feature18/@feature19
 - [ ] Verify: `tests/e2e/helpers.ts` содержит `runInstallerViaNpx()` и `NpxInstallResult` interface
 - [ ] Update CHANGELOG.md с записью про добавление regression-тестов
 
@@ -66,8 +66,8 @@ CORE003_18 (Linux) и CORE003_19 (Windows) добавляются как failing
 - [ ] Наполнить pending scenarios INSTALL_DIAG_05..09 (it.skip с NotImplementedError) в `tests/features/plugins/install-diagnostics/`
   _Source: install-diagnostics.feature_
   @feature6
-- [ ] Создать BDD scenario `CORE003_20` в `tests/features/core/CORE003_claude-installer.feature` и pending integration test в `tests/e2e/claude-installer.test.ts`
-  _Requirements: [FR-9](FR.md#fr-9-bdd-regression-scenario-for-promptrace-core00320-feature6)_
+- [ ] Создать BDD scenario `CORE003_20` в ~~`tests/features/core/CORE003_claude-installer.feature`~~ и pending integration test в ~~`tests/e2e/claude-installer.test.ts`~~
+  _Requirements: [FR-9](FR.md#fr-9-bdd-regression-scenario-for-prompt-race-core00320-feature6)_
   @feature6
 - [ ] Verify: новые scenarios в RED state
 
@@ -77,7 +77,7 @@ CORE003_18 (Linux) и CORE003_19 (Windows) добавляются как failing
   - Check if `_npx/<hash>/` is empty / missing node_modules
   - Check install.log mtime freshness
   - Classify output header: `Mode: A`, `Mode: B`, `Mode: A+B (sequential)`
-  _Requirements: [FR-6](FR.md#fr-6-promptrace-failure-mode-detection-feature6)_
+  _Requirements: [FR-6](FR.md#fr-6-prompt-race-failure-mode-detection-feature6)_
   @feature6
 - [ ] Edit skill to auto-reproduce с `--yes` in fresh temp cache as Mode B confirmation step (run second `runInstallerViaNpx('--claude --all', { fresh: true, forceYes: true })`)
   @feature6
@@ -90,7 +90,7 @@ CORE003_18 (Linux) и CORE003_19 (Windows) добавляются как failing
 
 - [ ] Edit `tests/e2e/helpers.ts` — `runInstallerViaNpx(args, options)` добавить option `forceYes?: boolean` (default true для backward compat; set to false для Mode B reproduce test)
   _Rationale: FR-9 scenario запускает БЕЗ --yes; existing helpers всегда с --yes_
-  _Requirements: [FR-3](FR.md#fr-3-runinstallerviapnpx-helper-api-feature3) extension, [FR-9](FR.md#fr-9-bdd-regression-scenario-for-promptrace-core00320-feature6)_
+  _Requirements: [FR-3](FR.md#fr-3-runinstallervianpx-helper-api-feature3) extension, [FR-9](FR.md#fr-9-bdd-regression-scenario-for-prompt-race-core00320-feature6)_
   @feature6
 - [ ] Verify: existing CORE003_18/19 продолжают работать с default `forceYes: true`
 
@@ -99,7 +99,7 @@ CORE003_18 (Linux) и CORE003_19 (Windows) добавляются как failing
 - [ ] Запустить grep по tracked .md files (`grep -rEn '\bnpx\s+(?!--?yes\s+|-y\s+).*dev-pomogator' --include='*.md' --include='*.rst' --include='*.txt' .`) и собрать список всех violations
   @feature6
 - [ ] Edit `README.md` (root) — заменить `npx github:stgmt/dev-pomogator` на `npx --yes github:stgmt/dev-pomogator` во всех install examples
-  _Requirements: [FR-7](FR.md#fr-7-docs-hardening--yes-flag-in-all-userfacing-install-commands-feature6)_
+  _Requirements: [FR-7](FR.md#fr-7-docs-hardening-yes-flag-in-all-user-facing-install-commands-feature6)_
   @feature6
 - [ ] Edit `CLAUDE.md` (root) — то же самое
   @feature6
@@ -119,7 +119,7 @@ CORE003_18 (Linux) и CORE003_19 (Windows) добавляются как failing
   - Skip files listed in `.lintignore-install` ИЛИ с `<!-- lint-install: allow -->` marker on line или line above
   - Print violations: `${file}:${line} — ${matchedText}` + suggestion
   - Exit 0 clean / 1 dirty
-  _Requirements: [FR-8](FR.md#fr-8-installcommand-lint-check-regression-prevention-feature6)_
+  _Requirements: [FR-8](FR.md#fr-8-install-command-lint-check-regression-prevention-feature6)_
   @feature6
 - [ ] Create vitest test `tests/e2e/docs-install-lint.test.ts` (ИЛИ extend CORE007 as `CORE007_12`) который вызывает `spawnSync('npx', ['tsx', 'tools/lint-install-commands.ts'])` и asserts exit 0 + 0 violations
   @feature6
@@ -129,10 +129,10 @@ CORE003_18 (Linux) и CORE003_19 (Windows) добавляются как failing
 
 ### Regression test CORE003_20 (Phase 4.5) — FR-9, AC-10
 
-- [ ] Add `Scenario: CORE003_20 npx prompt-race produces empty _npx cache` к `tests/features/core/CORE003_claude-installer.feature` с комментарием `# @feature6`
-  _Requirements: [FR-9](FR.md#fr-9-bdd-regression-scenario-for-promptrace-core00320-feature6)_
+- [ ] Add `Scenario: CORE003_20 npx prompt-race produces empty _npx cache` к ~~`tests/features/core/CORE003_claude-installer.feature`~~ с комментарием `# @feature6`
+  _Requirements: [FR-9](FR.md#fr-9-bdd-regression-scenario-for-prompt-race-core00320-feature6)_
   @feature6
-- [ ] Add integration `it('CORE003_20 npx prompt-race ...', ...)` в `tests/e2e/claude-installer.test.ts`:
+- [ ] Add integration `it('CORE003_20 npx prompt-race ...', ...)` в ~~`tests/e2e/claude-installer.test.ts`~~:
   - `runInstallerViaNpx('--claude --all', { fresh: true, forceYes: false, emptyStdin: true, timeout: 30_000 })`
   - Assert `_npx/<hash>/node_modules/dev-pomogator/package.json` does NOT exist
   - Assert `installerLogTouched === false`

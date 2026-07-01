@@ -23,7 +23,7 @@
 
 'use strict';
 
-const { execSync, execFileSync } = require('child_process');
+const { execSync, execFileSync, spawnSync } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 
@@ -85,6 +85,19 @@ if (args.length === 0) {
 function resolveScriptPath(rawPath) {
   // Absolute and exists — use as-is
   if (path.isAbsolute(rawPath) && fs.existsSync(rawPath)) return rawPath;
+
+  // Plugin-root relative (canonical install). Hook commands resolve bootstrap.cjs via
+  // CLAUDE_PLUGIN_ROOT but pass the CHILD script as a plugin-relative path ("tools/..."),
+  // so it must be resolved against the plugin root too — NOT the session CWD. For an
+  // external user `claude` runs in THEIR project, so CWD-relative resolution finds nothing
+  // and every hook dies with ENOENT. Tried BEFORE CWD so a user's same-named tools/<x>.ts
+  // can't shadow the plugin script. Env-gated: CLAUDE_PLUGIN_ROOT is unset in dogfood/v1,
+  // so those paths are unchanged (CWD-relative still wins there).
+  const pluginRoot = process.env.CLAUDE_PLUGIN_ROOT;
+  if (pluginRoot) {
+    const prResolved = path.resolve(pluginRoot, rawPath);
+    if (fs.existsSync(prResolved)) return prResolved;
+  }
 
   // Relative from CWD
   const cwdResolved = path.resolve(process.cwd(), rawPath);
@@ -482,27 +495,38 @@ function runNodeNativeTs() {
   const [major, minor] = process.versions.node.split('.').map(Number);
   if (major < 22 || (major === 22 && minor < 6)) return false;
 
-  // --experimental-default-type=module forces .ts → ESM regardless of nearest
-  // package.json. It existed in Node 22/23 but was REMOVED in Node 24 (module-type
-  // detection became stable); passing it there aborts with `bad option` (exit 9)
-  // before V8 starts. Only pass it on the versions that accept it; on Node 24+ the
-  // default detection + package.json "type":"module" + explicit .ts specifiers
-  // (see rule ts-import-extensions) already yield ESM.
+  // --experimental-default-type was removed in Node 23+ ("bad option", exit 9).
+  // On 23+ .ts files are ESM-detected natively; the flag is only needed on 22.x.
   const nodeArgs = ['--experimental-strip-types'];
-  if (major < 24) {
-    nodeArgs.push('--experimental-default-type=module');
-  }
+  if (major === 22) nodeArgs.push('--experimental-default-type=module');
 
-  execFileSync(process.execPath, [
+  // stderr is piped (not inherited) so that resolver errors (SyntaxError,
+  // ERR_MODULE_NOT_FOUND, "bad option") are visible to isResolverError() and
+  // trigger fall-through to the tsx loader family. With stdio:'inherit' the
+  // error text never reaches err.stderr and fall-through silently never fires.
+  // spawnSync (not execFileSync) so stderr is ALSO re-emitted on exit 0 —
+  // fail-open hooks log errors to stderr and exit 0; those must stay visible.
+  // Trade-off: stderr is buffered until exit, not streamed live.
+  const res = spawnSync(process.execPath, [
     ...nodeArgs,
     scriptPath,
     ...scriptArgs,
   ], {
-    stdio: 'inherit',
+    stdio: ['inherit', 'inherit', 'pipe'],
     cwd: process.cwd(),
     env: { ...getSafeEnv(), NODE_NO_WARNINGS: '1' },
-    timeout: 30000,
+    timeout: TSX_EXEC_TIMEOUT, // same budget as the tsx strategies — a 30s hardcode killed >30s hooks (e.g. auto-commit LLM)
   });
+  if (res.stderr && res.stderr.length) process.stderr.write(String(res.stderr));
+  if (res.error) throw res.error; // spawn/timeout-level failure (ETIMEDOUT, ENOENT)
+  if (res.status !== 0) {
+    // Mirror execFileSync's throw shape: the strategy loop classifies via
+    // err.stderr (resolver tokens) and err.status (exit-code propagation).
+    const err = new Error(`Command failed: ${process.execPath} (exit ${res.status})`);
+    err.status = res.status;
+    err.stderr = res.stderr;
+    throw err;
+  }
   return true;
 }
 
@@ -517,11 +541,7 @@ const RESOLVER_ERROR_TOKENS = [
   'ERR_UNSUPPORTED_NODE_OPTION',
   'SyntaxError',
   'Cannot find module',
-  // Node's pre-V8 CLI parser rejects an unknown/removed flag with `bad option: ...`
-  // (exit 9), which is NOT one of the JS-level tokens above. Treat it as a
-  // node-strip loader failure so the runner falls through to the tsx family
-  // instead of propagating a hard exit (defends against future flag removals).
-  'bad option',
+  'bad option', // node rejects an unknown CLI flag (exit 9) — loader-level, retry with tsx
 ];
 function isResolverError(err) {
   if (!err) return false;

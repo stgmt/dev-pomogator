@@ -167,8 +167,45 @@ const STOPWORDS = new Set([
 ]);
 
 /**
- * Score how well a plan's Extracted Requirements match recent user prompts.
- * Returns negative score if low overlap (plan likely from different task).
+ * Select the prompt window for relevance scoring. The naive "last 3" starves the signal
+ * when recent turns are short clarifications ("да", "1 и 2", "поясни") that carry no task
+ * vocabulary — every plan then scores 0 grounding and is falsely denied. Walk back from
+ * the tail, accumulating prompts until we have enough distinct task vocabulary (MIN_SIGNAL)
+ * or hit a cap (MAX_PROMPTS). Safe with the precision metric below: a wider corpus only
+ * adds grounding opportunities (the denominator is the plan's terms, not prompt vocabulary),
+ * so even a large pasted transcript helps rather than hurts.
+ */
+export function selectRelevanceWindow(prompts: string[]): string[] {
+  const MIN_SIGNAL = 40; // distinct ≥5-letter words deemed enough to characterise the task
+  const MAX_PROMPTS = 25; // bound cost on very long sessions
+  const selected: string[] = [];
+  const signal = new Set<string>();
+  for (let i = prompts.length - 1; i >= 0 && selected.length < MAX_PROMPTS; i--) {
+    selected.push(prompts[i]);
+    for (const w of prompts[i].toLowerCase().match(/[a-zа-яё]{5,}/g) ?? []) signal.add(w);
+    if (signal.size >= MIN_SIGNAL) break;
+  }
+  return selected.reverse();
+}
+
+/**
+ * Score how well a plan's Extracted Requirements are GROUNDED in recent user prompts.
+ *
+ * Measures PRECISION (plan→prompt): "what fraction of the plan's own distinctive terms
+ * appear in the request" — NOT recall ("what fraction of ALL recent words the plan
+ * echoes", the previous metric). The direction flip is paste-immune by construction: the
+ * denominator is the plan's term set, so a huge pasted context block (e.g. a 24KB
+ * transcript) can no longer make the gate unreachable. It still catches the real target —
+ * a plan copied from a DIFFERENT task (plan-freshness contamination): that plan's anchors
+ * are absent from the current request → low precision.
+ *
+ * Salience weighting (poor-man's TF-IDF): generic filler is dropped via STOPWORDS, and
+ * terms that FLOOD the prompt corpus (paste boilerplate, freq > FLOOD) are damped, so a
+ * coincidental match on a common pasted word earns little grounding credit (anti-padding).
+ * A true IDF needs a background corpus we don't have in a fast PreToolUse hook; this
+ * approximates it cheaply and deterministically.
+ *
+ * Returns 0 (ok) / -10 (weak) / -20 (deny) by precision thresholds.
  */
 export function scorePromptRelevance(planContent: string, promptTexts: string[]): number {
   if (promptTexts.length === 0) return 0;
@@ -177,30 +214,69 @@ export function scorePromptRelevance(planContent: string, promptTexts: string[])
   if (!reqMatch) return 0;
   const reqText = reqMatch[1].toLowerCase();
 
-  const allPromptText = promptTexts.join(' ').toLowerCase();
-  const words = allPromptText.match(/[a-zа-яё]{5,}/g) ?? [];
-  const significantWords = [...new Set(words.filter((w) => !STOPWORDS.has(w)))];
+  // Plan's distinctive terms = the denominator (precision direction, NOT prompt vocabulary).
+  const planTerms = [...new Set((reqText.match(/[a-zа-яё]{5,}/g) ?? []).filter((w) => !STOPWORDS.has(w)))];
+  if (planTerms.length === 0) return 0; // nothing distinctive to judge → don't block
 
-  if (significantWords.length === 0) return 0;
-
-  let matched = 0;
-  for (const word of significantWords) {
-    if (reqText.includes(word)) {
-      matched += 1;
-    }
+  // Prompt corpus + per-term frequency (drives flood-damping of paste boilerplate).
+  const promptText = promptTexts.join(' ').toLowerCase();
+  const promptFreq = new Map<string, number>();
+  for (const w of promptText.match(/[a-zа-яё]{5,}/g) ?? []) {
+    promptFreq.set(w, (promptFreq.get(w) ?? 0) + 1);
   }
 
-  const overlap = matched / significantWords.length;
-  if (overlap < 0.2) return -20;
-  if (overlap < 0.4) return -10;
+  const FLOOD = 10; // freq above which a word is treated as paste-boilerplate, not signal
+  const salience = (term: string): number => {
+    const f = promptFreq.get(term) ?? 0;
+    if (f <= FLOOD) return 1; // distinctive or normally-repeated → full weight
+    return 1 / (1 + Math.log2(f / FLOOD)); // extreme flood → damped credit
+  };
+
+  let groundedWeight = 0;
+  let totalWeight = 0;
+  for (const term of planTerms) {
+    const sal = salience(term);
+    totalWeight += sal;
+    if (promptText.includes(term)) groundedWeight += sal;
+  }
+
+  // Calibrated on real data: a legit plan grounded against substantive prompts scores
+  // ~0.4 (distinctive technical anchors legitimately absent from a casual request drag it
+  // down), while a plan copied from a different task scores ~0.0. Deny only on near-zero
+  // grounding so technical-heavy-but-relevant plans are never falsely blocked.
+  const precision = groundedWeight / totalWeight;
+  if (precision < 0.15) return -20;
+  if (precision < 0.3) return -10;
   return 0;
 }
 
 /**
  * Deny ExitPlanMode with formatted error message and exit.
  */
+/**
+ * FR-15: render a ValidationError[] readably (`line N: message` + hint), NOT the pre-fix
+ * "line undefined: undefined" that a bare string[] produced. Exported so a BDD scenario can
+ * bind to the ACTUAL deny formatting (the shipped fix), not just the Phase 2.5 trigger.
+ */
+export function formatDenyErrors(errors: ValidationError[]): string {
+  return errors.map((e) => `  line ${e.line}: ${e.message}\n    💡 ${e.hint}`).join('\n');
+}
+
+/**
+ * FR-15: the Phase 2.5 relevance-deny payload as a STRUCTURED ValidationError. The shipped bug
+ * fix (b8a2bca) was passing this object instead of a bare string — a string rendered as
+ * "line undefined: undefined" through formatDenyErrors. Exported for the @feature15 scenario.
+ */
+export function phase25RelevanceDenyError(): ValidationError {
+  return {
+    line: 0,
+    message: 'План слабо заземлён в текущем запросе: его Extracted Requirements почти не пересекаются с тем, что ты просил в этой сессии. Похоже на план, скопированный из другой задачи.',
+    hint: 'Перепиши ### Extracted Requirements так, чтобы они прямо отражали ТЕКУЩИЙ запрос (ключевые слова из твоих сообщений этой сессии), а не другую задачу.',
+  };
+}
+
 function denyAndExit(planName: string, phaseLabel: string, errors: ValidationError[], extra: string = ''): never {
-  const errorList = errors.map((e) => `  line ${e.line}: ${e.message}\n    💡 ${e.hint}`).join('\n');
+  const errorList = formatDenyErrors(errors);
   const output = {
     hookSpecificOutput: {
       hookEventName: 'PreToolUse',
@@ -307,18 +383,14 @@ async function main(): Promise<void> {
     if (data.session_id) {
       const promptData = readPromptFile(getPromptFilePath(data.session_id));
       if (promptData?.prompts?.length) {
-        promptTexts.push(...promptData.prompts.slice(-3).map((p) => p.text));
+        promptTexts.push(...selectRelevanceWindow(promptData.prompts.map((p) => p.text)));
       }
     }
     if (promptTexts.length > 0) {
       const relevanceScore = scorePromptRelevance(planContent, promptTexts);
       if (relevanceScore <= -20) {
         denyAndExit(planName, 'Phase 2.5 — релевантность',
-          [{
-            line: 0,
-            message: 'План не соответствует текущей задаче (overlap < 20%). Extracted Requirements должны отражать ТЕКУЩИЙ запрос пользователя.',
-            hint: 'Перепиши Extracted Requirements с прямыми ссылками на ключевые слова из последних 3 пользовательских сообщений.',
-          }],
+          [phase25RelevanceDenyError()],
           '\nНЕ копируй содержимое из других планов. Создай план С НУЛЯ по шаблону.\n' + loadUserPrompts(data.session_id));
       }
     }

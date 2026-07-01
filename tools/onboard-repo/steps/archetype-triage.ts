@@ -12,7 +12,7 @@
 
 import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import * as fsExtra from 'fs-extra';
+import fsExtra from 'fs-extra';
 import { glob } from 'glob';
 import type { ArchetypeTriageResult, Archetype, Confidence } from '../lib/types.ts';
 

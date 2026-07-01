@@ -2,7 +2,7 @@
 
 ## FR-1: Remove Cursor-only functions from memory.ts @feature1
 
-Delete all Cursor-specific functions from `src/installer/memory.ts`: `installCursorHooks`, `areCursorHooksInstalled`, `generateCursorHooksJson`, `getWorkerServicePath`, `getCursorSummarizeScriptPath`, `copyCursorSummarizeScript`, `CursorHooksJson` interface.
+Delete all Cursor-specific functions from ~~`src/installer/memory.ts`~~ (removed in v2 — no canonical replacement): `installCursorHooks`, `areCursorHooksInstalled`, `generateCursorHooksJson`, `getWorkerServicePath`, `getCursorSummarizeScriptPath`, `copyCursorSummarizeScript`, `CursorHooksJson` interface.
 
 ## FR-2: Remove dead helper functions from memory.ts @feature2
 
@@ -10,7 +10,7 @@ Delete helper functions called only from dead `installCursorHooks`: `copyCheckUp
 
 ## FR-3: Remove dead Cursor code from updater/index.ts @feature3
 
-Delete `CursorHooksJson` interface and `updateCursorHooksForProject` function from `src/updater/index.ts`.
+Delete `CursorHooksJson` interface and `updateCursorHooksForProject` function from ~~`src/updater/index.ts`~~ (removed in v2 migration).
 
 ## FR-4: Simplify unreachable ternary branches @feature4
 

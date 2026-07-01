@@ -16,7 +16,7 @@
   _Source: DESIGN.md "Директории и файлы"_
 - [ ] Создать `tests/fixtures/docker-test-tee/README.md` — документация fixtures (что stubbed, что real)
 - [ ] Создать `tests/e2e/docker-test-tee.test.ts` с 6 it-блоками 1:1 с FBOL001_01..06
-  _Requirements: [FR-1](FR.md#fr-1-persistent-log-для-docker-testsh-output), [FR-2](FR.md#fr-2-обновить-rule-no-blocking-on-tests--запрет-naked--tail-в-bg), [FR-3](FR.md#fr-3-directory-lifecycle--dev-pomogatordocker-status-создаётся-безопасно), [FR-4](FR.md#fr-4-log-rotation--gitignore--не-коммитить-test-run-log), [FR-5](FR.md#fr-5-exit-code-preservation--regression-guard)_
+  _Requirements: [FR-1](FR.md#fr-1-persistent-log-для-docker-testsh-output), [FR-2](FR.md#fr-2-обновить-rule-no-blocking-on-tests-запрет-naked-tail-в-bg), [FR-3](FR.md#fr-3-directory-lifecycle-dev-pomogatordocker-status-создаётся-безопасно), [FR-4](FR.md#fr-4-log-rotation-gitignore-не-коммитить-test-run-log), [FR-5](FR.md#fr-5-exit-code-preservation-regression-guard)_
   _Naming: describe(`FBOL001: Fix Background Output Loss`) + it(`FBOL001_NN: ...`) per extension-test-quality rule_
 - [ ] Verify: все 6 сценариев FAIL (Red) — `npx vitest run tests/e2e/docker-test-tee.test.ts` exits non-zero
 
@@ -25,12 +25,12 @@
 > Реализовать persistent log через tee. Сценарии FBOL001_01..04 переходят Red → Green.
 
 - [ ] Отредактировать `scripts/docker-test.sh`: добавить блок инициализации LOG_DIR/LOG_FILE + `mkdir -p` ПОСЛЕ `set -o pipefail` (строка 6) -- @feature1
-  _Requirements: [FR-1](FR.md#fr-1-persistent-log-для-docker-testsh-output), [FR-3](FR.md#fr-3-directory-lifecycle--dev-pomogatordocker-status-создаётся-безопасно)_
+  _Requirements: [FR-1](FR.md#fr-1-persistent-log-для-docker-testsh-output), [FR-3](FR.md#fr-3-directory-lifecycle-dev-pomogatordocker-status-создаётся-безопасно)_
   _Source: DESIGN.md "Алгоритм (docker-test.sh patch)" шаги 1-3_
 - [ ] Отредактировать `scripts/docker-test.sh`: добавить `echo "[docker-test] Log: $LOG_FILE"` непосредственно перед блоком docker compose run -- @feature1
   _Requirements: [FR-1](FR.md#fr-1-persistent-log-для-docker-testsh-output), [NFR Usability](NFR.md#usability)_
 - [ ] Отредактировать `scripts/docker-test.sh`: изменить строки 69-72 — в конец invocation добавить `2>&1 | tee -a "$LOG_FILE"` -- @feature1
-  _Requirements: [FR-1](FR.md#fr-1-persistent-log-для-docker-testsh-output), [FR-5](FR.md#fr-5-exit-code-preservation--regression-guard)_
+  _Requirements: [FR-1](FR.md#fr-1-persistent-log-для-docker-testsh-output), [FR-5](FR.md#fr-5-exit-code-preservation-regression-guard)_
   _Source: DESIGN.md "Patch diff (indicative)" шаг 3_
 - [ ] Verify: сценарии @feature1 (FBOL001_01..04) переходят из Red в Green — `npx vitest run tests/e2e/docker-test-tee.test.ts -t "FBOL001_0[1-4]"` exits zero
 
@@ -39,11 +39,11 @@
 > Добавить Anti-pattern секцию. Сценарий FBOL001_05 переходит Red → Green.
 
 - [ ] Отредактировать `.claude/rules/pomogator/no-blocking-on-tests.md`: добавить секцию `## Anti-pattern: naked \`| tail\` в bg` после существующего "Чеклист" -- @feature2
-  _Requirements: [FR-2](FR.md#fr-2-обновить-rule-no-blocking-on-tests--запрет-naked--tail-в-bg)_
+  _Requirements: [FR-2](FR.md#fr-2-обновить-rule-no-blocking-on-tests-запрет-naked-tail-в-bg)_
   _Source: DESIGN.md "Алгоритм (rule update)" шаги 1-4_
   _Content: reasoning (H1/H2/H3 hypotheses одной строкой каждая со ссылкой на `.specs/fix-bg-output-loss/RESEARCH.md`), Неправильно (naked `| tail`), Правильно (`tee /tmp/full.log | tail -N` ИЛИ `&> /tmp/full.log; tail -N`)_
 - [ ] Добавить в секцию "Чеклист" новый bullet: `- [ ] Bg команда с \`| tail\` использует \`| tee <path> | tail -N\` (не naked tail)` -- @feature2
-  _Requirements: [FR-2](FR.md#fr-2-обновить-rule-no-blocking-on-tests--запрет-naked--tail-в-bg)_
+  _Requirements: [FR-2](FR.md#fr-2-обновить-rule-no-blocking-on-tests-запрет-naked-tail-в-bg)_
 - [ ] Verify: сценарий @feature2 (FBOL001_05) переходит Red → Green — `npx vitest run tests/e2e/docker-test-tee.test.ts -t "FBOL001_05"` exits zero
 
 ## Phase 3: Gitignore Verification + Refactor
@@ -51,7 +51,7 @@
 > Подтвердить gitignore coverage. Сценарий FBOL001_06 должен быть Green без code changes (существующий `.dev-pomogator/` entry покрывает).
 
 - [ ] Запустить `grep -n "\.dev-pomogator" .gitignore` и задокументировать результат в RESEARCH.md (уже сделано в Phase 1.5) — нет code changes, только verification -- @feature3
-  _Requirements: [FR-4](FR.md#fr-4-log-rotation--gitignore--не-коммитить-test-run-log)_
+  _Requirements: [FR-4](FR.md#fr-4-log-rotation-gitignore-не-коммитить-test-run-log)_
 - [ ] Verify: сценарий @feature3 (FBOL001_06) Green — `npx vitest run tests/e2e/docker-test-tee.test.ts -t "FBOL001_06"` exits zero
 - [ ] Полный прогон: `npx vitest run tests/e2e/docker-test-tee.test.ts` — все 6 тестов Green, exit 0
 - [ ] Рефакторинг: если есть дублирование setup между it-блоками — извлечь в beforeEach/helper (per `no-test-helper-duplication` rule)
@@ -65,7 +65,7 @@
   _Done When:_ `bash scripts/bg-log.sh smoke echo "hello"` создаёт `.dev-pomogator/.bg-logs/<epoch>-smoke.log` со словом "hello"; exit code 0
   _Status:_ Pending
   _Est:_ 15min
-  _Requirements: [FR-7](FR.md#fr-7-generic-bg-logsh-wrapper-docker-bg-v020)_
+  _Requirements: [FR-7](FR.md#fr-7-deprecated-replaced-by-fr-11-in-v030)_
   _Source: DESIGN.md "Generic bg-log.sh architecture" Algorithm steps 1-5_
 
 - [ ] T-8: Обновить `.claude/rules/pomogator/no-blocking-on-tests.md` — Confirmed Anthropic bugs + Preferred file-redirect pattern subsections -- @feature8
@@ -78,20 +78,20 @@
   _Done When:_ feature содержит `# @feature7` tag + 3 Scenario блока (wraps echo, preserves exit code, sanitizes slug)
   _Status:_ Pending
   _Est:_ 15min
-  _Requirements: [FR-7](FR.md#fr-7-generic-bg-logsh-wrapper-docker-bg-v020), [AC-7](ACCEPTANCE_CRITERIA.md#ac-7-fr-7)_
+  _Requirements: [FR-7](FR.md#fr-7-deprecated-replaced-by-fr-11-in-v030), [AC-7](ACCEPTANCE_CRITERIA.md#ac-7-deprecated-replaced-by-ac-11-in-v030)_
 
 - [ ] T-10: Создать `tests/e2e/bg-log-helper.test.ts` — integration test через spawnSync -- @feature7
   _Done When:_ файл содержит describe `FBOL002: Bg-log helper` + 3 it() блока с CODE_NN matching .feature scenarios; tests PASS green
   _Status:_ Pending
   _Est:_ 30min
-  _Requirements: [FR-7](FR.md#fr-7-generic-bg-logsh-wrapper-docker-bg-v020), [AC-7](ACCEPTANCE_CRITERIA.md#ac-7-fr-7)_
+  _Requirements: [FR-7](FR.md#fr-7-deprecated-replaced-by-fr-11-in-v030), [AC-7](ACCEPTANCE_CRITERIA.md#ac-7-deprecated-replaced-by-ac-11-in-v030)_
   _Naming: per extension-test-quality rule_
 
 - [ ] T-11: Записать feedback memory `feedback_bg-tail-windows-claude-code-bugs.md` + обновить MEMORY.md index
   _Done When:_ файл существует в `~/.claude/projects/D--repos-dev-pomogator/memory/` с frontmatter (type=feedback) + rule + Why (4 issue links + 25-min incident) + How to apply; MEMORY.md содержит 1 line index entry
   _Status:_ Pending
   _Est:_ 10min
-  _Requirements: [FR-6](FR.md#fr-6-feedback-memory-anti-pattern-personal-memory-out-of-scope) (runtime, post-spec)_
+  _Requirements: [FR-6](FR.md#fr-6-feedback-memory-anti-pattern-зафиксирован-в-personal-memory-out-of-scope-частично) (runtime, post-spec)_
 
 - [ ] T-12: Verification — validate-spec + audit-spec + /run-tests filter FBOL002 + manual smoke
   _Done When:_ validate-spec.ts → 0 errors; audit-spec → 0 ERRORS / 0 OMISSIONS; FBOL002_01..03 green в /run-tests; existing FBOL001 still green (no regression)

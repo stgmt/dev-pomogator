@@ -5,7 +5,7 @@
 dev-pomogator формирует структуру с обязательным манифестом `.claude-plugin/plugin.json` (поля: `name`, `version`, `description`, `author`) и canonical sub-directories: `skills/<skill-name>/SKILL.md`, `commands/*.md`, `.mcp.json`, `agents/*.md` (где есть). Hooks конфиг — `.claude-plugin/hooks.json` (вместе с `plugin.json` и `marketplace.json` FR-2). Все три манифеста (`plugin.json`, `marketplace.json`, `hooks.json`) — hand-authored static files, поддерживаются вручную в repo root, не генерируются build-step'ом. Tool/hook скрипты лежат top-level в `tools/<tool>/`.
 
 **Связанные AC:** [AC-1](ACCEPTANCE_CRITERIA.md#ac-1-fr-1-fr-9)
-**Use Case:** [UC-1](USE_CASES.md#uc-1-first-time-install-default-global)
+**Use Case:** [UC-1](USE_CASES.md#uc-1-first-time-install-default-user-scope)
 
 ## FR-2: Marketplace catalog (.claude-plugin/marketplace.json)
 
@@ -33,7 +33,7 @@ dev-pomogator repo содержит `.claude-plugin/marketplace.json` котор
 Required top-level fields: `name` (kebab-case marketplace identifier), `owner.name`, `plugins[]` (≥1 entry). Plugin entry required: `name`, `source` (relative path `./` означает «same repo as marketplace»). Optional fields per Anthropic spec: `description`, `version`, `author`, `homepage`, `repository`, `license`, `keywords`, `category`, `tags`.
 
 **Связанные AC:** [AC-2](ACCEPTANCE_CRITERIA.md#ac-2-fr-2-fr-3)
-**Use Case:** [UC-1](USE_CASES.md#uc-1-first-time-install-default-global)
+**Use Case:** [UC-1](USE_CASES.md#uc-1-first-time-install-default-user-scope)
 
 ## FR-3: Distribution через `/plugin marketplace add`
 
@@ -47,7 +47,7 @@ Canonical install начинается с `/plugin marketplace add stgmt/dev-pom
 dev-pomogator больше **не распространяется через `npm i -g`**. Старый npm-based install path выпиливается; package.json `bin/cli.js` остаётся ТОЛЬКО для legacy migration utility (FR-7) и постепенно deprecated.
 
 **Связанные AC:** [AC-2](ACCEPTANCE_CRITERIA.md#ac-2-fr-2-fr-3)
-**Use Case:** [UC-1](USE_CASES.md#uc-1-first-time-install-default-global)
+**Use Case:** [UC-1](USE_CASES.md#uc-1-first-time-install-default-user-scope)
 
 ## FR-4: Install через `/plugin install dev-pomogator@stgmt`
 
@@ -61,7 +61,7 @@ dev-pomogator больше **не распространяется через `n
 dev-pomogator runtime не зависит от npm; install полностью managed Claude Code'ом.
 
 **Связанные AC:** [AC-3](ACCEPTANCE_CRITERIA.md#ac-3-fr-4-fr-5-fr-6)
-**Use Case:** [UC-1](USE_CASES.md#uc-1-first-time-install-default-global)
+**Use Case:** [UC-1](USE_CASES.md#uc-1-first-time-install-default-user-scope)
 
 ## FR-5: Scope-aware install (user/project/local)
 
@@ -86,7 +86,7 @@ dev-pomogator не реализует кастомный scope handling — Anth
 dev-pomogator должен документировать в README + CHANGELOG: «After /plugin install run /reload-plugins (CLI) or restart Claude Desktop». Это NFR-Usability требование.
 
 **Связанные AC:** [AC-3](ACCEPTANCE_CRITERIA.md#ac-3-fr-4-fr-5-fr-6)
-**Use Case:** [UC-1](USE_CASES.md#uc-1-first-time-install-default-global)
+**Use Case:** [UC-1](USE_CASES.md#uc-1-first-time-install-default-user-scope)
 
 ## FR-7: Migration v1 → v2 (documentation + optional cleanup script)
 
@@ -132,7 +132,7 @@ Cursor-related код удаляется полностью:
 Манифеста поддерживаются вручную (committed static files), не генерируются. Integrity между манифестами и реальными on-disk скриптами под `tools/` guard'ится drift-тестом (`tests/e2e/canonical-plugin.test.ts`): каждая hook-команда в `hooks.json` ОБЯЗАНА резолвиться в существующий скрипт под `tools/` (и vice-versa), плюс manifest schema validity. Это verification-шаг, не build-step.
 
 **Связанные AC:** [AC-1](ACCEPTANCE_CRITERIA.md#ac-1-fr-1-fr-9)
-**Use Case:** [UC-1](USE_CASES.md#uc-1-first-time-install-default-global)
+**Use Case:** [UC-1](USE_CASES.md#uc-1-first-time-install-default-user-scope)
 
 ## FR-10: Update path через `/plugin marketplace update`
 
@@ -147,7 +147,7 @@ Claude Code re-fetches marketplace.json, detects version bump, prompts user дл
 dev-pomogator team responsibility — bump `version` в `marketplace.json` AND `plugin.json` синхронно при каждом release. Это обеспечивает predictable update behavior.
 
 **Связанные AC:** [AC-1](ACCEPTANCE_CRITERIA.md#ac-1-fr-1-fr-9)
-**Use Case:** [UC-1](USE_CASES.md#uc-1-first-time-install-default-global)
+**Use Case:** [UC-1](USE_CASES.md#uc-1-first-time-install-default-user-scope)
 
 ## FR-11: Desktop compatibility via canonical UI
 
@@ -160,7 +160,7 @@ Claude Desktop поддерживает плагины через canonical UI: 
 Desktop reload behavior: `/reload-plugins` слот не доступен в Desktop UI (CLI-only command). Manual restart Desktop приложения требуется для подхвата нового install. Документировать в README.
 
 **Связанные AC:** [AC-7](ACCEPTANCE_CRITERIA.md#ac-7-fr-11)
-**Use Case:** [UC-1](USE_CASES.md#uc-1-first-time-install-default-global)
+**Use Case:** [UC-1](USE_CASES.md#uc-1-first-time-install-default-user-scope)
 
 ## FR-12: Uninstall via `/plugin uninstall`
 
@@ -174,3 +174,15 @@ dev-pomogator не реализует custom uninstall code — Anthropic mechan
 
 **Связанные AC:** [AC-6](ACCEPTANCE_CRITERIA.md#ac-6-fr-12)
 **Use Case:** [UC-5](USE_CASES.md#uc-5-uninstall-canonical), [UC-6](USE_CASES.md#uc-6-cleanup-v1-residue)
+
+## FR-13: Plugin hooks resolve independent of process CWD
+
+The plugin's hook commands SHALL resolve their bootstrap loader and target script regardless of the process working directory. The `hooks.json` command anchors the `bootstrap.cjs` require on `process.env.CLAUDE_PROJECT_DIR` (falling back to `.`) and `tsx-runner.resolveScriptPath` resolves the script argument against `CLAUDE_PROJECT_DIR` / `CLAUDE_PLUGIN_ROOT` — NEVER a cwd-relative `path.resolve('tools/...')`. A Stop hook spawned with the shell CWD left inside a subdirectory (or an unrelated tmpdir) SHALL still load and exit 0, not die with `Cannot find module .../bootstrap.cjs`.
+
+**Связанные AC:** [AC-1](ACCEPTANCE_CRITERIA.md#ac-1-fr-1-fr-9)
+
+## FR-14: Plugin hook commands are deps-absent-safe
+
+The plugin install ships NO `node_modules`, so every `.claude-plugin/hooks.json` command SHALL be deps-absent-safe: it either launches a bundled `*.bundle.mjs` (npm deps inlined by esbuild) or a script whose transitive import chain is node-builtins-only. A raw `.ts`/`.cjs` hook that (transitively) imports a real npm package crashes `ERR_MODULE_NOT_FOUND` for plugin users — `tools/plugin-deps-guard/check.ts::findDepsUnsafeHooks` SHALL detect such hooks (returning the `script -> packages` offenders; `[]` when clean) so the dead-integration never ships silently (the dogfood repo has `node_modules` and hides it).
+
+**Связанные AC:** [AC-1](ACCEPTANCE_CRITERIA.md#ac-1-fr-1-fr-9)

@@ -2,6 +2,12 @@
 
 Реальные failures из spec-review session (PR #78 + adjacent). Каждый урок: что произошло → корневой урок → grep pattern для категории.
 
+> **MCP-rails (FR-39):** the `grep … .specs/{slug}/…` snippets below are HISTORICAL
+> case-study shorthand. When you actually run such a check, read the spec through the
+> door — `read_spec_doc`/`list_spec_docs` then apply the shown regex to the content —
+> never a raw `grep`/`Read` of `.specs/` (blocked under enforce). Greps over **code**
+> (`src/`, `tools/`, `.claude/rules/`) stay ordinary `Grep`.
+
 ## Урок 1: Tawk vs Twilio (категория #2 — Existing-asset duplicate)
 
 **PR/Session:** PR #78 spec drafting, RESEARCH.md initial.

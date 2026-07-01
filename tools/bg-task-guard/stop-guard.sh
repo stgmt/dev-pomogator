@@ -13,9 +13,10 @@ fi
 INPUT=$(cat 2>/dev/null || true)
 
 # TTL thresholds (seconds)
-HARD_TTL=900    # 15 min — always allow stop
-SOFT_TTL=300    # 5 min — allow if no fresh running status
-STUCK_TTL=180   # 3 min — allow if 0% progress (build hung)
+HARD_TTL=900     # 15 min — always allow stop
+SOFT_TTL=300     # 5 min — allow if no fresh running status
+STUCK_TTL=180    # 3 min — 0% progress → start escalating the hang to the human
+ESCALATE_TTL=360 # 6 min — 0% progress past this with NO human answer → allow stop (headless-safe recover)
 
 # Cross-platform mtime helper (GNU vs BSD stat)
 get_mtime() {
@@ -163,9 +164,17 @@ if [ -n "$STAT_GNU" ]; then
         exit 0
         ;;
       running)
-        # FR-8: Stuck detection — 0% progress for >STUCK_TTL means build/tests hung
+        # FR-8 + FR-16 (escalation; cross-ref claim-evidence-gate FR-13): 0% progress for >STUCK_TTL
+        # means the build/tests hung. WITHIN the escalation window (STUCK_TTL..ESCALATE_TTL) ask the
+        # HUMAN — block with an instruction for the agent to call AskUserQuestion (wait / kill / continue)
+        # — instead of silently allowing the stop. PAST ESCALATE_TTL (no human answered — headless/cron)
+        # fall back to the original allow-stop recovery, so a human-less run never hangs (HARD_TTL outer cap).
         if [ "${TEST_PASSED:-0}" = "0" ] && [ "${TEST_FAILED:-0}" = "0" ] && [ "$AGE" -ge "$STUCK_TTL" ]; then
-          printf '{"decision":"allow","reason":"Tests appear stuck (0%% for %dmin). Build may have failed silently. Allowing stop."}\n' "$AGE_MIN"
+          if [ "$AGE" -lt "$ESCALATE_TTL" ]; then
+            printf '{"decision":"block","reason":"Долгая задача %s зависла: 0%% прогресса за %dмин — возможно сборка/тесты повисли. Спроси пользователя через AskUserQuestion: ждать / убить (TaskStop task_id=%s) / продолжить."}\n' "$TASK_ID" "$AGE_MIN" "$TASK_ID"
+            exit 0
+          fi
+          printf '{"decision":"allow","reason":"Tests appear stuck (0%% for %dmin), no human resolution within the escalation window — allowing stop to recover."}\n' "$AGE_MIN"
           rm -f "$MARKER"
           exit 0
         fi

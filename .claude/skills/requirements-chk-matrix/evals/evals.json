@@ -1,0 +1,41 @@
+{
+  "skill_name": "requirements-chk-matrix",
+  "description": "Behavioural evals for requirements-chk-matrix — verifies it builds the CHK traceability matrix (CHK-FR{n}-{nn} rows linked to FR + AC/@feature/UC) in REQUIREMENTS.md and the ## Key Decisions blocks (Rationale + Trade-off + Alternatives) in DESIGN.md, preserving Jira trace lines byte-for-byte and not fabricating links. Grounded in the skill contract (Phase 2 step 4b).",
+  "evals": [
+    {
+      "id": 0,
+      "name": "chk-rows-link-to-real-fr-and-coverage",
+      "prompt": "Run requirements-chk-matrix for a spec with FR-1..FR-3, each having AC and an @feature tag. Build the CHK matrix in REQUIREMENTS.md.",
+      "expected_output": "REQUIREMENTS.md gains CHK rows numbered CHK-FR{n}-{nn}; every row references an FR that EXISTS plus at least one of its AC / @feature / UC. No CHK row points at a non-existent FR or a coverage anchor that is not present in the spec (no fabricated traceability).",
+      "files": []
+    },
+    {
+      "id": 1,
+      "name": "key-decisions-have-all-three-subfields",
+      "prompt": "Run requirements-chk-matrix on a spec whose DESIGN.md has a `## Key Decisions` heading but empty body.",
+      "expected_output": "Each Key Decision block carries non-placeholder Rationale, Trade-off, AND Alternatives. A block missing any of the three sub-fields is a failure (the form-guard for design decisions rejects it).",
+      "files": []
+    },
+    {
+      "id": 2,
+      "name": "jira-trace-lines-preserved-byte-for-byte",
+      "prompt": "Run requirements-chk-matrix on a spec whose REQUIREMENTS.md already contains Jira trace lines (e.g. `Jira: PROJ-42`).",
+      "expected_output": "Existing Jira trace lines are preserved BYTE-FOR-BYTE — neither reordered, reformatted, nor dropped — while CHK rows are added around them.",
+      "files": []
+    },
+    {
+      "id": 3,
+      "name": "idempotent-rerun-no-duplicate-chk-rows",
+      "prompt": "Run requirements-chk-matrix twice in a row on the same spec.",
+      "expected_output": "The second run does NOT duplicate CHK rows or Key Decision blocks already present — it reconciles/updates in place. Row count is stable across reruns.",
+      "files": []
+    },
+    {
+      "id": 4,
+      "name": "no-chk-for-fr-without-coverage-flagged",
+      "prompt": "Run requirements-chk-matrix on a spec where FR-2 has NO AC, no @feature, no UC link.",
+      "expected_output": "FR-2 is surfaced as an uncovered requirement (a CHK row that flags the gap, or an explicit note) rather than silently inventing a coverage link to make the matrix look complete.",
+      "files": []
+    }
+  ]
+}

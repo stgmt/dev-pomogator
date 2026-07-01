@@ -1,0 +1,57 @@
+# Functional Requirements (FR)
+
+## FR-1: {Название}
+
+NSS content generation. The `generateNss()` exported function SHALL produce a Nilesoft Shell `.nss` script containing exactly ONE entry — "Claude Code (YOLO + TUI)", elevated (`admin=true`), launching with `-Yolo` (changed 2026-07-01 per owner request: the plain/non-elevated/non-Yolo variants were removed — admin + `--dangerously-skip-permissions` + TUI is the only mode actually used, and a smaller menu surface is less to drift or break). The NSS SHALL reference the global path `~/.dev-pomogator/scripts/launch-claude-tui.ps1` and SHALL NOT contain project-specific hardcoded paths.
+
+**Связанные AC:** [AC-1](ACCEPTANCE_CRITERIA.md#ac-1-fr-1)
+**Use Case:** [UC-1](USE_CASES.md#uc-1-название)
+
+## FR-2: {Название}
+
+Non-Windows skip and integration execution. WHEN `postinstall.ts` is executed on a non-Windows platform it SHALL exit 0 and print "Skipped" to stdout. WHEN executed via tsx integration the script SHALL exit 0 and produce non-empty combined output.
+
+**Связанные AC:** [AC-2](ACCEPTANCE_CRITERIA.md#ac-2-fr-2)
+**Use Case:** [UC-2](USE_CASES.md#uc-2-название)
+
+## FR-3: {Название}
+
+Launch script copy and resolution. `copyLaunchScript(src, dest)` SHALL copy src to dest (creating intermediate directories) and return `true`. WHEN src does not exist it SHALL return `false` and NOT create dest. `bundledLaunchScriptPath()` SHALL resolve to `scripts/launch-claude-tui.ps1` in the repository tree and that file SHALL exist.
+
+**Связанные AC:** [AC-3](ACCEPTANCE_CRITERIA.md#ac-3-fr-3)
+**Use Case:** [UC-3](USE_CASES.md#uc-3-название)
+
+## FR-4: {Название}
+
+NSS path drift guard. The path embedded by `generateNss()` SHALL match the default destination of `copyLaunchScript()` — `~/.dev-pomogator/scripts/launch-claude-tui.ps1` — so the context menu entry and the installed launch script cannot drift apart.
+
+**Связанные AC:** [AC-4](ACCEPTANCE_CRITERIA.md#ac-4-fr-4)
+**Use Case:** [UC-4](USE_CASES.md#uc-4-название)
+
+## FR-5: {Название}
+
+Launch script split ratio artifact. `scripts/launch-claude-tui.ps1` SHALL contain `-s 0.07` and SHALL NOT contain `-s 0.3`.
+
+**Связанные AC:** [AC-5](ACCEPTANCE_CRITERIA.md#ac-5-fr-5)
+**Use Case:** [UC-5](USE_CASES.md#uc-5-название)
+
+## FR-N: {Название} — OUT OF SCOPE
+
+> OUT OF SCOPE — Launch script pwsh logging (FR-6). Requires a real `pwsh` binary; cannot run headlessly in Docker without pwsh or on Windows host. Covered by @manual BDD scenarios CTXMENU001_09 / CTXMENU001_10.
+>
+> Связанные UC, AC и User Stories также должны быть помечены `> OUT OF SCOPE — см. FR-N`.
+
+## FR-6: Context-menu launch entries log every invocation
+
+Every context-menu launch entry — the existing `.ps1`-routed entries AND the raw `wt.exe`-direct NSS entries ("Claude Code (YOLO)", "Claude Code", and their Admin-submenu mirrors) — SHALL append an invocation record (timestamp, resolved project directory, claude flags used) to `~/.dev-pomogator/logs/context-menu-launch.log` before invoking `claude`. WHEN the launched `claude` process exits non-zero THEN the log entry SHALL record "ERROR" plus the observed exit code, so a failed right-click leaves a diagnosable trace regardless of which menu entry triggered it. Today only the `.ps1`-routed "YOLO + TUI" entry logs (`scripts/launch-claude-tui.ps1`); the raw NSS entries call `claude` directly with zero diagnostics — this requirement closes that gap by routing every entry through the same logged script.
+
+**Связанные AC:** [AC-6](ACCEPTANCE_CRITERIA.md#ac-6-fr-6)
+**Use Case:** [UC-1](USE_CASES.md#uc-1-название)
+
+## FR-7: Trust auto-grant before bypass-permissions launch
+
+WHEN a context-menu entry launches `claude --dangerously-skip-permissions` (a "YOLO" entry) AND the target directory has not yet been interactively trusted by Claude Code (`~/.claude.json` → `projects["<dir>"].hasTrustDialogAccepted` is `false` or absent) THEN the launcher SHALL atomically write `hasTrustDialogAccepted: true` for that exact directory into `~/.claude.json` (temp-file + atomic rename) BEFORE invoking `claude`, so the launch does not hard-fail with `Ignoring N permissions.allow entries ... this workspace has not been trusted` (confirmed Claude Code behavior — see RESEARCH.md). The plain "Claude Code" entries (no `--dangerously-skip-permissions`) SHALL NOT auto-grant trust — they SHALL preserve Claude Code's normal interactive trust-dialog flow untouched.
+
+**Связанные AC:** [AC-7](ACCEPTANCE_CRITERIA.md#ac-7-fr-7)
+**Use Case:** [UC-1](USE_CASES.md#uc-1-название)
+

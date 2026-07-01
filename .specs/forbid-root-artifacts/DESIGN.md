@@ -5,7 +5,7 @@
 - [FR-1: Auto-prune stale allow entries в check.py](FR.md#fr-1-auto-prune-stale-allow-entries-в-checkpy)
 - [FR-2: User-configurable trash classification](FR.md#fr-2-user-configurable-trash-classification)
 - [FR-3: LLM-driven classification через Claude Code CLI subscription](FR.md#fr-3-llm-driven-classification-через-claude-code-cli-subscription)
-- [FR-4: Shared classifier module + extended yaml config](FR.md#fr-4-shared-classifier-module--extended-yaml-config)
+- [FR-4: Shared classifier module + extended yaml config](FR.md#fr-4-shared-classifier-module-extended-yaml-config)
 
 ## Компоненты
 
@@ -301,6 +301,20 @@ def find_stale_allow_entries(repo_root: Path, allow_list: list[str]) -> list[str
 - Fail loudly с non-zero exit — rejected: блокирует все коммиты пока user не разберётся; UX hostile
 
 ## BDD Test Infrastructure (ОБЯЗАТЕЛЬНО)
+
+> **CORRECTION (v1.2.0 — supersedes the "Vitest" note below):** the scenarios actually run under
+> **cucumber-js + `V4World`**, not vitest. Live step-defs: `tests/step_definitions/feature_forbid_root_artifacts.ts`
+> (drives the REAL `check.py`/`configure.py`/`setup.py` + `install-hook.ts` in a per-scenario tmp git repo
+> via `tests/hooks/before-after.ts`). The `tests/e2e/forbid-root-artifacts.test.ts` referenced below no
+> longer exists (superseded vitest twin). The Vitest block is kept for history only.
+
+> **Installer component (v1.2.0, FR-7..FR-10):** `install-hook.ts` — SessionStart adapter. A pure
+> `rootArtifactsInstallDecision(state)` (opt-out / not-git / already / backoff / install) drives a thin
+> orchestrator that provisions deps (`deps-install.py`, FR-9) then delegates the real wiring to
+> `setup.py` (DRY). `setup.py` copies runtime files into `.dev-pomogator/tools/forbid-root-artifacts/`
+> and writes a portable entry `python .dev-pomogator/tools/forbid-root-artifacts/check.py` (FR-8).
+> Health verified by `doctor-check.ts::checkRootArtifactsInstall` (FR-10), reused by the pomogator-doctor
+> `forbidRootArtifactsCheck` (C25). All TS is node-builtins-only (deps-absent safe).
 
 > Step 6 — feature classification.
 

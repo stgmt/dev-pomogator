@@ -10,7 +10,7 @@
 |------|--------|--------|
 | `.claude/skills/create-spec/SKILL.md` | edit | Replace 66-line scaffold-only skill with full workflow overview ≤200 lines per [FR-1](FR.md#fr-1-skill-structure-with-progressive-disclosure-feature1), [FR-9](FR.md#fr-9-skill-description-preserves-all-trigger-phrases-feature5), [FR-10](FR.md#fr-10-allowed-tools-covers-full-workflow-feature5) |
 | `.claude/skills/create-spec/references/phase1_discovery.md` | create | Phase 1 algorithm extracted from old specs-management.md per [FR-1](FR.md#fr-1-skill-structure-with-progressive-disclosure-feature1) |
-| `.claude/skills/create-spec/references/phase1.5_project-context.md` | create | Phase 1.5 algorithm per [FR-2](FR.md#fr-2-reference-file-naming-convention-phasen-m_descriptive-feature2) |
+| `.claude/skills/create-spec/references/phase1.5_project-context.md` | create | Phase 1.5 algorithm per [FR-2](FR.md#fr-2-reference-file-naming-convention-phasenmdescriptive-feature2) |
 | `.claude/skills/create-spec/references/phase2_requirements-and-design.md` | create | Phase 2 algorithm without BDD subsection per [FR-1](FR.md#fr-1-skill-structure-with-progressive-disclosure-feature1) |
 | `.claude/skills/create-spec/references/phase2_bdd-test-infrastructure.md` | create | Step 6.1-6.5 BDD infra assessment extracted as separate file per [FR-1](FR.md#fr-1-skill-structure-with-progressive-disclosure-feature1) |
 | `.claude/skills/create-spec/references/phase3_finalization.md` | create | Phase 3 algorithm per [FR-1](FR.md#fr-1-skill-structure-with-progressive-disclosure-feature1) |
@@ -33,7 +33,7 @@
 
 | Path | Action | Reason |
 |------|--------|--------|
-| `.claude/skills/research-workflow/SKILL.md` | create | New standalone skill per [FR-5](FR.md#fr-5-research-workflow-extracted-as-standalone-skill-feature5); content ported from `.claude/rules/specs-workflow/research-workflow.md` (157 lines) |
+| `.claude/skills/research-workflow/SKILL.md` | create | New standalone skill per [FR-5](FR.md#fr-5-research-workflow-extracted-as-standalone-skill-and-invoked-by-create-spec-feature5); content ported from `.claude/rules/specs-workflow/research-workflow.md` (157 lines) |
 
 ## Source rule deletions
 
@@ -41,7 +41,7 @@
 |------|--------|--------|
 | `.claude/rules/specs-workflow/specs-management.md` | delete | Replaced by `create-spec` skill per [FR-6](FR.md#fr-6-source-rule-files-removed-atomically-feature4); content split across SKILL.md + references/ |
 | `.claude/rules/specs-workflow/no-mocks-fallbacks.md` | delete | Moved to `create-spec/references/no-mocks-fallbacks.md` per [FR-6](FR.md#fr-6-source-rule-files-removed-atomically-feature4) |
-| `.claude/rules/specs-workflow/research-workflow.md` | delete | Promoted to standalone `research-workflow` skill per [FR-5](FR.md#fr-5-research-workflow-extracted-as-standalone-skill-feature5), [FR-6](FR.md#fr-6-source-rule-files-removed-atomically-feature4) |
+| `.claude/rules/specs-workflow/research-workflow.md` | delete | Promoted to standalone `research-workflow` skill per [FR-5](FR.md#fr-5-research-workflow-extracted-as-standalone-skill-and-invoked-by-create-spec-feature5), [FR-6](FR.md#fr-6-source-rule-files-removed-atomically-feature4) |
 | `.claude/rules/specs-workflow/specs-validation.md` | delete | Moved to `create-spec/references/specs-validation.md` per [FR-6](FR.md#fr-6-source-rule-files-removed-atomically-feature4); hook code unaffected per [FR-11](FR.md#fr-11-specs-validation-hook-unaffected-by-migration-feature4) |
 | `.claude/rules/specs-workflow/bdd-enforcement.md` | delete | Moved to `create-spec/references/bdd-enforcement.md` per [FR-6](FR.md#fr-6-source-rule-files-removed-atomically-feature4) (was unmanaged — net gain for end users) |
 | `.claude/rules/specs-workflow/undefined-behavior-taxonomy.md` | delete | Inlined into `create-spec/references/phase3plus_audit-undefined-behavior.md` per [FR-6](FR.md#fr-6-source-rule-files-removed-atomically-feature4), Decision 5 (was unmanaged — net gain) |
@@ -58,7 +58,7 @@
 | Path | Action | Reason |
 |------|--------|--------|
 | `tests/features/plugins/specs-workflow/PLUGIN003_specs-workflow.feature` | edit | Add scenarios for hard-cutover migration FR-4, FR-6, FR-7; research-workflow skill registration FR-5; token efficiency FR-13. Existing scenario "Skill file is installed for Claude Code" stays (still relevant). Stale Cursor scenarios at lines 22-25 NOT touched (FR-12 OUT OF SCOPE) |
-| `tests/e2e/specs-management-skill-migration.test.ts` | create | Integration test driving FR-4 / FR-6 / FR-7 / FR-11 verification via `runInstaller(updateMode=true)` + assertions on file state. Uses existing `tests/e2e/helpers.ts` |
+| ~~`tests/e2e/specs-management-skill-migration.test.ts`~~ → skill `.claude/skills/create-spec/` + `tests/e2e/create-specs-bdd-enforcement.test.ts` | create | Integration test driving FR-4 / FR-6 / FR-7 / FR-11 verification via `runInstaller(updateMode=true)` + assertions on file state. Uses existing `tests/e2e/helpers.ts` |
 | `tests/fixtures/specs-management-as-skill/sample-spec/USER_STORIES.md` | create | F-2 fixture for SPECMGT001_09 hook validation test per [FR-11](FR.md#fr-11-specs-validation-hook-unaffected-by-migration-feature4) |
 | `tests/fixtures/specs-management-as-skill/sample-spec/FR.md` | create | F-2 fixture per [FR-11](FR.md#fr-11-specs-validation-hook-unaffected-by-migration-feature4) |
 | `tests/fixtures/specs-management-as-skill/sample-spec/ACCEPTANCE_CRITERIA.md` | create | F-2 fixture per [FR-11](FR.md#fr-11-specs-validation-hook-unaffected-by-migration-feature4) |

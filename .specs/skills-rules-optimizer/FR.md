@@ -95,8 +95,8 @@ System SHALL provide common `Asset` interface (`type: "rule" | "skill"`) и shar
 
 Asset-specific logic (rule antipatterns vs skill antipatterns) — separate functions, но через shared types.
 
-**Связанные AC:** [AC-8](ACCEPTANCE_CRITERIA.md#ac-8-fr-8)
-**Use Case:** [UC-1](USE_CASES.md#uc-1-audit-skills-repo-happy-path), [UC-6](USE_CASES.md#uc-6-suggest-rules-backwards-compat)
+**Связанные AC:** [AC-8](ACCEPTANCE_CRITERIA.md#ac-8-fr-9)
+**Use Case:** [UC-1](USE_CASES.md#uc-1-audit-skills-repo-happy-path), [UC-6](USE_CASES.md#uc-6-edge-suggest-rules-backwards-compat)
 
 ## FR-9: Backward compatibility для rules-side
 
@@ -107,8 +107,8 @@ System SHALL preserve current `rules-optimizer` API surface unchanged:
 
 `/suggest-rules` Phase 6 invocations SHALL work без modifications кроме path updates (`rules-optimizer/scripts/...` → `skills-rules-optimizer/scripts/...`).
 
-**Связанные AC:** [AC-8](ACCEPTANCE_CRITERIA.md#ac-8-fr-8)
-**Use Case:** [UC-6](USE_CASES.md#uc-6-suggest-rules-backwards-compat)
+**Связанные AC:** [AC-8](ACCEPTANCE_CRITERIA.md#ac-8-fr-9)
+**Use Case:** [UC-6](USE_CASES.md#uc-6-edge-suggest-rules-backwards-compat)
 
 ## FR-10: Embedding-based semantic merge — OUT OF SCOPE
 

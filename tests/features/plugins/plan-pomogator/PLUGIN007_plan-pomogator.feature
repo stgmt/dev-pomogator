@@ -15,7 +15,7 @@ Feature: PLUGIN007 Plan-pomogator Extension
     When dev-pomogator installs plan-pomogator for Claude
     Then plan-pomogator.md should exist in PROJECT/.claude/rules/
 
-  Scenario: Tools are installed
+  Scenario: plan-pomogator tools are installed
     When dev-pomogator installs plan-pomogator
     Then plan-pomogator folder should exist in PROJECT/.dev-pomogator/tools/
     And requirements.md should exist
@@ -203,6 +203,32 @@ Feature: PLUGIN007 Plan-pomogator Extension
     And user prompts are about "plan-gate anti-copy protection"
     When scorePromptRelevance runs
     Then the score should be > -20
+
+  # @feature6
+  Scenario: PLUGIN007_29B_01 Relevance precision is immune to a huge pasted block
+    Given a legit plan whose Extracted Requirements share distinctive terms with the request
+    And the prompt corpus contains a large pasted transcript with the task vocabulary buried in noise
+    When scorePromptRelevance runs
+    Then the score should be > -20
+
+  # @feature6
+  Scenario: PLUGIN007_29B_02 Contaminated plan stays denied despite a huge corpus
+    Given a plan copied from a different task (auth) with no terms grounded in the request
+    And the prompt corpus is a large pasted block of unrelated vocabulary
+    When scorePromptRelevance runs
+    Then the score should be <= -20
+
+  # @feature6
+  Scenario: PLUGIN007_29C_01 selectRelevanceWindow walks back past short clarifications
+    Given recent prompts are short clarifications after one substantive prompt
+    When selectRelevanceWindow selects the corpus
+    Then the substantive prompt is included in the window
+
+  # @feature6
+  Scenario: PLUGIN007_29C_02 selectRelevanceWindow preserves chronological order
+    Given several substantive prompts in order
+    When selectRelevanceWindow selects the corpus
+    Then the selected prompts keep their original chronological order
 
   # @feature31
   Scenario: PLUGIN007_31 Validator detects missing changes: field in todo

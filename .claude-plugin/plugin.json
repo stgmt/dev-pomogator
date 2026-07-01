@@ -23,5 +23,14 @@
   "skills": ["./.claude/skills"],
   "commands": ["./.claude/commands"],
   "hooks": ["./.claude-plugin/hooks.json"],
-  "mcpServers": ["./.mcp.json"]
+  "mcpServers": ["./.mcp.json"],
+  "lspServers": "./.lsp.json",
+  "userConfig": {
+    "spec_access_enforce": {
+      "type": "boolean",
+      "title": "Enforce MCP-only access to specs",
+      "description": "When ON (default), the agent's raw Read/Grep/Edit/Write/Bash over .specs/** is DENIED and routed through the dev-pomogator-specs MCP door (read_spec_doc / apply_spec_change / etc.); deliberate bypass via SPEC_ACCESS_SKIP=1. Turn OFF only to downgrade to shadow (log-only). Lets you get enforcement without hand-editing settings.json.",
+      "default": true
+    }
+  }
 }

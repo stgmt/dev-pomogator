@@ -14,7 +14,7 @@ WHEN Doctor запускается AND `git --version` возвращает non-
 
 ## AC-3 (FR-3) @feature2
 
-**Требование:** [FR-3](FR.md#fr-3-devpomogator-structure-check-feature2)
+**Требование:** [FR-3](FR.md#fr-3-dev-pomogator-structure-check-feature2)
 
 IF `~/.dev-pomogator/config.json` OR `~/.dev-pomogator/scripts/tsx-runner-bootstrap.cjs` OR `~/.dev-pomogator/tools/<ext>/` для любого installed extension отсутствует THEN Doctor SHALL пометить соответствующий check как critical, `reinstallable=yes`.
 
@@ -44,7 +44,7 @@ WHEN Doctor собрал список binaries из installed extensions AND "bu
 
 ## AC-8 (FR-8) @feature11
 
-**Требование:** [FR-8](FR.md#fr-8-python--perextension-packages-check-extension-gated-feature11)
+**Требование:** [FR-8](FR.md#fr-8-python-per-extension-packages-check-extension-gated-feature11)
 
 WHEN Doctor собрал `pythonPackages[]` из installed extensions AND `python3 -c 'import <pkg>'` non-zero для любого pkg THEN Doctor SHALL пометить каждый missing package отдельным critical с hint `"pip install --user <pkg>"`.
 
@@ -77,7 +77,7 @@ IF target `.gitignore` не содержит `MARKER_BEGIN ... MARKER_END` block
 
 ## AC-13 (FR-13) @feature10
 
-**Требование:** [FR-13](FR.md#fr-13-commandsskills-pluginloader-check-feature10)
+**Требование:** [FR-13](FR.md#fr-13-commandsskills-plugin-loader-check-feature10)
 
 WHEN Doctor читает `plugin.json → commands[]` / `skills[]` AND declared command NOT в `.claude/commands/*.md` AND NOT в `~/.claude/plugins/.../commands/*.md` THEN Doctor SHALL пометить C15 как critical `reinstallable=yes`, state=`BROKEN-missing`.
 
@@ -85,7 +85,7 @@ WHEN declared command exists ONLY в `~/.claude/plugins/.../commands/*.md` (dyna
 
 ## AC-14 (FR-14) @feature11
 
-**Требование:** [FR-14](FR.md#fr-14-docker--devcontainer-cli-check-extension-gated-feature11)
+**Требование:** [FR-14](FR.md#fr-14-docker-devcontainer-cli-check-extension-gated-feature11)
 
 IF `devcontainer` extension ∈ `config.installedExtensions` AND `docker --version` OR `devcontainer --version` failed THEN Doctor SHALL пометить C16 как critical `reinstallable=no` с platform hint.
 
@@ -93,15 +93,15 @@ IF `devcontainer` extension NOT ∈ installed THEN Doctor SHALL skip C16.
 
 ## AC-15 (FR-15) @feature1
 
-**Требование:** [FR-15](FR.md#fr-15-slash-command-pomogatordoctor-feature1)
+**Требование:** [FR-15](FR.md#fr-15-slash-command-pomogator-doctor-feature1)
 
 WHEN пользователь вводит `/pomogator-doctor` в Claude Code THEN Claude SHALL вызвать `.claude/commands/pomogator-doctor.md` instructions → spawn `dev-pomogator --doctor` (interactive mode).
 
 ## AC-16 (FR-16) @feature8
 
-**Требование:** [FR-16](FR.md#fr-16-cli-flag-devpomogator-doctor-feature8)
+**Требование:** [FR-16](FR.md#fr-16-cli-flag-dev-pomogator-doctor-feature8)
 
-WHEN пользователь запускает `dev-pomogator --doctor` в terminal THEN `src/index.ts` SHALL распарсить flag AND вызвать `runDoctor({interactive: true})`.
+WHEN пользователь запускает `dev-pomogator --doctor` в terminal THEN ~~`src/index.ts`~~ (removed in v2 migration) SHALL распарсить flag AND вызвать `runDoctor({interactive: true})`.
 WHEN `--json` flag present THEN `{interactive: false, json: true}`.
 WHEN `--quiet` flag present THEN `{quiet: true}`.
 
@@ -132,7 +132,7 @@ Each CheckResult SHALL содержать boolean field `reinstallable`. Classif
 
 ## AC-20 (FR-20) @feature9
 
-**Требование:** [FR-20](FR.md#fr-20-trafficlight-grouped-output-feature9)
+**Требование:** [FR-20](FR.md#fr-20-traffic-light-grouped-output-feature9)
 
 WHEN mode=interactive AND `--json` absent THEN reporter SHALL вывести output в 3 группах:
 - 🟢 Self-sufficient (checks без external deps)
@@ -143,7 +143,7 @@ Summary line внизу: `"N ok, M warnings, K critical (of Total relevant check
 
 ## AC-21 (FR-21) @feature11
 
-**Требование:** [FR-21](FR.md#fr-21-perextension-driving-feature11)
+**Требование:** [FR-21](FR.md#fr-21-per-extension-driving-feature11)
 
 WHEN Doctor reads `config.installedExtensions` AND extension NOT installed THEN Doctor SHALL skip все extension-gated checks для этого extension. Report SHALL прицифре относительных relevant checks: `"N of 17 checks relevant for your K installed extensions"`.
 
@@ -204,7 +204,7 @@ WHEN Doctor проверяет current projectRoot AND (a) `pomogator-doctor` �
 
 ## AC-30 (FR-30) @feature8
 
-**Требование:** [FR-30](FR.md#fr-30-allprojects-flag-feature8)
+**Требование:** [FR-30](FR.md#fr-30-all-projects-flag-feature8)
 
 WHEN CLI invoked с `--all-projects` THEN Doctor SHALL iterate deduplicated union of `installedExtensions[*].projectPaths` AND для каждого projectPath выполнить isolated doctor run с concurrency ≤ 4. Output structure:
 - Interactive mode: per-project section `=== {projectPath} ===` + traffic-light + per-project summary; top-level aggregate summary "Scanned N projects: M healthy, K with issues".
@@ -220,13 +220,13 @@ WHEN Doctor computes expected hooks THEN Doctor SHALL aggregate `installedExtens
 
 ## AC-32 (FR-32) @feature2
 
-**Требование:** [FR-32](FR.md#fr-32-configjson-toplevel-version-field-feature2)
+**Требование:** [FR-32](FR.md#fr-32-configjson-top-level-version-field-feature2)
 
 WHEN Installer writes `~/.dev-pomogator/config.json` THEN JSON object SHALL include top-level `"version": "<package.json.version>"` key. Doctor FR-11 reads from `ctx.config.version` (top-level). IF `ctx.config.version` is null/undefined/empty string THEN emit severity=warning, reinstallable=yes, hint contains "lacks top-level version". IF field present AND valid semver AND matches `packageVersion` — severity=ok.
 
 ## AC-33 (FR-33) @feature4
 
-**Требование:** [FR-33](FR.md#fr-33-mcp-probe-timeout--error-categorization-feature4)
+**Требование:** [FR-33](FR.md#fr-33-mcp-probe-timeout-error-categorization-feature4)
 
 WHEN MCP probe executes THEN timeout SHALL be 10_000 ms (not 3_000). Severity mapping:
 - outcome `timeout` → severity=warning (not critical), hint starts with "probe did not complete in 10s".

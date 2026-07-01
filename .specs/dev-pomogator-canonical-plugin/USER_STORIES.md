@@ -104,7 +104,7 @@ And `~/.claude/settings.json` не получает new entry от этого in
 
 As a maintainer dev-pomogator, I want чтобы Cursor-related код был удалён полностью (manifests, code paths, package.json keywords), чтобы не поддерживать мёртвый функционал и не путать пользователей.
 
-**Why:** Cursor CLI отвергается с v1.5 (`src/index.ts:44-47`), но обрывки cursor-кода остались: `extensions/edge-debug-port/extension.json:5` всё ещё содержит `["claude", "cursor"]`, `package.json` `description` упоминает Cursor, в `keywords` есть `"cursor"`. Это технический долг.
+**Why:** Cursor CLI отвергается с v1.5 (`~~`src/index.ts`~~ (removed in v2 migration):44-47`), но обрывки cursor-кода остались: `extensions/edge-debug-port/extension.json:5` всё ещё содержит `["claude", "cursor"]`, `package.json` `description` упоминает Cursor, в `keywords` есть `"cursor"`. Это технический долг.
 
 **Independent Test:** Grep `cursor` (case-insensitive) по всему репозиторию (`tools/`, `package.json`, манифесты `.claude-plugin/`) — должно вернуть 0 результатов кроме комментариев типа "removed since v2". Legacy CLI (если remains для migration utility) `--cursor` всё ещё отвергается с error message указывающим v2 canonical install.
 

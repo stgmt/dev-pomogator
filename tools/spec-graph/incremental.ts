@@ -31,12 +31,17 @@
  * @see .specs/spec-generator-v4/NFR.md NFR-Performance-2 (≤100ms p95)
  */
 
+// NOTE (review 2026-06-07): incremental patches do NOT update graph.rawCollisions —
+// the pre-map collision stats stay at their cold-build value. corpus-health and
+// collision-probe always cold-build, so this is safe today; a long-running MCP
+// server wanting fresh collision stats after watcher patches must rebuild.
 import chokidar, { type FSWatcher } from 'chokidar';
 import fs from 'node:fs';
 import path from 'node:path';
 import { parseMarkdownFile } from './parsers/md.ts';
 import { parseGherkinFile } from './parsers/gherkin.ts';
 import { parseNdjsonFile, applyTestResults } from './parsers/ndjson.ts';
+import { parseTasksFile } from './parsers/tasks.ts';
 import { rebuildBacklinks } from './builder.ts';
 import type { SpecGraph, ScenarioNode, ParserOutput } from './types.ts';
 
@@ -54,6 +59,12 @@ export interface WatchOptions {
    * Windows + WSL bind mounts; explicit `true` is for tests + Docker.
    */
   usePolling?: boolean;
+  /**
+   * Polling interval in ms when `usePolling` is active. Default 100. The
+   * lifecycle auto-fallback path raises this to 1000 (1s) per SPECGEN004_32
+   * so a Docker-Desktop bind mount isn't hammered every 100ms.
+   */
+  interval?: number;
   /** Called after every successful incremental patch. Optional. */
   onPatch?: (event: PatchEvent) => void;
   /** Called on any watcher-level error. Optional; default = swallow + log. */
@@ -163,8 +174,24 @@ export function applyChange(
 
   if (kind === 'md') {
     if (!fs.existsSync(absPath)) return { nodesDelta: 0, edgesDelta: 0 };
+    // FR-36a (P13-2): the parsers self-qualify — a live patch carries the
+    // same composite keys as the cold build by construction.
     const slice = parseMarkdownFile(absPath, repoRoot);
     const delta = applySlice(graph, slice);
+    // The cold build (builder.ts step 1b) parses TASKS.md with BOTH
+    // parseMarkdownFile AND parseTasksFile. The incremental path must mirror
+    // that — otherwise dropFileSlice() removes every Task node for the file and
+    // parseMarkdownFile (which emits no Task nodes) never re-adds them, so the
+    // live graph loses ALL tasks for a spec after ANY TASKS.md edit (e.g. a
+    // set_entity_status write) until a full restart. Bug found 2026-06-15:
+    // back-to-back set_entity_status → second call NOT_FOUND on a node a cold
+    // rebuild still has.
+    if (path.basename(absPath) === 'TASKS.md') {
+      const taskSlice = parseTasksFile(absPath, repoRoot);
+      const taskDelta = applySlice(graph, taskSlice);
+      delta.nodesDelta += taskDelta.nodesDelta;
+      delta.edgesDelta += taskDelta.edgesDelta;
+    }
     rebuildBacklinks(graph);
     return delta;
   }
@@ -239,7 +266,7 @@ export function startWatching(graph: SpecGraph, opts: WatchOptions): FSWatcher {
       !p.endsWith('.last-test-run.ndjson'),
     ignoreInitial: true,
     usePolling: opts.usePolling ?? false,
-    interval: 100,
+    interval: opts.interval ?? 100,
     binaryInterval: 300,
     awaitWriteFinish: { stabilityThreshold: 50, pollInterval: 25 },
     persistent: true,

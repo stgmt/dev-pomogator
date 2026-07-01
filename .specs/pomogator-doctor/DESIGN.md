@@ -7,23 +7,21 @@
 ## Компоненты
 
 - `src/doctor/index.ts` — публичное API `runDoctor(options)` возвращающее `DoctorReport`
-- `src/doctor/runner.ts` — orchestrator: загружает `config.installedExtensions`, drives per-extension gating (FR-21), запускает checks concurrently с bounded pool (NFR-P-3), применяет timeout (NFR-P-2, P-4)
-- `src/doctor/reporter.ts` — форматер output: chalk table для interactive (traffic-light groups per FR-20), JSON для `--json` (FR-24 + FR-25 redaction), hook JSON payload для `--quiet` (FR-17)
-- `src/doctor/reinstall.ts` — AskUserQuestion prompt + `spawn('npx', ['dev-pomogator'], {stdio:'inherit', shell:false})` (FR-18)
+- `.claude/skills/pomogator-doctor/scripts/engine/runner.ts` — orchestrator: загружает `config.installedExtensions`, drives per-extension gating (FR-21), запускает checks concurrently с bounded pool (NFR-P-3), применяет timeout (NFR-P-2, P-4)
+- `.claude/skills/pomogator-doctor/scripts/engine/reporter.ts` — форматер output: chalk table для interactive (traffic-light groups per FR-20), JSON для `--json` (FR-24 + FR-25 redaction), hook JSON payload для `--quiet` (FR-17)
+- `.claude/skills/pomogator-doctor/scripts/engine/reinstall.ts` — AskUserQuestion prompt + `spawn('npx', ['dev-pomogator'], {stdio:'inherit', shell:false})` (FR-18)
 - `src/doctor/types.ts` — TypeScript interfaces (CheckResult, DoctorOptions, DoctorReport) — детали в [SCHEMA](pomogator-doctor_SCHEMA.md)
-- `src/doctor/lock.ts` — file lock через `fs.writeFile(path, pid, {flag:'wx'})` против concurrent runs (NFR-R-4)
+- `.claude/skills/pomogator-doctor/scripts/engine/lock.ts` — file lock через `fs.writeFile(path, pid, {flag:'wx'})` против concurrent runs (NFR-R-4)
 - `src/doctor/checks/*.ts` — один файл на FR (14 checks: node, git, home, hooks, env, envExample, bun, python, mcpParse, mcpProbe, version, gitignore, pluginLoader, docker)
 - `extensions/pomogator-doctor/extension.json` — manifest: SessionStart hook registration
 - `extensions/pomogator-doctor/tools/pomogator-doctor/doctor-hook.ts` — thin wrapper импортирующий `runDoctor({quiet:true})` из shared core
 - `extensions/pomogator-doctor/claude/commands/pomogator-doctor.md` — slash command markdown с frontmatter `allowed-tools: [Bash, AskUserQuestion]`
-- `src/index.ts` (edit) — добавление `--doctor` / `--json` / `--quiet` / `--extension <name>` flags
 
 ## Где лежит реализация
 
 - App-код (shared core): `src/doctor/` (NEW)
 - Extension: `extensions/pomogator-doctor/` (NEW)
-- CLI wiring: `src/index.ts` (edit, add `--doctor` flag parsing)
-- Tests: `tests/features/plugins/pomogator-doctor/*.test.ts` (NEW per-feature) + `tests/e2e/pomogator-doctor.test.ts` (NEW integration)
+- Tests: `tests/features/plugins/pomogator-doctor/*.test.ts` (NEW per-feature) + `tests/e2e/doctor-{core,entry,gating,output,reinstall,reliability}.test.ts` (split layout) [was: ~~`tests/e2e/pomogator-doctor.test.ts`~~]
 - Fixtures: `tests/fixtures/pomogator-doctor/` (NEW)
 
 ## Директории и файлы
@@ -43,8 +41,8 @@ src/doctor/
     ├── hooks-registry.ts    # FR-4
     ├── env-vars.ts          # FR-5 (dual location)
     ├── env-example.ts       # FR-6
-    ├── bun.ts               # FR-7 (gated). Reuse: src/installer/memory.ts:checkBunInstalled()
-    ├── python.ts            # FR-8 (gated, per-ext packages). Reuse: src/installer/memory.ts:pipInstall() fallback strategy для hint text
+    ├── bun.ts               # FR-7 (gated). Reuse: ~~`src/installer/memory.ts:checkBunInstalled()`~~ (removed in v2 — no canonical replacement)
+    ├── python.ts            # FR-8 (gated, per-ext packages). Reuse: ~~`src/installer/memory.ts:pipInstall()`~~ (removed in v2 — no canonical replacement) fallback strategy для hint text
     ├── mcp-parse.ts         # FR-9
     ├── mcp-probe.ts         # FR-10 (Full probe)
     ├── version-match.ts     # FR-11
@@ -59,7 +57,7 @@ extensions/pomogator-doctor/
 └── claude/commands/
     └── pomogator-doctor.md  # slash command
 
-src/index.ts                 # edit: add --doctor flag parsing + routing
+~~`src/index.ts`~~ (removed in v2 migration)                 # edit: add --doctor flag parsing + routing
 
 tests/features/plugins/pomogator-doctor/
 ├── doctor-core.test.ts      # FR-1..FR-14 (checks)
@@ -169,7 +167,6 @@ if (manual.length > 0) reporter.emitNonReinstallableBlock(manual);
 
 ### CLI: dev-pomogator --doctor
 
-- Method: CLI flag в `src/index.ts`
 - Flags: `--doctor`, `--json`, `--quiet`, `--extension <name>`
 
 ### SessionStart hook

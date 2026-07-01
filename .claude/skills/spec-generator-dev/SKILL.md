@@ -1,0 +1,152 @@
+---
+name: spec-generator-dev
+description: >
+  Maintenance & development discipline for the spec-generator-v4 subsystem (the spec-graph,
+  its parsers, the MCP server, the authoritative verdict, the judge, the backlog resolvers and
+  the auditors). INVOKE when: fixing ANY defect found in spec docs or graph output («почини
+  спеку/граф/вердикт», «откуда этот мусор в FR.md», «false positive у audit/conformance»),
+  extending the subsystem (new MCP tool, new check, new resolver), or reviewing a change that
+  touches tools/spec-graph / tools/spec-mcp-server / tools/specs-generator / tools/spec-backlog /
+  tools/spec-llm-judge. Triggers (RU): «поддержка спек-генератора», «разработка спек-плагина»,
+  «почини генератор спек», «producer-фикс», «кто породил этот дефект», «ревью спек-генератора», «почини вердикт/счётчик/граф/хук спек», «оживи guard», «ложная находка», «шум в счётчике». Triggers (EN): "spec
+  generator dev", "maintain the spec plugin", "producer fix", "what produced this defect", "review the spec generator", "false finding", "noisy counter".
+  Do NOT use for authoring a spec's CONTENT (create-spec), per-spec health (spec-status /
+  spec-verdict), or corpus hygiene runs (corpus-health).
+allowed-tools: Read, Write, Edit, Glob, Grep, Bash, Agent
+---
+
+# spec-generator-dev — миссия и дисциплина развития спек-генератора
+
+## МИССИЯ
+
+**Чинить ПРОИЗВОДИТЕЛЕЙ дефектов, а не симптомы.** Каждый мусорный артефакт в спеках
+(фантомный FR, ложная находка аудита, шумное ребро графа, повисший статус) был кем-то
+ПОРОЖДЁН — скриптом, резолвером, парсером, чекером или воркфлоу-привычкой агента. Удалить
+артефакт = симптоматика; обязанность этого скилла — найти генератор и закрыть класс:
+
+1. **Найди производителя.** Грепни уникальную сигнатуру артефакта («[TBD title]», «### Citations»,
+   формат сообщения находки) по `tools/` и `.claude/skills/*/scripts/` — у каждого генератора
+   есть отпечаток.
+2. **Почини класс у источника** — и у каждого ПОТРЕБИТЕЛЯ той же сырой логики (инцидент
+   2026-06-06: `FR-(\d+)`-харвестинг без выреза код-спанов жил в ТРЁХ местах — fr-author,
+   tasks-парсер, LINK_VALIDITY-чек; одна болезнь, три носителя).
+3. **Регрессия на инцидент** — тест, воспроизводящий именно тот случай, который прорвался.
+4. **Симптом убери последним** — и в коммите назови оба: производителя и класс.
+
+## Карта подсистемы (где что порождается)
+
+| Слой | Файлы | Порождает | Типовая болезнь |
+|---|---|---|---|
+| Парсеры | `tools/spec-graph/parsers/{md,gherkin,tasks,ndjson,…}.ts` | узлы/рёбра/refs/anchors | харвестинг id из прозы/примеров; небрежная квалификация (FR-36) |
+| Builder | `tools/spec-graph/builder.ts` | один граф, implements-рёбра, bare-edge резолюция | last-writer схлопывание при коллизии ключей |
+| Чекеры | `conformance.ts`, `traceability.ts`, `corpus-health.ts` | findings/gaps | неякорённые regex (false positives), несвязанная с рёбрами семантика тегов |
+| Audit | `tools/specs-generator/specs-generator-core.mjs` | P0/warnings | `## FR-N:` без `^…m` ловит примеры в прозе |
+| Вердикт | `tools/specs-generator/spec-verdict.ts` | RED/GREEN + gap list | пропущенный слой = тихое false-green (всегда fail-loud ноты) |
+| MCP | `tools/spec-mcp-server/{tools,server}.ts` + `server.bundle.mjs` | read + full CRUD+rename mutation door (`create_spec`/`read_spec_doc`/`apply_spec_change`(+CAS `expected_sha`)/`delete_spec_doc`/**`rename_spec_doc`** anchors-aware: refuse-Decision на inbound markdown-якоря чужих доков ИЛИ `rewrite_inbound` авто-ретаргет; findInboundLinks/rewriteInboundLinks в `mutations.ts`) | забытый rebuild бандла = юзеры без фикса; bare-id двусмысленность; **direct-run guard любого ИНЛАЙНЕННОГО в бандл модуля (`import.meta.url===argv[1]`) срабатывает В БАНДЛЕ и убивает сервер (dead-door) — basename-guard** |
+| Judge | `tools/spec-llm-judge/` | DRIFT-вердикты | трактовать SUBPROCESS_FAILED как «no drift» |
+| Резолверы | `tools/spec-backlog/resolvers/*.ts` | ПИШУТ В СПЕКИ | главный риск мусора: создают артефакты из ошибочно-понятых цитат |
+
+## Логи подсистемы (где что пишется + как читать)
+
+Подсистема логирует свою работу СТРУКТУРНО (JSONL с типами) и ТРАССИРУЕМО (каждая
+находка несёт `spec_slug`+`node_id`+`location{file,line}` → до конкретного атома).
+Централизация по СМЫСЛУ, не по месту — FR-23 «log-file inventory contract»: два
+главных лога НАМЕРЕННО не объединены (доступ ≠ конформанс). Не ищи один мега-лог.
+
+| Лог | Путь | Формат | Что пишет | Чем читать |
+|---|---|---|---|---|
+| Conformance/findings (FR-15) | `.dev-pomogator/.spec-check-log/<date>.jsonl` | JSONL `{timestamp,finding_code,severity,location{file,line},message,source,spec_slug,node_id}` | каждую находку чекеров (UNCOVERED_FR…), date-sharded | `node --import tsx tools/spec-check-log/cli.ts --since 24h [--code C][--severity S][--source X][--count][--json]` |
+| Access-аудит (FR-39b) | `.dev-pomogator/logs/spec-access.jsonl` | JSONL `{ts,tool,args_digest,decision}` (args — ХЭШ, не сырьё) | каждый агентский spec read/write через дверь; O_APPEND, ротация 10MB/30д | ⚠️ query-тула НЕТ (LOW gap из v4-deep-gap-analysis «аудит-лог без читателя») → пока `tail`/`jq` руками |
+| Watcher/door lifecycle | `.dev-pomogator/logs/watcher.log` | line-based | lock-contention, read-only boot (P21-1), native-vs-poll watcher | `tail` |
+| Escape-hatch аудит | `.claude/logs/{spec-access,spec-variant-matrix,spec-architecture,scope-gate}-escapes.jsonl` | JSONL append-only | каждое использование escape-маркера (anti-gaming) | `tail`/`jq` + правила `*/escape-hatch-audit.md` |
+| Движок/хуки | `~/.dev-pomogator/logs/{form-guards,tsx-runner,specs-validator}.log` | line-based | form-валидация, tsx-загрузчик, prompt-баннер | `tail` |
+
+Aggregate-поверхности (читают эти логи ЗА тебя, не парси сырьё руками без нужды):
+prompt-баннер (DENY-счётчик + task-census каждый ход), `/spec-status` («full aggregate,
+also acknowledges»), census-кэш `.dev-pomogator/.task-census.json`.
+
+```bash
+# находки за сутки (счётчик):
+node --import tsx tools/spec-check-log/cli.ts --since 24h --count
+# конкретный класс находок с локацией:
+node --import tsx tools/spec-check-log/cli.ts --code UNCOVERED_FR --severity warning
+# что агент трогал в спеках через дверь (CLI нет — руками):
+tail -20 .dev-pomogator/logs/spec-access.jsonl
+```
+
+⚠️ `spec-check-log` — ОБЩИЙ шард: DENY-продюсер и side-channel `spec-conformance-push`
+делят файл. Считаешь «реальные» находки — фильтруй `--source` (инцидент: 1052 push-info
+посчитались как DENY в шапке; новый потребитель ОБЩЕГО лога ОБЯЗАН перечислить считаемые
+`source`-ы — см. реестр инцидентов ниже).
+
+## Верификационная батарея (после ЛЮБОЙ правки слоя)
+
+```bash
+node --import tsx tools/spec-graph/collision-probe.ts                       # 0 коллизий
+node --import tsx tools/spec-graph/corpus-health.ts                        # организм
+npx tsx tools/specs-generator/spec-verdict.ts -Path .specs/<slug> [--no-semantic]
+node --import tsx tools/spec-mcp-server/dogfood-dataset.ts                 # LIVE тулзы
+node --import tsx node_modules/@cucumber/cucumber/bin/cucumber.js          # BDD 0 failed (полный прогон — иначе NDJSON частичный → coverage врёт; см. not_run)
+# vitest по слою (через wrapper): tools/spec-graph/__tests__ + tools/spec-mcp-server/__tests__
+npm run build:mcp   # ОБЯЗАТЕЛЬНО при правке tools.ts/server.ts/импорт-графа сервера — иначе юзеры плагина без фикса
+# bundle-serve смоук (РЕАЛЬНЫЙ артефакт юзеров, не source) — обязателен после build:mcp:
+printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2024-11-05","capabilities":{},"clientInfo":{"name":"smoke","version":"0"}}}' '{"jsonrpc":"2.0","method":"notifications/initialized"}' '{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}' | DEV_POMOGATOR_REPO_ROOT="$PWD" node tools/spec-mcp-server/server.bundle.mjs   # ждём serverInfo + 25 тулзов, НЕ "usage: …"
+```
+
+Вердиктные прогоны Docker-сьюта — только из ЧИСТОГО worktree (`git worktree add ../confirm <sha>`),
+общее дерево мутируют параллельные сессии (issue #49).
+
+## САМОПРОВЕРКА перед «готово» (не жди вопроса «сам проверил?»)
+
+После ЛЮБОЙ правки — прогони проверку В ЭТОМ ЖЕ ходе и процитируй вывод; «готово» без улики = факап.
+Особые классы, которые ОБЯЗАН проверять активно (горьким опытом):
+
+1. **Guard/чек, доверяющий ДЕКЛАРАЦИИ (таблица/список/мапа), ОБЯЗАН проверять, что декларация ПРАВДИВА против реальности.** «Запись в таблице непуста» ≠ «запись истинна». Инцидент 2026-06-07 (поймал юзер «сам проверил?»): `checkToolConsumers` проверял, что у тула ЕСТЬ потребитель в `TOOL_CONSUMERS`, но не что скилл-потребитель РЕАЛЬНО использует тул — 2 ложные записи (spec-status за get_coverage/get_spec_status) прошли. Фикс: `verifyConsumerTruthfulness` грепает SKILL.md каждого заявленного потребителя; в drift-check как третий гейт. **Паттерн фикса универсален: на каждую trust-таблицу — companion-чек «декларация == реальность», и тест на ЛОЖНУЮ запись.**
+2. **Новый guard/чек ОБЯЗАН падать на ПОДСАженном нарушении** (planted-violation тест), иначе он inert (см. конформанс-инцидент: гейт фильтровал severity, которой не бывает).
+3. **Хук — registered LIVE в обоих манифестах + deps-absent + пин** (класс пяти мёртвых стражей).
+4. **Bundle-distributed артефакт (MCP server) ОБЯЗАН тестироваться запуском РЕАЛЬНОГО бандла** (`node server.bundle.mjs` → initialize+tools/list по stdin), НЕ source через tsx. Инцидент 2026-06-08: `mutations.ts` затянул `anchor-integrity/check.mjs` в граф импортов → esbuild заинлайнил его → его direct-run guard `import.meta.url===pathToFileURL(argv[1])` в бандле ИСТИНЕН (единственный import.meta.url == путь бандла) → `cliMain()` печатал usage и убивал сервер. `hooks-stdin-e2e` гонял SOURCE (tsx server.ts) и маскировал → дверь была мертва у юзеров. Фикс: basename-guard в check.mjs + тест переведён на БАНДЛ. **verify-against-real-artifact: тестируй то, что запускают юзеры (.mcp.json → бандл), не dev-проксю.**
+5. **Deterministic-падение ≠ флейк — расследуй ДО того как списать.** Инцидент 2026-06-08: `hooks-stdin-e2e` (stale tool-list 13 vs 19), hyperv/scope-gate frontmatter-чеки — я скопом списал их в «пред-существующие spawn-флейки», advisor поправил: ~6 из 14 детерминированы. `hooks-stdin-e2e` был РЕАЛЬНЫМ red с P17-1/2 (drift-guard сработал, список не обновили). Прежде чем сказать «падения не мои/флейки» — открой хвост каждого детерминированного и прочитай ассерт.
+6. **Плагин-дистрибуцию МОЖНО тестировать — НЕ заявляй «нельзя прогнать установку».** Инцидент 2026-06-08: сказал юзеру «установку не прогнать», а тулзы есть: `claude plugin validate <path> [--strict]` (валидирует манифест; `--strict` варнит нераспознанные поля — так подтверждается что новое поле типа `userConfig` реально), `claude --plugin-dir <path>` (грузит плагин из папки на сессию — локальный тест без marketplace), `claude --plugin-url`, `claude plugin details/list/install/init`. Перед утверждением о поведении плагина — прогони `validate`/`--plugin-dir`, не догадывайся.
+7. **MCP/guard, меняющий поведение у ЮЗЕРОВ, верифицируй ЖИВЫМ агентом (`claude -p`), а не только смоуком сервера.** Методика P17-6: stamp размера `spec-access.jsonl` → `[SPEC_ACCESS_ENFORCE=true] claude -p --allowedTools "mcp__dev-pomogator-specs__* …" -- "<естественная спек-задача>"` → дельта лога. 0 сырых Read/Grep = агент пошёл в дверь. Естественная задача (не «use the MCP tool» — это театр). Голый `claude -p` classifier пропускает; `--dangerously-skip-permissions` и self-widening settings — НЕТ (действия юзера).
+8. **«Готово» ЗАПРЕЩЕНО по зелёному сьюту — это НЕ доказательство трассировки.** Suite-green значит «тесты прошли», НЕ «граф здоров». Перед «готово» ОБЯЗАН прогнать И процитировать ОРГАНИЗМ, не только сьют: (a) `node --import tsx tools/spec-graph/corpus-health.ts` — НЕТ НОВЫХ orphan-тестов (FR-44/GT-1) / untraced-атомов (FR-37b: UNCOVERED_FR/TASK_UNTESTED/UNTAGGED_SCENARIO) от ТВОЕГО дифа (сравни с предсуществующим — чужой долг ≠ твой); (b) `spec-verdict -Path .specs/<slug>` GREEN на затронутой спеке; (c) `fr-census --spec <slug>` на новом/затронутом FR. Инцидент 2026-06-12: заявил «всё зелёно в Docker», организм НЕ прогнал — оказался 🔴 RED (98 orphan, 1325 untraced); поймал юзер «сам проверил? каждую спеку?».
+9. **Новый код/возможность (тул/агент/чек/резолвер) ОБЯЗАН быть трассирован к FR ДО «готово».** Добавить код без триады (FILE_CHANGES implements-ребро + TASK с `refs: FR-N` + @feature-сценарий на реальный код) = САМ ПО СЕБЕ дефект (orphan/untraced), даже если тесты зелёные. «Реализовал + тест прошёл» ≠ «требование существует и связано». Самопроверка: твой новый файл есть в FILE_CHANGES? есть TASK с refs на FR? есть @feature-сценарий? иначе `fr-census` не зачтёт, а `corpus-health` посчитает orphan. Инцидент 2026-06-12: написал тулы `get_archival_proof`/`archive_spec` + агент `spec-archive.ts` БЕЗ FR-45 → мой код привязан к нулю требований.
+
+## Реестр инцидентов → producer-фиксов (пополняй при каждом новом классе)
+
+| Инцидент | Производитель | Фикс |
+|---|---|---|
+| 9 авто-[TBD] FR-скелетов из примеров в AC | `spec-backlog/resolvers/fr-author.ts` — голый `FR-(\d+)` харвест | вырез код-спанов/fence + plausibility (zero-padded twin, numbering range) + регрессия в `__tests__/fr-author.test.ts` |
+| LINK_VALIDITY false positives на прозе | `core.mjs` — `## FR-N:` без `^…m` | ^-якоря (TASKS-link + AC-link чеки) |
+| ORPHAN_TASK из evidence-прозы | `parsers/tasks.ts` — refs из всего тела | вырез код-спанов перед харвестом |
+| 47-из-470 FR (last-writer) | `builder.ts` bare-ключи | композитные `<slug>:<localId>` (FR-36, P13) |
+| get_trace мёртв при зелёном сьюте | рёбра не строились, сьют ходил side-channel-ом | @featureN → реальные рёбра + dogfood-сэмплер предпочитает FR с ребром |
+| blanket-тег ≠ семантика (11 дрифтов @FR-19) | агентская привычка «закрыть гейт одним тегом» | механический страж `TAG_BULK_SUSPECT` в conformance (≥10 сценариев под одним req-тегом в файле → INFO с указателем на judge) + FR-8 semantic в вердикте; пере-тег по-сценарно |
+| missing-fr из inline-примеров (upstream) | `cross-spec-reconcile/reconcile.ts` стрипал fence, но не inline-спаны | `stripCodeExamples()` (fence + inline) в citation-пути |
+| PARTIAL_IMPL false positive | core.mjs: неякорённый heading-трекер + маркеры в бэктиках (`PARTIAL` как enum-литерал) | ^-якорь + fence-skip + вырез код-спанов перед маркер-матчем |
+| Структурный pass = «valid» | привычка агента | правило `no-structural-valid.md` + FR-37d гарды в скиллах |
+| Свежий scaffold рождался RED (7 audit ERROR + 3 UNTAGGED из коробки) | `tools/specs-generator/templates/` — FR-3/4/5 без AC/UC-ссылок, edit-row на несуществующий путь, сценарии без тегов | FR/AC-шаблоны с полными перекрёстными ссылками, FILE_CHANGES placeholder → create + warning, feature.template с реальными @FR-N; live-proof: scaffold → verdict GREEN at birth |
+| Псевдо-тег `# @featureN` (комментарий — парсер не видит → UNTAGGED, рёбер нет) | ПРОМПТЫ-учителя: `extension-test-quality.md` (root), `feature-creation-rules.md`, `phase3plus_audit-logic-gaps.md`, `requirements-chk-matrix` | все 4 носителя переписаны на НАСТОЯЩИЙ Gherkin-тег (читать оба формата, ПИСАТЬ только реальный) |
+| «validate-spec: 0 errors» как финальная валидация в workflow | `phase3_finalization.md` шаг 3 | двухуровневая финализация: pre-filter + `spec-verdict --no-semantic` GREEN (FR-37a/d) |
+| Весь enforcement-слой создающей стороны мёртв (5 form-guards без единой живой регистрации; meta-guard охранял несуществующее; скиллы обещали «guard will deny») | регистрация терялась при v1→v2 миграции манифестов; ни один тест не проверял ЖИВОСТЬ регистрации (только прямой спавн) | `form-guards-dispatch.ts` live в обоих манифестах + самозащита в meta-guard + пин в SPECGEN004_52 + дисциплина: для каждого hook-артефакта проверять «registered in a LIVE manifest», не только «код+тест есть» |
+| Скилл инструктирует формат, который его же guard режет (CHK-NFR id; lowercase Jira-маркеры) | SKILL.md и guard-регекс эволюционировали независимо, evals нет | скиллы переписаны под guard-контракт + построен `--check` CLI (был фантомом в 3 скиллах) + P16-2: evals с negative-кейсами на оба класса |
+| Счётчик читает СВОЙ выдуманный envelope, а не producer-овский (FR-20 hard-tier искал `code`, реальный writer пишет `finding_code` — реальные находки не считались никогда; тесты сеяли рукодельный конверт) | новый потребитель лога написан без чтения composeEntry соседнего модуля | поле из producer-а (`finding_code ?? code`), тест-сидер через РЕАЛЬНЫЙ composeEntry; пойман SPECGEN004_122 на первом прогоне |
+| «Unresolved DENY» считал НЕ-denies (фикс выше открыл глаза счётчику → 1401 push-info-находка → 1052 в шапке) | общий JSONL-шард делят DENY-продюсер и side-channel push; счётчик не фильтровал source | фильтр `source !== 'spec-conformance-push'` + дисциплина: новый потребитель ОБЩЕГО лога перечисляет считаемые source-ы |
+| Класс NO-SCEN: FR реализован+vitest, но 0 BDD-сценариев → невидим tested-by слою (FR-23/28) | vitest-only верификация проходит все гейты задач | per-FR срез в spec-status (шаг 5b) детектит класс; закрытие = сценарий на РЕАЛЬНОМ коде |
+| Guard доверяет ДЕКЛАРАЦИИ, не проверяя её правдивость (FR-42a `checkToolConsumers`: «потребитель есть в таблице» ≠ «скилл реально юзает тул»; 2 ложные записи прошли — поймал юзер «сам проверил?») | trust-таблица без companion-чека «декларация == реальность» | `verifyConsumerTruthfulness` (грепает SKILL.md заявленного потребителя) третьим гейтом drift-check + unit на ЛОЖНУЮ запись; самопроверка-класс №1 выше |
+| MCP-сервер мёртв headless (`server.bundle.mjs` печатал `usage: check.mjs` и выходил, не обслуживая) — вся MCP-rails волна на двери, которая не открывается у юзеров | `mutations.ts`→`check.mjs` в графе импортов; esbuild заинлайнил его direct-run guard `import.meta.url===argv[1]`, истинный в бандле | basename-guard `/(^\|[\\/])check\.mjs$/` в check.mjs; `hooks-stdin-e2e` переведён на БАНДЛ + список 13→19; самопроверка-класс №4 |
+| Частичный `cucumber --tags X` затирал общий NDJSON → coverage показывал остальные сценарии как «undefined» (как будто спека развалилась, passed 132→5) | `coverage.ts` сваливал «нет результата» (не прогнан) и `UNDEFINED` (undefined-шаги) в ОДИН бакет | отдельный бакет `not_run` ≠ `undefined` + NOT_RUN-нота в spec-verdict с разбивкой по feature-файлу (различает фильтр-прогон vs feature вне cucumber paths); SPECGEN004_134 |
+| ENGINE_CLI вайтлист пропускал directory-named тулзы (`anchor-integrity/fix.mjs`→basename `fix` ∉ списка → под enforce anchor-fix DENY); SPECGEN004_133 first cut тестил синтетический `tools/x/anchor-integrity.ts` = fake-green | hand-maintained basename-список дрейфует; тест зеркалил выдуманный путь, не реальный producer | guard распознаёт движок по СУТИ (basename ∈ ENGINE_CLI ИЛИ project-script под tools/.claude — command-position, не redirect-target); _133 переписан на РЕАЛЬНЫЕ инвокации; verify-against-real-artifact |
+| Живой агент под enforce падал в Read: MCP-сервер вернул `NODE_NOT_FOUND` на реальный FR (P17-6) | headless `claude -p` не подставлял `${CLAUDE_PROJECT_DIR}` → `DEV_POMOGATOR_REPO_ROOT`=literal (непустой, `\|\| cwd` не словил) → граф из несуществующего пути | `resolveRepoRoot(env,cwd)`: доверять env ТОЛЬКО если это реальный dir с `.specs/`, иначе cwd (отвергает `${…}`-плейсхолдер + `.specs`-less путь); unit `server-repo-root.test.ts` |
+| Юзеры плагина не получали enforce/MCP-конфиг без ручной правки settings.json | в манифесте плагина НЕТ поля `permissions` (грант не шипится); enforce был только per-session env | enforce шипится через `userConfig.spec_access_enforce` (default true; авто-экспорт `CLAUDE_PLUGIN_OPTION_*` → guard читает обе casing); MCP-сервер авто-регистрируется из plugin.json `mcpServers` + per-server approval (не правка settings); подтверждено `claude plugin validate --strict` |
+| Спека невидима census-у/tested-by (0 Task-нод) — `parsers/tasks.ts` `headerOf` требует `— id:` И `Status:`, а старые спеки (session-pilot) пишут `Tnn:`-префикс БЕЗ `— id:` → headerOf=null → задачи пропущены молча (census трекал 1 спеку из 50) | дрейф формата TASKS.md: строгий v4 (`— id: — Status:`) vs `Tnn:`-таблица task-board-forms | `scripts/add-task-ids.ts` (CRLF-safe, status-preserving, child-safe, idempotent) реворкает `Tnn:`→`— id: tNN`; писать ЧЕРЕЗ дверь; session-pilot 0→58 task-нод, census 1→2 спеки (24 open+34 ⏸ — честно: трекнут, НЕ переверифицирован); reference `references/rework-loose-tasks-to-strict.md` |
+| Заявил «готово/green» по Docker-сьюту, не прогнав ОРГАНИЗМ; добавил архив-тулы+агента БЕЗ FR-45 → нетрассируемый код (поймал юзер «сам проверил? каждую спеку?») | привычка агента: «зелёный сьют = проверено», и новый код без триады трассировки | классы самопроверки №8 (organism+verdict+census ОБЯЗАТЕЛЬНЫ перед готово; suite-green≠трассировка) и №9 (новый код трассируй к FR ДО готово) выше; `audit-reports/archival-verification-plan.md` |
+
+## Связанные
+
+- Правило: `.claude/rules/spec-verdict/no-structural-valid.md` (FR-37d)
+- Скиллы-соседи: `corpus-health` (организм), `spec-graph-query` (читать граф),
+  `spec-mcp-dogfood` (рантайм-перепись тулзов), `spec-status` (per-spec вердикт)
+- Спека: `.specs/spec-generator-v4/` (FR-36/37/38 — identity, вердикт, lifecycle)
+- Реворк loose→strict TASKS.md (чтобы спека трекалась census/tested-by): `references/rework-loose-tasks-to-strict.md` + `scripts/add-task-ids.ts`
+- Аудит — кто что проверяет (validate-spec/audit-spec/conformance/coverage/semantic/corpus-health, композиция в spec-verdict): `references/audit-split-responsibility.md` (P16-5)
+- Архивы: `audit-reports/fr36-dogfood-before-after.md`, `audit-reports/fr8-semantic-drift-inventory.md`

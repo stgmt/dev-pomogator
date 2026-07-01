@@ -17,8 +17,8 @@ Diagnostics & regression tests for npx silent install failure on Windows. Эта
 
 - **Diagnostic skill**: `.claude/skills/install-diagnostics/SKILL.md`
 - **Test helper**: `tests/e2e/helpers.ts` → `runInstallerViaNpx()` (после `runInstaller`)
-- **BDD scenarios**: `tests/features/core/CORE003_claude-installer.feature` → CORE003_18, CORE003_19
-- **Integration tests**: `tests/e2e/claude-installer.test.ts` → 2 новых `describe.skipIf` блока перед `afterAll` основного `describe('CORE003: ...', ...)`
+- **BDD scenarios**: ~~`tests/features/core/CORE003_claude-installer.feature`~~ → CORE003_18, CORE003_19
+- **Integration tests**: ~~`tests/e2e/claude-installer.test.ts`~~ → 2 новых `describe.skipIf` блока перед `afterAll` основного `describe('CORE003: ...', ...)`
 - **Bug evidence**: [RESEARCH.md](RESEARCH.md) (полное reproduction + paths)
 
 ## Где читать дальше

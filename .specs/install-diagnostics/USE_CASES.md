@@ -5,7 +5,7 @@
 Docker test runner запускает `npm test -- claude-installer` на Linux в контейнере. Linux control test CORE003_18 проверяет что цепочка `npx → bin → installer → install.log` отрабатывает end-to-end без warnings.
 
 - CI пайплайн запускает `bash scripts/docker-test.sh`
-- Docker container выполняет `vitest run tests/e2e/claude-installer.test.ts`
+- Docker container выполняет ~~`vitest run tests/e2e/claude-installer.test.ts`~~
 - Vitest вызывает `runInstallerViaNpx('--claude --all', { fresh: true })` в `describe('CORE003_18', ...)` блоке
 - Helper создаёт temp dir, fresh `NPM_CONFIG_CACHE`, запускает `npx --loglevel verbose --yes github:stgmt/dev-pomogator --claude --all`
 - npx скачивает tarball с github.com, npm reify установит пакет в `_npx/<hash>/node_modules/dev-pomogator/`
@@ -16,7 +16,7 @@ Docker test runner запускает `npm test -- claude-installer` на Linux 
 
 Разработчик на Windows host запускает CORE003_19 регрессионный тест. Тест намеренно failing-by-design до upstream fix-а silent install bug-а.
 
-- Разработчик: `cd D:\repos\dev-pomogator && npx vitest run tests/e2e/claude-installer.test.ts -t "CORE003_19"`
+- Разработчик: ~~`cd D:\repos\dev-pomogator && npx vitest run tests/e2e/claude-installer.test.ts -t "CORE003_19"`~~
 - Vitest определяет `process.platform === 'win32'`, не пропускает блок (skipIf проходит)
 - `runInstallerViaNpx('--claude --all', { fresh: true })` вызывается
 - npm reify хитает EPERM на `@inquirer/external-editor/dist/esm` → cleanup warnings → exit 2 → bin не извлекается
@@ -28,7 +28,7 @@ Docker test runner запускает `npm test -- claude-installer` на Linux 
 Через N месяцев upstream npm fix исправляет EPERM на reify cleanup ИЛИ dev-pomogator переходит на bundled installer без deep @inquirer deps. Разработчик хочет verify что fix действительно работает.
 
 - Разработчик обновляет npm до версии с fix-ом ИЛИ применяет local workaround
-- Запускает: `npx vitest run tests/e2e/claude-installer.test.ts -t "CORE003_19"`
+- Запускает: ~~`npx vitest run tests/e2e/claude-installer.test.ts -t "CORE003_19"`~~
 - `runInstallerViaNpx()` теперь успешно завершает npm reify
 - exitCode === 0, rocket banner печатается, install.log touched, cache populated, нет cleanup warnings
 - **Результат**: тест PASS без изменения assertions. Это сигнал что bug fixed. Разработчик может закрыть upstream issue / удалить workaround mention из RESEARCH.md

@@ -1,0 +1,28 @@
+{
+  "version": 4,
+  "featureSlug": "bdd-only-migration",
+  "createdAt": "2026-06-21T18:47:37.233Z",
+  "currentPhase": "Discovery",
+  "phases": {
+    "Discovery": {
+      "completedAt": null,
+      "stopConfirmed": false,
+      "stopConfirmedAt": null
+    },
+    "Context": {
+      "completedAt": null,
+      "stopConfirmed": false,
+      "stopConfirmedAt": null
+    },
+    "Requirements": {
+      "completedAt": null,
+      "stopConfirmed": false,
+      "stopConfirmedAt": null
+    },
+    "Finalization": {
+      "completedAt": null,
+      "stopConfirmed": false,
+      "stopConfirmedAt": null
+    }
+  }
+}

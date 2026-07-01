@@ -1,0 +1,387 @@
+#!/usr/bin/env node
+/**
+ * bdd-migrator — deterministic inventory + classifier for the BDD-only migration (FR-M1).
+ *
+ * This is the MECHANICAL half of the migrator: given a spec slug it reports the migration
+ * plan — which scenarios are graph-traceable, whether the `.feature` is wired into cucumber,
+ * and how each vitest test classifies (the three classes finding #11 found in the answer-simple
+ * pilot). Authoring the actual step-defs is the LLM half, driven by the `bdd-migrator` skill via
+ * the strong-tests §6.5 recipe; this tool tells the skill exactly what is left to do.
+ *
+ * Classes (per finding #11):
+ *   - runtime   → test calls a real engine (imports a tools/ module & invokes it, or spawnSync/
+ *                 execSync). Migrates to a real-engine step-def (strong, mutation-checkable).
+ *   - artifact  → test only inspects file structure (fs read + assert). Migrates to a
+ *                 file-inspection step-def (same strength as the vitest, now graph-traceable).
+ *   - manual    → it.skip / needs a live session (no automation hook). Tag the scenario @manual.
+ *
+ * Usage:  npx tsx tools/bdd-migrator/migrate.ts --spec <slug> [--json]
+ * Exit:   0 = analysed; 2 = spec/feature not found.
+ *
+ * @see audit-reports/v4-dogfood-retrospective.md finding #11 (the spec for this tool)
+ * @see .claude/skills/strong-tests/SKILL.md §6.5 (the authoring recipe the skill runs)
+ */
+import fs from 'node:fs';
+import path from 'node:path';
+import { skippedDescribeSpans } from './inventory.ts';
+
+const REPO = process.cwd();
+
+export type TestClass = 'runtime' | 'artifact' | 'manual' | 'unknown';
+export interface ScenarioInfo {
+  id: string;
+  tagState: 'real' | 'comment' | 'none';
+  tags: string[];
+}
+export interface VitestInfo {
+  name: string;
+  cls: TestClass;
+}
+export interface MigrationPlan {
+  spec: string;
+  featurePath: string | null;
+  wiredInCucumber: boolean;
+  scenarios: ScenarioInfo[];
+  vitestFiles: string[];
+  vitestTests: VitestInfo[];
+  localRunRisk: boolean;
+  actions: string[];
+}
+
+/** Parse a `.feature` into scenarios + whether each carries a REAL tag line vs a `# comment`. */
+export function parseScenarios(feature: string): ScenarioInfo[] {
+  const lines = feature.split(/\r?\n/);
+  const out: ScenarioInfo[] = [];
+  for (let i = 0; i < lines.length; i++) {
+    const m = lines[i].match(/^\s*Scenario(?: Outline)?:\s*(.+?)\s*$/);
+    if (!m) continue;
+    // Walk upward over blank lines collecting the immediately-preceding tag/comment lines.
+    let tagState: ScenarioInfo['tagState'] = 'none';
+    const tags: string[] = [];
+    for (let j = i - 1; j >= 0; j--) {
+      const t = lines[j].trim();
+      if (t === '') continue;
+      const real = t.match(/^(@[^\s]+(?:\s+@[^\s]+)*)$/);
+      const comment = t.match(/^#\s*(@\S+)/);
+      if (real) {
+        tagState = 'real';
+        tags.push(...real[1].split(/\s+/));
+        // keep walking — multiple tag lines may stack
+        continue;
+      }
+      if (comment) {
+        if (tagState !== 'real') tagState = 'comment';
+        tags.push(comment[1]);
+      }
+      break;
+    }
+    // Prefer a short id token (CODE_NN) from the scenario title when present. The trailing `[a-z]?`
+    // keeps a letter SUFFIX (SRC001_05b) distinct from its base (SRC001_05) — without it both parse
+    // to "SRC001_05" and collide (the planner listed SRC001_05 twice for spec-reality-check).
+    const idTok = m[1].match(/^([A-Za-z]+\d+_\d+[a-z]?|[A-Za-z]+\d+)/);
+    out.push({ id: idTok ? idTok[1] : m[1].slice(0, 40), tagState, tags });
+  }
+  return out;
+}
+
+/** Symbols imported from a production module — invoking one in a test = a real engine call. Production
+ *  code lives under BOTH `tools/` AND `.claude/{skills,rules,agents,commands}/<x>/scripts/` (e.g.
+ *  strong-tests' `scan`/`nestedLoopCount`/`suggestInvariants` from
+ *  `.claude/skills/strong-tests/scripts/detect-invariant-candidates.ts`, spec-reality-check's
+ *  `verify.ts`). The old `tools/`-only match mis-labelled those in-process drivers as `unknown` →
+ *  inflated the `needs-triage` U: count for every skill-homed spec (dogfood 2026-06-21: strong-tests'
+ *  48 kill-surface tests showed as a false migration backlog). */
+export function toolImportSymbols(src: string): string[] {
+  const syms: string[] = [];
+  const re = /import\s*(?:type\s*)?\{([^}]+)\}\s*from\s*['"][^'"]*(?:tools|\.claude\/(?:skills|rules|agents|commands))\/[^'"]+['"]/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(src))) {
+    for (const s of m[1].split(',')) {
+      const name = s.trim().split(/\s+as\s+/)[0].trim();
+      if (name && /^[A-Za-z_$]\w*$/.test(name)) syms.push(name);
+    }
+  }
+  return syms;
+}
+
+/**
+ * Classify a single it()/test() body. `toolSymbols` are names imported from tools/ — a body that
+ * CALLS one is runtime even if it also reads files (the classifier's blind spot found on
+ * skill-listing-budget: ensureSkillListingBudget(...) + fs.readJson was mis-labelled artifact).
+ */
+export function classifyTestBody(body: string, toolSymbols: string[] = []): TestClass {
+  if (/\bspawnSync\b|\bexecSync\b|\bspawn\b/.test(body)) return 'runtime';
+  if (toolSymbols.some((s) => new RegExp(`\\b${s}\\s*\\(`).test(body))) return 'runtime';
+  if (/\b(detect|run|build|parse|compute|validate|audit|generate|resolve|ensure|apply)[A-Z]\w*\s*\(/.test(body)) return 'runtime';
+  if (/\bfs\.|readFileSync|pathExists|readJson|existsSync/.test(body)) return 'artifact';
+  return 'unknown';
+}
+
+/** Split a vitest file into it()/test() blocks (incl. it.skip) and classify each. */
+export function classifyVitestFile(src: string): VitestInfo[] {
+  const toolSymbols = toolImportSymbols(src);
+  const skippedSpans = skippedDescribeSpans(src); // a describe.skip/.todo suite is skipped → manual, like it.skip
+  const out: VitestInfo[] = [];
+  const re = /\b(it|test)(\.skip|\.only)?\s*\(\s*(['"`])([\s\S]*?)\3/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(src))) {
+    const start = m.index;
+    const skipped = m[2] === '.skip' || skippedSpans.some((s) => start >= s.start && start < s.end);
+    const name = m[4];
+    // Body = from this match to the next it/test (rough block boundary).
+    re.lastIndex = m.index + m[0].length;
+    const nextMatch = /\b(it|test)(\.skip|\.only)?\s*\(/.exec(src.slice(re.lastIndex));
+    const end = nextMatch ? re.lastIndex + nextMatch.index : src.length;
+    const body = src.slice(start, end);
+    out.push({ name, cls: skipped ? 'manual' : classifyTestBody(body, toolSymbols) });
+  }
+  return out;
+}
+
+function isWired(featureRel: string): boolean {
+  const cfgPath = path.join(REPO, 'cucumber.json');
+  if (!fs.existsSync(cfgPath)) return false;
+  try {
+    const cfg = JSON.parse(fs.readFileSync(cfgPath, 'utf-8'));
+    const paths: string[] = cfg?.default?.paths ?? [];
+    const norm = (p: string) => p.replace(/\\/g, '/');
+    return paths.map(norm).includes(norm(featureRel));
+  } catch {
+    return false;
+  }
+}
+
+const TEST_SKIP_DIRS = new Set([
+  'node_modules', '.git', '.stryker-tmp', 'dist', '.dev-pomogator', '.dev-pomogator-tmp',
+  'reports', '__fixtures__', 'fixtures',
+]);
+
+/** Collect every *.test.ts under tests/ + tools/ + .claude/ (skipping build/vendor/fixture trees). */
+function walkTestFiles(): string[] {
+  const out: string[] = [];
+  const visit = (dir: string): void => {
+    let entries: fs.Dirent[];
+    try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch { return; }
+    for (const e of entries) {
+      if (e.isDirectory()) { if (!TEST_SKIP_DIRS.has(e.name)) visit(path.join(dir, e.name)); }
+      else if (e.isFile() && e.name.endsWith('.test.ts')) out.push(path.join(dir, e.name));
+    }
+  };
+  for (const root of ['tests', 'tools', '.claude']) visit(path.join(REPO, root));
+  return out;
+}
+
+function escapeRe(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/** Does a test file's SOURCE attribute it to `slug` — i.e. reference the spec's production code dir
+ *  (`tools/<slug>/`, `.claude/{skills,rules,agents,commands}/<slug>/`)? Pure + exported so the
+ *  attribution is unit-testable. (Dogfood 2026-06-21 — see {@link findVitestFiles}.) */
+export function testAttributesToSpec(src: string, slug: string): boolean {
+  return new RegExp('(?:tools|\\.claude/(?:skills|rules|agents|commands))/' + escapeRe(slug) + '/').test(src);
+}
+
+/** Is a test file physically HOMED under some component dir (`tools/<x>/`, `.claude/{skills,rules,agents,
+ *  commands}/<x>/`)? Such a file belongs to THAT component and must not be content-attributed to a
+ *  different slug it merely mentions as a fixture string. Pure + exported for the unit test. */
+export function isComponentHomed(rel: string): boolean {
+  return /(?:^|\/)(?:tools|\.claude\/(?:skills|rules|agents|commands))\/[^/]+\//.test(rel.replace(/\\/g, '/'));
+}
+
+/** Find vitest files that own a spec: tests/e2e/<slug>.test.ts (direct, named by slug) PLUS any
+ *  *.test.ts physically UNDER the spec's code dir OR whose body REFERENCES it (content-attribution).
+ *  Dogfood 2026-06-21: the slug-name-only match missed tests/e2e/test-guard.test.ts — it drives the
+ *  spec's hook `tools/tui-test-runner/test_guard.ts` but is not named by the slug, so non-slug twins
+ *  were invisible to the inventory and the agent had to be told about them out-of-band. */
+function findVitestFiles(slug: string): string[] {
+  const hits = new Set<string>();
+  const direct = path.join(REPO, 'tests', 'e2e', `${slug}.test.ts`);
+  if (fs.existsSync(direct)) hits.add(path.relative(REPO, direct).replace(/\\/g, '/'));
+  const locRe = new RegExp('(?:^|/)(?:tools|\\.claude/(?:skills|rules|agents|commands))/' + escapeRe(slug) + '/');
+  // A file physically homed under SOME component dir (`tools/<x>/`, `.claude/skills/<x>/`, …) belongs to
+  // THAT component — never content-attribute it to a DIFFERENT slug just because it mentions the slug's
+  // path as a fixture string (dogfood 2026-06-21: `tools/bdd-migrator/__tests__/migrate.test.ts` was
+  // wrongly pulled into answer-simple because a MIGRATE001 fixture string is `.claude/skills/answer-simple/…`).
+  for (const abs of walkTestFiles()) {
+    const rel = path.relative(REPO, abs).replace(/\\/g, '/');
+    if (hits.has(rel)) continue;
+    if (locRe.test(rel)) { hits.add(rel); continue; } // physically under THIS spec's code dir → location-attributed
+    if (isComponentHomed(rel)) continue; // homed under ANOTHER component → its own pass, not content-attribution
+    let src: string;
+    try { src = fs.readFileSync(abs, 'utf-8'); } catch { continue; }
+    if (testAttributesToSpec(src, slug)) hits.add(rel); // unhomed (tests/e2e/, tests/unit/, …) → attribute by reference
+  }
+  return [...hits].sort();
+}
+
+/** Mutate targets declared in any `stryker*.config.mjs` at the repo root — the modules whose mutation
+ *  coverage MUST be preserved. A vitest twin that drives one of these is the "Stryker kill-surface":
+ *  under the BDD-only policy it is NOT kept — it is migrated to a `@featureN` Scenario Outline + Examples
+ *  + wired `stryker.bdd.config.mjs` + gated by `verify-kill` before deletion. Pure + exported for tests. */
+export function strykerMutateTargets(root: string): string[] {
+  const out = new Set<string>();
+  for (const cfg of ['stryker.config.mjs', 'stryker.bdd.config.mjs']) {
+    let src: string;
+    try { src = fs.readFileSync(path.join(root, cfg), 'utf-8'); } catch { continue; }
+    const block = src.match(/mutate\s*:\s*\[([\s\S]*?)\]/);
+    if (!block) continue;
+    for (const m of block[1].matchAll(/['"]([^'"]+)['"]/g)) out.add(m[1]);
+  }
+  return [...out];
+}
+
+/** Which mutate targets do these test sources drive (import by path or name)? Non-empty ⇒ kill-surface. */
+export function mutationSurfaceTargets(vitestSrcs: string[], targets: string[]): string[] {
+  const hit = new Set<string>();
+  for (const t of targets) {
+    const baseNoExt = t.replace(/\\/g, '/').split('/').pop()!.replace(/\.(tsx?|mjs|cjs|js)$/, '');
+    if (vitestSrcs.some((s) => s.includes(baseNoExt))) hit.add(t);
+  }
+  return [...hit];
+}
+
+export function buildPlan(slug: string): MigrationPlan {
+  const featureRel = `.specs/${slug}/${slug}.feature`;
+  const featureAbs = path.join(REPO, featureRel);
+  const hasFeature = fs.existsSync(featureAbs);
+  const scenarios = hasFeature ? parseScenarios(fs.readFileSync(featureAbs, 'utf-8')) : [];
+  const vitestFiles = findVitestFiles(slug);
+  const vitestSrcs = vitestFiles.map((f) => fs.readFileSync(path.join(REPO, f), 'utf-8'));
+  const vitestTests = vitestSrcs.flatMap((s) => classifyVitestFile(s));
+  // Run-safety: a test that writes into the REAL repo (.specs/.claude via APP_DIR/appPath) must
+  // run in Docker, not the local cucumber dev-loop (shared tree, parallel sessions). tmp-isolated
+  // tests (mkdtemp/tmpdir) are local-safe. This is orthogonal to test CLASS — found on
+  // create-specs-bdd-enforcement (class-clean but mutates real .specs/).
+  const localRunRisk = vitestSrcs.some(
+    (s) =>
+      /(APP_DIR|appPath\()/.test(s) &&
+      /(mkdirSync|writeFileSync|rmSync|ensureDirSync|writeJsonSync|fs\.remove)\b/.test(s) &&
+      /\.specs|\.claude/.test(s),
+  );
+  const wired = hasFeature && isWired(featureRel);
+
+  const actions: string[] = [];
+  if (!hasFeature) actions.push(`NO .feature — author scenarios for ${slug} (create-spec born-BDD)`);
+  const commentTagged = scenarios.filter((s) => s.tagState === 'comment');
+  if (commentTagged.length) actions.push(`fix ${commentTagged.length} comment-tag(s) → real @tag lines (graph-invisible otherwise): ${commentTagged.map((s) => s.id).join(', ')}`);
+  const untagged = scenarios.filter((s) => s.tagState === 'none');
+  if (untagged.length) actions.push(`tag ${untagged.length} untagged scenario(s): ${untagged.map((s) => s.id).join(', ')}`);
+  if (hasFeature && !wired) actions.push(`wire ${featureRel} into cucumber.json paths (gated by tags) once step-defs exist`);
+  const byClass = { runtime: 0, artifact: 0, manual: 0, unknown: 0 };
+  for (const t of vitestTests) byClass[t.cls]++;
+  if (vitestFiles.length) {
+    actions.push(`migrate ${vitestTests.length} vitest test(s) → step-defs [runtime:${byClass.runtime} artifact:${byClass.artifact} manual:${byClass.manual} unknown:${byClass.unknown}], then delete ${vitestFiles.join(', ')}`);
+    const directRel = `tests/e2e/${slug}.test.ts`;
+    const attributed = vitestFiles.filter((f) => f !== directRel);
+    if (attributed.length) {
+      actions.push(`⚠ CANDIDATE twins (attributed via the spec's shared code dir, NOT the slug name) — confirm each truly belongs to ${slug} by FR-SUBJECT before migrating; a file under tools/${slug}/ may be owned by a sibling spec: ${attributed.join(', ')}`);
+    }
+    const surface = mutationSurfaceTargets(vitestSrcs, strykerMutateTargets(REPO));
+    if (surface.length) {
+      actions.push(`⚠ MUTATION SURFACE (drives stryker mutate target: ${surface.join(', ')}) — BDD-only policy: do NOT keep. Migrate to a @featureN Scenario Outline + Examples (one row per former assertion), wire stryker.bdd.config.mjs at that tag, then prove parity with \`npm run mutation:verify\` (verify-kill) BEFORE deleting the twin. The BDD scenarios become the kill-surface.`);
+    }
+  } else {
+    actions.push(`no vitest twin found (slug-named, located-in, or referencing tools/${slug}/) — already migrated or cross-cutting (check project-test-trace.ts for orphans)`);
+  }
+
+  return { spec: slug, featurePath: hasFeature ? featureRel : null, wiredInCucumber: wired, scenarios, vitestFiles, vitestTests, localRunRisk, actions };
+}
+
+function render(plan: MigrationPlan): string {
+  const L: string[] = [];
+  L.push(`bdd-migrator plan — spec: ${plan.spec}`);
+  L.push(`  feature: ${plan.featurePath ?? '(none)'}  wired: ${plan.wiredInCucumber ? 'yes' : 'NO'}`);
+  L.push(`  scenarios (${plan.scenarios.length}): ` + (plan.scenarios.map((s) => `${s.id}[${s.tagState}]`).join(', ') || '(none)'));
+  L.push(`  vitest: ${plan.vitestFiles.join(', ') || '(none)'}`);
+  for (const t of plan.vitestTests) L.push(`    - ${t.cls.padEnd(8)} ${t.name}`);
+  L.push(`  actions:`);
+  for (const a of plan.actions) L.push(`    • ${a}`);
+  return L.join('\n');
+}
+
+/** Every spec slug (nested too) that owns a `<slug>/<slug>.feature`. runBatch then keeps only those
+ *  whose buildPlan().vitestFiles is non-empty (smart attribution via findVitestFiles). Dogfood
+ *  2026-06-21: the old enumerator only read tests/e2e/<slug>.test.ts filenames, so it MISSED every
+ *  spec whose vitest twin isn't named by the slug (the same blind spot findVitestFiles just fixed) —
+ *  --batch under-reported the remaining set. */
+function discoverMigratableSpecs(): string[] {
+  const root = path.join(REPO, '.specs');
+  if (!fs.existsSync(root)) return [];
+  const slugs: string[] = [];
+  const visit = (rel: string): void => {
+    const dir = path.join(root, rel);
+    const base = rel.split('/').pop()!;
+    if (fs.existsSync(path.join(dir, `${base}.feature`))) slugs.push(rel);
+    let entries: fs.Dirent[];
+    try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch { return; }
+    for (const e of entries) {
+      if (e.isDirectory() && !e.name.startsWith('.') && e.name !== '_artifact' && e.name !== 'archive') {
+        visit(`${rel}/${e.name}`);
+      }
+    }
+  };
+  for (const e of fs.readdirSync(root, { withFileTypes: true })) {
+    if (e.isDirectory() && !e.name.startsWith('.')) visit(e.name);
+  }
+  return slugs;
+}
+
+/** Lower score = easier/safer to migrate first (all-clean + few tests). */
+export function migratability(plan: MigrationPlan): { score: number; label: string } {
+  const c = { runtime: 0, artifact: 0, manual: 0, unknown: 0 };
+  for (const t of plan.vitestTests) c[t.cls]++;
+  const total = plan.vitestTests.length || 1;
+  // run-risky specs sort LAST (must run in Docker, not the local dev-loop) regardless of class.
+  const score = (c.manual + c.unknown) * 100 + total + (plan.localRunRisk ? 200 : 0);
+  const label = plan.localRunRisk ? 'docker-only' : c.manual + c.unknown === 0 ? 'clean' : c.unknown ? 'needs-triage' : 'has-manual';
+  return { score, label };
+}
+
+/** Emit a prioritised batch plan over all candidate specs that still own a vitest file. */
+function runBatch(): void {
+  const rows = discoverMigratableSpecs()
+    .map((slug) => {
+      const plan = buildPlan(slug);
+      return { slug, plan, m: migratability(plan) };
+    })
+    .filter((r) => r.plan.vitestFiles.length > 0)
+    .sort((a, b) => a.m.score - b.m.score);
+  console.log(`bdd-migrator BATCH plan — ${rows.length} spec(s) with a vitest file + matching .feature, easiest first:\n`);
+  for (const r of rows) {
+    const c = { runtime: 0, artifact: 0, manual: 0, unknown: 0 };
+    for (const t of r.plan.vitestTests) c[t.cls]++;
+    console.log(
+      `  [${r.m.label.padEnd(12)}] ${r.slug.padEnd(30)} tests:${String(r.plan.vitestTests.length).padStart(3)}` +
+        `  R:${c.runtime} A:${c.artifact} M:${c.manual} U:${c.unknown}  wired:${r.plan.wiredInCucumber ? 'y' : 'n'}`,
+    );
+  }
+  console.log(`\nBatch model: author step-defs for a batch of specs (parallelisable via test-author subagents,`);
+  console.log(`throttle ~3/wave per the swarm rate-limit finding), then ONE full cucumber run validates all —`);
+  console.log(`the run is the serial bottleneck (last-write-wins ndjson), so amortise it across the batch.`);
+}
+
+function main(): void {
+  const args = process.argv.slice(2);
+  if (args.includes('--batch')) {
+    runBatch();
+    process.exit(0);
+  }
+  const specIdx = args.indexOf('--spec');
+  const slug = specIdx >= 0 ? args[specIdx + 1] : undefined;
+  const asJson = args.includes('--json');
+  if (!slug) {
+    console.error('usage: npx tsx tools/bdd-migrator/migrate.ts --spec <slug> [--json]');
+    process.exit(2);
+  }
+  if (!fs.existsSync(path.join(REPO, '.specs', slug))) {
+    console.error(`spec not found: .specs/${slug}`);
+    process.exit(2);
+  }
+  const plan = buildPlan(slug);
+  console.log(asJson ? JSON.stringify(plan, null, 2) : render(plan));
+  process.exit(0);
+}
+
+const isDirectRun = process.argv[1]?.endsWith('migrate.ts') || process.argv[1]?.endsWith('migrate.js');
+if (isDirectRun) main();

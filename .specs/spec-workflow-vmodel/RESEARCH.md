@@ -4240,7 +4240,7 @@ FILE_CHANGES.md проверка — только в `$aiChecksPending` (line 57
 
 `_hooksNote` (line 114): "Hooks are installed by memory.ts (hardcoded)".
 
-**Ожидаемое** (из `extension-manifest-integrity.md`): manifest = single source of truth. Hooks hardcoded в `src/installer/memory.ts` (line 168: `npx tsx` для specs-validator) вместо manifest.
+**Ожидаемое** (из `extension-manifest-integrity.md`): manifest = single source of truth. Hooks hardcoded в ~~`src/installer/memory.ts`~~ (removed in v2 migration) (line 168: `npx tsx` для specs-validator) вместо manifest.
 
 ### GAP-IN-3: specs-management.md validation rules table — no "checked by" column (LOW, SMALL)
 

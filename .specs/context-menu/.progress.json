@@ -1,0 +1,28 @@
+{
+  "version": 4,
+  "featureSlug": "context-menu",
+  "createdAt": "2026-06-21T23:36:00.988Z",
+  "currentPhase": "Discovery",
+  "phases": {
+    "Discovery": {
+      "completedAt": null,
+      "stopConfirmed": false,
+      "stopConfirmedAt": null
+    },
+    "Context": {
+      "completedAt": null,
+      "stopConfirmed": false,
+      "stopConfirmedAt": null
+    },
+    "Requirements": {
+      "completedAt": null,
+      "stopConfirmed": false,
+      "stopConfirmedAt": null
+    },
+    "Finalization": {
+      "completedAt": null,
+      "stopConfirmed": false,
+      "stopConfirmedAt": null
+    }
+  }
+}

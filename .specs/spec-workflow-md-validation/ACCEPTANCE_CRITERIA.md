@@ -40,7 +40,7 @@ AND система SHALL НЕ создавать validation-report.md в ней
 
 ## AC-5 (FR-5): NOT_COVERED в отчёте @feature5
 
-→ [FR-5](FR.md#fr-5-детекция-not_covered-feature5)
+→ [FR-5](FR.md#fr-5-детекция-notcovered-feature5)
 
 WHEN @featureN тег найден в FR.md, ACCEPTANCE_CRITERIA.md или USE_CASES.md
 AND этот @featureN НЕ найден в .feature файле (как # @featureN)

@@ -7,16 +7,16 @@
 | [FR-1](FR.md#fr-1-always-apply-шаблон-самопроверки-агента-перед-отправкой-ответа) | Always-apply self-check template | [AC-1](ACCEPTANCE_CRITERIA.md#ac-1-fr-1) | @feature1 | Draft |
 | [FR-2](FR.md#fr-2-slash-команда-answer-simple-для-ручного-аудита-черновика) | Slash /answer-simple draft audit | [AC-2](ACCEPTANCE_CRITERIA.md#ac-2-fr-2) | @feature2 | Draft |
 | [FR-3](FR.md#fr-3-extension-следует-конвенциям-extension-layout) | Extension follows extension-layout | [AC-3](ACCEPTANCE_CRITERIA.md#ac-3-fr-3) | @feature3 | Draft |
-| [FR-4](FR.md#fr-4-триггер-инцидента-—-запрет-нового-вопроса-при-сигнале-непонимания) | Incident trigger no-new-question branch | [AC-4](ACCEPTANCE_CRITERIA.md#ac-4-fr-4) | @feature1 | Draft |
-| [FR-5](FR.md#fr-5-миграция-существующего-rule-с-обновлением-claude-md-глоссария) | Rule migration with glossary update | [AC-5](ACCEPTANCE_CRITERIA.md#ac-5-fr-5) | @feature3 | Draft |
+| [FR-4](FR.md#fr-4-триггер-инцидента-запрет-нового-вопроса-при-сигнале-непонимания) | Incident trigger no-new-question branch | [AC-4](ACCEPTANCE_CRITERIA.md#ac-4-fr-4) | @feature1 | Draft |
+| [FR-5](FR.md#fr-5-миграция-существующего-rule-с-обновлением-claudemd-глоссария) | Rule migration with glossary update | [AC-5](ACCEPTANCE_CRITERIA.md#ac-5-fr-5) | @feature3 | Draft |
 
 ## Functional Requirements
 
 - [FR-1: Always-apply self-check template](FR.md#fr-1-always-apply-шаблон-самопроверки-агента-перед-отправкой-ответа)
 - [FR-2: Slash /answer-simple draft audit](FR.md#fr-2-slash-команда-answer-simple-для-ручного-аудита-черновика)
 - [FR-3: Extension follows extension-layout](FR.md#fr-3-extension-следует-конвенциям-extension-layout)
-- [FR-4: Incident trigger no-new-question branch](FR.md#fr-4-триггер-инцидента-—-запрет-нового-вопроса-при-сигнале-непонимания)
-- [FR-5: Rule migration with glossary update](FR.md#fr-5-миграция-существующего-rule-с-обновлением-claude-md-глоссария)
+- [FR-4: Incident trigger no-new-question branch](FR.md#fr-4-триггер-инцидента-запрет-нового-вопроса-при-сигнале-непонимания)
+- [FR-5: Rule migration with glossary update](FR.md#fr-5-миграция-существующего-rule-с-обновлением-claudemd-глоссария)
 
 ## Non-Functional Requirements
 

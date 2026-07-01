@@ -1,77 +1,213 @@
 # Spec Generator V4
 
-> **Status:** ✅ **APPROVED — Ready for Implementation** (обсуждена 2026-05-18)
-> **Phase progress:** Discovery ✅ → Context ✅ → Requirements ✅ → Finalization ✅ → Audit ✅
-> **Spec review:** 0 P0 / 0 P1 blockers, 4 P2 / 5 P3 improvements logged in REVIEW_NOTES.md
-> **Implementation:** Not yet started — awaiting kickoff of Phase 0 (`install-bdd-framework`)
+> **Status:** 🚀 **LIVE on `feat/phase-2a-mcp-server-and-hooks` / PR #32** — Phase 0/1/2/3/4/6/7 shipped (Phase 5 migration helper landed; Phase 4 SQLite gated behind opt-in flag). 33 commits, 159 files, +20,394/-137 lines, **188 tests PASS**, **PR mergeable + CI green**.
+> **Implementation timeline:** approved 2026-05-18 → in active polish through 2026-06-02.
 
-Эволюция spec-generator v3: переход от плоских MD спек к **in-memory SpecGraph + MCP server + LSP integration + canonical Cucumber-JS BDD with NDJSON**, чтобы AI агент автоматически трассировал FR ↔ AC ↔ Scenario ↔ TestResult ↔ Code без галлюцинаций над спеками. **18 FRs, 8 phases** (Phase 0 cucumber-js миграция → Phase 6 architecture-research-workflow skill → Phase 7 cross-spec reconciliation).
+---
 
-## Ключевые идеи
+## TL;DR — что умеет уже сегодня
 
-- **In-memory SpecGraph builder** (Phase 1) — `unified+remark` для MD + `@cucumber/gherkin` для .feature + `@cucumber/messages` для NDJSON → типизированный граф с nodes (FR/NFR/AC/SCEN/TASK/UC/RISK) + edges (refs/covers/tested-by/tagged-by/implements/last-result). Cold start ≤2s для 30 specs, incremental ≤100ms p95.
-- **MCP server `dev-pomogator-specs` с 11 tools** (Phase 2) — главный `get_trace(node_id)` отдаёт structured tree + natural-language `explanation_for_agent` за один call. Агент не делает follow-up Read'ов для понимания контекста.
-- **Dual-anchor heading convention** — `### FR-001: Login` регистрирует **оба** anchors `FR-001` и `fr-001-login`. Wiki-link `[[FR-001]]` (compact) и `[[fr-001-login]]` (descriptive) работают. Legacy v3 `### Requirement: FR-N` ALSO работает через triple-anchor (backward compat без миграции).
-- **PreToolUse HARD hooks + PostToolUse always-push с 3s throttle** — hard invariants (DUPLICATE_DEFINITION, MALFORMED_FRONTMATTER, MALFORMED_GHERKIN) блокируются sync-time; soft drift (UNCOVERED_FR, ORPHAN_TASK, SCENARIO_TAG_ORPHAN) push'ится в agent context aggregated в 3-секундном окне.
-- **Marksman LSP bundled silent install** — wiki-link navigation в любом LSP-compatible редакторе (VS Code, Neovim, Obsidian, Helix) out of the box. +15MB binary.
-- **Cucumber-JS canonical NDJSON output** (Phase 0) — миграция dev-pomogator с vitest pseudo-BDD на real `@cucumber/cucumber` runner. Mandatory additive для всех TS target projects.
-- **Phase 6 meta-deliverable** — новый skill `architecture-research-workflow` encapsulates 7-stage flow (pain validation → research → variants → decisions → phases → hand-off), чтобы будущие major features занимали 5-8 turns вместо 30+.
-- **Phase 7 cross-spec reconciliation** (v0.2.0 spec-only addition 2026-05-20) — два новых skill (`cross-spec-reconcile` + `cross-spec-resolve`) детектят конфликты между всеми `.specs/*/` (terminology drift, runtime identifier mismatch, module ownership conflict, contradictory FR, NFR conflict + 23 more codes) и spec-vs-implementation drift (missing-file, mcp-tool-drift, hook-registration-drift, architectural-decision-vs-reality + 9 more). Findings → YAML `.specs/{slug}/consistency-report.yaml` + optional SARIF 2.1.0. CRITICAL findings блокируют STOP с CAPS prompt; resolve skill применяет fix'ы через explain-then-confirm flow + Path A/B/C для архитектурных развилок. См. FR-17, FR-18 + 9-я audit-категория CROSS_SPEC_CONSISTENCY (запланирована в Phase 7 TASKS.md).
+Один MCP-сервер + 8 авто-резолверов + детектор cross-spec несоответствий + LSP wiki-links + hooks которые блокируют поломанные правки до save. Цель — **AI агент видит весь спек целиком за один вызов и не галлюцинирует над спеками**.
 
-## Где лежит реализация
+```bash
+# В Claude Code:
+/spec-backlog              # посмотреть очередь несоответствий
+/cross-spec-reconcile      # запустить full детектор
+/cross-spec-resolve        # interactive walker по findings
+```
 
-- **App-код** (новая структура): `extensions/specs-workflow/tools/spec-graph/`, `extensions/specs-workflow/tools/spec-mcp-server/`, `extensions/specs-workflow/tools/spec-conformance-guard/`, `extensions/specs-workflow/tools/spec-conformance-push/`, `extensions/specs-workflow/tools/bash-post-test-ingest/`, `extensions/specs-workflow/tools/migrate-v3-to-v4/`, `extensions/specs-workflow/tools/claude-cli-bridge/`
-- **Skill**: `.claude/skills/architecture-research-workflow/`, `.claude/skills/_shared/research-base.md`, `.claude/skills/cross-spec-reconcile/` (Phase 7 — FR-17 reconcile entry point + scripts + references), `.claude/skills/cross-spec-resolve/` (Phase 7 — FR-18 resolve entry point + scripts + references)
-- **Wiring**: `extensions/specs-workflow/extension.json` (v4.0.0 — registers MCP + 3 hooks + meta-guard), `package.json` (cucumber-js + remark + chokidar + MCP SDK + better-sqlite3 optional dep), `.devcontainer/devcontainer.json` (postStartCommand)
-- **Existing infrastructure reused**: `extensions/specs-workflow/tools/specs-generator/{validate-spec,audit-spec,bdd-framework-detector,scaffold-spec}.ts`, all 6 v3 form-guards as patterns
-- **Marksman binary** (postInstall): `.dev-pomogator/bin/marksman` (per-platform)
-- **In-memory state** (Phase 2): no persistence — graph rebuilds on MCP startup
-- **Optional SQLite** (Phase 4): `.dev-pomogator/.spec-index.sqlite` (WAL mode, FTS5)
-- **Locks/config** (per worktree): `.dev-pomogator/.mcp-lock.json`, `.dev-pomogator/.spec-config.json`, `.dev-pomogator/.last-test-run.ndjson`, `.dev-pomogator/.spec-check-log/<YYYY-MM-DD>.jsonl`
+---
 
-## Phases overview
+## Changelog — последние изменения первыми
 
-| Phase | Scope | Effort |
+### 2026-06-02 — Round 4: PR cleanup pass (commits `85275d4`, `1db9233`, `5a19b03`, `7284f4a`, `38a8510`, `8d332e0`)
+
+**+2 новых резолвера в registry (6 → 8):**
+
+- **`cross-ref-linker`** — закрывает silent-skip баг: 70 findings `cross-spec/missing-cross-ref` раньше уходили в never-implemented AUTO_FIX rule (0 применено). Теперь оборачивает первое упоминание spec slug в markdown link `[slug](../slug/FR.md)`. Idempotent (bail на already-linked / inside-code-fence). 7/7 тестов, 18 реальных edit'ов на dogfood corpus.
+- **`wrap-deprecated-ref`** — wraps removed v1 production files `~~src/installer/foo.ts~~ (removed in v2 — no canonical replacement)`. Сохраняет traceability для OWNERSHIP_RECOMMENDATION.md артефактов без потери ссылок. 7/7 тестов.
+
+**+3 новых BacklogCategory:** `ambiguous-link`, `missing-cross-ref`, `deprecated-ref` (плюс существующие 7).
+
+**MCP method-name false-positive fix:** детектор больше не ругается на `tools/list`, `resources/list`, `prompts/list`, `roots/list`, `notifications/initialized` и ещё 8 MCP JSON-RPC методов. Экономит ~17 ложных findings.
+
+**Resolution Patterns закодированы в `.claude/skills/cross-spec-reconcile/SKILL.md`:** 5 паттернов (WRAP-deprecated / DELETE-redirect / RECREATE-as-skip / DEFER-spec / MCP-exclusion) + полный catalog в `references/reference_resolution-patterns.md`.
+
+**Реальные правки на dogfood корпусе:** 322 spec edits applied across 3 rounds:
+- Round 1: 89 RENAME (v1 path → v2 canonical-plugin path) + 64 DELETE/WRAP (v1 refs) в 41 файле
+- Round 2: 133 cleanup edits в 50 файлах (GROUP_C rename + 7 DELETE × ~21 refs каждый + 25 SKIP re-pass + table-cell rewriter)
+- Round 3: 195 edits в 92 файлах (12 needs-human decisions applied: WRAP/DELETE/RECREATE-stub/DEFER + FIELD_VERIFICATION_FINAL.md fixed from false-PASS to honest PLANNED status)
+
+**Аналитические артефакты:**
+- `MISSING_FILE_REPORT.md` (395 строк) — 965 битых ссылок сгруппировано по 5 dimensions, классифицировано на 5 buckets (UNCLEAR 57.7% / RENAME_UPDATE 16.4% / DELETE_REFERENCE 14.8% / RECREATE 10.3% / OUT_OF_SCOPE 0.8%)
+- `MISSING_FILE_PATCHES_REVIEW.md` (465 строк) — per-bucket sample diffs + Round 1+2+3 finalization + 10 codified patterns для future pipeline
+- `NEEDS_HUMAN_REVIEW_PACKET.md` — review table для 12 needs-human items с per-target recommendations
+
+### 2026-05-30/31 — Batches 21-27 (commits `0b1f6fd`..`f2b397c`): honest-audit noise reduction
+
+User caught a flawed "89% reduction" claim — 3878 residual findings still ~63% noise. Six batches of triage-by-sampling:
+
+| Batch | Что закрыто |
+|------|---|
+| 21 | ownership-conflict на удалённых v1 paths (444 → 30 через `fs.existsSync`) · concept-overlap opt-in default off (2082 → 0) · missing-cross-ref ≥2 mentions (293 → 187) |
+| 22 | nested category dir filtered (`backlog` больше не treated как spec) · contradictory-nfr opt-in default off |
+| 23 | specs-validator prompt-spam ~150 → 2 lines/prompt · auto-generated `OWNERSHIP_RECOMMENDATION.md` excluded from missing-cross-ref (circular noise) |
+| 24 | per-spec `printPhaseStatus` aggregated (4 lines × N → 1 line total) |
+| 25 | dead-link strip fenced + skip regex/placeholder targets · orphan-task accepts `@featureN` |
+| 26 | missing-cross-ref strip INLINE backticks |
+| 27 | CHANGELOG honest summary |
+
+**Cumulative dogfood:** 38,453 → **1,185 findings** (-96.9%). CRITICAL: 33,860 → **32** (-99.9%). Actionability: 37% → **~91%**.
+
+### Earlier (Phase 0..7 ship) — commits `9dd58d0`..`43e5397`
+
+- **Phase 0 — Cucumber-JS BDD foundation** (FR-1): real `@cucumber/cucumber` runner with NDJSON output to `.dev-pomogator/.last-test-run.ndjson`, mandatory additive for TS target projects
+- **Phase 1 — In-memory SpecGraph** (FR-2, FR-3): typed graph builder over `unified+remark` (MD) + `@cucumber/gherkin` (.feature) + `@cucumber/messages` (NDJSON). **Cold start ≤2s for 30 specs**, incremental ≤100ms p95. Dual-anchor headings: `### FR-001: Login` registers BOTH `FR-001` и `fr-001-login`. Legacy v3 `### Requirement: FR-N` triple-anchor — backward compat без миграции.
+- **Phase 2 — MCP server + hooks + Marksman** (FR-4..7, FR-27):
+  - `dev-pomogator-specs` stdio MCP server с **11 read-only tools**: `get_trace` (primary) · `find_by_tags` · `conformance_check` · `search` · `get_node` · `list_phase_tasks` · `get_test_result` · `find_orphans` · `get_coverage_summary` · `validate_anchor` · `list_specs`
+  - **PreToolUse hard hook** `spec-conformance-guard`: DENY на write/edit спек если detected `DUPLICATE_DEFINITION` / `MALFORMED_FRONTMATTER` / `MALFORMED_GHERKIN` / `INVALID_ANCHOR_PATTERN`
+  - **PostToolUse soft hook** `spec-conformance-push`: aggregated findings в `<system-reminder>` с **3-second fixed-window throttle** (FR-28)
+  - **Marksman LSP** bundled install с sha256 verification per FR-27 — wiki-link navigation в любом LSP-compatible редакторе
+- **Phase 3 — LLM-as-judge + multi-language** (FR-8, FR-9, FR-26): `claude -p` subprocess wrapper с FR-26 deny-list (никаких `.env`/secrets/tokens в LLM prompts) + sha256 cache. Multi-language adapters: Reqnroll (C#) · behave (Python) · Cucumber-JVM (Java) — все emit Cucumber Messages NDJSON.
+- **Phase 4 — SQLite + JSONL log + Codespaces** (FR-10, FR-15, FR-16): better-sqlite3 WAL + FTS5 (opt-in `storage.sqlite_enabled = true`) · append-only JSONL spec-check-log с 10MB rotation · Codespaces auto-start MCP через `.devcontainer/scripts/post-start.sh`
+- **Phase 5 — Migration helper v3→v4** (FR-11): CLI `dev-pomogator-migrate-v3-to-v4` с `--suggest-only` mode + interactive prompt с 30-second default-skip timeout. Atomic spec MD rewrite + `.progress.json` version 3 → 4 bump
+- **Phase 6 — architecture-research-workflow skill** (FR-12): 7-stage greenfield architecture-decision flow (problem framing → pain validation → research → variants → decisions → rollout → hand-off). Auto-invoked by `create-spec` complexity heuristic. **3-rewind hard limit** prevents infinite Stage 5 loops.
+- **Phase 7 — Cross-spec reconcile/resolve** (FR-17, FR-18):
+  - `.claude/skills/cross-spec-reconcile/` — **28 finding codes** across 7 categories (uncovered / contradiction / runtime-identifier-drift / architectural-decision-vs-reality / concept-overlap / spec-only / schema-drift). YAML output + **SARIF 2.1.0** + JSONL audit log
+  - `.claude/skills/cross-spec-resolve/` — interactive 7-step walker с 5-field explanation block (code/severity/class — files+lines — plain — WHY — options). Path A/B/C dispatch для архитектурных развилок. Foreign-spec extra-confirm banner
+
+---
+
+## Что в registry сегодня (8 резолверов)
+
+| Resolver | Category | Что делает |
+|---|---|---|
+| `ac-author` | `missing-fr-section` | Создаёт ACCEPTANCE_CRITERIA.md skeleton с AC-N (FR-N) per FR |
+| `link-fixer` | `dead-link-typo` | Typo correction в markdown links (по basename glob) |
+| `scenario-writer` | `missing-test` | Создаёт .feature scenarios для не покрытых FR |
+| `fr-author` | `missing-fr-section` | Создаёт FR.md skeleton с FR-N headings |
+| `decision-arbiter` | `contradictory-nfr` | DECISION_RECOMMENDATION.md с frequency tally (Node fs walker, портативный) |
+| `owner-picker` | `ownership-conflict` | OWNERSHIP_RECOMMENDATION.md по git-history first-commit-date proximity |
+| `cross-ref-linker` ★ | `missing-cross-ref` | Wraps spec slug mentions в markdown links |
+| `wrap-deprecated-ref` ★ | `deprecated-ref` | Strikethrough для removed v1 production refs |
+
+★ — новые в Round 4.
+
+## Test posture
+
+| Suite | Status |
+|---|---|
+| Classifier evals | **35/35 PASS** (`tools/spec-backlog/evals/run-classifier-evals.ts`) |
+| Reconcile detector | **77/77 PASS** (`.claude/skills/cross-spec-reconcile/scripts/__tests__/reconcile.test.ts`) |
+| spec-backlog suite | **76/76 PASS** (7 resolver tests files + smoke) |
+| E2E pipeline | **9/9 assertions, 43ms** (`tools/spec-backlog/evals/e2e-pipeline.ts`) |
+| **Total** | **188 PASS** |
+| Legacy v3 regression | **28/28 PASS** (form-guards survived FR-25 additive merge — soft tier preserved) |
+
+## Performance (NFR budgets)
+
+| Workload | Target | Actual | Status |
+|---|---|---|---|
+| Cold start, 30 specs | ≤2s (NFR-1) | ~142ms | **99.3% under budget** |
+| 100 specs cold ingest | — | 436ms (was 1811ms, batch-17 perf) | 4.2× |
+| 100 specs warm-dedup | — | **104ms** (was 2865ms) | **27×** |
+| Incremental update single file | ≤100ms p95 (NFR-2) | not measured this session | — |
+
+## Cross-spec consistency дitector (live результат)
+
+Сегодня на 49 спеках dev-pomogator:
+
+| Code | Count | Severity | Real signal? |
+|---|---:|---|---|
+| `impl-drift/missing-file` | 982 | WARNING | 100% real (классифицируются в NOISE — backtick refs без resolver) |
+| `cross-spec/missing-cross-ref` | 70 → 77 (re-detected) | INFO/WARNING | ~80% real (resolver применяет) |
+| `spec-only/unreachable-task` | 65 | INFO | 100% intentional |
+| `cross-spec/module-ownership-conflict` | 32 | WARNING | 100% real |
+| `spec-only/orphan-task` | 30 | WARNING | ~95% real |
+| `impl-drift/test-result-stale` | 25 | INFO | 100% — CI gotcha |
+| `impl-drift/dead-link` | 6 | WARNING | ~85% real |
+| `spec-only/orphan-FR` | 3 | WARNING | 100% real |
+| `spec-only/duplicate-fr-id` | 2 | CRITICAL | 100% real |
+
+**Open backlog: 151 entries** (после Round 3) — это уже team work, не bugs.
+
+---
+
+## Где код
+
+| Что | Где |
+|---|---|
+| SpecGraph builder | `tools/spec-graph/` (types + parsers/{md,gherkin,ndjson}.ts + builder.ts + conformance.ts + incremental.ts) |
+| MCP server + 11 tools | `tools/spec-mcp-server/` |
+| PreToolUse hard hook | `tools/spec-conformance-guard/` |
+| PostToolUse push | `tools/spec-conformance-push/` |
+| LLM-as-judge bridge | `tools/spec-llm-judge/` |
+| Marksman installer | `tools/marksman-installer/` |
+| Migration v3→v4 | `tools/migrate-v3-to-v4/` |
+| Cross-spec detector | `.claude/skills/cross-spec-reconcile/scripts/reconcile.ts` (~2000 lines) |
+| Cross-spec resolve loop | `.claude/skills/cross-spec-resolve/` |
+| 8 resolvers + registry | `tools/spec-backlog/resolvers/{ac-author,link-fixer,scenario-writer,fr-author,decision-arbiter,owner-picker,cross-ref-linker,wrap-deprecated-ref}.ts` |
+| Classifier + CLI | `tools/spec-backlog/{classifier.ts,cli.ts,bin.cjs}` |
+| Shared FR-parser | `tools/_shared/fr-parser.ts` (dedup 3 inline regexes) |
+| architecture-research-workflow | `.claude/skills/architecture-research-workflow/` (7-stage templates + scripts) |
+| Backlog JSONL | `.dev-pomogator/.specs-backlog/<YYYY-MM-DD>.jsonl` (append-only, deterministic entryId = sha256 first-12-hex) |
+| Codespaces autostart | `.devcontainer/scripts/post-start.sh` |
+
+---
+
+## Phases overview (статус каждой)
+
+| Phase | Scope | Status |
 |-------|-------|--------|
-| **Phase 0** | Cucumber-JS BDD migration (dev-pomogator + target TS mandatory) | 1-2 days |
-| **Phase 1** | SpecGraph builder + 3 parsers (MD/Gherkin/NDJSON) + dual-anchor + conformance checker | 4-5 days |
-| **Phase 2** | MCP server (11 tools) + PreToolUse HARD + PostToolUse push + Marksman bundle | 5-7 days |
-| **Phase 3** | LLM semantic drift check + multi-language (C#/Python/Java) | 2-3 days |
-| **Phase 4** | SQLite persistence + side-channel JSONL log + Codespaces support | 3-4 days |
-| **Phase 5** | Migration helper v3→v4 (interactive + suggest-only) | 2 days |
-| **Phase 6** | architecture-research-workflow skill + research-workflow enrichment + create-spec integration | 7-10 days |
-| **Phase 7** | Cross-spec reconciliation (FR-17 reconcile + FR-18 resolve, 28 finding codes, SARIF, dry-run, Path A/B/C, JSONL audit) | 10-11 days |
+| **Phase 0** | Cucumber-JS BDD migration | ✅ SHIPPED |
+| **Phase 1** | SpecGraph builder + 3 parsers + conformance | ✅ SHIPPED |
+| **Phase 2** | MCP server + hooks + Marksman | ✅ SHIPPED |
+| **Phase 3** | LLM-as-judge + multi-language (C#/Python/Java) | ✅ SHIPPED |
+| **Phase 4** | SQLite (opt-in) + JSONL log + Codespaces | ✅ SHIPPED |
+| **Phase 5** | Migration helper v3→v4 | ✅ SHIPPED |
+| **Phase 6** | architecture-research-workflow skill | ✅ SHIPPED |
+| **Phase 7** | Cross-spec reconcile + resolve (28 finding codes) | ✅ SHIPPED — 8 resolvers · live dogfood proven · 322 spec edits applied |
 
-Total: ~35-46 days effort.
+---
 
-> **Estimate derivation:** Phase 7 task estimates in `TASKS.md` sum to ~5100 minutes (~85 hours ≈ 10-11 dev-days at 8h/day). Key drivers: `impl-mechanical-checks` (12h), `impl-resolve-loop` (12h), `impl-architectural-detection` (12h), `impl-semantic-subagent` (8h), `install-cross-spec-skills` (8h), `e2e-test-reconcile-roundtrip` (8h); 8 smaller tasks make up the remainder.
+## Honest gaps (не сделано)
 
-## Где читать дальше
+- **3 из 7 v4.0.1 deferred items** (commit `85275d4`):
+  - `readSpecMd cache` — DECLINED: `filesBySlug` Map уже cached single-pass; адddding `Map<string,string>` = duplicate caching без выгоды
+  - `NFR multi-token context matching` — план готов (regex extension + unit normalization), workflow conditional-skip bug помешал
+  - `24 MEDIUM/LOW eval gaps` — CHANGELOG ссылается на workflow ID `w0w45s96f` но список 24 items нигде в репе не enumerated
+- **38 GROUP_C DELETE markdown-table-cell SKIPs** — нужен table-aware handler (Round 4 codebase fix)
+- **2 GROUP_C RENAME `needs_human`** (`src/installer/claude.ts` + `src/installer/memory.ts`) — нет canonical replacement, остаются WRAP'нутыми
+- **10 multi-spec human-triage items** обработаны как Round 3 batch — но 3 из них (#5, #6, #9 strong-tests/settings-protection) сделаны как stubs с `it.skip()` + TODO для будущей реализации
 
-- [USER_STORIES.md](USER_STORIES.md) — 20 user stories с form (Priority+Why+Independent Test+Acceptance Scenarios)
-- [USE_CASES.md](USE_CASES.md) — 15 UCs + 12 edge cases (UC-1 happy path, EC-* failure modes, UC-17..21 cross-spec reconciliation)
-- [RESEARCH.md](RESEARCH.md) — 1300+ строк, 17 appendices (A-Q), включая alternatives rejected, Cucumber Messages 21 envelopes, devcontainer constraints, architecture decisions history (WHY), + Related sprint work + Prior art (Phase 7)
-- [FR.md](FR.md) — 18 FRs + 3 OUT_OF_SCOPE (real-time collab, GUI, reverse-eng)
-- [NFR.md](NFR.md) — 25 NFRs across Performance / Security / Reliability / Usability
-- [ACCEPTANCE_CRITERIA.md](ACCEPTANCE_CRITERIA.md) — 51 EARS ACs (1:1 with FRs)
-- [REQUIREMENTS.md](REQUIREMENTS.md) — 18-row traceability matrix + 54 CHKs verification matrix
-- [DESIGN.md](DESIGN.md) — Components, Algorithm, API, Key Decisions (Rationale+Trade-off+Alternatives), BDD Test Infrastructure, Cross-spec reconciliation architecture
-- [spec-generator-v4_SCHEMA.md](spec-generator-v4_SCHEMA.md) — 7 base entities + Consistency Report YAML schema + 28 Cross-Spec Finding Codes + SARIF mapping
-- [FILE_CHANGES.md](FILE_CHANGES.md) — 87 files across 8 phases (75 create + 12 edit) — Phase 7 implementation files described in TASKS.md
-- [spec-generator-v4.feature](spec-generator-v4.feature) — 54 SPECGEN004 scenarios mapped 1:1 to @feature1..@feature18 + Round 3 @feature19/@feature22/@feature25/@feature26/@feature27
-- [TASKS.md](TASKS.md) — 64 tasks TDD-ordered with Done When / Status / Est / dependencies (14 new Phase 7 tasks)
-- [FIXTURES.md](FIXTURES.md) — BDD fixtures inventory + Gap analysis + cross-spec-corpus fixture for Phase 7
-- [REVIEW_NOTES.md](REVIEW_NOTES.md) — Phase 1 + Phase 2 spec-review findings (0 P0/P1, recommendations logged) + 2026-05-20 cross-spec reconciliation tracking entry
-- [CHANGELOG.md](CHANGELOG.md) — feature change log
+---
+
+## Deep links (полный контент)
+
+- [USER_STORIES.md](USER_STORIES.md) — 20 user stories
+- [USE_CASES.md](USE_CASES.md) — 15 UCs + 12 edge cases
+- [RESEARCH.md](RESEARCH.md) — 1300+ lines, 17 appendices
+- [FR.md](FR.md) — 18 FRs + 3 OUT_OF_SCOPE
+- [NFR.md](NFR.md) — 25 NFRs (Performance/Security/Reliability/Usability)
+- [ACCEPTANCE_CRITERIA.md](ACCEPTANCE_CRITERIA.md) — 51 EARS ACs
+- [DESIGN.md](DESIGN.md) — Components + Algorithm + API + Key Decisions
+- [spec-generator-v4_SCHEMA.md](spec-generator-v4_SCHEMA.md) — 7 entities + 28 finding codes + SARIF mapping
+- [FILE_CHANGES.md](FILE_CHANGES.md) — 87 files across 8 phases
+- [spec-generator-v4.feature](spec-generator-v4.feature) — 54 SPECGEN004 scenarios
+- [TASKS.md](TASKS.md) — 64 tasks TDD-ordered
+- [CHANGELOG.md](CHANGELOG.md) — full per-batch ledger
+- [MISSING_FILE_REPORT.md](MISSING_FILE_REPORT.md) — 965 битых ссылок analyzed
+- [MISSING_FILE_PATCHES_REVIEW.md](MISSING_FILE_PATCHES_REVIEW.md) — Round 1+2+3 finalization
+- [NEEDS_HUMAN_REVIEW_PACKET.md](NEEDS_HUMAN_REVIEW_PACKET.md) — 12 multi-spec triage decisions
+
+---
 
 ## v3 → v4 doc reorganization
 
-The v3 ROADMAP referenced a central rule file at `.claude/rules/specs-workflow/specs-management.md` that documented the spec author's Phase 1 (Discovery) → Phase 2 (Requirements + Design) → Phase 3 (Finalization) workflow in one place. **That file was a v3 planning artifact and was NEVER shipped to live `.claude/rules/` installations.** (Verified during the Round 3 patch: the file appears only in v3 spec text and in `.stryker-tmp/sandbox-*/` mutation-testing copies; the live `.claude/rules/specs-workflow/` directory contains only `architecture-decision/` and `variant-matrix/` subdirectories — no top-level `specs-management.md`.)
+The v3 ROADMAP referenced a central rule file at `.claude/rules/specs-workflow/specs-management.md` that documented the spec author's Phase 1 (Discovery) → Phase 2 (Requirements + Design) → Phase 3 (Finalization) workflow in one place. **That file was a v3 planning artifact and was NEVER shipped to live `.claude/rules/` installations.**
 
-In v4 the same workflow is distributed across the SKILL.md files of three skills:
+In v4 the same workflow is distributed across three skills:
 
-- `create-spec` — drives the 4-phase STOP-confirmed workflow (Discovery → Context → Requirements + Design → Finalization) and now invokes `discovery-forms`, `requirements-chk-matrix`, and `task-board-forms` directly at the appropriate Phase steps.
-- `cross-spec-reconcile` (FR-17) — invoked from `create-spec` Phase 2 step 4d, Phase 3 step 1c, and Phase 3+ Audit category CROSS_SPEC_CONSISTENCY.
-- `cross-spec-resolve` (FR-18) — invoked explicitly by the user via `/cross-spec-resolve` when conflicts surface.
-
-> **Footnote:** Three skill SKILL.md frontmatter descriptions previously referenced «Called by `specs-management.md` Phase N step M» (a v3 planning-artifact reference that was never live). The Round 3 patch corrected these to «Called by `create-spec` Phase N step M» — see frontmatter of `.claude/skills/discovery-forms/SKILL.md`, `.claude/skills/requirements-chk-matrix/SKILL.md`, and `.claude/skills/task-board-forms/SKILL.md`.
+- `create-spec` — drives the 4-phase STOP-confirmed workflow (Discovery → Context → Requirements + Design → Finalization)
+- `cross-spec-reconcile` — invoked from `create-spec` Phase 2 step 4d, Phase 3 step 1c, Phase 3+ Audit
+- `cross-spec-resolve` — invoked explicitly via `/cross-spec-resolve`

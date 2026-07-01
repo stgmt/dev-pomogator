@@ -18,16 +18,10 @@
 
 ## Где лежит реализация
 
-- Extension interface: `src/installer/extensions.ts`
-- Installer UI: `src/installer/index.ts`
-- Install pipeline: `src/installer/claude.ts`
-- Updater: `src/updater/index.ts`
+- Install pipeline: ~~`src/installer/claude.ts`~~ (removed in v2 — no canonical replacement)
 
 ## Директории и файлы
 
-- `src/installer/extensions.ts` — Extension interface
-- `src/installer/index.ts` — checkbox UI, --all filter, --include-beta
-- `src/updater/index.ts` — updater beta filter
 - `extensions/docker-optimization/extension.json` — первый beta manifest
 
 ## Алгоритм
@@ -35,7 +29,7 @@
 ### Extension interface change
 
 ```typescript
-// src/installer/extensions.ts
+// ~~`src/installer/extensions.ts`~~ (removed in v2 migration)
 export interface Extension {
   // ... existing fields ...
   stability?: 'stable' | 'beta';  // undefined = 'stable'
@@ -53,7 +47,7 @@ function isBeta(ext: Extension): boolean {
 ### Interactive checkbox (FR-2, FR-3)
 
 ```typescript
-// src/installer/index.ts
+// ~~`src/installer/index.ts`~~ (removed in v2 migration)
 choices: availableExtensions.map(ext => ({
   name: `${ext.name}${isBeta(ext) ? ' (BETA)' : ''} — ${ext.description}`,
   value: ext.name,
@@ -64,7 +58,7 @@ choices: availableExtensions.map(ext => ({
 ### Non-interactive --all (FR-4, FR-5)
 
 ```typescript
-// src/installer/index.ts
+// ~~`src/installer/index.ts`~~ (removed in v2 migration)
 if (options.all && !options.includeBeta) {
   availableExtensions = availableExtensions.filter(ext => !isBeta(ext));
 }
@@ -73,7 +67,7 @@ if (options.all && !options.includeBeta) {
 ### CLI args parsing
 
 ```typescript
-// src/index.ts
+// ~~`src/index.ts`~~ (removed in v2 migration)
 const args = process.argv.slice(2);
 const includeBeta = args.includes('--include-beta');
 ```

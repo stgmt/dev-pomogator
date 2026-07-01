@@ -11,7 +11,7 @@
 | [FR-5](FR.md#fr-5-llm-merge-synthesis-через-sub-agent) | LLM merge envelope | [AC-5](ACCEPTANCE_CRITERIA.md#ac-5-fr-5) | @feature5 | Draft |
 | [FR-6](FR.md#fr-6-ratchet-scorer-regression-prevention) | Ratchet scorer | [AC-6](ACCEPTANCE_CRITERIA.md#ac-6-fr-6) | @feature6 | Draft |
 | [FR-7](FR.md#fr-7-preserve-originals-no-auto-delete) | Preserve originals | [AC-7](ACCEPTANCE_CRITERIA.md#ac-7-fr-7) | @feature7 | Draft |
-| [FR-8](FR.md#fr-8-unified-scoring-engine-для-rules--skills) | Unified scoring engine | (transitively covered) | (transitively covered) | Draft |
+| [FR-8](FR.md#fr-8-unified-scoring-engine-для-rules-skills) | Unified scoring engine | (transitively covered) | (transitively covered) | Draft |
 | [FR-9](FR.md#fr-9-backward-compatibility-для-rules-side) | Backward compat (rules) | [AC-8](ACCEPTANCE_CRITERIA.md#ac-8-fr-9) | @feature8 | Draft |
 
 ## Functional Requirements
@@ -23,10 +23,10 @@
 - [FR-5: LLM merge synthesis](FR.md#fr-5-llm-merge-synthesis-через-sub-agent)
 - [FR-6: Ratchet scorer](FR.md#fr-6-ratchet-scorer-regression-prevention)
 - [FR-7: Preserve originals](FR.md#fr-7-preserve-originals-no-auto-delete)
-- [FR-8: Unified scoring engine](FR.md#fr-8-unified-scoring-engine-для-rules--skills)
+- [FR-8: Unified scoring engine](FR.md#fr-8-unified-scoring-engine-для-rules-skills)
 - [FR-9: Backward compatibility (rules)](FR.md#fr-9-backward-compatibility-для-rules-side)
-- ~~[FR-10: Embedding-based semantic merge](FR.md#fr-10-embedding-based-semantic-merge--out-of-scope)~~ — OUT OF SCOPE (deferred to v0.2.0)
-- ~~[FR-11: Auto-apply без human review](FR.md#fr-11-auto-apply-без-human-review--out-of-scope)~~ — OUT OF SCOPE (design choice, never)
+- ~~[FR-10: Embedding-based semantic merge](FR.md#fr-10-embedding-based-semantic-merge-out-of-scope)~~ — OUT OF SCOPE (deferred to v0.2.0)
+- ~~[FR-11: Auto-apply без human review](FR.md#fr-11-auto-apply-без-human-review-out-of-scope)~~ — OUT OF SCOPE (design choice, never)
 
 ## Non-Functional Requirements
 

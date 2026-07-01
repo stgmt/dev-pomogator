@@ -14,7 +14,7 @@
 import * as path from 'node:path';
 import * as os from 'node:os';
 import { spawnSync } from 'node:child_process';
-import * as fsExtra from 'fs-extra';
+import fsExtra from 'fs-extra';
 import { glob } from 'glob';
 import type { OnboardingJson } from '../lib/types.ts';
 

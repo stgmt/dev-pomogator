@@ -1,0 +1,48 @@
+{
+  "skill_name": "discovery-forms",
+  "description": "Behavioural evals for discovery-forms — verifies it populates USER_STORIES.md v3-form blocks (Priority + Why + Independent Test + Acceptance Scenarios) and a RESEARCH.md ## Risk Assessment table that PASS the user-story-form-guard + risk-assessment-guard, without fabricating domain facts or rewriting already-complete blocks. Grounded in the real contract (SKILL.md §Mission, §Step 3) and the real parser tools/specs-validator/spec-form-parsers.ts.",
+  "evals": [
+    {
+      "id": 0,
+      "name": "empty-template-populates-full-v3-forms",
+      "prompt": "Run discovery-forms for slug \"sample-checkout\" where USER_STORIES.md holds only template bullets (`- Как {роль}...`), USE_CASES.md lists actors {shopper, admin} and an edge case (empty cart), and the user wants a one-click checkout. Populate the Phase-1 forms.",
+      "expected_output": "USER_STORIES.md gains ≥1 `### User Story N: ... (Priority: P1|P2|P3)` block, each with an `As a {role}, I want {goal}, so that {value}.` line + non-placeholder `**Why:**`, `**Independent Test:**`, and `**Acceptance Scenarios:**` (inline Given/When/Then). RESEARCH.md gains a `## Risk Assessment` table with ≥2 non-placeholder rows (Risk|Likelihood|Impact|Mitigation). Both pass user-story-form-guard + risk-assessment-guard and parse via spec-form-parsers.ts. Writes go through apply_spec_change (door), never raw Edit of .specs/.",
+      "files": []
+    },
+    {
+      "id": 1,
+      "name": "partial-block-emits-only-missing-fields",
+      "prompt": "Run discovery-forms where USER_STORIES.md already has one complete v3 block (Priority + Why + Independent Test + Acceptance Scenarios) and one block that has `(Priority: P2)` + the As-a line but is MISSING `**Why:**` and `**Independent Test:**`.",
+      "expected_output": "Only the missing fields (Why + Independent Test) of the incomplete block are added; the already-complete block is left BYTE-FOR-BYTE unchanged (no rewrite). Verifies the §Step-1 completeness check, not blanket regeneration.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "name": "pre-v3-progress-exits-early",
+      "prompt": "Run discovery-forms for a slug whose .progress.json has version 2 (pre-v3).",
+      "expected_output": "Skill exits early with a note that form-guards will not fire and the skill is unnecessary — it does NOT write v3 forms into a pre-v3 spec. Verifies the §Preconditions guard.",
+      "files": []
+    },
+    {
+      "id": 3,
+      "name": "jira-source-preserved-verbatim",
+      "prompt": "Run discovery-forms where JIRA_SOURCE.md contains verbatim Jira text (e.g. an acceptance note and a ticket key PROJ-123) and the user asks to seed stories from it.",
+      "expected_output": "Generated stories reference the Jira intent, and the original JIRA_SOURCE.md text is preserved BYTE-FOR-BYTE (not paraphrased or dropped). No fabricated acceptance criteria beyond what the Jira text + user intent support.",
+      "files": []
+    },
+    {
+      "id": 4,
+      "name": "terse-input-expands-then-confirms-no-fabrication",
+      "prompt": "Run discovery-forms where the user gives one terse story (\"shoppers can save a cart\") and nothing else.",
+      "expected_output": "Skill expands the terse story by inference into a full v3 block AND shows the expanded draft for inline confirmation (conversational, not a second AskUserQuestion). It does NOT invent unrelated domain facts (e.g. payment providers, SLAs) the user never mentioned. Verifies §Step-2 expand-then-confirm.",
+      "files": []
+    },
+    {
+      "id": 5,
+      "name": "risk-table-rows-are-real-not-placeholder",
+      "prompt": "Run discovery-forms and inspect the RESEARCH.md ## Risk Assessment table it appends for slug \"sample-checkout\".",
+      "expected_output": "The ## Risk Assessment table has ≥2 rows whose Risk/Mitigation cells are specific to the feature (e.g. a concurrency or empty-cart risk), NOT placeholders like `TBD` / `risk 1` / `мitigation`. risk-assessment-guard passes (it rejects placeholder rows).",
+      "files": []
+    }
+  ]
+}

@@ -19,7 +19,7 @@
 
 ## Step 0 (только в Jira-mode)
 
-Если `.specs/{slug}/JIRA_SOURCE.md` существует — выполнить Step 0 из [`jira-mode.md`](jira-mode.md) для Phase 1.5 (architectural constraints из comments + config_values + data_schema). Если файла нет — пропустить.
+Если `JIRA_SOURCE.md` присутствует (проверка через `list_spec_docs({spec})`; MCP-rails, не raw `ls`) — выполнить Step 0 из [`jira-mode.md`](jira-mode.md) для Phase 1.5 (architectural constraints из comments + config_values + data_schema). Если файла нет — пропустить.
 
 ## Алгоритм
 

@@ -1,85 +1,65 @@
 Feature: PLUGIN008 Deep Insights Aggregation Script
   As a developer
-  I want aggregate-facets.sh to process insights data
-  So that deep-insights skill produces cross-session analytics
+  I want aggregate-facets.sh to process facet data into cross-session analytics
+  So that the deep-insights skill reports reliable insights
 
-  Background:
-    Given dev-pomogator is installed
-    And jq is available
+  # Drives the REAL .claude/skills/deep-insights/scripts/aggregate-facets.sh via tests/step_definitions/
+  # feature_deep_insights.ts (spawn + temp HOME facet fixtures; asserts the script's real JSON output).
+  # The original LF-line-endings / executable-bit cases were dropped as file-inspection anti-patterns.
 
-  # @feature1
-  Scenario: Script has LF line endings (no CRLF)
-    When I check line endings of aggregate-facets.sh
-    Then the file should not contain CRLF
+  @feature3
+  Scenario: PLUGIN008_03 a missing facets directory yields status missing
+    Given a deep-insights facets directory that does not exist
+    When aggregate-facets.sh runs over that deep-insights home
+    Then the deep-insights output is valid JSON with status "missing"
+    And the deep-insights facets_count is 0
 
-  # @feature2
-  Scenario: Script is executable
-    When I check file permissions of aggregate-facets.sh
-    Then the file should be executable
+  @feature4
+  Scenario: PLUGIN008_04 an empty facets directory yields status missing
+    Given a deep-insights facets directory that exists but is empty
+    When aggregate-facets.sh runs over that deep-insights home
+    Then the deep-insights output is valid JSON with status "missing"
+    And the deep-insights facets_count is 0
 
-  # @feature3
-  Scenario: Missing facets directory returns missing status
-    Given facets directory does not exist
-    When I run aggregate-facets.sh
-    Then output should be valid JSON
-    And JSON status should be "missing"
+  @feature5
+  Scenario: PLUGIN008_05 valid work sessions aggregate into ok with the aggregate arrays
+    Given a deep-insights facets directory with valid work sessions
+    When aggregate-facets.sh runs over that deep-insights home
+    Then the deep-insights output is valid JSON with status "ok"
+    And the deep-insights output carries the aggregate arrays
 
-  # @feature4
-  Scenario: Empty facets directory returns missing status
-    Given facets directory exists but is empty
-    When I run aggregate-facets.sh
-    Then output should be valid JSON
-    And JSON status should be "missing"
+  @feature6
+  Scenario: PLUGIN008_06 a string friction_detail is handled gracefully
+    Given a deep-insights facet with a string friction_detail
+    When aggregate-facets.sh runs over that deep-insights home
+    Then the deep-insights output is valid JSON with status "ok"
 
-  # @feature5
-  Scenario: Aggregation with valid facets data
-    Given facets directory contains sample facets files
-    When I run aggregate-facets.sh
-    Then output should be valid JSON
-    And JSON status should be "ok"
-    And JSON should contain facets_count > 0
-    And JSON should contain outcomes array
-    And JSON should contain friction_summary array
-    And JSON should contain helpfulness array
-    And JSON should contain success_rate number
+  @feature7
+  Scenario: PLUGIN008_07 an object goal_categories is handled gracefully
+    Given a deep-insights facet with an object goal_categories
+    When aggregate-facets.sh runs over that deep-insights home
+    Then the deep-insights output is valid JSON with status "ok"
 
-  # @feature6
-  Scenario: Handles string friction_detail gracefully
-    Given facets directory contains a file with string friction_detail
-    When I run aggregate-facets.sh
-    Then output should be valid JSON
-    And JSON status should be "ok"
+  @feature8
+  Scenario: PLUGIN008_08 a string claude_helpfulness is handled gracefully
+    Given a deep-insights facet with a string claude_helpfulness
+    When aggregate-facets.sh runs over that deep-insights home
+    Then the deep-insights output is valid JSON with status "ok"
 
-  # @feature7
-  Scenario: Handles object goal_categories gracefully
-    Given facets directory contains a file with object goal_categories
-    When I run aggregate-facets.sh
-    Then output should be valid JSON
-    And JSON status should be "ok"
+  @feature9
+  Scenario: PLUGIN008_09 observer sessions with a text marker are excluded from the work count
+    Given a deep-insights facets directory with work and observer sessions
+    When aggregate-facets.sh runs over that deep-insights home
+    Then the deep-insights work count is 1 and observer count is 1
 
-  # @feature8
-  Scenario: Handles string claude_helpfulness gracefully
-    Given facets directory contains a file with string claude_helpfulness
-    When I run aggregate-facets.sh
-    Then output should be valid JSON
-    And JSON status should be "ok"
+  @feature10
+  Scenario: PLUGIN008_10 an observer is detected by its goal_categories marker
+    Given a deep-insights facet flagged observer by its goal_categories
+    When aggregate-facets.sh runs over that deep-insights home
+    Then the deep-insights work count is 1 and observer count is 1
 
-  # @feature9
-  Scenario: Observer sessions excluded from main metrics by text marker
-    Given facets directory contains work and observer sessions
-    When I run aggregate-facets.sh
-    Then JSON facets_count should only include work sessions
-    And JSON observer_count should count observer sessions
-    And success_rate should be calculated from work sessions only
-
-  # @feature10
-  Scenario: Observer detection by goal_categories marker
-    Given facets directory contains a session with memory_observation_creation goal
-    When I run aggregate-facets.sh
-    Then the session should be counted as observer
-
-  # @feature11
-  Scenario: warmup_minimal session without observer text is NOT filtered
-    Given facets directory contains a warmup_minimal session without observer markers
-    When I run aggregate-facets.sh
-    Then the session should be included in facets_count as work session
+  @feature11
+  Scenario: PLUGIN008_11 a warmup_minimal session without observer markers stays a work session
+    Given a deep-insights warmup_minimal facet with no observer markers
+    When aggregate-facets.sh runs over that deep-insights home
+    Then the deep-insights work count is 1 and observer count is 0

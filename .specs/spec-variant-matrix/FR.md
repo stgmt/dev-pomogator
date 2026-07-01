@@ -51,7 +51,7 @@ Phase 3+ Audit checks 4 conditions: (1) FR-trigger ↔ AC-table presence; (2) AC
 New skill at `extensions/specs-workflow/.claude/skills/variant-matrix-build/SKILL.md`. Frontmatter: `disable-model-invocation: true` (caller-only — invoked by create-spec Phase 2 step 4c). Detects polymorphic FRs via trigger-phrases.ts, generates AC Decision Table template, Gherkin Examples block, per-variant tasks placeholder. Returns JSON `{frs_with_matrix, ac_rows, examples_rows, tasks_emitted, escape_hatches, files_touched}`.
 
 **Связанные AC:** [AC-1](ACCEPTANCE_CRITERIA.md#ac-1-fr-1), [AC-3](ACCEPTANCE_CRITERIA.md#ac-3-fr-3), [AC-4](ACCEPTANCE_CRITERIA.md#ac-4-fr-4)
-**Use Case:** [UC-1](USE_CASES.md#uc-1-happy-path-polymorphic-fr-с-complete-matrix), [UC-5](USE_CASES.md#uc-5-ru-en-mixed-fr-bilingual-detection)
+**Use Case:** [UC-1](USE_CASES.md#uc-1-happy-path-polymorphic-fr-с-complete-matrix), [UC-5](USE_CASES.md#uc-5-ruen-mixed-fr-bilingual-detection)
 
 ## FR-9: PreToolUse form-guard на Write/Edit FR.md — OUT OF SCOPE
 

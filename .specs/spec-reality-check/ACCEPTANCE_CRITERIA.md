@@ -6,7 +6,7 @@
 WHEN Claude Code загружает skill registry AND `.claude/skills/spec-reality-check/SKILL.md` существует THEN frontmatter SHALL содержать поле `description` с EN+RU триггерами покрывающими все 4 lifecycle-операции (create/modify/supplement/implement) плюс общие проверки.
 
 ## AC-2 (FR-2) @feature2
-**Требование:** [FR-2](FR.md#fr-2-file_changes-verification-checks-feature2)
+**Требование:** [FR-2](FR.md#fr-2-filechanges-verification-checks-feature2)
 
 WHEN `verify.ts` запущен на спеке с FILE_CHANGES row `action=create` указывающей на существующий файл THEN output SHALL содержать finding `FC_CREATE_EXISTS` severity=ERROR с file path в details.
 
@@ -27,7 +27,7 @@ WHEN `verify.ts` запускает `git log --max-count=20 -S "FR-N"` для к
 IF `.git/` directory отсутствует THEN check SHALL skip с INFO finding "git unavailable, code-drift check skipped" AND continue с остальными checks.
 
 ## AC-5 (FR-5) @feature5
-**Требование:** [FR-5](FR.md#fr-5-tasksfile_changes-consistency-feature5)
+**Требование:** [FR-5](FR.md#fr-5-tasksfilechanges-consistency-feature5)
 
 WHEN `verify.ts` парсит TASKS.md `**files:**` блоки AND FILE_CHANGES.md table AND находит файл в TASKS но не в FILE_CHANGES (orphan TASK file) THEN output SHALL содержать finding `TASKS_FC_CONSISTENCY` severity=WARNING.
 
@@ -80,11 +80,11 @@ WHEN `Skill("spec-review")` вызывается перед любым `ConfirmS
 WHEN `Skill("create-spec")` доходит до Phase 3 Finalization step "validation" перед `ConfirmStop Finalization` THEN workflow SHALL invoke `Skill("spec-reality-check")` AND если есть ERRORs — Phase 3 NOT SHALL confirm-иться пока drift не починен.
 
 ## AC-14 (FR-14) @feature14
-**Требование:** [FR-14](FR.md#fr-14-graceful-file_changes-parser-fallback-feature14)
+**Требование:** [FR-14](FR.md#fr-14-graceful-filechanges-parser-fallback-feature14)
 
 WHEN `verify.ts` парсит FILE_CHANGES.md row которая не содержит column `Action` или unparseable THEN parser SHALL emit INFO finding "row N unparseable" AND continue с остальными rows, не crash.
 
 ## AC-15 (FR-15) @feature15
-**Требование:** [FR-15](FR.md#fr-15-bug-fix-plan-gate-phase-25--already-shipped-feature15)
+**Требование:** [FR-15](FR.md#fr-15-bug-fix-plan-gate-phase-25-already-shipped-feature15)
 
 WHEN `plan-gate.ts` Phase 2.5 detects relevance score ≤ -20 AND вызывает `denyAndExit` THEN argument SHALL быть `ValidationError[]` objects (не string array) AND printer выводит реальный `line N: message\n💡 hint` format. **Shipped в commit b8a2bca**.

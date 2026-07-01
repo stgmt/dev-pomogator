@@ -26,7 +26,7 @@ if (needsClaudeMem) {
 
 Существующий код `installClaude()` уже умеет ставить extensions по имени. Просто добавить вызов.
 
-### 2. src/installer/memory.ts — post-install validation + logging (FR-2, FR-3)
+### 2. ~~`src/installer/memory.ts`~~ (removed in v2 — no canonical replacement) — post-install validation + logging (FR-2, FR-3)
 
 После line 726 (конец ensureClaudeMem) добавить:
 
@@ -64,7 +64,7 @@ report.add({ component: 'claude-mem/mcp', status: validation.mcpBinary ? 'ok' : 
 report.add({ component: 'claude-mem/hooks', status: healthHooksInstalled ? 'ok' : 'fail' });
 ```
 
-### 4. src/installer/memory.ts — graceful degradation (FR-5)
+### 4. ~~`src/installer/memory.ts`~~ (removed in v2 — no canonical replacement) — graceful degradation (FR-5)
 
 Текущий код уже не блокирует на chroma failure (non-blocking catch). Нужно:
 - Когда worker fail → НЕ регистрировать MCP (line 724 — добавить guard)
@@ -82,7 +82,7 @@ await registerClaudeMemMcp();
 
 ### 5. Тесты (FR-7)
 
-В `tests/e2e/claude-installer.test.ts` describe `CORE003-Claude-mem`:
+В ~~`tests/e2e/claude-installer.test.ts`~~ describe `CORE003-Claude-mem`:
 - Тест: health hooks registered в settings.json (новый)
 - Тест: install report содержит per-component статусы (новый)
 - Усилить существующие: worker-service.cjs size > 1000 (уже сделано), MCP markers (уже сделано)
@@ -91,11 +91,11 @@ await registerClaudeMemMcp();
 
 | Что | Откуда | Зачем |
 |-----|--------|-------|
-| `isWorkerRunning()` | `src/installer/memory.ts:88` | Post-install validation |
-| `isChromaRunning()` | `src/installer/memory.ts:113` | Post-install validation |
-| `installClaude()` | `src/installer/claude.ts` | Auto-install health extension |
-| `InstallReport` | `src/installer/report.ts` | Per-component statuses |
-| `formatErrorChain` | `src/utils/logger.ts` | Error logging |
+| `isWorkerRunning()` | ~~`src/installer/memory.ts:88`~~ (removed in v2 — no canonical replacement) | Post-install validation |
+| `isChromaRunning()` | ~~`src/installer/memory.ts:113`~~ (removed in v2 — no canonical replacement) | Post-install validation |
+| `installClaude()` | ~~`src/installer/claude.ts`~~ (removed in v2 — no canonical replacement) | Auto-install health extension |
+| `InstallReport` | `.claude/skills/skills-rules-optimizer/scripts/report.ts` | Per-component statuses |
+| `formatErrorChain` | `tools/steps-validator/logger.ts` | Error logging |
 
 ## BDD Test Infrastructure
 

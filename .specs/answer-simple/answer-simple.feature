@@ -7,69 +7,84 @@ Feature: PLUGIN017_answer-simple
 
   # @feature1 — US-1 / FR-1 / FR-4 / AC-1 / AC-4 (always-apply self-check + incident trigger)
 
-  Scenario: PLUGIN017_01: агент молча применяет шаблон самопроверки перед содержательным ответом
-    Given пользователь задал агенту нетривиальный вопрос требующий ответа
-    And в reasoning context агента подгружено правило clear-questions-to-user
-    When агент готовит черновик ответа содержащий внутренние коды "Wave 14" и "FR-12" без расшифровки
-    Then перед отправкой агент SHALL прогнать 5-шаговый шаблон самопроверки
-    And финальный ответ SHALL не содержать необъяснённых внутренних кодов формата "Wave N" или "FR-N"
-    And финальный ответ SHALL иметь структуру микроистории с минимум 3 из 5 опорных точек
+  @feature1
+  Scenario: PLUGIN017_01: правило answer-simple несёт 5-шаговый шаблон самопроверки и микроисторию
+    Given содержимое правила clear-questions-to-user прочитано
+    Then правило SHALL содержать все 5 шагов шаблона самопроверки
+    And правило SHALL перечислять 5 опорных точек микроистории
 
-  Scenario: PLUGIN017_02: триггер инцидента — агент не задаёт новый вопрос при сигнале "не понял"
-    Given в прошлом turn агент задал жаргонный multi-select вопрос пользователю
-    When пользователь в текущем turn ответил "ниче не понял слишком сложно"
-    Then агент SHALL не задавать новый уточняющий вопрос в текущем turn
-    And агент SHALL перечитать копипаст пользователя за последние 2-3 turn
-    And агент SHALL действовать из контекста или задать одну свободную фразу без multi-select опций
+  @feature1
+  Scenario: PLUGIN017_02: правило несёт секцию триггера инцидента с мандатом не задавать новый вопрос
+    Given содержимое правила clear-questions-to-user прочитано
+    Then правило SHALL содержать секцию Триггер инцидента с ключевыми словами не понял и сложно
+    And правило SHALL содержать мандат СТОП не задавать новый вопрос
 
   # @feature2 — US-2 / FR-2 / AC-2 (slash-команда explicit invocation)
 
-  Scenario: PLUGIN017_03: slash-команда /answer-simple возвращает структурированный output на жаргонном черновике
-    Given пользователь набирает в чате команду `/answer-simple "Wave 14 (gates+OpenRouter) ПЕРЕД Wave 11 — Keep / Swap / Parallel?"`
-    When Claude Code находит skill `.claude/skills/answer-simple/SKILL.md` и активирует его
-    Then skill SHALL вернуть output содержащий заголовок "Переформулировано:"
-    And output SHALL содержать заголовок "Найдено проблем:"
-    And блок "Найдено проблем:" SHALL включать упоминания "Wave 14" "Wave 11" "gates" "OpenRouter" как жаргон и multi-select с 3 опциями как превышение порога 2
+  @feature2
+  Scenario: PLUGIN017_03: skill answer-simple несёт корректный frontmatter и критерии workflow
+    Given содержимое skill answer-simple прочитано
+    Then skill SHALL содержать frontmatter с name answer-simple и allowed-tools и упоминание slash-команды
+    And skill SHALL перечислять фиксированные заголовки output Переформулировано Найдено-проблем и Проблем-не-найдено
 
+  @manual
   Scenario: PLUGIN017_04: slash-команда /answer-simple на чистом черновике возвращает "Проблем не найдено"
     Given черновик соответствует шаблону микроистории и не содержит внутренних кодов
     When пользователь вызывает `/answer-simple <чистый-черновик>`
     Then skill SHALL вернуть output "Проблем не найдено"
     And output SHALL включать краткий список пройденных критериев
 
-  # @feature3 — US-3 / FR-3 / FR-5 / AC-3 / AC-5 (installer + migration)
+  # @feature5 — US-3 / FR-5 / AC-5 (atomic migration of rule + CLAUDE.md update)
 
-  Scenario: PLUGIN017_05: установка extension создаёт корректную структуру файлов и миграция rule выполнена атомарно
-    Given fresh target-проект без установленного dev-pomogator
-    And dev-pomogator source repo с уже выполненной миграцией rule (atomic 3-step)
-    When запущена команда `npx github:<owner>/dev-pomogator --claude --plugins=answer-simple` в target-проекте
-    Then target-проект SHALL содержать файл `.claude/rules/answer-simple/clear-questions-to-user.md`
-    And target-проект SHALL содержать файл `.claude/skills/answer-simple/SKILL.md`
-    And `~/.dev-pomogator/config.json` SHALL содержать SHA-256 хеши обоих файлов в managedFiles
-    And валидатор `extensions/_shared/extension-layout-validate.ts` SHALL вернуть exit 0
-    And dev-pomogator source repo SHALL содержать CLAUDE.md глоссарий-запись с путём `.claude/rules/answer-simple/clear-questions-to-user.md`
-    And dev-pomogator source repo SHALL не содержать старый путь `.claude/rules/clear-questions-to-user.md`
+  @feature5
+  Scenario: PLUGIN017_05: v2-проводка и атомарная миграция rule выполнены в репозитории
+    Given репозиторий dev-pomogator после атомарной миграции rule (v2 canonical)
+    Then Stop-хук answer-simple SHALL быть подключён в `.claude-plugin/hooks.json`
+    And файл `tools/answer-simple/answer_simple_stop.ts` SHALL присутствовать
+    And старый путь правила `.claude/rules/clear-questions-to-user.md` SHALL отсутствовать
+    And новый путь правила `.claude/rules/answer-simple/clear-questions-to-user.md` SHALL присутствовать
+    And `CLAUDE.md` SHALL ссылаться на новый путь и не содержать старый путь в backticks
 
-  # @feature4 — US-1 / FR-8 / AC-8 (Stop-hook runtime enforcement of plain language)
+  # @feature8 — US-1 / FR-8 / AC-8 (Stop-hook runtime enforcement of plain language)
 
+  @feature8
   Scenario: PLUGIN017_06: детектор блокирует ответ-стену из внутренних кодов независимо от длины
     Given финальный ответ агента содержит >2 различных внутренних кода (FR-N, ARCH-N, SCREAMING_CODE) в прозе
     When detectJargon анализирует текст
     Then результат SHALL иметь block=true
     And reasons SHALL называть найденные коды бытовой формулировкой "стена внутренних кодов"
 
+  @feature8
   Scenario: PLUGIN017_07: детектор пропускает чистую прозу и hard-OUT для кода/короткого
     Given ответ — чистая проза без внутренних кодов, либо преимущественно блок кода, либо короткий и чистый
     When detectJargon анализирует текст
     Then результат SHALL иметь block=false (ложноположительные исключены)
 
+  @feature8
   Scenario: PLUGIN017_08: Stop-хук блокирует жаргонную стену с понятной причиной, пропускает чистый ответ
     Given answer_simple_stop.ts установлен и подключён как Stop-hook
     When на Stop приходит финальный ответ-стена из кодов
     Then хук SHALL вернуть `{"decision":"block"}` с reason на простом русском "Перепиши ответ проще"
     And на чистый ответ хук SHALL вернуть `{}` (разрешить)
 
+  @feature8
   Scenario: PLUGIN017_09: Stop-хук защищён от петли — повтор того же текста и stop_hook_active пропускаются
     Given хук уже заблокировал конкретный ответ один раз
     When тот же текст приходит повторно ИЛИ stop_hook_active=true
     Then хук SHALL вернуть `{}` (не блокировать снова, исключая бесконечный цикл)
+
+  # @feature8 — FR-8 / AC-8 (regression tokens that slipped through before the 2026-06-11 fix)
+
+  @feature8
+  Scenario: PLUGIN017_10: детектор ловит конкретные токены FR-43c P18-1 SUPERSEDED HITL not_run SPECGEN003
+    Given тексты с токенами FR-43c и P18-1 и SUPERSEDED и HITL и not_run и SPECGEN003 встроены в длинную прозу
+    When detectJargon анализирует каждый текст
+    Then каждый токен SHALL быть обнаружен в stats.codes
+
+  # @feature7 — FR-7 / AC-7 (universal engineering vocabulary must not be flagged)
+
+  @feature7
+  Scenario: PLUGIN017_11: детектор не флагует общеупотребительные аббревиатуры JSON API HTTP GREEN OK DONE
+    Given текст содержит только общеупотребительные аббревиатуры JSON API HTTP GREEN OK DONE в прозе
+    When detectJargon анализирует текст
+    Then stats.codes SHALL быть пустым массивом

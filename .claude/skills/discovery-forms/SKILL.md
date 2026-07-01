@@ -4,10 +4,12 @@ description: >
   Populates USER_STORIES.md with v3-form blocks (Priority + Why + Independent Test + Acceptance Scenarios)
   and appends ## Risk Assessment to RESEARCH.md. Called by create-spec Phase 1 (Discovery) step 3.
   Returns structured JSON summary listing stories populated, risks added, and files touched.
-allowed-tools: Read, Write, Edit, Bash, AskUserQuestion
+allowed-tools: mcp__dev-pomogator-specs__read_spec_doc, mcp__dev-pomogator-specs__list_spec_docs, mcp__dev-pomogator-specs__apply_spec_change, mcp__dev-pomogator-specs__propose_spec_change, Bash, AskUserQuestion
 ---
 
 # Discovery Forms
+
+> **spec-authoring-steer compliance:** when writing a full `{ content }` document via `apply_spec_change`, include `[skip-spec-steer: discovery-forms autofill]` in the `reason` — this marks the write as sanctioned automation so the steer hook does not flag it as hand-authoring (targeted `old_string`/`new_string` edits need no marker).
 
 ## Mission
 
@@ -35,9 +37,17 @@ If `.progress.json` is missing or pre-v3, exit early with a note — form-guards
 
 ## Execution
 
+> **MCP-rails (FR-39/40):** read every input doc (USER_STORIES / USE_CASES /
+> RESEARCH / JIRA_SOURCE) via `read_spec_doc({ spec: "{slug}", doc })`
+> (`list_spec_docs` to see what exists), and write USER_STORIES.md / RESEARCH.md
+> via `apply_spec_change({ spec, doc, old_string, new_string | content })` — the
+> mutation door validates the v3 form (user-story / risk-assessment) BEFORE the
+> disk write. Never a raw `Read`/`Write`/`Edit`/`grep` of `.specs/`. Running
+> `spec-form-parsers.ts` to self-check is fine (engine CLI carve-out).
+
 ### Step 1 — Inventory existing content
 
-Read USER_STORIES.md. If it contains only template bullets (`- Как {роль}...`), treat as empty and proceed to fresh population.
+`read_spec_doc({ spec: "{slug}", doc: "USER_STORIES.md" })`. If it contains only template bullets (`- Как {роль}...`), treat as empty and proceed to fresh population.
 
 If stories already exist in v3 form (presence of `(Priority: Pn)` + Why + IT + AC), verify completeness block-by-block and emit only missing fields — do not rewrite.
 
@@ -76,11 +86,11 @@ Then {alternate outcome}
 Rules:
 - Priority **must** be inside the H3 heading as `(Priority: P1|P2|P3)` — form-guard checks exactly this pattern.
 - Each of `**Why:**`, `**Independent Test:**`, `**Acceptance Scenarios:**` must appear as bold markers on their own line.
-- Write via Edit (anchor on `# User Stories` or previous block) to preserve any existing Jira trace lines (`Jira quote: "..."`, `Evidence: ...`).
+- Write via `apply_spec_change({ spec, doc: "USER_STORIES.md", old_string, new_string })` (MCP-rails — not a raw Edit), anchoring `old_string` on `# User Stories` or the previous block to preserve any existing Jira trace lines (`Jira quote: "..."`, `Evidence: ...`).
 
 ### Step 4 — Append Risk Assessment to RESEARCH.md
 
-Check for `## Risk Assessment` heading. If absent, append at end of file:
+`read_spec_doc({ spec: "{slug}", doc: "RESEARCH.md" })` and check for a `## Risk Assessment` heading. If absent, append via `apply_spec_change({ spec, doc: "RESEARCH.md", old_string: <last block>, new_string: <last block + table> })` (or `{ content }` for a full rewrite) — never a raw Edit of `.specs/`:
 
 ```markdown
 

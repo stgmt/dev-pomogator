@@ -2,13 +2,13 @@
 
 ## Реализуемые требования
 
-- [FR-1: Phase 2 Step 6 extends с TEST_FORMAT](FR.md#fr-1-phase-2-step-6-extends-с-test_format-classification-feature1)
+- [FR-1: Phase 2 Step 6 extends с TEST_FORMAT](FR.md#fr-1-phase-2-step-6-extends-с-testformat-classification-feature1)
 - [FR-2: Phase 1.5 детект framework](FR.md#fr-2-phase-15-project-context-детектит-bdd-framework-в-target-test-projects-feature2)
 - [FR-3: analyze-features multi-folder scan](FR.md#fr-3-analyze-featurests-multi-folder-recursive-scan-feature3)
-- [FR-4: scaffold-spec -TestFormat flag](FR.md#fr-4-scaffold-spects-поддерживает--testformat-flag-feature4)
+- [FR-4: scaffold-spec -TestFormat flag](FR.md#fr-4-scaffold-spects-поддерживает-testformat-flag-feature4)
 - [FR-5: State machine gate](FR.md#fr-5-state-machine-гейтит-requirementsfinalization-на-bdd-classification-feature5)
-- [FR-6: Phase 0 bootstrap block](FR.md#fr-6-tasksmd-phase-0-bootstrap-block-install--hooks--fixtures-config-feature6)
-- [FR-7: Validator severity upgrade](FR.md#fr-7-validator-bdd_infra-rule-severity-upgrade-warning--error-feature7)
+- [FR-6: Phase 0 bootstrap block](FR.md#fr-6-tasksmd-phase-0-bootstrap-block-install-hooks-fixtures-config-feature6)
+- [FR-7: Validator severity upgrade](FR.md#fr-7-validator-bddinfra-rule-severity-upgrade-warning-error-feature7)
 - [FR-8: Shared detector module](FR.md#fr-8-shared-bdd-framework-detectorts-module-переиспользует-steps-validatordetectorts-feature8)
 - [FR-9: Create new spec](FR.md#fr-9-создание-спеки-specscreate-specs-bdd-enforcement-с-cross-reference-на-spec-phase-gate-feature9)
 

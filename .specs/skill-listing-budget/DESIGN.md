@@ -4,29 +4,29 @@
 
 - [FR-1: Запись `skillListingBudgetFraction: 1.0`](FR.md#fr-1-запись-skilllistingbudgetfraction-10-в-claudesettingsjson)
 - [FR-2: Идемпотентность](FR.md#fr-2-идемпотентность-повторных-запусков)
-- [FR-3: Bump существующего значения < 1.0](FR.md#fr-3-bump-существующего-значения--10)
+- [FR-3: Bump существующего значения < 1.0](FR.md#fr-3-bump-существующего-значения-10)
 - [FR-4: Install report line](FR.md#fr-4-install-report-includes-change-line)
 
 ## Компоненты
 
 - `src/installer/skill-budget.ts` — новый module, единственная экспортируемая функция `ensureSkillListingBudget(homeDir?, report?): Promise<void>`. Содержит весь decision-tree (absent/equal/lower/invalid).
-- `src/installer/claude.ts` — вызов `ensureSkillListingBudget()` после основного install loop, перед формированием InstallReport.
-- `src/installer/report.ts` — добавлен метод `recordSkillBudget(line: string)` для накопления одной строки.
+- ~~`src/installer/claude.ts`~~ (removed in v2 — no canonical replacement) — вызов `ensureSkillListingBudget()` после основного install loop, перед формированием InstallReport.
+- `.claude/skills/skills-rules-optimizer/scripts/report.ts` — добавлен метод `recordSkillBudget(line: string)` для накопления одной строки.
 - `src/utils/atomic-json.ts` — reuse существующих `readJsonSafe()` + `writeJsonAtomic()`. Никаких новых утилит.
 
 ## Где лежит реализация
 
 - App-код: `src/installer/skill-budget.ts` (новый)
-- Wiring: `src/installer/claude.ts` (1 вызов в существующей функции `installClaude`)
-- Report: `src/installer/report.ts` (1 новый метод + 1 строка в render)
+- Wiring: ~~`src/installer/claude.ts`~~ (removed in v2 — no canonical replacement) (1 вызов в существующей функции `installClaude`)
+- Report: `.claude/skills/skills-rules-optimizer/scripts/report.ts` (1 новый метод + 1 строка в render)
 - Tests (integration): `tests/e2e/skill-listing-budget.test.ts` (новый)
 - Tests (.feature): `tests/features/core/CORE023_skill-listing-budget.feature` (новый, копия из `.specs/skill-listing-budget/skill-listing-budget.feature`)
 
 ## Директории и файлы
 
 - `src/installer/skill-budget.ts` — новый
-- `src/installer/claude.ts` — edit (1 import + 1 вызов)
-- `src/installer/report.ts` — edit (1 метод + 1 render-строка)
+- ~~`src/installer/claude.ts`~~ (removed in v2 — no canonical replacement) — edit (1 import + 1 вызов)
+- `.claude/skills/skills-rules-optimizer/scripts/report.ts` — edit (1 метод + 1 render-строка)
 - `tests/e2e/skill-listing-budget.test.ts` — новый
 - `tests/features/core/CORE023_skill-listing-budget.feature` — новый
 
@@ -138,7 +138,7 @@ function ensureSkillListingBudget(homeDir = os.homedir()):
 **TEST_FORMAT:** BDD [VERIFIED: project convention per `.claude/rules/extension-test-quality.md` 1:1 mapping]
 **Framework:** vitest (project default — это integration-первые BDD-style тесты через `describe`/`it` + `.feature` 1:1 mapping per `extension-test-quality` rule)
 **Install Command:** already installed (vitest 1.x в `package.json`)
-**Evidence:** `tests/e2e/claude-installer.test.ts` + `tests/features/core/CORE003_claude-installer.feature` — существующий pattern integration-first с 1:1 .feature mapping. `tests/e2e/settings-protection.test.ts` + `tests/features/core/CORE005_settings-protection.feature` — точно тот же шаблон для settings.json manipulation.
+**Evidence:** ~~`tests/e2e/claude-installer.test.ts`~~ + ~~`tests/features/core/CORE003_claude-installer.feature`~~ — существующий pattern integration-first с 1:1 .feature mapping. `tests/e2e/settings-protection.test.ts` + `tests/features/core/CORE005_settings-protection.feature` — точно тот же шаблон для settings.json manipulation.
 **Verdict:** TEST_DATA_ACTIVE: тесты пишут в temp `HOME` directory; `beforeEach` создаёт temp HOME, `afterEach` удаляет. Hooks нужны для temp HOME isolation.
 
 ### Существующие hooks

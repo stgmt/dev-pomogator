@@ -3,10 +3,10 @@
 ## Реализуемые требования
 
 - [FR-1: Skill structure with progressive disclosure](FR.md#fr-1-skill-structure-with-progressive-disclosure-feature1)
-- [FR-2: Reference file naming convention](FR.md#fr-2-reference-file-naming-convention-phasen-m_descriptive-feature2)
+- [FR-2: Reference file naming convention](FR.md#fr-2-reference-file-naming-convention-phasenmdescriptive-feature2)
 - [FR-3: Phase 3+ Audit categories split](FR.md#fr-3-phase-3-audit-categories-split-into-separate-files-feature3)
 - [FR-4: Hard cutover migration via installer](FR.md#fr-4-hard-cutover-migration-via-installer-feature4)
-- [FR-5: research-workflow extracted as standalone skill](FR.md#fr-5-research-workflow-extracted-as-standalone-skill-feature5)
+- [FR-5: research-workflow extracted as standalone skill](FR.md#fr-5-research-workflow-extracted-as-standalone-skill-and-invoked-by-create-spec-feature5)
 - [FR-6: Source rule files removed atomically](FR.md#fr-6-source-rule-files-removed-atomically-feature4)
 - [FR-7: extension.json manifest updated atomically](FR.md#fr-7-extensionjson-manifest-updated-atomically-feature4)
 - [FR-8: CLAUDE.md glossary synced](FR.md#fr-8-claudemd-glossary-synced-with-new-skill-layout-feature4)

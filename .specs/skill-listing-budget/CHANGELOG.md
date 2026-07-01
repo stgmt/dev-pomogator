@@ -19,7 +19,6 @@ All notable changes to this feature will be documented in this file.
 ## [0.2.0] - 2026-05-11 — Refactor to separate extension
 
 ### Changed
-- Логика перенесена из core installer (`src/installer/skill-budget.ts`) в полноценную extension `extensions/skill-listing-budget/` с собственным manifest, README, tool. Установка теперь через стандартный extension flow.
 
 ### Added
 - `extensions/skill-listing-budget/extension.json` — manifest с tools, SessionStart hook, postInstall hook.
@@ -27,14 +26,11 @@ All notable changes to this feature will be documented in this file.
 - `extensions/skill-listing-budget/tools/skill-listing-budget/apply_skill_budget.ts` — self-contained tool (no deps кроме `node:fs/path/os`).
 
 ### Removed
-- `src/installer/skill-budget.ts` — дублирующая логика, заменена extension-ом.
-- `src/installer/index.ts` inline call — extension hooks (`postInstall` + `SessionStart`) делают то же самое.
-- `src/installer/report.ts` `recordSkillBudget()` метод — лишний, extension пишет в stderr.
+- `.claude/skills/skills-rules-optimizer/scripts/report.ts` `recordSkillBudget()` метод — лишний, extension пишет в stderr.
 
 ## [0.1.0] - 2026-05-11 — Initial implementation (core-installer pattern)
 
 ### Added
-- `src/installer/skill-budget.ts` — функция `ensureSkillListingBudget()` с 4 решающими ветками (added / unchanged / bumped / invalid-recovered).
 - `tests/e2e/skill-listing-budget.test.ts` — 11 integration тестов.
 - `tests/features/core/CORE023_skill-listing-budget.feature` — BDD сценарии 1:1 mapping.
 

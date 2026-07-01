@@ -207,9 +207,8 @@ if (manual.length > 0) printNonReinstallableBlock(manual);  // always show hints
 
 ## Где лежит реализация
 
-- App-код (будущий, после этой спеки): `src/doctor/`, `extensions/pomogator-doctor/`, `src/index.ts` (--doctor flag)
 - Конфигурация: `~/.dev-pomogator/config.json`, `.claude/settings.local.json`, `.env`, `.mcp.json`, `~/.claude/mcp.json`
-- Тесты (будущие): `tests/features/plugins/pomogator-doctor/*.test.ts`, `tests/e2e/pomogator-doctor.test.ts`
+- Тесты (будущие): `tests/features/plugins/pomogator-doctor/*.test.ts`, `tests/e2e/doctor-{core,entry,gating,output,reinstall,reliability}.test.ts` (split layout) [was: ~~`tests/e2e/pomogator-doctor.test.ts`~~]
 
 ## Выводы
 
@@ -245,9 +244,9 @@ if (manual.length > 0) printNonReinstallableBlock(manual);  // always show hints
 | Source | Path | What It Provides | Relevance |
 |--------|------|-------------------|-----------|
 | claude-mem-health | `extensions/claude-mem-health/` | Template SessionStart hook с JSON protocol (`{continue, suppressOutput}`), `writeOutput()` helper | Direct template для `extensions/pomogator-doctor/tools/pomogator-doctor/doctor-hook.ts` |
-| status.ts | `src/installer/status.ts:4-29` | chalk pattern для installer status output — `chalk.bold`, `chalk.gray` | Reference для `src/doctor/reporter.ts` chalk formatting |
+| status.ts | `src/installer/status.ts:4-29` | chalk pattern для installer status output — `chalk.bold`, `chalk.gray` | Reference для `.claude/skills/pomogator-doctor/scripts/engine/reporter.ts` chalk formatting |
 | env-setup.ts | `src/installer/env-setup.ts:30-43` | `getMissingRequiredEnv(extensions)` — итерирует envRequirements | **Reuse as-is** для C7 check |
-| memory.ts | `src/installer/memory.ts:44-94, 139-150` | `checkBunInstalled()`, `pipInstall()` — binary presence + auto-install | **Reuse** для C9 / C10 checks |
+| memory.ts | ~~`src/installer/memory.ts:44-94, 139-150`~~ (removed in v2 — no canonical replacement) | `checkBunInstalled()`, `pipInstall()` — binary presence + auto-install | **Reuse** для C9 / C10 checks |
 | tsx-runner.js | `src/scripts/tsx-runner.js:5-12` | Multi-strategy fallback (native / local / home / global / npx) | doctor-hook.ts инициализация через tsx-runner-bootstrap |
 | gitignore.ts | `src/installer/gitignore.ts:1-28` | `MARKER_BEGIN` / `MARKER_END` для managed blocks | Reuse для C14 validation |
 | loadConfig | `src/config/index.ts:6` | Reads `~/.dev-pomogator/config.json` | Reuse для C3/C5/C6/C13 |
@@ -329,9 +328,7 @@ if (manual.length > 0) printNonReinstallableBlock(manual);  // always show hints
 
 3 файла + 4 edit'а покроют 90% webapp-style сценариев:
 
-1. **New** `src/doctor/checks/hook-command-integrity.ts` (~80 строк) — FR-26
-2. **New** `src/doctor/checks/managed-files-integrity.ts` (~70 строк) — FR-27
-3. **Fix** `src/doctor/checks/hooks-registry.ts` (~20 строк change) — FR-31 (critical false-positive regression)
-4. **Fix** `src/doctor/checks/plugin-loader.ts` (~10 строк change) — FR-28
+3. **Fix** `.claude/skills/pomogator-doctor/scripts/engine/checks/hooks-registry.ts` (~20 строк change) — FR-31 (critical false-positive regression)
+4. **Fix** `.claude/skills/pomogator-doctor/scripts/engine/checks/plugin-loader.ts` (~10 строк change) — FR-28
 
 P1 дополнения (MCP retune, --all-projects, self-install, config.version) — следующая итерация после P0 verify.

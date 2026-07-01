@@ -80,7 +80,7 @@
 - [x] Реализовать `extensions/onboard-repo/tools/onboard-repo/lib/git-sha-cache.ts` (read `.onboarding.json`, compare with `git rev-parse HEAD`, return decision enum: `missing | valid | drift | error`) -- @feature4
   _Requirements: [FR-4](FR.md#fr-4-git-sha-cache-invalidation-feature4)_
 - [x] Реализовать handle для `--refresh-onboarding` flag: archive prev artifacts в `.onboarding-history/`, retention 5 -- @feature4
-  _Requirements: [FR-16](FR.md#fr-16-manual-refresh-через---refresh-onboarding-feature4)_
+  _Requirements: [FR-16](FR.md#fr-16-manual-refresh-через-refresh-onboarding-feature4)_
 - [x] Реализовать fallback для non-git repos (mtime-based invalidation) -- @feature4
   _Requirements: [NFR-C3](NFR.md#compatibility)_
 - [x] Verify: сценарии ONBOARD003 (cache hit) + ONBOARD004 (drift) + ONBOARD005 (refresh) + ONBOARD032 (non-git) переходят Red → Green
@@ -165,7 +165,7 @@
 ## Phase 10: Ignore parser + secret redaction (Green, @feature2 + NFR-S1)
 
 - [x] Реализовать `extensions/onboard-repo/tools/onboard-repo/lib/ignore-parser.ts` — parse `.gitignore`/`.cursorignore`/`.aiderignore` с proper gitignore semantics
-  _Requirements: [FR-17](FR.md#fr-17-respect-cursorignore--aiderignore--gitignore-feature2)_
+  _Requirements: [FR-17](FR.md#fr-17-respect-cursorignore-aiderignore-gitignore-feature2)_
 - [x] Реализовать `extensions/onboard-repo/tools/onboard-repo/lib/secret-redaction.ts` — pre-write scanner для sk-*, ghp_*, xoxb-*, AKIA, eyJ... patterns
   _Requirements: [NFR-S1](NFR.md#security) secrets never in artifacts_
 - [x] Integrate ignore-parser в subagent prompts (skip matching paths)

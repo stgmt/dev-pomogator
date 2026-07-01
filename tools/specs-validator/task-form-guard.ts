@@ -12,6 +12,7 @@
  */
 
 import { isV3Spec } from './phase-constants.ts';
+import { readStdin } from '../_shared/stdin.ts';
 import { parseTaskBlocks, extractSpecInfo, extractWriteContent } from './spec-form-parsers.ts';
 import { logEvent } from './audit-logger.ts';
 
@@ -21,12 +22,6 @@ const TARGET_FILE = 'TASKS.md';
 interface PreToolUseInput {
   tool_name?: string;
   tool_input?: { file_path?: string; content?: string; new_string?: string };
-}
-
-async function readStdin(): Promise<string> {
-  let buf = '';
-  for await (const chunk of process.stdin) buf += chunk.toString();
-  return buf;
 }
 
 function deny(reason: string, filepath: string): never {
@@ -82,7 +77,7 @@ async function main(): Promise<void> {
   const msg =
     `${violations.length} task(s) failed v3 form validation in ${specInfo.filename}:\n` +
     lines.join('\n') +
-    `\n\nRequired per task: **Done When:** block with ≥1 \`- [ ]\` checkbox, \`Status: TODO|IN_PROGRESS|DONE|BLOCKED\`, \`Est: <N>m\`.\n` +
+    `\n\nRequired per task: **Done When:** block with ≥1 \`- [ ]\` checkbox, \`Status: TODO|READY|IN_PROGRESS|DONE|BLOCKED\`, \`Est: <N>m\`.\n` +
     `Tasks in Phase -1 (Infrastructure) are exempt; mark explicit waivers with \`_waived: {reason}_\`.\n` +
     `Fix: call Skill("task-board-forms") to enrich tasks with Done When/Status/Est.`;
   deny(msg, filePath);

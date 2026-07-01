@@ -16,7 +16,7 @@
 Для каждого finding:
 
 - FR без AC → добавить `## AC-N (FR-N) ...` в ACCEPTANCE_CRITERIA.md (EARS формат)
-- AC без BDD сценария → добавить `Scenario: ...` в `.feature` с тегом `# @featureN`
+- AC без BDD сценария → добавить `Scenario: ...` в `.feature` с НАСТОЯЩИМ Gherkin-тегом `@featureN` строкой над сценарием (НЕ комментарием `# @featureN` — его парсер графа не видит)
 - FR без задачи в TASKS.md → добавить task block с `**refs:** FR-N`
 - File из TASKS.md отсутствует в FILE_CHANGES.md → добавить строку в File Changes таблицу
 - UC без FR → либо добавить FR, либо пометить UC `> OUT OF SCOPE`

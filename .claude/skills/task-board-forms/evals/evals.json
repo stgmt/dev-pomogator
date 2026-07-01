@@ -1,0 +1,41 @@
+{
+  "skill_name": "task-board-forms",
+  "description": "Behavioural evals for task-board-forms — verifies it enriches each TASKS.md task with Done When / Status / Est fields and regenerates the ## Task Summary Table via spec-status.ts -Format task-table, idempotently (re-run replaces the auto-generated block between markers, no duplication). Grounded in the skill contract (Phase 3 step 1b).",
+  "evals": [
+    {
+      "id": 0,
+      "name": "every-task-gets-done-when-status-est",
+      "prompt": "Run task-board-forms on a TASKS.md where tasks have titles + ids but no Done When / Status / Est fields.",
+      "expected_output": "Every task block gains a non-placeholder `Done When` (a verifiable condition, not `TBD`), a `Status` from the legal vocabulary, and an `Est`. No task is left without the three fields.",
+      "files": []
+    },
+    {
+      "id": 1,
+      "name": "summary-table-regenerated-between-markers",
+      "prompt": "Run task-board-forms on a TASKS.md that has a stale ## Task Summary Table.",
+      "expected_output": "The ## Task Summary Table is regenerated via spec-status.ts -Format task-table and replaces ONLY the auto-generated block between its markers; hand-written prose outside the markers is untouched.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "name": "idempotent-rerun-no-duplicate-table-or-fields",
+      "prompt": "Run task-board-forms twice in a row on the same TASKS.md.",
+      "expected_output": "The second run produces a byte-identical result (idempotent): no duplicated Task Summary Table, no doubled Done When / Status / Est fields. The marked block is replaced, not appended.",
+      "files": []
+    },
+    {
+      "id": 3,
+      "name": "done-when-is-verifiable-not-restated-title",
+      "prompt": "Run task-board-forms on a task titled \"implement the YAML writer\".",
+      "expected_output": "The generated `Done When` is a checkable acceptance condition (e.g. \"writer emits valid YAML for a 3-spec corpus and the e2e asserts it\"), NOT a restatement of the title (\"YAML writer implemented\"). Verifies Done-When quality, not echo.",
+      "files": []
+    },
+    {
+      "id": 4,
+      "name": "status-values-from-legal-vocabulary",
+      "prompt": "Run task-board-forms and inspect the Status fields it writes.",
+      "expected_output": "Each Status is one of the legal lifecycle tokens (TODO / READY / IN_PROGRESS / BLOCKED / DONE) consistent with the task parser STATUS_MAP — never an ad-hoc string. A task already marked done keeps its checkbox/Status consistent.",
+      "files": []
+    }
+  ]
+}

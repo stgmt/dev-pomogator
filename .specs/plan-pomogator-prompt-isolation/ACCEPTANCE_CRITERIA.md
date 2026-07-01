@@ -2,13 +2,13 @@
 
 ## AC-1 (FR-1) @feature1
 
-**Требование:** [FR-1](FR.md#fr-1-prompt-capture-использует-session_id-из-hook-input-feature1)
+**Требование:** [FR-1](FR.md#fr-1-prompt-capture-использует-sessionid-из-hook-input-feature1)
 
 WHEN `prompt-capture.ts` получает hook input `{session_id: "abc-123", prompt: "real user message"}` THEN скрипт SHALL создать файл `~/.dev-pomogator/.plan-prompts-abc-123.json` с записью `{ts: <timestamp>, text: "real user message"}` AND скрипт SHALL NOT создать файл `~/.dev-pomogator/.plan-prompts-default.json`.
 
 ## AC-2 (FR-2) @feature2
 
-**Требование:** [FR-2](FR.md#fr-2-prompt-capture-не-пишет-defaultjson-при-отсутствии-session_id-feature2)
+**Требование:** [FR-2](FR.md#fr-2-prompt-capture-не-пишет-defaultjson-при-отсутствии-sessionid-feature2)
 
 IF hook input не содержит поле `session_id` ИЛИ `session_id` пустая строка THEN `prompt-capture.ts` SHALL завершиться с exit 0 AND скрипт SHALL NOT создать никакого файла в `~/.dev-pomogator/`.
 
@@ -32,7 +32,7 @@ IF файл `.plan-prompts-x.json` содержит mix `[{text: "<task-notifica
 
 ## AC-6 (FR-6)
 
-**Требование:** [FR-6](FR.md#fr-6-спецификация-specsplan-pomogator-prompt-isolation-полна-и-валидна-feature6)
+**Требование:** [FR-6](FR.md#fr-6-спецификация-specsplan-pomogator-prompt-isolation-полна-и-валидна)
 
 WHEN `./.dev-pomogator/tools/specs-generator/validate-spec.ts -Path .specs/plan-pomogator-prompt-isolation` запускается THEN скрипт SHALL завершиться с exit 0 AND скрипт SHALL вывести 0 ERROR-уровень замечаний (warnings допустимы при наличии оправдания в спеке).
 

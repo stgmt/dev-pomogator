@@ -2,16 +2,16 @@
 
 ## FR-1: Managed gitignore block @feature1
 
-Installer SHALL записать marker block в `{repoRoot}/.gitignore` target-проекта после `addProjectPaths` (после step 9 в `src/installer/claude.ts:270`). Block содержит: `.claude/settings.local.json` (первой строкой) + все `ManagedFileEntry.path` из `managedByExtension`, нормализованные через `/`, отсортированные, с collapse per-tool/per-skill/per-rule-subfolder директорий. Маркеры: `# >>> dev-pomogator (managed — do not edit) >>>` / `# <<< dev-pomogator (managed — do not edit) <<<`. Atomic write через temp + `fs.move`. Если `.gitignore` не существует — создать с только marker block. Если block уже есть — регенерировать целиком (drop stale entries). Action пропускается при активном self-guard (FR-4).
+Installer SHALL записать marker block в `{repoRoot}/.gitignore` target-проекта после `addProjectPaths` (после step 9 в ~~`src/installer/claude.ts:270`~~ (removed in v2 — no canonical replacement)). Block содержит: `.claude/settings.local.json` (первой строкой) + все `ManagedFileEntry.path` из `managedByExtension`, нормализованные через `/`, отсортированные, с collapse per-tool/per-skill/per-rule-subfolder директорий. Маркеры: `# >>> dev-pomogator (managed — do not edit) >>>` / `# <<< dev-pomogator (managed — do not edit) <<<`. Atomic write через temp + `fs.move`. Если `.gitignore` не существует — создать с только marker block. Если block уже есть — регенерировать целиком (drop stale entries). Action пропускается при активном self-guard (FR-4).
 
-**Связанные AC:** [AC-1](ACCEPTANCE_CRITERIA.md#ac-1-fr-1)
+**Связанные AC:** [AC-1](ACCEPTANCE_CRITERIA.md#ac-1-fr-1-feature1)
 **Use Case:** [UC-1](USE_CASES.md#uc-1-fresh-install-в-чистый-target-проект-feature1-feature2-feature3), [UC-2](USE_CASES.md#uc-2-re-install-после-удаления-extension-feature1)
 
 ## FR-2: settings.local.json target для hooks/env @feature2
 
-`installExtensionHooks` в `src/installer/claude.ts:371-544` SHALL писать dev-pomogator hooks и env entries в `{repoRoot}/.claude/settings.local.json` вместо `.claude/settings.json`. Существующий `settings.json` НЕ модифицируется — team hooks preserved. Существующий `settings.local.json` читается через `readJsonSafe` (preserve user keys), dev-pomogator entries merged через существующую dedupe логику из `claude.ts:469-494`. Atomic write через `writeJsonAtomic`. Action пропускается при активном self-guard (FR-4).
+`installExtensionHooks` в ~~`src/installer/claude.ts:371-544`~~ (removed in v2 — no canonical replacement) SHALL писать dev-pomogator hooks и env entries в `{repoRoot}/.claude/settings.local.json` вместо `.claude/settings.json`. Существующий `settings.json` НЕ модифицируется — team hooks preserved. Существующий `settings.local.json` читается через `readJsonSafe` (preserve user keys), dev-pomogator entries merged через существующую dedupe логику из `claude.ts:469-494`. Atomic write через `writeJsonAtomic`. Action пропускается при активном self-guard (FR-4).
 
-**Связанные AC:** [AC-2](ACCEPTANCE_CRITERIA.md#ac-2-fr-2)
+**Связанные AC:** [AC-2](ACCEPTANCE_CRITERIA.md#ac-2-fr-2-feature2)
 **Use Case:** [UC-1](USE_CASES.md#uc-1-fresh-install-в-чистый-target-проект-feature1-feature2-feature3)
 
 ## FR-3: Legacy migration из settings.json @feature2
@@ -22,7 +22,7 @@ Installer SHALL записать marker block в `{repoRoot}/.gitignore` target-
 
 Env entries: матчим по именам из `extension.envRequirements[].name`. Найденные entries SHALL переноситься в `settings.local.json`, удаляться из `settings.json`. Team hooks (не матчат оба критерия) SHALL оставаться в `settings.json` нетронутыми. Action пропускается при self-guard.
 
-**Связанные AC:** [AC-3](ACCEPTANCE_CRITERIA.md#ac-3-fr-3)
+**Связанные AC:** [AC-3](ACCEPTANCE_CRITERIA.md#ac-3-fr-3-feature2)
 **Use Case:** [UC-1](USE_CASES.md#uc-1-fresh-install-в-чистый-target-проект-feature1-feature2-feature3)
 
 ## FR-4: Self-guard для dev-pomogator репо @feature3
@@ -39,7 +39,7 @@ Installer SHALL детектить "running in dev-pomogator source repository" 
 
 Копирование tools/commands/rules/skills продолжается как раньше (dogfood works). Console output: `"Detected dev-pomogator source repository — skipping personal-mode features"`.
 
-**Связанные AC:** [AC-4](ACCEPTANCE_CRITERIA.md#ac-4-fr-4)
+**Связанные AC:** [AC-4](ACCEPTANCE_CRITERIA.md#ac-4-fr-4-feature3)
 **Use Case:** [UC-3](USE_CASES.md#uc-3-install-в-dev-pomogator-репо-dogfooding-feature3), [UC-8](USE_CASES.md#uc-8-uninstall-в-dev-pomogator-репо-feature7)
 
 ## FR-5: Loud-fail setupGlobalScripts @feature4
@@ -48,7 +48,7 @@ Installer SHALL детектить "running in dev-pomogator source repository" 
 
 После `setupGlobalScripts` completes, installer SHALL выполнять post-install verification: `if (!await fs.pathExists(runnerPath)) throw new Error('Post-install verification failed: ~/.dev-pomogator/scripts/tsx-runner.js missing')`. Это гарантирует что после успешного return из `setupGlobalScripts`, runner файл реально существует.
 
-**Связанные AC:** [AC-5](ACCEPTANCE_CRITERIA.md#ac-5-fr-5)
+**Связанные AC:** [AC-5](ACCEPTANCE_CRITERIA.md#ac-5-fr-5-feature4)
 **Use Case:** [UC-4](USE_CASES.md#uc-4-broken-dist-dkorotkov-repro-feature4)
 
 ## FR-6: Fail-soft hook wrapper @feature5
@@ -67,7 +67,7 @@ Bootstrap файл `src/scripts/tsx-runner-bootstrap.cjs` (новый, ~15 lines
 
 Bootstrap копируется через `setupGlobalScripts` вместе с `tsx-runner.js`.
 
-**Связанные AC:** [AC-6](ACCEPTANCE_CRITERIA.md#ac-6-fr-6)
+**Связанные AC:** [AC-6](ACCEPTANCE_CRITERIA.md#ac-6-fr-6-feature5)
 **Use Case:** [UC-5](USE_CASES.md#uc-5-runner-исчез-после-успешной-установки-feature5)
 
 ## FR-7: Collision detection через git ls-files @feature6
@@ -85,12 +85,12 @@ export async function detectGitTrackedCollisions(repoRoot: string, candidatePath
 
 В `installClaude` перед copy loops (line ~63) — собрать candidate paths для commands+rules+skills (НЕ tools — они в `.dev-pomogator/` namespace, collision impossible), вызвать `detectGitTrackedCollisions`, пропускать copy + исключать из `managedByExtension` entries + WARN в install report: `"COLLISION: {path} — skipped (user-tracked in git)"`.
 
-**Связанные AC:** [AC-7](ACCEPTANCE_CRITERIA.md#ac-7-fr-7)
+**Связанные AC:** [AC-7](ACCEPTANCE_CRITERIA.md#ac-7-fr-7-feature6)
 **Use Case:** [UC-6](USE_CASES.md#uc-6-collision-с-user-committed-command-feature6)
 
 ## FR-8: Per-project uninstall command @feature7
 
-Новая CLI команда `dev-pomogator uninstall --project [--dry-run]` (wire в `src/index.ts`). Реализация в новом `src/installer/uninstall-project.ts`:
+Новая CLI команда `dev-pomogator uninstall --project [--dry-run]` (wire в ~~`src/index.ts`~~ (removed in v2 migration)). Реализация в новом `src/installer/uninstall-project.ts`:
 
 ```typescript
 export async function uninstallFromProject(repoRoot: string): Promise<UninstallReport>
@@ -109,7 +109,7 @@ Global `~/.dev-pomogator/scripts/` и `~/.claude.json` НЕ трогает (pers
 
 `--dry-run` flag: preview mode, no actual deletion/writes, только print report.
 
-**Связанные AC:** [AC-8](ACCEPTANCE_CRITERIA.md#ac-8-fr-8)
+**Связанные AC:** [AC-8](ACCEPTANCE_CRITERIA.md#ac-8-fr-8-feature7)
 **Use Case:** [UC-7](USE_CASES.md#uc-7-per-project-uninstall-feature7), [UC-8](USE_CASES.md#uc-8-uninstall-в-dev-pomogator-репо-feature7)
 
 ## FR-9: Force-global MCP writes @feature8
@@ -118,9 +118,9 @@ Global `~/.dev-pomogator/scripts/` и `~/.claude.json` НЕ трогает (pers
 
 Info print при save: `"[INFO] Writing MCP servers to global config ({config_path}) — personal mode"`.
 
-`src/installer/memory.ts:registerClaudeMemMcp` уже пишет только в `~/.claude.json` — инвариант сохраняется (BDD test PERSO_84 защищает от регрессии).
+~~`src/installer/memory.ts:registerClaudeMemMcp`~~ (removed in v2 — no canonical replacement) уже пишет только в `~/.claude.json` — инвариант сохраняется (BDD test PERSO_84 защищает от регрессии).
 
-**Связанные AC:** [AC-9](ACCEPTANCE_CRITERIA.md#ac-9-fr-9)
+**Связанные AC:** [AC-9](ACCEPTANCE_CRITERIA.md#ac-9-fr-9-feature8)
 **Use Case:** [UC-9](USE_CASES.md#uc-9-setup-mcppy-с-существующим-project-mcpjson-feature8), [UC-11](USE_CASES.md#uc-11-claude-mem-mcp-registration-invariant-feature8)
 
 ## FR-10: Secret detection в project .mcp.json @feature8
@@ -144,7 +144,7 @@ Info print при save: `"[INFO] Writing MCP servers to global config ({config_p
 
 Install НЕ блокируется, только warning. Файл `.mcp.json` НЕ модифицируется (read-only check). Новый модуль `src/installer/mcp-security.ts` с функцией `checkMcpJsonForSecrets(repoRoot): Promise<SecretFinding[]>`.
 
-**Связанные AC:** [AC-10](ACCEPTANCE_CRITERIA.md#ac-10-fr-10)
+**Связанные AC:** [AC-10](ACCEPTANCE_CRITERIA.md#ac-10-fr-10-feature8)
 **Use Case:** [UC-10](USE_CASES.md#uc-10-install-с-secrets-в-project-mcpjson-feature8)
 
 ## FR-11: AI agent uninstall skill @feature9
@@ -173,14 +173,14 @@ allowed-tools: Read, Bash, Edit, Glob, Grep
 
 Тело SKILL.md — 5 секций (Safety Checks → Scope Selection → CLI-First → Manual Fallback → Verification). Детали в `DESIGN.md` секции "Компоненты". Skill НЕ содержит destructive команд без user confirmation.
 
-Installer уже поддерживает skills install через `getExtensionSkills` → `src/installer/claude.ts:173-195` — дополнительных изменений в installer core не требуется.
+Installer уже поддерживает skills install через `getExtensionSkills` → ~~`src/installer/claude.ts:173-195`~~ (removed in v2 — no canonical replacement) — дополнительных изменений в installer core не требуется.
 
-**Связанные AC:** [AC-11](ACCEPTANCE_CRITERIA.md#ac-11-fr-11)
+**Связанные AC:** [AC-11](ACCEPTANCE_CRITERIA.md#ac-11-fr-11-feature9)
 **Use Case:** [UC-12](USE_CASES.md#uc-12-user-просит-ai-удалить-dev-pomogator-feature9)
 
 ## FR-12: Updater syncs `_shared/` utilities @feature10
 
-Updater (`src/updater/index.ts:checkUpdate`) SHALL sync `extensions/_shared/` to `{repoRoot}/.dev-pomogator/tools/_shared/` for every project on every update run, regardless of which extensions changed. New helper `updateSharedFiles(projectPath, previousShared)` in `src/updater/shared-sync.ts`:
+Updater (`~~`src/updater/index.ts`~~ (removed in v2 migration):checkUpdate`) SHALL sync `extensions/_shared/` to `{repoRoot}/.dev-pomogator/tools/_shared/` for every project on every update run, regardless of which extensions changed. New helper `updateSharedFiles(projectPath, previousShared)` in `src/updater/shared-sync.ts`:
 
 1. Reads static manifest `extensions/_shared/.manifest.json` (committed alongside `_shared/` source) listing all files
 2. For each file, calls `downloadExtensionFile('_shared', fileName)` (existing helper handles both local source root and GitHub raw URL fallback)
@@ -192,12 +192,12 @@ Result tracked in `Config.installedShared: Record<string, ManagedFileEntry[]>` k
 
 **Why**: installer uses `fs.copy` for `_shared/` (full directory copy at step 3b), updater historically used `toolFiles[]` whitelist. After auto-update, target `_shared/` becomes stale → hook scripts importing `../_shared/hook-utils.js` fail with `MODULE_NOT_FOUND`. Reference incident: dkidyaev (`c:\msmaster`).
 
-**Связанные AC:** [AC-12](ACCEPTANCE_CRITERIA.md#ac-12-fr-12)
+**Связанные AC:** [AC-12](ACCEPTANCE_CRITERIA.md#ac-12-fr-12-feature10)
 **Use Case:** UC-13 (auto-update with stale _shared/)
 
 ## FR-13: Updater orphan dir cleanup @feature10
 
-After `updateToolFiles()` per extension returns, updater SHALL prune empty parent directories left behind by stale-file removal. New helper `pruneEmptyDirs(projectPath, removedRelativePaths)` in `src/updater/index.ts`:
+After `updateToolFiles()` per extension returns, updater SHALL prune empty parent directories left behind by stale-file removal. New helper `pruneEmptyDirs(projectPath, removedRelativePaths)` in ~~`src/updater/index.ts`~~ (removed in v2 migration):
 
 1. Computes parent dir set bottom-up from each removed file path
 2. Stops walking at `{projectPath}/.dev-pomogator/tools/` boundary (never deletes the tools root)
@@ -207,7 +207,7 @@ After `updateToolFiles()` per extension returns, updater SHALL prune empty paren
 
 **Why**: removing files from `toolFiles[]` manifest leaves stale empty dirs accumulating after multiple updates. Cleaner state matches installer expectations.
 
-**Связанные AC:** [AC-13](ACCEPTANCE_CRITERIA.md#ac-13-fr-13)
+**Связанные AC:** [AC-13](ACCEPTANCE_CRITERIA.md#ac-13-fr-13-feature10)
 
 ## FR-14: Updater regenerates `plugin.json` @feature10
 
@@ -220,7 +220,7 @@ The helper writes `{ name, version, description, skills? }` atomically. Updater 
 
 **Why**: after extensions added or removed via re-install, `plugin.json` description becomes stale. Plugin discovery in Claude Code reads this file — stale entries can mislead users about what's installed.
 
-**Связанные AC:** [AC-14](ACCEPTANCE_CRITERIA.md#ac-14-fr-14)
+**Связанные AC:** [AC-14](ACCEPTANCE_CRITERIA.md#ac-14-fr-14-feature10)
 
 ## FR-15: Migration sanitization completeness @feature10
 
@@ -232,9 +232,20 @@ After FR-3 legacy migration runs in `installExtensionHooks` (non-dogfood mode), 
 4. **Empty hooks object deleted**: if all hookName arrays are removed, the entire `settings.hooks` key SHALL be `delete`d
 5. **Team entries preserved bit-for-bit**: any hook or env entry not matching dev-pomogator criteria SHALL remain identical to its pre-migration state
 
-Implementation lives in `src/installer/settings-local.ts:migrateLegacySettingsJson`. Substring detection delegated to `isDevPomogatorCommand` from `src/installer/shared.ts` (single source of truth).
+Implementation lives in `src/installer/settings-local.ts:migrateLegacySettingsJson`. Substring detection delegated to `isDevPomogatorCommand` from `.claude/skills/skills-rules-optimizer/scripts/shared.ts` (single source of truth).
 
 **Why**: incomplete migration leaves residue that confuses both users (stale references in shared team config) and the installer on subsequent runs (which might re-detect "managed" entries that should have been migrated). Bit-tight contract is the only way to be confident downstream.
 
-**Связанные AC:** [AC-15](ACCEPTANCE_CRITERIA.md#ac-15-fr-15)
+**Связанные AC:** [AC-15](ACCEPTANCE_CRITERIA.md#ac-15-fr-15-feature10)
 **Use Case:** UC-1 (fresh install), UC-2 (re-install)
+
+## FR-16: Global MCP bootstrap @feature11
+
+The SessionStart hook `tools/mcp-setup/mcp-bootstrap.ts` SHALL install the Context7 and Octocode MCP servers GLOBALLY into the user-scope config `~/.claude.json` (top-level `mcpServers`, available across all projects), NEVER into a project `.mcp.json` (anti-leak, see [FR-10](FR.md#fr-10-secret-detection-в-project-mcpjson-feature8)). On Windows the stdio command SHALL be wrapped as `cmd /c npx …`. Installation SHALL be idempotent (an existing server entry is never clobbered) and disabled by `DEV_POMOGATOR_MCP_SETUP=off`.
+
+While Context7 lacks a non-empty API key (anonymous tier) OR Octocode lacks GitHub auth, the hook SHALL emit an `additionalContext` warning each session with instructions, and SHALL go silent (`suppressOutput`) once BOTH are configured. The "configured" verdict SHALL be a REAL check — a live read of `~/.claude.json` plus, for Octocode, `gh auth status` — never a blind assumption (predicates in `tools/mcp-setup/mcp-auth-detect.ts`).
+
+The skill `configure-mcp` SHALL let the agent obtain a secret (ask the user / point to where to get it / acquire it via `npx ctx7 setup` or `gh auth`) and persist it via `tools/mcp-setup/set-mcp-key.ts`, which writes the secret into the server's `env` in `~/.claude.json` and re-checks it. The pomogator-doctor check `C-MCPA` SHALL surface the same unconfigured state with a `configure-mcp` fix-action, and the `mcp-parse` check (C11) SHALL exclude plugin-provided servers (`plugin_*`, `claude_ai_*`, `claude-in-chrome`) from its "missing" list.
+
+**Связанные AC:** [AC-16](ACCEPTANCE_CRITERIA.md#ac-16-fr-16-feature11)
+**Use Case:** [UC-13](USE_CASES.md#uc-13-auto-install-mcp-and-configure-auth-feature11)

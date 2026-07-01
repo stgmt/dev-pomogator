@@ -88,14 +88,39 @@ async function main(): Promise<void> {
   }
 
   const lines = diffOutput.trim().split('\n');
-  const testFiles = lines
+  const allTestFiles = lines
     .map((l) => l.split('\t')[2])
     .filter((p): p is string => !!p && p.startsWith('tests/'));
   const specFiles = lines
     .map((l) => l.split('\t')[2])
     .filter((p): p is string => !!p && (p.startsWith('.specs/') || p.endsWith('.feature')));
 
-  // No test changes or specs already present → approve
+  // Shared-tree scoping (M2, incident 2026-06-19): the working tree carries OTHER sessions'
+  // uncommitted files — this gate flagged a parallel session's docker/WSL test files that this
+  // session never touched (the agent's OWN work was already committed, so only foreign noise
+  // remained in `git diff`). Record the test files dirty on the FIRST invocation per session as the
+  // foreign baseline, then only ever flag test files that appear AFTER (the agent's own changes).
+  const sessionId = input.session_id || 'nosession';
+  const safeSession = sessionId.replace(/[^a-zA-Z0-9_-]/g, '_');
+  const baselinePath = path.join(cwd, '.dev-pomogator', `.test-spec-baseline-${safeSession}.json`);
+  if (!fs.existsSync(baselinePath)) {
+    try {
+      writeMarker(baselinePath, { hash: '', timestamp: Date.now(), count: 0, files: allTestFiles } as Marker & { files: string[] });
+    } catch {
+      /* best-effort; if we cannot record the baseline, fall through to evaluating */
+    }
+    approve(); // first invocation establishes the foreign baseline (pre-existing dirty files)
+    return;
+  }
+  let baselineFiles: string[] = [];
+  try {
+    baselineFiles = (JSON.parse(fs.readFileSync(baselinePath, 'utf-8'))?.files as string[]) ?? [];
+  } catch {
+    /* unreadable baseline → treat as empty (conservative: evaluate all) */
+  }
+  const testFiles = allTestFiles.filter((p) => !baselineFiles.includes(p));
+
+  // No NEW (this-session) test changes, or specs already present → approve
   if (testFiles.length === 0 || specFiles.length > 0) {
     approve();
     return;

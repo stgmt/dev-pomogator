@@ -9,7 +9,7 @@
 > - Тесты: `tests/unit/score-diff.test.ts`, `tests/unit/marker-store.test.ts`, `tests/e2e/scope-gate.test.ts`, `tests/regressions/stocktaking-incident.test.ts`, `tests/unit/plan-gate-scope-advisory.test.ts` — все 5 GREEN
 > - Skill: `.claude/skills/verify-generic-scope-fix/SKILL.md`
 > - Правила: `.claude/rules/scope-gate/when-to-verify.md` + `escape-hatch-audit.md`
-> - Helper `tests/e2e/scope-gate-helpers.ts` — не создан, helpers инлайнены в самих тестах (acceptable consolidation)
+> - Helper ~~`tests/e2e/scope-gate-helpers.ts`~~ (removed in v2 migration) — не создан, helpers инлайнены в самих тестах (acceptable consolidation)
 
 ## TDD Workflow
 
@@ -32,7 +32,6 @@ N/A — фича не требует новых сервисов, БД, конт
 - [x] **P0-1** Создать `.specs/verify-generic-scope-fix/verify-generic-scope-fix.feature` с Background + 11 VSGF001_NN сценариев — **ГОТОВО в Phase 3** ✓
   _Source: FIXTURES.md, DESIGN.md Architecture_
 
-- [x] **P0-2** Создать `tests/e2e/scope-gate-helpers.ts` с функциями `createTmpRepoWithDiff()`, `writeMarkerFile()`, `spawnHook()` — @feature1 through @feature5
   _Source: DESIGN.md "BDD Test Infrastructure" > "Новые hooks"_
   _Reuse: `tests/e2e/helpers.ts` `runInstaller()` + `spawnSync` wrappers_
 
@@ -48,10 +47,10 @@ N/A — фича не требует новых сервисов, БД, конт
   _Rationale: per-scenario tmp directory isolation + marker state cleanup_
 
 - [x] **P0-5** Создать `tests/unit/score-diff.test.ts` — 12-15 unit тестов для pure `scoreDiff()`: happy match, docs dampening, no match, edge cases (empty diff, malformed diff); все RED
-  _Requirements: [FR-6](FR.md#fr-6-weighted-suspicionscore-heuristic), [FR-4](FR.md#fr-4-docstest-dampening--anti-over-application)_
+  _Requirements: [FR-6](FR.md#fr-6-weighted-suspicionscore-heuristic), [FR-4](FR.md#fr-4-docstest-dampening-anti-over-application-feature4)_
 
 - [x] **P0-6** Создать `tests/unit/marker-store.test.ts` — unit тесты для `writeMarker`, `readFreshMarker`, `runGC`: atomic write, TTL, hash mismatch, session scoping, concurrent write safety, path traversal protection; все RED
-  _Requirements: [FR-5](FR.md#fr-5-marker-invalidation--diff-hash-pin--ttl), [S-2 path-traversal](NFR.md#security)_
+  _Requirements: [FR-5](FR.md#fr-5-marker-invalidation-diff-hash-pin-ttl-feature2), [S-2 path-traversal](NFR.md#security)_
 
 - [x] **P0-7** Создать `tests/regressions/stocktaking-incident.test.ts` — regression pin: `scoreDiff(fs.readFileSync('tests/fixtures/scope-gate/stocktaking-diff.patch')).score >= 4`; RED (depends on P1-1)
   _Rationale: RESEARCH.md H-regression-pin — prevent future heuristic tweaks from losing incident detection_
@@ -63,14 +62,14 @@ N/A — фича не требует новых сервисов, БД, конт
 ## Phase 1: scoreDiff pure heuristic (Green, @feature1 @feature4)
 
 - [x] **P1-1** Создать `extensions/scope-gate/tools/scope-gate/score-diff.ts` — pure function `scoreDiff(diff, {dampenFiles})`: {score, reasons}
-  _Requirements: [FR-6](FR.md#fr-6-weighted-suspicionscore-heuristic), [FR-4](FR.md#fr-4-docstest-dampening--anti-over-application)_
+  _Requirements: [FR-6](FR.md#fr-6-weighted-suspicionscore-heuristic), [FR-4](FR.md#fr-4-docstest-dampening-anti-over-application-feature4)_
   _Reuse: pattern из plan-gate.ts:164-188 (scorePromptRelevance weighted overlap)_
 
 - [x] **P1-2** Implement detection helpers в `score-diff.ts`: `parseFilesFromDiff()`, `isEnumLikeItem()`, `isSwitchCase()`, `findEnclosingFunction()` — line-by-line regex + 3-line context window
   _Requirements: [FR-6 R-enum, R-case, R-predicate](FR.md#fr-6-weighted-suspicionscore-heuristic)_
 
 - [x] **P1-3** Implement FR-4 dampening в `score-diff.ts`: `-2 per .md/.txt/.rst`, `-1 per docs/tests path`
-  _Requirements: [FR-4](FR.md#fr-4-docstest-dampening--anti-over-application)_
+  _Requirements: [FR-4](FR.md#fr-4-docstest-dampening-anti-over-application-feature4)_
 
 - [x] **P1-verify** Запустить `tests/unit/score-diff.test.ts` — все unit тесты GREEN. Запустить `tests/regressions/stocktaking-incident.test.ts` — GREEN (стоктэйкинг diff score >= 4). @feature1 @feature4 unit layer complete.
 
@@ -79,20 +78,20 @@ N/A — фича не требует новых сервисов, БД, конт
 ## Phase 2: marker-store atomic I/O (Green, @feature2)
 
 - [x] **P2-1** Создать `extensions/scope-gate/tools/scope-gate/marker-store.ts` с функциями `writeMarker`, `readFreshMarker`, `runGC`, `shortSha`
-  _Requirements: [FR-5](FR.md#fr-5-marker-invalidation--diff-hash-pin--ttl), [S-2 path-traversal](NFR.md#security), [S-3 session-scoping](NFR.md#security)_
+  _Requirements: [FR-5](FR.md#fr-5-marker-invalidation-diff-hash-pin-ttl-feature2), [S-2 path-traversal](NFR.md#security), [S-3 session-scoping](NFR.md#security)_
   _Reuse: `.claude/rules/atomic-config-save.md` (temp+rename), `.claude/rules/atomic-update-lock.md` (`flag: 'wx'`), `.claude/rules/no-unvalidated-manifest-paths.md` (resolve+startsWith), `.claude/rules/gotchas/hook-global-state-cwd-scoping.md` (cwd-scoped)_
 
 - [x] **P2-2** Implement atomic write: `tempPath` → `fs.writeFileSync(temp, content, {flag: 'wx'})` → `fs.renameSync(temp, final)`; retry на EEXIST
   _Requirements: [R-3 concurrent invocation safety](NFR.md#reliability)_
 
 - [x] **P2-3** Implement TTL + session + hash invalidation в `readFreshMarker()`; fail-open JSON parse error
-  _Requirements: [FR-5](FR.md#fr-5-marker-invalidation--diff-hash-pin--ttl), [R-4 corrupt marker resilience](NFR.md#reliability)_
+  _Requirements: [FR-5](FR.md#fr-5-marker-invalidation-diff-hash-pin-ttl-feature2), [R-4 corrupt marker resilience](NFR.md#reliability)_
 
 - [x] **P2-4a** Implement GC guard в `runGC()`: read `.last-gc` file mtime, skip if < 1h ago (fast path)
   _Requirements: [P-3 GC budget <100ms](NFR.md#performance)_
 
 - [x] **P2-4b** Implement stale file iteration в `runGC()`: `fs.readdirSync` + filter по `Date.now() - mtime > 24h`, skip `.last-gc` sentinel
-  _Requirements: [FR-5](FR.md#fr-5-marker-invalidation--diff-hash-pin--ttl) GC rule_
+  _Requirements: [FR-5](FR.md#fr-5-marker-invalidation-diff-hash-pin-ttl-feature2) GC rule_
 
 - [x] **P2-4c** Implement unlink + sentinel update в `runGC()`: `fs.unlinkSync` для каждого stale, then `fs.writeFileSync('.last-gc', timestamp)`; fail-open on unlink errors (log WARN, continue)
   _Requirements: [R-1 fail-open](NFR.md#reliability)_
@@ -104,24 +103,24 @@ N/A — фича не требует новых сервисов, БД, конт
 ## Phase 3: scope-gate-guard hook (Green, @feature1 @feature2 @feature3 @feature4)
 
 - [x] **P3-1** Создать `extensions/scope-gate/tools/scope-gate/scope-gate-guard.ts` — main() per DESIGN.md алгоритм (14 шагов)
-  _Requirements: [FR-2](FR.md#fr-2-pretooluse-hook--block-commit-without-fresh-verification)_
+  _Requirements: [FR-2](FR.md#fr-2-pretooluse-hook-block-commit-without-fresh-verification-feature1)_
   _Reuse: **direct template** из `extensions/plan-pomogator/tools/plan-pomogator/plan-gate.ts:206-296` (stdin read, isTTY check, JSON parse fail-open, tool_name filter, denyAndExit pattern)_
   _Imports: `./score-diff.ts`, `./marker-store.ts` (per `ts-import-extensions.md` — `.ts` не `.js`)_
 
 - [x] **P3-2** Implement command parser для extracting commit message from `-m` / `-F` / inherited `.git/COMMIT_EDITMSG`
-  _Requirements: [FR-3](FR.md#fr-3-escape-hatch-with-audit-trail) parse escape hatch regex_
+  _Requirements: [FR-3](FR.md#fr-3-escape-hatch-with-audit-trail-feature3) parse escape hatch regex_
 
 - [x] **P3-3** Implement escape hatch flow: match `/\[skip-scope-verify:([^\]]+)\]/i` OR env `SCOPE_GATE_SKIP`; append to `.claude/logs/scope-gate-escapes.jsonl`; WARN на short reason
-  _Requirements: [FR-3](FR.md#fr-3-escape-hatch-with-audit-trail), [S-1 reason ≥8 chars](NFR.md#security), [S-4 append-only audit](NFR.md#security)_
+  _Requirements: [FR-3](FR.md#fr-3-escape-hatch-with-audit-trail-feature3), [S-1 reason ≥8 chars](NFR.md#security), [S-4 append-only audit](NFR.md#security)_
 
 - [x] **P3-4** Implement docs-only short-circuit: parse `git diff --cached --name-only`, check `/\.(md|txt|rst)$|(\/|^)(docs?|tests?|__tests__|spec)\//i`
-  _Requirements: [FR-4 rule (c)](FR.md#fr-4-docstest-dampening--anti-over-application)_
+  _Requirements: [FR-4 rule (c)](FR.md#fr-4-docstest-dampening-anti-over-application-feature4)_
 
 - [x] **P3-5** Implement marker lookup via `marker-store.readFreshMarker()`
-  _Requirements: [FR-5](FR.md#fr-5-marker-invalidation--diff-hash-pin--ttl)_
+  _Requirements: [FR-5](FR.md#fr-5-marker-invalidation-diff-hash-pin-ttl-feature2)_
 
 - [x] **P3-5b** Honor `should_ship: false` в hook: deny даже на fresh marker (fail-loud propagation)
-  _Requirements: [FR-7](FR.md#fr-7-fail-loud-on-unreachable-variant--explicit-counter-h3)_
+  _Requirements: [FR-7](FR.md#fr-7-fail-loud-on-unreachable-variant-explicit-counter-h3-feature1)_
 
 - [x] **P3-6** Implement `denyAndExit()` — emit `hookSpecificOutput.permissionDecision: "deny"` JSON + `process.exit(2)`; message per U-1 (≤1000 chars, actionable)
   _Requirements: [AC-2](ACCEPTANCE_CRITERIA.md#ac-2-fr-2-feature1), [U-1 deny reason ≤1000 chars](NFR.md#usability)_
@@ -133,15 +132,15 @@ N/A — фича не требует новых сервисов, БД, конт
 ## Phase 4: skill + analyze-diff (Green, @feature1 @feature5)
 
 - [x] **P4-1** Создать `extensions/scope-gate/skills/verify-generic-scope-fix/SKILL.md` — frontmatter (`disable-model-invocation: true`, `allowed-tools: Read, Bash, Grep, Glob`) + 5-step checklist + Gotchas section + Related section
-  _Requirements: [FR-1](FR.md#fr-1-skill-workflow--mechanical-reach-analysis-per-variant), [FR-8](FR.md#fr-8-skill-frontmatter--disable-model-invocation-pattern)_
+  _Requirements: [FR-1](FR.md#fr-1-skill-workflow-mechanical-reach-analysis-per-variant-feature1), [FR-8](FR.md#fr-8-skill-frontmatter-disable-model-invocation-pattern-feature5)_
   _Reuse: frontmatter shape from `.claude/skills/dev-pomogator-uninstall/SKILL.md` (+ NEW field `disable-model-invocation: true`)_
 
 - [x] **P4-2** Создать `extensions/scope-gate/skills/verify-generic-scope-fix/scripts/analyze-diff.ts` — `parseAddedVariants()` + orchestrates reach analysis + calls `writeMarker()` из marker-store
-  _Requirements: [FR-1](FR.md#fr-1-skill-workflow--mechanical-reach-analysis-per-variant), [FR-7](FR.md#fr-7-fail-loud-on-unreachable-variant--explicit-counter-h3)_
+  _Requirements: [FR-1](FR.md#fr-1-skill-workflow-mechanical-reach-analysis-per-variant-feature1), [FR-7](FR.md#fr-7-fail-loud-on-unreachable-variant-explicit-counter-h3-feature1)_
   _Imports: `../../../tools/scope-gate/score-diff.ts`, `../../../tools/scope-gate/marker-store.ts`_
 
 - [x] **P4-3** Implement reach classification в `analyze-diff.ts`: per variant (grep dedicated flow → grep gate call sites → check read-only flags); output `{variant, reach, evidence}`; если any `unreachable` → `should_ship: false`
-  _Requirements: [FR-1 reach analysis](FR.md#fr-1-skill-workflow--mechanical-reach-analysis-per-variant), [FR-7 fail-loud](FR.md#fr-7-fail-loud-on-unreachable-variant--explicit-counter-h3)_
+  _Requirements: [FR-1 reach analysis](FR.md#fr-1-skill-workflow-mechanical-reach-analysis-per-variant-feature1), [FR-7 fail-loud](FR.md#fr-7-fail-loud-on-unreachable-variant-explicit-counter-h3-feature1)_
 
 - [x] **P4-4** Implement human-readable report output: per-variant verdict + overall `should_ship` + actionable hint
   _Requirements: [U-2 structured skill output](NFR.md#usability)_

@@ -2,7 +2,7 @@
 
 > Per `strong-tests` skill §2 Pre-write checklist item 1 — **≥5 invariants per public function**. Each invariant пара (production-code property → test guard).
 >
-> v0.3.0 scope: TS / Python / C# stacks. Test file: `tests/e2e/detect-invariant-candidates-unit.test.ts` (module-import unit tests for Stryker visibility) + `tests/e2e/strong-tests-jit.test.ts` (spawnSync integration tests).
+> v0.3.0 scope: TS / Python / C# stacks. Test file: `tests/e2e/detect-invariant-candidates-unit.test.ts` (module-import unit tests for Stryker visibility) + ~~`tests/e2e/strong-tests-jit.test.ts`~~ (planned, not implemented — spawnSync integration tests).
 
 ## `detectStack(filePath: string): Stack | null`
 

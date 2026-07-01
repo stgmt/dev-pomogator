@@ -50,22 +50,22 @@
 > Реализовать базовые типы и атомарные операции с очередью.
 
 - [ ] Создать `.dev-pomogator/tools/learnings-capture/types.ts` — TypeScript interfaces (QueueEntry, Queue, Signal, OverlapResult) @feature2
-  _Requirements: [FR-2](FR.md#fr-2-queue-schema)_
+  _Requirements: [FR-2](FR.md#fr-2-queue-schema-feature2)_
   _Leverage: DESIGN.md TypeScript Interfaces_
 
 - [ ] Создать `.dev-pomogator/tools/learnings-capture/queue.ts` — readQueue, appendEntries, updateEntries, removeByStatus, acquireLock, releaseLock @feature2 @feature3
-  _Requirements: [FR-2](FR.md#fr-2-queue-schema), [FR-3](FR.md#fr-3-atomic-queue-operations)_
+  _Requirements: [FR-2](FR.md#fr-2-queue-schema-feature2), [FR-3](FR.md#fr-3-atomic-queue-operations-feature3)_
   _Leverage: `.claude/rules/atomic-config-save.md`, `.claude/rules/atomic-update-lock.md`_
 
 - [ ] Добавить fingerprint, count, lastSeen в QueueEntry type @feature1a
-  _Requirements: [FR-2](FR.md#fr-2-queue-schema)_
+  _Requirements: [FR-2](FR.md#fr-2-queue-schema-feature2)_
   _Source: claude-reflect-system fingerprint dedup_
 
 - [ ] Реализовать generateFingerprint() в queue.ts @feature1a
-  _Requirements: [FR-3](FR.md#fr-3-atomic-queue-operations)_
+  _Requirements: [FR-3](FR.md#fr-3-atomic-queue-operations-feature3)_
 
 - [ ] Обновить appendEntries() для fingerprint dedup @feature1a
-  _Requirements: [FR-3](FR.md#fr-3-atomic-queue-operations)_
+  _Requirements: [FR-3](FR.md#fr-3-atomic-queue-operations-feature3)_
   _Source: claude-reflect-system learning_ledger.py_
 
 - [ ] Verify: сценарии @feature2 (Queue schema), @feature3 (Atomic write, Recovery) переходят из Red в Green
@@ -75,18 +75,18 @@
 > Реализовать regex-based detection для UserPromptSubmit hook.
 
 - [ ] Создать `.dev-pomogator/tools/learnings-capture/capture.ts` — hook entry point с regex detection @feature1 @feature1a
-  _Requirements: [FR-1](FR.md#fr-1-capture-hook-script), [FR-1a](FR.md#fr-1a-regex-based-detection)_
+  _Requirements: [FR-1](FR.md#fr-1-capture-hook-script-feature1), [FR-1a](FR.md#fr-1a-regex-based-detection-feature1a)_
   _Leverage: `.dev-pomogator/tools/specs-validator/validate-specs.ts` (паттерн UserPromptSubmit hook)_
 
 - [ ] Добавить threshold check в capture.ts после appendEntries @feature5
   _Requirements: [FR-10](FR.md#fr-10-auto-suggest-threshold-feature5)_
 
 - [ ] Добавить approval regex patterns в capture.ts @feature6
-  _Requirements: [FR-1a](FR.md#fr-1a-regex-based-detection)_
+  _Requirements: [FR-1a](FR.md#fr-1a-regex-based-detection-feature1a)_
   _Source: claude-reflect-system MEDIUM approval patterns_
 
 - [ ] Реализовать approval boost logic для existing entries @feature6
-  _Requirements: [FR-1a](FR.md#fr-1a-regex-based-detection)_
+  _Requirements: [FR-1a](FR.md#fr-1a-regex-based-detection-feature1a)_
 
 - [ ] Verify: сценарии @feature1 (Capture T2, No capture), @feature1a (T2 EN/RU, T6, explicit marker, fingerprint dedup), @feature5 (threshold notification), @feature6 (approval boost) переходят из Red в Green
 
@@ -95,11 +95,11 @@
 > Реализовать AI-powered semantic detection для Stop hook.
 
 - [ ] Создать `.dev-pomogator/tools/learnings-capture/semantic.ts` — LLM detection + fallback @feature1b
-  _Requirements: [FR-1b](FR.md#fr-1b-ai-powered-semantic-detection)_
+  _Requirements: [FR-1b](FR.md#fr-1b-ai-powered-semantic-detection-feature1b)_
   _Leverage: `.dev-pomogator/tools/auto-commit/auto_commit_core.ts` (LLM call + transcript reading)_
 
 - [ ] Расширить LLM prompt template self-evaluation gates в semantic.ts @feature1b
-  _Requirements: [FR-1b](FR.md#fr-1b-ai-powered-semantic-detection)_
+  _Requirements: [FR-1b](FR.md#fr-1b-ai-powered-semantic-detection-feature1b)_
   _Source: Claudeception self-evaluation gates_
 
 - [ ] Verify: сценарии @feature1b (Semantic detection, Fallback to regex, Self-evaluation gates) переходят из Red в Green
@@ -119,23 +119,23 @@
 > Интегрировать Phase -1.5 в suggest-rules и создать /reflect command.
 
 - [ ] Редактировать `extensions/suggest-rules/claude/commands/suggest-rules.md` — добавить Phase -1.5 @feature4
-  _Requirements: [FR-4](FR.md#fr-4-suggest-rules-phase--15-integration)_
+  _Requirements: [FR-4](FR.md#fr-4-suggest-rules-phase-15-integration-feature4)_
 
 - [ ] Редактировать `extensions/suggest-rules/cursor/commands/suggest-rules.md` — добавить Phase -1.5 @feature4
-  _Requirements: [FR-4](FR.md#fr-4-suggest-rules-phase--15-integration)_
+  _Requirements: [FR-4](FR.md#fr-4-suggest-rules-phase-15-integration-feature4)_
 
 - [ ] Создать `extensions/suggest-rules/claude/commands/reflect.md` — /reflect command @feature2
-  _Requirements: [FR-6](FR.md#fr-6-reflect-command)_
+  _Requirements: [FR-6](FR.md#fr-6-reflect-command-feature2)_
 
 - [ ] Создать `extensions/suggest-rules/cursor/commands/reflect.md` — /reflect command @feature2
-  _Requirements: [FR-6](FR.md#fr-6-reflect-command)_
+  _Requirements: [FR-6](FR.md#fr-6-reflect-command-feature2)_
 
 - [ ] Добавить descriptionHint к pre-candidates из queue @feature4
-  _Requirements: [FR-4](FR.md#fr-4-suggest-rules-phase--15-integration)_
+  _Requirements: [FR-4](FR.md#fr-4-suggest-rules-phase-15-integration-feature4)_
   _Source: Claudeception description optimization_
 
 - [ ] Добавить ACCUMULATED_EVIDENCE и CROSS_SESSION_REPEAT scoring bonuses @feature4
-  _Requirements: [FR-4](FR.md#fr-4-suggest-rules-phase--15-integration)_
+  _Requirements: [FR-4](FR.md#fr-4-suggest-rules-phase-15-integration-feature4)_
   _Source: claude-reflect-system count-based promotion_
 
 - [ ] Verify: сценарии @feature4 (Phase -1.5 consumes, skips empty, descriptionHint), @feature2 (/reflect table, reject, empty) переходят из Red в Green
@@ -145,13 +145,13 @@
 > Обновить extension.json и добавить verification checks.
 
 - [ ] Редактировать `extensions/suggest-rules/extension.json` — hooks, toolFiles, commands, version bump @feature4
-  _Requirements: [FR-8](FR.md#fr-8-extension-manifest-update)_
+  _Requirements: [FR-8](FR.md#fr-8-extension-manifest-update-feature4)_
 
 - [ ] Добавить auto-capture checks в verify-install @feature4
-  _Requirements: [FR-9](FR.md#fr-9-installation-verification)_
+  _Requirements: [FR-9](FR.md#fr-9-installation-verification-feature4)_
 
 - [ ] Редактировать `CLAUDE.md` — добавить /reflect в Commands таблицу @feature2
-  _Requirements: [FR-6](FR.md#fr-6-reflect-command)_
+  _Requirements: [FR-6](FR.md#fr-6-reflect-command-feature2)_
 
 - [ ] Verify: сценарии @feature4 (Hooks registered, Verify-install) переходят из Red в Green
 

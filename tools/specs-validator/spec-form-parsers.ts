@@ -96,8 +96,29 @@ export interface TaskBlock {
 const PHASE_HEADING = /^(?:##|###)\s+(Phase\s+[-\d]+\S*.*?)$/i;
 const TASK_BULLET = /^-\s+\[[ x]\]\s+(.+)$/;
 const TASK_HEADING = /^###\s+📋\s+`([^`]+)`/;
-const STATUS_TAG = /Status:\s*(TODO|IN_PROGRESS|DONE|BLOCKED)/;
+const STATUS_TAG = /Status:\s*(TODO|READY|IN_PROGRESS|DONE|BLOCKED)/;
+// Any `Status:` token with a value — used to tell "no Status tag" from "Status tag present but
+// the VALUE is invalid" (M3: `Status: IN-PROGRESS` reported as "missing Status tag" was confusing;
+// the value is wrong, not missing — the parser wants the underscore form IN_PROGRESS).
+const STATUS_PRESENT = /Status:\s*([^\s|]+)/;
 const EST_TAG = /Est:\s*\d+\s*m/i;
+
+/**
+ * FR-50: the deliberate-waiver marker — an italic `_waived: <reason>_` marker that is its
+ * OWN body line in a task block (a sibling of the `_depends:` / `_Requirements:` lines).
+ * Capture group 1 = the reason. SHARED single source: the spec-graph task parser
+ * (tools/spec-graph/parsers/tasks.ts) imports this to set `TaskNode.waived`, so the
+ * form-gate's "skip waived" check below and the graph's waived-close floor (FR-50c)
+ * never drift apart.
+ *
+ * FULL-LINE anchored (`^…$`, `m` flag): the marker counts only when it is a STANDALONE
+ * line — never a code-span mention (`` `_waived:` ``) or prose that merely DESCRIBES the
+ * marker. The earlier unanchored `[^_]+` matched the FR-50 task's OWN description of the
+ * marker and spanned newlines into the header, false-firing TASK_WAIVED_CLOSED on
+ * `p26-waived-close-gate` (the task that built this very feature). `[^_\n]` keeps the
+ * reason on one line. Non-global: safe with both `.test()` (here) and `.match()` (graph parser).
+ */
+export const WAIVED_RE = /^[ \t]*_waived:[ \t]*([^_\n]+)_[ \t]*$/m;
 
 export function parseTaskBlocks(content: string): TaskBlock[] {
   const lines = content.replace(/\r\n/g, '\n').split('\n');
@@ -127,9 +148,10 @@ export function parseTaskBlocks(content: string): TaskBlock[] {
     }
     const body = lines.slice(i, j).join('\n');
     const hasStatus = STATUS_TAG.test(body);
+    const badStatusValue = hasStatus ? null : body.match(STATUS_PRESENT)?.[1] ?? null;
     const hasEst = EST_TAG.test(body);
     const hasDoneWhen = /\*\*Done When:\*\*/.test(body);
-    const waived = /_waived:\s*[^_]+_/.test(body);
+    const waived = WAIVED_RE.test(body);
     // Count `- [ ]` or `- [x]` lines that appear AFTER `**Done When:**` marker
     let doneWhenCheckboxes = 0;
     if (hasDoneWhen) {
@@ -143,7 +165,10 @@ export function parseTaskBlocks(content: string): TaskBlock[] {
       ? null // Phase -1 relaxed (WARN, not DENY — enforced by hook, not parser)
       : (!hasDoneWhen && 'Done When block') ||
         (hasDoneWhen && doneWhenCheckboxes === 0 && 'Done When checkbox (at least one - [ ])') ||
-        (!hasStatus && 'Status tag') ||
+        (!hasStatus &&
+          (badStatusValue
+            ? `valid Status value (got "${badStatusValue}", expected TODO|READY|IN_PROGRESS|DONE|BLOCKED)`
+            : 'Status tag')) ||
         (!hasEst && 'Est tag') ||
         null;
     blocks.push({
@@ -448,4 +473,57 @@ export function extractWriteContent(
   const idx = current.indexOf(oldStr);
   if (idx === -1) return newStr; // can't apply diff cleanly — fail-safe to fragment
   return current.slice(0, idx) + newStr + current.slice(idx + oldStr.length);
+}
+
+// ── CLI: `--check <kind> <file>` — the dry-run surface the form skills document ──
+// (discovery-forms Step 5, requirements-chk-matrix Step 5, task-board-forms Step 6).
+// Was a PHANTOM until 2026-06-07: three skills instructed this invocation while no
+// CLI existed (creation-pipeline review finding). Exit 1 on any violation so the
+// skill can correct in place and re-emit BEFORE the form-guard hook denies a Write.
+
+export function runCheckCli(argv: string[]): { output: string; exitCode: number } {
+  const [flag, kind, file] = argv;
+  const usage = 'usage: spec-form-parsers.ts --check <user-stories|tasks|decisions|chk-rows> <file>';
+  if (flag !== '--check' || !kind || !file) return { output: usage, exitCode: 2 };
+  let content: string;
+  try {
+    content = fs.readFileSync(file, 'utf-8');
+  } catch (e) {
+    return { output: `cannot read ${file}: ${e instanceof Error ? e.message : e}`, exitCode: 2 };
+  }
+  const violations: string[] = [];
+  switch (kind) {
+    case 'user-stories':
+      for (const b of parseUserStoryBlocks(content)) {
+        if (b.missingFirst) violations.push(`${file}:${b.lineNumber} [${b.heading}] missing: ${b.missingFirst}`);
+      }
+      break;
+    case 'tasks':
+      for (const b of parseTaskBlocks(content)) {
+        if (!b.waived && b.missingFirst) violations.push(`${file}:${b.lineNumber} [${b.title}] missing: ${b.missingFirst}`);
+      }
+      break;
+    case 'decisions':
+      for (const b of parseDecisionBlocks(content)) {
+        if (b.missingFirst) violations.push(`${file}:${b.lineNumber} [${b.heading}] missing: ${b.missingFirst}`);
+      }
+      break;
+    case 'chk-rows':
+      for (const r of parseChkRows(content)) {
+        if (r.missingFirst) violations.push(`${file}:${r.lineNumber} [${r.id}] invalid: ${r.missingFirst}`);
+      }
+      break;
+    default:
+      return { output: usage, exitCode: 2 };
+  }
+  if (violations.length === 0) return { output: `OK — 0 violations (${kind})`, exitCode: 0 };
+  return { output: violations.join('\n') + `\n${violations.length} violation(s) (${kind})`, exitCode: 1 };
+}
+
+const isDirectRunFormParsers =
+  process.argv[1]?.endsWith('spec-form-parsers.ts') || process.argv[1]?.endsWith('spec-form-parsers.js');
+if (isDirectRunFormParsers) {
+  const { output, exitCode } = runCheckCli(process.argv.slice(2));
+  console.log(output);
+  process.exit(exitCode);
 }

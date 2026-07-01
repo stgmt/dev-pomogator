@@ -25,21 +25,43 @@
     ".claude-plugin",
     ".claude",
     "tools",
+    "scripts",
     ".mcp.json",
     "audit-reports"
   ],
+  "bin": {
+    "dev-pomogator-spec-check-log": "tools/spec-check-log/bin.cjs",
+    "dev-pomogator-migrate-v3-to-v4": "tools/migrate-v3-to-v4/bin.cjs",
+    "dev-pomogator-spec-backlog": "tools/spec-backlog/bin.cjs"
+  },
   "scripts": {
     "lint": "eslint .claude tools",
+    "build:mcp": "esbuild tools/spec-mcp-server/server.ts --bundle --platform=node --format=esm --target=node20 --banner:js=\"import { createRequire as __cr } from 'module'; const require = __cr(import.meta.url);\" --outfile=tools/spec-mcp-server/server.bundle.mjs",
+    "build:gate": "esbuild tools/spec-graph/test_quality_gate_stop.ts --bundle --platform=node --format=esm --target=node20 --banner:js=\"import { createRequire as __cr } from 'module'; const require = __cr(import.meta.url);\" --outfile=tools/spec-graph/test_quality_gate_stop.bundle.mjs",
+    "build:guard": "esbuild tools/spec-conformance-guard/spec-conformance-guard.ts --bundle --platform=node --format=esm --target=node20 --banner:js=\"import { createRequire as __cr } from 'module'; const require = __cr(import.meta.url);\" --outfile=tools/spec-conformance-guard/spec-conformance-guard.bundle.mjs",
+    "build:push": "esbuild tools/spec-conformance-push/spec-conformance-push.ts --bundle --platform=node --format=esm --target=node20 --banner:js=\"import { createRequire as __cr } from 'module'; const require = __cr(import.meta.url);\" --outfile=tools/spec-conformance-push/spec-conformance-push.bundle.mjs",
+    "build:ingest": "esbuild tools/spec-backlog/auto-ingest-hook.ts --bundle --platform=node --format=esm --target=node20 --banner:js=\"import { createRequire as __cr } from 'module'; const require = __cr(import.meta.url);\" --outfile=tools/spec-backlog/auto-ingest-hook.bundle.mjs",
+    "build:pinator": "esbuild tools/prompt-suggest/prompt_suggest_stop.ts --bundle --platform=node --format=esm --target=node20 --banner:js=\"import { createRequire as __cr } from 'module'; const require = __cr(import.meta.url);\" --outfile=tools/prompt-suggest/prompt_suggest_stop.bundle.mjs",
+    "build:claim-gate": "esbuild tools/claim-evidence-gate/claim_evidence_gate_stop.ts --bundle --platform=node --format=esm --target=node20 --banner:js=\"import { createRequire as __cr } from 'module'; const require = __cr(import.meta.url);\" --outfile=tools/claim-evidence-gate/claim_evidence_gate_stop.bundle.mjs",
+    "build:bundles": "npm run build:mcp && npm run build:gate && npm run build:guard && npm run build:push && npm run build:ingest && npm run build:pinator && npm run build:claim-gate",
+    "check:status-drift": "tsx scripts/check-status-drift.mts",
     "test": "bash scripts/docker-test.sh",
     "test:bdd": "node --import tsx node_modules/@cucumber/cucumber/bin/cucumber.js",
+    "test:bdd:docker": "bash scripts/docker-bdd.sh",
     "test:all": "bash scripts/docker-test.sh",
-    "test:e2e:docker": "vitest run tests/e2e --reporter=verbose",
-    "test:tui": "python3 -m pytest tests/tui/ -v",
-    "mutation": "bash scripts/docker-mutation.sh"
+    "test:e2e:docker": "vitest run --reporter=verbose",
+    "test:tui": "bash scripts/docker-test.sh --tui",
+    "mutation": "bash scripts/docker-mutation.sh stryker.real.config.mjs",
+    "mutation:skill": "npx stryker run stryker.bdd.config.mjs",
+    "mutation:specgen": "bash scripts/docker-mutation.sh stryker.specgen.config.mjs",
+    "mutation:bdd": "npx stryker run stryker.bdd.config.mjs",
+    "mutation:verify": "tsx tools/stryker-mutation/verify-kill.ts"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "ajv": "^8.17.1",
     "ajv-formats": "^3.0.1",
+    "better-sqlite3": "^12.10.0",
     "chalk": "^5.3.0",
     "chokidar": "^4.0.3",
     "cross-spawn": "^7.0.6",
@@ -52,7 +74,8 @@
     "semver": "^7.6.0",
     "unified": "^11.0.5",
     "vfile": "^6.0.3",
-    "yaml": "^2.8.2"
+    "yaml": "^2.8.2",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@ast-grep/napi": "^0.42.2",
@@ -61,11 +84,14 @@
     "@cucumber/gherkin-utils": "^11.0.0",
     "@cucumber/messages": "^32.3.1",
     "@stryker-mutator/core": "^9.6.1",
+    "@stryker-mutator/cucumber-runner": "^9.6.1",
     "@stryker-mutator/vitest-runner": "^9.6.1",
     "@types/cross-spawn": "^6.0.6",
     "@types/fs-extra": "^11.0.4",
     "@types/node": "^20.11.0",
     "@types/semver": "^7.5.6",
+    "esbuild": "^0.28.0",
+    "fast-check": "^4.8.0",
     "tsx": "^4.0.0",
     "typescript": "^5.3.0",
     "vitest": "^4.1.0"

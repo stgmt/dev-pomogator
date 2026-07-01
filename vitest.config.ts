@@ -5,13 +5,13 @@ export default defineConfig({
     globals: true,
     testTimeout: 300000, // 5 minutes for git clone
     hookTimeout: 300000,
-    include: ['tests/**/*.test.ts', 'tools/**/__tests__/*.test.ts'],
+    include: [
+      'tests/**/*.test.ts',
+      'tools/**/__tests__/*.test.ts',
+      '.claude/skills/**/__tests__/*.test.ts',
+    ],
     exclude: [
       'tests/fixtures/**',
-      // statusline-config management (resolveClaudeStatusLine / isManagedStatusLineCommand
-      // etc.) was an installer-era concern removed together with src/ in plugin v2.
-      // This file (26 references to the deleted utils) needs a focused rewrite; tracked.
-      'tests/e2e/tui-statusline.test.ts',
     ],
     setupFiles: ['tests/setup/ensure-docker.ts'],
     // Run test files sequentially to avoid race conditions

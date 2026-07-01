@@ -13,7 +13,7 @@
 | `extensions/test-statusline/tools/test-statusline/status_types.ts` | create | [FR-2](FR.md#fr-2-yaml-status-file-protocol-feature2) — TypeScript интерфейсы |
 | `.claude/settings.json` | edit | [FR-6](FR.md#fr-6-sessionstart-hook-feature4) — регистрация SessionStart hook |
 | `tests/features/plugins/test-statusline/PLUGIN011_test-statusline.feature` | create | BDD сценарии для всех FR |
-| `tests/e2e/test-statusline.test.ts` | create | Step definitions для BDD |
+| ~~`tests/e2e/test-statusline.test.ts`~~ → `tests/e2e/tui-statusline.test.ts` + `tests/features/plugins/tui-statusline/PLUGIN011_tui-statusline.feature` | create | Step definitions для BDD |
 | `tests/fixtures/test-statusline/mock-status-running.yaml` | create | Mock YAML для тестов рендеринга |
 | `tests/fixtures/test-statusline/mock-status-passed.yaml` | create | Mock YAML для тестов рендеринга |
 | `tests/fixtures/test-statusline/mock-status-failed.yaml` | create | Mock YAML для тестов рендеринга |

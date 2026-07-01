@@ -205,6 +205,17 @@ command: "bash tools/tui-test-runner/test-monitor.sh .dev-pomogator/.docker-stat
 
 **Гарантии test-guard hook:** прямой `npx vitest` блокируется (centralized-test-runner rule). Через wrapper — разрешено, потому что wrapper и есть централизованный entry point.
 
+**Ещё быстрее для PURE-функции — standalone node-check, МИНУЯ vitest целиком:** когда правишь
+чистую функцию (parser / aggregator / verdict / любой `compute*` без I/O в HOME) и хочешь
+проверить ЛОГИКУ за <1s, не поднимая vitest-харнесс и не дожидаясь Docker — напиши throwaway
+`.dev-pomogator/.tmp/check.mjs` (через **Write-тул**, не heredoc), импортирующий функцию, и
+прогони `node --import tsx .dev-pomogator/.tmp/check.mjs`. Это НЕ замена коммит-гейту (vitest
+в Docker + BDD остаются обязательными перед «готово») — это dev-loop для fast feedback. Инцидент
+2026-06-11: `computeFrCensus` проверен так за 1 проход (5 вердиктов + инварианты), пока полный
+Docker-сьют был настоящим гейтом. `ensure-docker` не триггерится (это не vitest-setup), test-guard
+не ловит (это не test-команда). Ограничение: только pure-логика — функция, трогающая `~/.claude`/
+`appPath()`, всё равно идёт в Docker.
+
 ### Step 4: Report results
 
 After execution completes (or when Monitor emits DONE), report:
@@ -236,3 +247,16 @@ git diff --name-only HEAD~1 HEAD -- '*.test.*' '*_test.*' '*Tests.cs' '*Steps.cs
 **Если test files НЕ changed (только production code edited)** — skip hint (не спамить user).
 
 Cross-link: `.claude/skills/strong-tests/SKILL.md` для skill workflow + thresholds (default 70% kill rate для critical paths).
+
+### Step 5b: Записать test-quality side-channel (FR-35a producer, P19-5)
+
+Если `strong-tests` отгрейдил тесты (Step 5) — ПЕРСИСТИТЬ его канонические вердикты в honesty side-channel, чтобы гейт `get_coverage`/`spec-verdict`/Stop-gate реально кусал (без этого producer-шага гейт мёртв — кусает только рукодельный файл, инцидент 2026-06-08).
+
+1. Собрать из вывода `strong-tests` мапу `{ "<testId>": "STRONG"|"WEAK"|"FAKE-POSITIVE-RISK" }` (канонический словарь — см. strong-tests SKILL.md «Canonical verdict»; GOOD→STRONG, FAIR/WEAK→WEAK, fake-positive→FAKE-POSITIVE-RISK). Записать во временный grades-файл, напр. `.dev-pomogator/.test-grades.json`.
+2. Запустить детерминированный producer (engine CLI — carve-out, не raw write):
+   ```bash
+   npx tsx tools/spec-graph/test-quality-producer.ts .dev-pomogator/.test-grades.json
+   ```
+   Он джойнит `testId → scenario → task` по графу (worst-wins) и атомарно пишет `.dev-pomogator/.test-quality.json` (keyed by taskId). Дальше `get_coverage`/`spec-verdict` сами опускают слабо-протестированный DONE до IN_PROGRESS.
+
+Skip, если `strong-tests` не запускался (Step 5 hint не сработал) — producer без грейдов бессмыслен.
