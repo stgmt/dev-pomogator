@@ -214,7 +214,7 @@ This block enumerates the spec-doc edits applied as part of the v3→v4 transiti
 
 | Path | Action | Reason |
 |------|--------|--------|
-| `tools/spec-graph/scaffold-sentinels.ts` | create | Единый классификатор scaffold-сентинелов, извлекаемых дословно из `templates/*.template` (вырез fenced+inline кода + отсев строчных токенов/JSON-скобок + номера строк); ЕДИНСТВЕННЫЙ источник для validate-spec PLACEHOLDER и новой audit-категории ([FR-57](FR.md#fr-57)) |
+| `tools/specs-generator/scaffold-sentinels.mjs` | create | Единый классификатор scaffold-сентинелов (builtins-only, co-located с `.mjs`-движком), извлекаемых дословно из `templates/*.template` (вырез fenced+inline кода + отсев строчных токенов/JSON-скобок + номера строк); ЕДИНСТВЕННЫЙ источник для validate-spec PLACEHOLDER и новой audit-категории ([FR-57](FR.md#fr-57)) |
 | `tools/specs-generator/specs-generator-core.mjs` | edit | Новая audit-категория `SCAFFOLD_INCOMPLETE` (phase-gated ERROR/INFO) через классификатор; `validate-spec` PLACEHOLDER и FIXTURES_CONSISTENCY-плейсхолдер-ветка сведены на тот же классификатор ([FR-57](FR.md#fr-57)) |
 | `tools/spec-graph/__tests__/scaffold-sentinels.test.ts` | create | Юнит: сентинел-матч + вырез кода + строчные токены + дрейф-регресс (сентинелы ⊇ шаблонных) + исключения templates/__fixtures__/backlog ([FR-57](FR.md#fr-57)) |
 | `tests/step_definitions/feature57_scaffold_completeness.ts` | create | Биндит SPECGEN004_470..477 на реальный классификатор + audit-spec + spec-verdict (real-engine, без моков) ([FR-57](FR.md#fr-57)) |
