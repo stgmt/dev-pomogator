@@ -23,6 +23,7 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import os from 'node:os';
 import { V4World } from '../hooks/before-after.ts';
+import { checkRootArtifactsInstall, type RootArtifactsCheckResult } from '../../tools/forbid-root-artifacts/doctor-check.ts';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -46,6 +47,14 @@ interface FRAState {
   mtimeSnapshots: Record<string, number>;
   /** Which source directory CLASS_01/02 scenario uses. */
   pluginSourceDir?: string;
+  /** FR-7: env overrides applied to the install-hook run (opt-out, launchers, force-deps). */
+  installEnv?: Record<string, string>;
+  /** FR-7: path where the recording launcher appends invoked phases (deps/setup). */
+  installRecordPath?: string;
+  /** FR-7: mtime snapshot of .pre-commit-config.yaml before the run. */
+  preCommitMtimeBefore?: number;
+  /** FR-10: last doctor-check result. */
+  doctorResult?: RootArtifactsCheckResult;
 }
 
 function state(world: V4World): FRAState {
@@ -613,4 +622,206 @@ Then(/^exit code should be 1 OR exit code should be 0 \(если уже не в 
     this.lastExitCode === 0 || this.lastExitCode === 1,
     `Expected exit code 0 or 1, got ${this.lastExitCode}`,
   );
+});
+
+// ─── FR-7..FR-10: SessionStart auto-installer + doctor steps ─────────────────────
+
+const INSTALL_HOOK_SRC = path.join(REPO_ROOT, 'tools', 'forbid-root-artifacts', 'install-hook.ts');
+const PRECOMMIT_CFG = '.pre-commit-config.yaml';
+
+function installEnv(s: FRAState): Record<string, string> {
+  if (!s.installEnv) s.installEnv = {};
+  return s.installEnv;
+}
+
+/** Write a node recorder that appends its phase arg to the record file; on 'deps' it touches the marker. */
+function ensureRecorder(s: FRAState): string {
+  if (!s.installRecordPath) s.installRecordPath = path.join(s.repoDir, '_install-record.log');
+  const recorderPath = path.join(s.repoDir, '_launcher.cjs');
+  if (!fs.existsSync(recorderPath)) {
+    const src =
+      "const fs=require('fs');\n" +
+      "fs.appendFileSync(process.env.DEV_POMOGATOR_ROOT_ARTIFACTS_RECORD,(process.argv[2]||'')+'\\n');\n" +
+      "const m=process.env.DEV_POMOGATOR_ROOT_ARTIFACTS_DEPS_MARKER;\n" +
+      "if(process.argv[2]==='deps'&&m){fs.writeFileSync(m,'');}\n" +
+      "process.exit(0);\n";
+    fs.writeFileSync(recorderPath, src, 'utf-8');
+  }
+  installEnv(s).DEV_POMOGATOR_ROOT_ARTIFACTS_RECORD = s.installRecordPath;
+  return recorderPath;
+}
+
+function readRecord(s: FRAState): string[] {
+  if (!s.installRecordPath || !fs.existsSync(s.installRecordPath)) return [];
+  return fs.readFileSync(s.installRecordPath, 'utf-8').split('\n').map(l => l.trim()).filter(Boolean);
+}
+
+Given(/^no "\.pre-commit-config\.yaml" exists in repo root$/, function (this: V4World) {
+  const s = state(this);
+  const p = path.join(s.repoDir, PRECOMMIT_CFG);
+  if (fs.existsSync(p)) fs.unlinkSync(p);
+});
+
+Given(/^a recording setup launcher is configured$/, function (this: V4World) {
+  const s = state(this);
+  const recorder = ensureRecorder(s);
+  installEnv(s).DEV_POMOGATOR_ROOT_ARTIFACTS_SETUP_LAUNCHER = recorder;
+  // Default the install-hook run to "deps present" so it reaches the setup phase deterministically
+  // (a MISSING seam takes precedence, so deps scenarios can still override this).
+  installEnv(s).DEV_POMOGATOR_ROOT_ARTIFACTS_FORCE_DEPS_OK = '1';
+});
+
+Given(/^a recording deps launcher is configured$/, function (this: V4World) {
+  const s = state(this);
+  const recorder = ensureRecorder(s);
+  installEnv(s).DEV_POMOGATOR_ROOT_ARTIFACTS_DEPS_LAUNCHER = recorder;
+  // Simulate a successful provision: the recorder creates this marker on the 'deps' phase.
+  installEnv(s).DEV_POMOGATOR_ROOT_ARTIFACTS_DEPS_MARKER = path.join(s.repoDir, '_deps-provisioned.marker');
+});
+
+Given(/^the root-artifacts opt-out env is set$/, function (this: V4World) {
+  installEnv(state(this)).DEV_POMOGATOR_ROOT_ARTIFACTS_SETUP = 'off';
+});
+
+Given(/^the repo root is not a git repository$/, function (this: V4World) {
+  const s = state(this);
+  fs.rmSync(path.join(s.repoDir, '.git'), { recursive: true, force: true });
+});
+
+Given(/^"pre-commit" is not available in test PATH$/, function (this: V4World) {
+  // Deterministic: force the deps probe to report missing (independent of the host PATH).
+  installEnv(state(this)).DEV_POMOGATOR_ROOT_ARTIFACTS_FORCE_DEPS_MISSING = '1';
+});
+
+Given(/^deps-install cannot provision the dependencies$/, function (this: V4World) {
+  const s = state(this);
+  const recorder = ensureRecorder(s);
+  // Deps launcher configured but NO marker env → recorder cannot mark deps provisioned → stays missing.
+  installEnv(s).DEV_POMOGATOR_ROOT_ARTIFACTS_DEPS_LAUNCHER = recorder;
+  installEnv(s).DEV_POMOGATOR_ROOT_ARTIFACTS_FORCE_DEPS_MISSING = '1';
+});
+
+Given(/^"\.pre-commit-config\.yaml" already contains hook id "([^"]+)"$/, function (this: V4World, id: string) {
+  const s = state(this);
+  const p = path.join(s.repoDir, PRECOMMIT_CFG);
+  fs.writeFileSync(
+    p,
+    `repos:\n  - repo: local\n    hooks:\n      - id: ${id}\n        name: Forbid root artifacts\n` +
+      `        entry: python .dev-pomogator/tools/forbid-root-artifacts/check.py\n        language: python\n`,
+    'utf-8',
+  );
+  s.preCommitMtimeBefore = fs.statSync(p).mtimeMs;
+});
+
+Given(/^the pre-commit entry path exists in repo root$/, function (this: V4World) {
+  const s = state(this);
+  // Background copied tools to .dev-pomogator/tools/forbid-root-artifacts/ — ensure check.py is present.
+  const entry = path.join(toolsDestDir(s.repoDir), 'check.py');
+  if (!fs.existsSync(entry)) {
+    fs.mkdirSync(path.dirname(entry), { recursive: true });
+    fs.writeFileSync(entry, '# stub\n');
+  }
+});
+
+When(/^I run the forbid-root-artifacts install-hook$/, function (this: V4World) {
+  const s = state(this);
+  // Launch via the REAL bootstrap.cjs launcher (as hooks.json does) with cwd=REPO_ROOT so tsx resolves;
+  // the target repo is passed through the hook's stdin cwd (install-hook prefers inputCwd over process.cwd).
+  const bootstrapRequire =
+    "require(require('path').join(process.env.CLAUDE_PLUGIN_ROOT || '.', 'tools', '_shared', 'bootstrap.cjs'))";
+  const result = spawnSync(
+    process.execPath,
+    ['-e', bootstrapRequire, '--', 'tools/forbid-root-artifacts/install-hook.ts'],
+    {
+      cwd: REPO_ROOT,
+      encoding: 'utf-8',
+      input: JSON.stringify({ cwd: s.repoDir }),
+      env: { ...process.env, CLAUDE_PLUGIN_ROOT: REPO_ROOT, ...(s.installEnv ?? {}) },
+    },
+  );
+  this.lastExitCode = result.status ?? 1;
+  this.lastStdout = result.stdout?.toString() ?? '';
+  this.lastStderr = result.stderr?.toString() ?? '';
+});
+
+When(/^I run "python setup\.py" as the installer$/, function (this: V4World) {
+  const s = state(this);
+  const setupScript = path.join(toolsDestDir(s.repoDir), 'setup.py');
+  const result = spawnSync('python', [setupScript], { cwd: s.repoDir, encoding: 'utf-8', env: { ...process.env } });
+  this.lastExitCode = result.status ?? 1;
+  this.lastStdout = result.stdout?.toString() ?? '';
+  this.lastStderr = result.stderr?.toString() ?? '';
+});
+
+When(/^I run the forbid-root-artifacts doctor check$/, function (this: V4World) {
+  const s = state(this);
+  s.doctorResult = checkRootArtifactsInstall(s.repoDir);
+});
+
+Then(/^the setup launcher should have been invoked exactly once$/, function (this: V4World) {
+  const n = readRecord(state(this)).filter(p => p === 'setup').length;
+  assert.equal(n, 1, `Expected setup launcher invoked once, got ${n}`);
+});
+
+Then(/^the setup launcher should NOT have been invoked$/, function (this: V4World) {
+  const n = readRecord(state(this)).filter(p => p === 'setup').length;
+  assert.equal(n, 0, `Expected setup launcher NOT invoked, got ${n}`);
+});
+
+Then(/^the deps launcher should have been invoked before the setup launcher$/, function (this: V4World) {
+  const rec = readRecord(state(this));
+  const di = rec.indexOf('deps');
+  const si = rec.indexOf('setup');
+  assert.ok(di >= 0, `deps launcher not invoked; record: ${rec.join(',')}`);
+  assert.ok(si >= 0, `setup launcher not invoked; record: ${rec.join(',')}`);
+  assert.ok(di < si, `Expected deps before setup; record: ${rec.join(',')}`);
+});
+
+Then(/^\.pre-commit-config\.yaml mtime should be unchanged$/, function (this: V4World) {
+  const s = state(this);
+  const after = fs.statSync(path.join(s.repoDir, PRECOMMIT_CFG)).mtimeMs;
+  assert.equal(after, s.preCommitMtimeBefore, `Expected .pre-commit-config.yaml mtime unchanged`);
+});
+
+Then(/^the pre-commit entry for "([^"]+)" should be "([^"]+)"$/, function (this: V4World, id: string, expected: string) {
+  const s = state(this);
+  const content = fs.readFileSync(path.join(s.repoDir, PRECOMMIT_CFG), 'utf-8');
+  assert.ok(content.includes(`id: ${id}`), `hook id ${id} not found in config:\n${content}`);
+  assert.ok(content.includes(`entry: ${expected}`), `Expected entry "${expected}"\nConfig:\n${content}`);
+});
+
+Then(/^the pre-commit entry path should exist in repo root$/, function (this: V4World) {
+  const s = state(this);
+  const content = fs.readFileSync(path.join(s.repoDir, PRECOMMIT_CFG), 'utf-8');
+  const m = content.match(/entry:\s*python3?\s+(\S+)/);
+  assert.ok(m, `no entry line in config:\n${content}`);
+  const entryPath = path.join(s.repoDir, m![1]);
+  assert.ok(fs.existsSync(entryPath), `entry path ${m![1]} does not resolve at ${entryPath}`);
+});
+
+Then(/^a backoff lock file exists under "\.dev-pomogator"$/, function (this: V4World) {
+  const s = state(this);
+  const lock = path.join(s.repoDir, '.dev-pomogator', '.root-artifacts-setup.lock');
+  assert.ok(fs.existsSync(lock), `Expected backoff lock at ${lock}`);
+});
+
+Then(/^the doctor check status should be non-green$/, function (this: V4World) {
+  const s = state(this);
+  assert.ok(s.doctorResult, 'doctor check not run');
+  assert.notEqual(s.doctorResult!.status, 'green', `Expected non-green, got ${s.doctorResult!.status}`);
+});
+
+Then(/^the doctor check status should be green$/, function (this: V4World) {
+  const s = state(this);
+  assert.ok(s.doctorResult, 'doctor check not run');
+  assert.equal(
+    s.doctorResult!.status,
+    'green',
+    `Expected green, got ${s.doctorResult!.status}: ${s.doctorResult!.message}`,
+  );
+});
+
+Then(/^the doctor check should offer a reinstall fix action$/, function (this: V4World) {
+  const s = state(this);
+  assert.ok(s.doctorResult?.fixAction, `Expected a reinstall fixAction, got: ${JSON.stringify(s.doctorResult)}`);
 });

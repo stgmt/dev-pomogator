@@ -382,3 +382,79 @@ Feature: PLUGIN004 Forbid Root Artifacts — Auto-Prune + Configurable Classific
     Then stderr contains "WARNING: classifier module missing — using fallback"
     And exit code should be 1
     And stdout should classify "test.tmp" as trash via fallback patterns
+
+  @feature7
+  Scenario: PLUGIN004_INSTALL_01 SessionStart hook wires the pre-commit hook in a fresh git repo
+    Given no ".pre-commit-config.yaml" exists in repo root
+    And a recording setup launcher is configured
+    When I run the forbid-root-artifacts install-hook
+    Then exit code should be 0
+    And the setup launcher should have been invoked exactly once
+
+  @feature7
+  Scenario: PLUGIN004_INSTALL_02 install-hook is idempotent when the hook is already wired
+    Given ".pre-commit-config.yaml" already contains hook id "forbid-root-artifacts"
+    And a recording setup launcher is configured
+    When I run the forbid-root-artifacts install-hook
+    Then exit code should be 0
+    And the setup launcher should NOT have been invoked
+    And .pre-commit-config.yaml mtime should be unchanged
+
+  @feature7
+  Scenario: PLUGIN004_INSTALL_03 opt-out env makes install-hook a no-op
+    Given no ".pre-commit-config.yaml" exists in repo root
+    And the root-artifacts opt-out env is set
+    And a recording setup launcher is configured
+    When I run the forbid-root-artifacts install-hook
+    Then exit code should be 0
+    And the setup launcher should NOT have been invoked
+    And no ".pre-commit-config.yaml" exists in repo root
+
+  @feature7
+  Scenario: PLUGIN004_INSTALL_04 non-git directory is a no-op (fail-open)
+    Given the repo root is not a git repository
+    And a recording setup launcher is configured
+    When I run the forbid-root-artifacts install-hook
+    Then exit code should be 0
+    And the setup launcher should NOT have been invoked
+
+  @feature8
+  Scenario: PLUGIN004_INSTALL_RESOLVE_01 real setup writes a resolvable, portable entry path
+    Given no ".pre-commit-config.yaml" exists in repo root
+    When I run "python setup.py" as the installer
+    Then the pre-commit entry for "forbid-root-artifacts" should be "python .dev-pomogator/tools/forbid-root-artifacts/check.py"
+    And the pre-commit entry path should exist in repo root
+
+  @feature9
+  Scenario: PLUGIN004_INSTALL_DEPS_01 missing deps trigger deps-install before setup
+    Given no ".pre-commit-config.yaml" exists in repo root
+    And "pre-commit" is not available in test PATH
+    And a recording deps launcher is configured
+    And a recording setup launcher is configured
+    When I run the forbid-root-artifacts install-hook
+    Then exit code should be 0
+    And the deps launcher should have been invoked before the setup launcher
+
+  @feature9
+  Scenario: PLUGIN004_INSTALL_DEPS_02 unavailable deps fail open with a backoff lock
+    Given no ".pre-commit-config.yaml" exists in repo root
+    And "pre-commit" is not available in test PATH
+    And deps-install cannot provision the dependencies
+    When I run the forbid-root-artifacts install-hook
+    Then exit code should be 0
+    And stderr contains "WARNING"
+    And a backoff lock file exists under ".dev-pomogator"
+
+  @feature10
+  Scenario: PLUGIN004_DOCTOR_01 doctor flags a missing / unresolvable hook install
+    Given no ".pre-commit-config.yaml" exists in repo root
+    When I run the forbid-root-artifacts doctor check
+    Then the doctor check status should be non-green
+    And the doctor check should offer a reinstall fix action
+
+  @feature10
+  Scenario: PLUGIN004_DOCTOR_02 doctor is green when the hook is wired and the entry path resolves
+    Given ".pre-commit-config.yaml" already contains hook id "forbid-root-artifacts"
+    And the pre-commit entry path exists in repo root
+    When I run the forbid-root-artifacts doctor check
+    Then the doctor check status should be green

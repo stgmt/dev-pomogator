@@ -10,6 +10,10 @@
 | [FR-4](FR.md#fr-4-shared-classifier-module-extended-yaml-config) | Shared classifier module + extended yaml config | [AC-10](ACCEPTANCE_CRITERIA.md#ac-10-fr-4), [AC-11](ACCEPTANCE_CRITERIA.md#ac-11-fr-4), [AC-12](ACCEPTANCE_CRITERIA.md#ac-12-fr-4) | @feature4 | Draft |
 | [FR-5](FR.md#fr-5-out-of-scope-migration-helper-для-существующих-stale-yaml-в-downstream-repos) | Migration helper | OUT OF SCOPE | — | OUT OF SCOPE |
 | [FR-6](FR.md#fr-6-out-of-scope-multi-llm-provider-support-openai-local-etc) | Multi-LLM provider support | OUT OF SCOPE | — | OUT OF SCOPE |
+| [FR-7](FR.md#fr-7-sessionstart-auto-installer-hook) | SessionStart auto-installer hook | [AC-14](ACCEPTANCE_CRITERIA.md#ac-14-fr-7), [AC-15](ACCEPTANCE_CRITERIA.md#ac-15-fr-7), [AC-16](ACCEPTANCE_CRITERIA.md#ac-16-fr-7) | @feature7 | Draft |
+| [FR-8](FR.md#fr-8-self-contained-resolvable-install-fix-dead-integration) | Self-contained resolvable install | [AC-17](ACCEPTANCE_CRITERIA.md#ac-17-fr-8) | @feature8 | Draft |
+| [FR-9](FR.md#fr-9-auto-provision-python-deps) | Auto-provision Python deps | [AC-18](ACCEPTANCE_CRITERIA.md#ac-18-fr-9), [AC-19](ACCEPTANCE_CRITERIA.md#ac-19-fr-9) | @feature9 | Draft |
+| [FR-10](FR.md#fr-10-doctor-verification) | Doctor verification | [AC-20](ACCEPTANCE_CRITERIA.md#ac-20-fr-10) | @feature10 | Draft |
 
 ## Functional Requirements
 

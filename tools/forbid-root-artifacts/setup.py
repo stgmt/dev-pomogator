@@ -2,11 +2,16 @@
 """
 Setup script for forbid-root-artifacts pre-commit hook.
 
-This script:
-1. Checks if pre-commit is installed
+This script (FR-8 — self-contained, portable install):
+1. Copies runtime files into <repo>/.dev-pomogator/tools/forbid-root-artifacts/
 2. Creates default .root-artifacts.yaml if not exists
-3. Adds hook to .pre-commit-config.yaml if not present
-4. Runs pre-commit install
+3. Adds the hook to .pre-commit-config.yaml with a repo-relative, portable entry
+4. Runs `pre-commit install` if pre-commit is available (else warns, non-fatal)
+
+The .pre-commit-config.yaml entry is written BEFORE the pre-commit check so the wiring
+is produced even on machines that do not yet have pre-commit (git-hook activation is a
+separate, best-effort step). Deps are auto-provisioned by install-hook.ts (FR-9) /
+deps-install.py.
 
 Usage:
     python setup.py
@@ -23,6 +28,18 @@ try:
 except ImportError:
     print("ERROR: pyyaml is required. Install with: pip install pyyaml", file=sys.stderr)
     sys.exit(2)
+
+# Runtime files that must live next to check.py in the consuming repo for the hook to run.
+RUNTIME_FILES = [
+    "check.py",
+    "_classifier.py",
+    "default-whitelist.yaml",
+    ".root-artifacts.yaml.template",
+]
+
+# Repo-relative location the hook is installed into + the portable entry (FR-8).
+INSTALL_REL_DIR = Path(".dev-pomogator") / "tools" / "forbid-root-artifacts"
+HOOK_ENTRY = "python .dev-pomogator/tools/forbid-root-artifacts/check.py"
 
 
 def get_repo_root() -> Path:
@@ -46,20 +63,38 @@ def check_pre_commit_installed() -> bool:
     return shutil.which("pre-commit") is not None
 
 
+def copy_runtime_files(repo_root: Path, script_dir: Path) -> Path:
+    """Copy runtime files into <repo>/.dev-pomogator/tools/forbid-root-artifacts/ (FR-8).
+
+    Returns the target directory. If the script already runs from the target
+    (self-contained repo), copying is skipped file-by-file.
+    """
+    target_dir = (repo_root / INSTALL_REL_DIR).resolve()
+    target_dir.mkdir(parents=True, exist_ok=True)
+    if target_dir == script_dir:
+        print(f"✓ Runtime files already in place: {target_dir}")
+        return target_dir
+    for name in RUNTIME_FILES:
+        src = script_dir / name
+        if src.exists():
+            shutil.copy(src, target_dir / name)
+    print(f"✓ Copied runtime files to: {target_dir}")
+    return target_dir
+
+
 def create_default_config(repo_root: Path, script_dir: Path) -> bool:
     """Create default .root-artifacts.yaml if not exists."""
     config_path = repo_root / ".root-artifacts.yaml"
     template_path = script_dir / ".root-artifacts.yaml.template"
-    
+
     if config_path.exists():
         print(f"✓ Config already exists: {config_path}")
         return False
-    
+
     if template_path.exists():
         shutil.copy(template_path, config_path)
         print(f"✓ Created config from template: {config_path}")
     else:
-        # Create minimal config
         config_path.write_text(
             "# Configuration for forbid-root-artifacts\n"
             "mode: extend\n"
@@ -67,70 +102,62 @@ def create_default_config(repo_root: Path, script_dir: Path) -> bool:
             encoding="utf-8",
         )
         print(f"✓ Created minimal config: {config_path}")
-    
+
     return True
 
 
 def add_hook_to_pre_commit_config(repo_root: Path) -> bool:
-    """Add forbid-root-artifacts hook to .pre-commit-config.yaml."""
+    """Add forbid-root-artifacts hook to .pre-commit-config.yaml with a portable entry (FR-8)."""
     config_path = repo_root / ".pre-commit-config.yaml"
-    
+
     hook_entry = {
         "id": "forbid-root-artifacts",
         "name": "Forbid root artifacts",
-        "entry": "python3 tools/forbid-root-artifacts/check.py",
+        "entry": HOOK_ENTRY,
         "language": "python",
         "pass_filenames": False,
         "always_run": True,
         "additional_dependencies": ["pyyaml"],
     }
-    
+
     if config_path.exists():
         with open(config_path, "r", encoding="utf-8") as f:
             config = yaml.safe_load(f) or {}
-        
-        # Check if hook already exists
+
         repos = config.get("repos", [])
         for repo in repos:
             if repo.get("repo") == "local":
-                hooks = repo.get("hooks", [])
-                for hook in hooks:
+                for hook in repo.get("hooks", []):
                     if hook.get("id") == "forbid-root-artifacts":
                         print("✓ Hook already configured in .pre-commit-config.yaml")
                         return False
-        
-        # Add to existing local repo or create new
+
         local_repo = None
         for repo in repos:
             if repo.get("repo") == "local":
                 local_repo = repo
                 break
-        
+
         if local_repo:
             local_repo.setdefault("hooks", []).append(hook_entry)
         else:
             repos.append({"repo": "local", "hooks": [hook_entry]})
-        
+
         config["repos"] = repos
     else:
-        # Create new config
-        config = {
-            "repos": [
-                {"repo": "local", "hooks": [hook_entry]}
-            ]
-        }
-    
+        config = {"repos": [{"repo": "local", "hooks": [hook_entry]}]}
+
     with open(config_path, "w", encoding="utf-8") as f:
         yaml.dump(config, f, default_flow_style=False, allow_unicode=True, sort_keys=False)
-    
+
     print(f"✓ Added hook to: {config_path}")
     return True
 
 
 def run_pre_commit_install() -> bool:
-    """Run pre-commit install."""
+    """Run pre-commit install (best-effort)."""
     try:
-        result = subprocess.run(
+        subprocess.run(
             ["pre-commit", "install"],
             check=True,
             capture_output=True,
@@ -139,7 +166,7 @@ def run_pre_commit_install() -> bool:
         print("✓ Ran: pre-commit install")
         return True
     except subprocess.CalledProcessError as e:
-        print(f"ERROR: pre-commit install failed: {e.stderr}", file=sys.stderr)
+        print(f"WARNING: pre-commit install failed: {e.stderr}", file=sys.stderr)
         return False
 
 
@@ -147,41 +174,34 @@ def main() -> int:
     """Main entry point."""
     print("Setting up forbid-root-artifacts...")
     print()
-    
-    # Check pre-commit
-    if not check_pre_commit_installed():
-        print("ERROR: pre-commit is not installed.", file=sys.stderr)
-        print()
-        print("Install with:")
-        print("  pip install pre-commit")
-        print()
-        return 2
-    
-    print("✓ pre-commit is installed")
-    
+
     try:
         repo_root = get_repo_root()
     except Exception as ex:
         print(f"ERROR: Failed to determine repository root: {ex}", file=sys.stderr)
         return 2
-    
+
     script_dir = get_script_dir()
-    
-    # Create default config
+
+    # FR-8: make the install self-contained (runtime files under .dev-pomogator/), then write the
+    # config wiring — BEFORE the pre-commit check, so the entry is produced even without pre-commit.
+    copy_runtime_files(repo_root, script_dir)
     create_default_config(repo_root, script_dir)
-    
-    # Add hook to pre-commit config
     add_hook_to_pre_commit_config(repo_root)
-    
-    # Run pre-commit install
-    run_pre_commit_install()
-    
+
+    # Activate the git hook if pre-commit is available (deps are provisioned by install-hook.ts / FR-9).
+    if check_pre_commit_installed():
+        print("✓ pre-commit is installed")
+        run_pre_commit_install()
+    else:
+        print("WARNING: pre-commit not found — config written but git hook not activated.",
+              file=sys.stderr)
+        print("  Install with: pip install pre-commit  (then: pre-commit install)", file=sys.stderr)
+
     print()
-    print("Setup complete! The hook will run on every commit.")
-    print()
+    print("Setup complete. The hook config is wired in .pre-commit-config.yaml.")
     print("To customize whitelist, edit .root-artifacts.yaml in repository root.")
-    print("To run manually: python tools/forbid-root-artifacts/check.py")
-    
+
     return 0
 
 

@@ -99,3 +99,53 @@ Reply with EXACTLY ONE word: trash | config | unknown.
 > OUT OF SCOPE — На старт только Claude Code CLI (subscription). Если в будущем появится потребность в других provider'ах (OpenAI API, local Ollama и т.д.) — отдельная спека. Текущий design `classifier.llm.cli: claude` подразумевает что provider — это бинарь в PATH; при необходимости можно расширить через `provider:` discriminator, но сейчас не делаем.
 >
 > Связанные UC, AC и User Stories также должны быть помечены `> OUT OF SCOPE — см. FR-6`.
+
+## FR-7: SessionStart auto-installer hook
+
+Новый TS-хук `tools/forbid-root-artifacts/install-hook.ts` регистрируется на событие
+`SessionStart` и при каждом старте сессии в git-репозитории ОБЯЗАН идемпотентно обеспечивать,
+что pre-commit-хук forbid-root-artifacts установлен.
+
+Контракт (как у sibling-инсталлеров `mcp-bootstrap.ts` / `install-claude-mem.ts`):
+- **Builtins-only**: только `node:fs`/`node:path`/`node:child_process` (+ локальные `.ts`); НИ ОДНОГО
+  импорта из `node_modules` — иначе краш у юзеров плагина без установленных зависимостей
+  (NFR-Compatibility, правило `dead-integration-guard`).
+- **Fail-open**: любая ошибка → лог + `{continue:true, suppressOutput:true}` + `exit 0`; хук НИКОГДА
+  не блокирует сессию.
+- **Идемпотентность (fast-path)**: дешёвая проверка — прочитать `.pre-commit-config.yaml` и найти
+  `id: forbid-root-artifacts`; если есть → скип БЕЗ запуска python-subprocess.
+- **Opt-out**: env `DEV_POMOGATOR_ROOT_ARTIFACTS_SETUP=off` → полный no-op.
+- **Backoff**: неуспешная установка не повторяется чаще раза в 6ч (lock-файл в
+  `.dev-pomogator/`, по образцу `install-claude-mem.ts`).
+- **DRY-делегирование**: саму установку выполняет существующий `setup.py` (запускается detached),
+  хук НЕ переписывает YAML-логику.
+
+Логика решения вынесена в чистую функцию `rootArtifactsInstallDecision(state)` →
+`install | skip:already | skip:not-git | skip:opt-out | skip:backoff` (SOLID: single-responsibility,
+тестируется без I/O, зеркалит `mcpInstallDecision`).
+
+## FR-8: Self-contained resolvable install (fix dead-integration)
+
+`setup.py` ОБЯЗАН делать установку самодостаточной и портируемой:
+- Копировать рантайм-файлы (`check.py`, `_classifier.py`, `default-whitelist.yaml`,
+  `.root-artifacts.yaml.template`) в `<repo>/.dev-pomogator/tools/forbid-root-artifacts/`.
+- Писать в `.pre-commit-config.yaml` entry с резолвящимся путём:
+  `python .dev-pomogator/tools/forbid-root-artifacts/check.py` (портируемый интерпретатор `python`,
+  не `python3`; путь относительно корня репо, а не dogfood-дерева плагина).
+
+Так хук работает после клона у любого члена команды. Текущее поведение (entry
+`python3 tools/forbid-root-artifacts/check.py`) — «installed ≠ integrated»: путь резолвится только
+в репозитории самого плагина, у юзера pre-commit падал бы на каждом коммите.
+
+## FR-9: Auto-provision Python deps
+
+Когда `pre-commit` или `pyyaml` отсутствуют, `install-hook.ts` ОБЯЗАН перед `setup.py` вызвать
+существующий `deps-install.py` (graceful pip-каскад `--user` → `--break-system-packages` → bare,
+всегда exit 0). Если после этого зависимости всё ещё недоступны — хук пишет WARN с инструкцией в
+лог и делает fail-open (exit 0), фиксируя попытку в backoff-lock.
+
+## FR-10: Doctor verification
+
+`pomogator-doctor` ОБЯЗАН получить проверку состояния установки: (1) в `.pre-commit-config.yaml` есть
+`id: forbid-root-artifacts` И (2) entry-путь указывает на существующий `check.py`. При отсутствии или
+битом пути — пометить (🟡/🔴) и предложить fix-action переустановки (повторный запуск установки).

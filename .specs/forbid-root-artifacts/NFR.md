@@ -33,3 +33,15 @@
 - **NFR-Usability-3:** Документация `.root-artifacts.yaml` schema в README — все новые поля с examples.
 - **NFR-Usability-4:** При `claude` CLI отсутствии — одноразовый WARN в stderr, не на каждый file (отдельный flag в classifier instance).
 - **NFR-Usability-5:** Pre-commit framework auto-prune workflow — задокументировать в README раздел «Auto-prune behavior»: «Hook may modify `.root-artifacts.yaml`. If it does, commit fails with message «files were modified by this hook». Run `git add .root-artifacts.yaml && git commit` to retry — yaml changes will be included in the commit (atomic with file deletions for `git revert`).»
+
+## Compatibility
+
+- **NFR-Compatibility-1 (FR-7):** `install-hook.ts` ОБЯЗАН импортировать ТОЛЬКО node-builtins (`node:fs`/`node:path`/`node:child_process`) + локальные `.ts`; НИ ОДНОГО пакета из `node_modules`. Плагин распространяется без `node_modules` у юзера — импорт пакета = `ERR_MODULE_NOT_FOUND` на каждом старте сессии (правило `dead-integration-guard`). Проверяется deps-absent прогоном (спрятать `node_modules`, запустить через реальный лаунчер `bootstrap.cjs`).
+- **NFR-Compatibility-2 (FR-8):** entry-путь в `.pre-commit-config.yaml` ОБЯЗАН быть относительным к корню репо (`python .dev-pomogator/...`) — без абсолютных машинно-зависимых путей, чтобы резолвиться после клона у любого члена команды.
+
+## Installer Reliability & Performance
+
+- **NFR-Reliability-8 (FR-7/FR-9):** `install-hook.ts` fail-open — ЛЮБАЯ ошибка (нет git/python/pip, битый конфиг, упавший `setup.py`) → лог + `{continue:true}` + exit 0; хук НИКОГДА не блокирует старт сессии.
+- **NFR-Reliability-9 (FR-7):** установка идемпотентна — повторный старт при уже установленном хуке = no-op без побочных эффектов; неуспех не ретраится чаще раза в 6ч (backoff-lock).
+- **NFR-Performance-5 (FR-7):** fast-path (хук уже установлен) ОБЯЗАН быть дешёвым — только чтение `.pre-commit-config.yaml`, БЕЗ запуска python-subprocess; тяжёлая установка идёт detached, чтобы SessionStart возвращался быстро (бюджет хука — секунды, timeout 10s).
+- **NFR-Usability-6 (FR-7):** opt-out одной переменной `DEV_POMOGATOR_ROOT_ARTIFACTS_SETUP=off`; при отсутствии deps — понятный одноразовый WARN с инструкцией (`pip install pre-commit pyyaml`), не спам на каждый старт.

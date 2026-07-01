@@ -111,3 +111,24 @@ F-1 (tmp repo)
   дерево плагина) — сравнение mtime/содержимого ПОСЛЕ запуска и есть предмет проверки.
 - F-5 не требует реальной подписки Claude: LLM-ветка тестируется детерминированным
   shim'ом, что делает @feature3 воспроизводимым в CI без секретов.
+
+## Installer fixtures (@feature7–10, FR-7..FR-10)
+
+| ID | Name | Type | Path | Scope | Owner |
+|----|------|------|------|-------|-------|
+| F-7 | Recording launcher (`_launcher.cjs`) | factory | `<repo>/_launcher.cjs` | per-scenario | шаг «a recording setup/deps launcher is configured» |
+| F-8 | Install record log | factory | `<repo>/_install-record.log` | per-scenario | recorder (append phase) |
+| F-9 | Deps-provisioned marker | factory | `<repo>/_deps-provisioned.marker` | per-scenario | recorder on `deps` phase |
+
+- **F-7** — node-скрипт, который install-hook запускает вместо реальных `deps-install.py`/`setup.py`
+  (через env-сеамы `DEV_POMOGATOR_ROOT_ARTIFACTS_{DEPS,SETUP}_LAUNCHER`). Дописывает свою фазу
+  (`deps`/`setup`) в F-8 и — на фазе `deps` — создаёт F-9 (симуляция успешной провизии деп).
+  Делает @feature7/@feature9 детерминированными без реального pip.
+- **F-8** — упорядоченный лог фаз; ассерты «setup invoked once», «deps before setup» читают его.
+- **F-9** — маркер: при `FORCE_DEPS_MISSING=1` `depsAvailable()` возвращает true только если маркер
+  существует. DEPS_01 (провизия удалась) создаёт его; DEPS_02 (провизия не удалась) — нет →
+  fail-open + backoff-lock (`.dev-pomogator/.root-artifacts-setup.lock`).
+- Env-сеамы (не файлы, но часть фикстур-контракта): `FORCE_DEPS_MISSING=1` (deps missing),
+  `FORCE_DEPS_OK=1` (deps present — дефолт для setup-сценариев, MISSING имеет приоритет),
+  `DEV_POMOGATOR_ROOT_ARTIFACTS_SETUP=off` (opt-out). install-hook запускается через реальный
+  `bootstrap.cjs` (cwd=REPO_ROOT для резолва tsx), целевой repo — через stdin `cwd`.

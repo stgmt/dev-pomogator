@@ -6,6 +6,7 @@ import { contextMenuCheck } from './context-menu.js';
 import { dockerCheck } from './docker.js';
 import { envExampleCheck } from './env-example.js';
 import { envVarsCheck } from './env-vars.js';
+import { forbidRootArtifactsCheck } from './forbid-root-artifacts.js';
 import { gitCheck } from './git.js';
 import { gitignoreBlockCheck } from './gitignore-block.js';
 import { hooksExecCheck } from './hooks-exec.js';
@@ -36,6 +37,7 @@ export const phase2Checks: CheckDefinition[] = [
   statuslineCheck,
   statuslineWidgetsCheck,
   contextMenuCheck,
+  forbidRootArtifactsCheck,
 ];
 
 export const phase3Checks: CheckDefinition[] = [bunCheck, pythonCheck, dockerCheck, meridianCheck];
@@ -56,6 +58,7 @@ export {
   dockerCheck,
   envExampleCheck,
   envVarsCheck,
+  forbidRootArtifactsCheck,
   gitCheck,
   gitignoreBlockCheck,
   hooksExecCheck,

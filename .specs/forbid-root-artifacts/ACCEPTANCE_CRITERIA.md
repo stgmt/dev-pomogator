@@ -75,3 +75,45 @@ IF `_classifier.py` отсутствует (broken upgrade scenario, see UC-7), 
 ## AC-13: Cross-cutting verification
 
 WHEN developer запускает test suite (`/run-tests` или `npx vitest run tests/e2e/forbid-root-artifacts.test.ts`), THEN ALL existing PLUGIN004 scenarios SHALL pass AND new PLUGIN004_NN scenarios для FR-1..FR-4 SHALL pass.
+
+## AC-14 (FR-7)
+
+**Требование:** [FR-7](FR.md#fr-7-sessionstart-auto-installer-hook)
+
+WHEN сессия стартует в git-репозитории AND `.pre-commit-config.yaml` не содержит `id: forbid-root-artifacts` AND env `DEV_POMOGATOR_ROOT_ARTIFACTS_SETUP` не равен `off`, THEN install-hook SHALL привести к `.pre-commit-config.yaml` c `id: forbid-root-artifacts` AND к созданному `.root-artifacts.yaml` AND к рантайм-файлам в `.dev-pomogator/tools/forbid-root-artifacts/`.
+
+## AC-15 (FR-7)
+
+**Требование:** [FR-7](FR.md#fr-7-sessionstart-auto-installer-hook)
+
+WHEN хук уже установлен (`.pre-commit-config.yaml` содержит `id: forbid-root-artifacts`), THEN install-hook SHALL пропустить установку БЕЗ запуска python-subprocess AND SHALL вернуть exit 0.
+
+## AC-16 (FR-7)
+
+**Требование:** [FR-7](FR.md#fr-7-sessionstart-auto-installer-hook)
+
+IF env `DEV_POMOGATOR_ROOT_ARTIFACTS_SETUP=off` OR CWD не является git-репозиторием, THEN install-hook SHALL сделать no-op AND SHALL вернуть exit 0 (fail-open, сессия не блокируется).
+
+## AC-17 (FR-8)
+
+**Требование:** [FR-8](FR.md#fr-8-self-contained-resolvable-install-fix-dead-integration)
+
+WHEN `setup.py` завершает установку, THEN `.pre-commit-config.yaml` entry SHALL быть `python .dev-pomogator/tools/forbid-root-artifacts/check.py` AND файл по этому пути SHALL существовать (резолвится после клона репо у любого члена команды).
+
+## AC-18 (FR-9)
+
+**Требование:** [FR-9](FR.md#fr-9-auto-provision-python-deps)
+
+WHEN `pre-commit` или `pyyaml` отсутствуют на старте, THEN install-hook SHALL вызвать `deps-install.py` ПЕРЕД `setup.py`.
+
+## AC-19 (FR-9)
+
+**Требование:** [FR-9](FR.md#fr-9-auto-provision-python-deps)
+
+IF после `deps-install.py` зависимости всё ещё недоступны, THEN install-hook SHALL записать WARN с инструкцией в лог AND SHALL вернуть exit 0 (не блокировать) AND SHALL не повторять попытку чаще раза в 6ч (backoff-lock).
+
+## AC-20 (FR-10)
+
+**Требование:** [FR-10](FR.md#fr-10-doctor-verification)
+
+WHEN `pomogator-doctor` запущен AND (`id: forbid-root-artifacts` отсутствует в `.pre-commit-config.yaml` OR entry-путь указывает на несуществующий `check.py`), THEN doctor SHALL пометить проблему (🟡/🔴) AND SHALL предложить fix-action переустановки.
