@@ -71,6 +71,20 @@ different spec's fixture↔check drift requiring a design decision.
   Windows). It belongs to the `pomogator-doctor` spec (`@feature17`/`@feature10`), not to the
   spec-generator-v4 backlog. This is scoped follow-up work, not a mechanical fix.
 
+### Actionable fix mechanism (for the follow-up)
+
+Each `CheckDefinition` carries an optional `gate?(ctx) => { relevant, reason? }`
+(`engine/types.ts:126`); a `false` gate moves the check to `gatedOut` (never warns). The fix
+is to give the 6 environment checks a gate that returns `relevant:false` for a bare/isolated
+home (no `~/.dev-pomogator/config.json` ⇒ `ctx.config === null`), and to make the "valid"
+fixture path either satisfy or gate them. **Deeper relevance bug surfaced while probing:** `C11`
+warned `2 referenced MCP server(s) not configured: context7, octocode` even though the fixture's
+`projectRoot` is a bare temp dir — i.e. it read MCP references from the **developer's** real
+config, not `ctx.projectRoot`. So the follow-up is a per-check relevance audit (source each
+check off `ctx`, not ambient machine state), not a one-liner — and each of the 6 checks has its
+own "does-warn-when-misconfigured" scenario that must stay green (run the full `pomogator-doctor`
+feature in Docker to confirm no regression).
+
 ## Ownership
 
 - Classes 1 & 2: fixed + pushed this session (branches above). PRs pending the filtered Docker green.
