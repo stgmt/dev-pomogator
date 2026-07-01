@@ -3097,7 +3097,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
   # ── FR-57: scaffold-completeness audit (stub-detection gate) ──────────────
 
   @feature57
-  Scenario: SPECGEN004_470 the scaffold classifier flags a verbatim template sentinel in prose
+  Scenario: SPECGEN004_506 the scaffold classifier flags a verbatim template sentinel in prose
     Given a scaffold-sentinel fixture document with one unfilled template placeholder in prose outside code
     When the scaffold-sentinel classifier scans the fixture document
     Then the scaffold classifier reports exactly one finding naming that placeholder and its line
@@ -3136,7 +3136,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Given the scaffold-sentinel set is derived from the specs-generator templates directory
     When the scaffold-sentinel set is compared against the current template placeholders
     Then the scaffold-sentinel set contains every current template placeholder
-    And validate-spec PLACEHOLDER and audit SCAFFOLD_INCOMPLETE both resolve to the one classifier
+    And validate-spec PLACEHOLDER and audit SCAFFOLD_INCOMPLETE agree that a real template sentinel is a stub
 
   @feature57
   Scenario: SPECGEN004_476 a placeholder FIXTURES.md is reported once through the unified classifier

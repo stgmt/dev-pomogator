@@ -6,6 +6,7 @@ import {
   extractTemplateSentinels,
   scanDocumentForScaffold,
   SCAFFOLD_SCAN_DOCS,
+  isBacklogSpecPath,
 } from './scaffold-sentinels.mjs';
 
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
@@ -2892,22 +2893,11 @@ function commandAuditSpec(argv) {
         details: 'Create FIXTURES.md with fixture inventory, lifecycle, and gap analysis per specs-management Step 6.5',
       });
       log('WARN', 'FIXTURES_CONSISTENCY: FIXTURES.md missing for TEST_DATA_ACTIVE');
-    } else {
-      // Check if FIXTURES.md is still a placeholder (contains unfilled template markers)
-      const hasPlaceholders = /\{Название фикстуры\}|\{static\/factory/.test(fixturesContent);
-      // Real content = F-N headings with actual names (not template placeholders)
-      const hasRealFixtures = /### F-\d+:\s+[^{]/.test(fixturesContent);
-      if (hasPlaceholders && !hasRealFixtures) {
-        findings.push({
-          check: 'FIXTURES_CONSISTENCY',
-          category: 'LOGIC_GAPS',
-          severity: 'WARNING',
-          message: 'DESIGN.md has TEST_DATA_ACTIVE but FIXTURES.md contains only placeholder template',
-          details: 'Fill FIXTURES.md with actual fixture definitions: inventory, lifecycle, dependencies, gap analysis',
-        });
-        log('WARN', 'FIXTURES_CONSISTENCY: FIXTURES.md is placeholder for TEST_DATA_ACTIVE');
-      }
     }
+    // FR-57d: the "FIXTURES.md is still a placeholder" sub-check is folded into the unified
+    // SCAFFOLD_INCOMPLETE classifier above (which reports FIXTURES.md ERROR under TEST_DATA_ACTIVE)
+    // so a placeholder FIXTURES.md is reported ONCE, not twice, and its sentinels track the
+    // template instead of a hardcoded 2-token regex.
   }
 
   log('INFO', 'Running VARIANT_COVERAGE check...');
@@ -2959,7 +2949,7 @@ function commandAuditSpec(argv) {
         claimsDone = progress.phases.Finalization.stopConfirmed === true;
       }
       // Backlog specs are never-built scaffolding (rule bdd-only-tests §backlog) — never ERROR.
-      const isBacklog = /[\\/]backlog[\\/]/.test(targetDir);
+      const isBacklog = isBacklogSpecPath(targetDir);
       const scaffoldSeverity = claimsDone && !isBacklog ? 'ERROR' : 'INFO';
       // FIXTURES.md is a CONDITIONALLY-required doc (only when DESIGN declares TEST_DATA_ACTIVE,
       // per the FIXTURES_CONSISTENCY contract). A TEST_DATA_NONE spec with a leftover stub
