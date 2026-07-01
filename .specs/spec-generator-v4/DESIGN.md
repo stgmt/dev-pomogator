@@ -18,6 +18,7 @@
 - [FR-14: Devcontainer / multi-env support](FR.md#fr-14)
 - [FR-15: Side-channel conformance log](FR.md#fr-15)
 - [FR-16: GitHub Codespaces support](FR.md#fr-16)
+- [FR-57: Scaffold-completeness audit](FR.md#fr-57)
 
 ## Компоненты
 

@@ -798,3 +798,18 @@ As a maintainer resolving a consistency-report, I want each finding explained an
 Given a consistency-report with a missing-file finding
 When cross-spec-resolve processes it
 Then a 5-field explanation is emitted and no edit occurs until the user confirms Apply
+
+---
+
+### User Story 36: A "done" spec cannot hide an unfilled scaffold (Priority: P2)
+**Требование:** [FR-57](FR.md#fr-57)
+
+As a maintainer trusting the spec health verdict, I want a spec that still contains unfilled template placeholders to be flagged (RED once it claims done), so that a scaffold cannot masquerade as a finished spec just because its traceability links happen to resolve.
+
+**Why:** traceability can be complete while the prose is still `{Краткое описание фичи}` — the verdict then reads GREEN and the incomplete work is invisible (real case: forbid-root-artifacts).
+**Independent Test:** finalize a spec whose README is left as the template scaffold and run spec-verdict → verdict is RED with a SCAFFOLD_INCOMPLETE finding naming the file, line and sentinel; fill the prose and it goes GREEN.
+**Acceptance Scenarios:**
+
+Given a claims-done spec whose README is still the unfilled template scaffold
+When spec-verdict runs on it
+Then the verdict is RED with a SCAFFOLD_INCOMPLETE finding, and filling the prose clears it
