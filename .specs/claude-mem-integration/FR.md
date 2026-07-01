@@ -1,62 +1,39 @@
 # Functional Requirements (FR)
 
-## FR-1: Auto-install claude-mem-health extension @feature1
+> v2 rewrite (2026-06-24). The v1 installer (`src/installer/`) that set claude-mem up was deleted in the canonical plugin refactor (commit `43cf9462`) with no replacement. These FRs describe the v2 replacement: a non-interactive SessionStart bootstrap hook (`tools/claude-mem-bootstrap/`) plus pomogator-doctor detection. claude-mem's own MCP (`plugin_claude-mem_mcp-search`) ships with the plugin.
 
-Когда `needsClaudeMem=true` (определяется по selected extensions), installer MUST автоматически установить `claude-mem-health` extension вместе с его hooks. Юзер НЕ ДОЛЖЕН выбирать его вручную.
+## FR-1: Bootstrap decision @feature1
 
-## FR-2: Post-install validation @feature2
+The bootstrap MUST decide to install claude-mem ONLY when it is not already installed, not opted out, and not within the retry backoff window. The decision is a pure function `claudeMemBootstrapDecision({installed, optOut, lockFresh})` evaluated in order opt-out then installed then backoff then install, returning one of `install` / `skip-installed` / `skip-optout` / `skip-backoff`.
 
-После завершения `ensureClaudeMem()`, installer MUST проверить:
-- Worker отвечает на `GET /api/health` (port 37777)
-- Chroma отвечает на `GET /api/v2/heartbeat` (port 8000) — или зафиксировать что chroma unavailable
-- MCP server binary exists и файл непустой
+**Связанные AC:** [AC-1](ACCEPTANCE_CRITERIA.md#ac-1-fr-1-feature1)
 
-Результат validation записывается в install report с per-component статусами.
+## FR-2: Non-interactive install command @feature2
 
-## FR-3: Structured error logging для всех 20 точек отказа @feature3
+When the decision is `install`, the hook MUST invoke the official installer non-interactively with the dev-pomogator defaults: `npx -y claude-mem install --ide claude-code --provider claude --model claude-haiku-4-5-20251001 --runtime worker`, with env `DO_NOT_TRACK=1`, `CI=1`, `CLAUDE_MEM_ONLINE_OPTIN=false`, spawned WITHOUT a TTY (detached). On Windows the command is wrapped as `cmd /c npx ...`. These flags plus env plus non-TTY suppress every interactive prompt (verified against thedotmack/claude-mem@13.8.0 `src/npx-cli`).
 
-Каждая точка отказа в `memory.ts` MUST логировать в `install.log` через `installLog.error()` или `installLog.warn()`:
-- Какой шаг (step name)
-- Что именно сломалось (error message)
-- Контекст (file path, port, command)
-- Stack trace (через `formatErrorChain`)
+**Связанные AC:** [AC-2](ACCEPTANCE_CRITERIA.md#ac-2-fr-2-feature2)
 
-Не только console.log yellow warning.
+## FR-3: Idempotency and backoff @feature3
 
-## FR-4: User-facing diagnostics @feature4
+The hook MUST be a no-op when claude-mem is already installed (`installed_plugins.json` contains a `claude-mem@*` entry, OR `~/.claude-mem/.worker.pid` / `~/.claude-mem/claude-mem.db` exists) or when opted out via `DEV_POMOGATOR_CLAUDE_MEM=off`. After firing, it MUST stamp a lock (`~/.dev-pomogator/.claude-mem-bootstrap.lock`) and back off for 6h so it does not re-fire every session.
 
-При сбое claude-mem, юзер видит в console:
-- Какой шаг сломался (1-строка)
-- Конкретная причина
-- Путь к install.log для деталей
-- Install report (`~/.dev-pomogator/last-install-report.md`) с per-component таблицей
+**Связанные AC:** [AC-3](ACCEPTANCE_CRITERIA.md#ac-3-fr-3-feature3)
 
-## FR-5: Graceful degradation @feature5
+## FR-4: Fail-open builtins-only @feature4
 
-Если chroma не стартует — claude-mem ДОЛЖЕН работать в degraded mode:
-- Worker стартует без chroma (basic memory: observations, context injection)
-- Semantic search недоступен — логировать как warning, не error
-- Install report: claude-mem: warn (not fail) + "chroma unavailable, basic memory works"
+The hook MUST never block session start: any error (including malformed stdin) MUST result in exit 0 with a `{continue:true,suppressOutput:true}` payload. It MUST be builtins-only (no `node_modules` imports) so it runs for plugin users with no installed dependencies.
 
-Если worker не стартует — claude-mem FAIL:
-- MCP НЕ регистрируется (нет смысла указывать на мёртвый worker)
-- Install report: claude-mem: fail + конкретная причина
+**Связанные AC:** [AC-4](ACCEPTANCE_CRITERIA.md#ac-4-fr-4-feature4)
 
-## FR-6: Re-install idempotency @feature6
+## FR-5: Doctor detection @feature5
 
-Повторная установка (`--claude --all`) при уже работающем claude-mem:
-- isWorkerRunning() → skip re-clone/rebuild
-- Health check → всё ok → skip
-- Hooks не дублируются (existing smart merge)
-- Install report: claude-mem: ok (skipped, already running)
+The pomogator-doctor MUST report whether claude-mem is installed (check `C-CMEM`): severity `warning` with an install hint when absent, severity `ok` when present.
 
-## FR-7: Integration tests для failure modes @feature7
+**Связанные AC:** [AC-5](ACCEPTANCE_CRITERIA.md#ac-5-fr-5-feature5)
 
-Тесты MUST покрывать:
-- Чистая установка → все компоненты ok (existing, усилить)
-- Post-install validation → worker health + chroma heartbeat
-- claude-mem-health hooks registered в settings.json после install
-- Install report содержит per-component статусы
-- Graceful degradation: chroma off → worker still starts → report: warn
+## FR-6: Doctor reads the canonical global MCP config @feature6
 
-Тесты integration-first: runInstaller() → check real state, не source scan.
+The doctor MCP-parse check (`C11`) MUST read the canonical user-global config `~/.claude.json` (NOT the non-existent `~/.claude/mcp.json`) in addition to the project `.mcp.json`, so globally-registered MCP servers are visible.
+
+**Связанные AC:** [AC-6](ACCEPTANCE_CRITERIA.md#ac-6-fr-6-feature6)

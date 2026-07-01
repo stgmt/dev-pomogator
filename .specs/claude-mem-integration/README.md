@@ -1,30 +1,18 @@
-# Claude-mem Integration
+# claude-mem-integration (v2)
 
-Надёжная установка claude-mem: auto-install health hooks, post-install validation, structured logging, graceful degradation, per-component diagnostics.
+dev-pomogator bootstraps the **claude-mem** plugin (persistent memory across sessions) automatically, and the pomogator-doctor detects it.
 
-## Проблема
+## Why v2
 
-claude-mem устанавливается "успешно" но не работает: worker мёртв, chroma не стартует, health hooks не зарегистрированы, MCP указывает на мёртвый сервис. 12 из 20 точек отказа не логируются.
+The v1 installer (`src/installer/`) that set claude-mem up was deleted in the canonical plugin refactor (commit `43cf9462`) with no replacement, so on a fresh machine claude-mem was never installed. This spec covers the v2 replacement.
 
-## Решение
+## What it does
 
-- Auto-install `claude-mem-health` extension при `needsClaudeMem=true`
-- Post-install health validation (worker + chroma + MCP)
-- Per-component install report (worker/chroma/mcp/hooks × ok/warn/fail)
-- Structured logging для всех 20 точек отказа
-- Graceful degradation: chroma down → basic memory works
+- **SessionStart hook** `tools/claude-mem-bootstrap/install-claude-mem.ts` — if claude-mem is not installed, fires `npx -y claude-mem install` with non-interactive defaults (provider=claude, model Haiku 4.5, runtime=worker, IDE=claude-code, telemetry off) DETACHED, once (lock-backed, opt-out via `DEV_POMOGATOR_CLAUDE_MEM=off`). Builtins-only, fail-open.
+- **Doctor** — `C-CMEM` reports whether claude-mem is installed; `C11` now reads the canonical `~/.claude.json`.
 
-## Навигация
+claude-mem's MCP (`plugin_claude-mem_mcp-search`) ships with the plugin itself.
 
-| Файл | Описание |
-|------|----------|
-| [USER_STORIES.md](USER_STORIES.md) | 4 user stories |
-| [USE_CASES.md](USE_CASES.md) | 5 use cases |
-| [RESEARCH.md](RESEARCH.md) | Аудит: 20 точек отказа, 3 критические проблемы |
-| [FR.md](FR.md) | 7 functional requirements |
-| [ACCEPTANCE_CRITERIA.md](ACCEPTANCE_CRITERIA.md) | 7 AC в EARS формате |
-| [NFR.md](NFR.md) | Performance, Reliability, Usability |
-| [DESIGN.md](DESIGN.md) | 5 компонентов изменений, reuse plan |
-| [REQUIREMENTS.md](REQUIREMENTS.md) | Traceability matrix |
-| [FILE_CHANGES.md](FILE_CHANGES.md) | 5 файлов edit + 1 create |
-| [claude-mem-integration.feature](claude-mem-integration.feature) | 9 BDD scenarios (CORE019) |
+## Verify
+
+`claude-mem-integration.feature` (CMEM001_01..11) — pure decision, hook command/idempotency/fail-open, doctor checks. Run via the Docker BDD suite.

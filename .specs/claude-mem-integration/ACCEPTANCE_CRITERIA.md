@@ -1,45 +1,46 @@
 # Acceptance Criteria (EARS)
 
-## AC-1 (FR-1): Auto-install health extension @feature1
+## AC-1 (FR-1) @feature1
 
-- WHEN installer runs with extension that has `requiresClaudeMem: true` THEN installer SHALL also install `claude-mem-health` extension
-- WHEN `claude-mem-health` installed THEN `~/.claude/settings.json` or project `.claude/settings.json` SHALL contain SessionStart hook pointing to `health-check.ts`
-- WHEN user runs `--claude --all` THEN claude-mem-health hooks SHALL be registered without manual selection
+**Требование:** [FR-1](FR.md#fr-1-bootstrap-decision-feature1)
 
-## AC-2 (FR-2): Post-install validation @feature2
+- WHEN state is not-installed AND not opted-out AND lock not fresh THEN the decision SHALL be `install`
+- WHEN claude-mem is already installed THEN the decision SHALL be `skip-installed`
+- WHEN `DEV_POMOGATOR_CLAUDE_MEM=off` THEN the decision SHALL be `skip-optout`
+- WHEN not installed AND the lock is fresh (within backoff) THEN the decision SHALL be `skip-backoff`
 
-- WHEN `ensureClaudeMem()` completes THEN installer SHALL call `isWorkerRunning()` and log result
-- WHEN worker responds to /api/health THEN install report SHALL show `worker: ok`
-- WHEN worker does NOT respond THEN install report SHALL show `worker: fail` with error
-- WHEN chroma responds to heartbeat THEN install report SHALL show `chroma: ok`
-- WHEN chroma does NOT respond THEN install report SHALL show `chroma: warn` (degraded mode)
+## AC-2 (FR-2) @feature2
 
-## AC-3 (FR-3): Structured error logging @feature3
+**Требование:** [FR-2](FR.md#fr-2-non-interactive-install-command-feature2)
 
-- WHEN any step in memory.ts fails THEN `install.log` SHALL contain `[ERROR]` entry with step name, error message, and stack
-- WHEN chroma binary not found THEN install.log SHALL contain "chroma binary not found" (not just console yellow)
-- WHEN worker spawn fails THEN install.log SHALL contain "worker start failed" with error details
+- WHEN the hook installs THEN it SHALL invoke `claude-mem install` with `--ide claude-code --provider claude --model claude-haiku-4-5-20251001 --runtime worker`
+- WHEN the hook installs THEN the process environment SHALL set `DO_NOT_TRACK=1` and `CLAUDE_MEM_ONLINE_OPTIN=false`
+- WHEN the platform is Windows THEN the command SHALL be wrapped as `cmd /c npx ...`
 
-## AC-4 (FR-4): User-facing diagnostics @feature4
+## AC-3 (FR-3) @feature3
 
-- WHEN claude-mem installation fails THEN console SHALL show: step name, reason, path to install.log
-- WHEN installation completes THEN `~/.dev-pomogator/last-install-report.md` SHALL contain per-component table (worker | chroma | mcp | hooks)
+**Требование:** [FR-3](FR.md#fr-3-idempotency-and-backoff-feature3)
 
-## AC-5 (FR-5): Graceful degradation @feature5
+- WHEN `installed_plugins.json` contains a `claude-mem@*` entry THEN the hook SHALL NOT invoke the installer
+- WHEN `DEV_POMOGATOR_CLAUDE_MEM=off` THEN the hook SHALL NOT invoke the installer
+- WHEN the hook fires THEN it SHALL stamp `~/.dev-pomogator/.claude-mem-bootstrap.lock`
 
-- WHEN chroma fails to start THEN worker SHALL still be started
-- WHEN chroma fails THEN install report SHALL show `chroma: warn` not `claude-mem: fail`
-- WHEN worker fails THEN MCP SHALL NOT be registered (pointing to dead service)
-- WHEN worker fails THEN install report SHALL show `claude-mem: fail`
+## AC-4 (FR-4) @feature4
 
-## AC-6 (FR-6): Re-install idempotency @feature6
+**Требование:** [FR-4](FR.md#fr-4-fail-open-builtins-only-feature4)
 
-- WHEN claude-mem is already running THEN re-install SHALL skip clone/build
-- WHEN re-install runs THEN hooks SHALL NOT be duplicated in settings.json
-- WHEN re-install completes THEN install report SHALL show `claude-mem: ok (already running)`
+- WHEN the hook receives malformed stdin THEN it SHALL exit 0 with a `{continue:true}` payload
+- WHEN the hook errors internally THEN it SHALL NOT block session start
 
-## AC-7 (FR-7): Integration tests @feature7
+## AC-5 (FR-5) @feature5
 
-- WHEN test verifies claude-mem installed THEN it SHALL check worker health via HTTP, not just pathExists
-- WHEN test verifies hooks THEN it SHALL check settings.json contains health-check.ts hook
-- WHEN test verifies install report THEN it SHALL check per-component statuses (worker/chroma/mcp)
+**Требование:** [FR-5](FR.md#fr-5-doctor-detection-feature5)
+
+- WHEN claude-mem is not installed THEN the doctor `C-CMEM` check SHALL report severity `warning`
+- WHEN claude-mem is installed THEN the doctor `C-CMEM` check SHALL report severity `ok`
+
+## AC-6 (FR-6) @feature6
+
+**Требование:** [FR-6](FR.md#fr-6-doctor-reads-the-canonical-global-mcp-config-feature6)
+
+- WHEN a referenced MCP server is registered in `~/.claude.json` THEN the doctor `C11` check SHALL report it as configured

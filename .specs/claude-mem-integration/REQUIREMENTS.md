@@ -4,13 +4,12 @@
 
 | ID | Name | Linked AC | @featureN | Status |
 |----|------|-----------|-----------|--------|
-| FR-1 | Auto-install health extension | AC-1 | @feature1 | Draft |
-| FR-2 | Post-install validation | AC-2 | @feature2 | Draft |
-| FR-3 | Structured error logging | AC-3 | @feature3 | Draft |
-| FR-4 | User-facing diagnostics | AC-4 | @feature4 | Draft |
-| FR-5 | Graceful degradation | AC-5 | @feature5 | Draft |
-| FR-6 | Re-install idempotency | AC-6 | @feature6 | Draft |
-| FR-7 | Integration tests | AC-7 | @feature7 | Draft |
+| [FR-1](FR.md#fr-1-bootstrap-decision-feature1) | Bootstrap decision | [AC-1](ACCEPTANCE_CRITERIA.md#ac-1-fr-1-feature1) | @feature1 | Done |
+| [FR-2](FR.md#fr-2-non-interactive-install-command-feature2) | Non-interactive install command | [AC-2](ACCEPTANCE_CRITERIA.md#ac-2-fr-2-feature2) | @feature2 | Done |
+| [FR-3](FR.md#fr-3-idempotency-and-backoff-feature3) | Idempotency and backoff | [AC-3](ACCEPTANCE_CRITERIA.md#ac-3-fr-3-feature3) | @feature3 | Done |
+| [FR-4](FR.md#fr-4-fail-open-builtins-only-feature4) | Fail-open builtins-only | [AC-4](ACCEPTANCE_CRITERIA.md#ac-4-fr-4-feature4) | @feature4 | Done |
+| [FR-5](FR.md#fr-5-doctor-detection-feature5) | Doctor detection | [AC-5](ACCEPTANCE_CRITERIA.md#ac-5-fr-5-feature5) | @feature5 | Done |
+| [FR-6](FR.md#fr-6-doctor-reads-the-canonical-global-mcp-config-feature6) | Doctor reads canonical global MCP config | [AC-6](ACCEPTANCE_CRITERIA.md#ac-6-fr-6-feature6) | @feature6 | Done |
 
 ## NFR
 
