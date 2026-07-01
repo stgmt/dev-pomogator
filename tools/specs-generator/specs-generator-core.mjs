@@ -2,6 +2,11 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
+import {
+  extractTemplateSentinels,
+  scanDocumentForScaffold,
+  SCAFFOLD_SCAN_DOCS,
+} from './scaffold-sentinels.mjs';
 
 const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const DATE_ONLY_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -2937,6 +2942,41 @@ function commandAuditSpec(argv) {
     }
   } catch (err) {
     log('WARN', `VARIANT_COVERAGE: ${err.message}`);
+  }
+
+  // SCAFFOLD_INCOMPLETE (FR-57): a document left as an unfilled template stub is structurally
+  // valid but not DONE — this dimension is orthogonal to traceability. Uses the single
+  // exact-sentinel classifier (scaffold-sentinels.mjs) shared with validate-spec so the two
+  // can't drift. Severity is phase-gated: ERROR only when the spec CLAIMS verified-completion
+  // (Finalization stop_confirmed) — a fresh scaffold stays INFO so it is GREEN at birth.
+  log('INFO', 'Running SCAFFOLD_INCOMPLETE check...');
+  try {
+    const scaffoldSentinels = extractTemplateSentinels(path.join(SCRIPT_DIR, 'templates'));
+    if (scaffoldSentinels.size > 0) {
+      let claimsDone = false;
+      const progress = readJsonIfExists(path.join(targetDir, '.progress.json'));
+      if (progress && progress.phases && progress.phases.Finalization) {
+        claimsDone = progress.phases.Finalization.stopConfirmed === true;
+      }
+      // Backlog specs are never-built scaffolding (rule bdd-only-tests §backlog) — never ERROR.
+      const isBacklog = /[\\/]backlog[\\/]/.test(targetDir);
+      const scaffoldSeverity = claimsDone && !isBacklog ? 'ERROR' : 'INFO';
+      for (const fileName of SCAFFOLD_SCAN_DOCS) {
+        const scaffoldContent = getFileContent(fileName);
+        if (!scaffoldContent) continue;
+        for (const hit of scanDocumentForScaffold(scaffoldContent, scaffoldSentinels)) {
+          findings.push({
+            check: 'SCAFFOLD_INCOMPLETE',
+            category: 'LOGIC_GAPS',
+            severity: scaffoldSeverity,
+            message: `${fileName}:${hit.line} unfilled scaffold sentinel ${hit.sentinel}`,
+            details: `Document still carries a verbatim template placeholder — fill it via the matching autofiller (discovery-forms / requirements-chk-matrix / task-board-forms) or through the MCP door (${claimsDone ? 'spec claims done → ERROR gate' : 'early phase → INFO only, scaffold GREEN at birth'}).`,
+          });
+        }
+      }
+    }
+  } catch (err) {
+    log('WARN', `SCAFFOLD_INCOMPLETE: ${err.message}`);
   }
 
   const categoryCount = {
