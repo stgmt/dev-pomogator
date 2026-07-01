@@ -2,8 +2,13 @@
 
 | Path | Action | Reason |
 |------|--------|--------|
-| `src/installer/index.ts` | edit | Auto-install claude-mem-health when needsClaudeMem; per-component report entries |
-| ~~`src/installer/memory.ts`~~ (removed in v2 — no canonical replacement) | edit | Post-install validation; structured logging для 12 точек отказа; graceful degradation guard; передача logger |
-| `.claude/skills/skills-rules-optimizer/scripts/report.ts` | edit | Per-component entries (worker/chroma/mcp/hooks) |
-| ~~`tests/e2e/claude-installer.test.ts`~~ | edit | Новые тесты: health hooks registered, per-component report, graceful degradation |
-| `tests/features/core/CORE019_claude-mem-integration.feature` | create | BDD scenarios (9 штук) |
+| `tools/claude-mem-bootstrap/install-claude-mem.ts` | create | Non-interactive claude-mem bootstrap hook (FR-1..FR-4). |
+| `.claude-plugin/hooks.json` | edit | Register SessionStart bootstrap hook for plugin users (FR-3). |
+| `.claude/settings.json` | edit | Dogfood registration of the bootstrap hook (registry-parity). |
+| `.claude/skills/pomogator-doctor/scripts/engine/checks/claude-mem-plugin.ts` | create | Doctor C-CMEM detection check (FR-5). |
+| `.claude/skills/pomogator-doctor/scripts/engine/checks/mcp-parse.ts` | edit | Read canonical `~/.claude.json` (FR-6). |
+| `.claude/skills/pomogator-doctor/scripts/engine/checks/index.ts` | edit | Register C-CMEM in phase4. |
+| `.claude/skills/pomogator-doctor/SKILL.md` | edit | Check count 18 to 19 plus C-CMEM doc. |
+| `tests/step_definitions/feature_claude_mem_bootstrap.ts` | create | Step-defs driving real code. |
+| `tests/fixtures/claude-mem-bootstrap/record-launcher.cjs` | create | Recorded-launcher test seam. |
+| `cucumber.json` | edit | Wire the feature into the suite. |
