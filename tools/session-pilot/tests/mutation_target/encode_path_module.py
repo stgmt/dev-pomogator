@@ -17,15 +17,23 @@ def encode_path_for_claude_v2(p: str) -> list[str]:
     """
     variants = set()
     p = p.rstrip("/").rstrip("\\")
-    variants.add(p.replace(":", "").replace("\\", "-").replace("/", "-"))
+    base_generic = p.replace(":", "").replace("\\", "-").replace("/", "-")
+    variants.add(base_generic)
+    # Dot-folder variant: Claude Code replaces `.` in path segments with `-`
+    # (e.g. `<repo>/.cursor/worktrees/bar` -> `...--cursor-worktrees-bar`).
+    variants.add(base_generic.replace(".", "-"))
     if p.startswith("/mnt/") and len(p) > 6:
         drive = p[5].upper()
-        rest = p[6:]
-        variants.add(f"{drive}-{rest.replace('/', '-').replace(':', '')}")
+        rest = p[6:].replace('/', '-').replace(':', '')
+        variants.add(f"{drive}-{rest}")
+        variants.add(f"{drive}-{rest.replace('.', '-')}")
     if len(p) >= 3 and p[1] == ":" and p[2] in ("/", "\\"):
         drive_lo = p[0].lower()
         drive_up = p[0].upper()
         rest = p[3:].replace("\\", "-").replace("/", "-")
+        rest_dot = rest.replace(".", "-")
         variants.add(f"-mnt-{drive_lo}-{rest}")
+        variants.add(f"-mnt-{drive_lo}-{rest_dot}")
         variants.add(f"{drive_up}--{rest}")
+        variants.add(f"{drive_up}--{rest_dot}")
     return [v.lstrip("-") for v in variants] + [v for v in variants if v.startswith("-")] + list(variants)

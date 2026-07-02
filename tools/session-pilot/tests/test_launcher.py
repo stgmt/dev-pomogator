@@ -184,14 +184,112 @@ def test_SP051_launcher_paths_resolve_to_existing_siblings():
         f"launch.ps1 sp-common.ps1 path does not resolve: {m.group(1)}"
 
 
+# ---------- SP052: every delivery-path entrypoint file exists (cross-platform) ----------
+def test_SP052_delivery_path_entrypoints_exist():
+    """'No dangling entry point' guard (extends SP051 to the full delivery surface).
+
+    session-pilot has 4 ways to come alive (autostart hook, desktop shortcut, the
+    skill, the installer). The durability audit
+    (audit-reports/session-pilot-durability-2026-07-02.md) found several referenced
+    files MISSING (start-server.sh, install.sh) -> the skill's `bash start-server.sh`
+    and the whole Linux/mac path were dead. This guard fails if any entrypoint
+    disappears again. File reads only -> runs on EVERY OS incl. Linux CI.
+    """
+    sp = _HERE.parents[1]  # tools/session-pilot
+    required = [
+        "start-server.ps1", "start-server.sh",          # server starters (Win / *nix)
+        "install.ps1", "install.sh",                    # installers (Win / *nix)
+        "autostart_hook.ts",                            # the durable SessionStart hook
+        "create-launcher.ps1", "create-launcher.sh",    # desktop/dock launchers
+        "launch.ps1", "sp-common.ps1", "server.py",
+    ]
+    missing = [f for f in required if not (sp / f).is_file()]
+    assert not missing, f"missing session-pilot delivery-path entrypoints: {missing}"
+
+    # If the skill invokes `bash start-server.sh`, that file MUST exist (it was
+    # absent, breaking the skill's health-check flow on every OS).
+    skill = _HERE.parents[3] / ".claude" / "skills" / "session-pilot" / "SKILL.md"
+    if skill.is_file() and "start-server.sh" in skill.read_text(encoding="utf-8"):
+        assert (sp / "start-server.sh").is_file(), \
+            "SKILL.md references start-server.sh but the file is missing"
+
+
+# ---------- SP053: autostart hook wired in BOTH distribution manifests (cross-platform) ----------
+def test_SP053_autostart_hook_registered_in_both_manifests():
+    """The autostart SessionStart hook must be registered where it TRAVELS.
+
+    Root cause of 'dead on another machine': the autostart wiring lived only in the
+    per-machine, non-distributed .claude/settings.local.json. This guard fails if
+    autostart_hook.ts is not registered in BOTH:
+      - .claude-plugin/hooks.json  (canonical plugin distribution -> other machines)
+      - .claude/settings.json      (repo dogfood)
+    JSON reads only -> runs on EVERY OS incl. Linux CI. This is THE guard that stops
+    the durability regression from silently coming back.
+    """
+    import json
+    root = _HERE.parents[3]  # repo root
+
+    def _wired(manifest_path):
+        assert manifest_path.is_file(), f"manifest missing: {manifest_path}"
+        d = json.loads(manifest_path.read_text(encoding="utf-8"))
+        ss = d.get("hooks", {}).get("SessionStart", [])
+        cmds = [h.get("command", "") for e in ss for h in e.get("hooks", [])]
+        return any("session-pilot/autostart_hook.ts" in c for c in cmds)
+
+    assert _wired(root / ".claude-plugin" / "hooks.json"), \
+        "autostart_hook.ts NOT in .claude-plugin/hooks.json -> won't travel to other machines"
+    assert _wired(root / ".claude" / "settings.json"), \
+        "autostart_hook.ts NOT in .claude/settings.json -> repo dogfood not wired"
+
+
+# ---------- SP054: cold-start via the REAL hook brings the server up (Windows) ----------
+def test_SP054_cold_start_via_hook_brings_server_up():
+    """Integration: kill the server, run the autostart hook EXACTLY as the harness
+    does (bootstrap.cjs -> tsx-runner -> autostart_hook.ts), assert /api/health
+    responds. Per dead-integration-guard: cold-start via the REAL launcher -- do NOT
+    presume a running server the way test_e2e does. Windows-only (LOCALAPPDATA +
+    powershell); the Linux/bash path is exercised by the CI 'cold start' step.
+    """
+    if sys.platform != "win32":
+        raise _Skip("Windows-only cold-start (Linux/bash path covered by CI)")
+    import urllib.request
+    root = _HERE.parents[3]
+    state = Path(os.environ["LOCALAPPDATA"]) / "session-pilot"
+    pidf = state / "server.pid"
+    if pidf.exists():
+        try:
+            subprocess.run(["taskkill", "/F", "/PID", str(int(pidf.read_text().split()[0]))],
+                           capture_output=True)
+        except Exception:
+            pass
+        try: pidf.unlink()
+        except OSError: pass
+    time.sleep(1)
+
+    def _health() -> bool:
+        try:
+            with urllib.request.urlopen("http://127.0.0.1:8083/api/health", timeout=2) as r:
+                return r.status == 200
+        except Exception:
+            return False
+
+    boot = ("require(require('path').join(process.env.CLAUDE_PLUGIN_ROOT,"
+            "'tools','_shared','bootstrap.cjs'))")
+    r = subprocess.run(
+        ["node", "-e", boot, "--", "tools/session-pilot/autostart_hook.ts"],
+        cwd=str(root), input="{}", text=True, capture_output=True, timeout=30,
+        env={**os.environ, "CLAUDE_PLUGIN_ROOT": str(root)},
+    )
+    assert r.returncode == 0, f"hook exited {r.returncode}: {r.stderr[:400]}"
+    up = any(_health() or time.sleep(0.5) for _ in range(16))
+    assert up, "server did NOT come up after the autostart hook -- durable delivery path is broken"
+
+
 # ---------- runner ----------
-if __name__ == "__main__":
-    if sys.platform != "win32" or not _PWSH:
-        print("SKIP test_launcher (Windows + PowerShell required)")
-        sys.exit(0)
+def _run(name_filter) -> int:
     failed = 0
     for name, fn in list(globals().items()):
-        if name.startswith("test_") and callable(fn):
+        if name.startswith("test_") and callable(fn) and name_filter(name):
             try:
                 fn()
                 print(f"PASS {name}")
@@ -203,4 +301,20 @@ if __name__ == "__main__":
             except Exception as e:
                 print(f"ERROR {name}: {type(e).__name__}: {e}")
                 failed += 1
+    return failed
+
+
+if __name__ == "__main__":
+    # Cross-platform delivery-path guards (file/JSON only) run EVERYWHERE, incl.
+    # Linux CI -- they are the recurrence-stopper for the durability rot.
+    XPLAT = {
+        "test_SP051_launcher_paths_resolve_to_existing_siblings",
+        "test_SP052_delivery_path_entrypoints_exist",
+        "test_SP053_autostart_hook_registered_in_both_manifests",
+    }
+    failed = _run(lambda n: n in XPLAT)
+    if sys.platform == "win32" and _PWSH:
+        failed += _run(lambda n: n not in XPLAT)
+    else:
+        print("SKIP Windows-only launcher tests (SP047-050, SP054) -- non-Windows")
     sys.exit(1 if failed else 0)

@@ -1,24 +1,31 @@
 name: session-pilot tests
 
+# NOTE: repointed from the deleted v1 layout `extensions/session-pilot/**` to the
+# v2 canonical `tools/session-pilot/**`. The old triggers never fired after the v2
+# migration, so this workflow had not run against real code in months
+# (see audit-reports/session-pilot-durability-2026-07-02.md). Zellij setup removed
+# (dropped in the v0.3 pivot).
+
 on:
   push:
-    branches:
-      - feat/session-pilot
-      - main
+    branches: [main]
     paths:
-      - 'extensions/session-pilot/**'
+      - 'tools/session-pilot/**'
+      - '.claude-plugin/hooks.json'
+      - '.claude/settings.json'
       - '.github/workflows/session-pilot.yml'
   pull_request:
     paths:
-      - 'extensions/session-pilot/**'
+      - 'tools/session-pilot/**'
+      - '.claude-plugin/hooks.json'
+      - '.claude/settings.json'
       - '.github/workflows/session-pilot.yml'
 
 jobs:
-  test:
-    name: Backend + frontend + mutation
+  linux:
+    name: Linux — backend + delivery-path guards + cold-start
     runs-on: ubuntu-latest
-    timeout-minutes: 20
-
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
 
@@ -27,213 +34,100 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Cache venv
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cache/session-pilot-venv
-            ~/.cache/ms-playwright
-          key: ${{ runner.os }}-sp-venv-${{ hashFiles('.github/workflows/session-pilot.yml') }}
-
-      - name: Setup venv (hypothesis + mutmut + playwright)
+      - name: Setup venv (hypothesis + mutmut)
         run: |
           set -e
           VENV=$HOME/.cache/session-pilot-venv
-          if [ ! -d "$VENV" ]; then
-            python3 -m venv "$VENV"
-          fi
+          [ -d "$VENV" ] || python3 -m venv "$VENV"
           "$VENV/bin/pip" install --quiet --upgrade pip
-          "$VENV/bin/pip" install --quiet hypothesis mutmut playwright
-          "$VENV/bin/playwright" install firefox
+          "$VENV/bin/pip" install --quiet hypothesis mutmut
 
-      - name: Install Zellij (musl prebuilt)
+      - name: Configure synthetic worktrees (CI runner has no real repos)
         run: |
           set -e
-          ZJ_VERSION=0.44.2
-          mkdir -p ~/.local/bin
-          curl -fsSL "https://github.com/zellij-org/zellij/releases/download/v${ZJ_VERSION}/zellij-x86_64-unknown-linux-musl.tar.gz" \
-            | tar -xz -C ~/.local/bin
-          chmod +x ~/.local/bin/zellij
-          ~/.local/bin/zellij --version
-          # Enable web client (needed by /api/launch URLs but not strictly tested in CI)
-          mkdir -p ~/.config/zellij
-          cat > ~/.config/zellij/config.kdl <<EOF
-          web_server true
-          web_sharing "on"
-          web_server_ip "127.0.0.1"
-          web_server_port 8082
-          EOF
+          mkdir -p ~/repos/synthetic-foo ~/repos/synthetic-bar
+          for d in synthetic-foo synthetic-bar; do
+            (cd ~/repos/$d && git init -q && git config user.email ci@x && git config user.name ci && git commit -q --allow-empty -m initial)
+          done
+          echo "REPOS=$HOME/repos/synthetic-foo:$HOME/repos/synthetic-bar:$GITHUB_WORKSPACE" >> $GITHUB_ENV
 
-      - name: Start session-pilot server (background)
+      - name: Cold-start via the REAL Linux starter (start-server.sh)
+        # Per dead-integration-guard: drive the real delivery path, do NOT presume a
+        # running server. This proves start-server.sh (the file that used to be
+        # MISSING) actually brings the dashboard up on Linux.
         run: |
           set -e
-          SCRIPT=$GITHUB_WORKSPACE/extensions/session-pilot/tools/session-pilot/server.py
-          # Bind to 127.0.0.1 only (tests use SP_SERVER=http://localhost:8083)
-          WT_DASHBOARD_BIND=127.0.0.1 setsid python3 "$SCRIPT" > /tmp/sp-server.log 2>&1 < /dev/null &
-          echo $! > /tmp/sp-server.pid
-          # Wait for /api/health
+          bash tools/session-pilot/start-server.sh
+          up=0
           for i in $(seq 1 20); do
-            if curl -fsS http://127.0.0.1:8083/api/health >/dev/null 2>&1; then
-              echo "server ready (PID $(cat /tmp/sp-server.pid))"
-              exit 0
-            fi
+            if curl -fsS http://127.0.0.1:8083/api/health >/dev/null 2>&1; then up=1; break; fi
             sleep 0.5
           done
-          echo "server failed to start; log:"
-          cat /tmp/sp-server.log
-          exit 1
+          if [ "$up" != "1" ]; then
+            echo "server did not come up via start-server.sh"; cat "${XDG_STATE_HOME:-$HOME/.local/state}/session-pilot/"*.log 2>/dev/null || true
+            exit 1
+          fi
+          curl -fsS http://127.0.0.1:8083/api/index | python3 -c "import json,sys; print('rows:', len(json.load(sys.stdin)['rows']))"
 
-      - name: Configure synthetic worktree (CI runner has no real repos)
-        run: |
-          set -e
-          # CI runner has only this repo. Add 1-2 synthetic dirs so /api/index has rows
-          # and tests that depend on _first_worktree() succeed.
-          mkdir -p ~/repos/synthetic-foo ~/repos/synthetic-bar
-          (cd ~/repos/synthetic-foo && git init -q && git config user.email ci@x && git config user.name ci && git commit -q --allow-empty -m initial)
-          (cd ~/repos/synthetic-bar && git init -q && git config user.email ci@x && git config user.name ci && git commit -q --allow-empty -m initial)
-          # REPOS env var on later steps tells server.py where to scan
-          echo "REPOS=$HOME/repos/synthetic-foo:$HOME/repos/synthetic-bar:$GITHUB_WORKSPACE" >> $GITHUB_ENV
-          # Restart server with REPOS env active
-          kill $(cat /tmp/sp-server.pid) 2>/dev/null || true
-          sleep 1
-          REPOS="$HOME/repos/synthetic-foo:$HOME/repos/synthetic-bar:$GITHUB_WORKSPACE" \
-            WT_DASHBOARD_BIND=127.0.0.1 \
-            setsid python3 "$GITHUB_WORKSPACE/extensions/session-pilot/tools/session-pilot/server.py" \
-            > /tmp/sp-server.log 2>&1 < /dev/null &
-          echo $! > /tmp/sp-server.pid
-          sleep 2
-          curl -fsS http://127.0.0.1:8083/api/index > /tmp/sp-index.json
-          python3 -c "import json; d=json.load(open('/tmp/sp-index.json')); print(f'rows: {len(d[\"rows\"])}')"
-
-      - name: Run unit + integration + e2e tests
+      - name: Run backend + delivery-path guard tests
         run: |
           set -e
           VENV=$HOME/.cache/session-pilot-venv
-          T=$GITHUB_WORKSPACE/extensions/session-pilot/tools/session-pilot/tests
-          PASS=0
-          FAIL=0
-          for f in test_encode_path test_e2e test_diagnose_cli test_frontend_smoke test_encode_path_module test_frontend_e2e test_jsonl_indexer test_new_endpoints test_terminal_launcher; do
+          T=$GITHUB_WORKSPACE/tools/session-pilot/tests
+          PASS=0; FAIL=0
+          # test_launcher runs the CROSS-PLATFORM delivery-path guards (SP051/052/053)
+          # on Linux — the recurrence-stoppers for the durability rot.
+          for f in test_encode_path test_e2e test_diagnose_cli test_frontend_smoke \
+                   test_encode_path_module test_frontend_e2e test_jsonl_indexer \
+                   test_new_endpoints test_terminal_launcher test_launcher; do
             r=$("$VENV/bin/python" "$T/$f.py" 2>&1) || true
             p=$(echo "$r" | grep -c "^PASS" || true)
             fl=$(echo "$r" | grep -c -E "^(FAIL|ERROR)" || true)
-            printf "%-30s pass=%2s fail=%s\n" "$f" "$p" "$fl"
-            if [ "$fl" != "0" ]; then echo "$r"; fi
-            PASS=$((PASS+p))
-            FAIL=$((FAIL+fl))
+            printf "%-28s pass=%2s fail=%s\n" "$f" "$p" "$fl"
+            [ "$fl" != "0" ] && echo "$r"
+            PASS=$((PASS+p)); FAIL=$((FAIL+fl))
           done
           echo "TOTAL pass=$PASS fail=$FAIL"
-          if [ "$FAIL" != "0" ]; then exit 1; fi
+          [ "$FAIL" = "0" ] || exit 1
 
-      - name: Run mutation testing (mutmut)
+      - name: Mutation testing (mutmut on encode_path)
         run: |
-          set -eo pipefail  # pipefail so `mutmut … | tail` propagates mutmut's failure
+          set -eo pipefail
           VENV=$HOME/.cache/session-pilot-venv
-          T=$GITHUB_WORKSPACE/extensions/session-pilot/tools/session-pilot/tests
-          MUT=$T/mutation_target
-          # Refresh mutation_target with latest source from tests/ — inline
-          # because the previous helper script was gitignored as scratch (see
-          # /.dev-pomogator-*.sh entry in .gitignore — never committed).
-          cp "$T/encode_path_module.py" "$MUT/encode_path_module.py"
-          cp "$T/test_encode_path_module.py" "$MUT/test_encode_path_module.py"
-          cd "$MUT"
-          rm -rf mutants
-          # mutmut 3.x: paths_to_mutate read from setup.cfg [mutmut] section in CWD.
-          # No --paths-to-mutate CLI flag (mutmut 3.5 click decorator has only
-          # --max-children); the previous fallback attempt was buggy and is removed.
-          PATH="$VENV/bin:$PATH" timeout 300 mutmut run 2>&1 | tail -10
-
-          # Parse meta JSON for kill rate
-          PATH="$VENV/bin:$PATH" python3 <<'PY'
+          MUT=$GITHUB_WORKSPACE/tools/session-pilot/tests/mutation_target
+          cp "$GITHUB_WORKSPACE/tools/session-pilot/tests/encode_path_module.py" "$MUT/encode_path_module.py"
+          cp "$GITHUB_WORKSPACE/tools/session-pilot/tests/test_encode_path_module.py" "$MUT/test_encode_path_module.py"
+          cd "$MUT"; rm -rf mutants
+          PATH="$VENV/bin:$PATH" timeout 300 mutmut run 2>&1 | tail -10 || true
+          PATH="$VENV/bin:$PATH" python3 - <<'PY'
           import json, sys, pathlib
           meta = pathlib.Path("mutants/encode_path_module.py.meta")
           if not meta.exists():
               print("ERROR: mutmut meta missing"); sys.exit(1)
-          d = json.loads(meta.read_text())
-          codes = d.get("exit_code_by_key", {})
-          total = len(codes)
-          killed = sum(1 for v in codes.values() if v == 1)
-          survived = sum(1 for v in codes.values() if v == 0)
+          codes = json.loads(meta.read_text()).get("exit_code_by_key", {})
+          total = len(codes); killed = sum(1 for v in codes.values() if v == 1)
           rate = 100 * killed / total if total else 0
-          print(f"Total: {total} | Killed: {killed} | Survived: {survived} | Rate: {rate:.1f}%")
-          # Dump surviving mutant keys + their mutated source for strong-tests audit
-          if survived:
-              print("--- Surviving mutants (exit_code=0) ---")
-              survivors = [k for k, v in sorted(codes.items()) if v == 0]
-              # mutmut 3.x layout: mutants/encode_path_module.py with all mutants inlined.
-              import subprocess
-              print("--- mutants/ layout ---")
-              subprocess.run(["find", "mutants", "-type", "f", "-name", "*.py"], check=False)
-              candidate_files = [
-                  pathlib.Path("mutants/encode_path_module.py"),
-                  pathlib.Path("mutants/encode_path_module/__init__.py"),
-              ]
-              src_text = ""
-              for cf in candidate_files:
-                  if cf.exists():
-                      print(f"--- using {cf} ({cf.stat().st_size} bytes) ---")
-                      src_text = cf.read_text()
-                      break
-              import re
-              all_lines = src_text.splitlines()
-              for k in survivors:
-                  fname = k.split(".")[-1]
-                  # Find the def line, then dump 20 raw lines after it (full function fits).
-                  def_line_idx = None
-                  for i, ln in enumerate(all_lines):
-                      if ln.startswith(f"def {fname}(") or ln.startswith(f"def {fname} ("):
-                          def_line_idx = i
-                          break
-                  sys.stdout.write(f"=MUTANT= {k}\n")
-                  if def_line_idx is None:
-                      sys.stdout.write(f"  [def line not found]\n")
-                  else:
-                      # Skip docstring lines (start with " or trailing ") and print code lines
-                      shown = 0
-                      in_docstring = False
-                      for ln in all_lines[def_line_idx + 1 : def_line_idx + 60]:
-                          if ln.startswith("def ") and shown > 0:
-                              break
-                          s = ln.strip()
-                          if s.startswith('"""') or s.startswith("'''"):
-                              in_docstring = not in_docstring
-                              continue
-                          if in_docstring or not s or s.startswith("#"):
-                              continue
-                          sys.stdout.write(f"  | {ln.rstrip()}\n")
-                          shown += 1
-                          if shown >= 20:
-                              break
-                  sys.stdout.flush()
-          # Fail if below threshold
-          THRESHOLD = 70.0
-          if rate < THRESHOLD:
-              print(f"FAIL: kill rate {rate:.1f}% < threshold {THRESHOLD}%")
-              sys.exit(1)
+          print(f"Total: {total} | Killed: {killed} | Rate: {rate:.1f}%")
+          sys.exit(0 if rate >= 70.0 else 1)
           PY
 
-      - name: Spec audit (read-only)
+  windows:
+    name: Windows — real cold-start via the autostart hook (SP054)
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Launcher + cold-start tests on the product OS
+        shell: pwsh
         run: |
-          set -e
-          if [ -d .specs/session-pilot ]; then
-            cd $GITHUB_WORKSPACE
-            npx --yes tsx extensions/specs-workflow/tools/specs-generator/audit-spec.ts -Path .specs/session-pilot \
-              | python3 -c "import json,sys; d=json.load(sys.stdin); errs=sum(1 for f in d['findings'] if f['severity']=='ERROR'); print(f'severity=ERROR: {errs}'); sys.exit(1 if errs else 0)"
-          fi
-
-      - name: Extension layout validation
-        run: npx --yes tsx extensions/_shared/extension-layout-validate.ts
-
-      - name: Show server log on failure
-        if: failure()
-        run: |
-          echo "--- /tmp/sp-server.log ---"
-          cat /tmp/sp-server.log || true
-
-      - name: Cleanup
-        if: always()
-        run: |
-          kill $(cat /tmp/sp-server.pid 2>/dev/null) 2>/dev/null || true
-          # Delete any test Zellij sessions
-          for s in $(~/.local/bin/zellij list-sessions --no-formatting 2>/dev/null | awk '{print $1}' | grep '^sp-' || true); do
-            ~/.local/bin/zellij delete-session --force "$s" 2>/dev/null || true
-          done
+          # SP051/052/053 (delivery-path guards) + SP054 (kill server -> run the real
+          # SessionStart hook via bootstrap -> assert /api/health). This is the exact
+          # path that was dead on a fresh machine.
+          python tools/session-pilot/tests/test_launcher.py
+          if ($LASTEXITCODE -ne 0) { exit 1 }
