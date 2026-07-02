@@ -33,13 +33,28 @@ argument-hint: "<scenario-name>"
 
 **Когда триггерится**: «проверь dashboard работает», «открой worktree dashboard», «session-pilot status».
 
+> **Автостарт теперь автоматический и durable.** SessionStart-хук `tools/session-pilot/autostart_hook.ts`
+> (зарегистрирован в `.claude-plugin/hooks.json` — уезжает с плагином на любую машину — И в
+> `.claude/settings.json` — dogfood) сам поднимает сервер на каждой сессии, кроссплатформенно
+> (Windows → `start-server.ps1`, Linux/macOS → `start-server.sh`), fail-open, idempotent.
+> Выключатель: `SP_NO_AUTOSTART=1`. Этот сценарий — ручная проверка/починка, если хук не сработал.
+
 **Шаги**:
 1. `curl -fsS http://localhost:8083/api/health 2>/dev/null` — если 200 OK → server alive, идём к step 4
-2. Если fail → `bash tools/session-pilot/start-server.sh` (idempotent)
-3. Wait 2s, retry curl. Если fail повторно → `cat /tmp/sp-server.log` и report problem
+2. Если fail → запусти стартер вручную (idempotent): Windows `pwsh -NoProfile -File tools/session-pilot/start-server.ps1` (fallback `powershell.exe`); Linux/macOS `bash tools/session-pilot/start-server.sh`
+3. Wait 2s, retry curl. Если fail повторно → читай логи в state-dir (не `/tmp`):
+   - Windows: `%LOCALAPPDATA%\session-pilot\{launcher.log,server.log,server.log.err}`
+   - Linux/macOS: `${XDG_STATE_HOME:-~/.local/state}/session-pilot/{launcher.log,server.log,server.log.err}`
+   `launcher.log` пишет ЧТО сделал лаунчер (какой python выбран, spawn pid, exit) — там причина молчаливого фейла.
 4. **Verification (anti-халява, обязательно)**: `mcp__claude-in-chrome__navigate` to `http://localhost:8083`, then `mcp__claude-in-chrome__screenshot` to confirm UI loaded. Format: «CONFIRMED: dashboard UI rendered with N worktrees» / «DENIED: <reason>»
 
 ## Scenario 2: Launch claude --resume в worktree
+
+> ⚠️ **Zellij удалён в v0.3.** Шаги ниже (2/3) ещё описывают старый v0.2 Zellij-флоу
+> (`session_name`, `zellij list-sessions`, Web Client URL) — это **stale**. Реальный
+> `/api/launch` теперь native-terminal: payload `{worktree_path, mode:"resume"|"fresh", uuid?}`
+> (без `session_name`), ответ `{ok, method: "wt-spawn…"|"cmd-fallback…"|"cached", url?}`.
+> Верификация — через dashboard + `mcp__claude-in-chrome__screenshot`, НЕ `zellij list-sessions`.
 
 **Когда триггерится**: «launch claude в worktree X», «resume claude в feature/auth», «продолжи сессию в lm-saas».
 
@@ -96,7 +111,7 @@ argument-hint: "<scenario-name>"
 1. `pwsh -File tools/session-pilot/create-launcher.ps1` — создаёт Desktop `.lnk` → hidden `launch.ps1` (single-instance) со своей иконкой `session-pilot.ico` + AppUserModelID `ClaudeCode.SessionPilot`.
 2. Юзер закрепляет вручную: right-click → «Show more options» → «Pin to taskbar».
 3. Поведение: клик → окно открыто → фокус; закрыто → ровно одно. Детект окна — по выделенному `--user-data-dir` профилю (`Get-SpDashboardProcess`).
-4. **Если плодятся окна ИЛИ мерцает без интерфейса** → см. `single-instance-launcher.md`: мерцание = рассинхрон версии в 3 местах (extension.json + handlers.py + frontend.py FRONTEND_VERSION) → цикл перезагрузки.
+4. **Если плодятся окна ИЛИ мерцает без интерфейса** → см. `single-instance-launcher.md`: мерцание = рассинхрон версии в 2 местах (handlers.py `/api/health` + frontend.py `FRONTEND_VERSION`; `extension.json` удалён в v2) → цикл перезагрузки.
 5. **Verification**: `SP_GUI_TEST=1 python tools/session-pilot/tests/test_launcher.py` → SP047/SP048 PASS; затем открыть окно + `mcp__claude-in-chrome__screenshot` → CONFIRMED интерфейс виден (не мерцает).
 
 ## Anti-халява rules (mandatory для каждого scenario)
@@ -115,7 +130,7 @@ argument-hint: "<scenario-name>"
 - `subprocess.Popen` с `stdin=DEVNULL` без TTY → Zellij hangs at startup.
 - Cross-OS encoding: `D--repos-foo` (Windows-cwd) AND `-mnt-d-repos-foo` (WSL-cwd) — обе variants нужны.
 - WSL2 NAT mode: `netsh portproxy add v4tov4 listenport=8083 connectaddress=<WSL_IP>` для access from Windows host.
-- **Версия в 3 местах** (extension.json + handlers.py `/api/health` + frontend.py `FRONTEND_VERSION`) — менять ВМЕСТЕ, иначе фронт уходит в цикл перезагрузки (мерцание, интерфейса не видно). Проверять на живой странице, не только `/api/health`.
+- **Версия в 2 местах** (handlers.py `/api/health` + frontend.py `FRONTEND_VERSION`; `extension.json` удалён в v2 canonical) — менять ВМЕСТЕ, иначе фронт уходит в цикл перезагрузки (мерцание, интерфейса не видно). Проверять на живой странице, не только `/api/health`.
 - **Single-instance лаунчер**: окно детектится по выделенному `--user-data-dir` профилю; повторный запуск фокусирует, не плодит. Считай ОКНА (`MainWindowHandle != 0`), не процессы Edge (~13 на одно окно).
 
 ## Поддерживаемые extensions

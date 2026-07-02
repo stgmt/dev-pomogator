@@ -1,24 +1,23 @@
 """
-End-to-end test of session-pilot critical path:
+End-to-end test of session-pilot critical path (v0.3+ native-terminal launch —
+Zellij was removed in v0.3; the old Zellij steps in this header were stale):
 
 1. GET /api/health → 200
 2. GET /api/index → 200, ≥1 worktree
 3. GET /api/claude?path=<wt> → 200 with ETag
 4. GET /api/claude?path=<wt> with If-None-Match → 304 + 0 bytes
-5. POST /api/launch fresh mode → 200 ok=true method∈{write-chars,new-layout}
-6. Poll `zellij list-sessions` → assert spawned session present
-7. POST /api/launch SAME → method=cached (idempotency)
-8. Cleanup: `zellij delete-session --force <name>`
+5. POST /api/launch fresh → 200 ok=true method∈{wt-spawn…,cmd-fallback…,cached}
+   (500 tolerated on Linux CI — no wt.exe/cmd.exe)
+6. POST /api/launch invalid mode → 400
+7. POST /api/launch non-whitelisted path → 403
 
-This is the full critical-path E2E that test_launch_idempotent's
-unit-level happy-path doesn't cover. Single test method per requirement
-that exercises real HTTP + real Zellij + real assertions on side effects.
+Per `.claude/rules/integration-tests-first.md`: real HTTP, real subprocess. No mocks.
 
-Per `.claude/rules/integration-tests-first.md`: real HTTP, real subprocess,
-real filesystem polling. No mocks.
-
-Per `.specs/session-pilot/FIXTURES.md` cleanup ordering: Zellij sessions
-must be deleted BEFORE process exits.
+NOTE: this test PRESUMES a server already running at SP_SERVER (default
+localhost:8083) — it does NOT cold-start via the launcher. The durable
+cold-start delivery path is proven by test_launcher.py::SP054 (Windows) and the
+CI 'cold-start via start-server.sh' step (Linux). See
+audit-reports/session-pilot-durability-2026-07-02.md.
 """
 
 import json

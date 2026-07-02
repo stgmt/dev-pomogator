@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-  Session Pilot launcher — shared configuration + helpers.
+  Session Pilot launcher -- shared configuration + helpers.
 
 .DESCRIPTION
   Single source of truth dot-sourced by launch.ps1, create-launcher.ps1 and
@@ -10,7 +10,7 @@
 
   Single-instance key: the dashboard always runs in a dedicated --user-data-dir
   ($SpProfileDir). Any msedge.exe whose command line references that dir IS our
-  window — a reliable detection key (no fragile title matching required).
+  window -- a reliable detection key (no fragile title matching required).
 #>
 
 # -- Constants -----------------------------------------------------------------
@@ -20,12 +20,12 @@ $SpUrl       = "http://127.0.0.1:$SpPort/"
 $SpHealthUrl = "http://127.0.0.1:$SpPort/api/health"
 $SpStateDir  = Join-Path $env:LOCALAPPDATA 'session-pilot'
 $SpProfileDir = Join-Path $SpStateDir 'browser-profile'
-$SpAppId     = 'ClaudeCode.SessionPilot'        # AppUserModelID — distinct taskbar identity
+$SpAppId     = 'ClaudeCode.SessionPilot'        # AppUserModelID -- distinct taskbar identity
 $SpWindowTitle = 'Worktree Dashboard'           # dashboard <title>, secondary detect signal
 $SpIconPath  = Join-Path $SpStateDir 'session-pilot.ico'
 $SpStarter   = Join-Path $script:SpToolsDir 'start-server.ps1'
 
-# -- Win32 P/Invoke (window restore + foreground) — compiled lazily ------------
+# -- Win32 P/Invoke (window restore + foreground) -- compiled lazily ------------
 # Add-Type C# compilation costs ~100-300ms, so it is NOT done at dot-source time.
 # start-server.ps1 (a SessionStart hook with a <200ms budget) dot-sources this
 # file for constants only and never triggers the compile.
@@ -72,7 +72,7 @@ function Ensure-SpServer {
   # Probe health; if down, run start-server.ps1 and wait up to 6s. Returns $true if up.
   if (Test-SpHealth) { return $true }
   if (-not (Test-Path $SpStarter)) {
-    Write-Warning "start-server.ps1 not found at $SpStarter — cannot autostart server."
+    Write-Warning "start-server.ps1 not found at $SpStarter -- cannot autostart server."
     return $false
   }
   & $SpStarter
@@ -117,7 +117,7 @@ function Show-SpWindow {
 # -- Icon generation -----------------------------------------------------------
 function Ensure-SpIcon {
   # Generate a simple branded .ico (rounded square + "SP") into $SpIconPath if
-  # absent. Self-contained — no binary asset committed to the repo.
+  # absent. Self-contained -- no binary asset committed to the repo.
   if (Test-Path $SpIconPath) { return $SpIconPath }
   if (-not (Test-Path $SpStateDir)) { New-Item -ItemType Directory -Path $SpStateDir -Force | Out-Null }
   try {
@@ -143,12 +143,12 @@ function Ensure-SpIcon {
     $fs.Close(); $icon.Dispose(); $bmp.Dispose()
     return $SpIconPath
   } catch {
-    Write-Warning "Could not generate icon ($_) — shortcut will fall back to browser icon."
+    Write-Warning "Could not generate icon ($_) -- shortcut will fall back to browser icon."
     return $null
   }
 }
 
-# -- AppUserModelID on shortcut (IShellLink + IPropertyStore) — compiled lazily -
+# -- AppUserModelID on shortcut (IShellLink + IPropertyStore) -- compiled lazily -
 function Initialize-SpShortcut {
   if (([System.Management.Automation.PSTypeName]'SpShortcut').Type) { return }
   Add-Type @"
@@ -192,7 +192,7 @@ public static class SpShortcut {
     PROPERTYKEY key = new PROPERTYKEY {
       fmtid = new Guid("9F4C2855-9F79-4B39-A8D0-E1D42DE1D5F3"), pid = 5
     };
-    // Build PROPVARIANT(VT_LPWSTR) manually — avoids propsys.dll
+    // Build PROPVARIANT(VT_LPWSTR) manually -- avoids propsys.dll
     // InitPropVariantFromString (not exported by name on all Windows builds).
     PROPVARIANT pv = new PROPVARIANT();
     pv.vt = VT_LPWSTR;
@@ -209,7 +209,7 @@ public static class SpShortcut {
 
 function Set-SpShortcutAppId {
   param([Parameter(Mandatory)][string]$LnkPath)
-  # Best-effort — failure here is non-fatal (icon + single-instance still work).
+  # Best-effort -- failure here is non-fatal (icon + single-instance still work).
   Initialize-SpShortcut
   try { [SpShortcut]::SetAppId($LnkPath, $SpAppId) } catch { Write-Warning "Could not set AppUserModelID on shortcut: $_" }
 }
