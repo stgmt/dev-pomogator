@@ -22,6 +22,7 @@ import json
 import os
 import re
 import subprocess
+import sys
 import time
 from datetime import datetime
 from pathlib import Path
@@ -131,6 +132,54 @@ def _is_headless_session(jsonl_path) -> bool:
     val = _detect_headless(jsonl_path)
     _headless_cache[key] = val
     return val
+
+
+# ── Persisted repo roots (cold-state durability) ──────────────────────────────
+# The dashboard learns where the user's repos live from the cwds of RUNNING Claude
+# sessions (see build_session_index). To survive a "cold" state — a fresh PC or all
+# windows closed — it remembers discovered repo roots in a tiny JSON file, so closed
+# session history still resolves to correct paths with zero config. Fail-open: the
+# file is an advisory cache, never required for correctness.
+def _sp_state_dir() -> Path:
+    """State dir, matching the launcher (start-server.ps1/.sh). SP_STATE_DIR wins."""
+    if os.environ.get("SP_STATE_DIR"):
+        return Path(os.environ["SP_STATE_DIR"])
+    if sys.platform == "win32":
+        base = os.environ.get("LOCALAPPDATA") or str(Path.home() / "AppData" / "Local")
+        return Path(base) / "session-pilot"
+    xdg = os.environ.get("XDG_STATE_HOME") or str(Path.home() / ".local" / "state")
+    return Path(xdg) / "session-pilot"
+
+
+def _roots_file() -> Path:
+    return _sp_state_dir() / "repo-roots.json"
+
+
+def _load_persisted_roots() -> set[str]:
+    """Remembered repo roots that STILL exist. Fail-open (empty on any error)."""
+    try:
+        f = _roots_file()
+        if not f.exists():
+            return set()
+        data = json.loads(f.read_text(encoding="utf-8"))
+        if not isinstance(data, list):
+            return set()
+        return {r for r in data if isinstance(r, str) and Path(r).exists()}
+    except Exception:  # noqa: BLE001 — advisory cache, never fatal
+        return set()
+
+
+def _save_persisted_roots(roots: set[str]) -> None:
+    """Atomically persist repo roots (temp file + replace, per atomic-config-save)."""
+    try:
+        d = _sp_state_dir()
+        d.mkdir(parents=True, exist_ok=True)
+        f = _roots_file()
+        tmp = f.with_name(f.name + ".tmp")
+        tmp.write_text(json.dumps(sorted(roots), ensure_ascii=False), encoding="utf-8")
+        os.replace(tmp, f)
+    except Exception:  # noqa: BLE001
+        pass
 
 
 def discover_repos(extra_roots: list[str] | None = None) -> list[Path]:
@@ -565,15 +614,26 @@ def build_session_index() -> dict:
         pids = proc_map.get(norm1, [])
         return bool(pids), list(pids)
 
-    # Infer scan roots from running Claude sessions so the user's repos are found
-    # even when they live outside the default roots (e.g. E:/repos). Without this
-    # every session degrades to orphan mode with fabricated paths (window-count audit).
+    # Scan roots come from THREE places so the dashboard finds the user's repos
+    # without config, and keeps finding them in cold state (all windows closed / a
+    # fresh PC): (1) the parents of currently-running session cwds, (2) the persisted
+    # memory of previously-discovered roots, plus the built-in defaults inside
+    # discover_repos. See audit-reports/session-pilot-window-count-2026-07-02.md.
     _proc_roots: set[str] = set()
     for _cwd in proc_map:
         parent = os.path.dirname(_cwd.rstrip("/"))
-        if parent and parent not in _proc_roots:
+        if parent:
             _proc_roots.add(parent)
-    repos = discover_repos(extra_roots=sorted(_proc_roots))
+    _persisted_roots = _load_persisted_roots()
+    repos = discover_repos(extra_roots=sorted(_proc_roots | _persisted_roots))
+    # Remember the PARENT of every discovered repo (a proven-useful root) so the next
+    # cold build finds them even with no window open. Only write when something new.
+    try:
+        _useful = {str(r.resolve().parent).replace("\\", "/") for r in repos}
+        if _useful and not _useful <= _persisted_roots:
+            _save_persisted_roots(_persisted_roots | _useful)
+    except Exception:  # noqa: BLE001 — persistence is advisory, never fatal
+        pass
     rows: list[dict] = []
     seen_paths: set[str] = set()
     a_cwds: set[str] = set()  # Source A cwds (normalized) — for B dedup

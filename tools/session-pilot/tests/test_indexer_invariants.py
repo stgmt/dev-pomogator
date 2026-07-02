@@ -260,6 +260,57 @@ def test_IDX_INV_07_orphan_process_match_uses_real_cwd(monkeypatch):
         assert 4242 in (r.get("claude_window_pids") or []), r
 
 
+def _norm(p) -> str:
+    try:
+        return str(Path(p).resolve()).replace("\\", "/").rstrip("/").lower()
+    except OSError:
+        return str(p).replace("\\", "/").rstrip("/").lower()
+
+
+def test_IDX_INV_08_persisted_roots_roundtrip_and_filter(monkeypatch):
+    """Remembered repo roots survive a save/load round-trip; roots that no longer
+    exist are dropped on load (a moved/deleted drive doesn't poison the memory)."""
+    with tempfile.TemporaryDirectory(prefix="idx-inv-persist-") as td:
+        root = Path(td)
+        exists = root / "exists"
+        exists.mkdir()
+        monkeypatch.setenv("SP_STATE_DIR", str(root / "state"))
+
+        indexer._save_persisted_roots({str(exists), str(root / "gone")})
+        loaded = {_norm(p) for p in indexer._load_persisted_roots()}
+        assert _norm(exists) in loaded, f"existing root not remembered: {loaded}"
+        assert _norm(root / "gone") not in loaded, f"non-existent root not filtered: {loaded}"
+
+
+def test_IDX_INV_09_cold_build_finds_repo_via_persisted_root(monkeypatch):
+    """The durability guarantee: once a repo root has been remembered, a COLD build
+    (NO windows open -> empty process scan) STILL discovers the repo. This is what
+    makes "move to a new PC / close all windows" not re-break path resolution.
+    See audit-reports/session-pilot-window-count-2026-07-02.md.
+    """
+    import process_scanner
+    with tempfile.TemporaryDirectory(prefix="idx-inv-cold-") as td:
+        root = Path(td)
+        reporoot = root / "myrepos"
+        repo = reporoot / "foo-bar"          # literal-dash repo name
+        _init_repo_with_commit(repo)
+        empty_projects = root / "projects"
+        empty_projects.mkdir()
+
+        monkeypatch.setenv("SP_STATE_DIR", str(root / "state"))
+        monkeypatch.setattr(server, "CLAUDE_PROJECTS_DIRS", [empty_projects])
+        # Pre-seed memory as if a window had been open in this repo before.
+        indexer._save_persisted_roots({str(reporoot)})
+        # COLD: no running Claude windows at all.
+        monkeypatch.setattr(process_scanner, "scan_claude_processes", lambda *a, **k: {})
+
+        idx = indexer.build_session_index()
+        paths = {_norm(r["worktree_path"]) for r in idx["rows"]}
+        assert _norm(repo) in paths, (
+            f"cold build lost the repo — persistence not honoured. rows: {sorted(paths)}"
+        )
+
+
 if __name__ == "__main__":
     # Stand-alone runner (no pytest required)
     class _MP:
