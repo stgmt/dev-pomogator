@@ -210,6 +210,56 @@ def test_IDX_INV_05_cursor_worktrees_filtered_out(monkeypatch):
         )
 
 
+def test_IDX_INV_07_orphan_process_match_uses_real_cwd(monkeypatch):
+    """Regression (window-count bug): a running Claude window in a literal-dash
+    folder (E:/repos/lm-saas) whose JSONL lives in an orphan project dir
+    (E--repos-lm-saas) MUST get (a) worktree_path == the REAL cwd, not the
+    decoder's fabricated `E:/repos/lm/saas`, AND (b) claude_window_open == True.
+
+    Pre-fix: `_decode_claude_dir_name` turned EVERY dash into '/', so the proc_map
+    key 'E:/repos/lm-saas' never matched the row path 'E:/repos/lm/saas' -> the
+    FR-25 open badge was lost and an idle-but-open window was invisible (user saw
+    5 rows for 6 windows). See audit-reports/session-pilot-window-count-2026-07-02.md.
+    """
+    import process_scanner
+    real_cwd = "E:/repos/lm-saas"
+    # The encoder (single source of truth) must map the real cwd to the orphan
+    # dir name — otherwise the whole premise is wrong.
+    assert "E--repos-lm-saas" in server.encode_path_for_claude(real_cwd)
+
+    with tempfile.TemporaryDirectory(prefix="idx-inv-orphan-") as td:
+        base = Path(td) / "projects"
+        proj = base / "E--repos-lm-saas"
+        proj.mkdir(parents=True)
+        # Interactive marker (entrypoint:"cli") so the headless filter does NOT hide it.
+        (proj / "sess-uuid-1.jsonl").write_text(
+            '{"type":"user","entrypoint":"cli","message":{"content":"hi"}}\n',
+            encoding="utf-8",
+        )
+
+        monkeypatch.setattr(server, "CLAUDE_PROJECTS_DIRS", [base])
+        # Force orphan mode (Source B) — no git repos discovered.
+        monkeypatch.setattr(indexer, "discover_repos", lambda extra_roots=None: [])
+        # A live claude.exe in the REAL literal-dash cwd.
+        monkeypatch.setattr(
+            process_scanner, "scan_claude_processes",
+            lambda *a, **k: {real_cwd: [4242]},
+        )
+
+        idx = indexer.build_session_index()
+        mine = [r for r in idx["rows"] if r.get("session_uuid") == "sess-uuid-1"]
+        assert len(mine) == 1, f"expected exactly 1 row, got: {idx['rows']}"
+        r = mine[0]
+        assert r["worktree_path"] == real_cwd, (
+            f"decoder mangled the path instead of using the real cwd: "
+            f"{r['worktree_path']!r} (expected {real_cwd!r})"
+        )
+        assert r["claude_window_open"] is True, (
+            f"FR-25 open badge lost — process->row match failed: {r}"
+        )
+        assert 4242 in (r.get("claude_window_pids") or []), r
+
+
 if __name__ == "__main__":
     # Stand-alone runner (no pytest required)
     class _MP:
