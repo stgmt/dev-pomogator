@@ -22,6 +22,7 @@ import json
 import os
 import re
 import subprocess
+import sys
 import time
 from datetime import datetime
 from pathlib import Path
@@ -133,8 +134,67 @@ def _is_headless_session(jsonl_path) -> bool:
     return val
 
 
-def discover_repos() -> list[Path]:
+# ── Persisted repo roots (cold-state durability) ──────────────────────────────
+# The dashboard learns where the user's repos live from the cwds of RUNNING Claude
+# sessions (see build_session_index). To survive a "cold" state — a fresh PC or all
+# windows closed — it remembers discovered repo roots in a tiny JSON file, so closed
+# session history still resolves to correct paths with zero config. Fail-open: the
+# file is an advisory cache, never required for correctness.
+def _sp_state_dir() -> Path:
+    """State dir, matching the launcher (start-server.ps1/.sh). SP_STATE_DIR wins."""
+    if os.environ.get("SP_STATE_DIR"):
+        return Path(os.environ["SP_STATE_DIR"])
+    if sys.platform == "win32":
+        base = os.environ.get("LOCALAPPDATA") or str(Path.home() / "AppData" / "Local")
+        return Path(base) / "session-pilot"
+    xdg = os.environ.get("XDG_STATE_HOME") or str(Path.home() / ".local" / "state")
+    return Path(xdg) / "session-pilot"
+
+
+def _roots_file() -> Path:
+    return _sp_state_dir() / "repo-roots.json"
+
+
+def _load_persisted_roots() -> set[str]:
+    """Remembered repo roots that STILL exist. Fail-open (empty on any error)."""
+    try:
+        f = _roots_file()
+        if not f.exists():
+            return set()
+        data = json.loads(f.read_text(encoding="utf-8"))
+        if not isinstance(data, list):
+            return set()
+        return {r for r in data if isinstance(r, str) and Path(r).exists()}
+    except Exception:  # noqa: BLE001 — advisory cache, never fatal
+        return set()
+
+
+def _save_persisted_roots(roots: set[str]) -> None:
+    """Atomically persist repo roots (temp file + replace, per atomic-config-save)."""
+    try:
+        d = _sp_state_dir()
+        d.mkdir(parents=True, exist_ok=True)
+        f = _roots_file()
+        tmp = f.with_name(f.name + ".tmp")
+        tmp.write_text(json.dumps(sorted(roots), ensure_ascii=False), encoding="utf-8")
+        os.replace(tmp, f)
+    except Exception:  # noqa: BLE001
+        pass
+
+
+def discover_repos(extra_roots: list[str] | None = None) -> list[Path]:
     """Find git **main** worktrees (not linked worktrees) under scan roots.
+
+    Scan roots, in order (deduped by resolved path):
+      1. REPOS env (os.pathsep-separated) — each entry is treated BOTH as a repo
+         itself AND as a root whose children are scanned (so `REPOS=E:/repos`
+         works, not only `REPOS=E:/repos/foo:E:/repos/bar`).
+      2. Default autodiscovery: ~/repos, /mnt/d/repos, /mnt/c/repos.
+      3. `extra_roots` — roots inferred at runtime (e.g. the parent dirs of
+         running Claude sessions). This is what stops the dashboard degrading to
+         orphan mode with fabricated paths when the user's repos live outside the
+         default roots (e.g. E:/repos). See
+         audit-reports/session-pilot-window-count-2026-07-02.md.
 
     Linked git worktrees have `.git` as a file (gitdir pointer) — including
     those produces N×M cartesian explosion in `build_worktree_index` because
@@ -142,23 +202,41 @@ def discover_repos() -> list[Path]:
     on `.git` being a directory to keep only main worktrees.
     """
     repos: list[Path] = []
+    seen: set[str] = set()
+
+    def _add_repo(p: Path) -> None:
+        try:
+            if p.is_dir() and (p / ".git").is_dir():
+                key = str(p.resolve()).replace("\\", "/").lower()
+                if key not in seen:
+                    seen.add(key)
+                    repos.append(p)
+        except OSError:
+            pass
+
+    def _scan_root(root: Path) -> None:
+        try:
+            if not root.exists():
+                return
+            for child in root.iterdir():
+                _add_repo(child)
+        except OSError:
+            pass
+
     explicit = os.environ.get("REPOS")
     if explicit:
         # Use os.pathsep — ':' clashes with Windows drive letters (C:/...).
         for p in explicit.split(os.pathsep):
             if not p:
                 continue
-            p = Path(p)
-            if p.is_dir() and (p / ".git").is_dir():
-                repos.append(p)
-        return repos
-    candidates = [Path.home() / "repos", Path("/mnt/d/repos"), Path("/mnt/c/repos")]
-    for root in candidates:
-        if not root.exists():
-            continue
-        for child in root.iterdir():
-            if child.is_dir() and (child / ".git").is_dir():
-                repos.append(child)
+            pp = Path(p)
+            _add_repo(pp)    # entry may be a repo itself
+            _scan_root(pp)   # ...or a root whose children are repos
+    else:
+        for root in (Path.home() / "repos", Path("/mnt/d/repos"), Path("/mnt/c/repos")):
+            _scan_root(root)
+    for r in (extra_roots or []):
+        _scan_root(Path(r))
     return repos
 
 
@@ -536,7 +614,26 @@ def build_session_index() -> dict:
         pids = proc_map.get(norm1, [])
         return bool(pids), list(pids)
 
-    repos = discover_repos()
+    # Scan roots come from THREE places so the dashboard finds the user's repos
+    # without config, and keeps finding them in cold state (all windows closed / a
+    # fresh PC): (1) the parents of currently-running session cwds, (2) the persisted
+    # memory of previously-discovered roots, plus the built-in defaults inside
+    # discover_repos. See audit-reports/session-pilot-window-count-2026-07-02.md.
+    _proc_roots: set[str] = set()
+    for _cwd in proc_map:
+        parent = os.path.dirname(_cwd.rstrip("/"))
+        if parent:
+            _proc_roots.add(parent)
+    _persisted_roots = _load_persisted_roots()
+    repos = discover_repos(extra_roots=sorted(_proc_roots | _persisted_roots))
+    # Remember the PARENT of every discovered repo (a proven-useful root) so the next
+    # cold build finds them even with no window open. Only write when something new.
+    try:
+        _useful = {str(r.resolve().parent).replace("\\", "/") for r in repos}
+        if _useful and not _useful <= _persisted_roots:
+            _save_persisted_roots(_persisted_roots | _useful)
+    except Exception:  # noqa: BLE001 — persistence is advisory, never fatal
+        pass
     rows: list[dict] = []
     seen_paths: set[str] = set()
     a_cwds: set[str] = set()  # Source A cwds (normalized) — for B dedup
@@ -624,6 +721,16 @@ def build_session_index() -> dict:
     # Filter out Claude Code meta dirs (C--Users-*--claude-*).
     now_ts = time.time()
     threshold = _server.RUNNING_THRESHOLD_SEC
+    # Fix 1: reverse index for exact orphan matching. Encode each running-process
+    # cwd (from proc_map) and map every encoded variant -> the REAL cwd. Orphan
+    # dir names are ENCODED; the decoder is lossy (a literal dash in a folder like
+    # `lm-saas` decodes to the non-existent `lm/saas`), so when a live process
+    # forward-encodes to this dir name we use its real cwd instead of decoding.
+    # See audit-reports/session-pilot-window-count-2026-07-02.md.
+    proc_encoded: dict[str, str] = {}
+    for _cwd in proc_map:
+        for _v in _server.encode_path_for_claude(_cwd):
+            proc_encoded.setdefault(_v, _cwd)
     for base_dir in _server.CLAUDE_PROJECTS_DIRS:
         if not base_dir.exists():
             continue
@@ -638,20 +745,29 @@ def build_session_index() -> dict:
             # forward-encoded variants → already covered, skip silently.
             if name in a_encoded_variants:
                 continue
-            candidates = _decode_claude_dir_name(name)
-            decoded = None
-            decoded_exists = False
-            for c in candidates:
-                from pathlib import Path as _P
-                cp = _P(c)
-                if cp.exists():
-                    decoded = c
-                    decoded_exists = True
-                    break
-            if not decoded:
-                # Use first candidate but flag stale
-                decoded = candidates[0] if candidates else f"<unknown:{name}>"
+            # Fix 1: prefer a running process's REAL cwd if it forward-encodes to
+            # this dir name (exact — avoids the decoder's dash/slash ambiguity that
+            # mangles literal-dash folders like `lm-saas` -> `lm/saas` and breaks
+            # the FR-25 open-window match).
+            real_cwd = proc_encoded.get(name)
+            if real_cwd:
+                decoded = real_cwd.replace("\\", "/").rstrip("/")
+                decoded_exists = True
+            else:
+                candidates = _decode_claude_dir_name(name)
+                decoded = None
                 decoded_exists = False
+                for c in candidates:
+                    from pathlib import Path as _P
+                    cp = _P(c)
+                    if cp.exists():
+                        decoded = c
+                        decoded_exists = True
+                        break
+                if not decoded:
+                    # Use first candidate but flag stale
+                    decoded = candidates[0] if candidates else f"<unknown:{name}>"
+                    decoded_exists = False
             decoded_norm = decoded.replace("\\", "/").rstrip("/")
             # Match jsonls for this exact encoded dir (no fuzzy — orphan is exact)
             jsonls_for_dir: list[dict] = []
