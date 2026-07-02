@@ -6,7 +6,9 @@ description: >
   coverage высокий но mutation score низкий".
   Triggers (RU): "напиши крепкие тесты", "сильные тесты",
   "mutation testing", "переписать тесты сильнее",
-  "проверь тесты на крепкость".
+  "проверь тесты на крепкость",
+  "шаг UndefinedStep / не найден но метод есть",
+  "тест выглядит багом Reqnroll/фреймворка / binding не регистрируется".
   Triggers (EN): "write strong tests", "strengthen tests",
   "mutation-resistant tests", "fix weak tests",
   "no fake-positive tests".
@@ -904,6 +906,16 @@ skeleton (`SPECGEN004_185` / `gherkin-parser-impl`, tag-inheritance via the real
    quick in-process `scan()`-style call to see which branch a fixture reaches before authoring (see
    `audit-reports/stryker-bdd-mutation-finding.md`).
 
+**Debug — шаг репортит `UndefinedStep` / `No matching step definition`, ХОТЯ step-def существует:**
+НЕ списывай на «баг фреймворка / binding-discovery аномалию». В 100% случаев это (a) тест бежит по
+**устаревшей сборке** без метода (билд молча крашнулся — `MSB4166`), либо (b) текст шага мис-парсится
+как **cucumber-выражение** (`/` `{}` `()` — спецсимволы: `tags/description` = «tags ИЛИ description»,
+литерал не матчит). Детект за 10с (docker НЕ нужен): grep скомпилированной dll на литерал шага
+(докажи, что метод СОБРАН) → затем проверь текст атрибута на cucumber-спецсимволы. Полный
+разбор + триггер-эвристики + лечение: [`references/anti-patterns.md`](references/anti-patterns.md)
+**Part C** (10a STALE_BUILD_UNDEFINED, 10b CUCUMBER_SLASH_UNDEFINED). Это fake-результат (шаг не
+исполнил код) той же природы, что #9 FAKE_FIXTURE — strong-тест обязан РЕАЛЬНО исполнить целевой код.
+
 **Never**: fabricate a scenario for a genuinely-unbuilt task (flag it `_waived:` / honest status);
 author in `tests/features/`; flip before green; copy production logic into the step-def.
 
@@ -1007,7 +1019,7 @@ These are non-negotiable. If your output violates any, redo before submitting.
 
 ## References
 
-- [`references/anti-patterns.md`](references/anti-patterns.md) — 8 anti-patterns full detail + honnibal-style 8-category AI-driven mutation catalogue
+- [`references/anti-patterns.md`](references/anti-patterns.md) — Part A: 9 fake-positive anti-patterns full detail; Part B: honnibal-style 8-category AI-driven mutation catalogue; Part C: BDD step-binding fakeouts (`UndefinedStep` that isn't a framework bug — stale-build + cucumber-`/`, with trigger/detect + cure)
 - [`references/tooling-setup.md`](references/tooling-setup.md) — install + run + threshold per stack (6 stacks)
 - [`scripts/run-mutation.ts`](scripts/run-mutation.ts) — auto-detect stack + dispatch Stryker/mutmut subprocess + standardized JSON output
 

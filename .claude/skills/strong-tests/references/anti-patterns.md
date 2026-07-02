@@ -313,3 +313,105 @@ lines.push(env({ testCaseFinished: { testCaseStartedId: 'tcs', timestamp: { seco
 - `Cascading` — one mutation breaks 10+ tests; suggests over-coupled tests or under-isolated production code.
 
 **Credits:** Catalogue + diagnostic-quality rating verbatim from honnibal/claude-skills `mutation-testing.md.txt`. Extended to multi-stack by `strong-tests`.
+
+---
+
+## Part C — BDD step-binding fakeouts: `UndefinedStep` that is NOT a framework bug
+
+> **Когда грузить:** BDD (Reqnroll/SpecFlow/cucumber) шаг репортит `UndefinedStep` /
+> `No matching step definition found`, ХОТЯ метод-биндинг точно есть в исходнике (`grep` по
+> `*Steps.cs` находит `[Given/When/Then]`). Симптом мимикрирует под «binding-discovery аномалию
+> фреймворка» / «часть шагов класса видна, часть нет» / «даже свежий класс невидим». В 100% случаев
+> это **не фреймворк** — либо тест бежит по устаревшей сборке, либо текст шага мис-парсится как
+> cucumber-выражение. Родня anti-pattern #9 (FAKE_FIXTURE): там UNDEFINED/PENDING схлопывался в
+> PASSED — здесь UNDEFINED мис-атрибутируется фреймворку; оба = fake-результат, тест не исполнил код.
+>
+> **Почему это в strong-tests:** «сильный» тест обязан РЕАЛЬНО исполнить целевой код. Шаг в статусе
+> UndefinedStep (молча skipped / ошибочно списанный на «баг Reqnroll») = нулевое покрытие под маской
+> «инфра сломана». Триггер-эвристики ниже отличают реальный факап от мнимой аномалии за 10 секунд,
+> БЕЗ запуска стенда (docker не нужен).
+
+### 10a. STALE_BUILD_UNDEFINED — тест бежит по устаревшей dll без метода
+
+**Severity:** HIGH (30pt — нулевое исполнение под маской «фреймворк глючит»).
+
+**Корень:** `dotnet test --no-build` / раннер реюзает `bin/`, а билд, который должен был добавить
+биндинг, **молча не дособрался** (`MSB4166 "child node exited prematurely"` — краш ноды билда на
+OOM/поломанном окружении). Рантайм грузит СТАРУЮ сборку без метода → рефлексия Reqnroll его не видит →
+честный `UndefinedStep`. Это НЕ «замороженный реестр биндингов»: `RuntimeBindingRegistryBuilder` —
+чистая рефлексия по загруженной сборке каждый прогон; если метод в dll — он зарегистрируется.
+
+**Триггер/детект (docker НЕ нужен):**
+```bash
+DLL="bin/Debug/net10.0/<Assembly>.Tests.dll"
+# 1) mtime: исходник новее dll = гарантированно stale
+stat -c '%y %n' "$DLL"; stat -c '%y %n' path/to/XxxSteps.cs
+# 2) строковый литерал шага внутри dll (строки .NET dll = UTF-16LE)
+python3 -c "print(open(r'$DLL','rb').read().count('получила непустой tags'.encode('utf-16-le')))"
+#   0 = метода в dll НЕТ (stale) → причина UndefinedStep найдена; НЕ вини фреймворк
+#   1 = метод в dll есть → переходи к 10b (мис-парс выражения)
+```
+Ищи **литерал регекса** `[Then]`-атрибута (UTF-16), НЕ имя метода (member-ref, не UTF-16-литерал).
+
+**Лечение:** честная успешная сборка, затем перепроверь детект:
+```bash
+rm -f bin/Debug/net*/<Assembly>.Tests.dll
+dotnet build -m:1 -v:m -clp:ErrorsOnly     # -m:1 = serial node, обходит MSB4166 краш ноды
+# → "0 Error(s)", re-grep dll: 0 → 1 = биндинг теперь скомпилирован → только теперь гонять BDD
+```
+
+### 10b. CUCUMBER_SLASH_UNDEFINED — `/` (или `{}` `()`) в тексте шага = cucumber-альтернатива
+
+**Severity:** HIGH (30pt).
+
+**Корень:** Reqnroll 2.x / cucumber трактует строку `[When("...")]` как **Cucumber Expression** (не
+regex), если нет regex-признаков. В Cucumber Expression `/` = разделитель альтернатив:
+`tags/description` → «`tags` ИЛИ `description`», а НЕ литерал `tags/description` → шаг с буквальным
+`tags/description` не находит привязку → `UndefinedStep`, хотя метод скомпилирован.
+
+**BAD:**
+```csharp
+[When(@"я синхронизирую tags/description моделей")]   // "/" → cucumber-альтернатива → не матчит литерал
+public async Task Sync() { ... }
+```
+```gherkin
+Когда я синхронизирую tags/description моделей        # UndefinedStep
+```
+
+**GOOD:**
+```csharp
+[When(@"я синхронизирую tags и description моделей")]  // reword без "/"
+```
+```gherkin
+Когда я синхронизирую tags и description моделей
+```
+Альтернатива (если `/` нужен): заякорить `[When(@"^...tags/description...$")]` — `^`/`$` заставляют
+Reqnroll трактовать как regex → `/` литерален.
+
+**Дискриминатор «cucumber vs regex» (объясняет «половина шагов класса видна, половина нет»):**
+
+| Текст атрибута | Трактовка | спецсимвол? | Результат |
+|---|---|---|---|
+| `модель "(.*)" уже размечена` | regex (есть `(.*)`) | — | ✅ матч |
+| `labels-sync не бросил исключение` | cucumber (плоский) | нет | ✅ матч |
+| `я синхронизирую tags/description моделей` | cucumber | **`/`** | ❌ UndefinedStep |
+
+**Триггер/детект:** текст атрибута содержит `/` `{` `}` `(` `)` И НЕ содержит regex-признаков
+(`(.*)`, `^`, `$`, `\d`) → это cucumber-выражение, символ трактуется специально. Grep-эвристика:
+```
+\[(Given|When|Then)\(@?"[^"^$]*[/{}][^"]*"\)]     # шаг со слэшем/фигурными без regex-анкоров
+```
+
+**Detection heuristic (общий, для обоих 10a/10b):** прежде чем списать `UndefinedStep` на «баг
+фреймворка/binding-discovery» — (1) grep dll на литерал шага (докажи, что метод СОБРАН), (2) если
+собран — проверь текст атрибута на cucumber-спецсимволы. Только после этих двух шагов делай вывод.
+
+**Self-eval items violated:** #11 (No trivial input — шаг вообще не исполняется), #12 (Self-challenge —
+«а точно ли тест исполнил целевой код, или он UndefinedStep/skipped?»).
+
+**Живой кейс:** lm-saas issue #102 TAG-003/004/005 (2026-07-03) — многосессионная охота на
+«Reqnroll binding-discovery anomaly» (8 техник, web research — все мимо). Двойной конфаундер: сперва
+10a (dll собрана `00:41`, Steps.cs `00:51`, grep литерала = 0), затем `dotnet build -m:1` → grep = 1,
+но всё ещё UndefinedStep → 10b (`tags/description` cucumber-`/`). Reword → `Passed 5/5`. Полные разборы:
+`lm-saas/.claude/rules/gotchas/stale-bin-dll-fakes-reqnroll-undefined-step.md` +
+`reqnroll-cucumber-slash-alternative-undefined.md`.
