@@ -22,7 +22,7 @@ const INSTALL_HINT =
  * with a non-empty entry list). The worker pid/db file under ~/.claude-mem is a fallback for an
  * install that registered outside that manifest. Mirrors tools/claude-mem-bootstrap detection.
  */
-function isClaudeMemInstalled(homeDir: string): boolean {
+export function isClaudeMemInstalled(homeDir: string): boolean {
   try {
     const manifest = path.join(homeDir, '.claude', 'plugins', 'installed_plugins.json');
     const data = JSON.parse(fs.readFileSync(manifest, 'utf-8')) as { plugins?: Record<string, unknown[]> };

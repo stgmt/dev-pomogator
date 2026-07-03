@@ -37,3 +37,9 @@ The pomogator-doctor MUST report whether claude-mem is installed (check `C-CMEM`
 The doctor MCP-parse check (`C11`) MUST read the canonical user-global config `~/.claude.json` (NOT the non-existent `~/.claude/mcp.json`) in addition to the project `.mcp.json`, so globally-registered MCP servers are visible.
 
 **Связанные AC:** [AC-6](ACCEPTANCE_CRITERIA.md#ac-6-fr-6-feature6)
+
+## FR-7: Worker reaper heals a wedged port @feature7
+
+On Windows a SIGKILL'd claude-mem worker can leave an orphaned `chroma-mcp` child holding the fixed worker port (37777) under a dead PID, blocking every new worker with EADDRINUSE and ultimately blocking every tool call via the fail-loud `process.exit(2)`. The `claude-mem-reaper` SessionStart hook (`tools/claude-mem-health/health-check.ts`) MUST, when the worker is unreachable AND the port is held by a dead PID, kill ONLY orphaned processes whose command line carries a claude-mem signature AND whose parent is dead — freeing the port — then reset the `hook-failures.json` counter. When the worker is healthy, the platform is not Windows, the port is free, or the port owner is alive, it MUST NOT kill anything. The decision is the pure function `reaperDecision(input)`. Opt-out: `DEV_POMOGATOR_CLAUDE_MEM_REAP=off`.
+
+**Связанные AC:** [AC-7](ACCEPTANCE_CRITERIA.md#ac-7-fr-7-feature7)

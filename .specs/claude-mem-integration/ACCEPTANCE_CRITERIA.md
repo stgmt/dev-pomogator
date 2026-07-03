@@ -44,3 +44,15 @@
 **Требование:** [FR-6](FR.md#fr-6-doctor-reads-the-canonical-global-mcp-config-feature6)
 
 - WHEN a referenced MCP server is registered in `~/.claude.json` THEN the doctor `C11` check SHALL report it as configured
+
+## AC-7 (FR-7) @feature7
+
+**Требование:** [FR-7](FR.md#fr-7-worker-reaper-heals-a-wedged-port-feature7)
+
+- WHEN the platform is not Windows THEN `reaperDecision` SHALL return `skip-not-windows` and kill nothing
+- WHEN the worker `/api/health` responds 200 THEN `reaperDecision` SHALL return `skip-healthy` and kill nothing
+- WHEN the worker is unreachable AND the port is not listening THEN `reaperDecision` SHALL return `skip-not-wedged` and kill nothing
+- WHEN the worker is unreachable AND the port is listening AND the port owner is alive THEN `reaperDecision` SHALL return `skip-owner-alive` and kill nothing
+- WHEN the worker is unreachable AND the port is held by a dead PID THEN `reaperDecision` SHALL return `reap` with ONLY the orphaned claude-mem-signature PIDs
+- WHEN a wedged snapshot contains no orphaned claude-mem process THEN `reaperDecision` SHALL kill nothing
+- WHEN the reaper reaps THEN it SHALL reset `hook-failures.json` `consecutiveFailures` to 0

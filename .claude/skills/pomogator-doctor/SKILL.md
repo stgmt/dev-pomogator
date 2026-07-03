@@ -70,6 +70,35 @@ Skill проверяет 21 environment aspect (21 CheckDefinitions в `checks/i
 
 `doctor-hook.ts` registered как SessionStart hook через plugin's `.claude-plugin/hooks.json`. Quiet mode — outputs только при detected problems. Fail-soft per NFR-R-2: any error logs к `~/.dev-pomogator/logs/doctor.log` и exits clean.
 
+## claude-mem worker wedged (Windows) — root cause + auto-heal
+
+**Symptom:** `claude-mem worker unreachable for N consecutive hooks` surfaced as a BLOCKING
+PostToolUse error (claude-mem does `process.exit(2)` at its fail-loud threshold), hitting every
+tool call in every project. Users saw it ~3×/day and were told to reboot.
+
+**Root cause (Windows-only, proven live 2026-07-03):** claude-mem's worker binds a fixed port
+(`37700 + (getuid ?? 77) % 100` → always 37777, `getuid` is undefined on Windows). Under load its
+observer LLM aborts on timeout → returns empty → after 3 in a row claude-mem SIGKILLs the worker.
+The worker had spawned `chroma-mcp` as a child, which **inherited the 37777 listening-socket
+handle** (Windows inherits handles by default). SIGKILL kills the worker but the orphaned
+`chroma-mcp` survives and keeps the socket bound under the now-dead worker PID → every new worker
+fails `Is port 37777 in use?` → wedge. It is NOT a kernel zombie — a LIVE orphan holds it, so
+killing that orphan frees the port **without reboot**. Known unfixed upstream: thedotmack/claude-mem
+issues #415/#1531/#2111/#213/#729.
+
+**Auto-heal (no reboot, no port change):** the `claude-mem-reaper` SessionStart hook
+(`tools/claude-mem-health/health-check.ts`) runs every session start: probes `/api/health`; if
+unhealthy AND the port is held by a dead PID, it kills only orphaned processes whose command line
+carries a claude-mem signature (`chroma-mcp …/.claude-mem`, `…/claude-mem/…/worker-service.cjs`)
+and whose parent is dead — freeing the port — then resets `hook-failures.json`. Surgical matcher:
+a live worker (health 200) is never touched; a non-claude-mem orphan is never killed. Opt out with
+`DEV_POMOGATOR_CLAUDE_MEM_REAP=off`.
+
+**Doctor surface:** check `C-CMEM-W` (`checks/claude-mem-worker.ts`) reports worker runtime health
+(probe + `hook-failures.json` counter) as ok / warning / critical, so a degraded worker is VISIBLE
+instead of silently blocking. It does not kill anything (diagnostic only) — the reaper hook owns
+the fix and heals on the next session.
+
 ## Slash command companion
 
 `.claude/commands/pomogator-doctor.md` provides `/pomogator-doctor` slash command — alternative invocation от skill. Both call same engine; command output verbose with severity grouping, skill output adapted к conversation context.
