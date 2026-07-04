@@ -30,11 +30,12 @@
  * @see .specs/tui-test-runner/tui-test-runner.feature
  * @see .claude/skills/bdd-migrator/SKILL.md
  */
-import { Given, When, Then } from '@cucumber/cucumber';
+import { Given, When, Then, After } from '@cucumber/cucumber';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import crossSpawn from 'cross-spawn';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { V4World } from '../hooks/before-after.ts';
@@ -745,6 +746,248 @@ Then(
 // (same shape the v1 vitest twin used). We clean our own session files after.
 const WRAP_STATUS_DIR = '.dev-pomogator/.test-status';
 const WRAP_SESSION = 'wrapbdd1';
+
+// ---------------------------------------------------------------------------
+// @feature16 — FR-16..FR-19 robust wrapper process lifecycle (WRAP001).
+// Drives the REAL wrapper as a live process: on interrupt / self-timeout it must
+// gracefully terminate the child tree (no forced kill), leaving docker to the tests.
+// ---------------------------------------------------------------------------
+
+const WRAP_LONG_CHILD =
+  `require('fs').writeFileSync(process.env.WRAP_PIDFILE, String(process.pid)); setInterval(() => {}, 100000);`;
+
+// The wrapper truncates the session to the first 8 chars for the status filename
+// (test_runner_wrapper.ts: `prefix = SESSION.slice(0, 8)`), so mirror that here.
+const wrapStatusPath = (session: string): string => {
+  const prefix = session.length >= 8 ? session.slice(0, 8) : session;
+  return appPath(WRAP_STATUS_DIR, `status.${prefix}.yaml`);
+};
+
+interface WrapRun {
+  proc: ReturnType<typeof crossSpawn>;
+  stderr: string;
+  stdout: string;
+  closed: Promise<{ code: number | null; signal: NodeJS.Signals | null }>;
+}
+
+/**
+ * Spawn the wrapper directly via `node --import tsx wrapper.ts <childCmd...>` so a
+ * later proc.kill('SIGINT') reaches the wrapper itself (npx would swallow the signal).
+ */
+function spawnWrapperAsync(childCmd: string[], extraEnv: Record<string, string>, pidFile: string): WrapRun {
+  const wrapper = appPath('tools/tui-test-runner/test_runner_wrapper.ts');
+  const proc = crossSpawn(process.execPath, ['--import', 'tsx', wrapper, ...childCmd], {
+    cwd: REPO_ROOT,
+    env: { ...process.env, FORCE_COLOR: '0', WRAP_PIDFILE: pidFile, TEST_RUNNER_KILL_GRACE_MS: '800', ...extraEnv },
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+  const run: WrapRun = {
+    proc,
+    stderr: '',
+    stdout: '',
+    closed: new Promise((resolve) => proc.on('close', (code, signal) => resolve({ code, signal }))),
+  };
+  proc.stdout?.on('data', (b: Buffer) => { run.stdout += b.toString('utf-8'); });
+  proc.stderr?.on('data', (b: Buffer) => { run.stderr += b.toString('utf-8'); });
+  return run;
+}
+
+const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
+
+async function waitForFile(p: string, timeoutMs: number): Promise<void> {
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
+    try {
+      if (fs.existsSync(p) && fs.readFileSync(p, 'utf-8').trim().length > 0) return;
+    } catch { /* mid-write — retry */ }
+    await sleep(50);
+  }
+  throw new Error(`waitForFile: ${p} was not written within ${timeoutMs}ms`);
+}
+
+function isAlive(pid: number): boolean {
+  try { process.kill(pid, 0); return true; } catch { return false; }
+}
+
+async function waitForDead(pid: number, timeoutMs: number): Promise<boolean> {
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
+    if (!isAlive(pid)) return true;
+    await sleep(50);
+  }
+  return !isAlive(pid);
+}
+
+// Defensive test teardown ONLY (scoped to @feature16): reap any surviving test child and
+// remove temp artifacts. Production code never force-kills — this is test hygiene.
+After({ tags: '@feature16' }, function (this: TuiWorld) {
+  const pid = (this as any).wrapChildPid as number | undefined;
+  if (pid && isAlive(pid)) { try { process.kill(pid, 'SIGKILL'); } catch { /* already gone */ } }
+  const dir = (this as any).wrapTmpDir as string | undefined;
+  if (dir) { try { fs.rmSync(dir, { recursive: true, force: true }); } catch { /* best-effort */ } }
+  const statusFile = (this as any).wrapStatusFile as string | undefined;
+  if (statusFile) {
+    try {
+      fs.rmSync(statusFile, { force: true });
+      fs.rmSync(statusFile.replace('status.', 'test.').replace('.yaml', '.log'), { force: true });
+    } catch { /* best-effort */ }
+  }
+});
+
+// --- WRAP001_01: framework path, interrupt → child tree actually dies + marker cleaned ---
+Given(/^the test runner wrapper is running a long-lived child process$/, async function (this: TuiWorld) {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'wraptest-'));
+  const pidFile = path.join(dir, 'child.pid');
+  const session = `wraplife-${process.pid}`;
+  const run = spawnWrapperAsync(['node', '-e', WRAP_LONG_CHILD], {
+    TEST_STATUSLINE_SESSION: session,
+    TEST_STATUSLINE_PROJECT: appPath(),
+    TEST_SKIP_DISCOVERY: '1',
+    TEST_STATUS_DIR: WRAP_STATUS_DIR,
+  }, pidFile);
+  await waitForFile(pidFile, 15000);
+  (this as any).wrapRun = run;
+  (this as any).wrapChildPid = Number(fs.readFileSync(pidFile, 'utf-8').trim());
+  (this as any).wrapTmpDir = dir;
+  (this as any).wrapStatusFile = wrapStatusPath(session);
+});
+
+When(/^the wrapper receives an interrupt signal$/, async function (this: TuiWorld) {
+  const run = (this as any).wrapRun as WrapRun;
+  run.proc.kill('SIGINT');
+  (this as any).wrapClose = await run.closed;
+});
+
+Then(/^the child process tree should be terminated$/, async function (this: TuiWorld) {
+  const pid = (this as any).wrapChildPid as number;
+  assert.ok(await waitForDead(pid, 6000), `expected the child pid ${pid} to be terminated after the interrupt`);
+});
+
+Then(/^the wrapper should remove its PID marker before exit$/, function (this: TuiWorld) {
+  const run = (this as any).wrapRun as WrapRun;
+  assert.match(run.stderr, /\[marker\] DELETED/, 'expected the wrapper to delete its PID marker on interrupt');
+});
+
+// --- WRAP001_02: self-timeout → exceeded status + child terminated + non-zero exit ---
+Given(/^the test runner wrapper runs a long-lived child with a short self timeout$/, async function (this: TuiWorld) {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'wraptest-'));
+  const pidFile = path.join(dir, 'child.pid');
+  const session = `wraptimeout-${process.pid}`;
+  const run = spawnWrapperAsync(['node', '-e', WRAP_LONG_CHILD], {
+    TEST_STATUSLINE_SESSION: session,
+    TEST_STATUSLINE_PROJECT: appPath(),
+    TEST_SKIP_DISCOVERY: '1',
+    TEST_STATUS_DIR: WRAP_STATUS_DIR,
+    TEST_RUNNER_TIMEOUT_MS: '2000',
+  }, pidFile);
+  await waitForFile(pidFile, 15000);
+  (this as any).wrapRun = run;
+  (this as any).wrapChildPid = Number(fs.readFileSync(pidFile, 'utf-8').trim());
+  (this as any).wrapTmpDir = dir;
+  (this as any).wrapStatusFile = wrapStatusPath(session);
+});
+
+When(/^the self-imposed timeout elapses$/, async function (this: TuiWorld) {
+  const run = (this as any).wrapRun as WrapRun;
+  (this as any).wrapClose = await run.closed; // resolves when the wrapper exits via the timeout path
+});
+
+Then(/^the wrapper should write a run exceeded timeout status$/, async function (this: TuiWorld) {
+  const statusFile = (this as any).wrapStatusFile as string;
+  assert.ok(fs.existsSync(statusFile), `expected the wrapper status file at ${statusFile}`);
+  const { parse } = await import('yaml');
+  const status = parse(fs.readFileSync(statusFile, 'utf-8')) as Record<string, unknown>;
+  assert.match(String(status.error_message ?? ''), /exceeded/i, 'expected the timeout-exceeded message in the YAML status');
+});
+
+Then(/^the wrapper should terminate the child tree and exit non-zero$/, async function (this: TuiWorld) {
+  const close = (this as any).wrapClose as { code: number | null; signal: string | null };
+  assert.notEqual(close.code, 0, `expected a non-zero wrapper exit after the timeout, got ${String(close.code)}`);
+  const pid = (this as any).wrapChildPid as number;
+  assert.ok(await waitForDead(pid, 6000), `expected the child pid ${pid} to be terminated by the self-timeout`);
+});
+
+// --- WRAP001_03: TEST_RUNNER_TIMEOUT_MS=0 disables the self-timer (real resolver) ---
+Given(/^the test runner wrapper is configured with a zero self timeout$/, function () { /* asserted in the When/Then via the real resolver */ });
+
+When(/^the wrapper starts a child$/, async function (this: TuiWorld) {
+  const mod = await import(pathToFileURL(appPath('tools/_shared/process-tree.ts')).href);
+  (this as any).zeroTimeout = mod.resolveSelfTimeoutMs('0');
+  (this as any).defaultTimeout = mod.resolveSelfTimeoutMs(undefined);
+});
+
+Then(/^the wrapper should not arm a self-imposed timeout$/, function (this: TuiWorld) {
+  assert.equal((this as any).zeroTimeout, 0, 'TEST_RUNNER_TIMEOUT_MS=0 must resolve to 0 so the wrapper does not arm a timer');
+  assert.equal((this as any).defaultTimeout, 1_800_000, 'the default self-timeout must be 30 minutes');
+});
+
+// --- WRAP001_04: windows branch records a graceful taskkill /T intent, never /F ---
+Given(/^the process tree signaller runs on windows with kill recording enabled$/, function (this: TuiWorld) {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'wraprec-'));
+  (this as any).recordFile = path.join(dir, 'kills.json');
+  (this as any).wrapTmpDir = dir;
+});
+
+When(/^the signaller is asked to terminate a child pid$/, async function (this: TuiWorld) {
+  const mod = await import(pathToFileURL(appPath('tools/_shared/process-tree.ts')).href);
+  mod.signalProcessTree(4242, { platform: 'win32', recordFile: (this as any).recordFile });
+});
+
+Then(/^it should record a taskkill tree intent$/, function (this: TuiWorld) {
+  const rec = JSON.parse(fs.readFileSync((this as any).recordFile, 'utf-8')) as Array<{ cmd: string; args: string[] }>;
+  assert.equal(rec.length, 1, 'expected exactly one recorded intent');
+  const intent = rec[0];
+  assert.equal(intent.cmd, 'taskkill', 'windows branch must use taskkill');
+  assert.ok(intent.args.includes('/T'), 'expected the whole-tree flag /T');
+  assert.ok(intent.args.includes('/PID'), 'expected a targeted /PID');
+  (this as any).recordedIntent = intent;
+});
+
+Then(/^the recorded intent should not include the force flag$/, function (this: TuiWorld) {
+  const intent = (this as any).recordedIntent as { args: string[] };
+  assert.ok(!intent.args.includes('/F'), 'graceful termination must NOT force-kill (no /F)');
+});
+
+// --- WRAP001_05: passthrough (no session) path, interrupt → child tree actually dies ---
+Given(/^the test runner wrapper runs a long-lived child in passthrough mode$/, async function (this: TuiWorld) {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'wraptest-'));
+  const pidFile = path.join(dir, 'child.pid');
+  // Empty session forces the passthrough branch regardless of any inherited session env.
+  const run = spawnWrapperAsync(['node', '-e', WRAP_LONG_CHILD], { TEST_STATUSLINE_SESSION: '' }, pidFile);
+  await waitForFile(pidFile, 15000);
+  (this as any).wrapRun = run;
+  (this as any).wrapChildPid = Number(fs.readFileSync(pidFile, 'utf-8').trim());
+  (this as any).wrapTmpDir = dir;
+});
+
+Then(/^the passthrough child process tree should be terminated$/, async function (this: TuiWorld) {
+  const pid = (this as any).wrapChildPid as number;
+  assert.ok(await waitForDead(pid, 6000), `expected the passthrough child pid ${pid} to be terminated after the interrupt`);
+});
+
+// --- WRAP001_06: shim lifts the tsx-runner 180s ceiling for wrapper runs ---
+Given(/^the test statusline shim launches the wrapper via tsx-runner$/, function () { /* driven in the When step */ });
+
+When(/^TSX_RUNNER_TIMEOUT is not set in the environment$/, function (this: TuiWorld) {
+  const shim = appPath('tools/test-statusline/test_runner_wrapper.cjs');
+  const echo = `console.log('SEEN_TSX_TIMEOUT=' + (process.env.TSX_RUNNER_TIMEOUT || 'unset'));`;
+  const env: Record<string, string> = { ...process.env, FORCE_COLOR: '0' } as Record<string, string>;
+  delete env.TSX_RUNNER_TIMEOUT;
+  const res = crossSpawn.sync(process.execPath, [shim, 'node', '-e', echo], {
+    encoding: 'utf-8',
+    cwd: REPO_ROOT,
+    env,
+    timeout: 30000,
+  });
+  (this as any).shimOutput = `${res.stdout || ''}${res.stderr || ''}`;
+});
+
+Then(/^the shim should pass a large TSX_RUNNER_TIMEOUT to tsx-runner$/, function (this: TuiWorld) {
+  const out = (this as any).shimOutput as string;
+  const m = out.match(/SEEN_TSX_TIMEOUT=(\d+)/);
+  assert.ok(m, `expected the child to echo a numeric TSX_RUNNER_TIMEOUT, got: ${out.slice(0, 300)}`);
+  assert.ok(Number(m[1]) >= 1_800_000, `expected a large (>=30min) TSX_RUNNER_TIMEOUT, got ${m[1]}`);
+});
 
 Given(
   /^a child test command that prints one pass and one fail$/,

@@ -127,3 +127,51 @@ WHEN `/run-tests` резолвит фреймворк THEN dispatch table SHALL 
 WHEN wrapper или passthrough запускает дочернюю npx-команду THEN он SHALL сделать это кроссплатформенно, вернуть exit 0 и напечатать semver-версию.
 
 WHEN добавляется новый фреймворк THEN он SHALL требовать ровно одну новую строку в dispatch table.
+
+## AC-15 (FR-16): Graceful test-process termination on interrupt @feature16
+
+**Требование:** [FR-16](FR.md#fr-16-graceful-test-process-termination-on-interrupt-feature16)
+
+WHEN обёртка получает SIGTERM/SIGINT/SIGHUP во время активного прогона THEN обёртка SHALL мягко завершить дерево дочернего процесса и удалить PID-маркер до выхода.
+
+WHEN платформа Windows AND задан TEST_RUNNER_KILL_RECORD THEN сигнальщик дерева SHALL записать намерение `taskkill /PID <pid> /T` без флага `/F` в файл вместо реального сигнала.
+
+IF платформа Linux/Mac THEN сигнальщик SHALL послать SIGTERM группе процессов дочернего дерева.
+
+IF процесс не завершился за grace-окно после мягкого сигнала THEN обёртка SHALL добить дерево принудительно (Windows `taskkill /PID <pid> /T /F`; Linux/Mac SIGKILL группе процессов).
+
+## AC-16 (FR-17): Wrapper self-imposed timeout @feature16
+
+**Требование:** [FR-17](FR.md#fr-17-wrapper-self-imposed-timeout-feature16)
+
+IF прогон длится дольше TEST_RUNNER_TIMEOUT_MS больше нуля THEN обёртка SHALL записать статус «run exceeded timeout», мягко завершить дерево и завершиться ненулевым кодом.
+
+WHEN TEST_RUNNER_TIMEOUT_MS равен нулю THEN обёртка SHALL НЕ ставить собственный таймаут.
+
+## AC-17 (FR-18): Passthrough shares graceful lifecycle @feature16
+
+**Требование:** [FR-18](FR.md#fr-18-passthrough-shares-graceful-lifecycle-feature16)
+
+WHEN passthrough путь прерывается THEN обёртка SHALL мягко завершить дерево тем же механизмом, что и framework-путь.
+
+WHEN passthrough запускает кроссплатформенный npx-child THEN он SHALL вернуть тот же контракт (exit 0 и semver), что и до изменения.
+
+## AC-18 (FR-19): Shim lifts tsx-runner ceiling @feature16
+
+**Требование:** [FR-19](FR.md#fr-19-shim-lifts-tsx-runner-ceiling-feature16)
+
+WHEN shim запускает обёртку AND TSX_RUNNER_TIMEOUT не задан в окружении THEN shim SHALL выставить его большим значением не меньше лимита обёртки плюс запас, чтобы 180-секундный потолок раннера не срабатывал раньше graceful-таймаута обёртки.
+
+## AC-19 (FR-15): Build Guard Hook @feature15
+
+**Требование:** [FR-15](FR.md#fr-15-build-guard-hook-feature15)
+
+WHEN тест-команда vitest/jest запускается в cwd с `src/`, но без `dist/` THEN build guard SHALL отклонить с кодом 2 и причиной про `npm run build`.
+
+WHEN Docker-тест-команда несёт `SKIP_BUILD=1` THEN build guard SHALL отклонить с кодом 2.
+
+WHEN dotnet-тест-команда несёт `--no-build` THEN build guard SHALL отклонить с кодом 2.
+
+IF фреймворк интерпретируемый (pytest/go/rust) OR задан `SKIP_BUILD_CHECK=1` OR команда не тестовая THEN build guard SHALL разрешить с кодом 0.
+
+IF hook получает невалидный JSON или ошибку stat THEN build guard SHALL fail-open (код 0).

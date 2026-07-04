@@ -54,20 +54,29 @@ if (!process.env.TEST_STATUSLINE_SESSION) {
 }
 
 function runViaTsxRunner(scriptPath) {
+  // FR-19: lift the tsx-runner 180s default ceiling for wrapper runs so it never preempts the
+  // wrapper's own graceful timeout (FR-17). tsx-runner already honours a positive TSX_RUNNER_TIMEOUT
+  // (tools/_shared/tsx-runner.js) — we inject a large value here and do NOT modify the runner.
+  const env = { ...process.env };
+  if (!env.TSX_RUNNER_TIMEOUT) env.TSX_RUNNER_TIMEOUT = '1860000';
   const result = spawnSync('node', ['-e', `require('${tsxRunner.replace(/\\/g, '\\\\')}')`, '--', scriptPath, ...args], {
     stdio: 'inherit',
     cwd: repoRoot,
-    env: process.env,
+    env,
   });
   process.exit(result.status ?? (result.signal ? 1 : 0));
 }
 
 function runViaNpxTsx(scriptPath) {
   const npxCmd = process.platform === 'win32' ? 'npx.cmd' : 'npx';
+  // FR-19: same TSX_RUNNER_TIMEOUT lift on the npx fallback so the wrapper's child is never
+  // blunt-killed at the 180s ceiling regardless of which loader path runs.
+  const env = { ...process.env };
+  if (!env.TSX_RUNNER_TIMEOUT) env.TSX_RUNNER_TIMEOUT = '1860000';
   const result = spawnSync(npxCmd, ['tsx', scriptPath, ...args], {
     stdio: 'inherit',
     cwd: repoRoot,
-    env: process.env,
+    env,
   });
   process.exit(result.status ?? (result.signal ? 1 : 0));
 }

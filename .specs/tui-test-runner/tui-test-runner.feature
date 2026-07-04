@@ -452,3 +452,48 @@ Feature: PLUGIN012_TUI_Test_Runner
   Scenario: GUARD002_14 build_guard is registered before test_guard in PreToolUse order
     Given the plugin hooks registry is read for build guard
     Then build_guard should appear before test_guard in the PreToolUse registry
+
+  # ---------------------------------------------------------------------------
+  # @feature16 — FR-16..FR-19 Robust wrapper process lifecycle (WRAP001)
+  # Graceful process-tree termination on interrupt and self-timeout; no forced kill;
+  # docker container lifecycle stays with the tests.
+  # ---------------------------------------------------------------------------
+
+  @feature16
+  Scenario: WRAP001_01 wrapper gracefully terminates the child process tree on interrupt
+    Given the test runner wrapper is running a long-lived child process
+    When the wrapper receives an interrupt signal
+    Then the child process tree should be terminated
+    And the wrapper should remove its PID marker before exit
+
+  @feature16
+  Scenario: WRAP001_02 wrapper self-timeout writes an exceeded status and terminates the tree
+    Given the test runner wrapper runs a long-lived child with a short self timeout
+    When the self-imposed timeout elapses
+    Then the wrapper should write a run exceeded timeout status
+    And the wrapper should terminate the child tree and exit non-zero
+
+  @feature16
+  Scenario: WRAP001_03 wrapper does not arm a self-timeout when the timeout is disabled
+    Given the test runner wrapper is configured with a zero self timeout
+    When the wrapper starts a child
+    Then the wrapper should not arm a self-imposed timeout
+
+  @feature16
+  Scenario: WRAP001_04 windows branch records a graceful taskkill tree intent without the force flag
+    Given the process tree signaller runs on windows with kill recording enabled
+    When the signaller is asked to terminate a child pid
+    Then it should record a taskkill tree intent
+    And the recorded intent should not include the force flag
+
+  @feature16
+  Scenario: WRAP001_05 passthrough path gracefully terminates its child tree on interrupt
+    Given the test runner wrapper runs a long-lived child in passthrough mode
+    When the wrapper receives an interrupt signal
+    Then the passthrough child process tree should be terminated
+
+  @feature16
+  Scenario: WRAP001_06 shim lifts the tsx-runner ceiling for wrapper runs
+    Given the test statusline shim launches the wrapper via tsx-runner
+    When TSX_RUNNER_TIMEOUT is not set in the environment
+    Then the shim should pass a large TSX_RUNNER_TIMEOUT to tsx-runner

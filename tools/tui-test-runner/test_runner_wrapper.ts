@@ -16,6 +16,7 @@ import { PytestAdapter } from './adapters/pytest_adapter.ts';
 import { VitestAdapter } from './adapters/vitest_adapter.ts';
 import { detectFramework } from './config.ts';
 import { YamlWriter } from './yaml_writer.ts';
+import { signalProcessTree, forceKillProcessTree, resolveSelfTimeoutMs, resolveKillGraceMs } from '../_shared/process-tree.ts';
 
 const SESSION = process.env.TEST_STATUSLINE_SESSION || '';
 const PROJECT = process.env.TEST_STATUSLINE_PROJECT || process.cwd();
@@ -212,13 +213,55 @@ function discoverTestCount(framework: TestFramework, projectRoot: string, comman
   }
 }
 
-function passthrough(commandArgs: string[], childEnv: Record<string, string>): number {
-  const result = crossSpawn.sync(commandArgs[0], commandArgs.slice(1), {
+async function passthrough(commandArgs: string[], childEnv: Record<string, string>): Promise<number> {
+  // FR-18: generic (no-session) path shares the framework path's graceful lifecycle —
+  // async spawn in its own group, soft tree-signal on interrupt/timeout, same exit contract.
+  const child = crossSpawn(commandArgs[0], commandArgs.slice(1), {
     stdio: 'inherit',
     cwd: PROJECT,
     env: { ...process.env, ...childEnv },
+    // POSIX: own process group so the whole tree can be signalled via kill(-pid) (FR-16/FR-4).
+    detached: process.platform !== 'win32',
   });
-  return result.status ?? 1;
+
+  let selfTimeout: ReturnType<typeof setTimeout> | undefined;
+  let forceTimer: ReturnType<typeof setTimeout> | undefined;
+  let terminating = false;
+  const graceMs = resolveKillGraceMs(process.env.TEST_RUNNER_KILL_GRACE_MS);
+  const beginTermination = (reason: string): void => {
+    if (terminating) return;
+    terminating = true;
+    if (selfTimeout) { clearTimeout(selfTimeout); selfTimeout = undefined; }
+    if (!child.pid) return;
+    process.stderr.write(`[terminate] graceful reason=${reason} pid=${child.pid} graceMs=${graceMs}\n`);
+    signalProcessTree(child.pid);
+    forceTimer = setTimeout(() => {
+      if (child.pid) {
+        process.stderr.write(`[terminate] force pid=${child.pid}\n`);
+        forceKillProcessTree(child.pid);
+      }
+    }, graceMs);
+  };
+  process.on('SIGTERM', () => beginTermination('SIGTERM'));
+  process.on('SIGINT', () => beginTermination('SIGINT'));
+  process.on('SIGHUP', () => beginTermination('SIGHUP'));
+
+  // FR-17: same self-imposed timeout as the framework path (30min default; 0 disables).
+  const selfTimeoutMs = resolveSelfTimeoutMs(process.env.TEST_RUNNER_TIMEOUT_MS);
+  if (selfTimeoutMs > 0) {
+    selfTimeout = setTimeout(() => beginTermination('timeout'), selfTimeoutMs);
+    selfTimeout.unref?.();
+  }
+
+  return new Promise<number>((resolve) => {
+    const done = (v: number): void => {
+      if (selfTimeout) { clearTimeout(selfTimeout); selfTimeout = undefined; }
+      if (forceTimer) { clearTimeout(forceTimer); forceTimer = undefined; }
+      resolve(v);
+    };
+    child.on('error', () => done(1));
+    child.on('close', (code, signal) => done(code ?? (signal ? 1 : 0)));
+  });
 }
 
 function createEvent(type: TestEvent['type'], errorMessage: string): TestEvent {
@@ -306,8 +349,9 @@ async function main(): Promise<number> {
     } catch { /* ignore */ }
   };
   process.on('exit', (code) => cleanupMarker(`exit(${code})`));
-  process.on('SIGTERM', () => { cleanupMarker('SIGTERM'); process.exit(143); });
-  process.on('SIGINT', () => { cleanupMarker('SIGINT'); process.exit(130); });
+  // SIGTERM/SIGINT/SIGHUP handlers are registered after the child spawn (below) so they
+  // can gracefully terminate the child tree (FR-16); selfTimeout (FR-17) is armed there too.
+  let selfTimeout: ReturnType<typeof setTimeout> | undefined;
 
   let adapter;
   try {
@@ -325,6 +369,8 @@ async function main(): Promise<number> {
     cwd: projectRoot,
     stdio: ['pipe', 'pipe', 'pipe'],
     env: { ...process.env, ...parsed.childEnv },
+    // POSIX: own process group so the whole tree can be signalled via kill(-pid) (FR-16/FR-4).
+    detached: process.platform !== 'win32',
   });
 
   // Close stdin immediately — child tests spawn hooks that call readStdin(),
@@ -335,6 +381,42 @@ async function main(): Promise<number> {
   const heartbeat = setInterval(() => {
     writer.write();
   }, 2000);
+
+  // FR-16/FR-17: the wrapper owns the child's lifecycle. On interrupt or self-timeout it
+  // gracefully signals the whole child tree (so the test runs its own cleanup, incl. its docker
+  // containers), then escalates to a forced kill after a grace window if the child refuses to
+  // exit (Windows console procs need /F; a hung child needs SIGKILL). Docker is never touched.
+  let forceTimer: ReturnType<typeof setTimeout> | undefined;
+  let terminating = false;
+  const graceMs = resolveKillGraceMs(process.env.TEST_RUNNER_KILL_GRACE_MS);
+  const beginTermination = (reason: string): void => {
+    if (terminating) return;
+    terminating = true;
+    if (selfTimeout) { clearTimeout(selfTimeout); selfTimeout = undefined; }
+    if (!child.pid) return;
+    process.stderr.write(`[terminate] graceful reason=${reason} pid=${child.pid} graceMs=${graceMs}\n`);
+    signalProcessTree(child.pid);
+    forceTimer = setTimeout(() => {
+      if (child.pid) {
+        process.stderr.write(`[terminate] force pid=${child.pid}\n`);
+        forceKillProcessTree(child.pid);
+      }
+    }, graceMs);
+  };
+  process.on('SIGTERM', () => beginTermination('SIGTERM'));
+  process.on('SIGINT', () => beginTermination('SIGINT'));
+  process.on('SIGHUP', () => beginTermination('SIGHUP'));
+
+  // FR-17: wrapper self-imposed timeout. Default 30min; TEST_RUNNER_TIMEOUT_MS=0 disables it.
+  const selfTimeoutMs = resolveSelfTimeoutMs(process.env.TEST_RUNNER_TIMEOUT_MS);
+  if (selfTimeoutMs > 0) {
+    selfTimeout = setTimeout(() => {
+      writer.processEvent(createEvent('error', `run exceeded TEST_RUNNER_TIMEOUT_MS (${selfTimeoutMs}ms) — terminating`));
+      writer.write();
+      beginTermination('timeout');
+    }, selfTimeoutMs);
+    selfTimeout.unref?.();
+  }
 
   let childError: string | null = null;
   const buffers: Record<'stdout' | 'stderr', string> = {
@@ -402,6 +484,8 @@ async function main(): Promise<number> {
   return new Promise<number>((resolve) => {
     child.on('close', (code, signal) => {
       clearInterval(heartbeat);
+      if (selfTimeout) { clearTimeout(selfTimeout); selfTimeout = undefined; }
+      if (forceTimer) { clearTimeout(forceTimer); forceTimer = undefined; }
       flushRemainders();
 
       const exitCode = childError
