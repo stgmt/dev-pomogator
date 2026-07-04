@@ -109,3 +109,27 @@ PreToolUse hook (`tools/tui-test-runner/build_guard.ts`) SHALL block test comman
 Framework → test command mapping. Поддержка 6 фреймворков: vitest, jest, pytest, dotnet, rust (cargo), go. Расширяемый: добавить новый фреймворк = 1 строка.
 
 **Связанные AC:** [AC-14](ACCEPTANCE_CRITERIA.md#ac-14-fr-14-dispatch-table-feature14)
+
+## FR-16: Graceful test-process termination on interrupt @feature16
+
+WHEN обёртка прерывается (SIGTERM/SIGINT/SIGHUP) ИЛИ срабатывает её собственный таймаут THEN она SHALL завершить всё дерево дочернего тест-процесса по схеме graceful-then-force: сперва МЯГКО (дать тесту отработать собственную очистку, в т.ч. его docker-контейнеры), а если процесс не завершился за grace-окно `TEST_RUNNER_KILL_GRACE_MS` (по умолчанию 3000 мс) — ПРИНУДИТЕЛЬНО. Мягкая фаза: Linux/Mac — SIGTERM группе процессов (async-spawn с `detached: true`); Windows — `taskkill /PID <pid> /T` без `/F`. Принудительная фаза: Linux/Mac — SIGKILL группе; Windows — `taskkill /PID <pid> /T /F` (Windows console-процесс без `/F` не завершается — измерено 2026-07-04). docker-контейнерами обёртка не управляет — их жизненный цикл на самих тестах. PID-маркер удаляется до выхода. Тест-приём `TEST_RUNNER_KILL_RECORD` записывает намерение (graceful/force) в файл для детерминированной проверки.
+
+**Связанные AC:** AC-15 · сценарии WRAP001_01, WRAP001_04
+
+## FR-17: Wrapper self-imposed timeout @feature16
+
+Обёртка SHALL поддерживать собственный настраиваемый таймаут `TEST_RUNNER_TIMEOUT_MS` (по умолчанию 1800000 мс; `0` = выключен). WHEN прогон превышает таймаут THEN обёртка SHALL записать статус-событие «run exceeded timeout», мягко завершить дерево (FR-16) и финализировать ненулевым кодом. Таймаут — единственный `setTimeout`, снимаемый в `close`.
+
+**Связанные AC:** AC-16 · сценарии WRAP001_02, WRAP001_03
+
+## FR-18: Passthrough shares graceful lifecycle @feature16
+
+Generic (passthrough) путь SHALL использовать тот же async-spawn + мягкое завершение дерева + собственный таймаут, что и framework-путь, сохранив существующий контракт (код возврата, кроссплатформенный npx-child).
+
+**Связанные AC:** AC-17 · сценарий WRAP001_05
+
+## FR-19: Shim lifts tsx-runner ceiling @feature16
+
+Shim (`test_runner_wrapper.cjs`) SHALL передавать раннеру `TSX_RUNNER_TIMEOUT` не меньше собственного лимита обёртки + запас, чтобы дефолтный 180-секундный потолок tsx-runner не обрубал длинный прогон раньше graceful-таймаута обёртки. Код `tsx-runner.js` не меняется.
+
+**Связанные AC:** AC-18 · сценарий WRAP001_06
