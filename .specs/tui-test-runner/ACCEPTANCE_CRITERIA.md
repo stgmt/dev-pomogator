@@ -161,3 +161,17 @@ WHEN passthrough запускает кроссплатформенный npx-chi
 **Требование:** [FR-19](FR.md#fr-19-shim-lifts-tsx-runner-ceiling-feature16)
 
 WHEN shim запускает обёртку AND TSX_RUNNER_TIMEOUT не задан в окружении THEN shim SHALL выставить его большим значением не меньше лимита обёртки плюс запас, чтобы 180-секундный потолок раннера не срабатывал раньше graceful-таймаута обёртки.
+
+## AC-19 (FR-15): Build Guard Hook @feature15
+
+**Требование:** [FR-15](FR.md#fr-15-build-guard-hook-feature15)
+
+WHEN тест-команда vitest/jest запускается в cwd с `src/`, но без `dist/` THEN build guard SHALL отклонить с кодом 2 и причиной про `npm run build`.
+
+WHEN Docker-тест-команда несёт `SKIP_BUILD=1` THEN build guard SHALL отклонить с кодом 2.
+
+WHEN dotnet-тест-команда несёт `--no-build` THEN build guard SHALL отклонить с кодом 2.
+
+IF фреймворк интерпретируемый (pytest/go/rust) OR задан `SKIP_BUILD_CHECK=1` OR команда не тестовая THEN build guard SHALL разрешить с кодом 0.
+
+IF hook получает невалидный JSON или ошибку stat THEN build guard SHALL fail-open (код 0).

@@ -101,7 +101,7 @@ PreToolUse hook (`tools/tui-test-runner/build_guard.ts`) SHALL block test comman
 7. Allow (exit 0) passthrough for non-test commands (e.g. `ls -la`).
 8. Fail-open (exit 0) on any error: invalid JSON stdin, stat errors, missing src/.
 
-**Связанные AC:** GUARD002_02–GUARD002_14
+**Связанные AC:** [AC-19](ACCEPTANCE_CRITERIA.md#ac-19-fr-15-build-guard-hook-feature15) · сценарии GUARD002_02–GUARD002_14
 **Use Case:** Prevent running tests against stale build artifacts; ensure Docker images are always rebuilt.
 
 ## FR-14: Dispatch Table @feature14
@@ -114,22 +114,22 @@ Framework → test command mapping. Поддержка 6 фреймворков:
 
 WHEN обёртка прерывается (SIGTERM/SIGINT/SIGHUP) ИЛИ срабатывает её собственный таймаут THEN она SHALL завершить всё дерево дочернего тест-процесса по схеме graceful-then-force: сперва МЯГКО (дать тесту отработать собственную очистку, в т.ч. его docker-контейнеры), а если процесс не завершился за grace-окно `TEST_RUNNER_KILL_GRACE_MS` (по умолчанию 3000 мс) — ПРИНУДИТЕЛЬНО. Мягкая фаза: Linux/Mac — SIGTERM группе процессов (async-spawn с `detached: true`); Windows — `taskkill /PID <pid> /T` без `/F`. Принудительная фаза: Linux/Mac — SIGKILL группе; Windows — `taskkill /PID <pid> /T /F` (Windows console-процесс без `/F` не завершается — измерено 2026-07-04). docker-контейнерами обёртка не управляет — их жизненный цикл на самих тестах. PID-маркер удаляется до выхода. Тест-приём `TEST_RUNNER_KILL_RECORD` записывает намерение (graceful/force) в файл для детерминированной проверки.
 
-**Связанные AC:** AC-15 · сценарии WRAP001_01, WRAP001_04
+**Связанные AC:** [AC-15](ACCEPTANCE_CRITERIA.md#ac-15-fr-16-graceful-test-process-termination-on-interrupt-feature16) · сценарии WRAP001_01, WRAP001_04
 
 ## FR-17: Wrapper self-imposed timeout @feature16
 
 Обёртка SHALL поддерживать собственный настраиваемый таймаут `TEST_RUNNER_TIMEOUT_MS` (по умолчанию 1800000 мс; `0` = выключен). WHEN прогон превышает таймаут THEN обёртка SHALL записать статус-событие «run exceeded timeout», мягко завершить дерево (FR-16) и финализировать ненулевым кодом. Таймаут — единственный `setTimeout`, снимаемый в `close`.
 
-**Связанные AC:** AC-16 · сценарии WRAP001_02, WRAP001_03
+**Связанные AC:** [AC-16](ACCEPTANCE_CRITERIA.md#ac-16-fr-17-wrapper-self-imposed-timeout-feature16) · сценарии WRAP001_02, WRAP001_03
 
 ## FR-18: Passthrough shares graceful lifecycle @feature16
 
 Generic (passthrough) путь SHALL использовать тот же async-spawn + мягкое завершение дерева + собственный таймаут, что и framework-путь, сохранив существующий контракт (код возврата, кроссплатформенный npx-child).
 
-**Связанные AC:** AC-17 · сценарий WRAP001_05
+**Связанные AC:** [AC-17](ACCEPTANCE_CRITERIA.md#ac-17-fr-18-passthrough-shares-graceful-lifecycle-feature16) · сценарий WRAP001_05
 
 ## FR-19: Shim lifts tsx-runner ceiling @feature16
 
 Shim (`test_runner_wrapper.cjs`) SHALL передавать раннеру `TSX_RUNNER_TIMEOUT` не меньше собственного лимита обёртки + запас, чтобы дефолтный 180-секундный потолок tsx-runner не обрубал длинный прогон раньше graceful-таймаута обёртки. Код `tsx-runner.js` не меняется.
 
-**Связанные AC:** AC-18 · сценарий WRAP001_06
+**Связанные AC:** [AC-18](ACCEPTANCE_CRITERIA.md#ac-18-fr-19-shim-lifts-tsx-runner-ceiling-feature16) · сценарий WRAP001_06
