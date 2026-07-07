@@ -47,7 +47,7 @@ Failed with non-blocking status code:
 1. **[FIXED]** `--experimental-default-type=module` удалён в Node 23+ → Strategy 0 падала с «bad option» (exit 9) на любом современном Node. Фикс: флаг добавляется только на Node 22.x (`tools/_shared/tsx-runner.js:runNodeNativeTs`).
 2. **[FIXED]** Fall-through на tsx никогда не срабатывал: Strategy 0 шла с `stdio: 'inherit'`, поэтому текст ошибки (SyntaxError / ERR_MODULE_NOT_FOUND / bad option) не попадал в `err.stderr`, и `isResolverError()` возвращал false → жёсткий fail вместо фолбэка. Фикс: stderr теперь `pipe` + re-emit, `'bad option'` добавлен в `RESOLVER_ERROR_TOKENS`.
 3. **[FIXED]** `tools/test-statusline/package.json` содержал `{"type": "commonjs"}` → на Node 23+ (где override-флага больше нет) `.ts` файлы рядом трактовались как CJS и падали на `import`. Заменено на `"module"` (в папке только `.ts` ESM + `.cjs`, которому поле не нужно).
-4. **[OPEN]** `npm run lint` = `eslint .claude tools`, но eslint НЕ в devDependencies и конфига (`eslint.config.*`) в репе нет — lint сломан на любой чистой машине. Требует отдельного решения: добавить eslint+конфиг в репо или убрать script.
+4. **[FIXED 2026-07-07]** `npm run lint` = `eslint .claude tools` теперь воспроизводим: `eslint`, `@eslint/js`, `typescript-eslint` и `globals` закреплены в devDependencies + lockfile, а корневой `eslint.config.mjs` задаёт flat-config для `.claude/` и `tools/` с baseline-исключениями для legacy-долга и generated/vendor файлов.
 
 Верификация: все 4 SessionStart + все 8 Stop хуков прогнаны вручную через реальный `node -e "require(bootstrap.cjs)"` entrypoint — exit 0, `~/.dev-pomogator/logs/tsx-runner.log` показывает `OK strategies=0:native` ~110-330ms.
 
