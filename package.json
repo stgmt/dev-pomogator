@@ -27,6 +27,7 @@
     "tools",
     "scripts",
     ".mcp.json",
+    "eslint.config.mjs",
     "audit-reports"
   ],
   "bin": {
@@ -83,6 +84,7 @@
     "@cucumber/gherkin": "^39.1.0",
     "@cucumber/gherkin-utils": "^11.0.0",
     "@cucumber/messages": "^32.3.1",
+    "@eslint/js": "^9.39.4",
     "@stryker-mutator/core": "^9.6.1",
     "@stryker-mutator/cucumber-runner": "^9.6.1",
     "@stryker-mutator/vitest-runner": "^9.6.1",
@@ -91,9 +93,12 @@
     "@types/node": "^20.11.0",
     "@types/semver": "^7.5.6",
     "esbuild": "^0.28.0",
+    "eslint": "^9.39.4",
     "fast-check": "^4.8.0",
+    "globals": "^15.15.0",
     "tsx": "^4.0.0",
     "typescript": "^5.3.0",
+    "typescript-eslint": "^8.63.0",
     "vitest": "^4.1.0"
   },
   "engines": {

@@ -187,7 +187,6 @@ describe('incremental — applyChange / applyUnlink / dropFileSlice', () => {
     }
     samples.sort((a, b) => a - b);
     const p95 = percentile(samples, 95);
-    // eslint-disable-next-line no-console
     console.log(
       `[incremental] p50=${percentile(samples, 50).toFixed(2)}ms p95=${p95.toFixed(2)}ms n=20`,
     );
