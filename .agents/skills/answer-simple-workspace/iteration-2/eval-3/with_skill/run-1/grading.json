@@ -1,0 +1,8 @@
+{
+  "expectations": [
+    {"text": "Output contains 'Проблем не найдено' verdict", "passed": true, "evidence": "Line 1: 'Проблем не найдено'"},
+    {"text": "Output does NOT fabricate fake problems on clean draft", "passed": true, "evidence": "No 'Найдено проблем:' block; only verdict + passed criteria"},
+    {"text": "Output lists passed criteria (5 anchor points / no jargon / causal link present)", "passed": true, "evidence": "Lines 3-7: full criteria list with anchor points explicitly mapped (откуда / что сделал / где / дальше)"}
+  ],
+  "summary": {"passed": 3, "failed": 0, "total": 3, "pass_rate": 1.0}
+}

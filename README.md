@@ -1,6 +1,6 @@
 # dev-pomogator
 
-Canonical Claude Code marketplace plugin — командные стандарты, рабочие процессы, скиллы и хуки. Distributed через Anthropic plugin marketplace, работает в Claude Code CLI и Claude Desktop.
+Canonical Claude Code marketplace plugin plus an explicit Codex plugin whitelist — командные стандарты, рабочие процессы, скиллы, хуки, and the first Codex-supported `context-menu` surface.
 
 **Что это даёт:**
 - Единый формат планов, спецификаций и коммитов для всей команды
@@ -33,6 +33,19 @@ Canonical Claude Code marketplace plugin — командные стандарт
 /plugin install dev-pomogator@stgmt --scope project   # committed to <cwd>/.claude/settings.json (team-shared)
 /plugin install dev-pomogator@stgmt --scope local     # personal per-repo (gitignored settings.local.json)
 ```
+
+### Codex install (context-menu whitelist)
+
+Codex uses its own plugin marketplace command tree; there is no npm `--codex` install flag. From this checkout:
+
+```powershell
+cd E:\repos\dev-pomogator
+.\scripts\install-codex-context-menu.ps1
+```
+
+The script registers this checkout as a local Codex marketplace, installs `context-menu@dev-pomogator-codex`, and applies the Windows right-click menu with `--codex-only`.
+
+This Codex path installs only `Codex.nss`, `imports/Codex.nss`, `codex-icon.ico`, and `launch-Codex-tui.ps1`; it does not create or overwrite Claude context-menu artifacts. The icon is extracted from the installed OpenAI Codex app when available; generated fallback is used only when the local app icon cannot be extracted. The current Codex entry is `Codex (YOLO)` with `-NoTui`; Codex+TUI is intentionally deferred until the TUI launcher path is verified.
 
 ## Что устанавливается
 

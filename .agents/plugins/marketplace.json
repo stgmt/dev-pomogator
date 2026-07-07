@@ -1,0 +1,52 @@
+{
+  "name": "dev-pomogator-codex",
+  "interface": {
+    "displayName": "dev-pomogator Codex"
+  },
+  "plugins": [
+    {
+      "name": "context-menu",
+      "source": {
+        "source": "local",
+        "path": "./"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ],
+  "x-dev-pomogator-whitelist": [
+    {
+      "pluginName": "context-menu",
+      "featureSlug": "context-menu",
+      "status": "Supported",
+      "codexManifestPath": ".codex-plugin/plugin.json",
+      "specPath": ".specs/context-menu",
+      "runtimeContracts": [
+        "scripts/install-codex-context-menu.ps1 wraps Codex plugin add and Codex-only postinstall",
+        "tools/context-menu/postinstall.ts exports generateCodexNss and bundledCodexLaunchScriptPath",
+        "tools/context-menu/postinstall.ts supports --codex-only without Claude context-menu side effects",
+        "tools/context-menu/postinstall.ts generates and installs codex-icon.ico for the Codex channel",
+        "scripts/launch-Codex-tui.ps1 invokes codex with --dangerously-bypass-approvals-and-sandbox",
+        "scripts/launch-Codex-tui.ps1 writes Codex trust to ~/.codex/config.toml"
+      ],
+      "verificationEvidence": [
+        "tools/codex-plugin-support/verify-whitelist.ts",
+        ".specs/context-menu/context-menu.feature#CTXMENU001_18",
+        ".specs/context-menu/context-menu.feature#CTXMENU001_19",
+        ".specs/context-menu/context-menu.feature#CTXMENU001_20",
+        ".specs/context-menu/context-menu.feature#CTXMENU001_21",
+        ".specs/context-menu/context-menu.feature#CTXMENU001_22",
+        ".specs/context-menu/context-menu.feature#CTXMENU001_23",
+        ".specs/context-menu/context-menu.feature#CTXMENU001_24",
+        ".specs/context-menu/context-menu.feature#CTXMENU001_25",
+        ".specs/codex-init/codex-init.feature#CODEXINIT001_03",
+        ".specs/codex-init/codex-init.feature#CODEXINIT001_04",
+        ".specs/codex-init/codex-init.feature#CODEXINIT001_05",
+        ".specs/codex-init/codex-init.feature#CODEXINIT001_07"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "expectations": [
+    {
+      "text": "policy 'mvp-poc' → recommended 'serverless'",
+      "passed": true,
+      "evidence": "actual=serverless"
+    },
+    {
+      "text": "policy 'production-grade' → recommended 'k8s'",
+      "passed": true,
+      "evidence": "actual=k8s"
+    },
+    {
+      "text": "recommendations differ across policies",
+      "passed": true,
+      "evidence": "recommended_by_policy={'mvp-poc': 'serverless', 'production-grade': 'k8s'}"
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "eval_id": 5,
+  "eval_name": "empty-invocation-usage-hint",
+  "prompt": "/answer-simple",
+  "assertions": [
+    {"text": "Output returns Usage hint (contains 'Usage:' or 'Использование')"},
+    {"text": "Output does NOT generate fake audit blocks (no 'Переформулировано:' / 'Найдено проблем:' on empty input)"},
+    {"text": "Output includes at least 1 example invocation"}
+  ]
+}

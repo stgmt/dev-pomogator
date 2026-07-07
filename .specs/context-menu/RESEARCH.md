@@ -18,6 +18,13 @@
 - [cmd: `claude --dangerously-skip-permissions -p "say hi"` run in a guaranteed-fresh untrusted directory → exit 0, normal response] — confirms headless `-p` mode is NOT subject to the same hard-fail; the failure is specific to the interactive launch path our `wt.exe`-based NSS entries use.
 - The "press Enter to restart" text seen closing the terminal on failure is native Windows Terminal `closeOnExit` pane-exit chrome, not anything this repo prints — confirmed by grepping the whole repo for the phrase (no hits) and by Windows Terminal's own issue tracker [src:https://github.com/microsoft/terminal/issues/16363] [src:https://github.com/microsoft/terminal/issues/16608]. Consistent with — not contradicting — the `wt.exe`-spawned NSS entries [ref:tools/context-menu/postinstall.ts:70].
 
+### Codex CLI launch flags and hook-trust bypass
+
+- Official Codex CLI reference documents `--cd, -C` as the flag that sets the working directory before Codex starts processing the request [src:https://developers.openai.com/codex/cli/reference].
+- The same reference documents `--dangerously-bypass-approvals-and-sandbox` / `--yolo` as bypassing approval prompts and sandboxing, with the explicit warning to use only in an isolated runner [src:https://developers.openai.com/codex/cli/reference].
+- The same reference documents `--dangerously-bypass-hook-trust` as running enabled hooks without persisted hook trust for that invocation, intended only when automation already vets hook sources [src:https://developers.openai.com/codex/cli/reference].
+- Therefore the Codex context-menu launcher must use Codex-native flags (`codex -C "<dir>" --dangerously-bypass-approvals-and-sandbox`, plus `--dangerously-bypass-hook-trust` only when hook trust bypass is required) and must not copy Claude Code's `--dangerously-skip-permissions` flag.
+
 ### {Тема 1}
 
 ### {Тема 1}

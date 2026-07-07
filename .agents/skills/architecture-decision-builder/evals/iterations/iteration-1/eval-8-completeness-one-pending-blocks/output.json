@@ -1,0 +1,1 @@
+{"findings":[{"category":"COMPLETENESS_COVERAGE","code":"DIMENSION_PENDING","severity":"WARNING","message":"Completeness dimension \"deploy-ops\" is pending — address or mark out-of-scope before STOP","dimension_id":"deploy-ops"}]}

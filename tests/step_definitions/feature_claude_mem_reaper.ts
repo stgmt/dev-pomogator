@@ -58,6 +58,10 @@ interface ReaperWorld extends V4World {
   reaperExit: number;
   reaperStdout: string;
   reaperHome: string;
+  reaperExtraEnv: Record<string, string>;
+  reaperProbeRecord: string;
+  canonicalHooks: Record<string, unknown>;
+  dogfoodHooks: Record<string, unknown>;
 }
 
 // ---- pure decision (Scenario Outline @feature7) ----
@@ -103,6 +107,46 @@ function writeSnapshot(world: ReaperWorld, snap: Record<string, unknown>): strin
   return p;
 }
 
+function ensureReaperHome(world: ReaperWorld): string {
+  if (world.reaperHome) return world.reaperHome;
+  world.reaperHome = path.join(world.tempDir, 'home');
+  return world.reaperHome;
+}
+
+function ensureExtraEnv(world: ReaperWorld): Record<string, string> {
+  if (!world.reaperExtraEnv) world.reaperExtraEnv = {};
+  return world.reaperExtraEnv;
+}
+
+function runReaperHook(world: ReaperWorld, extraEnv: Record<string, string> = {}): void {
+  const snapPath = writeSnapshot(world, world.reaperSnapshot);
+  const killRecord = path.join(world.tempDir, 'reaper-kills.json');
+  const home = ensureReaperHome(world);
+  const res = spawnSync(
+    process.execPath,
+    ['-e', "require(require('path').resolve('tools/_shared/bootstrap.cjs'))", '--', HOOK_REL],
+    {
+      input: '{}',
+      encoding: 'utf-8',
+      cwd: REPO,
+      timeout: 30000,
+      env: {
+        ...process.env,
+        ...ensureExtraEnv(world),
+        ...extraEnv,
+        CLAUDE_MEM_REAPER_SNAPSHOT: snapPath,
+        CLAUDE_MEM_REAPER_KILL_RECORD: killRecord,
+        CLAUDE_MEM_REAPER_HOME: home,
+      },
+    },
+  );
+  world.reaperExit = res.status ?? -1;
+  world.reaperStdout = res.stdout ?? '';
+  world.reaperKills = fs.existsSync(killRecord)
+    ? (JSON.parse(fs.readFileSync(killRecord, 'utf-8')) as number[])
+    : [];
+}
+
 Given('a simulated Windows wedge snapshot with an orphaned chroma-mcp and an unrelated python', function (this: ReaperWorld) {
   this.reaperSnapshot = {
     platform: 'win32',
@@ -126,41 +170,64 @@ Given('a simulated healthy worker snapshot', function (this: ReaperWorld) {
 });
 
 Given(/^a fake claude-mem home with (\d+) consecutive hook failures$/, function (this: ReaperWorld, n: string) {
-  const home = path.join(this.tempDir, 'home');
+  const home = ensureReaperHome(this);
   const stateDir = path.join(home, '.claude-mem', 'state');
   fs.mkdirSync(stateDir, { recursive: true });
   fs.writeFileSync(
     path.join(stateDir, 'hook-failures.json'),
     JSON.stringify({ consecutiveFailures: Number(n), lastFailureAt: 1 }),
   );
-  this.reaperHome = home;
+});
+
+Given('a recent mid-session reaper check already ran', function (this: ReaperWorld) {
+  const home = ensureReaperHome(this);
+  const stateDir = path.join(home, '.claude-mem', 'state');
+  fs.mkdirSync(stateDir, { recursive: true });
+  fs.writeFileSync(path.join(stateDir, 'dev-pomogator-reaper.json'), JSON.stringify({ lastCheckAt: 10_000 }));
+  this.reaperProbeRecord = path.join(this.tempDir, 'reaper-probes.json');
+  ensureExtraEnv(this).CLAUDE_MEM_REAPER_MID_SESSION = '1';
+  ensureExtraEnv(this).CLAUDE_MEM_REAPER_NOW_MS = '10001';
+  ensureExtraEnv(this).CLAUDE_MEM_REAPER_DEBOUNCE_MS = '10000';
+  ensureExtraEnv(this).CLAUDE_MEM_REAPER_PROBE_RECORD = this.reaperProbeRecord;
+});
+
+Given('claude-mem reaping is disabled by environment', function (this: ReaperWorld) {
+  ensureExtraEnv(this).DEV_POMOGATOR_CLAUDE_MEM_REAP = 'off';
+  ensureExtraEnv(this).CLAUDE_MEM_REAPER_MID_SESSION = '1';
+});
+
+Given('a simulated unavailable claude-mem worker has been down longer than the visibility threshold', function (this: ReaperWorld) {
+  this.reaperSnapshot = {
+    platform: 'win32',
+    healthOk: false,
+    portListening: false,
+    portOwnerAlive: false,
+    procs: [],
+  };
+  const home = ensureReaperHome(this);
+  const stateDir = path.join(home, '.claude-mem', 'state');
+  fs.mkdirSync(stateDir, { recursive: true });
+  fs.writeFileSync(path.join(stateDir, 'dev-pomogator-reaper.json'), JSON.stringify({ downSince: 1_000, lastCheckAt: 0 }));
+  ensureExtraEnv(this).CLAUDE_MEM_REAPER_MID_SESSION = '1';
+  ensureExtraEnv(this).CLAUDE_MEM_REAPER_NOW_MS = '20000';
+  ensureExtraEnv(this).CLAUDE_MEM_REAPER_DOWN_VISIBILITY_MS = '10000';
+});
+
+Given('the dev-pomogator hook manifests are available', function (this: ReaperWorld) {
+  this.canonicalHooks = JSON.parse(fs.readFileSync(path.join(REPO, '.claude-plugin', 'hooks.json'), 'utf-8')) as Record<string, unknown>;
+  this.dogfoodHooks = JSON.parse(fs.readFileSync(path.join(REPO, '.claude', 'settings.json'), 'utf-8')) as Record<string, unknown>;
 });
 
 When('the claude-mem reaper hook runs', function (this: ReaperWorld) {
-  const snapPath = writeSnapshot(this, this.reaperSnapshot);
-  const killRecord = path.join(this.tempDir, 'reaper-kills.json');
-  const home = this.reaperHome || path.join(this.tempDir, 'home');
-  const res = spawnSync(
-    process.execPath,
-    ['-e', "require(require('path').resolve('tools/_shared/bootstrap.cjs'))", '--', HOOK_REL],
-    {
-      input: '{}',
-      encoding: 'utf-8',
-      cwd: REPO,
-      timeout: 30000,
-      env: {
-        ...process.env,
-        CLAUDE_MEM_REAPER_SNAPSHOT: snapPath,
-        CLAUDE_MEM_REAPER_KILL_RECORD: killRecord,
-        CLAUDE_MEM_REAPER_HOME: home,
-      },
-    },
-  );
-  this.reaperExit = res.status ?? -1;
-  this.reaperStdout = res.stdout ?? '';
-  this.reaperKills = fs.existsSync(killRecord)
-    ? (JSON.parse(fs.readFileSync(killRecord, 'utf-8')) as number[])
-    : [];
+  runReaperHook(this);
+});
+
+When('the claude-mem mid-session guard runs before a tool call', function (this: ReaperWorld) {
+  runReaperHook(this, { CLAUDE_MEM_REAPER_MID_SESSION: '1' });
+});
+
+When('the claude-mem hook registrations are inspected', function () {
+  // Data was loaded by the Given step; Then steps assert the concrete registration.
 });
 
 Then('the recorded kills are exactly the chroma-mcp pid', function (this: ReaperWorld) {
@@ -180,4 +247,37 @@ Then('the reaper hook-failures counter is reset to 0', function (this: ReaperWor
 Then('the reaper hook exits 0 with a continue payload', function (this: ReaperWorld) {
   assert.equal(this.reaperExit, 0);
   assert.match(this.reaperStdout, /"continue"\s*:\s*true/);
+});
+
+Then('no worker health probe is attempted', function (this: ReaperWorld) {
+  const probes = this.reaperProbeRecord && fs.existsSync(this.reaperProbeRecord)
+    ? (JSON.parse(fs.readFileSync(this.reaperProbeRecord, 'utf-8')) as number[])
+    : [];
+  assert.deepEqual(probes, []);
+});
+
+function hasReaperPreToolUseRegistration(config: Record<string, unknown>, rootEnv: 'CLAUDE_PLUGIN_ROOT' | 'CLAUDE_PROJECT_DIR'): boolean {
+  const hooks = config.hooks as Record<string, unknown> | undefined;
+  const pre = hooks?.PreToolUse as Array<{ matcher?: string; hooks?: Array<{ command?: string }> }> | undefined;
+  return !!pre?.some((entry) =>
+    (entry.matcher === '' || entry.matcher === '*') &&
+    entry.hooks?.some((h) =>
+      typeof h.command === 'string' &&
+      h.command.includes(rootEnv) &&
+      h.command.includes('tools/claude-mem-health/health-check.ts'),
+    ),
+  );
+}
+
+Then('the canonical plugin manifest registers the reaper on PreToolUse', function (this: ReaperWorld) {
+  assert.equal(hasReaperPreToolUseRegistration(this.canonicalHooks, 'CLAUDE_PLUGIN_ROOT'), true);
+});
+
+Then('the dogfood settings register the reaper on PreToolUse', function (this: ReaperWorld) {
+  assert.equal(hasReaperPreToolUseRegistration(this.dogfoodHooks, 'CLAUDE_PROJECT_DIR'), true);
+});
+
+Then('the guard emits a visible memory-not-recording warning', function (this: ReaperWorld) {
+  assert.match(this.reaperStdout, /claude-mem недоступен/);
+  assert.doesNotMatch(this.reaperStdout, /"suppressOutput"\s*:\s*true/);
 });

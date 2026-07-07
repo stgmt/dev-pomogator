@@ -286,6 +286,16 @@
     ],
     "PreToolUse": [
       {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node -e \"require(require('path').join(process.env.CLAUDE_PROJECT_DIR || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/claude-mem-health/health-check.ts\" --mid-session",
+            "timeout": 15
+          }
+        ]
+      },
+      {
         "matcher": "ExitPlanMode",
         "hooks": [
           {

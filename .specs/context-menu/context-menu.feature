@@ -1,5 +1,5 @@
 Feature: CTXMENU001_Context_Menu_Setup
-  Windows right-click context menu integration for Claude Code via Nilesoft Shell.
+  Windows right-click context menu integration for Claude Code and Codex via Nilesoft Shell.
   Exported functions: generateNss, copyLaunchScript, bundledLaunchScriptPath.
 
   @feature1
@@ -116,3 +116,79 @@ Feature: CTXMENU001_Context_Menu_Setup
     When generateNss is called
     Then the NSS "Claude Code (YOLO + TUI)" entry command should reference "launch-claude-tui.ps1"
     And the NSS "Claude Code (YOLO + TUI)" entry command should not call claude directly
+
+  @feature8
+  Scenario: CTXMENU001_18 Codex support is added without removing the Claude Code channel
+    Given the context-menu postinstall module is imported
+    When the combined Nilesoft imports are generated
+    Then the shell.nss content should contain "imports/claude-code.nss"
+    And the shell.nss content should contain "imports/Codex.nss"
+    And the generated entries should include "Claude Code (YOLO + TUI)"
+    And the generated entries should include "Codex (YOLO)"
+
+  @feature9
+  Scenario: CTXMENU001_19 Codex NSS produces a single elevated YOLO entry without TUI
+    Given the context-menu postinstall module is imported
+    When the Codex NSS content is generated
+    Then the Codex NSS content should contain exactly 1 "item(" entry
+    And the Codex NSS content should contain "Codex (YOLO)"
+    And the Codex NSS content should contain "admin=true"
+    And the Codex NSS content should contain "-Yolo"
+    And the Codex NSS content should contain "-NoTui"
+    And the Codex NSS content should contain "launch-Codex-tui.ps1"
+    And the Codex NSS content should not contain "Codex (YOLO + TUI)"
+    And the Codex NSS content should not contain "launch-claude-tui.ps1"
+
+  @feature10
+  Scenario: CTXMENU001_20 Codex NSS references the same path that the Codex script copy writes to
+    Given the context-menu postinstall module is imported
+    When the Codex NSS content is generated
+    Then the Codex NSS content should contain the global path home/.dev-pomogator/scripts/launch-Codex-tui.ps1
+    And the bundled Codex launch script path should end with "scripts/launch-Codex-tui.ps1"
+
+  @feature11
+  Scenario: CTXMENU001_21 Codex YOLO launch uses Codex-native full-access flags
+    Given the launch-Codex-tui.ps1 script file is read
+    Then the Codex launch script should contain "--dangerously-bypass-approvals-and-sandbox"
+    And the Codex launch script should not contain "--dangerously-skip-permissions"
+    And the Codex launch script should invoke "codex"
+
+  @feature11
+  Scenario: CTXMENU001_22 Codex trust handling does not touch Claude trust state
+    Given pwsh is available and a temporary Codex config.toml fixture with no entry for the target directory
+    When the launch-Codex-tui.ps1 script is invoked with -Yolo -NoTui and the target directory
+    Then the Codex config fixture should have trust_level "trusted" for the target directory
+    And the Claude trust fixture should be unchanged
+
+  @feature12
+  Scenario: CTXMENU001_23 Codex-only postinstall mode does not modify Claude menu artifacts
+    Given the context-menu postinstall module is imported
+    When the Codex-only postinstall plan is generated
+    Then the Codex-only plan should copy only the Codex launch script
+    And the Codex-only plan should write only "Codex.nss"
+    And the Codex-only shell imports should contain "imports/Codex.nss"
+    And the Codex-only shell imports should not contain "imports/claude-code.nss"
+
+  @feature13
+  Scenario: CTXMENU001_24 Codex install uses a first-class launcher script
+    When the install-codex-context-menu.ps1 script file is read
+    Then the Codex install launcher should contain "codex"
+    And the Codex install launcher should contain "plugin marketplace add"
+    And the Codex install launcher should contain "plugin add"
+    And the Codex install launcher should contain "context-menu@dev-pomogator-codex"
+    And the Codex install launcher should contain "tools/context-menu/postinstall.ts"
+    And the Codex install launcher should contain "--codex-only"
+    And the Codex install launcher should not contain "npm"
+    And the Codex install launcher should not contain "npx"
+    And the Codex install launcher should not contain "--Codex"
+
+  @feature14
+  Scenario: CTXMENU001_25 Codex icon is installed by the Codex channel
+    Given the context-menu postinstall module is imported
+    When the Codex-only postinstall plan is generated
+    Then the Codex-only plan should install only "codex-icon.ico"
+    When the Codex icon file candidates are generated for a Windows app install
+    Then the Codex icon file candidates should include "WindowsApps/OpenAI.Codex_1.2.3.0_x64__2p2nqsd0c76g0/app/resources/icon.ico"
+    When the fallback Codex icon is generated
+    Then the fallback Codex icon should be a valid ICO file
+    And the Codex NSS content should contain "codex-icon.ico"

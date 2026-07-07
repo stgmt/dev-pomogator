@@ -1,0 +1,1 @@
+{"findings":[{"category":"ARCHITECTURE_COVERAGE","code":"AXIS_PENDING","severity":"WARNING","message":"Axis \"email axis\" is still pending — resolve or escape before STOP","axis_id":"email"},{"category":"ARCHITECTURE_COVERAGE","code":"WARNING_REASON_TOO_SHORT","severity":"INFO","message":"Escape-hatch reason \"ok\" < 12 chars in AXIS-email.md","axis_id":"email"}]}

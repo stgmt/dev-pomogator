@@ -1,0 +1,14 @@
+{
+  "expectations": [
+    {
+      "text": "insights_count == 1",
+      "passed": true,
+      "evidence": "actual=1"
+    },
+    {
+      "text": "rejected_count == 2",
+      "passed": true,
+      "evidence": "actual=2; reasons=['fewer than 2 axes (not cross-axis)', 'unknown axis id(s): ghost-axis']"
+    }
+  ]
+}

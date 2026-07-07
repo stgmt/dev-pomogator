@@ -1,0 +1,28 @@
+{
+  "version": 4,
+  "featureSlug": "lint-self-bootstrap",
+  "createdAt": "2026-07-07T01:31:35.582Z",
+  "currentPhase": "Discovery",
+  "phases": {
+    "Discovery": {
+      "completedAt": null,
+      "stopConfirmed": false,
+      "stopConfirmedAt": null
+    },
+    "Context": {
+      "completedAt": null,
+      "stopConfirmed": false,
+      "stopConfirmedAt": null
+    },
+    "Requirements": {
+      "completedAt": null,
+      "stopConfirmed": false,
+      "stopConfirmedAt": null
+    },
+    "Finalization": {
+      "completedAt": null,
+      "stopConfirmed": false,
+      "stopConfirmedAt": null
+    }
+  }
+}

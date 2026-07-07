@@ -1,0 +1,12 @@
+{
+  "eval_id": 1,
+  "eval_name": "short-no-structure-готово",
+  "prompt": "/answer-simple \"Готово. Обновил FR-12 и подключил VARIANT_COVERAGE category.\"",
+  "assertions": [
+    {"text": "Output contains 'Переформулировано:' header"},
+    {"text": "Output contains 'Найдено проблем:' header"},
+    {"text": "Output identifies 'FR-12' as undefined internal code"},
+    {"text": "Output identifies 'VARIANT_COVERAGE' as undefined internal code"},
+    {"text": "Output identifies missing micro-story structure or missing causal links"}
+  ]
+}

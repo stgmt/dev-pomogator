@@ -1,0 +1,8 @@
+{
+  "expectations": [
+    {"text": "Output returns Usage hint (contains 'Usage:' or 'Использование')", "passed": true, "evidence": "Line 3: 'Использование:' (Russian for Usage). Baseline accidentally produces correct format for empty input."},
+    {"text": "Output does NOT generate fake audit blocks (no 'Переформулировано:' / 'Найдено проблем:' on empty input)", "passed": true, "evidence": "No fake audit blocks. Baseline says 'нечего обрабатывать'."},
+    {"text": "Output includes at least 1 example invocation", "passed": true, "evidence": "Line 17: example with INC-12345 ticket — fabricated but qualifies as example"}
+  ],
+  "summary": {"passed": 3, "failed": 0, "total": 3, "pass_rate": 1.0}
+}

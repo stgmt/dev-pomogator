@@ -24,6 +24,11 @@
 | T2-17 | Run the BDD suite in Docker, confirm CTXMENU001_13..17 GREEN, no regression | DONE | — | Phase 2.5 | 15m |
 | T3-18 | Refactor after scenarios went Green (deduped exit-log batch) | DONE | — | Phase 3 | 30m |
 | T3-19 | Final verification (validate-spec 0 errors, audit-spec 0 ERROR findings) | DONE | — | Phase 3 | 15m |
+| T4-20 | Add Codex BDD scenarios CTXMENU001_18..22 | TODO | — | Phase 4 | 30m |
+| T4-21 | Generate/install Codex.nss without removing claude-code.nss | TODO | T4-20 | Phase 4 | 45m |
+| T4-22 | Add launch-Codex-tui.ps1 with Codex-native dangerous flags | TODO | T4-20 | Phase 4 | 45m |
+| T4-23 | Add Codex trust handling via .codex/config.toml, never .claude.json | TODO | T4-22 | Phase 4 | 45m |
+| T4-24 | Verify Claude channel regression + Codex channel green in Docker BDD | TODO | T4-21,T4-22,T4-23 | Phase 4 | 30m |
 <!-- end auto-generated -->
 
 > Regenerate via `Skill("task-board-forms")` or `npx tsx tools/specs-generator/spec-status.ts -Path .specs/{slug} -Format task-table` and splice between markers.
@@ -135,3 +140,33 @@ N/A — context-menu needs no new services, env vars, database, or secrets (Wind
   **Done When:**
   - [x] `validate-spec.ts -Path .specs/context-menu` → 0 errors (228 pre-existing placeholder warnings remain in USER_STORIES/USE_CASES/FIXTURES/SCHEMA — legacy scaffold debt predating G8, out of this fix's scope)
   - [x] `audit-spec.ts -Path .specs/context-menu` → 0 ERROR-severity findings (fixed the 1 real error — FR-5 plain-text link in TASKS.md; remaining 21 are pre-existing INFO/WARNING legacy gaps, same scope note as above)
+
+## Phase 4: Codex parallel channel (Red -> Green)
+
+- [ ] Add Codex BDD scenarios CTXMENU001_18..22 -- @feature8 @feature9 @feature10 @feature11 — Status: TODO | Est: 30m
+  _Requirements: [FR-8](FR.md#fr-8-parallel-claude-code-and-codex-channels), [FR-9](FR.md#fr-9-codex-nss-content-generation), [FR-10](FR.md#fr-10-codex-launch-script-copy-and-path-drift-guard), [FR-11](FR.md#fr-11-codex-full-access-launch-and-trust-handling)_
+  **Done When:**
+  - [ ] `context-menu.feature` contains CTXMENU001_18..22 and they fail before Codex implementation
+- [ ] Generate and install `Codex.nss` while preserving `claude-code.nss` -- @feature8 @feature9 — Status: TODO | Est: 45m
+  _Requirements: [FR-8](FR.md#fr-8-parallel-claude-code-and-codex-channels), [FR-9](FR.md#fr-9-codex-nss-content-generation)_
+  **Done When:**
+  - [ ] `shell.nss` import handling preserves `imports/claude-code.nss`
+  - [ ] `shell.nss` import handling adds `imports/Codex.nss`
+  - [ ] Codex NSS has exactly one `Codex (YOLO)` entry with `admin=true`, `-Yolo`, and `-NoTui`
+- [ ] Add `scripts/launch-Codex-tui.ps1` and copy it to `~/.dev-pomogator/scripts/launch-Codex-tui.ps1` -- @feature10 @feature11 — Status: TODO | Est: 45m
+  _Requirements: [FR-10](FR.md#fr-10-codex-launch-script-copy-and-path-drift-guard), [FR-11](FR.md#fr-11-codex-full-access-launch-and-trust-handling)_
+  **Done When:**
+  - [ ] Codex NSS embedded path matches the script copy destination
+  - [ ] Missing bundled script is reported as installer error
+  - [ ] Launch command uses `codex -C "<dir>" --dangerously-bypass-approvals-and-sandbox`
+  - [ ] Launch command does not use `--dangerously-skip-permissions`
+- [ ] Implement Codex trust handling via `%USERPROFILE%\.codex\config.toml`, never `~/.claude.json` -- @feature11 — Status: TODO | Est: 45m
+  _Requirements: [FR-11](FR.md#fr-11-codex-full-access-launch-and-trust-handling)_
+  **Done When:**
+  - [ ] Target directory receives `trust_level = "trusted"` in the Codex config fixture
+  - [ ] Claude trust fixture remains unchanged
+  - [ ] Writes are atomic
+- [ ] Verify Claude channel regression + Codex channel green in Docker BDD -- Status: TODO | Est: 30m
+  **Done When:**
+  - [ ] Existing CTXMENU001_01..17 still pass
+  - [ ] New CTXMENU001_18..22 pass

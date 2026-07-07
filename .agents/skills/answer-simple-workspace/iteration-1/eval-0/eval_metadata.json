@@ -1,0 +1,13 @@
+{
+  "eval_id": 0,
+  "eval_name": "jargon-multi-select-wave-codes",
+  "prompt": "/answer-simple \"Wave 14 (gates+OpenRouter) ПЕРЕД Wave 11 — Keep / Swap / Parallel?\"",
+  "assertions": [
+    {"text": "Output contains 'Переформулировано:' header"},
+    {"text": "Output contains 'Найдено проблем:' header"},
+    {"text": "Output identifies 'Wave 14' as undefined internal code"},
+    {"text": "Output identifies 'Wave 11' as undefined internal code"},
+    {"text": "Output identifies multi-select with 3+ options as exceeding threshold of 2"},
+    {"text": "Output identifies missing micro-story structure (no 5 anchor points)"}
+  ]
+}

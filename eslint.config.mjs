@@ -7,6 +7,7 @@ export default tseslint.config(
     ignores: [
       '**/node_modules/**',
       '**/dist/**',
+      '**/.claude/worktrees/**',
       '**/*.bundle.mjs',
       '**/*.min.js',
       'tools/session-pilot/ui/vendor/**',

@@ -1,0 +1,9 @@
+{
+  "expectations": [
+    {"text": "Output contains 'Проблем не найдено' verdict", "passed": true, "evidence": "Line 1: 'Проблем не найдено'"},
+    {"text": "Output does NOT fabricate fake problems on clean draft", "passed": true, "evidence": "No 'Найдено проблем:' block. Output is concise — only verdict + passed criteria list, no fabricated issues"},
+    {"text": "Output lists passed criteria (5 anchor points / no jargon / causal link present)", "passed": true, "evidence": "Lines 3-7: 'Пройденные критерии: Микроистория с 5 опорными точками присутствует... Нет внутренних кодов... Multi-select отсутствует... Причинно-следственная связка После того как... присутствует'"}
+  ],
+  "summary": {"passed": 3, "failed": 0, "total": 3, "pass_rate": 1.0},
+  "timing": {"total_duration_seconds": 18.351}
+}

@@ -43,7 +43,10 @@
       "Bash(echo \"docker info exit: $?\")",
       "Bash(wsl.exe -e docker ps)",
       "Bash(node tools/test-statusline/test_runner_wrapper.cjs --framework generic -- node --import tsx node_modules/@cucumber/cucumber/bin/cucumber.js)",
-      "Bash(tee .dev-pomogator/.bg-logs/full-bdd-p195d.log)"
+      "Bash(tee .dev-pomogator/.bg-logs/full-bdd-p195d.log)",
+      "mcp__plugin_context-mode_context-mode__ctx_execute_file",
+      "mcp__tokensave__tokensave_context",
+      "Bash(rtk git *)"
     ]
   },
   "enabledMcpjsonServers": [

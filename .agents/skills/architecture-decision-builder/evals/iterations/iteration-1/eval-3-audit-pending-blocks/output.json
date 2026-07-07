@@ -1,0 +1,1 @@
+{"findings":[{"category":"ARCHITECTURE_COVERAGE","code":"AXIS_PENDING","severity":"WARNING","message":"Axis \"hosting axis\" is still pending — resolve or escape before STOP","axis_id":"hosting"}]}

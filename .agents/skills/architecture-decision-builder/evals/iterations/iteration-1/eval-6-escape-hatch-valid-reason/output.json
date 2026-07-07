@@ -1,0 +1,1 @@
+{"findings":[{"category":"ARCHITECTURE_COVERAGE","code":"ESCAPE_HATCH_USED","severity":"INFO","message":"Escape-hatch used in AXIS-email.md: covered by parametrized doctype helper","axis_id":"email"},{"category":"ARCHITECTURE_COVERAGE","code":"MATRIX_COMPLETE","severity":"INFO","message":"All 1 architecture axes resolved"}]}

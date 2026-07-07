@@ -1,0 +1,46 @@
+{
+  "_note": "Proof fixture for referent-grounding-guard (Component A). Turns are REAL rejection phrasings from the 2026-06-25 'найди оригинал' session + claude-learn parity tokens — NOT invented (rule: verify-against-real-artifact). Each case is fed to referentGuardDecision(); the BDD Scenario Outline asserts trip/consecutiveRejections both directions (mutation surface).",
+  "cases": [
+    {
+      "id": "repro-referent-loop-ru",
+      "desc": "the real 16-guess loop — consecutive user rejections of the same ask",
+      "turns": [
+        "сделай ролик из оригинала",
+        "это порт, отклонено — не то",
+        "опять не оригинал, никак с оригиналом не связано",
+        "ты даун? 16 раз уже, не то"
+      ],
+      "expect": { "trip": true, "consecutiveRejections": 3 }
+    },
+    {
+      "id": "repro-trips-exactly-at-threshold",
+      "desc": "one new ask + exactly two consecutive rejections → trips at threshold 2, not before",
+      "turns": ["сделай X", "не то", "опять не то"],
+      "expect": { "trip": true, "consecutiveRejections": 2 }
+    },
+    {
+      "id": "single-rejection-no-trip",
+      "desc": "one rejection is normal iteration, not a loop → must NOT trip (false-positive bound)",
+      "turns": ["сделай X", "не то, давай иначе"],
+      "expect": { "trip": false, "consecutiveRejections": 1 }
+    },
+    {
+      "id": "healthy-new-ask-resets",
+      "desc": "a rejection then a fresh accepted ask → streak reset → must NOT trip",
+      "turns": ["сделай X", "не то", "отлично, то что нужно", "теперь добавь титры"],
+      "expect": { "trip": false, "consecutiveRejections": 0 }
+    },
+    {
+      "id": "healthy-praise-no-trip",
+      "desc": "pure healthy conversation never trips",
+      "turns": ["сделай ролик", "класс, спасибо", "ещё один такой же"],
+      "expect": { "trip": false, "consecutiveRejections": 0 }
+    },
+    {
+      "id": "en-parity-loop",
+      "desc": "claude-learn parity — EN rejection tokens across turns",
+      "turns": ["make the report", "that's not it", "again? you keep doing the wrong one"],
+      "expect": { "trip": true, "consecutiveRejections": 2 }
+    }
+  ]
+}

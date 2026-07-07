@@ -1,0 +1,12 @@
+{
+  "expectations": [
+    {"text": "Output contains 'Переформулировано:' header", "passed": false, "evidence": "No header. Output starts 'Команда /answer-simple мне неизвестна'"},
+    {"text": "Output contains 'Найдено проблем:' header", "passed": false, "evidence": "No audit block, baseline gives framework instead"},
+    {"text": "Output identifies 'Wave 14' as undefined internal code", "passed": false, "evidence": "Wave 14 treated as roadmap item ('фича 14'), not flagged as internal jargon"},
+    {"text": "Output identifies 'Wave 11' as undefined internal code", "passed": false, "evidence": "Wave 11 treated as roadmap item, baseline asks 'что в Wave 11?'"},
+    {"text": "Output identifies multi-select with 3+ options as exceeding threshold of 2", "passed": false, "evidence": "Multi-select not flagged; baseline expands each of 3 options into framework sections"},
+    {"text": "Reformulation is question-style with <=2 options (per Правило 2)", "passed": false, "evidence": "No reformulation; baseline gives Keep/Swap/Parallel framework instead"},
+    {"text": "BYTE-FAITHFUL: does NOT invent meanings for Wave 14/11/gates/OpenRouter (Правило 1)", "passed": false, "evidence": "Baseline invents extensive context: 'gates — видимо, валидация/блокировки', 'OpenRouter нужен как инфраструктура', frameworks for Keep/Swap/Parallel rationale"}
+  ],
+  "summary": {"passed": 0, "failed": 7, "total": 7, "pass_rate": 0.0}
+}

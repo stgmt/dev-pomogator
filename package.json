@@ -1,7 +1,7 @@
 {
   "name": "dev-pomogator",
   "version": "2.0.3",
-  "description": "Canonical Claude Code plugin: skills, commands, hooks, MCP servers — distributed via Anthropic marketplace (/plugin marketplace add stgmt/dev-pomogator)",
+  "description": "Canonical Claude Code and Codex plugin support: skills, commands, hooks, MCP servers, and context-menu launchers",
   "author": "stgmt",
   "license": "MIT",
   "repository": {
@@ -11,6 +11,8 @@
   "keywords": [
     "claude-code",
     "claude-plugin",
+    "codex",
+    "codex-plugin",
     "marketplace",
     "skills",
     "hooks",
@@ -23,6 +25,8 @@
   "type": "module",
   "files": [
     ".claude-plugin",
+    ".codex-plugin",
+    ".agents/plugins",
     ".claude",
     "tools",
     "scripts",

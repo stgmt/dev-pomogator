@@ -1,28 +1,25 @@
-// SessionStart hook: claude-mem worker REAPER (heals a wedged worker on Windows).
+// SessionStart + PreToolUse hook: claude-mem worker REAPER (heals a wedged worker on Windows).
 //
-// Why this exists (root cause, proven live 2026-07-03):
-//   claude-mem runs a background worker on a fixed Windows port (37700 + (getuid ?? 77) % 100
-//   → always 37777, because getuid is undefined on Windows). Under load its observer LLM aborts
-//   on timeout and returns empty output; after 3 in a row claude-mem declares the SDK session
-//   "poisoned" and SIGKILLs the worker's process group. The worker had spawned `chroma-mcp` as a
-//   child, which INHERITED the 37777 listening-socket handle (Windows inherits handles by
-//   default). SIGKILL kills the worker but the orphaned `chroma-mcp` survives and keeps the socket
-//   open under the now-dead worker PID → every new worker fails with "Is port 37777 in use?" →
-//   hooks flood `hook-failures.json` → at the fail-loud threshold the plugin does process.exit(2)
-//   = a BLOCKING error on every tool call, in every project, until the worker is reachable again.
+// Why this exists (root cause, proven live 2026-07):
+//   claude-mem injects memory via hooks that call a background worker on a fixed Windows port
+//   (37700 + (getuid ?? 77) % 100 → 37777 on Windows). When that worker is unavailable but the
+//   port is still held, the upstream hook can wait until Claude Code's 60s hook budget expires.
+//   The recurring live triggers were version-mismatch worker recycle plus fixed-port rebind
+//   failure: the successor worker cannot start (`Is port 37777 in use?`) while an orphaned
+//   claude-mem child such as `chroma-mcp` still owns the socket handle.
 //
-//   Upstream never self-heals this on Windows (issues #415/#1531/#2111/#213/#729), and its own
-//   advice is "reboot". But the socket is NOT a true kernel zombie — it is held by a LIVE orphan
-//   child. Killing that orphan frees the port immediately, no reboot, no port change. Proven:
-//   Get-NetTCPConnection :37777 → dead owner PID; taskkill the orphaned chroma-mcp tree →
-//   "PORT 37777 FREE" → next hook lazy-spawns a healthy worker.
+//   Upstream never self-heals this on Windows. Rebooting is not a fix: the socket is usually held
+//   by a LIVE orphan child, not by an unfixable kernel zombie. Killing only that claude-mem orphan
+//   frees the port immediately; the next hook lazy-spawns a healthy worker.
 //
-// What this hook does, on SessionStart:
+// What this hook does:
 //   1. Probe the worker's /api/health. Healthy → do nothing (NEVER touch a live worker).
 //   2. Unhealthy → snapshot the port owner + claude-mem process table (PowerShell).
 //   3. If the port is bound by a DEAD PID (the wedge signature) → kill only the orphaned
 //      processes whose command line carries a claude-mem signature AND whose parent is dead.
 //      Reset the hook-failures counter so the exit(2) block clears at once.
+//   4. In PreToolUse mode, debounce full checks and emit a visible, non-blocking warning if memory
+//      stays down across checks.
 //
 // Contract: FAST, NON-BLOCKING, FAIL-OPEN (any error → {continue:true}, never throws/blocks),
 // builtins-only (ships in the plugin, runs with no node_modules — dead-integration-guard),
@@ -44,6 +41,8 @@ const VERBOSE = process.env.DEV_POMOGATOR_HOOK_VERBOSE === '1';
 const DEFAULT_PORT = 37777;
 const HEALTH_TIMEOUT_MS = 1500;
 const PS_TIMEOUT_MS = 8000;
+const DEFAULT_MID_SESSION_DEBOUNCE_MS = 10_000;
+const DEFAULT_DOWN_VISIBILITY_MS = 5 * 60_000;
 
 function log(level: 'INFO' | 'DEBUG' | 'WARN' | 'ERROR', msg: string): void {
   if (level !== 'ERROR' && !VERBOSE) return;
@@ -84,6 +83,19 @@ export type ReaperAction =
 export interface ReaperVerdict {
   action: ReaperAction;
   killPids: number[];
+  reason: string;
+}
+
+export type MidSessionAction =
+  | 'skip-debounce'
+  | 'skip-opt-out'
+  | 'skip-not-windows'
+  | 'checked';
+
+export interface MidSessionVerdict {
+  action: MidSessionAction;
+  reaper?: ReaperVerdict;
+  notice?: string;
   reason: string;
 }
 
@@ -285,12 +297,69 @@ function resetHookFailures(homeDir: string): void {
   try {
     const p = path.join(homeDir, '.claude-mem', 'state', 'hook-failures.json');
     if (!fs.existsSync(p)) return;
-    const tmp = `${p}.tmp`;
-    fs.writeFileSync(tmp, JSON.stringify({ consecutiveFailures: 0, lastFailureAt: 0 }));
-    fs.renameSync(tmp, p);
+    writeJsonAtomic(p, { consecutiveFailures: 0, lastFailureAt: 0 });
   } catch {
     /* best-effort */
   }
+}
+
+function stateDir(homeDir: string): string {
+  return path.join(homeDir, '.claude-mem', 'state');
+}
+
+function midSessionStateFile(homeDir: string): string {
+  return path.join(stateDir(homeDir), 'dev-pomogator-reaper.json');
+}
+
+function writeJsonAtomic(file: string, data: unknown): void {
+  const tmp = `${file}.tmp`;
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(tmp, JSON.stringify(data));
+  fs.renameSync(tmp, file);
+}
+
+function readNumberEnv(name: string, fallback: number): number {
+  const raw = process.env[name];
+  if (!raw) return fallback;
+  const n = Number(raw);
+  return Number.isFinite(n) && n >= 0 ? n : fallback;
+}
+
+function nowMs(): number {
+  const raw = process.env.CLAUDE_MEM_REAPER_NOW_MS;
+  if (raw) {
+    const n = Number(raw);
+    if (Number.isFinite(n)) return n;
+  }
+  return Date.now();
+}
+
+interface MidSessionState {
+  lastCheckAt?: number;
+  downSince?: number;
+  lastNoticeAt?: number;
+}
+
+function readMidSessionState(homeDir: string): MidSessionState {
+  try {
+    const p = midSessionStateFile(homeDir);
+    if (!fs.existsSync(p)) return {};
+    return JSON.parse(fs.readFileSync(p, 'utf-8')) as MidSessionState;
+  } catch {
+    return {};
+  }
+}
+
+function writeMidSessionState(homeDir: string, state: MidSessionState): void {
+  try {
+    writeJsonAtomic(midSessionStateFile(homeDir), state);
+  } catch {
+    /* best-effort */
+  }
+}
+
+function shouldDebounce(state: MidSessionState, now: number, windowMs: number): boolean {
+  return typeof state.lastCheckAt === 'number' && now - state.lastCheckAt >= 0 && now - state.lastCheckAt < windowMs;
 }
 
 async function drainStdin(): Promise<void> {
@@ -303,16 +372,55 @@ async function drainStdin(): Promise<void> {
   }
 }
 
-function writeContinue(): void {
+function writeContinue(additionalContext?: string): void {
   try {
-    process.stdout.write(JSON.stringify({ continue: true, suppressOutput: true }) + '\n');
+    const payload = additionalContext
+      ? { continue: true, additionalContext }
+      : { continue: true, suppressOutput: true };
+    process.stdout.write(JSON.stringify(payload) + '\n');
   } catch {
     /* best-effort */
   }
 }
 
+function updateDownNotice(
+  homeDir: string,
+  state: MidSessionState,
+  now: number,
+  workerHealthy: boolean,
+): { state: MidSessionState; notice?: string } {
+  if (workerHealthy) {
+    const next = { lastCheckAt: state.lastCheckAt };
+    writeMidSessionState(homeDir, next);
+    return { state: next };
+  }
+
+  const downSince = state.downSince ?? now;
+  const visibilityMs = readNumberEnv('CLAUDE_MEM_REAPER_DOWN_VISIBILITY_MS', DEFAULT_DOWN_VISIBILITY_MS);
+  const downFor = Math.max(0, now - downSince);
+  const lastNoticeAt = state.lastNoticeAt ?? 0;
+  const shouldNotice = downFor >= visibilityMs && now - lastNoticeAt >= visibilityMs;
+  const next = { ...state, downSince, lastNoticeAt: shouldNotice ? now : state.lastNoticeAt };
+  const minutes = Math.max(1, Math.round(downFor / 60_000));
+  const notice = shouldNotice
+    ? `⚠️ claude-mem недоступен уже ~${minutes} мин: память может не записываться. Инструмент не блокирую; dev-pomogator попробовал авто-уборку.`
+    : undefined;
+  writeMidSessionState(homeDir, next);
+  return { state: next, notice };
+}
+
 /** Exposed for the doctor auto-fix action: run the reaper once and return what it did. */
 export async function reapWedgedWorker(homeDir?: string): Promise<ReaperVerdict> {
+  const probeRecord = process.env.CLAUDE_MEM_REAPER_PROBE_RECORD;
+  if (probeRecord) {
+    try {
+      const prev = fs.existsSync(probeRecord) ? (JSON.parse(fs.readFileSync(probeRecord, 'utf-8')) as number[]) : [];
+      prev.push(nowMs());
+      writeJsonAtomic(probeRecord, prev);
+    } catch {
+      /* best-effort */
+    }
+  }
   const home = resolveHome(homeDir);
   let platform: NodeJS.Platform = process.platform;
   let healthOk: boolean;
@@ -353,6 +461,32 @@ export async function reapWedgedWorker(homeDir?: string): Promise<ReaperVerdict>
   return verdict;
 }
 
+export async function runMidSessionGuard(homeDir?: string): Promise<MidSessionVerdict> {
+  const home = resolveHome(homeDir);
+  const now = nowMs();
+  const state = readMidSessionState(home);
+  const debounceMs = readNumberEnv('CLAUDE_MEM_REAPER_DEBOUNCE_MS', DEFAULT_MID_SESSION_DEBOUNCE_MS);
+
+  if ((process.env.DEV_POMOGATOR_CLAUDE_MEM_REAP ?? '').toLowerCase() === 'off') {
+    return { action: 'skip-opt-out', reason: 'opt-out' };
+  }
+  if (process.platform !== 'win32' && !process.env.CLAUDE_MEM_REAPER_SNAPSHOT) {
+    return { action: 'skip-not-windows', reason: 'not Windows' };
+  }
+  if (shouldDebounce(state, now, debounceMs)) {
+    return { action: 'skip-debounce', reason: 'debounce window' };
+  }
+
+  const checkedState = { ...state, lastCheckAt: now };
+  writeMidSessionState(home, checkedState);
+  const reaper = await reapWedgedWorker(home);
+  // Only a successful health probe clears the outage marker. A reap is a repair attempt, not proof
+  // that memory is recording again; the next debounced check will observe the healed worker.
+  const workerHealthy = reaper.action === 'skip-healthy';
+  const notice = updateDownNotice(home, checkedState, now, workerHealthy).notice;
+  return { action: 'checked', reaper, notice, reason: reaper.reason };
+}
+
 async function main(): Promise<void> {
   await drainStdin();
 
@@ -364,6 +498,18 @@ async function main(): Promise<void> {
   if (process.platform !== 'win32' && !process.env.CLAUDE_MEM_REAPER_SNAPSHOT) {
     log('DEBUG', 'not Windows — skipping');
     return writeContinue();
+  }
+
+  const hookEvent = process.env.CLAUDE_HOOK_EVENT_NAME || process.env.CLAUDE_CODE_HOOK_EVENT_NAME;
+  const midSession = hookEvent === 'PreToolUse' || process.env.CLAUDE_MEM_REAPER_MID_SESSION === '1' || process.argv.includes('--mid-session');
+  if (midSession) {
+    const verdict = await runMidSessionGuard();
+    if (verdict.reaper?.action === 'reap') {
+      log('INFO', `${verdict.reaper.reason}; pids=${verdict.reaper.killPids.join(',') || '(none)'}`);
+    } else {
+      log('DEBUG', `mid-session no reap: ${verdict.action}${verdict.reaper ? `/${verdict.reaper.action}` : ''}`);
+    }
+    return writeContinue(verdict.notice);
   }
 
   const verdict = await reapWedgedWorker();

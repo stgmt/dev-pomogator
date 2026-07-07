@@ -1,0 +1,10 @@
+{
+  "eval_id": 3,
+  "eval_name": "clean-micro-story-should-pass",
+  "prompt": "/answer-simple \"После того как ты сказал переделать правило на шаблон самопроверки, я переписал на 5 шагов — что понял, черновик, самооценка, шаблон ответа, переписать если не прошло. Сейчас правило в .claude/rules/answer-simple/. Дальше — применяю в каждом ответе.\"",
+  "assertions": [
+    {"text": "Output contains 'Проблем не найдено' verdict"},
+    {"text": "Output does NOT fabricate fake problems on clean draft"},
+    {"text": "Output lists passed criteria (5 anchor points / no jargon / causal link present)"}
+  ]
+}

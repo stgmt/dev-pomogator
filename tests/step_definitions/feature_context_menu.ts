@@ -15,6 +15,8 @@ import { spawnSync } from 'node:child_process';
 const REPO_ROOT = process.env.APP_DIR || process.cwd();
 const POSTINSTALL_SCRIPT = path.join(REPO_ROOT, 'tools', 'context-menu', 'postinstall.ts');
 const LAUNCH_SCRIPT = path.join(REPO_ROOT, 'scripts', 'launch-claude-tui.ps1');
+const CODEX_LAUNCH_SCRIPT = path.join(REPO_ROOT, 'scripts', 'launch-Codex-tui.ps1');
+const INSTALL_CODEX_CONTEXT_MENU_SCRIPT = path.join(REPO_ROOT, 'scripts', 'install-codex-context-menu.ps1');
 
 // ============================================================================
 // G8 (FR-6/FR-7) helpers — drive the REAL launch-claude-tui.ps1 via real pwsh,
@@ -25,8 +27,15 @@ const LAUNCH_SCRIPT = path.join(REPO_ROOT, 'scripts', 'launch-claude-tui.ps1');
 interface G8World extends V4World {
   g8FakeHome?: string;
   g8ClaudeJsonPath?: string;
+  g8ClaudeJsonBefore?: string;
+  g8CodexConfigPath?: string;
   g8LogPath?: string;
   g8TargetDir?: string;
+  codexOnlyPlan?: import('../../tools/context-menu/postinstall.ts').InstallPlan;
+  codexOnlyShellImports?: string;
+  fallbackCodexIcon?: Buffer;
+  codexExecutableCandidates?: string[];
+  codexIconFileCandidates?: string[];
 }
 
 function pwshAvailable(): boolean {
@@ -37,7 +46,7 @@ function pwshAvailable(): boolean {
   return probe.status === 0;
 }
 
-function runLaunchScript(world: G8World, extraArgs: string[]): void {
+function runLaunchScript(world: G8World, extraArgs: string[], scriptPath = LAUNCH_SCRIPT): void {
   const fakeHome = world.g8FakeHome ?? path.join(world.tempDir, 'fake-home');
   fs.mkdirSync(fakeHome, { recursive: true });
   world.g8FakeHome = fakeHome;
@@ -45,7 +54,7 @@ function runLaunchScript(world: G8World, extraArgs: string[]): void {
 
   const result = spawnSync(
     'pwsh',
-    ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', LAUNCH_SCRIPT, ...extraArgs],
+    ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', scriptPath, ...extraArgs],
     {
       encoding: 'utf-8',
       timeout: 15000,
@@ -109,6 +118,14 @@ When(/^the launch-claude-tui\.ps1 script file is read$/, function (this: V4World
   this.lastStdout = fs.readFileSync(LAUNCH_SCRIPT, 'utf-8');
 });
 
+Given(/^the launch-Codex-tui\.ps1 script file is read$/, function (this: V4World) {
+  this.lastStdout = fs.readFileSync(CODEX_LAUNCH_SCRIPT, 'utf-8');
+});
+
+When(/^the install-codex-context-menu\.ps1 script file is read$/, function (this: V4World) {
+  this.lastStdout = fs.readFileSync(INSTALL_CODEX_CONTEXT_MENU_SCRIPT, 'utf-8');
+});
+
 When(/^copyLaunchScript is called with an existing source and a temporary destination$/, async function (this: V4World) {
   const mod = await getPostinstall();
   const srcFile = path.join(this.tempDir, 'src-launch.ps1');
@@ -134,6 +151,55 @@ When(/^copyLaunchScript is called with a missing source path$/, async function (
 When(/^bundledLaunchScriptPath is called$/, async function (this: V4World) {
   const mod = await getPostinstall();
   this.lastStdout = mod.bundledLaunchScriptPath();
+});
+
+When(/^the combined Nilesoft imports are generated$/, async function (this: V4World) {
+  const mod = await getPostinstall();
+  this.lastStdout = [
+    mod.generateShellImports(),
+    mod.generateNss(),
+    mod.generateCodexNss(),
+  ].join('\n');
+});
+
+When(/^the Codex NSS content is generated$/, async function (this: V4World) {
+  const mod = await getPostinstall();
+  this.lastStdout = mod.generateCodexNss();
+});
+
+When(/^the Codex-only postinstall plan is generated$/, async function (this: G8World) {
+  const mod = await getPostinstall();
+  this.codexOnlyPlan = mod.installPlanForMode('codex-only');
+  this.codexOnlyShellImports = mod.generateShellImports('', 'codex-only');
+  this.lastStdout = JSON.stringify(this.codexOnlyPlan, null, 2);
+});
+
+When(/^the fallback Codex icon is generated$/, async function (this: G8World) {
+  const mod = await getPostinstall();
+  this.fallbackCodexIcon = mod.generateFallbackCodexIcon();
+  this.lastStdout = mod.generateCodexNss();
+});
+
+When(/^the Codex executable candidates are generated for a Windows user profile$/, async function (this: G8World) {
+  const mod = await getPostinstall();
+  this.codexExecutableCandidates = mod.codexExecutableCandidates({
+    LOCALAPPDATA: 'C:\\Users\\demo\\AppData\\Local',
+    PATH: '',
+  });
+  this.lastStdout = JSON.stringify(this.codexExecutableCandidates, null, 2);
+});
+
+When(/^the Codex icon file candidates are generated for a Windows app install$/, async function (this: G8World) {
+  const mod = await getPostinstall();
+  const programFiles = path.join(this.tempDir, 'Program Files');
+  const codexAppDir = path.join(programFiles, 'WindowsApps', 'OpenAI.Codex_1.2.3.0_x64__2p2nqsd0c76g0', 'app', 'resources');
+  fs.mkdirSync(codexAppDir, { recursive: true });
+  this.codexIconFileCandidates = mod.codexIconFileCandidates({
+    LOCALAPPDATA: 'C:\\Users\\demo\\AppData\\Local',
+    ProgramFiles: programFiles,
+    PATH: '',
+  });
+  this.lastStdout = JSON.stringify(this.codexIconFileCandidates, null, 2);
 });
 
 // ============================================================================
@@ -250,6 +316,164 @@ Then(/^the NSS content should contain the global path home\/\.dev-pomogator\/scr
   }
 });
 
+Then(/^the shell\.nss content should contain "([^"]+)"$/, function (this: V4World, expected: string) {
+  if (!this.lastStdout.includes(expected)) {
+    throw new Error(`Expected shell.nss content to contain "${expected}" but got:\n${this.lastStdout}`);
+  }
+});
+
+Then(/^the generated entries should include "([^"]+)"$/, function (this: V4World, expected: string) {
+  if (!this.lastStdout.includes(expected)) {
+    throw new Error(`Expected generated entries to include "${expected}" but got:\n${this.lastStdout}`);
+  }
+});
+
+Then(/^the Codex NSS content should contain exactly (\d+) "item\(" entry$/, function (this: V4World, expectedStr: string) {
+  const expected = parseInt(expectedStr, 10);
+  const actual = (this.lastStdout.match(/item\(/g) || []).length;
+  if (actual !== expected) {
+    throw new Error(`Expected exactly ${expected} "item(" entries in Codex NSS but found ${actual}.\nNSS:\n${this.lastStdout}`);
+  }
+});
+
+Then(/^the Codex NSS content should contain "([^"]+)"$/, function (this: V4World, expected: string) {
+  if (!this.lastStdout.includes(expected)) {
+    throw new Error(`Expected Codex NSS content to contain "${expected}" but got:\n${this.lastStdout}`);
+  }
+});
+
+Then(/^the Codex NSS content should not contain "([^"]+)"$/, function (this: V4World, unexpected: string) {
+  if (this.lastStdout.includes(unexpected)) {
+    throw new Error(`Expected Codex NSS content NOT to contain "${unexpected}" but got:\n${this.lastStdout}`);
+  }
+});
+
+Then(/^the Codex NSS content should contain the global path home\/\.dev-pomogator\/scripts\/launch-Codex-tui\.ps1$/, function (this: V4World) {
+  const homeDir = os.homedir().replace(/\\/g, '/');
+  const expectedPath = `${homeDir}/.dev-pomogator/scripts/launch-Codex-tui.ps1`;
+  const nss = this.lastStdout.replace(/\\/g, '/');
+  if (!nss.includes(expectedPath)) {
+    throw new Error(`Expected Codex NSS to contain global path "${expectedPath}"\nNSS (normalized):\n${nss.slice(0, 500)}`);
+  }
+});
+
+Then(/^the bundled Codex launch script path should end with "([^"]+)"$/, async function (this: V4World, suffix: string) {
+  const mod = await getPostinstall();
+  const result = mod.bundledCodexLaunchScriptPath();
+  const normalPath = result.replace(/\\/g, '/');
+  if (!normalPath.endsWith(suffix)) {
+    throw new Error(`Expected Codex launch path to end with "${suffix}" but got: ${result}`);
+  }
+  if (!fs.existsSync(result)) {
+    throw new Error(`Expected Codex launch script to exist at: ${result}`);
+  }
+});
+
+Then(/^the Codex launch script should contain "([^"]+)"$/, function (this: V4World, expected: string) {
+  if (!this.lastStdout.includes(expected)) {
+    throw new Error(`Expected Codex launch script to contain "${expected}"`);
+  }
+});
+
+Then(/^the Codex launch script should not contain "([^"]+)"$/, function (this: V4World, unexpected: string) {
+  if (this.lastStdout.includes(unexpected)) {
+    throw new Error(`Expected Codex launch script NOT to contain "${unexpected}"`);
+  }
+});
+
+Then(/^the Codex launch script should invoke "codex"$/, function (this: V4World) {
+  if (!/\bcodex\b/.test(this.lastStdout)) {
+    throw new Error('Expected Codex launch script to invoke codex');
+  }
+});
+
+Then(/^the Codex-only plan should copy only the Codex launch script$/, function (this: G8World) {
+  const plan = this.codexOnlyPlan;
+  if (!plan?.copyCodex || plan.copyClaude || plan.launchScripts.length !== 1 || plan.launchScripts[0] !== 'launch-Codex-tui.ps1') {
+    throw new Error(`Expected Codex-only plan to copy only launch-Codex-tui.ps1, got:\n${this.lastStdout}`);
+  }
+});
+
+Then(/^the Codex-only plan should write only "([^"]+)"$/, function (this: G8World, expected: string) {
+  const plan = this.codexOnlyPlan;
+  if (!plan?.writeCodexNss || plan.writeClaudeNss || plan.nssFiles.length !== 1 || plan.nssFiles[0] !== expected) {
+    throw new Error(`Expected Codex-only plan to write only ${expected}, got:\n${this.lastStdout}`);
+  }
+});
+
+Then(/^the Codex-only plan should install only "([^"]+)"$/, function (this: G8World, expected: string) {
+  const plan = this.codexOnlyPlan;
+  if (!plan?.writeCodexIcon || plan.iconFiles.length !== 1 || plan.iconFiles[0] !== expected) {
+    throw new Error(`Expected Codex-only plan to install only ${expected}, got:\n${this.lastStdout}`);
+  }
+});
+
+Then(/^the Codex-only shell imports should contain "([^"]+)"$/, function (this: G8World, expected: string) {
+  if (!this.codexOnlyShellImports?.includes(expected)) {
+    throw new Error(`Expected Codex-only shell imports to contain ${expected}, got:\n${this.codexOnlyShellImports ?? '<missing>'}`);
+  }
+});
+
+Then(/^the Codex-only shell imports should not contain "([^"]+)"$/, function (this: G8World, unexpected: string) {
+  if (this.codexOnlyShellImports?.includes(unexpected)) {
+    throw new Error(`Expected Codex-only shell imports not to contain ${unexpected}, got:\n${this.codexOnlyShellImports}`);
+  }
+});
+
+Then(/^the fallback Codex icon should be a valid ICO file$/, function (this: G8World) {
+  const icon = this.fallbackCodexIcon;
+  if (!icon) throw new Error('Fallback Codex icon was not generated');
+  const valid =
+    icon.length > 100 &&
+    icon.readUInt16LE(0) === 0 &&
+    icon.readUInt16LE(2) === 1 &&
+    icon.readUInt16LE(4) === 1 &&
+    icon.readUInt8(6) === 32 &&
+    icon.readUInt8(7) === 32 &&
+    icon.readUInt16LE(12) === 32;
+  if (!valid) {
+    throw new Error(`Expected a valid single-image 32x32 ICO, got ${icon.length} bytes`);
+  }
+});
+
+Then(/^the Codex executable candidates should include "([^"]+)"$/, function (this: G8World, expected: string) {
+  const normalizedExpected = expected.replace(/\\/g, '/');
+  const candidates = this.codexExecutableCandidates ?? [];
+  if (!candidates.some((candidate) => candidate.replace(/\\/g, '/').endsWith(normalizedExpected))) {
+    throw new Error(`Expected Codex executable candidates to include ${expected}, got:\n${this.lastStdout}`);
+  }
+});
+
+Then(/^the Codex icon file candidates should include "([^"]+)"$/, function (this: G8World, expected: string) {
+  const normalizedExpected = expected.replace(/\\/g, '/');
+  const candidates = this.codexIconFileCandidates ?? [];
+  if (!candidates.some((candidate) => candidate.replace(/\\/g, '/').endsWith(normalizedExpected))) {
+    throw new Error(`Expected Codex icon file candidates to include ${expected}, got:\n${this.lastStdout}`);
+  }
+});
+
+function normalizedLauncherText(value: string): string {
+  return value
+    .replace(/[`"',()[\]{}]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+Then(/^the Codex install launcher should contain "([^"]+)"$/, function (this: V4World, expected: string) {
+  const normalized = normalizedLauncherText(this.lastStdout);
+  if (!normalized.includes(expected)) {
+    throw new Error(`Expected Codex install launcher to contain "${expected}".\nNormalized:\n${normalized}`);
+  }
+});
+
+Then(/^the Codex install launcher should not contain "([^"]+)"$/, function (this: V4World, unexpected: string) {
+  const raw = this.lastStdout;
+  const normalized = normalizedLauncherText(raw);
+  if (raw.includes(unexpected) || normalized.includes(unexpected)) {
+    throw new Error(`Expected Codex install launcher not to contain "${unexpected}".`);
+  }
+});
+
 // ============================================================================
 // G8 (FR-6 universal logging / FR-7 trust auto-grant) — CTXMENU001_13..17
 // ============================================================================
@@ -281,6 +505,28 @@ Given(/^pwsh is available and a temporary ~\/\.claude\.json fixture with no entr
   );
 });
 
+Given(/^pwsh is available and a temporary Codex config\.toml fixture with no entry for the target directory$/, function (this: G8World) {
+  if (!pwshAvailable()) return 'pending';
+  const fakeHome = path.join(this.tempDir, 'fake-home');
+  fs.mkdirSync(fakeHome, { recursive: true });
+  this.g8FakeHome = fakeHome;
+  this.g8TargetDir = path.join(this.tempDir, 'target-project');
+  fs.mkdirSync(this.g8TargetDir, { recursive: true });
+
+  const codexDir = path.join(fakeHome, '.codex');
+  fs.mkdirSync(codexDir, { recursive: true });
+  this.g8CodexConfigPath = path.join(codexDir, 'config.toml');
+  fs.writeFileSync(
+    this.g8CodexConfigPath,
+    '[projects."C:\\\\Users\\\\x\\\\unrelated-repo"]\ntrust_level = "trusted"\n',
+    'utf-8',
+  );
+
+  this.g8ClaudeJsonPath = path.join(fakeHome, '.claude.json');
+  this.g8ClaudeJsonBefore = JSON.stringify({ projects: { 'C:/Users/x/unrelated-repo': { hasTrustDialogAccepted: true } } });
+  fs.writeFileSync(this.g8ClaudeJsonPath, this.g8ClaudeJsonBefore, 'utf-8');
+});
+
 When(/^the launch-claude-tui\.ps1 script is invoked with -NoTui and a project dir$/, function (this: G8World) {
   const dir = this.g8TargetDir ?? this.tempDir;
   runLaunchScript(this, ['-NoTui', '-ProjectDir', dir]);
@@ -292,6 +538,10 @@ When(/^the launch-claude-tui\.ps1 script is invoked with -Yolo -NoTui and the ta
 
 When(/^the launch-claude-tui\.ps1 script is invoked with -NoTui and the target directory$/, function (this: G8World) {
   runLaunchScript(this, ['-NoTui', '-ProjectDir', this.g8TargetDir!]);
+});
+
+When(/^the launch-Codex-tui\.ps1 script is invoked with -Yolo -NoTui and the target directory$/, function (this: G8World) {
+  runLaunchScript(this, ['-Yolo', '-NoTui', '-ProjectDir', this.g8TargetDir!], CODEX_LAUNCH_SCRIPT);
 });
 
 Then(/^a log file should be created at ~\/\.dev-pomogator\/logs\/context-menu-launch\.log$/, function (this: G8World) {
@@ -321,7 +571,8 @@ Then(/^the fixture should have hasTrustDialogAccepted true for the target direct
   const raw = fs.readFileSync(this.g8ClaudeJsonPath!, 'utf-8');
   const obj = JSON.parse(raw);
   const dir = fs.realpathSync(this.g8TargetDir!);
-  const entry = obj.projects?.[dir] ?? obj.projects?.[this.g8TargetDir!];
+  const slashDir = dir.replace(/\\/g, '/');
+  const entry = obj.projects?.[dir] ?? obj.projects?.[slashDir] ?? obj.projects?.[this.g8TargetDir!];
   if (!entry || entry.hasTrustDialogAccepted !== true) {
     throw new Error(`Expected ~/.claude.json to have hasTrustDialogAccepted:true for "${dir}" but got:\n${raw}`);
   }
@@ -331,9 +582,31 @@ Then(/^the fixture should be unchanged$/, function (this: G8World) {
   const raw = fs.readFileSync(this.g8ClaudeJsonPath!, 'utf-8');
   const obj = JSON.parse(raw);
   const dir = fs.realpathSync(this.g8TargetDir!);
-  const entry = obj.projects?.[dir] ?? obj.projects?.[this.g8TargetDir!];
+  const slashDir = dir.replace(/\\/g, '/');
+  const entry = obj.projects?.[dir] ?? obj.projects?.[slashDir] ?? obj.projects?.[this.g8TargetDir!];
   if (entry) {
     throw new Error(`Expected ~/.claude.json to have NO entry for "${dir}" (non-Yolo launch must never write trust) but got:\n${raw}`);
+  }
+});
+
+Then(/^the Codex config fixture should have trust_level "trusted" for the target directory$/, function (this: G8World) {
+  const raw = fs.readFileSync(this.g8CodexConfigPath!, 'utf-8');
+  const dir = fs.realpathSync(this.g8TargetDir!);
+  const escapedDir = dir.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+  const acceptedHeaders = [
+    `[projects."${escapedDir}"]`,
+    `[projects.'${dir}']`,
+  ];
+  const hasHeader = acceptedHeaders.some((header) => raw.includes(header));
+  if (!hasHeader || !raw.includes('trust_level = "trusted"')) {
+    throw new Error(`Expected config.toml to trust "${dir}" but got:\n${raw}\nstdout: ${this.lastStdout}\nstderr: ${this.lastStderr}`);
+  }
+});
+
+Then(/^the Claude trust fixture should be unchanged$/, function (this: G8World) {
+  const raw = fs.readFileSync(this.g8ClaudeJsonPath!, 'utf-8');
+  if (raw !== this.g8ClaudeJsonBefore) {
+    throw new Error(`Expected Claude trust fixture to remain unchanged.\nBefore:\n${this.g8ClaudeJsonBefore}\nAfter:\n${raw}`);
   }
 });
 

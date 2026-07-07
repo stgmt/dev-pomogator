@@ -214,7 +214,7 @@ Summarize:
 > - **Config updated**: yes/no
 > - **Git status**: clean (0 dev-pomogator paths) / {list if any remain}
 >
-> You can reinstall dev-pomogator later with `npx dev-pomogator --claude --all`.
+> You can reinstall the Claude plugin later with `/plugin install dev-pomogator@stgmt --force`. Do not use the deprecated `npx dev-pomogator --claude --all` v1 installer unless explicitly diagnosing a legacy v1 install.
 > Your `~/.dev-pomogator/` global scripts are still intact for use in other projects."
 
 ---
@@ -231,8 +231,6 @@ Summarize:
 
 If the uninstall goes wrong and user wants to roll back:
 
-```bash
-npx dev-pomogator --claude --all
-```
+Use `/plugin install dev-pomogator@stgmt --force` for the canonical plugin path.
 
-This re-runs the full installer, which will recreate managed files, re-add the gitignore block, and re-write `.claude/settings.local.json`. User-authored files will still be preserved (collision detection).
+Do not roll canonical installs back through the deprecated `npx dev-pomogator --claude --all` v1 installer unless the user is explicitly recovering a legacy v1 installation.
