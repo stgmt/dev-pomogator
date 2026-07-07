@@ -1,0 +1,28 @@
+{
+  "version": 3,
+  "featureSlug": "spec-generator-v3",
+  "createdAt": "2026-04-23T10:41:46.382Z",
+  "currentPhase": "Complete",
+  "phases": {
+    "Discovery": {
+      "completedAt": "2026-04-23T10:48:17.335Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-04-23T10:48:17.334Z"
+    },
+    "Context": {
+      "completedAt": "2026-04-23T10:48:17.335Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-04-23T10:48:26.709Z"
+    },
+    "Requirements": {
+      "completedAt": "2026-04-23T10:53:32.141Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-04-23T10:53:32.140Z"
+    },
+    "Finalization": {
+      "completedAt": "2026-04-23T10:57:07.331Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-04-23T10:57:07.331Z"
+    }
+  }
+}
