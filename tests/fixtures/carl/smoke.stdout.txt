@@ -1,0 +1,5 @@
+CARL smoke OK
+domains=116
+neutral_chars=691
+debug_domains=[GLOBAL] always_on (2 rules) | [CORE__DONT_BLAME_INFRA_BEFORE_TRACING] matched: инфра (1 rules) | [CORE__REPRODUCE_NOT_THEORIZE] matched: че за ошибка, исследуй втф, до конца (1 rules)
+codex_domains=[GLOBAL] always_on (2 rules) | [CORE__REPRODUCE_NOT_THEORIZE] matched: че за ошибка (1 rules)

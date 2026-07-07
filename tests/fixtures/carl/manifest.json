@@ -1,0 +1,102 @@
+{
+  "captured_at": "2026-07-07",
+  "source_root": "E:/repos/presentation-reels",
+  "source_git_status_short": [
+    "M .gitignore",
+    " M CLAUDE.md",
+    "?? .carl/",
+    "?? .claude/hooks/carl-hook.py",
+    "?? .codex/",
+    "?? AGENTS.md",
+    "?? scripts/carl/"
+  ],
+  "source_tracked_carl_inventory": [
+    ".claude/hooks/aggregate-verdict.mjs",
+    ".claude/hooks/backend-change-reminder.mjs",
+    ".claude/hooks/backend-change-reminder.ts",
+    ".claude/hooks/bdd-scaffold-on-feature-write.ts",
+    ".claude/hooks/block-broken-headline.ts",
+    ".claude/hooks/block-kill-all-node.ts",
+    ".claude/hooks/block-non-langsmith-render.ts",
+    ".claude/hooks/check-pipeline-on-edit.ts",
+    ".claude/hooks/check-render-image-fresh-on-edit.ts",
+    ".claude/hooks/playwright-force-screenshot.ts",
+    ".claude/hooks/render-functionality-needs-e2e.ts",
+    ".claude/hooks/self-improve-post-agent-run.ts",
+    ".claude/hooks/self-improve-pre-compact.ts",
+    ".claude/hooks/self-improve-session-start.ts",
+    ".claude/hooks/self-improve-user-prompt.ts",
+    ".claude/hooks/trace-health-post-agent-run.ts",
+    ".claude/hooks/trace-health-session-start.ts"
+  ],
+  "source_untracked_carl_inventory": [
+    ".carl/carl.json",
+    ".claude/hooks/carl-hook.py",
+    "scripts/carl/bench-carl-hooks.mjs",
+    "scripts/carl/generate-carl-rules.mjs",
+    "scripts/carl/smoke-carl-hooks.mjs"
+  ],
+  "commands": {
+    "smoke": "cd E:/repos/presentation-reels && node scripts/carl/smoke-carl-hooks.mjs",
+    "bench": "cd E:/repos/presentation-reels && node scripts/carl/bench-carl-hooks.mjs",
+    "hook": "powershell -NoProfile -Command <command from .claude/settings.json or .codex/hooks.json>"
+  },
+  "source_hashes": {
+    ".claude/hooks/carl-hook.py": "06c061d58c13433a41290534eb38e578a8dfbdf6295cb21ee04dd74451c8ab07",
+    ".carl/carl.json": "943362c21753f0f9b53875db9d79f301c26a407b12e574754f9a4da2f7cbae5d",
+    "scripts/carl/smoke-carl-hooks.mjs": "faec3c449f042112e014f151a809062472360d6b57e5ba56e3f37daefff9ce91",
+    "scripts/carl/bench-carl-hooks.mjs": "4d139e3b73e023551fa062998b7b555aa3e419dde8add05504ed6c12151f4a1d",
+    "scripts/carl/generate-carl-rules.mjs": "1e4e7c553e60f85e98d70209cacdeed6af38727019def39a4029f3d56e43a341",
+    ".claude/settings.json": "6c19559f48bfe664600422b7f1d72b8eacceb3da4b38f520b32b5932f3c1c75b",
+    ".codex/hooks.json": "ab3adefbd6c7adb0e5b9ec49b711118dad06e341d498d673f6796472520a6bfc"
+  },
+  "hook_commands": {
+    "claudeCommand": "python \"E:/repos/presentation-reels/.claude/hooks/carl-hook.py\"",
+    "codexCommand": "python 'E:\\\\repos\\\\presentation-reels\\\\.claude\\\\hooks\\\\carl-hook.py'"
+  },
+  "hook_samples": [
+    {
+      "name": "claude-neutral",
+      "status": 0,
+      "stdoutBytes": 816,
+      "stderrBytes": 0,
+      "contextChars": 691,
+      "loadedDomains": [
+        "[GLOBAL] always_on (2 rules)"
+      ]
+    },
+    {
+      "name": "claude-debug",
+      "status": 0,
+      "stdoutBytes": 57138,
+      "stderrBytes": 0,
+      "contextChars": 20557,
+      "loadedDomains": [
+        "[GLOBAL] always_on (2 rules)",
+        "[CORE__DONT_BLAME_INFRA_BEFORE_TRACING] matched: инфра (1 rules)",
+        "[CORE__REPRODUCE_NOT_THEORIZE] matched: че за ошибка, исследуй втф, до конца (1 rules)"
+      ]
+    },
+    {
+      "name": "codex-debug",
+      "status": 0,
+      "stdoutBytes": 16879,
+      "stderrBytes": 0,
+      "contextChars": 9155,
+      "loadedDomains": [
+        "[GLOBAL] always_on (2 rules)",
+        "[CORE__REPRODUCE_NOT_THEORIZE] matched: че за ошибка (1 rules)"
+      ]
+    }
+  ],
+  "smoke": {
+    "status": 0,
+    "stdoutBytes": 394,
+    "stderrBytes": 0
+  },
+  "bench": {
+    "status": 0,
+    "stdoutBytes": 955,
+    "stderrBytes": 0
+  }
+}

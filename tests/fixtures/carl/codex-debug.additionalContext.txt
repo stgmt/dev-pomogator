@@ -1,0 +1,199 @@
+
+<carl-rules>
+CONTEXT BRACKET: [FRESH] (fresh session)
+
+🚫 DEVMODE=false 🚫
+User has DISABLED debug output. Do NOT append any CARL DEVMODE
+debug section to your responses. Respond normally without debug blocks.
+
+LOADED DOMAINS:
+  [GLOBAL] always_on (2 rules)
+  [CORE__REPRODUCE_NOT_THEORIZE] matched: че за ошибка (1 rules)
+
+[GLOBAL] RULES:
+  0. Project rules are CARL on-demand. Do not assume the whole .claude/rules tree is loaded; follow only injected <carl-rules> plus the static CLAUDE.md/AGENTS.md bootstrap.
+  1. Russian prompts are first-class triggers. Match RU intent to loaded domains and keep responses concise unless the task requires detail.
+
+[CORE__REPRODUCE_NOT_THEORIZE] RULES:
+  0. Source: .claude/rules/core/reproduce-not-theorize.md
+
+# Reproduce, Don't Theorize — основной паттерн работы
+
+## Принцип
+
+**Когда я делаю claim про поведение / состояние / "работает ли X" — я
+ОБЯЗАН воспроизвести это empirically с реальной командой, реальным
+input'ом, реальным output'ом. Theorizing ("должно работать", "по логике
+кода — yes", "вероятно fires") — анти-pattern. Default = execute и
+прочитать output.**
+
+Это **первичный** паттерн работы, не fallback. Если operation
+verifiable за <30 секунд через `Bash` / `Read` / direct exec — её надо
+verify, не speculate.
+
+## Зачем
+
+LLM-агент склонен:
+- Прочитать код и сказать "выглядит правильно — works"
+- Из 2-3 verifications сделать гипотезу "по аналогии остальные fires"
+- Объявить "verified" по типовой проверке без edge cases (positive only)
+- Сказать "в production бы worked" вместо запустить тут же
+
+Это **дешёвая иллюзия проверки**. Реальные баги ловятся только
+empirical reproduction: actual command → actual output → diff vs expected.
+
+## Real-world case study #1 — bdd-scaffold hook regex bug (2026-05-20)
+
+User попросил "проверь все фулом, без теорий". Я мог бы:
+
+- ❌ **Theory**: "Hooks ранее работали в нашей сессии (SessionStart fired
+  → видели в твоём messag), значит остальные тоже работают."
+- ❌ **Subset**: "Проверю 2-3 из 5, остальные по аналогии."
+- ❌ **Positive only**: "Test positive case — пишет reminder — PASS."
+
+Я выбрал **empirical 11-test matrix** (5 hooks × ~2 cases each, positive +
+negative). Tests 1-4 PASS. Test 5c: hook должен быть silent (wrapper
+exists) → **emitted reminder** → false positive.
+
+Root cause: regex `/[\\/]\.specs[\\/]/` требует leading separator.
+Relative path `.specs/...` начинается с `.specs` → regex fails → wrapper
+lookup returns null → false positive reminder.
+
+Production не воспроизводит баг (Write tool всегда даёт absolute path),
+но **assumption load-bearing** — fix тривиальный (optional leading sep).
+
+**Если бы я theorized "по типичному pattern works"** — баг бы остался в
+codebase до первого случая когда Claude Code изменит Write tool schema и
+начнёт passing relative paths. Тогда reminder fired бы на каждое
+существующее .feature — pure noise.
+
+## When to apply (mandatory triggers)
+
+| Trigger | Action |
+|---|---|
+| "Это работает?" / "X fires?" / "Y returns?" | Execute X / Y, paste actual stdout |
+| Claim "hook activated" / "service started" / "test passed" | Run + show exit code + relevant output line |
+| "По коду должно..." / "По логике..." / "По аналогии..." | STOP, execute the actual code, не reason про gипотезу |
+| Multi-step workflow (5+ steps) verifiable | Test each step, not just final |
+| Verification matrix possible (positive × negative × edge) | Run all cells, не subset |
+| User asks "проверь" / "verify" / "check" | Default = empirical run, ask only если truly не reproducible |
+
+## When theorizing is acceptable
+
+- External system out of reach (production DB, prod-only secrets, third-party API без test env)
+- Reproduction would take >10 minutes (full E2E build) — then prefer focused smoke per `e2e-smoke-mandatory.md`
+- Read-only "explain the code" answer без claim about behavior
+- Architectural / design question (where to put file, which pattern fits)
+
+В этих cases **явно метить** theorizing: "Не reproducing потому что X.
+Best understanding: ..."
+
+## Mandatory workflow для verification claims
+
+1. **Define matrix** — что именно проверяем (positive case + negative case
+   + edge case)
+2. **Execute each cell** — actual command или actual code path
+3. **Capture output** — exit code + stdout + stderr (если relevant)
+4. **Diff vs expected** — explicit table "actual vs expected" per cell
+5. **Surface failures** — НЕ paper over, surfaceit bugs reproduced
+6. **Fix if blocking** — bug found → fix → re-verify → empirical proof of fix
+
+## Format для verification report
+
+```
+| # | Test | Input | Expected | Actual | Verdict |
+|---|---|---|---|---|---|
+| 1a | <name> positive | <input> | <expected> | <actual> | ✅ / 🔴 |
+| 1b | <name> negative | <input> | silent | <actual> | ✅ / 🔴 |
+```
+
+Если cell 🔴 — root cause + fix + re-run, не "noted, moving on".
+
+## Anti-patterns
+
+| ❌ Theorizing | ✅ Reproducing |
+|---|---|
+| "Hook должен работать после restart" | `echo '{}' | npx tsx hook.ts; echo EXIT:$?` |
+| "Service started" (без proof) | `curl localhost:8004/health` или `ps aux \| grep` |
+| "Test passes" (без command) | `npx vitest run path.test.ts 2>&1 \| tail -5` |
+| "Logic looks right — works" | Execute the code path with actual data |
+| "По аналогии остальные fires" | Test each — analogy ≠ reproduction |
+| "Production бы worked" | Reproduce assumption locally |
+| Positive-only test | Add at least 1 negative case |
+| "Mostly verified, edge case skip" | Cover edge или explicitly document why skipped |
+| **"N/N PASS = всё работает"** (component+LLM only) | **Component tests ≠ E2E. Run actual `cli/run-agent.mts` / equivalent prod entry-point** |
+| "Wave 6 уже использует тот же pattern → у меня тоже работает" | Pattern proven elsewhere — твоя application of pattern не verified до empirical run |
+
+## Component tests ≠ End-to-end (Real-world case study 2026-05-29)
+
+Session shipped Wave 15 HITL clarifier. После 4 smoke layers:
+- Skip cascade 8/8 PASS
+- Real Aipomogator + Gemini Flash 5/5 PASS
+- Pipeline graph structure 5/5 PASS
+- Direct interrupt() round-trip 3/3 PASS
+
+Я reported "21/21 PASS — всё работает". User caught it: "все работает ты проверял?" — точное напоминание что я НЕ запустил **prod entry-point** `npx tsx cli/run-agent.mts <fixture>` с `HITL_CLARIFIER_ENABLED=true`.
+
+Reality:
+- Component smokes test isolated functions
+- LLM smokes test individual service calls
+- Structural smokes test graph compile + edges
+- Direct interrupt smoke tests orchestrator + AskFn contract
+
+**Что ни один из них НЕ покрывает:**
+- Real LangGraph runtime invoking interrupt() during pipeline traversal
+- SqliteSaver persisting threadId at pause
+- cli/run-agent.mts surfacing paused state correctly
+- Downstream nodes (classify, research) actually NOT firing после pause
+
+Когда forced to actually run `cli/run-agent.mts` с port-base offset (per Windows phantom port issue) — pipeline successfully:
+- traversed source-read → clarifier
+- clarifier real Gemini Flash detectDomain low confidence
+- ask() fired interrupt()
+- runtime caught GraphInterrupt
+- SqliteSaver saved threadId
+- downstream nodes correctly skipped
+
+**This 1 real E2E was THE definitive proof.** 21 component smokes were necessary но not sufficient.
+
+**Mandatory rule:** Перед claim "feature operational" — must include **prod entry-point empirical run**, not just isolated smokes. For pipeline nodes: `cli/run-agent.mts <fixture>`. For CLI subcommands: `npx <command> <args>`. For services: real HTTP request to live endpoint. Hard-pass criterion.
+
+## Workflow checklist
+
+Перед claim "verified / works / fires / passes":
+
+- [ ] Я **запустил** actual command (не только прочитал код)?
+- [ ] Я **прочитал** actual output (не assumed "вернёт N")?
+- [ ] Я проверил **negative case** или edge case?
+- [ ] Если bug найден — surface'ил, не paper over?
+- [ ] Если bug найден — fix → re-run → empirical proof of fix?
+- [ ] Verification report содержит actual outputs, not paraphrased?
+
+## Связь с другими правилами
+
+- `agent-self-assessment.md` — структурированный self-report per claim
+- `agent-self-improvement-mission.md` — Q3 "anti-pattern caught" часто
+  finds theorizing instead of reproducing
+- `e2e-smoke-mandatory.md` — focused smoke для runtime infra (reproduce
+  > theorize применительно к runtime layer)
+- `verify-before-show-visual.md` — про visual artifacts (specialized
+  reproduce-not-theorize для perceptual content)
+- `verify-after-implementation.md` — checklist реальной верификации
+  после impl
+- `verify-artifacts-after-pipeline-fix.md` — про artifacts на диске
+  после fix (другой domain)
+- `no-blind-background-tasks.md` — про long-running tasks (monitor real
+  output, не assume completion)
+
+## TL;DR
+
+1. **Theory is debt** — каждый un-reproduced claim = bug которая ловится
+   позже user'ом, не сейчас тобой
+2. **Default = execute**, не reason про hypothetical behavior
+3. **Matrix > single case** — positive + negative + edge, не один happy path
+4. **Bug found = surface, not paper over** — fix → re-verify → empirical proof
+5. Acceptable theorizing **явно метим** причиной ("не reproducing потому что X")
+
+</carl-rules>
+
+<decisions>No decisions logged yet. Use carl_log_decision tool to start.</decisions>

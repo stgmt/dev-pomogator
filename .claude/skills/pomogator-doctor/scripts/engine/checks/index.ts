@@ -3,6 +3,7 @@ import { bunCheck } from './bun.js';
 import { claudeBinPriorityCheck } from './claude-bin-priority.js';
 import { claudeMemPluginCheck } from './claude-mem-plugin.js';
 import { claudeMemWorkerCheck } from './claude-mem-worker.js';
+import { carlCheck } from './carl.js';
 import { contextMenuCheck } from './context-menu.js';
 import { dockerCheck } from './docker.js';
 import { envExampleCheck } from './env-example.js';
@@ -38,6 +39,7 @@ export const phase2Checks: CheckDefinition[] = [
   statuslineCheck,
   statuslineWidgetsCheck,
   contextMenuCheck,
+  carlCheck,
   forbidRootArtifactsCheck,
 ];
 
@@ -54,6 +56,7 @@ export const allChecks: CheckDefinition[] = [
 export {
   bunCheck,
   claudeBinPriorityCheck,
+  carlCheck,
   claudeMemPluginCheck,
   contextMenuCheck,
   dockerCheck,

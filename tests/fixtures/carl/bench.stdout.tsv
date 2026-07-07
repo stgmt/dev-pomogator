@@ -1,0 +1,8 @@
+old_bulk_autoload_chars=683575
+iterations=5
+case	p50_ms	p95_ms	chars	est_tokens	threshold	domains
+neutral-continue	409.7	411.0	691	173	<=2000	[GLOBAL] always_on (2 rules)
+ru-debug-root-cause	419.2	439.8	20557	5140	<=25000	[GLOBAL] always_on (2 rules) | [CORE__DONT_BLAME_INFRA_BEFORE_TRACING] matched: инфра (1 rules) | [CORE__REPRODUCE_NOT_THEORIZE] matched: че за ошибка, исследуй втф, до конца (1 rules)
+render-legibility	398.7	398.8	44524	11131	<=50000	[GLOBAL] always_on (2 rules) | [REELS__LEGIBILITY_DESIGN_SYSTEM] matched: текст не виден (1 rules) | [REELS__REMOTION_REFERENCE] matched: remotion (1 rules)
+feature-index	393.7	407.7	17169	4293	<=35000	[GLOBAL] always_on (2 rules) | [PROJECT__FEATURE_INDEX] matched: спеки, *feature-index (1 rules)
+codex-ru-debug	399.4	409.6	9155	2289	<=15000	[GLOBAL] always_on (2 rules) | [CORE__REPRODUCE_NOT_THEORIZE] matched: че за ошибка (1 rules)

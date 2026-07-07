@@ -33,6 +33,7 @@
       ".specs/codex-init/codex-init.feature",
       ".specs/claude-mem-midsession-reaper/claude-mem-midsession-reaper.feature",
       ".specs/lint-self-bootstrap/lint-self-bootstrap.feature",
+      "tests/features/carl-integration.feature",
       "tests/features/plugins/reqnroll-ce-guard/CEGUARD001_reqnroll-ce-guard.feature",
       ".specs/specs-workflow-jira-mode/specs-workflow-jira-mode.feature",
       "tests/features/plugins/suggest-rules/PLUGIN008_deep-insights.feature",

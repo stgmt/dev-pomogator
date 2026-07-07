@@ -1,0 +1,392 @@
+
+<carl-rules>
+CONTEXT BRACKET: [FRESH] (fresh session)
+
+🚫 DEVMODE=false 🚫
+User has DISABLED debug output. Do NOT append any CARL DEVMODE
+debug section to your responses. Respond normally without debug blocks.
+
+LOADED DOMAINS:
+  [GLOBAL] always_on (2 rules)
+  [CORE__DONT_BLAME_INFRA_BEFORE_TRACING] matched: инфра (1 rules)
+  [CORE__REPRODUCE_NOT_THEORIZE] matched: че за ошибка, исследуй втф, до конца (1 rules)
+
+[GLOBAL] RULES:
+  0. Project rules are CARL on-demand. Do not assume the whole .claude/rules tree is loaded; follow only injected <carl-rules> plus the static CLAUDE.md/AGENTS.md bootstrap.
+  1. Russian prompts are first-class triggers. Match RU intent to loaded domains and keep responses concise unless the task requires detail.
+
+[CORE__DONT_BLAME_INFRA_BEFORE_TRACING] RULES:
+  0. Source: .claude/rules/core/dont-blame-infra-before-tracing.md
+
+# Don't Blame Infra/Environment as Root Cause Before Tracing the Code Path
+
+## Принцип
+
+**Когда что-то падает/ведёт себя не так и я тянусь объяснить это
+ИНФРАСТРУКТУРОЙ — "stale code / кэш / .pyc / агент не подхватывает / flaky /
+ingestion lag / phantom port / watchfiles" — СТОП. Сначала ПРОТРАССИРУЙ
+фактический code path от симптома к причине (прочитай функцию, которая
+производит симптом). Infra-blame — это соблазнительный НЕ-ответ, который
+ПРЕЖДЕВРЕМЕННО завершает расследование. Инфра-причина допустима ТОЛЬКО после
+того, как трассировка кода НЕ нашла причину — и тогда её надо ДОКАЗАТЬ
+(sentinel-print, version-check, diff served-vs-source), а не предположить.**
+
+Это reproduce-not-theorize + verify-status-against-code, применённые к
+**ROOT-CAUSE claim**, а не к behavior claim.
+
+## Зачем
+
+Infra-blame ("это просто stale code") ощущается как объяснение, но это
+капитуляция: оно не указывает на строку, его нельзя проверить дешёво, и оно
+останавливает чтение кода — ровно там, где лежит настоящая причина. LLM-агент
+тянется к нему, потому что "среда глючит" снимает ответственность с кода
+(который агент только что писал/читал) и звучит правдоподобно.
+
+## Триггеры (мысли, на которых надо ОСТАНОВИТЬСЯ и читать код)
+
+- "агент не подхватывает мой свежий код" / "stale .pyc" / "watchfiles не релоуд"
+- "это кэш" / "caching issue" / "registry закэширован"
+- "flaky" / "иногда работает" / "race"
+- "ingestion lag" / "ещё не проиндексировалось"
+- "phantom port" / "среда сломана" / "Windows глючит"
+- "наверное не та версия запущена"
+- "контейнеры рестартятся / host bounce / VM нестабильна / docker не тянет / среда не справляется"
+- "нода пайплайна висит / `next=[X]` не двигается / run молча упал" (в multi-process
+  системе) → читай лог КОМПОНЕНТА-ОРКЕСТРАТОРА (worker, который гоняет граф), а НЕ
+  downstream-зависимости. Зависимость, выглядящая "idle" (пустая очередь), —
+  обманка: оркестратор мог уже получить ответ-с-ошибкой и упасть.
+
+Любая из этих фраз КАК ROOT CAUSE без прочитанного code path = СТОП.
+
+## Mandatory workflow перед infra-blame
+
+1. **Найди функцию, которая производит симптом.** Симптом =
+   `EVALUATOR_ERROR: 'str' object has no attribute 'get'`? → открой гейт,
+   найди КАЖДЫЙ `.get()` и спроси "на чём из них значение может быть строкой?".
+2. **Прочитай весь path symptom→cause**, не первые 5 строк. Второй/третий
+   `.get()` дальше по функции — частый виновник (первый ты пофиксил, симптом
+   остался → НЕ "stale code", а второй site).
+3. **Если код-причина найдена** — это и есть root cause. Infra ни при чём.
+4. **Если код чист** — тогда инфра под подозрением, НО докажи:
+   - sentinel `print("[SENTINEL] vN", flush=True)` → перезапусти → есть в логе?
+   - сравни served-код с source (version/mtime/diff).
+   - НЕ "наверное stale" — покажи доказательство.
+
+## Real incident (2026-06-05) — "Windows stale-code" вместо чтения гейта
+
+Гейты rvg5/rvg7/rvg9 давали `EVALUATOR_ERROR: 'str' has no 'get'` → ложный 0.0.
+Я пофиксил `variantData.get()` (один site). Симптом ОСТАЛСЯ после re-eval. Я
+заявил пользователю: **"eval-агент на Windows langgraph НЕ подхватывает свежий
+код, отдаёт кэш"** — и перезагрузил агент ~6 раз (порты 8035-8040), очищал
+`__pycache__`, писал в отчёте "stale-code блокирует проверку".
+
+Реальность (после того как пользователь спросил "как это фиксить?"): я наконец
+ПРОЧИТАЛ гейт целиком → `theme = data.get("theme")` — а `theme` в variant.json
+это **строка-id** `"crazy"`, и `theme.get("bg")` падал. Второй crash-site, на
+который мой фикс не влиял. **Агент всё время грузил свежий код** — он просто
+падал на другой строке. Чтение кода с самого начала сэкономило бы 6 перезагрузок
++ ложный отчёт.
+
+Урок: симптом-остался-после-фикса ≠ "stale code". Это значит **фикс был
+неполным** — читай дальше по функции.
+
+## Real incident (2026-06-08) — «host bounce / VM нестабильна» вместо worker-лога
+
+E2E через docker-стек (10 контейнеров) висел: harness 23 polls держал
+`next=[research]`, рилс не собирался. Я заметил, что `docker compose ps` показывает
+«Up 3 seconds» при разных проверках, и **ушёл в инфра-теорию**: мерил `StartedAt` по
+контейнерам, ловил `docker events`, проверял OOM/`free`/`uptime`, выводил «весь
+docker-хост рестартится каждые ~2 мин, VM 6.2GB не тянет — это твоя среда, владелец
+чинит». Почти отправил отчёт-обвинение окружения (~10 тулколлов в пустоту).
+
+Реальность (когда наконец прочитал лог worker'а reel-agent-api — компонента, который
+ГОНЯЕТ граф): `[invokeAgent] research ←200 за 8.8с` (bridge работал!), а в теле ответа —
+`Aipomogator HTTP 402: "can only afford 359 tokens, requested 2048 — add more credits"`
+→ `Background run failed`. Причина — **кончились кредиты OpenRouter** (детерминированно),
+лежала в логе всё время. «Bounce» оказался разовым перетряхиванием Docker при смене
+ресурсов VM (за ~10 мин устаканилось: 175с `events` = только healthcheck-пробы, 0
+рестартов контейнеров).
+
+Две ошибки:
+1. **Симптом производит ОРКЕСТРАТОР, а не downstream-зависимость.** Я смотрел очередь
+   research-агента (`n_running=0` — «idle, значит не дозвонились») — обманка: агент уже
+   ответил 200-с-ошибкой, оркестратор упал. Надо было читать worker-лог reel-agent-api
+   ПЕРВЫМ.
+2. **Грязный grep маскировал ошибку.** `Select-String 'error'` ловил `error_detail=None`
+   (healthcheck-шум) → казалось «ошибок нет». Фильтруй точно и **читай тело реальной
+   ошибки/payload**, не делай вывод «gateway медленный» из латентности.
+
+Урок: «контейнеры рестартятся / VM не тянет / среда нестабильна» как ROOT CAUSE — СТОП.
+Сначала прочитай лог компонента-оркестратора (worker, гоняющий граф) + тело ответа
+зависимости. Инфра-нестабильность доказывай (`die`/exit-events, OOM в dmesg), а
+«bounce» при смене ресурсов хоста почти всегда разовый — проверь стабилизацию (тихое
+окно `events` без `die`/`start`), не строй на одном «Up 3 seconds».
+
+## Real incident (2026-06-19) — «classify не отдал contentType» vs чтение classify-лога + 200-`__error__`
+
+E2E-live упал: variants кинул `No variant registered for contentType 'undefined'`.
+Соблазн — «classify-stage баг / тонкий топик». Реальность (после чтения логов с ДВУХ
+концов + grep кода): classify-агент звал LLM через **Anthropic SDK → `/v1/messages`
+→ `APIConnectionError`** (его `ANTHROPIC_BASE_URL=http://meridian:3456` — мёртвый
+прокси после удаления Meridian). classify-run УПАЛ, но `/runs/wait` вернул
+orchestrator'у **HTTP 200 с `__error__` в теле** → invokeAgent отдал error-payload
+как «валидный» пустой output → `s.classify.contentType=undefined` → variants кинул
+ОБМАНЧИВУЮ ошибку через ДВЕ стадии.
+
+Два корня: (1) **stale-процесс агента** — агенты bind-mount'ят `/app`, но запущенный
+процесс classify держал СТАРЫЙ `llm_config` (provider=anthropic + мёртвый URL);
+watchfiles-релоады модуль не переимпортировали. Фикс: `docker compose restart`
+агентов + verify `docker compose exec <svc> printenv` (НЕ `docker exec <service>` —
+он падает «No such container»). (2) **invokeAgent глотал 200-`__error__`** → теперь
+throw'ит (`infra/langgraph/http-runtime.adapter.ts`).
+
+Урок: cryptic downstream-ошибка («contentType undefined» в N-й стадии) → читай лог
+АГЕНТА-который-производит-вход (classify), не теоретизируй про downstream-ноду; 200
+несёт `__error__`; проверь свежесть РАНТАЙМА агента после code-change (bind-mount ≠
+живой процесс). И НЕ останавливайся на «нужен отдельный трейс» — сделай его (см.
+[[agent-self-improvement-mission]] Real example #14).
+
+## Если ВСЁ ЖЕ называешь infra-причину — докажи цитатой, помечай ТЕОРИЯ, НЕ приписывай находку юзеру
+
+Когда инфра-причину наконец заявляешь, помни: юзер может **поверить и
+ДЕЙСТВОВАТЬ** по ней (вписать в `.wslconfig`, сменить рантайм), не имея способа
+проверить сам. Поэтому:
+1. Причина = ПРОВЕРЯЕМОЕ наблюдение, процитированное в моменте (`dockerd PID ~280
+   = cold-boot VM, не systemctl restart`), НЕ «по логике / наверное / должно быть».
+2. Доказать нельзя (событие историческое, не воспроизводится) → пометь **ТЕОРИЯ**,
+   перечисли альтернативы (OOM / ручной / нагрузка), предложи дешёвую проверку —
+   НЕ подавай как факт. Один сигнал ≠ доказанный триггер.
+3. **Не приписывай находку юзеру** («ты сам нашёл»). Причину вывел Я — так и скажи.
+   Ложная атрибуция + неподтверждённая теория = «могу наебать» в глазах юзера,
+   потеря доверия.
+
+### Real incident (2026-06-20) — «WSL idle-timeout гасит VM» подан как факт + приписан юзеру
+
+«Docker моргает каждую минуту» → я вывел «дефолтный idle-timeout 60с гасит ВСЮ
+VM в паузах». Реальное наблюдение было ОДНО — low `dockerd` PID (= cold-boot VM,
+не рестарт сервиса). Что триггер именно idle-timeout (а не OOM / ручной / нагрузка)
+— я **не воспроизвёл** (событие историческое). Но подал уверенно, а summary ещё и
+приписал находку юзеру («ты сам нашёл корень»). Юзер: «я ниче не находил, я тебе
+верю, а ты можешь наебать». Вдобавок «фикс» `vmIdleTimeout=-1` даже не активен
+(нужен `wsl --shutdown`) — VM реально держит keepalive-процесс, не конфиг.
+Правильно было: «ТЕОРИЯ: idle-timeout (1 сигнал — low dockerd PID); альтернативы
+OOM/manual; проверить `wsl` uptime vs dockerd PID после blip».
+
+## Anti-patterns
+
+| ❌ Infra-blame | ✅ Trace-first |
+|---|---|
+| "инфра-причина = факт" (юзер впишет в конфиг по доверию) | "ТЕОРИЯ + 1 наблюдение + альтернативы + дешёвая проверка" |
+| "ты сам нашёл" (приписал находку юзеру) | "причину вывел я; вот наблюдение, вот чего НЕ доказал" |
+| "Симптом остался → агент кэширует старый код" | "Симптом остался → мой фикс неполный, читаю функцию дальше" |
+| "EVALUATOR_ERROR persists → stale .pyc" | "grep ВСЕ `.get()` в гейте → какой на строке?" |
+| "flaky, перезапущу ещё раз" | "что в коде делает результат недетерминированным?" |
+| "ingestion lag" (без проверки) | "данные есть в LangSmith СЕЙЧАС? было ли их тогда?" |
+| 6 перезагрузок агента | 1 чтение функции |
+| "пайплайн висит → host bounce / VM не тянет / среда" | "читай worker-лог оркестратора + тело ответа зависимости" |
+| "downstream idle (`n_running=0`) → не дозвонились" | "оркестратор мог получить ответ-с-ошибкой и упасть — читай ЕГО лог" |
+| вывод «gateway медленный» из латентности | прочитай тело ответа (там может быть 402/4xx, не «медленно») |
+
+## Связь с другими правилами
+
+- `.claude/rules/core/reproduce-not-theorize.md` — родитель (это про ROOT CAUSE,
+  то про BEHAVIOR)
+- `.claude/rules/core/verify-status-against-code-before-acting.md` — verify против кода
+- `.claude/rules/gotchas/comment-drift-distrust-comments.md` — код, не комментарий
+- `.claude/rules/reels/langgraph-dev-restart-discipline.md` — КОГДА stale-code
+  реален (и как ДОКАЗАТЬ через sentinel), а не предполагать
+
+## TL;DR
+
+1. Тянусь сказать "stale/кэш/flaky/lag/phantom/host-bounce/VM-не-тянет" как ПРИЧИНУ → СТОП.
+2. Прочитай функцию/лог, производящий симптом, ЦЕЛИКОМ. Найди строку. В multi-process —
+   лог ОРКЕСТРАТОРА (worker, гоняющий граф), не downstream-зависимости.
+3. Симптом остался после фикса = неполный фикс (читай дальше), НЕ "stale code".
+4. Инфра-причина — только после того как код чист, и только с ДОКАЗАТЕЛЬСТВОМ
+   (`die`/exit-events, OOM в dmesg; «bounce» при смене ресурсов хоста — почти всегда разовый).
+5. Читай ТЕЛО ответа зависимости (200 может нести `__error__`/402), не выводи причину из латентности; фильтруй grep точно (не лови `error_detail=None`).
+
+
+[CORE__REPRODUCE_NOT_THEORIZE] RULES:
+  0. Source: .claude/rules/core/reproduce-not-theorize.md
+
+# Reproduce, Don't Theorize — основной паттерн работы
+
+## Принцип
+
+**Когда я делаю claim про поведение / состояние / "работает ли X" — я
+ОБЯЗАН воспроизвести это empirically с реальной командой, реальным
+input'ом, реальным output'ом. Theorizing ("должно работать", "по логике
+кода — yes", "вероятно fires") — анти-pattern. Default = execute и
+прочитать output.**
+
+Это **первичный** паттерн работы, не fallback. Если operation
+verifiable за <30 секунд через `Bash` / `Read` / direct exec — её надо
+verify, не speculate.
+
+## Зачем
+
+LLM-агент склонен:
+- Прочитать код и сказать "выглядит правильно — works"
+- Из 2-3 verifications сделать гипотезу "по аналогии остальные fires"
+- Объявить "verified" по типовой проверке без edge cases (positive only)
+- Сказать "в production бы worked" вместо запустить тут же
+
+Это **дешёвая иллюзия проверки**. Реальные баги ловятся только
+empirical reproduction: actual command → actual output → diff vs expected.
+
+## Real-world case study #1 — bdd-scaffold hook regex bug (2026-05-20)
+
+User попросил "проверь все фулом, без теорий". Я мог бы:
+
+- ❌ **Theory**: "Hooks ранее работали в нашей сессии (SessionStart fired
+  → видели в твоём messag), значит остальные тоже работают."
+- ❌ **Subset**: "Проверю 2-3 из 5, остальные по аналогии."
+- ❌ **Positive only**: "Test positive case — пишет reminder — PASS."
+
+Я выбрал **empirical 11-test matrix** (5 hooks × ~2 cases each, positive +
+negative). Tests 1-4 PASS. Test 5c: hook должен быть silent (wrapper
+exists) → **emitted reminder** → false positive.
+
+Root cause: regex `/[\\/]\.specs[\\/]/` требует leading separator.
+Relative path `.specs/...` начинается с `.specs` → regex fails → wrapper
+lookup returns null → false positive reminder.
+
+Production не воспроизводит баг (Write tool всегда даёт absolute path),
+но **assumption load-bearing** — fix тривиальный (optional leading sep).
+
+**Если бы я theorized "по типичному pattern works"** — баг бы остался в
+codebase до первого случая когда Claude Code изменит Write tool schema и
+начнёт passing relative paths. Тогда reminder fired бы на каждое
+существующее .feature — pure noise.
+
+## When to apply (mandatory triggers)
+
+| Trigger | Action |
+|---|---|
+| "Это работает?" / "X fires?" / "Y returns?" | Execute X / Y, paste actual stdout |
+| Claim "hook activated" / "service started" / "test passed" | Run + show exit code + relevant output line |
+| "По коду должно..." / "По логике..." / "По аналогии..." | STOP, execute the actual code, не reason про gипотезу |
+| Multi-step workflow (5+ steps) verifiable | Test each step, not just final |
+| Verification matrix possible (positive × negative × edge) | Run all cells, не subset |
+| User asks "проверь" / "verify" / "check" | Default = empirical run, ask only если truly не reproducible |
+
+## When theorizing is acceptable
+
+- External system out of reach (production DB, prod-only secrets, third-party API без test env)
+- Reproduction would take >10 minutes (full E2E build) — then prefer focused smoke per `e2e-smoke-mandatory.md`
+- Read-only "explain the code" answer без claim about behavior
+- Architectural / design question (where to put file, which pattern fits)
+
+В этих cases **явно метить** theorizing: "Не reproducing потому что X.
+Best understanding: ..."
+
+## Mandatory workflow для verification claims
+
+1. **Define matrix** — что именно проверяем (positive case + negative case
+   + edge case)
+2. **Execute each cell** — actual command или actual code path
+3. **Capture output** — exit code + stdout + stderr (если relevant)
+4. **Diff vs expected** — explicit table "actual vs expected" per cell
+5. **Surface failures** — НЕ paper over, surfaceit bugs reproduced
+6. **Fix if blocking** — bug found → fix → re-verify → empirical proof of fix
+
+## Format для verification report
+
+```
+| # | Test | Input | Expected | Actual | Verdict |
+|---|---|---|---|---|---|
+| 1a | <name> positive | <input> | <expected> | <actual> | ✅ / 🔴 |
+| 1b | <name> negative | <input> | silent | <actual> | ✅ / 🔴 |
+```
+
+Если cell 🔴 — root cause + fix + re-run, не "noted, moving on".
+
+## Anti-patterns
+
+| ❌ Theorizing | ✅ Reproducing |
+|---|---|
+| "Hook должен работать после restart" | `echo '{}' | npx tsx hook.ts; echo EXIT:$?` |
+| "Service started" (без proof) | `curl localhost:8004/health` или `ps aux \| grep` |
+| "Test passes" (без command) | `npx vitest run path.test.ts 2>&1 \| tail -5` |
+| "Logic looks right — works" | Execute the code path with actual data |
+| "По аналогии остальные fires" | Test each — analogy ≠ reproduction |
+| "Production бы worked" | Reproduce assumption locally |
+| Positive-only test | Add at least 1 negative case |
+| "Mostly verified, edge case skip" | Cover edge или explicitly document why skipped |
+| **"N/N PASS = всё работает"** (component+LLM only) | **Component tests ≠ E2E. Run actual `cli/run-agent.mts` / equivalent prod entry-point** |
+| "Wave 6 уже использует тот же pattern → у меня тоже работает" | Pattern proven elsewhere — твоя application of pattern не verified до empirical run |
+
+## Component tests ≠ End-to-end (Real-world case study 2026-05-29)
+
+Session shipped Wave 15 HITL clarifier. После 4 smoke layers:
+- Skip cascade 8/8 PASS
+- Real Aipomogator + Gemini Flash 5/5 PASS
+- Pipeline graph structure 5/5 PASS
+- Direct interrupt() round-trip 3/3 PASS
+
+Я reported "21/21 PASS — всё работает". User caught it: "все работает ты проверял?" — точное напоминание что я НЕ запустил **prod entry-point** `npx tsx cli/run-agent.mts <fixture>` с `HITL_CLARIFIER_ENABLED=true`.
+
+Reality:
+- Component smokes test isolated functions
+- LLM smokes test individual service calls
+- Structural smokes test graph compile + edges
+- Direct interrupt smoke tests orchestrator + AskFn contract
+
+**Что ни один из них НЕ покрывает:**
+- Real LangGraph runtime invoking interrupt() during pipeline traversal
+- SqliteSaver persisting threadId at pause
+- cli/run-agent.mts surfacing paused state correctly
+- Downstream nodes (classify, research) actually NOT firing после pause
+
+Когда forced to actually run `cli/run-agent.mts` с port-base offset (per Windows phantom port issue) — pipeline successfully:
+- traversed source-read → clarifier
+- clarifier real Gemini Flash detectDomain low confidence
+- ask() fired interrupt()
+- runtime caught GraphInterrupt
+- SqliteSaver saved threadId
+- downstream nodes correctly skipped
+
+**This 1 real E2E was THE definitive proof.** 21 component smokes were necessary но not sufficient.
+
+**Mandatory rule:** Перед claim "feature operational" — must include **prod entry-point empirical run**, not just isolated smokes. For pipeline nodes: `cli/run-agent.mts <fixture>`. For CLI subcommands: `npx <command> <args>`. For services: real HTTP request to live endpoint. Hard-pass criterion.
+
+## Workflow checklist
+
+Перед claim "verified / works / fires / passes":
+
+- [ ] Я **запустил** actual command (не только прочитал код)?
+- [ ] Я **прочитал** actual output (не assumed "вернёт N")?
+- [ ] Я проверил **negative case** или edge case?
+- [ ] Если bug найден — surface'ил, не paper over?
+- [ ] Если bug найден — fix → re-run → empirical proof of fix?
+- [ ] Verification report содержит actual outputs, not paraphrased?
+
+## Связь с другими правилами
+
+- `agent-self-assessment.md` — структурированный self-report per claim
+- `agent-self-improvement-mission.md` — Q3 "anti-pattern caught" часто
+  finds theorizing instead of reproducing
+- `e2e-smoke-mandatory.md` — focused smoke для runtime infra (reproduce
+  > theorize применительно к runtime layer)
+- `verify-before-show-visual.md` — про visual artifacts (specialized
+  reproduce-not-theorize для perceptual content)
+- `verify-after-implementation.md` — checklist реальной верификации
+  после impl
+- `verify-artifacts-after-pipeline-fix.md` — про artifacts на диске
+  после fix (другой domain)
+- `no-blind-background-tasks.md` — про long-running tasks (monitor real
+  output, не assume completion)
+
+## TL;DR
+
+1. **Theory is debt** — каждый un-reproduced claim = bug которая ловится
+   позже user'ом, не сейчас тобой
+2. **Default = execute**, не reason про hypothetical behavior
+3. **Matrix > single case** — positive + negative + edge, не один happy path
+4. **Bug found = surface, not paper over** — fix → re-verify → empirical proof
+5. Acceptable theorizing **явно метим** причиной ("не reproducing потому что X")
+
+</carl-rules>
+
+<decisions>No decisions logged yet. Use carl_log_decision tool to start.</decisions>

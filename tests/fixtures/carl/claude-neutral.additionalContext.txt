@@ -1,0 +1,17 @@
+
+<carl-rules>
+CONTEXT BRACKET: [FRESH] (fresh session)
+
+🚫 DEVMODE=false 🚫
+User has DISABLED debug output. Do NOT append any CARL DEVMODE
+debug section to your responses. Respond normally without debug blocks.
+
+LOADED DOMAINS:
+  [GLOBAL] always_on (2 rules)
+
+[GLOBAL] RULES:
+  0. Project rules are CARL on-demand. Do not assume the whole .claude/rules tree is loaded; follow only injected <carl-rules> plus the static CLAUDE.md/AGENTS.md bootstrap.
+  1. Russian prompts are first-class triggers. Match RU intent to loaded domains and keep responses concise unless the task requires detail.
+</carl-rules>
+
+<decisions>No decisions logged yet. Use carl_log_decision tool to start.</decisions>
