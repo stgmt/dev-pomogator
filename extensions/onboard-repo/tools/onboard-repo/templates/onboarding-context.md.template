@@ -1,0 +1,104 @@
+<!-- managed by dev-pomogator onboarding v{{version}}, do not edit -->
+<!-- source: .specs/.onboarding.json (schema v{{schema_version}}) -->
+<!-- regenerate via: /create-spec <any-slug> --refresh-onboarding -->
+
+# Project onboarding context — {{project.name}}
+
+_Archetype: `{{archetype}}` | Indexed: {{indexed_at}} | SHA: {{last_indexed_sha_short}}_
+
+## Project
+- **Name:** {{project.name}}
+- **Purpose:** {{project.purpose}}
+- **Domain:** {{project.domain_problem}}
+
+## Tech context
+- **Languages:** {{languages_compact}}
+- **Frameworks:** {{frameworks_compact}}
+- **Package managers:** {{package_managers_compact}}
+
+## Commands (use wrappers, not raw)
+{{#commands_entries}}
+### `{{name}}`
+- **Preferred:** `{{preferred_invocation}}`
+{{#via_skill}}- **Skill wrapper:** `{{via_skill}}` — DO NOT bypass.{{/via_skill}}
+- **Reason:** {{reason}}
+{{#forbidden_if_skill_present}}- **⚠️ Raw command blocked by PreToolUse hook.**{{/forbidden_if_skill_present}}
+
+{{/commands_entries}}
+
+## Rules index
+{{#rules_index}}
+- `{{name}}` — {{enforces}} _(path: `{{path}}`)_
+{{/rules_index}}
+{{^rules_index}}_No `.claude/rules/` detected in this repo._{{/rules_index}}
+
+## Skills registry
+{{#skills_registry}}
+- `{{name}}` — {{description}} | invocation: `{{invocation_example}}`
+{{/skills_registry}}
+{{^skills_registry}}_No `.claude/skills/` detected._{{/skills_registry}}
+
+## Hooks registry
+{{#hooks_registry}}
+- `{{event}}` on `{{matcher}}` → {{action}} _(path: `{{path}}`)_
+{{/hooks_registry}}
+{{^hooks_registry}}_No hooks installed._{{/hooks_registry}}
+
+## MCP servers
+{{#mcp_servers}}
+- `{{name}}` — capabilities: {{capabilities_compact}}{{#auth_required}} (auth: `{{auth_required}}`){{/auth_required}}
+{{/mcp_servers}}
+{{^mcp_servers}}_No MCP servers configured._{{/mcp_servers}}
+
+## Boundaries
+
+**✅ Always:**
+{{#boundaries.always}}
+- {{.}}
+{{/boundaries.always}}
+{{^boundaries.always}}_none_{{/boundaries.always}}
+
+**⚠️ Ask first:**
+{{#boundaries.ask_first}}
+- {{.}}
+{{/boundaries.ask_first}}
+{{^boundaries.ask_first}}_none_{{/boundaries.ask_first}}
+
+**🚫 Never:**
+{{#boundaries.never}}
+- {{.}}
+{{/boundaries.never}}
+{{^boundaries.never}}_none_{{/boundaries.never}}
+
+## Gotchas
+{{#gotchas}}
+### {{symptom}} _(severity: {{severity}})_
+- **Cause:** {{cause}}
+- **Fix:** {{fix}}
+
+{{/gotchas}}
+{{^gotchas}}_No known gotchas._{{/gotchas}}
+
+## Verification
+- **Primary command:** `{{verification.primary_command}}`
+- **Success criteria:** {{verification.success_criteria}}
+{{#verification.manual_checks}}
+- Manual: {{.}}
+{{/verification.manual_checks}}
+
+## Glossary
+{{#glossary}}
+- **{{term}}** — {{definition}}{{#example}} (e.g. _{{example}}_){{/example}}
+{{/glossary}}
+{{^glossary}}_No domain-specific terminology catalogued._{{/glossary}}
+
+## Env requirements
+**Required:**
+{{#env_requirements.required}}
+- `{{var}}` — {{purpose}} (found in: {{found_in_compact}})
+{{/env_requirements.required}}
+{{^env_requirements.required}}_none_{{/env_requirements.required}}
+
+**Secrets that must NEVER appear in code:** {{secrets_never_in_code_compact}}
+
+<!-- END managed onboarding context -->

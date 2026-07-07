@@ -1,0 +1,114 @@
+{
+  "$description": "Signal-файл → archetype mapping. Each entry: { paths: glob patterns to match in projectPath, contentMatch: regex to grep inside if path exists (optional), weight: score contribution }. Depth limited to 2 levels (root + immediate subdirs).",
+  "$schema_version": "1.0",
+  "archetypes": {
+    "python-api": {
+      "signals": [
+        { "path": "pyproject.toml", "contentMatch": "fastapi|Flask|django|starlette|uvicorn|gunicorn", "weight": 4 },
+        { "path": "requirements.txt", "contentMatch": "^fastapi|^Flask|^django|^uvicorn|^starlette", "weight": 3 },
+        { "path": "setup.py", "contentMatch": "fastapi|Flask|django", "weight": 2 },
+        { "path": "src/main.py", "weight": 2 },
+        { "path": "app/main.py", "weight": 2 },
+        { "path": "src/routes/", "weight": 1 },
+        { "path": "manage.py", "weight": 3 }
+      ],
+      "incompatible_with": ["nodejs-frontend", "dotnet-service", "cli-tool"]
+    },
+    "nodejs-backend": {
+      "signals": [
+        { "path": "package.json", "contentMatch": "\"(express|fastify|@nestjs/|koa|hapi|hono)\"", "weight": 4 },
+        { "path": "src/server.js", "weight": 2 },
+        { "path": "src/server.ts", "weight": 2 },
+        { "path": "src/app.js", "weight": 2 },
+        { "path": "src/app.ts", "weight": 2 },
+        { "path": "nest-cli.json", "weight": 3 }
+      ],
+      "incompatible_with": ["python-api", "dotnet-service", "nodejs-frontend"]
+    },
+    "nodejs-frontend": {
+      "signals": [
+        { "path": "next.config.ts", "weight": 5 },
+        { "path": "next.config.js", "weight": 5 },
+        { "path": "next.config.mjs", "weight": 5 },
+        { "path": "vite.config.ts", "contentMatch": "react|vue|solid|svelte", "weight": 4 },
+        { "path": "vite.config.js", "contentMatch": "react|vue|solid|svelte", "weight": 4 },
+        { "path": "nuxt.config.ts", "weight": 5 },
+        { "path": "svelte.config.js", "weight": 4 },
+        { "path": "astro.config.mjs", "weight": 4 },
+        { "path": "package.json", "contentMatch": "\"(next|react|vue|svelte|@angular/core)\"", "weight": 2 },
+        { "path": "src/app/", "weight": 2 },
+        { "path": "src/pages/", "weight": 2 }
+      ],
+      "incompatible_with": ["nodejs-backend", "python-api", "dotnet-service"]
+    },
+    "fullstack-monorepo": {
+      "signals": [
+        { "path": "turbo.json", "weight": 5 },
+        { "path": "pnpm-workspace.yaml", "weight": 4 },
+        { "path": "nx.json", "weight": 4 },
+        { "path": "lerna.json", "weight": 3 },
+        { "path": "package.json", "contentMatch": "\"workspaces\"\\s*:", "weight": 3 },
+        { "path": "packages/", "weight": 2 },
+        { "path": "apps/", "weight": 2 }
+      ],
+      "incompatible_with": []
+    },
+    "dotnet-service": {
+      "signals": [
+        { "path": "Program.cs", "weight": 4 },
+        { "path": "Startup.cs", "weight": 3 },
+        { "path": "global.json", "weight": 2 },
+        { "pathPattern": "*.csproj", "weight": 4 },
+        { "pathPattern": "*.sln", "weight": 3 }
+      ],
+      "incompatible_with": ["python-api", "nodejs-backend", "nodejs-frontend"]
+    },
+    "cli-tool": {
+      "signals": [
+        { "path": "bin/", "weight": 3 },
+        { "path": "package.json", "contentMatch": "\"bin\"\\s*:", "weight": 4 },
+        { "path": "pyproject.toml", "contentMatch": "\\[project\\.scripts\\]|entry_points", "weight": 4 },
+        { "path": "setup.py", "contentMatch": "entry_points|console_scripts", "weight": 3 },
+        { "path": "Cargo.toml", "contentMatch": "\\[\\[bin\\]\\]", "weight": 3 }
+      ],
+      "incompatible_with": []
+    },
+    "library": {
+      "signals": [
+        { "path": "package.json", "contentMatch": "\"main\"\\s*:|\"exports\"\\s*:", "weight": 2 },
+        { "path": "setup.cfg", "weight": 2 },
+        { "path": "Cargo.toml", "contentMatch": "\\[lib\\]", "weight": 3 },
+        { "path": "index.js", "weight": 1 },
+        { "path": "src/index.ts", "weight": 1 },
+        { "path": "src/index.js", "weight": 1 }
+      ],
+      "incompatible_with": ["nodejs-frontend", "cli-tool"]
+    },
+    "infra": {
+      "signals": [
+        { "pathPattern": "*.tf", "weight": 5 },
+        { "path": "terraform/", "weight": 4 },
+        { "path": "Pulumi.yaml", "weight": 5 },
+        { "path": "ansible.cfg", "weight": 4 },
+        { "path": "playbook.yml", "weight": 3 },
+        { "pathPattern": "*.cloudformation.yml", "weight": 4 }
+      ],
+      "incompatible_with": []
+    },
+    "ml-research": {
+      "signals": [
+        { "path": "notebooks/", "weight": 3 },
+        { "pathPattern": "*.ipynb", "weight": 3 },
+        { "path": "requirements.txt", "contentMatch": "numpy|pandas|torch|tensorflow|scikit-learn|jupyter", "weight": 2 },
+        { "path": "pyproject.toml", "contentMatch": "torch|tensorflow|scikit-learn|jupyter|transformers", "weight": 3 },
+        { "path": "environment.yml", "contentMatch": "conda|python", "weight": 2 }
+      ],
+      "incompatible_with": ["nodejs-frontend", "dotnet-service"]
+    }
+  },
+  "confidence_thresholds": {
+    "high": 5,
+    "medium": 3,
+    "low": 1
+  }
+}

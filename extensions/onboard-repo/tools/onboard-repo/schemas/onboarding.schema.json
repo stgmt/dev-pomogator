@@ -1,0 +1,331 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dev-pomogator/schemas/onboarding.schema.json",
+  "title": "Phase 0 Repo Onboarding artifact",
+  "description": "AI-first schema for .specs/.onboarding.json. See .specs/onboard-repo-phase0/onboard-repo-phase0_SCHEMA.md",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "version",
+    "last_indexed_sha",
+    "indexed_at",
+    "generated_by",
+    "cache_policy",
+    "project",
+    "tech_context",
+    "commands",
+    "rules_index",
+    "skills_registry",
+    "hooks_registry",
+    "mcp_servers",
+    "boundaries",
+    "gotchas",
+    "env_requirements",
+    "verification",
+    "ignore",
+    "glossary",
+    "archetype",
+    "archetype_confidence",
+    "archetype_evidence",
+    "baseline_tests",
+    "phase0_duration_ms",
+    "existing_ai_configs"
+  ],
+  "additionalProperties": true,
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+(\\.\\d+)?$"
+    },
+    "version": { "type": "string" },
+    "last_indexed_sha": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{40}$|^$"
+    },
+    "indexed_at": { "type": "string", "format": "date-time" },
+    "generated_by": { "type": "string", "minLength": 1 },
+    "cache_policy": {
+      "type": "object",
+      "required": ["invalidate_on_sha_drift", "drift_threshold_commits", "invalidate_on_file_change"],
+      "properties": {
+        "invalidate_on_sha_drift": { "type": "boolean" },
+        "drift_threshold_commits": { "type": "integer", "minimum": 0 },
+        "invalidate_on_file_change": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "project": {
+      "type": "object",
+      "required": ["name", "purpose", "domain_problem", "audience"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "purpose": { "type": "string" },
+        "domain_problem": { "type": "string" },
+        "audience": { "type": "array", "items": { "type": "string" } },
+        "scope_boundaries": { "type": "string" }
+      }
+    },
+    "tech_context": {
+      "type": "object",
+      "required": ["languages", "frameworks", "package_managers", "runtime_versions", "technical_constraints"],
+      "properties": {
+        "languages": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "version", "usage"],
+            "properties": {
+              "name": { "type": "string" },
+              "version": { "type": "string" },
+              "usage": { "type": "string" }
+            }
+          }
+        },
+        "frameworks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "version", "role"],
+            "properties": {
+              "name": { "type": "string" },
+              "version": { "type": "string" },
+              "role": { "type": "string" }
+            }
+          }
+        },
+        "package_managers": { "type": "array", "items": { "type": "string" } },
+        "runtime_versions": { "type": "object", "additionalProperties": { "type": "string" } },
+        "technical_constraints": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "commands": {
+      "type": "object",
+      "additionalProperties": { "$ref": "#/$defs/commandBlock" }
+    },
+    "rules_index": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "trigger", "enforces", "path", "always_loaded"],
+        "properties": {
+          "name": { "type": "string" },
+          "trigger": { "type": "string" },
+          "enforces": { "type": "string" },
+          "path": { "type": "string" },
+          "always_loaded": { "type": "boolean" }
+        }
+      }
+    },
+    "skills_registry": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "trigger", "description", "invocation_example", "path"],
+        "properties": {
+          "name": { "type": "string" },
+          "trigger": { "type": "string" },
+          "description": { "type": "string" },
+          "invocation_example": { "type": "string" },
+          "path": { "type": "string" }
+        }
+      }
+    },
+    "hooks_registry": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["event", "matcher", "action", "path"],
+        "properties": {
+          "event": { "enum": ["SessionStart", "Stop", "PreToolUse", "PostToolUse", "UserPromptSubmit"] },
+          "matcher": { "type": "string" },
+          "action": { "type": "string" },
+          "path": { "type": "string" },
+          "managed_by": { "type": "string" }
+        }
+      }
+    },
+    "mcp_servers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "capabilities", "auth_required"],
+        "properties": {
+          "name": { "type": "string" },
+          "capabilities": { "type": "array", "items": { "type": "string" } },
+          "auth_required": { "type": ["string", "null"] },
+          "url_or_path": { "type": "string" }
+        }
+      }
+    },
+    "boundaries": {
+      "type": "object",
+      "required": ["always", "ask_first", "never"],
+      "properties": {
+        "always": { "type": "array", "items": { "type": "string" } },
+        "ask_first": { "type": "array", "items": { "type": "string" } },
+        "never": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "gotchas": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["symptom", "cause", "fix", "severity"],
+        "properties": {
+          "symptom": { "type": "string" },
+          "cause": { "type": "string" },
+          "fix": { "type": "string" },
+          "severity": { "enum": ["low", "medium", "high", "critical"] }
+        }
+      }
+    },
+    "env_requirements": {
+      "type": "object",
+      "required": ["required", "optional", "secrets_never_in_code"],
+      "properties": {
+        "required": { "type": "array", "items": { "$ref": "#/$defs/envRequirement" } },
+        "optional": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["var", "purpose", "default"],
+            "properties": {
+              "var": { "type": "string" },
+              "purpose": { "type": "string" },
+              "default": { "type": "string" }
+            }
+          }
+        },
+        "secrets_never_in_code": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "verification": {
+      "type": "object",
+      "required": ["primary_command", "success_criteria", "manual_checks"],
+      "properties": {
+        "primary_command": { "type": "string" },
+        "success_criteria": { "type": "string" },
+        "screenshot_workflow": { "type": "string" },
+        "manual_checks": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "ignore": {
+      "type": "object",
+      "required": ["ai_excluded_paths", "index_only_excluded", "external_configs_found"],
+      "properties": {
+        "ai_excluded_paths": { "type": "array", "items": { "type": "string" } },
+        "index_only_excluded": { "type": "array", "items": { "type": "string" } },
+        "external_configs_found": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "glossary": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["term", "definition"],
+        "properties": {
+          "term": { "type": "string" },
+          "definition": { "type": "string" },
+          "example": { "type": "string" }
+        }
+      }
+    },
+    "archetype": {
+      "enum": ["python-api", "nodejs-backend", "nodejs-frontend", "fullstack-monorepo", "dotnet-service", "cli-tool", "library", "infra", "ml-research", "unknown"]
+    },
+    "archetype_confidence": { "enum": ["high", "medium", "low"] },
+    "archetype_evidence": { "type": "string", "minLength": 1 },
+    "baseline_tests": {
+      "type": "object",
+      "required": ["framework", "command", "via_skill", "passed", "failed", "skipped", "duration_s", "failed_test_ids", "skipped_by_user"],
+      "properties": {
+        "framework": { "type": ["string", "null"] },
+        "command": { "type": "string" },
+        "via_skill": { "type": ["string", "null"] },
+        "passed": { "type": "integer", "minimum": 0 },
+        "failed": { "type": "integer", "minimum": 0 },
+        "skipped": { "type": "integer", "minimum": 0 },
+        "duration_s": { "type": "number", "minimum": 0 },
+        "failed_test_ids": { "type": "array", "items": { "type": "string" } },
+        "reason_if_null": { "type": ["string", "null"] },
+        "skipped_by_user": { "type": "boolean" }
+      }
+    },
+    "phase0_duration_ms": { "type": "integer", "minimum": 0 },
+    "existing_ai_configs": { "type": "array", "items": { "type": "string" } },
+    "code_style": {
+      "type": "object",
+      "properties": {
+        "rules": { "type": "array", "items": { "type": "string" } },
+        "examples": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["pattern", "path", "snippet"],
+            "properties": {
+              "pattern": { "type": "string" },
+              "path": { "type": "string" },
+              "snippet": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "workflow": { "type": "object" },
+    "imports": { "type": "array", "items": { "type": "string" } },
+    "system_patterns": { "type": "object" },
+    "repo_map": { "type": "object" },
+    "archetype_specific": { "type": "object" },
+    "ingestion": {
+      "type": "object",
+      "required": ["method"],
+      "properties": {
+        "method": { "enum": ["repomix", "fallback"] },
+        "output_path": { "type": ["string", "null"] },
+        "compression_ratio": { "type": "number", "minimum": 0, "maximum": 1 },
+        "files_included": { "type": "integer", "minimum": 0 },
+        "total_tokens_estimate": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "active_context": { "type": "object" },
+    "progress": { "type": "object" },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["step", "severity", "message"],
+        "properties": {
+          "step": { "enum": ["archetype", "recon", "ingestion", "baseline", "scratch", "gate", "finalize"] },
+          "severity": { "enum": ["info", "warning", "error"] },
+          "message": { "type": "string" },
+          "context": { "type": "object" }
+        }
+      }
+    },
+    "metrics": { "type": "object" }
+  },
+  "$defs": {
+    "commandBlock": {
+      "type": "object",
+      "required": ["via_skill", "preferred_invocation", "fallback_cmd", "raw_pattern_to_block", "forbidden_if_skill_present", "reason"],
+      "properties": {
+        "via_skill": { "type": ["string", "null"] },
+        "preferred_invocation": { "type": "string" },
+        "fallback_cmd": { "type": "string" },
+        "raw_pattern_to_block": { "type": "string" },
+        "forbidden_if_skill_present": { "type": "boolean" },
+        "reason": { "type": "string" },
+        "enforces": { "type": "string" }
+      }
+    },
+    "envRequirement": {
+      "type": "object",
+      "required": ["var", "purpose", "found_in"],
+      "properties": {
+        "var": { "type": "string" },
+        "purpose": { "type": "string" },
+        "found_in": { "type": "array", "items": { "type": "string" } },
+        "example_value_format": { "type": "string" }
+      }
+    }
+  }
+}
