@@ -3177,3 +3177,9 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     When the spec-generator template ownership check runs
     Then every template left in tools/specs-generator/templates is instantiated by scaffold-spec
     And the seven non-scaffold templates live only under their owning skill reference templates
+
+  @feature34
+  Scenario: SPECGEN004_509 feature template FR tags resolve against FR template headings
+    Given the real feature and FR scaffold templates
+    When the feature-template anchor integrity check runs
+    Then every feature-template @FR tag resolves to an FR heading in FR.md.template

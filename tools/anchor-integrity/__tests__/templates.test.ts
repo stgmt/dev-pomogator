@@ -12,7 +12,7 @@ import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { checkLinks } from '../check.mjs';
+import { checkLinks, indexHeadings } from '../check.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const templatesDir = path.join(here, '..', '..', 'specs-generator', 'templates');
@@ -64,6 +64,10 @@ function scaffoldTemplateInputs(): string[] {
     .sort();
 }
 
+function featureRequirementTags(content: string): string[] {
+  return [...new Set([...content.matchAll(/^\s*@(FR-\d+)\b/gm)].map((m) => m[1]))].sort();
+}
+
 describe('scaffold templates emit Marksman-resolvable anchors', () => {
   it.skipIf(!hasTemplates)('every `*.md.template` link anchor resolves (0 broken)', () => {
     const files = fs
@@ -82,6 +86,18 @@ describe('scaffold templates emit Marksman-resolvable anchors', () => {
       .map((b) => `${b.file}:${b.line} [${b.linkText}] #${b.brokenAnchor}` + (b.currentSlug ? ` → #${b.currentSlug}` : ' (ambiguous)'))
       .join('\n');
     expect(broken, `broken template anchors:\n${detail}`).toEqual([]);
+  });
+
+  it.skipIf(!hasTemplates)('feature.template @FR tags resolve against FR.md.template headings', () => {
+    const feature = fs.readFileSync(path.join(templatesDir, 'feature.template'), 'utf-8');
+    const fr = fs.readFileSync(path.join(templatesDir, 'FR.md.template'), 'utf-8');
+    const frIndex = indexHeadings(fr);
+    const tags = featureRequirementTags(feature);
+
+    expect(tags, 'feature.template should carry concrete FR tags for generated scenarios').toEqual(['FR-1', 'FR-2', 'FR-3']);
+    for (const tag of tags) {
+      expect(frIndex.idToSlug.has(tag), `${tag} from feature.template must resolve to an FR.md.template heading`).toBe(true);
+    }
   });
 
   it.skipIf(!hasTemplates)('templates directory contains only scaffold-instantiated templates', () => {

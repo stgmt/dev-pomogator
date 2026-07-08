@@ -21,6 +21,7 @@ import {
   isExcludedFromScaffoldScan,
   isBacklogSpecPath,
 } from '../../tools/specs-generator/scaffold-sentinels.mjs';
+import { indexHeadings } from '../../tools/anchor-integrity/check.mjs';
 import { V4World } from '../hooks/before-after.ts';
 
 const REPO_ROOT = path.resolve(import.meta.dirname ?? __dirname, '..', '..');
@@ -80,6 +81,10 @@ interface ScaffoldWorld extends V4World {
   verdictText?: string;
   createdSpecDirs?: string[];
   templateOwnership?: TemplateOwnershipResult;
+  featureTemplateContent?: string;
+  frTemplateIds?: Set<string>;
+  featureTemplateTags?: string[];
+  featureTemplateMissingTags?: string[];
 }
 
 // ── fixture helpers ─────────────────────────────────────────────────────────
@@ -127,6 +132,10 @@ function scaffoldTemplateMappings(slug: string): Array<{ template: string; targe
 
 function sortedScaffoldTemplates(): string[] {
   return fs.readdirSync(TEMPLATES_DIR).filter((n) => n.endsWith('.template')).sort();
+}
+
+function featureRequirementTags(content: string): string[] {
+  return [...new Set([...content.matchAll(/^\s*@(FR-\d+)\b/gm)].map((m) => m[1]))].sort();
 }
 
 function runTemplateOwnershipCheck(tempDir: string): TemplateOwnershipResult {
@@ -402,4 +411,26 @@ Then(/^the seven non-scaffold templates live only under their owning skill refer
   const result = this.templateOwnership!;
   assert.deepEqual(result.retiredStillInScaffold, [], `retired templates still live in scaffold dir: ${JSON.stringify(result.retiredStillInScaffold)}`);
   assert.deepEqual(result.missingOwnerTemplates, [], `missing owner template copies: ${JSON.stringify(result.missingOwnerTemplates)}`);
+});
+
+// ── SPECGEN004_509 — feature.template @FR tags resolve against FR.md.template ──
+
+Given(/^the real feature and FR scaffold templates$/, function (this: ScaffoldWorld) {
+  const featurePath = path.join(TEMPLATES_DIR, 'feature.template');
+  const frPath = path.join(TEMPLATES_DIR, 'FR.md.template');
+  assert.ok(fs.existsSync(featurePath), `missing feature template: ${featurePath}`);
+  assert.ok(fs.existsSync(frPath), `missing FR template: ${frPath}`);
+
+  this.featureTemplateContent = fs.readFileSync(featurePath, 'utf-8');
+  this.frTemplateIds = new Set(indexHeadings(fs.readFileSync(frPath, 'utf-8')).idToSlug.keys());
+});
+
+When(/^the feature-template anchor integrity check runs$/, function (this: ScaffoldWorld) {
+  this.featureTemplateTags = featureRequirementTags(this.featureTemplateContent!);
+  this.featureTemplateMissingTags = this.featureTemplateTags.filter((tag) => !this.frTemplateIds!.has(tag));
+});
+
+Then(/^every feature-template @FR tag resolves to an FR heading in FR\.md\.template$/, function (this: ScaffoldWorld) {
+  assert.deepEqual(this.featureTemplateTags, ['FR-1', 'FR-2', 'FR-3']);
+  assert.deepEqual(this.featureTemplateMissingTags, [], `unresolved feature.template tags: ${JSON.stringify(this.featureTemplateMissingTags)}`);
 });

@@ -1241,9 +1241,11 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [x] ARCHITECTURE_AXIS/INDEX, ATTACHMENTS, AUDIT_REPORT, COMPLETENESS, JIRA_SOURCE, SYNTHESIS: each either moved to its owning tool/skill, instantiated by a documented caller, or deleted with reason — Jira/audit skeletons now live under create-spec `references/templates/`, architecture skeletons under architecture-decision-builder `references/templates/`
   - [x] templates dir contains ONLY templates something instantiates (test pins the mapping) — verified by SPECGEN004_508 plus `tools/anchor-integrity/__tests__/templates.test.ts` in Docker
 
-- [ ] P16-4: feature.template into the anchor-integrity test — id: p16-feature-template-anchors — Status: TODO | Est: 60m
+- [x] P16-4: feature.template into the anchor-integrity test — id: p16-feature-template-anchors — Status: DONE (2026-07-08, feature.template FR tags pinned by anchor-integrity unit + BDD) | Est: 60m
+  _Requirements: [FR-34](FR.md#fr-34)_
+  _Refs: verified by @feature34 scenario SPECGEN004_509_
   **Done When:**
-  - [ ] `tools/anchor-integrity/__tests__/templates.test.ts` covers feature.template (`@FR-N` tags must resolve against FR.md.template headings)
+  - [x] `tools/anchor-integrity/__tests__/templates.test.ts` covers feature.template (`@FR-N` tags must resolve against FR.md.template headings) — verified by `npm run lint`, Docker BDD SPECGEN004_509 (1 scenario / 6 steps passed), focused Docker vitest (1 file / 4 tests passed), and full Docker suite (79 files / 883 passed / 2 skipped)
 
 - [ ] P16-5: document the audit split-responsibility model — id: p16-audit-split-doc — Status: IN_PROGRESS | Est: 60m (impl+test/doc done; cucumber scenario pending для DONE-green — gate требует, без гейминга тега)
   _Requirements: [FR-37](FR.md#fr-37)_
