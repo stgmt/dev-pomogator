@@ -1247,10 +1247,11 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   **Done When:**
   - [x] `tools/anchor-integrity/__tests__/templates.test.ts` covers feature.template (`@FR-N` tags must resolve against FR.md.template headings) — verified by `npm run lint`, Docker BDD SPECGEN004_509 (1 scenario / 6 steps passed), focused Docker vitest (1 file / 4 tests passed), and full Docker suite (79 files / 883 passed / 2 skipped)
 
-- [ ] P16-5: document the audit split-responsibility model — id: p16-audit-split-doc — Status: IN_PROGRESS | Est: 60m (impl+test/doc done; cucumber scenario pending для DONE-green — gate требует, без гейминга тега)
+- [x] P16-5: document the audit split-responsibility model — id: p16-audit-split-doc — Status: DONE (2026-07-08, audit split-responsibility doc pinned by BDD) | Est: 60m
   _Requirements: [FR-37](FR.md#fr-37)_
+  _Refs: verified by @feature37 scenario SPECGEN004_510_
   **Done When:**
-  - [x] phase3plus_audit-overview.md Step 2 аннотирован колонкой mechanical-vs-AI-semantic: MECHANICAL (JIRA_DRIFT=CHECK-13 / VARIANT_COVERAGE / ARCHITECTURE_COVERAGE / COMPLETENESS_COVERAGE), AI-semantic-only (Rudiments/Fantasies/Undefined-behavior), hybrid (Errors=CHECK-9 / Logic=CHECK-10+12 / Inconsistency=CHECK-11) + нота «mechanical findings читать из Step 1, не передоказывать»; bonus skill-reference audit-split-responsibility.md (verdict layering)
+  - [x] phase3plus_audit-overview.md Step 2 аннотирован колонкой mechanical-vs-AI-semantic: MECHANICAL (JIRA_DRIFT=CHECK-13 / VARIANT_COVERAGE / ARCHITECTURE_COVERAGE / COMPLETENESS_COVERAGE), AI-semantic-only (Rudiments/Fantasies/Undefined-behavior), hybrid (Errors=CHECK-9 / Logic=CHECK-10+12 / Inconsistency=CHECK-11) + нота «mechanical findings читать из Step 1, не передоказывать»; bonus skill-reference audit-split-responsibility.md (verdict layering) — verified by `npm run lint`, Docker BDD SPECGEN004_510 (1 scenario / 8 steps passed), and full Docker suite (79 files / 883 passed / 2 skipped)
 
 - [x] P16-6: CRLF-safe `replaceLiteralAll` in fill-template — id: p16-crlf-fill-template — Status: DONE | Est: 60m (impl+test/doc done; cucumber scenario pending для DONE-green — gate требует, без гейминга тега)
   **Done When:**

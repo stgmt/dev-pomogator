@@ -3183,3 +3183,11 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Given the real feature and FR scaffold templates
     When the feature-template anchor integrity check runs
     Then every feature-template @FR tag resolves to an FR heading in FR.md.template
+
+  @feature37
+  Scenario: SPECGEN004_510 audit split-responsibility documentation separates mechanical and semantic work
+    Given the Phase 3 audit overview and audit split-responsibility references
+    When the audit split-responsibility documentation is checked
+    Then mechanical audit categories are declared as script-owned inputs not AI rediscovery work
+    And semantic-only audit categories are declared as agent-owned review work
+    And the spec health rule points "is it healthy?" to the composed verdict only
