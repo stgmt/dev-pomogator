@@ -329,11 +329,16 @@ function findAllSpecDirs(specsRoot: string): string[] {
 function renderFormGuardsSummary(): void {
   try {
     rotateLog();
-    const line = buildConformanceSummary();
+    const repoRoot = process.env.SPEC_CONFORMANCE_REPO_ROOT ?? process.cwd();
+    const line = buildConformanceSummary({
+      ackFile: process.env.SPEC_CONFORMANCE_ACK_FILE,
+      repoRoot,
+      softLog: process.env.SPEC_CONFORMANCE_SOFT_LOG,
+    });
     if (line) console.log(line);
     // P21-4: surface unfinished tasks from the cached census (graph-only, written
     // by spec-conformance-push). Reads a tiny JSON — never builds the graph here.
-    const census = buildTaskCensusLine();
+    const census = buildTaskCensusLine(repoRoot);
     if (census) console.log(census);
   } catch {
     // fail-silent — audit log is non-critical

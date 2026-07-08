@@ -1226,13 +1226,13 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [x] pseudo-tags `# @featureN` removed from specs-validation.md (×3) + jira-mode.md; audit-overview Verdict → two-condition (findings closed AND spec-verdict GREEN, FR-37d) + get_spec_status pointer; dead `extensions/` path fixed; 13-vs-15 file-count contradiction reconciled; task-board-forms allowed-tools += AskUserQuestion; architecture-decision-builder context7 namespaces both + ToolSearch fallback
   - [x] FR-20 test race fixed (soft-tier log injectable end-to-end); validator suites 16/16; full BDD 110: 109 passed / 1 skipped / 0 failed; spec-verdict GREEN
 
-- [ ] P16-2: evals for the 3 form skills (discovery-forms / requirements-chk-matrix / task-board-forms) — id: p16-form-skill-evals — Status: IN_PROGRESS | Est: 360m
+- [x] P16-2: evals for the 3 form skills (discovery-forms / requirements-chk-matrix / task-board-forms) — id: p16-form-skill-evals — Status: DONE (2026-07-08, executable evals + Docker suite green) | Est: 360m
   _Requirements: [FR-19](FR.md#fr-19)_
-  _Refs: review backlog #1 — оба дедлока P16-1 жили бы меньше при наличии evals_
+  _Refs: review backlog #1 — оба дедлока P16-1 жили бы меньше при наличии evals; verified by @feature19 scenarios SPECGEN004_478, SPECGEN004_479, SPECGEN004_507_
   **Done When:**
-  - [ ] each skill gets `evals/` (pattern: spec-reality-check run-evals/bulk-run) — output passes its own form-guard + the `--check` CLI on every eval case
-  - [ ] negative cases pin the two P16-1 deadlock classes (NFR-id, lowercase markers) so they cannot regress
-  - [ ] maintain-evals-on-edit rule extended to these skills
+  - [x] each skill gets `evals/` (pattern: spec-reality-check run-evals/bulk-run) — `discovery-forms`, `requirements-chk-matrix`, and `task-board-forms` executable runners all pass 7/7 and exercise real form-guards plus `spec-form-parsers.ts --check`
+  - [x] negative cases pin the two P16-1 deadlock classes (NFR-id, lowercase markers) so they cannot regress — `negative-invalid-nfr-chk-id-is-denied` and `negative-lowercase-markers-are-denied` both verify CLI reject + guard deny paths
+  - [x] maintain-evals-on-edit rule extended to these skills — rule index updated and full verification green (`npm run lint`, filtered Docker BDD, focused Docker vitest, full Docker suite 79 files / 880 passed / 2 skipped)
 
 - [ ] P16-3: resolve the 7 orphan templates — id: p16-orphan-templates — Status: TODO | Est: 120m
   **Done When:**

@@ -3150,3 +3150,23 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     When the scaffold-sentinel classifier evaluates those documents
     Then the templates file and the __fixtures__ document yield no findings
     And the backlog spec document yields at most an INFO finding never an ERROR
+
+  @feature19
+  Scenario: SPECGEN004_478 discovery-forms executable evals exercise real form contracts
+    Given the discovery-forms executable eval runner
+    When that form-skill eval runner executes
+    Then the eval aggregate is fully green and every case exercised the real form contracts
+
+  @feature19
+  Scenario: SPECGEN004_479 requirements-chk-matrix executable evals pin invalid CHK IDs
+    Given the requirements-chk-matrix executable eval runner
+    When that form-skill eval runner executes
+    Then the eval aggregate is fully green and every case exercised the real form contracts
+    And the eval aggregate pins the P16-1 negative regression cases
+
+  @feature19
+  Scenario: SPECGEN004_507 task-board-forms executable evals pin lowercase task markers
+    Given the task-board-forms executable eval runner
+    When that form-skill eval runner executes
+    Then the eval aggregate is fully green and every case exercised the real form contracts
+    And the eval aggregate pins the P16-1 negative regression cases

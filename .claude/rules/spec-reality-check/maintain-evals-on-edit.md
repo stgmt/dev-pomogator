@@ -1,4 +1,4 @@
-# Spec-Reality-Check — Maintain Evals on Edit
+# Maintain Skill Evals on Edit
 
 ## Правило
 
@@ -14,6 +14,16 @@ npx tsx .claude/skills/spec-reality-check/evals/bulk-run.ts
 # 3) In-process algorithm bench (10/100/500/1000/2000 FC rows)
 npx tsx .claude/skills/spec-reality-check/evals/bench-synthetic.ts
 ```
+
+При ЛЮБОМ изменении файлов form-filler skills `discovery-forms`, `requirements-chk-matrix`, `task-board-forms` — SKILL.md / evals / shared eval engine / related guard-contract prose — агент ОБЯЗАН в той же сессии перед коммитом запустить executable evals соответствующего skill-а:
+
+```bash
+npx tsx .claude/skills/discovery-forms/evals/run-evals.ts
+npx tsx .claude/skills/requirements-chk-matrix/evals/run-evals.ts
+npx tsx .claude/skills/task-board-forms/evals/run-evals.ts
+```
+
+Эти evals — контракт P16-2: каждый generated form example должен проходить реальный `tools/specs-validator/spec-form-parsers.ts --check` CLI и соответствующий form-guard через dispatcher, а negative cases обязаны убивать два P16-1 deadlock класса: `CHK-FR{n}-NFR` и lowercase `**done when:**` / `**status:**` markers.
 
 ## Почему
 
@@ -39,6 +49,13 @@ Bulk-run на real corpus в session 2026-05-24 поймал **4 systemic false-
 2. Запустить bulk-run
 3. Если regression-baseline-pinned ИЛИ bulk clean count fell — НЕ коммитить пока не починено
 
+## При изменении form-filler skills
+
+После каждого Edit в `.claude/skills/{discovery-forms,requirements-chk-matrix,task-board-forms}/` или `.claude/skills/_shared/form-skill-evals.ts`:
+1. Запустить eval runner изменённого skill-а.
+2. Если менялся общий eval engine или shared form contract — запустить все три form-skill eval runners.
+3. Проверить, что `aggregate.json` показывает 100% pass и negative cases реально проходят через deny/exit-1 путь, а не только проверяют строки.
+
 ## При добавлении нового check
 
 После добавления нового check code (например `FC_NEW_THING`):
@@ -61,6 +78,7 @@ Bulk-run на real corpus в session 2026-05-24 поймал **4 systemic false-
 - НЕ удалять existing evals — только дополнять
 - НЕ менять `expected_codes` / `forbidden_codes` существующих evals "чтобы прошло" — это эквивалент disabling test
 - НЕ полагаться только на vitest tests/e2e/spec-reality-check.test.ts — они на синтетических фикстурах; bulk-run на real corpus обязателен
+- Для form-filler skills НЕ удалять negative evals `negative-invalid-nfr-chk-id-is-denied` и `negative-lowercase-markers-are-denied` — это regression pins для P16-1 deadlocks
 
 ## Связанные правила
 
