@@ -17,7 +17,35 @@
   },
   "skillFiles": {
     "create-spec": [
-      ".claude/skills/create-spec/SKILL.md"
+      ".claude/skills/create-spec/SKILL.md",
+      ".claude/skills/create-spec/references/bdd-enforcement.md",
+      ".claude/skills/create-spec/references/feature-creation-rules.md",
+      ".claude/skills/create-spec/references/jira-mode.md",
+      ".claude/skills/create-spec/references/no-mocks-fallbacks.md",
+      ".claude/skills/create-spec/references/phase1.5_project-context.md",
+      ".claude/skills/create-spec/references/phase1.75_architecture-decisions.md",
+      ".claude/skills/create-spec/references/phase1_discovery.md",
+      ".claude/skills/create-spec/references/phase2_bdd-test-infrastructure.md",
+      ".claude/skills/create-spec/references/phase2_requirements-and-design.md",
+      ".claude/skills/create-spec/references/phase3_finalization.md",
+      ".claude/skills/create-spec/references/phase3plus_audit-architecture-coverage.md",
+      ".claude/skills/create-spec/references/phase3plus_audit-completeness-coverage.md",
+      ".claude/skills/create-spec/references/phase3plus_audit-cross-spec-consistency.md",
+      ".claude/skills/create-spec/references/phase3plus_audit-errors.md",
+      ".claude/skills/create-spec/references/phase3plus_audit-fantasies.md",
+      ".claude/skills/create-spec/references/phase3plus_audit-inconsistency.md",
+      ".claude/skills/create-spec/references/phase3plus_audit-jira-drift.md",
+      ".claude/skills/create-spec/references/phase3plus_audit-logic-gaps.md",
+      ".claude/skills/create-spec/references/phase3plus_audit-overview.md",
+      ".claude/skills/create-spec/references/phase3plus_audit-rudiments.md",
+      ".claude/skills/create-spec/references/phase3plus_audit-undefined-behavior.md",
+      ".claude/skills/create-spec/references/phase3plus_audit-variant-coverage.md",
+      ".claude/skills/create-spec/references/specs-validation.md",
+      ".claude/skills/create-spec/references/validation-rules.md",
+      ".claude/skills/create-spec/references/templates/JIRA_SOURCE.md.template",
+      ".claude/skills/create-spec/references/templates/ATTACHMENTS.md.template",
+      ".claude/skills/create-spec/references/templates/AUDIT_REPORT.md.template",
+      ".claude/skills/create-spec/scripts/complexity-heuristic.ts"
     ],
     "discovery-forms": [
       ".claude/skills/discovery-forms/SKILL.md"
@@ -68,8 +96,7 @@
       ".dev-pomogator/tools/specs-generator/templates/TASKS.md.template",
       ".dev-pomogator/tools/specs-generator/templates/USE_CASES.md.template",
       ".dev-pomogator/tools/specs-generator/templates/USER_STORIES.md.template",
-      ".dev-pomogator/tools/specs-generator/templates/CHANGELOG.md.template",
-      ".dev-pomogator/tools/specs-generator/templates/AUDIT_REPORT.md.template"
+      ".dev-pomogator/tools/specs-generator/templates/CHANGELOG.md.template"
     ],
     "specs-validator": [
       ".dev-pomogator/tools/specs-validator/completeness.ts",

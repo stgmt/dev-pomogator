@@ -93,6 +93,7 @@ CLI: `tools/specs-generator/architecture-decision/architecture-decision-cli.ts`
 - create-spec mode: `.specs/{slug}/ARCHITECTURE/AXIS-NN-{id}.md|.html|.model.json` + `INDEX.md|.html` + `COMPLETENESS.md` + `SYNTHESIS.md|.html` + `ARCHITECTURE.html` (full-report)
 - standalone: `./architecture-decisions/{slug}/` (incl. `COMPLETENESS.md`, `SYNTHESIS.md`, `ARCHITECTURE.html`)
 - `AXIS-*.model.json` — persisted AxisModel (источник для full-report re-render; не для глаз)
+- Reference skeletons for non-scaffold architecture artifacts live in this skill at `references/templates/` (`ARCHITECTURE_AXIS.md.template`, `ARCHITECTURE_INDEX.md.template`, `COMPLETENESS.md.template`, `SYNTHESIS.md.template`); live artifacts are rendered by `architecture-decision-cli.ts`, not copied by the base spec scaffold.
 
 ## Hard-OUT (НЕ запускать)
 

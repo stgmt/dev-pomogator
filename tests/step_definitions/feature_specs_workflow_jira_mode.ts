@@ -373,13 +373,42 @@ Then(
   },
 );
 
-// ── 07: Artifact check — template files exist on disk ───────────────────────
+// ── 07: Artifact check — owning template files exist on disk ────────────────
+
+Then(
+  /^the Jira-mode template file "([^"]+)" exists in create-spec references\/templates$/,
+  function (this: JiraModeWorld, filename: string) {
+    const p = path.join(REPO_ROOT, '.claude', 'skills', 'create-spec', 'references', 'templates', filename);
+    assert.ok(fs.existsSync(p), `expected create-spec reference template file to exist: ${p}`);
+  },
+);
 
 Then(
   /^the Jira-mode template file "([^"]+)" exists in tools\/specs-generator\/templates$/,
   function (this: JiraModeWorld, filename: string) {
     const p = path.join(REPO_ROOT, 'tools', 'specs-generator', 'templates', filename);
-    assert.ok(fs.existsSync(p), `expected template file to exist: ${p}`);
+    assert.ok(fs.existsSync(p), `expected specs-generator template file to exist: ${p}`);
+  },
+);
+
+Then(
+  /^extension\.json skillFiles for create-spec include the Jira-mode reference templates$/,
+  function () {
+    const manifest = JSON.parse(
+      fs.readFileSync(path.join(REPO_ROOT, 'extensions', 'specs-workflow', 'extension.json'), 'utf-8'),
+    ) as { skillFiles?: Record<string, string[]>; toolFiles?: Record<string, string[]> };
+    const createSpecTemplates = (manifest.skillFiles?.['create-spec'] ?? [])
+      .filter((p) => p.includes('/references/templates/'))
+      .sort();
+    const retiredToolTemplates = (manifest.toolFiles?.['specs-generator'] ?? [])
+      .filter((p) => /templates\/(JIRA_SOURCE|ATTACHMENTS)\.md\.template$/.test(p))
+      .sort();
+    assert.deepEqual(createSpecTemplates, [
+      '.claude/skills/create-spec/references/templates/ATTACHMENTS.md.template',
+      '.claude/skills/create-spec/references/templates/AUDIT_REPORT.md.template',
+      '.claude/skills/create-spec/references/templates/JIRA_SOURCE.md.template',
+    ]);
+    assert.deepEqual(retiredToolTemplates, []);
   },
 );
 

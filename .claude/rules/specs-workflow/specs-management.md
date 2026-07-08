@@ -596,7 +596,7 @@ Re-read all three Jira artifacts: `JIRA_SOURCE.md`, `ATTACHMENTS.md`, `.jira-cac
 
 #### Шаг 5: Генерация AUDIT_REPORT.md
 
-1. Создать `.specs/{feature}/AUDIT_REPORT.md` по шаблону из `.dev-pomogator/tools/specs-generator/templates/AUDIT_REPORT.md.template`
+1. Создать `.specs/{feature}/AUDIT_REPORT.md` по шаблону из `.claude/skills/create-spec/references/templates/AUDIT_REPORT.md.template`
 2. Записать ВСЕ найденные и исправленные проблемы (что было → что исправлено)
 3. Показать summary таблицу пользователю
 

@@ -58,6 +58,6 @@ Feature: SPECJIRA001 Optional Jira-first Workflow
   # @feature7
   Scenario: SPECJIRA001_07 Templates are installed via extension
     When dev-pomogator installs specs-workflow for Claude
-    Then ".dev-pomogator/tools/specs-generator/templates/JIRA_SOURCE.md.template" should exist
-    And ".dev-pomogator/tools/specs-generator/templates/ATTACHMENTS.md.template" should exist
+    Then ".claude/skills/create-spec/references/templates/JIRA_SOURCE.md.template" should exist
+    And ".claude/skills/create-spec/references/templates/ATTACHMENTS.md.template" should exist
     And ".dev-pomogator/tools/specs-generator/templates/JIRA_CACHE.schema.json" should exist

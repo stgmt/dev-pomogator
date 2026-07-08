@@ -25,8 +25,53 @@ import { V4World } from '../hooks/before-after.ts';
 
 const REPO_ROOT = path.resolve(import.meta.dirname ?? __dirname, '..', '..');
 const TEMPLATES_DIR = path.join(REPO_ROOT, 'tools', 'specs-generator', 'templates');
+const SPECS_GENERATOR_CORE = path.join(REPO_ROOT, 'tools', 'specs-generator', 'specs-generator-core.mjs');
+const SCAFFOLD_SCRIPT = path.join(REPO_ROOT, 'tools', 'specs-generator', 'scaffold-spec.ts');
 // A real brace placeholder the generator emits verbatim (README.md.template) — a genuine stub.
 const STUB_SENTINEL = '{Краткое описание фичи}';
+
+const MOVED_TEMPLATE_OWNERS = new Map<string, string[]>([
+  ['JIRA_SOURCE.md.template', [
+    '.claude/skills/create-spec/references/templates/JIRA_SOURCE.md.template',
+    '.agents/skills/create-spec/references/templates/JIRA_SOURCE.md.template',
+  ]],
+  ['ATTACHMENTS.md.template', [
+    '.claude/skills/create-spec/references/templates/ATTACHMENTS.md.template',
+    '.agents/skills/create-spec/references/templates/ATTACHMENTS.md.template',
+  ]],
+  ['AUDIT_REPORT.md.template', [
+    '.claude/skills/create-spec/references/templates/AUDIT_REPORT.md.template',
+    '.agents/skills/create-spec/references/templates/AUDIT_REPORT.md.template',
+  ]],
+  ['ARCHITECTURE_AXIS.md.template', [
+    '.claude/skills/architecture-decision-builder/references/templates/ARCHITECTURE_AXIS.md.template',
+    '.agents/skills/architecture-decision-builder/references/templates/ARCHITECTURE_AXIS.md.template',
+  ]],
+  ['ARCHITECTURE_INDEX.md.template', [
+    '.claude/skills/architecture-decision-builder/references/templates/ARCHITECTURE_INDEX.md.template',
+    '.agents/skills/architecture-decision-builder/references/templates/ARCHITECTURE_INDEX.md.template',
+  ]],
+  ['COMPLETENESS.md.template', [
+    '.claude/skills/architecture-decision-builder/references/templates/COMPLETENESS.md.template',
+    '.agents/skills/architecture-decision-builder/references/templates/COMPLETENESS.md.template',
+  ]],
+  ['SYNTHESIS.md.template', [
+    '.claude/skills/architecture-decision-builder/references/templates/SYNTHESIS.md.template',
+    '.agents/skills/architecture-decision-builder/references/templates/SYNTHESIS.md.template',
+  ]],
+]);
+
+interface TemplateOwnershipResult {
+  actualTemplates: string[];
+  mappedTemplates: string[];
+  unmappedTemplates: string[];
+  staleMappings: string[];
+  scaffoldStatus: number | null;
+  scaffoldOutput: string;
+  missingGeneratedTargets: string[];
+  retiredStillInScaffold: string[];
+  missingOwnerTemplates: string[];
+}
 
 interface ScaffoldWorld extends V4World {
   sentinels?: Set<string>;
@@ -34,6 +79,7 @@ interface ScaffoldWorld extends V4World {
   auditFindings?: Array<{ check: string; severity: string; message: string }>;
   verdictText?: string;
   createdSpecDirs?: string[];
+  templateOwnership?: TemplateOwnershipResult;
 }
 
 // ── fixture helpers ─────────────────────────────────────────────────────────
@@ -64,6 +110,61 @@ function makeSpecDir(this: ScaffoldWorld, slug: string, files: Record<string, st
   fs.writeFileSync(path.join(dir, '.progress.json'), JSON.stringify(progress), 'utf-8');
   (this.createdSpecDirs ??= []).push(dir);
   return dir;
+}
+
+function scaffoldTemplateMappings(slug: string): Array<{ template: string; target: string }> {
+  const core = fs.readFileSync(SPECS_GENERATOR_CORE, 'utf-8');
+  const block = core.match(/const templateMappings = \[[\s\S]*?\];/);
+  assert.ok(block, 'specs-generator-core.mjs must expose templateMappings');
+
+  return [...block[0].matchAll(/\[\s*['"]([^'"]+\.template)['"]\s*,\s*(?:['"]([^'"]+)['"]|`\$\{options\.name\}([^`]*)`)\s*\]/g)]
+    .map((m) => ({
+      template: m[1],
+      target: m[2] ?? `${slug}${m[3]}`,
+    }))
+    .sort((a, b) => a.template.localeCompare(b.template));
+}
+
+function sortedScaffoldTemplates(): string[] {
+  return fs.readdirSync(TEMPLATES_DIR).filter((n) => n.endsWith('.template')).sort();
+}
+
+function runTemplateOwnershipCheck(tempDir: string): TemplateOwnershipResult {
+  const slug = 'template-ownership-proof';
+  const mappings = scaffoldTemplateMappings(slug);
+  const actualTemplates = sortedScaffoldTemplates();
+  const mappedTemplates = mappings.map((m) => m.template).sort();
+  const mapped = new Set(mappedTemplates);
+  const actual = new Set(actualTemplates);
+
+  const scaffold = spawnSync(process.execPath, ['--import', 'tsx', SCAFFOLD_SCRIPT, '-Name', slug], {
+    cwd: REPO_ROOT,
+    env: { ...process.env, FORCE_COLOR: '0', SPECS_GENERATOR_ROOT: tempDir },
+    encoding: 'utf-8',
+    timeout: 60_000,
+  });
+  const generatedSpec = path.join(tempDir, '.specs', slug);
+
+  return {
+    actualTemplates,
+    mappedTemplates,
+    unmappedTemplates: actualTemplates.filter((name) => !mapped.has(name)),
+    staleMappings: mappedTemplates.filter((name) => !actual.has(name)),
+    scaffoldStatus: scaffold.status,
+    scaffoldOutput: `${scaffold.stdout ?? ''}${scaffold.stderr ?? ''}`,
+    missingGeneratedTargets: mappings
+      .map((m) => m.target)
+      .filter((target) => !fs.existsSync(path.join(generatedSpec, target)))
+      .sort(),
+    retiredStillInScaffold: [...MOVED_TEMPLATE_OWNERS.keys()]
+      .filter((name) => fs.existsSync(path.join(TEMPLATES_DIR, name)))
+      .sort(),
+    missingOwnerTemplates: [...MOVED_TEMPLATE_OWNERS.entries()]
+      .flatMap(([name, owners]) => owners
+        .filter((ownerPath) => !fs.existsSync(path.join(REPO_ROOT, ownerPath)))
+        .map((ownerPath) => `${name} -> ${ownerPath}`))
+      .sort(),
+  };
 }
 
 function runAudit(slug: string): Array<{ check: string; severity: string; message: string }> {
@@ -271,4 +372,34 @@ Then(/^the templates file and the __fixtures__ document yield no findings$/, fun
 Then(/^the backlog spec document yields at most an INFO finding never an ERROR$/, function () {
   assert.equal(isBacklogSpecPath(path.join('.specs', 'backlog', 'some-spec')), true);
   assert.equal(isBacklogSpecPath(path.join('.specs', 'real-spec')), false);
+});
+
+// ── SPECGEN004_508 — scaffold template directory owns only instantiated templates ──
+
+Given(/^the real scaffold template mapping and owning skill reference template directories$/, function () {
+  assert.ok(fs.existsSync(SPECS_GENERATOR_CORE), `missing scaffold core: ${SPECS_GENERATOR_CORE}`);
+  assert.ok(fs.existsSync(SCAFFOLD_SCRIPT), `missing scaffold CLI: ${SCAFFOLD_SCRIPT}`);
+  assert.ok(fs.existsSync(TEMPLATES_DIR), `missing scaffold templates dir: ${TEMPLATES_DIR}`);
+});
+
+When(/^the spec-generator template ownership check runs$/, function (this: ScaffoldWorld) {
+  this.templateOwnership = runTemplateOwnershipCheck(this.tempDir);
+});
+
+Then(/^every template left in tools\/specs-generator\/templates is instantiated by scaffold-spec$/, function (this: ScaffoldWorld) {
+  const result = this.templateOwnership!;
+  assert.equal(result.scaffoldStatus, 0, `scaffold-spec must run successfully: ${result.scaffoldOutput}`);
+  assert.deepEqual(result.actualTemplates, result.mappedTemplates, JSON.stringify({
+    unmappedTemplates: result.unmappedTemplates,
+    staleMappings: result.staleMappings,
+    actualTemplates: result.actualTemplates,
+    mappedTemplates: result.mappedTemplates,
+  }, null, 2));
+  assert.deepEqual(result.missingGeneratedTargets, [], `scaffold-spec did not instantiate mapped targets: ${JSON.stringify(result.missingGeneratedTargets)}`);
+});
+
+Then(/^the seven non-scaffold templates live only under their owning skill reference templates$/, function (this: ScaffoldWorld) {
+  const result = this.templateOwnership!;
+  assert.deepEqual(result.retiredStillInScaffold, [], `retired templates still live in scaffold dir: ${JSON.stringify(result.retiredStillInScaffold)}`);
+  assert.deepEqual(result.missingOwnerTemplates, [], `missing owner template copies: ${JSON.stringify(result.missingOwnerTemplates)}`);
 });

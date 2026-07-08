@@ -1234,10 +1234,12 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [x] negative cases pin the two P16-1 deadlock classes (NFR-id, lowercase markers) so they cannot regress — `negative-invalid-nfr-chk-id-is-denied` and `negative-lowercase-markers-are-denied` both verify CLI reject + guard deny paths
   - [x] maintain-evals-on-edit rule extended to these skills — rule index updated and full verification green (`npm run lint`, filtered Docker BDD, focused Docker vitest, full Docker suite 79 files / 880 passed / 2 skipped)
 
-- [ ] P16-3: resolve the 7 orphan templates — id: p16-orphan-templates — Status: TODO | Est: 120m
+- [x] P16-3: resolve the 7 orphan templates — id: p16-orphan-templates — Status: DONE (2026-07-08, template ownership moved + Docker verification green) | Est: 120m
+  _Requirements: [FR-57](FR.md#fr-57)_
+  _Refs: review backlog #2 — base scaffold templates must be only scaffold-instantiated files; verified by @feature57 scenario SPECGEN004_508_
   **Done When:**
-  - [ ] ARCHITECTURE_AXIS/INDEX, ATTACHMENTS, AUDIT_REPORT, COMPLETENESS, JIRA_SOURCE, SYNTHESIS: each either moved to its owning tool/skill, instantiated by a documented caller, or deleted with reason
-  - [ ] templates dir contains ONLY templates something instantiates (test pins the mapping)
+  - [x] ARCHITECTURE_AXIS/INDEX, ATTACHMENTS, AUDIT_REPORT, COMPLETENESS, JIRA_SOURCE, SYNTHESIS: each either moved to its owning tool/skill, instantiated by a documented caller, or deleted with reason — Jira/audit skeletons now live under create-spec `references/templates/`, architecture skeletons under architecture-decision-builder `references/templates/`
+  - [x] templates dir contains ONLY templates something instantiates (test pins the mapping) — verified by SPECGEN004_508 plus `tools/anchor-integrity/__tests__/templates.test.ts` in Docker
 
 - [ ] P16-4: feature.template into the anchor-integrity test — id: p16-feature-template-anchors — Status: TODO | Est: 60m
   **Done When:**

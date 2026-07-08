@@ -3170,3 +3170,10 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     When that form-skill eval runner executes
     Then the eval aggregate is fully green and every case exercised the real form contracts
     And the eval aggregate pins the P16-1 negative regression cases
+
+  @feature57
+  Scenario: SPECGEN004_508 scaffold template ownership keeps non-scaffold templates out of the base templates directory
+    Given the real scaffold template mapping and owning skill reference template directories
+    When the spec-generator template ownership check runs
+    Then every template left in tools/specs-generator/templates is instantiated by scaffold-spec
+    And the seven non-scaffold templates live only under their owning skill reference templates

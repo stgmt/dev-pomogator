@@ -110,7 +110,7 @@ Files: {done}/{total} complete — Next: {next_action}
 
 ## Conditional Jira-first mode
 
-Если `.specs/{slug}/JIRA_SOURCE.md` существует — активируется Jira-first workflow. Каждая фаза начинается со Step 0 (re-read 3 Jira-артефактов: `JIRA_SOURCE.md`, `ATTACHMENTS.md`, `.jira-cache.json`). Полная семантика и format Jira trace в FR/AC/BDD/TASKS — см. [`references/jira-mode.md`](references/jira-mode.md). Если файла нет — раздел no-op.
+Если `.specs/{slug}/JIRA_SOURCE.md` существует — активируется Jira-first workflow. Каждая фаза начинается со Step 0 (re-read 3 Jira-артефактов: `JIRA_SOURCE.md`, `ATTACHMENTS.md`, `.jira-cache.json`). Markdown-скелеты Jira/audit-артефактов живут рядом со skill-ом в `references/templates/` (`JIRA_SOURCE.md.template`, `ATTACHMENTS.md.template`, `AUDIT_REPORT.md.template`), потому что их создают jira-intake / Phase 3+ audit, а не base scaffold. Полная семантика и format Jira trace в FR/AC/BDD/TASKS — см. [`references/jira-mode.md`](references/jira-mode.md). Если файла нет — раздел no-op.
 
 ## Topic references (loaded on demand)
 
