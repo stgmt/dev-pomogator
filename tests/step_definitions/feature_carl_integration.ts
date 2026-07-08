@@ -39,6 +39,7 @@ interface CarlWorld extends V4World {
   carlBenchmarkReport?: Record<string, unknown>;
   carlReviewReport?: CarlReviewReport;
   carlRussianEvalReport?: Record<string, unknown>;
+  carlMutationReport?: Record<string, unknown>;
 }
 
 function appPath(...segments: string[]): string {
@@ -117,11 +118,11 @@ function assertRunSucceeded(run: CommandResult | undefined, purpose: string): as
   );
 }
 
-function findCarlHookCommand(): string | undefined {
+function findPluginHookCommand(eventName: 'SessionStart' | 'UserPromptSubmit', commandPattern: RegExp): string | undefined {
   const hooksPath = appPath('.claude-plugin', 'hooks.json');
   if (!fs.existsSync(hooksPath)) return undefined;
-  const hooks = JSON.parse(fs.readFileSync(hooksPath, 'utf-8')) as unknown;
-  const stack: unknown[] = [hooks];
+  const hooks = JSON.parse(fs.readFileSync(hooksPath, 'utf-8')) as { hooks?: Record<string, unknown> };
+  const stack: unknown[] = [hooks.hooks?.[eventName]];
   while (stack.length > 0) {
     const item = stack.pop();
     if (Array.isArray(item)) {
@@ -131,10 +132,18 @@ function findCarlHookCommand(): string | undefined {
     if (!item || typeof item !== 'object') continue;
     const record = item as Record<string, unknown>;
     const command = record.command;
-    if (typeof command === 'string' && /carl/i.test(command)) return command;
+    if (typeof command === 'string' && commandPattern.test(command)) return command;
     stack.push(...Object.values(record));
   }
   return undefined;
+}
+
+function findCarlHookCommand(): string | undefined {
+  return findPluginHookCommand('UserPromptSubmit', /tools\/carl\/runner\.ts|tools\\carl\\runner\.ts/u);
+}
+
+function findSessionStartDoctorCommand(): string | undefined {
+  return findPluginHookCommand('SessionStart', /pomogator-doctor.*doctor-hook\.ts/u);
 }
 
 function runRegisteredCarlHook(world: CarlWorld, env: NodeJS.ProcessEnv = {}): CommandResult {
@@ -148,19 +157,31 @@ function runRegisteredCarlHook(world: CarlWorld, env: NodeJS.ProcessEnv = {}): C
     };
   }
 
+  return runHookCommand(command, world, {
+    hookEventName: 'UserPromptSubmit',
+    prompt: 'че за ошибка, исследуй до конца',
+    env,
+  });
+}
+
+function runHookCommand(
+  command: string,
+  world: CarlWorld,
+  options: { hookEventName: 'SessionStart' | 'UserPromptSubmit'; prompt?: string; env?: NodeJS.ProcessEnv },
+): CommandResult {
   const input = JSON.stringify({
     session_id: 'carl-bdd-session',
     transcript_path: path.join(world.tempDir, 'transcript.jsonl'),
     cwd: world.carlProjectDir ?? world.tempDir,
-    hook_event_name: 'UserPromptSubmit',
+    hook_event_name: options.hookEventName,
     permission_mode: 'default',
-    prompt: 'че за ошибка, исследуй до конца',
+    ...(options.prompt ? { prompt: options.prompt } : {}),
   });
 
   const result = spawnSync(command, {
     shell: true,
-    cwd: REPO_ROOT,
-    env: { ...process.env, FORCE_COLOR: '0', ...env },
+    cwd: world.carlProjectDir ?? REPO_ROOT,
+    env: { ...process.env, CLAUDE_PLUGIN_ROOT: REPO_ROOT, FORCE_COLOR: '0', ...(options.env ?? {}) },
     input,
     encoding: 'utf-8',
     timeout: 20_000,
@@ -171,6 +192,20 @@ function runRegisteredCarlHook(world: CarlWorld, env: NodeJS.ProcessEnv = {}): C
     stdout: result.stdout ?? '',
     stderr: result.stderr ?? '',
   };
+}
+
+function runSessionStartDoctorHook(world: CarlWorld): CommandResult {
+  const command = findSessionStartDoctorCommand();
+  if (!command) {
+    return {
+      status: 127,
+      stdout: '',
+      stderr: 'Missing pomogator-doctor SessionStart hook registration in .claude-plugin/hooks.json',
+      missing: '.claude-plugin/hooks.json SessionStart doctor hook entry',
+    };
+  }
+
+  return runHookCommand(command, world, { hookEventName: 'SessionStart' });
 }
 
 function writeManagedCarlManifest(world: CarlWorld, overrides: Record<string, unknown> = {}): void {
@@ -285,6 +320,20 @@ When(/^the CARL adaptation script runs for the project$/, function (this: CarlWo
   this.carlLastRun = runTsTool('tools/carl/adapt-rules.ts', ['--project', this.carlProjectDir!]);
 });
 
+When(/^the plugin SessionStart doctor hook runs for that project$/, function (this: CarlWorld) {
+  this.carlLastRun = runSessionStartDoctorHook(this);
+});
+
+When(/^the CARL install mutation checks run$/, function (this: CarlWorld) {
+  this.carlLastRun = runTsTool('tools/carl/verify-mutations.ts', ['--json']);
+  assertRunSucceeded(this.carlLastRun, 'CARL install mutation verifier');
+  this.carlMutationReport = JSON.parse(this.carlLastRun.stdout) as Record<string, unknown>;
+
+  assert.equal(this.carlMutationReport.ok, true, 'mutation verifier must pass only when real install passes and mutant is killed');
+  assert.equal((this.carlMutationReport.realInstall as { pass?: unknown }).pass, true, 'real installer must satisfy Russian adaptation acceptance before mutant comparison');
+  assert.equal((this.carlMutationReport.missingAdaptation as { mutantKilled?: unknown }).mutantKilled, true, 'missing-adaptation mutant must be killed by the verifier');
+});
+
 Then(/^the project CARL manifest records the changed source hash$/, function (this: CarlWorld) {
   assertRunSucceeded(this.carlLastRun, 'CARL adaptation script');
   const text = stringify(readCarlManifest(this));
@@ -302,6 +351,32 @@ Then(/^Russian aliases are added when safe source text or curated overrides exis
 Then(/^sources without safe Russian aliases are marked as needing aliases instead of being silently omitted$/, function (this: CarlWorld) {
   const text = stringify(readCarlManifest(this));
   assert.match(text, /ru:needs-alias|needsAlias|needs-alias/, 'unsafe/unresolved sources must be marked as needing aliases');
+});
+
+Then(/^the next CARL prompt hook runs guidance instead of project-missing fallback$/, function (this: CarlWorld) {
+  const hookRun = runRegisteredCarlHook(this);
+  assertRunSucceeded(hookRun, 'CARL UserPromptSubmit after SessionStart');
+  const output = `${hookRun.stdout}\n${hookRun.stderr}`;
+  assert.match(output, /CARL guidance ran for this prompt/, 'SessionStart-created project manifest must let the prompt hook run CARL guidance');
+  assert.doesNotMatch(output, /project-missing/, 'prompt hook must not fall back to project-missing after SessionStart doctor repair');
+  const manifest = readCarlManifest(this) as { runtime?: { status?: string } };
+  assert.equal(manifest.runtime?.status, 'verified', 'prompt hook must mark runtime verified after SessionStart bootstrap');
+});
+
+Then(/^the mutation checks prove the BDD would fail without automatic Russian adaptation$/, function (this: CarlWorld) {
+  assert.ok(this.carlMutationReport, 'mutation report must be produced');
+  assert.equal(this.carlMutationReport.ok, true, `mutation verifier must pass; report=${stringify(this.carlMutationReport)}`);
+
+  const realInstall = this.carlMutationReport.realInstall as { pass?: unknown; ruStatus?: unknown; aliases?: unknown; needsAliasSources?: unknown };
+  assert.equal(realInstall.pass, true, 'real installer must satisfy Russian adaptation acceptance');
+  assert.equal(realInstall.ruStatus, 'partial', 'real installer must produce honest partial Russian coverage');
+  assert.ok(Array.isArray(realInstall.aliases) && realInstall.aliases.includes('че за ошибка'), 'real installer must include Russian aliases');
+  assert.ok(Array.isArray(realInstall.needsAliasSources) && realInstall.needsAliasSources.includes('.claude/skills/plain/SKILL.md'), 'real installer must mark unresolved English-only source');
+
+  const missingAdaptation = this.carlMutationReport.missingAdaptation as { mutantKilled?: unknown; ruStatus?: unknown; aliases?: unknown };
+  assert.equal(missingAdaptation.mutantKilled, true, 'missing-adaptation mutant must be killed');
+  assert.notEqual(missingAdaptation.ruStatus, 'partial', 'mutant without adaptProject must not satisfy Russian-ready/partial manifest status');
+  assert.deepEqual(missingAdaptation.aliases, [], 'mutant without adaptProject must not generate Russian aliases');
 });
 
 // ── CARL001_02 ───────────────────────────────────────────────────────────────
