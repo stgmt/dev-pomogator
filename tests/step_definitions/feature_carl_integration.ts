@@ -242,7 +242,28 @@ Then(/^unrelated user configuration remains unchanged$/, function (this: CarlWor
   assert.match(settings, /preserve-me/, 'installer must preserve unrelated user configuration');
 });
 
-// ── CARL001_11 ───────────────────────────────────────────────────────────────
+function writeRussianCarlSources(world: CarlWorld): void {
+  fs.mkdirSync(projectPath(world, '.claude', 'rules'), { recursive: true });
+  fs.writeFileSync(
+    projectPath(world, '.claude', 'rules', 'ru-root-cause.md'),
+    '# Root cause rule\n\nЕсли пользователь пишет "че за ошибка", сначала воспроизведи и найди корень.\n',
+    'utf-8',
+  );
+  fs.mkdirSync(projectPath(world, '.claude', 'skills', 'ru-debug'), { recursive: true });
+  fs.writeFileSync(
+    projectPath(world, '.claude', 'skills', 'ru-debug', 'SKILL.md'),
+    '# ru-debug\n\nTrigger: исследуй ошибку до конца.\n',
+    'utf-8',
+  );
+  fs.mkdirSync(projectPath(world, '.claude', 'skills', 'plain'), { recursive: true });
+  fs.writeFileSync(
+    projectPath(world, '.claude', 'skills', 'plain', 'SKILL.md'),
+    '# Plain\n\nEnglish-only helper with no safe Russian trigger.\n',
+    'utf-8',
+  );
+}
+
+// ── CARL001_11 / CARL001_13 ──────────────────────────────────────────────────
 Given(/^a project rule or skill is added after CARL was generated$/, function (this: CarlWorld) {
   ensureProject(this);
   const installRun = runTsTool('tools/carl/install.ts', [
@@ -252,24 +273,12 @@ Given(/^a project rule or skill is added after CARL was generated$/, function (t
     'claude-code',
   ]);
   assertRunSucceeded(installRun, 'CARL installer precondition');
-  fs.mkdirSync(projectPath(this, '.claude', 'rules'), { recursive: true });
-  fs.writeFileSync(
-    projectPath(this, '.claude', 'rules', 'ru-root-cause.md'),
-    '# Root cause rule\n\nЕсли пользователь пишет "че за ошибка", сначала воспроизведи и найди корень.\n',
-    'utf-8',
-  );
-  fs.mkdirSync(projectPath(this, '.claude', 'skills', 'ru-debug'), { recursive: true });
-  fs.writeFileSync(
-    projectPath(this, '.claude', 'skills', 'ru-debug', 'SKILL.md'),
-    '# ru-debug\n\nTrigger: исследуй ошибку до конца.\n',
-    'utf-8',
-  );
-  fs.mkdirSync(projectPath(this, '.claude', 'skills', 'plain'), { recursive: true });
-  fs.writeFileSync(
-    projectPath(this, '.claude', 'skills', 'plain', 'SKILL.md'),
-    '# Plain\n\nEnglish-only helper with no safe Russian trigger.\n',
-    'utf-8',
-  );
+  writeRussianCarlSources(this);
+});
+
+Given(/^a fresh Claude Code project contains Russian CARL rule and skill sources$/, function (this: CarlWorld) {
+  ensureProject(this);
+  writeRussianCarlSources(this);
 });
 
 When(/^the CARL adaptation script runs for the project$/, function (this: CarlWorld) {

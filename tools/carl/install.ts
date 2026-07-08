@@ -2,6 +2,7 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { adaptProject, type AdaptRulesResult } from './adapt-rules.ts';
 import { atomicWriteJson, buildDefaultManifest, codexPlatformState, manifestPath, readManifest, type ManagedCarlManifest } from './manifest.ts';
 
 export interface InstallArgs {
@@ -160,15 +161,24 @@ export function install(args: InstallArgs): Record<string, unknown> {
   const manifest = mergeManifest(existing, args.platform, args.project);
   atomicWriteJson(manifestPath(args.project), manifest);
 
+  let adaptation: AdaptRulesResult | null = null;
+  try {
+    adaptation = adaptProject({ project: args.project });
+  } catch {
+    adaptation = null;
+  }
+  const refreshedManifest = readManifest(args.project) ?? manifest;
+
   return {
     ok: true,
     status: args.repair ? 'repaired' : 'installed',
     managedBy: MANAGED_OWNER,
     manifest: manifestPath(args.project),
     platform: args.platform,
-    languageStatus: manifest.languageStatus,
-    runtime: manifest.runtime,
+    languageStatus: refreshedManifest.languageStatus,
+    runtime: refreshedManifest.runtime,
     settings: settingsResult,
+    adaptation,
   };
 }
 
