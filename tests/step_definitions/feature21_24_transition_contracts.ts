@@ -20,6 +20,7 @@ import { V4World } from '../hooks/before-after.ts';
 
 const REPO_ROOT = path.resolve(import.meta.dirname ?? __dirname, '..', '..');
 const CORE = path.join(REPO_ROOT, 'tools', 'specs-generator', 'specs-generator-core.mjs');
+const VALIDATE_SPECS = path.join(REPO_ROOT, 'tools', 'specs-validator', 'validate-specs.ts');
 const BASELINE = path.join(REPO_ROOT, 'tools', 'specs-generator', '__fixtures__', 'task-table.baseline.md');
 const FIXTURE_INPUT = path.join(REPO_ROOT, 'tools', 'specs-generator', '__fixtures__', 'task-table-input', 'TASKS.md');
 const META_GUARD = path.join(REPO_ROOT, 'tools', 'specs-validator', 'extension-json-meta-guard.ts');
@@ -308,5 +309,107 @@ Then(
       assert.ok(body.includes('Write/Edit/MCP'), `${name} documentation must explicitly forbid manual/MCP mutation`);
       assert.ok(!body.includes('`.progress.json` создаётся ТОЛЬКО через `spec-status.ts`'), `${name} documentation must not keep the stale single-writer claim`);
     }
+  },
+);
+
+// ── SPECGEN004_512 — P16-8: active-spec STOP signal, no corpus nag ─────────
+
+interface FStopDisciplineWorld extends V4World {
+  stopHookResult?: { status: number | null; stdout: string; stderr: string };
+  verboseStopHookResult?: { status: number | null; stdout: string; stderr: string };
+}
+
+function progressWithUnconfirmedStop(featureSlug: string): ProgressState {
+  return {
+    version: 4,
+    featureSlug,
+    createdAt: '2026-07-08T00:00:00.000Z',
+    currentPhase: 'Requirements',
+    phases: {
+      Discovery: { completedAt: '2026-07-08T00:00:00.000Z', stopConfirmed: false, stopConfirmedAt: null },
+      Context: { completedAt: null, stopConfirmed: false, stopConfirmedAt: null },
+      Requirements: { completedAt: null, stopConfirmed: false, stopConfirmedAt: null },
+      Finalization: { completedAt: null, stopConfirmed: false, stopConfirmedAt: null },
+    },
+  };
+}
+
+function seedProgressOnlySpec(root: string, slug: string): void {
+  const specDir = path.join(root, '.specs', slug);
+  fs.mkdirSync(specDir, { recursive: true });
+  fs.writeFileSync(
+    path.join(specDir, '.progress.json'),
+    `${JSON.stringify(progressWithUnconfirmedStop(slug), null, 2)}\n`,
+    'utf-8',
+  );
+}
+
+function runValidateSpecsHook(corpusRoot: string, prompt: string, extraEnv: NodeJS.ProcessEnv = {}): { status: number | null; stdout: string; stderr: string } {
+  const input = JSON.stringify({
+    conversation_id: 'bdd-stop-discipline',
+    cwd: corpusRoot,
+    workspace_roots: [corpusRoot],
+    prompt,
+  });
+  const r = spawnSync(process.execPath, ['--import', 'tsx', VALIDATE_SPECS], {
+    encoding: 'utf-8',
+    input,
+    env: {
+      ...process.env,
+      SPEC_CONFORMANCE_REPO_ROOT: corpusRoot,
+      ...extraEnv,
+    },
+    timeout: 60_000,
+  });
+  return { status: r.status, stdout: r.stdout ?? '', stderr: r.stderr ?? '' };
+}
+
+Given(
+  /^a temp spec corpus with active and legacy specs that both have unconfirmed STOPs$/,
+  function (this: FStopDisciplineWorld) {
+    fs.mkdirSync(path.join(this.tempDir, '.specs'), { recursive: true });
+    seedProgressOnlySpec(this.tempDir, 'active-spec');
+    seedProgressOnlySpec(this.tempDir, 'legacy-spec');
+  },
+);
+
+When(
+  /^the specs-validator prompt hook receives a prompt about the active spec$/,
+  function (this: FStopDisciplineWorld) {
+    this.stopHookResult = runValidateSpecsHook(
+      this.tempDir,
+      'Continue .specs/active-spec/DESIGN.md after checking the active spec phase state.',
+    );
+    assert.equal(this.stopHookResult.status, 0, `validate-specs hook must exit 0; stderr: ${this.stopHookResult.stderr}`);
+
+    this.verboseStopHookResult = runValidateSpecsHook(
+      this.tempDir,
+      'Continue .specs/active-spec/DESIGN.md after checking the active spec phase state.',
+      { SPECS_VALIDATOR_VERBOSE: '1' },
+    );
+    assert.equal(this.verboseStopHookResult.status, 0, `verbose validate-specs hook must exit 0; stderr: ${this.verboseStopHookResult.stderr}`);
+  },
+);
+
+Then(
+  /^the hook output surfaces the active spec unconfirmed STOP with the exact confirm command$/,
+  function (this: FStopDisciplineWorld) {
+    assert.match(this.stopHookResult!.stdout, /\[specs-validator\] ACTIVE SPEC STOP "active-spec" \| Phase: Requirements \| STOP #1 not confirmed/);
+    assert.match(this.stopHookResult!.stdout, /Confirm: spec-status\.ts -Path "\.specs\/active-spec" -ConfirmStop Discovery/);
+  },
+);
+
+Then(
+  /^the hook output does not emit a corpus-wide unconfirmed STOP count$/,
+  function (this: FStopDisciplineWorld) {
+    assert.doesNotMatch(this.stopHookResult!.stdout, /\d+ specs with unconfirmed STOP/);
+  },
+);
+
+Then(
+  /^the unrelated legacy spec stays quiet unless verbose mode is enabled$/,
+  function (this: FStopDisciplineWorld) {
+    assert.doesNotMatch(this.stopHookResult!.stdout, /legacy-spec/);
+    assert.match(this.verboseStopHookResult!.stdout, /SPEC STOP \(verbose\) "legacy-spec"/);
   },
 );

@@ -1262,11 +1262,11 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   **Done When:**
   - [x] scaffold-spec's inline creation vs «only via spec-status.ts» rule reconciled by documenting the engine-only two-writer contract: `scaffold-spec.ts` is bootstrap writer for fresh v4 `.progress.json`, `spec-status.ts` is state-transition/repair writer; manual Write/Edit/MCP mutation remains forbidden in create-spec skill/rule/phase agent — verified by `npm run lint`, Docker BDD SPECGEN004_511 (1 scenario / 8 steps passed), and full Docker suite (79 files / 883 passed / 2 skipped)
 
-- [ ] P16-8: STOP-confirm discipline — id: p16-stop-confirm-discipline — Status: TODO | Est: 180m
-  _Refs: validator nags «9 specs with unconfirmed STOP» every prompt; no mechanism prevents an agent skipping ConfirmStop_
+- [x] P16-8: STOP-confirm discipline — id: p16-stop-confirm-discipline — Status: DONE (2026-07-08, active-spec STOP signal implemented and legacy STOP debt triaged) | Est: 180m
+  _Refs: verified by @feature35 scenario SPECGEN004_512; triage note: `audit-reports/p16-8-stop-confirm-triage.md`_
   **Done When:**
-  - [ ] a mechanism (Stop-gate check or spec-verdict note) surfaces unconfirmed STOPs of the ACTIVE spec as a blocking/loud signal, not a corpus-wide nag
-  - [ ] the 9 legacy unconfirmed-STOP specs triaged: confirmed where work is done, или explicit deferred-note
+  - [x] a mechanism surfaces unconfirmed STOPs of the ACTIVE spec as a loud prompt-time signal with the exact `spec-status.ts -Path ".specs/<slug>" -ConfirmStop <phase>` command, while unrelated legacy specs stay quiet by default; verified by Docker BDD SPECGEN004_512 (1 scenario / 8 steps passed)
+  - [x] legacy unconfirmed-STOP specs triaged via explicit deferred-note: 20 complete legacy specs require per-spec review before confirmation, and 10 `spec-v3-verify-46316-*` scratch dirs are cleanup candidates, not confirmation candidates
 
 ## Phase 17 — MCP-rails: живой генератор + MCP-only доступ + агенты по фазам (FR-39/40/41)
 

@@ -3199,3 +3199,11 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Then scaffold-spec is the bootstrap writer for initial .progress.json state
     And spec-status is the state-transition writer for existing specs
     And create-spec documentation forbids manual or MCP mutation of .progress.json while naming both engine writers
+
+  @feature35
+  Scenario: SPECGEN004_512 active spec unconfirmed STOP is loud without corpus-wide nagging
+    Given a temp spec corpus with active and legacy specs that both have unconfirmed STOPs
+    When the specs-validator prompt hook receives a prompt about the active spec
+    Then the hook output surfaces the active spec unconfirmed STOP with the exact confirm command
+    And the hook output does not emit a corpus-wide unconfirmed STOP count
+    And the unrelated legacy spec stays quiet unless verbose mode is enabled
