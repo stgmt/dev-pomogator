@@ -436,8 +436,8 @@ Feature: PLUGIN006 Specs Generator Scripts
   Scenario: Audit detects placeholder FIXTURES.md when TEST_DATA_ACTIVE
     Given a spec fixture "audit-review-fixture" with TEST_DATA_ACTIVE and placeholder FIXTURES.md
     When I run audit-spec.ts on the spec
-    Then findings should contain check "FIXTURES_CONSISTENCY"
-    And FIXTURES_CONSISTENCY finding should mention "placeholder"
+    Then findings should contain check "SCAFFOLD_INCOMPLETE"
+    And findings should contain check "SCAFFOLD_INCOMPLETE" mentioning "FIXTURES.md"
 
   @feature65
   Scenario: Audit detects @featureN tag in FR but missing from matching AC

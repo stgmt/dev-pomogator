@@ -27,6 +27,14 @@ export interface ManagedCarlManifest {
       lastGeneratedAt: string;
     };
   };
+  contextDiet?: {
+    mode: 'additive' | 'lazy-managed';
+    status: 'applied' | 'no-rules' | 'partial';
+    estimatedTokensBefore: number;
+    estimatedTokensAfter: number;
+    rulesManaged: number;
+    rulesTotal: number;
+  };
   managed: {
     settingsKey: string;
     hookCommand: string;

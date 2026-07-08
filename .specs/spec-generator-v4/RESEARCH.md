@@ -1476,4 +1476,8 @@ This appendix preserves the research and risk-assessment content from `.specs/sp
 
 Source code for v3 form-guards remains at `tools/specs-validator/*.ts` (production). The four design decisions are reproduced in DESIGN.md paragraph (o). The 28 BDD scenarios are preserved at `.specs/spec-generator-v4/legacy-v3.feature` and continue to be tested by `tests/e2e/spec-generator-v3.test.ts`. v3's performance budgets are preserved in NFR.md under «Legacy v3 budgets». The v3 production release entry is preserved in CHANGELOG.md as `[0.1.0-v3]`.
 
+### Z.6 Hook output context bloat
+
+Live transcript analysis in `audit-reports/hook-output-context-bloat-biet-handoff.md` found that the PostToolUse conformance push can print hundreds of kilobytes into Claude Code history: one captured hook event had `attachment.stdout len=713574`, and later events repeated around `stdoutLen=716640` for roughly 2690 findings. The source producer is `tools/spec-conformance-push/spec-conformance-push.ts`: the formatter iterates every finding for the agent-facing reminder, while `appendFindings(...)` already persists the full audit record separately. The fix is to cap only the agent-facing reminder and keep the durable log complete. [VERIFIED: handoff report + source inspection]
+
 

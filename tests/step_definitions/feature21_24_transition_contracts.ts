@@ -25,6 +25,17 @@ const BASELINE = path.join(REPO_ROOT, 'tools', 'specs-generator', '__fixtures__'
 const FIXTURE_INPUT = path.join(REPO_ROOT, 'tools', 'specs-generator', '__fixtures__', 'task-table-input', 'TASKS.md');
 const META_GUARD = path.join(REPO_ROOT, 'tools', 'specs-validator', 'extension-json-meta-guard.ts');
 
+function readDocumentationBody(filePath: string): string {
+  const body = fs.readFileSync(filePath, 'utf-8');
+  if (!body.includes('dev-pomogator-carl-context-diet:managed-stub')) return body;
+
+  const fullTextMatch = body.match(/Full text: `([^`]+)`/) ?? body.match(/Lazy rule body: `([^`]+)`/);
+  if (!fullTextMatch) return body;
+
+  const fullTextPath = path.join(REPO_ROOT, fullTextMatch[1]);
+  return fs.existsSync(fullTextPath) ? fs.readFileSync(fullTextPath, 'utf-8') : body;
+}
+
 // ── SPECGEN004_107 — FR-21: task-table byte contract ───────────────────────
 
 interface F21World extends V4World {
@@ -250,9 +261,9 @@ When(
     this.freshProgress = JSON.parse(fs.readFileSync(path.join(this.tempDir, '.specs', 'fresh-progress', '.progress.json'), 'utf-8')) as ProgressState;
     this.repairedProgress = JSON.parse(fs.readFileSync(path.join(this.tempDir, '.specs', 'status-existing', '.progress.json'), 'utf-8')) as ProgressState;
     this.documentationBodies = {
-      claude: fs.readFileSync(path.join(REPO_ROOT, '.claude', 'skills', 'create-spec', 'SKILL.md'), 'utf-8'),
-      agent: fs.readFileSync(path.join(REPO_ROOT, '.agents', 'skills', 'create-spec', 'SKILL.md'), 'utf-8'),
-      rule: fs.readFileSync(path.join(REPO_ROOT, '.claude', 'rules', 'specs-workflow', 'specs-management.md'), 'utf-8'),
+      claude: readDocumentationBody(path.join(REPO_ROOT, '.claude', 'skills', 'create-spec', 'SKILL.md')),
+      agent: readDocumentationBody(path.join(REPO_ROOT, '.agents', 'skills', 'create-spec', 'SKILL.md')),
+      rule: readDocumentationBody(path.join(REPO_ROOT, '.claude', 'rules', 'specs-workflow', 'specs-management.md')),
     };
   },
 );

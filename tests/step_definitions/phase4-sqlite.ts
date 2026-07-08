@@ -184,14 +184,7 @@ Given(
   },
 );
 
-// "When the MCP server starts" already lives in phase2-mcp.ts (marksman
-// flavour). We move the corruption-detection logic into the Then step so
-// both Gherkin scenarios can share the same When without ambiguity.
-
-Then('corruption is detected at startup', async function (this: SqliteWorld) {
-  // phase2's "the MCP server starts" step is a no-op marker; the real startup
-  // recovery (detect → quarantine → log → reopen) runs here against the
-  // garbage file the Given wrote.
+When('the MCP server starts and opens the SQLite index', async function (this: SqliteWorld) {
   this.recovery = await openDatabaseWithRecovery({
     repoRoot: this.tempDir,
     now: new Date('2026-05-30T00:00:00Z'),
@@ -201,6 +194,9 @@ Then('corruption is detected at startup', async function (this: SqliteWorld) {
   if (!this.recovery.handle.backend.available && !this.recovery.recovered) return 'pending';
   this.sessionAHandle = this.recovery.handle; // let the After-hook close it
   this.corruptionDetected = this.recovery.recovered;
+});
+
+Then('corruption is detected at startup', function (this: SqliteWorld) {
   assert.equal(this.corruptionDetected, true);
 });
 

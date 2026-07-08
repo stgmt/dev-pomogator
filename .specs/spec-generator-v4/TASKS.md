@@ -1496,7 +1496,7 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
 
 - [ ] P21-3: сценарная гниль — FR-19 blanket-ре-тег + FR-7 пересъёмка под нативный LSP — id: p21-scenario-rot — Status: TODO | Est: 240m
   _depends: p17-enforce_
-  _Requirements: [FR-8](FR.md#fr-8), [FR-19](FR.md#fr-19), [FR-7](FR.md#fr-7)_
+  _Requirements: [FR-8](FR.md#fr-8), [FR-19](FR.md#fr-19), [FR-7](FR.md#fr-7), [FR-58](FR.md#fr-58)_
   **Done When:**
   - [ ] 11 blanket-@FR-19 сценариев legacy-v3 ре-тегнуты (fr8-semantic-drift-inventory = чеклист); судья не флагает FR-19
   - [ ] FR-7 сценарии тестируют ТЕКУЩУЮ нативную LSP-интеграцию, не ретайрнутый binary
@@ -1924,3 +1924,30 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   **Done When:**
   - [ ] `spec-verdict`/`corpus-health` прогнан по всему `.specs/` — залогировано, сколько claims-done спек всплыло недописанными (ожидаемо >1), список приложен к отчёту
   - [ ] новые файлы (классификатор + тесты + step-def) есть в FILE_CHANGES.md с implements-ссылкой на FR-57; UNCOVERED_FR / TASK_UNTESTED / UNTAGGED_SCENARIO по спеке остаются 0
+
+## Phase 31 — FR-59 bounded conformance-push reminder (2026-07-09)
+
+Источник: `audit-reports/hook-output-context-bloat-biet-handoff.md` (live transcript evidence: `attachment.stdout len=713574` / ~716KB repeated pushes). Fix producer `tools/spec-conformance-push/spec-conformance-push.ts`: cap only the Claude-facing `<system-reminder>`, keep `appendFindings(...)` complete, rebuild distributed bundle. TDD Red→Green with synthetic large finding batch and real writer proof.
+
+- [ ] P31-1: cap `formatReminder`/`decidePush` output without touching durable log (FR-59a/b) — id: p31-bounded-reminder — Status: TODO | Est: 120m
+  _Requirements: [FR-59](FR.md#fr-59)_
+  **Done When:**
+  - [ ] flushing 3000 findings emits a `<system-reminder>` at or below 6000 UTF-8 bytes with total count, counts by severity, ≤20 sample findings, omitted count, and full-log pointer
+  - [ ] long individual finding messages are truncated/sampled so the whole reminder remains within the byte budget
+  - [ ] `appendFindings(...)` still receives every finding observed by `runPush`, including when the reminder is capped or `_no_push_check: true` suppresses the agent-facing push
+
+- [ ] P31-2: regression coverage for bounded stdout + complete side-channel (FR-59a/b/c) — id: p31-regression-coverage — Status: TODO | Est: 120m
+  _depends: p31-bounded-reminder_
+  _Requirements: [FR-59](FR.md#fr-59)_
+  **Done When:**
+  - [ ] `tools/spec-conformance-push/__tests__/spec-conformance-push.test.ts` covers large synthetic batches and proves not every finding message is printed
+  - [ ] `@feature59` scenario SPECGEN004_513 in `tests/step_definitions/feature23_28_log_inventory_throttle.ts` drives the real `decidePush` formatter and real `appendFindings` writer, not a mocked copy
+  - [ ] prompt-time conformance/task-census compactness remains covered by existing top-5/one-line summary tests or equivalent focused assertions
+
+- [ ] P31-3: rebuild and real-artifact probe for plugin users (FR-59c) — id: p31-bundle-probe — Status: TODO | Est: 90m
+  _depends: p31-bounded-reminder, p31-regression-coverage_
+  _Requirements: [FR-59](FR.md#fr-59)_
+  **Done When:**
+  - [ ] `npm run build:push` refreshes `tools/spec-conformance-push/spec-conformance-push.bundle.mjs`
+  - [ ] a real bundle/source probe shows stdout under the cap and full JSONL side-channel retention
+  - [ ] focused tests plus spec reality/check verdict evidence are recorded before reporting done

@@ -90,6 +90,7 @@ Feature: CTXMENU001_Context_Menu_Setup
     Then a log file should be created at ~/.dev-pomogator/logs/context-menu-launch.log
     And the log should contain "launch-claude-tui.ps1 invoked"
     And the log should contain the resolved project dir
+    And the generated Claude launcher should set TEST_STATUSLINE_PROJECT with forward slashes
 
   @feature6
   Scenario: CTXMENU001_14 failed claude launch is logged with ERROR and exit code

@@ -20,8 +20,8 @@ The important behavioral change is not to auto-confirm these silently. Auto-conf
 | Group | Count | Disposition | Why |
 |---|---:|---|---|
 | Active spec named by prompt/env | 1+ | Loud prompt-time STOP warning | The agent is working there now; skipping the phase checkpoint is actionable and must be visible. |
-| Complete legacy specs with stale STOP state | 21 | Deferred, not auto-confirmed | They need per-spec review before `spec-status.ts -ConfirmStop ...`; mass-confirm would claim evidence the session did not verify. |
-| `spec-v3-verify-46316-*` scratch dirs | 9 | Deferred cleanup candidates | They are incomplete verification artifacts, not real finished specs: no `.feature`, missing all required markdown docs. |
+| Complete legacy specs with stale STOP state | 20 | Deferred, not auto-confirmed | They need per-spec review before `spec-status.ts -ConfirmStop ...`; mass-confirm would claim evidence the session did not verify. |
+| `spec-v3-verify-46316-*` scratch dirs | 10 | Deferred cleanup candidates | They are incomplete verification artifacts, not real finished specs: no `.feature`, missing all required markdown docs. |
 
 ## Legacy specs deferred for future review
 

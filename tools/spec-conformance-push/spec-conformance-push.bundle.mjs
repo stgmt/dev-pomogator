@@ -12317,7 +12317,7 @@ var require_src2 = __commonJS({
 });
 
 // tools/spec-conformance-push/spec-conformance-push.ts
-import fs11 from "node:fs";
+import fs12 from "node:fs";
 
 // tools/_shared/stdin.ts
 async function readStdin() {
@@ -12331,7 +12331,7 @@ async function readStdinJson() {
 }
 
 // tools/spec-conformance-push/spec-conformance-push.ts
-import path7 from "node:path";
+import path8 from "node:path";
 import { pathToFileURL } from "node:url";
 
 // tools/spec-graph/builder.ts
@@ -13915,9 +13915,64 @@ function parseChkRows(content) {
   }
   return rows;
 }
+var RISK_HEADING = /^##\s+Risk Assessment\b/;
+var ALLOWED_LEVELS = /* @__PURE__ */ new Set(["Low", "Medium", "High"]);
+var PLACEHOLDER_MARKERS = /^\{.*\}$|^—$|^-$|^TBD$|^\?+$/;
+function parseRiskRows(content) {
+  const lines = content.replace(/\r\n/g, "\n").split("\n");
+  let headingLineNumber = null;
+  let tableStart = -1;
+  for (let i = 0; i < lines.length; i++) {
+    if (RISK_HEADING.test(lines[i])) {
+      headingLineNumber = i + 1;
+      for (let j = i + 1; j < lines.length; j++) {
+        if (/^\|/.test(lines[j].trim())) {
+          tableStart = j;
+          break;
+        }
+        if (/^##\s/.test(lines[j])) break;
+      }
+      break;
+    }
+  }
+  if (headingLineNumber === null) {
+    return { headingLineNumber: null, rows: [], validRowCount: 0 };
+  }
+  const rows = [];
+  if (tableStart >= 0) {
+    for (let i = tableStart; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line.startsWith("|")) break;
+      if (/^\|[\s-:|]+\|$/.test(line)) continue;
+      const cells = line.split("|").slice(1, -1).map((c) => c.trim());
+      if (cells.length < 4) continue;
+      const [risk, likelihood, impact, mitigation] = cells;
+      if (risk === "Risk" && likelihood === "Likelihood") continue;
+      const isPlaceholder = PLACEHOLDER_MARKERS.test(risk) || PLACEHOLDER_MARKERS.test(mitigation) || /\{[^}]*\}/.test(risk) || /\{[^}]*\}/.test(mitigation);
+      const likelihoodValid = ALLOWED_LEVELS.has(likelihood);
+      const impactValid = ALLOWED_LEVELS.has(impact);
+      const mitigationValid = !!mitigation && !PLACEHOLDER_MARKERS.test(mitigation) && !/\{[^}]*\}/.test(mitigation);
+      rows.push({
+        lineNumber: i + 1,
+        risk,
+        likelihood,
+        impact,
+        mitigation,
+        isPlaceholder,
+        likelihoodValid,
+        impactValid,
+        mitigationValid
+      });
+    }
+  }
+  const validRowCount = rows.filter(
+    (r) => !r.isPlaceholder && r.likelihoodValid && r.impactValid && r.mitigationValid
+  ).length;
+  return { headingLineNumber, rows, validRowCount };
+}
 function runCheckCli(argv) {
   const [flag, kind, file] = argv;
-  const usage = "usage: spec-form-parsers.ts --check <user-stories|tasks|decisions|chk-rows> <file>";
+  const usage = "usage: spec-form-parsers.ts --check <user-stories|tasks|decisions|chk-rows|risks> <file>";
   if (flag !== "--check" || !kind || !file) return { output: usage, exitCode: 2 };
   let content;
   try {
@@ -13947,6 +14002,15 @@ function runCheckCli(argv) {
         if (r.missingFirst) violations.push(`${file}:${r.lineNumber} [${r.id}] invalid: ${r.missingFirst}`);
       }
       break;
+    case "risks": {
+      const assessment = parseRiskRows(content);
+      if (assessment.headingLineNumber === null) {
+        violations.push(`${file}:1 [Risk Assessment] missing: heading`);
+      } else if (assessment.validRowCount < 2) {
+        violations.push(`${file}:${assessment.headingLineNumber} [Risk Assessment] invalid: expected \u22652 populated risk rows, got ${assessment.validRowCount}`);
+      }
+      break;
+    }
     default:
       return { output: usage, exitCode: 2 };
   }
@@ -14965,7 +15029,7 @@ function appendFindings(findings, opts) {
 import fs10 from "node:fs";
 import path6 from "node:path";
 var HARD_NEGATIVE = /* @__PURE__ */ new Set(["failed", "undefined", "ambiguous"]);
-function computeTaskCensus(graph) {
+function computeTaskCensus(graph, opts = {}) {
   const scenarios = [];
   const tasks = [];
   const taskEntries = [];
@@ -14994,6 +15058,7 @@ function computeTaskCensus(graph) {
     return r;
   };
   for (const { node: t, slug } of taskEntries) {
+    if (opts.backlogSpecs?.has(slug)) continue;
     if (t.status === "todo" || t.status === "in-progress" || t.status === "blocked") {
       const r = row(slug);
       r.open++;
@@ -15051,40 +15116,75 @@ function readTaskCensusCache(repoRoot) {
   return readCacheFile(taskCensusCachePath(repoRoot));
 }
 
+// tools/spec-graph/spec-status-store.ts
+import fs11 from "node:fs";
+import path7 from "node:path";
+var SENTINEL = ".spec-status";
+function backlogSpecs(repoRoot) {
+  const out = /* @__PURE__ */ new Set();
+  const root = path7.join(repoRoot, ".specs");
+  const walk = (dir) => {
+    let ents;
+    try {
+      ents = fs11.readdirSync(dir, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    for (const e of ents) {
+      const full = path7.join(dir, e.name);
+      if (e.isDirectory()) {
+        walk(full);
+      } else if (e.name === SENTINEL) {
+        try {
+          if (fs11.readFileSync(full, "utf-8").trim() === "backlog") {
+            out.add(path7.relative(root, dir).split(path7.sep).join("/"));
+          }
+        } catch {
+        }
+      }
+    }
+  };
+  walk(root);
+  return out;
+}
+
 // tools/spec-conformance-push/spec-conformance-push.ts
 var WINDOW_MS = 3e3;
 var STATE_PATH_REL = ".dev-pomogator/.push-throttle-state.json";
+var REMINDER_BUDGET_BYTES = 6e3;
+var MAX_REMINDER_SAMPLES = 20;
+var ELLIPSIS = "\u2026";
 function statePath(repoRoot) {
-  return path7.join(repoRoot, STATE_PATH_REL);
+  return path8.join(repoRoot, STATE_PATH_REL);
 }
 function readState(repoRoot) {
   const p = statePath(repoRoot);
-  if (!fs11.existsSync(p)) return null;
+  if (!fs12.existsSync(p)) return null;
   try {
-    return JSON.parse(fs11.readFileSync(p, "utf8"));
+    return JSON.parse(fs12.readFileSync(p, "utf8"));
   } catch {
     return null;
   }
 }
 function writeState(repoRoot, state) {
   const p = statePath(repoRoot);
-  fs11.mkdirSync(path7.dirname(p), { recursive: true });
+  fs12.mkdirSync(path8.dirname(p), { recursive: true });
   const tmp = `${p}.tmp.${process.pid}`;
-  fs11.writeFileSync(tmp, JSON.stringify(state, null, 2));
-  fs11.renameSync(tmp, p);
+  fs12.writeFileSync(tmp, JSON.stringify(state, null, 2));
+  fs12.renameSync(tmp, p);
 }
 function clearState(repoRoot) {
   const p = statePath(repoRoot);
   try {
-    fs11.unlinkSync(p);
+    fs12.unlinkSync(p);
   } catch {
   }
 }
 function isOptedOut(filePath, repoRoot) {
-  const abs = path7.isAbsolute(filePath) ? filePath : path7.join(repoRoot, filePath);
-  if (!fs11.existsSync(abs)) return false;
+  const abs = path8.isAbsolute(filePath) ? filePath : path8.join(repoRoot, filePath);
+  if (!fs12.existsSync(abs)) return false;
   try {
-    const head = fs11.readFileSync(abs, "utf8").slice(0, 512);
+    const head = fs12.readFileSync(abs, "utf8").slice(0, 512);
     if (/^_no_push_check:\s*true/m.test(head)) return true;
     if (/^#\s*_no_push_check:\s*true/m.test(head)) return true;
   } catch {
@@ -15105,22 +15205,71 @@ function dedupe(findings) {
   }
   return out;
 }
-function formatReminder(findings) {
-  const lines = [];
-  lines.push("<system-reminder>");
-  lines.push("Spec conformance findings (PostToolUse push, 3s window):");
+function byteLength(s) {
+  return Buffer.byteLength(s, "utf8");
+}
+function truncateUtf8(s, maxBytes) {
+  if (byteLength(s) <= maxBytes) return s;
+  const ellipsisBytes = byteLength(ELLIPSIS);
+  if (maxBytes <= ellipsisBytes) return "";
+  let out = "";
+  let used = 0;
+  for (const ch of s) {
+    const chBytes = byteLength(ch);
+    if (used + chBytes + ellipsisBytes > maxBytes) break;
+    out += ch;
+    used += chBytes;
+  }
+  return `${out}${ELLIPSIS}`;
+}
+function severityCounts(findings) {
   const bySev = /* @__PURE__ */ new Map();
   for (const f of findings) bySev.set(f.severity, (bySev.get(f.severity) ?? 0) + 1);
-  lines.push(
-    `  ${findings.length} finding(s): ` + Array.from(bySev.entries()).map(([s, n]) => `${n} ${s}`).join(", ")
-  );
-  for (const f of findings) {
-    lines.push(
-      `  [${f.severity.toUpperCase()}] ${f.code} ${f.location.file}:${f.location.line} \u2014 ${f.message}`
-    );
+  const ordered = ["error", "warning", "info"].filter((s) => bySev.has(s)).map((s) => `${bySev.get(s)} ${s}`);
+  for (const [severity, count] of bySev.entries()) {
+    if (!["error", "warning", "info"].includes(severity)) ordered.push(`${count} ${severity}`);
   }
-  lines.push("</system-reminder>");
-  return lines.join("\n");
+  return ordered.join(", ");
+}
+function sampleLine(f) {
+  return `  [${f.severity.toUpperCase()}] ${f.code} ${f.location.file}:${f.location.line} \u2014 ${f.message}`;
+}
+function fitReminder(lines, budgetBytes) {
+  const closing = "</system-reminder>";
+  while (lines.length > 0 && byteLength([...lines, closing].join("\n")) > budgetBytes) {
+    const last = lines[lines.length - 1];
+    const withoutLast = [...lines.slice(0, -1), closing].join("\n");
+    const available = budgetBytes - byteLength(withoutLast) - byteLength("\n");
+    if (available > byteLength("  ") + byteLength(ELLIPSIS)) {
+      lines[lines.length - 1] = truncateUtf8(last, available);
+      break;
+    }
+    lines.pop();
+  }
+  return [...lines, closing].join("\n");
+}
+function formatReminder(findings) {
+  const sampleCount = Math.min(findings.length, MAX_REMINDER_SAMPLES);
+  const omitted = Math.max(0, findings.length - sampleCount);
+  const lines = [
+    "<system-reminder>",
+    "Spec conformance findings (PostToolUse push, 3s window):",
+    `  ${findings.length} finding(s): ${severityCounts(findings)}`,
+    `  Showing up to ${sampleCount} sample finding(s); omitted ${omitted}.`,
+    "  Full log: .dev-pomogator/.spec-check-log/ (or run /spec-status)."
+  ];
+  if (sampleCount > 0) {
+    const closing = "</system-reminder>";
+    const budgetAfterHeader = REMINDER_BUDGET_BYTES - byteLength([...lines, closing].join("\n"));
+    const sampleLineBudget = Math.max(
+      byteLength(`  ${ELLIPSIS}`),
+      Math.floor((budgetAfterHeader - sampleCount) / sampleCount)
+    );
+    for (const f of findings.slice(0, sampleCount)) {
+      lines.push(truncateUtf8(sampleLine(f), sampleLineBudget));
+    }
+  }
+  return fitReminder(lines, REMINDER_BUDGET_BYTES);
 }
 function decidePush(opts) {
   const { now, previous, newFindings } = opts;
@@ -15149,7 +15298,7 @@ function runPush(repoRoot, changedFile, now, options = {}) {
   const newFindings = checkConformance(graph);
   try {
     const censusGraph = buildGraph({ repoRoot });
-    writeTaskCensusCache(repoRoot, computeTaskCensus(censusGraph), new Date(now).toISOString());
+    writeTaskCensusCache(repoRoot, computeTaskCensus(censusGraph, { backlogSpecs: backlogSpecs(repoRoot) }), new Date(now).toISOString());
   } catch {
   }
   if (newFindings.length > 0) {

@@ -2896,6 +2896,7 @@ async function commandAuditSpec(argv) {
     // SCAFFOLD_INCOMPLETE classifier above (which reports FIXTURES.md ERROR under TEST_DATA_ACTIVE)
     // so a placeholder FIXTURES.md is reported ONCE, not twice, and its sentinels track the
     // template instead of a hardcoded 2-token regex.
+
   }
 
   log('INFO', 'Running VARIANT_COVERAGE check...');

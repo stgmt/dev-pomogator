@@ -1008,3 +1008,31 @@ traceable `@feature55` BDD scenarios in `spec-generator-v4.feature`.
 - **FR-57f (самодогфуд парадигмы FR→task→BDD):** FR-57 сам SHALL быть покрыт `@feature57`-сценарием на РЕАЛЬНОМ коде классификатора + задачей с `refs: FR-57` — иначе гейты FR-37b (`UNCOVERED_FR`/`TASK_UNTESTED`/`UNTAGGED_SCENARIO`) держат спеку RED. Это подтверждает: парадигма «каждый FR несёт задачу + BDD-сценарий (TDD Red→Green)» УЖЕ enforce'ится генератором структурно и НЕ требует нового слоя; FR-57 её дожёвывает измерением дописанности, не дублирует. Статический контроль SHALL ограничиваться существованием связки FR→task→scenario (порядок «Red-first» статически недоказуем — не заявляется).
 
 **Зависит от:** FR-37 (смарт-вердикт + audit hard gate — точка встраивания категории), FR-37b (traceability-инварианты — уже держат FR→task→BDD; FR-57 ортогонален), FR-32 (lifecycle/перепись — источник сигнала «claims-done»). Триггер: handoff `audit-reports/spec-generator-stub-detection-gap-handoff.md` (2026-07-01) + owner-директива «спекв4 сам должен ловить недописанный scaffold и держать парадигму FR-task-BDD-TDD без напоминаний».
+
+---
+
+## FR-58
+
+**Inherited v3 form-contract scenarios SHALL have an explicit v4 owner and SHALL NOT inflate FR-19 @feature58**
+
+BDD-only migration moved legacy SPECGEN003 form-guard and form-skill regression scenarios into `spec-generator-v4.feature`. Those scenarios protect real inherited contracts — form-document guard routing, form parser Edit reconstruction, child form-skill executable evals, and v3 fail-open robustness — but they are NOT all evidence for FR-19's two-tier failure-mode policy. Blanket-tagging them `@feature19` polluted FR-19 coverage and made the semantic judge see unrelated form-contract regressions as proof of the hard/soft tier policy. System SHALL give these inherited v3 form-contract scenarios their own explicit v4 owner (`@feature58`) so coverage remains honest: FR-19 is covered only by true two-tier policy scenarios, while migrated v3 contracts remain traceable and executable.
+
+- **FR-58a (retag inherited form contracts):** all migrated SPECGEN003 form guard/form skill scenarios and the SPECGEN004 form-guards-dispatch / `extractWriteContent` / form-skill-eval scenarios that do not test FR-19's hard-tier startup/file-parse policy SHALL be tagged `@feature58`, not `@feature19`.
+- **FR-58b (real-code regression surface):** these scenarios SHALL continue to drive the real production entry points (`tools/specs-validator/*form*guard*.ts`, `form-guards-dispatch.ts`, `spec-form-parsers.ts`, and the executable eval runners under `.claude/skills/*/evals/`) through process execution or direct production imports; no mock-only retag is allowed.
+- **FR-58c (FR-19 remains narrow):** FR-19 SHALL retain only scenarios that demonstrate the two-tier failure policy itself: hard-tier startup/config-load crash blocks Write, hard-tier per-file parse crash logs and allows Write, and soft-tier exception handling where the scenario's subject is explicitly the two-tier policy. Inherited contract checks (Priority/Done-When/CHK/Key Decisions/Risk forms, dispatcher routing, edit reconstruction, and form-skill eval aggregates) SHALL not count as FR-19 coverage.
+
+**Связанные AC:** [AC-58.1](ACCEPTANCE_CRITERIA.md#ac-581), [AC-58.2](ACCEPTANCE_CRITERIA.md#ac-582), [AC-58.3](ACCEPTANCE_CRITERIA.md#ac-583)
+**Use Case:** [UC-3](USE_CASES.md#uc-3)
+**User Story:** US-19
+
+## FR-59
+
+**Claude-facing hook reminders SHALL be bounded while the durable conformance log stays complete**
+
+PostToolUse conformance push currently has two valid outputs with different audiences: (1) the durable spec-check-log, which must keep every finding for audit/debugging, and (2) the `<system-reminder>` that is injected into Claude's context, which must stay small enough not to bloat the session. System SHALL cap the agent-facing reminder produced by `tools/spec-conformance-push/spec-conformance-push.ts` while preserving the complete `appendFindings(...)` journal. The capped reminder SHALL include total finding count, counts by severity, at most 20 sample findings, an omitted count, and a pointer to the full audit surface (`spec-check-log` / `/spec-status`). The default byte budget SHALL be 6000 bytes; if individual finding messages are long, truncation SHALL still keep the whole reminder under budget. The distributed bundle `tools/spec-conformance-push/spec-conformance-push.bundle.mjs` SHALL be rebuilt so plugin users receive the cap, not only source-tree users. Prompt-time status/census banners SHALL remain compact (one-line conformance summary, top-5 task-census specs, target ≤1500 chars) so repeated prompts do not accumulate avoidable noise.
+
+Grounding: [RESEARCH.md Z.6](RESEARCH.md#z6-hook-output-context-bloat) records the live transcript evidence (`attachment.stdout len=713574` and repeated ~716KB pushes) and identifies the producer/consumer split.
+
+**Связанные AC:** [AC-59.1](ACCEPTANCE_CRITERIA.md#ac-591), [AC-59.2](ACCEPTANCE_CRITERIA.md#ac-592), [AC-59.3](ACCEPTANCE_CRITERIA.md#ac-593)
+**Use Case:** [UC-2](USE_CASES.md#uc-2)
+**User Story:** US-37

@@ -36,6 +36,12 @@ __pycache__/
 
 # dev-pomogator runtime (tools, backups)
 .dev-pomogator/
+
+# CARL runtime reports are project-local, but lazy rule bodies are source artifacts
+.carl/*
+!.carl/rules/
+!.carl/rules/**
+
 # scratch / e2e harness (plugin-install Docker test, logs)
 .dev-pomogator-tmp/
 # but DO track intentional test fixtures that live under a .dev-pomogator/ path

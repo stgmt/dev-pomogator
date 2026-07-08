@@ -15,7 +15,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { V4World } from '../hooks/before-after.ts';
 import { logEvent, readRecentEvents } from '../../tools/specs-validator/audit-logger.ts';
-import { appendFinding } from '../../tools/spec-check-log/writer.ts';
+import { appendFinding, appendFindings } from '../../tools/spec-check-log/writer.ts';
 import { decidePush, type PushDecision } from '../../tools/spec-conformance-push/spec-conformance-push.ts';
 import type { Finding } from '../../tools/spec-graph/conformance.ts';
 
@@ -122,4 +122,80 @@ Then('the flush after the window carries the aggregated deduplicated set', funct
   assert.ok(this.flush.emit!.includes('burst-2'), 'flush carries the second burst');
   const dupCount = (this.flush.emit!.match(/burst-2/g) ?? []).length;
   assert.equal(dupCount, 1, `duplicates must be deduped in the flush, got ${dupCount} occurrences`);
+});
+
+// ── SPECGEN004_513 — FR-59: bounded push reminder, complete log ─────────────
+
+interface F59World extends V4World {
+  f59Findings?: Finding[];
+  f59Flush?: PushDecision;
+  f59RepoRoot?: string;
+}
+
+Given('a PostToolUse push window with {int} conformance findings', function (this: F59World, count: number) {
+  this.f59RepoRoot = path.join(this.tempDir, 'fr59-repo');
+  fs.mkdirSync(this.f59RepoRoot, { recursive: true });
+  this.f59Findings = Array.from({ length: count }, (_, i) =>
+    mkFinding(`synthetic-fr59-finding-${i + 1} ${'x'.repeat(220)}`, i + 1),
+  );
+});
+
+When('the spec-conformance push window flushes', function (this: F59World) {
+  this.f59Flush = decidePush({
+    now: 4_000,
+    previous: { window_start: 1_000, pending: this.f59Findings! },
+    newFindings: [],
+  });
+});
+
+Then('the emitted reminder is at most {int} bytes', function (this: F59World, maxBytes: number) {
+  assert.notEqual(this.f59Flush?.emit, null, 'window elapsed → bounded reminder emitted');
+  assert.equal(this.f59Flush?.newState, null, 'state clears after the bounded flush');
+  assert.equal(
+    Buffer.byteLength(this.f59Flush!.emit!, 'utf8') <= maxBytes,
+    true,
+    `expected reminder <= ${maxBytes} bytes, got ${Buffer.byteLength(this.f59Flush!.emit!, 'utf8')}`,
+  );
+});
+
+Then('the emitted reminder summarizes the finding count, severity counts, omitted count, and full-log pointer', function (this: F59World) {
+  const lines = (this.f59Flush?.emit ?? '').split('\n');
+  assert.equal(lines[0], '<system-reminder>');
+  assert.equal(lines[1], 'Spec conformance findings (PostToolUse push, 3s window):');
+  assert.equal(lines[2], '  3000 finding(s): 3000 warning');
+  assert.equal(lines[3], '  Showing up to 20 sample finding(s); omitted 2980.');
+  assert.equal(lines[4], '  Full log: .dev-pomogator/.spec-check-log/ (or run /spec-status).');
+  assert.equal(lines[lines.length - 1], '</system-reminder>');
+});
+
+Then('the emitted reminder shows no more than {int} sample findings', function (this: F59World, maxSamples: number) {
+  const emit = this.f59Flush?.emit ?? '';
+  const sampleLines = emit.split('\n').filter((line) => /^ {2}\[[A-Z]+\]/.test(line));
+  assert.equal(sampleLines.length, maxSamples, `expected exactly ${maxSamples} sample lines`);
+  assert.match(sampleLines[0], /^ {2}\[WARNING\] ORPHAN_TASK \.specs\/probe\/TASKS\.md:1 — synthetic-fr59-finding-1 /);
+  assert.match(sampleLines[19], /^ {2}\[WARNING\] ORPHAN_TASK \.specs\/probe\/TASKS\.md:20 — synthetic-fr59-finding-20 /);
+  assert.doesNotMatch(emit, /synthetic-fr59-finding-21\s/);
+  assert.doesNotMatch(emit, /synthetic-fr59-finding-3000\s/);
+});
+
+Then('the durable spec-check-log writer still records every synthetic finding', function (this: F59World) {
+  appendFindings(this.f59Findings!, {
+    repoRoot: this.f59RepoRoot!,
+    source: 'spec-conformance-push',
+    sessionId: 'bdd-fr59',
+    now: new Date('2026-07-09T00:00:00.000Z'),
+  });
+  const dir = path.join(this.f59RepoRoot!, '.dev-pomogator', '.spec-check-log');
+  const lines = fs
+    .readdirSync(dir)
+    .filter((name) => name.endsWith('.jsonl'))
+    .flatMap((name) => fs.readFileSync(path.join(dir, name), 'utf8').split('\n').filter(Boolean));
+  assert.equal(lines.length, this.f59Findings!.length, 'writer must retain every synthetic finding');
+  const first = JSON.parse(lines[0]);
+  const last = JSON.parse(lines[lines.length - 1]);
+  assert.equal(first.source, 'spec-conformance-push');
+  assert.equal(first.session_id, 'bdd-fr59');
+  assert.equal(first.finding_code, 'ORPHAN_TASK');
+  assert.match(first.message, /synthetic-fr59-finding-1/);
+  assert.match(last.message, /synthetic-fr59-finding-3000/);
 });

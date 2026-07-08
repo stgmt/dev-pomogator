@@ -105,13 +105,14 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Then within 3 seconds the agent context receives a `<system-reminder>` message
     And the message contains the finding code, location, and suggested actions
 
-  @feature6
+  @feature6 @feature28
   Scenario: SPECGEN004_13 PostToolUse hook aggregates and deduplicates findings in bulk edit
     Given the agent makes 5 sequential Edits to `.specs/auth/*.md` within 2 seconds
     When PostToolUse hook fires for each
     Then findings are batched in the 3-second throttle window
     And duplicate findings (same code + location) are deduplicated
     And only one aggregated `<system-reminder>` is pushed after the window closes
+    And the push latency from the first edit is at most 3000 ms plus 100 ms tolerance
 
   @feature6
   Scenario: SPECGEN004_14 PostToolUse push silenced when frontmatter flag set
@@ -122,18 +123,18 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     And the findings are still logged to `.dev-pomogator/.spec-check-log/`
 
   @feature7
-  Scenario: SPECGEN004_15 Marksman binary installed silently during npm install
-    Given the Marksman installer runs
-    When the postInstall script completes
-    Then `.dev-pomogator/bin/marksman` (or platform equivalent) exists and is executable
-    And the binary responds to LSP `initialize` request
+  Scenario: SPECGEN004_15 Marksman native LSP registration is declared by the canonical plugin
+    Given the canonical plugin manifest declares the Marksman native LSP server
+    When the Marksman native LSP registration is inspected
+    Then plugin.json references `.lsp.json` through `lspServers`
+    And `.lsp.json` registers server `marksman` with the launcher shim and markdown extension mapping
+    And the native launcher responds to LSP `initialize` through the real Marksman binary
 
   @feature7
-  Scenario: SPECGEN004_16 No fake fallback when Marksman is unavailable
-    Given the Marksman binary download fails during install (no network)
-    When the MCP server starts
-    Then it detects missing Marksman binary
-    And `.dev-pomogator/install-log.json` is updated with marksman_available=false
+  Scenario: SPECGEN004_16 Missing Marksman disables only native markdown LSP, not spec-domain MCP tools
+    Given no Marksman binary is available to the launcher
+    When the native Marksman LSP launcher starts
+    Then the launcher exits non-zero with an actionable missing-binary message
     And there is no custom JS markdown-LSP fallback in the MCP tool registry
     And spec-domain graph queries still work through the MCP `find_refs` tool
 
@@ -190,7 +191,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
   @feature10
   Scenario: SPECGEN004_23 SQLite corruption: auto-fallback to in-memory rebuild
     Given `.dev-pomogator/.spec-index.sqlite` file is corrupt (PRAGMA integrity_check fails)
-    When the MCP server starts
+    When the MCP server starts and opens the SQLite index
     Then corruption is detected at startup
     And the corrupt file is moved to `.dev-pomogator/.spec-index.sqlite.corrupt-{timestamp}`
     And MCP server falls back to in-memory rebuild
@@ -2069,25 +2070,25 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     When spec-status runs with the task-table format on that empty spec
     Then the CLI exits with status 1 and stderr contains "TASKS.md not found"
 
-  @feature19
+  @feature58
   Scenario: SPECGEN004_295 form-guards-dispatch routes violating TASKS.md to task-form-guard and propagates deny
     Given a v3 spec directory with a progress.json marking version 3
     When form-guards-dispatch receives a Write for a violating TASKS.md in that spec
     Then the dispatcher exits 2 and the stdout JSON carries permissionDecision deny mentioning task-form-guard
 
-  @feature19
+  @feature58
   Scenario: SPECGEN004_296 form-guards-dispatch lets a guard-clean TASKS.md through with exit 0
     Given a v3 spec directory with a progress.json marking version 3
     When form-guards-dispatch receives a Write for a valid TASKS.md in that spec
     Then the dispatcher exits 0 with no deny output
 
-  @feature19
+  @feature58
   Scenario: SPECGEN004_297 form-guards-dispatch routes violating USER_STORIES.md to user-story-form-guard and propagates deny
     Given a v3 spec directory with a progress.json marking version 3
     When form-guards-dispatch receives a Write for a violating USER_STORIES.md in that spec
     Then the dispatcher exits 2 and the stdout JSON carries permissionDecision deny mentioning user-story-form-guard
 
-  @feature19
+  @feature58
   Scenario: SPECGEN004_298 form-guards-dispatch fast-exits 0 without spawning a guard for non-spec paths and non-target basenames
     Given a v3 spec directory with a progress.json marking version 3
     When form-guards-dispatch receives a Write for a path outside .specs or for a non-target basename NOTES.md
@@ -2667,19 +2668,19 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Then the verifyBatch error count is 1
     And the first verifyBatch result verdict is "ERROR"
 
-  @feature19
+  @feature58
   Scenario: SPECGEN004_385 extractWriteContent user-story-form-guard Edit heading-only allows write
     Given an isolated spec directory with a fully-formed USER_STORIES.md for extractWriteContent testing
     When the user-story-form-guard receives an Edit of the user story heading only leaving body intact
     Then the user-story-form-guard exits 0 and allows the user story write
 
-  @feature19
+  @feature58
   Scenario: SPECGEN004_386 extractWriteContent user-story-form-guard Edit on incomplete file still denies
     Given an isolated spec directory with an incomplete USER_STORIES.md lacking required body fields
     When the user-story-form-guard receives an Edit of the heading on the incomplete user story file
     Then the user-story-form-guard exits non-zero and stderr mentions missing why
 
-  @feature19
+  @feature58
   Scenario Outline: SPECGEN004_387 extractWriteContent user-story-form-guard Write tool unchanged behavior
     Given an isolated spec directory with a fully-formed USER_STORIES.md for extractWriteContent testing
     When the user-story-form-guard receives a Write with <content_kind> user story content
@@ -2690,19 +2691,19 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
       | fully-formed  | allowed      |
       | incomplete    | denied       |
 
-  @feature19
+  @feature58
   Scenario: SPECGEN004_388 extractWriteContent task-form-guard Edit title-only allows write
     Given an isolated spec directory with a fully-formed TASKS.md for extractWriteContent testing
     When the task-form-guard receives an Edit of the task title only leaving body fields intact
     Then the task-form-guard exits 0 and allows the task write
 
-  @feature19
+  @feature58
   Scenario: SPECGEN004_389 extractWriteContent user-story-form-guard Edit with replace_all on multi-story file allows write
     Given an isolated spec directory with a multi-story USER_STORIES.md for extractWriteContent testing
     When the user-story-form-guard receives an Edit with replace_all true on the multi-story user story file
     Then the user-story-form-guard exits 0 and allows the user story write
 
-  @feature19
+  @feature58
   Scenario: SPECGEN004_390 extractWriteContent user-story-form-guard Edit fallback when old_string absent uses new_string allowing write
     Given an isolated spec directory with a fully-formed USER_STORIES.md for extractWriteContent testing
     When the user-story-form-guard receives an Edit with an old_string absent from the file
@@ -2937,91 +2938,91 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     When denied .specs greps and a non-grep reader are mapped to door calls
     Then each grep maps to its concrete spec-door search call and the non-grep maps to nothing
 
-  @feature19
+  @feature58
   Scenario: SPECGEN003_01 user-story-form-guard denies missing Priority field
     Given a SPECGEN003 v3 spec directory is prepared
     When the SPECGEN003 user-story-form-guard is invoked via Write on USER_STORIES.md missing Priority
     Then the SPECGEN003 guard exits with code 2 and stderr mentions "Priority"
 
-  @feature19
+  @feature58
   Scenario: SPECGEN003_02 user-story-form-guard denies missing Why field when Priority is present
     Given a SPECGEN003 v3 spec directory is prepared
     When the SPECGEN003 user-story-form-guard is invoked via Write on USER_STORIES.md with Priority but missing Why
     Then the SPECGEN003 guard exits with code 2 and stderr mentions "Why"
 
-  @feature19
+  @feature58
   Scenario: SPECGEN003_03 user-story-form-guard allows all 4 required fields
     Given a SPECGEN003 v3 spec directory is prepared
     When the SPECGEN003 user-story-form-guard is invoked via Write on USER_STORIES.md with all 4 required fields
     Then the SPECGEN003 guard exits with code 0
 
-  @feature19
+  @feature58
   Scenario: SPECGEN003_04 form guards pass through when no .progress.json exists
     Given a SPECGEN003 spec directory with no progress.json is prepared
     When the SPECGEN003 user-story-form-guard is invoked via Write on USER_STORIES.md with minimal invalid content
     Then the SPECGEN003 guard exits with code 0
 
-  @feature19
+  @feature58
   Scenario: SPECGEN003_05 task-form-guard denies TASKS.md missing Done When section
     Given a SPECGEN003 v3 spec directory is prepared
     When the SPECGEN003 task-form-guard is invoked via Write on TASKS.md missing Done When
     Then the SPECGEN003 guard exits with code 2 and stderr mentions "Done When"
 
-  @feature19
+  @feature58
   Scenario: SPECGEN003_06 task-form-guard denies Done When section with no checkboxes
     Given a SPECGEN003 v3 spec directory is prepared
     When the SPECGEN003 task-form-guard is invoked via Write on TASKS.md with Done When but no checkboxes
     Then the SPECGEN003 guard exits with code 2 and stderr mentions "checkbox"
 
-  @feature19
+  @feature58
   Scenario: SPECGEN003_07 task-form-guard allows valid Done When with checkboxes
     Given a SPECGEN003 v3 spec directory is prepared
     When the SPECGEN003 task-form-guard is invoked via Write on TASKS.md with valid Done When and checkboxes
     Then the SPECGEN003 guard exits with code 0
 
-  @feature19
+  @feature58
   Scenario: SPECGEN003_08 design-decision-guard denies Decision block lacking Alternatives
     Given a SPECGEN003 v3 spec directory is prepared
     When the SPECGEN003 design-decision-guard is invoked via Write on DESIGN.md with a Decision block but no Alternatives
     Then the SPECGEN003 guard exits with code 2 and stderr mentions "Alternatives"
 
-  @feature19
+  @feature58
   Scenario: SPECGEN003_09 design-decision-guard passes when no Decision blocks present
     Given a SPECGEN003 v3 spec directory is prepared
     When the SPECGEN003 design-decision-guard is invoked via Write on DESIGN.md with no Decision blocks
     Then the SPECGEN003 guard exits with code 0
 
-  @feature19
+  @feature58
   Scenario: SPECGEN003_10 requirements-chk-guard denies empty Verification Method cell
     Given a SPECGEN003 v3 spec directory is prepared
     When the SPECGEN003 requirements-chk-guard is invoked via Write on REQUIREMENTS.md with an empty Verification Method cell
     Then the SPECGEN003 guard exits with code 2 and stderr mentions "Verification Method"
 
-  @feature19
+  @feature58
   Scenario: SPECGEN003_11 requirements-chk-guard denies invalid CHK ID format
     Given a SPECGEN003 v3 spec directory is prepared
     When the SPECGEN003 requirements-chk-guard is invoked via Write on REQUIREMENTS.md with an invalid CHK ID format
     Then the SPECGEN003 guard exits with code 2 and stderr mentions "CHK-FR"
 
-  @feature19
+  @feature58
   Scenario: SPECGEN003_12 requirements-chk-guard allows valid CHK-FR format
     Given a SPECGEN003 v3 spec directory is prepared
     When the SPECGEN003 requirements-chk-guard is invoked via Write on REQUIREMENTS.md with a valid CHK-FR row
     Then the SPECGEN003 guard exits with code 0
 
-  @feature19
+  @feature58
   Scenario: SPECGEN003_13 risk-assessment-guard denies only 1 risk row in table
     Given a SPECGEN003 v3 spec directory is prepared
     When the SPECGEN003 risk-assessment-guard is invoked via Write on RESEARCH.md with only 1 risk data row
     Then the SPECGEN003 guard exits with code 2 and stderr mentions "Risk Assessment"
 
-  @feature19
+  @feature58
   Scenario: SPECGEN003_14 risk-assessment-guard passes when no Risk Assessment heading
     Given a SPECGEN003 v3 spec directory is prepared
     When the SPECGEN003 risk-assessment-guard is invoked via Write on RESEARCH.md with no Risk Assessment heading
     Then the SPECGEN003 guard exits with code 0
 
-  @feature19
+  @feature58
   Scenario: SPECGEN003_15 form guards ignore Read tool events
     Given a SPECGEN003 v3 spec directory is prepared
     When the SPECGEN003 user-story-form-guard is invoked via Read on USER_STORIES.md
@@ -3039,7 +3040,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     When the SPECGEN003 child phase-assistant skill SKILL.md files are read from the repository
     Then the SPECGEN003 task-board-forms SKILL.md exists without auto-trigger phrases in the first 600 characters
 
-  @feature19
+  @feature58
   Scenario: SPECGEN003_18 form guards pass through for legacy .progress.json lacking version field
     Given a SPECGEN003 spec directory with a legacy progress.json lacking a version field is prepared
     When the SPECGEN003 user-story-form-guard is invoked via Write on USER_STORIES.md with minimal invalid content
@@ -3064,13 +3065,13 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     When the SPECGEN003 child phase-assistant skill SKILL.md files are read from the repository
     Then the SPECGEN003 requirements-chk-matrix SKILL.md exists and mentions Jira preservation
 
-  @feature19
+  @feature58
   Scenario: SPECGEN003_22 form guards fail-open on malformed JSON stdin
     Given a SPECGEN003 v3 spec directory is prepared
     When the SPECGEN003 user-story-form-guard is invoked with malformed JSON on stdin
     Then the SPECGEN003 guard exits with code 0
 
-  @feature19
+  @feature58
   Scenario: SPECGEN003_23 form guards fail-open on pathological regex content
     Given a SPECGEN003 v3 spec directory is prepared
     When the SPECGEN003 user-story-form-guard is invoked via Write on USER_STORIES.md with pathological regex content
@@ -3151,20 +3152,20 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Then the templates file and the __fixtures__ document yield no findings
     And the backlog spec document yields at most an INFO finding never an ERROR
 
-  @feature19
+  @feature58
   Scenario: SPECGEN004_478 discovery-forms executable evals exercise real form contracts
     Given the discovery-forms executable eval runner
     When that form-skill eval runner executes
     Then the eval aggregate is fully green and every case exercised the real form contracts
 
-  @feature19
+  @feature58
   Scenario: SPECGEN004_479 requirements-chk-matrix executable evals pin invalid CHK IDs
     Given the requirements-chk-matrix executable eval runner
     When that form-skill eval runner executes
     Then the eval aggregate is fully green and every case exercised the real form contracts
     And the eval aggregate pins the P16-1 negative regression cases
 
-  @feature19
+  @feature58
   Scenario: SPECGEN004_507 task-board-forms executable evals pin lowercase task markers
     Given the task-board-forms executable eval runner
     When that form-skill eval runner executes
@@ -3207,3 +3208,12 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Then the hook output surfaces the active spec unconfirmed STOP with the exact confirm command
     And the hook output does not emit a corpus-wide unconfirmed STOP count
     And the unrelated legacy spec stays quiet unless verbose mode is enabled
+
+  @feature59
+  Scenario: SPECGEN004_513 PostToolUse conformance push keeps Claude reminder bounded while retaining the full log
+    Given a PostToolUse push window with 3000 conformance findings
+    When the spec-conformance push window flushes
+    Then the emitted reminder is at most 6000 bytes
+    And the emitted reminder summarizes the finding count, severity counts, omitted count, and full-log pointer
+    And the emitted reminder shows no more than 20 sample findings
+    And the durable spec-check-log writer still records every synthetic finding

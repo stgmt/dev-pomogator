@@ -31,6 +31,7 @@ import {
   loadUserPrompts,
 } from '../../tools/plan-pomogator/plan-gate.ts';
 import { PROMPT_FILE_PREFIX } from '../../tools/plan-pomogator/prompt-store.ts';
+import { readRuleContentForAdaptation } from '../../tools/carl/context-diet.ts';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -929,13 +930,15 @@ Given(/^a plan-validator plan with a destructive action and Impact Analysis set 
 // ---------------------------------------------------------------------------
 
 When(/^the plan-validator checks the proactive-investigation rule$/, function (this: PvWorld) {
+  const ruleRel = '.claude/rules/plan-pomogator/proactive-investigation.md';
   const rulePath = path.join(REPO_ROOT, '.claude', 'rules', 'plan-pomogator', 'proactive-investigation.md');
-  this.pvRuleContent = fs.readFileSync(rulePath, 'utf-8');
+  this.pvRuleContent = readRuleContentForAdaptation(REPO_ROOT, rulePath, ruleRel);
 });
 
 When(/^the plan-validator checks the spec-test-sync rule$/, function (this: PvWorld) {
+  const ruleRel = '.claude/rules/plan-pomogator/spec-test-sync.md';
   const rulePath = path.join(REPO_ROOT, '.claude', 'rules', 'plan-pomogator', 'spec-test-sync.md');
-  this.pvRuleContent = fs.readFileSync(rulePath, 'utf-8');
+  this.pvRuleContent = readRuleContentForAdaptation(REPO_ROOT, rulePath, ruleRel);
 });
 
 When(/^the plan-validator checks the plugin hook registry$/, function (this: PvWorld) {

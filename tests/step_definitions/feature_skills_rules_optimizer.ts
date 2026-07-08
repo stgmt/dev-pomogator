@@ -81,6 +81,7 @@ interface SroWorld extends V4World {
   sroOversize?: import('../../.claude/skills/skills-rules-optimizer/scripts/shared.ts').SkillFinding | null;
   sroOverlaps?: import('../../.claude/skills/skills-rules-optimizer/scripts/shared.ts').OverlapPair[];
   sroRun?: { stdout: string; stderr: string; status: number | null };
+  sroDirectRun?: { stdout: string; stderr: string; status: number | null };
   sroEnvelope?: any;
   sroOriginalsBefore?: { a: string; b: string };
   sroRuleFm?: string;
@@ -478,8 +479,18 @@ Given(/^the SRO audit dispatcher is invoked against the real `\.claude\/rules` d
 When(/^audit\.ts runs `--dir \.claude\/rules --save` to a temp file$/, function (this: SroWorld) {
   const saveTo = path.join(this.tempDir, 'audit_before.json');
   this.sroRun = runSroScript('audit.ts', ['--dir', path.join(REPO_ROOT, '.claude', 'rules'), '--save', saveTo]);
-  assert.equal(this.sroRun.status, 0, `audit.ts exited ${this.sroRun.status}: ${this.sroRun.stderr}`);
+  assert.ok(fs.existsSync(saveTo), `audit.ts must write the --save JSON before exiting; stdout: ${this.sroRun.stdout}`);
   this.sroEnvelope = JSON.parse(fs.readFileSync(saveTo, 'utf-8'));
+
+  const directSaveTo = path.join(this.tempDir, 'audit_direct.json');
+  this.sroDirectRun = runSroScript('audit-rules.ts', ['--dir', path.join(REPO_ROOT, '.claude', 'rules'), '--save', directSaveTo]);
+  assert.ok(fs.existsSync(directSaveTo), `audit-rules.ts must write the control JSON; stdout: ${this.sroDirectRun.stdout}`);
+  const directJson = fs.readFileSync(directSaveTo, 'utf-8');
+  const directEnvelope = JSON.parse(directJson);
+
+  assert.equal(this.sroRun.status, this.sroDirectRun.status, 'audit.ts dispatcher must preserve audit-rules.ts exit code');
+  assert.equal(fs.readFileSync(saveTo, 'utf-8'), directJson, 'audit.ts dispatcher must save byte-identical rules audit JSON');
+  assert.deepEqual(this.sroEnvelope, directEnvelope, 'audit.ts dispatcher JSON must parse to the same rules audit object');
 });
 
 Then(

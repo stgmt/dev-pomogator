@@ -219,6 +219,15 @@ This block enumerates the spec-doc edits applied as part of the v3→v4 transiti
 | `tools/spec-graph/__tests__/scaffold-sentinels.test.ts` | create | Юнит: сентинел-матч + вырез кода + строчные токены + дрейф-регресс (сентинелы ⊇ шаблонных) + исключения templates/__fixtures__/backlog ([FR-57](FR.md#fr-57)) |
 | `tests/step_definitions/feature57_scaffold_completeness.ts` | create | Биндит SPECGEN004_470..477 на реальный классификатор + audit-spec + spec-verdict (real-engine, без моков) ([FR-57](FR.md#fr-57)) |
 
+## Phase 31 — FR-59 bounded conformance-push reminder (2026-07-09)
+
+| Path | Action | Reason |
+|------|--------|--------|
+| `tools/spec-conformance-push/spec-conformance-push.ts` | edit | Cap Claude-facing `<system-reminder>` output at 6000 bytes with count/severity/sample/omitted summary while preserving full `appendFindings(...)` logging ([FR-59](FR.md#fr-59)) |
+| `tools/spec-conformance-push/__tests__/spec-conformance-push.test.ts` | edit | Focused vitest regression for large finding batches, byte cap, omitted count, and durable log completeness ([FR-59](FR.md#fr-59)) |
+| `tests/step_definitions/feature23_28_log_inventory_throttle.ts` | edit | Add @feature59 BDD steps that drive real `decidePush` and `appendFindings` for bounded reminder + complete log proof ([FR-59](FR.md#fr-59)) |
+| `tools/spec-conformance-push/spec-conformance-push.bundle.mjs` | edit | Rebuilt distributed hook artifact so plugin users receive bounded stdout behavior ([FR-59](FR.md#fr-59)) |
+
 ## Total counts
 
 | Phase | Files |

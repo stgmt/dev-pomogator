@@ -10,7 +10,7 @@
 | [FR-4](FR.md#fr-4) | MCP server get_trace | [AC-4.1](ACCEPTANCE_CRITERIA.md#ac-41), [AC-4.2](ACCEPTANCE_CRITERIA.md#ac-42) | @feature4 | Draft |
 | [FR-5](FR.md#fr-5) | PreToolUse HARD hooks | [AC-5.1](ACCEPTANCE_CRITERIA.md#ac-51), [AC-5.2](ACCEPTANCE_CRITERIA.md#ac-52), [AC-5.3](ACCEPTANCE_CRITERIA.md#ac-53) | @feature5 | Draft |
 | [FR-6](FR.md#fr-6) | PostToolUse always-push 3s throttle | [AC-6.1](ACCEPTANCE_CRITERIA.md#ac-61), [AC-6.2](ACCEPTANCE_CRITERIA.md#ac-62), [AC-6.3](ACCEPTANCE_CRITERIA.md#ac-63) | @feature6 | Draft |
-| [FR-7](FR.md#fr-7) | Marksman bundle install | [AC-7.1](ACCEPTANCE_CRITERIA.md#ac-71), [AC-7.2](ACCEPTANCE_CRITERIA.md#ac-72) | @feature7 | Draft |
+| [FR-7](FR.md#fr-7) | Native Marksman LSP plugin registration | [AC-7.1](ACCEPTANCE_CRITERIA.md#ac-71), [AC-7.2](ACCEPTANCE_CRITERIA.md#ac-72), [AC-7.3](ACCEPTANCE_CRITERIA.md#ac-73) | @feature7 | Draft |
 | [FR-8](FR.md#fr-8) | LLM semantic drift check (opt-in) | [AC-8.1](ACCEPTANCE_CRITERIA.md#ac-81), [AC-8.2](ACCEPTANCE_CRITERIA.md#ac-82) | @feature8 | Draft |
 | [FR-9](FR.md#fr-9) | Multi-language BDD support | [AC-9.1](ACCEPTANCE_CRITERIA.md#ac-91), [AC-9.2](ACCEPTANCE_CRITERIA.md#ac-92) | @feature9 | Draft |
 | [FR-10](FR.md#fr-10) | SQLite FTS5 cross-session (Phase 4) | [AC-10.1](ACCEPTANCE_CRITERIA.md#ac-101), [AC-10.2](ACCEPTANCE_CRITERIA.md#ac-102), [AC-10.3](ACCEPTANCE_CRITERIA.md#ac-103) | @feature10 | Draft |
@@ -20,6 +20,7 @@
 | [FR-14](FR.md#fr-14) | Devcontainer / multi-env support | [AC-14.1](ACCEPTANCE_CRITERIA.md#ac-141), [AC-14.2](ACCEPTANCE_CRITERIA.md#ac-142), [AC-14.3](ACCEPTANCE_CRITERIA.md#ac-143) | @feature14 | Draft |
 | [FR-15](FR.md#fr-15) | Side-channel conformance log | [AC-15.1](ACCEPTANCE_CRITERIA.md#ac-151), [AC-15.2](ACCEPTANCE_CRITERIA.md#ac-152) | @feature15 | Draft |
 | [FR-16](FR.md#fr-16) | GitHub Codespaces support | [AC-16.1](ACCEPTANCE_CRITERIA.md#ac-161), [AC-16.2](ACCEPTANCE_CRITERIA.md#ac-162) | @feature16 | Draft |
+| [FR-58](FR.md#fr-58) | Inherited v3 form-contract scenarios have explicit owner | [AC-58.1](ACCEPTANCE_CRITERIA.md#ac-581), [AC-58.2](ACCEPTANCE_CRITERIA.md#ac-582), [AC-58.3](ACCEPTANCE_CRITERIA.md#ac-583) | @feature58 | Draft |
 
 ## Functional Requirements
 
@@ -39,6 +40,7 @@
 - [FR-14: Devcontainer / multi-env support](FR.md#fr-14)
 - [FR-15: Side-channel conformance log](FR.md#fr-15)
 - [FR-16: GitHub Codespaces support](FR.md#fr-16)
+- [FR-58: Inherited v3 form-contract scenarios have explicit owner](FR.md#fr-58)
 
 ## Non-Functional Requirements
 
@@ -77,8 +79,8 @@
 | CHK-FR6-01 | FR-6 push within 3s window via AC-6.1 | FR-6, AC-6.1, @feature6, UC-2 | BDD scenario | Draft | Throttle behavior |
 | CHK-FR6-02 | FR-6 bulk edit dedup via AC-6.2 | FR-6, AC-6.2, @feature6 | BDD scenario | Draft | Aggregation |
 | CHK-FR6-03 | FR-6 silence flag escape hatch via AC-6.3 | FR-6, AC-6.3, @feature6 | BDD scenario | Draft | Red phase support |
-| CHK-FR7-01 | FR-7 Marksman binary installed via AC-7.1 | FR-7, AC-7.1, @feature7 | Integration test | Draft | postInstall |
-| CHK-FR7-02 | FR-7 fallback to JS LSP via AC-7.2 | FR-7, AC-7.2, @feature7 | Integration test | Draft | Network/offline |
+| CHK-FR7-01 | FR-7 native Marksman LSP registration via AC-7.3 | FR-7, AC-7.3, @feature7 | Integration test | Draft | plugin.json `.lsp.json` wiring + launcher initialize |
+| CHK-FR7-02 | FR-7 missing Marksman disables native markdown LSP only via AC-7.2 | FR-7, AC-7.2, @feature7 | Integration test | Draft | no custom JS markdown-LSP fallback; spec MCP tools remain |
 | CHK-FR8-01 | FR-8 semantic drift detection via AC-8.1 | FR-8, AC-8.1, @feature8, UC-5 | BDD scenario | Draft | Phase 3 |
 | CHK-FR8-02 | FR-8 default disabled via AC-8.2 | FR-8, AC-8.2, @feature8 | Unit test | Draft | Config gate |
 | CHK-FR9-01 | FR-9 Reqnroll C# NDJSON via AC-9.1 | FR-9, AC-9.1, @feature9 | Integration test | Draft | Multi-lang Phase 3 |
@@ -121,8 +123,14 @@
 | CHK-FR29-02 | FR-29 BDD scenarios + step defs cover AC-29.1/29.2/29.3 | FR-29, AC-29.1, AC-29.2, AC-29.3, @feature29 | BDD scenario | Draft | Phase 8 — SCENGEN004_55..59 |
 | CHK-FR30-02 | FR-30 BDD scenarios + step defs cover AC-30.1/30.2 | FR-30, AC-30.1, AC-30.2, @feature30 | BDD scenario | Draft | Phase 8 — SCENGEN004_60..64 |
 | CHK-FR31-02 | FR-31 BDD scenarios + step defs cover AC-31.1/31.2 | FR-31, AC-31.1, AC-31.2, @feature31 | BDD scenario | Draft | Phase 8 — SCENGEN004_65..69 |
-| CHK-MANUAL-E2E-01 | Manual agent walkthrough produces MANUAL_AGENT_E2E_WALKTHROUGH.md proof artifact with tool-invocation log + per-phase verdict | FR-4, FR-29, FR-30, FR-31, UC-1 | Manual review | Draft | Phase 8 — Claude-as-agent end-to-end run |
-| CHK-FIXTURE-SHAPES-01 | 5-shape fixture corpus tested in tests/e2e/fixture-shapes.test.ts (one it() per shape) | FR-2, FR-3, FR-5, FR-29, F-21, F-22, F-23, F-24, F-25 | Integration test | Draft | Phase 8 — SHAPE001..SHAPE005 |
+| CHK-FR31-03 | Manual agent walkthrough produces MANUAL_AGENT_E2E_WALKTHROUGH.md proof artifact with tool-invocation log + per-phase verdict | FR-4, FR-29, FR-30, FR-31, @feature31, UC-1 | Manual review | Draft | Phase 8 — Claude-as-agent end-to-end run |
+| CHK-FR31-04 | 5-shape fixture corpus tested in tests/e2e/fixture-shapes.test.ts (one it() per shape) | FR-2, FR-3, FR-5, FR-29, @feature31, F-21, F-22, F-23, F-24, F-25 | Integration test | Draft | Phase 8 — SHAPE001..SHAPE005 |
+| CHK-FR58-01 | Inherited v3 form-contract scenarios are retagged away from FR-19 to @feature58 | FR-58, AC-58.1, @feature58, UC-3 | BDD scenario | Draft | P21-3 scenario-rot cleanup |
+| CHK-FR58-02 | Retagged scenarios keep driving real form guards, dispatch, parser, and eval runners | FR-58, AC-58.2, @feature58, UC-3 | BDD scenario | Draft | Real-code regression surface |
+| CHK-FR58-03 | FR-19 coverage remains limited to true two-tier policy scenarios | FR-58, AC-58.3, @feature58, UC-3 | Manual review | Draft | Verified with FR-19 coverage search |
+| CHK-FR59-01 | FR-59 bounded agent-facing reminder with counts/samples/omitted pointer via AC-59.1 | FR-59, AC-59.1, @feature59, UC-2 | BDD scenario | Draft | SPECGEN004_513 + focused vitest |
+| CHK-FR59-02 | FR-59 durable spec-check-log remains complete via AC-59.2 | FR-59, AC-59.2, @feature59, UC-2 | BDD scenario | Draft | Real appendFindings writer proof |
+| CHK-FR59-03 | FR-59 compact prompt banners and rebuilt bundle via AC-59.3 | FR-59, AC-59.3, @feature59, UC-2 | Integration test | Draft | build:push + real artifact probe |
 
 ## Verification Process
 
@@ -144,9 +152,9 @@
 
 ## Summary Counts
 
-- Total CHKs: 62 (57 prior + 5 Phase 8 gap-close: FR-29-02, FR-30-02, FR-31-02, MANUAL-E2E-01, FIXTURE-SHAPES-01)
+- Total CHKs: 65 (57 prior + 5 Phase 8 gap-close + 3 FR-59 bounded-reminder rows)
 - Verified: 0
 - In Progress: 0
-- Draft: 62
+- Draft: 65
 - Blocked: 0
 - Blocked: 0

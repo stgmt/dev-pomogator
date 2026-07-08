@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import type { CheckContext, CheckDefinition, CheckResult } from '../types.js';
 import { buildResult } from './_helpers.js';
 
@@ -126,7 +126,13 @@ export async function checkCarlProject(options: CarlCheckOptions): Promise<Check
 }
 
 function pluginRootFrom(ctx?: CheckContext): string {
-  return path.resolve(process.env.CLAUDE_PLUGIN_ROOT || ctx?.projectRoot || process.cwd());
+  const envRoot = process.env.CLAUDE_PLUGIN_ROOT ? path.resolve(process.env.CLAUDE_PLUGIN_ROOT) : '';
+  if (envRoot && fs.existsSync(path.join(envRoot, 'tools', 'carl', 'runner.ts'))) return envRoot;
+
+  // In SessionStart hook tests the projectRoot is an isolated temp project that
+  // does not contain plugin files. Resolve the bundled checker back to the
+  // plugin root so CARL repair can find tools/carl/{install,runner}.ts.
+  return path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..', '..', '..', '..');
 }
 
 export const carlCheck: CheckDefinition = {

@@ -793,3 +793,39 @@ WHEN спека свежесоздана / в ранней фазе / её те�
 **Требование:** [FR-57](FR.md#fr-57)
 
 WHEN классификатор сканирует документ THEN он SHALL вырезать fenced+inline код перед матчем AND НЕ флагать строчно-однословные токены (`{int}`/`{string}`/`{slug}`), JSON-скобки и EARS-примеры внутри кода; WHEN документ — сам `templates/*.template`, лежит под `__fixtures__/**`, либо под `.specs/backlog/**` THEN он SHALL быть исключён (backlog — максимум INFO); WHEN новая audit-категория проверяет заглушки THEN она SHALL звать классификатор как ЕДИНСТВЕННЫЙ источник ERROR-гейта, а `validate-spec` SHALL сохранить свою широкую `PLACEHOLDER`-эвристику как отдельный WARNING-предфильтр; оба слоя SHALL СОГЛАШАТЬСЯ, что дословный шаблонный сентинел — заглушка; AND регресс-тест SHALL держать набор сентинелов ⊇ актуальных плейсхолдеров шаблонов.
+
+## AC-58.1
+
+**Требование:** [FR-58](FR.md#fr-58)
+
+WHEN migrated SPECGEN003 form-contract scenarios or SPECGEN004 dispatcher/parser/form-skill-eval scenarios are present in `spec-generator-v4.feature` AND their subject is inherited v3 form-contract behavior rather than FR-19's two-tier hard/soft policy THEN those scenarios SHALL use `@feature58` and SHALL NOT use `@feature19`; WHEN `search("FR-19", coverage:true)` is inspected THEN FR-19 SHALL be covered only by true two-tier policy scenarios such as SPECGEN004_49 and SPECGEN004_50.
+
+## AC-58.2
+
+**Требование:** [FR-58](FR.md#fr-58)
+
+WHEN the inherited form-contract scenarios execute THEN they SHALL drive real production code paths: form guards via their actual hook entrypoints, `form-guards-dispatch.ts` via process execution, `spec-form-parsers.ts` edit reconstruction via the real guard pipeline, and the child form-skill eval runners via their real executable eval scripts; no scenario SHALL be considered valid if it only asserts a mocked retag or static label.
+
+## AC-58.3
+
+**Требование:** [FR-58](FR.md#fr-58)
+
+WHEN P21-3 scenario-rot cleanup is complete THEN `@feature58` SHALL have an explicit FR owner, AC coverage, and a TASKS.md task reference, so retagging does not create orphan `@feature58` scenarios; WHEN FR-19 coverage is re-read after cleanup THEN inherited Priority/Done-When/CHK/Key Decisions/Risk-form checks, dispatcher routing, Edit reconstruction, and form-skill eval aggregates SHALL not appear in FR-19's `tested_by` list.
+
+## AC-59.1
+
+**Требование:** [FR-59](FR.md#fr-59)
+
+WHEN `decidePush` flushes a PostToolUse window containing thousands of findings THEN the emitted `<system-reminder>` SHALL stay at or below 6000 bytes AND SHALL include total finding count, counts by severity, at most 20 sample findings, an omitted count, and a pointer to the full audit surface; THEN the reminder SHALL NOT include every finding message from the batch.
+
+## AC-59.2
+
+**Требование:** [FR-59](FR.md#fr-59)
+
+WHEN `runPush` observes conformance findings THEN `appendFindings(...)` SHALL still persist every finding to `.dev-pomogator/.spec-check-log/*.jsonl` with the existing envelope fields; AND WHEN the agent-facing reminder is capped or suppressed by `_no_push_check: true` THEN the durable audit journal SHALL remain complete.
+
+## AC-59.3
+
+**Требование:** [FR-59](FR.md#fr-59)
+
+WHEN prompt-time conformance/task-census banners render repeated status context THEN `buildConformanceSummary(...)` SHALL remain a single line and `buildTaskCensusLine(...)` SHALL render only the header, the next open task, the top 5 specs, and an omitted-spec count with target output length at or below 1500 chars; AND WHEN source changes are complete THEN `tools/spec-conformance-push/spec-conformance-push.bundle.mjs` SHALL be rebuilt and a real bundle probe SHALL show bounded stdout.

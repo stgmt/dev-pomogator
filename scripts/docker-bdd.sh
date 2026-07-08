@@ -24,18 +24,52 @@ LOG_FILE="${LOG_DIR}/bdd-run-$(date +%s).log"
 OUT_REL=".dev-pomogator/.docker-status/bdd-last-run.ndjson"
 CANONICAL=".dev-pomogator/.last-test-run.ndjson"
 
-SESSION="${TEST_STATUSLINE_SESSION:-bdd-$$-${RANDOM}}"
-export COMPOSE_PROJECT_NAME="devpom-bdd-${SESSION}"
+SESSION="${TEST_STATUSLINE_SESSION:-}"
+# If no SESSION in env, read from host session.env (written by SessionStart hook).
+# Do not `source` the file: Windows paths with backslashes are shell escapes
+# (e.g. `\r`), which can corrupt TEST_STATUSLINE_PROJECT and abort the script.
+if [ -z "$SESSION" ]; then
+  SESSION_ENV=".dev-pomogator/.test-status/session.env"
+  if [ -f "$SESSION_ENV" ]; then
+    SESSION=$(grep -m1 '^TEST_STATUSLINE_SESSION=' "$SESSION_ENV" 2>/dev/null | cut -d= -f2 || true)
+  fi
+fi
+if [ -n "$SESSION" ]; then
+  PROJECT_NAME="devpom-bdd-${SESSION}"
+else
+  PROJECT_NAME="devpom-bdd-$$-${RANDOM}"
+fi
+export COMPOSE_PROJECT_NAME="$PROJECT_NAME"
 
 cleanup() {
-  docker compose -f docker-compose.test.yml down --remove-orphans 2>/dev/null || true
+  COMPOSE_PROJECT_NAME="$PROJECT_NAME" docker compose -f docker-compose.test.yml down --remove-orphans 2>/dev/null || true
 }
 trap cleanup EXIT INT TERM
 
 # Docker-specific cucumber config: same paths/import as cucumber.json, but format
 # → the mounted dir so the result reaches the host. Generated fresh (gitignored)
 # BEFORE the build so COPY . . includes it in the image.
-node -e "const fs=require('fs');const c=JSON.parse(fs.readFileSync('cucumber.json','utf8'));c.default.format=['message:${OUT_REL}','progress'];c.default.publishQuiet=true;fs.writeFileSync('cucumber.docker.json',JSON.stringify(c,null,2)+'\n');console.log('[docker-bdd] generated cucumber.docker.json ('+c.default.paths.length+' paths, format -> mounted dir)');"
+if command -v node >/dev/null 2>&1; then
+  node -e "const fs=require('fs');const c=JSON.parse(fs.readFileSync('cucumber.json','utf8'));c.default.format=['message:${OUT_REL}','progress'];c.default.publishQuiet=true;fs.writeFileSync('cucumber.docker.json',JSON.stringify(c,null,2)+'\n');console.log('[docker-bdd] generated cucumber.docker.json ('+c.default.paths.length+' paths, format -> mounted dir)');"
+elif command -v python3 >/dev/null 2>&1; then
+  OUT_REL="$OUT_REL" python3 - <<'PY'
+import json
+import os
+out_rel = os.environ['OUT_REL']
+with open('cucumber.json', 'r', encoding='utf-8') as f:
+    config = json.load(f)
+default = config.setdefault('default', {})
+default['format'] = [f'message:{out_rel}', 'progress']
+default['publishQuiet'] = True
+with open('cucumber.docker.json', 'w', encoding='utf-8') as f:
+    json.dump(config, f, indent=2)
+    f.write('\n')
+print(f"[docker-bdd] generated cucumber.docker.json ({len(default.get('paths', []))} paths, format -> mounted dir)")
+PY
+else
+  echo "[docker-bdd] ERROR: need node or python3 to generate cucumber.docker.json" >&2
+  exit 1
+fi
 
 # Base image
 if ! docker image inspect dev-pomogator-test-base:local >/dev/null 2>&1; then
@@ -52,7 +86,9 @@ fi
 # Run cucumber in-container. Override the entrypoint (default CMD runs the vitest
 # wrapper, which can't run cucumber) — same trick the --tui path uses for pytest.
 echo "[docker-bdd] Running cucumber in Docker/Linux → $LOG_FILE"
-rm -f "$OUT_REL" 2>/dev/null || true
+# Windows/WSL bind mounts can let shell `touch` create a file while Node's
+# formatter open(create) fails with ENOENT; pre-create/truncate the target.
+: > "$OUT_REL"
 # .specs/ is dockerignored (kept out of the image so the census banner doesn't
 # bake in — see .dockerignore). The .feature files live there, so we mount it at
 # runtime. But it must be WRITABLE, not :ro — a few scenarios (create-specs
@@ -65,13 +101,19 @@ rm -rf "$SPECS_RW" 2>/dev/null || true
 mkdir -p "$(dirname "$SPECS_RW")"
 cp -r .specs "$SPECS_RW"
 echo "[docker-bdd] mounted a writable .specs copy ($SPECS_RW) — real .specs/ untouched"
+SESSION_ARGS=()
+if [ -n "$SESSION" ]; then
+  SESSION_ARGS+=(-e "TEST_STATUSLINE_SESSION=$SESSION")
+fi
+
 docker compose -f docker-compose.test.yml run --rm -T \
   --entrypoint node \
   -e PYTHONUNBUFFERED=1 \
+  "${SESSION_ARGS[@]}" \
   -v "$(pwd)/${SPECS_RW}:/home/testuser/app/.specs" \
   test --import tsx node_modules/@cucumber/cucumber/bin/cucumber.js -c cucumber.docker.json "$@" 2>&1 | tee -a "$LOG_FILE"
-rm -rf "$SPECS_RW" 2>/dev/null || true
 STATUS=${PIPESTATUS[0]}
+rm -rf "$SPECS_RW" 2>/dev/null || true
 
 # Persist the Docker result to the host canonical path the spec-graph reads.
 # CLOBBER-SAFE (H1 / FR-52a): only a FULL run (no extra cucumber args) may write the

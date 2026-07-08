@@ -1,24 +1,4 @@
 # No `git add -A` в общем дереве параллельных сессий
-
-В этом репо рабочее дерево делят ПАРАЛЛЕЛЬНЫЕ Claude-сессии: в `git status`
-постоянно висят чужие незакоммиченные файлы (другая фича, другая сессия).
-
-## Правило
-
-- `git add -A` / `git add .` ЗАПРЕЩЕНЫ. Коммитить только ЯВНЫМ перечислением путей.
-- Перед коммитом — `git status -s` глазами: staged == только мои файлы.
-- Захватил чужое → `git reset --soft HEAD~1` + `git restore --staged <чужие>` +
-  переком своих явными путями + `push --force-with-lease` (только своя ветка);
-  чужие файлы остаются нетронутыми в рабочем дереве.
-
-## Инцидент
-
-2026-06-07, коммит `12220e5`: `git add -A` утащил в коммит спеки/tools
-native-statusline и pomogator-doctor параллельной сессии. Исправлено soft-reset
-+ селективный переком (`9a8184c`) + force-with-lease; данные не пострадали.
-
-## Чеклист
-
-- [ ] В команде коммита нет `-A` / `add .`
-- [ ] `git status -s` просмотрен: staged == мои файлы
-- [ ] Force-push — только `--force-with-lease`
+<!-- dev-pomogator-carl-context-diet:managed-stub v1 source=.claude/rules/gotchas/no-git-add-all-shared-tree.md library=.carl/rules/gotchas/no-git-add-all-shared-tree.md sha256=a0b220384ede609af108b469faa6bb0d39cdf03d2d89a3482c8d55196a1a4a04 -->
+<!-- /dev-pomogator-carl-context-diet -->
+Lazy rule body: `.carl/rules/gotchas/no-git-add-all-shared-tree.md`

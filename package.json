@@ -28,6 +28,7 @@
     ".codex-plugin",
     ".agents/plugins",
     ".claude",
+    ".carl/rules",
     "tools",
     "scripts",
     ".mcp.json",

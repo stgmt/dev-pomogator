@@ -264,7 +264,11 @@ function resolveActiveSpecs(prompt: string | undefined, specNames: string[]): Se
     }
   }
 
-  if (active.size === 0 && specNames.length === 1 && prompt?.trim()) {
+  // UserPromptSubmit payloads used by tests and some clients can omit the prompt
+  // text entirely while still scoping workspace_roots to a single spec corpus.
+  // In that case the sole discovered spec is the active one, so the banner must
+  // still surface its unconfirmed STOP instead of silently passing.
+  if (active.size === 0 && specNames.length === 1) {
     active.add(specNames[0]);
   }
 

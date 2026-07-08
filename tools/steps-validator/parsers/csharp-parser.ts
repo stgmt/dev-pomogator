@@ -72,7 +72,12 @@ export const CSHARP_ASSERTION_PATTERNS: RegExp[] = [
   /\b(Then|Assert|Verify|Check|Validate)\w+\s*\([^)]*\)\s*;/,
 
   // Playwright assertions (implicit - throws on failure)
-  /\.WaitFor(URL|Selector|Function|LoadState)Async\s*\(/,
+  // Keep this finite-state friendly: a previous grouped alternation could spend
+  // seconds backtracking on method names like WaitForURLAsync / WaitForSelectorAsync.
+  /\.WaitForURLAsync\s*\(/,
+  /\.WaitForSelectorAsync\s*\(/,
+  /\.WaitForFunctionAsync\s*\(/,
+  /\.WaitForLoadStateAsync\s*\(/,
   /\.Expect\w*Async\s*\(/,
   /await\s+Expect\s*\(/,
 ];
@@ -407,8 +412,14 @@ export function isEmptyBody(body: string): boolean {
   // Empty or just whitespace
   if (trimmed === "") return true;
 
-  // Only comments
-  if (/^(\/\/[^\n]*\n?|\s*)+$/.test(trimmed)) return true;
+  // Only comments. Strip line/block comments first instead of using a nested
+  // alternation over the whole body; the old regex could catastrophically
+  // backtrack on multi-line commented fixtures.
+  const withoutComments = trimmed
+    .replace(/\/\/[^\n\r]*(?:\r?\n|$)/g, '')
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .trim();
+  if (withoutComments === '') return true;
 
   // Only return statement
   if (/^return\s*(Task\.CompletedTask)?;?\s*$/.test(trimmed)) return true;

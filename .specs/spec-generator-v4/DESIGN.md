@@ -1259,3 +1259,13 @@ Then a finding is emitted (not silent)
 **Alternatives considered:**
 - Batch auto-fix all findings — rejected: silent wrong edits with no review surface.
 - Read-only report with no resolve path — rejected: leaves the user to hand-apply every fix.
+
+## Decision: FR-59 caps only the Claude-facing reminder, not the durable log
+**Требование:** [FR-59](FR.md#fr-59)
+
+**Rationale:** The conformance push has two consumers with opposite size needs. The audit/debug consumer needs the full finding set in `.dev-pomogator/.spec-check-log/*.jsonl`; the Claude context consumer needs a short reminder. Therefore the producer keeps `appendFindings(...)` complete and applies a byte budget only inside the reminder formatter used by `decidePush`. The formatter emits counts first, then bounded sample findings, then an omitted count and the full-log pointer. The byte budget is enforced after UTF-8 encoding so long messages cannot bypass it. Prompt-time status banners keep their existing summary-only shape and get a regression cap so repeated prompts do not accumulate into the same class of context bloat.
+**Trade-off:** Claude sees fewer individual findings in the immediate reminder; in exchange the session remains usable and the complete list remains available through the log and `/spec-status`.
+**Alternatives considered:**
+- Stop writing the conformance findings entirely — rejected: destroys auditability and violates FR-15's durable record.
+- Rely on Claude Code's persisted-output preview — rejected: the transcript still stores raw hook stdout, which was the observed bloat.
+- Cap by line count only — rejected: one very long finding message can still exceed the byte budget.

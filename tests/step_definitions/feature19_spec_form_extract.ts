@@ -1,5 +1,5 @@
 /**
- * @feature19 step definitions — extractWriteContent Edit-reconstruction (Issue #18)
+ * @feature58 step definitions — inherited extractWriteContent Edit-reconstruction (Issue #18)
  * (SPECGEN004_385 – SPECGEN004_390)
  *
  * Drives the REAL `tools/specs-validator/user-story-form-guard.ts` and
@@ -9,7 +9,7 @@
  * Tests that extractWriteContent correctly reconstructs the post-edit file so
  * guards validate the whole file content rather than just the diff fragment.
  *
- * @see .specs/spec-generator-v4/FR.md FR-19 (two-tier hook policy, soft tier)
+ * @see .specs/spec-generator-v4/FR.md FR-58 (inherited v3 form-contract owner)
  */
 import { Given, When, Then } from '@cucumber/cucumber';
 import assert from 'node:assert/strict';
