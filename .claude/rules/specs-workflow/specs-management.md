@@ -59,7 +59,7 @@
 
 ### Запреты
 
-- `.progress.json` создаётся ТОЛЬКО через `spec-status.ts`. ЗАПРЕЩЕНО создавать его через Write tool, вручную или напрямую. Аргумент `-Path` ОБЯЗАН указывать на `.specs/<feature>/` (не `.`, не `.specs/`, не произвольную папку).
+- `.progress.json` не является agent/MCP/manual-mutable документом. Писатели только engine CLI: `scaffold-spec.ts` создаёт initial v4 state при scaffold новой спеки; `spec-status.ts` создаёт missing state для existing spec и обновляет phase/STOP state. ЗАПРЕЩЕНО создавать/редактировать его через Write/Edit/MCP вручную. Аргумент `-Path` для `spec-status.ts` ОБЯЗАН указывать на `.specs/<feature>/` (не `.`, не `.specs/`, не произвольную папку).
 
 ---
 

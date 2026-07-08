@@ -1257,9 +1257,10 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   **Done When:**
   - [x] replaceLiteralAll матчит EOL значения к EOL документа (specs-generator-core.mjs); CRLF-template + multi-line LF value → 0 lone-LF; regression PLUGIN006_FT_CRLF (@feature15) GREEN в Docker
 
-- [ ] P16-7: `.progress.json` single-writer contract — id: p16-progress-single-writer — Status: TODO | Est: 60m
+- [x] P16-7: `.progress.json` single-writer contract — id: p16-progress-single-writer — Status: DONE (2026-07-08, engine two-writer contract documented and BDD-pinned) | Est: 60m
+  _Refs: verified by @feature40 scenario SPECGEN004_511_
   **Done When:**
-  - [ ] scaffold-spec's inline creation vs «only via spec-status.ts» rule reconciled (either delegate or document the two-writer contract); create-spec SKILL.md Запреты updated to match reality
+  - [x] scaffold-spec's inline creation vs «only via spec-status.ts» rule reconciled by documenting the engine-only two-writer contract: `scaffold-spec.ts` is bootstrap writer for fresh v4 `.progress.json`, `spec-status.ts` is state-transition/repair writer; manual Write/Edit/MCP mutation remains forbidden in create-spec skill/rule/phase agent — verified by `npm run lint`, Docker BDD SPECGEN004_511 (1 scenario / 8 steps passed), and full Docker suite (79 files / 883 passed / 2 skipped)
 
 - [ ] P16-8: STOP-confirm discipline — id: p16-stop-confirm-discipline — Status: TODO | Est: 180m
   _Refs: validator nags «9 specs with unconfirmed STOP» every prompt; no mechanism prevents an agent skipping ConfirmStop_

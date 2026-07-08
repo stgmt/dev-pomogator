@@ -3191,3 +3191,11 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Then mechanical audit categories are declared as script-owned inputs not AI rediscovery work
     And semantic-only audit categories are declared as agent-owned review work
     And the spec health rule points "is it healthy?" to the composed verdict only
+
+  @feature40
+  Scenario: SPECGEN004_511 progress state has an engine-only two-writer contract
+    Given a temp spec corpus for the progress writer contract
+    When scaffold-spec creates a fresh spec and spec-status repairs a pre-existing spec
+    Then scaffold-spec is the bootstrap writer for initial .progress.json state
+    And spec-status is the state-transition writer for existing specs
+    And create-spec documentation forbids manual or MCP mutation of .progress.json while naming both engine writers
