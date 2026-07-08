@@ -27,6 +27,32 @@ Feature: CARL001_CARL integration lifecycle
     And Russian aliases are added when safe source text or curated overrides exist
     And sources without safe Russian aliases are marked as needing aliases instead of being silently omitted
 
+  @feature1
+  @FR-1
+  Scenario: CARL001_13 Claude Code install automatically adapts Russian rule and skill domains
+    Given a fresh Claude Code project contains Russian CARL rule and skill sources
+    When the CARL integration installer runs for Claude Code
+    Then the project CARL manifest records the changed source hash
+    And Russian aliases are added when safe source text or curated overrides exist
+    And sources without safe Russian aliases are marked as needing aliases instead of being silently omitted
+
+  @feature1
+  @FR-1
+  Scenario: CARL001_14 SessionStart doctor bootstraps project Russian CARL before prompt hooks
+    Given a fresh Claude Code project contains Russian CARL rule and skill sources
+    When the plugin SessionStart doctor hook runs for that project
+    Then the project CARL manifest records the changed source hash
+    And Russian aliases are added when safe source text or curated overrides exist
+    And sources without safe Russian aliases are marked as needing aliases instead of being silently omitted
+    And the next CARL prompt hook runs guidance instead of project-missing fallback
+
+  @feature1
+  @FR-1
+  Scenario: CARL001_15 Russian CARL install BDD kills missing-adaptation mutants
+    Given a fresh Claude Code project contains Russian CARL rule and skill sources
+    When the CARL install mutation checks run
+    Then the mutation checks prove the BDD would fail without automatic Russian adaptation
+
   @feature2
   @FR-2
   Scenario: CARL001_02 Missing CARL runtime is not reported as healthy

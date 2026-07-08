@@ -2,6 +2,7 @@
 import * as crypto from 'node:crypto';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 interface SourceEntry {
   kind: 'rule' | 'skill' | 'index';
@@ -323,33 +324,55 @@ function atomicWriteJson(filePath: string, value: unknown): void {
   fs.renameSync(tempPath, filePath);
 }
 
-function main(): void {
-  const args = parseArgs(process.argv.slice(2));
-  if (!fs.existsSync(args.project) || !fs.statSync(args.project).isDirectory()) {
-    process.stderr.write(`Project directory does not exist: ${args.project}\n`);
-    process.exit(1);
+export interface AdaptRulesResult {
+  ok: true;
+  manifest: string;
+  totalSources: number;
+  readyRuSources: number;
+  needsAliasSources: string[];
+  generatedAliases: string[];
+  languageStatus: CarlManifest['languageStatus']['ru']['status'];
+}
+
+export function adaptProject(args: { project: string; out?: string }): AdaptRulesResult {
+  const project = path.resolve(args.project);
+  if (!fs.existsSync(project) || !fs.statSync(project).isDirectory()) {
+    throw new Error(`Project directory does not exist: ${project}`);
   }
 
-  const entries = buildEntries(args.project);
-  const manifestPath = args.out ?? path.join(args.project, '.carl', 'carl.json');
-  const manifest = mergeWithExisting(manifestPath, buildManifest(args.project, entries));
-  atomicWriteJson(manifestPath, manifest);
+  const entries = buildEntries(project);
+  const outputPath = args.out ?? path.join(project, '.carl', 'carl.json');
+  const manifest = mergeWithExisting(outputPath, buildManifest(project, entries));
+  atomicWriteJson(outputPath, manifest);
 
-  const summary = {
+  return {
     ok: true,
-    manifest: manifestPath,
+    manifest: outputPath,
     totalSources: manifest.coverage.totalSources,
     readyRuSources: manifest.coverage.readyRuSources,
     needsAliasSources: manifest.languageStatus.ru.needsAliasSources,
     generatedAliases: manifest.languageStatus.ru.generatedAliases,
     languageStatus: manifest.languageStatus.ru.status,
   };
+}
 
-  if (args.json) {
-    process.stdout.write(`${JSON.stringify(summary, null, 2)}\n`);
-  } else {
-    process.stdout.write(`CARL adaptation OK: ${summary.totalSources} sources, ${summary.readyRuSources} ru-ready, ${summary.needsAliasSources.length} ru:needs-alias -> ${manifestPath}\n`);
+function main(): void {
+  try {
+    const args = parseArgs(process.argv.slice(2));
+    const summary = adaptProject(args);
+
+    if (args.json) {
+      process.stdout.write(`${JSON.stringify(summary, null, 2)}\n`);
+    } else {
+      process.stdout.write(`CARL adaptation OK: ${summary.totalSources} sources, ${summary.readyRuSources} ru-ready, ${summary.needsAliasSources.length} ru:needs-alias -> ${summary.manifest}\n`);
+    }
+  } catch (error) {
+    process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
+    process.exit(1);
   }
 }
 
-main();
+const invokedPath = process.argv[1] ? pathToFileURL(path.resolve(process.argv[1])).href : '';
+if (import.meta.url === invokedPath) {
+  main();
+}
