@@ -1,8 +1,10 @@
 /**
- * @feature46 step definitions — SPECGEN004_160..162. Drives the REAL FR-46 enforcement
- * on synthetic graphs: checkConformance's TASK_NO_OWN_SCENARIO rule (a DONE task that
- * cites only its FR is flagged; one that cites its own SPECGEN id is NOT) and get_trace's
- * own_scenario surfacing. Synthetic graph (no temp fs) — robust in Docker.
+ * @feature46/@feature52 step definitions — SPECGEN004_160..162 + SPECGEN004_519.
+ * Drives the REAL FR-46/FR-52 enforcement on synthetic graphs: checkConformance's
+ * TASK_NO_OWN_SCENARIO rule (a DONE task that cites only its FR is flagged; one that
+ * cites its own SPECGEN id is NOT; a migrated many→few task with at least one passing
+ * consolidated scenario is accepted) and get_trace's own_scenario surfacing. Synthetic
+ * graph (no temp fs) — robust in Docker.
  *
  * @see .specs/spec-generator-v4/spec-generator-v4.feature SPECGEN004_160
  * @see .specs/spec-generator-v4/FR.md FR-46
@@ -43,6 +45,22 @@ Given('a graph with a DONE task whose Done-When cites its own SPECGEN scenario i
   this.trGraph = mkGraph('done when SPECGEN004_160 passes', true);
 });
 
+Given('a graph with a DONE migrated task mapped to one passing consolidated scenario and one not-run sibling', function (this: TraceWorld) {
+  this.trGraph = {
+    version: 1,
+    builtAt: '',
+    definitions: new Map(),
+    backlinks: new Map(),
+    nodes: new Map<string, unknown>([
+      ['demo:FR-1', { id: 'demo:FR-1', type: 'FR', file: 'FR.md', line: 1, title: 'x', anchors: ['FR-1'] }],
+      ['demo:t1', { id: 'demo:t1', type: 'Task', file: 'TASKS.md', line: 1, refs: ['demo:FR-1'], status: 'done', doneWhen: 'done when @feature1 consolidation passes' }],
+      ['demo:s1', { id: 'demo:SCEN-specgen004-518-consolidated', type: 'Scenario', file: 'x.feature', line: 1, tags: ['@feature1'], steps: [], lastResult: 'PASSED' }],
+      ['demo:s2', { id: 'demo:SCEN-specgen004-519-manual-sibling', type: 'Scenario', file: 'x.feature', line: 2, tags: ['@feature1', '@manual'], steps: [] }],
+    ]),
+    edges: [],
+  };
+});
+
 When('conformance runs over the graph', function (this: TraceWorld) {
   this.trFindings = checkConformance(this.trGraph as never);
 });
@@ -62,6 +80,14 @@ Then('a TASK_NO_OWN_SCENARIO warning is raised for that task', function (this: T
 
 Then('no TASK_NO_OWN_SCENARIO finding is raised for that task', function (this: TraceWorld) {
   assert.equal(this.trFindings!.filter((x) => x.code === 'TASK_NO_OWN_SCENARIO').length, 0);
+});
+
+Then('a TASK_STATUS_UNVERIFIED warning still surfaces the not-run sibling', function (this: TraceWorld) {
+  const f = this.trFindings!.filter((x) => x.code === 'TASK_STATUS_UNVERIFIED');
+  assert.equal(f.length, 1, `expected one TASK_STATUS_UNVERIFIED, got ${f.length}: ${JSON.stringify(this.trFindings)}`);
+  assert.equal(f[0].nodeId, 'demo:t1');
+  assert.match(f[0].message, /not green/);
+  assert.match(f[0].message, /not_run/);
 });
 
 Then("the task's own_scenario is surfaced with its passing result", function (this: TraceWorld) {

@@ -16,7 +16,9 @@ source "$(dirname "$0")/_docker-wsl.sh"
 wsl_guard_reexec "scripts/docker-bdd.sh" "$@"
 
 LOG_DIR=".dev-pomogator/.docker-status"
-mkdir -p "$LOG_DIR"
+HISTORY_DIR=".dev-pomogator/.test-history"
+mkdir -p "$LOG_DIR" "$HISTORY_DIR"
+chmod 777 "$HISTORY_DIR" 2>/dev/null || true
 LOG_FILE="${LOG_DIR}/bdd-run-$(date +%s).log"
 
 # The result ndjson is written by in-container cucumber into the MOUNTED dir,
@@ -96,24 +98,178 @@ echo "[docker-bdd] Running cucumber in Docker/Linux → $LOG_FILE"
 # not tmpdir-isolatable). So mount a WRITABLE COPY: scaffold writes land in the
 # copy, the real host .specs/ is untouched (no parallel-session interference),
 # and worktree's Linux shell-mocks work because we're in the Linux container.
-SPECS_RW=".dev-pomogator/.tmp/specs-docker-rw"
+SPECS_RW=".dev-pomogator/.tmp/specs-docker-rw-${PROJECT_NAME}"
 rm -rf "$SPECS_RW" 2>/dev/null || true
-mkdir -p "$(dirname "$SPECS_RW")"
-cp -r .specs "$SPECS_RW"
+mkdir -p "$SPECS_RW"
+cp -R .specs/. "$SPECS_RW"/
 echo "[docker-bdd] mounted a writable .specs copy ($SPECS_RW) — real .specs/ untouched"
 SESSION_ARGS=()
 if [ -n "$SESSION" ]; then
   SESSION_ARGS+=(-e "TEST_STATUSLINE_SESSION=$SESSION")
 fi
 
+HAS_EXPLICIT_CONFIG=0
+for arg in "$@"; do
+  case "$arg" in
+    -c|--config|--config=*) HAS_EXPLICIT_CONFIG=1 ;;
+  esac
+done
+CUCUMBER_ARGS=()
+if [ "$HAS_EXPLICIT_CONFIG" = "1" ]; then
+  CUCUMBER_ARGS=("$@")
+else
+  CUCUMBER_ARGS=(-c cucumber.docker.json "$@")
+fi
+
+# Route the in-container run through scripts/run-bdd.mjs (not raw cucumber.js), so every
+# sanctioned BDD path shares the same runtime entry and FR-52 clobber safety stays
+# centralized. docker-bdd.sh still owns the Docker-mounted output path and the final
+# full-run-only copy to the host canonical below.
 docker compose -f docker-compose.test.yml run --rm -T \
   --entrypoint node \
   -e PYTHONUNBUFFERED=1 \
+  -e RUN_BDD_HISTORY_EXTERNAL=1 \
   "${SESSION_ARGS[@]}" \
   -v "$(pwd)/${SPECS_RW}:/home/testuser/app/.specs" \
-  test --import tsx node_modules/@cucumber/cucumber/bin/cucumber.js -c cucumber.docker.json "$@" 2>&1 | tee -a "$LOG_FILE"
+  test scripts/run-bdd.mjs "${CUCUMBER_ARGS[@]}" 2>&1 | tee -a "$LOG_FILE"
 STATUS=${PIPESTATUS[0]}
 rm -rf "$SPECS_RW" 2>/dev/null || true
+
+archive_history() {
+  local source="$1"
+  local kind="$2"
+  if [ ! -s "$source" ]; then
+    return 0
+  fi
+  mkdir -p "$HISTORY_DIR"
+  local history_tool epoch chunk scenarios duration stats
+  if command -v python3 >/dev/null 2>&1; then
+    history_tool="python3"
+  elif command -v node >/dev/null 2>&1; then
+    history_tool="node"
+  else
+    echo "[docker-bdd] WARN: history archive skipped (need python3 or node)" >&2
+    return 0
+  fi
+
+  if [ "$history_tool" = "python3" ]; then
+    epoch=$(python3 - <<'PY'
+import time
+print(int(time.time() * 1000))
+PY
+)
+  else
+    epoch=$(node -e "console.log(Date.now())")
+  fi
+
+  chunk="run-${epoch}-${kind}.ndjson"
+  cp "$source" "$HISTORY_DIR/$chunk" || { echo "[docker-bdd] WARN: history archive skipped (copy failed: $source -> $HISTORY_DIR/$chunk)" >&2; return 0; }
+
+  if [ "$history_tool" = "python3" ]; then
+    stats=$(python3 - "$source" <<'PY'
+import json
+import sys
+started = None
+finished = None
+scenarios = 0
+with open(sys.argv[1], encoding='utf-8') as f:
+    for line in f:
+        if not line.strip():
+            continue
+        try:
+            env = json.loads(line)
+        except Exception:
+            continue
+        if env.get('testRunStarted', {}).get('timestamp'):
+            started = env['testRunStarted']['timestamp']
+        if env.get('testRunFinished', {}).get('timestamp'):
+            finished = env['testRunFinished']['timestamp']
+        if env.get('testCaseFinished') is not None:
+            scenarios += 1
+
+def to_ms(ts):
+    return ts['seconds'] * 1000 + round(ts.get('nanos', 0) / 1_000_000)
+
+duration = to_ms(finished) - to_ms(started) if started and finished else None
+print(f"{scenarios}\t{'' if duration is None else duration}")
+PY
+)
+  else
+    stats=$(node - "$source" <<'JS'
+const fs = require('fs');
+let started = null;
+let finished = null;
+let scenarios = 0;
+for (const line of fs.readFileSync(process.argv[2], 'utf8').split('\n')) {
+  if (!line.trim()) continue;
+  try {
+    const env = JSON.parse(line);
+    if (env.testRunStarted?.timestamp) started = env.testRunStarted.timestamp;
+    if (env.testRunFinished?.timestamp) finished = env.testRunFinished.timestamp;
+    if (env.testCaseFinished) scenarios += 1;
+  } catch {}
+}
+const toMs = (t) => t.seconds * 1000 + Math.round((t.nanos || 0) / 1e6);
+const duration = started && finished ? toMs(finished) - toMs(started) : '';
+console.log(`${scenarios}\t${duration}`);
+JS
+)
+  fi
+  IFS=$'\t' read -r scenarios duration <<< "$stats"
+  scenarios=${scenarios:-0}
+
+  if [ "$history_tool" = "python3" ]; then
+    python3 - "$HISTORY_DIR" "$chunk" "$kind" "$epoch" "$scenarios" "$duration" "$STATUS" <<'PY'
+import json
+import os
+import sys
+from datetime import datetime, timezone
+
+dir_, chunk, kind, epoch, scenarios, duration, status = sys.argv[1:]
+epoch_i = int(epoch)
+entry = {
+    'ts': datetime.fromtimestamp(epoch_i / 1000, tz=timezone.utc).isoformat().replace('+00:00', 'Z'),
+    'epoch': epoch_i,
+    'kind': kind,
+    'scenarios': int(scenarios),
+    'durationMs': None if duration == '' else int(duration),
+    'exit': int(status),
+    'file': chunk,
+}
+with open(os.path.join(dir_, 'index.ndjson'), 'a', encoding='utf-8') as f:
+    f.write(json.dumps(entry, separators=(',', ':')) + '\n')
+chunks = sorted(f for f in os.listdir(dir_) if f.startswith('run-') and f.endswith('.ndjson'))
+for old in chunks[:-30]:
+    try:
+        os.unlink(os.path.join(dir_, old))
+    except OSError:
+        pass
+PY
+  else
+    node - "$HISTORY_DIR" "$chunk" "$kind" "$epoch" "$scenarios" "$duration" "$STATUS" <<'JS'
+const fs = require('fs');
+const path = require('path');
+const [dir, chunk, kind, epoch, scenarios, duration, status] = process.argv.slice(2);
+const entry = {
+  ts: new Date(Number(epoch)).toISOString(),
+  epoch: Number(epoch),
+  kind,
+  scenarios: Number(scenarios),
+  durationMs: duration === '' ? null : Number(duration),
+  exit: Number(status),
+  file: chunk,
+};
+fs.appendFileSync(path.join(dir, 'index.ndjson'), JSON.stringify(entry) + '\n');
+const chunks = fs.readdirSync(dir).filter((f) => f.startsWith('run-') && f.endsWith('.ndjson')).sort();
+for (const old of chunks.slice(0, -30)) {
+  try {
+    fs.unlinkSync(path.join(dir, old));
+  } catch {}
+}
+JS
+  fi
+  echo "[docker-bdd] archived $kind run -> $HISTORY_DIR/$chunk (${scenarios} scenarios, ${duration:-?}ms)"
+}
 
 # Persist the Docker result to the host canonical path the spec-graph reads.
 # CLOBBER-SAFE (H1 / FR-52a): only a FULL run (no extra cucumber args) may write the
@@ -122,9 +278,11 @@ rm -rf "$SPECS_RW" 2>/dev/null || true
 # census. Its result still lands in $OUT_REL for inspection. No `shift` runs above, so
 # "$#" here is the original argc.
 if [ "$#" -gt 0 ]; then
+  archive_history "$OUT_REL" "filtered"
   echo "[docker-bdd] filtered run ($*) — result in $OUT_REL ONLY; canonical NOT updated (clobber-safe)"
 elif [ -s "$OUT_REL" ]; then
   cp "$OUT_REL" "$CANONICAL"
+  archive_history "$CANONICAL" "full"
   echo "[docker-bdd] Canonical ndjson updated from the Docker/Linux run -> $CANONICAL"
 else
   echo "[docker-bdd] WARN: no ndjson produced ($OUT_REL empty/missing) — canonical NOT updated"

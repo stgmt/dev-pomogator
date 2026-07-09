@@ -37,9 +37,13 @@ CARL implementation follows Red → Green → Refactor. Phase 0 creates executab
   - Mark any temporary hand-shaped CARL fixture as `[UNVERIFIED]` and exclude it from final done evidence until replaced by a captured real artifact.
   - Document the induced broken-runtime fixture used only for fail-open behavior, not for proving real CARL producer output shape.
   **Done When:**
-  - [ ] `tests/fixtures/carl/real-output/README.md` names either a captured real CARL artifact with provenance or an explicit `[UNVERIFIED]` blocker that prevents benchmark thresholds from becoming final.
-  - [ ] The real-artifact ledger distinguishes runtime-consumer proof from producer-shape proof and does not let file existence count as a CARL green verdict.
-  - [ ] Any benchmark threshold remains draft/blocked until this task records real CARL evidence or an approved external requirement.
+  - [x] `tests/fixtures/carl/real-output/README.md` names either a captured real CARL artifact with provenance or an explicit `[UNVERIFIED]` blocker that prevents benchmark thresholds from becoming final.
+  - [x] The real-artifact ledger distinguishes runtime-consumer proof from producer-shape proof and does not let file existence count as a CARL green verdict.
+  - [x] Any benchmark threshold remains draft/blocked until this task records real CARL evidence or an approved external requirement.
+  **Evidence:**
+  - Real producer-shape ledger: `tests/fixtures/carl/real-output/README.md` records the captured sibling CARL artifact, source hashes, smoke output, benchmark TSV, and the trust boundary separating producer-shape evidence from dev-pomogator runtime integration proof.
+  - Runtime-consumer proof: `.dev-pomogator/.tmp/carl-runtime-evidence-1783567719470.json` captured plugin hook registration for `tools/carl/runner.ts`, install exit `0`, hook exit `0`, and manifest runtime transition `unverified` → `verified`; the review report records `fakeGreenGate.runtimeConsumerExecuted=true` and `hookRegistered=true`.
+  - Benchmark gate proof: the same evidence records no-fixture benchmark mode as `status=blocked`, `thresholdState=draft-no-real-artifact`, `regressionGate.enabled=false`, and fixture-backed mode as `status=baseline-recorded` with five metrics and seven source hashes.
 
 - [x] Author CARL BDD red scenarios and step definitions — id: author-carl-bdd-red — Status: DONE | Est: 75m
   _Requirements: [FR-1](FR.md#fr-1-claude-code-managed-carl-install), [FR-2](FR.md#fr-2-no-fake-green-when-carl-is-absent), [FR-3](FR.md#fr-3-runtime-consumer-and-end-to-end-proof), [FR-4](FR.md#fr-4-fail-open-warning-injection), [FR-5](FR.md#fr-5-doctor-health-and-repair), [FR-6](FR.md#fr-6-managed-markers-preserve-user-configuration), [FR-7](FR.md#fr-7-codex-path-gated-by-launcher-and-dispatcher-prerequisites), [FR-8](FR.md#fr-8-review-audit-and-reporting), [FR-9](FR.md#fr-9-recall-benchmark-threshold-and-regression-gate)_

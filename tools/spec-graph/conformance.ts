@@ -28,7 +28,7 @@
  */
 
 import type { SpecGraph, Edge, ScenarioNode, TaskNode } from './types.ts';
-import { computeCoverage, specOf, type Bucket, type ScenarioLike, type TaskLike, type TestQualityVerdict } from './coverage.ts';
+import { computeCoverage, scenarioKey, specOf, type Bucket, type ScenarioLike, type TaskLike, type TestQualityVerdict } from './coverage.ts';
 import { WORKING_STATUSES, canEnterWorkingStatus } from './task-lifecycle.ts';
 
 export type FindingCode =
@@ -371,9 +371,9 @@ export function checkConformance(
       taskLikes.push({ id: t.id, doneWhen: t.doneWhen ?? '', refs: t.refs, spec: specOf(t.file) });
     }
   }
-  if (taskLikes.length > 0) {
-    const cov = computeCoverage(taskLikes, scenarioLikes, opts.testQualityByTask);
-    const bucketById = new Map<string, Bucket>();
+  const cov = taskLikes.length > 0 ? computeCoverage(taskLikes, scenarioLikes, opts.testQualityByTask) : null;
+  const bucketById = new Map<string, Bucket>();
+  if (cov) {
     for (const b of Object.keys(cov.buckets) as Bucket[]) for (const id of cov.buckets[b]) bucketById.set(id, b);
     for (const node of graph.nodes.values()) {
       if (node.type !== 'Task') continue;
@@ -429,26 +429,33 @@ export function checkConformance(
     }
   }
 
-  // 2c) TASK_NO_OWN_SCENARIO (FR-46a/b) — a DONE task whose Done-When cites NO explicit
-  // SPECGEN id of ITS OWN. Mapping via refs→FR-wide @featureN is NOT enough: the task
-  // rides on the requirement's other scenarios and passes as verified without a test for
-  // ITSELF (proven: 0/26 v4 tasks cite their own id). WARNING for now — staged
-  // detect→retrofit→gate (FR-46c); promote to ERROR only after the corpus is retrofitted,
-  // else the door wedges on pre-existing violators.
+  // 2c) TASK_NO_OWN_SCENARIO (FR-46a/b + FR-52/F7) — a DONE task whose Done-When cites NO
+  // explicit scenario id of ITS OWN. Mapping via refs→FR-wide @featureN is NOT enough:
+  // the task rides on the requirement's other scenarios and passes as verified without
+  // a test for ITSELF. Migrated specs may intentionally consolidate many tasks into one
+  // stronger scenario; in that case the task is accepted when it already maps to ≥1
+  // passed covering scenario via @feature/FR. Non-green siblings remain visible through
+  // TASK_STATUS_UNVERIFIED; this rule only asks whether any task-level proof exists.
+  // WARNING for remaining gaps — staged detect→retrofit→gate
+  // (FR-46c); promote to ERROR only after the corpus is retrofitted.
   for (const node of graph.nodes.values()) {
     if (node.type !== 'Task') continue;
     const task = node as TaskNode;
     if (task.status !== 'done') continue;
-    if (/s[pc]e[cn]gen004[_-]\d+/i.test(task.doneWhen ?? '')) continue; // cites its own scenario id
+    if (scenarioKey(task.doneWhen ?? '')) continue; // cites its own explicit scenario id
+    const entry = cov?.tasks[task.id];
+    const greenScenarioCount = entry?.scenarios.filter((id) => bucketById.get(id) === 'passed').length ?? 0;
+    if (greenScenarioCount > 0) continue; // accepted many→few consolidation
     findings.push({
       code: 'TASK_NO_OWN_SCENARIO',
       severity: 'warning',
       location: { file: task.file, line: task.line },
-      message: `Task ${task.id} is marked DONE but its Done-When cites no SPECGEN id of its OWN — it only maps to its requirement's scenarios at large, so no test verifies THIS task specifically (FR-46a).`,
+      message: `Task ${task.id} is marked DONE but its Done-When cites no explicit scenario id of its OWN and no mapped covering scenario has passed; FR-wide refs alone are not proof for THIS task (FR-46a/FR-52 F7).`,
       nodeId: task.id,
       suggestions: [
-        { action: 'cite_own_scenario', reason: "Reference this task's own SPECGEN004_NN scenario in Done-When (the one that verifies exactly this task), not just the FR.", confidence: 'high' },
-        { action: 'downgrade', reason: 'Or set Status back to IN_PROGRESS until the task has its own passing scenario.', confidence: 'high' },
+        { action: 'cite_own_scenario', reason: "Reference this task's own SPECGEN004_NN / TESTQUAL001_NN scenario in Done-When when it has a dedicated proof.", confidence: 'high' },
+        { action: 'accept_consolidated_scenario', reason: 'For migrated many→few consolidation, map the task to at least one passing covering scenario via @feature/FR so the shared proof is explicit in the graph.', confidence: 'medium' },
+        { action: 'downgrade', reason: 'Or set Status back to IN_PROGRESS until a dedicated or consolidated covering scenario is green.', confidence: 'high' },
       ],
     });
   }

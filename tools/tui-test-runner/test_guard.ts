@@ -41,7 +41,7 @@ const ALLOWED_PATTERNS = [
   /docker-test\.sh/,       // project Docker test script (used by /run-tests --docker)
   /docker-bdd\.sh/,        // project Docker BDD/cucumber script (the ONLY sanctioned cucumber path)
   /docker compose.*test/,  // direct docker compose test invocation
-  /cucumber\.docker\.json/, // in-container cucumber config (docker-bdd.sh spawns this)
+  /\bnpm\s+run\s+test:bdd\b(?!:)/, // npm run test:bdd (script routes to docker-bdd.sh)
   /test:bdd:docker/,       // npm run test:bdd:docker
   /test:e2e:docker/,       // internal Docker test command
   /vitest.*--reporter/,    // vitest inside Docker (npm run test:e2e:docker)

@@ -21,6 +21,9 @@ describe('scenarioKey', () => {
   it('tolerates the legacy SCENGEN004 typo', () => {
     expect(scenarioKey('SCENGEN004_55 implements edges')).toBe('specgen004_55');
   });
+  it('normalises named non-v4 scenario ids such as TESTQUAL001', () => {
+    expect(scenarioKey('vitest TESTQUAL001_10 integration test PASS')).toBe('testqual001_10');
+  });
   it('returns null when no id present', () => {
     expect(scenarioKey('just some prose')).toBeNull();
   });
@@ -82,12 +85,11 @@ describe('mapTasksToScenarios', () => {
     const tasks: TaskLike[] = [{ id: 't3', doneWhen: 'no explicit ids', refs: ['FR-2'] }];
     expect(mapTasksToScenarios(tasks, scenarios).get('t3')).toEqual(['SCEN-specgen004-03-z']);
   });
-  it('de-dupes a scenario referenced by multiple sources', () => {
-    // explicit _70 AND @feature32 (which also covers _70) → _70 appears once
+  it('prefers an explicit own scenario over broad @feature/FR-ref siblings', () => {
+    // FR-52e: explicit _70 is this task's own proof. The broad @feature32 / FR-32
+    // siblings include _71 (undefined/manual sibling) and must not drag the task down.
     const tasks: TaskLike[] = [{ id: 't4', doneWhen: '@feature32 SPECGEN004_70', refs: ['FR-32'] }];
-    const got = mapTasksToScenarios(tasks, scenarios).get('t4')!;
-    expect(new Set(got).size).toBe(got.length); // no duplicates
-    expect(got).toContain('SCEN-specgen004-70-x');
+    expect(mapTasksToScenarios(tasks, scenarios).get('t4')).toEqual(['SCEN-specgen004-70-x']);
   });
 });
 
@@ -175,5 +177,17 @@ describe('computeCoverage — end to end', () => {
     expect(report.tasks['done-task'].verified_status).toBe('DONE');
     expect(report.tasks['mixed-task'].verified_status).toBe('IN_PROGRESS');
     expect(report.tasks['orphan-task'].verified_status).toBe('unverified');
+  });
+
+  it('FR-52e: explicit own scenario wins over not-run/manual same-feature siblings', () => {
+    const scopedReport = computeCoverage(
+      [{ id: 'strong-tests:t29', doneWhen: 'covered by TESTQUAL001_10 / SPECGEN004_10 and @feature32', refs: ['FR-32'], spec: 'strong-tests' }],
+      [
+        { id: 'SCEN-testqual001-10-go-detector', tags: ['@feature32'], result: 'PASSED', spec: 'strong-tests' },
+        { id: 'SCEN-testqual001-11-manual-sibling', tags: ['@feature32', '@manual'], spec: 'strong-tests' },
+      ],
+    );
+    expect(scopedReport.tasks['strong-tests:t29'].scenarios).toEqual(['SCEN-testqual001-10-go-detector']);
+    expect(scopedReport.tasks['strong-tests:t29'].verified_status).toBe('DONE');
   });
 });

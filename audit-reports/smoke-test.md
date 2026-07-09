@@ -38,6 +38,21 @@ Run **automated and non-interactive** in a clean Docker container (`node:22` + `
 
 **Bug found + fixed (commit `8bb67b5`):** `plugin.json` declared `skills/commands/hooks/mcpServers` as bare strings. That passes `marketplace validate` but `claude plugin install` rejected it (`…: Invalid input`) — the plugin would NOT have installed for any user. Fixed to arrays of path strings; drift test `CANON001_11` now guards it (runs in the normal suite, no Docker/auth needed).
 
+## Fresh install rerun (EXECUTED — PASSED, 2026-07-09)
+
+Run **automated and non-interactive** in a clean Docker container (`node:22-bookworm`) via the real `@anthropic-ai/claude-code@2.1.152` CLI. Repo mounted read-only at `/repo`; `HOME=/tmp/clean-home` so no previous Claude settings/cache could affect the result. Full raw log saved at `.dev-pomogator/.tmp/claude-plugin-install-e2e-2.1.152.log`.
+
+| Step | Result |
+|------|--------|
+| `claude --version` | ✅ `2.1.152 (Claude Code)` |
+| `claude plugin validate /repo/.claude-plugin/plugin.json` | ✅ validation passed with only the expected root-`CLAUDE.md` context warning |
+| `claude plugin validate /repo/.claude-plugin/marketplace.json` | ✅ validation passed |
+| `claude plugin marketplace add /repo/.claude-plugin/marketplace.json` | ✅ added marketplace `stgmt` |
+| `claude plugin marketplace list` | ✅ lists `stgmt`, source `File (/repo/.claude-plugin/marketplace.json)` |
+| `claude plugin install dev-pomogator@stgmt --scope user --config spec_access_enforce=true` | ✅ installed `dev-pomogator@stgmt` |
+| `claude plugin list` | ✅ `dev-pomogator@stgmt`, version `2.0.3`, scope `user`, status `enabled` |
+| `claude plugin details dev-pomogator` | ✅ resolved component inventory: 58 skills, 5 hook events, MCP server, LSP server |
+
 ## User-driven smoke test procedure (для reviewer)
 
 To verify canonical install works end-to-end, run следующие steps в fresh Claude Code session OR Desktop:

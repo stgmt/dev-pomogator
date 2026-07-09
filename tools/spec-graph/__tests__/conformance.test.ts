@@ -113,6 +113,37 @@ describe('checkConformance — TASK_NO_OWN_SCENARIO (FR-46a/b: DONE needs its OW
     expect(onlyRule(g)).toHaveLength(0);
   });
 
+  it('does NOT flag a DONE task that cites its own non-v4 scenario id in Done-When', () => {
+    const g = emptyGraph();
+    g.nodes.set('t1', doneTask('t1', 'done when TESTQUAL001_10 passes'));
+    expect(onlyRule(g)).toHaveLength(0);
+  });
+
+  it('does NOT flag many→few consolidation when the task maps to a green scenario', () => {
+    const g = emptyGraph();
+    g.nodes.set('FR-1', fr('FR-1'));
+    g.nodes.set('t1', doneTask('t1', 'verified by @feature1', ['FR-1']));
+    g.nodes.set('s1', { id: 'SCEN-specgen004-01-consolidated', type: 'Scenario', file: 't.feature', line: 1, tags: ['@feature1'], steps: [], lastResult: 'PASSED' } as ScenarioNode);
+    expect(onlyRule(g)).toHaveLength(0);
+  });
+
+  it('does NOT flag many→few consolidation when at least one mapped scenario is green and another sibling is not run', () => {
+    const g = emptyGraph();
+    g.nodes.set('FR-1', fr('FR-1'));
+    g.nodes.set('t1', doneTask('t1', 'verified by @feature1', ['FR-1']));
+    g.nodes.set('s1', { id: 'SCEN-specgen004-01-consolidated', type: 'Scenario', file: 't.feature', line: 1, tags: ['@feature1'], steps: [], lastResult: 'PASSED' } as ScenarioNode);
+    g.nodes.set('s2', { id: 'SCEN-specgen004-02-manual-sibling', type: 'Scenario', file: 't.feature', line: 2, tags: ['@feature1', '@manual'], steps: [] } as ScenarioNode);
+    expect(onlyRule(g)).toHaveLength(0);
+  });
+
+  it('still flags many→few consolidation when the mapped scenario is not green', () => {
+    const g = emptyGraph();
+    g.nodes.set('FR-1', fr('FR-1'));
+    g.nodes.set('t1', doneTask('t1', 'verified by @feature1', ['FR-1']));
+    g.nodes.set('s1', { id: 'SCEN-specgen004-01-consolidated', type: 'Scenario', file: 't.feature', line: 1, tags: ['@feature1'], steps: [], lastResult: 'UNDEFINED' } as ScenarioNode);
+    expect(onlyRule(g)).toHaveLength(1);
+  });
+
   it('does NOT flag a TODO task without an own scenario (link required at DONE, not creation)', () => {
     const g = emptyGraph();
     g.nodes.set('t1', task('t1', ['FR-1'])); // status TODO

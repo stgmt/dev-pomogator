@@ -7,8 +7,8 @@ blocking `AskUserQuestion` (header `⚠️ CRIT`); a user override is logged to
 
 This catalogue is the **source-of-truth extract from the engine** — codes come from
 `scripts/reconcile.ts` (mechanical, light + full mode) and `scripts/full-mode.ts` (the
-one LLM-semantic code). Counts in older task notes ("28"/"37") are stale; the real set is
-**31** codes below. If you add a code in the engine, add its row here.
+LLM-semantic codes). Counts in older task notes ("28"/"37") are stale; the real set is
+**32** codes below. If you add a code in the engine, add its row here.
 
 ## Namespaces
 
@@ -49,6 +49,7 @@ one LLM-semantic code). Counts in older task notes ("28"/"37") are stale; the re
 | `cross-spec/contradictory-fr` | CRITICAL | contradiction | Two specs' FRs conflict — resolve which holds. |
 | `cross-spec/concept-overlap` | INFO | concept-overlap | Two specs cover overlapping concepts — dedupe or cross-reference. |
 | `cross-spec/semantic-drift` | varies (LLM-judged) | semantic | Full-mode only: the Phase-3 judge found a semantic divergence not caught mechanically — review the judge rationale and reconcile. |
+| `cross-spec/semantic-check-failed` | WARNING | semantic | Full-mode degraded for this pair because the semantic judge failed/timeouted — inspect `partial_reasons[]`; mechanical findings are still valid. |
 
 ### `spec-only/*` — a single spec, internal
 

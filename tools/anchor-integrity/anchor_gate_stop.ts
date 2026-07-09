@@ -87,6 +87,17 @@ function logEscape(repoRoot: string, reason: string, sessionId?: string): void {
   }
 }
 
+export function buildBlockReason(slugs: string[], broken: ReturnType<typeof checkSpecDir>): string {
+  const head = broken.slice(0, 8).map((b) => `  ${b.file}:${b.line} [${b.linkText}] #${b.brokenAnchor}` + (b.currentSlug ? ` → #${b.currentSlug}` : ' (ambiguous)'));
+  return (
+    `anchor-integrity (FR-34): you edited ${slugs.join(', ')} and left ${broken.length} broken link anchor(s) — ` +
+    `they will NOT resolve in the Marksman LSP.\n${head.join('\n')}` +
+    (broken.length > 8 ? `\n  …+${broken.length - 8} more` : '') +
+    `\nFix: node tools/anchor-integrity/fix.mjs --spec .specs/${slugs[0]} --apply --door  (door-safe under SPEC_ACCESS_ENFORCE; or the anchor-fix skill), then re-check.` +
+    `\nEscape (deliberate): add [skip-anchor-fix: <reason ≥8 chars>] to the commit message, or set ANCHOR_GATE_SKIP=1.`
+  );
+}
+
 async function main(): Promise<void> {
   const mode = process.env.ANCHOR_GATE_ENABLED ?? 'true';
   if (mode === 'false') return approve();
@@ -115,13 +126,7 @@ async function main(): Promise<void> {
     return approve();
   }
 
-  const head = broken.slice(0, 8).map((b) => `  ${b.file}:${b.line} [${b.linkText}] #${b.brokenAnchor}` + (b.currentSlug ? ` → #${b.currentSlug}` : ' (ambiguous)'));
-  const reason =
-    `anchor-integrity (FR-34): you edited ${slugs.join(', ')} and left ${broken.length} broken link anchor(s) — ` +
-    `they will NOT resolve in the Marksman LSP.\n${head.join('\n')}` +
-    (broken.length > 8 ? `\n  …+${broken.length - 8} more` : '') +
-    `\nFix: node tools/anchor-integrity/fix.mjs --spec .specs/${slugs[0]} --apply  (or the anchor-fix skill), then re-check.` +
-    `\nEscape (deliberate): add [skip-anchor-fix: <reason ≥8 chars>] to the commit message, or set ANCHOR_GATE_SKIP=1.`;
+  const reason = buildBlockReason(slugs, broken);
 
   if (mode === 'shadow') {
     process.stderr.write(`[anchor-gate] shadow: would block — ${broken.length} broken in ${slugs.join(',')}\n`);

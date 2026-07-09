@@ -31,6 +31,7 @@ import { composeEntry } from '../../spec-check-log/writer.ts';
 import { writeTaskCensusCache } from '../../spec-graph/task-census.ts';
 
 const ACK_CLI = path.resolve(__dirname, '..', 'ack-summary.ts');
+const REPO_ROOT = path.resolve(__dirname, '..', '..', '..');
 
 let root: string;
 let ackFile: string;
@@ -93,6 +94,7 @@ describe('P21-6 per-spec task-census banner (buildTaskCensusLine)', () => {
     expect(line).toMatch(/^📋 Spec tasks \(census 2026-06-10.*\): 29 open, 1 🔴 done-but-red, 3 ⏸ done-but-not-run/);
     expect(line).toMatch(/\n {3}spec-generator-v4: 29 open, 1🔴, 3⏸/);
     expect(line).toMatch(/\n {3}session-pilot: 4 open/);
+    expect(line).not.toMatch(/следующее:/);
   });
 
   it('shows было→стало when the total changed since the prev snapshot', () => {
@@ -116,6 +118,94 @@ describe('P21-6 per-spec task-census banner (buildTaskCensusLine)', () => {
     expect(buildTaskCensusLine(repoRoot)).toBeNull(); // no cache
     writeTaskCensusCache(repoRoot, { total: { open: 0, doneRed: 0, doneUnrun: 0 }, specs: [] }, 't');
     expect(buildTaskCensusLine(repoRoot)).toBeNull(); // all clean → zero-noise
+  });
+
+  function seedCensusLeakFixture(): { pluginRoot: string; targetRoot: string } {
+    const pluginRoot = path.join(root, 'plugin-root');
+    const targetRoot = path.join(root, 'target-repo');
+    fs.mkdirSync(path.join(pluginRoot, '.specs', 'spec-generator-v4'), { recursive: true });
+    fs.mkdirSync(path.join(targetRoot, '.specs', 'reel-agent-marketplace'), { recursive: true });
+
+    writeTaskCensusCache(
+      pluginRoot,
+      {
+        total: { open: 99, doneRed: 0, doneUnrun: 0 },
+        specs: [
+          {
+            slug: 'spec-generator-v4',
+            open: 99,
+            doneRed: 0,
+            doneUnrun: 0,
+            nextOpen: { id: 'spec-generator-v4:ws-f-remaining', title: 'WS-F foreign backlog @feature35' },
+          },
+        ],
+      },
+      'plugin-cache',
+    );
+    writeTaskCensusCache(
+      targetRoot,
+      {
+        total: { open: 1, doneRed: 0, doneUnrun: 0 },
+        specs: [
+          {
+            slug: 'reel-agent-marketplace',
+            open: 1,
+            doneRed: 0,
+            doneUnrun: 0,
+            nextOpen: { id: 'reel-agent-marketplace:t1', title: 'Draft marketplace story' },
+          },
+        ],
+      },
+      'target-cache',
+    );
+    return { pluginRoot, targetRoot };
+  }
+
+  function runValidateSpecsHook(pluginRoot: string, hookInput: Record<string, unknown>) {
+    return spawnSync(process.execPath, ['--import', 'tsx', 'tools/specs-validator/validate-specs.ts'], {
+      cwd: REPO_ROOT,
+      input: JSON.stringify({ hook_event_name: 'UserPromptSubmit', prompt: '', ...hookInput }),
+      encoding: 'utf-8',
+      timeout: 60_000,
+      env: {
+        ...process.env,
+        CLAUDE_PLUGIN_ROOT: pluginRoot,
+        HOME: root,
+        USERPROFILE: root,
+        SPEC_CONFORMANCE_ACK_FILE: path.join(root, 'ack.json'),
+        SPEC_CONFORMANCE_SOFT_LOG: softLog,
+        FORCE_COLOR: '0',
+      },
+    });
+  }
+
+  function expectNoForeignCensusLeak(stdout: string): void {
+    expect(stdout).toContain('reel-agent-marketplace');
+    expect(stdout).toContain('Draft marketplace story');
+    expect(stdout).not.toContain('spec-generator-v4');
+    expect(stdout).not.toContain('WS-F');
+    expect(stdout).not.toContain('@feature35');
+  }
+
+  it('UserPromptSubmit reads the task-census cache from hook cwd, not the plugin/process root', () => {
+    const { pluginRoot, targetRoot } = seedCensusLeakFixture();
+    const r = runValidateSpecsHook(pluginRoot, {
+      cwd: targetRoot,
+      workspace_roots: [pluginRoot],
+    });
+
+    expect(r.status, r.stderr).toBe(0);
+    expectNoForeignCensusLeak(r.stdout);
+  });
+
+  it('UserPromptSubmit reads the task-census cache from workspace_roots[0] when cwd is absent', () => {
+    const { pluginRoot, targetRoot } = seedCensusLeakFixture();
+    const r = runValidateSpecsHook(pluginRoot, {
+      workspace_roots: [targetRoot],
+    });
+
+    expect(r.status, r.stderr).toBe(0);
+    expectNoForeignCensusLeak(r.stdout);
   });
 });
 

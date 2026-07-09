@@ -13,6 +13,8 @@ and the diff readable). This doc is the schema extract from that emitter; if you
 | `generated_at` | string (ISO 8601) | `report.generatedAt` | when the run produced the report |
 | `mode` | string | `report.mode` | `light` (mechanical only) or `full` (adds the LLM-semantic pass) |
 | `spec_slug` | string | `report.specSlug` | the spec this report is about |
+| `partial` | boolean | `report.partial` | emitted only when `true`; full mode degraded on at least one semantic judge failure |
+| `partial_reasons` | list | `report.partialReasons` | emitted only with `partial: true`; human-readable degradation reasons |
 | `total_findings` | integer | `report.findings.length` | count of `findings[]` |
 | `summary` | map | computed (FR-17) | aggregate roll-up — see [§ summary](#summary) below; always present, even with zero findings |
 | `findings` | list \| `[]` | `report.findings` | empty list emitted literally as `findings: []` |
@@ -41,7 +43,7 @@ FR-17 (`impl-coverage-summary`) roll-up, emitted right after `total_findings`. A
 | Key | Type | Meaning |
 |---|---|---|
 | `by_severity` | map | counts keyed by `CRITICAL` / `WARNING` / `INFO` (all three keys always present) |
-| `by_class` | map \| `{}` | counts keyed by the REAL `FindingClass` values present (`uncovered`, `contradiction`, `runtime-identifier-drift`, `architectural-decision-vs-reality`, `concept-overlap`, `spec-only`, `schema-drift`), sorted; absent classes omitted |
+| `by_class` | map \| `{}` | counts keyed by the REAL `FindingClass` values present (`uncovered`, `contradiction`, `runtime-identifier-drift`, `architectural-decision-vs-reality`, `concept-overlap`, `semantic`, `spec-only`, `schema-drift`), sorted; absent classes omitted |
 | `by_namespace` | map \| `{}` | counts keyed by the code prefix before `/` (e.g. `cross-spec`, `impl-drift`), sorted |
 | `totals.findings` | integer | `report.findings.length` |
 | `totals.specs_compared` | integer | corpus size compared (`.specs/<slug>/` count) — `report.specsCompared` |

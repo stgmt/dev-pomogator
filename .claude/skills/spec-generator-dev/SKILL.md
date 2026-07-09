@@ -86,7 +86,7 @@ node --import tsx tools/spec-graph/collision-probe.ts                       # 0 
 node --import tsx tools/spec-graph/corpus-health.ts                        # организм
 npx tsx tools/specs-generator/spec-verdict.ts -Path .specs/<slug> [--no-semantic]
 node --import tsx tools/spec-mcp-server/dogfood-dataset.ts                 # LIVE тулзы
-node --import tsx node_modules/@cucumber/cucumber/bin/cucumber.js          # BDD 0 failed (полный прогон — иначе NDJSON частичный → coverage врёт; см. not_run)
+bash scripts/docker-bdd.sh                                                  # BDD 0 failed; full Docker run refreshes canonical NDJSON (filtered runs leave it untouched)
 # vitest по слою (через wrapper): tools/spec-graph/__tests__ + tools/spec-mcp-server/__tests__
 npm run build:mcp   # ОБЯЗАТЕЛЬНО при правке tools.ts/server.ts/импорт-графа сервера — иначе юзеры плагина без фикса
 # bundle-serve смоук (РЕАЛЬНЫЙ артефакт юзеров, не source) — обязателен после build:mcp:

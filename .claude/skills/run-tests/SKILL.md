@@ -135,6 +135,16 @@ node tools/test-statusline/test_runner_wrapper.cjs --framework <detected-framewo
 
 **Cross-platform note:** The wrapper uses `cross-spawn` for transparent cross-platform command resolution on all OSes.
 
+**dev-pomogator BDD/cucumber path (FR-52a / no-host-bdd-runs):** never run raw `node --import tsx node_modules/@cucumber/cucumber/bin/cucumber.js` or host `node scripts/run-bdd.mjs`. The sanctioned path is Docker:
+
+```bash
+bash scripts/docker-bdd.sh                         # full suite; updates canonical .last-test-run.ndjson
+bash scripts/docker-bdd.sh --name "SPECGEN004_513" # filtered; writes bdd-last-run.ndjson only
+bash scripts/docker-bdd.sh --tags "@feature52"      # filtered; canonical left untouched
+```
+
+Filtered Docker BDD runs are clobber-safe: they do **not** overwrite `.dev-pomogator/.last-test-run.ndjson`. The `test_guard.ts` PreToolUse hook blocks raw host cucumber/run-bdd and points back to `docker-bdd.sh`.
+
 Run the built command using the Bash tool.
 
 ### Step 3.5: Start Monitor for real-time notifications

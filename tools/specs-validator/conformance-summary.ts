@@ -25,7 +25,7 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { readRecentEvents } from './audit-logger.ts';
-import { readTaskCensusCache, readTaskCensusPrev, sumTotal } from '../spec-graph/task-census.ts';
+import { readTaskCensusCache, readTaskCensusPrev, selectNextStepRoute, sumTotal } from '../spec-graph/task-census.ts';
 
 export interface AckState {
   ack_timestamp: string;
@@ -39,6 +39,8 @@ export interface SummaryPaths {
   repoRoot?: string;
   /** Soft-tier audit-log override (tests/isolation). Default: the real form-guards.log. */
   softLog?: string;
+  /** Active/current spec slugs from the prompt/env. Used only for scoped next-step routing. */
+  activeSpecSlugs?: Set<string> | string[];
 }
 
 const ENTRY_CAP = 1000; // FR-20: bound scan cost per file
@@ -146,7 +148,7 @@ export function buildConformanceSummary(paths: SummaryPaths = {}): string | null
  * total changed since the prev snapshot. Header + top-5 specs + «ещё N»; silent
  * when nothing is unfinished or the cache is absent.
  */
-export function buildTaskCensusLine(repoRoot = process.cwd()): string | null {
+export function buildTaskCensusLine(repoRoot = process.cwd(), opts: { activeSpecSlugs?: Set<string> | string[] } = {}): string | null {
   const c = readTaskCensusCache(repoRoot);
   if (!c) return null;
   if (c.total.open === 0 && c.total.doneRed === 0 && c.total.doneUnrun === 0) return null; // all clean → silent
@@ -163,11 +165,12 @@ export function buildTaskCensusLine(repoRoot = process.cwd()): string | null {
   }
 
   const lines = [header];
-  // FR-49a: name ONE concrete next open task (busiest unfinished spec with an
-  // open task) so «what's next» rides the standing signal, not just counts.
-  const nextSpec = c.specs.find((s) => s.nextOpen);
-  if (nextSpec?.nextOpen) {
-    lines.push(`   👉 следующее: ${nextSpec.nextOpen.title} [${nextSpec.nextOpen.id}]`);
+  // FR-49a: name a concrete next task ONLY inside the active/current spec scope.
+  // Never fall back to global `specs[0]` / busiest corpus work — that leaked
+  // spec-generator-v4 WS-F backlog into unrelated sessions/repos.
+  const next = selectNextStepRoute({ census: c, currentSpecSlugs: opts.activeSpecSlugs });
+  if (next?.source === 'current-spec') {
+    lines.push(`   👉 следующее: ${next.title} [${next.id}]`);
   }
   const TOP = 5;
   for (const s of c.specs.slice(0, TOP)) {

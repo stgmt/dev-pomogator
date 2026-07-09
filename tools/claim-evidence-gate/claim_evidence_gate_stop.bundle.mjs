@@ -534,6 +534,36 @@ function agentNextOpenTodo(transcriptPath) {
   const s = next?.subject?.trim();
   return s ? s : null;
 }
+function currentSlugCandidates(slugs) {
+  if (!slugs) return [];
+  return [...Array.isArray(slugs) ? slugs : slugs.values()].filter((s) => typeof s === "string" && s.trim());
+}
+function selectNextStepRoute(opts = {}) {
+  if (opts.transcriptPath) {
+    const todo = agentNextOpenTodo(opts.transcriptPath);
+    if (todo) return { source: "agent-todo", title: todo };
+  }
+  if (opts.awaitingAsync) {
+    return {
+      source: "active-async",
+      title: opts.asyncTitle ?? "\u0434\u043E\u0436\u0434\u0430\u0442\u044C\u0441\u044F \u0430\u043A\u0442\u0438\u0432\u043D\u043E\u0439 \u0444\u043E\u043D\u043E\u0432\u043E\u0439 \u0437\u0430\u0434\u0430\u0447\u0438 \u0438 \u043E\u0431\u0440\u0430\u0431\u043E\u0442\u0430\u0442\u044C \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442"
+    };
+  }
+  return selectCurrentSpecNextOpen(opts.census ?? null, opts);
+}
+function selectCurrentSpecNextOpen(census, opts = {}) {
+  if (!census) return null;
+  const bySlug = (slug) => {
+    if (!slug) return null;
+    const spec = census.specs.find((s) => s.slug === slug);
+    return spec?.nextOpen ? { source: "current-spec", spec: spec.slug, ...spec.nextOpen } : null;
+  };
+  const explicit = bySlug(opts.currentSpecSlug);
+  if (explicit) return explicit;
+  const candidates = currentSlugCandidates(opts.currentSpecSlugs);
+  if (candidates.length === 1) return bySlug(candidates[0]);
+  return null;
+}
 function readCacheFile(p) {
   try {
     const parsed = JSON.parse(fs2.readFileSync(p, "utf-8"));
@@ -786,7 +816,7 @@ function logFire(repoRoot, entry) {
   } catch {
   }
 }
-function censusReminder(c) {
+function censusReminder(c, nextStep) {
   try {
     if (!c) return null;
     const t = c.total;
@@ -794,9 +824,10 @@ function censusReminder(c) {
     const parts = [`${t.open} \u0432 \u0440\u0430\u0431\u043E\u0442\u0435`];
     if (t.doneRed) parts.push(`${t.doneRed} \u{1F534} done-but-red`);
     if (t.doneUnrun) parts.push(`${t.doneUnrun} \u23F8 done-but-not-run`);
-    const top = c.specs[0];
-    const next = top?.nextOpen ? ` \u0421\u043B\u0435\u0434\u0443\u044E\u0449\u0435\u0435: ${top.nextOpen.title} [${top.nextOpen.id}].` : "";
-    return `\u043F\u0435\u0440\u0435\u043F\u0438\u0441\u044C (${c.ts}): ${parts.join(", ")} \u043D\u0435\u0437\u0430\u043A\u0440\u044B\u0442\u043E${top ? `, \u0441\u0430\u043C\u0430\u044F \u043D\u0430\u0433\u0440\u0443\u0436\u0435\u043D\u043D\u0430\u044F \u2014 ${top.slug}` : ""}.${next}`;
+    const specs = c.specs.map((s) => s.slug).slice(0, 3).join(", ");
+    const scope = specs ? `, scope \u2014 ${specs}${c.specs.length > 3 ? ", \u2026" : ""}` : "";
+    const next = nextStep?.source === "current-spec" ? ` \u0421\u043B\u0435\u0434\u0443\u044E\u0449\u0435\u0435: ${nextStep.title}${nextStep.id ? ` [${nextStep.id}]` : ""}.` : "";
+    return `\u043F\u0435\u0440\u0435\u043F\u0438\u0441\u044C (${c.ts}): ${parts.join(", ")} \u043D\u0435\u0437\u0430\u043A\u0440\u044B\u0442\u043E${scope}.${next}`;
   } catch {
     return null;
   }
@@ -861,10 +892,9 @@ async function main() {
   const liveOpen = liveOpenForUncensusedSlugs(repoRoot, editedSlugs, globalCensus);
   const openWork = scopedSpecOpen + agentOpen + liveOpen;
   const recencySlug = lastEditedSpecSlug(tx);
-  const recencyNextOpen = recencySlug ? scoped?.specs?.find((s) => s.slug === recencySlug)?.nextOpen ?? null : null;
-  const nextStepHint = recencyNextOpen?.title ?? scoped?.specs?.[0]?.nextOpen?.title ?? agentNextOpenTodo(tx);
-  const nextLine = nextStepHint ? `
-\u{1F449} \u0421\u043B\u0435\u0434\u0443\u044E\u0449\u0435\u0435: ${nextStepHint}` : "";
+  let nextStep = null;
+  let nextLine = "";
+  let nextOpenTask = null;
   const mutatingToolsThisTurn = toolUses.filter((t) => MUTATING_TOOL.test(t.name) || isDoorWrite.test(t.name)).length;
   const gateSelfEditThisTurn = gateSelfEdit(toolUses);
   const selfMarkedBlockedOrBacklogThisTurn = selfMarkedBlockedOrBacklog(toolUses);
@@ -872,6 +902,15 @@ async function main() {
   const awaitingAsync = bgInFlightInWindow(rawTranscript) || bgJobMarkerActive(repoRoot) || agentBgCount > 0 || bgCommandInFlight(rawTranscript);
   const AWAITS_RESULT_RE = /когда\s+придёт|как\s+придёт|по\s+результату|результат[ауые]?\b[^.]{0,40}(?:обработ|свер|прочит|проверю|коммич|закоммич)|если\s+(?:\d|зел[её]н|green|ок\b|чисто)|при\s+зел[её]н|when\s+it\s+(?:returns|lands|completes|finishes)|on\s+the\s+result|once\s+it\s+(?:returns|lands|completes)/i;
   const nextStepAwaitsResult = awaitingAsync && AWAITS_RESULT_RE.test(claimText);
+  nextStep = selectNextStepRoute({
+    transcriptPath: tx,
+    census: scoped,
+    currentSpecSlug: recencySlug,
+    awaitingAsync
+  });
+  nextOpenTask = nextStep?.source === "current-spec" && nextStep.id ? { id: nextStep.id, title: nextStep.title } : null;
+  nextLine = nextStep ? `
+\u{1F449} \u0421\u043B\u0435\u0434\u0443\u044E\u0449\u0435\u0435: ${nextStep.title}` : "";
   const userRequest = lastUserPrompt(rawTranscript);
   const sessionPrompts = sessionUserPrompts(rawTranscript);
   const taskIsAboutTheGate = /пинатор|pinator|claim.?evidence.?gate|claim.?gate|сторож|судь[яеиёю]|meridian|\bjudge\b/i.test(userRequest);
@@ -884,7 +923,7 @@ async function main() {
   const priorMarker = readMarker(mp);
   const metaStreak = gateMetaThisTurn ? (priorMarker?.metaStreak ?? 0) + 1 : 0;
   let unsupported = firstUnsupported(claimText, toolUses, config.minSearch);
-  const censusMsg = isSpecCompletionClaim(claimText) ? censusReminder(scoped) : null;
+  const censusMsg = isSpecCompletionClaim(claimText) ? censusReminder(scoped, nextStep) : null;
   if (!unsupported && censusMsg) {
     unsupported = { cls: "spec-false-close", need: censusMsg };
   }
@@ -927,8 +966,8 @@ async function main() {
         // 1+3 (2026-06-21): the named next step consumes the pending bg result → legit wait
         // Phase 0 (2026-06-21): the next open task is ALREADY named → "which task?" is a fake hand-off;
         // a multi-spec session makes "which spec to finish" a genuine owner choice (a legit AskUserQuestion).
-        nextOpenTask: recencyNextOpen ?? scoped?.specs?.[0]?.nextOpen ?? null,
-        // FR-22: prefer the spec edited most recently
+        nextOpenTask,
+        // FR-49a: current-spec only; never global/scoped specs[0] fallback
         multiSpecSession: editedSlugs.size > 1,
         userRequest,
         // Phase 1: backstop — the judge approves a report-stop the user asked for
@@ -956,7 +995,7 @@ async function main() {
   }
   const metaOpen = openWork;
   if (!unsupported && !analysisOnly && metaStreak >= 2 && metaOpen > 0) {
-    unsupported = { cls: "gate-meta", need: nextStepHint ? `\u0434\u0435\u043B\u0430\u0439: ${nextStepHint}` : "\u0434\u0435\u043B\u0430\u0439 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u044B\u0439 \u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0438\u0439 \u0448\u0430\u0433 \u043F\u043E \u043E\u0442\u043A\u0440\u044B\u0442\u043E\u0439 \u0437\u0430\u0434\u0430\u0447\u0435" };
+    unsupported = { cls: "gate-meta", need: nextStep ? `\u0434\u0435\u043B\u0430\u0439: ${nextStep.title}` : "\u0434\u0435\u043B\u0430\u0439 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u044B\u0439 \u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0438\u0439 \u0448\u0430\u0433 \u043F\u043E \u043E\u0442\u043A\u0440\u044B\u0442\u043E\u0439 \u0437\u0430\u0434\u0430\u0447\u0435" };
   }
   if (!unsupported && metaStreak !== (priorMarker?.metaStreak ?? 0)) {
     writeMarkerAtomic(mp, {

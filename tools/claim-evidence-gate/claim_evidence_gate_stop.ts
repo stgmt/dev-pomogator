@@ -34,7 +34,7 @@ import { log as _logShared, normalizePath } from '../_shared/hook-utils.ts';
 import { markerPath, readMarker, writeMarkerAtomic, isWithinCooldown, hashFileList } from '../_shared/marker-utils.ts';
 import { extractTurnWindow, bgInFlightInWindow, agentBgInFlightCount, bgCommandInFlight, lastUserPrompt, sessionUserPrompts } from './turn_window.ts';
 import { firstUnsupported, isSpecCompletionClaim } from './claim_classifier.ts';
-import { readTaskCensusCache, scopeCensusToSlugs, sessionEditedSpecSlugs, lastEditedSpecSlug, agentOpenTodoCount, agentNextOpenTodo, liveOpenForUncensusedSlugs, type TaskCensusCache } from '../spec-graph/task-census.ts';
+import { readTaskCensusCache, scopeCensusToSlugs, sessionEditedSpecSlugs, lastEditedSpecSlug, agentOpenTodoCount, liveOpenForUncensusedSlugs, selectNextStepRoute, type NextStepRoute, type TaskCensusCache } from '../spec-graph/task-census.ts';
 import { judgeStop, judgeAvailable, buildJudgeNoTokenDemand, isJudgeArmed } from './meridian-judge.ts';
 import { MUTATING_TOOL, isDoorWrite, gateSelfEdit, selfMarkedBlockedOrBacklog } from './game_guard_facts.ts';
 
@@ -132,7 +132,7 @@ function logFire(repoRoot: string, entry: Record<string, unknown>): void {
  * the per-prompt banner reads — cheap JSON, never builds the graph). Null when the
  * cache is absent or everything is finished. Fail-open on any error.
  */
-function censusReminder(c: TaskCensusCache | null): string | null {
+function censusReminder(c: TaskCensusCache | null, nextStep: NextStepRoute | null): string | null {
   try {
     if (!c) return null;
     const t = c.total;
@@ -140,9 +140,10 @@ function censusReminder(c: TaskCensusCache | null): string | null {
     const parts = [`${t.open} в работе`];
     if (t.doneRed) parts.push(`${t.doneRed} 🔴 done-but-red`);
     if (t.doneUnrun) parts.push(`${t.doneUnrun} ⏸ done-but-not-run`);
-    const top = c.specs[0];
-    const next = top?.nextOpen ? ` Следующее: ${top.nextOpen.title} [${top.nextOpen.id}].` : '';
-    return `перепись (${c.ts}): ${parts.join(', ')} незакрыто${top ? `, самая нагруженная — ${top.slug}` : ''}.${next}`;
+    const specs = c.specs.map((s) => s.slug).slice(0, 3).join(', ');
+    const scope = specs ? `, scope — ${specs}${c.specs.length > 3 ? ', …' : ''}` : '';
+    const next = nextStep?.source === 'current-spec' ? ` Следующее: ${nextStep.title}${nextStep.id ? ` [${nextStep.id}]` : ''}.` : '';
+    return `перепись (${c.ts}): ${parts.join(', ')} незакрыто${scope}.${next}`;
   } catch {
     return null;
   }
@@ -253,17 +254,10 @@ async function main(): Promise<void> {
   // The open-work signal every firing precondition gates on: spec-scope open + the agent's own todos +
   // FR-19 live count of edited-but-uncensused specs.
   const openWork = scopedSpecOpen + agentOpen + liveOpen;
-  // Phase 2 part 1 (2026-06-21): a HELPFUL kick NAMES the next concrete step — the spec's next open task
-  // if any, else the agent's own next open todo (so a non-spec session is told «делай X», not just barked
-  // at). Cures the «слепота» the owner flagged: the gate should point at the next task, not only block.
-  // FR-22 (2026-06-25): offer the next task of the spec edited MOST RECENTLY (the one the agent is
-  // currently on), not an arbitrary `specs[0]` — so «pick what the gate offers» means a CONTEXTUAL task,
-  // not a random one. Falls back to specs[0] then the agent's own next todo (recency spec may be absent
-  // from the census snapshot — then specs[0] / todo covers it). Fail-open via the optional chains.
   const recencySlug = lastEditedSpecSlug(tx);
-  const recencyNextOpen = recencySlug ? (scoped?.specs?.find((s) => s.slug === recencySlug)?.nextOpen ?? null) : null;
-  const nextStepHint = recencyNextOpen?.title ?? scoped?.specs?.[0]?.nextOpen?.title ?? agentNextOpenTodo(tx);
-  const nextLine = nextStepHint ? `\n👉 Следующее: ${nextStepHint}` : '';
+  let nextStep: NextStepRoute | null = null;
+  let nextLine = '';
+  let nextOpenTask: { id: string; title: string } | null = null;
 
   // FR-10/FR-11: observable, agent-INDEPENDENT facts about THIS turn (the harness writes the tool_use
   // records; the agent cannot fabricate them). mutating = real changes attempted this turn (judge
@@ -307,6 +301,17 @@ async function main(): Promise<void> {
   const AWAITS_RESULT_RE =
     /когда\s+придёт|как\s+придёт|по\s+результату|результат[ауые]?\b[^.]{0,40}(?:обработ|свер|прочит|проверю|коммич|закоммич)|если\s+(?:\d|зел[её]н|green|ок\b|чисто)|при\s+зел[её]н|when\s+it\s+(?:returns|lands|completes|finishes)|on\s+the\s+result|once\s+it\s+(?:returns|lands|completes)/i;
   const nextStepAwaitsResult = awaitingAsync && AWAITS_RESULT_RE.test(claimText);
+  // FR-49a: one shared, scoped next-step route for every Stop-gate surface. Priority:
+  // agent's own todo → active async → current spec → none. The current-spec branch is
+  // strict: no fallback to global scoped?.specs[0], which was the WS-F/@feature35 leak.
+  nextStep = selectNextStepRoute({
+    transcriptPath: tx,
+    census: scoped,
+    currentSpecSlug: recencySlug,
+    awaitingAsync,
+  });
+  nextOpenTask = nextStep?.source === 'current-spec' && nextStep.id ? { id: nextStep.id, title: nextStep.title } : null;
+  nextLine = nextStep ? `\n👉 Следующее: ${nextStep.title}` : '';
 
   // Phase 1 (2026-06-21): intent of the LAST user prompt — the agent-independent INTENT signal (the agent
   // can't fake the user's words). analysis-only = an analysis word AND no implement verb → require ONLY a
@@ -355,7 +360,7 @@ async function main(): Promise<void> {
   // false-close — block even when tools ran and there is no defer phrasing (the gap the
   // text classes miss). Tightly spec-scoped: isSpecCompletionClaim is whole-spec (not
   // per-task) AND requires a REAL unfinished census, so a non-spec "fixed it" never trips it.
-  const censusMsg = isSpecCompletionClaim(claimText) ? censusReminder(scoped) : null;
+  const censusMsg = isSpecCompletionClaim(claimText) ? censusReminder(scoped, nextStep) : null;
   if (!unsupported && censusMsg) {
     unsupported = { cls: 'spec-false-close', need: censusMsg };
   }
@@ -450,7 +455,7 @@ async function main(): Promise<void> {
         nextStepAwaitsResult, // 1+3 (2026-06-21): the named next step consumes the pending bg result → legit wait
         // Phase 0 (2026-06-21): the next open task is ALREADY named → "which task?" is a fake hand-off;
         // a multi-spec session makes "which spec to finish" a genuine owner choice (a legit AskUserQuestion).
-        nextOpenTask: recencyNextOpen ?? scoped?.specs?.[0]?.nextOpen ?? null, // FR-22: prefer the spec edited most recently
+        nextOpenTask, // FR-49a: current-spec only; never global/scoped specs[0] fallback
         multiSpecSession: editedSlugs.size > 1,
         userRequest, // Phase 1: backstop — the judge approves a report-stop the user asked for
         sessionUserPrompts: sessionPrompts, // FR-28: the full human mandate — mandate-complete overrides nextOpenTask backlog
@@ -489,7 +494,7 @@ async function main(): Promise<void> {
   // with a BARE next-step demand. The hidden meta-reason is never shown, so it can't be gamed.
   const metaOpen = openWork; // spec-scope open + agent todos (K3)
   if (!unsupported && !analysisOnly && metaStreak >= 2 && metaOpen > 0) {
-    unsupported = { cls: 'gate-meta', need: nextStepHint ? `делай: ${nextStepHint}` : 'делай конкретный следующий шаг по открытой задаче' };
+    unsupported = { cls: 'gate-meta', need: nextStep ? `делай: ${nextStep.title}` : 'делай конкретный следующий шаг по открытой задаче' };
   }
   // α: persist the streak even on an approve, so the SECOND inspection is caught (resets to 0 on any
   // real-work / non-meta turn). Preserve the anti-loop fields; only metaStreak changes.

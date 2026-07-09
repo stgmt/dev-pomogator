@@ -31,6 +31,7 @@ interface CovWorld extends V4World {
   covMaps?: Record<string, string[] | undefined>;
   covSpecOf?: Record<string, string | undefined>;
   covScope?: { frRef?: string[]; tag?: string[]; explicit?: string[]; crossDone?: string; legacy?: string };
+  covOwn?: Record<string, string[] | string>;
   covVerified?: Record<string, string>;
   covReport?: ReturnType<typeof computeCoverage>;
 }
@@ -39,20 +40,22 @@ Given('the coverage scenarioKey normaliser', function () {
   // pure function — applied in the When
 });
 
-When('it normalises a slug node id a raw Done-When mention a legacy-typo id and plain prose', function (this: CovWorld) {
+When('it normalises a slug node id a raw Done-When mention a legacy-typo id a named non-v4 id and plain prose', function (this: CovWorld) {
   this.covKeys = {
     slug: scenarioKey('SCEN-specgen004-70-spec-status-derives'),
     mention: scenarioKey('@feature32 SPECGEN004_71 passes'),
     typo: scenarioKey('SCENGEN004_55 implements edges'),
+    named: scenarioKey('vitest TESTQUAL001_10 integration test PASS'),
     prose: scenarioKey('just some prose'),
   };
 });
 
-Then('it yields the canonical specgen004 id tolerates the legacy SCENGEN typo and returns null for prose', function (this: CovWorld) {
+Then('it yields canonical scenario ids tolerates the legacy SCENGEN typo and returns null for prose', function (this: CovWorld) {
   const k = this.covKeys!;
   assert.equal(k.slug, 'specgen004_70', 'a slug node id normalises to the canonical id');
   assert.equal(k.mention, 'specgen004_71', 'a raw Done-When mention normalises');
   assert.equal(k.typo, 'specgen004_55', 'the legacy SCENGEN004 typo is tolerated');
+  assert.equal(k.named, 'testqual001_10', 'a named non-v4 scenario id normalises');
   assert.equal(k.prose, null, 'plain prose with no id yields null');
 });
 
@@ -215,6 +218,18 @@ When('computeCoverage scores them end to end', function (this: CovWorld) {
     { id: 'orphan-task', doneWhen: 'no scenarios here', refs: [] },
   ];
   this.covReport = computeCoverage(tasks, scenarios);
+
+  const ownScenarioReport = computeCoverage(
+    [{ id: 'strong-tests:t29', doneWhen: 'covered by TESTQUAL001_10 and @feature32', refs: ['FR-32'], spec: 'strong-tests' }],
+    [
+      { id: 'SCEN-testqual001-10-go-detector', tags: ['@feature32'], result: 'PASSED', spec: 'strong-tests' },
+      { id: 'SCEN-testqual001-11-manual-sibling', tags: ['@feature32', '@manual'], spec: 'strong-tests' },
+    ],
+  );
+  this.covOwn = {
+    scenarios: ownScenarioReport.tasks['strong-tests:t29'].scenarios,
+    status: ownScenarioReport.tasks['strong-tests:t29'].verified_status,
+  };
 });
 
 Given('a coverage run over one passed and one undefined scenario with a done a mixed and an orphan task', function () {
@@ -222,7 +237,7 @@ Given('a coverage run over one passed and one undefined scenario with a done a m
 });
 
 Then(
-  'the bucket totals reconcile with the scenario count and the done task is DONE the mixed task IN_PROGRESS and the orphan task unverified',
+  'the bucket totals reconcile with the scenario count the done task is DONE the mixed task IN_PROGRESS the orphan task unverified and a TESTQUAL own-scenario task is DONE without same-feature siblings',
   function (this: CovWorld) {
     const r = this.covReport!;
     const sum = (Object.keys(r.buckets) as Bucket[]).reduce((n, b) => n + r.totals[b], 0);
@@ -231,5 +246,7 @@ Then(
     assert.equal(r.tasks['done-task'].verified_status, 'DONE', 'all mapped scenarios passed → DONE');
     assert.equal(r.tasks['mixed-task'].verified_status, 'IN_PROGRESS', 'one undefined scenario → never DONE (honesty gate)');
     assert.equal(r.tasks['orphan-task'].verified_status, 'unverified', 'no mapped scenarios → unverified');
+    assert.deepEqual(this.covOwn!.scenarios, ['SCEN-testqual001-10-go-detector'], 'explicit TESTQUAL001_10 own scenario wins over same-feature siblings');
+    assert.equal(this.covOwn!.status, 'DONE', 'the own-scenario task is DONE because its explicit proof passed');
   },
 );

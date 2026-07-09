@@ -1,11 +1,11 @@
 {
-  "ran_at": "2026-06-18T23:43:13.553Z",
-  "specs_total": 51,
+  "ran_at": "2026-07-09T01:34:34.798Z",
+  "specs_total": 71,
   "crashed_count": 0,
-  "erroring_count": 40,
-  "clean_count": 11,
-  "duration_total_ms": 85141.32,
-  "duration_wall_ms": 85151,
+  "erroring_count": 46,
+  "clean_count": 25,
+  "duration_total_ms": 190464.74,
+  "duration_wall_ms": 190481,
   "crashed": [],
   "erroring": [
     {
@@ -15,11 +15,11 @@
         "FC_CREATE_EXISTS": 2,
         "FC_DELETE_MISSING": 1,
         "FC_EDIT_MISSING": 1,
-        "NARRATIVE_PATH_MISSING": 12,
+        "NARRATIVE_PATH_MISSING": 13,
         "CODE_DRIFT_FR_ALREADY_DONE": 8,
         "TASKS_FC_CONSISTENCY": 4
       },
-      "duration_ms": 1195.6
+      "duration_ms": 2325.3
     },
     {
       "slug": "architecture-decision-builder",
@@ -31,104 +31,143 @@
         "CODE_DRIFT_FR_ALREADY_DONE": 19,
         "TASKS_FC_CONSISTENCY": 37
       },
-      "duration_ms": 3453.28
+      "duration_ms": 9138.84
     },
     {
       "slug": "auto-capture",
-      "error": 15,
+      "error": 14,
       "codes": {
         "FC_EDIT_MISSING": 3,
-        "FC_CREATE_EXISTS": 12,
+        "FC_CREATE_EXISTS": 11,
         "NARRATIVE_PATH_MISSING": 13,
         "CODE_DRIFT_FR_ALREADY_DONE": 4,
         "TASKS_FC_CONSISTENCY": 13
       },
-      "duration_ms": 1240.75
+      "duration_ms": 1757.5
+    },
+    {
+      "slug": "bdd-mutation-quality",
+      "error": 5,
+      "codes": {
+        "FC_CREATE_EXISTS": 5,
+        "NARRATIVE_PATH_MISSING": 2,
+        "CODE_DRIFT_FR_ALREADY_DONE": 3,
+        "TASKS_FC_CONSISTENCY": 12
+      },
+      "duration_ms": 714.05
+    },
+    {
+      "slug": "bdd-only-migration",
+      "error": 4,
+      "codes": {
+        "FC_CREATE_EXISTS": 4,
+        "CODE_DRIFT_FR_ALREADY_DONE": 9,
+        "TASKS_FC_CONSISTENCY": 13
+      },
+      "duration_ms": 1403.36
     },
     {
       "slug": "bg-task-guard",
-      "error": 3,
+      "error": 2,
       "codes": {
         "FC_EDIT_MISSING": 1,
-        "FC_CREATE_EXISTS": 2,
+        "FC_CREATE_EXISTS": 1,
         "NARRATIVE_PATH_MISSING": 4,
         "CODE_DRIFT_FR_ALREADY_DONE": 6
       },
-      "duration_ms": 1344.12
+      "duration_ms": 5648.11
+    },
+    {
+      "slug": "carl-integration",
+      "error": 13,
+      "codes": {
+        "FC_CREATE_EXISTS": 13,
+        "NARRATIVE_PATH_MISSING": 5,
+        "CODE_DRIFT_FR_ALREADY_DONE": 9,
+        "TASKS_FC_CONSISTENCY": 5
+      },
+      "duration_ms": 5098.97
+    },
+    {
+      "slug": "claim-evidence-gate",
+      "error": 1,
+      "codes": {
+        "FC_DELETE_MISSING": 1,
+        "NARRATIVE_PATH_MISSING": 1,
+        "CODE_DRIFT_FR_ALREADY_DONE": 16,
+        "TASKS_FC_CONSISTENCY": 7
+      },
+      "duration_ms": 3615.42
     },
     {
       "slug": "claude-mem-integration",
       "error": 4,
       "codes": {
-        "FC_V1_LAYOUT_DRIFT": 1,
-        "FC_EDIT_MISSING": 2,
-        "FC_CREATE_EXISTS": 1,
-        "NARRATIVE_PATH_MISSING": 11,
-        "TASKS_FC_CONSISTENCY": 6
+        "FC_CREATE_EXISTS": 4,
+        "NARRATIVE_PATH_MISSING": 2,
+        "CODE_DRIFT_FR_ALREADY_DONE": 3,
+        "TASKS_FC_CONSISTENCY": 7
       },
-      "duration_ms": 755.6
+      "duration_ms": 1083.25
     },
     {
       "slug": "codex-cli-support",
-      "error": 9,
+      "error": 10,
       "codes": {
         "FC_V1_LAYOUT_DRIFT": 6,
-        "FC_EDIT_MISSING": 3,
-        "NARRATIVE_PATH_MISSING": 56,
+        "FC_EDIT_MISSING": 4,
+        "NARRATIVE_PATH_MISSING": 40,
         "CODE_DRIFT_FR_ALREADY_DONE": 12,
         "TASKS_FC_CONSISTENCY": 20,
         "FC_GLOB_PATTERN": 1
       },
-      "duration_ms": 1635.51
+      "duration_ms": 2298.73
+    },
+    {
+      "slug": "codex-init",
+      "error": 1,
+      "codes": {
+        "FC_CREATE_EXISTS": 1,
+        "CODE_DRIFT_FR_ALREADY_DONE": 7,
+        "FC_ACTION_UNCHECKED": 1,
+        "TASKS_FC_CONSISTENCY": 2
+      },
+      "duration_ms": 3762.46
+    },
+    {
+      "slug": "context-menu",
+      "error": 1,
+      "codes": {
+        "FC_CREATE_EXISTS": 1,
+        "CODE_DRIFT_FR_ALREADY_DONE": 10,
+        "TASKS_FC_CONSISTENCY": 2
+      },
+      "duration_ms": 1908.83
     },
     {
       "slug": "create-specs-bdd-enforcement",
-      "error": 15,
+      "error": 12,
       "codes": {
-        "FC_EDIT_MISSING": 6,
-        "FC_CREATE_EXISTS": 9,
-        "NARRATIVE_PATH_MISSING": 16,
+        "FC_EDIT_MISSING": 4,
+        "FC_CREATE_EXISTS": 8,
+        "NARRATIVE_PATH_MISSING": 11,
         "CODE_DRIFT_FR_ALREADY_DONE": 8,
         "TASKS_FC_CONSISTENCY": 20
       },
-      "duration_ms": 997.63
+      "duration_ms": 1024.51
     },
     {
       "slug": "cursor-dead-code-cleanup",
-      "error": 4,
+      "error": 3,
       "codes": {
         "FC_EDIT_MISSING": 1,
         "FC_V1_LAYOUT_DRIFT": 1,
-        "FC_CREATE_EXISTS": 2,
+        "FC_CREATE_EXISTS": 1,
         "NARRATIVE_PATH_MISSING": 2,
         "CODE_DRIFT_FR_ALREADY_DONE": 1,
         "TASKS_FC_CONSISTENCY": 2
       },
-      "duration_ms": 426.04
-    },
-    {
-      "slug": "dev-pomogator-canonical-plugin",
-      "error": 5,
-      "codes": {
-        "FC_CREATE_EXISTS": 5,
-        "NARRATIVE_PATH_MISSING": 9,
-        "CODE_DRIFT_FR_ALREADY_DONE": 11,
-        "TASKS_FC_CONSISTENCY": 23,
-        "FC_PLACEHOLDER_PATH": 2,
-        "FC_GLOB_PATTERN": 1
-      },
-      "duration_ms": 1253.03
-    },
-    {
-      "slug": "docker-win-test",
-      "error": 2,
-      "codes": {
-        "FC_CREATE_EXISTS": 2,
-        "NARRATIVE_PATH_MISSING": 1,
-        "FC_ACTION_UNCHECKED": 2,
-        "TASKS_FC_CONSISTENCY": 5
-      },
-      "duration_ms": 466.82
+      "duration_ms": 626.01
     },
     {
       "slug": "extension-beta-flag",
@@ -141,30 +180,30 @@
         "CODE_DRIFT_FR_ALREADY_DONE": 6,
         "TASKS_FC_CONSISTENCY": 3
       },
-      "duration_ms": 619.32
+      "duration_ms": 1037.02
     },
     {
       "slug": "fix-bg-output-loss",
-      "error": 4,
+      "error": 3,
       "codes": {
-        "FC_CREATE_EXISTS": 4,
+        "FC_CREATE_EXISTS": 3,
         "NARRATIVE_PATH_MISSING": 16,
-        "CODE_DRIFT_FR_ALREADY_DONE": 1,
+        "CODE_DRIFT_FR_ALREADY_DONE": 2,
         "TASKS_FC_CONSISTENCY": 5
       },
-      "duration_ms": 1741.06
+      "duration_ms": 2914.1
     },
     {
       "slug": "forbid-root-artifacts",
-      "error": 6,
+      "error": 7,
       "codes": {
-        "FC_EDIT_MISSING": 6,
-        "NARRATIVE_PATH_MISSING": 6,
+        "FC_EDIT_MISSING": 7,
+        "NARRATIVE_PATH_MISSING": 15,
         "CODE_DRIFT_FR_ALREADY_DONE": 4,
         "FC_ACTION_UNCHECKED": 1,
-        "TASKS_FC_CONSISTENCY": 12
+        "TASKS_FC_CONSISTENCY": 11
       },
-      "duration_ms": 506.81
+      "duration_ms": 999.42
     },
     {
       "slug": "global-dir-guard",
@@ -175,19 +214,7 @@
         "CODE_DRIFT_FR_ALREADY_DONE": 3,
         "TASKS_FC_CONSISTENCY": 6
       },
-      "duration_ms": 562.91
-    },
-    {
-      "slug": "hyperv-test-runner",
-      "error": 24,
-      "codes": {
-        "FC_CREATE_EXISTS": 24,
-        "NARRATIVE_PATH_MISSING": 4,
-        "CODE_DRIFT_FR_ALREADY_DONE": 12,
-        "TASKS_FC_CONSISTENCY": 19,
-        "FC_ACTION_UNCHECKED": 3
-      },
-      "duration_ms": 1399.51
+      "duration_ms": 282.8
     },
     {
       "slug": "install-diagnostics",
@@ -201,7 +228,17 @@
         "FC_GLOB_PATTERN": 1,
         "FC_ACTION_UNCHECKED": 1
       },
-      "duration_ms": 1357.47
+      "duration_ms": 1303.79
+    },
+    {
+      "slug": "lint-self-bootstrap",
+      "error": 2,
+      "codes": {
+        "FC_CREATE_EXISTS": 2,
+        "CODE_DRIFT_FR_ALREADY_DONE": 5,
+        "TASKS_FC_CONSISTENCY": 7
+      },
+      "duration_ms": 667.18
     },
     {
       "slug": "native-statusline",
@@ -210,61 +247,73 @@
         "FC_CREATE_EXISTS": 8,
         "FC_DELETE_MISSING": 1,
         "NARRATIVE_PATH_MISSING": 3,
-        "CODE_DRIFT_FR_ALREADY_DONE": 9,
+        "CODE_DRIFT_FR_ALREADY_DONE": 10,
         "TASKS_FC_CONSISTENCY": 12
       },
-      "duration_ms": 1257.42
+      "duration_ms": 984.07
     },
     {
       "slug": "onboard-repo-phase0",
-      "error": 32,
+      "error": 53,
       "codes": {
-        "FC_CREATE_EXISTS": 28,
-        "FC_EDIT_MISSING": 3,
+        "FC_CREATE_EXISTS": 50,
+        "FC_EDIT_MISSING": 2,
         "FC_V1_LAYOUT_DRIFT": 1,
-        "NARRATIVE_PATH_MISSING": 45,
+        "NARRATIVE_PATH_MISSING": 41,
         "CODE_DRIFT_FR_ALREADY_DONE": 16,
         "TASKS_FC_CONSISTENCY": 38,
         "FC_PARSE_UNPARSEABLE": 2,
         "FC_ACTION_UNCHECKED": 1
       },
-      "duration_ms": 2495.74
+      "duration_ms": 3160.88
     },
     {
       "slug": "personal-pomogator",
-      "error": 22,
+      "error": 28,
       "codes": {
-        "FC_CREATE_EXISTS": 15,
-        "FC_EDIT_MISSING": 5,
+        "FC_CREATE_EXISTS": 22,
+        "FC_EDIT_MISSING": 4,
         "FC_V1_LAYOUT_DRIFT": 2,
         "NARRATIVE_PATH_MISSING": 26,
-        "CODE_DRIFT_FR_ALREADY_DONE": 15,
-        "TASKS_FC_CONSISTENCY": 31
+        "CODE_DRIFT_FR_ALREADY_DONE": 16,
+        "TASKS_FC_CONSISTENCY": 42
       },
-      "duration_ms": 1816.34
+      "duration_ms": 7000.04
+    },
+    {
+      "slug": "plan-evidence-enforcement",
+      "error": 2,
+      "codes": {
+        "FC_CREATE_EXISTS": 1,
+        "FC_EDIT_MISSING": 1,
+        "NARRATIVE_PATH_MISSING": 1,
+        "CODE_DRIFT_FR_ALREADY_DONE": 2,
+        "TASKS_FC_CONSISTENCY": 6
+      },
+      "duration_ms": 464.43
     },
     {
       "slug": "plan-pomogator-plain-language",
-      "error": 5,
+      "error": 6,
       "codes": {
-        "FC_EDIT_MISSING": 5,
-        "NARRATIVE_PATH_MISSING": 14,
+        "FC_EDIT_MISSING": 6,
+        "NARRATIVE_PATH_MISSING": 17,
         "CODE_DRIFT_FR_ALREADY_DONE": 7,
         "TASKS_FC_CONSISTENCY": 2
       },
-      "duration_ms": 840.63
+      "duration_ms": 2692.3
     },
     {
       "slug": "plan-pomogator-prompt-isolation",
-      "error": 6,
+      "error": 7,
       "codes": {
-        "FC_EDIT_MISSING": 5,
+        "FC_EDIT_MISSING": 6,
         "FC_CREATE_EXISTS": 1,
-        "NARRATIVE_PATH_MISSING": 11,
+        "NARRATIVE_PATH_MISSING": 14,
         "CODE_DRIFT_FR_ALREADY_DONE": 7,
         "TASKS_FC_CONSISTENCY": 3
       },
-      "duration_ms": 742.77
+      "duration_ms": 1711.45
     },
     {
       "slug": "pomogator-doctor",
@@ -278,7 +327,7 @@
         "FC_GLOB_PATTERN": 1,
         "FC_ACTION_UNCHECKED": 2
       },
-      "duration_ms": 4757.79
+      "duration_ms": 12119.29
     },
     {
       "slug": "prompt-suggest",
@@ -288,7 +337,7 @@
         "NARRATIVE_PATH_MISSING": 4,
         "TASKS_FC_CONSISTENCY": 6
       },
-      "duration_ms": 772.89
+      "duration_ms": 839.74
     },
     {
       "slug": "session-pilot",
@@ -299,105 +348,116 @@
         "CODE_DRIFT_FR_ALREADY_DONE": 9,
         "TASKS_FC_CONSISTENCY": 33
       },
-      "duration_ms": 3000.01
+      "duration_ms": 7288.65
     },
     {
       "slug": "skill-listing-budget",
       "error": 1,
       "codes": {
         "FC_CREATE_EXISTS": 1,
-        "NARRATIVE_PATH_MISSING": 14,
+        "NARRATIVE_PATH_MISSING": 20,
         "CODE_DRIFT_FR_ALREADY_DONE": 4,
         "TASKS_FC_CONSISTENCY": 15,
         "FC_ACTION_UNCHECKED": 3
       },
-      "duration_ms": 459.04
+      "duration_ms": 1037.5
     },
     {
       "slug": "skills-rules-optimizer",
       "error": 12,
       "codes": {
         "FC_CREATE_EXISTS": 12,
-        "NARRATIVE_PATH_MISSING": 5,
+        "NARRATIVE_PATH_MISSING": 7,
         "CODE_DRIFT_FR_ALREADY_DONE": 9,
         "TASKS_FC_CONSISTENCY": 32,
         "FC_ACTION_UNCHECKED": 3
       },
-      "duration_ms": 1330.64
+      "duration_ms": 2897.23
+    },
+    {
+      "slug": "spec-generator-v3",
+      "error": 25,
+      "codes": {
+        "FC_CREATE_EXISTS": 18,
+        "FC_EDIT_MISSING": 7,
+        "NARRATIVE_PATH_MISSING": 10,
+        "CODE_DRIFT_FR_ALREADY_DONE": 16,
+        "TASKS_FC_CONSISTENCY": 38
+      },
+      "duration_ms": 3507.99
     },
     {
       "slug": "spec-generator-v4",
-      "error": 70,
+      "error": 73,
       "codes": {
-        "FC_CREATE_EXISTS": 70,
-        "NARRATIVE_PATH_MISSING": 61,
-        "CODE_DRIFT_FR_ALREADY_DONE": 104,
-        "TASKS_FC_CONSISTENCY": 190,
+        "FC_CREATE_EXISTS": 73,
+        "NARRATIVE_PATH_MISSING": 71,
+        "CODE_DRIFT_FR_ALREADY_DONE": 112,
+        "TASKS_FC_CONSISTENCY": 213,
         "FC_GLOB_PATTERN": 1,
-        "FC_PARSE_UNPARSEABLE": 12,
+        "FC_PARSE_UNPARSEABLE": 13,
         "FC_ACTION_UNCHECKED": 1
       },
-      "duration_ms": 22719.54
+      "duration_ms": 48353.15
     },
     {
       "slug": "spec-phase-gate",
-      "error": 5,
+      "error": 4,
       "codes": {
-        "FC_EDIT_MISSING": 4,
+        "FC_EDIT_MISSING": 3,
         "FC_CREATE_EXISTS": 1,
-        "NARRATIVE_PATH_MISSING": 16,
-        "CODE_DRIFT_FR_ALREADY_DONE": 5,
+        "NARRATIVE_PATH_MISSING": 11,
+        "CODE_DRIFT_FR_ALREADY_DONE": 7,
         "TASKS_FC_CONSISTENCY": 6
       },
-      "duration_ms": 1627.55
+      "duration_ms": 1953.51
     },
     {
       "slug": "spec-variant-matrix",
-      "error": 19,
+      "error": 18,
       "codes": {
-        "FC_CREATE_EXISTS": 19,
-        "NARRATIVE_PATH_MISSING": 2,
+        "FC_CREATE_EXISTS": 18,
+        "NARRATIVE_PATH_MISSING": 1,
         "CODE_DRIFT_FR_ALREADY_DONE": 7,
         "TASKS_FC_CONSISTENCY": 25
       },
-      "duration_ms": 1392.67
+      "duration_ms": 1251.64
     },
     {
       "slug": "specs-management-as-skill",
-      "error": 40,
+      "error": 38,
       "codes": {
         "FC_CREATE_EXISTS": 33,
-        "FC_DELETE_MISSING": 6,
-        "FC_EDIT_MISSING": 1,
-        "NARRATIVE_PATH_MISSING": 25,
+        "FC_DELETE_MISSING": 5,
+        "NARRATIVE_PATH_MISSING": 19,
         "CODE_DRIFT_FR_ALREADY_DONE": 13,
         "TASKS_FC_CONSISTENCY": 33,
         "FC_PARSE_UNPARSEABLE": 6
       },
-      "duration_ms": 2859.12
+      "duration_ms": 3913.92
     },
     {
       "slug": "stale-build-guard",
-      "error": 3,
+      "error": 2,
       "codes": {
         "FC_EDIT_MISSING": 1,
-        "FC_CREATE_EXISTS": 2,
-        "NARRATIVE_PATH_MISSING": 8,
+        "FC_CREATE_EXISTS": 1,
+        "NARRATIVE_PATH_MISSING": 9,
         "CODE_DRIFT_FR_ALREADY_DONE": 7,
         "TASKS_FC_CONSISTENCY": 3
       },
-      "duration_ms": 726.44
+      "duration_ms": 1022.54
     },
     {
       "slug": "strong-tests",
       "error": 8,
       "codes": {
         "FC_CREATE_EXISTS": 8,
-        "NARRATIVE_PATH_MISSING": 38,
+        "NARRATIVE_PATH_MISSING": 40,
         "CODE_DRIFT_FR_ALREADY_DONE": 7,
         "TASKS_FC_CONSISTENCY": 17
       },
-      "duration_ms": 2026.79
+      "duration_ms": 2472.4
     },
     {
       "slug": "suggest-rules-insights",
@@ -409,7 +469,7 @@
         "TASKS_FC_CONSISTENCY": 3,
         "FC_ACTION_UNCHECKED": 1
       },
-      "duration_ms": 1489.67
+      "duration_ms": 929.46
     },
     {
       "slug": "test-statusline",
@@ -418,22 +478,22 @@
         "FC_CREATE_EXISTS": 1,
         "FC_EDIT_MISSING": 2,
         "NARRATIVE_PATH_MISSING": 16,
-        "CODE_DRIFT_FR_ALREADY_DONE": 8,
+        "CODE_DRIFT_FR_ALREADY_DONE": 9,
         "TASKS_FC_CONSISTENCY": 17
       },
-      "duration_ms": 2175.63
+      "duration_ms": 1576.21
     },
     {
       "slug": "tests-create-update",
-      "error": 4,
+      "error": 3,
       "codes": {
-        "FC_CREATE_EXISTS": 3,
+        "FC_CREATE_EXISTS": 2,
         "FC_EDIT_MISSING": 1,
         "NARRATIVE_PATH_MISSING": 3,
         "CODE_DRIFT_FR_ALREADY_DONE": 1,
         "TASKS_FC_CONSISTENCY": 2
       },
-      "duration_ms": 637.06
+      "duration_ms": 802.78
     },
     {
       "slug": "tui-statusline-mode",
@@ -445,72 +505,72 @@
         "CODE_DRIFT_FR_ALREADY_DONE": 4,
         "TASKS_FC_CONSISTENCY": 7
       },
-      "duration_ms": 924.08
+      "duration_ms": 1255.32
     },
     {
       "slug": "tui-test-runner",
-      "error": 6,
+      "error": 5,
       "codes": {
-        "FC_CREATE_EXISTS": 6,
+        "FC_CREATE_EXISTS": 5,
         "NARRATIVE_PATH_MISSING": 47,
         "CODE_DRIFT_FR_ALREADY_DONE": 9,
         "TASKS_FC_CONSISTENCY": 25
       },
-      "duration_ms": 1453.71
+      "duration_ms": 7058.32
     },
     {
       "slug": "tui-test-runner-v2",
-      "error": 10,
+      "error": 9,
       "codes": {
         "FC_EDIT_MISSING": 7,
-        "FC_CREATE_EXISTS": 3,
+        "FC_CREATE_EXISTS": 2,
         "NARRATIVE_PATH_MISSING": 27,
         "CODE_DRIFT_FR_ALREADY_DONE": 1,
         "TASKS_FC_CONSISTENCY": 10
       },
-      "duration_ms": 817.02
+      "duration_ms": 3794.99
     },
     {
       "slug": "verify-generic-scope-fix",
-      "error": 32,
+      "error": 27,
       "codes": {
         "FC_EDIT_MISSING": 3,
-        "FC_CREATE_EXISTS": 29,
-        "NARRATIVE_PATH_MISSING": 19,
+        "FC_CREATE_EXISTS": 24,
+        "NARRATIVE_PATH_MISSING": 20,
         "CODE_DRIFT_FR_ALREADY_DONE": 9,
         "TASKS_FC_CONSISTENCY": 45
       },
-      "duration_ms": 2526.65
+      "duration_ms": 8356.85
     },
     {
       "slug": "worktree-setup",
-      "error": 11,
+      "error": 10,
       "codes": {
-        "FC_CREATE_EXISTS": 9,
+        "FC_CREATE_EXISTS": 8,
         "FC_V1_LAYOUT_DRIFT": 1,
         "FC_EDIT_MISSING": 1,
         "NARRATIVE_PATH_MISSING": 15,
         "CODE_DRIFT_FR_ALREADY_DONE": 11,
         "TASKS_FC_CONSISTENCY": 8
       },
-      "duration_ms": 1353.57
+      "duration_ms": 1974.96
     }
   ],
   "slowest": [
     {
       "slug": "spec-generator-v4",
-      "duration_ms": 22719.54,
-      "total": 439,
-      "error": 70,
-      "warning": 247,
-      "info": 122,
+      "duration_ms": 48353.15,
+      "total": 484,
+      "error": 73,
+      "warning": 270,
+      "info": 141,
       "codes": {
-        "FC_CREATE_EXISTS": 70,
-        "NARRATIVE_PATH_MISSING": 61,
-        "CODE_DRIFT_FR_ALREADY_DONE": 104,
-        "TASKS_FC_CONSISTENCY": 190,
+        "FC_CREATE_EXISTS": 73,
+        "NARRATIVE_PATH_MISSING": 71,
+        "CODE_DRIFT_FR_ALREADY_DONE": 112,
+        "TASKS_FC_CONSISTENCY": 213,
         "FC_GLOB_PATTERN": 1,
-        "FC_PARSE_UNPARSEABLE": 12,
+        "FC_PARSE_UNPARSEABLE": 13,
         "FC_ACTION_UNCHECKED": 1
       },
       "has_fr_md": true,
@@ -519,7 +579,7 @@
     },
     {
       "slug": "pomogator-doctor",
-      "duration_ms": 4757.79,
+      "duration_ms": 12119.29,
       "total": 96,
       "error": 25,
       "warning": 49,
@@ -539,7 +599,7 @@
     },
     {
       "slug": "architecture-decision-builder",
-      "duration_ms": 3453.28,
+      "duration_ms": 9138.84,
       "total": 66,
       "error": 6,
       "warning": 24,
@@ -556,8 +616,26 @@
       "has_tasks_md": true
     },
     {
+      "slug": "verify-generic-scope-fix",
+      "duration_ms": 8356.85,
+      "total": 101,
+      "error": 27,
+      "warning": 45,
+      "info": 29,
+      "codes": {
+        "FC_EDIT_MISSING": 3,
+        "FC_CREATE_EXISTS": 24,
+        "NARRATIVE_PATH_MISSING": 20,
+        "CODE_DRIFT_FR_ALREADY_DONE": 9,
+        "TASKS_FC_CONSISTENCY": 45
+      },
+      "has_fr_md": true,
+      "has_fc_md": true,
+      "has_tasks_md": true
+    },
+    {
       "slug": "session-pilot",
-      "duration_ms": 3000.01,
+      "duration_ms": 7288.65,
       "total": 58,
       "error": 6,
       "warning": 23,
@@ -571,54 +649,34 @@
       "has_fr_md": true,
       "has_fc_md": true,
       "has_tasks_md": true
-    },
-    {
-      "slug": "specs-management-as-skill",
-      "duration_ms": 2859.12,
-      "total": 117,
-      "error": 40,
-      "warning": 47,
-      "info": 30,
-      "codes": {
-        "FC_CREATE_EXISTS": 33,
-        "FC_DELETE_MISSING": 6,
-        "FC_EDIT_MISSING": 1,
-        "NARRATIVE_PATH_MISSING": 25,
-        "CODE_DRIFT_FR_ALREADY_DONE": 13,
-        "TASKS_FC_CONSISTENCY": 33,
-        "FC_PARSE_UNPARSEABLE": 6
-      },
-      "has_fr_md": true,
-      "has_fc_md": true,
-      "has_tasks_md": true
     }
   ],
   "code_frequency": {
-    "FC_CREATE_EXISTS": 361,
+    "FC_CREATE_EXISTS": 394,
     "FC_DELETE_MISSING": 11,
-    "FC_EDIT_MISSING": 82,
-    "NARRATIVE_PATH_MISSING": 706,
-    "CODE_DRIFT_FR_ALREADY_DONE": 413,
-    "TASKS_FC_CONSISTENCY": 849,
-    "FC_PLACEHOLDER_PATH": 10,
-    "FC_V1_LAYOUT_DRIFT": 15,
+    "FC_EDIT_MISSING": 86,
+    "NARRATIVE_PATH_MISSING": 725,
+    "CODE_DRIFT_FR_ALREADY_DONE": 496,
+    "TASKS_FC_CONSISTENCY": 954,
+    "FC_PLACEHOLDER_PATH": 16,
+    "FC_V1_LAYOUT_DRIFT": 14,
     "FC_GLOB_PATTERN": 5,
-    "FC_ACTION_UNCHECKED": 18,
-    "FC_PARSE_UNPARSEABLE": 63
+    "FC_ACTION_UNCHECKED": 14,
+    "FC_PARSE_UNPARSEABLE": 64
   },
   "per_spec": [
     {
       "slug": "answer-simple",
-      "duration_ms": 1195.6,
-      "total": 28,
+      "duration_ms": 2325.3,
+      "total": 29,
       "error": 4,
-      "warning": 22,
+      "warning": 23,
       "info": 2,
       "codes": {
         "FC_CREATE_EXISTS": 2,
         "FC_DELETE_MISSING": 1,
         "FC_EDIT_MISSING": 1,
-        "NARRATIVE_PATH_MISSING": 12,
+        "NARRATIVE_PATH_MISSING": 13,
         "CODE_DRIFT_FR_ALREADY_DONE": 8,
         "TASKS_FC_CONSISTENCY": 4
       },
@@ -628,7 +686,7 @@
     },
     {
       "slug": "architecture-decision-builder",
-      "duration_ms": 3453.28,
+      "duration_ms": 9138.84,
       "total": 66,
       "error": 6,
       "warning": 24,
@@ -646,7 +704,7 @@
     },
     {
       "slug": "archive",
-      "duration_ms": 0.09,
+      "duration_ms": 0.16,
       "total": 0,
       "error": 0,
       "warning": 0,
@@ -658,14 +716,14 @@
     },
     {
       "slug": "auto-capture",
-      "duration_ms": 1240.75,
-      "total": 45,
-      "error": 15,
+      "duration_ms": 1757.5,
+      "total": 44,
+      "error": 14,
       "warning": 25,
       "info": 5,
       "codes": {
         "FC_EDIT_MISSING": 3,
-        "FC_CREATE_EXISTS": 12,
+        "FC_CREATE_EXISTS": 11,
         "NARRATIVE_PATH_MISSING": 13,
         "CODE_DRIFT_FR_ALREADY_DONE": 4,
         "TASKS_FC_CONSISTENCY": 13
@@ -675,15 +733,62 @@
       "has_tasks_md": true
     },
     {
+      "slug": "bdd-mutation-quality",
+      "duration_ms": 714.05,
+      "total": 22,
+      "error": 5,
+      "warning": 6,
+      "info": 11,
+      "codes": {
+        "FC_CREATE_EXISTS": 5,
+        "NARRATIVE_PATH_MISSING": 2,
+        "CODE_DRIFT_FR_ALREADY_DONE": 3,
+        "TASKS_FC_CONSISTENCY": 12
+      },
+      "has_fr_md": true,
+      "has_fc_md": true,
+      "has_tasks_md": true
+    },
+    {
+      "slug": "bdd-only-migration",
+      "duration_ms": 1403.36,
+      "total": 26,
+      "error": 4,
+      "warning": 10,
+      "info": 12,
+      "codes": {
+        "FC_CREATE_EXISTS": 4,
+        "CODE_DRIFT_FR_ALREADY_DONE": 9,
+        "TASKS_FC_CONSISTENCY": 13
+      },
+      "has_fr_md": true,
+      "has_fc_md": true,
+      "has_tasks_md": true
+    },
+    {
+      "slug": "bdd-test-scanner",
+      "duration_ms": 1182.96,
+      "total": 1,
+      "error": 0,
+      "warning": 1,
+      "info": 0,
+      "codes": {
+        "CODE_DRIFT_FR_ALREADY_DONE": 1
+      },
+      "has_fr_md": true,
+      "has_fc_md": true,
+      "has_tasks_md": true
+    },
+    {
       "slug": "bg-task-guard",
-      "duration_ms": 1344.12,
-      "total": 13,
-      "error": 3,
+      "duration_ms": 5648.11,
+      "total": 12,
+      "error": 2,
       "warning": 10,
       "info": 0,
       "codes": {
         "FC_EDIT_MISSING": 1,
-        "FC_CREATE_EXISTS": 2,
+        "FC_CREATE_EXISTS": 1,
         "NARRATIVE_PATH_MISSING": 4,
         "CODE_DRIFT_FR_ALREADY_DONE": 6
       },
@@ -692,20 +797,42 @@
       "has_tasks_md": true
     },
     {
-      "slug": "claim-evidence-gate",
-      "duration_ms": 0.51,
-      "total": 0,
-      "error": 0,
-      "warning": 0,
-      "info": 0,
-      "codes": {},
+      "slug": "carl-integration",
+      "duration_ms": 5098.97,
+      "total": 32,
+      "error": 13,
+      "warning": 16,
+      "info": 3,
+      "codes": {
+        "FC_CREATE_EXISTS": 13,
+        "NARRATIVE_PATH_MISSING": 5,
+        "CODE_DRIFT_FR_ALREADY_DONE": 9,
+        "TASKS_FC_CONSISTENCY": 5
+      },
       "has_fr_md": true,
-      "has_fc_md": false,
-      "has_tasks_md": false
+      "has_fc_md": true,
+      "has_tasks_md": true
+    },
+    {
+      "slug": "claim-evidence-gate",
+      "duration_ms": 3615.42,
+      "total": 25,
+      "error": 1,
+      "warning": 18,
+      "info": 6,
+      "codes": {
+        "FC_DELETE_MISSING": 1,
+        "NARRATIVE_PATH_MISSING": 1,
+        "CODE_DRIFT_FR_ALREADY_DONE": 16,
+        "TASKS_FC_CONSISTENCY": 7
+      },
+      "has_fr_md": true,
+      "has_fc_md": true,
+      "has_tasks_md": true
     },
     {
       "slug": "claim-sanity-check",
-      "duration_ms": 0.8,
+      "duration_ms": 1.44,
       "total": 3,
       "error": 0,
       "warning": 0,
@@ -719,17 +846,30 @@
     },
     {
       "slug": "claude-mem-integration",
-      "duration_ms": 755.6,
-      "total": 21,
+      "duration_ms": 1083.25,
+      "total": 16,
       "error": 4,
-      "warning": 13,
-      "info": 4,
+      "warning": 6,
+      "info": 6,
       "codes": {
-        "FC_V1_LAYOUT_DRIFT": 1,
-        "FC_EDIT_MISSING": 2,
-        "FC_CREATE_EXISTS": 1,
-        "NARRATIVE_PATH_MISSING": 11,
-        "TASKS_FC_CONSISTENCY": 6
+        "FC_CREATE_EXISTS": 4,
+        "NARRATIVE_PATH_MISSING": 2,
+        "CODE_DRIFT_FR_ALREADY_DONE": 3,
+        "TASKS_FC_CONSISTENCY": 7
+      },
+      "has_fr_md": true,
+      "has_fc_md": true,
+      "has_tasks_md": true
+    },
+    {
+      "slug": "claude-mem-midsession-reaper",
+      "duration_ms": 1223.4,
+      "total": 1,
+      "error": 0,
+      "warning": 0,
+      "info": 1,
+      "codes": {
+        "TASKS_FC_CONSISTENCY": 1
       },
       "has_fr_md": true,
       "has_fc_md": true,
@@ -737,15 +877,15 @@
     },
     {
       "slug": "codex-cli-support",
-      "duration_ms": 1635.51,
-      "total": 98,
-      "error": 9,
-      "warning": 70,
+      "duration_ms": 2298.73,
+      "total": 83,
+      "error": 10,
+      "warning": 54,
       "info": 19,
       "codes": {
         "FC_V1_LAYOUT_DRIFT": 6,
-        "FC_EDIT_MISSING": 3,
-        "NARRATIVE_PATH_MISSING": 56,
+        "FC_EDIT_MISSING": 4,
+        "NARRATIVE_PATH_MISSING": 40,
         "CODE_DRIFT_FR_ALREADY_DONE": 12,
         "TASKS_FC_CONSISTENCY": 20,
         "FC_GLOB_PATTERN": 1
@@ -755,16 +895,49 @@
       "has_tasks_md": true
     },
     {
+      "slug": "codex-init",
+      "duration_ms": 3762.46,
+      "total": 11,
+      "error": 1,
+      "warning": 7,
+      "info": 3,
+      "codes": {
+        "FC_CREATE_EXISTS": 1,
+        "CODE_DRIFT_FR_ALREADY_DONE": 7,
+        "FC_ACTION_UNCHECKED": 1,
+        "TASKS_FC_CONSISTENCY": 2
+      },
+      "has_fr_md": true,
+      "has_fc_md": true,
+      "has_tasks_md": true
+    },
+    {
+      "slug": "context-menu",
+      "duration_ms": 1908.83,
+      "total": 13,
+      "error": 1,
+      "warning": 10,
+      "info": 2,
+      "codes": {
+        "FC_CREATE_EXISTS": 1,
+        "CODE_DRIFT_FR_ALREADY_DONE": 10,
+        "TASKS_FC_CONSISTENCY": 2
+      },
+      "has_fr_md": true,
+      "has_fc_md": true,
+      "has_tasks_md": true
+    },
+    {
       "slug": "create-specs-bdd-enforcement",
-      "duration_ms": 997.63,
-      "total": 59,
-      "error": 15,
-      "warning": 31,
+      "duration_ms": 1024.51,
+      "total": 51,
+      "error": 12,
+      "warning": 26,
       "info": 13,
       "codes": {
-        "FC_EDIT_MISSING": 6,
-        "FC_CREATE_EXISTS": 9,
-        "NARRATIVE_PATH_MISSING": 16,
+        "FC_EDIT_MISSING": 4,
+        "FC_CREATE_EXISTS": 8,
+        "NARRATIVE_PATH_MISSING": 11,
         "CODE_DRIFT_FR_ALREADY_DONE": 8,
         "TASKS_FC_CONSISTENCY": 20
       },
@@ -774,15 +947,15 @@
     },
     {
       "slug": "cursor-dead-code-cleanup",
-      "duration_ms": 426.04,
-      "total": 9,
-      "error": 4,
+      "duration_ms": 626.01,
+      "total": 8,
+      "error": 3,
       "warning": 3,
       "info": 2,
       "codes": {
         "FC_EDIT_MISSING": 1,
         "FC_V1_LAYOUT_DRIFT": 1,
-        "FC_CREATE_EXISTS": 2,
+        "FC_CREATE_EXISTS": 1,
         "NARRATIVE_PATH_MISSING": 2,
         "CODE_DRIFT_FR_ALREADY_DONE": 1,
         "TASKS_FC_CONSISTENCY": 2
@@ -793,16 +966,15 @@
     },
     {
       "slug": "dev-pomogator-canonical-plugin",
-      "duration_ms": 1253.03,
-      "total": 51,
-      "error": 5,
-      "warning": 29,
-      "info": 17,
+      "duration_ms": 1552.12,
+      "total": 56,
+      "error": 0,
+      "warning": 38,
+      "info": 18,
       "codes": {
-        "FC_CREATE_EXISTS": 5,
-        "NARRATIVE_PATH_MISSING": 9,
+        "NARRATIVE_PATH_MISSING": 17,
         "CODE_DRIFT_FR_ALREADY_DONE": 11,
-        "TASKS_FC_CONSISTENCY": 23,
+        "TASKS_FC_CONSISTENCY": 25,
         "FC_PLACEHOLDER_PATH": 2,
         "FC_GLOB_PATTERN": 1
       },
@@ -811,25 +983,8 @@
       "has_tasks_md": true
     },
     {
-      "slug": "docker-win-test",
-      "duration_ms": 466.82,
-      "total": 10,
-      "error": 2,
-      "warning": 1,
-      "info": 7,
-      "codes": {
-        "FC_CREATE_EXISTS": 2,
-        "NARRATIVE_PATH_MISSING": 1,
-        "FC_ACTION_UNCHECKED": 2,
-        "TASKS_FC_CONSISTENCY": 5
-      },
-      "has_fr_md": true,
-      "has_fc_md": true,
-      "has_tasks_md": true
-    },
-    {
       "slug": "extension-beta-flag",
-      "duration_ms": 619.32,
+      "duration_ms": 1037.02,
       "total": 18,
       "error": 5,
       "warning": 10,
@@ -848,15 +1003,15 @@
     },
     {
       "slug": "fix-bg-output-loss",
-      "duration_ms": 1741.06,
+      "duration_ms": 2914.1,
       "total": 26,
-      "error": 4,
-      "warning": 21,
+      "error": 3,
+      "warning": 22,
       "info": 1,
       "codes": {
-        "FC_CREATE_EXISTS": 4,
+        "FC_CREATE_EXISTS": 3,
         "NARRATIVE_PATH_MISSING": 16,
-        "CODE_DRIFT_FR_ALREADY_DONE": 1,
+        "CODE_DRIFT_FR_ALREADY_DONE": 2,
         "TASKS_FC_CONSISTENCY": 5
       },
       "has_fr_md": true,
@@ -865,17 +1020,17 @@
     },
     {
       "slug": "forbid-root-artifacts",
-      "duration_ms": 506.81,
-      "total": 29,
-      "error": 6,
-      "warning": 10,
-      "info": 13,
+      "duration_ms": 999.42,
+      "total": 38,
+      "error": 7,
+      "warning": 19,
+      "info": 12,
       "codes": {
-        "FC_EDIT_MISSING": 6,
-        "NARRATIVE_PATH_MISSING": 6,
+        "FC_EDIT_MISSING": 7,
+        "NARRATIVE_PATH_MISSING": 15,
         "CODE_DRIFT_FR_ALREADY_DONE": 4,
         "FC_ACTION_UNCHECKED": 1,
-        "TASKS_FC_CONSISTENCY": 12
+        "TASKS_FC_CONSISTENCY": 11
       },
       "has_fr_md": true,
       "has_fc_md": true,
@@ -883,7 +1038,7 @@
     },
     {
       "slug": "global-dir-guard",
-      "duration_ms": 562.91,
+      "duration_ms": 282.8,
       "total": 17,
       "error": 3,
       "warning": 10,
@@ -899,26 +1054,8 @@
       "has_tasks_md": true
     },
     {
-      "slug": "hyperv-test-runner",
-      "duration_ms": 1399.51,
-      "total": 62,
-      "error": 24,
-      "warning": 18,
-      "info": 20,
-      "codes": {
-        "FC_CREATE_EXISTS": 24,
-        "NARRATIVE_PATH_MISSING": 4,
-        "CODE_DRIFT_FR_ALREADY_DONE": 12,
-        "TASKS_FC_CONSISTENCY": 19,
-        "FC_ACTION_UNCHECKED": 3
-      },
-      "has_fr_md": true,
-      "has_fc_md": true,
-      "has_tasks_md": true
-    },
-    {
       "slug": "install-diagnostics",
-      "duration_ms": 1357.47,
+      "duration_ms": 1303.79,
       "total": 85,
       "error": 19,
       "warning": 44,
@@ -937,8 +1074,24 @@
       "has_tasks_md": true
     },
     {
+      "slug": "lint-self-bootstrap",
+      "duration_ms": 667.18,
+      "total": 14,
+      "error": 2,
+      "warning": 5,
+      "info": 7,
+      "codes": {
+        "FC_CREATE_EXISTS": 2,
+        "CODE_DRIFT_FR_ALREADY_DONE": 5,
+        "TASKS_FC_CONSISTENCY": 7
+      },
+      "has_fr_md": true,
+      "has_fc_md": true,
+      "has_tasks_md": true
+    },
+    {
       "slug": "local-dev-environment",
-      "duration_ms": 0.11,
+      "duration_ms": 0.14,
       "total": 0,
       "error": 0,
       "warning": 0,
@@ -950,7 +1103,7 @@
     },
     {
       "slug": "lsp-setup",
-      "duration_ms": 841.7,
+      "duration_ms": 817.95,
       "total": 23,
       "error": 0,
       "warning": 13,
@@ -966,16 +1119,16 @@
     },
     {
       "slug": "native-statusline",
-      "duration_ms": 1257.42,
-      "total": 33,
+      "duration_ms": 984.07,
+      "total": 34,
       "error": 9,
-      "warning": 15,
+      "warning": 16,
       "info": 9,
       "codes": {
         "FC_CREATE_EXISTS": 8,
         "FC_DELETE_MISSING": 1,
         "NARRATIVE_PATH_MISSING": 3,
-        "CODE_DRIFT_FR_ALREADY_DONE": 9,
+        "CODE_DRIFT_FR_ALREADY_DONE": 10,
         "TASKS_FC_CONSISTENCY": 12
       },
       "has_fr_md": true,
@@ -984,16 +1137,16 @@
     },
     {
       "slug": "onboard-repo-phase0",
-      "duration_ms": 2495.74,
-      "total": 134,
-      "error": 32,
-      "warning": 67,
+      "duration_ms": 3160.88,
+      "total": 151,
+      "error": 53,
+      "warning": 63,
       "info": 35,
       "codes": {
-        "FC_CREATE_EXISTS": 28,
-        "FC_EDIT_MISSING": 3,
+        "FC_CREATE_EXISTS": 50,
+        "FC_EDIT_MISSING": 2,
         "FC_V1_LAYOUT_DRIFT": 1,
-        "NARRATIVE_PATH_MISSING": 45,
+        "NARRATIVE_PATH_MISSING": 41,
         "CODE_DRIFT_FR_ALREADY_DONE": 16,
         "TASKS_FC_CONSISTENCY": 38,
         "FC_PARSE_UNPARSEABLE": 2,
@@ -1005,18 +1158,36 @@
     },
     {
       "slug": "personal-pomogator",
-      "duration_ms": 1816.34,
-      "total": 94,
-      "error": 22,
+      "duration_ms": 7000.04,
+      "total": 112,
+      "error": 28,
       "warning": 51,
-      "info": 21,
+      "info": 33,
       "codes": {
-        "FC_CREATE_EXISTS": 15,
-        "FC_EDIT_MISSING": 5,
+        "FC_CREATE_EXISTS": 22,
+        "FC_EDIT_MISSING": 4,
         "FC_V1_LAYOUT_DRIFT": 2,
         "NARRATIVE_PATH_MISSING": 26,
-        "CODE_DRIFT_FR_ALREADY_DONE": 15,
-        "TASKS_FC_CONSISTENCY": 31
+        "CODE_DRIFT_FR_ALREADY_DONE": 16,
+        "TASKS_FC_CONSISTENCY": 42
+      },
+      "has_fr_md": true,
+      "has_fc_md": true,
+      "has_tasks_md": true
+    },
+    {
+      "slug": "plan-evidence-enforcement",
+      "duration_ms": 464.43,
+      "total": 11,
+      "error": 2,
+      "warning": 3,
+      "info": 6,
+      "codes": {
+        "FC_CREATE_EXISTS": 1,
+        "FC_EDIT_MISSING": 1,
+        "NARRATIVE_PATH_MISSING": 1,
+        "CODE_DRIFT_FR_ALREADY_DONE": 2,
+        "TASKS_FC_CONSISTENCY": 6
       },
       "has_fr_md": true,
       "has_fc_md": true,
@@ -1024,14 +1195,14 @@
     },
     {
       "slug": "plan-pomogator-plain-language",
-      "duration_ms": 840.63,
-      "total": 28,
-      "error": 5,
-      "warning": 22,
+      "duration_ms": 2692.3,
+      "total": 32,
+      "error": 6,
+      "warning": 25,
       "info": 1,
       "codes": {
-        "FC_EDIT_MISSING": 5,
-        "NARRATIVE_PATH_MISSING": 14,
+        "FC_EDIT_MISSING": 6,
+        "NARRATIVE_PATH_MISSING": 17,
         "CODE_DRIFT_FR_ALREADY_DONE": 7,
         "TASKS_FC_CONSISTENCY": 2
       },
@@ -1041,15 +1212,15 @@
     },
     {
       "slug": "plan-pomogator-prompt-isolation",
-      "duration_ms": 742.77,
-      "total": 27,
-      "error": 6,
-      "warning": 18,
+      "duration_ms": 1711.45,
+      "total": 31,
+      "error": 7,
+      "warning": 21,
       "info": 3,
       "codes": {
-        "FC_EDIT_MISSING": 5,
+        "FC_EDIT_MISSING": 6,
         "FC_CREATE_EXISTS": 1,
-        "NARRATIVE_PATH_MISSING": 11,
+        "NARRATIVE_PATH_MISSING": 14,
         "CODE_DRIFT_FR_ALREADY_DONE": 7,
         "TASKS_FC_CONSISTENCY": 3
       },
@@ -1059,7 +1230,7 @@
     },
     {
       "slug": "pomogator-doctor",
-      "duration_ms": 4757.79,
+      "duration_ms": 12119.29,
       "total": 96,
       "error": 25,
       "warning": 49,
@@ -1079,7 +1250,7 @@
     },
     {
       "slug": "prompt-suggest",
-      "duration_ms": 772.89,
+      "duration_ms": 839.74,
       "total": 11,
       "error": 1,
       "warning": 10,
@@ -1095,7 +1266,7 @@
     },
     {
       "slug": "session-pilot",
-      "duration_ms": 3000.01,
+      "duration_ms": 7288.65,
       "total": 58,
       "error": 6,
       "warning": 23,
@@ -1112,14 +1283,14 @@
     },
     {
       "slug": "skill-listing-budget",
-      "duration_ms": 459.04,
-      "total": 37,
+      "duration_ms": 1037.5,
+      "total": 43,
       "error": 1,
-      "warning": 24,
+      "warning": 30,
       "info": 12,
       "codes": {
         "FC_CREATE_EXISTS": 1,
-        "NARRATIVE_PATH_MISSING": 14,
+        "NARRATIVE_PATH_MISSING": 20,
         "CODE_DRIFT_FR_ALREADY_DONE": 4,
         "TASKS_FC_CONSISTENCY": 15,
         "FC_ACTION_UNCHECKED": 3
@@ -1130,7 +1301,7 @@
     },
     {
       "slug": "skill-rule-customization",
-      "duration_ms": 0.1,
+      "duration_ms": 0.14,
       "total": 0,
       "error": 0,
       "warning": 0,
@@ -1141,8 +1312,64 @@
       "has_tasks_md": false
     },
     {
-      "slug": "skill-security-scan",
-      "duration_ms": 0.51,
+      "slug": "skills-rules-optimizer",
+      "duration_ms": 2897.23,
+      "total": 63,
+      "error": 12,
+      "warning": 19,
+      "info": 32,
+      "codes": {
+        "FC_CREATE_EXISTS": 12,
+        "NARRATIVE_PATH_MISSING": 7,
+        "CODE_DRIFT_FR_ALREADY_DONE": 9,
+        "TASKS_FC_CONSISTENCY": 32,
+        "FC_ACTION_UNCHECKED": 3
+      },
+      "has_fr_md": true,
+      "has_fc_md": true,
+      "has_tasks_md": true
+    },
+    {
+      "slug": "spec-generator-v3",
+      "duration_ms": 3507.99,
+      "total": 89,
+      "error": 25,
+      "warning": 29,
+      "info": 35,
+      "codes": {
+        "FC_CREATE_EXISTS": 18,
+        "FC_EDIT_MISSING": 7,
+        "NARRATIVE_PATH_MISSING": 10,
+        "CODE_DRIFT_FR_ALREADY_DONE": 16,
+        "TASKS_FC_CONSISTENCY": 38
+      },
+      "has_fr_md": true,
+      "has_fc_md": true,
+      "has_tasks_md": true
+    },
+    {
+      "slug": "spec-generator-v4",
+      "duration_ms": 48353.15,
+      "total": 484,
+      "error": 73,
+      "warning": 270,
+      "info": 141,
+      "codes": {
+        "FC_CREATE_EXISTS": 73,
+        "NARRATIVE_PATH_MISSING": 71,
+        "CODE_DRIFT_FR_ALREADY_DONE": 112,
+        "TASKS_FC_CONSISTENCY": 213,
+        "FC_GLOB_PATTERN": 1,
+        "FC_PARSE_UNPARSEABLE": 13,
+        "FC_ACTION_UNCHECKED": 1
+      },
+      "has_fr_md": true,
+      "has_fc_md": true,
+      "has_tasks_md": true
+    },
+    {
+      "slug": "spec-mcp-usability-dogfood",
+      "duration_ms": 1.42,
       "total": 3,
       "error": 0,
       "warning": 0,
@@ -1155,55 +1382,17 @@
       "has_tasks_md": true
     },
     {
-      "slug": "skills-rules-optimizer",
-      "duration_ms": 1330.64,
-      "total": 61,
-      "error": 12,
-      "warning": 17,
-      "info": 32,
-      "codes": {
-        "FC_CREATE_EXISTS": 12,
-        "NARRATIVE_PATH_MISSING": 5,
-        "CODE_DRIFT_FR_ALREADY_DONE": 9,
-        "TASKS_FC_CONSISTENCY": 32,
-        "FC_ACTION_UNCHECKED": 3
-      },
-      "has_fr_md": true,
-      "has_fc_md": true,
-      "has_tasks_md": true
-    },
-    {
-      "slug": "spec-generator-v4",
-      "duration_ms": 22719.54,
-      "total": 439,
-      "error": 70,
-      "warning": 247,
-      "info": 122,
-      "codes": {
-        "FC_CREATE_EXISTS": 70,
-        "NARRATIVE_PATH_MISSING": 61,
-        "CODE_DRIFT_FR_ALREADY_DONE": 104,
-        "TASKS_FC_CONSISTENCY": 190,
-        "FC_GLOB_PATTERN": 1,
-        "FC_PARSE_UNPARSEABLE": 12,
-        "FC_ACTION_UNCHECKED": 1
-      },
-      "has_fr_md": true,
-      "has_fc_md": true,
-      "has_tasks_md": true
-    },
-    {
       "slug": "spec-phase-gate",
-      "duration_ms": 1627.55,
-      "total": 32,
-      "error": 5,
-      "warning": 25,
+      "duration_ms": 1953.51,
+      "total": 28,
+      "error": 4,
+      "warning": 22,
       "info": 2,
       "codes": {
-        "FC_EDIT_MISSING": 4,
+        "FC_EDIT_MISSING": 3,
         "FC_CREATE_EXISTS": 1,
-        "NARRATIVE_PATH_MISSING": 16,
-        "CODE_DRIFT_FR_ALREADY_DONE": 5,
+        "NARRATIVE_PATH_MISSING": 11,
+        "CODE_DRIFT_FR_ALREADY_DONE": 7,
         "TASKS_FC_CONSISTENCY": 6
       },
       "has_fr_md": true,
@@ -1212,13 +1401,13 @@
     },
     {
       "slug": "spec-reality-check",
-      "duration_ms": 1646.41,
-      "total": 49,
+      "duration_ms": 1888.79,
+      "total": 53,
       "error": 0,
-      "warning": 46,
+      "warning": 50,
       "info": 3,
       "codes": {
-        "NARRATIVE_PATH_MISSING": 23,
+        "NARRATIVE_PATH_MISSING": 27,
         "CODE_DRIFT_FR_ALREADY_DONE": 11,
         "TASKS_FC_CONSISTENCY": 15
       },
@@ -1227,15 +1416,135 @@
       "has_tasks_md": true
     },
     {
+      "slug": "spec-v3-verify-46316-1",
+      "duration_ms": 0.1,
+      "total": 0,
+      "error": 0,
+      "warning": 0,
+      "info": 0,
+      "codes": {},
+      "has_fr_md": false,
+      "has_fc_md": false,
+      "has_tasks_md": false
+    },
+    {
+      "slug": "spec-v3-verify-46316-10",
+      "duration_ms": 0.08,
+      "total": 0,
+      "error": 0,
+      "warning": 0,
+      "info": 0,
+      "codes": {},
+      "has_fr_md": false,
+      "has_fc_md": false,
+      "has_tasks_md": false
+    },
+    {
+      "slug": "spec-v3-verify-46316-12",
+      "duration_ms": 0.07,
+      "total": 0,
+      "error": 0,
+      "warning": 0,
+      "info": 0,
+      "codes": {},
+      "has_fr_md": false,
+      "has_fc_md": false,
+      "has_tasks_md": false
+    },
+    {
+      "slug": "spec-v3-verify-46316-2",
+      "duration_ms": 0.08,
+      "total": 0,
+      "error": 0,
+      "warning": 0,
+      "info": 0,
+      "codes": {},
+      "has_fr_md": false,
+      "has_fc_md": false,
+      "has_tasks_md": false
+    },
+    {
+      "slug": "spec-v3-verify-46316-3",
+      "duration_ms": 0.07,
+      "total": 0,
+      "error": 0,
+      "warning": 0,
+      "info": 0,
+      "codes": {},
+      "has_fr_md": false,
+      "has_fc_md": false,
+      "has_tasks_md": false
+    },
+    {
+      "slug": "spec-v3-verify-46316-4",
+      "duration_ms": 0.07,
+      "total": 0,
+      "error": 0,
+      "warning": 0,
+      "info": 0,
+      "codes": {},
+      "has_fr_md": false,
+      "has_fc_md": false,
+      "has_tasks_md": false
+    },
+    {
+      "slug": "spec-v3-verify-46316-5",
+      "duration_ms": 0.07,
+      "total": 0,
+      "error": 0,
+      "warning": 0,
+      "info": 0,
+      "codes": {},
+      "has_fr_md": false,
+      "has_fc_md": false,
+      "has_tasks_md": false
+    },
+    {
+      "slug": "spec-v3-verify-46316-6",
+      "duration_ms": 0.07,
+      "total": 0,
+      "error": 0,
+      "warning": 0,
+      "info": 0,
+      "codes": {},
+      "has_fr_md": false,
+      "has_fc_md": false,
+      "has_tasks_md": false
+    },
+    {
+      "slug": "spec-v3-verify-46316-7",
+      "duration_ms": 0.07,
+      "total": 0,
+      "error": 0,
+      "warning": 0,
+      "info": 0,
+      "codes": {},
+      "has_fr_md": false,
+      "has_fc_md": false,
+      "has_tasks_md": false
+    },
+    {
+      "slug": "spec-v3-verify-46316-9",
+      "duration_ms": 0.08,
+      "total": 0,
+      "error": 0,
+      "warning": 0,
+      "info": 0,
+      "codes": {},
+      "has_fr_md": false,
+      "has_fc_md": false,
+      "has_tasks_md": false
+    },
+    {
       "slug": "spec-variant-matrix",
-      "duration_ms": 1392.67,
-      "total": 53,
-      "error": 19,
-      "warning": 10,
+      "duration_ms": 1251.64,
+      "total": 51,
+      "error": 18,
+      "warning": 9,
       "info": 24,
       "codes": {
-        "FC_CREATE_EXISTS": 19,
-        "NARRATIVE_PATH_MISSING": 2,
+        "FC_CREATE_EXISTS": 18,
+        "NARRATIVE_PATH_MISSING": 1,
         "CODE_DRIFT_FR_ALREADY_DONE": 7,
         "TASKS_FC_CONSISTENCY": 25
       },
@@ -1245,7 +1554,7 @@
     },
     {
       "slug": "spec-workflow-feature-steps-validation",
-      "duration_ms": 1667.88,
+      "duration_ms": 3915.85,
       "total": 69,
       "error": 0,
       "warning": 18,
@@ -1261,13 +1570,13 @@
     },
     {
       "slug": "spec-workflow-md-validation",
-      "duration_ms": 1824.59,
-      "total": 33,
+      "duration_ms": 3847.44,
+      "total": 34,
       "error": 0,
-      "warning": 8,
+      "warning": 9,
       "info": 25,
       "codes": {
-        "NARRATIVE_PATH_MISSING": 7,
+        "NARRATIVE_PATH_MISSING": 8,
         "CODE_DRIFT_FR_ALREADY_DONE": 1,
         "FC_PLACEHOLDER_PATH": 1,
         "FC_PARSE_UNPARSEABLE": 16,
@@ -1279,7 +1588,7 @@
     },
     {
       "slug": "spec-workflow-vmodel",
-      "duration_ms": 0.39,
+      "duration_ms": 0.92,
       "total": 0,
       "error": 0,
       "warning": 0,
@@ -1291,16 +1600,15 @@
     },
     {
       "slug": "specs-management-as-skill",
-      "duration_ms": 2859.12,
-      "total": 117,
-      "error": 40,
-      "warning": 47,
+      "duration_ms": 3913.92,
+      "total": 109,
+      "error": 38,
+      "warning": 41,
       "info": 30,
       "codes": {
         "FC_CREATE_EXISTS": 33,
-        "FC_DELETE_MISSING": 6,
-        "FC_EDIT_MISSING": 1,
-        "NARRATIVE_PATH_MISSING": 25,
+        "FC_DELETE_MISSING": 5,
+        "NARRATIVE_PATH_MISSING": 19,
         "CODE_DRIFT_FR_ALREADY_DONE": 13,
         "TASKS_FC_CONSISTENCY": 33,
         "FC_PARSE_UNPARSEABLE": 6
@@ -1310,16 +1618,30 @@
       "has_tasks_md": true
     },
     {
+      "slug": "specs-workflow-jira-mode",
+      "duration_ms": 1.09,
+      "total": 3,
+      "error": 0,
+      "warning": 0,
+      "info": 3,
+      "codes": {
+        "FC_PLACEHOLDER_PATH": 3
+      },
+      "has_fr_md": true,
+      "has_fc_md": true,
+      "has_tasks_md": true
+    },
+    {
       "slug": "stale-build-guard",
-      "duration_ms": 726.44,
+      "duration_ms": 1022.54,
       "total": 21,
-      "error": 3,
-      "warning": 18,
+      "error": 2,
+      "warning": 19,
       "info": 0,
       "codes": {
         "FC_EDIT_MISSING": 1,
-        "FC_CREATE_EXISTS": 2,
-        "NARRATIVE_PATH_MISSING": 8,
+        "FC_CREATE_EXISTS": 1,
+        "NARRATIVE_PATH_MISSING": 9,
         "CODE_DRIFT_FR_ALREADY_DONE": 7,
         "TASKS_FC_CONSISTENCY": 3
       },
@@ -1329,14 +1651,14 @@
     },
     {
       "slug": "strong-tests",
-      "duration_ms": 2026.79,
-      "total": 70,
+      "duration_ms": 2472.4,
+      "total": 72,
       "error": 8,
-      "warning": 56,
+      "warning": 58,
       "info": 6,
       "codes": {
         "FC_CREATE_EXISTS": 8,
-        "NARRATIVE_PATH_MISSING": 38,
+        "NARRATIVE_PATH_MISSING": 40,
         "CODE_DRIFT_FR_ALREADY_DONE": 7,
         "TASKS_FC_CONSISTENCY": 17
       },
@@ -1346,7 +1668,7 @@
     },
     {
       "slug": "suggest-rules-insights",
-      "duration_ms": 1489.67,
+      "duration_ms": 929.46,
       "total": 27,
       "error": 2,
       "warning": 24,
@@ -1364,16 +1686,16 @@
     },
     {
       "slug": "test-statusline",
-      "duration_ms": 2175.63,
-      "total": 44,
+      "duration_ms": 1576.21,
+      "total": 45,
       "error": 3,
-      "warning": 31,
+      "warning": 32,
       "info": 10,
       "codes": {
         "FC_CREATE_EXISTS": 1,
         "FC_EDIT_MISSING": 2,
         "NARRATIVE_PATH_MISSING": 16,
-        "CODE_DRIFT_FR_ALREADY_DONE": 8,
+        "CODE_DRIFT_FR_ALREADY_DONE": 9,
         "TASKS_FC_CONSISTENCY": 17
       },
       "has_fr_md": true,
@@ -1382,13 +1704,13 @@
     },
     {
       "slug": "tests-create-update",
-      "duration_ms": 637.06,
-      "total": 10,
-      "error": 4,
+      "duration_ms": 802.78,
+      "total": 9,
+      "error": 3,
       "warning": 5,
       "info": 1,
       "codes": {
-        "FC_CREATE_EXISTS": 3,
+        "FC_CREATE_EXISTS": 2,
         "FC_EDIT_MISSING": 1,
         "NARRATIVE_PATH_MISSING": 3,
         "CODE_DRIFT_FR_ALREADY_DONE": 1,
@@ -1400,7 +1722,7 @@
     },
     {
       "slug": "tui-statusline-mode",
-      "duration_ms": 924.08,
+      "duration_ms": 1255.32,
       "total": 39,
       "error": 9,
       "warning": 25,
@@ -1418,13 +1740,13 @@
     },
     {
       "slug": "tui-test-runner",
-      "duration_ms": 1453.71,
-      "total": 87,
-      "error": 6,
+      "duration_ms": 7058.32,
+      "total": 86,
+      "error": 5,
       "warning": 79,
       "info": 2,
       "codes": {
-        "FC_CREATE_EXISTS": 6,
+        "FC_CREATE_EXISTS": 5,
         "NARRATIVE_PATH_MISSING": 47,
         "CODE_DRIFT_FR_ALREADY_DONE": 9,
         "TASKS_FC_CONSISTENCY": 25
@@ -1435,14 +1757,14 @@
     },
     {
       "slug": "tui-test-runner-v2",
-      "duration_ms": 817.02,
-      "total": 48,
-      "error": 10,
+      "duration_ms": 3794.99,
+      "total": 47,
+      "error": 9,
       "warning": 38,
       "info": 0,
       "codes": {
         "FC_EDIT_MISSING": 7,
-        "FC_CREATE_EXISTS": 3,
+        "FC_CREATE_EXISTS": 2,
         "NARRATIVE_PATH_MISSING": 27,
         "CODE_DRIFT_FR_ALREADY_DONE": 1,
         "TASKS_FC_CONSISTENCY": 10
@@ -1452,16 +1774,30 @@
       "has_tasks_md": true
     },
     {
+      "slug": "undefined",
+      "duration_ms": 0.89,
+      "total": 3,
+      "error": 0,
+      "warning": 0,
+      "info": 3,
+      "codes": {
+        "FC_PLACEHOLDER_PATH": 3
+      },
+      "has_fr_md": true,
+      "has_fc_md": true,
+      "has_tasks_md": true
+    },
+    {
       "slug": "verify-generic-scope-fix",
-      "duration_ms": 2526.65,
-      "total": 105,
-      "error": 32,
-      "warning": 44,
+      "duration_ms": 8356.85,
+      "total": 101,
+      "error": 27,
+      "warning": 45,
       "info": 29,
       "codes": {
         "FC_EDIT_MISSING": 3,
-        "FC_CREATE_EXISTS": 29,
-        "NARRATIVE_PATH_MISSING": 19,
+        "FC_CREATE_EXISTS": 24,
+        "NARRATIVE_PATH_MISSING": 20,
         "CODE_DRIFT_FR_ALREADY_DONE": 9,
         "TASKS_FC_CONSISTENCY": 45
       },
@@ -1471,13 +1807,13 @@
     },
     {
       "slug": "worktree-setup",
-      "duration_ms": 1353.57,
-      "total": 45,
-      "error": 11,
+      "duration_ms": 1974.96,
+      "total": 44,
+      "error": 10,
       "warning": 29,
       "info": 5,
       "codes": {
-        "FC_CREATE_EXISTS": 9,
+        "FC_CREATE_EXISTS": 8,
         "FC_V1_LAYOUT_DRIFT": 1,
         "FC_EDIT_MISSING": 1,
         "NARRATIVE_PATH_MISSING": 15,

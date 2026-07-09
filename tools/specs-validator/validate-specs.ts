@@ -341,10 +341,9 @@ function findAllSpecDirs(specsRoot: string): string[] {
  *
  * @see .specs/spec-generator-v4/FR.md FR-20, NFR.md NFR-Performance-6
  */
-function renderFormGuardsSummary(): void {
+function renderFormGuardsSummary(repoRoot: string, activeSpecSlugs?: Set<string>): void {
   try {
     rotateLog();
-    const repoRoot = process.env.SPEC_CONFORMANCE_REPO_ROOT ?? process.cwd();
     const line = buildConformanceSummary({
       ackFile: process.env.SPEC_CONFORMANCE_ACK_FILE,
       repoRoot,
@@ -353,7 +352,7 @@ function renderFormGuardsSummary(): void {
     if (line) console.log(line);
     // P21-4: surface unfinished tasks from the cached census (graph-only, written
     // by spec-conformance-push). Reads a tiny JSON — never builds the graph here.
-    const census = buildTaskCensusLine(repoRoot);
+    const census = buildTaskCensusLine(repoRoot, { activeSpecSlugs });
     if (census) console.log(census);
   } catch {
     // fail-silent — audit log is non-critical
@@ -368,29 +367,27 @@ async function main(): Promise<void> {
       return; // No input, exit silently
     }
 
-    // 1.5 Form-guards summary runs independently of .specs/ discovery
-    // — so that it fires even on projects without any .specs/ folder
-    // but with form-guards events recorded globally. Must run BEFORE the
-    // empty-roots early-return below; otherwise the Claude Code UserPromptSubmit
-    // payload (which carries `cwd`, not Cursor's `workspace_roots`) would skip it
-    // entirely and FR-13's "on every prompt" summary would never fire in practice.
-    renderFormGuardsSummary();
-
     // Accept both the Cursor shape (`workspace_roots`) and the Claude Code shape
     // (`cwd`). Falling back to `cwd` lets spec discovery work under Claude Code too.
     const workspaceRoots =
-      input.workspace_roots && input.workspace_roots.length > 0
-        ? input.workspace_roots
-        : input.cwd
-          ? [input.cwd]
+      input.cwd
+        ? [input.cwd]
+        : input.workspace_roots && input.workspace_roots.length > 0
+          ? input.workspace_roots
           : [];
+    const repoRoot = workspaceRoots[0] ?? process.env.SPEC_CONFORMANCE_REPO_ROOT ?? process.cwd();
+
     if (workspaceRoots.length === 0) {
+      // Form-guards summary still has a repoRoot fallback, but with no hook scope it
+      // must not invent a next step from a global census.
+      renderFormGuardsSummary(repoRoot);
       return; // No workspace roots (and no cwd) — nothing further to discover
     }
 
     // 2. Find .specs/ folder
     const specsRoot = findSpecsFolder(workspaceRoots);
     if (!specsRoot) {
+      renderFormGuardsSummary(repoRoot);
       return; // No .specs/ folder, exit silently
     }
 
@@ -413,6 +410,10 @@ async function main(): Promise<void> {
     const allSpecDirs = findAllSpecDirs(specsRoot);
     const specNames = allSpecDirs.map((specDir) => path.basename(specDir));
     const activeSpecs = resolveActiveSpecs(input.prompt, specNames);
+
+    // 1.5 Form-guards summary runs after active-spec resolution so the task-census
+    // banner can show a scoped next step without falling back to corpus/global backlog.
+    renderFormGuardsSummary(repoRoot, activeSpecs);
 
     for (const specDir of allSpecDirs) {
       const specName = path.basename(specDir);

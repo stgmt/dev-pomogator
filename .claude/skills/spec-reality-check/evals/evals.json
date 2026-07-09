@@ -429,6 +429,20 @@
       "expected_codes": ["FC_V1_LAYOUT_DRIFT"],
       "forbidden_codes": ["FC_EDIT_MISSING", "FC_CREATE_EXISTS", "FC_DELETE_MISSING", "CODE_DRIFT_SKIPPED", "NARRATIVE_PATH_MISSING", "TASKS_FC_CONSISTENCY"],
       "category": "fc-checks-isolated"
+    },
+    {
+      "id": 33,
+      "name": "v2-fc-v1-layout-src-present-stays-generic-NEGATIVE",
+      "prompt": "NEGATIVE — same canonical-plugin marker and missing src/old_v1_module.ts edit row, but src/ exists. The v1-layout classifier must not over-generalize: expect generic FC_EDIT_MISSING, not FC_V1_LAYOUT_DRIFT.",
+      "fixture": "tests/fixtures/spec-reality-check/v2/fc-v1-layout-drift",
+      "setup": { "create_files": [".claude-plugin/plugin.json", "src/.keep"], "git_init_empty": true },
+      "expected_total": 1,
+      "expected_error": 1,
+      "expected_warning": 0,
+      "expected_info": 0,
+      "expected_codes": ["FC_EDIT_MISSING"],
+      "forbidden_codes": ["FC_V1_LAYOUT_DRIFT", "FC_CREATE_EXISTS", "FC_DELETE_MISSING", "CODE_DRIFT_SKIPPED", "NARRATIVE_PATH_MISSING", "TASKS_FC_CONSISTENCY"],
+      "category": "fc-checks-isolated"
     }
   ]
 }

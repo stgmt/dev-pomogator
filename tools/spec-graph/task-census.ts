@@ -477,6 +477,78 @@ export function agentNextOpenTodo(transcriptPath: string): string | null {
   return s ? s : null;
 }
 
+export type NextStepSource = 'agent-todo' | 'active-async' | 'current-spec';
+
+export interface NextStepRoute {
+  source: NextStepSource;
+  title: string;
+  id?: string;
+  spec?: string;
+}
+
+export interface NextStepRouteOptions {
+  /** Transcript to reconstruct the agent's own open Task/TodoWrite list from. */
+  transcriptPath?: string | null;
+  /** Already-scoped census. Pass a session/current-spec slice, not the global corpus, for Stop-gate use. */
+  census?: TaskCensus | null;
+  /** The single current spec, e.g. last edited spec in this session. */
+  currentSpecSlug?: string | null;
+  /** Active/current spec candidates. A single candidate is actionable; multiple candidates are a real choice. */
+  currentSpecSlugs?: Set<string> | string[] | null;
+  /** True when an observable background job is still in flight. */
+  awaitingAsync?: boolean;
+  /** Optional replacement for the generic async route title. */
+  asyncTitle?: string;
+}
+
+function currentSlugCandidates(slugs: NextStepRouteOptions['currentSpecSlugs']): string[] {
+  if (!slugs) return [];
+  return [...(Array.isArray(slugs) ? slugs : slugs.values())].filter((s) => typeof s === 'string' && s.trim());
+}
+
+/**
+ * FR-49a shared next-step selector. It is intentionally STRICT about spec routing:
+ * it may name a spec task only when the caller gives a current spec (or exactly one
+ * active spec). It never falls back to the corpus' busiest `specs[0]`, because that
+ * is the leak that sent dev-pomogator/spec-generator WS-F backlog into unrelated
+ * sessions/repos. Priority is: agent's own todo → active async → current spec → none.
+ */
+export function selectNextStepRoute(opts: NextStepRouteOptions = {}): NextStepRoute | null {
+  if (opts.transcriptPath) {
+    const todo = agentNextOpenTodo(opts.transcriptPath);
+    if (todo) return { source: 'agent-todo', title: todo };
+  }
+
+  if (opts.awaitingAsync) {
+    return {
+      source: 'active-async',
+      title: opts.asyncTitle ?? 'дождаться активной фоновой задачи и обработать результат',
+    };
+  }
+
+  return selectCurrentSpecNextOpen(opts.census ?? null, opts);
+}
+
+/** Select a next open task from the CURRENT spec only; never from global corpus order. */
+export function selectCurrentSpecNextOpen(
+  census: TaskCensus | null,
+  opts: Pick<NextStepRouteOptions, 'currentSpecSlug' | 'currentSpecSlugs'> = {},
+): NextStepRoute | null {
+  if (!census) return null;
+  const bySlug = (slug: string | null | undefined): NextStepRoute | null => {
+    if (!slug) return null;
+    const spec = census.specs.find((s) => s.slug === slug);
+    return spec?.nextOpen ? { source: 'current-spec', spec: spec.slug, ...spec.nextOpen } : null;
+  };
+
+  const explicit = bySlug(opts.currentSpecSlug);
+  if (explicit) return explicit;
+
+  const candidates = currentSlugCandidates(opts.currentSpecSlugs);
+  if (candidates.length === 1) return bySlug(candidates[0]);
+  return null;
+}
+
 function readCacheFile(p: string): TaskCensusCache | null {
   try {
     const parsed = JSON.parse(fs.readFileSync(p, 'utf-8'));

@@ -51,7 +51,7 @@ export function buildReminder(absPath: string | null): string | null {
     lines.push(`  ${b.file}:${b.line}  [${b.linkText}] #${b.brokenAnchor}` + (b.currentSlug ? ` → fix to #${b.currentSlug}` : '  (ambiguous → claude -p)'));
   }
   if (broken.length > 8) lines.push(`  …and ${broken.length - 8} more`);
-  lines.push(`Fix: node tools/anchor-integrity/fix.mjs --spec .specs/${spec.slug} --apply   (or invoke the anchor-fix skill).`);
+  lines.push(`Fix: node tools/anchor-integrity/fix.mjs --spec .specs/${spec.slug} --apply --door   (door-safe under SPEC_ACCESS_ENFORCE; or invoke the anchor-fix skill).`);
   lines.push('</system-reminder>');
   return lines.join('\n') + '\n';
 }

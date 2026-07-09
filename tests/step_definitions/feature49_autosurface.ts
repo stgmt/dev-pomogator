@@ -1,11 +1,11 @@
 /**
  * @feature49 step definitions (FR-49a — banner names the next step) — SPECGEN004_178.
  *
- * The per-prompt task-census banner must not just COUNT unfinished work — it must name
- * ONE concrete next open task so «what's next» rides the standing signal. Drives the REAL
+ * The per-prompt task-census banner must not just COUNT unfinished work — it may name
+ * ONE concrete next open task only inside the current spec scope. Drives the REAL
  * writeTaskCensusCache + buildTaskCensusLine on a temp repo (no synthetic stub): write a
- * cache whose busiest spec carries a titled open task, render the banner, assert the title
- * shows as the next step.
+ * cache whose busiest spec is foreign, render for the current spec, assert only the
+ * current-spec title shows as the next step.
  *
  * @see .specs/spec-generator-v4/spec-generator-v4.feature SPECGEN004_178
  * @see .specs/spec-generator-v4/FR.md FR-49 (FR-49a)
@@ -19,7 +19,7 @@ import os from 'node:os';
 import { spawnSync } from 'node:child_process';
 import { V4World } from '../hooks/before-after.ts';
 import type { SpecGraph } from '../../tools/spec-graph/types.ts';
-import { writeTaskCensusCache, findStaleInProgress, type StaleMarker } from '../../tools/spec-graph/task-census.ts';
+import { writeTaskCensusCache, findStaleInProgress, selectNextStepRoute, type NextStepRoute, type StaleMarker } from '../../tools/spec-graph/task-census.ts';
 import { renderStaleReport } from '../../tools/spec-graph/stale-marker-scan.ts';
 import { buildTaskCensusLine } from '../../tools/specs-validator/conformance-summary.ts';
 import { validateSpecChange, type ValidateResult } from '../../tools/spec-mcp-server/mutations.ts';
@@ -70,6 +70,16 @@ interface AutoSurfaceWorld extends V4World {
   bpBare?: boolean;
   bpTool?: boolean;
   bpBg?: boolean;
+  routeRoot?: string;
+  routeTranscript?: string;
+  routeCensus?: {
+    total: { open: number; doneRed: number; doneUnrun: number };
+    specs: Array<{ slug: string; open: number; doneRed: number; doneUnrun: number; nextOpen?: { id: string; title: string } }>;
+  };
+  routeTodo?: NextStepRoute | null;
+  routeAsync?: NextStepRoute | null;
+  routeSpec?: NextStepRoute | null;
+  routeForeign?: NextStepRoute | null;
 }
 
 // FR-49f (SPECGEN004_181): the door strength-gate refuses a .feature write that ADDS a
@@ -98,14 +108,15 @@ const DOOR_REAL = `Feature: door-fixture
     Then an error is shown
 `;
 
-Given('a cached task census whose busiest spec has an open task with a title', function (this: AutoSurfaceWorld) {
+Given('a cached task census with a foreign busiest spec and a current spec next task', function (this: AutoSurfaceWorld) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'fr49a-'));
   writeTaskCensusCache(
     root,
     {
-      total: { open: 1, doneRed: 0, doneUnrun: 0 },
+      total: { open: 30, doneRed: 0, doneUnrun: 0 },
       specs: [
-        { slug: 'demo', open: 1, doneRed: 0, doneUnrun: 0, nextOpen: { id: 'demo:wire-gate', title: 'Wire the gate' } },
+        { slug: 'spec-generator-v4', open: 29, doneRed: 0, doneUnrun: 0, nextOpen: { id: 'ws-f-remaining', title: 'WS-F: remaining feature work' } },
+        { slug: 'reel-agent-marketplace', open: 1, doneRed: 0, doneUnrun: 0, nextOpen: { id: 'p32-1', title: 'Fix marketplace routing' } },
       ],
     },
     '2026-06-13T00:00:00Z',
@@ -113,15 +124,79 @@ Given('a cached task census whose busiest spec has an open task with a title', f
   this.asRoot = root;
 });
 
-When('the per-prompt task-census banner renders', function (this: AutoSurfaceWorld) {
-  this.asBanner = buildTaskCensusLine(this.asRoot!);
+When('the per-prompt task-census banner renders for the current spec', function (this: AutoSurfaceWorld) {
+  this.asBanner = buildTaskCensusLine(this.asRoot!, { activeSpecSlugs: new Set(['reel-agent-marketplace']) });
 });
 
-Then('the banner names that task title as the next step', function (this: AutoSurfaceWorld) {
+Then('the banner names only the current spec task as the next step', function (this: AutoSurfaceWorld) {
   fs.rmSync(this.asRoot!, { recursive: true, force: true });
   assert.ok(this.asBanner, 'banner rendered (census non-empty)');
   assert.match(this.asBanner!, /следующее:/, 'banner carries a next-step line');
-  assert.match(this.asBanner!, /Wire the gate/, 'banner names the concrete next open task title');
+  assert.match(this.asBanner!, /Fix marketplace routing/, 'banner names the current spec next open task title');
+  assert.doesNotMatch(this.asBanner!, /WS-F: remaining feature work/, 'banner must not leak the foreign busiest backlog next step');
+});
+
+Given('the shared next-step router has an agent todo an active async job and a current spec task', function (this: AutoSurfaceWorld) {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'fr49a-route-'));
+  const tx = path.join(root, 'transcript.jsonl');
+  fs.writeFileSync(
+    tx,
+    JSON.stringify({
+      type: 'assistant',
+      message: { role: 'assistant', content: [{ type: 'tool_use', name: 'TaskCreate', input: { subject: 'Finish router' } }] },
+    }) + '\n',
+    'utf-8',
+  );
+  this.routeRoot = root;
+  this.routeTranscript = tx;
+  this.routeCensus = {
+    total: { open: 30, doneRed: 0, doneUnrun: 0 },
+    specs: [
+      { slug: 'spec-generator-v4', open: 29, doneRed: 0, doneUnrun: 0, nextOpen: { id: 'ws-f-remaining', title: 'WS-F: remaining feature work' } },
+      { slug: 'reel-agent-marketplace', open: 1, doneRed: 0, doneUnrun: 0, nextOpen: { id: 'p32-1', title: 'Fix marketplace routing' } },
+    ],
+  };
+});
+
+When('the next-step route is selected across priority cases', function (this: AutoSurfaceWorld) {
+  this.routeTodo = selectNextStepRoute({
+    transcriptPath: this.routeTranscript!,
+    census: this.routeCensus!,
+    currentSpecSlug: 'reel-agent-marketplace',
+    awaitingAsync: true,
+  });
+  fs.writeFileSync(this.routeTranscript!, '', 'utf-8');
+  this.routeAsync = selectNextStepRoute({
+    transcriptPath: this.routeTranscript!,
+    census: this.routeCensus!,
+    currentSpecSlug: 'reel-agent-marketplace',
+    awaitingAsync: true,
+  });
+  this.routeSpec = selectNextStepRoute({
+    transcriptPath: this.routeTranscript!,
+    census: this.routeCensus!,
+    currentSpecSlug: 'reel-agent-marketplace',
+    awaitingAsync: false,
+  });
+  this.routeForeign = selectNextStepRoute({
+    transcriptPath: this.routeTranscript!,
+    census: this.routeCensus!,
+    currentSpecSlug: 'lm-saas',
+    awaitingAsync: false,
+  });
+});
+
+Then('the route chooses agent todo before async before current spec and never a foreign backlog', function (this: AutoSurfaceWorld) {
+  fs.rmSync(this.routeRoot!, { recursive: true, force: true });
+  assert.deepEqual(this.routeTodo, { source: 'agent-todo', title: 'Finish router' });
+  assert.equal(this.routeAsync?.source, 'active-async', 'active async is second priority after agent todo');
+  assert.deepEqual(this.routeSpec, {
+    source: 'current-spec',
+    spec: 'reel-agent-marketplace',
+    id: 'p32-1',
+    title: 'Fix marketplace routing',
+  });
+  assert.equal(this.routeForeign, null, 'unknown current spec must not fall back to the foreign busiest backlog');
 });
 
 // SPECGEN004_179 (FR-49d): the stale-marker reconciler flags an all-green in-progress
@@ -310,13 +385,16 @@ Then(
 // task census still shows unfinished work is blocked, with the real numbers + next task injected.
 // Migrated from the vitest CEGATE001_25 to a BDD scenario driving the REAL hook (judge OFF; the
 // census-false-close is deterministic and fires before the judge).
-Given('a census with unfinished work naming a next open task and the real claim-evidence-gate stop hook', function (this: AutoSurfaceWorld) {
+Given('a census with a foreign busiest spec plus current-spec unfinished work and the real claim-evidence-gate stop hook', function (this: AutoSurfaceWorld) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'fr49b-'));
   writeTaskCensusCache(
     root,
     {
-      total: { open: 11, doneRed: 0, doneUnrun: 0 },
-      specs: [{ slug: 'demo', open: 11, doneRed: 0, doneUnrun: 0, nextOpen: { id: 'demo:wire-gate', title: 'Wire the gate' } }],
+      total: { open: 30, doneRed: 0, doneUnrun: 0 },
+      specs: [
+        { slug: 'spec-generator-v4', open: 29, doneRed: 0, doneUnrun: 0, nextOpen: { id: 'ws-f-remaining', title: 'WS-F: remaining feature work' } },
+        { slug: 'demo', open: 1, doneRed: 0, doneUnrun: 0, nextOpen: { id: 'demo:wire-gate', title: 'Wire the gate' } },
+      ],
     },
     '2026-06-17T00:00:00Z',
   );
@@ -324,16 +402,20 @@ Given('a census with unfinished work naming a next open task and the real claim-
 });
 
 When('the hook judges a whole-spec done claim made after a tool ran', function (this: AutoSurfaceWorld) {
-  const out = runStopHook(this.csRoot!, 'Спека готова, всё закрыто. 37 из 48.');
+  const out = runStopHook(this.csRoot!, 'Спека готова, всё закрыто. 37 из 48.', [
+    { name: 'Edit', input: { file_path: '.specs/spec-generator-v4/FR.md' } },
+    { name: 'Edit', input: { file_path: '.specs/demo/FR.md' } },
+  ]);
   this.csBlocked = out.blocked;
   this.csRaw = out.raw;
 });
 
-Then('the hook blocks it and the block names the unfinished count and the next task', function (this: AutoSurfaceWorld) {
+Then('the hook blocks it and the block names the unfinished count and only the current spec next task', function (this: AutoSurfaceWorld) {
   fs.rmSync(this.csRoot!, { recursive: true, force: true });
   assert.equal(this.csBlocked, true, 'whole-spec done claim + unfinished census → block');
   assert.match(this.csRaw!, /в работе|незакрыто/, 'the block injects the real unfinished count');
-  assert.match(this.csRaw!, /Wire the gate/, 'the block names the concrete next open task');
+  assert.match(this.csRaw!, /Wire the gate/, 'the block names the current spec next open task');
+  assert.doesNotMatch(this.csRaw!, /WS-F: remaining feature work/, 'the block must not leak the foreign busiest backlog next step');
 });
 
 // SPECGEN004_190 (FR-49b anti-H1): the census branch is tightly spec-scoped — a task-level "fixed

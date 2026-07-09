@@ -10,23 +10,22 @@
  * That is the F2 footgun (audit-reports/session-dogfood-findings-2026-06-18.md):
  * a one-scenario diagnostic run silently wiped the full-suite coverage this session.
  *
- * This wrapper routes a FILTERED run's `message` output to a throwaway ndjson and
- * leaves the canonical untouched; a FULL run still writes the canonical. Use it for
- * any diagnostic / single-scenario run. Full runs may use it too (identical to a
- * bare cucumber invocation in that case).
+ * This wrapper is the runtime entry used inside Docker by scripts/docker-bdd.sh. It
+ * routes a FILTERED run's default-config `message` output to a throwaway ndjson and
+ * leaves the canonical untouched; a FULL default-config run still writes the
+ * canonical. Host invocations are refused below — use the Docker wrapper.
  *
- *   node scripts/run-bdd.mjs --name "SPECGEN004_149"   # → throwaway, canonical safe
- *   node scripts/run-bdd.mjs                            # → full run, canonical
+ *   bash scripts/docker-bdd.sh --name "SPECGEN004_149"   # → throwaway, canonical safe
+ *   bash scripts/docker-bdd.sh                            # → full run, canonical
  */
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 
 // Strict host-block (rule no-host-bdd-runs, owner directive 2026-06-24 "ничего на машине, всё в
-// Docker"): run-bdd is a HOST-only tool (docker-bdd.sh runs cucumber in-container directly, never via
-// run-bdd), so refuse on the host. Belt-and-suspenders behind the test_guard PreToolUse hook — if a
-// caller bypasses the Bash hook, this still stops a host run. No bypass by design (mirrors
-// tests/setup/ensure-docker.ts).
+// Docker"): run-bdd is the in-container runtime used by docker-bdd.sh, so refuse everywhere else.
+// Belt-and-suspenders behind the test_guard PreToolUse hook — if a caller bypasses the Bash hook,
+// this still stops a host run. No bypass by design (mirrors tests/setup/ensure-docker.ts).
 if (process.env.DEV_POMOGATOR_TEST_IN_DOCKER !== '1') {
   process.stderr.write(
     '\n[run-bdd] host BDD runs are disabled — the cucumber suite must run in Docker.\n' +
@@ -37,6 +36,28 @@ if (process.env.DEV_POMOGATOR_TEST_IN_DOCKER !== '1') {
 }
 
 const args = process.argv.slice(2);
+
+function findExplicitConfig(argv) {
+  for (let i = 0; i < argv.length; i += 1) {
+    const arg = argv[i];
+    if (arg === '--config' || arg === '-c') return argv[i + 1] ?? null;
+    if (arg.startsWith('--config=')) return arg.slice('--config='.length);
+  }
+  return null;
+}
+
+function messageTargetFromConfig(configPath) {
+  if (!configPath) return null;
+  try {
+    const cfg = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+    const formats = cfg?.default?.format ?? [];
+    const message = formats.find((f) => typeof f === 'string' && f.startsWith('message:'));
+    return message ? message.slice('message:'.length) : null;
+  } catch {
+    return null;
+  }
+}
+
 const FILTER_FLAGS = ['--name', '-n', '--tags', '-t'];
 const isFiltered = args.some(
   (a) => FILTER_FLAGS.includes(a) || FILTER_FLAGS.some((f) => a.startsWith(f + '=')),
@@ -49,9 +70,8 @@ const isFiltered = args.some(
 // 703 all-skipped events — done-but-not-run 43→234.)
 const isDryRun = args.includes('--dry-run');
 const isPartial = isFiltered || isDryRun;
-const hasExplicitConfig = args.some(
-  (a) => a === '--config' || a === '-c' || a.startsWith('--config='),
-);
+const explicitConfigPath = findExplicitConfig(args);
+const hasExplicitConfig = explicitConfigPath !== null;
 
 const CANONICAL = path.join('.dev-pomogator', '.last-test-run.ndjson');
 const THROWAWAY = path.join('.dev-pomogator', '.tmp', 'bdd-filtered.ndjson');
@@ -86,11 +106,16 @@ const r = spawnSync(process.execPath, runArgs, { stdio: 'inherit' });
 // timings + accurate pass/fail derivable later via the canonical ndjson parser).
 const HISTORY_KEEP = 30;
 try {
-  // Only archive runs through the DEFAULT config: full → CANONICAL, filtered → THROWAWAY
-  // (both targets known here). An explicit `-c` run writes its own target the wrapper can't
-  // know, so skip it (those are scoped validation runs that already use a temp ndjson).
-  const wrote = isPartial ? THROWAWAY : CANONICAL;
-  if (!hasExplicitConfig && fs.existsSync(wrote)) {
+  // docker-bdd.sh archives Docker runs from the host side after the container exits. That avoids
+  // Windows/WSL bind-mount permission failures while still keeping sanctioned runs in the same
+  // .dev-pomogator/.test-history format.
+  if (process.env.RUN_BDD_HISTORY_EXTERNAL === '1') throw new Error('external-history');
+
+  // Archive default-config runs (full → CANONICAL, filtered → THROWAWAY) and explicit-config
+  // runs whose config declares a `message:<path>` formatter. This keeps FR-52's per-run history
+  // complete without ever copying a filtered result into the canonical.
+  const wrote = hasExplicitConfig ? messageTargetFromConfig(explicitConfigPath) : isPartial ? THROWAWAY : CANONICAL;
+  if (wrote && fs.existsSync(wrote)) {
     const HIST = path.join('.dev-pomogator', '.test-history');
     fs.mkdirSync(HIST, { recursive: true });
     const raw = fs.readFileSync(wrote, 'utf8');
@@ -146,7 +171,9 @@ try {
     );
   }
 } catch (e) {
-  process.stderr.write(`[run-bdd] history archive skipped: ${e?.message ?? e}\n`);
+  if (e?.message !== 'external-history') {
+    process.stderr.write(`[run-bdd] history archive skipped: ${e?.message ?? e}\n`);
+  }
 }
 
 process.exit(r.status ?? 1);

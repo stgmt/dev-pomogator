@@ -52,6 +52,9 @@ function writeFakeEslint(dir: string, body = 'echo local-eslint'): void {
 
 function installCommandFor(dir: string): string {
   const scriptPath = path.join(dir, 'install-eslint.cjs');
+  const fakeBody = process.platform === 'win32'
+    ? '@echo off\r\necho local-eslint\r\n'
+    : '#!/bin/sh\necho local-eslint\n';
   fs.writeFileSync(
     scriptPath,
     [
@@ -59,8 +62,8 @@ function installCommandFor(dir: string): string {
       "const path = require('node:path');",
       `const target = ${JSON.stringify(fakeEslintPath(dir))};`,
       "fs.mkdirSync(path.dirname(target), { recursive: true });",
-      "fs.writeFileSync(target, '#!/bin/sh\\necho local-eslint\\n');",
-      "fs.chmodSync(target, 0o755);",
+      `fs.writeFileSync(target, ${JSON.stringify(fakeBody)});`,
+      "try { fs.chmodSync(target, 0o755); } catch {}",
     ].join('\n'),
     'utf-8',
   );
@@ -150,7 +153,7 @@ Then(/^lint execution is not attempted$/, function (this: LintBootWorld) {
 
 Then(/^it resolves eslint from project-local tooling$/, function (this: LintBootWorld) {
   assert.ok(this.lintInspection, 'lint inspection must be loaded');
-  assert.equal(this.lintInspection.lintScript, 'eslint .claude tools');
+  assert.equal(this.lintInspection.lintScript, 'node tools/lint-self-bootstrap/run-lint.cjs');
   const devDeps = this.lintInspection.packageJson.devDependencies as Record<string, unknown>;
   assert.equal(typeof devDeps.eslint, 'string', 'eslint must be project-local in devDependencies');
 });

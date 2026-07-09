@@ -210,6 +210,42 @@ This block enumerates the spec-doc edits applied as part of the v3→v4 transiti
 | `tests/step_definitions/feature43_legacy_triage.ts` | create | SPECGEN004_156 binds the real computeLegacyTriage ([FR-43](FR.md#fr-43)) |
 | `tools/spec-graph/builder.ts` | edit | P18-2: skipDirs += `archive` so `.specs/archive/` retired specs leave the live graph ([FR-43](FR.md#fr-43)) |
 
+## Phase 28 — FR-52 session dogfood hardening (2026-07-09)
+
+| Path | Action | Reason |
+|------|--------|--------|
+| `tools/anchor-integrity/fix.mjs` | edit | P28-2 / FR-52b: add `--door`/enforce mode that applies deterministic anchor rewrites through `scripts/spec-door.ts` + `apply_spec_change`, with temp instruction files outside `.specs/` ([FR-52](FR.md#fr-52)) |
+| `tools/anchor-integrity/anchor_gate_stop.ts` | edit | P28-2 / FR-52b: Stop-gate fix hint now prescribes `--apply --door` and names the enforce-safe path ([FR-52](FR.md#fr-52)) |
+| `tools/anchor-integrity/anchor_check_post.ts` | edit | P28-2 / FR-52b: PostToolUse reminder now prescribes the same door-safe anchor-fix command ([FR-52](FR.md#fr-52)) |
+| `tools/anchor-integrity/__tests__/fix.test.ts` | edit | P28-2 / FR-52b unit regression proves door instructions stay outside `.specs/` and carry rewritten content to the door ([FR-52](FR.md#fr-52)) |
+| `tools/anchor-integrity/__tests__/hooks.test.ts` | edit | P28-2 / FR-52b hook regression asserts enforce-safe `--door` guidance in reminders ([FR-52](FR.md#fr-52)) |
+| `tools/spec-mcp-server/tools.ts` | edit | P28-3 / FR-52c: clarify `validate_anchor` domains and add `DOC.md#heading-slug` Marksman-slug validation via shared `marksman-slug.mjs` ([FR-52](FR.md#fr-52)) |
+| `tools/spec-mcp-server/__tests__/tools.test.ts` | edit | Unit regression: compact-id alias still resolves; `FR.md#fr-34-marksman-v20-anchors` resolves with Marksman punctuation rules ([FR-52](FR.md#fr-52)) |
+| `tests/step_definitions/feature52_dogfood_hardening.ts` | edit | BDD regressions for SPECGEN004_514 (`validate_anchor`), SPECGEN004_515 (anchor-fix via door), and SPECGEN004_517 (guarded v1-layout FILE_CHANGES drift) on real code paths ([FR-52](FR.md#fr-52)) |
+| `.specs/spec-generator-v4/spec-generator-v4.feature` | edit | Add @feature52 scenarios SPECGEN004_514, SPECGEN004_515, and SPECGEN004_517 for compact-vs-heading anchors, enforce-safe anchor-fix, and guarded v1-layout FILE_CHANGES drift ([FR-52](FR.md#fr-52)) |
+| `tools/spec-mcp-server/server.bundle.mjs` | edit | Rebuilt distributed MCP bundle so plugin users receive FR-52c behavior ([FR-52](FR.md#fr-52)) |
+| `.claude/skills/spec-reality-check/scripts/verify.ts` | edit | P28-4 / FR-52d: classify missing `edit` rows under removed v1 prefixes as `FC_V1_LAYOUT_DRIFT` only for canonical plugin repos where that prefix directory is gone, preserving generic `FC_EDIT_MISSING` elsewhere ([FR-52](FR.md#fr-52)) |
+| `.claude/skills/spec-reality-check/evals/evals.json` | edit | P28-4 / FR-52d eval pins the positive canonical-plugin v1-layout drift case and forbids generic `FC_EDIT_MISSING` in that branch ([FR-52](FR.md#fr-52)) |
+| `.claude/skills/spec-reality-check/references/checks.md` | edit | Documents `FC_V1_LAYOUT_DRIFT` trigger, guard conditions, and remap guidance ([FR-52](FR.md#fr-52)) |
+| `tests/fixtures/spec-reality-check/v2/fc-v1-layout-drift/` | create | Fixture with missing `src/` edit row used by spec-reality-check evals for the guarded v1-layout drift detector ([FR-52](FR.md#fr-52)) |
+| `.dockerignore` | edit | Exclude `.dev-pomogator/.tmp` runtime scratch from Docker build context so focused Docker BDD builds do not stream stale temp worktrees/logs into the image; verified during SPECGEN004_517 rerun ([FR-52](FR.md#fr-52)) |
+| `scripts/docker-bdd.sh` | edit | Make the writable `.specs` copy per-run and copy `.specs/.` contents into it so stale `.dev-pomogator/.tmp/specs-docker-rw` directories cannot nest the mounted corpus and make filtered BDD runs select 0 scenarios ([FR-52](FR.md#fr-52)) |
+| `.claude/skills/cross-spec-reconcile/scripts/full-mode.ts` | edit | P28-WS-F / FR-17: raise semantic dispatcher timeout to 120s and surface `SUBPROCESS_FAILED` as mechanical-only partial report with `cross-spec/semantic-check-failed` warning ([FR-17](FR.md#fr-17)) |
+| `.claude/skills/cross-spec-reconcile/scripts/reconcile.ts` | edit | P28-WS-F / FR-17: extend report typing for `mode: full`, `partial`, `partialReasons`, and semantic finding class ([FR-17](FR.md#fr-17)) |
+| `.claude/skills/cross-spec-reconcile/scripts/yaml-writer.ts` | edit | P28-WS-F / FR-17: emit `partial: true` and `partial_reasons[]` for degraded full-mode reports ([FR-17](FR.md#fr-17)) |
+| `tests/step_definitions/feature17_full_mode.ts` | edit | P28-WS-F / FR-17: BDD regression SPECGEN004_516 drives real runFullMode + emitYaml partial fallback path ([FR-17](FR.md#fr-17)) |
+| `scripts/wire-feature.mjs` | edit | P28-7 / FR-51d: validate same-spec `@featureN` tags, promote immediate `# @featureN`/control tag comments to real Gherkin tag lines, and write the feature plus `cucumber.json` under the existing lock ([FR-51](FR.md#fr-51)) |
+| `tools/bdd-migrator/__tests__/migrate.test.ts` | edit | P28-7 / FR-51d unit regression for promotion, idempotence, wrong-feature-number refusal, graph `tested-by` edge creation, and full `wireFeature` temp-corpus writes ([FR-51](FR.md#fr-51)) |
+| `tests/step_definitions/feature51_bdd_migrator.ts` | edit | P28-7 / FR-51d BDD steps drive the real wire-feature promotion helper and graph parser on a temp feature fixture ([FR-51](FR.md#fr-51)) |
+| `.specs/spec-generator-v4/spec-generator-v4.feature` | edit | Add @feature51 scenario SPECGEN004_518 for wire-time comment-tag promotion ([FR-51](FR.md#fr-51)) |
+| `tools/spec-graph/conformance.ts` | edit | P28-8 / FR-52g: relax `TASK_NO_OWN_SCENARIO` for migrated many→few task↔scenario consolidation when at least one mapped covering scenario passed; leave `TASK_STATUS_UNVERIFIED` to surface non-green siblings ([FR-52](FR.md#fr-52)) |
+| `tools/spec-graph/__tests__/conformance.test.ts` | edit | Regression pins accepted many→few consolidation with a green scenario plus not-run sibling, and still flags all-non-green consolidation ([FR-52](FR.md#fr-52)) |
+| `tests/step_definitions/feature46_task_traceability.ts` | edit | BDD steps for SPECGEN004_519 drive real `checkConformance` over the many→few graph and assert the narrow relaxation ([FR-52](FR.md#fr-52)) |
+| `.specs/spec-generator-v4/FR.md` | edit | FR-46/FR-52g document the chosen cardinality policy: consolidated green proof can satisfy the no-own-scenario rule for migrations ([FR-52](FR.md#fr-52)) |
+| `.specs/spec-generator-v4/ACCEPTANCE_CRITERIA.md` | edit | AC-46.1 / AC-52.1 capture that green many→few covering proof suppresses `TASK_NO_OWN_SCENARIO` while non-green siblings remain surfaced ([FR-52](FR.md#fr-52)) |
+| `.specs/spec-generator-v4/spec-generator-v4.feature` | edit | Add @feature52 scenario SPECGEN004_519 for the many→few `TASK_NO_OWN_SCENARIO` cardinality policy ([FR-52](FR.md#fr-52)) |
+| `tools/spec-mcp-server/server.bundle.mjs` | edit | Rebuilt distributed MCP bundle after conformance policy change so plugin users receive P28-8 behavior ([FR-52](FR.md#fr-52)) |
+
 ## Phase 30 — FR-57 scaffold-completeness audit (stub-detection gate, 2026-07-01)
 
 | Path | Action | Reason |
@@ -227,6 +263,20 @@ This block enumerates the spec-doc edits applied as part of the v3→v4 transiti
 | `tools/spec-conformance-push/__tests__/spec-conformance-push.test.ts` | edit | Focused vitest regression for large finding batches, byte cap, omitted count, and durable log completeness ([FR-59](FR.md#fr-59)) |
 | `tests/step_definitions/feature23_28_log_inventory_throttle.ts` | edit | Add @feature59 BDD steps that drive real `decidePush` and `appendFindings` for bounded reminder + complete log proof ([FR-59](FR.md#fr-59)) |
 | `tools/spec-conformance-push/spec-conformance-push.bundle.mjs` | edit | Rebuilt distributed hook artifact so plugin users receive bounded stdout behavior ([FR-59](FR.md#fr-59)) |
+
+## Phase 32 — FR-49a scope-aware next-step router hardening
+
+| Path | Action | Reason |
+|------|--------|--------|
+| `tools/specs-validator/validate-specs.ts` | edit | Resolve task-census data root from hook payload `cwd` / `workspace_roots[0]`, not plugin/process root, preventing cross-project `WS-F` leakage ([FR-49](FR.md#fr-49)) |
+| `tools/specs-validator/conformance-summary.ts` | edit | Replace global/busiest-spec next-step rendering with scope-aware next router input/output while preserving health-count summary ([FR-49](FR.md#fr-49)) |
+| `tools/spec-graph/task-census.ts` | edit | Expose/reuse transcript-derived agent todo/current-spec helpers for the shared next-step router and tests ([FR-49](FR.md#fr-49)) |
+| `tools/claim-evidence-gate/claim_evidence_gate_stop.ts` | edit | Use the same router for Stop-gate `nextLine`/`nextOpenTask` so agent todos/async/current spec outrank unrelated spec backlog ([FR-49](FR.md#fr-49)) |
+| `tools/claim-evidence-gate/turn_window.ts` | edit | Ensure background Bash/Agent/subagent in-flight facts are available to router decisions without relying on agent prose ([FR-49](FR.md#fr-49)) |
+| `tools/specs-validator/__tests__/conformance-summary.test.ts` | edit | Unit regressions for agent todo priority, current-spec-only next, no foreign next when scope unknown, and hook cwd root isolation ([FR-49](FR.md#fr-49)) |
+| `tests/step_definitions/feature49_autosurface.ts` | edit | Update SPECGEN004_178 and add @feature49 BDD steps for scope-aware next routing and cross-project leak prevention ([FR-49](FR.md#fr-49)) |
+| `.specs/spec-generator-v4/spec-generator-v4.feature` | edit | Update @feature49 scenarios to pin agent-todo/async/current-spec/root-isolation routing instead of busiest-spec routing ([FR-49](FR.md#fr-49)) |
+| `tools/claim-evidence-gate/claim_evidence_gate_stop.bundle.mjs` | edit | Rebuilt distributed Stop-gate artifact so plugin users receive scope-aware next routing ([FR-49](FR.md#fr-49)) |
 
 ## Total counts
 

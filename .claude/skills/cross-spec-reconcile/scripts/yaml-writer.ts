@@ -73,6 +73,13 @@ export function emitYaml(report: ReconcileResult): string {
   lines.push(`generated_at: ${report.generatedAt}`);
   lines.push(`mode: ${report.mode}`);
   lines.push(`spec_slug: ${report.specSlug}`);
+  if (report.partial === true) {
+    lines.push('partial: true');
+    if (report.partialReasons?.length) {
+      lines.push('partial_reasons:');
+      for (const reason of report.partialReasons) lines.push(`  - ${escape(reason)}`);
+    }
+  }
   lines.push(`total_findings: ${report.findings.length}`);
   emitSummary(lines, report);
   if (report.findings.length === 0) {

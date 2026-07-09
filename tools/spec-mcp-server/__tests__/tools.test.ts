@@ -48,6 +48,7 @@ function makeGraph(): SpecGraph {
   };
   g.nodes.set('FR-1', fr('FR-1', 'Login flow'));
   g.nodes.set('FR-2', fr('FR-2', 'Logout flow', '.specs/auth/FR.md', 20));
+  g.nodes.set('FR-34', fr('FR-34', 'Marksman v2.0 anchors!', '.specs/auth/FR.md', 40));
   g.nodes.set('AC-1', ac('AC-1', 'FR-1'));
   g.nodes.set('SCEN-login-ok', scen('SCEN-login-ok', ['@FR-1', '@happy-path']));
   g.nodes.set('SCEN-orphan', scen('SCEN-orphan', ['@FR-999']));
@@ -425,10 +426,27 @@ describe('get_node + validate_anchor + list_specs', () => {
     expect(body.node.id).toBe('AC-1');
   });
 
+  it('validate_anchor describes compact-id aliases separately from Marksman heading slugs', () => {
+    const description = tool('validate_anchor').description;
+    expect(description).toContain('spec-graph compact-id/alias registry');
+    expect(description).toContain('DOC.md#heading-slug');
+    expect(description).toContain('Marksman heading slug');
+    expect(description).toContain('not a compact-id alias lookup');
+  });
+
   it('validate_anchor returns registered: true for known compact id', async () => {
     const r = await tool('validate_anchor').handler({ anchor: 'FR-1' });
-    const body = parseResult(r) as { registered: boolean };
+    const body = parseResult(r) as { registered: boolean; kind: string };
     expect(body.registered).toBe(true);
+    expect(body.kind).toBe('spec-graph-alias');
+  });
+
+  it('validate_anchor validates DOC.md#heading-slug using Marksman slug rules', async () => {
+    const r = await tool('validate_anchor').handler({ anchor: 'FR.md#fr-34-marksman-v20-anchors', spec: 'auth' });
+    const body = parseResult(r) as { registered: boolean; kind: string; location: { file: string; line: number } };
+    expect(body.registered).toBe(true);
+    expect(body.kind).toBe('marksman-heading-slug');
+    expect(body.location).toEqual({ file: '.specs/auth/FR.md', line: 40 });
   });
 
   it('validate_anchor returns registered: false for unknown alias', async () => {
@@ -465,7 +483,7 @@ describe('find_orphans + get_test_result + get_spec_status (view=counts) + list_
     const r = await tool('get_spec_status').handler({ view: 'counts' });
     const body = parseResult(r) as { specs: Array<{ spec: string; fr: number; ac: number; scenario: number; task: number }> };
     const auth = body.specs.find((s) => s.spec === 'auth')!;
-    expect(auth.fr).toBe(2);
+    expect(auth.fr).toBe(3);
     expect(auth.ac).toBe(1);
     expect(auth.scenario).toBe(2);
     expect(auth.task).toBe(2);

@@ -1366,10 +1366,16 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Then the bare id resolves to the composite task node and is not 404ed
 
   @feature49
-  Scenario: SPECGEN004_178 the task-census banner names one concrete next open task
-    Given a cached task census whose busiest spec has an open task with a title
-    When the per-prompt task-census banner renders
-    Then the banner names that task title as the next step
+  Scenario: SPECGEN004_178 the task-census banner routes the next step only within the current spec
+    Given a cached task census with a foreign busiest spec and a current spec next task
+    When the per-prompt task-census banner renders for the current spec
+    Then the banner names only the current spec task as the next step
+
+  @feature49
+  Scenario: SPECGEN004_480 the shared next-step router prioritizes agent todo then async then current spec
+    Given the shared next-step router has an agent todo an active async job and a current spec task
+    When the next-step route is selected across priority cases
+    Then the route chooses agent todo before async before current spec and never a foreign backlog
 
   @feature49
   Scenario: SPECGEN004_179 the reconciler flags a stale in-progress marker but never auto-closes it
@@ -1427,13 +1433,13 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
 
   @feature49
   Scenario: SPECGEN004_189 the stop-gate blocks a whole-spec done claim while the census shows unfinished work
-    Given a census with unfinished work naming a next open task and the real claim-evidence-gate stop hook
+    Given a census with a foreign busiest spec plus current-spec unfinished work and the real claim-evidence-gate stop hook
     When the hook judges a whole-spec done claim made after a tool ran
-    Then the hook blocks it and the block names the unfinished count and the next task
+    Then the hook blocks it and the block names the unfinished count and only the current spec next task
 
   @feature49
   Scenario: SPECGEN004_190 the census-false-close gate does not fire on a non-spec works-done claim
-    Given a census with unfinished work naming a next open task and the real claim-evidence-gate stop hook
+    Given a census with a foreign busiest spec plus current-spec unfinished work and the real claim-evidence-gate stop hook
     When the hook judges a task-level fixed-it claim made after a tool ran
     Then the hook does not block it
 
@@ -1491,6 +1497,14 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     When the migrator inventories that source
     Then the helper-calling case is runtime the direct call is pure the fs case is artifact and the skipped case is manual
 
+  @feature51
+  Scenario: SPECGEN004_518 wire-feature promotes comment feature tags before wiring
+    Given a feature text with a comment feature tag and a same-spec FR list
+    When the wire-feature promotion helper prepares that feature for wiring
+    Then the comment feature tag becomes a real Gherkin tag line with its control tag
+    And the promoted feature parses to a tested-by edge for that FR
+    And an unknown feature number is rejected before wiring
+
   @feature3
   Scenario: SPECGEN004_200 the wiki-link resolver resolves ids and slug aliases strips fragments and flags broken targets
     Given the graph wiki-link resolver and a registry of node locations
@@ -1498,10 +1512,10 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Then ids and slug aliases resolve identically unknown targets are broken the alias and fragment are stripped a same-file fragment is empty-but-not-broken and line numbers are recorded
 
   @feature32
-  Scenario: SPECGEN004_201 the coverage scenarioKey normaliser canonicalises ids and ignores prose
+  Scenario: SPECGEN004_201 the coverage scenarioKey normaliser canonicalises ids including non-v4 prefixes and ignores prose
     Given the coverage scenarioKey normaliser
-    When it normalises a slug node id a raw Done-When mention a legacy-typo id and plain prose
-    Then it yields the canonical specgen004 id tolerates the legacy SCENGEN typo and returns null for prose
+    When it normalises a slug node id a raw Done-When mention a legacy-typo id a named non-v4 id and plain prose
+    Then it yields canonical scenario ids tolerates the legacy SCENGEN typo and returns null for prose
 
   @feature32
   Scenario: SPECGEN004_202 bucketScenarios conserves every scenario and routes each result to one bucket
@@ -1537,13 +1551,13 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
   Scenario: SPECGEN004_207 computeCoverage reconciles totals and never marks a task with an unrun scenario DONE
     Given a coverage run over one passed and one undefined scenario with a done a mixed and an orphan task
     When computeCoverage scores them end to end
-    Then the bucket totals reconcile with the scenario count and the done task is DONE the mixed task IN_PROGRESS and the orphan task unverified
+    Then the bucket totals reconcile with the scenario count the done task is DONE the mixed task IN_PROGRESS the orphan task unverified and a TESTQUAL own-scenario task is DONE without same-feature siblings
 
   @feature46
   Scenario: SPECGEN004_208 get_trace surfaces each task's own cited scenario and its last result
-    Given a graph where one task cites its own SPECGEN scenario in Done-When and another does not
+    Given a graph where one task cites its own SPECGEN scenario in Done-When another cites its own TESTQUAL scenario and a third does not
     When get_trace is asked for the shared FR
-    Then the citing task own_scenario resolves to that scenario with its last result and the other task own_scenario is null
+    Then the citing tasks own_scenario resolves to each scenario with its last result and the other task own_scenario is null
 
   @feature3
   Scenario: SPECGEN004_209 parseMarkdown registers triple anchors for a legacy Requirement heading and the v4 pair without regression
@@ -1634,8 +1648,17 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Then the guard denies it with exit 2 and routes to docker-bdd
     When a docker-bdd.sh invocation runs the suite in Docker
     Then the guard allows it with exit 0
+    When an npm test:bdd invocation reaches the guard
+    Then the guard allows it with exit 0
     When a git commit message merely mentions a cucumber run
     Then the guard allows it with exit 0
+
+    When the package BDD script is inspected
+    Then test:bdd routes to docker-bdd
+    When the docker-bdd runner is inspected
+    Then docker-bdd invokes run-bdd inside Docker instead of raw cucumber
+    When the BDD runner instructions are inspected
+    Then they route filtered BDD diagnostics through docker-bdd and not host cucumber
 
   @feature49
   Scenario: SPECGEN004_222 the gate releases after consecutive zero-tool kicks and a tool-run resets the no-progress streak
@@ -2358,6 +2381,12 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Given two specs each have a FR-1 with short bodies in the full-mode temp repo
     When runFullMode is called with default options against two short-body specs
     Then 0 spawn calls were made because both FR bodies are shorter than 60 chars
+
+  @feature17
+  Scenario: SPECGEN004_516 runFullMode marks partial when the semantic dispatcher fails
+    Given two specs each have a FR-1 with long matching prose in the full-mode temp repo
+    When runFullMode is called with a spawn that throws "semantic dispatcher timeout after 120000ms"
+    Then the full-mode report is marked partial and contains a cross-spec/semantic-check-failed warning containing "semantic dispatcher timeout after 120000ms"
 
   # FR-18 cross-spec-resolve step-7 — updateStatus YAML stamping
 
@@ -3217,3 +3246,30 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     And the emitted reminder summarizes the finding count, severity counts, omitted count, and full-log pointer
     And the emitted reminder shows no more than 20 sample findings
     And the durable spec-check-log writer still records every synthetic finding
+
+  @feature52
+  Scenario: SPECGEN004_514 validate_anchor distinguishes compact aliases from Marksman heading slugs
+    Given a validate_anchor tool over a spec containing a punctuation-heavy Marksman heading
+    When validate_anchor checks both a compact id and DOC.md#heading-slug
+    Then the tool description separates the alias registry from Marksman heading slugs
+    And the compact id and Marksman heading slug resolve while a non-Marksman slug does not
+
+  @feature52
+  Scenario: SPECGEN004_515 anchor-fix repairs enforce sessions through the spec door
+    Given a spec with a broken id-bearing anchor while spec-access enforce is on
+    When anchor-fix runs in door mode
+    Then the anchor is fixed through the spec door and enforce hints never prescribe a raw write
+
+  @feature52
+  Scenario: SPECGEN004_517 FILE_CHANGES v1 layout drift is specific to canonical plugin repos
+    Given a canonical plugin repo fixture with FILE_CHANGES edit rows under removed v1 prefixes
+    When the spec-reality checker runs on the v1 layout drift fixture
+    Then it emits FC_V1_LAYOUT_DRIFT instead of generic FC_EDIT_MISSING
+    And the same missing src edit path stays generic when the src directory exists
+
+  @feature52
+  Scenario: SPECGEN004_519 TASK_NO_OWN_SCENARIO accepts migrated many-to-few consolidation with a green covering scenario
+    Given a graph with a DONE migrated task mapped to one passing consolidated scenario and one not-run sibling
+    When conformance runs over the graph
+    Then no TASK_NO_OWN_SCENARIO finding is raised for that task
+    And a TASK_STATUS_UNVERIFIED warning still surfaces the not-run sibling

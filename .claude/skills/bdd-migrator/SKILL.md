@@ -47,18 +47,20 @@ answer-simple pilot proved (retrospective finding #11) — follow it, don't rein
    (Write tool, NOT heredoc — under enforce a heredoc with `.specs/` is denied) e.g.
    `.dev-pomogator/.tmp/cuke-<slug>.json` with `paths:[the .feature]`, `import` = the SAME globs as
    `cucumber.json` (`tests/step_definitions/**/*.ts` + `tests/hooks/**/*.ts`), and
-   `format:["message:.dev-pomogator/.tmp/<slug>.ndjson"]` — a TEMP ndjson, **NEVER**
-   `message:.dev-pomogator/.last-test-run.ndjson` (a filtered/partial run into the canonical file
-   poisons every other session's honesty gate). Run:
-   `node --import tsx node_modules/@cucumber/cucumber/bin/cucumber.js -c .dev-pomogator/.tmp/cuke-<slug>.json --name "<id-regex>"`
+   `format:["message:.dev-pomogator/.docker-status/<slug>.ndjson"]` — a Docker-mounted TEMP ndjson,
+   **NEVER** `message:.dev-pomogator/.last-test-run.ndjson` (a filtered/partial run into the canonical
+   file poisons every other session's honesty gate). Run through the sanctioned Docker wrapper:
+   `bash scripts/docker-bdd.sh -c .dev-pomogator/.tmp/cuke-<slug>.json --name "<id-regex>"`
    (the `.specs/` path lives in the config FILE, so it never hits the command line → the spec-access
-   guard stays quiet). Iterate to all-green.
+   guard stays quiet; docker-bdd enters Docker and invokes `scripts/run-bdd.mjs` there). Iterate to all-green.
    > **Quick filtered diagnostic against the DEFAULT config** (re-running one scenario from the full
-   > suite, NOT this isolated temp-config validation) — use `node scripts/run-bdd.mjs --name "<id>"`,
-   > **never** raw `node … cucumber.js --name` against `cucumber.json`. The wrapper routes a filtered run
-   > to a throwaway ndjson (canonical `.last-test-run.ndjson` left intact) and archives every run to
-   > `.dev-pomogator/.test-history/` with timings (FR-52a). A bare `--name` against the default config
-   > overwrites the canonical with a partial result → every other spec then reads `not_run`.
+   > suite, NOT this isolated temp-config validation) — use `bash scripts/docker-bdd.sh --name "<id>"`,
+   > **never** raw host `node … cucumber.js --name` against `cucumber.json` and never host
+   > `node scripts/run-bdd.mjs`. The Docker wrapper routes a filtered run to `bdd-last-run.ndjson`
+   > only (canonical `.last-test-run.ndjson` left intact). The Bash PreToolUse guard denies raw host
+   > cucumber/run-bdd and points back to `docker-bdd.sh` (FR-52a + no-host-bdd-runs). A bare `--name`
+   > against the default config overwrites the canonical with a partial result → every other spec then
+   > reads `not_run`.
 6. **Collision dry-run — your step-def file is loaded by the WHOLE suite.** `tests/step_definitions/**`
    is one global namespace; a too-broad regex hijacks another feature's step (ambiguous → main suite
    breaks). Scope every regex to THIS spec's vocabulary, then prove it: `--dry-run` over a **TEMP
@@ -74,13 +76,14 @@ answer-simple pilot proved (retrospective finding #11) — follow it, don't rein
    spec-scoped vocabulary (preferred) or a negative lookahead (disambiguates in-process vs spawn vs repeat
    Whens — see gotchas). Generic assertion text is a collision magnet — always prefix it with the spec subject.
    > 🚫 **CLOBBER TRAP (observed live 2026-06-19):** the dry-run config MUST set
-   > `format:["message:.dev-pomogator/.tmp/<slug>-collision.ndjson"]` (a throwaway) — do **NOT** run the
-   > default `cucumber.json` directly (`node … cucumber.js` with no `-c`, or `-c cucumber.json`). The
-   > default config's format writes the canonical `.dev-pomogator/.last-test-run.ndjson`, and a
-   > `--dry-run` produces an **all-skipped** ndjson → it overwrites the real run, so the spec-graph
-   > census reads every scenario as `not_run` (poisons the honesty gate for ALL specs). A dry-run looks
-   > harmless because nothing executes — but it still WRITES the result file. Copy the paths into your
-   > temp config (Write tool); never point cucumber at `cucumber.json` for a partial/dry run.
+   > `format:["message:.dev-pomogator/.docker-status/<slug>-collision.ndjson"]` (a throwaway) and run via
+   > `bash scripts/docker-bdd.sh -c .dev-pomogator/.tmp/<slug>-collision.json --dry-run` — do **NOT** run
+   > the default `cucumber.json` directly. The default config's format writes the canonical
+   > `.dev-pomogator/.last-test-run.ndjson`, and a `--dry-run` produces an **all-skipped** ndjson → it
+   > overwrites the real run, so the spec-graph census reads every scenario as `not_run` (poisons the
+   > honesty gate for ALL specs). A dry-run looks harmless because nothing executes — but it still WRITES
+   > the result file. Copy the paths into your temp config (Write tool); never point cucumber at
+   > `cucumber.json` for a partial/dry run.
 7. **Wire — only when ALL scenarios are green AND `cucumber.json` is shared-tree-safe.** Add the
    `.feature` to `cucumber.json` `paths` (keep `"tags": "not @manual"` + `not @wip` while staging) ONLY
    after every scenario has a step-def (else mass-UNDEFINED) **and** `git status --short cucumber.json`
@@ -237,31 +240,27 @@ self-verify. The ONLY step left to the coordinator is the single shared canonica
 all specs write ONE shared `.last-test-run.ndjson` and N concurrent full runs would clobber it. Everything
 else below you do yourself, and it is safe to run in parallel with sibling migrator agents.
 
-1. **Promote YOUR tags via the door** — rewrite your `.feature` through `apply_spec_change`, converting every
-   `# @featureN` → real `@featureN` AND every `# @manual` → real `@manual` (same line as the feature tag,
-   e.g. `@feature6 @manual`). A comment `# @manual` is INVISIBLE to the gate's `not @manual` filter — leave
-   it a comment and that scenario RUNS as undefined and reddens the gate. Door `findings: []` = every tag
-   resolves to an FR. (Per-spec `.feature` edit through the door is CAS-safe — no cross-agent race.)
-2. **Verify each tag NUMBER against the FR it actually tests — do NOT trust the file's group convention.**
+1. **Verify each tag NUMBER against the FR it actually tests — do NOT trust the file's group convention.**
    Dogfood (skills-rules-optimizer SRO009): a scenario carried `# @feature8` by the file's grouping habit
    but tested the rules-backward-compat requirement (FR-9); a blind promote would build the `tested-by`
-   edge on the WRONG requirement. Read the scenario's intent; tag the real FR.
-3. **Wire YOURSELF — concurrency-safe** — add your `.feature` to `cucumber.json` via
+   edge on the WRONG requirement. Read the scenario's intent; tag the real FR before wiring.
+2. **Wire YOURSELF — concurrency-safe and tag-promoting** — add your `.feature` to `cucumber.json` via
    `node scripts/wire-feature.mjs <slug>` (pass the BARE SLUG, not the `.specs/...` path — the helper
    builds the path internally, keeping `.specs/` out of the command so the enforce Bash-guard doesn't
-   deny it). This is an O_EXCL-lock-guarded, idempotent,
-   atomic append (debugged 2026-06-19: a naive read-modify-write loses sibling agents' paths; the helper
-   serialises behind a lock so parallel agents never clobber each other). Do NOT hand-edit `cucumber.json`
-   while siblings run. Keep `"tags": "not @wip and not @manual"`.
-4. **Self-verify with a SCOPED run (NOT the full glob, NOT the canonical ndjson).** Validate via a temp
+   deny it). The helper holds the O_EXCL lock, validates every current/promoted `@featureN` against the
+   same-spec `FR-N`, converts immediately-attached `# @featureN @manual` / `# @featureN @wip` lines to real
+   Gherkin tags, and atomically writes the feature plus `cucumber.json`. This keeps real-tagging and wiring
+   together, so there is no graph-visible-but-unwired half-state and no wired feature with invisible tags.
+   Do NOT hand-edit `cucumber.json` while siblings run. Keep `"tags": "not @wip and not @manual"`.
+3. **Self-verify with a SCOPED run (NOT the full glob, NOT the canonical ndjson).** Validate via a temp
    config importing ONLY your own step-def + `tests/hooks/**`, format → a temp ndjson (e.g.
    `.dev-pomogator/.tmp/cuke-<slug>.ndjson`). This proves your spec green with REAL tags without loading
    siblings' in-progress step-defs or touching the shared `.last-test-run.ndjson`. Do NOT use
    `scripts/run-bdd.mjs` (its throwaway ndjson is shared → races).
-5. **Bind the test to the FIX, not the trigger — run the revert-check.** Dogfood (advisor catch): a
+4. **Bind the test to the FIX, not the trigger — run the revert-check.** Dogfood (advisor catch): a
    t20/FR-15 scenario drove the Phase-2.5 *trigger* and SURVIVED reverting the actual fix → fake-green.
    Extract the fixed unit, assert its post-fix shape, and PROVE the bind by reverting → scenario RED → restore.
-6. **Report honestly** — scenarios + FR map, scoped-run pass/fail, `@manual` ones, and which vitest doubles
+5. **Report honestly** — scenarios + FR map, scoped-run pass/fail, `@manual` ones, and which vitest doubles
    are safe to delete. **Honest IN_PROGRESS is correct, not a failure**: a task whose mapped set includes a
    `@manual` (not-run) scenario stays IN_PROGRESS (FR-32 worst-of) — the truth, NOT something to force-green.
 

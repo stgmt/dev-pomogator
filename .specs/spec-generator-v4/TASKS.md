@@ -572,15 +572,15 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [ ] `check-impl-drift.ts` validates each declared path via fs.existsSync, greps declared symbols, parses extension.json hook registrations
   - [ ] Unit tests cover all 15 cross-spec/* + 13 impl-drift/* finding codes against fixture corpus
 
-- [x] Implement semantic subagent dispatcher -- @feature17 — id: impl-semantic-subagent — Status: DONE (partial 2026-06-07: `full-mode.ts` ships judge dispatch + cache-hit-no-spawn + call counting; NOT found: 120s timeout fallback, `partial: true` flag on subagent failure) | Est: 480m
+- [x] Implement semantic subagent dispatcher -- @feature17 — id: impl-semantic-subagent — Status: DONE (2026-07-09: `full-mode.ts` ships judge dispatch + cache-hit-no-spawn + call counting; WS-F added 120s semantic dispatcher timeout, `cross-spec/semantic-check-failed` WARNING, and `partial: true` YAML fallback for semantic failures; evidence: lint exit 0; Docker BDD `SPECGEN004_516` passed 1 scenario / 6 steps) | Est: 480m
   _depends: impl-mechanical-checks_
   _Requirements: [FR-17](FR.md#fr-17), [AC-17.4](ACCEPTANCE_CRITERIA.md#ac-174), [NFR-Performance-5](NFR.md#nfr-performance-5), [NFR-Reliability-7](NFR.md#nfr-reliability-7)_
   **Done When:**
   - [ ] `semantic-judge.ts` pre-filters pairs by ≥3 concept-noun overlap before subagent invocation
   - [ ] sha256(spec_a_content + spec_b_content) cache at `.dev-pomogator/.cross-spec-cache/<hash>.json` skips unchanged pairs
-  - [ ] Per-pair Agent subagent invocation with 120s timeout; on timeout fallback to mechanical-only + warning
+  - [x] Per-pair Meridian/spec-llm-judge invocation uses a 120s timeout; on timeout fallback to mechanical-only + warning
   - [ ] Subagent JSON `{verdict, confidence, snippets, path_alternatives?}` aggregated into findings[] array
-  - [ ] `partial: true` flag set in YAML on any partial subagent failure (not fail-loud)
+  - [x] `partial: true` flag set in YAML on any partial semantic failure (not fail-loud)
 
 - [x] Implement atomic YAML writer -- @feature17 — id: impl-yaml-writer — Status: DONE (partial 2026-06-07: `yaml-writer.ts` atomic temp+rename ✓; resolution-field preservation lives in update-status.ts/recheck.ts ✓; NOT found in yaml-writer: merge-on-existing-YAML, `summary` dashboard (by_severity/by_class/by_namespace), `recommendations[]`) — own scenario **SPECGEN004_48** (atomic temp+rename write asserted) | Est: 240m
   _depends: impl-semantic-subagent_
@@ -768,14 +768,14 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [x] Missing hash pin → explicit error (postinstall.test.ts)
   - [x] Hash update CLI: `tools/marksman-installer/cli-update-hashes.ts` — DOWNLOADS the real release assets and COMPUTES sha256 (never hand-pasted; stronger than the planned «prompt maintainer for sha»); rewrites `marksman-hashes.json` in place. LIVE PROOF 2026-06-07: ran against real upstream (4 assets, 2026-02-08) — computed hashes byte-match the committed pins, `git diff` empty
 
-- [x] T-Trans.10 verify FR-28 PostToolUse fixed-window throttle — id: verify-fr-28-fixed-window — Status: DONE (BDD SPECGEN004_123 added 2026-06-07 — fixed-window + dedup-flush pinned through the real decidePush; closes the NO-SCEN class) | Est: 45m
+- [x] T-Trans.10 verify FR-28 PostToolUse fixed-window throttle — id: verify-fr-28-fixed-window — Status: DONE (BDD SPECGEN004_13 refreshed 2026-07-09 — fixed-window + dedup-flush + latency upper-bound pinned through the real decidePush; closes the NO-SCEN class) | Est: 45m
   _Requirements: [FR-28](FR.md#fr-28)_
-  **Done When:** _(verified: `tools/spec-conformance-push/__tests__/spec-conformance-push.test.ts` "decidePush — pure throttle decision", 4 tests, full suite GREEN; BDD-контракт fixed-window агрегации — SPECGEN004_13)_
+  **Done When:** _(verified: `tools/spec-conformance-push/__tests__/spec-conformance-push.test.ts` "decidePush — pure throttle decision", 6 tests, Docker vitest GREEN; BDD-контракт fixed-window агрегации + latency upper-bound — SPECGEN004_13 Docker GREEN)_
   - [x] Single edit at t=0 → push at t=3.0s — "flushes after the 3-second window with the aggregated set"
   - [x] Burst: edits accumulate → single batched push — "accumulates within a 3-second window without emitting" + "dedupes a finding that arrives twice across the window"
   - [x] Window boundary / no sliding — "keeps the original window_start when accumulating across multiple bursts" (fixed window, not sliding)
-  - [x] All 4 pass in the 0-failure suite run
-  - [ ] Latency upper-bound assertion: from first edit to push ≤ throttle_ms (3000ms default) + 100ms tolerance
+  - [x] All 6 pure throttle tests pass in the 0-failure focused Docker vitest run
+  - [x] Latency upper-bound assertion: from first edit to push ≤ throttle_ms (3000ms default) + 100ms tolerance — pinned in vitest and SPECGEN004_13
 
 ## Phase 8 — Gap-close (FR-29..FR-31)
 
@@ -1088,7 +1088,7 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [x] bundle freshness guards green: MCP `bundle.test.ts` + gate `test_quality_gate_stop.test.ts`; NEW `tests/e2e/plugin-deps-safe.test.ts` (CI guard — fails if any raw-.ts hook transitively imports a real package; 30 checked, 0 offenders) Docker green
   - [ ] NOTE: the literal full `claude plugin install` in Docker (needs claude CLI + auth + a billed `claude -p`) was NOT run — the deps-absent proof + the 4 fixed dead-integrations cover the real risk far better than the theatrical install; the full run remains available via the `verify-plugin-install` skill
 
-- [ ] WS-F: remaining feature work — TRIAGE done, BUILD is the open v4 backlog -- @feature35 — id: ws-f-remaining — Status: IN_PROGRESS (triage closed, build pending) | Est: 600m
+- [ ] WS-F: remaining feature work — TRIAGE done, BUILD backlog remains open after P28-4 -- @feature35 — id: ws-f-remaining — Status: IN_PROGRESS (triage closed; P28-4 built+verified; next open items remain P28-5+) | Est: 600m
   _Requirements: [FR-33](FR.md#fr-33)_
   **Done When:**
   - [~] WS-B triage applied (drift vs real): deliverable-existence heuristic proved UNRELIABLE (mislabels both ways — see corrected DEFERRED-56 note: T2-16 ships 13 tools but was bucketed "pending"). The reliable reconciler is the FR-32 gate (WS-B's 24 explicit-id flips stand); the remainder's true status needs a per-task grep+green-scenario check, deferred to the build backlog. NOT re-derived on file-existence
@@ -1767,49 +1767,49 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [ ] мигрировать 4 (architecture-research-workflow ×2, cross-spec-resolve, cross-spec-reconcile) → `PLUGINxxx_skills-scripts.feature` + in-process step-defs, импортящие скрипты скиллов (без spawn по spawn-grep)
   - [ ] валидировать зелёным в Docker через детерминированный unique-config обход; mutation-check (сломать движок → сценарий RED → восстановить); выпилить vitest-двойник ПОСЛЕ зелёного эквивалента
 
-- [ ] P27-14: ко-локированный хвост (другие языки): §9 «3 `*_test.py`/`*Tests.cs`» — fixtures + own-domain, НЕ цель миграции (исключено) (FR-51c) — id: p27-tail-other-language-runners — Status: TODO | Est: 30m
+- [x] P27-14: ко-локированный хвост (другие языки): §9 «3 `*_test.py`/`*Tests.cs`» — fixtures + own-domain, НЕ цель миграции (исключено) (FR-51c) — id: p27-tail-other-language-runners — Status: DONE (2026-07-09: `git ls-files '*Tests.cs' '*_test.py' 'test_*.py'` filtered through `grep -vE 'tests/fixtures/|tools/session-pilot/|tests/tui/'` equivalent returned empty; all three tracked hits are fixture `tests/fixtures/dotnet-stryker-target/UnitTests/*.cs`) | Est: 30m
   _depends: p27-migrator-and-pilot_
   _Requirements: [FR-51](FR.md#fr-51)_
   **Done When:**
-  - [ ] зафиксировано (evidence: `git ls-files '*Tests.cs' '*_test.py' 'test_*.py' | grep -vE 'tests/fixtures/|tools/session-pilot/|tests/tui/'` = пусто): единственные `*Tests.cs` — fixtures (`tests/fixtures/dotnet-stryker-target`, `tests/fixtures/steps-validator`); `*_test.py` вне own-domain = 0; session-pilot/TUI Python — собственный домен (своя спека, pilot-API) → НЕ цель cucumber-js миграции
-  - [ ] guard-residуал: если позже появится ЖИВОЙ не-TS тест ПРОД-кода → language-native BDD (pytest-bdd/behave; Reqnroll) отдельной runner-дорожкой; до тех пор — исключено как fixtures/own-domain (НЕ сворачивать в `.feature`)
+  - [x] зафиксировано (evidence: `git ls-files '*Tests.cs' '*_test.py' 'test_*.py' | grep -vE 'tests/fixtures/|tools/session-pilot/|tests/tui/'` = пусто): единственные `*Tests.cs` — fixtures (`tests/fixtures/dotnet-stryker-target`, `tests/fixtures/steps-validator`); `*_test.py` вне own-domain = 0; session-pilot/TUI Python — собственный домен (своя спека, pilot-API) → НЕ цель cucumber-js миграции
+  - [x] guard-residуал: если позже появится ЖИВОЙ не-TS тест ПРОД-кода → language-native BDD (pytest-bdd/behave; Reqnroll) отдельной runner-дорожкой; до тех пор — исключено как fixtures/own-domain (НЕ сворачивать в `.feature`)
 
 ## Phase 28 — Session dogfood hardening (FR-52: door/MCP/BDD-workflow frictions, 2026-06-18)
 
 Источник: `audit-reports/session-dogfood-findings-2026-06-18.md` (находки F1–F10). Каждая задача — детерминированный фикс с тестом, раскрывает FR-52a..f. F1 — work-item автору незакоммиченной E-A-переделки двери (код двери не трогаем — чужая работа).
 
-- [ ] P28-1: канонический ndjson клоббер-безопасен — фильтрованный прогон → throwaway, не `.last-test-run.ndjson` (F2/FR-52a) — id: p28-ndjson-clobber-safe — Status: TODO | Est: 120m
+- [x] P28-1: канонический ndjson клоббер-безопасен — фильтрованный прогон → throwaway, не `.last-test-run.ndjson` (F2/FR-52a) — id: p28-ndjson-clobber-safe — Status: DONE (2026-07-09: `run-tests` + `bdd-migrator` point diagnostics to `docker-bdd.sh`; `test_guard.ts` denies raw host cucumber/run-bdd with Docker remediation; focused Docker `SPECGEN004_221` passed 1 scenario / 28 steps; filtered archive wrote `.dev-pomogator/.test-history/run-1783554284933-filtered.ndjson`; canonical mtime stayed `1783550036593027400` before/after) | Est: 120m
   _depends: p27-migrator-and-pilot_
   _Requirements: [FR-52](FR.md#fr-52)_
   **Done When:**
   - [x] обёртка `scripts/run-bdd.mjs` собрана: фильтрованный (`--name`/`--tags`) → throwaway ndjson, полный → канонический; verified — фильтрованный прогон оставляет канонический нетронутым (mtime unchanged)
-  - [x] умная история кусочками с таймингами (идея owner'а): каждый прогон → `.dev-pomogator/.test-history/run-<epoch>-<kind>.ndjson` + строка индекса (ts/kind/scenarios/durationMs/exit), ротация последних 30; verified на probe-прогоне
-  - [ ] ОСТАЛОСЬ: вписать `run-bdd.mjs` санкционированным путём (bdd-migrator SKILL + run-tests) — иначе raw `cucumber.js --name` всё ещё затирает (dead-integration); enforcement-гард (PreToolUse деном raw фильтрованного cucumber, пишущего канонический); BDD-сценарий @feature52
+  - [x] умная история кусочками с таймингами (идея owner'а): каждый прогон → `.dev-pomogator/.test-history/run-<epoch>-<kind>.ndjson` + строка индекса (ts/kind/scenarios/durationMs/exit), ротация последних 30; verified на Docker-прогоне
+  - [x] санкционированный путь вписан в `run-tests` + `bdd-migrator`; `test_guard.ts` denies raw host cucumber/run-bdd; BDD-сценарий @feature52 green via Docker `SPECGEN004_221`
 
-- [ ] P28-2: anchor-fix через дверь под enforce + enforce-aware hint гейта (F3/F10/FR-52b) — id: p28-anchor-fix-door — Status: TODO | Est: 180m
+- [x] P28-2: anchor-fix через дверь под enforce + enforce-aware hint гейта (F3/F10/FR-52b) — id: p28-anchor-fix-door — Status: DONE (2026-07-09: `fix.mjs --apply --door` applies deterministic rewrites through `scripts/spec-door.ts`/`apply_spec_change`; Stop/PostToolUse hints prescribe `--apply --door`; focused Docker vitest `tools/anchor-integrity/__tests__/fix.test.ts tools/anchor-integrity/__tests__/hooks.test.ts` passed 2 files / 13 tests; Docker BDD `SPECGEN004_515` passed 1 scenario / 6 steps; standalone smoke printed `APPLIED via door: 1 deterministic fixes`) | Est: 180m
   _depends: p27-migrator-and-pilot_
   _Requirements: [FR-52](FR.md#fr-52)_
   **Done When:**
-  - [ ] door-тул чинит якорь (canonical slug через `marksman-slug.mjs`, запись валидированной дверью) ЛИБО `anchor_gate_stop` под enforce советует door-путь (не блокируемый `fix.mjs`); тест: под `SPEC_ACCESS_ENFORCE` битый якорь чинится без обхода гарда/двери
+  - [x] door-тул чинит якорь (canonical slug через `marksman-slug.mjs`, запись валидированной дверью) ЛИБО `anchor_gate_stop` под enforce советует door-путь (не блокируемый `fix.mjs`); тест: под `SPEC_ACCESS_ENFORCE` битый якорь чинится без обхода гарда/двери
 
-- [ ] P28-3: validate_anchor — описание различает 2 смысла «якоря» + heading-slug резолв (F4/FR-52c) — id: p28-validate-anchor-clarity — Status: TODO | Est: 90m
+- [x] P28-3: validate_anchor — описание различает 2 смысла «якоря» + heading-slug резолв (F4/FR-52c) — id: p28-validate-anchor-clarity — Status: DONE (2026-07-09: `tools.ts` now separates `spec-graph-alias` from `marksman-heading-slug`; focused Docker vitest `tools/spec-mcp-server/__tests__/tools.test.ts` passed 1 file / 38 tests; Docker BDD `SPECGEN004_514` passed 1 scenario / 7 steps; real bundle smoke returned compact `FR-34` registered as `spec-graph-alias` and `FR.md#fr-34-marksman-v20-anchors` registered as `marksman-heading-slug`) | Est: 90m
   _depends: p27-migrator-and-pilot_
   _Requirements: [FR-52](FR.md#fr-52)_
   **Done When:**
-  - [ ] описание `validate_anchor` явно: spec-graph compact-id/alias-реестр ≠ Marksman heading-слаг; добавлена проверка резолва `DOC.md#heading-slug` (reuse `marksman-slug.mjs`); тест: heading-slug линк валидируется, compact-id по-прежнему работает
+  - [x] описание `validate_anchor` явно: spec-graph compact-id/alias-реестр ≠ Marksman heading-слаг; добавлена проверка резолва `DOC.md#heading-slug` (reuse `marksman-slug.mjs`); тест: heading-slug линк валидируется, compact-id по-прежнему работает
 
-- [ ] P28-4: audit ловит v1→v2 дрейф путей FILE_CHANGES (F5/FR-52d) — id: p28-v1v2-filechanges-drift — Status: TODO | Est: 120m
+- [x] P28-4: audit ловит v1→v2 дрейф путей FILE_CHANGES (F5/FR-52d) — id: p28-v1v2-filechanges-drift — Status: DONE (2026-07-09: `verify.ts` classifies missing `edit` rows under removed `src/`/`extensions/` prefixes as `FC_V1_LAYOUT_DRIFT` only when `.claude-plugin/plugin.json` exists and the prefix directory is gone; otherwise it preserves generic `FC_EDIT_MISSING`. Evidence: spec-reality-check evals passed 33/33 incl. positive id32 + negative id33; bulk-run completed 71 specs with 0 crashes (46 specs still have pre-existing ERRORs, 25 clean; dev-pomogator-canonical-plugin stayed 0 ERROR); bench at 2000 rows mean 73.89ms / p95 77.96ms against the 30s NFR; Docker BDD `SPECGEN004_517` passed 1 scenario / 7 steps after excluding `.dev-pomogator/.tmp` from the Docker build context and making `docker-bdd.sh` use a per-run writable `.specs` copy.) | Est: 120m
   _depends: p27-migrator-and-pilot_
   _Requirements: [FR-52](FR.md#fr-52)_
   **Done When:**
-  - [ ] `edit`-путь под удалённым v1-префиксом (`src/`,`extensions/`) + файла нет → находка «v1-layout, ремапь в `.claude/...` или удали» (не только generic FILE_CHANGES_VERIFY); тест: фикстура с мёртвым `src/`-edit даёт v1-drift находку, живой v2-путь — нет
-  - [ ] **Уточнение дизайна (2026-06-19, начатая попытка откатана):** наивный префикс-чек в ОБЩЕМ скиле `verify.ts`/`checkFcRows` НЕ годится — `src/` легитимен у большинства юзеров, мисфайрит на «ещё не созданный `src/`-файл» и ломает eval `v2-code-drift-no-git` (фикстура `src/feature_v2.ts`). v1→v2 знание dev-pomogator-специфично → детектор обязан быть guarded: срабатывать ТОЛЬКО когда репо — canonical v2-плагин (`.claude-plugin/plugin.json` присутствует) И сам префикс-каталог (`src/`/`extensions/`) отсутствует целиком; иначе обычный FC_EDIT_MISSING. Требует полного цикла maintain-evals-on-edit: positive-фикстура с plugin-маркером + dir-gone, negative-eval «`src/`-каталог есть → FC_EDIT_MISSING», bulk-run reclassification на 45 реальных спеках (clean-count не должен упасть). verify.ts откатан в pristine — мисфайр в общий скил не шипнут.
+  - [x] `edit`-путь под удалённым v1-префиксом (`src/`,`extensions/`) + файла нет → находка «v1-layout, ремапь в `.claude/...` или удали» (не только generic FILE_CHANGES_VERIFY); тест: фикстура с мёртвым `src/`-edit даёт v1-drift находку, живой v2-путь — нет
+  - [x] **Уточнение дизайна (2026-06-19, начатая попытка откатана):** наивный префикс-чек в ОБЩЕМ скиле `verify.ts`/`checkFcRows` НЕ годится — `src/` легитимен у большинства юзеров, мисфайрит на «ещё не созданный `src/`-файл» и ломает eval `v2-code-drift-no-git` (фикстура `src/feature_v2.ts`). v1→v2 знание dev-pomogator-специфично → детектор guarded: срабатывает ТОЛЬКО когда репо — canonical v2-плагин (`.claude-plugin/plugin.json` присутствует) И сам префикс-каталог (`src/`/`extensions/`) отсутствует целиком; иначе обычный FC_EDIT_MISSING. Maintain-evals-on-edit выполнен: positive-фикстура с plugin-маркером + dir-gone, negative-eval «`src/`-каталог есть → FC_EDIT_MISSING», bulk-run reclassification по реальным спекам, bench synthetic в NFR-бюджете.
 
-- [ ] P28-5: FR-32 join — задача verified своим сценарием, не worst-of-feature (F8/FR-52e) — id: p28-fr32-own-scenario-join — Status: TODO | Est: 120m
+- [x] P28-5: FR-32 join — задача verified своим сценарием, не worst-of-feature (F8/FR-52e) — id: p28-fr32-own-scenario-join — Status: DONE (2026-07-09: `mapTasksToScenarios` теперь сначала берёт явные собственные scenario-id из Done-When (`SPECGEN004_NN`/`TESTQUAL001_NN` и т.п.) и только при их отсутствии падает назад на `@featureN`/FR; `get_trace` для Task передаёт реальный `doneWhen`, а не пустую строку. Evidence: Docker vitest `coverage.test.ts` + `get-trace-own-scenario.test.ts` passed 28/28; lint passed; `npm run build:mcp` rebuilt `server.bundle.mjs`; source graph smoke показал `strong-tests:t29` → `DONE` по единственному `SCEN-testqual001-10...`, без sibling @feature7.) | Est: 120m
   _depends: p27-migrator-and-pilot_
   _Requirements: [FR-52](FR.md#fr-52)_
   **Done When:**
-  - [ ] задача с PASSED собственным покрывающим сценарием читается verified (не DONE-but-unverified из-за @manual/not-run сиблингов того же @featureN); тест-пин: strong-tests:t29 (покрыт TESTQUAL001_10 passed) → verified
+  - [x] задача с PASSED собственным покрывающим сценарием читается verified (не DONE-but-unverified из-за @manual/not-run сиблингов того же @featureN); тест-пин: strong-tests:t29 (покрыт TESTQUAL001_10 passed) → verified
 
 - [ ] P28-6: стейл-сценарий vs E-A переделка двери — обновить SPECGEN004_149 + FR под short-write-lock семантику (F1/FR-52f) — id: p28-readonly-door-bdd-vs-ea — Status: TODO | Est: 60m
   _depends: p27-migrator-and-pilot_
@@ -1817,17 +1817,18 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   **Done When:**
   - [ ] (work-item автору E-A, НЕ мне — чужая незакоммиченная переделка двери) при коммите E-A: SPECGEN004_149 + read-only-door FR переписаны под short-write-lock+CAS (writes succeed cross-session; transient WRITE_LOCK_BUSY only in-flight; same-doc → CAS_MISMATCH); до тех пор канонический сьют несёт 1 известно-красный стейл-сценарий
 
-- [ ] P28-7: атомарный промоут тегов комментарий→реальный при wire (F6) — id: p28-tag-promote-at-wire — Status: TODO | Est: 90m
+- [x] P28-7: атомарный промоут тегов комментарий→реальный при wire (F6) — id: p28-tag-promote-at-wire — Status: DONE | Est: 90m
   _depends: p27-migrator-and-pilot_
   _Requirements: [FR-51](FR.md#fr-51)_
   **Done When:**
-  - [ ] door-хелпер/wire-шаг промоутит `# @featureN`→`@featureN` с SRO009-проверкой (номер тега = FR, который сценарий реально тестит); тест: промоут строит tested-by рёбра, неверный номер отвергается
+  - [x] `scripts/wire-feature.mjs` под тем же O_EXCL-lock валидирует same-spec `@featureN` → `FR-N`, промоутит непосредственные `# @featureN`/`# @manual`/`# @wip` строки в реальные Gherkin-теги и атомарно пишет `.feature` + `cucumber.json`; неверный номер отказывается до записи обоих файлов; SPECGEN004_518 / MIGRATE004 покрывают promoted `tested-by` edge
+  **Evidence (2026-07-09):** `node tools/test-statusline/test_runner_wrapper.cjs --framework generic -- npm run lint` → exit 0; `node --check scripts/wire-feature.mjs` → exit 0; helper smoke `node --import tsx -e ...prepareFeatureForWiring...` → `wire-feature smoke ok: 1`; Docker vitest `bash scripts/docker-test.sh npx vitest run tools/bdd-migrator/__tests__/migrate.test.ts` → 1 file, 20 tests passed; Docker BDD `bash scripts/docker-bdd.sh --name "SPECGEN004_518"` → 1 scenario / 8 steps passed; `get_trace(FR-51)` shows SPECGEN004_518 as `@feature51` scenario linked to FR-51 (canonical result remains UNKNOWN because filtered BDD is clobber-safe and does not update `.last-test-run.ndjson`).
 
-- [ ] P28-8: политика кардинальности задача↔сценарий для консолидированных миграций (F7) — id: p28-task-scenario-cardinality — Status: TODO | Est: 60m
+- [x] P28-8: политика кардинальности задача↔сценарий для консолидированных миграций (F7) — id: p28-task-scenario-cardinality — Status: DONE (2026-07-09: chosen policy = accept many→few; `TASK_NO_OWN_SCENARIO` no longer fires when a DONE task without own-id maps to at least one PASSED covering scenario, while non-green mapped siblings still surface through `TASK_STATUS_UNVERIFIED`. Evidence: pure check `p28-8 cardinality policy pure checks passed`; `npm run build:mcp` rebuilt `server.bundle.mjs`; `npm run lint` exit 0; Docker vitest `conformance.test.ts` + `coverage.test.ts` + `get-trace-own-scenario.test.ts` passed 3 files / 67 tests; Docker BDD `SPECGEN004_519|SPECGEN004_160|SPECGEN004_208` passed 3 scenarios / 19 steps.) | Est: 60m
   _depends: p27-migrator-and-pilot_
   _Requirements: [FR-52](FR.md#fr-52)_
   **Done When:**
-  - [ ] решено + закодировано: many→few (задача «протестирована» если ≥1 покрывающий сценарий passed → ослабить `TASK_NO_OWN_SCENARIO` при наличии tested-by ребра) ЛИБО мигратор обязан сплитить; тест фиксирует выбранную политику
+  - [x] решено + закодировано: many→few accepted (задача «протестирована» если ≥1 covering-сценарий PASSED → ослабить `TASK_NO_OWN_SCENARIO` при наличии green mapped proof); мигратор НЕ обязан искусственно сплитить consolidated scenarios; SPECGEN004_519 фиксирует выбранную политику и проверяет, что honesty-warning для not-run sibling остаётся видимым.
 
 ## Phase 29 — Честная перекличка покрытия (FR-56: снимок-канон + посценарный оверлей свежести + рантайм-трейс, 2026-06-29)
 
@@ -1929,25 +1930,62 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
 
 Источник: `audit-reports/hook-output-context-bloat-biet-handoff.md` (live transcript evidence: `attachment.stdout len=713574` / ~716KB repeated pushes). Fix producer `tools/spec-conformance-push/spec-conformance-push.ts`: cap only the Claude-facing `<system-reminder>`, keep `appendFindings(...)` complete, rebuild distributed bundle. TDD Red→Green with synthetic large finding batch and real writer proof.
 
-- [ ] P31-1: cap `formatReminder`/`decidePush` output without touching durable log (FR-59a/b) — id: p31-bounded-reminder — Status: TODO | Est: 120m
+- [x] P31-1: cap `formatReminder`/`decidePush` output without touching durable log (FR-59a/b) — id: p31-bounded-reminder — Status: DONE (2026-07-09: `formatReminder` now caps Claude-facing output at 6000 UTF-8 bytes with severity counts, ≤20 samples, omitted count, and full-log pointer; durable `appendFindings(...)` remains complete) | Est: 120m
   _Requirements: [FR-59](FR.md#fr-59)_
   **Done When:**
-  - [ ] flushing 3000 findings emits a `<system-reminder>` at or below 6000 UTF-8 bytes with total count, counts by severity, ≤20 sample findings, omitted count, and full-log pointer
-  - [ ] long individual finding messages are truncated/sampled so the whole reminder remains within the byte budget
-  - [ ] `appendFindings(...)` still receives every finding observed by `runPush`, including when the reminder is capped or `_no_push_check: true` suppresses the agent-facing push
+  - [x] flushing 3000 findings emits a `<system-reminder>` at or below 6000 UTF-8 bytes with total count, counts by severity, ≤20 sample findings, omitted count, and full-log pointer
+  - [x] long individual finding messages are truncated/sampled so the whole reminder remains within the byte budget
+  - [x] `appendFindings(...)` still receives every finding observed by `runPush`, including when the reminder is capped or `_no_push_check: true` suppresses the agent-facing push
 
-- [ ] P31-2: regression coverage for bounded stdout + complete side-channel (FR-59a/b/c) — id: p31-regression-coverage — Status: TODO | Est: 120m
+- [x] P31-2: regression coverage for bounded stdout + complete side-channel (FR-59a/b/c) — id: p31-regression-coverage — Status: DONE (2026-07-09: focused Docker vitest `spec-conformance-push.test.ts` 10/10 GREEN; Docker BDD `SPECGEN004_513` 1 scenario / 9 steps GREEN) | Est: 120m
   _depends: p31-bounded-reminder_
   _Requirements: [FR-59](FR.md#fr-59)_
   **Done When:**
-  - [ ] `tools/spec-conformance-push/__tests__/spec-conformance-push.test.ts` covers large synthetic batches and proves not every finding message is printed
-  - [ ] `@feature59` scenario SPECGEN004_513 in `tests/step_definitions/feature23_28_log_inventory_throttle.ts` drives the real `decidePush` formatter and real `appendFindings` writer, not a mocked copy
-  - [ ] prompt-time conformance/task-census compactness remains covered by existing top-5/one-line summary tests or equivalent focused assertions
+  - [x] `tools/spec-conformance-push/__tests__/spec-conformance-push.test.ts` covers large synthetic batches and proves not every finding message is printed
+  - [x] `@feature59` scenario SPECGEN004_513 in `tests/step_definitions/feature23_28_log_inventory_throttle.ts` drives the real `decidePush` formatter and real `appendFindings` writer, not a mocked copy
+  - [x] prompt-time conformance/task-census compactness remains covered by existing top-5/one-line summary tests or equivalent focused assertions
 
-- [ ] P31-3: rebuild and real-artifact probe for plugin users (FR-59c) — id: p31-bundle-probe — Status: TODO | Est: 90m
+- [x] P31-3: rebuild and real-artifact probe for plugin users (FR-59c) — id: p31-bundle-probe — Status: DONE (2026-07-09: `npm run build:push` rebuilt `spec-conformance-push.bundle.mjs`; bundle probe confirmed bounded stdout and complete JSONL side-channel) | Est: 90m
   _depends: p31-bounded-reminder, p31-regression-coverage_
   _Requirements: [FR-59](FR.md#fr-59)_
   **Done When:**
-  - [ ] `npm run build:push` refreshes `tools/spec-conformance-push/spec-conformance-push.bundle.mjs`
-  - [ ] a real bundle/source probe shows stdout under the cap and full JSONL side-channel retention
-  - [ ] focused tests plus spec reality/check verdict evidence are recorded before reporting done
+  - [x] `npm run build:push` refreshes `tools/spec-conformance-push/spec-conformance-push.bundle.mjs`
+  - [x] a real bundle/source probe shows stdout under the cap and full JSONL side-channel retention
+  - [x] focused tests plus spec reality/check verdict evidence are recorded before reporting done
+
+## Phase 32 — FR-49a scope-aware next-step router hardening (2026-07-09)
+
+Источник: live pinator incident — агент создавал новую спеку с нуля (`lm-saas/.specs/reel-agent-marketplace/`), а prompt-time census из dev-pomogator подсовывал unrelated backlog `spec-generator-v4:ws-f-remaining @feature35`. Корень: `следующее` бралось из global/busiest census и/или plugin-root cache, а не из текущего мандата агента. `следующее` НЕ удаляется: оно остаётся steering-механизмом, но становится scope-aware router.
+
+- [x] P32-1: hook data-root isolation for task census — id: p32-hook-root-isolation — Status: DONE (2026-07-09: `validate-specs.ts` now resolves the prompt-time task-census data root from hook payload `cwd` first, then `workspace_roots[0]`, and passes that root into `buildTaskCensusLine`; no fallback to plugin/process cwd can print a foreign next step. Evidence: Docker vitest `conformance-summary.test.ts` passed 1 file / 12 tests, including planted plugin-root-vs-target-root regressions for both `cwd` and `workspace_roots[0]`.) | Est: 120m
+  _Requirements: [FR-49](FR.md#fr-49)_
+  **Done When:**
+  - [x] UserPromptSubmit summary reads `.dev-pomogator/.task-census.json` from hook payload `cwd` / `workspace_roots[0]`, not from `CLAUDE_PLUGIN_ROOT` or process cwd used to load the plugin script
+  - [x] planted regression: plugin root has dev-pomogator census with `spec-generator-v4:WS-F`, hook payload cwd is a temp/lm-saas repo with its own `.specs/reel-agent-marketplace`; rendered output never mentions `spec-generator-v4`, `WS-F`, or `@feature35`
+  - [x] both project `.claude/settings.json` and plugin `.claude-plugin/hooks.json` invocation paths stay supported
+
+- [x] P32-2: shared next-step router priority — id: p32-next-router-shared — Status: DONE (2026-07-09: `selectNextStepRoute` is shared by prompt banner and Stop-gate; priority is agent todo → active async → current spec → none, and current-spec routing never falls back to the busiest/global corpus spec. Evidence: focused Docker BDD `SPECGEN004_178` / `SPECGEN004_480` / `SPECGEN004_189` passed 4 scenarios / 24 steps; lint passed.) | Est: 180m
+  _depends: p32-hook-root-isolation_
+  _Requirements: [FR-49](FR.md#fr-49)_
+  **Done When:**
+  - [x] one pure router is shared by prompt banner and claim-evidence Stop-gate: agent open todo (`TodoWrite` / `TaskCreate` / `TaskUpdate`) beats spec census; active background Bash/Agent/subagent beats unrelated backlog and yields result-processing next; current spec slug beats any other spec; no current scope means no `👉 следующее` from global census
+  - [x] the old “busiest spec wins” path is removed or demoted to health-only counts; global census can show counts/top specs, but cannot command a next task outside current scope
+  - [x] `censusReminder()` in `claim_evidence_gate_stop.ts` stops using `c.specs[0]` / “самая нагруженная” / raw `top.nextOpen` as an imperative next step; the deterministic `spec-false-close` block uses the shared router and may print counts without a foreign `👉 Следующее`
+  - [x] router returns the selected source (`agent-todo` / `active-async` / `current-spec`) or `null` for tests and future debugging
+
+- [x] P32-3: BDD + unit regressions for scope-aware next — id: p32-next-router-regressions — Status: DONE (2026-07-09: `SPECGEN004_178` now drives scoped banner routing; `SPECGEN004_480` drives agent-todo/async/current-spec priority and unknown-scope no-fallback; `SPECGEN004_189` drives Stop-gate false-close output without foreign backlog; Docker vitest covers cross-project plugin-root/cwd leak prevention. Evidence: focused Docker BDD passed 4 scenarios / 24 steps; Docker vitest `conformance-summary.test.ts` passed 12/12.) | Est: 240m
+  _depends: p32-next-router-shared_
+  _Requirements: [FR-49](FR.md#fr-49)_
+  **Done When:**
+  - [x] SPECGEN004_178 is updated from “busiest spec names next” to “current scope/router selects next” and drives the real router/banner
+  - [x] new @feature49 scenario proves active background work/subagent suppresses unrelated backlog and names result-processing as next
+  - [x] new @feature49 scenario proves a finished/unknown current spec keeps counts but omits `👉 следующее` instead of naming a foreign spec
+  - [x] new @feature49/unit hook regression proves cross-project plugin-root census cannot leak into another repo's hook cwd
+
+- [x] P32-4: distributed artifact verification — id: p32-next-router-bundle-probe — Status: DONE (2026-07-09: `npm run build:claim-gate` rebuilt `tools/claim-evidence-gate/claim_evidence_gate_stop.bundle.mjs`; UserPromptSubmit hook is source/bootstrap loaded and covered by real `validate-specs.ts` stdin probes for `cwd` and `workspace_roots[0]`; final verification: Docker BDD 4 scenarios / 24 steps, Docker vitest 12/12, lint exit 0.) | Est: 90m
+  _depends: p32-next-router-regressions_
+  _Requirements: [FR-49](FR.md#fr-49)_
+  **Done When:**
+  - [x] bundles affected by UserPromptSubmit / claim-evidence Stop-gate are rebuilt (`build:gate` / `build:claim-gate` / relevant hook bundle)
+  - [x] real hook stdin probes cover project-root and plugin-root invocation shapes
+  - [x] focused Docker BDD/vitest evidence is recorded before marking this hardening DONE

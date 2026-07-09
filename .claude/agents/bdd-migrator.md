@@ -82,7 +82,9 @@ ambiguous) → mutation gutcheck (RED-on-break).
    scenario un-`@wip`'d in a feature you wire. THEN add the `.feature` to `cucumber.json` `paths` ONLY when
    `git status --short cucumber.json` is clean. If a PARALLEL session has it `M`, DO NOT edit it — that is
    a legitimate BLOCK; leave the `.feature` comment-tagged, do NOT real-tag, and report the block.
-   Otherwise real-tag + wire together, then one FULL run (no `--tags`) so `.last-test-run.ndjson` stays complete.
+   Otherwise run `node scripts/wire-feature.mjs <slug>`: it validates same-spec `@featureN` targets, promotes
+   immediately-attached comment tag lines to real Gherkin tags, and updates `cucumber.json` under the same
+   lock. Then run one FULL run (no `--tags`) so `.last-test-run.ndjson` stays complete.
 7. **Mutation gutcheck (runtime class).** Break the engine, re-run, confirm the scenario goes RED,
    restore. A scenario that survives a real mutation is FAKE-POSITIVE-RISK, not a deliverable.
 8. **Verify + retire.** `project-test-trace.ts` shows no orphans; only THEN delete the superseded
