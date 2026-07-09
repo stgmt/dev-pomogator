@@ -17,6 +17,7 @@ import { V4World } from '../hooks/before-after.ts';
 import { logEvent, readRecentEvents } from '../../tools/specs-validator/audit-logger.ts';
 import { appendFinding, appendFindings } from '../../tools/spec-check-log/writer.ts';
 import { decidePush, type PushDecision } from '../../tools/spec-conformance-push/spec-conformance-push.ts';
+import { parseScenarioResults, appendJsonLinesAtomic } from '../../scripts/bdd-overlay.mjs';
 import type { Finding } from '../../tools/spec-graph/conformance.ts';
 
 // ── SPECGEN004_122 — FR-23: each tier writes to its own sink ───────────────
@@ -198,4 +199,63 @@ Then('the durable spec-check-log writer still records every synthetic finding', 
   assert.equal(first.finding_code, 'ORPHAN_TASK');
   assert.match(first.message, /synthetic-fr59-finding-1/);
   assert.match(last.message, /synthetic-fr59-finding-3000/);
+});
+
+// ── SPECGEN004_529 — FR-56: append-only scenario-result overlay writer ─────
+
+interface F56World extends V4World {
+  f56Stream?: string;
+  f56Overlay?: string;
+  f56Rows?: ReturnType<typeof parseScenarioResults>;
+}
+
+function f56Envelope(e: unknown): string {
+  return JSON.stringify(e);
+}
+
+function f56Stream(): string {
+  return [
+    f56Envelope({ gherkinDocument: { uri: '.specs/spec-generator-v4/spec-generator-v4.feature', feature: { children: [{ scenario: { id: 'sc-526', location: { line: 3342 } } }] } } }),
+    f56Envelope({ pickle: { id: 'pk-526', uri: '.specs/spec-generator-v4/spec-generator-v4.feature', name: 'SPECGEN004_529 every BDD run path writes append-only scenario overlay rows', tags: [{ name: '@feature56' }], astNodeIds: ['sc-526'], steps: [{ id: 'ps-1', text: 'overlay step' }] } }),
+    f56Envelope({ testCase: { id: 'tc-526', pickleId: 'pk-526', testSteps: [{ id: 'ts-1', pickleStepId: 'ps-1' }] } }),
+    f56Envelope({ testCaseStarted: { id: 'tcs-526', testCaseId: 'tc-526', timestamp: { seconds: 1_800_000_000, nanos: 0 } } }),
+    f56Envelope({ testStepFinished: { testCaseStartedId: 'tcs-526', testStepId: 'ts-1', testStepResult: { status: 'PASSED' } } }),
+    f56Envelope({ testCaseFinished: { testCaseStartedId: 'tcs-526', timestamp: { seconds: 1_800_000_001, nanos: 0 } } }),
+  ].join('\n');
+}
+
+Given('a Cucumber message run for a focused FR-56 scenario', function (this: F56World) {
+  this.f56Stream = f56Stream();
+  this.f56Overlay = path.join(this.tempDir, '.dev-pomogator', '.scenario-results.ndjson');
+});
+
+When('the scenario-result overlay writer records that run', function (this: F56World) {
+  this.f56Rows = parseScenarioResults(this.f56Stream!, {
+    runId: 'run-526',
+    source: 'docker-bdd:filtered',
+    traceFile: '.dev-pomogator/.test-history/run-526-filtered.ndjson',
+  });
+  assert.equal(appendJsonLinesAtomic(this.f56Overlay!, this.f56Rows), 1);
+});
+
+Then('the scenario overlay contains one row with result, run identity, source, and trace id', function (this: F56World) {
+  const lines = fs.readFileSync(this.f56Overlay!, 'utf8').trim().split('\n');
+  assert.equal(lines.length, 1, 'overlay writer appends exactly one row per executed scenario');
+  const row = JSON.parse(lines[0]);
+  assert.equal(row.scenario_id, 'SPECGEN004_529');
+  assert.equal(row.result, 'PASSED');
+  assert.equal(row.time, '2027-01-15T08:00:01.000Z');
+  assert.equal(row.run_id, 'run-526');
+  assert.equal(row.source, 'docker-bdd:filtered');
+  assert.equal(row.trace_id, '.dev-pomogator/.test-history/run-526-filtered.ndjson#tcs-526');
+  assert.equal(row.test_case_started_id, 'tcs-526');
+  assert.equal(row.uri, '.specs/spec-generator-v4/spec-generator-v4.feature');
+  assert.equal(row.line, 3342);
+});
+
+Then('appending another run preserves the existing overlay row', function (this: F56World) {
+  assert.equal(appendJsonLinesAtomic(this.f56Overlay!, [{ scenario_id: 'SPECGEN004_530', result: 'FAILED', time: '2027-01-15T08:00:02.000Z', run_id: 'run-527', source: 'docker-bdd:filtered', trace_id: 'trace#527' }]), 1);
+  const rows = fs.readFileSync(this.f56Overlay!, 'utf8').trim().split('\n').map((line) => JSON.parse(line));
+  assert.deepEqual(rows.map((row) => row.scenario_id), ['SPECGEN004_529', 'SPECGEN004_530']);
+  assert.deepEqual(rows.map((row) => row.run_id), ['run-526', 'run-527']);
 });

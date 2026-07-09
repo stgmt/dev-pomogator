@@ -406,24 +406,128 @@ export function lastEditedSpecSlug(transcriptPath: string): string | null {
  * Fail-open → 0 (a parse error must never falsely arm the gate).
  */
 const OPEN_TODO_STATUS = new Set(['pending', 'in_progress']);
-interface AgentTodo {
+const CLOSED_TODO_STATUS = new Set(['completed', 'deleted']);
+
+export interface AgentTodo {
+  /** Real visible Task tool id when known (`Task #72`), otherwise a synthetic create key. */
+  id?: string;
   subject: string;
   status: string;
+  /** Monotonic transcript event order; used to reconcile stale duplicates. */
+  seq: number;
+  /** 1-based JSONL line where the selected state came from. */
+  line?: number;
+  /** Why this canonical task survived duplicate reconciliation. */
+  reconciliation?: string;
+  /** Duplicate cluster could not be proven safe; route should demote it below async/current-spec. */
+  ambiguous?: boolean;
+}
+
+function blockText(b: Record<string, unknown>): string {
+  const c = b.content;
+  if (typeof c === 'string') return c;
+  if (Array.isArray(c)) {
+    return c.map((x) => (typeof x === 'string' ? x : typeof (x as { text?: unknown }).text === 'string' ? (x as { text: string }).text : JSON.stringify(x))).join('\n');
+  }
+  return c == null ? '' : JSON.stringify(c);
+}
+
+function taskIdFromText(text: string): string | null {
+  const m = text.match(/Task\s+#(\d+)/i);
+  return m ? m[1] : null;
+}
+
+const TASK_UPDATE_NOT_FOUND_RE = /Task not found/i;
+
+function normalizeTodoSubject(subject: string): string {
+  return subject.trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
+function mergeTaskState(target: AgentTodo, incoming: AgentTodo): AgentTodo {
+  const newer = incoming.seq >= target.seq ? incoming : target;
+  const older = newer === incoming ? target : incoming;
+  return {
+    ...newer,
+    id: target.id ?? incoming.id,
+    subject: newer.subject || older.subject,
+    reconciliation: newer.reconciliation ?? older.reconciliation,
+  };
+}
+
+function canonicalizeTaskReplay(tasks: AgentTodo[]): AgentTodo[] {
+  const bySubject = new Map<string, AgentTodo[]>();
+  for (const task of tasks) {
+    const key = normalizeTodoSubject(task.subject) || `id:${task.id ?? task.seq}`;
+    const bucket = bySubject.get(key) ?? [];
+    bucket.push(task);
+    bySubject.set(key, bucket);
+  }
+
+  const canonical: AgentTodo[] = [];
+  for (const group of bySubject.values()) {
+    if (group.length === 1) {
+      canonical.push({ ...group[0], reconciliation: group[0].reconciliation ?? 'unique' });
+      continue;
+    }
+
+    const sorted = [...group].sort((a, b) => b.seq - a.seq);
+    const newest = sorted[0];
+    const newestOpen = OPEN_TODO_STATUS.has(newest.status);
+    const openCount = sorted.filter((t) => OPEN_TODO_STATUS.has(t.status)).length;
+    const newestClosed = CLOSED_TODO_STATUS.has(newest.status) || !newestOpen;
+
+    if (newestClosed) {
+      canonical.push({
+        ...newest,
+        reconciliation: `duplicate-subject:${group.length}:newest-closed`,
+      });
+      continue;
+    }
+
+    canonical.push({
+      ...newest,
+      ambiguous: openCount > 1 && !sorted.some((t) => CLOSED_TODO_STATUS.has(t.status)),
+      reconciliation: openCount > 1
+        ? `duplicate-subject:${group.length}:ambiguous-open-demote`
+        : `duplicate-subject:${group.length}:newest-open`,
+    });
+  }
+
+  return canonical.sort((a, b) => a.seq - b.seq);
 }
 
 /** Reconstruct the agent's current task list from the transcript. Returns whichever of the two task
  * systems carries MORE open work (Task-replay vs latest TodoWrite) — never under-count. Fail-open → []. */
-function parseAgentTodos(transcriptPath: string): AgentTodo[] {
+export function parseAgentTodos(transcriptPath: string): AgentTodo[] {
   let raw: string;
   try {
     raw = fs.readFileSync(transcriptPath, 'utf-8');
   } catch {
     return [];
   }
-  const tasks: AgentTodo[] = []; // TaskCreate/Update replay; index = (1-based id) - 1
+  const tasks = new Map<string, AgentTodo>();
+  const useToTaskKey = new Map<string, string>();
+  const updateRollback = new Map<string, { key: string; previous: AgentTodo | null }>();
+  let createSeq = 0;
+  let seq = 0;
   let latestTodoWrite: AgentTodo[] | null = null; // latest TodoWrite carries the whole list
-  for (const line of raw.split(/\r?\n/)) {
-    if (!line.includes('"tool_use"') || line.length > 2_000_000) continue;
+
+  const upsertTask = (key: string, incoming: AgentTodo): void => {
+    const prev = tasks.get(key);
+    tasks.set(key, prev ? mergeTaskState(prev, incoming) : incoming);
+  };
+  const rekeyTask = (oldKey: string, realId: string, line: number): void => {
+    const existing = tasks.get(oldKey);
+    if (!existing) return;
+    tasks.delete(oldKey);
+    upsertTask(realId, { ...existing, id: realId, line, reconciliation: `real-id:${realId}` });
+    for (const [useId, key] of useToTaskKey.entries()) if (key === oldKey) useToTaskKey.set(useId, realId);
+  };
+
+  const lines = raw.split(/\r?\n/);
+  for (let lineNo = 0; lineNo < lines.length; lineNo++) {
+    const line = lines[lineNo];
+    if ((!line.includes('"tool_use"') && !line.includes('"tool_result"')) || line.length > 2_000_000) continue;
     let entry: { message?: { content?: unknown } };
     try {
       entry = JSON.parse(line);
@@ -433,27 +537,72 @@ function parseAgentTodos(transcriptPath: string): AgentTodo[] {
     const content = entry?.message?.content;
     if (!Array.isArray(content)) continue;
     for (const b of content as Array<Record<string, unknown>>) {
-      if (b?.type !== 'tool_use') continue;
+      const type = String(b?.type ?? '');
+      if (type === 'tool_result') {
+        const toolUseId = String(b.tool_use_id ?? '');
+        const contentText = blockText(b);
+        const realId = taskIdFromText(contentText);
+        const oldKey = toolUseId ? useToTaskKey.get(toolUseId) : undefined;
+        if (oldKey && realId) rekeyTask(oldKey, realId, lineNo + 1);
+        if (toolUseId && TASK_UPDATE_NOT_FOUND_RE.test(contentText)) {
+          const rollback = updateRollback.get(toolUseId);
+          if (rollback) {
+            if (rollback.previous) tasks.set(rollback.key, rollback.previous);
+            else tasks.delete(rollback.key);
+          } else if (oldKey) {
+            tasks.delete(oldKey);
+          }
+        }
+        continue;
+      }
+      if (type !== 'tool_use') continue;
       const name = String(b.name ?? '');
       const input = (b.input ?? {}) as Record<string, unknown>;
       if (name === 'TodoWrite' && Array.isArray(input.todos)) {
-        latestTodoWrite = (input.todos as Array<Record<string, unknown>>).map((t) => ({
+        latestTodoWrite = (input.todos as Array<Record<string, unknown>>).map((t, i) => ({
+          id: typeof t?.id === 'string' ? t.id : undefined,
           subject: String(t?.content ?? t?.subject ?? ''),
           status: String(t?.status ?? ''),
+          seq: ++seq,
+          line: lineNo + 1,
+          reconciliation: `todowrite:${i}`,
         }));
       } else if (name === 'TaskCreate') {
-        tasks.push({ subject: String(input.subject ?? ''), status: 'pending' });
+        const explicitId = typeof input.taskId === 'string' || typeof input.taskId === 'number' ? String(input.taskId) : null;
+        const key = explicitId ?? `create:${String(b.id ?? ++createSeq)}`;
+        if (!explicitId && b.id) useToTaskKey.set(String(b.id), key);
+        upsertTask(key, {
+          id: explicitId ?? undefined,
+          subject: String(input.subject ?? ''),
+          status: 'pending',
+          seq: ++seq,
+          line: lineNo + 1,
+        });
       } else if (name === 'TaskUpdate') {
-        const id = parseInt(String(input.taskId ?? ''), 10);
-        if (Number.isInteger(id) && id >= 1 && id <= tasks.length && typeof input.status === 'string') {
-          tasks[id - 1].status = input.status;
+        const id = String(input.taskId ?? input.id ?? '').trim();
+        if (!id) continue;
+        const key = tasks.has(id) ? id : `update:${String(b.id ?? id)}:${id}`;
+        if (b.id) {
+          useToTaskKey.set(String(b.id), key);
+          updateRollback.set(String(b.id), { key, previous: tasks.get(key) ?? null });
         }
+        const status = typeof input.status === 'string' ? input.status : undefined;
+        const subject = typeof input.subject === 'string' ? input.subject : '';
+        upsertTask(key, {
+          id,
+          subject: subject || tasks.get(key)?.subject || tasks.get(id)?.subject || '',
+          status: status ?? tasks.get(key)?.status ?? tasks.get(id)?.status ?? 'pending',
+          seq: ++seq,
+          line: lineNo + 1,
+          reconciliation: `task-update:${id}`,
+        });
       }
     }
   }
-  const taskOpen = tasks.filter((t) => OPEN_TODO_STATUS.has(t.status)).length;
+  const taskReplay = canonicalizeTaskReplay([...tasks.values()]);
+  const taskOpen = taskReplay.filter((t) => OPEN_TODO_STATUS.has(t.status)).length;
   const todoOpen = latestTodoWrite ? latestTodoWrite.filter((t) => OPEN_TODO_STATUS.has(t.status)).length : 0;
-  return latestTodoWrite && todoOpen > taskOpen ? latestTodoWrite : tasks;
+  return latestTodoWrite && todoOpen > taskOpen ? latestTodoWrite : taskReplay;
 }
 
 /**
@@ -466,13 +615,19 @@ function parseAgentTodos(transcriptPath: string): AgentTodo[] {
  * reintroduce the FR-9 over-fire. Fail-open → 0.
  */
 export function agentOpenTodoCount(transcriptPath: string): number {
-  return parseAgentTodos(transcriptPath).filter((t) => OPEN_TODO_STATUS.has(t.status)).length;
+  return parseAgentTodos(transcriptPath).filter((t) => OPEN_TODO_STATUS.has(t.status) && !t.ambiguous).length;
 }
 
-/** The subject of the FIRST still-open agent todo (creation order), for a helpful kick that NAMES the
- * next step when there is no spec next-task. Null if none / unreadable. */
+/** The FIRST actionable still-open agent todo. Ambiguous duplicate-open clusters are deliberately
+ * skipped here so they cannot dominate async/current-spec routing as a guessed stale next step. */
+export function agentNextOpenTodoDetail(transcriptPath: string): AgentTodo | null {
+  const next = parseAgentTodos(transcriptPath).find((t) => OPEN_TODO_STATUS.has(t.status) && !t.ambiguous);
+  return next?.subject?.trim() ? next : null;
+}
+
+/** The subject of the FIRST actionable still-open agent todo, for legacy callers. */
 export function agentNextOpenTodo(transcriptPath: string): string | null {
-  const next = parseAgentTodos(transcriptPath).find((t) => OPEN_TODO_STATUS.has(t.status));
+  const next = agentNextOpenTodoDetail(transcriptPath);
   const s = next?.subject?.trim();
   return s ? s : null;
 }
@@ -484,6 +639,8 @@ export interface NextStepRoute {
   title: string;
   id?: string;
   spec?: string;
+  line?: number;
+  reconciliation?: string;
 }
 
 export interface NextStepRouteOptions {
@@ -515,8 +672,8 @@ function currentSlugCandidates(slugs: NextStepRouteOptions['currentSpecSlugs']):
  */
 export function selectNextStepRoute(opts: NextStepRouteOptions = {}): NextStepRoute | null {
   if (opts.transcriptPath) {
-    const todo = agentNextOpenTodo(opts.transcriptPath);
-    if (todo) return { source: 'agent-todo', title: todo };
+    const todo = agentNextOpenTodoDetail(opts.transcriptPath);
+    if (todo) return { source: 'agent-todo', title: todo.subject, id: todo.id, line: todo.line, reconciliation: todo.reconciliation };
   }
 
   if (opts.awaitingAsync) {

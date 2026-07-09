@@ -19,11 +19,16 @@ LOG_DIR=".dev-pomogator/.docker-status"
 HISTORY_DIR=".dev-pomogator/.test-history"
 mkdir -p "$LOG_DIR" "$HISTORY_DIR"
 chmod 777 "$HISTORY_DIR" 2>/dev/null || true
-LOG_FILE="${LOG_DIR}/bdd-run-$(date +%s).log"
+RUN_STAMP="$(date +%s)-$$-${RANDOM}"
+LOG_FILE="${LOG_DIR}/bdd-run-${RUN_STAMP}.log"
 
 # The result ndjson is written by in-container cucumber into the MOUNTED dir,
 # so it appears on the host; then copied to the canonical path the graph reads.
-OUT_REL=".dev-pomogator/.docker-status/bdd-last-run.ndjson"
+# Use a per-run file as the archive/canonical source: parallel Docker BDD runs share
+# .docker-status, and a fixed bdd-last-run.ndjson can be overwritten by another run
+# before this process archives it.
+OUT_REL=".dev-pomogator/.docker-status/bdd-run-${RUN_STAMP}.ndjson"
+LATEST_REL=".dev-pomogator/.docker-status/bdd-last-run.ndjson"
 CANONICAL=".dev-pomogator/.last-test-run.ndjson"
 
 SESSION="${TEST_STATUSLINE_SESSION:-}"
@@ -88,9 +93,6 @@ fi
 # Run cucumber in-container. Override the entrypoint (default CMD runs the vitest
 # wrapper, which can't run cucumber) — same trick the --tui path uses for pytest.
 echo "[docker-bdd] Running cucumber in Docker/Linux → $LOG_FILE"
-# Windows/WSL bind mounts can let shell `touch` create a file while Node's
-# formatter open(create) fails with ENOENT; pre-create/truncate the target.
-: > "$OUT_REL"
 # .specs/ is dockerignored (kept out of the image so the census banner doesn't
 # bake in — see .dockerignore). The .feature files live there, so we mount it at
 # runtime. But it must be WRITABLE, not :ro — a few scenarios (create-specs
@@ -109,9 +111,19 @@ if [ -n "$SESSION" ]; then
 fi
 
 HAS_EXPLICIT_CONFIG=0
-for arg in "$@"; do
+EXPLICIT_CONFIG_PATH=""
+ARGS=("$@")
+for ((i=0; i<${#ARGS[@]}; i++)); do
+  arg="${ARGS[$i]}"
   case "$arg" in
-    -c|--config|--config=*) HAS_EXPLICIT_CONFIG=1 ;;
+    -c|--config)
+      HAS_EXPLICIT_CONFIG=1
+      EXPLICIT_CONFIG_PATH="${ARGS[$((i+1))]:-}"
+      ;;
+    --config=*)
+      HAS_EXPLICIT_CONFIG=1
+      EXPLICIT_CONFIG_PATH="${arg#--config=}"
+      ;;
   esac
 done
 CUCUMBER_ARGS=()
@@ -119,6 +131,36 @@ if [ "$HAS_EXPLICIT_CONFIG" = "1" ]; then
   CUCUMBER_ARGS=("$@")
 else
   CUCUMBER_ARGS=(-c cucumber.docker.json "$@")
+fi
+
+RESULT_REL="$OUT_REL"
+if [ -n "$EXPLICIT_CONFIG_PATH" ] && [ -f "$EXPLICIT_CONFIG_PATH" ]; then
+  if command -v node >/dev/null 2>&1; then
+    parsed=$(node -e "const fs=require('fs');const c=JSON.parse(fs.readFileSync(process.argv[1],'utf8'));const f=(c.default&&c.default.format)||[];const m=f.find(x=>typeof x==='string'&&x.startsWith('message:')); if(m) process.stdout.write(m.slice(8));" "$EXPLICIT_CONFIG_PATH" 2>/dev/null || true)
+    [ -n "$parsed" ] && RESULT_REL="$parsed"
+  elif command -v python3 >/dev/null 2>&1; then
+    parsed=$(python3 - "$EXPLICIT_CONFIG_PATH" <<'PY' 2>/dev/null || true
+import json, sys
+with open(sys.argv[1], encoding='utf-8') as f:
+    cfg = json.load(f)
+for item in cfg.get('default', {}).get('format', []):
+    if isinstance(item, str) and item.startswith('message:'):
+        print(item[len('message:'):], end='')
+        break
+PY
+)
+    [ -n "$parsed" ] && RESULT_REL="$parsed"
+  fi
+fi
+# Windows/WSL bind mounts can let shell `touch` create a file while Node's
+# formatter open(create) fails with ENOENT; pre-create/truncate the target.
+mkdir -p "$(dirname "$RESULT_REL")"
+: > "$RESULT_REL"
+
+CONFIG_MOUNT_ARGS=()
+if [ -n "$EXPLICIT_CONFIG_PATH" ] && [ -f "$EXPLICIT_CONFIG_PATH" ] && [[ "$EXPLICIT_CONFIG_PATH" == .dev-pomogator/.tmp/* ]]; then
+  config_dir=$(dirname "$EXPLICIT_CONFIG_PATH")
+  CONFIG_MOUNT_ARGS+=(-v "$(pwd)/${config_dir}:/home/testuser/app/${config_dir}")
 fi
 
 # Route the in-container run through scripts/run-bdd.mjs (not raw cucumber.js), so every
@@ -130,6 +172,8 @@ docker compose -f docker-compose.test.yml run --rm -T \
   -e PYTHONUNBUFFERED=1 \
   -e RUN_BDD_HISTORY_EXTERNAL=1 \
   "${SESSION_ARGS[@]}" \
+  "${CONFIG_MOUNT_ARGS[@]}" \
+  -v "$(pwd)/cucumber.docker.json:/home/testuser/app/cucumber.docker.json:ro" \
   -v "$(pwd)/${SPECS_RW}:/home/testuser/app/.specs" \
   test scripts/run-bdd.mjs "${CUCUMBER_ARGS[@]}" 2>&1 | tee -a "$LOG_FILE"
 STATUS=${PIPESTATUS[0]}
@@ -164,6 +208,17 @@ PY
 
   chunk="run-${epoch}-${kind}.ndjson"
   cp "$source" "$HISTORY_DIR/$chunk" || { echo "[docker-bdd] WARN: history archive skipped (copy failed: $source -> $HISTORY_DIR/$chunk)" >&2; return 0; }
+  if command -v node >/dev/null 2>&1; then
+    node scripts/bdd-overlay.mjs "$source" --run-id "$epoch" --source "docker-bdd:$kind" --trace-file "$HISTORY_DIR/$chunk" || echo "[docker-bdd] WARN: scenario overlay skipped" >&2
+  else
+    # WSL hosts on this project may have Docker but no host Node. Reuse the freshly-built
+    # test image so sanctioned Docker BDD runs still append the FR-56 overlay on every path.
+    COMPOSE_PROJECT_NAME="$PROJECT_NAME" docker compose -f docker-compose.test.yml run --rm -T --no-deps \
+      --entrypoint node \
+      -v "$(pwd)/.dev-pomogator:/home/testuser/app/.dev-pomogator" \
+      test scripts/bdd-overlay.mjs "$source" --run-id "$epoch" --source "docker-bdd:$kind" --trace-file "$HISTORY_DIR/$chunk" \
+      || echo "[docker-bdd] WARN: scenario overlay skipped" >&2
+  fi
 
   if [ "$history_tool" = "python3" ]; then
     stats=$(python3 - "$source" <<'PY'
@@ -277,11 +332,15 @@ JS
 # the canonical untouched — its partial/skipped ndjson must NOT poison the spec-graph
 # census. Its result still lands in $OUT_REL for inspection. No `shift` runs above, so
 # "$#" here is the original argc.
+if [ -s "$RESULT_REL" ] && [ "$RESULT_REL" != "$LATEST_REL" ]; then
+  cp "$RESULT_REL" "$LATEST_REL"
+fi
+
 if [ "$#" -gt 0 ]; then
-  archive_history "$OUT_REL" "filtered"
-  echo "[docker-bdd] filtered run ($*) — result in $OUT_REL ONLY; canonical NOT updated (clobber-safe)"
-elif [ -s "$OUT_REL" ]; then
-  cp "$OUT_REL" "$CANONICAL"
+  archive_history "$RESULT_REL" "filtered"
+  echo "[docker-bdd] filtered run ($*) — result in $RESULT_REL ONLY; canonical NOT updated (clobber-safe)"
+elif [ -s "$RESULT_REL" ]; then
+  cp "$RESULT_REL" "$CANONICAL"
   archive_history "$CANONICAL" "full"
   echo "[docker-bdd] Canonical ndjson updated from the Docker/Linux run -> $CANONICAL"
 else

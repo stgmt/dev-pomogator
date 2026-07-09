@@ -248,6 +248,22 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     And `create-spec` invokes regular `Skill("research-workflow")` instead of `architecture-research-workflow`
     And 7-stage overhead is avoided
 
+  @feature12
+  Scenario: SPECGEN004_531 shared research base is the single discipline source for both research skills
+    Given the shipped shared research base is loaded
+    When the research skills declare their shared research discipline
+    Then the base contains hypothesis-first source taxonomy triangulation verification markers schema-exhaustiveness recency anti-patterns external-pain and misconception-flush rules
+    And research-workflow links the shared base and references external-pain and misconception-flush sections
+    And architecture-research-workflow links the shared base from its Stage 3 broad research note
+
+  @feature12
+  Scenario: SPECGEN004_532 create-spec routes architecture research and honors research-done recursion guard
+    Given create-spec Phase 1 discovery documentation is loaded
+    When create-spec evaluates architectural small-feature and research-done prompts
+    Then architectural prompts route to architecture-research-workflow through the real heuristic
+    And small prompts route to research-workflow through the real heuristic
+    And the research-done recursion guard is documented before either research skill is invoked
+
   @feature13
   Scenario: SPECGEN004_29 Orphan scenario tag returns warn-severity finding by default
     Given a `.feature` file contains `@FR-999\nScenario: Some test` and FR-999 doesn't exist
@@ -1490,6 +1506,42 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Given the claim-evidence-gate stop hook and an unsupported works-done continuation stop
     When the same continuation stop fires twice with stop_hook_active set
     Then the first fire blocks and the identical re-fire is released by the anti-loop
+
+  @feature49
+  Scenario: SPECGEN004_526 transcript todo replay updates by real task id rather than positional array index
+    Given a captured transcript where TaskCreate and TaskUpdate events have sparse visible ids after compaction
+    When the Pinator task replay reconstructs agent todos
+    Then a completed visible task id closes that same real id and no array-slot stale todo remains open
+
+  @feature49
+  Scenario: SPECGEN004_531 intent extraction ignores interruption sentinels before terse continuations
+    Given a Pinator mandate followed by interruption sentinels and a terse continuation prompt
+    When the Pinator intent extractor computes the effective user request
+    Then interruption sentinels are ignored and the Pinator mandate remains effective
+
+  @feature49
+  Scenario: SPECGEN004_532 failed TaskUpdate results do not reopen phantom todos
+    Given a transcript where TaskUpdate for a missing task returns Task not found
+    When the Pinator task replay reconstructs agent todos
+    Then the missing-task update leaves no phantom open todo
+
+  @feature49
+  Scenario: SPECGEN004_527 duplicate agent todos cannot leave stale CARL evidence work as the next step
+    Given the captured CARL transcript includes repeated Capture real CARL runtime evidence todos and a later completed duplicate with real evidence files
+    When the shared next-step router selects the agent todo route
+    Then the stale CARL evidence duplicate is collapsed or demoted and the route does not name it as the next step
+
+  @feature49
+  Scenario: SPECGEN004_528 Stop-gate fire logs expose the selected todo id and reconciliation reason
+    Given a Pinator Stop-gate block caused by an agent todo route
+    When the fire is appended to .claim-evidence-gate-fires.jsonl
+    Then the log entry includes nextStepSource the real task id transcript location selected subject and duplicate reconciliation reason
+
+  @feature49
+  Scenario: SPECGEN004_533 the Stop-gate does not force the WS-F umbrella backlog after a narrow spec-generator-v4 report
+    Given a scoped spec-generator-v4 census whose next open task is the WS-F umbrella backlog
+    When the hook evaluates a narrow-task done report after that spec was touched
+    Then the hook approves the report and never suggests the WS-F umbrella backlog as next
 
   @feature51
   Scenario: SPECGEN004_199 the migrator inventory classifies cases by how they exercise code
@@ -3273,3 +3325,65 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     When conformance runs over the graph
     Then no TASK_NO_OWN_SCENARIO finding is raised for that task
     And a TASK_STATUS_UNVERIFIED warning still surfaces the not-run sibling
+
+  # ── FR-56: scenario-result overlay freshness (P29) ───────────────────────────
+
+  @feature56
+  Scenario: SPECGEN004_529 every BDD run path writes append-only scenario overlay rows
+    Given a Cucumber message run for a focused FR-56 scenario
+    When the scenario-result overlay writer records that run
+    Then the scenario overlay contains one row with result, run identity, source, and trace id
+    And appending another run preserves the existing overlay row
+
+  @feature49
+  Scenario: SPECGEN004_530 stop hook keeps previous substantive intent across terse follow-up prompts
+    Given a Pinator-fix mandate followed by a terse continuation prompt and a live judge endpoint
+    When the real Stop hook sends that turn to the judge
+    Then the judge facts say gate editing is not armed and the stop is approved
+
+  # ── FR-60: high-level MCP authoring API (pending implementation) ─────────────
+
+  @feature60 @wip
+  Scenario: SPECGEN004_520 section-targeted append preserves validation and EOL style
+    Given a spec document has an existing Phase heading and a known EOL style
+    When an agent proposes an MCP append_to_section operation targeting that Phase heading
+    Then the proposal resolves the stable heading anchor without requiring an exact old_string
+    And the preview preserves the document EOL style
+    And the same form, anchor, and conformance checks run before any write is applied
+
+  @feature60 @wip
+  Scenario: SPECGEN004_521 read_for_edit returns section metadata and safe insertion tokens
+    Given an agent reads a spec section for edit through the MCP door
+    When the read_for_edit response is returned
+    Then it includes eol_style, heading_anchor, section_sha, start_line, end_line, and append or insert tokens
+    And a follow-up insert using those tokens targets the same section even when unrelated document text changes elsewhere
+
+  @feature60 @wip
+  Scenario: SPECGEN004_522 replacement diagnostics distinguish EOL whitespace multi-match and missing-anchor misses
+    Given an MCP literal replacement fails to find old_string in a spec document
+    When the server analyzes the failed replacement
+    Then the response classifies the miss as EOL-only, whitespace-only, multi-match, changed body under the same anchor, or missing anchor
+    And with normalize_eol true a CRLF/LF-only mismatch is accepted while the persisted file keeps its original EOL style
+
+  @feature60 @wip
+  Scenario: SPECGEN004_523 multi-document proposal previews graph impact and applies atomically
+    Given a proposed spec change spans FR.md, ACCEPTANCE_CRITERIA.md, TASKS.md, the feature file, and FILE_CHANGES.md
+    When the agent calls propose_patch and then apply_spec_transaction
+    Then the preview includes anchors found, a diff, affected graph nodes, conformance findings, resulting shas, and a proposal_id
+    And applying the proposal writes all documents atomically or leaves every document unchanged
+    And the audit log records the transaction as one conceptual spec mutation
+
+  @feature60 @wip
+  Scenario: SPECGEN004_524 anchor-targeted CAS mismatch auto-rebases only non-conflicting changes
+    Given an anchor-targeted MCP mutation was prepared from an older document sha
+    When another session has changed unrelated text outside the target anchor
+    Then the mutation auto-rebases and applies against the fresh document
+    But when the target anchor body or preconditions changed the server refuses with fresh anchor context for the caller
+
+  @feature60 @wip
+  Scenario: SPECGEN004_525 domain helpers render canonical traceable markdown and enforce feature safety
+    Given an agent registers incident-driven backlog or amends a requirement through a domain helper
+    When the helper renders FR, AC, TASK, and optional feature changes
+    Then the generated markdown follows the canonical form contracts and keeps FR to AC to TASK traceability links
+    And ids are unique within the affected spec documents
+    And executable feature scenarios are refused unless matching step-definition work is included or the caller explicitly selects a TASKS-only acceptance pin

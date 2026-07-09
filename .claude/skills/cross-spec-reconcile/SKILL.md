@@ -11,7 +11,7 @@ description: |
   + optional `consistency-report.sarif`. CRITICAL findings invoke a
   blocking AskUserQuestion with header ⚠️ CRIT; user override is logged
   to `.claude/logs/cross-spec-overrides.jsonl` for audit trail.
-allowed-tools: Read, Write, Edit, Glob, Grep, Bash, AskUserQuestion
+allowed-tools: Read, Write, Edit, Glob, Grep, Bash, AskUserQuestion, Agent
 ---
 
 # cross-spec-reconcile

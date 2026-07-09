@@ -16,16 +16,17 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
+import * as http from 'node:http';
 import { V4World } from '../hooks/before-after.ts';
 import type { SpecGraph } from '../../tools/spec-graph/types.ts';
-import { writeTaskCensusCache, findStaleInProgress, selectNextStepRoute, type NextStepRoute, type StaleMarker } from '../../tools/spec-graph/task-census.ts';
+import { writeTaskCensusCache, findStaleInProgress, selectNextStepRoute, parseAgentTodos, agentNextOpenTodoDetail, type AgentTodo, type NextStepRoute, type StaleMarker } from '../../tools/spec-graph/task-census.ts';
 import { renderStaleReport } from '../../tools/spec-graph/stale-marker-scan.ts';
 import { buildTaskCensusLine } from '../../tools/specs-validator/conformance-summary.ts';
 import { validateSpecChange, type ValidateResult } from '../../tools/spec-mcp-server/mutations.ts';
 import { buildJudgePrompt, resolveEndpoint } from '../../tools/claim-evidence-gate/meridian-judge.ts';
 import { classify, firstUnsupported, stripCode } from '../../tools/claim-evidence-gate/claim_classifier.ts';
-import { extractTurnWindow } from '../../tools/claim-evidence-gate/turn_window.ts';
+import { effectiveUserRequest, extractTurnWindow, sessionUserPrompts } from '../../tools/claim-evidence-gate/turn_window.ts';
 
 interface AutoSurfaceWorld extends V4World {
   asRoot?: string;
@@ -45,6 +46,9 @@ interface AutoSurfaceWorld extends V4World {
   csRoot?: string;
   csBlocked?: boolean;
   csRaw?: string;
+  ubRoot?: string;
+  ubBlocked?: boolean;
+  ubRaw?: string;
   wdRoot?: string;
   wdBlockEdit?: boolean;
   wdApproveRun?: boolean;
@@ -80,6 +84,18 @@ interface AutoSurfaceWorld extends V4World {
   routeAsync?: NextStepRoute | null;
   routeSpec?: NextStepRoute | null;
   routeForeign?: NextStepRoute | null;
+  replayRoot?: string;
+  replayTx?: string;
+  replayTodos?: AgentTodo[];
+  replayNext?: AgentTodo | null;
+  replayRoute?: NextStepRoute | null;
+  fireLog?: Record<string, unknown>;
+  gateFollowRoot?: string;
+  gateFollowRaw?: string;
+  gateFollowBlocked?: boolean;
+  gateFollowPrompt?: string;
+  promptList?: string[];
+  effectivePrompt?: string;
 }
 
 // FR-49f (SPECGEN004_181): the door strength-gate refuses a .feature write that ADDS a
@@ -107,6 +123,18 @@ const DOOR_REAL = `Feature: door-fixture
     When the user saves
     Then an error is shown
 `;
+
+function writeJsonl(file: string, rows: unknown[]): void {
+  fs.writeFileSync(file, rows.map((r) => JSON.stringify(r)).join('\n') + '\n', 'utf-8');
+}
+
+function taskUse(id: string, name: 'TaskCreate' | 'TaskUpdate', input: Record<string, unknown>): unknown {
+  return { type: 'assistant', message: { role: 'assistant', content: [{ type: 'tool_use', id, name, input }] } };
+}
+
+function taskResult(toolUseId: string, content: string): unknown {
+  return { type: 'user', message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: toolUseId, content }] } };
+}
 
 Given('a cached task census with a foreign busiest spec and a current spec next task', function (this: AutoSurfaceWorld) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'fr49a-'));
@@ -188,7 +216,8 @@ When('the next-step route is selected across priority cases', function (this: Au
 
 Then('the route chooses agent todo before async before current spec and never a foreign backlog', function (this: AutoSurfaceWorld) {
   fs.rmSync(this.routeRoot!, { recursive: true, force: true });
-  assert.deepEqual(this.routeTodo, { source: 'agent-todo', title: 'Finish router' });
+  assert.equal(this.routeTodo?.source, 'agent-todo', 'agent todo is highest priority');
+  assert.equal(this.routeTodo?.title, 'Finish router', 'agent todo title is preserved');
   assert.equal(this.routeAsync?.source, 'active-async', 'active async is second priority after agent todo');
   assert.deepEqual(this.routeSpec, {
     source: 'current-spec',
@@ -293,6 +322,17 @@ function runStopHook(
   const raw = res.stdout || '';
   return { blocked: raw.includes('"decision":"block"'), raw };
 }
+function hookDecision(raw: string): string | undefined {
+  const trimmed = raw.trim();
+  if (!trimmed) return undefined;
+  const parsed = JSON.parse(trimmed) as { decision?: string };
+  return parsed.decision;
+}
+
+function isBlockDecision(raw: string): boolean {
+  return hookDecision(raw) === 'block';
+}
+
 function driveStopHook(root: string, claimText: string): boolean {
   return runStopHook(root, claimText).blocked;
 }
@@ -595,16 +635,18 @@ Then('the first fire blocks and the identical re-fire is released by the anti-lo
 // spec in an EARLIER turn (→ in FR-9 scope) while the CURRENT turn carries a controlled tool set (incl.
 // zero). runStopHook is single-turn (its tools land in the current window), so this drives a two-turn
 // transcript directly. Judge OFF — the no-progress + blocker-proof layers are deterministic.
-function runStopHookScoped(
+function runStopHookScopedRaw(
   root: string,
   claimText: string,
   currentTurnTools: Array<{ name: string; input: unknown }> = [],
   extraEnv: Record<string, string> = {},
-): boolean {
+  currentUserPrompt = 'идём',
+  editedSpecSlug = 'demo',
+): string {
   const rows = [
     { type: 'user', message: { role: 'user', content: [{ type: 'text', text: 'старт' }] } },
-    { type: 'assistant', message: { role: 'assistant', content: [{ type: 'tool_use', name: 'Edit', input: { file_path: '.specs/demo/FR.md' } }] } },
-    { type: 'user', message: { role: 'user', content: [{ type: 'text', text: 'идём' }] } },
+    { type: 'assistant', message: { role: 'assistant', content: [{ type: 'tool_use', name: 'Edit', input: { file_path: `.specs/${editedSpecSlug}/FR.md` } }] } },
+    { type: 'user', message: { role: 'user', content: [{ type: 'text', text: currentUserPrompt }] } },
     ...currentTurnTools.map((t) => ({ type: 'assistant', message: { role: 'assistant', content: [{ type: 'tool_use', name: t.name, input: t.input }] } })),
     { type: 'assistant', message: { role: 'assistant', content: [{ type: 'text', text: claimText }] } },
   ];
@@ -615,7 +657,17 @@ function runStopHookScoped(
     encoding: 'utf-8',
     env: { ...process.env, CLAIM_GATE_ENABLED: 'true', CLAIM_GATE_JUDGE: 'false', ...extraEnv },
   });
-  return (res.stdout || '').trim().includes('"decision":"block"');
+  return (res.stdout || '').trim();
+}
+
+function runStopHookScoped(
+  root: string,
+  claimText: string,
+  currentTurnTools: Array<{ name: string; input: unknown }> = [],
+  extraEnv: Record<string, string> = {},
+  currentUserPrompt = 'идём',
+): boolean {
+  return isBlockDecision(runStopHookScopedRaw(root, claimText, currentTurnTools, extraEnv, currentUserPrompt));
 }
 
 function censusRoot(prefix: string): string {
@@ -674,4 +726,250 @@ Then('the bare blocker is blocked for lacking evidence while the tool-backed and
   assert.equal(this.bpBare, true, 'a bare blocker claim with no tool and no bg → block (prove it or work)');
   assert.equal(this.bpTool, false, 'the same blocker after a real tool run → approve (substantiated)');
   assert.equal(this.bpBg, false, 'the same blocker after launching a bg task → approve (real async wait)');
+});
+
+Given('a captured transcript where TaskCreate and TaskUpdate events have sparse visible ids after compaction', function (this: AutoSurfaceWorld) {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'fr49h-real-id-'));
+  const tx = path.join(root, 'transcript.jsonl');
+  writeJsonl(tx, [
+    taskUse('u1', 'TaskCreate', { subject: 'Capture real CARL runtime evidence' }),
+    taskResult('u1', 'Task #72 created successfully: Capture real CARL runtime evidence'),
+    taskUse('u2', 'TaskUpdate', { taskId: '72', status: 'completed' }),
+  ]);
+  this.replayRoot = root;
+  this.replayTx = tx;
+});
+
+When('the Pinator task replay reconstructs agent todos', function (this: AutoSurfaceWorld) {
+  this.replayTodos = parseAgentTodos(this.replayTx!);
+  this.replayNext = agentNextOpenTodoDetail(this.replayTx!);
+});
+
+Then('a completed visible task id closes that same real id and no array-slot stale todo remains open', function (this: AutoSurfaceWorld) {
+  fs.rmSync(this.replayRoot!, { recursive: true, force: true });
+  assert.deepEqual(this.replayTodos!.map((t) => ({ id: t.id, subject: t.subject, status: t.status })), [
+    { id: '72', subject: 'Capture real CARL runtime evidence', status: 'completed' },
+  ]);
+  assert.equal(this.replayNext, null, 'completed real id #72 must leave no stale open agent todo');
+});
+
+Given('a Pinator mandate followed by interruption sentinels and a terse continuation prompt', function (this: AutoSurfaceWorld) {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'fr49-interrupt-'));
+  const tx = path.join(root, 'transcript.jsonl');
+  writeJsonl(tx, [
+    { type: 'user', message: { role: 'user', content: [{ type: 'text', text: 'почини пинатор: не считай honest gate-dev правку weakening-the-gate' }] } },
+    { type: 'user', message: { role: 'user', content: [{ type: 'text', text: '[Request interrupted by user for tool use]' }] } },
+    { type: 'user', message: { role: 'user', content: [{ type: 'text', text: '[Request interrupted by user]' }] } },
+    { type: 'user', message: { role: 'user', content: [{ type: 'text', text: 'дальше' }] } },
+  ]);
+  this.replayRoot = root;
+  this.replayTx = tx;
+});
+
+When('the Pinator intent extractor computes the effective user request', function (this: AutoSurfaceWorld) {
+  const raw = fs.readFileSync(this.replayTx!, 'utf-8');
+  this.promptList = sessionUserPrompts(raw);
+  this.effectivePrompt = effectiveUserRequest(raw);
+});
+
+Then('interruption sentinels are ignored and the Pinator mandate remains effective', function (this: AutoSurfaceWorld) {
+  fs.rmSync(this.replayRoot!, { recursive: true, force: true });
+  assert.deepEqual(this.promptList, ['почини пинатор: не считай honest gate-dev правку weakening-the-gate']);
+  assert.match(this.effectivePrompt!, /почини пинатор/i, 'the effective request must stay on the real gate mandate');
+  assert.doesNotMatch(this.effectivePrompt!, /Request interrupted/i, 'interruption sentinel must never become the effective task');
+});
+
+Given('a transcript where TaskUpdate for a missing task returns Task not found', function (this: AutoSurfaceWorld) {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'fr49-missing-task-'));
+  const tx = path.join(root, 'transcript.jsonl');
+  writeJsonl(tx, [
+    taskUse('u9', 'TaskCreate', { subject: 'Fix gate task-intent follow-up overfire' }),
+    taskResult('u9', 'Task #9 created successfully: Fix gate task-intent follow-up overfire'),
+    taskUse('u10', 'TaskUpdate', { taskId: '9', status: 'completed' }),
+    taskResult('u10', 'Updated task #9 status'),
+    taskUse('u11', 'TaskUpdate', { taskId: '9', status: 'in_progress', description: 'stale reopen after task store reset' }),
+    taskResult('u11', 'Task not found'),
+  ]);
+  this.replayRoot = root;
+  this.replayTx = tx;
+});
+
+Then('the missing-task update leaves no phantom open todo', function (this: AutoSurfaceWorld) {
+  fs.rmSync(this.replayRoot!, { recursive: true, force: true });
+  assert.deepEqual(this.replayTodos!.map((t) => ({ id: t.id, subject: t.subject, status: t.status })), [
+    { id: '9', subject: 'Fix gate task-intent follow-up overfire', status: 'completed' },
+  ]);
+  assert.equal(this.replayNext, null, 'a failed TaskUpdate must not reopen a phantom task');
+});
+
+Given('the captured CARL transcript includes repeated Capture real CARL runtime evidence todos and a later completed duplicate with real evidence files', function (this: AutoSurfaceWorld) {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'fr49h-carl-'));
+  const tx = path.join(root, 'transcript.jsonl');
+  fs.mkdirSync(path.join(root, '.dev-pomogator', '.tmp'), { recursive: true });
+  fs.writeFileSync(path.join(root, '.dev-pomogator', '.tmp', 'carl-runtime-evidence-latest.json'), JSON.stringify({ ok: true, afterRuntime: { status: 'verified' } }));
+  writeJsonl(tx, [
+    taskUse('u5', 'TaskCreate', { subject: 'Capture real CARL runtime evidence' }),
+    taskResult('u5', 'Task #5 created successfully: Capture real CARL runtime evidence'),
+    taskUse('u30', 'TaskCreate', { subject: 'Capture real CARL runtime evidence' }),
+    taskResult('u30', 'Task #30 created successfully: Capture real CARL runtime evidence'),
+    taskUse('u72', 'TaskCreate', { subject: 'Capture real CARL runtime evidence' }),
+    taskResult('u72', 'Task #72 created successfully: Capture real CARL runtime evidence'),
+    taskUse('u73', 'TaskUpdate', { taskId: '72', status: 'completed' }),
+  ]);
+  this.replayRoot = root;
+  this.replayTx = tx;
+});
+
+When('the shared next-step router selects the agent todo route', function (this: AutoSurfaceWorld) {
+  this.replayTodos = parseAgentTodos(this.replayTx!);
+  this.replayRoute = selectNextStepRoute({ transcriptPath: this.replayTx! });
+});
+
+Then('the stale CARL evidence duplicate is collapsed or demoted and the route does not name it as the next step', function (this: AutoSurfaceWorld) {
+  fs.rmSync(this.replayRoot!, { recursive: true, force: true });
+  assert.equal(this.replayRoute, null, `stale CARL todo must not be selected, got ${JSON.stringify(this.replayRoute)}`);
+  assert.equal(this.replayTodos!.length, 1, 'duplicate CARL evidence todos collapse to one canonical entry');
+  assert.match(this.replayTodos![0].reconciliation ?? '', /newest-closed/, 'completed newest duplicate wins the cluster');
+});
+
+Given('a Pinator Stop-gate block caused by an agent todo route', function (this: AutoSurfaceWorld) {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'fr49h-fire-'));
+  const tx = path.join(root, 'transcript.jsonl');
+  writeJsonl(tx, [
+    { type: 'user', message: { role: 'user', content: [{ type: 'text', text: 'почини пинатор' }] } },
+    taskUse('u72', 'TaskCreate', { subject: 'Capture real CARL runtime evidence' }),
+    taskResult('u72', 'Task #72 created successfully: Capture real CARL runtime evidence'),
+    { type: 'assistant', message: { role: 'assistant', content: [{ type: 'text', text: 'Готово. Продолжаю.' }] } },
+  ]);
+  const res = spawnSync(process.execPath, ['--import', 'tsx', NS_HOOK], {
+    input: JSON.stringify({ transcript_path: tx, cwd: root, session_id: 'fr49h-fire' }),
+    encoding: 'utf-8',
+    env: { ...process.env, CLAIM_GATE_ENABLED: 'true', CLAIM_GATE_JUDGE: 'false' },
+  });
+  assert.equal(isBlockDecision(res.stdout || ''), true, `fixture must produce a real block, raw=${res.stdout}`);
+  this.replayRoot = root;
+});
+
+When('the fire is appended to .claim-evidence-gate-fires.jsonl', function (this: AutoSurfaceWorld) {
+  const fires = fs.readFileSync(path.join(this.replayRoot!, '.dev-pomogator', '.claim-evidence-gate-fires.jsonl'), 'utf-8').trim().split(/\r?\n/);
+  this.fireLog = JSON.parse(fires.at(-1)!);
+});
+
+Then('the log entry includes nextStepSource the real task id transcript location selected subject and duplicate reconciliation reason', function (this: AutoSurfaceWorld) {
+  fs.rmSync(this.replayRoot!, { recursive: true, force: true });
+  assert.equal(this.fireLog!.nextStepSource, 'agent-todo');
+  assert.equal(this.fireLog!.nextStepTaskId, '72');
+  assert.equal(typeof this.fireLog!.nextStepTranscriptLine, 'number');
+  assert.equal(this.fireLog!.nextStepSubject, 'Capture real CARL runtime evidence');
+  assert.match(String(this.fireLog!.nextStepReconciliation), /real-id:72|unique/);
+});
+
+// SPECGEN004_533 (FR-49a/FR-49e regression): touching spec-generator-v4 for a narrow task must not make
+// the umbrella WS-F backlog the agent's forced «Дальше» item. Drives the REAL Stop hook with judge OFF so
+// the deterministic require-next-section layer is isolated.
+Given('a scoped spec-generator-v4 census whose next open task is the WS-F umbrella backlog', function (this: AutoSurfaceWorld) {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'fr49-wsf-'));
+  writeTaskCensusCache(
+    root,
+    {
+      total: { open: 29, doneRed: 0, doneUnrun: 0 },
+      specs: [
+        { slug: 'spec-generator-v4', open: 29, doneRed: 0, doneUnrun: 0, nextOpen: { id: 'ws-f-remaining', title: 'WS-F: remaining feature work' } },
+      ],
+    },
+    '2026-06-17T00:00:00Z',
+  );
+  this.ubRoot = root;
+});
+
+When('the hook evaluates a narrow-task done report after that spec was touched', function (this: AutoSurfaceWorld) {
+  this.ubRaw = runStopHookScopedRaw(
+    this.ubRoot!,
+    'Готово. Короткий отчёт по узкому разбору: причина найдена и описана.',
+    [],
+    {},
+    'сделай анализ и отчёт почему пинатор подкинул WS-F, пока не чини',
+    'spec-generator-v4',
+  );
+  this.ubBlocked = isBlockDecision(this.ubRaw);
+});
+
+Then('the hook approves the report and never suggests the WS-F umbrella backlog as next', function (this: AutoSurfaceWorld) {
+  fs.rmSync(this.ubRoot!, { recursive: true, force: true });
+  assert.equal(this.ubBlocked, false, `narrow-task report must approve, raw=${this.ubRaw}`);
+  assert.doesNotMatch(this.ubRaw!, /WS-F: remaining feature work/, 'the block text must not name the umbrella backlog');
+  assert.doesNotMatch(this.ubRaw!, /ws-f-remaining/i, 'the block text must not name the umbrella task id');
+});
+
+// SPECGEN004_530 (FR-49e/FR-29): a terse follow-up prompt like «дальше» must inherit the previous
+// substantive user intent. If that previous intent is to fix Pinator, editing gate files is honest work,
+// not "weakening the gate". Drives the REAL Stop hook and a local OpenAI-compatible judge endpoint.
+Given('a Pinator-fix mandate followed by a terse continuation prompt and a live judge endpoint', function (this: AutoSurfaceWorld) {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'fr49-follow-'));
+  const tx = path.join(root, 'transcript.jsonl');
+  writeJsonl(tx, [
+    { type: 'user', message: { role: 'user', content: [{ type: 'text', text: 'почини пинатор: он считает honest gate-dev правкой сторожа' }] } },
+    { type: 'user', message: { role: 'user', content: [{ type: 'text', text: 'дальше' }] } },
+    taskUse('u1', 'TaskCreate', { subject: 'Fix gate follow-up intent' }),
+    taskResult('u1', 'Task #91 created successfully: Fix gate follow-up intent'),
+    { type: 'assistant', message: { role: 'assistant', content: [{ type: 'tool_use', name: 'Edit', input: { file_path: 'tools/claim-evidence-gate/claim_evidence_gate_stop.ts' } }] } },
+    { type: 'assistant', message: { role: 'assistant', content: [{ type: 'text', text: 'Готово.\n\nДальше: запускаю focused BDD.' }] } },
+  ]);
+  this.gateFollowRoot = root;
+  this.replayTx = tx;
+});
+
+When('the real Stop hook sends that turn to the judge', async function (this: AutoSurfaceWorld) {
+  let server!: http.Server;
+  const requests: string[] = [];
+  server = http.createServer((req, res) => {
+    const chunks: Buffer[] = [];
+    req.on('data', (chunk: Buffer) => chunks.push(chunk));
+    req.on('end', () => {
+      const body = JSON.parse(Buffer.concat(chunks).toString('utf-8')) as { messages?: Array<{ content?: string }> };
+      const prompt = String(body.messages?.[0]?.content ?? '');
+      requests.push(prompt);
+      const selfEditStillArmed = /this turn EDITED the gate's OWN enforcement files[^\n]*: YES/i.test(prompt);
+      const content = JSON.stringify({
+        block: selfEditStillArmed,
+        reason: selfEditStillArmed ? 'Edited gate files; real task is not gate-fixing' : 'gate task allowed',
+      });
+      res.writeHead(200, { 'content-type': 'application/json' });
+      res.end(JSON.stringify({ choices: [{ message: { content } }] }));
+    });
+  });
+  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+  const port = (server.address() as { port: number }).port;
+  try {
+    const child = spawn(process.execPath, ['--import', 'tsx', NS_HOOK], {
+      cwd: process.cwd(),
+      env: {
+        ...process.env,
+        CLAIM_GATE_ENABLED: 'true',
+        CLAIM_GATE_JUDGE_KEY: 'sk-test',
+        CLAIM_GATE_JUDGE_URL: `http://127.0.0.1:${port}`,
+      },
+      stdio: ['pipe', 'pipe', 'pipe'],
+    });
+    let stdout = '';
+    let stderr = '';
+    child.stdout.on('data', (chunk: Buffer) => { stdout += chunk.toString(); });
+    child.stderr.on('data', (chunk: Buffer) => { stderr += chunk.toString(); });
+    child.stdin.end(JSON.stringify({ transcript_path: this.replayTx, cwd: this.gateFollowRoot }));
+    const code = await new Promise<number | null>((resolve) => child.on('exit', resolve));
+    assert.equal(code, 0, stderr);
+    this.gateFollowRaw = stdout.trim();
+    this.gateFollowBlocked = isBlockDecision(this.gateFollowRaw);
+    this.gateFollowPrompt = requests[0] ?? '';
+  } finally {
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+  }
+});
+
+Then('the judge facts say gate editing is not armed and the stop is approved', function (this: AutoSurfaceWorld) {
+  fs.rmSync(this.gateFollowRoot!, { recursive: true, force: true });
+  assert.equal(this.gateFollowBlocked, false, `gate-dev follow-up must approve, raw=${this.gateFollowRaw}`);
+  assert.match(this.gateFollowPrompt!, /the user's LAST request[^\n]*почини пинатор/i, 'the terse «дальше» prompt inherits the previous substantive Pinator request');
+  assert.match(this.gateFollowPrompt!, /this turn EDITED the gate's OWN enforcement files[^\n]*: no/i, 'gate self-edit fact is suppressed for honest Pinator work');
+  assert.doesNotMatch(this.gateFollowRaw!, /real task is not gate-fixing/i, 'the old overfire reason must not return');
 });

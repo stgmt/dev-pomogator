@@ -12378,8 +12378,10 @@ function qualifySlice(slice, slug) {
   }
 }
 function scenarioKey(s) {
-  const m = s.match(/s[pc]e[cn]gen004[_-](\d+)/i);
-  return m ? `specgen004_${m[1]}` : null;
+  const m = s.match(/\b([a-z][a-z0-9]*(?:gen)?\d{3})[_-](\d+)\b/i);
+  if (!m) return null;
+  const prefix = m[1].toLowerCase() === "scengen004" ? "specgen004" : m[1].toLowerCase();
+  return `${prefix}_${m[2]}`;
 }
 function bucketScenarios(scenarios) {
   const out = {
@@ -12413,23 +12415,25 @@ function mapTasksToScenarios(tasks, scenarios) {
   }
   const out = /* @__PURE__ */ new Map();
   for (const task of tasks) {
-    const ids = /* @__PURE__ */ new Set();
+    const explicitIds = /* @__PURE__ */ new Set();
+    const taggedIds = /* @__PURE__ */ new Set();
+    const refIds = /* @__PURE__ */ new Set();
     const sameSpec = (sid) => task.spec === void 0 || scenarioSpec.get(sid) === task.spec;
-    for (const m of task.doneWhen.matchAll(/s[pc]e[cn]gen004[_-]\d+/gi)) {
+    for (const m of task.doneWhen.matchAll(/\b[a-z][a-z0-9]*(?:gen)?\d{3}[_-]\d+\b/gi)) {
       const k = scenarioKey(m[0]);
       const sid = k && byKey.get(k);
-      if (sid) ids.add(sid);
+      if (sid) explicitIds.add(sid);
     }
     for (const m of task.doneWhen.matchAll(/@feature\d+/gi)) {
-      for (const sid of byTag.get(m[0].toLowerCase()) ?? []) if (sameSpec(sid)) ids.add(sid);
+      for (const sid of byTag.get(m[0].toLowerCase()) ?? []) if (sameSpec(sid)) taggedIds.add(sid);
     }
     for (const ref of task.refs) {
       const n = ref.match(/FR-(\d+)/i);
       if (n) {
-        for (const sid of byTag.get(`@feature${n[1]}`) ?? []) if (sameSpec(sid)) ids.add(sid);
+        for (const sid of byTag.get(`@feature${n[1]}`) ?? []) if (sameSpec(sid)) refIds.add(sid);
       }
     }
-    out.set(task.id, [...ids]);
+    out.set(task.id, [...explicitIds.size > 0 ? explicitIds : taggedIds.size > 0 ? taggedIds : refIds]);
   }
   return out;
 }
@@ -14800,9 +14804,9 @@ function checkConformance(graph, opts = {}) {
       taskLikes.push({ id: t.id, doneWhen: t.doneWhen ?? "", refs: t.refs, spec: specOf(t.file) });
     }
   }
-  if (taskLikes.length > 0) {
-    const cov = computeCoverage(taskLikes, scenarioLikes, opts.testQualityByTask);
-    const bucketById = /* @__PURE__ */ new Map();
+  const cov = taskLikes.length > 0 ? computeCoverage(taskLikes, scenarioLikes, opts.testQualityByTask) : null;
+  const bucketById = /* @__PURE__ */ new Map();
+  if (cov) {
     for (const b of Object.keys(cov.buckets)) for (const id of cov.buckets[b]) bucketById.set(id, b);
     for (const node of graph.nodes.values()) {
       if (node.type !== "Task") continue;
@@ -14856,16 +14860,20 @@ function checkConformance(graph, opts = {}) {
     if (node.type !== "Task") continue;
     const task = node;
     if (task.status !== "done") continue;
-    if (/s[pc]e[cn]gen004[_-]\d+/i.test(task.doneWhen ?? "")) continue;
+    if (scenarioKey(task.doneWhen ?? "")) continue;
+    const entry = cov?.tasks[task.id];
+    const greenScenarioCount = entry?.scenarios.filter((id) => bucketById.get(id) === "passed").length ?? 0;
+    if (greenScenarioCount > 0) continue;
     findings.push({
       code: "TASK_NO_OWN_SCENARIO",
       severity: "warning",
       location: { file: task.file, line: task.line },
-      message: `Task ${task.id} is marked DONE but its Done-When cites no SPECGEN id of its OWN \u2014 it only maps to its requirement's scenarios at large, so no test verifies THIS task specifically (FR-46a).`,
+      message: `Task ${task.id} is marked DONE but its Done-When cites no explicit scenario id of its OWN and no mapped covering scenario has passed; FR-wide refs alone are not proof for THIS task (FR-46a/FR-52 F7).`,
       nodeId: task.id,
       suggestions: [
-        { action: "cite_own_scenario", reason: "Reference this task's own SPECGEN004_NN scenario in Done-When (the one that verifies exactly this task), not just the FR.", confidence: "high" },
-        { action: "downgrade", reason: "Or set Status back to IN_PROGRESS until the task has its own passing scenario.", confidence: "high" }
+        { action: "cite_own_scenario", reason: "Reference this task's own SPECGEN004_NN / TESTQUAL001_NN scenario in Done-When when it has a dedicated proof.", confidence: "high" },
+        { action: "accept_consolidated_scenario", reason: "For migrated many\u2192few consolidation, map the task to at least one passing covering scenario via @feature/FR so the shared proof is explicit in the graph.", confidence: "medium" },
+        { action: "downgrade", reason: "Or set Status back to IN_PROGRESS until a dedicated or consolidated covering scenario is green.", confidence: "high" }
       ]
     });
   }

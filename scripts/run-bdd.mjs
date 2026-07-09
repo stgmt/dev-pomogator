@@ -21,6 +21,7 @@
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+import { writeScenarioOverlayFromNdjson } from './bdd-overlay.mjs';
 
 // Strict host-block (rule no-host-bdd-runs, owner directive 2026-06-24 "ничего на машине, всё в
 // Docker"): run-bdd is the in-container runtime used by docker-bdd.sh, so refuse everywhere else.
@@ -142,7 +143,13 @@ try {
     const epoch = Date.now();
     const kind = isFiltered ? 'filtered' : isDryRun ? 'dry-run' : 'full';
     const chunkName = `run-${epoch}-${kind}.ndjson`;
-    fs.copyFileSync(wrote, path.join(HIST, chunkName));
+    const traceFile = path.join(HIST, chunkName);
+    fs.copyFileSync(wrote, traceFile);
+    const overlayRows = writeScenarioOverlayFromNdjson(wrote, {
+      runId: String(epoch),
+      source: `run-bdd:${kind}`,
+      traceFile,
+    });
     const entry = {
       ts: new Date(epoch).toISOString(),
       epoch,
@@ -167,7 +174,7 @@ try {
       }
     }
     process.stderr.write(
-      `[run-bdd] archived ${kind} run → .test-history/${chunkName} (${scenarios} scenarios, ${durationMs ?? '?'}ms)\n`,
+      `[run-bdd] archived ${kind} run → .test-history/${chunkName} (${scenarios} scenarios, ${durationMs ?? '?'}ms; overlay +${overlayRows})\n`,
     );
   }
 } catch (e) {

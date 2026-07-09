@@ -32,7 +32,7 @@ import path from 'node:path';
 
 import { log as _logShared, normalizePath } from '../_shared/hook-utils.ts';
 import { markerPath, readMarker, writeMarkerAtomic, isWithinCooldown, hashFileList } from '../_shared/marker-utils.ts';
-import { extractTurnWindow, bgInFlightInWindow, agentBgInFlightCount, bgCommandInFlight, lastUserPrompt, sessionUserPrompts } from './turn_window.ts';
+import { extractTurnWindow, bgInFlightInWindow, agentBgInFlightCount, bgCommandInFlight, sessionUserPrompts, effectiveUserRequest } from './turn_window.ts';
 import { firstUnsupported, isSpecCompletionClaim } from './claim_classifier.ts';
 import { readTaskCensusCache, scopeCensusToSlugs, sessionEditedSpecSlugs, lastEditedSpecSlug, agentOpenTodoCount, liveOpenForUncensusedSlugs, selectNextStepRoute, type NextStepRoute, type TaskCensusCache } from '../spec-graph/task-census.ts';
 import { judgeStop, judgeAvailable, buildJudgeNoTokenDemand, isJudgeArmed } from './meridian-judge.ts';
@@ -248,12 +248,15 @@ async function main(): Promise<void> {
   const agentOpen = agentOpenTodoCount(tx);
   const scopedSpecOpen = scoped ? scoped.total.open + scoped.total.doneRed : 0;
   // FR-19 (2026-06-25): for session-edited slugs the census SNAPSHOT lacks (a freshly-created / just-edited
-  // spec it predates), count their open tasks LIVE from TASKS.md — so `openWork` isn't falsely 0 (the
-  // no-kick root cause). Bounded to edited slugs, fail-open, no graph build. FR-17 stays load-bearing.
+  // spec it predates), count their open tasks LIVE from TASKS.md. This is used only for whole-spec false-close
+  // detection below; a touched umbrella spec must NOT become the agent's assigned backlog by itself.
   const liveOpen = liveOpenForUncensusedSlugs(repoRoot, editedSlugs, globalCensus);
-  // The open-work signal every firing precondition gates on: spec-scope open + the agent's own todos +
-  // FR-19 live count of edited-but-uncensused specs.
-  const openWork = scopedSpecOpen + agentOpen + liveOpen;
+  const specCompletionClaim = isSpecCompletionClaim(claimText);
+  const scopedCompletionOpen = scopedSpecOpen + liveOpen;
+  // Most gate layers still need the scoped-spec open count (no-next-section / blocker-proof / judge /
+  // whole-spec false-close). The WS-F leak fix is NOT to hide open work; it is to stop the helper text from
+  // naming a scoped spec backlog unless the message claims the whole spec/feature is done.
+  const openWork = scopedCompletionOpen + agentOpen;
   const recencySlug = lastEditedSpecSlug(tx);
   let nextStep: NextStepRoute | null = null;
   let nextLine = '';
@@ -306,8 +309,8 @@ async function main(): Promise<void> {
   // strict: no fallback to global scoped?.specs[0], which was the WS-F/@feature35 leak.
   nextStep = selectNextStepRoute({
     transcriptPath: tx,
-    census: scoped,
-    currentSpecSlug: recencySlug,
+    census: specCompletionClaim ? scoped : null,
+    currentSpecSlug: specCompletionClaim ? recencySlug : null,
     awaitingAsync,
   });
   nextOpenTask = nextStep?.source === 'current-spec' && nextStep.id ? { id: nextStep.id, title: nextStep.title } : null;
@@ -318,7 +321,6 @@ async function main(): Promise<void> {
   // proof for factual claims and DROP the work-demanding kicks (lazy-stop / no-next-section / blocker /
   // judge / gate-meta / spec-false-close). Default (implement verb present OR ambiguous) → enforce-work
   // (К4 conservative). The judge ALSO gets `userRequest` as a backstop for phrasings this regex misses.
-  const userRequest = lastUserPrompt(rawTranscript);
   // FR-28 (2026-06-29): the human's FULL session mandate (every typed prompt, injections stripped). The
   // judge weighs it as a distinct dimension — once everything the human asked is done, the remaining
   // nextOpenTask backlog is NOT the agent's job → APPROVE (overrides the next-open-task / fake-handoff
@@ -326,20 +328,25 @@ async function main(): Promise<void> {
   // unrequested backlog umbrella (@feature35) because the gate conflated "open task in a touched spec"
   // with "the human's mandate". Agent-independent (transcript-derived) → ungameable.
   const sessionPrompts = sessionUserPrompts(rawTranscript);
+  // FR-29 follow-up intent (2026-07-09): a terse continuation prompt ("дальше", "go") has no domain words.
+  // sessionUserPrompts intentionally drops those ack-only turns, so the last substantive mandate is the right
+  // intent for deterministic carve-outs and for the judge's LAST-request field. Without this, an honest
+  // gate-dev continuation is misread as "edited gate files; real task is not gate-fixing".
+  const substantiveUserRequest = effectiveUserRequest(rawTranscript);
   // FR-5 (2026-06-25): editing the gate is only "fighting" it when the user's task is something ELSE.
   // When the owner ASKED to work on the gate/pinator itself, the gate-self-edit fact is NOT a tell — it's
   // the assigned task — so suppress it deterministically (don't rely on the LLM to re-derive the exception;
-  // it over-fired on honest gate-dev). edit-gate-to-dodge keeps the fact (its userRequest is про a spec).
+  // it over-fired on honest gate-dev). edit-gate-to-dodge keeps the fact (its effective request is про a spec).
   // FR-28: «судья/судью/judge/meridian» added — the owner's word for THIS subsystem was «судью», and the
   // file edited here is meridian-judge.ts. Without it, "fix the judge" requests register gateSelfEdit with
   // suppression OFF → the agent's own honest gate-dev stop is misread as "edit-gate-to-dodge". `судь[яеиёю]`
   // matches судья/судье/судьи/судью but NOT судьба (fate), so it does not over-suppress on unrelated prose.
-  const taskIsAboutTheGate = /пинатор|pinator|claim.?evidence.?gate|claim.?gate|сторож|судь[яеиёю]|meridian|\bjudge\b/i.test(userRequest);
+  const taskIsAboutTheGate = /пинатор|pinator|claim.?evidence.?gate|claim.?gate|сторож|судь[яеиёю]|meridian|\bjudge\b/i.test(substantiveUserRequest);
   const ANALYSIS_RE = /\bанализ|разбер|разбор|оцен[иь]|отч[её]т|\breport\b|analyz|ревью|\breview\b|\bплан\b|\bplan\b|посмотри что|что думаешь|что не так/i;
   // STRONG implement verbs only — NOT ambiguous "сделай/делай" (e.g. "сделай анализ", "план работ дай"
   // are analysis). A bare "делай вариант X" has no analysis word → already falls through to enforce-work.
   const IMPLEMENT_RE = /почини|\bfix\b|реализу|implement|\bbuild\b|мигрир|migrate|допиши|добавь|перепиши|внеси|закоммить|\bcommit\b/i;
-  const analysisOnly = ANALYSIS_RE.test(userRequest) && !IMPLEMENT_RE.test(userRequest);
+  const analysisOnly = ANALYSIS_RE.test(substantiveUserRequest) && !IMPLEMENT_RE.test(substantiveUserRequest);
 
   // α (2026-06-20): a turn spent INSPECTING / arguing with the GATE ITSELF — reading its own source,
   // the transcript or the fires-log — with NO real mutating edit is NOT progress. EDITING the gate
@@ -360,7 +367,7 @@ async function main(): Promise<void> {
   // false-close — block even when tools ran and there is no defer phrasing (the gap the
   // text classes miss). Tightly spec-scoped: isSpecCompletionClaim is whole-spec (not
   // per-task) AND requires a REAL unfinished census, so a non-spec "fixed it" never trips it.
-  const censusMsg = isSpecCompletionClaim(claimText) ? censusReminder(scoped, nextStep) : null;
+  const censusMsg = specCompletionClaim ? censusReminder(scoped, nextStep) : null;
   if (!unsupported && censusMsg) {
     unsupported = { cls: 'spec-false-close', need: censusMsg };
   }
@@ -379,7 +386,7 @@ async function main(): Promise<void> {
     // touched such a spec (the fake census signal the spec-generator fed the hook). doneUnrun is still
     // surfaced for a genuine WHOLE-SPEC "done" claim via the FR-49b censusReminder above
     // (isSpecCompletionClaim) — the real anti-false-close path, where "marked done, unverified" matters.
-    const open = openWork; // spec-scope open + the agent's own pending todos (K3)
+    const open = openWork; // scoped open + agent todos; helper text is gated separately from the fire condition
     // V2: skip the «Дальше:» requirement while a background job is in flight — the agent is awaiting
     // an async result and legitimately has no actionable next step until it lands.
     if (open > 0 && GRAY_SIGNAL.test(claimText) && !NEXT_SECTION_RE.test(claimText) && !awaitingAsync) {
@@ -457,7 +464,7 @@ async function main(): Promise<void> {
         // a multi-spec session makes "which spec to finish" a genuine owner choice (a legit AskUserQuestion).
         nextOpenTask, // FR-49a: current-spec only; never global/scoped specs[0] fallback
         multiSpecSession: editedSlugs.size > 1,
-        userRequest, // Phase 1: backstop — the judge approves a report-stop the user asked for
+        userRequest: substantiveUserRequest, // Phase 1/FR-29: last substantive request, not a terse continuation ack
         sessionUserPrompts: sessionPrompts, // FR-28: the full human mandate — mandate-complete overrides nextOpenTask backlog
         gateSelfEditThisTurn: gateSelfEditThisTurn && !taskIsAboutTheGate, // FR-4/5: fighting-the-gate ONLY if the task is NOT про the gate (honest gate-dev not penalised)
         selfMarkedBlockedOrBacklogThisTurn, // FR-4/5: self-marked own work blocked/backlog this turn (self-exemption)
@@ -520,6 +527,11 @@ async function main(): Promise<void> {
     mode: config.mode,
     session_id: input.session_id ?? null,
     cwd: repoRoot,
+    nextStepSource: nextStep?.source ?? null,
+    nextStepTaskId: nextStep?.id ?? null,
+    nextStepTranscriptLine: nextStep?.line ?? null,
+    nextStepSubject: nextStep?.title ?? null,
+    nextStepReconciliation: nextStep?.reconciliation ?? null,
   });
 
   if (config.mode === 'shadow') {

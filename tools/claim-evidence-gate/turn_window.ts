@@ -290,6 +290,9 @@ export function agentBgInFlight(rawTranscript: string): boolean {
 // intent classification so a banner-only turn is not mistaken for the user's request.
 const HOOK_INJECTION_RE =
   /^\s*(📋|👉|…ещё|\[specs-validator\]|⚠️|PHASE GATE WARNING|Stop hook feedback|UserPromptSubmit hook|<\/?task-notification|<(?:task-id|tool-use-id|output-file|status|summary)|<\/?command-(?:name|message|args)|<\/?local-command-(?:stdout|caveat)|\[SYSTEM NOTIFICATION|This is an automated|Do NOT interpret|[A-Za-z][\w.-]*:\s*\d+\s*(?:open|⏸))/u;
+// Harness interruption sentinels are user-role transcript rows, but they are not the user's task.
+// If they become the "last prompt", gate-dev work looks unrelated and the judge overfires.
+const INTERRUPTED_PROMPT_RE = /^\s*\[Request interrupted by user(?: for tool use)?\]\s*$/i;
 
 /**
  * FR-28 (2026-06-29): a GENUINELY-TYPED human prompt = a real user turn that the harness did NOT inject.
@@ -329,7 +332,7 @@ export function lastUserPrompt(rawTranscript: string): string {
     const firstNonEmpty = allLines.find((ln) => ln.trim()) ?? '';
     if (HOOK_INJECTION_RE.test(firstNonEmpty)) continue;
     const cleaned = allLines.filter((ln) => !HOOK_INJECTION_RE.test(ln)).join('\n').trim();
-    if (cleaned) return cleaned;
+    if (cleaned && !INTERRUPTED_PROMPT_RE.test(cleaned)) return cleaned;
   }
   return '';
 }
@@ -375,7 +378,7 @@ export function sessionUserPrompts(rawTranscript: string): string[] {
     const firstNonEmpty = allLines.find((ln) => ln.trim()) ?? '';
     if (HOOK_INJECTION_RE.test(firstNonEmpty)) continue; // a hook-injection-led message is not a prompt
     const cleaned = allLines.filter((ln) => !HOOK_INJECTION_RE.test(ln)).join('\n').trim();
-    if (!cleaned) continue;
+    if (!cleaned || INTERRUPTED_PROMPT_RE.test(cleaned)) continue;
     // Drop a PURE continuation ack ("го"/"ок"/"давай"/"go"…) — it carries no ask, and a run of them must
     // not crowd a substantive request out of the last-N window (which would leave an acks-only mandate the
     // judge could falsely read as "complete"). Only an EXACT filler match is dropped: "давай сделай X"
@@ -386,4 +389,14 @@ export function sessionUserPrompts(rawTranscript: string): string[] {
 
   }
   return out.slice(-MANDATE_MAX_PROMPTS);
+}
+
+/**
+ * Last substantive human request. Unlike lastUserPrompt(), this skips pure continuation acks
+ * ("дальше", "go", "+") via sessionUserPrompts(), so gate-dev follow-up turns keep the
+ * previous domain intent instead of looking like an unrelated task.
+ */
+export function effectiveUserRequest(rawTranscript: string): string {
+  const prompts = sessionUserPrompts(rawTranscript);
+  return prompts.at(-1) ?? lastUserPrompt(rawTranscript);
 }

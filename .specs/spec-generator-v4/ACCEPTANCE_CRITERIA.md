@@ -188,7 +188,7 @@ WHEN chokidar fails to detect FS events within 500ms touch test at startup THEN 
 ## AC-14.3
 **Требование:** [FR-14](FR.md#fr-14)
 
-WHEN the user opens the same worktree in two different environments (host + container) AND second MCP server tries to start THEN it SHALL detect existing `.mcp-lock.json` with different `env` tag AND DENY with clear message `"MCP already running in env X (pid Y), restart Claude Code in same env"`.
+WHEN the user opens the same worktree in two sessions/environments AND a second MCP server starts THEN it SHALL detect the existing `.mcp-lock.json` presence holder, boot a live presence-reader door instead of crashing, keep read tools and `propose_spec_change` available, and SHALL NOT refuse write tools with a lifetime `WRITE_LOCK_HELD`; writes SHALL serialize via the short `.mcp-write.lock`, reporting transient `WRITE_LOCK_BUSY` only for an in-flight writer, while same-doc stale writes are refused with `CAS_MISMATCH` from `expected_sha`, and a different `env` holder is named in the env-mismatch hint.
 
 ## AC-15.1
 **Требование:** [FR-15](FR.md#fr-15)
@@ -716,6 +716,12 @@ WHEN финальное сообщение хода — claim прогресса
 
 WHEN запись `.feature` через дверь (`apply_spec_change`) ДОБАВЛЯЕТ сценарий-заготовку — шаг, целиком состоящий из плейсхолдера (`<...>` с пробелом ИЛИ `{...}`) либо несущий НОВЫЙ маркер `[TBD]` — THEN дверь SHALL ОТКЛОНИТЬ запись finding'ом слоя `strength` с перечнем пустых сценариев; WHEN запись добавляет полностью написанный сценарий THEN strength-finding SHALL НЕ появляться; WHEN шаг — параметр Scenario Outline (`<amount>`, один токен без пробела) ИЛИ скобка внутри текста (`{"k":"v"}`) THEN он SHALL НЕ считаться заготовкой (точный сигнал, анти-H1); WHEN прежняя заготовка лишь СОХРАНЯЕТСЯ без добавления новой THEN запись SHALL НЕ отклоняться (net-new, doc-scoped — легаси не клинит несвязанные правки); WHEN спеку создают через `create_spec` THEN стартовый каркас из шаблона SHALL писаться мимо двери by design (гейт кусает на авторинге/правке через `apply_spec_change`, не на скаффолде).
 
+## AC-49.4
+
+**Требование:** [FR-49a](FR.md#fr-49), [FR-49b](FR.md#fr-49)
+
+WHEN transcript-derived agent todos are reconstructed from `TaskCreate` / `TaskUpdate` tool events whose visible task ids are sparse, non-monotonic, or preserved across compaction THEN replay SHALL key every update by the REAL task id carried in the tool metadata/result/input, not by array position (`id - 1`); WHEN a later `TaskUpdate` marks task `#N` completed THEN no earlier pending state for that same real id SHALL remain eligible as `agentOpenTodo`; WHEN several transcript todos have the same normalized subject and scope (for example repeated `Capture real CARL runtime evidence`) THEN the canonical todo set SHALL collapse duplicates using newest-event precedence and completion/evidence precedence, so an older stale open duplicate cannot outrank a newer completed duplicate or current-spec work; WHEN duplicate state cannot be collapsed safely THEN the router SHALL log the ambiguity and demote the todo below active async/current-spec routing rather than block on a guessed stale task; WHEN the Stop-gate blocks on an agent todo THEN the fire log SHALL include `nextStepSource`, real task id, transcript event location/range, selected subject, and reconciliation reason so the next incident is diagnosable without reparsing the full transcript; WHEN the captured CARL incident transcript is replayed THEN completing `Task #72` SHALL close task `#72` (not array slot 71 or stale internal id 5) and SHALL NOT select stale `Capture real CARL runtime evidence` as the next step after the real CARL runtime evidence file and BDD proof exist.
+
 ## AC-50.1
 
 **Требование:** [FR-50](FR.md#fr-50)
@@ -835,3 +841,27 @@ WHEN `runPush` observes conformance findings THEN `appendFindings(...)` SHALL st
 **Требование:** [FR-59](FR.md#fr-59)
 
 WHEN prompt-time conformance/task-census banners render repeated status context THEN `buildConformanceSummary(...)` SHALL remain a single line and `buildTaskCensusLine(...)` SHALL render only the header, the next open task, the top 5 specs, and an omitted-spec count with target output length at or below 1500 chars; AND WHEN source changes are complete THEN `tools/spec-conformance-push/spec-conformance-push.bundle.mjs` SHALL be rebuilt and a real bundle probe SHALL show bounded stdout.
+
+## AC-60.1
+
+**Требование:** [FR-60](FR.md#fr-60)
+
+WHEN an agent needs to append a phase/task/requirement block to an existing spec document THEN the MCP door SHALL accept an anchor/section operation (`append_to_section`, `insert_after_heading`, or `insert_at_eof`) that locates the target by stable heading identity rather than exact `old_string`; THEN the write SHALL preserve the document's existing EOL style and SHALL still run the same form, anchor, and conformance checks before touching disk.
+
+## AC-60.2
+
+**Требование:** [FR-60](FR.md#fr-60)
+
+WHEN a literal replacement cannot find `old_string` THEN the MCP response SHALL say whether the text would match after EOL normalization, whether the anchor exists with changed body, whether the text has multiple matches, or whether only whitespace drift is present; AND IF `normalize_eol: true` is provided THEN CRLF/LF differences SHALL NOT cause a false `old_string not found` while the persisted file keeps its original EOL style.
+
+## AC-60.3
+
+**Требование:** [FR-60](FR.md#fr-60)
+
+WHEN a spec change spans FR.md, ACCEPTANCE_CRITERIA.md, TASKS.md, `.feature`, and FILE_CHANGES.md THEN `propose_patch` / `apply_spec_transaction` SHALL preview anchors, diff, affected graph nodes, and conformance findings for all changed docs, then write all docs atomically or none; IF a CAS mismatch is non-conflicting and the target anchor still satisfies preconditions THEN the tool SHALL auto-rebase, otherwise it SHALL refuse with the fresh anchor context.
+
+## AC-60.4
+
+**Требование:** [FR-60](FR.md#fr-60)
+
+WHEN an agent registers incident-driven backlog or amends a requirement THEN domain helpers (`register_incident_backlog`, `amend_requirement`, `add_backlog_task`, `add_acceptance_criterion`) SHALL render canonical markdown, maintain FR↔AC↔TASK traceability links, enforce unique ids, and SHALL NOT add executable `.feature` scenarios unless matching step-definition work is included or the caller explicitly chooses a TASKS-only acceptance pin.

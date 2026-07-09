@@ -36,15 +36,15 @@
 | T4-30 | SQLite index opt-in -- @feature10 | DONE | graph-builder-impl | Phase 4: SQLite + side-channel log + Codespaces (In Progress — TODO remain) | 360m |
 | T4-31 | SQLite corruption recovery -- @feature10 | DONE | sqlite-index | Phase 4: SQLite + side-channel log + Codespaces (In Progress — TODO remain) | 180m |
 | T4-32 | Side-channel log JSONL -- @feature15 | DONE | conformance-checker | Phase 4: SQLite + side-channel log + Codespaces (In Progress — TODO remain) | 180m |
-| T4-33 | spec-check-log CLI -- @feature15 | IN_PROGRESS | spec-check-log | Phase 4: SQLite + side-channel log + Codespaces (In Progress — TODO remain) | 180m |
+| T4-33 | spec-check-log CLI -- @feature15 | DONE | spec-check-log | Phase 4: SQLite + side-channel log + Codespaces (In Progress — TODO remain) | 180m |
 | T4-34 | Codespaces env detector -- @feature16 | DONE | lock-manager-impl | Phase 4: SQLite + side-channel log + Codespaces (In Progress — TODO remain) | 120m |
 | T4-35 | Devcontainer postStartCommand -- @feature16 | DONE | mcp-server-skeleton | Phase 4: SQLite + side-channel log + Codespaces (In Progress — TODO remain) | 120m |
 | T4-36 | Verify Phase 4 Red→Green -- @feature10 | DONE | sqlite-index, spec-check-log, codespaces-detector, devcontainer-poststartcommand | Phase 4: SQLite + side-channel log + Codespaces (In Progress — TODO remain) | 120m |
 | T5-37 | Migration script main -- @feature11 | DONE | conformance-checker | Phase 5: Migration helper v3→v4 (In Progress — TODO remain) | 300m |
 | T5-38 | Heading converter -- @feature11 | DONE | migrate-script-main | Phase 5: Migration helper v3→v4 (In Progress — TODO remain) | 180m |
-| T5-39 | Tag predictor -- @feature11 | TODO | migrate-script-main | Phase 5: Migration helper v3→v4 (In Progress — TODO remain) | 240m |
+| T5-39 | Tag predictor -- @feature11 | DONE | migrate-script-main | Phase 5: Migration helper v3→v4 (In Progress — TODO remain) | 240m |
 | T5-40 | Interactive prompt with 30s timeout -- @feature11 | DONE | migrate-script-main | Phase 5: Migration helper v3→v4 (In Progress — TODO remain) | 180m |
-| T5-41 | Verify Phase 5 Red→Green -- @feature11 | TODO | interactive-prompt | Phase 5: Migration helper v3→v4 (In Progress — TODO remain) | 60m |
+| T5-41 | Verify Phase 5 Red→Green -- @feature11 | DONE | interactive-prompt | Phase 5: Migration helper v3→v4 (In Progress — TODO remain) | 60m |
 | T6-42 | Scaffold new skill -- @feature12 | DONE | — | Phase 6: architecture-research-workflow skill (In Progress — TODO remain) | 480m |
 | T6-43 | 7 stage templates -- @feature12 | DONE | arch-research-skill-scaffold | Phase 6: architecture-research-workflow skill (In Progress — TODO remain) | 480m |
 | T6-44 | Stage helper scripts -- @feature12 | DONE | arch-research-templates | Phase 6: architecture-research-workflow skill (In Progress — TODO remain) | 960m |
@@ -521,11 +521,12 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [ ] restart-from-stage.ts handles rewind + 3-rewind hard limit
   - [ ] @feature12 SPECGEN004_27 passes
 
-- [x] Shared research base -- @feature12 — id: shared-research-base — Status: DONE (2026-06-14) | Est: 240m
+- [x] Shared research base -- @feature12 — id: shared-research-base — Status: DONE (2026-07-09; focused BDD evidence added) | Est: 240m
   _Requirements: [FR-12](FR.md#fr-12)_
   **Done When:**
   - [x] `.claude/skills/_shared/research-base.md` contains common patterns (hypothesis-first, source taxonomy, ≥3-independent triangulation, verification markers, schema-exhaustiveness, recency, anti-patterns AP-1..8, external-pain §8, misconception-flush §9)
   - [x] Both skills reference it (research-workflow SKILL.md + architecture-research-workflow SKILL.md Stage-3 note both link `../_shared/research-base.md` — grep-verified)
+  - [x] SPECGEN004_531 reads the real shipped shared base plus both SKILL.md consumers; focused Docker BDD `bash scripts/docker-bdd.sh --name "SPECGEN004_531"` passed 1 scenario / 8 steps, exit 0 (filtered canonical not updated)
 
 - [x] Enrich research-workflow -- @feature12 — id: enrich-research-workflow — Status: DONE (2026-06-14) | Est: 240m
   _depends: shared-research-base_
@@ -534,43 +535,44 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [x] Add external-pain validation section (Phase 1 «External-pain validation» — H-pain hypothesis, `[ASSUMED]` без внешнего сигнала боли; references base §8)
   - [x] Add misconception-flush prompt to Phase 3 (Phase 3 «Misconception flush» before final verdicts — surface + disprove assumptions; references base §9)
 
-- [x] Create-spec heuristic + recursion guard -- @feature12 — id: create-spec-heuristic — Status: DONE | Est: 480m
+- [x] Create-spec heuristic + recursion guard -- @feature12 — id: create-spec-heuristic — Status: DONE (2026-07-09; routing contract pinned) | Est: 480m
   _depends: arch-research-scripts_
   _Requirements: [FR-12](FR.md#fr-12)_
   **Done When:**
-  - [ ] Detects complexity keywords OR ≥3 components
-  - [ ] Auto-invokes architecture-research-workflow when triggered
-  - [ ] `--research-done` flag prevents recursion
-  - [ ] @feature12 SPECGEN004_26, _28 pass
+  - [x] Detects complexity keywords OR ≥3 components (`detectComplexity()` covered by SPECGEN004_234..240 and exercised again by SPECGEN004_532)
+  - [x] Auto-invokes architecture-research-workflow when triggered (Phase 1 discovery docs now route `use-architecture-research-workflow` → `Skill("architecture-research-workflow")`; pinned by SPECGEN004_532)
+  - [x] `--research-done` flag prevents recursion (Phase 1 discovery docs check guard before either research skill; pinned by SPECGEN004_532)
+  - [x] @feature12 SPECGEN004_26, _28, _532 pass; focused Docker BDD `bash scripts/docker-bdd.sh --name "SPECGEN004_532"` passed 1 scenario / 8 steps, exit 0 (filtered canonical not updated)
 
-- [x] Verify Phase 6 Red→Green dogfood -- @feature12 — id: verify-phase6-green — Status: DONE | Est: 480m
+- [x] Verify Phase 6 Red→Green dogfood -- @feature12 — id: verify-phase6-green — Status: DONE (2026-07-09; v5 cache proof + @feature12 Docker green) | Est: 480m
   _depends: create-spec-heuristic, enrich-research-workflow_
   **Done When:**
-  - [ ] Dogfood: invoke arch-research on synthetic "v5 cache layer" feature
-  - [ ] All 7 stages produce outputs
-  - [ ] @feature12 scenarios all pass
+  - [x] Dogfood: invoked real arch-research scripts on synthetic "v5 cache layer" feature via `.dev-pomogator/.tmp/check-arch-research-v5-cache-layer.mjs`
+  - [x] All 7 stages produce outputs and merge into RESEARCH.md appendices; proof output `ARCH_RESEARCH_V5_CACHE_LAYER_PROOF PASS`, `created=7`, `merged=7`, `.done` marker written
+  - [x] @feature12 scenarios all pass: Docker BDD `bash scripts/docker-bdd.sh --tags "@feature12"` passed 36 scenarios / 233 steps, exit 0 (filtered canonical not updated)
 
 ## Phase 7: Cross-spec reconciliation (TODO — not started)
 
-- [x] Scaffold cross-spec-reconcile + cross-spec-resolve skills -- @feature17 @feature18 — id: install-cross-spec-skills — Status: DONE (partial 2026-06-07: both SKILL.md + scripts/ shipped and scenarios GREEN; the 6 planned reference docs (finding-codes.md / yaml-schema.md / semantic-judge-prompt.md / fix-templates.md / explain-before-edit.md) NOT written — only reference_resolution-patterns.md exists; 37 finding codes live in reconcile.ts, undocumented) | Est: 480m
+- [x] Scaffold cross-spec-reconcile + cross-spec-resolve skills -- @feature17 @feature18 — id: install-cross-spec-skills — Status: DONE (2026-07-09; stale partial note reconciled; all seven reference-doc bullets proof-checked) | Est: 480m
   _Requirements: [FR-17](FR.md#fr-17), [FR-18](FR.md#fr-18)_
   **Done When:**
-  - [ ] `.claude/skills/cross-spec-reconcile/SKILL.md` exists with frontmatter triggers (cross-spec, reconcile, согласование спек, conflict check) and allowed-tools (Read, Write, Glob, Grep, Bash, AskUserQuestion, Agent)
-  - [ ] `.claude/skills/cross-spec-reconcile/references/finding-codes.md` lists 28 Spectral-namespaced codes with severity + class + remediation
-  - [ ] `.claude/skills/cross-spec-reconcile/references/yaml-schema.md` documents Consistency Report YAML schema
-  - [ ] `.claude/skills/cross-spec-reconcile/references/semantic-judge-prompt.md` contains the Agent subagent prompt template (NO interactive prompts permitted from subagent)
-  - [ ] `.claude/skills/cross-spec-resolve/SKILL.md` exists with `/cross-spec-resolve` trigger and 7-step execution flow per FR-18
-  - [ ] `.claude/skills/cross-spec-resolve/references/fix-templates.md` covers per-code fix recipes including Path A/B/C for architectural decisions
-  - [ ] `.claude/skills/cross-spec-resolve/references/explain-before-edit.md` documents the 5-field explanation block format
+  - [x] `.claude/skills/cross-spec-reconcile/SKILL.md` exists with frontmatter triggers (cross-spec, reconcile, согласование спек, conflict check) and allowed-tools (Read, Write, Glob, Grep, Bash, AskUserQuestion, Agent); fixed missing `Agent` allowed-tool in this slice
+  - [x] `.claude/skills/cross-spec-reconcile/references/finding-codes.md` lists ≥28 namespaced codes with severity + class + remediation (focused proof saw 36 unique codes)
+  - [x] `.claude/skills/cross-spec-reconcile/references/yaml-schema.md` documents Consistency Report YAML schema including summary roll-up keys
+  - [x] `.claude/skills/cross-spec-reconcile/references/semantic-judge-prompt.md` contains the JSON-only semantic judge prompt contract and forbids interactive AskUserQuestion usage
+  - [x] `.claude/skills/cross-spec-resolve/SKILL.md` exists with `/cross-spec-resolve` trigger and 7-step execution flow per FR-18
+  - [x] `.claude/skills/cross-spec-resolve/references/fix-templates.md` covers per-code fix recipes including Path A/B/C for architectural decisions
+  - [x] `.claude/skills/cross-spec-resolve/references/explain-before-edit.md` documents the 5-field explanation block format
+  - [x] Evidence: `node .dev-pomogator/.tmp/check-cross-spec-reference-docs.mjs` → `CROSS_SPEC_REFERENCE_DOCS_PROOF PASS`, `finding_codes=36`, `checked=7_done_when_bullets`
 
-- [x] Implement mechanical reconcile checks -- @feature17 — id: impl-mechanical-checks — Status: DONE (delivered as a SINGLE `scripts/reconcile.ts` — not the 3 planned files; verified 2026-06-07: 37 namespaced finding codes (≥ planned 28), `__tests__/reconcile.test.ts` + full-mode.test.ts, @feature17 scenarios GREEN) — own scenario **SPECGEN004_38** (light-mode impl-drift/missing-file) | Est: 720m
+- [x] Implement mechanical reconcile checks -- @feature17 — id: impl-mechanical-checks — Status: DONE (reconciled 2026-07-09: shipped as the single light-mode engine `.claude/skills/cross-spec-reconcile/scripts/reconcile.ts`, not planned split files; focused proof pins 29 mechanical finding codes with 29 test-pinned codes) — own scenario **SPECGEN004_38** (light-mode impl-drift/missing-file) | Est: 720m
   _depends: install-cross-spec-skills_
   _Requirements: [FR-17](FR.md#fr-17), [AC-17.5](ACCEPTANCE_CRITERIA.md#ac-175), [AC-17.6](ACCEPTANCE_CRITERIA.md#ac-176)_
   **Done When:**
-  - [ ] `build-graph.ts` globs `.specs/*/{FR,DESIGN,NFR,SCHEMA}.md` + `.specs/*/*.feature`, parses with remark+mdast, extracts per-spec index (FR title nouns, declared paths, declared symbols, runtime identifiers via regex)
-  - [ ] `check-cross-spec.ts` pairwise compares indexes via Jaccard for FR_OVERLAP, exact-match for MODULE_OWNERSHIP_CONFLICT, levenshtein for RUNTIME_IDENTIFIER_DRIFT
-  - [ ] `check-impl-drift.ts` validates each declared path via fs.existsSync, greps declared symbols, parses extension.json hook registrations
-  - [ ] Unit tests cover all 15 cross-spec/* + 13 impl-drift/* finding codes against fixture corpus
+  - [x] `reconcile.ts` globs the `.specs` corpus, reads `FR.md` / `DESIGN.md` / schema docs plus `.feature` tags, and builds the per-spec mechanical inputs internally (`listSpecs`, `readSpecMd`, `collectFeatureTags`, `PATH_REF_RE`, `FEATURE_TAG_RE`)
+  - [x] `reconcile.ts` pairwise compares mechanical inputs for runtime identifier drift, concept overlap, module ownership conflict, duplicate/contradictory FR/NFR/schema/enum/url/CLI drift; implementation is function-level detectors rather than a separate `check-cross-spec.ts`
+  - [x] `reconcile.ts` validates implementation drift via filesystem and source-shape checks (`fs.existsSync`, `globSync`, `fs.statSync`, `TS_EXPORT_RE`, `findMissingFileReferences`, `findMissingSymbols`, `findMissingTestPerFR`, `findTestsWithoutFR`, `findStaleFeatureFiles`); shipped CLI/writers live in `reconcile-cli.ts`, `yaml-writer.ts`, `sarif.ts`, `overrides-log.ts`
+  - [x] Unit tests in `scripts/__tests__/reconcile.test.ts` pin all 29 mechanical `reconcile.ts` finding codes against fixture corpora; focused proof `node .dev-pomogator/.tmp/check-cross-spec-mechanical-checks.mjs` → `CROSS_SPEC_MECHANICAL_CHECKS_PROOF PASS`, `engine_codes=29`, `test_pinned_codes=29`, `namespace_counts={"cross-spec":12,"impl-drift":6,"schema-drift":3,"spec-only":8}`
 
 - [x] Implement semantic subagent dispatcher -- @feature17 — id: impl-semantic-subagent — Status: DONE (2026-07-09: `full-mode.ts` ships judge dispatch + cache-hit-no-spawn + call counting; WS-F added 120s semantic dispatcher timeout, `cross-spec/semantic-check-failed` WARNING, and `partial: true` YAML fallback for semantic failures; evidence: lint exit 0; Docker BDD `SPECGEN004_516` passed 1 scenario / 6 steps) | Est: 480m
   _depends: impl-mechanical-checks_
@@ -1093,7 +1095,7 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   **Done When:**
   - [~] WS-B triage applied (drift vs real): deliverable-existence heuristic proved UNRELIABLE (mislabels both ways — see corrected DEFERRED-56 note: T2-16 ships 13 tools but was bucketed "pending"). The reliable reconciler is the FR-32 gate (WS-B's 24 explicit-id flips stand); the remainder's true status needs a per-task grep+green-scenario check, deferred to the build backlog. NOT re-derived on file-existence
   - [x] no `(Green)` header left over a phase with real TODO — phases 2–6 relabelled `(In Progress — TODO remain)`, phase 7 `(TODO — not started)`; only Phase 1 keeps `(Green)` (genuinely all-DONE)
-  - [ ] **OPEN — genuinely-pending feature build (NOT faked DONE):** ~43 real tasks across Phase 2 (10 MCP tools + marksman LSP + watcher + lock + extension.json), Phase 3 (claude-cli-bridge, multi-lang), Phase 4 (SQLite + spec-check-log + codespaces), Phase 5 (tag-predictor + interactive-prompt), Phase 6 (arch-research skill), **Phase 7 cross-spec (24 tasks)**. This is the multi-wave build (plan `~/.claude/plans/fizzy-percolating-turing.md` = Wave W1 "Finish Phase 2" is the entry point). Marking this `[x]` without doing the work would be the exact fake-DONE WS-A was built to block
+  - [ ] **OPEN — genuinely-pending feature build (NOT faked DONE):** WS-F no longer starts at "Wave W1 / Finish Phase 2" — the summary table now shows Phase 2, Phase 3, and Phase 5 DONE; T4-33 `spec-check-log CLI` is DONE after focused Docker/WSL proof (`tools/spec-check-log/__tests__/cli.test.ts`: `1 passed` file / `13 passed` tests, exit 0); T5-39 `Tag predictor` is DONE after focused Docker/WSL proof (`tools/migrate-v3-to-v4/__tests__/cli.test.ts`: `1 passed` file / `19 passed` tests, exit 0); T5-41 `Verify Phase 5 Red→Green` is DONE after focused Docker BDD `--tags @feature11`: `42 scenarios / 273 steps passed`, exit 0, filtered canonical not updated; and T6-45 `Shared research base` is DONE after focused Docker BDD `--name "SPECGEN004_531"`: `1 scenario / 8 steps passed`, exit 0, filtered canonical not updated. The current first concrete build slice is **T6-46/T6-48 Phase 6 follow-up** (Status: TODO), followed by Phase 7 cross-spec tasks T7-49/T7-51/T7-52/T7-55/T7-56/T7-57/T7-58/T7-59/T7-61/T7-62. Marking WS-F `[x]` without completing those task ids would be the exact fake-DONE WS-A was built to block
 
 ## Phase 13 — Unified spec-graph via spec-qualified node ids (FR-36)
 
@@ -1478,13 +1480,13 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
 
 ## Phase 21 — Эксплуатация enforce + door-полнота (deep-gap-analysis 2026-06-10)
 
-- [x] P21-1: multi-session дверь — singleton-лок: вторая сессия больше НЕ падает, дверь boots READ-ONLY (P0 закрыт) — id: p21-multisession-door — Status: DONE | Est: 360m
+- [x] P21-1: multi-session дверь — singleton-лок: вторая сессия больше НЕ падает, дверь boots presence-reader (P0 закрыт; P28-6 обновил write-семантику) — id: p21-multisession-door — Status: DONE | Est: 360m
   _depends: p17-enforce_
   _Requirements: [FR-14](FR.md#fr-14), [FR-39](FR.md#fr-39)_
   **Done When:**
-  - [x] **РЕШЕНИЕ — read-only fallback (не брокер):** `acquireLockOrReadOnly` (lock-manager) при живом владельце возвращает reader+holder вместо throw; `startLifecycle({onLockContention:readonly})` поднимает дверь READ-ONLY (граф+watcher живут, heartbeat пропущен — reader ничего не владеет); три write-тула (apply/delete/create) рефьюзят `WRITE_LOCK_HELD` с именем держателя (pid+env), read-тулы и `propose_spec_change` dry-run остаются живыми; writes сериализуются на единственного владельца лока
-  - [x] headless: дверь в `claude -p` требует `--mcp-config .mcp.json` (живой пин из crud-e2e); singleton-kill держателя больше НЕ нужен — вторая сессия получает READ-ONLY дверь автоматически
-  - [x] BDD-регресс лок-семантики: SPECGEN004_149 (@feature14) биндит реальную цепочку acquireLock→acquireLockOrReadOnly→registry refusal; unit lock-manager (writer/reader/stale/envMismatch) + tools.test (3 write-тула рефьюзят, propose не гейтится) green; FR-14 обновлён (DENY whole-server → read-only fallback)
+  - [x] **РЕШЕНИЕ — presence-reader + short write-lock (не брокер):** `acquireLockOrReadOnly` (lock-manager) при живом владельце возвращает reader+holder вместо throw; `startLifecycle({onLockContention:readonly})` поднимает presence-reader дверь (граф+watcher живут, heartbeat пропущен — reader ничего не владеет). После P28-6 lifetime-лок больше НЕ блокирует write-тулы: apply/delete/create доходят до обычной валидации и сериализуются только на коротком `.mcp-write.lock`; in-flight конфликт → transient `WRITE_LOCK_BUSY`, same-doc stale write → `CAS_MISMATCH` по `expected_sha`; read-тулы и `propose_spec_change` dry-run остаются живыми.
+  - [x] headless: дверь в `claude -p` требует `--mcp-config .mcp.json` (живой пин из crud-e2e); singleton-kill держателя больше НЕ нужен — вторая сессия получает live presence-reader дверь автоматически
+  - [x] BDD-регресс лок-семантики: SPECGEN004_149 (@feature14) биндит реальную цепочку acquireLock→acquireLockOrReadOnly→registry write success; unit lock-manager (writer/reader/stale/envMismatch) + tools.test (write-тулы НЕ рефьюзят `WRITE_LOCK_HELD`, propose не гейтится) green; FR-14 обновлён (DENY whole-server/read-only-write-refusal → presence-reader + short write-lock)
 
 - [x] P21-2: enforce-эргономика — git-carve-out + пагинация read_spec_doc + рабочий inline-escape — id: p21-enforce-ergonomics — Status: DONE | Est: 240m
   _depends: p17-enforce_
@@ -1811,11 +1813,11 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   **Done When:**
   - [x] задача с PASSED собственным покрывающим сценарием читается verified (не DONE-but-unverified из-за @manual/not-run сиблингов того же @featureN); тест-пин: strong-tests:t29 (покрыт TESTQUAL001_10 passed) → verified
 
-- [ ] P28-6: стейл-сценарий vs E-A переделка двери — обновить SPECGEN004_149 + FR под short-write-lock семантику (F1/FR-52f) — id: p28-readonly-door-bdd-vs-ea — Status: TODO | Est: 60m
+- [x] P28-6: стейл-сценарий vs E-A переделка двери — обновить SPECGEN004_149 + FR под short-write-lock семантику (F1/FR-52f) — id: p28-readonly-door-bdd-vs-ea — Status: DONE (2026-07-09: FR-14/AC-14.3/DESIGN/P21-1 rewritten from lifetime read-only/write-refusal to presence-reader + short `.mcp-write.lock` + CAS semantics; focused Docker BDD `SPECGEN004_149` passed 1 scenario / 6 steps; focused Docker vitest `lock-manager.test.ts` + `tools.test.ts` passed 2 files / 53 tests, proving write tools no longer refuse with `WRITE_LOCK_HELD` and stale same-doc writes fail via `CAS_MISMATCH`.) | Est: 60m
   _depends: p27-migrator-and-pilot_
   _Requirements: [FR-52](FR.md#fr-52)_
   **Done When:**
-  - [ ] (work-item автору E-A, НЕ мне — чужая незакоммиченная переделка двери) при коммите E-A: SPECGEN004_149 + read-only-door FR переписаны под short-write-lock+CAS (writes succeed cross-session; transient WRITE_LOCK_BUSY only in-flight; same-doc → CAS_MISMATCH); до тех пор канонический сьют несёт 1 известно-красный стейл-сценарий
+  - [x] SPECGEN004_149 + read-only-door FR/AC/DESIGN are rewritten under short-write-lock+CAS semantics: a second presence-reader session keeps reads and dry-runs live; write tools succeed cross-session unless a real in-flight writer holds `.mcp-write.lock` (`WRITE_LOCK_BUSY`); stale same-doc writes are refused by `CAS_MISMATCH` from `expected_sha`; no canonical stale red remains for this item.
 
 - [x] P28-7: атомарный промоут тегов комментарий→реальный при wire (F6) — id: p28-tag-promote-at-wire — Status: DONE | Est: 90m
   _depends: p27-migrator-and-pilot_
@@ -1989,3 +1991,71 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [x] bundles affected by UserPromptSubmit / claim-evidence Stop-gate are rebuilt (`build:gate` / `build:claim-gate` / relevant hook bundle)
   - [x] real hook stdin probes cover project-root and plugin-root invocation shapes
   - [x] focused Docker BDD/vitest evidence is recorded before marking this hardening DONE
+
+## Phase 32b — FR-49h transcript todo replay reconciliation (2026-07-09)
+
+Источник: live Pinator/CARL incident after commit `bcb476ec`: Stop-gate still selected stale agent todo `Capture real CARL runtime evidence` and reported ~79/80 open tasks even though `.dev-pomogator/.tmp/carl-runtime-evidence-1783567719470.json` existed, `CARL001_(03|09|10)` passed in Docker, and the work was committed. Root cause: transcript replay of `TaskCreate`/`TaskUpdate` used positional array slots and kept stale duplicate pending tasks across compaction/restarts instead of reconciling by real visible task ids and subject/scope freshness.
+
+- [x] P32-5: replay TaskCreate/TaskUpdate by real task id, not array index — id: p32-transcript-task-real-id-replay — Status: DONE (2026-07-09: `parseAgentTodos` now rekeys `TaskCreate` rows from real `Task #N` tool results, stores updates by real id, and no longer writes `TaskUpdate #N` into `tasks[N-1]`; smoke `check-fr49h-agent-todos.mjs` passed and Docker BDD SPECGEN004_526 passed) | Est: 180m
+  _Requirements: [FR-49](FR.md#fr-49)_
+  **Done When:**
+  - [x] `parseAgentTodos`/router reconstruction extracts the real task id from Task tool metadata/result/input and stores tasks in a map keyed by that id; it never applies `TaskUpdate #N` to `tasks[N-1]` unless that id is proven identical
+  - [x] sparse/non-monotonic/compacted ids are accepted: completing visible `Task #72` closes real id `72` even when fewer than 72 `TaskCreate` events are visible in the current transcript window
+  - [x] BDD regression seeds out-of-order `TaskCreate`/`TaskUpdate` transcript lines and proves no stale open todo remains for the completed real id
+
+- [x] P32-6: duplicate-subject canonicalization and ambiguity-safe demotion — id: p32-agent-todo-dedupe-demotion — Status: DONE (2026-07-09: duplicate agent todos are normalized by subject; newest closed duplicate wins, ambiguous open duplicate clusters are marked ambiguous and skipped by `agentNextOpenTodoDetail`/`agentOpenTodoCount`, so async/current-spec routing can proceed; smoke and Docker BDD SPECGEN004_527 passed) | Est: 180m
+  _depends: p32-transcript-task-real-id-replay_
+  _Requirements: [FR-49](FR.md#fr-49)_
+  **Done When:**
+  - [x] repeated agent todos with the same normalized subject and scope collapse to one canonical entry using newest-event precedence plus completion/evidence precedence
+  - [x] an older pending duplicate cannot outrank a newer completed duplicate, a verified evidence artifact, active async work, or current-spec next work
+  - [x] if duplicates cannot be safely collapsed, the router logs the ambiguous cluster and demotes it below active async/current-spec routing instead of hard-blocking on a guessed stale `agent-todo`
+
+- [x] P32-7: captured CARL incident regression and Pinator fire logging — id: p32-carl-stale-agent-todo-regression — Status: DONE (2026-07-09: focused Docker BDD `SPECGEN004_(526|527|528|533)` passed 4 scenarios / 24 steps; Stop-gate logs next-step source/id/line/subject/reconciliation; `npm run build:claim-gate` rebuilt the distributed bundle; smoke `check-fr49h-agent-todos.mjs` passed after build) | Est: 240m
+  _depends: p32-agent-todo-dedupe-demotion_
+  _Requirements: [FR-49](FR.md#fr-49)_
+  **Done When:**
+  - [x] regression fixture replays the captured CARL transcript shape where stale internal ids (`5/30/35/37/59`) coexist with completed visible task `#72`, and proves `agentNextOpenTodo` is not `Capture real CARL runtime evidence` after the evidence JSON + Docker BDD proof exist
+  - [x] Stop-gate fire log includes `nextStepSource`, real task id, transcript event location/range, selected subject, duplicate-collapse/demotion reason, and selected route source so the next block can be diagnosed from `.claim-evidence-gate-fires.jsonl` without reparsing the full transcript
+  - [x] focused BDD/API coverage pins the real Pinator behavior: a committed CARL evidence run no longer gets blocked by a stale replayed agent todo; affected distributed bundle(s) are rebuilt and probed
+
+## Phase 33 — FR-60 high-level MCP authoring API (2026-07-09)
+
+Источник: live dogfood while authoring canonical-plugin and spec-generator-v4 updates: agents had to chain sha reads, fight exact `old_string` matching, CRLF/LF uncertainty, and split one conceptual change across FR/AC/TASKS/feature/FILE_CHANGES. Goal: keep the strict MCP door but expose intent/anchor/domain operations so agents stop hand-rolling mini-version-control.
+
+- [ ] P33-1: anchor/section insert operations + read_for_edit metadata — id: p33-anchor-section-ops — Status: TODO | Est: 240m
+  _Requirements: [FR-60](FR.md#fr-60)_
+  **Done When:**
+  - [ ] MCP exposes stable-heading operations (`append_to_section`, `insert_after_heading`, `insert_at_eof`) that preserve EOL style and run the existing validation-before-write path
+  - [ ] `read_spec_doc`/`read_for_edit` returns `eol_style`, `heading_anchor`, `section_sha`, `start_line/end_line`, and append/insert tokens for the requested section
+
+- [ ] P33-2: EOL-tolerant replace + remediation errors + CAS auto-rebase — id: p33-replace-diagnostics-rebase — Status: TODO | Est: 240m
+  _depends: p33-anchor-section-ops_
+  _Requirements: [FR-60](FR.md#fr-60)_
+  **Done When:**
+  - [ ] `normalize_eol: true` makes CRLF/LF differences non-fatal while preserving target file EOL on write
+  - [ ] failed replacements report whether the miss is EOL-only, whitespace-only, multi-match, changed body under same anchor, or missing anchor, with a safe next-operation hint
+  - [ ] non-conflicting CAS mismatch on an anchor-targeted change auto-rebases; real conflicts return fresh anchor context
+
+- [ ] P33-3: propose/apply transaction across documents — id: p33-proposal-transaction — Status: TODO | Est: 360m
+  _depends: p33-anchor-section-ops_
+  _Requirements: [FR-60](FR.md#fr-60)_
+  **Done When:**
+  - [ ] `propose_patch` returns preview diff, anchors found, affected graph nodes, conformance/form findings, resulting sha/section tokens, and `proposal_id`
+  - [ ] `apply_proposed_patch(proposal_id)` applies the validated proposal if still valid
+  - [ ] `apply_spec_transaction` validates and atomically writes FR/AC/TASKS/.feature/FILE_CHANGES all-or-none with one audit event
+
+- [ ] P33-4: domain authoring helpers + feature safety — id: p33-domain-authoring-helpers — Status: TODO | Est: 420m
+  _depends: p33-proposal-transaction_
+  _Requirements: [FR-60](FR.md#fr-60)_
+  **Done When:**
+  - [ ] domain helpers `add_backlog_task`, `add_phase`, `amend_requirement`, `add_acceptance_criterion`, `register_incident_backlog` render canonical markdown and maintain FR↔AC↔TASK traceability
+  - [ ] ids are unique and task/requirement formatting matches existing form contracts
+  - [ ] adding executable `.feature` scenarios without matching step-def work is refused or downgraded to TASKS-only acceptance pins by explicit caller choice
+
+- [ ] P33-5: BDD/API regressions for high-level authoring UX — id: p33-authoring-api-bdd — Status: TODO | Est: 300m
+  _depends: p33-domain-authoring-helpers_
+  _Requirements: [FR-60](FR.md#fr-60)_
+  **Done When:**
+  - [ ] `@feature60` scenarios cover section insert, EOL-normalized replacement, transaction rollback, CAS auto-rebase, domain task/requirement helper, and feature/step-def safety through the real MCP tool layer
+  - [ ] regression fixture reproduces the exact old-string/CRLF/CAS authoring pain observed in this session and passes without manual mini-version-control
