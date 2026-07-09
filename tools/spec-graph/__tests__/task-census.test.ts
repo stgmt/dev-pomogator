@@ -29,18 +29,20 @@ import {
 import { renderStaleReport } from '../stale-marker-scan.ts';
 
 function makeGraph(): SpecGraph {
-  const scen = (id: string, slug: string, result?: string) => ({ id, type: 'Scenario', tags: [], lastResult: result, file: `.specs/${slug}/x.feature` });
+  const scen = (id: string, slug: string, result?: string, stale = false) => ({ id, type: 'Scenario', tags: [], lastResult: result, resultStale: stale, file: `.specs/${slug}/x.feature` });
   const task = (id: string, slug: string, status: string, doneWhen: string) => ({ id, type: 'Task', status, refs: [], doneWhen, file: `.specs/${slug}/TASKS.md` });
   const nodes = new Map<string, unknown>([
     // demoA scenarios with distinct results
     ['SCEN-specgen004-01-pass', scen('SCEN-specgen004-01-pass', 'demoA', 'PASSED')],
     ['SCEN-specgen004-02-fail', scen('SCEN-specgen004-02-fail', 'demoA', 'FAILED')],
     ['SCEN-specgen004-03-notrun', scen('SCEN-specgen004-03-notrun', 'demoA', undefined)],
+    ['SCEN-specgen004-04-stale', scen('SCEN-specgen004-04-stale', 'demoA', 'PASSED', true)],
     // demoA tasks
     ['demoA:T-todo', task('demoA:T-todo', 'demoA', 'todo', '')],
     ['demoA:T-pass', task('demoA:T-pass', 'demoA', 'done', 'closed by SPECGEN004_01')], // confirmed → silent
     ['demoA:T-fail', task('demoA:T-fail', 'demoA', 'done', 'closed by SPECGEN004_02')], // red
     ['demoA:T-notrun', task('demoA:T-notrun', 'demoA', 'done', 'closed by SPECGEN004_03')], // unrun
+    ['demoA:T-stale', task('demoA:T-stale', 'demoA', 'done', 'closed by SPECGEN004_04')], // stale pass → unrun/unconfirmed
     ['demoA:T-mixed', task('demoA:T-mixed', 'demoA', 'done', 'SPECGEN004_02 and SPECGEN004_03')], // red wins
     // demoB tasks
     ['demoB:T-inprog', task('demoB:T-inprog', 'demoB', 'in-progress', '')],
@@ -54,30 +56,31 @@ describe('computeTaskCensus — per-spec signals', () => {
     const c = computeTaskCensus(makeGraph());
     const a = c.specs.find((s) => s.slug === 'demoA')!;
     const b = c.specs.find((s) => s.slug === 'demoB')!;
-    expect(a).toMatchObject({ open: 1, doneRed: 2, doneUnrun: 1 }); // T-fail + T-mixed red; T-notrun unrun; T-pass silent
+    expect(a).toMatchObject({ open: 1, doneRed: 2, doneUnrun: 2 }); // T-fail + T-mixed red; T-notrun + T-stale unrun; T-pass silent
     expect(b).toMatchObject({ open: 1, doneRed: 0, doneUnrun: 1 }); // T-noscen unrun
   });
 
   it('aggregates corpus totals and sorts specs by unfinished count desc', () => {
     const c = computeTaskCensus(makeGraph());
-    expect(c.total).toEqual({ open: 2, doneRed: 2, doneUnrun: 2 });
-    expect(c.specs[0].slug).toBe('demoA'); // 4 unfinished > demoB's 2
+    expect(c.total).toEqual({ open: 2, doneRed: 2, doneUnrun: 3 });
+    expect(c.specs[0].slug).toBe('demoA'); // 5 unfinished > demoB's 2
   });
 
   it('excludes not_run from doneRed (filtered-run poison resistance) and lets red win over not_run', () => {
     const c = computeTaskCensus(makeGraph());
     const a = c.specs.find((s) => s.slug === 'demoA')!;
-    // T-notrun (only a not_run scenario) is doneUnrun, NOT doneRed
-    expect(a.doneUnrun).toBe(1);
+    // T-notrun (only a not_run scenario) and T-stale (only stale passed evidence)
+    // are doneUnrun, NOT doneRed.
+    expect(a.doneUnrun).toBe(2);
     // T-mixed (failed + not_run) counts as red, not double-counted
     expect(a.doneRed).toBe(2);
   });
 
   it('an all-passed DONE task is silent (genuinely confirmed)', () => {
     const c = computeTaskCensus(makeGraph());
-    // demoA has 5 tasks; T-pass contributes to none of the three buckets
+    // demoA has 6 tasks; T-pass contributes to none of the three buckets
     const a = c.specs.find((s) => s.slug === 'demoA')!;
-    expect(a.open + a.doneRed + a.doneUnrun).toBe(4); // not 5
+    expect(a.open + a.doneRed + a.doneUnrun).toBe(5); // not 6
   });
 });
 
@@ -114,23 +117,25 @@ describe('FR-49a — nextOpen (the «next step» the banner names)', () => {
 
 describe('FR-49d — findStaleInProgress (stale in-progress markers)', () => {
   function staleGraph(): SpecGraph {
-    const scen = (id: string, result?: string) => ({ id, type: 'Scenario', tags: [], lastResult: result, file: '.specs/demo/x.feature' });
+    const scen = (id: string, result?: string, stale = false) => ({ id, type: 'Scenario', tags: [], lastResult: result, resultStale: stale, file: '.specs/demo/x.feature' });
     const task = (id: string, status: string, doneWhen: string, title: string) =>
       ({ id, type: 'Task', status, refs: [], doneWhen, title, file: '.specs/demo/TASKS.md' });
     const nodes = new Map<string, unknown>([
       ['SCEN-specgen004-01-pass', scen('SCEN-specgen004-01-pass', 'PASSED')],
       ['SCEN-specgen004-02-fail', scen('SCEN-specgen004-02-fail', 'FAILED')],
-      ['demo:T-stale', task('demo:T-stale', 'in-progress', 'closed by SPECGEN004_01', 'Stale one')], // all green → flag
+      ['SCEN-specgen004-03-stale-pass', scen('SCEN-specgen004-03-stale-pass', 'PASSED', true)],
+      ['demo:T-stale', task('demo:T-stale', 'in-progress', 'closed by SPECGEN004_01', 'Stale one')], // all fresh green → flag
       ['demo:T-real', task('demo:T-real', 'in-progress', 'closed by SPECGEN004_02', 'Real WIP')], // a red → not stale
+      ['demo:T-stale-result', task('demo:T-stale-result', 'in-progress', 'closed by SPECGEN004_03', 'Stale result')], // stale pass → not fresh proof
       ['demo:T-noscen', task('demo:T-noscen', 'in-progress', 'pure docs, no scenario', 'No evidence')], // no scenario → not flagged
       ['demo:T-todo', task('demo:T-todo', 'todo', 'closed by SPECGEN004_01', 'Not started')], // not in-progress → never
     ]);
     return { nodes } as unknown as SpecGraph;
   }
 
-  it('flags ONLY an in-progress task whose mapped scenarios all PASS', () => {
+  it('flags ONLY an in-progress task whose mapped scenarios all PASS freshly', () => {
     const stale = findStaleInProgress(staleGraph());
-    expect(stale.map((s) => s.id)).toEqual(['demo:T-stale']); // not T-real (red), T-noscen (no evidence), T-todo (not in-progress)
+    expect(stale.map((s) => s.id)).toEqual(['demo:T-stale']); // not T-real (red), T-stale-result (stale pass), T-noscen (no evidence), T-todo (not in-progress)
     expect(stale[0]).toMatchObject({ title: 'Stale one', spec: 'demo' });
     expect(stale[0].scenarios.length).toBeGreaterThan(0);
   });
@@ -171,7 +176,7 @@ describe('task-census cache + история rotation', () => {
     const fewer: typeof c = { total: { open: 1, doneRed: 0, doneUnrun: 0 }, specs: [{ slug: 'demoA', open: 1, doneRed: 0, doneUnrun: 0 }] };
     writeTaskCensusCache(root, fewer, 't3');
     const prev = readTaskCensusPrev(root)!;
-    expect(sumTotal(prev)).toBe(6); // the t2 snapshot (2+2+2)
+    expect(sumTotal(prev)).toBe(7); // the t2 snapshot (2+2+3)
     expect(sumTotal(readTaskCensusCache(root)!)).toBe(1);
   });
 
