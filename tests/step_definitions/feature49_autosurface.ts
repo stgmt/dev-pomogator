@@ -234,14 +234,16 @@ Then('the route chooses agent todo before async before current spec and never a 
 Given(
   'an in-progress task whose mapped scenarios all passed plus a sibling in-progress task still red',
   function (this: AutoSurfaceWorld) {
-    const scen = (id: string, result: string) => ({ id, type: 'Scenario', tags: [], lastResult: result, file: '.specs/demo/x.feature' });
+    const scen = (id: string, result: string, resultStale = false) => ({ id, type: 'Scenario', tags: [], lastResult: result, resultStale, file: '.specs/demo/x.feature' });
     const task = (id: string, doneWhen: string, title: string) =>
       ({ id, type: 'Task', status: 'in-progress', refs: [], doneWhen, title, file: '.specs/demo/TASKS.md' });
     const nodes = new Map<string, unknown>([
       ['SCEN-specgen004-01-pass', scen('SCEN-specgen004-01-pass', 'PASSED')],
       ['SCEN-specgen004-02-fail', scen('SCEN-specgen004-02-fail', 'FAILED')],
-      ['demo:T-stale', task('demo:T-stale', 'closed by SPECGEN004_01', 'Stale one')], // all green → flag
+      ['SCEN-specgen004-03-stale-pass', scen('SCEN-specgen004-03-stale-pass', 'PASSED', true)],
+      ['demo:T-stale', task('demo:T-stale', 'closed by SPECGEN004_01', 'Stale one')], // all fresh green → flag
       ['demo:T-real', task('demo:T-real', 'closed by SPECGEN004_02', 'Real WIP')], // a red → not stale
+      ['demo:T-stale-result', task('demo:T-stale-result', 'closed by SPECGEN004_03', 'Stale result')], // stale pass → not fresh proof
     ]);
     this.staleGraph = { nodes } as unknown as SpecGraph;
   },

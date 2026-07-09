@@ -8,13 +8,12 @@
  *
  *   - open       — status todo/in-progress/blocked (author-admitted not-done).
  *   - doneRed    — status DONE but ≥1 mapped scenario in a HARD-NEGATIVE bucket
- *                  (failed/undefined/ambiguous). `not_run` is EXCLUDED so a
- *                  filtered/stale cucumber run can't false-flag (the "partial
- *                  cucumber poisons NDJSON" hazard) — a stale run turns a
- *                  scenario into not_run, never failed.
+ *                  (failed/undefined/ambiguous). `not_run`/`stale` are EXCLUDED so
+ *                  a filtered run or stale pass can't false-flag as red (the
+ *                  "partial cucumber poisons NDJSON" hazard).
  *   - doneUnrun  — status DONE but NOT all scenarios passed and NOT red, i.e.
- *                  ≥1 not_run OR no scenario at all → "claimed done, can't
- *                  confirm". This is the "не запускался — тоже писать" signal:
+ *                  ≥1 not_run/stale/soft bucket OR no scenario at all → "claimed
+ *                  done, can't confirm". This is the "не запускался — тоже писать" signal:
  *                  surfaced, not hidden.
  *
  * Only the STRICT task format (parsed into Task nodes by the graph) is tracked;
@@ -71,6 +70,7 @@ export interface TaskCensus {
 }
 
 const HARD_NEGATIVE = new Set<Bucket>(['failed', 'undefined', 'ambiguous']);
+const UNCONFIRMED = new Set<Bucket>(['not_run', 'stale']);
 
 /**
  * Compute the per-spec honest census over a built graph. Pure — the caller
@@ -87,7 +87,7 @@ export function computeTaskCensus(
     const nodeSpec = specOf((node as { file: string }).file);
     if (node.type === 'Scenario') {
       const s = node as ScenarioNode;
-      scenarios.push({ id: s.id, tags: s.tags, result: s.lastResult, spec: nodeSpec });
+      scenarios.push({ id: s.id, tags: s.tags, result: s.lastResult, stale: s.resultStale, spec: nodeSpec });
     } else if (node.type === 'Task') {
       const t = node as TaskNode;
       tasks.push({ id: t.id, doneWhen: t.doneWhen ?? '', refs: t.refs, spec: nodeSpec });
@@ -120,9 +120,10 @@ export function computeTaskCensus(
       const sids = map.get(t.id) ?? [];
       const hasRed = sids.some((id) => HARD_NEGATIVE.has(bucketById.get(id) ?? 'not_run'));
       const allPassed = sids.length > 0 && sids.every((id) => bucketById.get(id) === 'passed');
+      const hasUnconfirmed = sids.some((id) => UNCONFIRMED.has(bucketById.get(id) ?? 'not_run'));
       if (hasRed) row(slug).doneRed++;
-      else if (!allPassed) row(slug).doneUnrun++; // ≥1 not_run OR no scenario → can't confirm
-      // allPassed → genuinely confirmed → not surfaced
+      else if (!allPassed || hasUnconfirmed) row(slug).doneUnrun++; // stale/not_run/no scenario → can't confirm
+      // allPassed and fresh → genuinely confirmed → not surfaced
     }
   }
 
@@ -163,7 +164,7 @@ export function findStaleInProgress(graph: SpecGraph): StaleMarker[] {
     const nodeSpec = specOf((node as { file: string }).file);
     if (node.type === 'Scenario') {
       const s = node as ScenarioNode;
-      scenarios.push({ id: s.id, tags: s.tags, result: s.lastResult, spec: nodeSpec });
+      scenarios.push({ id: s.id, tags: s.tags, result: s.lastResult, stale: s.resultStale, spec: nodeSpec });
     } else if (node.type === 'Task') {
       const t = node as TaskNode;
       tasks.push({ id: t.id, doneWhen: t.doneWhen ?? '', refs: t.refs, spec: nodeSpec });
