@@ -14,6 +14,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { V4World } from '../hooks/before-after.ts';
+import { readRuleContentForAdaptation } from '../../tools/carl/context-diet.ts';
 
 const REPO_ROOT = path.resolve(import.meta.dirname ?? __dirname, '..', '..');
 const GUARD_LAUNCHER = [
@@ -124,7 +125,11 @@ Then(/^reqnroll-ce-guard is registered as a Write\|Edit PreToolUse hook in both 
 Then(/^the reqnroll-ce-guard rule file is present under `\.claude\/rules\/`$/, function () {
   const ruleFile = path.join(REPO_ROOT, '.claude', 'rules', 'reqnroll-ce-guard', 'reqnroll-ce-slash.md');
   assert.ok(fs.existsSync(ruleFile), `rule file missing: ${ruleFile}`);
-  const content = fs.readFileSync(ruleFile, 'utf-8');
+  const content = readRuleContentForAdaptation(
+    REPO_ROOT,
+    ruleFile,
+    '.claude/rules/reqnroll-ce-guard/reqnroll-ce-slash.md',
+  );
   assert.match(content, /Cucumber Expression/);
   assert.match(content, /Alternative may not be empty/);
 });

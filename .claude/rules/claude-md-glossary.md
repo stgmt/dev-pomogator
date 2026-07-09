@@ -1,29 +1,4 @@
 # CLAUDE.md — глоссарий правил
-
-## Назначение
-
-`CLAUDE.md` в корне репозитория — это **глоссарий/индекс** на `.claude/rules/*.md`. Он НЕ дублирует содержимое правил, а содержит:
-- Команды сборки/тестов/линтинга
-- Краткую архитектурную справку
-- Таблицу правил: имя + 1 строка описания + путь к `.claude/rules/*.md`
-
-## При добавлении нового правила
-
-1. Создать `.claude/rules/{rule-name}.md`
-2. Добавить строку в таблицу Rules в `CLAUDE.md` (имя, описание, путь)
-
-## При удалении правила
-
-1. Удалить `.claude/rules/{rule-name}.md`
-2. Удалить строку из таблицы Rules в `CLAUDE.md`
-
-## При изменении правила
-
-- Менять содержимое в `.claude/rules/{rule-name}.md`
-- Описание в CLAUDE.md менять только если суть правила изменилась
-
-## Запреты
-
-- НЕ дублировать полное содержимое правил в CLAUDE.md
-- НЕ добавлять в CLAUDE.md инструкции, которые должны быть отдельным правилом
-- НЕ удалять секцию Commands из CLAUDE.md
+<!-- dev-pomogator-carl-context-diet:managed-stub v1 source=.claude/rules/claude-md-glossary.md library=.carl/rules/claude-md-glossary.md sha256=ad3fd10476c3efb8400d560cbfd094eb7669029712bdb0cc3ba8d30948adbf01 -->
+<!-- /dev-pomogator-carl-context-diet -->
+Lazy rule body: `.carl/rules/claude-md-glossary.md`

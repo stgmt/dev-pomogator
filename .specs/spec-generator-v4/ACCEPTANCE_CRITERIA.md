@@ -188,7 +188,7 @@ WHEN chokidar fails to detect FS events within 500ms touch test at startup THEN 
 ## AC-14.3
 **Требование:** [FR-14](FR.md#fr-14)
 
-WHEN the user opens the same worktree in two different environments (host + container) AND second MCP server tries to start THEN it SHALL detect existing `.mcp-lock.json` with different `env` tag AND DENY with clear message `"MCP already running in env X (pid Y), restart Claude Code in same env"`.
+WHEN the user opens the same worktree in two sessions/environments AND a second MCP server starts THEN it SHALL detect the existing `.mcp-lock.json` presence holder, boot a live presence-reader door instead of crashing, keep read tools and `propose_spec_change` available, and SHALL NOT refuse write tools with a lifetime `WRITE_LOCK_HELD`; writes SHALL serialize via the short `.mcp-write.lock`, reporting transient `WRITE_LOCK_BUSY` only for an in-flight writer, while same-doc stale writes are refused with `CAS_MISMATCH` from `expected_sha`, and a different `env` holder is named in the env-mismatch hint.
 
 ## AC-15.1
 **Требование:** [FR-15](FR.md#fr-15)
@@ -228,7 +228,7 @@ IF user chooses «Acknowledge & override» on the CRITICAL prompt THEN system SH
 ## AC-17.4
 **Требование:** [FR-17](FR.md#fr-17)
 
-WHEN reconcile runs in `full` mode AND ≥2 FR pairs share ≥3 concept-noun overlap THEN system SHALL invoke Agent tool subagent per pair using prompt template `references/semantic-judge-prompt.md` AND aggregate subagent JSON responses into `findings[]` of the YAML report (subagent NEVER calls AskUserQuestion; only the outer skill orchestrates AskUserQuestion).
+WHEN reconcile runs in `full` mode over comparable cross-spec FR pairs THEN system SHALL invoke the `spec-llm-judge` semantic judge through the local Meridian `/v1/messages` transport per pair, using the prompt contract in `references/semantic-judge-prompt.md`, and aggregate DRIFT verdicts into `findings[]` as `cross-spec/semantic-drift`; WHEN the judge transport returns non-JSON, non-200, throws, or times out after 120 seconds THEN system SHALL keep the mechanical report, emit a WARNING `cross-spec/semantic-check-failed` finding for the affected pair, and mark the YAML report `partial: true` with `partial_reasons[]` rather than silently dropping the semantic pass or falling back to a slow `claude -p` path.
 
 ## AC-17.5
 **Требование:** [FR-17](FR.md#fr-17)
@@ -678,7 +678,7 @@ WHEN спека-кандидат проверяется на архивацию 
 
 **Требование:** [FR-46a](FR.md#fr-46), [FR-46b](FR.md#fr-46), [FR-46c](FR.md#fr-46), [FR-46d](FR.md#fr-46)
 
-WHEN задача `Status: DONE` записывается без явного `specgen004_NN` в Done-When THEN conformance SHALL дать находку `TASK_NO_OWN_SCENARIO`; IF задача todo/in-progress без своего сценария THEN находки SHALL НЕ быть (связь нужна к DONE, не к созданию — тесты пишутся после задачи); WHEN задача DONE цитирует свой сценарий, но он не PASSED THEN conformance SHALL дать `TASK_STATUS_UNVERIFIED`; WHEN правило промоутнуто до ERROR THEN дверь `apply_spec_change` SHALL отказать запись с этой находкой, А предсуществующие нарушители SHALL НЕ блокировать несвязанную запись (поэтапный порядок детект→ретрофит→гейт ИЛИ delta-скоуп old→new); WHEN агент зовёт `get_trace` по задаче THEN ответ SHALL включать её свой `specgen004_NN` и его результат.
+WHEN задача `Status: DONE` записывается без явного `specgen004_NN` в Done-When И без хотя бы одного PASSED covering-сценария, на который она мапится через `@featureN`/FR, THEN conformance SHALL дать находку `TASK_NO_OWN_SCENARIO`; IF задача todo/in-progress без своего сценария THEN находки SHALL НЕ быть (связь нужна к DONE, не к созданию — тесты пишутся после задачи); WHEN задача DONE цитирует свой сценарий, но он не PASSED THEN conformance SHALL дать `TASK_STATUS_UNVERIFIED`; WHEN правило промоутнуто до ERROR THEN дверь `apply_spec_change` SHALL отказать запись с этой находкой, А предсуществующие нарушители SHALL НЕ блокировать несвязанную запись (поэтапный порядок детект→ретрофит→гейт ИЛИ delta-скоуп old→new); WHEN агент зовёт `get_trace` по задаче THEN ответ SHALL включать её свой `specgen004_NN` и его результат.
 
 ## AC-47.1
 
@@ -702,7 +702,7 @@ WHEN `set_entity_status` переводит ФАЗУ в `done` (подтверд
 
 **Требование:** [FR-49a](FR.md#fr-49), [FR-49b](FR.md#fr-49), [FR-49c](FR.md#fr-49), [FR-49d](FR.md#fr-49)
 
-WHEN per-prompt баннер переписи рендерится при наличии незавершённого THEN он SHALL называть ОДНУ конкретную следующую открытую задачу (из самой нагруженной незавершённой спеки) в дополнение к числам; WHEN claim-evidence-gate видит claim про завершение СПЕКИ И кэш переписи показывает незавершённое по затронутой спеке THEN текст блока SHALL нести реальные числа (готово/в-работе); WHEN claim про завершение НЕ спек-контекст (напр. не-спек фикс) THEN census-ветка SHALL НЕ срабатывать (без ложного блока); WHEN статус спеки меняется через дверь THEN кэш переписи SHALL оставаться свежим, чтобы баннер и гейт читали актуальные числа; WHEN полный прогон тестов оставил свежие результаты THEN сверщик SHALL ФЛАЖИТЬ (никогда не авто-закрывать) задачи `in-progress`, у которых все сопоставленные сценарии PASSED и Done-When выполнен, как «вероятно устарело — проверь».
+WHEN per-prompt баннер переписи рендерится при наличии незавершённого THEN он SHALL называть ОДИН конкретный следующий шаг в дополнение к числам, но SHALL выбирать его по scope-aware приоритету, а не из глобально самой нагруженной спеки; WHEN у агента есть открытый todo в transcript THEN этот todo SHALL быть назван как `следующее` раньше любого spec-census; WHEN есть активный background Bash / background Agent / subagent без completion THEN `следующее` SHALL указывать на ожидание/обработку этого результата и SHALL NOT подсовывать независимую backlog-задачу; WHEN agent todo и async отсутствуют, но текущий рабочий slug известен из spec-mutation/create_spec/apply_spec_change в текущем repo root THEN баннер/Stop-gate MAY назвать `nextOpen` только этой спеки; WHEN текущий slug неизвестен или текущая спека по контексту завершена THEN глобальный census SHALL оставаться health-сводкой без `👉 следующее` из чужой спеки; WHEN hook запускается из установленного plugin root, но payload `cwd` указывает на другой проект THEN `.task-census.json` SHALL читаться из payload `cwd` / `workspace_roots[0]`, и чужой `CLAUDE_PLUGIN_ROOT` / `process.cwd()` corpus SHALL NOT leak `spec-generator-v4` / `WS-F` в проектную сессию; WHEN claim-evidence-gate видит claim про завершение СПЕКИ И кэш переписи показывает незавершённое по затронутой спеке THEN текст блока SHALL нести реальные числа (готово/в-работе); WHEN claim про завершение НЕ спек-контекст (напр. не-спек фикс) THEN census-ветка SHALL НЕ срабатывать (без ложного блока); WHEN статус спеки меняется через дверь THEN кэш переписи SHALL оставаться свежим, чтобы баннер и гейт читали актуальные числа; WHEN полный прогон тестов оставил свежие результаты THEN сверщик SHALL ФЛАЖИТЬ (никогда не авто-закрывать) задачи `in-progress`, у которых все сопоставленные сценарии PASSED и Done-When выполнен, как «вероятно устарело — проверь».
 
 ## AC-49.2
 
@@ -716,6 +716,12 @@ WHEN финальное сообщение хода — claim прогресса
 
 WHEN запись `.feature` через дверь (`apply_spec_change`) ДОБАВЛЯЕТ сценарий-заготовку — шаг, целиком состоящий из плейсхолдера (`<...>` с пробелом ИЛИ `{...}`) либо несущий НОВЫЙ маркер `[TBD]` — THEN дверь SHALL ОТКЛОНИТЬ запись finding'ом слоя `strength` с перечнем пустых сценариев; WHEN запись добавляет полностью написанный сценарий THEN strength-finding SHALL НЕ появляться; WHEN шаг — параметр Scenario Outline (`<amount>`, один токен без пробела) ИЛИ скобка внутри текста (`{"k":"v"}`) THEN он SHALL НЕ считаться заготовкой (точный сигнал, анти-H1); WHEN прежняя заготовка лишь СОХРАНЯЕТСЯ без добавления новой THEN запись SHALL НЕ отклоняться (net-new, doc-scoped — легаси не клинит несвязанные правки); WHEN спеку создают через `create_spec` THEN стартовый каркас из шаблона SHALL писаться мимо двери by design (гейт кусает на авторинге/правке через `apply_spec_change`, не на скаффолде).
 
+## AC-49.4
+
+**Требование:** [FR-49a](FR.md#fr-49), [FR-49b](FR.md#fr-49)
+
+WHEN transcript-derived agent todos are reconstructed from `TaskCreate` / `TaskUpdate` tool events whose visible task ids are sparse, non-monotonic, or preserved across compaction THEN replay SHALL key every update by the REAL task id carried in the tool metadata/result/input, not by array position (`id - 1`); WHEN a later `TaskUpdate` marks task `#N` completed THEN no earlier pending state for that same real id SHALL remain eligible as `agentOpenTodo`; WHEN several transcript todos have the same normalized subject and scope (for example repeated `Capture real CARL runtime evidence`) THEN the canonical todo set SHALL collapse duplicates using newest-event precedence and completion/evidence precedence, so an older stale open duplicate cannot outrank a newer completed duplicate or current-spec work; WHEN duplicate state cannot be collapsed safely THEN the router SHALL log the ambiguity and demote the todo below active async/current-spec routing rather than block on a guessed stale task; WHEN the Stop-gate blocks on an agent todo THEN the fire log SHALL include `nextStepSource`, real task id, transcript event location/range, selected subject, and reconciliation reason so the next incident is diagnosable without reparsing the full transcript; WHEN the captured CARL incident transcript is replayed THEN completing `Task #72` SHALL close task `#72` (not array slot 71 or stale internal id 5) and SHALL NOT select stale `Capture real CARL runtime evidence` as the next step after the real CARL runtime evidence file and BDD proof exist.
+
 ## AC-50.1
 
 **Требование:** [FR-50](FR.md#fr-50)
@@ -728,11 +734,17 @@ WHEN задача несёт маркер `_waived: <причина>_` И пом
 
 WHEN `set_entity_status` переводит waived-задачу в `done` THEN команда SHALL отказать с `error: WAIVED` и причиной вейвера; WHEN закрываемая waived-задача НЕВИДИМА графу (неэнумный статус `WONT-VERIFY`) THEN команда SHALL просканировать `TASKS.md`, вернуть причину вейвера и `error: WAIVED`, а НЕ `NOT_FOUND`; WHEN парсер графа встречает колоночный `- [..]`-буллет с `id:` и неэнумным статусом THEN он SHALL завершить предыдущий блок (граница), чтобы `_waived:` сироты не втекал в соседнюю DONE-задачу; WHEN задача несёт `_waived:` THEN парсер SHALL поднять причину в `TaskNode.waived`.
 
+## AC-51.1
+
+**Требование:** [FR-51](FR.md#fr-51)
+
+WHEN `scripts/wire-feature.mjs <slug>` wires a spec feature file containing comment tag lines immediately attached to scenarios THEN it SHALL convert those comment tags into real Gherkin tag lines before the feature is added to `cucumber.json`; WHEN a comment tag line includes `@featureN @manual` or `@featureN @wip` THEN both the coverage tag and the control tag SHALL become real tags on the same line; WHEN the target feature already has real `@featureN` lines THEN they SHALL remain unchanged and the operation SHALL be idempotent; WHEN any current or promoted `@featureN` does not resolve to `FR-N` in the same spec THEN the wire step SHALL fail before writing either `.feature` or `cucumber.json`; WHEN promotion succeeds THEN parsing the promoted feature through the spec graph SHALL produce a `tested-by` edge from the same-spec FR to the scenario.
+
 ## AC-52.1
 
 **Требование:** [FR-52](FR.md#fr-52)
 
-WHEN cucumber-прогон отфильтрован (`--name` или частичный `paths`) THEN он SHALL НЕ перезаписывать канонический `.dev-pomogator/.last-test-run.ndjson` (фильтрованные пишут throwaway, канонический — только полный прогон); WHEN anchor-integrity гейт флажит битый якорь под `SPEC_ACCESS_ENFORCE` THEN remediation SHALL быть door-совместимой (не enforce-блокируемый `fix.mjs`); WHEN описывается `validate_anchor` THEN оно SHALL явно различать spec-graph compact-id-реестр от Marksman heading-слагов И уметь проверить резолв `DOC.md#heading-slug`; WHEN `edit`-путь в FILE_CHANGES совпал с удалённым v1-префиксом (`src/`, `extensions/`) И файла нет THEN audit SHALL эмитить v1-layout-drift находку с указанием ремапа, а не только generic FILE_CHANGES_VERIFY; WHEN FR-32 сворачивает покрытие задачи, чей СОБСТВЕННЫЙ покрывающий сценарий PASSED THEN задача SHALL читаться verified (не worst-of по @manual/not-run сиблингам); WHEN изменение кода двери/локов меняет наблюдаемое поведение THEN его BDD-сценарий + FR SHALL обновляться в ТОМ ЖЕ изменении (иначе стейл-сценарий валит канонический сьют).
+WHEN cucumber-прогон отфильтрован (`--name` или частичный `paths`) THEN он SHALL НЕ перезаписывать канонический `.dev-pomogator/.last-test-run.ndjson` (фильтрованные пишут throwaway, канонический — только полный прогон); WHEN anchor-integrity гейт флажит битый якорь под `SPEC_ACCESS_ENFORCE` THEN remediation SHALL быть door-совместимой (не enforce-блокируемый `fix.mjs`); WHEN описывается `validate_anchor` THEN оно SHALL явно различать spec-graph compact-id-реестр от Marksman heading-слагов И уметь проверить резолв `DOC.md#heading-slug`; WHEN `edit`-путь в FILE_CHANGES совпал с удалённым v1-префиксом (`src/`, `extensions/`) И файла нет THEN audit SHALL эмитить v1-layout-drift находку с указанием ремапа, а не только generic FILE_CHANGES_VERIFY; WHEN FR-32 сворачивает покрытие задачи, чей СОБСТВЕННЫЙ покрывающий сценарий PASSED THEN задача SHALL читаться verified (не worst-of по @manual/not-run сиблингам); WHEN DONE-задача миграции без own-id мапится хотя бы на один PASSED covering-сценарий THEN `TASK_NO_OWN_SCENARIO` SHALL NOT fire, while non-green mapped siblings still surface through `TASK_STATUS_UNVERIFIED`; WHEN изменение кода двери/локов меняет наблюдаемое поведение THEN его BDD-сценарий + FR SHALL обновляться в ТОМ ЖЕ изменении (иначе стейл-сценарий валит канонический сьют).
 
 ## AC-53.1
 
@@ -793,3 +805,63 @@ WHEN спека свежесоздана / в ранней фазе / её те�
 **Требование:** [FR-57](FR.md#fr-57)
 
 WHEN классификатор сканирует документ THEN он SHALL вырезать fenced+inline код перед матчем AND НЕ флагать строчно-однословные токены (`{int}`/`{string}`/`{slug}`), JSON-скобки и EARS-примеры внутри кода; WHEN документ — сам `templates/*.template`, лежит под `__fixtures__/**`, либо под `.specs/backlog/**` THEN он SHALL быть исключён (backlog — максимум INFO); WHEN новая audit-категория проверяет заглушки THEN она SHALL звать классификатор как ЕДИНСТВЕННЫЙ источник ERROR-гейта, а `validate-spec` SHALL сохранить свою широкую `PLACEHOLDER`-эвристику как отдельный WARNING-предфильтр; оба слоя SHALL СОГЛАШАТЬСЯ, что дословный шаблонный сентинел — заглушка; AND регресс-тест SHALL держать набор сентинелов ⊇ актуальных плейсхолдеров шаблонов.
+
+## AC-58.1
+
+**Требование:** [FR-58](FR.md#fr-58)
+
+WHEN migrated SPECGEN003 form-contract scenarios or SPECGEN004 dispatcher/parser/form-skill-eval scenarios are present in `spec-generator-v4.feature` AND their subject is inherited v3 form-contract behavior rather than FR-19's two-tier hard/soft policy THEN those scenarios SHALL use `@feature58` and SHALL NOT use `@feature19`; WHEN `search("FR-19", coverage:true)` is inspected THEN FR-19 SHALL be covered only by true two-tier policy scenarios such as SPECGEN004_49 and SPECGEN004_50.
+
+## AC-58.2
+
+**Требование:** [FR-58](FR.md#fr-58)
+
+WHEN the inherited form-contract scenarios execute THEN they SHALL drive real production code paths: form guards via their actual hook entrypoints, `form-guards-dispatch.ts` via process execution, `spec-form-parsers.ts` edit reconstruction via the real guard pipeline, and the child form-skill eval runners via their real executable eval scripts; no scenario SHALL be considered valid if it only asserts a mocked retag or static label.
+
+## AC-58.3
+
+**Требование:** [FR-58](FR.md#fr-58)
+
+WHEN P21-3 scenario-rot cleanup is complete THEN `@feature58` SHALL have an explicit FR owner, AC coverage, and a TASKS.md task reference, so retagging does not create orphan `@feature58` scenarios; WHEN FR-19 coverage is re-read after cleanup THEN inherited Priority/Done-When/CHK/Key Decisions/Risk-form checks, dispatcher routing, Edit reconstruction, and form-skill eval aggregates SHALL not appear in FR-19's `tested_by` list.
+
+## AC-59.1
+
+**Требование:** [FR-59](FR.md#fr-59)
+
+WHEN `decidePush` flushes a PostToolUse window containing thousands of findings THEN the emitted `<system-reminder>` SHALL stay at or below 6000 bytes AND SHALL include total finding count, counts by severity, at most 20 sample findings, an omitted count, and a pointer to the full audit surface; THEN the reminder SHALL NOT include every finding message from the batch.
+
+## AC-59.2
+
+**Требование:** [FR-59](FR.md#fr-59)
+
+WHEN `runPush` observes conformance findings THEN `appendFindings(...)` SHALL still persist every finding to `.dev-pomogator/.spec-check-log/*.jsonl` with the existing envelope fields; AND WHEN the agent-facing reminder is capped or suppressed by `_no_push_check: true` THEN the durable audit journal SHALL remain complete.
+
+## AC-59.3
+
+**Требование:** [FR-59](FR.md#fr-59)
+
+WHEN prompt-time conformance/task-census banners render repeated status context THEN `buildConformanceSummary(...)` SHALL remain a single line and `buildTaskCensusLine(...)` SHALL render only the header, the next open task, the top 5 specs, and an omitted-spec count with target output length at or below 1500 chars; AND WHEN source changes are complete THEN `tools/spec-conformance-push/spec-conformance-push.bundle.mjs` SHALL be rebuilt and a real bundle probe SHALL show bounded stdout.
+
+## AC-60.1
+
+**Требование:** [FR-60](FR.md#fr-60)
+
+WHEN an agent needs to append a phase/task/requirement block to an existing spec document THEN the MCP door SHALL accept an anchor/section operation (`append_to_section`, `insert_after_heading`, or `insert_at_eof`) that locates the target by stable heading identity rather than exact `old_string`; THEN the write SHALL preserve the document's existing EOL style and SHALL still run the same form, anchor, and conformance checks before touching disk.
+
+## AC-60.2
+
+**Требование:** [FR-60](FR.md#fr-60)
+
+WHEN a literal replacement cannot find `old_string` THEN the MCP response SHALL say whether the text would match after EOL normalization, whether the anchor exists with changed body, whether the text has multiple matches, or whether only whitespace drift is present; AND IF `normalize_eol: true` is provided THEN CRLF/LF differences SHALL NOT cause a false `old_string not found` while the persisted file keeps its original EOL style.
+
+## AC-60.3
+
+**Требование:** [FR-60](FR.md#fr-60)
+
+WHEN a spec change spans FR.md, ACCEPTANCE_CRITERIA.md, TASKS.md, `.feature`, and FILE_CHANGES.md THEN `propose_patch` / `apply_spec_transaction` SHALL preview anchors, diff, affected graph nodes, and conformance findings for all changed docs, then write all docs atomically or none; IF a CAS mismatch is non-conflicting and the target anchor still satisfies preconditions THEN the tool SHALL auto-rebase, otherwise it SHALL refuse with the fresh anchor context.
+
+## AC-60.4
+
+**Требование:** [FR-60](FR.md#fr-60)
+
+WHEN an agent registers incident-driven backlog or amends a requirement THEN domain helpers (`register_incident_backlog`, `amend_requirement`, `add_backlog_task`, `add_acceptance_criterion`) SHALL render canonical markdown, maintain FR↔AC↔TASK traceability links, enforce unique ids, and SHALL NOT add executable `.feature` scenarios unless matching step-definition work is included or the caller explicitly chooses a TASKS-only acceptance pin.

@@ -43,7 +43,8 @@ describe('buildReminder', () => {
     expect(out).toContain('<system-reminder>');
     expect(out).toContain('#fr-7-old');
     expect(out).toContain('→ fix to #fr-7');
-    expect(out).toContain('fix.mjs --spec .specs/bad --apply');
+    expect(out).toContain('fix.mjs --spec .specs/bad --apply --door');
+    expect(out).toContain('door-safe under SPEC_ACCESS_ENFORCE');
   });
   it('returns null for a non-spec path', () => {
     expect(buildReminder('/x/README.md')).toBeNull();

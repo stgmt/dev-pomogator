@@ -45005,8 +45005,10 @@ function qualifySlice(slice, slug) {
   }
 }
 function scenarioKey(s) {
-  const m = s.match(/s[pc]e[cn]gen004[_-](\d+)/i);
-  return m ? `specgen004_${m[1]}` : null;
+  const m = s.match(/\b([a-z][a-z0-9]*(?:gen)?\d{3})[_-](\d+)\b/i);
+  if (!m) return null;
+  const prefix = m[1].toLowerCase() === "scengen004" ? "specgen004" : m[1].toLowerCase();
+  return `${prefix}_${m[2]}`;
 }
 function bucketScenarios(scenarios) {
   const out = {
@@ -45040,23 +45042,25 @@ function mapTasksToScenarios(tasks, scenarios) {
   }
   const out = /* @__PURE__ */ new Map();
   for (const task of tasks) {
-    const ids = /* @__PURE__ */ new Set();
+    const explicitIds = /* @__PURE__ */ new Set();
+    const taggedIds = /* @__PURE__ */ new Set();
+    const refIds = /* @__PURE__ */ new Set();
     const sameSpec = (sid) => task.spec === void 0 || scenarioSpec.get(sid) === task.spec;
-    for (const m of task.doneWhen.matchAll(/s[pc]e[cn]gen004[_-]\d+/gi)) {
+    for (const m of task.doneWhen.matchAll(/\b[a-z][a-z0-9]*(?:gen)?\d{3}[_-]\d+\b/gi)) {
       const k = scenarioKey(m[0]);
       const sid = k && byKey.get(k);
-      if (sid) ids.add(sid);
+      if (sid) explicitIds.add(sid);
     }
     for (const m of task.doneWhen.matchAll(/@feature\d+/gi)) {
-      for (const sid of byTag.get(m[0].toLowerCase()) ?? []) if (sameSpec(sid)) ids.add(sid);
+      for (const sid of byTag.get(m[0].toLowerCase()) ?? []) if (sameSpec(sid)) taggedIds.add(sid);
     }
     for (const ref of task.refs) {
       const n = ref.match(/FR-(\d+)/i);
       if (n) {
-        for (const sid of byTag.get(`@feature${n[1]}`) ?? []) if (sameSpec(sid)) ids.add(sid);
+        for (const sid of byTag.get(`@feature${n[1]}`) ?? []) if (sameSpec(sid)) refIds.add(sid);
       }
     }
-    out.set(task.id, [...ids]);
+    out.set(task.id, [...explicitIds.size > 0 ? explicitIds : taggedIds.size > 0 ? taggedIds : refIds]);
   }
   return out;
 }
@@ -46542,9 +46546,64 @@ function parseChkRows(content) {
   }
   return rows;
 }
+var RISK_HEADING = /^##\s+Risk Assessment\b/;
+var ALLOWED_LEVELS = /* @__PURE__ */ new Set(["Low", "Medium", "High"]);
+var PLACEHOLDER_MARKERS = /^\{.*\}$|^—$|^-$|^TBD$|^\?+$/;
+function parseRiskRows(content) {
+  const lines = content.replace(/\r\n/g, "\n").split("\n");
+  let headingLineNumber = null;
+  let tableStart = -1;
+  for (let i = 0; i < lines.length; i++) {
+    if (RISK_HEADING.test(lines[i])) {
+      headingLineNumber = i + 1;
+      for (let j = i + 1; j < lines.length; j++) {
+        if (/^\|/.test(lines[j].trim())) {
+          tableStart = j;
+          break;
+        }
+        if (/^##\s/.test(lines[j])) break;
+      }
+      break;
+    }
+  }
+  if (headingLineNumber === null) {
+    return { headingLineNumber: null, rows: [], validRowCount: 0 };
+  }
+  const rows = [];
+  if (tableStart >= 0) {
+    for (let i = tableStart; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line.startsWith("|")) break;
+      if (/^\|[\s-:|]+\|$/.test(line)) continue;
+      const cells = line.split("|").slice(1, -1).map((c) => c.trim());
+      if (cells.length < 4) continue;
+      const [risk, likelihood, impact, mitigation] = cells;
+      if (risk === "Risk" && likelihood === "Likelihood") continue;
+      const isPlaceholder = PLACEHOLDER_MARKERS.test(risk) || PLACEHOLDER_MARKERS.test(mitigation) || /\{[^}]*\}/.test(risk) || /\{[^}]*\}/.test(mitigation);
+      const likelihoodValid = ALLOWED_LEVELS.has(likelihood);
+      const impactValid = ALLOWED_LEVELS.has(impact);
+      const mitigationValid = !!mitigation && !PLACEHOLDER_MARKERS.test(mitigation) && !/\{[^}]*\}/.test(mitigation);
+      rows.push({
+        lineNumber: i + 1,
+        risk,
+        likelihood,
+        impact,
+        mitigation,
+        isPlaceholder,
+        likelihoodValid,
+        impactValid,
+        mitigationValid
+      });
+    }
+  }
+  const validRowCount = rows.filter(
+    (r) => !r.isPlaceholder && r.likelihoodValid && r.impactValid && r.mitigationValid
+  ).length;
+  return { headingLineNumber, rows, validRowCount };
+}
 function runCheckCli(argv) {
   const [flag, kind, file2] = argv;
-  const usage = "usage: spec-form-parsers.ts --check <user-stories|tasks|decisions|chk-rows> <file>";
+  const usage = "usage: spec-form-parsers.ts --check <user-stories|tasks|decisions|chk-rows|risks> <file>";
   if (flag !== "--check" || !kind || !file2) return { output: usage, exitCode: 2 };
   let content;
   try {
@@ -46574,6 +46633,15 @@ function runCheckCli(argv) {
         if (r.missingFirst) violations.push(`${file2}:${r.lineNumber} [${r.id}] invalid: ${r.missingFirst}`);
       }
       break;
+    case "risks": {
+      const assessment = parseRiskRows(content);
+      if (assessment.headingLineNumber === null) {
+        violations.push(`${file2}:1 [Risk Assessment] missing: heading`);
+      } else if (assessment.validRowCount < 2) {
+        violations.push(`${file2}:${assessment.headingLineNumber} [Risk Assessment] invalid: expected \u22652 populated risk rows, got ${assessment.validRowCount}`);
+      }
+      break;
+    }
     default:
       return { output: usage, exitCode: 2 };
   }
@@ -48029,9 +48097,9 @@ function checkConformance(graph, opts = {}) {
       taskLikes.push({ id: t.id, doneWhen: t.doneWhen ?? "", refs: t.refs, spec: specOf(t.file) });
     }
   }
-  if (taskLikes.length > 0) {
-    const cov = computeCoverage(taskLikes, scenarioLikes, opts.testQualityByTask);
-    const bucketById = /* @__PURE__ */ new Map();
+  const cov = taskLikes.length > 0 ? computeCoverage(taskLikes, scenarioLikes, opts.testQualityByTask) : null;
+  const bucketById = /* @__PURE__ */ new Map();
+  if (cov) {
     for (const b of Object.keys(cov.buckets)) for (const id of cov.buckets[b]) bucketById.set(id, b);
     for (const node of graph.nodes.values()) {
       if (node.type !== "Task") continue;
@@ -48085,16 +48153,20 @@ function checkConformance(graph, opts = {}) {
     if (node.type !== "Task") continue;
     const task = node;
     if (task.status !== "done") continue;
-    if (/s[pc]e[cn]gen004[_-]\d+/i.test(task.doneWhen ?? "")) continue;
+    if (scenarioKey(task.doneWhen ?? "")) continue;
+    const entry = cov?.tasks[task.id];
+    const greenScenarioCount = entry?.scenarios.filter((id) => bucketById.get(id) === "passed").length ?? 0;
+    if (greenScenarioCount > 0) continue;
     findings.push({
       code: "TASK_NO_OWN_SCENARIO",
       severity: "warning",
       location: { file: task.file, line: task.line },
-      message: `Task ${task.id} is marked DONE but its Done-When cites no SPECGEN id of its OWN \u2014 it only maps to its requirement's scenarios at large, so no test verifies THIS task specifically (FR-46a).`,
+      message: `Task ${task.id} is marked DONE but its Done-When cites no explicit scenario id of its OWN and no mapped covering scenario has passed; FR-wide refs alone are not proof for THIS task (FR-46a/FR-52 F7).`,
       nodeId: task.id,
       suggestions: [
-        { action: "cite_own_scenario", reason: "Reference this task's own SPECGEN004_NN scenario in Done-When (the one that verifies exactly this task), not just the FR.", confidence: "high" },
-        { action: "downgrade", reason: "Or set Status back to IN_PROGRESS until the task has its own passing scenario.", confidence: "high" }
+        { action: "cite_own_scenario", reason: "Reference this task's own SPECGEN004_NN / TESTQUAL001_NN scenario in Done-When when it has a dedicated proof.", confidence: "high" },
+        { action: "accept_consolidated_scenario", reason: "For migrated many\u2192few consolidation, map the task to at least one passing covering scenario via @feature/FR so the shared proof is explicit in the graph.", confidence: "medium" },
+        { action: "downgrade", reason: "Or set Status back to IN_PROGRESS until a dedicated or consolidated covering scenario is green.", confidence: "high" }
       ]
     });
   }
@@ -49315,10 +49387,11 @@ function scenarioCoverageIndex(graph) {
 function linkedScenarioIds(node, scens, testedByIds) {
   const nodeSpec = specOf(node.file);
   if (node.type === "Task") {
+    const task = node;
     return mapTasksToScenarios(
-      [{ id: node.id, doneWhen: "", refs: node.refs, spec: nodeSpec }],
+      [{ id: task.id, doneWhen: task.doneWhen ?? "", refs: task.refs, spec: nodeSpec }],
       scens
-    ).get(node.id) ?? [];
+    ).get(task.id) ?? [];
   }
   if (node.type === "FR") {
     const num = node.id.match(/FR-(\d+)/i)?.[1];
@@ -49525,6 +49598,68 @@ function collectGraphRefs(graph, id) {
   }
   return references;
 }
+var MARKDOWN_LINK_RE = /^(?<doc>[^#]+\.md)#(?<slug>[^#\s]+)$/i;
+var HEADING_RE2 = /^(#{1,6})\s+(.+?)\s*$/;
+var FENCE_RE3 = /^(?:```|~~~)/;
+function markdownHeadingText(raw) {
+  return raw.replace(/\[([^\]]+)\]\([^)]*\)/g, "$1").replace(/\*\*([^*]+)\*\*/g, "$1").replace(/__([^_]+)__/g, "$1").replace(/\*([^*]+)\*/g, "$1").replace(/_([^_]+)_/g, "$1").replace(/`([^`]+)`/g, "$1").trim();
+}
+function normalizeDocPath(p) {
+  return p.replace(/\\/g, "/").replace(/^\.\//, "");
+}
+function decodeAnchorSlug(slug) {
+  try {
+    return decodeURIComponent(slug).toLowerCase();
+  } catch {
+    return slug.toLowerCase();
+  }
+}
+function nodeHeadingSlugCandidates(node) {
+  const title = "title" in node && typeof node.title === "string" ? node.title : "";
+  if (!title) return [];
+  const localId = node.spec && node.id.startsWith(`${node.spec}:`) ? node.id.slice(node.spec.length + 1) : node.id;
+  return [title, `${localId}: ${title}`, `${localId} ${title}`].map((heading) => marksmanSlug(heading));
+}
+function markdownLinkLocation(graph, anchor, spec) {
+  const m = anchor.match(MARKDOWN_LINK_RE);
+  if (!m?.groups) return null;
+  const targetDoc = normalizeDocPath(m.groups.doc);
+  const targetSlug = decodeAnchorSlug(m.groups.slug);
+  const files = /* @__PURE__ */ new Set();
+  if (targetDoc.startsWith(".specs/")) files.add(targetDoc);
+  if (fs22.existsSync(path19.resolve(process.cwd(), targetDoc))) files.add(targetDoc);
+  if (spec) files.add(normalizeDocPath(`.specs/${spec}/${targetDoc}`));
+  for (const node of graph.nodes.values()) {
+    const file2 = normalizeDocPath(node.file);
+    if (spec) {
+      if (file2 === normalizeDocPath(`.specs/${spec}/${targetDoc}`)) files.add(file2);
+    } else if (file2 === targetDoc || file2.endsWith(`/${targetDoc}`)) {
+      files.add(file2);
+    }
+  }
+  for (const file2 of Array.from(files).sort()) {
+    for (const node of graph.nodes.values()) {
+      if (normalizeDocPath(node.file) !== file2) continue;
+      if (nodeHeadingSlugCandidates(node).includes(targetSlug)) return { file: node.file, line: node.line };
+    }
+    const abs = path19.resolve(process.cwd(), file2);
+    if (!fs22.existsSync(abs) || !fs22.statSync(abs).isFile()) continue;
+    const lines = fs22.readFileSync(abs, "utf-8").split(/\r?\n/);
+    let inFence = false;
+    for (let i = 0; i < lines.length; i += 1) {
+      const raw = lines[i];
+      if (FENCE_RE3.test(raw)) {
+        inFence = !inFence;
+        continue;
+      }
+      if (inFence) continue;
+      const hm = raw.match(HEADING_RE2);
+      if (!hm) continue;
+      if (marksmanSlug(markdownHeadingText(hm[2])) === targetSlug) return { file: file2, line: i + 1 };
+    }
+  }
+  return null;
+}
 function buildToolRegistry(getGraph, registryOpts = {}) {
   const tools = [];
   const readOnlyRefusal = (_tool, _args) => null;
@@ -49603,16 +49738,15 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
           // (and FR aggregation for _60-_64) is unchanged.
           code_impl: computeCodeImpl(s, graph)
         })),
-        // FR-46d: surface the task's OWN scenario (the specgen004_NN it cites in Done-When)
-        // + its last result, so task↔own-scenario traceability is visible, not just task→FR.
+        // FR-46d / FR-52e: surface the task's OWN scenario (the explicit scenario id it cites
+        // in Done-When, e.g. SPECGEN004_NN / TESTQUAL001_NN) + its last result, so task↔own-
+        // scenario traceability is visible, not just task→FR.
         tasks: tasks.map((t) => {
-          const m = (t.doneWhen ?? "").match(/s[pc]e[cn]gen004[_-](\d+)/i);
+          const ownKey = scenarioKey(t.doneWhen ?? "");
           let own_scenario = null;
-          if (m) {
-            const sc = [...graph.nodes.values()].find(
-              (n) => n.type === "Scenario" && new RegExp(`specgen004[_-]${m[1]}(?:\\D|$)`, "i").test(n.id)
-            );
-            own_scenario = sc ? { id: sc.id, lastResult: sc.lastResult ?? "UNKNOWN" } : { id: `SPECGEN004_${m[1]}`, lastResult: "NOT_FOUND" };
+          if (ownKey) {
+            const sc = [...graph.nodes.values()].find((n) => n.type === "Scenario" && scenarioKey(n.id) === ownKey);
+            own_scenario = sc ? { id: sc.id, lastResult: sc.lastResult ?? "UNKNOWN" } : { id: ownKey.toUpperCase(), lastResult: "NOT_FOUND" };
           }
           return { id: t.id, status: t.status, file: t.file, line: t.line, own_scenario };
         }),
@@ -49777,12 +49911,31 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
   });
   tools.push({
     name: "validate_anchor",
-    description: "Check whether an anchor alias (compact id OR slug) resolves to a registered definition.",
-    inputShape: { anchor: external_exports.string() },
-    handler: async ({ anchor }) => {
-      const def = getGraph().definitions.get(anchor);
-      if (!def) return asJsonResult({ ok: false, anchor, registered: false });
-      return asJsonResult({ ok: true, anchor, registered: true, location: def });
+    description: 'Validate two distinct anchor domains. Bare input (for example "FR-1" or "fr-1-login-flow") checks the spec-graph compact-id/alias registry. Markdown link input "DOC.md#heading-slug" checks a Marksman heading slug by recomputing slugs with the shared marksmanSlug implementation; this is file-scoped Markdown navigation, not a compact-id alias lookup.',
+    inputShape: { anchor: external_exports.string(), spec: external_exports.string().optional() },
+    handler: async ({ anchor, spec }) => {
+      const anchorText = String(anchor);
+      const markdownLocation = markdownLinkLocation(getGraph(), anchorText, spec ? String(spec) : void 0);
+      if (markdownLocation) {
+        return asJsonResult({
+          ok: true,
+          anchor: anchorText,
+          registered: true,
+          kind: "marksman-heading-slug",
+          location: markdownLocation
+        });
+      }
+      if (MARKDOWN_LINK_RE.test(anchorText)) {
+        return asJsonResult({
+          ok: false,
+          anchor: anchorText,
+          registered: false,
+          kind: "marksman-heading-slug"
+        });
+      }
+      const def = getGraph().definitions.get(anchorText);
+      if (!def) return asJsonResult({ ok: false, anchor: anchorText, registered: false, kind: "spec-graph-alias" });
+      return asJsonResult({ ok: true, anchor: anchorText, registered: true, kind: "spec-graph-alias", location: def });
     }
   });
   tools.push({

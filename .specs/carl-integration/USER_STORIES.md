@@ -94,6 +94,8 @@ Then it marks the Codex CARL path as unsupported for that version and leaves Cla
 
 ### User Story 5: Reviewable analysis, report, and rollout plan (Priority: P2)
 
+**Требование:** [FR-8](FR.md#fr-8-review-audit-and-reporting)
+
 As a maintainer, I want the CARL integration spec to include an analysis/report/plan and later review path, so that the feature is not shipped as a hidden hook drop-in without evidence, sequencing, or failure-mode review.
 
 **Why:** CARL touches plugin distribution, hooks, doctor repair, and two agent platforms, so the plan must make evidence, assumptions, and unresolved external details visible before implementation.

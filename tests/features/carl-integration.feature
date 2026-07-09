@@ -35,6 +35,7 @@ Feature: CARL001_CARL integration lifecycle
     Then the project CARL manifest records the changed source hash
     And Russian aliases are added when safe source text or curated overrides exist
     And sources without safe Russian aliases are marked as needing aliases instead of being silently omitted
+    And CARL install moves auto-loaded rule bodies into lazy context storage
 
   @feature1
   @FR-1

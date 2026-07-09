@@ -21,6 +21,7 @@ import os from 'node:os';
 import { spawnSync } from 'node:child_process';
 import { V4World } from '../hooks/before-after.ts';
 import { detectJargon } from '../../tools/answer-simple/jargon_detector.ts';
+import { readRuleContentForAdaptation } from '../../tools/carl/context-diet.ts';
 
 const APP_DIR = process.env.APP_DIR || process.cwd();
 const appPath = (rel = ''): string => path.join(APP_DIR, rel);
@@ -176,7 +177,7 @@ Then(/^`CLAUDE\.md` SHALL ссылаться на новый путь и не с
 
 // --- PLUGIN017_01 / _02 (rule artifact structure) + _03 (skill artifact structure) ---
 Given(/^содержимое правила clear-questions-to-user прочитано$/, function (this: ASWorld) {
-  this.asRuleContent = fs.readFileSync(appPath(RULE_PATH), 'utf-8');
+  this.asRuleContent = readRuleContentForAdaptation(APP_DIR, appPath(RULE_PATH), RULE_PATH);
 });
 Then(/^правило SHALL содержать все 5 шагов шаблона самопроверки$/, function (this: ASWorld) {
   const c = this.asRuleContent!;

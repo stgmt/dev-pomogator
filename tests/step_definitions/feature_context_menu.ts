@@ -567,6 +567,24 @@ Then(/^the log should contain the resolved project dir$/, function (this: G8Worl
   }
 });
 
+Then(/^the generated Claude launcher should set TEST_STATUSLINE_PROJECT with forward slashes$/, function () {
+  const launcherPath = path.join(os.tmpdir(), 'dev-pomogator-launch', 'claude-only-pane.cmd');
+  if (!fs.existsSync(launcherPath)) {
+    throw new Error(`Expected generated launcher to exist at ${launcherPath}`);
+  }
+  const content = fs.readFileSync(launcherPath, 'utf-8');
+  const line = content.split(/\r?\n/).find((candidate) => candidate.startsWith('set TEST_STATUSLINE_PROJECT='));
+  if (!line) {
+    throw new Error(`Expected generated launcher to set TEST_STATUSLINE_PROJECT. Content:\n${content}`);
+  }
+  if (line.includes('\\')) {
+    throw new Error(`Expected TEST_STATUSLINE_PROJECT to use forward slashes, got: ${line}`);
+  }
+  if (!line.includes('/')) {
+    throw new Error(`Expected TEST_STATUSLINE_PROJECT to contain a normalized path, got: ${line}`);
+  }
+});
+
 Then(/^the fixture should have hasTrustDialogAccepted true for the target directory$/, function (this: G8World) {
   const raw = fs.readFileSync(this.g8ClaudeJsonPath!, 'utf-8');
   const obj = JSON.parse(raw);

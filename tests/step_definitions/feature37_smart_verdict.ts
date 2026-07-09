@@ -22,6 +22,7 @@ import { V4World } from '../hooks/before-after.ts';
 import { runSpecVerdict, type SpecVerdictResult } from '../../tools/specs-generator/spec-verdict.ts';
 import { buildGraphFromCwd } from '../../tools/spec-graph/builder.ts';
 import { checkTraceabilityCompleteness } from '../../tools/spec-graph/traceability.ts';
+import { readRuleContentForAdaptation } from '../../tools/carl/context-diet.ts';
 
 interface F37World extends V4World {
   stalePath?: string;
@@ -287,7 +288,7 @@ Then(
     const repoRoot = path.resolve(import.meta.dirname ?? __dirname, '..', '..');
     const rulePath = path.join(repoRoot, '.claude', 'rules', 'spec-verdict', 'no-structural-valid.md');
     assert.ok(fs.existsSync(rulePath), 'the no-structural-valid rule must exist');
-    const rule = fs.readFileSync(rulePath, 'utf-8');
+    const rule = readRuleContentForAdaptation(repoRoot, rulePath, '.claude/rules/spec-verdict/no-structural-valid.md');
     assert.ok(rule.includes('spec-verdict.ts') && rule.includes('false green'),
       'the rule must point at the smart verdict and encode the false-green incident');
   },

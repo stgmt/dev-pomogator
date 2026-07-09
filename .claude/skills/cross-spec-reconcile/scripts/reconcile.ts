@@ -50,6 +50,7 @@ export type FindingClass =
   | 'runtime-identifier-drift'
   | 'architectural-decision-vs-reality'
   | 'concept-overlap'
+  | 'semantic'
   | 'spec-only'
   | 'schema-drift';
 
@@ -221,9 +222,13 @@ const CONCEPT_NOUN_STOPLIST = new Set([
 
 export interface ReconcileResult {
   generatedAt: string;
-  mode: 'light';
+  mode: 'light' | 'full';
   specSlug: string;
   findings: Finding[];
+  /** True when a full-mode semantic pass failed open and the report contains mechanical findings only for at least one pair. */
+  partial?: boolean;
+  /** Human-readable reason(s) for a partial full-mode report. */
+  partialReasons?: string[];
   /** FR-17 impl-coverage-summary: corpus size compared (count of `.specs/<slug>/` scanned). */
   specsCompared?: number;
   /** FR-17 impl-coverage-summary: number of impl path references existence-checked for this spec. */

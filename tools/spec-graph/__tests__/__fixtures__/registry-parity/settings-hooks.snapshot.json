@@ -16,6 +16,7 @@
   ],
   "SessionStart": [
     "apply_skill_budget",
+    "autostart_hook",
     "doctor-hook",
     "ensure-marksman",
     "ensure-up",
@@ -35,6 +36,7 @@
     "extension-json-meta-guard",
     "form-guards-dispatch",
     "guard",
+    "health-check",
     "phase-gate",
     "plan-gate",
     "spec-access-guard",
@@ -55,6 +57,7 @@
     "capture --event UserPromptSubmit",
     "prompt-capture",
     "prompt_suggest_submit",
+    "runner",
     "validate-specs"
   ]
 }

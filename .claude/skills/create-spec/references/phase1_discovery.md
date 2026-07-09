@@ -46,13 +46,23 @@ ls ~/.claude/projects/${encoded}/memory/feedback_*.md 2>/dev/null
 
 4. **Заполнить USE_CASES.md** — UC-1 (happy path) + edge cases. Каждый UC должен быть связан с одной или несколькими User Stories.
 
-5. **Заполнить RESEARCH.md** (если нужен ресерч). **ВАЖНО:** на этом шаге вызвать `Skill("research-workflow")` чтобы делегировать технические находки и верификацию гипотез standalone-skill'у:
+5. **Заполнить RESEARCH.md** (если нужен ресерч). Перед выбором research skill выполнить Phase 1.5 complexity heuristic из `.claude/skills/create-spec/scripts/complexity-heuristic.ts` (`detectComplexity(userPrompt)`):
 
-   ```
-   Skill("research-workflow")
-   ```
+   - Если вход уже содержит `--research-done` / результат Stage 7 `architecture-research-workflow` — НЕ вызывать research skill повторно. Это recursion guard: `create-spec → architecture-research-workflow → create-spec` не должен зациклиться.
+   - Если `detectComplexity()` вернул `use-architecture-research-workflow` — вызвать тяжёлый architecture flow:
 
-   `research-workflow` skill пройдёт 4 фазы (Уточнение → Исследование → Верификация → Отчёт) и вернёт verifed findings — их вписать в `RESEARCH.md` секцию `## Технические находки`. В Jira-mode секция `## Problem` ссылается на `JIRA_SOURCE.md`: `См. JIRA_SOURCE.md ## Description (Verbatim)` — не дублировать текст. Секция `## Risk Assessment` уже добавлена `discovery-forms` skill'ом на шаге 3 — при ручном заполнении hook `risk-assessment-guard` требует ≥2 non-placeholder rows.
+     ```
+     Skill("architecture-research-workflow")
+     ```
+
+     Stage 7 этого skill пишет итоговый `RESEARCH.md` и выставляет `--research-done`, после чего create-spec продолжает Phase 1 без повторного `research-workflow`.
+   - Если `detectComplexity()` вернул `use-research-workflow` — вызвать обычный 4-фазный research skill:
+
+     ```
+     Skill("research-workflow")
+     ```
+
+   `research-workflow` skill пройдёт 4 фазы (Уточнение → Исследование → Верификация → Отчёт) и вернёт verified findings — их вписать в `RESEARCH.md` секцию `## Технические находки`. В Jira-mode секция `## Problem` ссылается на `JIRA_SOURCE.md`: `См. JIRA_SOURCE.md ## Description (Verbatim)` — не дублировать текст. Секция `## Risk Assessment` уже добавлена `discovery-forms` skill'ом на шаге 3 — при ручном заполнении hook `risk-assessment-guard` требует ≥2 non-placeholder rows.
 
 6. **Проверить статус:** `tools/specs-generator/spec-status.ts -Path ".specs/{feature}"`
 

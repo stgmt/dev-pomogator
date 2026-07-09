@@ -1,5 +1,5 @@
 /**
- * @feature19 step definitions — form-guards-dispatch routing + verdict propagation
+ * @feature58 step definitions — inherited form-guards-dispatch routing + verdict propagation
  * (SPECGEN004_295 – SPECGEN004_298)
  *
  * Drives the REAL `tools/specs-validator/form-guards-dispatch.ts` via
@@ -9,7 +9,7 @@
  * beforeAll from V4World provides a fresh tempDir per scenario via the
  * Before hook in tests/hooks/before-after.ts.
  *
- * @see .specs/spec-generator-v4/FR.md FR-19 (two-tier hook policy, soft tier)
+ * @see .specs/spec-generator-v4/FR.md FR-58 (inherited v3 form-contract owner)
  */
 import { Given, When, Then } from '@cucumber/cucumber';
 import assert from 'node:assert/strict';

@@ -36,6 +36,13 @@
       "prompt": "Run requirements-chk-matrix on a spec where FR-2 has NO AC, no @feature, no UC link.",
       "expected_output": "FR-2 is surfaced as an uncovered requirement (a CHK row that flags the gap, or an explicit note) rather than silently inventing a coverage link to make the matrix look complete.",
       "files": []
+    },
+    {
+      "id": 5,
+      "name": "negative-invalid-nfr-chk-id-is-denied",
+      "prompt": "Run the eval harness on a REQUIREMENTS.md matrix row that uses the old invalid NFR suffix ID `CHK-FR1-NFR`.",
+      "expected_output": "The eval harness must prove the real `spec-form-parsers.ts --check chk-rows` CLI and `requirements-chk-guard` both reject `CHK-FR1-NFR`; only numeric `CHK-FR{n}-{nn}` IDs are accepted.",
+      "files": []
     }
   ]
 }

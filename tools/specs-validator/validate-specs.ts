@@ -28,7 +28,6 @@ import {
   PHASE_ORDER,
   STOP_LABELS,
   readProgressState,
-  type PhaseState,
   type ProgressState,
 } from './phase-constants.ts';
 
@@ -221,81 +220,97 @@ function checkPhaseGate(
   return warnings;
 }
 
-/**
- * Print phase status banner for specs with .progress.json.
- * Injects allowed/blocked file lists so Claude knows what's writable.
- */
-function printPhaseStatus(specName: string, progress: ProgressState): void {
-  const allFiles = Object.values(PHASE_FILES).flat();
-  const allowed: string[] = [];
-  const blocked: string[] = [];
+interface UnconfirmedStopEntry {
+  specName: string;
+  currentPhase: string;
+  stopLabel: string;
+  unconfirmedPhase: string;
+}
 
-  for (const [phase, files] of Object.entries(PHASE_FILES)) {
-    if (files.length === 0) continue; // Context has no files
-    const phaseIdx = PHASE_ORDER.indexOf(phase as typeof PHASE_ORDER[number]);
-    let isAllowed = true;
-    for (let i = 0; i < phaseIdx; i++) {
-      const prevPhase = PHASE_ORDER[i];
-      if (prevPhase === 'Context') continue;
-      const prevState = progress.phases[prevPhase];
-      if (!prevState || !prevState.stopConfirmed) {
-        isAllowed = false;
-        break;
-      }
-    }
-    if (isAllowed) {
-      allowed.push(...files);
-    } else {
-      blocked.push(...files);
-    }
-  }
-
-  // Find first unconfirmed STOP
-  let unconfirmedStop = '';
-  let unconfirmedPhase = '';
+function firstUnconfirmedStop(progress: ProgressState): Omit<UnconfirmedStopEntry, 'specName' | 'currentPhase'> | null {
   for (const phase of PHASE_ORDER) {
     if (phase === 'Context') continue;
     const state = progress.phases[phase];
     if (!state || !state.stopConfirmed) {
-      unconfirmedStop = STOP_LABELS[phase] || phase;
-      unconfirmedPhase = phase;
-      break;
+      return {
+        stopLabel: STOP_LABELS[phase] || phase,
+        unconfirmedPhase: phase,
+      };
+    }
+  }
+  return null;
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function promptMentionsSpec(prompt: string, specName: string): boolean {
+  const normalized = prompt.replace(/\\/g, '/');
+  if (normalized.includes(`.specs/${specName}`)) return true;
+
+  const specToken = new RegExp(`(^|[^A-Za-z0-9_-])${escapeRegExp(specName)}([^A-Za-z0-9_-]|$)`);
+  return specToken.test(normalized);
+}
+
+function resolveActiveSpecs(prompt: string | undefined, specNames: string[]): Set<string> {
+  const active = new Set<string>();
+  const explicit = process.env.SPECS_VALIDATOR_ACTIVE_SPEC?.trim();
+  if (explicit && specNames.includes(explicit)) active.add(explicit);
+
+  if (prompt) {
+    for (const specName of specNames) {
+      if (promptMentionsSpec(prompt, specName)) active.add(specName);
     }
   }
 
-  // Batch-24 honest-audit: per-spec 4-line dump was the SECOND-largest
-  // hook prompt-spam source (after printWarnings). Aggregate into the
-  // module-level UNCONFIRMED_STOPS list; printed once at flush time.
-  if (unconfirmedStop) {
-    UNCONFIRMED_STOPS.push({
-      specName, currentPhase: progress.currentPhase,
-      stopLabel: unconfirmedStop, unconfirmedPhase,
-    });
+  // UserPromptSubmit payloads used by tests and some clients can omit the prompt
+  // text entirely while still scoping workspace_roots to a single spec corpus.
+  // In that case the sole discovered spec is the active one, so the banner must
+  // still surface its unconfirmed STOP instead of silently passing.
+  if (active.size === 0 && specNames.length === 1) {
+    active.add(specNames[0]);
+  }
+
+  return active;
+}
+
+function recordPhaseStatus(specName: string, progress: ProgressState, active: boolean): void {
+  const unconfirmed = firstUnconfirmedStop(progress);
+  if (!unconfirmed) return;
+
+  const entry = {
+    specName,
+    currentPhase: progress.currentPhase,
+    ...unconfirmed,
+  };
+
+  if (active) {
+    ACTIVE_UNCONFIRMED_STOPS.push(entry);
+  } else if (process.env.SPECS_VALIDATOR_VERBOSE === '1') {
+    VERBOSE_UNCONFIRMED_STOPS.push(entry);
   }
 }
 
-const UNCONFIRMED_STOPS: Array<{
-  specName: string; currentPhase: string;
-  stopLabel: string; unconfirmedPhase: string;
-}> = [];
+const ACTIVE_UNCONFIRMED_STOPS: UnconfirmedStopEntry[] = [];
+const VERBOSE_UNCONFIRMED_STOPS: UnconfirmedStopEntry[] = [];
 
-/** Flush aggregated phase-status into ONE summary line. Verbose env restores full dump. */
+function renderStopLine(prefix: string, e: UnconfirmedStopEntry): string {
+  return `${prefix} "${e.specName}" | Phase: ${e.currentPhase} | ${e.stopLabel} not confirmed. ` +
+    `Confirm: spec-status.ts -Path ".specs/${e.specName}" -ConfirmStop ${e.unconfirmedPhase}`;
+}
+
+/** Flush active-spec phase status. Corpus-wide dumps are opt-in via SPECS_VALIDATOR_VERBOSE=1. */
 function flushPhaseStatus(): void {
-  if (UNCONFIRMED_STOPS.length === 0) return;
-  const verbose = process.env.SPECS_VALIDATOR_VERBOSE === '1';
-  if (!verbose) {
-    console.log(
-      `[specs-validator] ${UNCONFIRMED_STOPS.length} specs with unconfirmed STOP ` +
-      `(SPECS_VALIDATOR_VERBOSE=1 for per-spec breakdown)`,
-    );
-    UNCONFIRMED_STOPS.length = 0;
-    return;
+  for (const e of ACTIVE_UNCONFIRMED_STOPS) {
+    console.log(renderStopLine('[specs-validator] ACTIVE SPEC STOP', e));
   }
-  for (const e of UNCONFIRMED_STOPS) {
-    console.log(`[specs-validator] SPEC: ${e.specName} | Phase: ${e.currentPhase} | ${e.stopLabel} not confirmed`);
-    console.log(`  Confirm: spec-status.ts -Path ".specs/${e.specName}" -ConfirmStop ${e.unconfirmedPhase}`);
+  ACTIVE_UNCONFIRMED_STOPS.length = 0;
+
+  for (const e of VERBOSE_UNCONFIRMED_STOPS) {
+    console.log(renderStopLine('[specs-validator] SPEC STOP (verbose)', e));
   }
-  UNCONFIRMED_STOPS.length = 0;
+  VERBOSE_UNCONFIRMED_STOPS.length = 0;
 }
 
 /**
@@ -326,14 +341,18 @@ function findAllSpecDirs(specsRoot: string): string[] {
  *
  * @see .specs/spec-generator-v4/FR.md FR-20, NFR.md NFR-Performance-6
  */
-function renderFormGuardsSummary(): void {
+function renderFormGuardsSummary(repoRoot: string, activeSpecSlugs?: Set<string>): void {
   try {
     rotateLog();
-    const line = buildConformanceSummary();
+    const line = buildConformanceSummary({
+      ackFile: process.env.SPEC_CONFORMANCE_ACK_FILE,
+      repoRoot,
+      softLog: process.env.SPEC_CONFORMANCE_SOFT_LOG,
+    });
     if (line) console.log(line);
     // P21-4: surface unfinished tasks from the cached census (graph-only, written
     // by spec-conformance-push). Reads a tiny JSON — never builds the graph here.
-    const census = buildTaskCensusLine();
+    const census = buildTaskCensusLine(repoRoot, { activeSpecSlugs });
     if (census) console.log(census);
   } catch {
     // fail-silent — audit log is non-critical
@@ -348,29 +367,27 @@ async function main(): Promise<void> {
       return; // No input, exit silently
     }
 
-    // 1.5 Form-guards summary runs independently of .specs/ discovery
-    // — so that it fires even on projects without any .specs/ folder
-    // but with form-guards events recorded globally. Must run BEFORE the
-    // empty-roots early-return below; otherwise the Claude Code UserPromptSubmit
-    // payload (which carries `cwd`, not Cursor's `workspace_roots`) would skip it
-    // entirely and FR-13's "on every prompt" summary would never fire in practice.
-    renderFormGuardsSummary();
-
     // Accept both the Cursor shape (`workspace_roots`) and the Claude Code shape
     // (`cwd`). Falling back to `cwd` lets spec discovery work under Claude Code too.
     const workspaceRoots =
-      input.workspace_roots && input.workspace_roots.length > 0
-        ? input.workspace_roots
-        : input.cwd
-          ? [input.cwd]
+      input.cwd
+        ? [input.cwd]
+        : input.workspace_roots && input.workspace_roots.length > 0
+          ? input.workspace_roots
           : [];
+    const repoRoot = workspaceRoots[0] ?? process.env.SPEC_CONFORMANCE_REPO_ROOT ?? process.cwd();
+
     if (workspaceRoots.length === 0) {
+      // Form-guards summary still has a repoRoot fallback, but with no hook scope it
+      // must not invent a next step from a global census.
+      renderFormGuardsSummary(repoRoot);
       return; // No workspace roots (and no cwd) — nothing further to discover
     }
 
     // 2. Find .specs/ folder
     const specsRoot = findSpecsFolder(workspaceRoots);
     if (!specsRoot) {
+      renderFormGuardsSummary(repoRoot);
       return; // No .specs/ folder, exit silently
     }
 
@@ -386,25 +403,35 @@ async function main(): Promise<void> {
       validateSpec(spec, workspaceRoot);
     }
 
-    // 5. Phase status injection + gate check for ALL specs with .progress.json
+    // 5. Phase status injection + gate check for specs with .progress.json.
+    // Keep the normal prompt quiet for unrelated legacy specs: an unconfirmed STOP
+    // is loud only for the active spec named by the prompt/env. Full corpus dumps
+    // remain available behind SPECS_VALIDATOR_VERBOSE=1.
     const allSpecDirs = findAllSpecDirs(specsRoot);
+    const specNames = allSpecDirs.map((specDir) => path.basename(specDir));
+    const activeSpecs = resolveActiveSpecs(input.prompt, specNames);
+
+    // 1.5 Form-guards summary runs after active-spec resolution so the task-census
+    // banner can show a scoped next step without falling back to corpus/global backlog.
+    renderFormGuardsSummary(repoRoot, activeSpecs);
+
     for (const specDir of allSpecDirs) {
       const specName = path.basename(specDir);
       const progress = readProgressState(specDir);
       if (!progress) continue; // no .progress.json = old spec, skip
 
-      // Inject phase status banner (Layer 2)
-      printPhaseStatus(specName, progress);
+      const active = activeSpecs.has(specName);
+      recordPhaseStatus(specName, progress, active);
 
       // Phase gate warning (advisory, Layer 2 — hard gate is in phase-gate.ts PreToolUse)
-      if (input.prompt) {
+      if (active && input.prompt) {
         const phaseWarnings = checkPhaseGate(specName, progress, input.prompt);
         for (const w of phaseWarnings) {
           console.log(w);
         }
       }
     }
-    // Batch-24: flush aggregated phase-status + warnings into single summary lines.
+    // Batch-24: flush aggregated coverage + active phase-status summary lines.
     flushWarnings();
     flushPhaseStatus();
 

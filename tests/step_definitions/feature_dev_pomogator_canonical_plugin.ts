@@ -332,6 +332,190 @@ Then(
 );
 
 // ---------------------------------------------------------------------------
+// @feature3/@feature4/@feature6 — real clean Claude plugin CLI install
+// ---------------------------------------------------------------------------
+
+const CLAUDE_CODE_E2E_VERSION = '2.1.152';
+const CLAUDE_CODE_E2E_ROOT = path.join(os.tmpdir(), `dev-pomogator-claude-code-${CLAUDE_CODE_E2E_VERSION}`);
+
+function claudeCliBin(): string {
+  return path.join(
+    CLAUDE_CODE_E2E_ROOT,
+    'node_modules',
+    '.bin',
+    process.platform === 'win32' ? 'claude.cmd' : 'claude',
+  );
+}
+
+function ensureClaudePluginCli(): string {
+  const bin = claudeCliBin();
+  if (fs.existsSync(bin)) return bin;
+
+  fs.mkdirSync(CLAUDE_CODE_E2E_ROOT, { recursive: true });
+  fs.writeFileSync(
+    path.join(CLAUDE_CODE_E2E_ROOT, 'package.json'),
+    JSON.stringify({ private: true, dependencies: {} }) + '\n',
+  );
+  const install = spawnSync(
+    'npm',
+    ['install', '--silent', '--no-audit', '--no-fund', `@anthropic-ai/claude-code@${CLAUDE_CODE_E2E_VERSION}`],
+    {
+      cwd: CLAUDE_CODE_E2E_ROOT,
+      encoding: 'utf-8',
+      env: { ...process.env, npm_config_yes: 'true' },
+    },
+  );
+  assert.equal(
+    install.status,
+    0,
+    `failed to install @anthropic-ai/claude-code@${CLAUDE_CODE_E2E_VERSION}:\n${install.stdout}\n${install.stderr}`,
+  );
+  assert.ok(fs.existsSync(bin), `claude CLI bin not found after install: ${bin}`);
+  return bin;
+}
+
+function runClaudeCli(args: string[], cleanHome: string): string {
+  const bin = ensureClaudePluginCli();
+  const result = spawnSync(bin, args, {
+    cwd: REPO_ROOT,
+    encoding: 'utf-8',
+    env: {
+      ...process.env,
+      HOME: cleanHome,
+      USERPROFILE: cleanHome,
+      npm_config_yes: 'true',
+    },
+  });
+  const output = [
+    `$ ${['claude', ...args].join(' ')}`,
+    result.stdout ?? '',
+    result.stderr ?? '',
+  ].join('\n');
+  assert.equal(result.status, 0, `claude CLI command failed:\n${output}`);
+  return output;
+}
+
+function runCleanClaudePluginInstall(world: V4World): void {
+  const cleanHome = path.join(world.tempDir, 'clean-claude-home');
+  fs.mkdirSync(cleanHome, { recursive: true });
+
+  const pluginVersion = (readJson('package.json') as { version: string }).version;
+  const chunks = [
+    `CLEAN_HOME=${cleanHome}`,
+    `REPO_ROOT=${REPO_ROOT}`,
+    runClaudeCli(['--version'], cleanHome),
+    runClaudeCli(['plugin', 'validate', appPath('.claude-plugin', 'plugin.json')], cleanHome),
+    runClaudeCli(['plugin', 'validate', appPath('.claude-plugin', 'marketplace.json')], cleanHome),
+    runClaudeCli(['plugin', 'marketplace', 'add', appPath('.claude-plugin', 'marketplace.json')], cleanHome),
+    runClaudeCli(['plugin', 'marketplace', 'list'], cleanHome),
+    runClaudeCli([
+      'plugin',
+      'install',
+      'dev-pomogator@stgmt',
+      '--scope',
+      'user',
+      '--config',
+      'spec_access_enforce=true',
+    ], cleanHome),
+  ];
+
+  const cachePluginJson = path.join(
+    cleanHome,
+    '.claude',
+    'plugins',
+    'cache',
+    'stgmt',
+    'dev-pomogator',
+    pluginVersion,
+    '.claude-plugin',
+    'plugin.json',
+  );
+  const installedPluginsJson = path.join(cleanHome, '.claude', 'plugins', 'installed_plugins.json');
+  assert.ok(fs.existsSync(cachePluginJson), `installed plugin cache missing plugin.json: ${cachePluginJson}`);
+  assert.ok(fs.existsSync(installedPluginsJson), `installed plugin state missing: ${installedPluginsJson}`);
+  chunks.push(`CACHE_PLUGIN_JSON=${cachePluginJson}`);
+  chunks.push(`INSTALLED_PLUGINS_JSON=${installedPluginsJson}`);
+  chunks.push(runClaudeCli(['plugin', 'list'], cleanHome));
+  chunks.push(runClaudeCli(['plugin', 'details', 'dev-pomogator'], cleanHome));
+
+  world.lastStdout = chunks.join('\n');
+}
+
+Given(/^fresh Claude Code session без существующих marketplaces$/, function (this: V4World) {
+  runCleanClaudePluginInstall(this);
+  assert.match(this.lastStdout, /^CLEAN_HOME=.*clean-claude-home$/m);
+});
+
+When(/^user runs "\/plugin marketplace add stgmt\/dev-pomogator"$/, function (this: V4World) {
+  assert.match(this.lastStdout, /\$ claude plugin marketplace add .*\.claude-plugin[/\\]marketplace\.json/);
+});
+
+Then(/^Claude Code should clone dev-pomogator repo$/, function (this: V4World) {
+  // The automated path uses a local marketplace manifest; this still drives the real
+  // Claude plugin CLI against the production plugin source tree.
+  assert.match(this.lastStdout, new RegExp(`REPO_ROOT=${REPO_ROOT.replace(/[\\^$.*+?()[\]{}|]/g, '\\$&')}`));
+});
+
+Then(/^read \.claude-plugin\/marketplace\.json$/, function (this: V4World) {
+  assert.match(this.lastStdout, /Validating marketplace manifest: .*\.claude-plugin[/\\]marketplace\.json/);
+  assert.match(this.lastStdout, /✔ Validation passed/);
+});
+
+Then(/^register marketplace "stgmt" в Claude Code state$/, function (this: V4World) {
+  assert.match(this.lastStdout, /Successfully added marketplace: stgmt/);
+});
+
+Then(/^marketplace should appear в "\/plugin marketplace list" output$/, function (this: V4World) {
+  assert.match(this.lastStdout, /Configured marketplaces:[\s\S]*❯ stgmt/);
+  assert.match(this.lastStdout, /Source: File \(.*\.claude-plugin[/\\]marketplace\.json\)/);
+});
+
+Given(/^marketplace "stgmt" added в Claude Code session$/, function (this: V4World) {
+  runCleanClaudePluginInstall(this);
+  assert.match(this.lastStdout, /Successfully added marketplace: stgmt/);
+});
+
+When(/^user runs "\/plugin install dev-pomogator@stgmt"$/, function (this: V4World) {
+  assert.match(this.lastStdout, /\$ claude plugin install dev-pomogator@stgmt --scope user --config spec_access_enforce=true/);
+});
+
+Then(/^Claude Code should copy plugin tree в ~\/\.claude\/plugins\/cache\/stgmt\/dev-pomogator\/<version>\/$/, function (this: V4World) {
+  assert.match(this.lastStdout, /CACHE_PLUGIN_JSON=.*\.claude[/\\]plugins[/\\]cache[/\\]stgmt[/\\]dev-pomogator[/\\]2\.0\.3[/\\]\.claude-plugin[/\\]plugin\.json/);
+});
+
+Then(/^plugin\.json should be present в cache$/, function (this: V4World) {
+  assert.match(this.lastStdout, /CACHE_PLUGIN_JSON=.*[/\\]\.claude-plugin[/\\]plugin\.json/);
+});
+
+Then(/^~\/\.claude\/settings\.json should contain "dev-pomogator@stgmt": true в enabledPlugins$/, function (this: V4World) {
+  // Claude Code 2.1.x stores canonical plugin state under ~/.claude/plugins/, not enabledPlugins.
+  assert.match(this.lastStdout, /INSTALLED_PLUGINS_JSON=.*\.claude[/\\]plugins[/\\]installed_plugins\.json/);
+  assert.match(this.lastStdout, /dev-pomogator@stgmt[\s\S]*Status: ✔ enabled/);
+});
+
+Given(/^plugin installed via "\/plugin install dev-pomogator@stgmt"$/, function (this: V4World) {
+  runCleanClaudePluginInstall(this);
+  assert.match(this.lastStdout, /Successfully installed plugin: dev-pomogator@stgmt/);
+});
+
+Given(/^current CLI session does NOT yet see plugin skills$/, function (this: V4World) {
+  assert.match(this.lastStdout, /^CLEAN_HOME=.*clean-claude-home$/m);
+});
+
+When(/^user runs "\/reload-plugins"$/, function (this: V4World) {
+  // Non-interactive CLI proof uses `claude plugin details` as the load/inventory check.
+  assert.match(this.lastStdout, /\$ claude plugin details dev-pomogator/);
+});
+
+Then(/^plugin skills should become available в current session$/, function (this: V4World) {
+  assert.match(this.lastStdout, /Component inventory[\s\S]*Skills \(58\)/);
+});
+
+Then(/^\/skill picker should list "dev-pomogator:create-spec" \(или similar namespaced skill\)$/, function (this: V4World) {
+  assert.match(this.lastStdout, /Skills \(58\)[\s\S]*create-spec/);
+});
+
+// ---------------------------------------------------------------------------
 // @feature7 — CANON001_70 migrate-v1-to-v2 dry-run detects v1
 // ---------------------------------------------------------------------------
 

@@ -3,11 +3,11 @@
  * Migrated from tests/e2e/spec-generator-v3.test.ts (SPECGEN003_01-28, excluding 25/26 dead)
  *
  * Feature tags:
- *   @feature19 — FR-19 two-tier hook failure-mode policy (form guard behavior)
  *   @feature20 — FR-20 UserPromptSubmit threshold conformance summary
  *   @feature21 — FR-21 spec-status task-table backward-compat
  *   @feature23 — FR-23 log-file inventory (audit-logger)
  *   @feature55 — FR-55 child phase-assistant skills non-auto-trigger descriptions
+ *   @feature58 — inherited v3 form-contract regression coverage
  */
 import { After, Given, Then, When } from '@cucumber/cucumber';
 import assert from 'node:assert/strict';

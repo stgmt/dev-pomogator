@@ -102,8 +102,9 @@
 | `.claude/skills/architecture-research-workflow/references/anti-patterns.md` | create | AP-arch-1..AP-arch-8 from session learnings ([FR-12](FR.md#fr-12)) |
 | `.claude/skills/_shared/research-base.md` | create | Shared patterns between research-workflow + architecture-research-workflow ([FR-12](FR.md#fr-12)) |
 | `.claude/skills/research-workflow/SKILL.md` | edit | Enrich with external-pain + misconception-flush sections from shared base ([FR-12](FR.md#fr-12)) |
+| `tests/step_definitions/phase6-arch-research.ts` | edit | Adds SPECGEN004_531/SPECGEN004_532 executable BDD pins for shared research base plus create-spec architecture routing/recursion guard ([FR-12](FR.md#fr-12)) |
 | `.claude/skills/create-spec/SKILL.md` | edit | Add complexity heuristic + `--research-done` flag recursion guard ([FR-12](FR.md#fr-12)) |
-| `.claude/skills/create-spec/references/phase1_discovery.md` | edit | Update Step 5 to invoke `architecture-research-workflow` when heuristic triggers ([FR-12](FR.md#fr-12)) |
+| `.claude/skills/create-spec/references/phase1_discovery.md` | edit | Step 5 runs `detectComplexity(userPrompt)`, routes architecture prompts to `architecture-research-workflow`, small prompts to `research-workflow`, and honors `--research-done` before either skill ([FR-12](FR.md#fr-12)) |
 | `.claude-plugin/plugin.json` | edit | Skill distribution через canonical `"skills": ".claude/skills"` dir override — отдельная регистрация per-skill не нужна в v2 ([FR-12](FR.md#fr-12)) |
 | `CLAUDE.md` | edit | Update skill index table with `architecture-research-workflow` entry ([FR-12](FR.md#fr-12)) |
 
@@ -111,22 +112,23 @@
 
 | Path | Action | Reason |
 |------|--------|--------|
-| `.claude/skills/cross-spec-reconcile/SKILL.md` | create | Reconcile skill entrypoint with 6-step execution flow + output contract ([FR-17](FR.md#fr-17)) |
-| `.claude/skills/cross-spec-reconcile/scripts/build-graph.ts` | create | Parse `.specs/*/{FR,DESIGN,NFR,SCHEMA}.md` + `.feature` into per-spec concept index via remark + mdast ([FR-17](FR.md#fr-17)) |
-| `.claude/skills/cross-spec-reconcile/scripts/check-cross-spec.ts` | create | Pairwise terminology / FR overlap / ownership / runtime identifier mechanical checks ([FR-17](FR.md#fr-17)) |
-| `.claude/skills/cross-spec-reconcile/scripts/check-impl-drift.ts` | create | File existence / symbol grep / MCP tool exports / hook registration validation ([FR-17](FR.md#fr-17)) |
-| `.claude/skills/cross-spec-reconcile/scripts/code-shape-index.ts` | create | Pre-index code exports / module boundaries / ports / MCP tools / hooks for architectural decision detection ([FR-17](FR.md#fr-17)) |
-| `.claude/skills/cross-spec-reconcile/scripts/semantic-judge.ts` | create | Agent subagent dispatcher with concept-overlap pre-filter + sha256 content-hash cache ([FR-17](FR.md#fr-17)) |
-| `.claude/skills/cross-spec-reconcile/scripts/write-yaml-report.ts` | create | Atomic YAML writer with merge preserving acknowledged/resolution fields + Coverage Summary dashboard ([FR-17](FR.md#fr-17)) |
-| `.claude/skills/cross-spec-reconcile/scripts/write-sarif-report.ts` | create | SARIF 2.1.0 secondary output writer with 1:1 rule-id mapping to finding codes ([FR-17](FR.md#fr-17)) |
-| `.claude/skills/cross-spec-reconcile/references/finding-codes.md` | create | All 28 finding codes (15 cross-spec/* + 13 impl-drift/*) with severity + class + remediation snippet ([FR-17](FR.md#fr-17)) |
+| `.claude/skills/cross-spec-reconcile/SKILL.md` | create/edit | Reconcile skill entrypoint with execution flow + output contract; 2026-07-09 reconciled allowed-tools to include Agent per skill workflow ([FR-17](FR.md#fr-17)) |
+| `.claude/skills/cross-spec-reconcile/scripts/reconcile.ts` | create/edit | Single shipped light-mode engine: scans `.specs`, extracts path/symbol/runtime/feature-tag/schema inputs, and emits 29 mechanical finding codes; proof `check-cross-spec-mechanical-checks.mjs` pins `engine_codes=29`, `test_pinned_codes=29` ([FR-17](FR.md#fr-17)) |
+| `.claude/skills/cross-spec-reconcile/scripts/reconcile-cli.ts` | create/edit | Runnable CLI driver for light/full mode, slug filtering, dry-run, SARIF, and per-spec summary table ([FR-17](FR.md#fr-17)) |
+| `.claude/skills/cross-spec-reconcile/scripts/full-mode.ts` | create/edit | Semantic full-mode wrapper around `spec-llm-judge`, Meridian 120s timeout, `cross-spec/semantic-check-failed`, `cross-spec/semantic-drift`, and partial YAML fallback ([FR-17](FR.md#fr-17)) |
+| `.claude/skills/cross-spec-reconcile/scripts/yaml-writer.ts` | create/edit | Atomic consistency-report YAML writer used by reconcile CLI and tests ([FR-17](FR.md#fr-17)) |
+| `.claude/skills/cross-spec-reconcile/scripts/sarif.ts` | create/edit | SARIF 2.1.0 secondary output writer with rule-id mapping to finding codes ([FR-17](FR.md#fr-17)) |
+| `.claude/skills/cross-spec-reconcile/scripts/overrides-log.ts` | create/edit | JSONL audit log helper for acknowledged CRITICAL overrides ([FR-17](FR.md#fr-17)) |
+| `.claude/skills/cross-spec-reconcile/scripts/__tests__/reconcile.test.ts` | create/edit | Unit fixture corpus pins all 29 shipped mechanical `reconcile.ts` finding codes plus YAML/SARIF/override helpers ([FR-17](FR.md#fr-17), [FR-18](FR.md#fr-18)) |
+| `.claude/skills/cross-spec-reconcile/references/finding-codes.md` | create/edit | Finding-code catalog with severity + class + remediation; focused proof saw 36 documented namespaced entries and the shipped engine pins 29 mechanical codes ([FR-17](FR.md#fr-17)) |
 | `.claude/skills/cross-spec-reconcile/references/yaml-schema.md` | create | Consistency Report YAML schema reference with full example output ([FR-17](FR.md#fr-17)) |
 | `.claude/skills/cross-spec-reconcile/references/semantic-judge-prompt.md` | create | Agent subagent prompt template (NO interactive prompts permitted; structured JSON output only) ([FR-17](FR.md#fr-17)) |
 | `.claude/skills/cross-spec-resolve/SKILL.md` | create | Resolve skill entrypoint with 7-step explain-confirm-apply execution flow ([FR-18](FR.md#fr-18)) |
-| `.claude/skills/cross-spec-resolve/scripts/load-report.ts` | create | YAML loader with schema validation and missing-file hint ([FR-18](FR.md#fr-18)) |
-| `.claude/skills/cross-spec-resolve/scripts/group-findings.ts` | create | Sort findings by severity + category, deduplicate by code+spec+location ([FR-18](FR.md#fr-18)) |
-| `.claude/skills/cross-spec-resolve/scripts/apply-mechanical-fix.ts` | create | Explain-then-confirm-then-Edit pipeline with foreign-spec guard banner ([FR-18](FR.md#fr-18)) |
-| `.claude/skills/cross-spec-resolve/scripts/update-yaml-resolution.ts` | create | Post-batch re-reconcile invocation + per-finding resolution_status update ([FR-18](FR.md#fr-18)) |
+| `.claude/skills/cross-spec-resolve/scripts/walker.ts` | create/edit | Shipped resolver walker: report loading, finding grouping, AskUserQuestion header/explanation builder, and resolution planning in one module ([FR-18](FR.md#fr-18)) |
+| `.claude/skills/cross-spec-resolve/scripts/resolve-cli.ts` | create/edit | Resolve CLI entrypoint wrapping the walker and documenting interactive AskUserQuestion execution boundaries ([FR-18](FR.md#fr-18)) |
+| `.claude/skills/cross-spec-resolve/scripts/update-status.ts` | create/edit | Resolution-status updater preserving acknowledged/override fields while stamping per-finding `resolution_status` transitions ([FR-18](FR.md#fr-18)) |
+| `.claude/skills/cross-spec-resolve/scripts/recheck.ts` | create/edit | Post-batch re-reconcile status recheck that marks findings resolved/still-open from fresh report output ([FR-18](FR.md#fr-18)) |
+| `.claude/skills/cross-spec-resolve/scripts/__tests__/walker.test.ts` | create/edit | Unit coverage for resolver grouping, explanation format, prompt header, choice exit code, and resolution planning ([FR-18](FR.md#fr-18)) |
 | `.claude/skills/cross-spec-resolve/references/fix-templates.md` | create | Per-finding-code fix recipe templates including Path A/B/C for architectural decisions ([FR-18](FR.md#fr-18)) |
 | `.claude/skills/cross-spec-resolve/references/explain-before-edit.md` | create | 5-field explanation block pattern documentation ([FR-18](FR.md#fr-18)) |
 | `.claude/skills/create-spec/SKILL.md` | edit | Add Phase 2 step 4d + Phase 3 step 1c reconcile invocations + Audit category dispatch ([FR-17](FR.md#fr-17)) |
@@ -135,14 +137,15 @@
 | `.claude/skills/create-spec/references/phase3plus_audit-overview.md` | edit | Add 9th row CROSS_SPEC_CONSISTENCY to audit category table ([FR-17](FR.md#fr-17)) |
 | `.claude/skills/create-spec/references/phase3plus_audit-cross-spec.md` | create | 9th audit category reference with Checks / Remediation / Severity / Resolution codes sections ([FR-17](FR.md#fr-17)) |
 | `.claude-plugin/plugin.json` | edit | `cross-spec-reconcile` + `cross-spec-resolve` distributed через canonical `"skills": ".claude/skills"` dir override ([FR-17](FR.md#fr-17), [FR-18](FR.md#fr-18)) |
-| `tests/fixtures/cross-spec-corpus/spec-a/FR.md` | create | Fixture spec A declaring session_token + src/auth/jwt.ts baseline ([FR-17](FR.md#fr-17)) |
-| `tests/fixtures/cross-spec-corpus/spec-a/DESIGN.md` | create | Fixture spec A declaring latency budget <100ms on /api/auth ([FR-17](FR.md#fr-17)) |
-| `tests/fixtures/cross-spec-corpus/spec-b/FR.md` | create | Fixture spec B declaring sessionToken + same path triggering runtime-identifier-drift + module-ownership-conflict ([FR-17](FR.md#fr-17)) |
-| `tests/fixtures/cross-spec-corpus/spec-b/DESIGN.md` | create | Fixture spec B declaring latency <50ms conflicting with spec-a ([FR-17](FR.md#fr-17)) |
-| `tests/fixtures/cross-spec-corpus/spec-c/FR.md` | create | Fixture spec C declaring MCP tool validate_user with no implementation file ([FR-17](FR.md#fr-17)) |
-| `tests/fixtures/cross-spec-corpus/README.md` | create | Document intentional conflicts + expected finding codes per scenario ([FR-17](FR.md#fr-17)) |
-| `tests/e2e/cross-spec-reconcile.test.ts` | create | E2E roundtrip 5 scenarios using spawnSync per integration-tests-first ([FR-17](FR.md#fr-17), [FR-18](FR.md#fr-18)) |
+| `tests/step_definitions/phase7-cross-spec.ts` | create/edit | Executable BDD step definitions for SPECGEN004_38..48 and later Phase 7 regressions; imports the shipped reconcile/yaml/sarif/resolve modules instead of external fixture folders ([FR-17](FR.md#fr-17), [FR-18](FR.md#fr-18)) |
+| `.dev-pomogator/.tmp/check-cross-spec-reference-docs.mjs` | create-on-demand | Focused proof script for shipped cross-spec reference docs and skill contracts (`CROSS_SPEC_REFERENCE_DOCS_PROOF PASS`, `finding_codes=36`, `checked=7_done_when_bullets`) ([FR-17](FR.md#fr-17), [FR-18](FR.md#fr-18)) |
+| `.dev-pomogator/.tmp/check-cross-spec-mechanical-checks.mjs` | create-on-demand | Focused proof script for shipped mechanical engine/test-code parity (`CROSS_SPEC_MECHANICAL_CHECKS_PROOF PASS`, `engine_codes=29`, `test_pinned_codes=29`) ([FR-17](FR.md#fr-17)) |
+| Removed planned cross-spec fixture/e2e paths | removed-from-plan | The planned cross-spec fixture corpus and e2e test file were not shipped; coverage is carried by `tests/step_definitions/phase7-cross-spec.ts`, `scripts/__tests__/reconcile.test.ts`, and the focused proof scripts above ([FR-17](FR.md#fr-17), [FR-18](FR.md#fr-18)) |
 | `.claude/logs/cross-spec-overrides.jsonl` | create-on-write | JSONL audit log of acknowledged CRITICAL overrides ([FR-17](FR.md#fr-17)) |
+
+
+
+
 
 ## Spec / docs (cross-phase)
 
@@ -210,6 +213,54 @@ This block enumerates the spec-doc edits applied as part of the v3→v4 transiti
 | `tests/step_definitions/feature43_legacy_triage.ts` | create | SPECGEN004_156 binds the real computeLegacyTriage ([FR-43](FR.md#fr-43)) |
 | `tools/spec-graph/builder.ts` | edit | P18-2: skipDirs += `archive` so `.specs/archive/` retired specs leave the live graph ([FR-43](FR.md#fr-43)) |
 
+## Phase 28 — FR-52 session dogfood hardening (2026-07-09)
+
+| Path | Action | Reason |
+|------|--------|--------|
+| `tools/anchor-integrity/fix.mjs` | edit | P28-2 / FR-52b: add `--door`/enforce mode that applies deterministic anchor rewrites through `scripts/spec-door.ts` + `apply_spec_change`, with temp instruction files outside `.specs/` ([FR-52](FR.md#fr-52)) |
+| `tools/anchor-integrity/anchor_gate_stop.ts` | edit | P28-2 / FR-52b: Stop-gate fix hint now prescribes `--apply --door` and names the enforce-safe path ([FR-52](FR.md#fr-52)) |
+| `tools/anchor-integrity/anchor_check_post.ts` | edit | P28-2 / FR-52b: PostToolUse reminder now prescribes the same door-safe anchor-fix command ([FR-52](FR.md#fr-52)) |
+| `tools/anchor-integrity/__tests__/fix.test.ts` | edit | P28-2 / FR-52b unit regression proves door instructions stay outside `.specs/` and carry rewritten content to the door ([FR-52](FR.md#fr-52)) |
+| `tools/anchor-integrity/__tests__/hooks.test.ts` | edit | P28-2 / FR-52b hook regression asserts enforce-safe `--door` guidance in reminders ([FR-52](FR.md#fr-52)) |
+| `tools/spec-mcp-server/tools.ts` | edit | P28-3 / FR-52c: clarify `validate_anchor` domains and add `DOC.md#heading-slug` Marksman-slug validation via shared `marksman-slug.mjs` ([FR-52](FR.md#fr-52)) |
+| `tools/spec-mcp-server/__tests__/tools.test.ts` | edit | Unit regression: compact-id alias still resolves; `FR.md#fr-34-marksman-v20-anchors` resolves with Marksman punctuation rules ([FR-52](FR.md#fr-52)) |
+| `tests/step_definitions/feature52_dogfood_hardening.ts` | edit | BDD regressions for SPECGEN004_514 (`validate_anchor`), SPECGEN004_515 (anchor-fix via door), and SPECGEN004_517 (guarded v1-layout FILE_CHANGES drift) on real code paths ([FR-52](FR.md#fr-52)) |
+| `.specs/spec-generator-v4/spec-generator-v4.feature` | edit | Add @feature52 scenarios SPECGEN004_514, SPECGEN004_515, and SPECGEN004_517 for compact-vs-heading anchors, enforce-safe anchor-fix, and guarded v1-layout FILE_CHANGES drift ([FR-52](FR.md#fr-52)) |
+| `tools/spec-mcp-server/server.bundle.mjs` | edit | Rebuilt distributed MCP bundle so plugin users receive FR-52c behavior ([FR-52](FR.md#fr-52)) |
+| `.claude/skills/spec-reality-check/scripts/verify.ts` | edit | P28-4 / FR-52d: classify missing `edit` rows under removed v1 prefixes as `FC_V1_LAYOUT_DRIFT` only for canonical plugin repos where that prefix directory is gone, preserving generic `FC_EDIT_MISSING` elsewhere ([FR-52](FR.md#fr-52)) |
+| `.claude/skills/spec-reality-check/evals/evals.json` | edit | P28-4 / FR-52d eval pins the positive canonical-plugin v1-layout drift case and forbids generic `FC_EDIT_MISSING` in that branch ([FR-52](FR.md#fr-52)) |
+| `.claude/skills/spec-reality-check/references/checks.md` | edit | Documents `FC_V1_LAYOUT_DRIFT` trigger, guard conditions, and remap guidance ([FR-52](FR.md#fr-52)) |
+| `tests/fixtures/spec-reality-check/v2/fc-v1-layout-drift/` | create | Fixture with missing `src/` edit row used by spec-reality-check evals for the guarded v1-layout drift detector ([FR-52](FR.md#fr-52)) |
+| `.dockerignore` | edit | Exclude `.dev-pomogator/.tmp` runtime scratch from Docker build context so focused Docker BDD builds do not stream stale temp worktrees/logs into the image; verified during SPECGEN004_517 rerun ([FR-52](FR.md#fr-52)) |
+| `scripts/docker-bdd.sh` | edit | Make the writable `.specs` copy per-run and copy `.specs/.` contents into it so stale `.dev-pomogator/.tmp/specs-docker-rw` directories cannot nest the mounted corpus and make filtered BDD runs select 0 scenarios ([FR-52](FR.md#fr-52)) |
+| `.claude/skills/cross-spec-reconcile/scripts/full-mode.ts` | edit | P28-WS-F / FR-17: raise semantic dispatcher timeout to 120s and surface `SUBPROCESS_FAILED` as mechanical-only partial report with `cross-spec/semantic-check-failed` warning ([FR-17](FR.md#fr-17)) |
+| `.claude/skills/cross-spec-reconcile/scripts/reconcile.ts` | edit | P28-WS-F / FR-17: extend report typing for `mode: full`, `partial`, `partialReasons`, and semantic finding class ([FR-17](FR.md#fr-17)) |
+| `.claude/skills/cross-spec-reconcile/scripts/yaml-writer.ts` | edit | P28-WS-F / FR-17: emit `partial: true` and `partial_reasons[]` for degraded full-mode reports ([FR-17](FR.md#fr-17)) |
+| `tests/step_definitions/feature17_full_mode.ts` | edit | P28-WS-F / FR-17: BDD regression SPECGEN004_516 drives real runFullMode + emitYaml partial fallback path ([FR-17](FR.md#fr-17)) |
+| `scripts/wire-feature.mjs` | edit | P28-7 / FR-51d: validate same-spec `@featureN` tags, promote immediate `# @featureN`/control tag comments to real Gherkin tag lines, and write the feature plus `cucumber.json` under the existing lock ([FR-51](FR.md#fr-51)) |
+| `tools/bdd-migrator/__tests__/migrate.test.ts` | edit | P28-7 / FR-51d unit regression for promotion, idempotence, wrong-feature-number refusal, graph `tested-by` edge creation, and full `wireFeature` temp-corpus writes ([FR-51](FR.md#fr-51)) |
+| `tests/step_definitions/feature51_bdd_migrator.ts` | edit | P28-7 / FR-51d BDD steps drive the real wire-feature promotion helper and graph parser on a temp feature fixture ([FR-51](FR.md#fr-51)) |
+| `.specs/spec-generator-v4/spec-generator-v4.feature` | edit | Add @feature51 scenario SPECGEN004_518 for wire-time comment-tag promotion ([FR-51](FR.md#fr-51)) |
+| `tools/spec-graph/conformance.ts` | edit | P28-8 / FR-52g: relax `TASK_NO_OWN_SCENARIO` for migrated many→few task↔scenario consolidation when at least one mapped covering scenario passed; leave `TASK_STATUS_UNVERIFIED` to surface non-green siblings ([FR-52](FR.md#fr-52)) |
+| `tools/spec-graph/__tests__/conformance.test.ts` | edit | Regression pins accepted many→few consolidation with a green scenario plus not-run sibling, and still flags all-non-green consolidation ([FR-52](FR.md#fr-52)) |
+| `tests/step_definitions/feature46_task_traceability.ts` | edit | BDD steps for SPECGEN004_519 drive real `checkConformance` over the many→few graph and assert the narrow relaxation ([FR-52](FR.md#fr-52)) |
+| `.specs/spec-generator-v4/FR.md` | edit | FR-46/FR-52g document the chosen cardinality policy: consolidated green proof can satisfy the no-own-scenario rule for migrations ([FR-52](FR.md#fr-52)) |
+| `.specs/spec-generator-v4/ACCEPTANCE_CRITERIA.md` | edit | AC-46.1 / AC-52.1 capture that green many→few covering proof suppresses `TASK_NO_OWN_SCENARIO` while non-green siblings remain surfaced ([FR-52](FR.md#fr-52)) |
+| `.specs/spec-generator-v4/spec-generator-v4.feature` | edit | Add @feature52 scenario SPECGEN004_519 for the many→few `TASK_NO_OWN_SCENARIO` cardinality policy ([FR-52](FR.md#fr-52)) |
+| `tools/spec-mcp-server/server.bundle.mjs` | edit | Rebuilt distributed MCP bundle after conformance policy change so plugin users receive P28-8 behavior ([FR-52](FR.md#fr-52)) |
+
+## Phase 29 — FR-56 scenario-result overlay freshness
+
+| Path | Action | Reason |
+|------|--------|--------|
+| `scripts/bdd-overlay.mjs` | create | P29-1 / FR-56b,d: parse Cucumber message NDJSON and append one atomic `.scenario-results.ndjson` row per executed scenario with `{scenario_id,result,time,run_id,source,trace_id}` ([FR-56](FR.md#fr-56)) |
+| `scripts/run-bdd.mjs` | edit | P29-1 / FR-56b,d: after archiving full/filtered/explicit-config runs, write the per-scenario overlay while keeping canonical `.last-test-run.ndjson` clobber-safe ([FR-56](FR.md#fr-56)) |
+| `scripts/docker-bdd.sh` | edit | P29-1 / FR-56b,d: archive Docker full/filtered/`-c` outputs from the actual message target and write host-side overlay rows for every sanctioned Docker BDD path ([FR-56](FR.md#fr-56)) |
+| `tools/spec-graph/__tests__/ndjson-ingester.test.ts` | edit | Focused unit coverage for overlay row extraction and append-only behavior on real Cucumber message envelopes ([FR-56](FR.md#fr-56)) |
+| `tests/step_definitions/feature23_28_log_inventory_throttle.ts` | edit | Add @feature56 BDD steps that drive the real overlay parser/writer and assert append-only rows retain trace identity ([FR-56](FR.md#fr-56)) |
+| `.specs/spec-generator-v4/spec-generator-v4.feature` | edit | Add @feature56 scenario SPECGEN004_529 for P29-1 overlay writer behavior ([FR-56](FR.md#fr-56)) |
+| `.specs/spec-generator-v4/FILE_CHANGES.md` | edit | Track Phase 29 implementation file changes for FR-56 ([FR-56](FR.md#fr-56)) |
+
 ## Phase 30 — FR-57 scaffold-completeness audit (stub-detection gate, 2026-07-01)
 
 | Path | Action | Reason |
@@ -218,6 +269,57 @@ This block enumerates the spec-doc edits applied as part of the v3→v4 transiti
 | `tools/specs-generator/specs-generator-core.mjs` | edit | Новая audit-категория `SCAFFOLD_INCOMPLETE` (phase-gated ERROR/INFO) через классификатор; `validate-spec` PLACEHOLDER и FIXTURES_CONSISTENCY-плейсхолдер-ветка сведены на тот же классификатор ([FR-57](FR.md#fr-57)) |
 | `tools/spec-graph/__tests__/scaffold-sentinels.test.ts` | create | Юнит: сентинел-матч + вырез кода + строчные токены + дрейф-регресс (сентинелы ⊇ шаблонных) + исключения templates/__fixtures__/backlog ([FR-57](FR.md#fr-57)) |
 | `tests/step_definitions/feature57_scaffold_completeness.ts` | create | Биндит SPECGEN004_470..477 на реальный классификатор + audit-spec + spec-verdict (real-engine, без моков) ([FR-57](FR.md#fr-57)) |
+
+## Phase 31 — FR-59 bounded conformance-push reminder (2026-07-09)
+
+| Path | Action | Reason |
+|------|--------|--------|
+| `tools/spec-conformance-push/spec-conformance-push.ts` | edit | Cap Claude-facing `<system-reminder>` output at 6000 bytes with count/severity/sample/omitted summary while preserving full `appendFindings(...)` logging ([FR-59](FR.md#fr-59)) |
+| `tools/spec-conformance-push/__tests__/spec-conformance-push.test.ts` | edit | Focused vitest regression for large finding batches, byte cap, omitted count, and durable log completeness ([FR-59](FR.md#fr-59)) |
+| `tests/step_definitions/feature23_28_log_inventory_throttle.ts` | edit | Add @feature59 BDD steps that drive real `decidePush` and `appendFindings` for bounded reminder + complete log proof ([FR-59](FR.md#fr-59)) |
+| `tools/spec-conformance-push/spec-conformance-push.bundle.mjs` | edit | Rebuilt distributed hook artifact so plugin users receive bounded stdout behavior ([FR-59](FR.md#fr-59)) |
+
+## Phase 32 — FR-49a scope-aware next-step router hardening
+
+| Path | Action | Reason |
+|------|--------|--------|
+| `tools/specs-validator/validate-specs.ts` | edit | Resolve task-census data root from hook payload `cwd` / `workspace_roots[0]`, not plugin/process root, preventing cross-project `WS-F` leakage ([FR-49](FR.md#fr-49)) |
+| `tools/specs-validator/conformance-summary.ts` | edit | Replace global/busiest-spec next-step rendering with scope-aware next router input/output while preserving health-count summary ([FR-49](FR.md#fr-49)) |
+| `tools/spec-graph/task-census.ts` | edit | Expose/reuse transcript-derived agent todo/current-spec helpers for the shared next-step router and tests ([FR-49](FR.md#fr-49)) |
+| `tools/claim-evidence-gate/claim_evidence_gate_stop.ts` | edit | Use the same router for Stop-gate `nextLine`/`nextOpenTask` so agent todos/async/current spec outrank unrelated spec backlog ([FR-49](FR.md#fr-49)) |
+| `tools/claim-evidence-gate/turn_window.ts` | edit | Ensure background Bash/Agent/subagent in-flight facts are available to router decisions without relying on agent prose ([FR-49](FR.md#fr-49)) |
+| `tools/specs-validator/__tests__/conformance-summary.test.ts` | edit | Unit regressions for agent todo priority, current-spec-only next, no foreign next when scope unknown, and hook cwd root isolation ([FR-49](FR.md#fr-49)) |
+| `tests/step_definitions/feature49_autosurface.ts` | edit | Update SPECGEN004_178 and add @feature49 BDD steps for scope-aware next routing and cross-project leak prevention ([FR-49](FR.md#fr-49)) |
+| `.specs/spec-generator-v4/spec-generator-v4.feature` | edit | Update @feature49 scenarios to pin agent-todo/async/current-spec/root-isolation routing instead of busiest-spec routing ([FR-49](FR.md#fr-49)) |
+| `tools/claim-evidence-gate/claim_evidence_gate_stop.bundle.mjs` | edit | Rebuilt distributed Stop-gate artifact so plugin users receive scope-aware next routing ([FR-49](FR.md#fr-49)) |
+
+## Phase 32b — FR-49h transcript todo replay reconciliation
+
+| Path | Action | Reason |
+|------|--------|--------|
+| `tools/spec-graph/task-census.ts` | edit | Reconcile transcript-derived `TaskCreate` / `TaskUpdate` agent todos by real task id instead of positional array index, collapse duplicate stale subjects, and demote ambiguous clusters ([FR-49](FR.md#fr-49)) |
+| `tools/claim-evidence-gate/claim_evidence_gate_stop.ts` | edit | Include selected next-step source, real task id, transcript location/range, selected subject, and reconciliation reason in Pinator fire logs ([FR-49](FR.md#fr-49)) |
+| `tests/step_definitions/feature49_autosurface.ts` | edit | BDD/API coverage for the captured CARL stale-agent-todo replay shape and enriched Stop-gate fire logging ([FR-49](FR.md#fr-49)) |
+| `tools/claim-evidence-gate/claim_evidence_gate_stop.bundle.mjs` | edit | Rebuilt distributed Stop-gate artifact so plugin users receive transcript todo replay reconciliation and diagnostics ([FR-49](FR.md#fr-49)) |
+| `.specs/spec-generator-v4/FR.md` | edit | Add FR-49h amendment documenting the proven Pinator stale `agentOpenTodo` root cause and canonical replay behavior ([FR-49](FR.md#fr-49)) |
+| `.specs/spec-generator-v4/ACCEPTANCE_CRITERIA.md` | edit | Add AC-49.4 for real-id replay, duplicate suppression, ambiguity demotion, and captured CARL incident regression ([FR-49](FR.md#fr-49)) |
+| `.specs/spec-generator-v4/TASKS.md` | edit | Add Phase 32b backlog tasks P32-5..P32-7 for implementation, dedupe, captured regression, logging, bundle rebuild, and proof ([FR-49](FR.md#fr-49)) |
+| `.specs/spec-generator-v4/spec-generator-v4.feature` | edit | Add executable @feature49 BDD regressions SPECGEN004_526..528 and SPECGEN004_533 for transcript replay, duplicate demotion, fire-log diagnostics, and umbrella routing behavior ([FR-49](FR.md#fr-49)) |
+
+## Phase 33 — FR-60 high-level MCP authoring API
+
+| Path | Action | Reason |
+|------|--------|--------|
+| `tools/spec-mcp-server/mutations.ts` | edit | Add high-level section/anchor mutation primitives, EOL-normalized replacement diagnostics, proposal storage, transaction validation, and non-conflicting CAS auto-rebase on top of the existing validation-before-write pipeline ([FR-60](FR.md#fr-60)) |
+| `tools/spec-mcp-server/tools.ts` | edit | Expose MCP schemas/handlers for `read_for_edit`, anchor/section insert operations, `propose_patch`, `apply_proposed_patch`, `apply_spec_transaction`, and domain authoring helpers ([FR-60](FR.md#fr-60)) |
+| `tools/spec-mcp-server/__tests__/mutations-high-level-authoring.test.ts` | create | Regression coverage for section insert, EOL-normalized replace, diagnostic miss categories, multi-doc rollback, proposal apply, and CAS auto-rebase/refusal ([FR-60](FR.md#fr-60)) |
+| `tests/step_definitions/feature60_high_level_authoring.ts` | create | BDD step definitions for SPECGEN004_520..525 once the high-level authoring API is implemented; must drive the real MCP mutation layer, not mocks ([FR-60](FR.md#fr-60)) |
+| `tools/spec-mcp-server/server.bundle.mjs` | edit | Rebuild distributed MCP bundle so plugin users receive the high-level authoring API ([FR-60](FR.md#fr-60)) |
+| `.specs/spec-generator-v4/FR.md` | edit | Add FR-60 high-level MCP authoring API requirement from live dogfood pain ([FR-60](FR.md#fr-60)) |
+| `.specs/spec-generator-v4/ACCEPTANCE_CRITERIA.md` | edit | Add AC-60.1..AC-60.4 for anchor ops, diagnostics, transactions/CAS, and domain helper safety ([FR-60](FR.md#fr-60)) |
+| `.specs/spec-generator-v4/TASKS.md` | edit | Add Phase 33 implementation backlog P33-1..P33-5 ([FR-60](FR.md#fr-60)) |
+| `.specs/spec-generator-v4/spec-generator-v4.feature` | edit | Add @feature60 @wip acceptance scenarios SPECGEN004_520..525 as pending executable pins ([FR-60](FR.md#fr-60)) |
+| `.specs/spec-generator-v4/FILE_CHANGES.md` | edit | Track Phase 33 planned implementation and spec-document changes ([FR-60](FR.md#fr-60)) |
 
 ## Total counts
 
@@ -229,10 +331,14 @@ This block enumerates the spec-doc edits applied as part of the v3→v4 transiti
 | Phase 3 | 5 (4 create + 1 edit; bridge + drift-check консолидированы в `spec-llm-judge/index.ts`) |
 | Phase 4 | 6 (4 create + 2 edit; sqlite schema/migrations/recovery консолидированы в `sqlite/wrapper.ts`) |
 | Phase 5 | 6 (all create) |
-| Phase 6 | 17 (12 create + 5 edit) |
+| Phase 6 | 18 (12 create + 6 edit) |
 | Phase 7 | 32 (27 create + 5 edit) |
 | Cross-phase docs | 4 (all edit; `dist/installer/extensions.js` удалён — v2 без installer) |
 | Round 3 patch (v3→v4 transition) | 12 (all edit; 9 v4-spec files + 3 SKILL.md frontmatter) |
 | Phase 18 (FR-43 legacy-triage) | 7 (6 create + 1 edit; classifier + LLM judge + dogfood + 2 unit + BDD step; legacy-v3 archived) |
 | Phase 30 (FR-57 scaffold-completeness) | 4 (3 create + 1 edit; classifier + engine edit + unit + BDD step) |
-| **Total** | **127 rows (~92 create + 35 edit; +4 Phase-30 FR-57 traced 2026-07-01)** |
+| Phase 31 (FR-59 bounded conformance push) | 4 (all edit) |
+| Phase 32 (FR-49a scope-aware next router) | 8 (all edit) |
+| Phase 32b (FR-49h transcript todo replay reconciliation) | 8 (all edit) |
+| Phase 33 (FR-60 high-level MCP authoring API) | 10 (2 create + 8 edit) |
+| **Total** | **158 rows (~94 create + 64 edit; Phase 31/32/32b/33 plus T6-45 BDD evidence traced through 2026-07-09)** |

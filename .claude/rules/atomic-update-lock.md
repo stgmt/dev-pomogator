@@ -1,23 +1,4 @@
 # Atomic Update Lock
-
-Lock должен устанавливаться атомарно, иначе возможны параллельные апдейты.
-
-## Правильно
-
-```typescript
-await fs.writeFile(lockFile, process.pid.toString(), { flag: 'wx' });
-// flag 'wx' гарантирует атомарность
-```
-
-## Неправильно
-
-```typescript
-if (await fs.pathExists(lockFile)) { ... }
-await fs.writeFile(lockFile, process.pid.toString());
-```
-
-## Чеклист
-
-- [ ] Lock создаётся атомарно (`wx` / O_EXCL)
-- [ ] Stale lock удаляется и затем повторно создаётся атомарно
-- [ ] В случае коллизии процесс завершает апдейт
+<!-- dev-pomogator-carl-context-diet:managed-stub v1 source=.claude/rules/atomic-update-lock.md library=.carl/rules/atomic-update-lock.md sha256=00b47afb4be57838c8788d656721a2521756bd88cdac97a00d6babd0875cec97 -->
+<!-- /dev-pomogator-carl-context-diet -->
+Lazy rule body: `.carl/rules/atomic-update-lock.md`

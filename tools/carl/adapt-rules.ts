@@ -3,6 +3,7 @@ import * as crypto from 'node:crypto';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { readRuleContentForAdaptation } from './context-diet.ts';
 
 interface SourceEntry {
   kind: 'rule' | 'skill' | 'index';
@@ -23,6 +24,7 @@ interface CarlManifest {
   runtime?: unknown;
   platforms?: unknown;
   managed?: unknown;
+  contextDiet?: unknown;
   languages: string[];
   sourceHashes: Record<string, string>;
   domains: Array<{
@@ -180,26 +182,50 @@ function extractQuotedRussian(content: string): string[] {
   return [...aliases];
 }
 
+function stripFencedCode(content: string): string {
+  return content.replace(/```[\s\S]*?```/gu, '\n');
+}
+
+function isTemplateOrCodeLine(cleaned: string): boolean {
+  return cleaned.includes('**files:**')
+    || cleaned.includes('**deps:**')
+    || cleaned.includes('**refs:**')
+    || cleaned.includes('**changes:**')
+    || cleaned.startsWith('|')
+    || cleaned.includes('→')
+    || /[`{}()[\]<>]/u.test(cleaned)
+    || /^[-–—]\s*(это|взять|существование)\b/u.test(cleaned)
+    || /^\/\//u.test(cleaned);
+}
+
+function isSafeQuotedAlias(alias: string): boolean {
+  if (alias.length > 48) return false;
+  if (isTemplateOrCodeLine(alias)) return false;
+  return /^(че за ошибка|исследуй|до конца|спеки|правила|скилы|[\p{L}\p{N}_ -]{3,48})$/u.test(alias);
+}
+
 function extractRussianPhrases(content: string): string[] {
   const aliases = new Set<string>();
-  for (const quoted of extractQuotedRussian(content)) aliases.add(quoted);
+  const searchable = stripFencedCode(content);
+  for (const quoted of extractQuotedRussian(searchable)) {
+    if (isSafeQuotedAlias(quoted)) aliases.add(quoted);
+  }
 
-  const lines = content.split(/\r?\n/u);
+  const lines = searchable.split(/\r?\n/u);
   for (const line of lines) {
     if (!CYRILLIC_RE.test(line)) continue;
     const cleaned = normalizeAlias(line.replace(/^[#>*\-\s]+/u, ''));
-    if (!cleaned) continue;
+    if (!cleaned || isTemplateOrCodeLine(cleaned)) continue;
 
     for (const phrase of DEFAULT_RU_ALIASES) {
       if (cleaned.includes(phrase)) aliases.add(phrase);
     }
 
-    const words = [...cleaned.matchAll(WORD_RE)].map(m => m[0]).filter(w => CYRILLIC_RE.test(w));
-    for (const word of words) {
-      if (word.length >= 4 && word.length <= 32) aliases.add(word);
+    const triggerMatch = cleaned.match(/\b(?:trigger|триггер):\s*(.+)$/iu);
+    if (triggerMatch) {
+      const triggerAlias = normalizeAlias(triggerMatch[1] ?? '');
+      if (triggerAlias && isSafeQuotedAlias(triggerAlias)) aliases.add(triggerAlias);
     }
-
-    if (cleaned.length >= 4 && cleaned.length <= 64) aliases.add(cleaned);
   }
 
   return [...aliases].sort((a, b) => a.localeCompare(b, 'ru'));
@@ -218,7 +244,9 @@ function classifyTags(entry: { kind: SourceEntry['kind']; rel: string; title: st
 
 function buildEntries(projectRoot: string): SourceEntry[] {
   return collectSourceFiles(projectRoot).map(source => {
-    const content = fs.readFileSync(source.abs, 'utf-8');
+    const content = source.kind === 'rule'
+      ? readRuleContentForAdaptation(projectRoot, source.abs, source.rel)
+      : fs.readFileSync(source.abs, 'utf-8');
     const title = extractTitle(content, source.rel);
     const aliases = extractRussianPhrases(`${title}\n${content}`);
     const status: SourceEntry['status'] = aliases.length > 0 ? 'ready' : 'ru:needs-alias';
@@ -244,6 +272,7 @@ function mergeWithExisting(manifestPath: string, next: CarlManifest): CarlManife
     const runtime = existing.runtime;
     const platforms = existing.platforms;
     const managed = existing.managed;
+    const contextDiet = existing.contextDiet;
     const existingLanguages = Array.isArray(existing.languages)
       ? existing.languages.filter((item): item is string => typeof item === 'string')
       : [];
@@ -255,6 +284,7 @@ function mergeWithExisting(manifestPath: string, next: CarlManifest): CarlManife
       ...(runtime !== undefined ? { runtime } : {}),
       ...(platforms !== undefined ? { platforms } : {}),
       ...(managed !== undefined ? { managed } : {}),
+      ...(contextDiet !== undefined ? { contextDiet } : {}),
       ...(user !== undefined ? { user } : {}),
       ...(userConfig !== undefined ? { userConfig } : {}),
       languages,

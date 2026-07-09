@@ -11,6 +11,7 @@ coverage
 run-tests-workspace
 .dev-pomogator/.test-status
 .dev-pomogator/.bg-task-active*
+.dev-pomogator/.tmp
 # Runtime task-census cache: keep the dev's live session census out of the test
 # image. Otherwise COPY . . bakes it in, the UserPromptSubmit hook (validate-specs)
 # emits the FR-49a "📋 Spec tasks" banner, and specs-validator's silent-output

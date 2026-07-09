@@ -64,7 +64,7 @@ Feature: CANON001 Canonical Claude Code Marketplace Plugin
   # @feature3 — Distribution via /plugin marketplace add (FR-3)
   # =========================================================================
 
-  @feature3 @manual
+  @feature3
   Scenario: CANON001_30 /plugin marketplace add registers marketplace
     Given fresh Claude Code session без существующих marketplaces
     When user runs "/plugin marketplace add stgmt/dev-pomogator"
@@ -77,7 +77,7 @@ Feature: CANON001 Canonical Claude Code Marketplace Plugin
   # @feature4 — Install via /plugin install (FR-4)
   # =========================================================================
 
-  @feature4 @manual
+  @feature4
   Scenario: CANON001_40 /plugin install copies plugin to cache
     Given marketplace "stgmt" added в Claude Code session
     When user runs "/plugin install dev-pomogator@stgmt"
@@ -117,7 +117,7 @@ Feature: CANON001 Canonical Claude Code Marketplace Plugin
   # @feature6 — Activation via /reload-plugins (FR-6)
   # =========================================================================
 
-  @feature6 @manual
+  @feature6
   Scenario: CANON001_60 /reload-plugins activates plugin in current CLI session
     Given plugin installed via "/plugin install dev-pomogator@stgmt"
     And current CLI session does NOT yet see plugin skills

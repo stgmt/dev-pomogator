@@ -6,7 +6,7 @@
 **Linked AC:** [AC-1](ACCEPTANCE_CRITERIA.md#ac-1-fr-1)
 **Use Cases:** [UC-1](USE_CASES.md#uc-1-название), [UC-5](USE_CASES.md#uc-5-название)
 
-### FR-1: Название
+### Legacy scaffold anchor alias for FR-1: Название
 
 > Legacy scaffold anchor alias retained so existing scaffold links remain clickable; the authoritative requirement title is the `## FR-1` heading above.
 
@@ -32,7 +32,7 @@ The installer SHALL write only dev-pomogator-managed artifacts or managed blocks
 **Linked AC:** [AC-2](ACCEPTANCE_CRITERIA.md#ac-2-fr-2)
 **Use Cases:** [UC-1](USE_CASES.md#uc-1-название), [UC-5](USE_CASES.md#uc-5-название)
 
-### FR-2: Название
+### Legacy scaffold anchor alias for FR-2: Название
 
 > Legacy scaffold anchor alias retained so existing scaffold links remain clickable; the authoritative requirement title is the `## FR-2` heading above.
 
@@ -48,7 +48,7 @@ The degraded state SHALL name the missing condition and SHALL preserve the main 
 **Linked AC:** [AC-3](ACCEPTANCE_CRITERIA.md#ac-3-fr-3)
 **Use Cases:** [UC-1](USE_CASES.md#uc-1-название), [UC-3](USE_CASES.md#uc-3-название), [UC-6](USE_CASES.md#uc-6-later-review-checks-install-repair-warning-and-sequencing)
 
-### FR-3: Название
+### Legacy scaffold anchor alias for FR-3: Название
 
 > Legacy scaffold anchor alias retained so existing scaffold links remain clickable; the authoritative requirement title is the `## FR-3` heading above.
 
@@ -64,7 +64,7 @@ The BDD proof SHALL use real CARL output or a fixture captured from the real CAR
 **Linked AC:** [AC-4](ACCEPTANCE_CRITERIA.md#ac-4-fr-4)
 **Use Case:** [UC-3](USE_CASES.md#uc-3-название)
 
-### FR-4: Название
+### Legacy scaffold anchor alias for FR-4: Название
 
 > Legacy scaffold anchor alias retained so existing scaffold links remain clickable; the authoritative requirement title is the `## FR-4` heading above.
 
@@ -80,7 +80,7 @@ On that fail-open path, the hook SHALL inject a concise warning into agent-visib
 **Linked AC:** [AC-5](ACCEPTANCE_CRITERIA.md#ac-5-fr-5)
 **Use Cases:** [UC-2](USE_CASES.md#uc-2-название), [UC-6](USE_CASES.md#uc-6-later-review-checks-install-repair-warning-and-sequencing)
 
-### FR-5: Название
+### Legacy scaffold anchor alias for FR-5: Название
 
 > Legacy scaffold anchor alias retained so existing scaffold links remain clickable; the authoritative requirement title is the `## FR-5` heading above.
 

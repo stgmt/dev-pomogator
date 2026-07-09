@@ -16,6 +16,8 @@ import { Given, When, Then } from '@cucumber/cucumber';
 import assert from 'node:assert/strict';
 import { inventoryVitestSource, type VitestInventory } from '../../tools/bdd-migrator/inventory.ts';
 import { parseScenarios, type ScenarioInfo } from '../../tools/bdd-migrator/migrate.ts';
+import { parseGherkin } from '../../tools/spec-graph/parsers/gherkin.ts';
+import { prepareFeatureForWiring } from '../../scripts/wire-feature.mjs';
 import { V4World } from '../hooks/before-after.ts';
 import '../hooks/before-after.ts';
 
@@ -71,6 +73,9 @@ Then(
 
 interface ParseScenariosWorld extends V4World {
   _parsedScenarios?: ScenarioInfo[];
+  _wireFeatureText?: string;
+  _promotedFeatureText?: string;
+  _wireErrors?: string[];
 }
 
 // Inline feature fixture matching the original vitest test:
@@ -130,5 +135,69 @@ Then(
     const ids = this._parsedScenarios!.map((s) => s.id);
     assert.deepEqual(ids, ['SRC001_02', 'SRC001_05', 'SRC001_05b'], 'id extraction including letter suffix');
     assert.notEqual(ids[1], ids[2], 'SRC001_05b must not collapse into SRC001_05 (regression)');
+  },
+);
+
+// ─── SPECGEN004_518 — wire-feature comment-tag promotion ─────────────────────
+
+Given(
+  /^a feature text with a comment feature tag and a same-spec FR list$/,
+  function (this: ParseScenariosWorld) {
+    this._wireFeatureText = `Feature: X
+
+  # @feature51 @manual
+  Scenario: SPECGEN004_518 comment-tagged wire target
+    Given x
+`;
+    this._promotedFeatureText = undefined;
+    this._wireErrors = undefined;
+  },
+);
+
+When(
+  /^the wire-feature promotion helper prepares that feature for wiring$/,
+  function (this: ParseScenariosWorld) {
+    const prepared = prepareFeatureForWiring(this._wireFeatureText!, new Set(['51']));
+    this._promotedFeatureText = prepared.content;
+    this._wireErrors = prepared.errors;
+  },
+);
+
+Then(
+  /^the comment feature tag becomes a real Gherkin tag line with its control tag$/,
+  function (this: ParseScenariosWorld) {
+    assert.deepEqual(this._wireErrors, []);
+    assert.match(this._promotedFeatureText!, /\n  @feature51 @manual\n  Scenario: SPECGEN004_518 comment-tagged wire target/);
+    assert.doesNotMatch(this._promotedFeatureText!, /#\s*@feature51/);
+  },
+);
+
+Then(
+  /^the promoted feature parses to a tested-by edge for that FR$/,
+  function (this: ParseScenariosWorld) {
+    const slice = parseGherkin(this._promotedFeatureText!, '.specs/demo/demo.feature');
+    assert.deepEqual(slice.edges, [
+      {
+        from: 'demo:FR-51',
+        to: 'demo:SCEN-specgen004-518-comment-tagged-wire-target',
+        type: 'tested-by',
+      },
+    ]);
+  },
+);
+
+Then(
+  /^an unknown feature number is rejected before wiring$/,
+  function () {
+    const feature = `Feature: X
+
+  # @feature999
+  Scenario: SPECGEN004_518 wrong wire target
+    Given x
+`;
+    const prepared = prepareFeatureForWiring(feature, new Set(['51']));
+    assert.deepEqual(prepared.errors, ['line 3: @feature999 has no same-spec FR-999']);
+    assert.equal(prepared.changed, false);
+    assert.equal(prepared.content, feature);
   },
 );

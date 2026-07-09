@@ -169,12 +169,15 @@ function Start-ClaudeOnly {
     }
     Write-LaunchLog "launching claude-only (Yolo=$Yolo) dir=$Dir"
 
-    $launcherDir = Join-Path $env:TEMP 'dev-pomogator-launch'
+    $launcherRoot = if ($env:TEMP) { $env:TEMP } else { [System.IO.Path]::GetTempPath() }
+    $launcherDir = Join-Path $launcherRoot 'dev-pomogator-launch'
     if (-not (Test-Path $launcherDir)) { New-Item -ItemType Directory -Path $launcherDir -Force | Out-Null }
     $claudeOnlyLauncher = Join-Path $launcherDir 'claude-only-pane.cmd'
     $claudeCmd = if ($Yolo) { 'claude --dangerously-skip-permissions' } else { 'claude' }
+    $dirForEnv = $Dir -replace '\\', '/'
     @"
 @echo off
+set TEST_STATUSLINE_PROJECT=$dirForEnv
 $claudeCmd
 $(Get-ClaudeExitLogBatch -Dir $Dir)
 "@ | Set-Content -Path $claudeOnlyLauncher -Encoding ASCII
@@ -199,6 +202,7 @@ try {
         }
     }
     $ProjectDir = (Resolve-Path $ProjectDir).Path
+    $projectDirForEnv = $ProjectDir -replace '\\', '/'
     Write-LaunchLog "resolved ProjectDir: $ProjectDir"
 
     # -NoTui (FR-6): the raw "Claude Code (YOLO)" / "Claude Code" NSS entries route here instead
@@ -277,7 +281,8 @@ try {
     # Use cmd /c with a batch-style command string for env vars.
 
     # Create a temporary launcher .cmd for Claude pane (avoids quoting hell with wt.exe)
-    $launcherDir = Join-Path $env:TEMP 'dev-pomogator-launch'
+    $launcherRoot = if ($env:TEMP) { $env:TEMP } else { [System.IO.Path]::GetTempPath() }
+    $launcherDir = Join-Path $launcherRoot 'dev-pomogator-launch'
     if (-not (Test-Path $launcherDir)) { New-Item -ItemType Directory -Path $launcherDir -Force | Out-Null }
 
     if ($Yolo) {
@@ -288,7 +293,7 @@ try {
     @"
 @echo off
 set TEST_STATUSLINE_SESSION=$sessionPrefix
-set TEST_STATUSLINE_PROJECT=$ProjectDir
+set TEST_STATUSLINE_PROJECT=$projectDirForEnv
 $(if ($Yolo) { 'claude --dangerously-skip-permissions' } else { 'claude' })
 $(Get-ClaudeExitLogBatch -Dir $ProjectDir)
 "@ | Set-Content -Path $claudeLauncher -Encoding ASCII

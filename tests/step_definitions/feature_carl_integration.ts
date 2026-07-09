@@ -8,6 +8,7 @@
  */
 import { Given, When, Then } from '@cucumber/cucumber';
 import assert from 'node:assert/strict';
+import crypto from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -27,6 +28,15 @@ interface CommandResult {
   stdout: string;
   stderr: string;
   missing?: string;
+}
+
+interface ContextDietAcceptance {
+  pass?: unknown;
+  contextMode?: unknown;
+  sourceIsStub?: unknown;
+  libraryPreservesBody?: unknown;
+  reportIsExact?: unknown;
+  runtimeLoadsSnippet?: unknown;
 }
 
 interface CarlWorld extends V4World {
@@ -107,6 +117,14 @@ function readJson(filePath: string): unknown {
 
 function stringify(value: unknown): string {
   return JSON.stringify(value, null, 2);
+}
+
+function sha256(value: string): string {
+  return crypto.createHash('sha256').update(value).digest('hex');
+}
+
+function estimatedTokens(value: string): number {
+  return Math.ceil(value.length / 4);
 }
 
 function assertRunSucceeded(run: CommandResult | undefined, purpose: string): asserts run is CommandResult {
@@ -353,6 +371,54 @@ Then(/^sources without safe Russian aliases are marked as needing aliases instea
   assert.match(text, /ru:needs-alias|needsAlias|needs-alias/, 'unsafe/unresolved sources must be marked as needing aliases');
 });
 
+Then(/^CARL install moves auto-loaded rule bodies into lazy context storage$/, function (this: CarlWorld) {
+  assertRunSucceeded(this.carlLastRun, 'CARL installer with context diet');
+
+  const sourceRulePath = projectPath(this, '.claude', 'rules', 'ru-root-cause.md');
+  const libraryRulePath = projectPath(this, '.carl', 'rules', 'ru-root-cause.md');
+  const reportPath = projectPath(this, '.carl', 'context-diet.json');
+  assert.ok(fs.existsSync(sourceRulePath), 'auto-loaded rule path must still exist as a short stub');
+  assert.ok(fs.existsSync(libraryRulePath), 'full rule body must be moved into CARL lazy storage');
+  assert.ok(fs.existsSync(reportPath), 'context-diet report must be written for runtime evidence');
+
+  const sourceStub = fs.readFileSync(sourceRulePath, 'utf-8');
+  const libraryBody = fs.readFileSync(libraryRulePath, 'utf-8');
+  assert.match(sourceStub, /dev-pomogator-carl-context-diet:managed-stub/, 'auto-loaded rule must be replaced by a managed stub');
+  assert.match(sourceStub, /\.carl\/rules\/ru-root-cause\.md/, 'stub must point to the lazy library copy');
+  assert.match(sourceStub, new RegExp(`sha256=${sha256(libraryBody)}`), 'stub hash must match the lazy library body exactly');
+  assert.doesNotMatch(sourceStub, /сначала воспроизведи и найди корень/, 'full rule body must not remain in the auto-loaded stub');
+  assert.match(libraryBody, /сначала воспроизведи и найди корень/, 'lazy library copy must preserve the full original rule body');
+
+  const report = readJson(reportPath) as { mode?: string; status?: string; rulesTotal?: number; rulesManaged?: number; estimatedTokensBefore?: number; estimatedTokensAfter?: number; entries?: Array<{ sourcePath?: string; action?: string; sourceHash?: string; stubBytes?: number; libraryBytes?: number }> };
+  assert.equal(report.mode, 'lazy-managed', 'context-diet report must prove lazy mode was applied by the real installer');
+  assert.equal(report.status, 'applied', 'context-diet report must be fully applied for the fixture project');
+  assert.equal(report.rulesTotal, 1, 'fixture has exactly one auto-loaded rule, so every extra/missing rule is a regression');
+  assert.equal(report.rulesManaged, 1, 'the one fixture rule must be managed lazily');
+  assert.equal(report.estimatedTokensBefore, estimatedTokens(libraryBody), 'before-token estimate must be computed from the original full rule body');
+  assert.equal(report.estimatedTokensAfter, estimatedTokens(sourceStub), 'after-token estimate must be computed from the generated stub');
+  assert.equal(report.entries?.length, 1, 'context-diet report must contain one entry for the one fixture rule');
+  assert.equal(report.entries?.[0]?.sourcePath, '.claude/rules/ru-root-cause.md', 'context-diet report must name the original auto-loaded rule path');
+  assert.equal(report.entries?.[0]?.action, 'created-stub', 'first install must create a fresh managed stub from a full rule body');
+  assert.equal(report.entries?.[0]?.sourceHash, sha256(libraryBody), 'context-diet report hash must match the lazy library body');
+  assert.equal(report.entries?.[0]?.libraryBytes, libraryBody.length, 'context-diet report must record full body byte size');
+  assert.equal(report.entries?.[0]?.stubBytes, sourceStub.length, 'context-diet report must record generated stub byte size');
+
+  const manifest = readCarlManifest(this) as { contextDiet?: { mode?: string; status?: string; rulesManaged?: number; rulesTotal?: number; estimatedTokensBefore?: number; estimatedTokensAfter?: number } };
+  assert.equal(manifest.contextDiet?.mode, 'lazy-managed', 'manifest must record that rules are lazy-managed, not additive-only');
+  assert.equal(manifest.contextDiet?.status, 'applied', 'context diet must be fully applied for the fixture rule');
+  assert.equal(manifest.contextDiet?.rulesManaged, 1, 'manifest must record the exact managed rule count');
+  assert.equal(manifest.contextDiet?.rulesTotal, 1, 'manifest must record the exact auto-loaded rule count');
+  assert.equal(manifest.contextDiet?.estimatedTokensBefore, estimatedTokens(libraryBody), 'manifest before-token estimate must match the full rule body');
+  assert.equal(manifest.contextDiet?.estimatedTokensAfter, estimatedTokens(sourceStub), 'manifest after-token estimate must match the generated stub');
+
+  const hookRun = runRegisteredCarlHook(this);
+  assertRunSucceeded(hookRun, 'registered CARL hook after lazy context install');
+  const output = `${hookRun.stdout}\n${hookRun.stderr}`;
+  assert.match(output, /context=lazy-managed/, 'runtime status must report lazy-managed mode from the real context-diet report');
+  assert.match(output, /Loaded 1 lazy rule snippet|CARL loaded rule \.claude\/rules\/ru-root-cause\.md/, 'real CARL runner must inject a prompt-relevant snippet from lazy storage');
+  assert.match(output, /сначала воспроизведи и найди корень/, 'runtime snippet must come from the full lazy rule body, not from the stub');
+});
+
 Then(/^the next CARL prompt hook runs guidance instead of project-missing fallback$/, function (this: CarlWorld) {
   const hookRun = runRegisteredCarlHook(this);
   assertRunSucceeded(hookRun, 'CARL UserPromptSubmit after SessionStart');
@@ -367,16 +433,28 @@ Then(/^the mutation checks prove the BDD would fail without automatic Russian ad
   assert.ok(this.carlMutationReport, 'mutation report must be produced');
   assert.equal(this.carlMutationReport.ok, true, `mutation verifier must pass; report=${stringify(this.carlMutationReport)}`);
 
-  const realInstall = this.carlMutationReport.realInstall as { pass?: unknown; ruStatus?: unknown; aliases?: unknown; needsAliasSources?: unknown };
+  const realInstall = this.carlMutationReport.realInstall as { pass?: unknown; ruStatus?: unknown; aliases?: unknown; needsAliasSources?: unknown; contextDiet?: ContextDietAcceptance };
   assert.equal(realInstall.pass, true, 'real installer must satisfy Russian adaptation acceptance');
   assert.equal(realInstall.ruStatus, 'partial', 'real installer must produce honest partial Russian coverage');
   assert.ok(Array.isArray(realInstall.aliases) && realInstall.aliases.includes('че за ошибка'), 'real installer must include Russian aliases');
   assert.ok(Array.isArray(realInstall.needsAliasSources) && realInstall.needsAliasSources.includes('.claude/skills/plain/SKILL.md'), 'real installer must mark unresolved English-only source');
+  assert.equal(realInstall.contextDiet?.pass, true, 'real installer must satisfy lazy context acceptance');
+  assert.equal(realInstall.contextDiet?.contextMode, 'lazy-managed', 'real installer must record lazy-managed context mode');
+  assert.equal(realInstall.contextDiet?.sourceIsStub, true, 'real installer must replace the auto-loaded rule with a stub');
+  assert.equal(realInstall.contextDiet?.libraryPreservesBody, true, 'real installer must preserve the full rule in lazy storage');
+  assert.equal(realInstall.contextDiet?.reportIsExact, true, 'real installer must write exact context-diet report metrics');
+  assert.equal(realInstall.contextDiet?.runtimeLoadsSnippet, true, 'real CARL runner must load a prompt-relevant snippet from lazy storage');
 
   const missingAdaptation = this.carlMutationReport.missingAdaptation as { mutantKilled?: unknown; ruStatus?: unknown; aliases?: unknown };
   assert.equal(missingAdaptation.mutantKilled, true, 'missing-adaptation mutant must be killed');
   assert.notEqual(missingAdaptation.ruStatus, 'partial', 'mutant without adaptProject must not satisfy Russian-ready/partial manifest status');
   assert.deepEqual(missingAdaptation.aliases, [], 'mutant without adaptProject must not generate Russian aliases');
+
+  const missingContextDiet = this.carlMutationReport.missingContextDiet as { mutantKilled?: unknown; contextDiet?: ContextDietAcceptance };
+  assert.equal(missingContextDiet.mutantKilled, true, 'missing-context-diet mutant must be killed');
+  assert.equal(missingContextDiet.contextDiet?.pass, false, 'mutant without applyContextDiet must not satisfy lazy context acceptance');
+  assert.equal(missingContextDiet.contextDiet?.sourceIsStub, false, 'mutant without applyContextDiet must leave the rule body in the auto-loaded path');
+  assert.equal(missingContextDiet.contextDiet?.runtimeLoadsSnippet, false, 'mutant without lazy storage must not let the runner inject the full lazy snippet');
 });
 
 // ── CARL001_02 ───────────────────────────────────────────────────────────────

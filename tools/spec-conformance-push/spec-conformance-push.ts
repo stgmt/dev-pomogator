@@ -22,7 +22,7 @@
  *
  * @see ../spec-graph/builder.ts (cold-start)
  * @see ../spec-graph/conformance.ts
- * @see .specs/spec-generator-v4/FR.md FR-6, FR-28
+ * @see .specs/spec-generator-v4/FR.md FR-6, FR-28, FR-59
  */
 
 import fs from 'node:fs';
@@ -43,6 +43,9 @@ interface HookInput {
 
 const WINDOW_MS = 3_000;
 const STATE_PATH_REL = '.dev-pomogator/.push-throttle-state.json';
+const REMINDER_BUDGET_BYTES = 6_000;
+const MAX_REMINDER_SAMPLES = 20;
+const ELLIPSIS = '…';
 
 interface ThrottleState {
   window_start: number; // ms since epoch
@@ -110,23 +113,78 @@ function dedupe(findings: Finding[]): Finding[] {
   return out;
 }
 
-function formatReminder(findings: Finding[]): string {
-  const lines: string[] = [];
-  lines.push('<system-reminder>');
-  lines.push('Spec conformance findings (PostToolUse push, 3s window):');
+function byteLength(s: string): number {
+  return Buffer.byteLength(s, 'utf8');
+}
+
+function truncateUtf8(s: string, maxBytes: number): string {
+  if (byteLength(s) <= maxBytes) return s;
+  const ellipsisBytes = byteLength(ELLIPSIS);
+  if (maxBytes <= ellipsisBytes) return '';
+  let out = '';
+  let used = 0;
+  for (const ch of s) {
+    const chBytes = byteLength(ch);
+    if (used + chBytes + ellipsisBytes > maxBytes) break;
+    out += ch;
+    used += chBytes;
+  }
+  return `${out}${ELLIPSIS}`;
+}
+
+function severityCounts(findings: Finding[]): string {
   const bySev = new Map<string, number>();
   for (const f of findings) bySev.set(f.severity, (bySev.get(f.severity) ?? 0) + 1);
-  lines.push(
-    `  ${findings.length} finding(s): ` +
-      Array.from(bySev.entries()).map(([s, n]) => `${n} ${s}`).join(', '),
-  );
-  for (const f of findings) {
-    lines.push(
-      `  [${f.severity.toUpperCase()}] ${f.code} ${f.location.file}:${f.location.line} — ${f.message}`,
-    );
+  const ordered = ['error', 'warning', 'info']
+    .filter((s) => bySev.has(s))
+    .map((s) => `${bySev.get(s)} ${s}`);
+  for (const [severity, count] of bySev.entries()) {
+    if (!['error', 'warning', 'info'].includes(severity)) ordered.push(`${count} ${severity}`);
   }
-  lines.push('</system-reminder>');
-  return lines.join('\n');
+  return ordered.join(', ');
+}
+
+function sampleLine(f: Finding): string {
+  return `  [${f.severity.toUpperCase()}] ${f.code} ${f.location.file}:${f.location.line} — ${f.message}`;
+}
+
+function fitReminder(lines: string[], budgetBytes: number): string {
+  const closing = '</system-reminder>';
+  while (lines.length > 0 && byteLength([...lines, closing].join('\n')) > budgetBytes) {
+    const last = lines[lines.length - 1];
+    const withoutLast = [...lines.slice(0, -1), closing].join('\n');
+    const available = budgetBytes - byteLength(withoutLast) - byteLength('\n');
+    if (available > byteLength('  ') + byteLength(ELLIPSIS)) {
+      lines[lines.length - 1] = truncateUtf8(last, available);
+      break;
+    }
+    lines.pop();
+  }
+  return [...lines, closing].join('\n');
+}
+
+function formatReminder(findings: Finding[]): string {
+  const sampleCount = Math.min(findings.length, MAX_REMINDER_SAMPLES);
+  const omitted = Math.max(0, findings.length - sampleCount);
+  const lines: string[] = [
+    '<system-reminder>',
+    'Spec conformance findings (PostToolUse push, 3s window):',
+    `  ${findings.length} finding(s): ${severityCounts(findings)}`,
+    `  Showing up to ${sampleCount} sample finding(s); omitted ${omitted}.`,
+    '  Full log: .dev-pomogator/.spec-check-log/ (or run /spec-status).',
+  ];
+  if (sampleCount > 0) {
+    const closing = '</system-reminder>';
+    const budgetAfterHeader = REMINDER_BUDGET_BYTES - byteLength([...lines, closing].join('\n'));
+    const sampleLineBudget = Math.max(
+      byteLength(`  ${ELLIPSIS}`),
+      Math.floor((budgetAfterHeader - sampleCount) / sampleCount),
+    );
+    for (const f of findings.slice(0, sampleCount)) {
+      lines.push(truncateUtf8(sampleLine(f), sampleLineBudget));
+    }
+  }
+  return fitReminder(lines, REMINDER_BUDGET_BYTES);
 }
 
 export interface PushDecision {

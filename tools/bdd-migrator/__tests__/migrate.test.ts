@@ -6,8 +6,13 @@
  * had to be told out-of-band. These pin the content-attribution helper that closes that gap. Drives the
  * REAL exported `testAttributesToSpec` — no mocks.
  */
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import { describe, it, expect } from 'vitest';
 import { testAttributesToSpec, isComponentHomed, toolImportSymbols, classifyTestBody, mutationSurfaceTargets } from '../migrate.ts';
+import { parseGherkin } from '../../spec-graph/parsers/gherkin.ts';
+import { prepareFeatureForWiring, wireFeature } from '../../../scripts/wire-feature.mjs';
 
 describe('MIGRATE001: vitest-twin attribution by spec code dir (dogfood 2026-06-21)', () => {
   it('MIGRATE001_01: attributes a test that references the spec code dir tools/<slug>/', () => {
@@ -99,5 +104,122 @@ describe('MIGRATE003: mutation-surface detection (BDD-only policy)', () => {
   it('MIGRATE003_03: no mutate targets configured → never flagged (empty list is safe)', () => {
     const src = `import { scan } from '../../.claude/skills/strong-tests/scripts/detect-invariant-candidates.ts';`;
     expect(mutationSurfaceTargets([src], [])).toEqual([]);
+  });
+});
+
+// The wire helper is the last mile of the BDD migrator: comment tags are safe while a feature is
+// half-migrated, but once the feature is wired they must become real Gherkin tags or the graph sees no
+// tested-by edge. These tests drive the exported helper directly (no shell, no shared cucumber.json).
+describe('MIGRATE004: wire-feature comment tag promotion (P28-7 / FR-51d)', () => {
+  const validFrs = new Set(['51']);
+
+  it('MIGRATE004_01: promotes an immediately-attached comment feature tag with its control tag', () => {
+    const feature = `Feature: X
+
+  # @feature51 @manual
+  Scenario: SPECGEN004_518 comment-tagged
+    Given x
+`;
+    const promoted = prepareFeatureForWiring(feature, validFrs);
+
+    expect(promoted.errors).toEqual([]);
+    expect(promoted.promotedCount).toBe(1);
+    expect(promoted.content).toContain('  @feature51 @manual\n  Scenario: SPECGEN004_518 comment-tagged');
+    expect(promoted.content).not.toContain('# @feature51');
+  });
+
+  it('MIGRATE004_02: is idempotent once tags are already real', () => {
+    const feature = `Feature: X
+
+  @feature51 @manual
+  Scenario: SPECGEN004_518 already-real
+    Given x
+`;
+    const promoted = prepareFeatureForWiring(feature, validFrs);
+
+    expect(promoted.errors).toEqual([]);
+    expect(promoted.changed).toBe(false);
+    expect(promoted.promotedCount).toBe(0);
+    expect(promoted.content).toBe(feature);
+  });
+
+  it('MIGRATE004_03: rejects an unknown feature number before changing content', () => {
+    const feature = `Feature: X
+
+  # @feature999
+  Scenario: SPECGEN004_518 wrong-number
+    Given x
+`;
+    const promoted = prepareFeatureForWiring(feature, validFrs);
+
+    expect(promoted.errors).toEqual(['line 3: @feature999 has no same-spec FR-999']);
+    expect(promoted.changed).toBe(false);
+    expect(promoted.content).toBe(feature);
+  });
+
+  it('MIGRATE004_04: promoted tags build the real same-spec tested-by edge', () => {
+    const feature = `Feature: X
+
+  # @feature51
+  Scenario: SPECGEN004_518 promoted edge
+    Given x
+`;
+    const promoted = prepareFeatureForWiring(feature, validFrs);
+    const slice = parseGherkin(promoted.content, '.specs/demo/demo.feature');
+
+    expect(slice.edges).toContainEqual({
+      from: 'demo:FR-51',
+      to: 'demo:SCEN-specgen004-518-promoted-edge',
+      type: 'tested-by',
+    });
+  });
+
+  it('MIGRATE004_05: wireFeature promotes and wires under the same locked operation', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'wire-feature-'));
+    try {
+      fs.mkdirSync(path.join(root, '.specs', 'demo'), { recursive: true });
+      fs.writeFileSync(path.join(root, '.specs', 'demo', 'FR.md'), '## FR-51\n\nDemo\n');
+      fs.writeFileSync(
+        path.join(root, '.specs', 'demo', 'demo.feature'),
+        `Feature: X
+
+  # @feature51 @wip
+  Scenario: SPECGEN004_518 locked write
+    Given x
+`,
+      );
+      fs.writeFileSync(path.join(root, 'cucumber.json'), '{"default":{"paths":[]}}\n');
+
+      const message = wireFeature('demo', root);
+
+      expect(message).toContain('promoted 1 tag line(s)');
+      expect(fs.readFileSync(path.join(root, '.specs', 'demo', 'demo.feature'), 'utf8')).toContain('\n  @feature51 @wip\n');
+      expect(JSON.parse(fs.readFileSync(path.join(root, 'cucumber.json'), 'utf8')).default.paths).toEqual(['.specs/demo/demo.feature']);
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('MIGRATE004_06: wireFeature refuses a wrong feature number before touching either file', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'wire-feature-invalid-'));
+    try {
+      fs.mkdirSync(path.join(root, '.specs', 'demo'), { recursive: true });
+      fs.writeFileSync(path.join(root, '.specs', 'demo', 'FR.md'), '## FR-51\n\nDemo\n');
+      const beforeFeature = `Feature: X
+
+  # @feature999
+  Scenario: SPECGEN004_518 wrong locked write
+    Given x
+`;
+      const beforeCfg = '{"default":{"paths":[]}}\n';
+      fs.writeFileSync(path.join(root, '.specs', 'demo', 'demo.feature'), beforeFeature);
+      fs.writeFileSync(path.join(root, 'cucumber.json'), beforeCfg);
+
+      expect(() => wireFeature('demo', root)).toThrow('@feature999 has no same-spec FR-999');
+      expect(fs.readFileSync(path.join(root, '.specs', 'demo', 'demo.feature'), 'utf8')).toBe(beforeFeature);
+      expect(fs.readFileSync(path.join(root, 'cucumber.json'), 'utf8')).toBe(beforeCfg);
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
   });
 });

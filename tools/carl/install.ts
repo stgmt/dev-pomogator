@@ -3,6 +3,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { adaptProject, type AdaptRulesResult } from './adapt-rules.ts';
+import { applyContextDiet, type ContextDietResult } from './context-diet.ts';
 import { atomicWriteJson, buildDefaultManifest, codexPlatformState, manifestPath, readManifest, type ManagedCarlManifest } from './manifest.ts';
 
 export interface InstallArgs {
@@ -132,6 +133,7 @@ function mergeManifest(existing: ManagedCarlManifest | null, platform: InstallAr
         lastGeneratedAt: existingRu?.lastGeneratedAt ?? now,
       },
     },
+    ...(existing?.contextDiet ? { contextDiet: existing.contextDiet } : {}),
     managed: {
       settingsKey: MANAGED_SETTINGS_KEY,
       hookCommand: MANAGED_HOOK_COMMAND,
@@ -161,12 +163,35 @@ export function install(args: InstallArgs): Record<string, unknown> {
   const manifest = mergeManifest(existing, args.platform, args.project);
   atomicWriteJson(manifestPath(args.project), manifest);
 
+  let contextDiet: ContextDietResult | null = null;
+  try {
+    contextDiet = applyContextDiet(args.project);
+  } catch {
+    contextDiet = null;
+  }
+
   let adaptation: AdaptRulesResult | null = null;
   try {
     adaptation = adaptProject({ project: args.project });
   } catch {
     adaptation = null;
   }
+
+  const postAdaptManifest = readManifest(args.project) ?? manifest;
+  if (contextDiet) {
+    atomicWriteJson(manifestPath(args.project), {
+      ...postAdaptManifest,
+      contextDiet: {
+        mode: contextDiet.mode,
+        status: contextDiet.status,
+        estimatedTokensBefore: contextDiet.estimatedTokensBefore,
+        estimatedTokensAfter: contextDiet.estimatedTokensAfter,
+        rulesManaged: contextDiet.rulesManaged,
+        rulesTotal: contextDiet.rulesTotal,
+      },
+    });
+  }
+
   const refreshedManifest = readManifest(args.project) ?? manifest;
 
   return {
@@ -178,6 +203,7 @@ export function install(args: InstallArgs): Record<string, unknown> {
     languageStatus: refreshedManifest.languageStatus,
     runtime: refreshedManifest.runtime,
     settings: settingsResult,
+    contextDiet,
     adaptation,
   };
 }

@@ -483,7 +483,7 @@ export function extractWriteContent(
 
 export function runCheckCli(argv: string[]): { output: string; exitCode: number } {
   const [flag, kind, file] = argv;
-  const usage = 'usage: spec-form-parsers.ts --check <user-stories|tasks|decisions|chk-rows> <file>';
+  const usage = 'usage: spec-form-parsers.ts --check <user-stories|tasks|decisions|chk-rows|risks> <file>';
   if (flag !== '--check' || !kind || !file) return { output: usage, exitCode: 2 };
   let content: string;
   try {
@@ -513,6 +513,15 @@ export function runCheckCli(argv: string[]): { output: string; exitCode: number 
         if (r.missingFirst) violations.push(`${file}:${r.lineNumber} [${r.id}] invalid: ${r.missingFirst}`);
       }
       break;
+    case 'risks': {
+      const assessment = parseRiskRows(content);
+      if (assessment.headingLineNumber === null) {
+        violations.push(`${file}:1 [Risk Assessment] missing: heading`);
+      } else if (assessment.validRowCount < 2) {
+        violations.push(`${file}:${assessment.headingLineNumber} [Risk Assessment] invalid: expected ≥2 populated risk rows, got ${assessment.validRowCount}`);
+      }
+      break;
+    }
     default:
       return { output: usage, exitCode: 2 };
   }

@@ -25,7 +25,7 @@ argument-hint: "<feature-slug>"
 | `tools/specs-generator/audit-spec.ts -Path ".specs/X"` | Phase 3+ автоматический аудит |
 | `tools/specs-generator/analyze-features.ts -Format text` | Паттерны существующих `.feature` |
 
-`.progress.json` создаётся ТОЛЬКО через `spec-status.ts`. ЗАПРЕЩЕНО создавать его через Write tool, вручную или напрямую. Аргумент `-Path` ОБЯЗАН указывать на `.specs/<feature>/`.
+`.progress.json` не является agent/MCP/manual-mutable документом. Писатели только engine CLI: `scaffold-spec.ts` создаёт initial v4 state при scaffold новой спеки; `spec-status.ts` создаёт missing state для existing spec и обновляет phase/STOP state. ЗАПРЕЩЕНО создавать/редактировать его через Write/Edit/MCP вручную. Аргумент `-Path` для `spec-status.ts` ОБЯЗАН указывать на `.specs/<feature>/`.
 
 ## MCP-rails: писать спеки через сервер, не Write/Edit напрямую (FR-40/FR-42)
 
@@ -40,7 +40,7 @@ create-spec — это ДВЕРЬ (юзер входит сюда как сей�
 | Проверить без записи (dry-run, те же гейты) | `propose_spec_change` | `{ spec, doc, content\|old/new, reason }` |
 | Прочитать цельный документ / перечень | `read_spec_doc` / `list_spec_docs` | `{ spec[, doc] }` |
 
-Сервер валидирует form-контракты + якоря (delta-only) + conformance ДО касания диска и отказывает с findings list — НЕ переписывай эту логику в скилле. `.progress.json` НЕ мутабелен через MCP (single-writer — `spec-status.ts`).
+Сервер валидирует form-контракты + якоря (delta-only) + conformance ДО касания диска и отказывает с findings list — НЕ переписывай эту логику в скилле. `.progress.json` НЕ мутабелен через MCP: writer contract = `scaffold-spec.ts` bootstrap only + `spec-status.ts` state-transition/repair only.
 
 ## Phase navigation
 
@@ -110,7 +110,7 @@ Files: {done}/{total} complete — Next: {next_action}
 
 ## Conditional Jira-first mode
 
-Если `.specs/{slug}/JIRA_SOURCE.md` существует — активируется Jira-first workflow. Каждая фаза начинается со Step 0 (re-read 3 Jira-артефактов: `JIRA_SOURCE.md`, `ATTACHMENTS.md`, `.jira-cache.json`). Полная семантика и format Jira trace в FR/AC/BDD/TASKS — см. [`references/jira-mode.md`](references/jira-mode.md). Если файла нет — раздел no-op.
+Если `.specs/{slug}/JIRA_SOURCE.md` существует — активируется Jira-first workflow. Каждая фаза начинается со Step 0 (re-read 3 Jira-артефактов: `JIRA_SOURCE.md`, `ATTACHMENTS.md`, `.jira-cache.json`). Markdown-скелеты Jira/audit-артефактов живут рядом со skill-ом в `references/templates/` (`JIRA_SOURCE.md.template`, `ATTACHMENTS.md.template`, `AUDIT_REPORT.md.template`), потому что их создают jira-intake / Phase 3+ audit, а не base scaffold. Полная семантика и format Jira trace в FR/AC/BDD/TASKS — см. [`references/jira-mode.md`](references/jira-mode.md). Если файла нет — раздел no-op.
 
 ## Topic references (loaded on demand)
 
@@ -118,6 +118,6 @@ Files: {done}/{total} complete — Next: {next_action}
 
 ## Запреты
 
-- НЕ создавай `.progress.json` через Write — только через `spec-status.ts`
+- НЕ создавай/редактируй `.progress.json` через Write/Edit/MCP; только engine CLI writers: `scaffold-spec.ts` (initial scaffold) и `spec-status.ts` (state/STOP updates).
 - НЕ копируй секции из других спек — каждая создаётся с нуля
 - НЕ пиши тесты без `.feature` сценария (TDD: Red → Green → Refactor; см. [`references/phase3_finalization.md`](references/phase3_finalization.md))

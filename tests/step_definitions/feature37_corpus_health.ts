@@ -24,6 +24,9 @@ import {
   type CorpusHealthReport,
 } from '../../tools/spec-graph/corpus-health.ts';
 import { buildGraphFromCwd } from '../../tools/spec-graph/builder.ts';
+import { checkLinks } from '../../tools/anchor-integrity/check.mjs';
+
+const REPO_ROOT = path.resolve(import.meta.dirname ?? __dirname, '..', '..');
 
 // ── World extension ──────────────────────────────────────────────────────────
 
@@ -32,6 +35,10 @@ interface CorpusHealthWorld extends V4World {
   healthReport?: CorpusHealthReport;
   renderOutput?: string;
   syntheticReport?: CorpusHealthReport;
+  auditOverview?: string;
+  auditSplitReference?: string;
+  auditSplitAgentReference?: string;
+  auditReferenceLinkFindings?: ReturnType<typeof checkLinks>;
 }
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -374,5 +381,100 @@ Then(
   function (this: CorpusHealthWorld, pattern: string) {
     const out = this.renderOutput!;
     assert.match(out, new RegExp(pattern, 's'), `Render output did not match /${pattern}/s.\nActual:\n${out}`);
+  },
+);
+
+// ── SPECGEN004_510 — P16-5 audit split-responsibility docs ──────────────────
+
+Given(
+  /^the Phase 3 audit overview and audit split-responsibility references$/,
+  function (this: CorpusHealthWorld) {
+    const overviewPath = path.join(REPO_ROOT, '.claude', 'skills', 'create-spec', 'references', 'phase3plus_audit-overview.md');
+    const splitPath = path.join(REPO_ROOT, '.claude', 'skills', 'spec-generator-dev', 'references', 'audit-split-responsibility.md');
+    const agentSplitPath = path.join(REPO_ROOT, '.agents', 'skills', 'spec-generator-dev', 'references', 'audit-split-responsibility.md');
+
+    assert.ok(fs.existsSync(overviewPath), `missing audit overview reference: ${overviewPath}`);
+    assert.ok(fs.existsSync(splitPath), `missing audit split-responsibility reference: ${splitPath}`);
+    assert.ok(fs.existsSync(agentSplitPath), `missing agent audit split-responsibility reference: ${agentSplitPath}`);
+
+    this.auditOverview = fs.readFileSync(overviewPath, 'utf-8');
+    this.auditSplitReference = fs.readFileSync(splitPath, 'utf-8');
+    this.auditSplitAgentReference = fs.readFileSync(agentSplitPath, 'utf-8');
+  },
+);
+
+When(
+  /^the audit split-responsibility documentation is checked$/,
+  function (this: CorpusHealthWorld) {
+    assert.equal(
+      this.auditSplitReference,
+      this.auditSplitAgentReference,
+      'Claude and agent copies of audit split-responsibility reference must stay in sync',
+    );
+
+    const createSpecReferenceDir = path.join(REPO_ROOT, '.claude', 'skills', 'create-spec', 'references');
+    const specGeneratorReferenceDir = path.join(REPO_ROOT, '.claude', 'skills', 'spec-generator-dev', 'references');
+    const files = [
+      ...fs.readdirSync(createSpecReferenceDir)
+        .filter((name) => name.endsWith('.md'))
+        .map((name) => ({
+          file: `.claude/skills/create-spec/references/${name}`,
+          content: fs.readFileSync(path.join(createSpecReferenceDir, name), 'utf-8'),
+        })),
+      ...fs.readdirSync(specGeneratorReferenceDir)
+        .filter((name) => name.endsWith('.md'))
+        .map((name) => ({
+          file: `.claude/skills/spec-generator-dev/references/${name}`,
+          content: fs.readFileSync(path.join(specGeneratorReferenceDir, name), 'utf-8'),
+        })),
+    ];
+
+    this.auditReferenceLinkFindings = checkLinks(files).filter((finding) =>
+      finding.file.endsWith('phase3plus_audit-overview.md') || finding.file.endsWith('audit-split-responsibility.md'),
+    );
+  },
+);
+
+Then(
+  /^mechanical audit categories are declared as script-owned inputs not AI rediscovery work$/,
+  function (this: CorpusHealthWorld) {
+    const overview = this.auditOverview!;
+    const split = this.auditSplitReference!;
+
+    for (const category of ['JIRA_DRIFT', 'VARIANT_COVERAGE', 'ARCHITECTURE_COVERAGE', 'COMPLETENESS_COVERAGE']) {
+      assert.match(overview, new RegExp(`${category}[^\n]*\\*\\*MECHANICAL\\*\\*`, 'm'), `${category} must be marked MECHANICAL in audit overview`);
+    }
+    assert.match(overview, /findings ВЫЧИСЛЯЮТСЯ скриптом/, 'overview must say mechanical findings are computed by scripts');
+    assert.match(overview, /НЕ передоказывает их семантически/, 'overview must tell the agent not to rediscover mechanical findings');
+    assert.match(split, /\|\s*audit gate\s*\|\s*`audit-spec\.ts`\s*\|/, 'split reference must identify audit-spec as the audit gate layer');
+    assert.match(split, /\|\s*conformance\s*\|\s*`spec-graph\/conformance\.ts`\s*\|/, 'split reference must identify conformance as its own mechanical layer');
+  },
+);
+
+Then(
+  /^semantic-only audit categories are declared as agent-owned review work$/,
+  function (this: CorpusHealthWorld) {
+    const overview = this.auditOverview!;
+
+    for (const category of ['РУДИМЕНТЫ', 'ФАНТАЗИИ', 'UNDEFINED_BEHAVIOR']) {
+      assert.match(overview, new RegExp(`${category}[^\n]*AI-semantic only`, 'm'), `${category} must be marked AI-semantic only`);
+    }
+    assert.match(overview, /агент обязан прочитать spec \+ реальный код/, 'overview must say semantic-only checks are agent-owned review work');
+  },
+);
+
+Then(
+  /^the spec health rule points "is it healthy\?" to the composed verdict only$/,
+  function (this: CorpusHealthWorld) {
+    const split = this.auditSplitReference!;
+
+    assert.deepEqual(
+      this.auditReferenceLinkFindings,
+      [],
+      `audit split docs must keep production anchor-integrity clean: ${JSON.stringify(this.auditReferenceLinkFindings)}`,
+    );
+    assert.match(split, /Spec health is \*\*not\*\* one check/, 'split reference must reject single-layer health');
+    assert.match(split, /`VERDICT` = GREEN only when every gating layer passes/, 'split reference must define GREEN as composed gating pass');
+    assert.match(split, /\*\*"is it healthy\?" →\s*spec-verdict \(the composition\), never one layer alone\.\*\*/, 'split reference must route health to the composed verdict only');
   },
 );

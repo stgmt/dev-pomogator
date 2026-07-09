@@ -235,6 +235,7 @@ function agentBgInFlightCount(rawTranscript) {
   return inFlight.size;
 }
 var HOOK_INJECTION_RE = /^\s*(📋|👉|…ещё|\[specs-validator\]|⚠️|PHASE GATE WARNING|Stop hook feedback|UserPromptSubmit hook|<\/?task-notification|<(?:task-id|tool-use-id|output-file|status|summary)|<\/?command-(?:name|message|args)|<\/?local-command-(?:stdout|caveat)|\[SYSTEM NOTIFICATION|This is an automated|Do NOT interpret|[A-Za-z][\w.-]*:\s*\d+\s*(?:open|⏸))/u;
+var INTERRUPTED_PROMPT_RE = /^\s*\[Request interrupted by user(?: for tool use)?\]\s*$/i;
 function isTypedHumanPrompt(e) {
   if (!isRealUser(e)) return false;
   if (e.isMeta === true || e.isCompactSummary === true || e.isVisibleInTranscriptOnly === true) return false;
@@ -249,7 +250,7 @@ function lastUserPrompt(rawTranscript) {
     const firstNonEmpty = allLines.find((ln) => ln.trim()) ?? "";
     if (HOOK_INJECTION_RE.test(firstNonEmpty)) continue;
     const cleaned = allLines.filter((ln) => !HOOK_INJECTION_RE.test(ln)).join("\n").trim();
-    if (cleaned) return cleaned;
+    if (cleaned && !INTERRUPTED_PROMPT_RE.test(cleaned)) return cleaned;
   }
   return "";
 }
@@ -272,12 +273,16 @@ function sessionUserPrompts(rawTranscript) {
     const firstNonEmpty = allLines.find((ln) => ln.trim()) ?? "";
     if (HOOK_INJECTION_RE.test(firstNonEmpty)) continue;
     const cleaned = allLines.filter((ln) => !HOOK_INJECTION_RE.test(ln)).join("\n").trim();
-    if (!cleaned) continue;
+    if (!cleaned || INTERRUPTED_PROMPT_RE.test(cleaned)) continue;
     const norm = cleaned.replace(/[\s.,!?…]+/gu, "").toLowerCase();
     if (ACK_ONLY_RE.test(norm)) continue;
     out.push(clampMandate(cleaned));
   }
   return out.slice(-MANDATE_MAX_PROMPTS);
+}
+function effectiveUserRequest(rawTranscript) {
+  const prompts = sessionUserPrompts(rawTranscript);
+  return prompts.at(-1) ?? lastUserPrompt(rawTranscript);
 }
 
 // tools/claim-evidence-gate/claim_classifier.ts
@@ -484,6 +489,67 @@ function lastEditedSpecSlug(transcriptPath) {
   return last;
 }
 var OPEN_TODO_STATUS = /* @__PURE__ */ new Set(["pending", "in_progress"]);
+var CLOSED_TODO_STATUS = /* @__PURE__ */ new Set(["completed", "deleted"]);
+function blockText(b) {
+  const c = b.content;
+  if (typeof c === "string") return c;
+  if (Array.isArray(c)) {
+    return c.map((x) => typeof x === "string" ? x : typeof x.text === "string" ? x.text : JSON.stringify(x)).join("\n");
+  }
+  return c == null ? "" : JSON.stringify(c);
+}
+function taskIdFromText(text) {
+  const m = text.match(/Task\s+#(\d+)/i);
+  return m ? m[1] : null;
+}
+var TASK_UPDATE_NOT_FOUND_RE = /Task not found/i;
+function normalizeTodoSubject(subject) {
+  return subject.trim().toLowerCase().replace(/\s+/g, " ");
+}
+function mergeTaskState(target, incoming) {
+  const newer = incoming.seq >= target.seq ? incoming : target;
+  const older = newer === incoming ? target : incoming;
+  return {
+    ...newer,
+    id: target.id ?? incoming.id,
+    subject: newer.subject || older.subject,
+    reconciliation: newer.reconciliation ?? older.reconciliation
+  };
+}
+function canonicalizeTaskReplay(tasks) {
+  const bySubject = /* @__PURE__ */ new Map();
+  for (const task of tasks) {
+    const key = normalizeTodoSubject(task.subject) || `id:${task.id ?? task.seq}`;
+    const bucket = bySubject.get(key) ?? [];
+    bucket.push(task);
+    bySubject.set(key, bucket);
+  }
+  const canonical = [];
+  for (const group of bySubject.values()) {
+    if (group.length === 1) {
+      canonical.push({ ...group[0], reconciliation: group[0].reconciliation ?? "unique" });
+      continue;
+    }
+    const sorted = [...group].sort((a, b) => b.seq - a.seq);
+    const newest = sorted[0];
+    const newestOpen = OPEN_TODO_STATUS.has(newest.status);
+    const openCount = sorted.filter((t) => OPEN_TODO_STATUS.has(t.status)).length;
+    const newestClosed = CLOSED_TODO_STATUS.has(newest.status) || !newestOpen;
+    if (newestClosed) {
+      canonical.push({
+        ...newest,
+        reconciliation: `duplicate-subject:${group.length}:newest-closed`
+      });
+      continue;
+    }
+    canonical.push({
+      ...newest,
+      ambiguous: openCount > 1 && !sorted.some((t) => CLOSED_TODO_STATUS.has(t.status)),
+      reconciliation: openCount > 1 ? `duplicate-subject:${group.length}:ambiguous-open-demote` : `duplicate-subject:${group.length}:newest-open`
+    });
+  }
+  return canonical.sort((a, b) => a.seq - b.seq);
+}
 function parseAgentTodos(transcriptPath) {
   let raw;
   try {
@@ -491,10 +557,27 @@ function parseAgentTodos(transcriptPath) {
   } catch {
     return [];
   }
-  const tasks = [];
+  const tasks = /* @__PURE__ */ new Map();
+  const useToTaskKey = /* @__PURE__ */ new Map();
+  const updateRollback = /* @__PURE__ */ new Map();
+  let createSeq = 0;
+  let seq = 0;
   let latestTodoWrite = null;
-  for (const line of raw.split(/\r?\n/)) {
-    if (!line.includes('"tool_use"') || line.length > 2e6) continue;
+  const upsertTask = (key, incoming) => {
+    const prev = tasks.get(key);
+    tasks.set(key, prev ? mergeTaskState(prev, incoming) : incoming);
+  };
+  const rekeyTask = (oldKey, realId, line) => {
+    const existing = tasks.get(oldKey);
+    if (!existing) return;
+    tasks.delete(oldKey);
+    upsertTask(realId, { ...existing, id: realId, line, reconciliation: `real-id:${realId}` });
+    for (const [useId, key] of useToTaskKey.entries()) if (key === oldKey) useToTaskKey.set(useId, realId);
+  };
+  const lines = raw.split(/\r?\n/);
+  for (let lineNo = 0; lineNo < lines.length; lineNo++) {
+    const line = lines[lineNo];
+    if (!line.includes('"tool_use"') && !line.includes('"tool_result"') || line.length > 2e6) continue;
     let entry;
     try {
       entry = JSON.parse(line);
@@ -504,35 +587,109 @@ function parseAgentTodos(transcriptPath) {
     const content = entry?.message?.content;
     if (!Array.isArray(content)) continue;
     for (const b of content) {
-      if (b?.type !== "tool_use") continue;
+      const type = String(b?.type ?? "");
+      if (type === "tool_result") {
+        const toolUseId = String(b.tool_use_id ?? "");
+        const contentText = blockText(b);
+        const realId = taskIdFromText(contentText);
+        const oldKey = toolUseId ? useToTaskKey.get(toolUseId) : void 0;
+        if (oldKey && realId) rekeyTask(oldKey, realId, lineNo + 1);
+        if (toolUseId && TASK_UPDATE_NOT_FOUND_RE.test(contentText)) {
+          const rollback = updateRollback.get(toolUseId);
+          if (rollback) {
+            if (rollback.previous) tasks.set(rollback.key, rollback.previous);
+            else tasks.delete(rollback.key);
+          } else if (oldKey) {
+            tasks.delete(oldKey);
+          }
+        }
+        continue;
+      }
+      if (type !== "tool_use") continue;
       const name = String(b.name ?? "");
       const input = b.input ?? {};
       if (name === "TodoWrite" && Array.isArray(input.todos)) {
-        latestTodoWrite = input.todos.map((t) => ({
+        latestTodoWrite = input.todos.map((t, i) => ({
+          id: typeof t?.id === "string" ? t.id : void 0,
           subject: String(t?.content ?? t?.subject ?? ""),
-          status: String(t?.status ?? "")
+          status: String(t?.status ?? ""),
+          seq: ++seq,
+          line: lineNo + 1,
+          reconciliation: `todowrite:${i}`
         }));
       } else if (name === "TaskCreate") {
-        tasks.push({ subject: String(input.subject ?? ""), status: "pending" });
+        const explicitId = typeof input.taskId === "string" || typeof input.taskId === "number" ? String(input.taskId) : null;
+        const key = explicitId ?? `create:${String(b.id ?? ++createSeq)}`;
+        if (!explicitId && b.id) useToTaskKey.set(String(b.id), key);
+        upsertTask(key, {
+          id: explicitId ?? void 0,
+          subject: String(input.subject ?? ""),
+          status: "pending",
+          seq: ++seq,
+          line: lineNo + 1
+        });
       } else if (name === "TaskUpdate") {
-        const id = parseInt(String(input.taskId ?? ""), 10);
-        if (Number.isInteger(id) && id >= 1 && id <= tasks.length && typeof input.status === "string") {
-          tasks[id - 1].status = input.status;
+        const id = String(input.taskId ?? input.id ?? "").trim();
+        if (!id) continue;
+        const key = tasks.has(id) ? id : `update:${String(b.id ?? id)}:${id}`;
+        if (b.id) {
+          useToTaskKey.set(String(b.id), key);
+          updateRollback.set(String(b.id), { key, previous: tasks.get(key) ?? null });
         }
+        const status = typeof input.status === "string" ? input.status : void 0;
+        const subject = typeof input.subject === "string" ? input.subject : "";
+        upsertTask(key, {
+          id,
+          subject: subject || tasks.get(key)?.subject || tasks.get(id)?.subject || "",
+          status: status ?? tasks.get(key)?.status ?? tasks.get(id)?.status ?? "pending",
+          seq: ++seq,
+          line: lineNo + 1,
+          reconciliation: `task-update:${id}`
+        });
       }
     }
   }
-  const taskOpen = tasks.filter((t) => OPEN_TODO_STATUS.has(t.status)).length;
+  const taskReplay = canonicalizeTaskReplay([...tasks.values()]);
+  const taskOpen = taskReplay.filter((t) => OPEN_TODO_STATUS.has(t.status)).length;
   const todoOpen = latestTodoWrite ? latestTodoWrite.filter((t) => OPEN_TODO_STATUS.has(t.status)).length : 0;
-  return latestTodoWrite && todoOpen > taskOpen ? latestTodoWrite : tasks;
+  return latestTodoWrite && todoOpen > taskOpen ? latestTodoWrite : taskReplay;
 }
 function agentOpenTodoCount(transcriptPath) {
-  return parseAgentTodos(transcriptPath).filter((t) => OPEN_TODO_STATUS.has(t.status)).length;
+  return parseAgentTodos(transcriptPath).filter((t) => OPEN_TODO_STATUS.has(t.status) && !t.ambiguous).length;
 }
-function agentNextOpenTodo(transcriptPath) {
-  const next = parseAgentTodos(transcriptPath).find((t) => OPEN_TODO_STATUS.has(t.status));
-  const s = next?.subject?.trim();
-  return s ? s : null;
+function agentNextOpenTodoDetail(transcriptPath) {
+  const next = parseAgentTodos(transcriptPath).find((t) => OPEN_TODO_STATUS.has(t.status) && !t.ambiguous);
+  return next?.subject?.trim() ? next : null;
+}
+function currentSlugCandidates(slugs) {
+  if (!slugs) return [];
+  return [...Array.isArray(slugs) ? slugs : slugs.values()].filter((s) => typeof s === "string" && s.trim());
+}
+function selectNextStepRoute(opts = {}) {
+  if (opts.transcriptPath) {
+    const todo = agentNextOpenTodoDetail(opts.transcriptPath);
+    if (todo) return { source: "agent-todo", title: todo.subject, id: todo.id, line: todo.line, reconciliation: todo.reconciliation };
+  }
+  if (opts.awaitingAsync) {
+    return {
+      source: "active-async",
+      title: opts.asyncTitle ?? "\u0434\u043E\u0436\u0434\u0430\u0442\u044C\u0441\u044F \u0430\u043A\u0442\u0438\u0432\u043D\u043E\u0439 \u0444\u043E\u043D\u043E\u0432\u043E\u0439 \u0437\u0430\u0434\u0430\u0447\u0438 \u0438 \u043E\u0431\u0440\u0430\u0431\u043E\u0442\u0430\u0442\u044C \u0440\u0435\u0437\u0443\u043B\u044C\u0442\u0430\u0442"
+    };
+  }
+  return selectCurrentSpecNextOpen(opts.census ?? null, opts);
+}
+function selectCurrentSpecNextOpen(census, opts = {}) {
+  if (!census) return null;
+  const bySlug = (slug) => {
+    if (!slug) return null;
+    const spec = census.specs.find((s) => s.slug === slug);
+    return spec?.nextOpen ? { source: "current-spec", spec: spec.slug, ...spec.nextOpen } : null;
+  };
+  const explicit = bySlug(opts.currentSpecSlug);
+  if (explicit) return explicit;
+  const candidates = currentSlugCandidates(opts.currentSpecSlugs);
+  if (candidates.length === 1) return bySlug(candidates[0]);
+  return null;
 }
 function readCacheFile(p) {
   try {
@@ -786,7 +943,7 @@ function logFire(repoRoot, entry) {
   } catch {
   }
 }
-function censusReminder(c) {
+function censusReminder(c, nextStep) {
   try {
     if (!c) return null;
     const t = c.total;
@@ -794,9 +951,10 @@ function censusReminder(c) {
     const parts = [`${t.open} \u0432 \u0440\u0430\u0431\u043E\u0442\u0435`];
     if (t.doneRed) parts.push(`${t.doneRed} \u{1F534} done-but-red`);
     if (t.doneUnrun) parts.push(`${t.doneUnrun} \u23F8 done-but-not-run`);
-    const top = c.specs[0];
-    const next = top?.nextOpen ? ` \u0421\u043B\u0435\u0434\u0443\u044E\u0449\u0435\u0435: ${top.nextOpen.title} [${top.nextOpen.id}].` : "";
-    return `\u043F\u0435\u0440\u0435\u043F\u0438\u0441\u044C (${c.ts}): ${parts.join(", ")} \u043D\u0435\u0437\u0430\u043A\u0440\u044B\u0442\u043E${top ? `, \u0441\u0430\u043C\u0430\u044F \u043D\u0430\u0433\u0440\u0443\u0436\u0435\u043D\u043D\u0430\u044F \u2014 ${top.slug}` : ""}.${next}`;
+    const specs = c.specs.map((s) => s.slug).slice(0, 3).join(", ");
+    const scope = specs ? `, scope \u2014 ${specs}${c.specs.length > 3 ? ", \u2026" : ""}` : "";
+    const next = nextStep?.source === "current-spec" ? ` \u0421\u043B\u0435\u0434\u0443\u044E\u0449\u0435\u0435: ${nextStep.title}${nextStep.id ? ` [${nextStep.id}]` : ""}.` : "";
+    return `\u043F\u0435\u0440\u0435\u043F\u0438\u0441\u044C (${c.ts}): ${parts.join(", ")} \u043D\u0435\u0437\u0430\u043A\u0440\u044B\u0442\u043E${scope}.${next}`;
   } catch {
     return null;
   }
@@ -859,12 +1017,13 @@ async function main() {
   const agentOpen = agentOpenTodoCount(tx);
   const scopedSpecOpen = scoped ? scoped.total.open + scoped.total.doneRed : 0;
   const liveOpen = liveOpenForUncensusedSlugs(repoRoot, editedSlugs, globalCensus);
-  const openWork = scopedSpecOpen + agentOpen + liveOpen;
+  const specCompletionClaim = isSpecCompletionClaim(claimText);
+  const scopedCompletionOpen = scopedSpecOpen + liveOpen;
+  const openWork = scopedCompletionOpen + agentOpen;
   const recencySlug = lastEditedSpecSlug(tx);
-  const recencyNextOpen = recencySlug ? scoped?.specs?.find((s) => s.slug === recencySlug)?.nextOpen ?? null : null;
-  const nextStepHint = recencyNextOpen?.title ?? scoped?.specs?.[0]?.nextOpen?.title ?? agentNextOpenTodo(tx);
-  const nextLine = nextStepHint ? `
-\u{1F449} \u0421\u043B\u0435\u0434\u0443\u044E\u0449\u0435\u0435: ${nextStepHint}` : "";
+  let nextStep = null;
+  let nextLine = "";
+  let nextOpenTask = null;
   const mutatingToolsThisTurn = toolUses.filter((t) => MUTATING_TOOL.test(t.name) || isDoorWrite.test(t.name)).length;
   const gateSelfEditThisTurn = gateSelfEdit(toolUses);
   const selfMarkedBlockedOrBacklogThisTurn = selfMarkedBlockedOrBacklog(toolUses);
@@ -872,19 +1031,28 @@ async function main() {
   const awaitingAsync = bgInFlightInWindow(rawTranscript) || bgJobMarkerActive(repoRoot) || agentBgCount > 0 || bgCommandInFlight(rawTranscript);
   const AWAITS_RESULT_RE = /когда\s+придёт|как\s+придёт|по\s+результату|результат[ауые]?\b[^.]{0,40}(?:обработ|свер|прочит|проверю|коммич|закоммич)|если\s+(?:\d|зел[её]н|green|ок\b|чисто)|при\s+зел[её]н|when\s+it\s+(?:returns|lands|completes|finishes)|on\s+the\s+result|once\s+it\s+(?:returns|lands|completes)/i;
   const nextStepAwaitsResult = awaitingAsync && AWAITS_RESULT_RE.test(claimText);
-  const userRequest = lastUserPrompt(rawTranscript);
+  nextStep = selectNextStepRoute({
+    transcriptPath: tx,
+    census: specCompletionClaim ? scoped : null,
+    currentSpecSlug: specCompletionClaim ? recencySlug : null,
+    awaitingAsync
+  });
+  nextOpenTask = nextStep?.source === "current-spec" && nextStep.id ? { id: nextStep.id, title: nextStep.title } : null;
+  nextLine = nextStep ? `
+\u{1F449} \u0421\u043B\u0435\u0434\u0443\u044E\u0449\u0435\u0435: ${nextStep.title}` : "";
   const sessionPrompts = sessionUserPrompts(rawTranscript);
-  const taskIsAboutTheGate = /пинатор|pinator|claim.?evidence.?gate|claim.?gate|сторож|судь[яеиёю]|meridian|\bjudge\b/i.test(userRequest);
+  const substantiveUserRequest = effectiveUserRequest(rawTranscript);
+  const taskIsAboutTheGate = /пинатор|pinator|claim.?evidence.?gate|claim.?gate|сторож|судь[яеиёю]|meridian|\bjudge\b/i.test(substantiveUserRequest);
   const ANALYSIS_RE = /\bанализ|разбер|разбор|оцен[иь]|отч[её]т|\breport\b|analyz|ревью|\breview\b|\bплан\b|\bplan\b|посмотри что|что думаешь|что не так/i;
   const IMPLEMENT_RE = /почини|\bfix\b|реализу|implement|\bbuild\b|мигрир|migrate|допиши|добавь|перепиши|внеси|закоммить|\bcommit\b/i;
-  const analysisOnly = ANALYSIS_RE.test(userRequest) && !IMPLEMENT_RE.test(userRequest);
+  const analysisOnly = ANALYSIS_RE.test(substantiveUserRequest) && !IMPLEMENT_RE.test(substantiveUserRequest);
   const GATE_INTERNAL = /claim.?evidence.?gate|meridian.?judge|bg.?task.?guard|turn_window|claim_classifier|transcript/i;
   const gateMetaThisTurn = mutatingToolsThisTurn === 0 && toolUses.length > 0 && toolUses.some((t) => GATE_INTERNAL.test(t.input));
   const mp = markerPath(repoRoot, MARKER_DIR, MARKER_FILENAME);
   const priorMarker = readMarker(mp);
   const metaStreak = gateMetaThisTurn ? (priorMarker?.metaStreak ?? 0) + 1 : 0;
   let unsupported = firstUnsupported(claimText, toolUses, config.minSearch);
-  const censusMsg = isSpecCompletionClaim(claimText) ? censusReminder(scoped) : null;
+  const censusMsg = specCompletionClaim ? censusReminder(scoped, nextStep) : null;
   if (!unsupported && censusMsg) {
     unsupported = { cls: "spec-false-close", need: censusMsg };
   }
@@ -927,11 +1095,11 @@ async function main() {
         // 1+3 (2026-06-21): the named next step consumes the pending bg result → legit wait
         // Phase 0 (2026-06-21): the next open task is ALREADY named → "which task?" is a fake hand-off;
         // a multi-spec session makes "which spec to finish" a genuine owner choice (a legit AskUserQuestion).
-        nextOpenTask: recencyNextOpen ?? scoped?.specs?.[0]?.nextOpen ?? null,
-        // FR-22: prefer the spec edited most recently
+        nextOpenTask,
+        // FR-49a: current-spec only; never global/scoped specs[0] fallback
         multiSpecSession: editedSlugs.size > 1,
-        userRequest,
-        // Phase 1: backstop — the judge approves a report-stop the user asked for
+        userRequest: substantiveUserRequest,
+        // Phase 1/FR-29: last substantive request, not a terse continuation ack
         sessionUserPrompts: sessionPrompts,
         // FR-28: the full human mandate — mandate-complete overrides nextOpenTask backlog
         gateSelfEditThisTurn: gateSelfEditThisTurn && !taskIsAboutTheGate,
@@ -956,7 +1124,7 @@ async function main() {
   }
   const metaOpen = openWork;
   if (!unsupported && !analysisOnly && metaStreak >= 2 && metaOpen > 0) {
-    unsupported = { cls: "gate-meta", need: nextStepHint ? `\u0434\u0435\u043B\u0430\u0439: ${nextStepHint}` : "\u0434\u0435\u043B\u0430\u0439 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u044B\u0439 \u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0438\u0439 \u0448\u0430\u0433 \u043F\u043E \u043E\u0442\u043A\u0440\u044B\u0442\u043E\u0439 \u0437\u0430\u0434\u0430\u0447\u0435" };
+    unsupported = { cls: "gate-meta", need: nextStep ? `\u0434\u0435\u043B\u0430\u0439: ${nextStep.title}` : "\u0434\u0435\u043B\u0430\u0439 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u044B\u0439 \u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0438\u0439 \u0448\u0430\u0433 \u043F\u043E \u043E\u0442\u043A\u0440\u044B\u0442\u043E\u0439 \u0437\u0430\u0434\u0430\u0447\u0435" };
   }
   if (!unsupported && metaStreak !== (priorMarker?.metaStreak ?? 0)) {
     writeMarkerAtomic(mp, {
@@ -977,7 +1145,12 @@ async function main() {
     claim_snippet: claimText.replace(/\s+/g, " ").slice(0, 200),
     mode: config.mode,
     session_id: input.session_id ?? null,
-    cwd: repoRoot
+    cwd: repoRoot,
+    nextStepSource: nextStep?.source ?? null,
+    nextStepTaskId: nextStep?.id ?? null,
+    nextStepTranscriptLine: nextStep?.line ?? null,
+    nextStepSubject: nextStep?.title ?? null,
+    nextStepReconciliation: nextStep?.reconciliation ?? null
   });
   if (config.mode === "shadow") {
     log2("INFO", `shadow: would block ${unsupported.cls}`);

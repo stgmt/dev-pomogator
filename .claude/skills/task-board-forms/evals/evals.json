@@ -36,6 +36,13 @@
       "prompt": "Run task-board-forms and inspect the Status fields it writes.",
       "expected_output": "Each Status is one of the legal lifecycle tokens (TODO / READY / IN_PROGRESS / BLOCKED / DONE) consistent with the task parser STATUS_MAP — never an ad-hoc string. A task already marked done keeps its checkbox/Status consistent.",
       "files": []
+    },
+    {
+      "id": 5,
+      "name": "negative-lowercase-markers-are-denied",
+      "prompt": "Run the eval harness on a TASKS.md block that uses lowercase `**done when:**` and `**status:**` markers.",
+      "expected_output": "The eval harness must prove the real `spec-form-parsers.ts --check tasks` CLI and `task-form-guard` both reject lowercase markers; only exact `**Done When:**` and `Status:` are accepted.",
+      "files": []
     }
   ]
 }

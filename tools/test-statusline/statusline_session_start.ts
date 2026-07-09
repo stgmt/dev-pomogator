@@ -111,10 +111,13 @@ async function main(): Promise<void> {
     fs.mkdirSync(statusDir, { recursive: true });
     log('INFO', `Status directory ensured: ${statusDir}`);
 
-    // Write session env vars
+    // Write session env vars. Windows paths use backslashes, which bash treats as
+    // escapes when the env file is sourced. Normalize to forward slashes so both
+    // Git Bash/WSL and Node-on-Windows can consume the project path safely.
+    const cwdPosix = cwd.replace(/\\/g, '/');
     const envLines = [
       `TEST_STATUSLINE_SESSION=${prefix}`,
-      `TEST_STATUSLINE_PROJECT=${cwd}`,
+      `TEST_STATUSLINE_PROJECT=${cwdPosix}`,
       `SESSION_PREFIX_LEN=${SESSION_PREFIX_LEN}`,
     ].join('\n') + '\n';
 

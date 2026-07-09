@@ -16,6 +16,7 @@ import { spawnSync, type SpawnSyncReturns } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { V4World } from '../hooks/before-after.ts';
+import { readRuleContentForAdaptation } from '../../tools/carl/context-diet.ts';
 
 const REPO_ROOT = process.cwd();
 const appPath = (...s: string[]): string => path.join(REPO_ROOT, ...s);
@@ -158,7 +159,8 @@ Given(/^file "\.claude\/rules\/pomogator\/no-blocking-on-tests\.md" exists$/, fu
   assert.ok(fs.existsSync(appPath('.claude/rules/pomogator/no-blocking-on-tests.md')), 'rule file must exist');
 });
 When(/^the rule file is read$/, function (this: FbolWorld) {
-  this.content = fs.readFileSync(appPath('.claude/rules/pomogator/no-blocking-on-tests.md'), 'utf-8');
+  const ruleRel = '.claude/rules/pomogator/no-blocking-on-tests.md';
+  this.content = readRuleContentForAdaptation(REPO_ROOT, appPath(ruleRel), ruleRel);
 });
 Then(/^the content contains a section titled "Anti-pattern" with the pattern "\| tail" at run_in_background mode$/, function (this: FbolWorld) {
   const c = (this.content || '').toLowerCase();

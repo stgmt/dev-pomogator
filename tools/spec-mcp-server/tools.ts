@@ -20,7 +20,7 @@
  *   get_spec_status         FR-38/FR-32 — one tool, three `view`s: status (lifecycle +
  *                           last_run), counts (per-spec FR/AC/Scenario/Task tallies),
  *                           coverage (per-scenario buckets + per-task verified_status)
- *   validate_anchor         is anchor alias registered?
+ *   validate_anchor         compact-id/alias registry OR DOC.md#Marksman heading-slug check
  *   list_specs              top-level `.specs/<slug>/` directories
  *   find_refs               incoming references for a node
  *   list_spec_docs          FR-39a — the read_spec_doc inventory of ONE spec
@@ -58,18 +58,21 @@ import type {
   StepBindingNode,
   Edge,
   EdgeMetadata,
+  NodeLocation,
 } from '../spec-graph/types.ts';
 import {
   computeCoverage,
   bucketScenarios,
   verifiedStatus,
   mapTasksToScenarios,
+  scenarioKey,
   specOf,
   type Bucket,
   type ScenarioLike,
   type TaskLike,
 } from '../spec-graph/coverage.ts';
 import { readVerdicts } from '../spec-graph/test-quality-gate.ts';
+import { marksmanSlug } from '../anchor-integrity/marksman-slug.mjs';
 
 /**
  * FR-36d (P13-3): resolve a tool-supplied node reference against the
@@ -131,11 +134,12 @@ function scenarioCoverageIndex(graph: SpecGraph): { scens: ScenarioLike[]; bucke
 function linkedScenarioIds(node: Node, scens: ScenarioLike[], testedByIds: string[]): string[] {
   const nodeSpec = specOf(node.file);
   if (node.type === 'Task') {
+    const task = node as TaskNode;
     return (
       mapTasksToScenarios(
-        [{ id: node.id, doneWhen: '', refs: (node as TaskNode).refs, spec: nodeSpec }],
+        [{ id: task.id, doneWhen: task.doneWhen ?? '', refs: task.refs, spec: nodeSpec }],
         scens,
-      ).get(node.id) ?? []
+      ).get(task.id) ?? []
     );
   }
   if (node.type === 'FR') {
@@ -507,6 +511,83 @@ function collectGraphRefs(graph: SpecGraph, id: string): GraphRef[] {
   return references;
 }
 
+const MARKDOWN_LINK_RE = /^(?<doc>[^#]+\.md)#(?<slug>[^#\s]+)$/i;
+const HEADING_RE = /^(#{1,6})\s+(.+?)\s*$/;
+const FENCE_RE = /^(?:```|~~~)/;
+
+function markdownHeadingText(raw: string): string {
+  return raw
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
+    .replace(/\*\*([^*]+)\*\*/g, '$1')
+    .replace(/__([^_]+)__/g, '$1')
+    .replace(/\*([^*]+)\*/g, '$1')
+    .replace(/_([^_]+)_/g, '$1')
+    .replace(/`([^`]+)`/g, '$1')
+    .trim();
+}
+
+function normalizeDocPath(p: string): string {
+  return p.replace(/\\/g, '/').replace(/^\.\//, '');
+}
+
+function decodeAnchorSlug(slug: string): string {
+  try {
+    return decodeURIComponent(slug).toLowerCase();
+  } catch {
+    return slug.toLowerCase();
+  }
+}
+
+function nodeHeadingSlugCandidates(node: Node): string[] {
+  const title = 'title' in node && typeof node.title === 'string' ? node.title : '';
+  if (!title) return [];
+  const localId = node.spec && node.id.startsWith(`${node.spec}:`) ? node.id.slice(node.spec.length + 1) : node.id;
+  return [title, `${localId}: ${title}`, `${localId} ${title}`].map((heading) => marksmanSlug(heading));
+}
+
+function markdownLinkLocation(graph: SpecGraph, anchor: string, spec?: string): NodeLocation | null {
+  const m = anchor.match(MARKDOWN_LINK_RE);
+  if (!m?.groups) return null;
+  const targetDoc = normalizeDocPath(m.groups.doc);
+  const targetSlug = decodeAnchorSlug(m.groups.slug);
+  const files = new Set<string>();
+  if (targetDoc.startsWith('.specs/')) files.add(targetDoc);
+  if (fs.existsSync(path.resolve(process.cwd(), targetDoc))) files.add(targetDoc);
+  if (spec) files.add(normalizeDocPath(`.specs/${spec}/${targetDoc}`));
+  for (const node of graph.nodes.values()) {
+    const file = normalizeDocPath(node.file);
+    if (spec) {
+      if (file === normalizeDocPath(`.specs/${spec}/${targetDoc}`)) files.add(file);
+    } else if (file === targetDoc || file.endsWith(`/${targetDoc}`)) {
+      files.add(file);
+    }
+  }
+
+  for (const file of Array.from(files).sort()) {
+    for (const node of graph.nodes.values()) {
+      if (normalizeDocPath(node.file) !== file) continue;
+      if (nodeHeadingSlugCandidates(node).includes(targetSlug)) return { file: node.file, line: node.line };
+    }
+
+    const abs = path.resolve(process.cwd(), file);
+    if (!fs.existsSync(abs) || !fs.statSync(abs).isFile()) continue;
+    const lines = fs.readFileSync(abs, 'utf-8').split(/\r?\n/);
+    let inFence = false;
+    for (let i = 0; i < lines.length; i += 1) {
+      const raw = lines[i];
+      if (FENCE_RE.test(raw)) {
+        inFence = !inFence;
+        continue;
+      }
+      if (inFence) continue;
+      const hm = raw.match(HEADING_RE);
+      if (!hm) continue;
+      if (marksmanSlug(markdownHeadingText(hm[2])) === targetSlug) return { file, line: i + 1 };
+    }
+  }
+  return null;
+}
+
 export interface RegistryOptions {
   /**
    * FR-40c graph freshness after a mutation. Inside the running MCP server the
@@ -636,18 +717,17 @@ export function buildToolRegistry(
           // (and FR aggregation for _60-_64) is unchanged.
           code_impl: computeCodeImpl(s, graph),
         })),
-        // FR-46d: surface the task's OWN scenario (the specgen004_NN it cites in Done-When)
-        // + its last result, so task↔own-scenario traceability is visible, not just task→FR.
+        // FR-46d / FR-52e: surface the task's OWN scenario (the explicit scenario id it cites
+        // in Done-When, e.g. SPECGEN004_NN / TESTQUAL001_NN) + its last result, so task↔own-
+        // scenario traceability is visible, not just task→FR.
         tasks: tasks.map((t) => {
-          const m = (t.doneWhen ?? '').match(/s[pc]e[cn]gen004[_-](\d+)/i);
+          const ownKey = scenarioKey(t.doneWhen ?? '');
           let own_scenario: { id: string; lastResult: string } | null = null;
-          if (m) {
-            const sc = [...graph.nodes.values()].find(
-              (n) => n.type === 'Scenario' && new RegExp(`specgen004[_-]${m[1]}(?:\\D|$)`, 'i').test(n.id),
-            ) as ScenarioNode | undefined;
+          if (ownKey) {
+            const sc = [...graph.nodes.values()].find((n) => n.type === 'Scenario' && scenarioKey(n.id) === ownKey) as ScenarioNode | undefined;
             own_scenario = sc
               ? { id: sc.id, lastResult: sc.lastResult ?? 'UNKNOWN' }
-              : { id: `SPECGEN004_${m[1]}`, lastResult: 'NOT_FOUND' };
+              : { id: ownKey.toUpperCase(), lastResult: 'NOT_FOUND' };
           }
           return { id: t.id, status: t.status, file: t.file, line: t.line, own_scenario };
         }),
@@ -849,12 +929,36 @@ export function buildToolRegistry(
   // ─── 10) validate_anchor ────────────────────────────────────────────────
   tools.push({
     name: 'validate_anchor',
-    description: 'Check whether an anchor alias (compact id OR slug) resolves to a registered definition.',
-    inputShape: { anchor: z.string() } as const satisfies z.ZodRawShape,
-    handler: async ({ anchor }) => {
-      const def = getGraph().definitions.get(anchor as string);
-      if (!def) return asJsonResult({ ok: false, anchor, registered: false });
-      return asJsonResult({ ok: true, anchor, registered: true, location: def });
+    description:
+      'Validate two distinct anchor domains. Bare input (for example "FR-1" or ' +
+      '"fr-1-login-flow") checks the spec-graph compact-id/alias registry. ' +
+      'Markdown link input "DOC.md#heading-slug" checks a Marksman heading slug ' +
+      'by recomputing slugs with the shared marksmanSlug implementation; this is ' +
+      'file-scoped Markdown navigation, not a compact-id alias lookup.',
+    inputShape: { anchor: z.string(), spec: z.string().optional() } as const satisfies z.ZodRawShape,
+    handler: async ({ anchor, spec }) => {
+      const anchorText = String(anchor);
+      const markdownLocation = markdownLinkLocation(getGraph(), anchorText, spec ? String(spec) : undefined);
+      if (markdownLocation) {
+        return asJsonResult({
+          ok: true,
+          anchor: anchorText,
+          registered: true,
+          kind: 'marksman-heading-slug',
+          location: markdownLocation,
+        });
+      }
+      if (MARKDOWN_LINK_RE.test(anchorText)) {
+        return asJsonResult({
+          ok: false,
+          anchor: anchorText,
+          registered: false,
+          kind: 'marksman-heading-slug',
+        });
+      }
+      const def = getGraph().definitions.get(anchorText);
+      if (!def) return asJsonResult({ ok: false, anchor: anchorText, registered: false, kind: 'spec-graph-alias' });
+      return asJsonResult({ ok: true, anchor: anchorText, registered: true, kind: 'spec-graph-alias', location: def });
     },
   });
 

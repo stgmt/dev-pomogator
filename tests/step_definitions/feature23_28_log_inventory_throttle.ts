@@ -15,8 +15,9 @@ import os from 'node:os';
 import path from 'node:path';
 import { V4World } from '../hooks/before-after.ts';
 import { logEvent, readRecentEvents } from '../../tools/specs-validator/audit-logger.ts';
-import { appendFinding } from '../../tools/spec-check-log/writer.ts';
+import { appendFinding, appendFindings } from '../../tools/spec-check-log/writer.ts';
 import { decidePush, type PushDecision } from '../../tools/spec-conformance-push/spec-conformance-push.ts';
+import { parseScenarioResults, appendJsonLinesAtomic } from '../../scripts/bdd-overlay.mjs';
 import type { Finding } from '../../tools/spec-graph/conformance.ts';
 
 // ── SPECGEN004_122 — FR-23: each tier writes to its own sink ───────────────
@@ -122,4 +123,139 @@ Then('the flush after the window carries the aggregated deduplicated set', funct
   assert.ok(this.flush.emit!.includes('burst-2'), 'flush carries the second burst');
   const dupCount = (this.flush.emit!.match(/burst-2/g) ?? []).length;
   assert.equal(dupCount, 1, `duplicates must be deduped in the flush, got ${dupCount} occurrences`);
+});
+
+// ── SPECGEN004_513 — FR-59: bounded push reminder, complete log ─────────────
+
+interface F59World extends V4World {
+  f59Findings?: Finding[];
+  f59Flush?: PushDecision;
+  f59RepoRoot?: string;
+}
+
+Given('a PostToolUse push window with {int} conformance findings', function (this: F59World, count: number) {
+  this.f59RepoRoot = path.join(this.tempDir, 'fr59-repo');
+  fs.mkdirSync(this.f59RepoRoot, { recursive: true });
+  this.f59Findings = Array.from({ length: count }, (_, i) =>
+    mkFinding(`synthetic-fr59-finding-${i + 1} ${'x'.repeat(220)}`, i + 1),
+  );
+});
+
+When('the spec-conformance push window flushes', function (this: F59World) {
+  this.f59Flush = decidePush({
+    now: 4_000,
+    previous: { window_start: 1_000, pending: this.f59Findings! },
+    newFindings: [],
+  });
+});
+
+Then('the emitted reminder is at most {int} bytes', function (this: F59World, maxBytes: number) {
+  assert.notEqual(this.f59Flush?.emit, null, 'window elapsed → bounded reminder emitted');
+  assert.equal(this.f59Flush?.newState, null, 'state clears after the bounded flush');
+  assert.equal(
+    Buffer.byteLength(this.f59Flush!.emit!, 'utf8') <= maxBytes,
+    true,
+    `expected reminder <= ${maxBytes} bytes, got ${Buffer.byteLength(this.f59Flush!.emit!, 'utf8')}`,
+  );
+});
+
+Then('the emitted reminder summarizes the finding count, severity counts, omitted count, and full-log pointer', function (this: F59World) {
+  const lines = (this.f59Flush?.emit ?? '').split('\n');
+  assert.equal(lines[0], '<system-reminder>');
+  assert.equal(lines[1], 'Spec conformance findings (PostToolUse push, 3s window):');
+  assert.equal(lines[2], '  3000 finding(s): 3000 warning');
+  assert.equal(lines[3], '  Showing up to 20 sample finding(s); omitted 2980.');
+  assert.equal(lines[4], '  Full log: .dev-pomogator/.spec-check-log/ (or run /spec-status).');
+  assert.equal(lines[lines.length - 1], '</system-reminder>');
+});
+
+Then('the emitted reminder shows no more than {int} sample findings', function (this: F59World, maxSamples: number) {
+  const emit = this.f59Flush?.emit ?? '';
+  const sampleLines = emit.split('\n').filter((line) => /^ {2}\[[A-Z]+\]/.test(line));
+  assert.equal(sampleLines.length, maxSamples, `expected exactly ${maxSamples} sample lines`);
+  assert.match(sampleLines[0], /^ {2}\[WARNING\] ORPHAN_TASK \.specs\/probe\/TASKS\.md:1 — synthetic-fr59-finding-1 /);
+  assert.match(sampleLines[19], /^ {2}\[WARNING\] ORPHAN_TASK \.specs\/probe\/TASKS\.md:20 — synthetic-fr59-finding-20 /);
+  assert.doesNotMatch(emit, /synthetic-fr59-finding-21\s/);
+  assert.doesNotMatch(emit, /synthetic-fr59-finding-3000\s/);
+});
+
+Then('the durable spec-check-log writer still records every synthetic finding', function (this: F59World) {
+  appendFindings(this.f59Findings!, {
+    repoRoot: this.f59RepoRoot!,
+    source: 'spec-conformance-push',
+    sessionId: 'bdd-fr59',
+    now: new Date('2026-07-09T00:00:00.000Z'),
+  });
+  const dir = path.join(this.f59RepoRoot!, '.dev-pomogator', '.spec-check-log');
+  const lines = fs
+    .readdirSync(dir)
+    .filter((name) => name.endsWith('.jsonl'))
+    .flatMap((name) => fs.readFileSync(path.join(dir, name), 'utf8').split('\n').filter(Boolean));
+  assert.equal(lines.length, this.f59Findings!.length, 'writer must retain every synthetic finding');
+  const first = JSON.parse(lines[0]);
+  const last = JSON.parse(lines[lines.length - 1]);
+  assert.equal(first.source, 'spec-conformance-push');
+  assert.equal(first.session_id, 'bdd-fr59');
+  assert.equal(first.finding_code, 'ORPHAN_TASK');
+  assert.match(first.message, /synthetic-fr59-finding-1/);
+  assert.match(last.message, /synthetic-fr59-finding-3000/);
+});
+
+// ── SPECGEN004_529 — FR-56: append-only scenario-result overlay writer ─────
+
+interface F56World extends V4World {
+  f56Stream?: string;
+  f56Overlay?: string;
+  f56Rows?: ReturnType<typeof parseScenarioResults>;
+}
+
+function f56Envelope(e: unknown): string {
+  return JSON.stringify(e);
+}
+
+function f56Stream(): string {
+  return [
+    f56Envelope({ gherkinDocument: { uri: '.specs/spec-generator-v4/spec-generator-v4.feature', feature: { children: [{ scenario: { id: 'sc-526', location: { line: 3342 } } }] } } }),
+    f56Envelope({ pickle: { id: 'pk-526', uri: '.specs/spec-generator-v4/spec-generator-v4.feature', name: 'SPECGEN004_529 every BDD run path writes append-only scenario overlay rows', tags: [{ name: '@feature56' }], astNodeIds: ['sc-526'], steps: [{ id: 'ps-1', text: 'overlay step' }] } }),
+    f56Envelope({ testCase: { id: 'tc-526', pickleId: 'pk-526', testSteps: [{ id: 'ts-1', pickleStepId: 'ps-1' }] } }),
+    f56Envelope({ testCaseStarted: { id: 'tcs-526', testCaseId: 'tc-526', timestamp: { seconds: 1_800_000_000, nanos: 0 } } }),
+    f56Envelope({ testStepFinished: { testCaseStartedId: 'tcs-526', testStepId: 'ts-1', testStepResult: { status: 'PASSED' } } }),
+    f56Envelope({ testCaseFinished: { testCaseStartedId: 'tcs-526', timestamp: { seconds: 1_800_000_001, nanos: 0 } } }),
+  ].join('\n');
+}
+
+Given('a Cucumber message run for a focused FR-56 scenario', function (this: F56World) {
+  this.f56Stream = f56Stream();
+  this.f56Overlay = path.join(this.tempDir, '.dev-pomogator', '.scenario-results.ndjson');
+});
+
+When('the scenario-result overlay writer records that run', function (this: F56World) {
+  this.f56Rows = parseScenarioResults(this.f56Stream!, {
+    runId: 'run-526',
+    source: 'docker-bdd:filtered',
+    traceFile: '.dev-pomogator/.test-history/run-526-filtered.ndjson',
+  });
+  assert.equal(appendJsonLinesAtomic(this.f56Overlay!, this.f56Rows), 1);
+});
+
+Then('the scenario overlay contains one row with result, run identity, source, and trace id', function (this: F56World) {
+  const lines = fs.readFileSync(this.f56Overlay!, 'utf8').trim().split('\n');
+  assert.equal(lines.length, 1, 'overlay writer appends exactly one row per executed scenario');
+  const row = JSON.parse(lines[0]);
+  assert.equal(row.scenario_id, 'SPECGEN004_529');
+  assert.equal(row.result, 'PASSED');
+  assert.equal(row.time, '2027-01-15T08:00:01.000Z');
+  assert.equal(row.run_id, 'run-526');
+  assert.equal(row.source, 'docker-bdd:filtered');
+  assert.equal(row.trace_id, '.dev-pomogator/.test-history/run-526-filtered.ndjson#tcs-526');
+  assert.equal(row.test_case_started_id, 'tcs-526');
+  assert.equal(row.uri, '.specs/spec-generator-v4/spec-generator-v4.feature');
+  assert.equal(row.line, 3342);
+});
+
+Then('appending another run preserves the existing overlay row', function (this: F56World) {
+  assert.equal(appendJsonLinesAtomic(this.f56Overlay!, [{ scenario_id: 'SPECGEN004_530', result: 'FAILED', time: '2027-01-15T08:00:02.000Z', run_id: 'run-527', source: 'docker-bdd:filtered', trace_id: 'trace#527' }]), 1);
+  const rows = fs.readFileSync(this.f56Overlay!, 'utf8').trim().split('\n').map((line) => JSON.parse(line));
+  assert.deepEqual(rows.map((row) => row.scenario_id), ['SPECGEN004_529', 'SPECGEN004_530']);
+  assert.deepEqual(rows.map((row) => row.run_id), ['run-526', 'run-527']);
 });

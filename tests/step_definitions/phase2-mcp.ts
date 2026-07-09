@@ -1,22 +1,23 @@
 /**
  * Phase 2 BDD step definitions — MCP tools + guard + push hook.
  *
- * Covers SPECGEN004_07..14 (Phase 2A surface). 15-16 are Marksman-related
- * (Phase 2B) and remain PENDING here — the Marksman installer's BDD steps
- * land with that PR.
+ * Covers SPECGEN004_07..16 (Phase 2A/B surface): SpecGraph MCP tools,
+ * conformance hooks, push reminders, and the native Marksman LSP plugin
+ * registration/launcher contract.
  *
  * Step handlers call REAL production code through the in-memory entry
  * points: `buildToolRegistry` for MCP tools, `runGuard` for the hard hook,
- * `runPush` for the push hook. No subprocess spawns — the JSON-RPC layer
- * is exercised by a dedicated integration test in
+ * `runPush` for the push hook, plus the real Marksman launcher shim. No mocks.
+ * The JSON-RPC layer is exercised by a dedicated integration test in
  * `tests/e2e/spec-graph-mcp.test.ts`.
  *
- * @see .specs/spec-generator-v4/spec-generator-v4.feature SPECGEN004_07..14
+ * @see .specs/spec-generator-v4/spec-generator-v4.feature SPECGEN004_07..16
  * @see ~/.claude/plans/phase-2-mcp-hooks-marksman.md PR A details
  */
 
 import { Given, When, Then } from '@cucumber/cucumber';
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { buildGraph } from '../../tools/spec-graph/builder.ts';
@@ -27,12 +28,17 @@ import type { Finding } from '../../tools/spec-graph/conformance.ts';
 import type { SpecGraph, ScenarioNode } from '../../tools/spec-graph/types.ts';
 import type { V4World } from '../hooks/before-after.ts';
 
+const REPO_ROOT = process.cwd();
+
 interface Phase2World extends V4World {
   graph?: SpecGraph;
   toolResponse?: { ok: boolean; explanation_for_agent?: string; node?: { id: string } } & Record<string, unknown>;
   hookOutput?: { hookSpecificOutput?: { permissionDecision?: string; permissionDecisionReason?: string } };
   throttleState?: { window_start: number; pending: Finding[] } | null;
   emitted?: string;
+  t0?: number;
+  flush?: ReturnType<typeof decidePush>;
+  flushAt?: number;
 }
 
 function writeProgress(root: string, version: number): void {
@@ -365,9 +371,11 @@ When('PostToolUse hook fires for each', function (this: Phase2World) {
     state = r.newState;
     if (r.emit) fired.push(r.emit);
   }
-  // After-window fire — flushes.
-  const flush = decidePush({ now: t0 + 4_000, previous: state, newFindings: [] });
-  if (flush.emit) fired.push(flush.emit);
+  // Boundary fire — flushes at the fixed-window deadline, not after a sliding delay.
+  this.t0 = t0;
+  this.flushAt = t0 + 3_000;
+  this.flush = decidePush({ now: this.flushAt, previous: state, newFindings: [] });
+  if (this.flush.emit) fired.push(this.flush.emit);
   this.throttleState = state;
   this.emitted = fired.join('\n');
 });
@@ -397,6 +405,22 @@ Then('only one aggregated `<system-reminder>` is pushed after the window closes'
   const opens = m.match(/<system-reminder>/g)?.length ?? 0;
   assert.equal(opens, 1, `expected exactly one <system-reminder> opener, got ${opens}`);
 });
+
+Then(
+  'the push latency from the first edit is at most {int} ms plus {int} ms tolerance',
+  function (this: Phase2World, throttleMs: number, toleranceMs: number) {
+    assert.ok(this.flush?.emit, 'latency is meaningful only after the real decidePush flushes');
+    assert.equal(
+      this.flushAt! - this.t0!,
+      throttleMs,
+      'fixed-window throttle must flush at the deadline opened by the first edit',
+    );
+    assert.ok(
+      this.flushAt! - this.t0! <= throttleMs + toleranceMs,
+      `expected push latency ≤ ${throttleMs + toleranceMs}ms, got ${this.flushAt! - this.t0!}ms`,
+    );
+  },
+);
 
 // ─── SPECGEN004_14 — frontmatter opt-out ─────────────────────────────────
 
@@ -439,7 +463,7 @@ Then(
   },
 );
 
-// ─── SPECGEN004_15 / 16 — Marksman LSP bundle ───────────────────────────
+// ─── SPECGEN004_15 / 16 — native Marksman LSP plugin ───────────────────
 
 import { runInstall as runMarksmanInstall } from '../../tools/marksman-installer/postinstall.ts';
 import { readLog as readMarksmanLog } from '../../tools/marksman-installer/install-log.ts';
@@ -447,49 +471,89 @@ import { resolveMarksmanBinary } from '../../tools/marksman-installer/resolve-bi
 import { createMarksmanWorkspace, decideE2e, isInDocker, probeInitialize, removeMarksmanWorkspace } from '../../tools/marksman-installer/lsp-probe.ts';
 import { createHash } from 'node:crypto';
 
+interface MarksmanRegistration {
+  plugin: { lspServers?: unknown };
+  lsp: Record<string, unknown>;
+}
+
+interface MarksmanLauncherResult {
+  status: number | null;
+  stderr: string;
+}
+
 interface MarksmanWorld extends Phase2World {
   marksmanInstallResult?: { state: { available: boolean; reason?: string; binary_path?: string } };
+  marksmanRegistration?: MarksmanRegistration;
+  marksmanLauncherResult?: MarksmanLauncherResult;
+}
+
+function readJsonFile<T>(filePath: string): T {
+  return JSON.parse(fs.readFileSync(filePath, 'utf8')) as T;
+}
+
+function assertMarksmanLspRegistration(registration: MarksmanRegistration): void {
+  assert.equal(registration.plugin.lspServers, './.lsp.json', 'plugin.json must point Claude Code at .lsp.json');
+  assert.deepEqual(registration.lsp, {
+    marksman: {
+      command: 'node',
+      args: ['${CLAUDE_PLUGIN_ROOT}/tools/marksman-installer/launch-marksman.cjs', 'server'],
+      extensionToLanguage: { '.md': 'markdown' },
+      startupTimeout: 15000,
+    },
+  });
+}
+
+function runNativeLauncherWithoutMarksman(repoRoot: string): MarksmanLauncherResult {
+  const launcher = path.join(REPO_ROOT, 'tools/marksman-installer/launch-marksman.cjs');
+  const emptyPath = path.delimiter;
+  const result = spawnSync(process.execPath, [launcher, 'server'], {
+    cwd: repoRoot,
+    env: {
+      ...process.env,
+      PATH: emptyPath,
+      Path: emptyPath,
+      DEV_POMOGATOR_MARKSMAN_BIN: '',
+      DEV_POMOGATOR_REPO_ROOT: repoRoot,
+      CLAUDE_PROJECT_DIR: repoRoot,
+      FORCE_COLOR: '0',
+    },
+    encoding: 'utf8',
+    timeout: 15_000,
+  });
+  return { status: result.status, stderr: result.stderr ?? '' };
 }
 
 const FAKE_MARKSMAN_BINARY = Buffer.from('fake-marksman-bytes');
 const FAKE_MARKSMAN_SHA = createHash('sha256').update(FAKE_MARKSMAN_BINARY).digest('hex');
 
-Given('the Marksman installer runs', async function (this: MarksmanWorld) {
-  this.marksmanInstallResult = await runMarksmanInstall({
-    repoRoot: this.tempDir,
-    platform: 'linux',
-    arch: 'x64',
-    hashes: {
-      version: '2024.10.10',
-      release_url_template: 'https://example.test/{version}/{asset}',
-      platforms: {
-        linux: { x64: { asset: 'marksman-linux-x64', sha256: FAKE_MARKSMAN_SHA } },
-      },
-    },
-    download: async () => FAKE_MARKSMAN_BINARY,
-  });
+Given('the canonical plugin manifest declares the Marksman native LSP server', function (this: MarksmanWorld) {
+  this.marksmanRegistration = {
+    plugin: readJsonFile(path.join(REPO_ROOT, '.claude-plugin', 'plugin.json')),
+    lsp: readJsonFile(path.join(REPO_ROOT, '.lsp.json')),
+  };
+  assertMarksmanLspRegistration(this.marksmanRegistration);
 });
 
-When('the postInstall script completes', function (this: MarksmanWorld) {
-  assert.ok(this.marksmanInstallResult, 'install must have run in prior step');
+When('the Marksman native LSP registration is inspected', function (this: MarksmanWorld) {
+  assert.ok(this.marksmanRegistration, 'manifest registration must be loaded by Given');
+});
+
+Then('plugin.json references `.lsp.json` through `lspServers`', function (this: MarksmanWorld) {
+  assert.equal(this.marksmanRegistration?.plugin.lspServers, './.lsp.json');
 });
 
 Then(
-  '`.dev-pomogator\\/bin\\/marksman` \\(or platform equivalent) exists and is executable',
+  '`.lsp.json` registers server `marksman` with the launcher shim and markdown extension mapping',
   function (this: MarksmanWorld) {
-    const p = this.marksmanInstallResult!.state.binary_path;
-    assert.ok(p, 'binary_path must be set when available');
-    assert.ok(fs.existsSync(p!), `expected binary at ${p}`);
+    assertMarksmanLspRegistration(this.marksmanRegistration!);
   },
 );
 
-Then('the binary responds to LSP `initialize` request', { timeout: 25000 }, async function () {
+Then('the native launcher responds to LSP `initialize` through the real Marksman binary', { timeout: 25000 }, async function () {
   // Real-artifact hop-1: resolve the REAL Marksman binary (env override → PATH →
   // managed), drive the native-LSP launcher shim `launch-marksman.cjs server`,
   // and assert a real `initialize` returns nav capabilities. skip-policy
   // semantic: absent inside Docker ⇒ hard FAIL; absent on a dev host ⇒ skip.
-  // (The synthetic fake binary from the install step is NOT used here — this
-  // tests the real binary the agent will actually navigate with.)
   const resolved = resolveMarksmanBinary({ repoRoot: process.cwd() });
   const decision = decideE2e({ binaryPath: resolved?.binaryPath ?? null, inDocker: isInDocker() });
   if (decision === 'fail') {
@@ -499,54 +563,31 @@ Then('the binary responds to LSP `initialize` request', { timeout: 25000 }, asyn
   const ws = createMarksmanWorkspace();
   try {
     const { capabilities } = await probeInitialize({ binaryPath: resolved!.binaryPath, workspaceDir: ws });
-    assert.ok(capabilities.definitionProvider, 'expected definitionProvider');
-    assert.ok(capabilities.referencesProvider, 'expected referencesProvider');
-    assert.ok(capabilities.documentSymbolProvider, 'expected documentSymbolProvider');
+    assert.equal(capabilities.definitionProvider, true);
+    assert.equal(capabilities.referencesProvider, true);
+    assert.equal(capabilities.renameProvider, true);
+    assert.equal(capabilities.documentSymbolProvider, true);
   } finally {
     removeMarksmanWorkspace(ws);
   }
 });
 
-Given(
-  'the Marksman binary download fails during install \\(no network)',
-  async function (this: MarksmanWorld) {
-    this.marksmanInstallResult = await runMarksmanInstall({
-      repoRoot: this.tempDir,
-      platform: 'linux',
-      arch: 'x64',
-      hashes: {
-        version: '2024.10.10',
-        release_url_template: 'https://example.test/{version}/{asset}',
-        platforms: {
-          linux: { x64: { asset: 'marksman-linux-x64', sha256: FAKE_MARKSMAN_SHA } },
-        },
-      },
-      download: async () => {
-        throw new Error('ENOTFOUND example.test');
-      },
-    });
-  },
-);
-
-When('the MCP server starts', function (this: MarksmanWorld) {
-  // Generic no-op marker — multiple Phase-2/Phase-4 scenarios share this
-  // Gherkin step. Specific assertions live in the Then steps:
-  //   • SPECGEN004_16 → reads marksman install-log
-  //   • SPECGEN004_23 → opens SQLite + integrity check
+Given('no Marksman binary is available to the launcher', function (this: MarksmanWorld) {
+  const managed = path.join(this.tempDir, '.dev-pomogator', 'bin', process.platform === 'win32' ? 'marksman.exe' : 'marksman');
+  fs.rmSync(managed, { force: true });
 });
 
-Then('it detects missing Marksman binary', function (this: MarksmanWorld) {
-  const log = readMarksmanLog(this.tempDir);
-  assert.equal(log?.marksman.available, false);
+When('the native Marksman LSP launcher starts', function (this: MarksmanWorld) {
+  this.marksmanLauncherResult = runNativeLauncherWithoutMarksman(this.tempDir);
 });
 
-Then(
-  '`.dev-pomogator\\/install-log.json` is updated with marksman_available=false',
-  function (this: MarksmanWorld) {
-    const log = readMarksmanLog(this.tempDir);
-    assert.equal(log?.marksman.available, false);
-  },
-);
+Then('the launcher exits non-zero with an actionable missing-binary message', function (this: MarksmanWorld) {
+  const result = this.marksmanLauncherResult!;
+  assert.notEqual(result.status, 0, `launcher should fail without Marksman; stderr:\n${result.stderr}`);
+  assert.match(result.stderr, /\[marksman-lsp\] Marksman binary not found\./);
+  assert.match(result.stderr, /auto-installed by the SessionStart hook/);
+  assert.match(result.stderr, /\/reload-plugins/);
+});
 
 Then('there is no custom JS markdown-LSP fallback in the MCP tool registry', function (
   this: MarksmanWorld,

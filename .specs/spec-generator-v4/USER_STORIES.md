@@ -813,3 +813,18 @@ As a maintainer trusting the spec health verdict, I want a spec that still conta
 Given a claims-done spec whose README is still the unfilled template scaffold
 When spec-verdict runs on it
 Then the verdict is RED with a SCAFFOLD_INCOMPLETE finding, and filling the prose clears it
+
+---
+
+### User Story 37: Hook feedback stays useful without flooding Claude's context (Priority: P1)
+**Требование:** [FR-59](FR.md#fr-59)
+
+As a maintainer editing specs in a noisy corpus, I want the conformance push to show a compact summary instead of thousands of lines, so that I can see the problem count and where to inspect the full audit without losing the session to context bloat.
+
+**Why:** The full list belongs in the durable audit journal; the Claude-facing reminder is only a steering signal. Printing every finding made real sessions carry ~700KB hook payloads.
+**Independent Test:** Drive `decidePush` with thousands of findings and assert the reminder stays under 6000 bytes with counts, samples, omitted count and full-log pointer; drive `runPush` on a fixture corpus and assert the spec-check-log still has every finding.
+**Acceptance Scenarios:**
+
+Given thousands of conformance findings are waiting in the PostToolUse push window
+When the window flushes
+Then Claude receives a bounded reminder with counts and an omitted count, while the full journal remains complete

@@ -510,26 +510,26 @@ Then(/^hook stdout is empty$/, function (this: VsgfWorld) {
 // Then — VSGF001_50 artifact assertions
 // ---------------------------------------------------------------------------
 
-Then(/^frontmatter contains "disable-model-invocation: true"$/, function () {
+function readVerifyGenericScopeFixFrontmatter(): string {
   const skillPath = path.resolve(REPO_ROOT, '.claude', 'skills', 'verify-generic-scope-fix', 'SKILL.md');
   const content = fs.readFileSync(skillPath, 'utf-8');
-  const frontmatter = content.match(/^---\n([\s\S]*?)\n---/)?.[1] ?? '';
+  return content.match(/^---\r?\n([\s\S]*?)\r?\n---/)?.[1] ?? '';
+}
+
+Then(/^frontmatter contains "disable-model-invocation: true"$/, function () {
+  const frontmatter = readVerifyGenericScopeFixFrontmatter();
   assert.match(frontmatter, /disable-model-invocation:\s*true/,
     'SKILL.md frontmatter must contain disable-model-invocation: true');
 });
 
 Then(/^frontmatter contains "name: verify-generic-scope-fix"$/, function () {
-  const skillPath = path.resolve(REPO_ROOT, '.claude', 'skills', 'verify-generic-scope-fix', 'SKILL.md');
-  const content = fs.readFileSync(skillPath, 'utf-8');
-  const frontmatter = content.match(/^---\n([\s\S]*?)\n---/)?.[1] ?? '';
+  const frontmatter = readVerifyGenericScopeFixFrontmatter();
   assert.match(frontmatter, /name:\s*verify-generic-scope-fix/,
     'SKILL.md frontmatter must contain name: verify-generic-scope-fix');
 });
 
 Then(/^frontmatter contains "allowed-tools:" with Read, Bash, Grep, Glob$/, function () {
-  const skillPath = path.resolve(REPO_ROOT, '.claude', 'skills', 'verify-generic-scope-fix', 'SKILL.md');
-  const content = fs.readFileSync(skillPath, 'utf-8');
-  const frontmatter = content.match(/^---\n([\s\S]*?)\n---/)?.[1] ?? '';
+  const frontmatter = readVerifyGenericScopeFixFrontmatter();
   assert.match(frontmatter, /allowed-tools:/,
     'SKILL.md frontmatter must contain allowed-tools:');
   // Read, Bash, Grep, Glob should all appear in the frontmatter

@@ -1,42 +1,4 @@
 # Plan Freshness — Запрет контаминации планов
-
-## Правило
-
-Каждый план создаётся С НУЛЯ для текущей задачи. ЗАПРЕЩЕНО копировать секции из предыдущих планов.
-
-## Что запрещено
-
-- Копировать File Changes из предыдущего плана в новый
-- Переносить Requirements/User Stories/Use Cases из другой задачи
-- Редактировать существующий план от другой задачи вместо создания нового
-- Оставлять пути в File Changes, которые не упомянуты в Implementation Plan или Todos текущего плана
-
-## Самопроверка перед ExitPlanMode
-
-Каждый путь в File Changes ДОЛЖЕН быть упомянут в:
-- Implementation Plan (как шаг), ИЛИ
-- Todos description (как `files:`), ИЛИ
-- Requirements (как объект изменения)
-
-Если путь не упомянут нигде — он stale и должен быть удалён.
-
-## Plan File Info (ОБЯЗАТЕЛЬНО)
-
-1. При входе в Plan mode — прочитать "Plan File Info:" из system prompt
-2. Писать ТОЛЬКО в указанный файл (не в файлы от предыдущих сессий)
-3. Перед ExitPlanMode — убедиться что файл совпадает с указанным в system prompt
-4. НЕ открывать и НЕ копировать содержимое из других plan files в `~/.claude/plans/`
-
-## Как действовать
-
-1. При входе в Plan mode — прочитать "Plan File Info:" и писать в указанный файл
-2. Создавай план с нуля из template.md
-3. НЕ открывай и НЕ редактируй планы от предыдущих задач
-4. Перед ExitPlanMode — проверь что каждый File Changes path трейсится к текущим Requirements
-
-## Чеклист
-
-- [ ] План создан с нуля (не редактирован от другой задачи)
-- [ ] Каждый File Changes path упомянут в Implementation Plan или Todos
-- [ ] Requirements соответствуют текущему запросу пользователя
-- [ ] Нет секций скопированных из предыдущих планов
+<!-- dev-pomogator-carl-context-diet:managed-stub v1 source=.claude/rules/plan-pomogator/plan-freshness.md library=.carl/rules/plan-pomogator/plan-freshness.md sha256=bb8bca2b0a7bfb9d27eb2fb35c57f42e8475d886c13213b5e7155099efb07ca0 -->
+<!-- /dev-pomogator-carl-context-diet -->
+Lazy rule body: `.carl/rules/plan-pomogator/plan-freshness.md`

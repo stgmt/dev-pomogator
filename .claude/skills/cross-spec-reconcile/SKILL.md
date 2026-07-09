@@ -11,7 +11,7 @@ description: |
   + optional `consistency-report.sarif`. CRITICAL findings invoke a
   blocking AskUserQuestion with header ⚠️ CRIT; user override is logged
   to `.claude/logs/cross-spec-overrides.jsonl` for audit trail.
-allowed-tools: Read, Write, Edit, Glob, Grep, Bash, AskUserQuestion
+allowed-tools: Read, Write, Edit, Glob, Grep, Bash, AskUserQuestion, Agent
 ---
 
 # cross-spec-reconcile
@@ -58,7 +58,7 @@ WARNING + INFO surface but never block.
 | Mode  | Cost      | What it does                                  |
 |-------|-----------|-----------------------------------------------|
 | light | <5s       | Globs FRs/ACs/Scenarios; extracts identifiers via regex; compares file existence against the SpecGraph (Phase 1); produces the mechanical subset of codes |
-| full  | +30-90s   | Adds the Phase-3 LLM-as-judge for pairwise FR/AC semantic compare; cached by `sha256(spec_a + spec_b)` so re-runs are free; FR-26 deny-list applies before any spawn |
+| full  | +30-90s   | Adds the Phase-3 LLM-as-judge for pairwise FR/AC semantic compare; cached by `sha256(spec_a + spec_b)` so re-runs are free; FR-26 deny-list applies before any spawn; semantic timeout/failure keeps mechanical findings and marks YAML `partial: true` |
 
 ## Output: `.specs/<slug>/consistency-report.yaml`
 

@@ -3,7 +3,10 @@
 // idempotent; round-trip (broken → fix → 0 broken).
 
 import { describe, it, expect } from 'vitest';
-import { applyFixes } from '../fix.mjs';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { applyFixes, fixSpecDirViaDoor } from '../fix.mjs';
 import { checkLinks } from '../check.mjs';
 
 const broken = (files: { file: string; content: string }[]) => checkLinks(files);
@@ -53,5 +56,46 @@ describe('applyFixes — deterministic id-bearing repair', () => {
     ];
     const { changed } = applyFixes(files, broken(files));
     expect(changed['.specs/x/FR.md']).toContain('[AC-1.1](AC.md#ac-11)');
+  });
+});
+
+describe('fixSpecDirViaDoor — enforce-safe door write', () => {
+  it('sends deterministic content through a spec-door instruction outside .specs', () => {
+    const repo = fs.mkdtempSync(path.join(os.tmpdir(), 'anchor-door-'));
+    try {
+      const specDir = path.join(repo, '.specs', 'auth');
+      fs.mkdirSync(specDir, { recursive: true });
+      fs.writeFileSync(path.join(specDir, 'FR.md'), '## FR-7\n\nsee [FR-7](#fr-7-old)\n');
+
+      const calls: string[] = [];
+      const spawnFn = (cmd: string, args: string[]) => {
+        calls.push(`${cmd} ${args.join(' ')}`);
+        const instruction = args.at(-1)!;
+        const normalizedInstruction = instruction.replace(/\\/g, '/');
+        expect(normalizedInstruction).toContain('/.dev-pomogator/.tmp/');
+        expect(normalizedInstruction).not.toContain('/.specs/');
+        const payload = JSON.parse(fs.readFileSync(instruction, 'utf-8')) as {
+          action: string;
+          spec: string;
+          doc: string;
+          content: string;
+          reason: string;
+        };
+        expect(payload).toMatchObject({ action: 'apply', spec: 'auth', doc: 'FR.md' });
+        expect(payload.reason).toContain('FR-52b');
+        expect(payload.content).toContain('[FR-7](#fr-7)');
+        expect(payload.content).not.toContain('#fr-7-old');
+        fs.writeFileSync(path.join(repo, '.specs', payload.spec, payload.doc), payload.content);
+        return { status: 0, stdout: '{"ok":true}', stderr: '' };
+      };
+
+      const result = fixSpecDirViaDoor(specDir, repo, { specDoor: 'scripts/spec-door.ts', spawnFn });
+      expect(calls).toHaveLength(1);
+      expect(result.failed).toEqual([]);
+      expect(result.written).toEqual(['.specs/auth/FR.md']);
+      expect(checkLinks([{ file: '.specs/auth/FR.md', content: fs.readFileSync(path.join(specDir, 'FR.md'), 'utf-8') }])).toEqual([]);
+    } finally {
+      fs.rmSync(repo, { recursive: true, force: true });
+    }
   });
 });

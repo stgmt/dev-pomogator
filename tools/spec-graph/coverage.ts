@@ -4,7 +4,7 @@
  * Pure helpers that turn the latest BDD run (`.dev-pomogator/.last-test-run.ndjson`,
  * ingested into the SpecGraph as `ScenarioNode.lastResult`) into:
  *   - per-scenario coverage buckets (passed / pending / undefined / ambiguous / failed / skipped)
- *   - a task → scenario map (from Done-When `SPECGEN004_NN` ids + `@featureN` tags + FR refs)
+ *   - a task → scenario map (prefer own Done-When scenario ids like `SPECGEN004_NN` / `TESTQUAL001_NN`; fallback to `@featureN` tags + FR refs)
  *   - per-task `verified_status` (DONE iff EVERY mapped scenario PASSED — the honesty gate)
  *
  * No I/O here — callers (MCP `get_coverage`, `get_trace`, `spec-status`) supply
@@ -50,7 +50,7 @@ export interface ScenarioLike {
 
 export interface TaskLike {
   id: string;
-  /** Raw Done-When text (carries `SPECGEN004_NN` refs + `@featureN`). */
+  /** Raw Done-When text (carries own scenario ids like `SPECGEN004_NN` / `TESTQUAL001_NN` + `@featureN`). */
   doneWhen: string;
   /** FR/NFR ids the task implements (TaskNode.refs). */
   refs: string[];
@@ -116,14 +116,17 @@ export interface CoverageReport {
 }
 
 /**
- * Extract the canonical scenario key `specgen004_NN` from any string (slug id,
+ * Extract the canonical scenario key `<PREFIX>_<N>` from any string (slug id,
  * scenario name, or Done-When mention), or `null`. Tolerates the `SCENGEN004`
  * typo seen in some legacy task blocks.
  */
 export function scenarioKey(s: string): string | null {
-  // Matches both SPECGEN004 (S-P-E-C-…) and the legacy SCENGEN004 typo (S-C-E-N-…).
-  const m = s.match(/s[pc]e[cn]gen004[_-](\d+)/i);
-  return m ? `specgen004_${m[1]}` : null;
+  // Matches SPECGEN004 (S-P-E-C-…), the legacy SCENGEN004 typo (S-C-E-N-…),
+  // and named non-v4 scenario ids such as TESTQUAL001_10 used by strong-tests.
+  const m = s.match(/\b([a-z][a-z0-9]*(?:gen)?\d{3})[_-](\d+)\b/i);
+  if (!m) return null;
+  const prefix = m[1].toLowerCase() === 'scengen004' ? 'specgen004' : m[1].toLowerCase();
+  return `${prefix}_${m[2]}`;
 }
 
 /** Group scenarios by last result. ABSENT result → `not_run` (not in the last
@@ -149,17 +152,19 @@ export function bucketScenarios(scenarios: ScenarioLike[]): Record<Bucket, strin
 }
 
 /**
- * Map each task to the scenario ids it depends on, via the union of:
- *   1. explicit `SPECGEN004_NN` ids mentioned in Done-When,
- *   2. `@featureN` tags mentioned in Done-When,
- *   3. FR refs → scenarios tagged `@feature<N>` (FR-N ↔ @featureN convention).
- * De-dupes across all three sources (a scenario referenced twice maps once).
+ * Map each task to the scenario ids it depends on:
+ *   1. explicit scenario ids mentioned in Done-When are the task's own proof and
+ *      WIN (FR-52e) — do not drag in @manual/not-run siblings from the same broad
+ *      `@featureN` tag once an own scenario is named,
+ *   2. otherwise, `@featureN` tags mentioned in Done-When,
+ *   3. otherwise, FR refs → scenarios tagged `@feature<N>` (FR-N ↔ @featureN convention).
+ * De-dupes within the chosen source class (a scenario referenced twice maps once).
  *
  * Same-spec scoping: `@featureN` tags are NOT unique across specs (`@feature2`
  * lives in many `.specs/<slug>/*.feature` files). When a task's `spec` is known,
  * tag-based matches (sources 2 & 3) are restricted to scenarios in the SAME
  * spec, so a v4 task isn't flagged by an unrun `@feature2` scenario in another
- * spec. Explicit `SPECGEN004_NN` ids (source 1) are unambiguous and never
+ * spec. Explicit own scenario ids (source 1) are unambiguous and never
  * scoped. When `spec` is absent (caller didn't supply it) the legacy
  * un-scoped behaviour is preserved.
  */
@@ -183,24 +188,26 @@ export function mapTasksToScenarios(
 
   const out = new Map<string, string[]>();
   for (const task of tasks) {
-    const ids = new Set<string>();
+    const explicitIds = new Set<string>();
+    const taggedIds = new Set<string>();
+    const refIds = new Set<string>();
     // Tag matches respect the task's spec when known (FR-N ↔ @featureN tags
     // collide across specs). An undefined task.spec disables scoping (legacy).
     const sameSpec = (sid: string): boolean =>
       task.spec === undefined || scenarioSpec.get(sid) === task.spec;
-    for (const m of task.doneWhen.matchAll(/s[pc]e[cn]gen004[_-]\d+/gi)) {
+    for (const m of task.doneWhen.matchAll(/\b[a-z][a-z0-9]*(?:gen)?\d{3}[_-]\d+\b/gi)) {
       const k = scenarioKey(m[0]);
       const sid = k && byKey.get(k);
-      if (sid) ids.add(sid); // explicit id — unambiguous, never scoped
+      if (sid) explicitIds.add(sid); // explicit own scenario id — unambiguous, never scoped
     }
     for (const m of task.doneWhen.matchAll(/@feature\d+/gi)) {
-      for (const sid of byTag.get(m[0].toLowerCase()) ?? []) if (sameSpec(sid)) ids.add(sid);
+      for (const sid of byTag.get(m[0].toLowerCase()) ?? []) if (sameSpec(sid)) taggedIds.add(sid);
     }
     for (const ref of task.refs) {
       const n = ref.match(/FR-(\d+)/i);
-      if (n) for (const sid of byTag.get(`@feature${n[1]}`) ?? []) if (sameSpec(sid)) ids.add(sid);
+      if (n) for (const sid of byTag.get(`@feature${n[1]}`) ?? []) if (sameSpec(sid)) refIds.add(sid);
     }
-    out.set(task.id, [...ids]);
+    out.set(task.id, [...(explicitIds.size > 0 ? explicitIds : taggedIds.size > 0 ? taggedIds : refIds)]);
   }
   return out;
 }

@@ -105,13 +105,14 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Then within 3 seconds the agent context receives a `<system-reminder>` message
     And the message contains the finding code, location, and suggested actions
 
-  @feature6
+  @feature6 @feature28
   Scenario: SPECGEN004_13 PostToolUse hook aggregates and deduplicates findings in bulk edit
     Given the agent makes 5 sequential Edits to `.specs/auth/*.md` within 2 seconds
     When PostToolUse hook fires for each
     Then findings are batched in the 3-second throttle window
     And duplicate findings (same code + location) are deduplicated
     And only one aggregated `<system-reminder>` is pushed after the window closes
+    And the push latency from the first edit is at most 3000 ms plus 100 ms tolerance
 
   @feature6
   Scenario: SPECGEN004_14 PostToolUse push silenced when frontmatter flag set
@@ -122,18 +123,18 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     And the findings are still logged to `.dev-pomogator/.spec-check-log/`
 
   @feature7
-  Scenario: SPECGEN004_15 Marksman binary installed silently during npm install
-    Given the Marksman installer runs
-    When the postInstall script completes
-    Then `.dev-pomogator/bin/marksman` (or platform equivalent) exists and is executable
-    And the binary responds to LSP `initialize` request
+  Scenario: SPECGEN004_15 Marksman native LSP registration is declared by the canonical plugin
+    Given the canonical plugin manifest declares the Marksman native LSP server
+    When the Marksman native LSP registration is inspected
+    Then plugin.json references `.lsp.json` through `lspServers`
+    And `.lsp.json` registers server `marksman` with the launcher shim and markdown extension mapping
+    And the native launcher responds to LSP `initialize` through the real Marksman binary
 
   @feature7
-  Scenario: SPECGEN004_16 No fake fallback when Marksman is unavailable
-    Given the Marksman binary download fails during install (no network)
-    When the MCP server starts
-    Then it detects missing Marksman binary
-    And `.dev-pomogator/install-log.json` is updated with marksman_available=false
+  Scenario: SPECGEN004_16 Missing Marksman disables only native markdown LSP, not spec-domain MCP tools
+    Given no Marksman binary is available to the launcher
+    When the native Marksman LSP launcher starts
+    Then the launcher exits non-zero with an actionable missing-binary message
     And there is no custom JS markdown-LSP fallback in the MCP tool registry
     And spec-domain graph queries still work through the MCP `find_refs` tool
 
@@ -190,7 +191,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
   @feature10
   Scenario: SPECGEN004_23 SQLite corruption: auto-fallback to in-memory rebuild
     Given `.dev-pomogator/.spec-index.sqlite` file is corrupt (PRAGMA integrity_check fails)
-    When the MCP server starts
+    When the MCP server starts and opens the SQLite index
     Then corruption is detected at startup
     And the corrupt file is moved to `.dev-pomogator/.spec-index.sqlite.corrupt-{timestamp}`
     And MCP server falls back to in-memory rebuild
@@ -246,6 +247,22 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Then the heuristic does NOT match (no "архитектур"/"v\d+"/"rebuild" keywords AND <3 components)
     And `create-spec` invokes regular `Skill("research-workflow")` instead of `architecture-research-workflow`
     And 7-stage overhead is avoided
+
+  @feature12
+  Scenario: SPECGEN004_531 shared research base is the single discipline source for both research skills
+    Given the shipped shared research base is loaded
+    When the research skills declare their shared research discipline
+    Then the base contains hypothesis-first source taxonomy triangulation verification markers schema-exhaustiveness recency anti-patterns external-pain and misconception-flush rules
+    And research-workflow links the shared base and references external-pain and misconception-flush sections
+    And architecture-research-workflow links the shared base from its Stage 3 broad research note
+
+  @feature12
+  Scenario: SPECGEN004_532 create-spec routes architecture research and honors research-done recursion guard
+    Given create-spec Phase 1 discovery documentation is loaded
+    When create-spec evaluates architectural small-feature and research-done prompts
+    Then architectural prompts route to architecture-research-workflow through the real heuristic
+    And small prompts route to research-workflow through the real heuristic
+    And the research-done recursion guard is documented before either research skill is invoked
 
   @feature13
   Scenario: SPECGEN004_29 Orphan scenario tag returns warn-severity finding by default
@@ -1365,10 +1382,16 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Then the bare id resolves to the composite task node and is not 404ed
 
   @feature49
-  Scenario: SPECGEN004_178 the task-census banner names one concrete next open task
-    Given a cached task census whose busiest spec has an open task with a title
-    When the per-prompt task-census banner renders
-    Then the banner names that task title as the next step
+  Scenario: SPECGEN004_178 the task-census banner routes the next step only within the current spec
+    Given a cached task census with a foreign busiest spec and a current spec next task
+    When the per-prompt task-census banner renders for the current spec
+    Then the banner names only the current spec task as the next step
+
+  @feature49
+  Scenario: SPECGEN004_480 the shared next-step router prioritizes agent todo then async then current spec
+    Given the shared next-step router has an agent todo an active async job and a current spec task
+    When the next-step route is selected across priority cases
+    Then the route chooses agent todo before async before current spec and never a foreign backlog
 
   @feature49
   Scenario: SPECGEN004_179 the reconciler flags a stale in-progress marker but never auto-closes it
@@ -1426,13 +1449,13 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
 
   @feature49
   Scenario: SPECGEN004_189 the stop-gate blocks a whole-spec done claim while the census shows unfinished work
-    Given a census with unfinished work naming a next open task and the real claim-evidence-gate stop hook
+    Given a census with a foreign busiest spec plus current-spec unfinished work and the real claim-evidence-gate stop hook
     When the hook judges a whole-spec done claim made after a tool ran
-    Then the hook blocks it and the block names the unfinished count and the next task
+    Then the hook blocks it and the block names the unfinished count and only the current spec next task
 
   @feature49
   Scenario: SPECGEN004_190 the census-false-close gate does not fire on a non-spec works-done claim
-    Given a census with unfinished work naming a next open task and the real claim-evidence-gate stop hook
+    Given a census with a foreign busiest spec plus current-spec unfinished work and the real claim-evidence-gate stop hook
     When the hook judges a task-level fixed-it claim made after a tool ran
     Then the hook does not block it
 
@@ -1484,11 +1507,55 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     When the same continuation stop fires twice with stop_hook_active set
     Then the first fire blocks and the identical re-fire is released by the anti-loop
 
+  @feature49
+  Scenario: SPECGEN004_526 transcript todo replay updates by real task id rather than positional array index
+    Given a captured transcript where TaskCreate and TaskUpdate events have sparse visible ids after compaction
+    When the Pinator task replay reconstructs agent todos
+    Then a completed visible task id closes that same real id and no array-slot stale todo remains open
+
+  @feature49
+  Scenario: SPECGEN004_531 intent extraction ignores interruption sentinels before terse continuations
+    Given a Pinator mandate followed by interruption sentinels and a terse continuation prompt
+    When the Pinator intent extractor computes the effective user request
+    Then interruption sentinels are ignored and the Pinator mandate remains effective
+
+  @feature49
+  Scenario: SPECGEN004_532 failed TaskUpdate results do not reopen phantom todos
+    Given a transcript where TaskUpdate for a missing task returns Task not found
+    When the Pinator task replay reconstructs agent todos
+    Then the missing-task update leaves no phantom open todo
+
+  @feature49
+  Scenario: SPECGEN004_527 duplicate agent todos cannot leave stale CARL evidence work as the next step
+    Given the captured CARL transcript includes repeated Capture real CARL runtime evidence todos and a later completed duplicate with real evidence files
+    When the shared next-step router selects the agent todo route
+    Then the stale CARL evidence duplicate is collapsed or demoted and the route does not name it as the next step
+
+  @feature49
+  Scenario: SPECGEN004_528 Stop-gate fire logs expose the selected todo id and reconciliation reason
+    Given a Pinator Stop-gate block caused by an agent todo route
+    When the fire is appended to .claim-evidence-gate-fires.jsonl
+    Then the log entry includes nextStepSource the real task id transcript location selected subject and duplicate reconciliation reason
+
+  @feature49
+  Scenario: SPECGEN004_533 the Stop-gate does not force the WS-F umbrella backlog after a narrow spec-generator-v4 report
+    Given a scoped spec-generator-v4 census whose next open task is the WS-F umbrella backlog
+    When the hook evaluates a narrow-task done report after that spec was touched
+    Then the hook approves the report and never suggests the WS-F umbrella backlog as next
+
   @feature51
   Scenario: SPECGEN004_199 the migrator inventory classifies cases by how they exercise code
     Given a non-BDD test source with a spawning helper a pure call an fs read and a skipped case
     When the migrator inventories that source
     Then the helper-calling case is runtime the direct call is pure the fs case is artifact and the skipped case is manual
+
+  @feature51
+  Scenario: SPECGEN004_518 wire-feature promotes comment feature tags before wiring
+    Given a feature text with a comment feature tag and a same-spec FR list
+    When the wire-feature promotion helper prepares that feature for wiring
+    Then the comment feature tag becomes a real Gherkin tag line with its control tag
+    And the promoted feature parses to a tested-by edge for that FR
+    And an unknown feature number is rejected before wiring
 
   @feature3
   Scenario: SPECGEN004_200 the wiki-link resolver resolves ids and slug aliases strips fragments and flags broken targets
@@ -1497,10 +1564,10 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Then ids and slug aliases resolve identically unknown targets are broken the alias and fragment are stripped a same-file fragment is empty-but-not-broken and line numbers are recorded
 
   @feature32
-  Scenario: SPECGEN004_201 the coverage scenarioKey normaliser canonicalises ids and ignores prose
+  Scenario: SPECGEN004_201 the coverage scenarioKey normaliser canonicalises ids including non-v4 prefixes and ignores prose
     Given the coverage scenarioKey normaliser
-    When it normalises a slug node id a raw Done-When mention a legacy-typo id and plain prose
-    Then it yields the canonical specgen004 id tolerates the legacy SCENGEN typo and returns null for prose
+    When it normalises a slug node id a raw Done-When mention a legacy-typo id a named non-v4 id and plain prose
+    Then it yields canonical scenario ids tolerates the legacy SCENGEN typo and returns null for prose
 
   @feature32
   Scenario: SPECGEN004_202 bucketScenarios conserves every scenario and routes each result to one bucket
@@ -1536,13 +1603,13 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
   Scenario: SPECGEN004_207 computeCoverage reconciles totals and never marks a task with an unrun scenario DONE
     Given a coverage run over one passed and one undefined scenario with a done a mixed and an orphan task
     When computeCoverage scores them end to end
-    Then the bucket totals reconcile with the scenario count and the done task is DONE the mixed task IN_PROGRESS and the orphan task unverified
+    Then the bucket totals reconcile with the scenario count the done task is DONE the mixed task IN_PROGRESS the orphan task unverified and a TESTQUAL own-scenario task is DONE without same-feature siblings
 
   @feature46
   Scenario: SPECGEN004_208 get_trace surfaces each task's own cited scenario and its last result
-    Given a graph where one task cites its own SPECGEN scenario in Done-When and another does not
+    Given a graph where one task cites its own SPECGEN scenario in Done-When another cites its own TESTQUAL scenario and a third does not
     When get_trace is asked for the shared FR
-    Then the citing task own_scenario resolves to that scenario with its last result and the other task own_scenario is null
+    Then the citing tasks own_scenario resolves to each scenario with its last result and the other task own_scenario is null
 
   @feature3
   Scenario: SPECGEN004_209 parseMarkdown registers triple anchors for a legacy Requirement heading and the v4 pair without regression
@@ -1633,8 +1700,17 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Then the guard denies it with exit 2 and routes to docker-bdd
     When a docker-bdd.sh invocation runs the suite in Docker
     Then the guard allows it with exit 0
+    When an npm test:bdd invocation reaches the guard
+    Then the guard allows it with exit 0
     When a git commit message merely mentions a cucumber run
     Then the guard allows it with exit 0
+
+    When the package BDD script is inspected
+    Then test:bdd routes to docker-bdd
+    When the docker-bdd runner is inspected
+    Then docker-bdd invokes run-bdd inside Docker instead of raw cucumber
+    When the BDD runner instructions are inspected
+    Then they route filtered BDD diagnostics through docker-bdd and not host cucumber
 
   @feature49
   Scenario: SPECGEN004_222 the gate releases after consecutive zero-tool kicks and a tool-run resets the no-progress streak
@@ -2069,25 +2145,25 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     When spec-status runs with the task-table format on that empty spec
     Then the CLI exits with status 1 and stderr contains "TASKS.md not found"
 
-  @feature19
+  @feature58
   Scenario: SPECGEN004_295 form-guards-dispatch routes violating TASKS.md to task-form-guard and propagates deny
     Given a v3 spec directory with a progress.json marking version 3
     When form-guards-dispatch receives a Write for a violating TASKS.md in that spec
     Then the dispatcher exits 2 and the stdout JSON carries permissionDecision deny mentioning task-form-guard
 
-  @feature19
+  @feature58
   Scenario: SPECGEN004_296 form-guards-dispatch lets a guard-clean TASKS.md through with exit 0
     Given a v3 spec directory with a progress.json marking version 3
     When form-guards-dispatch receives a Write for a valid TASKS.md in that spec
     Then the dispatcher exits 0 with no deny output
 
-  @feature19
+  @feature58
   Scenario: SPECGEN004_297 form-guards-dispatch routes violating USER_STORIES.md to user-story-form-guard and propagates deny
     Given a v3 spec directory with a progress.json marking version 3
     When form-guards-dispatch receives a Write for a violating USER_STORIES.md in that spec
     Then the dispatcher exits 2 and the stdout JSON carries permissionDecision deny mentioning user-story-form-guard
 
-  @feature19
+  @feature58
   Scenario: SPECGEN004_298 form-guards-dispatch fast-exits 0 without spawning a guard for non-spec paths and non-target basenames
     Given a v3 spec directory with a progress.json marking version 3
     When form-guards-dispatch receives a Write for a path outside .specs or for a non-target basename NOTES.md
@@ -2357,6 +2433,12 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Given two specs each have a FR-1 with short bodies in the full-mode temp repo
     When runFullMode is called with default options against two short-body specs
     Then 0 spawn calls were made because both FR bodies are shorter than 60 chars
+
+  @feature17
+  Scenario: SPECGEN004_516 runFullMode marks partial when the semantic dispatcher fails
+    Given two specs each have a FR-1 with long matching prose in the full-mode temp repo
+    When runFullMode is called with a spawn that throws "semantic dispatcher timeout after 120000ms"
+    Then the full-mode report is marked partial and contains a cross-spec/semantic-check-failed warning containing "semantic dispatcher timeout after 120000ms"
 
   # FR-18 cross-spec-resolve step-7 — updateStatus YAML stamping
 
@@ -2667,19 +2749,19 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Then the verifyBatch error count is 1
     And the first verifyBatch result verdict is "ERROR"
 
-  @feature19
+  @feature58
   Scenario: SPECGEN004_385 extractWriteContent user-story-form-guard Edit heading-only allows write
     Given an isolated spec directory with a fully-formed USER_STORIES.md for extractWriteContent testing
     When the user-story-form-guard receives an Edit of the user story heading only leaving body intact
     Then the user-story-form-guard exits 0 and allows the user story write
 
-  @feature19
+  @feature58
   Scenario: SPECGEN004_386 extractWriteContent user-story-form-guard Edit on incomplete file still denies
     Given an isolated spec directory with an incomplete USER_STORIES.md lacking required body fields
     When the user-story-form-guard receives an Edit of the heading on the incomplete user story file
     Then the user-story-form-guard exits non-zero and stderr mentions missing why
 
-  @feature19
+  @feature58
   Scenario Outline: SPECGEN004_387 extractWriteContent user-story-form-guard Write tool unchanged behavior
     Given an isolated spec directory with a fully-formed USER_STORIES.md for extractWriteContent testing
     When the user-story-form-guard receives a Write with <content_kind> user story content
@@ -2690,19 +2772,19 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
       | fully-formed  | allowed      |
       | incomplete    | denied       |
 
-  @feature19
+  @feature58
   Scenario: SPECGEN004_388 extractWriteContent task-form-guard Edit title-only allows write
     Given an isolated spec directory with a fully-formed TASKS.md for extractWriteContent testing
     When the task-form-guard receives an Edit of the task title only leaving body fields intact
     Then the task-form-guard exits 0 and allows the task write
 
-  @feature19
+  @feature58
   Scenario: SPECGEN004_389 extractWriteContent user-story-form-guard Edit with replace_all on multi-story file allows write
     Given an isolated spec directory with a multi-story USER_STORIES.md for extractWriteContent testing
     When the user-story-form-guard receives an Edit with replace_all true on the multi-story user story file
     Then the user-story-form-guard exits 0 and allows the user story write
 
-  @feature19
+  @feature58
   Scenario: SPECGEN004_390 extractWriteContent user-story-form-guard Edit fallback when old_string absent uses new_string allowing write
     Given an isolated spec directory with a fully-formed USER_STORIES.md for extractWriteContent testing
     When the user-story-form-guard receives an Edit with an old_string absent from the file
@@ -2937,91 +3019,91 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     When denied .specs greps and a non-grep reader are mapped to door calls
     Then each grep maps to its concrete spec-door search call and the non-grep maps to nothing
 
-  @feature19
+  @feature58
   Scenario: SPECGEN003_01 user-story-form-guard denies missing Priority field
     Given a SPECGEN003 v3 spec directory is prepared
     When the SPECGEN003 user-story-form-guard is invoked via Write on USER_STORIES.md missing Priority
     Then the SPECGEN003 guard exits with code 2 and stderr mentions "Priority"
 
-  @feature19
+  @feature58
   Scenario: SPECGEN003_02 user-story-form-guard denies missing Why field when Priority is present
     Given a SPECGEN003 v3 spec directory is prepared
     When the SPECGEN003 user-story-form-guard is invoked via Write on USER_STORIES.md with Priority but missing Why
     Then the SPECGEN003 guard exits with code 2 and stderr mentions "Why"
 
-  @feature19
+  @feature58
   Scenario: SPECGEN003_03 user-story-form-guard allows all 4 required fields
     Given a SPECGEN003 v3 spec directory is prepared
     When the SPECGEN003 user-story-form-guard is invoked via Write on USER_STORIES.md with all 4 required fields
     Then the SPECGEN003 guard exits with code 0
 
-  @feature19
+  @feature58
   Scenario: SPECGEN003_04 form guards pass through when no .progress.json exists
     Given a SPECGEN003 spec directory with no progress.json is prepared
     When the SPECGEN003 user-story-form-guard is invoked via Write on USER_STORIES.md with minimal invalid content
     Then the SPECGEN003 guard exits with code 0
 
-  @feature19
+  @feature58
   Scenario: SPECGEN003_05 task-form-guard denies TASKS.md missing Done When section
     Given a SPECGEN003 v3 spec directory is prepared
     When the SPECGEN003 task-form-guard is invoked via Write on TASKS.md missing Done When
     Then the SPECGEN003 guard exits with code 2 and stderr mentions "Done When"
 
-  @feature19
+  @feature58
   Scenario: SPECGEN003_06 task-form-guard denies Done When section with no checkboxes
     Given a SPECGEN003 v3 spec directory is prepared
     When the SPECGEN003 task-form-guard is invoked via Write on TASKS.md with Done When but no checkboxes
     Then the SPECGEN003 guard exits with code 2 and stderr mentions "checkbox"
 
-  @feature19
+  @feature58
   Scenario: SPECGEN003_07 task-form-guard allows valid Done When with checkboxes
     Given a SPECGEN003 v3 spec directory is prepared
     When the SPECGEN003 task-form-guard is invoked via Write on TASKS.md with valid Done When and checkboxes
     Then the SPECGEN003 guard exits with code 0
 
-  @feature19
+  @feature58
   Scenario: SPECGEN003_08 design-decision-guard denies Decision block lacking Alternatives
     Given a SPECGEN003 v3 spec directory is prepared
     When the SPECGEN003 design-decision-guard is invoked via Write on DESIGN.md with a Decision block but no Alternatives
     Then the SPECGEN003 guard exits with code 2 and stderr mentions "Alternatives"
 
-  @feature19
+  @feature58
   Scenario: SPECGEN003_09 design-decision-guard passes when no Decision blocks present
     Given a SPECGEN003 v3 spec directory is prepared
     When the SPECGEN003 design-decision-guard is invoked via Write on DESIGN.md with no Decision blocks
     Then the SPECGEN003 guard exits with code 0
 
-  @feature19
+  @feature58
   Scenario: SPECGEN003_10 requirements-chk-guard denies empty Verification Method cell
     Given a SPECGEN003 v3 spec directory is prepared
     When the SPECGEN003 requirements-chk-guard is invoked via Write on REQUIREMENTS.md with an empty Verification Method cell
     Then the SPECGEN003 guard exits with code 2 and stderr mentions "Verification Method"
 
-  @feature19
+  @feature58
   Scenario: SPECGEN003_11 requirements-chk-guard denies invalid CHK ID format
     Given a SPECGEN003 v3 spec directory is prepared
     When the SPECGEN003 requirements-chk-guard is invoked via Write on REQUIREMENTS.md with an invalid CHK ID format
     Then the SPECGEN003 guard exits with code 2 and stderr mentions "CHK-FR"
 
-  @feature19
+  @feature58
   Scenario: SPECGEN003_12 requirements-chk-guard allows valid CHK-FR format
     Given a SPECGEN003 v3 spec directory is prepared
     When the SPECGEN003 requirements-chk-guard is invoked via Write on REQUIREMENTS.md with a valid CHK-FR row
     Then the SPECGEN003 guard exits with code 0
 
-  @feature19
+  @feature58
   Scenario: SPECGEN003_13 risk-assessment-guard denies only 1 risk row in table
     Given a SPECGEN003 v3 spec directory is prepared
     When the SPECGEN003 risk-assessment-guard is invoked via Write on RESEARCH.md with only 1 risk data row
     Then the SPECGEN003 guard exits with code 2 and stderr mentions "Risk Assessment"
 
-  @feature19
+  @feature58
   Scenario: SPECGEN003_14 risk-assessment-guard passes when no Risk Assessment heading
     Given a SPECGEN003 v3 spec directory is prepared
     When the SPECGEN003 risk-assessment-guard is invoked via Write on RESEARCH.md with no Risk Assessment heading
     Then the SPECGEN003 guard exits with code 0
 
-  @feature19
+  @feature58
   Scenario: SPECGEN003_15 form guards ignore Read tool events
     Given a SPECGEN003 v3 spec directory is prepared
     When the SPECGEN003 user-story-form-guard is invoked via Read on USER_STORIES.md
@@ -3039,7 +3121,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     When the SPECGEN003 child phase-assistant skill SKILL.md files are read from the repository
     Then the SPECGEN003 task-board-forms SKILL.md exists without auto-trigger phrases in the first 600 characters
 
-  @feature19
+  @feature58
   Scenario: SPECGEN003_18 form guards pass through for legacy .progress.json lacking version field
     Given a SPECGEN003 spec directory with a legacy progress.json lacking a version field is prepared
     When the SPECGEN003 user-story-form-guard is invoked via Write on USER_STORIES.md with minimal invalid content
@@ -3064,13 +3146,13 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     When the SPECGEN003 child phase-assistant skill SKILL.md files are read from the repository
     Then the SPECGEN003 requirements-chk-matrix SKILL.md exists and mentions Jira preservation
 
-  @feature19
+  @feature58
   Scenario: SPECGEN003_22 form guards fail-open on malformed JSON stdin
     Given a SPECGEN003 v3 spec directory is prepared
     When the SPECGEN003 user-story-form-guard is invoked with malformed JSON on stdin
     Then the SPECGEN003 guard exits with code 0
 
-  @feature19
+  @feature58
   Scenario: SPECGEN003_23 form guards fail-open on pathological regex content
     Given a SPECGEN003 v3 spec directory is prepared
     When the SPECGEN003 user-story-form-guard is invoked via Write on USER_STORIES.md with pathological regex content
@@ -3150,3 +3232,158 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     When the scaffold-sentinel classifier evaluates those documents
     Then the templates file and the __fixtures__ document yield no findings
     And the backlog spec document yields at most an INFO finding never an ERROR
+
+  @feature58
+  Scenario: SPECGEN004_478 discovery-forms executable evals exercise real form contracts
+    Given the discovery-forms executable eval runner
+    When that form-skill eval runner executes
+    Then the eval aggregate is fully green and every case exercised the real form contracts
+
+  @feature58
+  Scenario: SPECGEN004_479 requirements-chk-matrix executable evals pin invalid CHK IDs
+    Given the requirements-chk-matrix executable eval runner
+    When that form-skill eval runner executes
+    Then the eval aggregate is fully green and every case exercised the real form contracts
+    And the eval aggregate pins the P16-1 negative regression cases
+
+  @feature58
+  Scenario: SPECGEN004_507 task-board-forms executable evals pin lowercase task markers
+    Given the task-board-forms executable eval runner
+    When that form-skill eval runner executes
+    Then the eval aggregate is fully green and every case exercised the real form contracts
+    And the eval aggregate pins the P16-1 negative regression cases
+
+  @feature57
+  Scenario: SPECGEN004_508 scaffold template ownership keeps non-scaffold templates out of the base templates directory
+    Given the real scaffold template mapping and owning skill reference template directories
+    When the spec-generator template ownership check runs
+    Then every template left in tools/specs-generator/templates is instantiated by scaffold-spec
+    And the seven non-scaffold templates live only under their owning skill reference templates
+
+  @feature34
+  Scenario: SPECGEN004_509 feature template FR tags resolve against FR template headings
+    Given the real feature and FR scaffold templates
+    When the feature-template anchor integrity check runs
+    Then every feature-template @FR tag resolves to an FR heading in FR.md.template
+
+  @feature37
+  Scenario: SPECGEN004_510 audit split-responsibility documentation separates mechanical and semantic work
+    Given the Phase 3 audit overview and audit split-responsibility references
+    When the audit split-responsibility documentation is checked
+    Then mechanical audit categories are declared as script-owned inputs not AI rediscovery work
+    And semantic-only audit categories are declared as agent-owned review work
+    And the spec health rule points "is it healthy?" to the composed verdict only
+
+  @feature40
+  Scenario: SPECGEN004_511 progress state has an engine-only two-writer contract
+    Given a temp spec corpus for the progress writer contract
+    When scaffold-spec creates a fresh spec and spec-status repairs a pre-existing spec
+    Then scaffold-spec is the bootstrap writer for initial .progress.json state
+    And spec-status is the state-transition writer for existing specs
+    And create-spec documentation forbids manual or MCP mutation of .progress.json while naming both engine writers
+
+  @feature35
+  Scenario: SPECGEN004_512 active spec unconfirmed STOP is loud without corpus-wide nagging
+    Given a temp spec corpus with active and legacy specs that both have unconfirmed STOPs
+    When the specs-validator prompt hook receives a prompt about the active spec
+    Then the hook output surfaces the active spec unconfirmed STOP with the exact confirm command
+    And the hook output does not emit a corpus-wide unconfirmed STOP count
+    And the unrelated legacy spec stays quiet unless verbose mode is enabled
+
+  @feature59
+  Scenario: SPECGEN004_513 PostToolUse conformance push keeps Claude reminder bounded while retaining the full log
+    Given a PostToolUse push window with 3000 conformance findings
+    When the spec-conformance push window flushes
+    Then the emitted reminder is at most 6000 bytes
+    And the emitted reminder summarizes the finding count, severity counts, omitted count, and full-log pointer
+    And the emitted reminder shows no more than 20 sample findings
+    And the durable spec-check-log writer still records every synthetic finding
+
+  @feature52
+  Scenario: SPECGEN004_514 validate_anchor distinguishes compact aliases from Marksman heading slugs
+    Given a validate_anchor tool over a spec containing a punctuation-heavy Marksman heading
+    When validate_anchor checks both a compact id and DOC.md#heading-slug
+    Then the tool description separates the alias registry from Marksman heading slugs
+    And the compact id and Marksman heading slug resolve while a non-Marksman slug does not
+
+  @feature52
+  Scenario: SPECGEN004_515 anchor-fix repairs enforce sessions through the spec door
+    Given a spec with a broken id-bearing anchor while spec-access enforce is on
+    When anchor-fix runs in door mode
+    Then the anchor is fixed through the spec door and enforce hints never prescribe a raw write
+
+  @feature52
+  Scenario: SPECGEN004_517 FILE_CHANGES v1 layout drift is specific to canonical plugin repos
+    Given a canonical plugin repo fixture with FILE_CHANGES edit rows under removed v1 prefixes
+    When the spec-reality checker runs on the v1 layout drift fixture
+    Then it emits FC_V1_LAYOUT_DRIFT instead of generic FC_EDIT_MISSING
+    And the same missing src edit path stays generic when the src directory exists
+
+  @feature52
+  Scenario: SPECGEN004_519 TASK_NO_OWN_SCENARIO accepts migrated many-to-few consolidation with a green covering scenario
+    Given a graph with a DONE migrated task mapped to one passing consolidated scenario and one not-run sibling
+    When conformance runs over the graph
+    Then no TASK_NO_OWN_SCENARIO finding is raised for that task
+    And a TASK_STATUS_UNVERIFIED warning still surfaces the not-run sibling
+
+  # ── FR-56: scenario-result overlay freshness (P29) ───────────────────────────
+
+  @feature56
+  Scenario: SPECGEN004_529 every BDD run path writes append-only scenario overlay rows
+    Given a Cucumber message run for a focused FR-56 scenario
+    When the scenario-result overlay writer records that run
+    Then the scenario overlay contains one row with result, run identity, source, and trace id
+    And appending another run preserves the existing overlay row
+
+  @feature49
+  Scenario: SPECGEN004_530 stop hook keeps previous substantive intent across terse follow-up prompts
+    Given a Pinator-fix mandate followed by a terse continuation prompt and a live judge endpoint
+    When the real Stop hook sends that turn to the judge
+    Then the judge facts say gate editing is not armed and the stop is approved
+
+  # ── FR-60: high-level MCP authoring API (pending implementation) ─────────────
+
+  @feature60 @wip
+  Scenario: SPECGEN004_520 section-targeted append preserves validation and EOL style
+    Given a spec document has an existing Phase heading and a known EOL style
+    When an agent proposes an MCP append_to_section operation targeting that Phase heading
+    Then the proposal resolves the stable heading anchor without requiring an exact old_string
+    And the preview preserves the document EOL style
+    And the same form, anchor, and conformance checks run before any write is applied
+
+  @feature60 @wip
+  Scenario: SPECGEN004_521 read_for_edit returns section metadata and safe insertion tokens
+    Given an agent reads a spec section for edit through the MCP door
+    When the read_for_edit response is returned
+    Then it includes eol_style, heading_anchor, section_sha, start_line, end_line, and append or insert tokens
+    And a follow-up insert using those tokens targets the same section even when unrelated document text changes elsewhere
+
+  @feature60 @wip
+  Scenario: SPECGEN004_522 replacement diagnostics distinguish EOL whitespace multi-match and missing-anchor misses
+    Given an MCP literal replacement fails to find old_string in a spec document
+    When the server analyzes the failed replacement
+    Then the response classifies the miss as EOL-only, whitespace-only, multi-match, changed body under the same anchor, or missing anchor
+    And with normalize_eol true a CRLF/LF-only mismatch is accepted while the persisted file keeps its original EOL style
+
+  @feature60 @wip
+  Scenario: SPECGEN004_523 multi-document proposal previews graph impact and applies atomically
+    Given a proposed spec change spans FR.md, ACCEPTANCE_CRITERIA.md, TASKS.md, the feature file, and FILE_CHANGES.md
+    When the agent calls propose_patch and then apply_spec_transaction
+    Then the preview includes anchors found, a diff, affected graph nodes, conformance findings, resulting shas, and a proposal_id
+    And applying the proposal writes all documents atomically or leaves every document unchanged
+    And the audit log records the transaction as one conceptual spec mutation
+
+  @feature60 @wip
+  Scenario: SPECGEN004_524 anchor-targeted CAS mismatch auto-rebases only non-conflicting changes
+    Given an anchor-targeted MCP mutation was prepared from an older document sha
+    When another session has changed unrelated text outside the target anchor
+    Then the mutation auto-rebases and applies against the fresh document
+    But when the target anchor body or preconditions changed the server refuses with fresh anchor context for the caller
+
+  @feature60 @wip
+  Scenario: SPECGEN004_525 domain helpers render canonical traceable markdown and enforce feature safety
+    Given an agent registers incident-driven backlog or amends a requirement through a domain helper
+    When the helper renders FR, AC, TASK, and optional feature changes
+    Then the generated markdown follows the canonical form contracts and keeps FR to AC to TASK traceability links
+    And ids are unique within the affected spec documents
+    And executable feature scenarios are refused unless matching step-definition work is included or the caller explicitly selects a TASKS-only acceptance pin

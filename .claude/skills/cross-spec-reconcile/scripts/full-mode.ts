@@ -20,10 +20,11 @@
 //
 // `runFullMode` is pure orchestration — the LLM spawn is injected so unit tests
 // cover every branch without a real call. PRODUCTION default = `meridianSpawn`
-// (the local Meridian subscription proxy, ~3s thinking-off) — NOT `claude -p`
+// (the local Meridian subscription proxy, thinking-off) — NOT `claude -p`
 // (~13s cold-start; see skill `meridian-model-call`). Fail-open: if Meridian is
-// down, the spawn throws → `runJudge` returns SUBPROCESS_FAILED → the pair is
-// skipped (no semantic finding), never falling back to the slow path.
+// down, the spawn throws → `runJudge` returns SUBPROCESS_FAILED → full mode keeps
+// the mechanical findings, emits a WARNING semantic finding, and marks the report
+// partial instead of silently pretending the semantic pass completed.
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -31,7 +32,7 @@ import { runJudge, type JudgeResult } from '../../../../tools/spec-llm-judge/ind
 import { type Finding, type ReconcileResult, reconcileLight } from './reconcile.ts';
 
 const MERIDIAN_MODEL = 'claude-haiku-4-5-20251001';
-const MERIDIAN_TIMEOUT_MS = 20_000;
+const MERIDIAN_TIMEOUT_MS = 120_000;
 const meridianUrl = () => (process.env.MERIDIAN_URL || 'http://127.0.0.1:3456').replace(/\/+$/, '');
 
 /**
@@ -43,7 +44,11 @@ const meridianUrl = () => (process.env.MERIDIAN_URL || 'http://127.0.0.1:3456').
 async function meridianSpawn(prompt: string): Promise<string> {
   if (typeof fetch !== 'function') throw new Error('no global fetch (node <18)');
   const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), MERIDIAN_TIMEOUT_MS);
+  let timedOut = false;
+  const timer = setTimeout(() => {
+    timedOut = true;
+    ctrl.abort();
+  }, MERIDIAN_TIMEOUT_MS);
   try {
     const r = await fetch(`${meridianUrl()}/v1/messages`, {
       method: 'POST',
@@ -62,6 +67,9 @@ async function meridianSpawn(prompt: string): Promise<string> {
     if (!text) throw new Error('empty meridian response');
     // Strip a ```json fence if Haiku wrapped the JSON; parseSubprocessOutput needs bare JSON.
     return text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
+  } catch (e) {
+    if (timedOut) throw new Error(`semantic dispatcher timeout after ${MERIDIAN_TIMEOUT_MS}ms`);
+    throw e;
   } finally {
     clearTimeout(timer);
   }
@@ -85,12 +93,15 @@ export interface FullModeOptions {
 }
 
 export interface FullModeResult extends ReconcileResult {
+  mode: 'full';
   /** Number of subprocess calls actually fired (cache hits don't count). */
   subprocess_calls: number;
   /** Number of pairs the judge said had drift. */
   drift_detected: number;
   /** Number of pairs skipped by FR-26 deny-list. */
   deny_list_skips: number;
+  /** Number of semantic judge failures that degraded full mode to mechanical-only for the affected pair. */
+  semantic_failures: number;
 }
 
 const MIN_TEXT_LEN = 60;
@@ -176,7 +187,11 @@ export async function runFullMode(opts: FullModeOptions): Promise<FullModeResult
   let drift = 0;
   let denyListSkips = 0;
   const semanticBySlug = new Map<string, Finding[]>();
-  for (const slug of slugs) semanticBySlug.set(slug, []);
+  const partialReasonsBySlug = new Map<string, string[]>();
+  for (const slug of slugs) {
+    semanticBySlug.set(slug, []);
+    partialReasonsBySlug.set(slug, []);
+  }
 
   for (const [a, b] of pairs) {
     if (calls >= maxCalls) break;
@@ -203,11 +218,29 @@ export async function runFullMode(opts: FullModeOptions): Promise<FullModeResult
       denyListSkips++;
       continue;
     }
+    if (judgeRes.result === 'SUBPROCESS_FAILED') {
+      const reason =
+        `Semantic judge failed for ${a.slug}/${a.frId} ↔ ${b.slug}/${b.frId}; ` +
+        `full mode continued with mechanical findings only for this pair. ${judgeRes.error ?? 'No error detail.'}`;
+      const finding: Finding = {
+        code: 'cross-spec/semantic-check-failed',
+        class: 'semantic',
+        severity: 'WARNING',
+        spec_a: `.specs/${a.slug} (${a.frId})`,
+        spec_b: `.specs/${b.slug} (${b.frId})`,
+        suggested_fix: reason,
+      };
+      semanticBySlug.get(a.slug)!.push(finding);
+      semanticBySlug.get(b.slug)!.push(finding);
+      partialReasonsBySlug.get(a.slug)!.push(reason);
+      partialReasonsBySlug.get(b.slug)!.push(reason);
+      continue;
+    }
     if (judgeRes.result === 'DRIFT') {
       drift++;
       const finding: Finding = {
         code: 'cross-spec/semantic-drift',
-        class: 'contradiction',
+        class: 'semantic',
         severity: judgeRes.severity === 'error' ? 'CRITICAL' : 'WARNING',
         spec_a: `.specs/${a.slug} (${a.frId})`,
         spec_b: `.specs/${b.slug} (${b.frId})`,
@@ -220,12 +253,18 @@ export async function runFullMode(opts: FullModeOptions): Promise<FullModeResult
     }
   }
 
-  return mechanical.map((r) => ({
-    ...r,
-    mode: 'light',
-    findings: [...r.findings, ...(semanticBySlug.get(r.specSlug) ?? [])],
-    subprocess_calls: calls,
-    drift_detected: drift,
-    deny_list_skips: denyListSkips,
-  }));
+  return mechanical.map((r) => {
+    const partialReasons = partialReasonsBySlug.get(r.specSlug) ?? [];
+    return {
+      ...r,
+      mode: 'full',
+      findings: [...r.findings, ...(semanticBySlug.get(r.specSlug) ?? [])],
+      partial: partialReasons.length > 0 ? true : undefined,
+      partialReasons: partialReasons.length > 0 ? partialReasons : undefined,
+      subprocess_calls: calls,
+      drift_detected: drift,
+      deny_list_skips: denyListSkips,
+      semantic_failures: partialReasons.length,
+    };
+  });
 }

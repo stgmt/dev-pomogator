@@ -2,10 +2,9 @@
 //
 // SPECGEN004_26 (7 stage outputs) — fully implemented.
 // SPECGEN004_27 (rewind on new constraint) + SPECGEN004_28 (complexity
-// heuristic falls through to research-workflow) — interactive prompts
-// + create-spec integration land in tiny follow-ups; the step defs mark
-// them PENDING with deferred-reason comments so the suite surfaces the
-// scope explicitly.
+// heuristic falls through to research-workflow) — fully implemented.
+// SPECGEN004_531 pins the shared research base consumed by both research skills.
+// SPECGEN004_532 pins create-spec's architecture routing + --research-done guard.
 
 import { Given, When, Then } from '@cucumber/cucumber';
 import assert from 'node:assert/strict';
@@ -28,6 +27,7 @@ import {
 import type { V4World } from '../hooks/before-after.ts';
 
 const THIS_FILE_DIR = path.dirname(fileURLToPath(import.meta.url));
+const REPO_ROOT = path.resolve(THIS_FILE_DIR, '..', '..');
 
 interface ArchWorld extends V4World {
   archSlug?: string;
@@ -37,6 +37,12 @@ interface ArchWorld extends V4World {
   heuristicResult?: HeuristicResult;
   rewindDecision?: RewindDecision;
   rewindToStage?: number;
+  researchBase?: string;
+  researchWorkflowSkill?: string;
+  architectureResearchWorkflowSkill?: string;
+  createSpecPhase1?: string;
+  architecturePromptResult?: HeuristicResult;
+  smallPromptResult?: HeuristicResult;
 }
 
 Given(
@@ -211,4 +217,113 @@ Then('{int}-stage overhead is avoided', function (this: ArchWorld, _n: number) {
   // The heavy N-stage architecture skill is only entered on the architecture
   // verdict; a research-workflow verdict skips it entirely.
   assert.notEqual(this.heuristicResult!.verdict, 'use-architecture-research-workflow');
+});
+
+// ─── SPECGEN004_531 — T6-45 shared research base. Reads the real shipped docs. ──
+
+Given('the shipped shared research base is loaded', function (this: ArchWorld) {
+  this.researchBase = fs.readFileSync(
+    path.join(REPO_ROOT, '.claude', 'skills', '_shared', 'research-base.md'),
+    'utf8',
+  );
+});
+
+When('the research skills declare their shared research discipline', function (this: ArchWorld) {
+  this.researchWorkflowSkill = fs.readFileSync(
+    path.join(REPO_ROOT, '.claude', 'skills', 'research-workflow', 'SKILL.md'),
+    'utf8',
+  );
+  this.architectureResearchWorkflowSkill = fs.readFileSync(
+    path.join(REPO_ROOT, '.claude', 'skills', 'architecture-research-workflow', 'SKILL.md'),
+    'utf8',
+  );
+});
+
+Then(
+  'the base contains hypothesis-first source taxonomy triangulation verification markers schema-exhaustiveness recency anti-patterns external-pain and misconception-flush rules',
+  function (this: ArchWorld) {
+    const base = this.researchBase!;
+    const requiredPatterns: Array<[string, RegExp]> = [
+      ['hypothesis-first', /## 1\. Hypothesis-FIRST/],
+      ['source taxonomy', /## 2\. Source taxonomy/],
+      ['triangulation', /## 3\. Triangulation[\s\S]*≥3 INDEPENDENT/],
+      ['verification markers', /## 4\. Verification markers[\s\S]*\[VERIFIED\][\s\S]*\[UNVERIFIED\][\s\S]*\[ASSUMED\]/],
+      ['schema exhaustiveness', /## 5\. Exhaustiveness for schema\/API\/protocol questions/],
+      ['recency', /## 6\. Recency/],
+      ['anti-patterns', /## 7\. Anti-patterns[\s\S]*AP-1[\s\S]*AP-8/],
+      ['external pain', /## 8\. External-pain validation/],
+      ['misconception flush', /## 9\. Misconception flush/],
+    ];
+    for (const [label, pattern] of requiredPatterns) {
+      assert.match(base, pattern, `shared research base missing ${label}`);
+    }
+  },
+);
+
+Then(
+  'research-workflow links the shared base and references external-pain and misconception-flush sections',
+  function (this: ArchWorld) {
+    const skill = this.researchWorkflowSkill!;
+    assert.match(skill, /\.\.\/_shared\/research-base\.md/, 'research-workflow must link the shared base');
+    assert.match(skill, /External-pain validation[\s\S]*_shared\/research-base\.md` §8/, 'research-workflow must reference base §8');
+    assert.match(skill, /Misconception flush[\s\S]*_shared\/research-base\.md` §9/, 'research-workflow must reference base §9');
+  },
+);
+
+Then(
+  'architecture-research-workflow links the shared base from its Stage 3 broad research note',
+  function (this: ArchWorld) {
+    const skill = this.architectureResearchWorkflowSkill!;
+    assert.match(skill, /\.\.\/_shared\/research-base\.md/, 'architecture-research-workflow must link the shared base');
+    assert.match(skill, /Stage 3 \("broad research"\)[\s\S]*research-workflow/, 'Stage 3 note must inherit research-workflow rigor');
+    assert.match(skill, /source taxonomy[\s\S]*verification markers[\s\S]*external-pain[\s\S]*misconception-flush/, 'architecture skill must name the shared discipline');
+  },
+);
+
+// ─── SPECGEN004_532 — T6-46/T6-48 create-spec routing + recursion guard. ──
+
+Given('create-spec Phase 1 discovery documentation is loaded', function (this: ArchWorld) {
+  this.createSpecPhase1 = fs.readFileSync(
+    path.join(REPO_ROOT, '.claude', 'skills', 'create-spec', 'references', 'phase1_discovery.md'),
+    'utf8',
+  );
+});
+
+When('create-spec evaluates architectural small-feature and research-done prompts', function (this: ArchWorld) {
+  this.architecturePromptResult = detectComplexity(
+    'Rebuild AuthService BillingProcessor EventBus for v4 architecture',
+  );
+  this.smallPromptResult = detectComplexity('add a loading spinner to a button');
+});
+
+Then('architectural prompts route to architecture-research-workflow through the real heuristic', function (this: ArchWorld) {
+  assert.equal(this.architecturePromptResult!.verdict, 'use-architecture-research-workflow');
+  assert.ok(this.architecturePromptResult!.keywordHits.length > 0, 'architecture prompt must record keyword evidence');
+  assert.match(
+    this.createSpecPhase1!,
+    /detectComplexity\(userPrompt\)[\s\S]*use-architecture-research-workflow[\s\S]*Skill\("architecture-research-workflow"\)/,
+    'Phase 1 docs must route architecture verdicts to architecture-research-workflow',
+  );
+});
+
+Then('small prompts route to research-workflow through the real heuristic', function (this: ArchWorld) {
+  assert.equal(this.smallPromptResult!.verdict, 'use-research-workflow');
+  assert.match(
+    this.createSpecPhase1!,
+    /use-research-workflow[\s\S]*Skill\("research-workflow"\)/,
+    'Phase 1 docs must route regular verdicts to research-workflow',
+  );
+});
+
+Then('the research-done recursion guard is documented before either research skill is invoked', function (this: ArchWorld) {
+  const doc = this.createSpecPhase1!;
+  const guard = doc.indexOf('--research-done');
+  const arch = doc.indexOf('Skill("architecture-research-workflow")');
+  const regular = doc.indexOf('Skill("research-workflow")');
+  assert.ok(guard >= 0, 'Phase 1 docs must mention --research-done guard');
+  assert.ok(arch >= 0, 'Phase 1 docs must mention architecture-research-workflow invocation');
+  assert.ok(regular >= 0, 'Phase 1 docs must mention research-workflow invocation');
+  assert.ok(guard < arch, '--research-done guard must be checked before architecture skill invocation');
+  assert.ok(guard < regular, '--research-done guard must be checked before regular research skill invocation');
+  assert.match(doc, /НЕ вызывать research skill повторно[\s\S]*recursion guard/, 'guard must explicitly skip repeated research');
 });

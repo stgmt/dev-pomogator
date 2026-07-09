@@ -59,6 +59,10 @@ function projectRootFromHookInput(input: string): string {
   return path.resolve(process.env.CLAUDE_PROJECT_DIR || process.cwd());
 }
 
+function hookHomeDir(): string {
+  return path.resolve(process.env.HOME || process.env.USERPROFILE || os.homedir());
+}
+
 function pluginRootFromScriptsDir(scriptsDir: string): string {
   return path.resolve(process.env.CLAUDE_PLUGIN_ROOT || path.join(scriptsDir, '..', '..', '..', '..'));
 }
@@ -88,6 +92,7 @@ async function main(): Promise<void> {
     // и dogfood (.claude/skills/pomogator-doctor/scripts/) одинаково.
     const __dirname = path.dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1'));
     const projectRoot = projectRootFromHookInput(hookInput);
+    const homeDir = hookHomeDir();
     const doctorPath = path.join(__dirname, 'engine', 'index.ts');
 
     try {
@@ -102,7 +107,7 @@ async function main(): Promise<void> {
       };
       if (typeof mod.runQuiet === 'function') {
         const payload = await Promise.race<HookOutput>([
-          mod.runQuiet({ projectRoot }),
+          mod.runQuiet({ homeDir, projectRoot }),
           new Promise<HookOutput>((resolve) =>
             setTimeout(
               () => resolve({ continue: true, suppressOutput: true }),

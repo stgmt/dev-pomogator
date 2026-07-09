@@ -9,7 +9,11 @@
  */
 
 import { describe, it, expect } from 'vitest';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import { parseNdjson, applyTestResults } from '../parsers/ndjson.ts';
+import { parseScenarioResults, appendJsonLinesAtomic } from '../../../scripts/bdd-overlay.mjs';
 import type { ScenarioNode } from '../types.ts';
 
 /** Build a single NDJSON line from an envelope object. */
@@ -273,6 +277,58 @@ describe('parseNdjson — result extraction from canonical envelopes', () => {
       { testCaseFinished: { testCaseStartedId: 'tcs1', timestamp: { seconds: 9, nanos: 0 } } },
     ].map((o) => JSON.stringify(o)).join('\n');
     expect(parseNdjson(stream).byLocation.get('f.feature:9')?.durationMs).toBe(0);
+  });
+});
+
+describe('P29-1 scenario overlay writer — append-only per executed scenario', () => {
+  it('extracts one FR-56 overlay row per executed scenario with run and trace identity', () => {
+    const stream = buildNdjsonStream({
+      uri: '.specs/spec-generator-v4/spec-generator-v4.feature',
+      scenarioId: 'sc-56',
+      scenarioLine: 3339,
+      pickleId: 'pk-56',
+      pickleName: 'SPECGEN004_529 overlay writes focused runs',
+      testCaseId: 'tc-56',
+      testCaseStartedId: 'tcs-56',
+      status: 'PASSED',
+      startSeconds: 1_800_000_000,
+      finishSeconds: 1_800_000_001,
+    });
+
+    const rows = parseScenarioResults(stream, {
+      runId: 'run-56',
+      source: 'run-bdd:filtered',
+      traceFile: '.dev-pomogator/.test-history/run-56-filtered.ndjson',
+    });
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      scenario_id: 'SPECGEN004_529',
+      result: 'PASSED',
+      time: '2027-01-15T08:00:01.000Z',
+      run_id: 'run-56',
+      source: 'run-bdd:filtered',
+      trace_id: '.dev-pomogator/.test-history/run-56-filtered.ndjson#tcs-56',
+      trace_file: '.dev-pomogator/.test-history/run-56-filtered.ndjson',
+      test_case_started_id: 'tcs-56',
+      uri: '.specs/spec-generator-v4/spec-generator-v4.feature',
+      line: 3339,
+      scenario_name: 'SPECGEN004_529 overlay writes focused runs',
+    });
+  });
+
+  it('writes each overlay row with append semantics and never truncates existing results', () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'bdd-overlay-'));
+    const overlay = path.join(dir, '.dev-pomogator', '.scenario-results.ndjson');
+    const first = [{ scenario_id: 'SPECGEN004_529', result: 'PASSED', time: '2027-01-15T08:00:01.000Z', run_id: 'r1', source: 'unit', trace_id: 'trace#1' }];
+    const second = [{ scenario_id: 'SPECGEN004_530', result: 'FAILED', time: '2027-01-15T08:00:02.000Z', run_id: 'r2', source: 'unit', trace_id: 'trace#2' }];
+
+    expect(appendJsonLinesAtomic(overlay, first)).toBe(1);
+    expect(appendJsonLinesAtomic(overlay, second)).toBe(1);
+
+    const rows = fs.readFileSync(overlay, 'utf8').trim().split('\n').map((line) => JSON.parse(line));
+    expect(rows.map((row) => row.scenario_id)).toEqual(['SPECGEN004_529', 'SPECGEN004_530']);
+    expect(rows.map((row) => row.run_id)).toEqual(['r1', 'r2']);
   });
 });
 

@@ -10,6 +10,7 @@
  */
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import { libraryPathForRule } from './context-diet.ts';
 import { atomicWriteJson, manifestPath, readManifest, type ManagedCarlManifest } from './manifest.ts';
 
 const REQUIRED_WARNING = 'CARL did not run; tell the user CARL guidance/recall was unavailable.';
@@ -28,6 +29,25 @@ interface HookOutput {
     hookEventName: 'UserPromptSubmit';
     additionalContext: string;
   };
+}
+
+interface ManifestDomain {
+  sourcePath?: string;
+  title?: string;
+  rules?: Array<{
+    sourcePath?: string;
+    aliases?: string[];
+    tags?: string[];
+  }>;
+}
+
+interface ContextDietReport {
+  mode?: string;
+  status?: string;
+  estimatedTokensBefore?: number;
+  estimatedTokensAfter?: number;
+  rulesManaged?: number;
+  rulesTotal?: number;
 }
 
 async function readStdin(): Promise<string> {
@@ -96,7 +116,77 @@ function statusFromManifest(manifest: ManagedCarlManifest | null, projectRoot: s
   if (!manifest) return 'project-missing';
   const runtimeState = verifyRuntimeConsumer(manifest, projectRoot);
   const ruStatus = manifest.languageStatus?.ru?.status ?? 'project-language-missing';
-  return `runtime=${runtimeState}; ru=${ruStatus}; managedBy=${manifest.managedBy ?? 'unknown'}; project=${projectRoot}`;
+  const diet = readContextDiet(projectRoot);
+  const contextMode = diet?.mode === 'lazy-managed' ? 'lazy-managed' : 'additive';
+  const reduction = diet?.estimatedTokensBefore && diet?.estimatedTokensAfter
+    ? `${diet.estimatedTokensBefore}->${diet.estimatedTokensAfter}`
+    : 'unverified';
+  return `runtime=${runtimeState}; ru=${ruStatus}; context=${contextMode}; reduction=${reduction}; managedBy=${manifest.managedBy ?? 'unknown'}; project=${projectRoot}`;
+}
+
+function readContextDiet(projectRoot: string): ContextDietReport | null {
+  const filePath = path.join(projectRoot, '.carl', 'context-diet.json');
+  if (!fs.existsSync(filePath)) return null;
+  try {
+    const parsed = JSON.parse(fs.readFileSync(filePath, 'utf-8')) as unknown;
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed as ContextDietReport : null;
+  } catch {
+    return null;
+  }
+}
+
+function tokenize(value: string): string[] {
+  return [...value.toLowerCase().matchAll(/[\p{L}\p{N}][\p{L}\p{N}_-]{2,}/gu)].map(match => match[0]);
+}
+
+function scoreDomain(domain: ManifestDomain, prompt: string): number {
+  const promptTokens = new Set(tokenize(prompt));
+  if (promptTokens.size === 0) return 0;
+  const haystack = [
+    domain.title ?? '',
+    domain.sourcePath ?? '',
+    ...(domain.rules ?? []).flatMap(rule => [rule.sourcePath ?? '', ...(rule.aliases ?? []), ...(rule.tags ?? [])]),
+  ].join(' ').toLowerCase();
+  let score = 0;
+  for (const token of promptTokens) {
+    if (haystack.includes(token)) score += token.length >= 6 ? 2 : 1;
+  }
+  return score;
+}
+
+function excerptMarkdown(content: string, maxChars = 900): string {
+  const lines = content
+    .split(/\r?\n/u)
+    .filter(line => !line.trim().startsWith('```'))
+    .filter(line => line.trim().length > 0);
+  const out: string[] = [];
+  let size = 0;
+  for (const line of lines) {
+    const next = line.length + 1;
+    if (size + next > maxChars) break;
+    out.push(line);
+    size += next;
+  }
+  return out.join('\n');
+}
+
+function relevantRuleContext(manifest: ManagedCarlManifest, projectRoot: string, prompt: string): string[] {
+  const domains = ((manifest as unknown as { domains?: ManifestDomain[] }).domains ?? [])
+    .map(domain => ({ domain, score: scoreDomain(domain, prompt) }))
+    .filter(item => item.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 4);
+
+  const snippets: string[] = [];
+  for (const item of domains) {
+    const sourcePath = item.domain.sourcePath ?? item.domain.rules?.[0]?.sourcePath;
+    if (!sourcePath || !sourcePath.startsWith('.claude/rules/')) continue;
+    const libraryPath = libraryPathForRule(projectRoot, sourcePath);
+    if (!fs.existsSync(libraryPath)) continue;
+    const content = fs.readFileSync(libraryPath, 'utf-8');
+    snippets.push(`CARL loaded rule ${sourcePath} (score ${item.score}):\n${excerptMarkdown(content)}`);
+  }
+  return snippets;
 }
 
 function buildCarlContext(input: UserPromptSubmitInput, projectRoot: string): string {
@@ -125,14 +215,15 @@ function buildCarlContext(input: UserPromptSubmitInput, projectRoot: string): st
   }
 
   const status = statusFromManifest(manifest, projectRoot);
-  const aliases = manifest.languageStatus?.ru?.generatedAliases ?? [];
-  const aliasNote = aliases.length > 0 ? `Russian aliases: ${aliases.slice(0, 8).join(', ')}.` : 'Russian aliases: none.';
+  const snippets = relevantRuleContext(manifest, projectRoot, prompt);
   return [
     `CARL guidance ran for this prompt in project ${projectRoot}.`,
     `Status: ${status}.`,
-    aliasNote,
+    snippets.length > 0
+      ? `Loaded ${snippets.length} lazy rule snippet(s):\n${snippets.join('\n\n')}`
+      : 'Loaded 0 lazy rule snippets; use baseline instructions only.',
     prompt ? `Prompt observed: ${prompt.slice(0, 160)}.` : 'Prompt observed: empty.',
-  ].join(' ');
+  ].join('\n');
 }
 
 async function main(): Promise<void> {

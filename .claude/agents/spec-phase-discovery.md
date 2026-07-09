@@ -24,5 +24,5 @@ beside the hook).
 3. On a refusal, READ the findings list and fix — never bypass.
 
 ## Never
-- No raw file tools over `.specs/`. No `.progress.json` writes (single-writer).
+- No raw file tools over `.specs/`. No `.progress.json` writes (engine-owned: scaffold bootstrap + spec-status state transitions only).
 - Do not advance the phase — the orchestrator runs the verdict gate.

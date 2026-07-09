@@ -14,13 +14,13 @@ import { randomUUID } from 'node:crypto';
 import { decidePush, runPush } from '../spec-conformance-push.ts';
 import type { Finding } from '../../spec-graph/conformance.ts';
 
-function findingAt(line: number): Finding {
+function findingAt(line: number, message = 'FR-N uncovered'): Finding {
   return {
     code: 'UNCOVERED_FR',
     severity: 'warning',
     location: { file: '.specs/x/FR.md', line },
-    message: 'FR-N uncovered',
-    nodeId: 'FR-1',
+    message,
+    nodeId: `FR-${line}`,
   };
 }
 
@@ -45,11 +45,46 @@ describe('decidePush — pure throttle decision', () => {
   });
 
   it('flushes after the 3-second window with the aggregated set', () => {
-    const previous = { window_start: 1000, pending: [findingAt(1)] };
-    const r = decidePush({ now: 1000 + 3000, previous, newFindings: [findingAt(2)] });
+    const t0 = 1000;
+    const throttleMs = 3000;
+    const toleranceMs = 100;
+    const previous = { window_start: t0, pending: [findingAt(1)] };
+    const beforeBoundary = decidePush({ now: t0 + throttleMs - 1, previous, newFindings: [findingAt(2)] });
+    expect(beforeBoundary.emit).toBeNull();
+    expect(beforeBoundary.newState?.pending).toHaveLength(2);
+
+    const boundaryAt = t0 + throttleMs;
+    const atBoundary = decidePush({ now: boundaryAt, previous, newFindings: [findingAt(2)] });
+    expect(atBoundary.emit).toContain('<system-reminder>');
+    expect(atBoundary.emit).toContain('2 finding(s)');
+    expect(atBoundary.newState).toBeNull();
+    expect(boundaryAt - previous.window_start).toBeLessThanOrEqual(throttleMs + toleranceMs);
+    expect(boundaryAt - previous.window_start).toBe(throttleMs);
+
+    const toleranceAt = t0 + throttleMs + toleranceMs;
+    const withinTolerance = decidePush({ now: toleranceAt, previous, newFindings: [findingAt(2)] });
+    expect(withinTolerance.emit).toContain('<system-reminder>');
+    expect(withinTolerance.newState).toBeNull();
+    expect(toleranceAt - previous.window_start).toBeLessThanOrEqual(throttleMs + toleranceMs);
+  });
+
+  it('bounds large flush reminders while summarizing omitted findings', () => {
+    const findings = Array.from({ length: 3000 }, (_, i) =>
+      findingAt(i + 1, `unique-large-finding-${i + 1} ${'x'.repeat(220)}`),
+    );
+    const previous = { window_start: 1000, pending: findings };
+    const r = decidePush({ now: 1000 + 3000, previous, newFindings: [] });
     expect(r.emit).toContain('<system-reminder>');
-    expect(r.emit).toContain('2 finding(s)');
-    expect(r.newState).toBeNull();
+    expect(Buffer.byteLength(r.emit!, 'utf8')).toBeLessThanOrEqual(6000);
+    expect(r.emit).toContain('3000 finding(s)');
+    expect(r.emit).toContain('3000 warning');
+    expect(r.emit).toContain('omitted 2980');
+    expect(r.emit).toContain('.dev-pomogator/.spec-check-log/');
+    expect(r.emit).toContain('/spec-status');
+    expect(r.emit).toContain('unique-large-finding-1');
+    expect(r.emit).toContain('unique-large-finding-20');
+    expect(r.emit).not.toContain('unique-large-finding-21');
+    expect(r.emit).not.toContain('unique-large-finding-3000');
   });
 
   it('keeps the original window_start when accumulating across multiple bursts', () => {
@@ -77,6 +112,7 @@ describe('runPush — stateful runner', () => {
     const out2 = runPush(root, '.specs/x/FR.md', t0 + 4_000);
     expect(out2).toContain('UNCOVERED_FR');
     expect(out2).toContain('FR-1');
+    expect(Buffer.byteLength(out2, 'utf8')).toBeLessThanOrEqual(6000);
   });
 
   it('per-spec opt-out (`_no_push_check: true`) suppresses push but STILL logs (SPECGEN004_14)', () => {

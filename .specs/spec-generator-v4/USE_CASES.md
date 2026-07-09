@@ -25,10 +25,10 @@ Developer modifies `### FR-001: Login` heading to clarify wording.
 - PostToolUse hook fires, incremental reindex affected file (<100ms)
 - Conformance check runs on affected scope (FR-001 + linked scenarios)
 - Within 3-second throttle window: findings batch + dedupe
-- After window closes: aggregated `<system-reminder>` injected into agent context with findings (e.g., "FR-001 wording changed — 3 scenarios may need review: SCEN-login-ok, SCEN-login-locked, SCEN-login-retry")
-- Agent decides whether to update scenarios or accept drift
+- After window closes: aggregated `<system-reminder>` injected into agent context with bounded findings summary (total count, severity counts, sample findings, omitted count, and full-log pointer)
+- Agent decides whether to update scenarios or inspect the full audit journal
 
-**Linked stories:** US-6
+**Linked stories:** US-6, US-37
 
 ---
 

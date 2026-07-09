@@ -11,6 +11,7 @@ import { Given, When, Then } from '@cucumber/cucumber';
 import assert from 'node:assert/strict';
 import type { V4World } from '../hooks/before-after.ts';
 import { runFullMode, type FullModeResult } from '../../.claude/skills/cross-spec-reconcile/scripts/full-mode.ts';
+import { emitYaml } from '../../.claude/skills/cross-spec-reconcile/scripts/yaml-writer.ts';
 
 // ── World extension ─────────────────────────────────────────────────────────────
 
@@ -173,6 +174,21 @@ When(
   },
 );
 
+When(
+  /^runFullMode is called with a spawn that throws "([^"]+)"$/,
+  async function (this: FullModeWorld, message: string) {
+    const root = this.tempDir;
+    let spawnCalls = 0;
+    const fakeSpawn = async (_p: string) => {
+      spawnCalls++;
+      throw new Error(message);
+    };
+    const reports = await runFullMode({ repoRoot: root, spawn: fakeSpawn });
+    this.fullModeReports = reports;
+    this.fullModeSpawnCallCount = spawnCalls;
+  },
+);
+
 // ── Then steps ────────────────────────────────────────────────────────────────────
 
 Then(
@@ -245,5 +261,41 @@ Then(
   /^0 spawn calls were made because both FR bodies are shorter than 60 chars$/,
   function (this: FullModeWorld) {
     assert.equal(this.fullModeSpawnCallCount, 0);
+  },
+);
+
+Then(
+  /^the full-mode report is marked partial and contains a cross-spec\/semantic-check-failed warning containing "([^"]+)"$/,
+  function (this: FullModeWorld, message: string) {
+    const reports = this.fullModeReports!;
+    assert.ok(reports.length >= 2, `Expected reports for both specs, got ${reports.length}`);
+    assert.equal(this.fullModeSpawnCallCount, 1);
+    for (const report of reports) {
+      assert.equal(report.mode, 'full');
+      assert.equal(report.partial, true);
+      assert.equal(report.semantic_failures, 1);
+      assert.equal(report.drift_detected, 0);
+      assert.ok(
+        report.partialReasons?.some((reason) => reason.includes(message) && reason.includes('mechanical findings only')),
+        `Expected partial reason with '${message}', got: ${report.partialReasons?.join(' | ')}`,
+      );
+    }
+    const failures = reports
+      .flatMap((r) => r.findings)
+      .filter((f) => f.code === 'cross-spec/semantic-check-failed');
+    assert.ok(failures.length >= 2, `Expected >=2 semantic-check-failed findings, got ${failures.length}`);
+    assert.equal(failures[0].class, 'semantic');
+    assert.equal(failures[0].severity, 'WARNING');
+    assert.ok(
+      failures[0].suggested_fix?.includes(message),
+      `suggested_fix should contain '${message}', got: ${failures[0].suggested_fix}`,
+    );
+
+    const yaml = emitYaml(reports[0]);
+    assert.match(yaml, /^mode: full$/m);
+    assert.match(yaml, /^partial: true$/m);
+    assert.match(yaml, /^partial_reasons:$/m);
+    assert.match(yaml, /cross-spec\/semantic-check-failed/);
+    assert.match(yaml, /semantic dispatcher timeout after 120000ms/);
   },
 );

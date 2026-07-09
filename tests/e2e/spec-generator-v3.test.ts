@@ -29,8 +29,10 @@ import { tmpdir, homedir } from 'os';
 import path from 'path';
 
 const APP_DIR = process.env.APP_DIR || process.cwd();
-const VALIDATOR_DIR = path.join(APP_DIR, 'extensions', 'specs-workflow', 'tools', 'specs-validator');
-const GENERATOR_DIR = path.join(APP_DIR, 'extensions', 'specs-workflow', 'tools', 'specs-generator');
+const VALIDATOR_DIR = path.join(APP_DIR, 'tools', 'specs-validator');
+const GENERATOR_DIR = path.join(APP_DIR, 'tools', 'specs-generator');
+const SKILLS_DIR = path.join(APP_DIR, '.claude', 'skills');
+const PLUGIN_HOOKS_JSON = path.join(APP_DIR, '.claude-plugin', 'hooks.json');
 const FIXTURES_DIR = path.join(APP_DIR, 'tests', 'fixtures', 'spec-generator-v3');
 
 const USER_STORY_GUARD = path.join(VALIDATOR_DIR, 'user-story-form-guard.ts');
@@ -70,8 +72,11 @@ function invokeHook(
 function makeTempSpec(opts: {
   files?: Record<string, string>;
   progressVersion?: number | 'missing' | 'no-version-field';
-}): { specDir: string; cleanup: () => void } {
-  const specDir = mkdtempSync(path.join(tmpdir(), 'spec-v3-test-'));
+}): { rootDir: string; specDir: string; specPath: string; cleanup: () => void } {
+  const rootDir = mkdtempSync(path.join(tmpdir(), 'spec-v3-test-'));
+  const specPath = '.specs/test';
+  const specDir = path.join(rootDir, specPath);
+  mkdirSync(specDir, { recursive: true });
   if (opts.files) {
     for (const [name, content] of Object.entries(opts.files)) {
       writeFileSync(path.join(specDir, name), content, 'utf-8');
@@ -92,7 +97,7 @@ function makeTempSpec(opts: {
       'utf-8'
     );
   }
-  return { specDir, cleanup: () => rmSync(specDir, { recursive: true, force: true }) };
+  return { rootDir, specDir, specPath, cleanup: () => rmSync(rootDir, { recursive: true, force: true }) };
 }
 
 describe('SPECGEN003: spec-generator-v3 form-guards + skills + audit log', () => {
@@ -362,7 +367,7 @@ describe('SPECGEN003: spec-generator-v3 form-guards + skills + audit log', () =>
   it('SPECGEN003_16: discovery-forms skill populates USER_STORIES.md in v3 format (integration)', () => {
     // Skill invocation is tested via its presence + structure.
     // Actual Skill tool execution requires Claude Code runtime which is not available in unit context.
-    const skillPath = path.join(APP_DIR, 'extensions', 'specs-workflow', '.claude', 'skills', 'discovery-forms', 'SKILL.md');
+    const skillPath = path.join(SKILLS_DIR, 'discovery-forms', 'SKILL.md');
     expect(existsSync(skillPath)).toBe(true);
     const content = readFileSync(skillPath, 'utf-8');
     // Frontmatter must be anti-pushy (no "when user asks"/"whenever")
@@ -374,7 +379,7 @@ describe('SPECGEN003: spec-generator-v3 form-guards + skills + audit log', () =>
 
   // @feature3
   it('SPECGEN003_17: task-board-forms skill exists and has anti-pushy description (integration)', () => {
-    const skillPath = path.join(APP_DIR, 'extensions', 'specs-workflow', '.claude', 'skills', 'task-board-forms', 'SKILL.md');
+    const skillPath = path.join(SKILLS_DIR, 'task-board-forms', 'SKILL.md');
     expect(existsSync(skillPath)).toBe(true);
     const content = readFileSync(skillPath, 'utf-8');
     expect(content.slice(0, 600)).not.toMatch(/when the user/i);
@@ -418,17 +423,17 @@ describe('SPECGEN003: spec-generator-v3 form-guards + skills + audit log', () =>
 
   // @feature3
   it('SPECGEN003_19: spec-status.ts -Format task-table renders markdown (integration)', () => {
-    const { specDir, cleanup } = makeTempSpec({
+    const { rootDir, specPath, cleanup } = makeTempSpec({
       progressVersion: 3,
       files: {
         'TASKS.md': `# Tasks\n\n## Phase 0: BDD\n\n- [ ] Create feature — Status: TODO | Est: 15m\n- [ ] Write step definitions — Status: TODO | Est: 30m\n\n## Phase 1: Implementation\n\n- [ ] Build parser — Status: TODO | Est: 45m\n- [ ] Wire hook — Status: TODO | Est: 30m\n- [ ] Integration test — Status: TODO | Est: 60m\n`,
       },
     });
     try {
-      const result = spawnSync('npx', ['tsx', SPEC_STATUS, '-Path', specDir, '-Format', 'task-table'], {
+      const result = spawnSync('npx', ['tsx', SPEC_STATUS, '-Path', specPath, '-Format', 'task-table'], {
         encoding: 'utf-8',
         cwd: APP_DIR,
-        env: { ...process.env, FORCE_COLOR: '0' },
+        env: { ...process.env, FORCE_COLOR: '0', SPECS_GENERATOR_ROOT: rootDir },
       });
       expect(result.status).toBe(0);
       expect(result.stdout).toMatch(/\|\s*ID\s*\|\s*Title\s*\|\s*Status\s*\|\s*Depends\s*\|\s*Phase\s*\|\s*Est/);
@@ -442,18 +447,18 @@ describe('SPECGEN003: spec-generator-v3 form-guards + skills + audit log', () =>
 
   // @feature3
   it('SPECGEN003_20: task-table format idempotent (integration)', () => {
-    const { specDir, cleanup } = makeTempSpec({
+    const { rootDir, specPath, cleanup } = makeTempSpec({
       progressVersion: 3,
       files: {
         'TASKS.md': `# Tasks\n\n## Phase 0\n\n- [ ] Task A — Status: TODO | Est: 15m\n- [ ] Task B — Status: DONE | Est: 30m\n`,
       },
     });
     try {
-      const a = spawnSync('npx', ['tsx', SPEC_STATUS, '-Path', specDir, '-Format', 'task-table'], {
-        encoding: 'utf-8', cwd: APP_DIR, env: { ...process.env, FORCE_COLOR: '0' },
+      const a = spawnSync('npx', ['tsx', SPEC_STATUS, '-Path', specPath, '-Format', 'task-table'], {
+        encoding: 'utf-8', cwd: APP_DIR, env: { ...process.env, FORCE_COLOR: '0', SPECS_GENERATOR_ROOT: rootDir },
       });
-      const b = spawnSync('npx', ['tsx', SPEC_STATUS, '-Path', specDir, '-Format', 'task-table'], {
-        encoding: 'utf-8', cwd: APP_DIR, env: { ...process.env, FORCE_COLOR: '0' },
+      const b = spawnSync('npx', ['tsx', SPEC_STATUS, '-Path', specPath, '-Format', 'task-table'], {
+        encoding: 'utf-8', cwd: APP_DIR, env: { ...process.env, FORCE_COLOR: '0', SPECS_GENERATOR_ROOT: rootDir },
       });
       expect(a.status).toBe(0);
       expect(a.stdout).toBe(b.stdout);
@@ -467,7 +472,7 @@ describe('SPECGEN003: spec-generator-v3 form-guards + skills + audit log', () =>
   // @feature1
   it('SPECGEN003_21: Jira-mode preservation — CHK skill preserves existing Jira traces (integration)', () => {
     // Structural: skill file references "Jira imperative:" preservation pattern
-    const skillPath = path.join(APP_DIR, 'extensions', 'specs-workflow', '.claude', 'skills', 'requirements-chk-matrix', 'SKILL.md');
+    const skillPath = path.join(SKILLS_DIR, 'requirements-chk-matrix', 'SKILL.md');
     expect(existsSync(skillPath)).toBe(true);
     const content = readFileSync(skillPath, 'utf-8');
     // Must mention Jira mode preservation explicitly
@@ -495,7 +500,7 @@ describe('SPECGEN003: spec-generator-v3 form-guards + skills + audit log', () =>
   it('SPECGEN003_24: child skills do NOT contain auto-trigger phrases (integration)', () => {
     const skills = ['discovery-forms', 'requirements-chk-matrix', 'task-board-forms'];
     for (const skill of skills) {
-      const skillPath = path.join(APP_DIR, 'extensions', 'specs-workflow', '.claude', 'skills', skill, 'SKILL.md');
+      const skillPath = path.join(SKILLS_DIR, skill, 'SKILL.md');
       expect(existsSync(skillPath), `${skill}/SKILL.md must exist`).toBe(true);
       const content = readFileSync(skillPath, 'utf-8');
       // Extract frontmatter description (first 800 chars ~ frontmatter block)
@@ -510,39 +515,36 @@ describe('SPECGEN003: spec-generator-v3 form-guards + skills + audit log', () =>
   // ========== meta-guard (FR-11) ==========
 
   // @feature7
-  it('SPECGEN003_25: meta-guard denies removing form-guard from extension.json (integration)', () => {
-    const extensionJson = path.join(APP_DIR, 'extensions', 'specs-workflow', 'extension.json');
-    // Simulate Edit removing user-story-form-guard entry from hooks.PreToolUse
-    const current = readFileSync(extensionJson, 'utf-8');
-    // Only run test if extension.json actually has the form-guards wired (Phase 5 done)
-    if (!current.includes('user-story-form-guard')) {
-      return; // not yet wired — scenario not applicable pre-phase-5
-    }
-    const mutated = current.replace(/\{\s*"type":\s*"command",\s*"command":\s*"[^"]*user-story-form-guard[^"]*"\s*\},?/g, '');
+  it('SPECGEN003_25: meta-guard denies removing form-guard dispatcher from canonical plugin hooks (integration)', () => {
+    const current = readFileSync(PLUGIN_HOOKS_JSON, 'utf-8');
+    expect(current).toContain('form-guards-dispatch.ts');
+    const parsed = JSON.parse(current);
+    parsed.hooks.PreToolUse = parsed.hooks.PreToolUse.filter((group: { hooks?: Array<{ command?: string }> }) =>
+      !(group.hooks || []).some((hook) => hook.command?.includes('form-guards-dispatch.ts')),
+    );
+    const mutated = JSON.stringify(parsed, null, 2);
+    expect(mutated).not.toContain('form-guards-dispatch.ts');
     const result = invokeHook(META_GUARD, {
       tool_name: 'Write',
-      tool_input: { file_path: extensionJson, content: mutated },
+      tool_input: { file_path: PLUGIN_HOOKS_JSON, content: mutated },
     });
     expect(result.status).toBe(2);
-    expect(result.stderr).toMatch(/cannot remove form-guards/i);
+    expect(result.stderr).toMatch(/cannot remove protected registrations/i);
     expect(result.stderr).toMatch(/human review/i);
   });
 
   // @feature7
   it('SPECGEN003_26: meta-guard allows adding new unrelated hook (integration)', () => {
-    const extensionJson = path.join(APP_DIR, 'extensions', 'specs-workflow', 'extension.json');
-    const current = readFileSync(extensionJson, 'utf-8');
-    if (!current.includes('user-story-form-guard')) {
-      return;
-    }
-    // Add a new unrelated entry while keeping all form-guards
+    const current = readFileSync(PLUGIN_HOOKS_JSON, 'utf-8');
+    expect(current).toContain('form-guards-dispatch.ts');
+    // Add a new unrelated entry while keeping all protected registrations.
     const mutated = current.replace(
       /"PreToolUse":\s*\[/,
       `"PreToolUse": [{ "matcher": "Write", "hooks": [{ "type": "command", "command": "npx tsx my-unrelated-hook.ts" }] },`
     );
     const result = invokeHook(META_GUARD, {
       tool_name: 'Write',
-      tool_input: { file_path: extensionJson, content: mutated },
+      tool_input: { file_path: PLUGIN_HOOKS_JSON, content: mutated },
     });
     expect(result.status).toBe(0);
   });
@@ -588,15 +590,21 @@ describe('SPECGEN003: spec-generator-v3 form-guards + skills + audit log', () =>
     writeFileSync(AUDIT_LOG, existing + synthetic, 'utf-8');
 
     const payload = { hook_event_name: 'UserPromptSubmit', prompt: 'hello', cwd: APP_DIR };
-    const result = spawnSync('npx', ['tsx', VALIDATE_SPECS], {
-      encoding: 'utf-8', input: JSON.stringify(payload),
-      cwd: APP_DIR, env: { ...process.env, FORCE_COLOR: '0' },
-    });
-    expect(result.status).toBe(0);
-    const combined = (result.stdout || '') + (result.stderr || '');
-    expect(combined).toMatch(/Form guards \(24h\)/);
-    expect(combined).toMatch(/3 DENY|DENY:\s*3/);
-    expect(combined).toMatch(/1 PARSER_CRASH|PARSER_CRASH:\s*1/);
-    expect(combined).toMatch(/2 ALLOW_AFTER_MIGRATION|ALLOW_AFTER_MIGRATION:\s*2/);
+    const ackFile = path.join(tmpdir(), `spec-v3-ack-${process.pid}-${Date.now()}.json`);
+    const repoRoot = mkdtempSync(path.join(tmpdir(), 'spec-v3-summary-repo-'));
+    try {
+      const result = spawnSync('npx', ['tsx', VALIDATE_SPECS], {
+        encoding: 'utf-8', input: JSON.stringify(payload),
+        cwd: APP_DIR, env: { ...process.env, FORCE_COLOR: '0', SPEC_CONFORMANCE_ACK_FILE: ackFile, SPEC_CONFORMANCE_REPO_ROOT: repoRoot },
+      });
+      expect(result.status).toBe(0);
+      const combined = (result.stdout || '') + (result.stderr || '');
+      expect(combined).toMatch(/Spec conformance:/);
+      expect(combined).toMatch(/4 unresolved DENY/);
+      expect(combined).toMatch(/never acked/);
+    } finally {
+      rmSync(repoRoot, { recursive: true, force: true });
+      rmSync(ackFile, { force: true });
+    }
   });
 });

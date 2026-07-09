@@ -2,7 +2,7 @@
 
 ## AC-1 (FR-1)
 
-**Требование:** [FR-1](FR.md#fr-1-название)
+**Требование:** [FR-1](FR.md#fr-1-claude-code-managed-carl-install)
 
 WHEN a supported Claude Code project installs or refreshes dev-pomogator THEN the CARL integration SHALL create or refresh the managed Claude Code CARL artifacts with dev-pomogator owner and version markers.
 
@@ -18,7 +18,7 @@ IF the adaptation script cannot derive safe Russian aliases for a rule or skill 
 
 ## AC-2 (FR-2)
 
-**Требование:** [FR-2](FR.md#fr-2-название)
+**Требование:** [FR-2](FR.md#fr-2-no-fake-green-when-carl-is-absent)
 
 IF no runnable CARL runtime consumer is present THEN installer, doctor, and reporting surfaces SHALL return a degraded state rather than `healthy`, `installed`, `active`, or `ready`.
 
@@ -28,7 +28,7 @@ WHEN a check observes only files on disk without executing the hook consumer THE
 
 ## AC-3 (FR-3)
 
-**Требование:** [FR-3](FR.md#fr-3-название)
+**Требование:** [FR-3](FR.md#fr-3-runtime-consumer-and-end-to-end-proof)
 
 WHEN the managed CARL hook is installed THEN a normal plugin-user hook launcher or dispatcher SHALL invoke the CARL runner through the same command path that is registered in the distributed plugin configuration.
 
@@ -38,7 +38,7 @@ IF test fixtures or benchmark fixtures model CARL output THEN those fixtures SHA
 
 ## AC-4 (FR-4)
 
-**Требование:** [FR-4](FR.md#fr-4-название)
+**Требование:** [FR-4](FR.md#fr-4-fail-open-warning-injection)
 
 WHEN the managed CARL hook encounters a missing dependency, timeout, malformed output, unsupported mode, or runtime exception THEN the hook SHALL exit in fail-open mode so the main agent session can continue.
 
@@ -48,7 +48,7 @@ WHEN the hook succeeds THEN it SHALL NOT inject a false failure warning.
 
 ## AC-5 (FR-5)
 
-**Требование:** [FR-5](FR.md#fr-5-название)
+**Требование:** [FR-5](FR.md#fr-5-doctor-health-and-repair)
 
 WHEN `pomogator-doctor` runs its CARL check THEN it SHALL classify the integration as one of `healthy`, `missing`, `stale`, `broken-runtime`, `unsupported`, `user-conflict`, or `repairable`.
 

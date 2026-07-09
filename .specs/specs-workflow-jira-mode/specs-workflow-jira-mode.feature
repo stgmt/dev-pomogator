@@ -70,9 +70,10 @@ Feature: specs-workflow-jira-mode — Optional Jira-first Spec Workflow
 
   @feature106
   Scenario: SPECJIRA001_07 Jira templates exist on disk
-    Then the Jira-mode template file "JIRA_SOURCE.md.template" exists in tools/specs-generator/templates
-    And the Jira-mode template file "ATTACHMENTS.md.template" exists in tools/specs-generator/templates
+    Then the Jira-mode template file "JIRA_SOURCE.md.template" exists in create-spec references/templates
+    And the Jira-mode template file "ATTACHMENTS.md.template" exists in create-spec references/templates
     And the Jira-mode template file "JIRA_CACHE.schema.json" exists in tools/specs-generator/templates
+    And extension.json skillFiles for create-spec include the Jira-mode reference templates
 
   # Regression: non-Jira specs get zero JIRA_DRIFT findings from runAllChecks
 

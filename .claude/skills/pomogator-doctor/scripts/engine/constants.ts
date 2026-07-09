@@ -1,7 +1,7 @@
 export const DOCTOR_TIMEOUTS = {
   GLOBAL_MS: 15_000,
   PROBE_MS: 3_000,
-  SPAWN_MS: 3_000,
+  SPAWN_MS: 5_000,
   HOOK_MS: 10_000,
 } as const;
 
