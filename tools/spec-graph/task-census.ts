@@ -569,10 +569,16 @@ export function parseAgentTodos(transcriptPath: string): AgentTodo[] {
         }));
       } else if (name === 'TaskCreate') {
         const explicitId = typeof input.taskId === 'string' || typeof input.taskId === 'number' ? String(input.taskId) : null;
-        const key = explicitId ?? `create:${String(b.id ?? ++createSeq)}`;
+        // Real Claude transcripts carry a tool_use id and a later tool_result with
+        // "Task #N", which rekeys the placeholder below. Unit/BDD fixtures often omit
+        // tool_result records, so give those result-less creates the same sequential ids
+        // the Task tool allocates; otherwise TaskUpdate({ taskId: "1" }) cannot close
+        // the first created task and the gate over-counts stale open work.
+        const syntheticId = !explicitId && !b.id ? String(++createSeq) : null;
+        const key = explicitId ?? syntheticId ?? `create:${String(b.id)}`;
         if (!explicitId && b.id) useToTaskKey.set(String(b.id), key);
         upsertTask(key, {
-          id: explicitId ?? undefined,
+          id: explicitId ?? syntheticId ?? undefined,
           subject: String(input.subject ?? ''),
           status: 'pending',
           seq: ++seq,

@@ -56,7 +56,10 @@ function projectRootFromHookInput(input: string): string {
   } catch {
     // Hook payload is best-effort; fall back below.
   }
-  return path.resolve(process.env.CLAUDE_PROJECT_DIR || process.cwd());
+  // In nested hook spawns/tests, CLAUDE_PROJECT_DIR can still point at the parent
+  // Claude session while the hook is intentionally launched with cwd set to a temp
+  // project. The launch cwd is the safer fallback when the hook payload omits cwd.
+  return path.resolve(process.cwd() || process.env.CLAUDE_PROJECT_DIR || '.');
 }
 
 function hookHomeDir(): string {
