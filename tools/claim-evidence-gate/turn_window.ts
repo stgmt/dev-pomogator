@@ -289,7 +289,9 @@ export function agentBgInFlight(rawTranscript: string): boolean {
 // banner, specs-validator output, gate kicks, task-notifications, system reminders. Stripped before
 // intent classification so a banner-only turn is not mistaken for the user's request.
 const HOOK_INJECTION_RE =
-  /^\s*(📋|👉|…ещё|\[specs-validator\]|⚠️|PHASE GATE WARNING|Stop hook feedback|UserPromptSubmit hook|<\/?task-notification|<(?:task-id|tool-use-id|output-file|status|summary)|<\/?command-(?:name|message|args)|<\/?local-command-(?:stdout|caveat)|\[SYSTEM NOTIFICATION|This is an automated|Do NOT interpret|[A-Za-z][\w.-]*:\s*\d+\s*(?:open|⏸))/u;
+  /^\s*(📋|👉|…ещё|\[specs-validator\]|⚠️|PHASE GATE WARNING|Stop hook feedback|Stop hook blocking error|UserPromptSubmit hook|<\/?task-notification|<(?:task-id|tool-use-id|output-file|status|summary)|<\/?command-(?:name|message|args)|<\/?local-command-(?:stdout|caveat)|\[SYSTEM NOTIFICATION|This is an automated|Do NOT interpret|[A-Za-z][\w.-]*:\s*\d+\s*(?:open|⏸))/u;
+const ACTIONABLE_STOP_FEEDBACK_RE =
+  /(?:Stop hook feedback|Stop hook blocking error)[\s\S]{0,1200}(?:TASK_UNTESTED|done without a strong test|Strengthen the test|blocking error|blocked|не закрыто|Нужно:|run\s+\S|fix\s+\S|почини|исправь|доделай)/i;
 // Harness interruption sentinels are user-role transcript rows, but they are not the user's task.
 // If they become the "last prompt", gate-dev work looks unrelated and the judge overfires.
 const INTERRUPTED_PROMPT_RE = /^\s*\[Request interrupted by user(?: for tool use)?\]\s*$/i;
@@ -396,6 +398,16 @@ export function sessionUserPrompts(rawTranscript: string): string[] {
  * ("дальше", "go", "+") via sessionUserPrompts(), so gate-dev follow-up turns keep the
  * previous domain intent instead of looking like an unrelated task.
  */
+export function latestActionableStopFeedback(rawTranscript: string): string {
+  const lines = parseLines(rawTranscript);
+  for (let i = lines.length - 1; i >= 0; i--) {
+    if (lines[i].isSidechain || !isRealUser(lines[i])) continue;
+    const text = assistantText(lines[i]).trim();
+    return ACTIONABLE_STOP_FEEDBACK_RE.test(text) ? text : '';
+  }
+  return '';
+}
+
 export function effectiveUserRequest(rawTranscript: string): string {
   const prompts = sessionUserPrompts(rawTranscript);
   return prompts.at(-1) ?? lastUserPrompt(rawTranscript);

@@ -15,7 +15,7 @@ import path from 'node:path';
 import os from 'node:os';
 import assert from 'node:assert/strict';
 import { classify, firstUnsupported, stripCode } from '../../tools/claim-evidence-gate/claim_classifier.ts';
-import { extractTurnWindow, bgInFlightInWindow, lastUserPrompt, agentBgInFlightCount, agentBgInFlight, sessionUserPrompts } from '../../tools/claim-evidence-gate/turn_window.ts';
+import { extractTurnWindow, bgInFlightInWindow, lastUserPrompt, agentBgInFlightCount, agentBgInFlight, sessionUserPrompts, latestActionableStopFeedback } from '../../tools/claim-evidence-gate/turn_window.ts';
 import { agentOpenTodoCount, liveOpenForUncensusedSlugs, lastEditedSpecSlug } from '../../tools/spec-graph/task-census.ts';
 import { gateSelfEdit, selfMarkedBlockedOrBacklog } from '../../tools/claim-evidence-gate/game_guard_facts.ts';
 import { buildJudgeNoTokenDemand, resolveEndpoint, isJudgeArmed } from '../../tools/claim-evidence-gate/meridian-judge.ts';
@@ -66,6 +66,7 @@ interface CegWorld extends V4World {
   cegOwnTodos?: { openBlocked: boolean; openRaw: string; doneBlocked: boolean };
   cegInjectionRaw?: string;
   cegExtractedPrompt?: string;
+  cegFeedback?: string;
   cegOneRunningRaw?: string;
   cegAllDoneRaw?: string;
   cegNoLaunchRaw?: string;
@@ -688,6 +689,29 @@ Given<CegWorld>('a works-done claim that mentions "claim-evidence-gate" by name 
 });
 Then<CegWorld>('the unbacked claim still blocks despite naming the gate, while the executor-backed claim approves', function () {
   assert.deepEqual(this.cegEachTurnResults, [true, false], `self-mention no-skip results wrong: ${JSON.stringify(this.cegEachTurnResults)}`);
+});
+
+Given<CegWorld>('the previous user-role message is a Stop-hook feedback demanding a strong test and the agent answers only with a review', function () {
+  const feedback = 'Stop hook feedback:\n7 task(s) marked DONE without a strong test: demo:t1 (TASK_UNTESTED). Strengthen the test until strong-tests reports STRONG (or write one).';
+  this.cegFeedback = feedback;
+  this.cegRows = [
+    U('ревью'),
+    U(feedback),
+    A([txt('Нашёл проблему: нужно усилить тесты. Следующий шаг — добавить BDD-сценарий.')]),
+  ];
+});
+
+Then<CegWorld>('it blocks because the Stop-hook feedback action was not addressed by any tool work', function () {
+  assert.equal(this.cegBlocked, true, `expected actionable Stop-hook feedback to block, raw=${this.cegRaw}`);
+  assert.match(this.cegRaw ?? '', /Stop-hook дал конкретное действие|Stop-hook feedback action/i, 'block reason must name the unaddressed Stop-hook action');
+  assert.match(latestActionableStopFeedback(this.cegRows!.map((r) => JSON.stringify(r)).join('\n')), /TASK_UNTESTED|strong test/i, 'extractor must see the actionable gate feedback');
+});
+
+Given<CegWorld>('the previous user-role message is a normal review request and the agent answers with a review', function () {
+  this.cegRows = [
+    U('ревью'),
+    A([txt('Нашёл проблему: тест слабый, нужно усилить сценарий.')]),
+  ];
 });
 
 Given<CegWorld>('a sequence of door edits across two specs ending with one spec last, then ending with the other last, then one ending on a .feature-only edit, then no edits at all', function () {

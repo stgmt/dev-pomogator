@@ -293,6 +293,18 @@ Feature: CEGATE001 Claim-Evidence Gate
     When the gate evaluates each turn
     Then the unbacked claim still blocks despite naming the gate, while the executor-backed claim approves
 
+  # @feature18
+  Scenario: CEGATE001_56 Actionable Stop-hook feedback remains an active mandate until work happens
+    Given the previous user-role message is a Stop-hook feedback demanding a strong test and the agent answers only with a review
+    When the gate evaluates the turn
+    Then it blocks because the Stop-hook feedback action was not addressed by any tool work
+
+  # @feature18
+  Scenario: CEGATE001_57 A normal review after a normal user review request still approves
+    Given the previous user-role message is a normal review request and the agent answers with a review
+    When the gate evaluates the turn
+    Then it approves the stop
+
   # @feature22
   Scenario: CEGATE001_55 The gate offers the task of the most recently edited spec, ignoring test-authoring edits
     Given a sequence of door edits across two specs ending with one spec last, then ending with the other last, then one ending on a .feature-only edit, then no edits at all

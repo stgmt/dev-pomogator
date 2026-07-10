@@ -234,7 +234,8 @@ function agentBgInFlightCount(rawTranscript) {
   }
   return inFlight.size;
 }
-var HOOK_INJECTION_RE = /^\s*(📋|👉|…ещё|\[specs-validator\]|⚠️|PHASE GATE WARNING|Stop hook feedback|UserPromptSubmit hook|<\/?task-notification|<(?:task-id|tool-use-id|output-file|status|summary)|<\/?command-(?:name|message|args)|<\/?local-command-(?:stdout|caveat)|\[SYSTEM NOTIFICATION|This is an automated|Do NOT interpret|[A-Za-z][\w.-]*:\s*\d+\s*(?:open|⏸))/u;
+var HOOK_INJECTION_RE = /^\s*(📋|👉|…ещё|\[specs-validator\]|⚠️|PHASE GATE WARNING|Stop hook feedback|Stop hook blocking error|UserPromptSubmit hook|<\/?task-notification|<(?:task-id|tool-use-id|output-file|status|summary)|<\/?command-(?:name|message|args)|<\/?local-command-(?:stdout|caveat)|\[SYSTEM NOTIFICATION|This is an automated|Do NOT interpret|[A-Za-z][\w.-]*:\s*\d+\s*(?:open|⏸))/u;
+var ACTIONABLE_STOP_FEEDBACK_RE = /(?:Stop hook feedback|Stop hook blocking error)[\s\S]{0,1200}(?:TASK_UNTESTED|done without a strong test|Strengthen the test|blocking error|blocked|не закрыто|Нужно:|run\s+\S|fix\s+\S|почини|исправь|доделай)/i;
 var INTERRUPTED_PROMPT_RE = /^\s*\[Request interrupted by user(?: for tool use)?\]\s*$/i;
 function isTypedHumanPrompt(e) {
   if (!isRealUser(e)) return false;
@@ -279,6 +280,15 @@ function sessionUserPrompts(rawTranscript) {
     out.push(clampMandate(cleaned));
   }
   return out.slice(-MANDATE_MAX_PROMPTS);
+}
+function latestActionableStopFeedback(rawTranscript) {
+  const lines = parseLines(rawTranscript);
+  for (let i = lines.length - 1; i >= 0; i--) {
+    if (lines[i].isSidechain || !isRealUser(lines[i])) continue;
+    const text = assistantText(lines[i]).trim();
+    return ACTIONABLE_STOP_FEEDBACK_RE.test(text) ? text : "";
+  }
+  return "";
 }
 function effectiveUserRequest(rawTranscript) {
   const prompts = sessionUserPrompts(rawTranscript);
@@ -619,10 +629,11 @@ function parseAgentTodos(transcriptPath) {
         }));
       } else if (name === "TaskCreate") {
         const explicitId = typeof input.taskId === "string" || typeof input.taskId === "number" ? String(input.taskId) : null;
-        const key = explicitId ?? `create:${String(b.id ?? ++createSeq)}`;
+        const syntheticId = !explicitId && !b.id ? String(++createSeq) : null;
+        const key = explicitId ?? syntheticId ?? `create:${String(b.id)}`;
         if (!explicitId && b.id) useToTaskKey.set(String(b.id), key);
         upsertTask(key, {
-          id: explicitId ?? void 0,
+          id: explicitId ?? syntheticId ?? void 0,
           subject: String(input.subject ?? ""),
           status: "pending",
           seq: ++seq,
@@ -1041,6 +1052,7 @@ async function main() {
   nextLine = nextStep ? `
 \u{1F449} \u0421\u043B\u0435\u0434\u0443\u044E\u0449\u0435\u0435: ${nextStep.title}` : "";
   const sessionPrompts = sessionUserPrompts(rawTranscript);
+  const actionableStopFeedback = latestActionableStopFeedback(rawTranscript);
   const substantiveUserRequest = effectiveUserRequest(rawTranscript);
   const taskIsAboutTheGate = /пинатор|pinator|claim.?evidence.?gate|claim.?gate|сторож|судь[яеиёю]|meridian|\bjudge\b/i.test(substantiveUserRequest);
   const ANALYSIS_RE = /\bанализ|разбер|разбор|оцен[иь]|отч[её]т|\breport\b|analyz|ревью|\breview\b|\bплан\b|\bplan\b|посмотри что|что думаешь|что не так/i;
@@ -1071,7 +1083,10 @@ async function main() {
       };
     }
   }
-  if (analysisOnly && unsupported) {
+  if (!unsupported && actionableStopFeedback && mutatingToolsThisTurn === 0 && !awaitingAsync) {
+    unsupported = { cls: "stop-feedback-unaddressed", need: "\u043F\u0440\u0435\u0434\u044B\u0434\u0443\u0449\u0438\u0439 Stop-hook \u0434\u0430\u043B \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u043E\u0435 \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0435, \u043D\u043E \u0432 \u044D\u0442\u043E\u043C \u0445\u043E\u0434\u0435 \u043D\u0435 \u0431\u044B\u043B\u043E \u0440\u0430\u0431\u043E\u0442\u044B \u2014 \u0441\u0434\u0435\u043B\u0430\u0439 \u0435\u0433\u043E \u0441\u0435\u0439\u0447\u0430\u0441" };
+  }
+  if (analysisOnly && unsupported && unsupported.cls !== "stop-feedback-unaddressed") {
     const PROOF_CLASSES = /* @__PURE__ */ new Set(["works-done", "analysis-verdict", "not-found-impossible", "verified-marker"]);
     const backed = toolUses.length > 0 || /\[UNVERIFIED\]/i.test(claimText);
     if (!PROOF_CLASSES.has(unsupported.cls) || backed) unsupported = null;
@@ -1202,6 +1217,11 @@ async function main() {
     block(
       `\u26A0\uFE0F ${SELF_MARKER}: ${unsupported.need}.
 \u041D\u0435\u043F\u0440\u043E\u0432\u0435\u0440\u0435\u043D\u043D\u044B\u0439 \u0431\u043B\u043E\u043A\u0435\u0440 \u2014 \u044D\u0442\u043E \u041D\u0415 \u0431\u043B\u043E\u043A\u0435\u0440. \u041F\u0440\u0435\u0434\u044A\u044F\u0432\u0438 \u0443\u043B\u0438\u043A\u0443 \u0412 \u042D\u0422\u041E\u041C \u0416\u0415 \u043E\u0442\u0432\u0435\u0442\u0435: \`git diff/log\` \u043D\u0430\u0437\u0432\u0430\u043D\u043D\u043E\u0433\u043E \u0444\u0430\u0439\u043B\u0430, \u0438\u043B\u0438 \u0437\u0430\u043F\u0443\u0441\u0442\u0438 \u043F\u0440\u043E\u0432\u0435\u0440\u043A\u0443. \u041D\u0435\u0442 \u0443\u043B\u0438\u043A\u0438 \u2192 \u043D\u0435 \u0437\u0430\u0431\u043B\u043E\u043A\u0438\u0440\u043E\u0432\u0430\u043D \u2192 \u0440\u0430\u0431\u043E\u0442\u0430\u0439 (\u0438\u043B\u0438 \u0432\u043E\u0437\u044C\u043C\u0438 \u0431\u0435\u0437\u043E\u043F\u0430\u0441\u043D\u0443\u044E \u043D\u0435-\u043F\u0435\u0440\u0435\u043A\u0440\u044B\u0432\u0430\u044E\u0449\u0443\u044E \u0440\u0430\u0431\u043E\u0442\u0443). \xAB\u0416\u0434\u0443 \u0444\u043E\u043D\u043E\u0432\u0443\u044E \u0437\u0430\u0434\u0430\u0447\u0443\xBB \u2014 \u0442\u043E\u043B\u044C\u043A\u043E \u0435\u0441\u043B\u0438 \u0442\u044B \u0435\u0451 \u0420\u0415\u0410\u041B\u042C\u041D\u041E \u0437\u0430\u043F\u0443\u0441\u0442\u0438\u043B \u0432 \u044D\u0442\u043E\u043C \u0445\u043E\u0434\u0435.`
+    );
+  } else if (unsupported.cls === "stop-feedback-unaddressed") {
+    block(
+      `\u26A0\uFE0F ${SELF_MARKER}: ${unsupported.need}.
+\u041D\u0435 \u043E\u0442\u0432\u0435\u0447\u0430\u0439 \u043E\u0431\u0437\u043E\u0440\u043E\u043C/\u043F\u0435\u0440\u0435\u0441\u043A\u0430\u0437\u043E\u043C \u043F\u043E\u0441\u043B\u0435 Stop-hook feedback. \u0412\u043E\u0437\u044C\u043C\u0438 \u0443\u043A\u0430\u0437\u0430\u043D\u043D\u043E\u0435 \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0435 \u0438 \u0432\u044B\u043F\u043E\u043B\u043D\u0438 \u0435\u0433\u043E \u0438\u043D\u0441\u0442\u0440\u0443\u043C\u0435\u043D\u0442\u0430\u043C\u0438 \u0441\u0435\u0439\u0447\u0430\u0441; \u0435\u0441\u043B\u0438 \u044D\u0442\u043E \u043D\u0435\u0432\u043E\u0437\u043C\u043E\u0436\u043D\u043E \u2014 \u043F\u0440\u0435\u0434\u044A\u044F\u0432\u0438 \u043F\u0440\u043E\u0432\u0435\u0440\u044F\u0435\u043C\u0443\u044E \u0443\u043B\u0438\u043A\u0443 \u043D\u0435\u0432\u043E\u0437\u043C\u043E\u0436\u043D\u043E\u0441\u0442\u0438 \u0432 \u044D\u0442\u043E\u043C \u0436\u0435 \u0445\u043E\u0434\u0435.`
     );
   } else if (unsupported.cls === "gate-meta") {
     block(`\u26A0\uFE0F ${SELF_MARKER}: \u043D\u0435 \u0437\u0430\u043A\u0440\u044B\u0442\u043E. ${unsupported.need} \u2014 \u0441\u0434\u0435\u043B\u0430\u0439 \u042D\u0422\u041E\u0422 \u0448\u0430\u0433 \u0441\u0435\u0439\u0447\u0430\u0441.`);
