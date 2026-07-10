@@ -38,3 +38,8 @@
 
 - **AC-17**: WHEN gray-zone стоп (открытая работа сессии + gray-signal) AND ни один из `CLAIM_GATE_JUDGE_KEY`/`OPENROUTER_API_KEY`/`CLAUDE_MEM_OPENROUTER_API_KEY`/`AUTO_COMMIT_API_KEY` не задан THEN хук SHALL **НЕ блокировать**, а вернуть `{decision:"approve", systemMessage}`, systemMessage которого требует подключить токен аипомогатора + называет точные переменные + endpoint `https://aipomogator.ru/go/v1` (решение владельца 2026-06-25: без токена — только предупреждение в чате, стоп проходит). *(CEGATE001_17)*
 - **AC-18**: WHEN тот же gray-zone стоп AND токен задан THEN ветка «нет токена» НЕ срабатывает (управление уходит реальному LLM-судье). *(CEGATE001_18)*
+
+## Actionable Stop-hook feedback (FR-31)
+
+- **AC-19**: WHEN последняя user-role запись является actionable Stop-hook feedback / blocking error with concrete remediation (for example `TASK_UNTESTED` / `Strengthen the test` / `Нужно:`) AND the next assistant turn stops without mutating/door tool work and without a real async wait THEN the hook SHALL block with `stop-feedback-unaddressed`, even if the latest human prompt was review/analysis-only. *(CEGATE001_56)*
+- **AC-20**: WHEN the latest prompt is a normal human review request (not Stop-hook feedback) AND the assistant delivers a review without claiming completion THEN the hook SHALL approve. *(CEGATE001_57)*

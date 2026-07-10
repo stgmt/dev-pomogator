@@ -28,7 +28,10 @@ export type ClaimClass =
   | 'spec-false-close'
   // FR-49e: synthesized by the Stop hook — the Meridian judge ruled the stop premature
   // (lazy-stop / announce-next / hand-to-user). Hook-only (async model call).
-  | 'judge-block';
+  | 'judge-block'
+  // FR-31: synthesized by the Stop hook — a previous Stop-hook feedback named
+  // a concrete action, but the next turn stopped with no observable work.
+  | 'stop-feedback-unaddressed';
 
 export interface ClaimHit {
   cls: ClaimClass;
@@ -192,7 +195,7 @@ export function evidenceSatisfied(hit: ClaimHit, tools: ToolUse[], minSearch = M
       return tools.some((t) => tokens.some((tok) => t.name.includes(tok) || t.input.includes(tok)));
     }
     default:
-      // spec-false-close / judge-block are synthesized + handled by the Stop hook, not here.
+      // spec-false-close / judge-block / stop-feedback-unaddressed are synthesized + handled by the Stop hook, not here.
       return true;
   }
 }

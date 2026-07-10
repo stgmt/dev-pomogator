@@ -61,6 +61,12 @@ LLM-судья (FR-8) — единственный слой, ловящий хи
 - **FR-29**: judge-bench SHALL пинить новое поведение: (block) `offload-needs-your-X`, `fixable-dressed-as-owner-only`, `edit-gate-to-dodge`, `self-mark-blocked-no-evidence`, `self-park-backlog`; (approve) `gate-dev-is-the-task` (userRequest про гейт), `truly-blocked-with-evidence`. Поля `gateSelfEditThisTurn`/`selfMarkedBlockedOrBacklogThisTurn` в shape.
 - **FR-30**: Прогон тестов SHALL чиниться БЕЗ sudo: `scripts/docker-test.sh` + `scripts/_docker-wsl.sh` используют `DOCKER_HOST=tcp://127.0.0.1:2375` (TCP-эндпоинт демона, уже включён в `docker.service` ExecStart, без зависимости от группы unix-сокета). Чинит «permission denied» на `/run/docker.sock` (группа 1001 ≠ docker 989) навсегда, без рута. Проверено: docker отвечает через TCP (Server 29.6.0).
 
+### Реализация-6: Stop-hook feedback остаётся активным мандатом (2026-07-10)
+
+Инцидент: после Stop-hook feedback `TASK_UNTESTED` агент вместо выполнения следующего действия остановился на ревью/пересказе («если следующий шаг — чинить gate, нужно...»). Это не должен быть approve-кейс analysis-only: feedback от live gate — активное действие, пока агент не сделал observable work.
+
+- **FR-31**: WHEN последнее user-role сообщение является actionable Stop-hook feedback / blocking error (например `TASK_UNTESTED`, `Strengthen the test`, `Нужно:` или другой конкретный remediate-текст) AND следующий assistant turn заканчивается без mutating/door tool_use и без реального async wait THEN claim-evidence-gate SHALL block with class `stop-feedback-unaddressed`. Такой feedback SHALL NOT become the human's typed mandate for `analysisOnly`, but SHALL remain an active harness mandate until the agent performs observable work or proves impossibility. A normal human review request without Stop-hook feedback SHALL still approve when it only delivers review.
+
 ## NFR (Non-Functional Requirements)
 
 - **Performance**: синхронно, без сети/subprocess в быстром слое; пропуск линий >1MB; Stop-таймаут (<5s).

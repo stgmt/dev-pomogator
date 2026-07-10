@@ -32,7 +32,7 @@ import path from 'node:path';
 
 import { log as _logShared, normalizePath } from '../_shared/hook-utils.ts';
 import { markerPath, readMarker, writeMarkerAtomic, isWithinCooldown, hashFileList } from '../_shared/marker-utils.ts';
-import { extractTurnWindow, bgInFlightInWindow, agentBgInFlightCount, bgCommandInFlight, sessionUserPrompts, effectiveUserRequest } from './turn_window.ts';
+import { extractTurnWindow, bgInFlightInWindow, agentBgInFlightCount, bgCommandInFlight, sessionUserPrompts, effectiveUserRequest, latestActionableStopFeedback } from './turn_window.ts';
 import { firstUnsupported, isSpecCompletionClaim } from './claim_classifier.ts';
 import { readTaskCensusCache, scopeCensusToSlugs, sessionEditedSpecSlugs, lastEditedSpecSlug, agentOpenTodoCount, liveOpenForUncensusedSlugs, selectNextStepRoute, type NextStepRoute, type TaskCensusCache } from '../spec-graph/task-census.ts';
 import { judgeStop, judgeAvailable, buildJudgeNoTokenDemand, isJudgeArmed } from './meridian-judge.ts';
@@ -328,6 +328,7 @@ async function main(): Promise<void> {
   // unrequested backlog umbrella (@feature35) because the gate conflated "open task in a touched spec"
   // with "the human's mandate". Agent-independent (transcript-derived) → ungameable.
   const sessionPrompts = sessionUserPrompts(rawTranscript);
+  const actionableStopFeedback = latestActionableStopFeedback(rawTranscript);
   // FR-29 follow-up intent (2026-07-09): a terse continuation prompt ("дальше", "go") has no domain words.
   // sessionUserPrompts intentionally drops those ack-only turns, so the last substantive mandate is the right
   // intent for deterministic carve-outs and for the judge's LAST-request field. Without this, an honest
@@ -411,11 +412,19 @@ async function main(): Promise<void> {
     }
   }
 
+  // FR-31: a Stop-hook block reason is not the user's original mandate, but it IS an active, actionable
+  // instruction from the harness. After such feedback, a follow-up "review/report" answer is NOT a pure
+  // analysis stop if the agent did no work: the gate should kick it to do the remedial action it was just
+  // told to do (for example, strengthen TASK_UNTESTED tests) instead of silently accepting a review of itself.
+  if (!unsupported && actionableStopFeedback && mutatingToolsThisTurn === 0 && !awaitingAsync) {
+    unsupported = { cls: 'stop-feedback-unaddressed', need: 'предыдущий Stop-hook дал конкретное действие, но в этом ходе не было работы — сделай его сейчас' };
+  }
+
   // Phase 1: on an ANALYSIS-only request, keep ONLY an UNBACKED factual claim — a works-done / verdict /
   // not-found / verified claim with NO tool this turn AND no [UNVERIFIED] marker ("максимум — пруфы просить").
   // Drop the work-demanding classes (spec-false-close / no-next-section / blocker). The judge + gate-meta
   // are guarded out below by `!analysisOnly`. The intent is the USER's words, so the agent can't game it.
-  if (analysisOnly && unsupported) {
+  if (analysisOnly && unsupported && unsupported.cls !== 'stop-feedback-unaddressed') {
     const PROOF_CLASSES = new Set(['works-done', 'analysis-verdict', 'not-found-impossible', 'verified-marker']);
     const backed = toolUses.length > 0 || /\[UNVERIFIED\]/i.test(claimText);
     if (!PROOF_CLASSES.has(unsupported.cls) || backed) unsupported = null;
@@ -626,6 +635,12 @@ async function main(): Promise<void> {
         `Непроверенный блокер — это НЕ блокер. Предъяви улику В ЭТОМ ЖЕ ответе: \`git diff/log\` названного файла, ` +
         `или запусти проверку. Нет улики → не заблокирован → работай (или возьми безопасную не-перекрывающую работу). ` +
         `«Жду фоновую задачу» — только если ты её РЕАЛЬНО запустил в этом ходе.`,
+    );
+  } else if (unsupported.cls === 'stop-feedback-unaddressed') {
+    block(
+      `⚠️ ${SELF_MARKER}: ${unsupported.need}.\n` +
+        `Не отвечай обзором/пересказом после Stop-hook feedback. Возьми указанное действие и выполни его инструментами сейчас; ` +
+        `если это невозможно — предъяви проверяемую улику невозможности в этом же ходе.`,
     );
   } else if (unsupported.cls === 'gate-meta') {
     // α: bare next-step demand — the hidden "you were inspecting the gate" reason is NEVER shown.

@@ -56,3 +56,12 @@
   _Requirements: FR-23_
   **Done When:**
   - [x] DESIGN/README note that the LLM-judge behaviour is pinned LIVE in `tools/claim-evidence-gate/bench/judge-bench.ts` (not a `*.test.ts`), so it is NOT an FR-5 migration target nor an FR-6 refusal — it is the genuine non-deterministic-judge exception
+
+## Phase 6: Actionable Stop feedback stays live (FR-31)
+
+- [x] Block review-only stops after actionable Stop-hook feedback -- @feature18 — id: fr31-stop-feedback-active — Status: DONE | Est: 45m
+  _Requirements: FR-31_
+  **Done When:**
+  - [x] CEGATE001_56 blocks a review-only response after `TASK_UNTESTED` / strong-test Stop-hook feedback
+  - [x] CEGATE001_57 approves an ordinary human review request with no Stop-hook feedback
+  - [x] `claim_evidence_gate_stop.bundle.mjs` is rebuilt and the real bundle contains `stop-feedback-unaddressed`

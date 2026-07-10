@@ -19,6 +19,7 @@
 | [FR-13](FR.md) | long-tool monitor → bg-task-guard | [AC-1](ACCEPTANCE_CRITERIA.md) | @feature13 |
 | [FR-14](FR.md) | judge token priority | [AC-18](ACCEPTANCE_CRITERIA.md) | @feature14 |
 | [FR-15](FR.md) | loud token demand | [AC-17](ACCEPTANCE_CRITERIA.md) | @feature15 |
+| [FR-31](FR.md) | actionable Stop-hook feedback remains active until work happens | [AC-19](ACCEPTANCE_CRITERIA.md), [AC-20](ACCEPTANCE_CRITERIA.md) | @feature18 |
 
 ## NFR
 
