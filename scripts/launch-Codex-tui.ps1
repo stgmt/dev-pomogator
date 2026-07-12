@@ -47,6 +47,30 @@ if not "%CM_EXIT%"=="0" (
 "@
 }
 
+function Quote-BatchToken {
+    param([string]$Value)
+    if ($Value -match '[\s&()^]') {
+        return '"' + ($Value -replace '"', '""') + '"'
+    }
+    return $Value
+}
+
+function Format-BatchCommand {
+    param(
+        [string]$Executable,
+        [string[]]$Arguments = @()
+    )
+
+    # Batch shims (.cmd/.bat) must be invoked with CALL from another .cmd,
+    # otherwise the launcher never resumes to log CM_EXIT after the CLI exits.
+    $prefix = if ($Executable -match '\.(cmd|bat)$') { 'call ' } else { '' }
+    $command = $prefix + (Quote-BatchToken $Executable)
+    if ($Arguments.Count -gt 0) {
+        $command += ' ' + ($Arguments -join ' ')
+    }
+    return $command
+}
+
 function Format-TomlBasicString {
     param([string]$Value)
     $escaped = $Value.Replace('\', '\\').Replace('"', '\"')
@@ -103,14 +127,23 @@ function Ensure-CodexProjectTrust {
     }
 }
 
+function Get-CodexCommandWithArgs {
+    param([string[]]$Arguments = @())
+    $codex = Get-Command codex -ErrorAction SilentlyContinue
+    $codexPath = if ($codex) { $codex.Source } else { 'codex' }
+    Write-LaunchLog "codex command: $codexPath"
+    return Format-BatchCommand -Executable $codexPath -Arguments $Arguments
+}
+
 function Get-CodexCommand {
     param([string]$Dir)
 
+    $codexArgs = @('-C', ('"' + $Dir + '"'))
     if ($Yolo) {
-        return 'codex -C "' + $Dir + '" --dangerously-bypass-approvals-and-sandbox --dangerously-bypass-hook-trust'
+        $codexArgs += @('--dangerously-bypass-approvals-and-sandbox', '--dangerously-bypass-hook-trust')
     }
 
-    return 'codex -C "' + $Dir + '"'
+    return Get-CodexCommandWithArgs -Arguments $codexArgs
 }
 
 function Start-CodexOnly {
@@ -129,10 +162,21 @@ function Start-CodexOnly {
     if (-not (Test-Path $launcherDir)) { New-Item -ItemType Directory -Path $launcherDir -Force | Out-Null }
     $codexOnlyLauncher = Join-Path $launcherDir 'codex-only-pane.cmd'
     $codexCmd = Get-CodexCommand -Dir $Dir
+    $codexVersionCmd = Get-CodexCommandWithArgs -Arguments @('--version')
     @"
 @echo off
+title Codex YOLO - $Dir
+cd /d "$Dir"
+echo [dev-pomogator] Codex context-menu no-TUI launch
+echo [dev-pomogator] cwd=%CD%
+echo [dev-pomogator] command=$codexCmd
+where codex
+$codexVersionCmd
+echo [dev-pomogator] starting Codex in 2 seconds...
+timeout /t 2 /nobreak >nul
 $codexCmd
 $(Get-CodexExitLogBatch -Dir $Dir)
+if not "%CM_EXIT%"=="0" pause
 "@ | Set-Content -Path $codexOnlyLauncher -Encoding ASCII
 
     wt.exe -d $Dir cmd /k $codexOnlyLauncher

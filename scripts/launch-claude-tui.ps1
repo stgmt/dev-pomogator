@@ -60,6 +60,39 @@ if not "%CM_EXIT%"=="0" (
 "@
 }
 
+function Quote-BatchToken {
+    param([string]$Value)
+    if ($Value -match '[\s&()^]') {
+        return '"' + ($Value -replace '"', '""') + '"'
+    }
+    return $Value
+}
+
+function Format-BatchCommand {
+    param(
+        [string]$Executable,
+        [string[]]$Arguments = @()
+    )
+
+    # Batch shims (.cmd/.bat) must be invoked with CALL from another .cmd,
+    # otherwise the launcher never resumes to log CM_EXIT after the CLI exits.
+    $prefix = if ($Executable -match '\.(cmd|bat)$') { 'call ' } else { '' }
+    $command = $prefix + (Quote-BatchToken $Executable)
+    if ($Arguments.Count -gt 0) {
+        $command += ' ' + ($Arguments -join ' ')
+    }
+    return $command
+}
+
+function Get-ClaudeCommand {
+    param([string[]]$Arguments = @())
+
+    $claude = Get-Command claude -ErrorAction SilentlyContinue
+    $claudePath = if ($claude) { $claude.Source } else { 'claude' }
+    Write-LaunchLog "claude command: $claudePath"
+    return Format-BatchCommand -Executable $claudePath -Arguments $Arguments
+}
+
 # FR-7: atomically grant workspace trust for $Dir before a --dangerously-skip-permissions launch.
 # Claude Code hard-fails (exit 1, "Ignoring N permissions.allow entries ... this workspace has
 # not been trusted") when --dangerously-skip-permissions targets a directory whose trust dialog
@@ -173,13 +206,28 @@ function Start-ClaudeOnly {
     $launcherDir = Join-Path $launcherRoot 'dev-pomogator-launch'
     if (-not (Test-Path $launcherDir)) { New-Item -ItemType Directory -Path $launcherDir -Force | Out-Null }
     $claudeOnlyLauncher = Join-Path $launcherDir 'claude-only-pane.cmd'
-    $claudeCmd = if ($Yolo) { 'claude --dangerously-skip-permissions' } else { 'claude' }
+    $claudeArgs = if ($Yolo) { @('--dangerously-skip-permissions') } else { @() }
+    $claudeCmd = Get-ClaudeCommand -Arguments $claudeArgs
+    $claudeVersionCmd = Get-ClaudeCommand -Arguments @('--version')
     $dirForEnv = $Dir -replace '\\', '/'
+    $sessionPrefix = 'notui-' + ([guid]::NewGuid().ToString('N').Substring(0, 8))
     @"
 @echo off
+title Claude Code YOLO - $Dir
+cd /d "$Dir"
+set TEST_STATUSLINE_SESSION=$sessionPrefix
 set TEST_STATUSLINE_PROJECT=$dirForEnv
+echo [dev-pomogator] Claude context-menu no-TUI launch
+echo [dev-pomogator] cwd=%CD%
+echo [dev-pomogator] session=%TEST_STATUSLINE_SESSION%
+echo [dev-pomogator] command=$claudeCmd
+where claude
+$claudeVersionCmd
+echo [dev-pomogator] starting Claude Code in 2 seconds...
+timeout /t 2 /nobreak >nul
 $claudeCmd
 $(Get-ClaudeExitLogBatch -Dir $Dir)
+if not "%CM_EXIT%"=="0" pause
 "@ | Set-Content -Path $claudeOnlyLauncher -Encoding ASCII
 
     wt.exe -d $Dir cmd /k $claudeOnlyLauncher
@@ -290,11 +338,13 @@ try {
     }
 
     $claudeLauncher = Join-Path $launcherDir 'claude-pane.cmd'
+    $claudeArgs = if ($Yolo) { @('--dangerously-skip-permissions') } else { @() }
+    $claudeCmd = Get-ClaudeCommand -Arguments $claudeArgs
     @"
 @echo off
 set TEST_STATUSLINE_SESSION=$sessionPrefix
 set TEST_STATUSLINE_PROJECT=$projectDirForEnv
-$(if ($Yolo) { 'claude --dangerously-skip-permissions' } else { 'claude' })
+$claudeCmd
 $(Get-ClaudeExitLogBatch -Dir $ProjectDir)
 "@ | Set-Content -Path $claudeLauncher -Encoding ASCII
 

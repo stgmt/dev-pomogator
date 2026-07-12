@@ -81,6 +81,19 @@ function exists(relativePath: string): boolean {
   return fs.existsSync(path.join(repoRoot, relativePath));
 }
 
+function hasBatchShimExitLoggingGuard(content: string, exitLoggerName: string): boolean {
+  return (
+    content.includes('function Format-BatchCommand') &&
+    content.includes("if ($Executable -match '\\.(cmd|bat)$') { 'call ' }") &&
+    content.includes('Format-BatchCommand -Executable') &&
+    content.includes(exitLoggerName)
+  );
+}
+
+function hasSafeVersionProbe(content: string, unsafeProbe: string, safeProbe: string): boolean {
+  return !content.includes(unsafeProbe) && content.includes(safeProbe);
+}
+
 function stripAnsi(value: string): string {
   return value.replace(/\x1b\[[0-9;]*m/g, '');
 }
@@ -249,6 +262,17 @@ if (fs.existsSync(installLauncherPath)) {
 if (fs.existsSync(postinstallPath)) {
   const postinstall = fs.readFileSync(postinstallPath, 'utf8');
   if (
+    postinstall.includes("path.join(MODULE_DIR, '..', '..', 'scripts', 'launch-claude-tui.ps1')") &&
+    postinstall.includes("path.join(MODULE_DIR, '..', '..', 'scripts', 'launch-Codex-tui.ps1')") &&
+    postinstall.includes('copyLaunchScript') &&
+    postinstall.includes('copyCodexLaunchScript')
+  ) {
+    add('runtime.launcher-source-of-truth', 'pass', 'postinstall copies Claude and Codex launchers from the repo scripts directory');
+  } else {
+    add('runtime.launcher-source-of-truth', 'fail', 'postinstall must copy both installed launchers from repo scripts/ so local and user installs share one source');
+  }
+
+  if (
     postinstall.includes('generateFallbackCodexIcon') &&
     postinstall.includes('findInstalledCodexIconFile') &&
     postinstall.includes('Get-AppxPackage OpenAI.Codex') &&
@@ -263,6 +287,20 @@ if (fs.existsSync(postinstallPath)) {
   }
 }
 
+if (fs.existsSync(claudeLaunchPath)) {
+  const claudeLaunch = fs.readFileSync(claudeLaunchPath, 'utf8');
+  if (hasBatchShimExitLoggingGuard(claudeLaunch, 'Get-ClaudeExitLogBatch')) {
+    add('runtime.claude-cmd-shim-exit-logging', 'pass', 'Claude launcher calls .cmd/.bat shims with CALL before logging CM_EXIT');
+  } else {
+    add('runtime.claude-cmd-shim-exit-logging', 'fail', 'Claude launcher must CALL .cmd/.bat shims so CM_EXIT logging still runs');
+  }
+  if (hasSafeVersionProbe(claudeLaunch, 'claude --version', "Get-ClaudeCommand -Arguments @('--version')")) {
+    add('runtime.claude-version-probe-cmd-shim', 'pass', 'Claude version probe also uses the batch-safe command builder');
+  } else {
+    add('runtime.claude-version-probe-cmd-shim', 'fail', 'Claude launcher must not call bare `claude --version` from a generated .cmd');
+  }
+}
+
 if (fs.existsSync(codexLaunchPath)) {
   const codexLaunch = fs.readFileSync(codexLaunchPath, 'utf8');
   if (codexLaunch.includes('--dangerously-bypass-approvals-and-sandbox') && codexLaunch.includes('codex')) {
@@ -274,6 +312,16 @@ if (fs.existsSync(codexLaunchPath)) {
     add('runtime.codex-stale-claude-flag', 'fail', 'Codex launch script contains Claude-only permission flag');
   } else {
     add('runtime.codex-stale-claude-flag', 'pass', 'Codex launch script does not contain Claude-only permission flag');
+  }
+  if (hasBatchShimExitLoggingGuard(codexLaunch, 'Get-CodexExitLogBatch')) {
+    add('runtime.codex-cmd-shim-exit-logging', 'pass', 'Codex launcher calls .cmd/.bat shims with CALL before logging CM_EXIT');
+  } else {
+    add('runtime.codex-cmd-shim-exit-logging', 'fail', 'Codex launcher must CALL .cmd/.bat shims so CM_EXIT logging still runs');
+  }
+  if (hasSafeVersionProbe(codexLaunch, 'codex --version', "Get-CodexCommandWithArgs -Arguments @('--version')")) {
+    add('runtime.codex-version-probe-cmd-shim', 'pass', 'Codex version probe also uses the batch-safe command builder');
+  } else {
+    add('runtime.codex-version-probe-cmd-shim', 'fail', 'Codex launcher must not call bare `codex --version` from a generated .cmd');
   }
 }
 
