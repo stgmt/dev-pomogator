@@ -1,105 +1,106 @@
 #!/usr/bin/env node
-// Test Runner Wrapper — thin shim to canonical v2 writer (Node.js port)
-// Delegates to tui-test-runner's test_runner_wrapper.ts for v2 YAML status
-// FR-2: YAML Protocol, FR-4: Test Runner Wrapper, FR-5: Session Isolation
-
+/**
+ * Stable JavaScript entry point for the TypeScript test runner.
+ *
+ * This file is intentionally dependency-free: test-guard can invoke it from a
+ * canonical plugin installation before any project dependencies are available.
+ */
 'use strict';
 
-const path = require('node:path');
-const fs = require('node:fs');
-const os = require('node:os');
-const { spawnSync } = require('node:child_process');
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
+const { spawnSync } = require('child_process');
 
 const scriptDir = __dirname;
-// Resolve project root across layouts:
-//   .dev-pomogator/tools/X -> 3 up  (legacy installed copy)
-//   extensions/X/tools/X    -> 4 up  (legacy source tree)
-//   tools/X                 -> 2 up  (canonical plugin v2 — tools at repo root)
-const repoRoot = scriptDir.includes('.dev-pomogator')
-  ? path.resolve(scriptDir, '..', '..', '..')
-  : scriptDir.includes('extensions')
-    ? path.resolve(scriptDir, '..', '..', '..', '..')
-    : path.resolve(scriptDir, '..', '..');
-
-// Candidate locations for the tui-test-runner .ts wrapper, canonical v2 first.
-const tuiWrapperCandidates = [
-  path.join(repoRoot, 'tools', 'tui-test-runner', 'test_runner_wrapper.ts'),
-  path.join(repoRoot, '.dev-pomogator', 'tools', 'tui-test-runner', 'test_runner_wrapper.ts'),
-  path.join(repoRoot, 'extensions', 'tui-test-runner', 'tools', 'tui-test-runner', 'test_runner_wrapper.ts'),
-];
-const tsxRunner = path.join(os.homedir(), '.dev-pomogator', 'scripts', 'tsx-runner.js');
-
+const repoRoot = path.resolve(scriptDir, '..', '..');
 const args = process.argv.slice(2);
 
-// Read session.env fallback when TEST_STATUSLINE_SESSION not set in env
-// (SessionStart hook writes session.env to .dev-pomogator/.test-status/;
-//  Docker CMD entry point relies on this fallback)
-if (!process.env.TEST_STATUSLINE_SESSION) {
-  const sessionEnvPaths = [
+function firstExisting(candidates) {
+  return candidates.find((candidate) => fs.existsSync(candidate));
+}
+
+function reportLaunchFailure(result, command) {
+  if (result.error) {
+    process.stderr.write(`[dev-pomogator] Failed to launch ${command}: ${result.error.message}\n`);
+  }
+  if (result.signal) {
+    process.stderr.write(`[dev-pomogator] ${command} terminated by signal ${result.signal}\n`);
+  }
+  return result.status ?? 1;
+}
+
+/** Remove shim-only options before directly launching a child command. */
+function directCommand(argv) {
+  const command = [];
+  for (let index = 0; index < argv.length; index += 1) {
+    const argument = argv[index];
+    if (argument === '--') {
+      command.push(...argv.slice(index + 1));
+      break;
+    }
+    if (argument === '--framework') {
+      index += 1;
+      continue;
+    }
+    if (argument.startsWith('--framework=')) continue;
+    command.push(argument);
+  }
+  return command;
+}
+
+function run(command, commandArgs, environment) {
+  // Do not set cwd: Windows rejects UNC working directories.  The child
+  // inherits the usable working directory chosen by its caller instead.
+  const result = spawnSync(command, commandArgs, {
+    stdio: 'inherit',
+    env: environment,
+  });
+  return reportLaunchFailure(result, command);
+}
+
+function loadSessionEnvironment() {
+  if (process.env.TEST_STATUSLINE_SESSION) return;
+  for (const sessionEnvPath of [
     path.join(repoRoot, '.dev-pomogator', '.test-status', 'session.env'),
     path.join(repoRoot, '.dev-pomogator', '.docker-status', 'session.env'),
-  ];
-  for (const sessionEnvPath of sessionEnvPaths) {
-    try {
-      const envContent = fs.readFileSync(sessionEnvPath, 'utf-8');
-      for (const line of envContent.split(/\r?\n/)) {
-        const m = line.match(/^([A-Za-z_][A-Za-z0-9_]*)=(.+)$/);
-        if (m && !process.env[m[1]]) {
-          process.env[m[1]] = m[2].trim();
-        }
-      }
-      if (process.env.TEST_STATUSLINE_SESSION) break;
-    } catch { /* no session.env at this path — try next */ }
+  ]) {
+    if (!fs.existsSync(sessionEnvPath)) continue;
+    for (const line of fs.readFileSync(sessionEnvPath, 'utf8').split(/\r?\n/)) {
+      const match = line.match(/^([A-Za-z_][A-Za-z0-9_]*)=(.+)$/);
+      if (match && !process.env[match[1]]) process.env[match[1]] = match[2].trim();
+    }
+    break;
   }
 }
 
-function runViaTsxRunner(scriptPath) {
-  // FR-19: lift the tsx-runner 180s default ceiling for wrapper runs so it never preempts the
-  // wrapper's own graceful timeout (FR-17). tsx-runner already honours a positive TSX_RUNNER_TIMEOUT
-  // (tools/_shared/tsx-runner.js) — we inject a large value here and do NOT modify the runner.
-  const env = { ...process.env };
-  if (!env.TSX_RUNNER_TIMEOUT) env.TSX_RUNNER_TIMEOUT = '1860000';
-  const result = spawnSync('node', ['-e', `require('${tsxRunner.replace(/\\/g, '\\\\')}')`, '--', scriptPath, ...args], {
-    stdio: 'inherit',
-    cwd: repoRoot,
-    env,
-  });
-  process.exit(result.status ?? (result.signal ? 1 : 0));
-}
-
-function runViaNpxTsx(scriptPath) {
-  const npxCmd = process.platform === 'win32' ? 'npx.cmd' : 'npx';
-  // FR-19: same TSX_RUNNER_TIMEOUT lift on the npx fallback so the wrapper's child is never
-  // blunt-killed at the 180s ceiling regardless of which loader path runs.
-  const env = { ...process.env };
-  if (!env.TSX_RUNNER_TIMEOUT) env.TSX_RUNNER_TIMEOUT = '1860000';
-  const result = spawnSync(npxCmd, ['tsx', scriptPath, ...args], {
-    stdio: 'inherit',
-    cwd: repoRoot,
-    env,
-  });
-  process.exit(result.status ?? (result.signal ? 1 : 0));
+function runTypeScript(wrapper, tsxRunner) {
+  const environment = { ...process.env };
+  if (!environment.TSX_RUNNER_TIMEOUT) environment.TSX_RUNNER_TIMEOUT = '1860000';
+  const runner = tsxRunner.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+  return run(process.execPath, ['-e', `require('${runner}')`, '--', wrapper, ...args], environment);
 }
 
 function runDirect() {
-  if (args.length === 0) process.exit(0);
-  const result = spawnSync(args[0], args.slice(1), {
-    stdio: 'inherit',
-    cwd: repoRoot,
-    env: process.env,
-  });
-  process.exit(result.status ?? (result.signal ? 1 : 0));
-}
-
-// Try canonical/installed/source wrapper locations, then direct fallback.
-const wrapperPath = tuiWrapperCandidates.find((p) => fs.existsSync(p)) || null;
-
-if (wrapperPath) {
-  if (fs.existsSync(tsxRunner)) {
-    runViaTsxRunner(wrapperPath);
-  } else {
-    runViaNpxTsx(wrapperPath);
+  const command = directCommand(args);
+  if (command.length === 0) {
+    process.stderr.write('[dev-pomogator] No test command supplied after wrapper options.\n');
+    return 1;
   }
-} else {
-  runDirect();
+  return run(command[0], command.slice(1), process.env);
 }
+
+loadSessionEnvironment();
+
+const tuiWrapper = firstExisting([
+  path.join(repoRoot, 'tools', 'tui-test-runner', 'test_runner_wrapper.ts'),
+  path.join(repoRoot, '.dev-pomogator', 'tools', 'tui-test-runner', 'test_runner_wrapper.ts'),
+  path.join(repoRoot, 'extensions', 'tui-test-runner', 'tools', 'tui-test-runner', 'test_runner_wrapper.ts'),
+]);
+const tsxRunner = firstExisting([
+  path.join(repoRoot, 'tools', '_shared', 'tsx-runner.js'),
+  path.join(scriptDir, '..', '_shared', 'tsx-runner.js'),
+  path.join(os.homedir(), '.dev-pomogator', 'tsx-runner.js'),
+]);
+
+process.exit(tuiWrapper && tsxRunner ? runTypeScript(tuiWrapper, tsxRunner) : runDirect());

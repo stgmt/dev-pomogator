@@ -105,7 +105,76 @@ interface StatuslineWorld extends V4World {
   hookEnvFile?: string;
   hookEnvContent?: string;
   wrapperResult?: { stdout: string; stderr: string; status: number | null };
+  isolatedWrapperPath?: string;
+  isolatedWrapperDir?: string;
+  wrapperResults?: Array<{ stdout: string; stderr: string; status: number | null }>;
 }
+
+// ============================================================================
+// @feature12 — Fail-closed canonical CJS test runner shim (PLUGIN011_36–42)
+// ============================================================================
+
+function runIsolatedCjsWrapper(
+  wrapperPath: string,
+  args: string[],
+): { stdout: string; stderr: string; status: number | null } {
+  const result = crossSpawn.sync(process.execPath, [wrapperPath, ...args], {
+    encoding: 'utf-8',
+    cwd: REPO_ROOT,
+    env: { ...process.env, FORCE_COLOR: '0' },
+    timeout: 10000,
+  });
+  return { stdout: result.stdout || '', stderr: result.stderr || '', status: result.status };
+}
+
+Given(/^an isolated CJS wrapper layout without a TypeScript delegate$/, function (this: StatuslineWorld) {
+  const layout = fs.mkdtempSync(path.join(this.tempDir, 'cjs-shim-'));
+  const wrapperDir = path.join(layout, 'tools', 'test-statusline');
+  fs.mkdirSync(wrapperDir, { recursive: true });
+  const wrapperPath = path.join(wrapperDir, 'test_runner_wrapper.cjs');
+  fs.copyFileSync(appPath('tools/test-statusline/test_runner_wrapper.cjs'), wrapperPath);
+  this.isolatedWrapperDir = wrapperDir;
+  this.isolatedWrapperPath = wrapperPath;
+});
+
+When(/^the CJS wrapper runs framework "generic" with a child that exits 7$/, function (this: StatuslineWorld) {
+  this.wrapperResult = runIsolatedCjsWrapper(this.isolatedWrapperPath!, ['--framework', 'generic', '--', process.execPath, '-e', 'process.exit(7)']);
+});
+
+When(/^the CJS wrapper runs a missing child executable$/, function (this: StatuslineWorld) {
+  this.wrapperResult = runIsolatedCjsWrapper(this.isolatedWrapperPath!, ['--framework', 'generic', '--', 'definitely-not-an-executable']);
+});
+
+When(/^the CJS wrapper exercises both supported framework syntaxes$/, function (this: StatuslineWorld) {
+  this.wrapperResults = [
+    runIsolatedCjsWrapper(this.isolatedWrapperPath!, ['--framework', 'generic', '--', process.execPath, '-e', 'process.exit(0)']),
+    runIsolatedCjsWrapper(this.isolatedWrapperPath!, ['--framework=generic', '--', process.execPath, '-e', 'process.exit(0)']),
+  ];
+});
+
+When(/^the CJS wrapper receives only its framework arguments$/, function (this: StatuslineWorld) {
+  this.wrapperResult = runIsolatedCjsWrapper(this.isolatedWrapperPath!, ['--framework', 'generic']);
+});
+
+Then(/^the CJS wrapper exit code should be 7$/, function (this: StatuslineWorld) {
+  assert.equal(this.wrapperResult?.status, 7, this.wrapperResult?.stderr);
+});
+
+Then(/^the CJS wrapper should exit non-zero$/, function (this: StatuslineWorld) {
+  assert.notEqual(this.wrapperResult?.status, 0, this.wrapperResult?.stderr);
+});
+
+Then(/^the CJS wrapper stderr should identify stage "direct" and the missing command$/, function (this: StatuslineWorld) {
+  assert.match(this.wrapperResult?.stderr || '', /Failed to launch definitely-not-an-executable/);
+});
+
+Then(/^both CJS wrapper invocations should execute the intended child command$/, function (this: StatuslineWorld) {
+  assert.deepEqual(this.wrapperResults?.map((result) => result.status), [0, 0]);
+});
+
+Then(/^the CJS wrapper stderr should contain "no test command supplied"$/, function (this: StatuslineWorld) {
+  assert.match(this.wrapperResult?.stderr || '', /No test command supplied/i);
+});
 
 // ============================================================================
 // @feature2 — YAML Status File Protocol / Test Runner Wrapper
