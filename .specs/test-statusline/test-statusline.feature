@@ -181,3 +181,45 @@ Feature: PLUGIN011_test-statusline
     Then YAML state should remain "running"
     And statusline output should still contain running indicators
 
+  @feature12
+  Scenario: PLUGIN011_36 CJS wrapper runs a direct command without a bundle
+    Given an isolated CJS test runner wrapper has no bundle
+    When the CJS wrapper runs a successful direct child command
+    Then the CJS wrapper should exit with code 0
+
+  @feature12
+  Scenario: PLUGIN011_37 CJS wrapper propagates a direct child failure
+    Given an isolated CJS test runner wrapper has no bundle
+    When the CJS wrapper runs a direct child command that exits 7
+    Then the CJS wrapper should exit with code 7
+
+  @feature12
+  Scenario: PLUGIN011_38 CJS wrapper fails closed for a missing executable
+    Given an isolated CJS test runner wrapper has no bundle
+    When the CJS wrapper runs a missing child executable
+    Then the CJS wrapper should fail closed with direct launch diagnostics
+
+  @feature12
+  Scenario: PLUGIN011_39 CJS wrapper accepts both framework option syntaxes
+    Given an isolated CJS test runner wrapper has no bundle
+    When the CJS wrapper exercises both supported framework syntaxes
+    Then both CJS wrapper invocations should execute the intended child command
+
+  @feature12
+  Scenario: PLUGIN011_40 CJS wrapper requires a command after options
+    Given an isolated CJS test runner wrapper has no bundle
+    When the CJS wrapper receives only framework options
+    Then the CJS wrapper should reject the missing test command
+
+  @feature12
+  Scenario: PLUGIN011_41 CJS wrapper delegates to a bundle under CLAUDE_PLUGIN_ROOT
+    Given a CLAUDE_PLUGIN_ROOT bundle records its received arguments
+    When the CJS wrapper runs with source options and a command separator
+    Then the plugin-root bundle should receive the unchanged wrapper arguments
+
+  @feature12
+  Scenario: PLUGIN011_42 CJS wrapper preserves a UNC source option through bundle delegation
+    Given a CLAUDE_PLUGIN_ROOT bundle records its received arguments
+    When the CJS wrapper runs with a UNC source option and import export flags
+    Then the plugin-root bundle should receive the unchanged UNC source option arguments
+

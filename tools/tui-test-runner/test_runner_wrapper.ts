@@ -3,7 +3,7 @@
  * Canonical v2 test runner wrapper.
  */
 
-import crossSpawn from 'cross-spawn';
+import { spawn, spawnSync } from 'node:child_process';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import type { TestEvent, TestFramework } from './adapters/types.ts';
@@ -190,7 +190,7 @@ function discoverTestCount(framework: TestFramework, projectRoot: string, comman
   const discoveryCmd = [...config.cmd, ...fileFilters];
 
   try {
-    const result = crossSpawn.sync(discoveryCmd[0], discoveryCmd.slice(1), {
+    const result = spawnSync(discoveryCmd[0], discoveryCmd.slice(1), {
       cwd: projectRoot,
       encoding: 'utf-8',
       timeout: 60000,
@@ -216,7 +216,7 @@ function discoverTestCount(framework: TestFramework, projectRoot: string, comman
 async function passthrough(commandArgs: string[], childEnv: Record<string, string>): Promise<number> {
   // FR-18: generic (no-session) path shares the framework path's graceful lifecycle —
   // async spawn in its own group, soft tree-signal on interrupt/timeout, same exit contract.
-  const child = crossSpawn(commandArgs[0], commandArgs.slice(1), {
+  const child = spawn(commandArgs[0], commandArgs.slice(1), {
     stdio: 'inherit',
     cwd: PROJECT,
     env: { ...process.env, ...childEnv },
@@ -365,7 +365,7 @@ async function main(): Promise<number> {
   }
 
   const logStream = fs.createWriteStream(logFile, { flags: 'a' });
-  const child = crossSpawn(parsed.commandArgs[0], parsed.commandArgs.slice(1), {
+  const child = spawn(parsed.commandArgs[0], parsed.commandArgs.slice(1), {
     cwd: projectRoot,
     stdio: ['pipe', 'pipe', 'pipe'],
     env: { ...process.env, ...parsed.childEnv },
