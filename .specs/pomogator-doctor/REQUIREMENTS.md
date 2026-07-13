@@ -107,6 +107,14 @@
 | FR-35 | C30 | Post-launch: Legacy npm Claude install (win32) |
 | FR-36 | C31 | Post-launch: Per-command hook sync (manifest vs settings) |
 
+## GitHub CLI diagnostic trace
+
+| CHK-ID | Requirement | Traces To | Verification Method | Status | Notes |
+|---|---|---|---|---|---|
+| CHK-FR37-01 | Resolve and invoke platform GitHub CLI without mutation | FR-37, AC-37, @feature37 | BDD scenario | Draft | Windows `gh.exe` or `gh.cmd`; other platforms `gh` |
+| CHK-FR37-02 | Classify missing, unauthenticated or invalid-token, non-zero, and timeout outcomes as non-blocking warnings | FR-37, AC-37, @feature37 | BDD scenario | Draft | Hints distinguish install, `gh auth login`, retry, and connectivity |
+| CHK-FR37-03 | Redact credential material while retaining account or host success diagnostics | FR-37, AC-37, @feature37 | Integration test | Draft | NFR-S-1, NFR-S-2 |
+
 ## Post-Launch FR/AC Index (2026-04-20)
 
 Новые требования добавленные после real-world incident (webapp 22 broken hooks). Все tagged `@feature12`. См. [CHANGELOG.md](CHANGELOG.md) `[Unreleased] - Post-launch hardening spec update (2026-04-20)`.

@@ -8,6 +8,8 @@
 - **P-4**: Global Doctor timeout SHALL be ≤ 15 секунд; превышение → abort всех child processes (включая MCP probe spawns) через AbortController + SIGKILL, exit с кодом 2 и report `"Doctor timeout"`.
 - **P-5**: Cold start overhead (import runner + reporter + all checks) SHALL быть < 500ms на Node 22.6+ (via `--experimental-strip-types`, без tsx transpile cost).
 
+- **P-6**: GitHub CLI diagnostic (FR-37) SHALL use the same bounded per-check timeout, kill its spawned child on expiry, and leave remaining checks runnable.
+
 ## Security
 
 - **S-1**: Doctor SHALL NEVER логировать **values** env vars (API keys, tokens) — ни в chalk output, ни в `--json`, ни в log files (`~/.dev-pomogator/logs/doctor.log`). Только `{name, status: "set"|"unset"}`.
@@ -16,6 +18,8 @@
 - **S-4**: Path validation: все paths из `config.json`, `extension.json`, user input SHALL проходить через `resolveWithinProject` (rule `no-unvalidated-manifest-paths`) перед любыми fs операциями.
 - **S-5**: MCP probe input SHALL быть контролирован: только server configs из parsed `.mcp.json` / `~/.claude/mcp.json`, не произвольные command strings от пользователя.
 - **S-6**: `.env` fixtures в тестах SHALL содержать только fake placeholder values (`sk-test-fake-key`, `test-token-xxx`), никаких реальных credentials.
+
+- **S-7**: The GitHub CLI diagnostic (FR-37) SHALL never log, serialize, or display GitHub access-token values; diagnostics retain only sanitized output and, on success, an account or host identifier.
 
 ## Reliability
 
