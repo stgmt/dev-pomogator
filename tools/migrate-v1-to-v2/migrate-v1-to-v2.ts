@@ -284,10 +284,46 @@ function projectCleanup(projectRoot: string, result: MigrationResult, dryRun: bo
   }
 }
 
+/**
+ * Artifacts only a v1 GLOBAL install ever created. Their absence means this machine
+ * never had v1 globally — and therefore there is nothing here to migrate.
+ */
+const V1_GLOBAL_ARTIFACTS = [
+  join('scripts', 'tsx-runner-bootstrap.cjs'),
+  join('scripts', 'check-update.js'),
+  join('scripts', 'tsx-runner.js'),
+];
+
+function detectV1Global(devPomogatorHome: string): boolean {
+  return V1_GLOBAL_ARTIFACTS.some((rel) => existsSync(join(devPomogatorHome, rel)));
+}
+
+/**
+ * `~/.dev-pomogator/` is NOT a v1-only directory — v2 still owns it. The context-menu
+ * postinstall deliberately keeps `scripts/launch-*.ps1` there under a stable, un-versioned
+ * path (the plugin cache path carries the version and would break the right-click menu on
+ * every update), and `logs/` lives there too.
+ *
+ * This function used to `rmSync` the whole directory, recursively, with no v1 check and
+ * enabled by DEFAULT — so a plain run on a machine that had never seen v1 destroyed the
+ * live v2 launchers and the watchdog's `tsx-runner-bootstrap.cjs`, whose loss then left the
+ * watchdog printing an ack command that could not run. Remove v1 artifacts, never the dir.
+ */
 function globalCleanup(result: MigrationResult, dryRun: boolean): void {
   const home = homedir();
   const devPomogatorHome = resolveWithinHome(join(home, '.dev-pomogator'));
-  if (devPomogatorHome) safeRemove(devPomogatorHome, result, dryRun);
+  if (devPomogatorHome && existsSync(devPomogatorHome)) {
+    if (!detectV1Global(devPomogatorHome)) {
+      result.warnings.push(
+        `Skipped ${devPomogatorHome}: no v1 global install detected (v2 still owns this directory).`,
+      );
+    } else {
+      for (const rel of V1_GLOBAL_ARTIFACTS) {
+        const target = resolveWithinHome(join(devPomogatorHome, rel));
+        if (target) safeRemove(target, result, dryRun);
+      }
+    }
+  }
 
   const configHome = resolveWithinHome(join(home, '.config', 'dev-pomogator'));
   if (configHome) safeRemove(configHome, result, dryRun);

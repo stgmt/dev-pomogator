@@ -12,6 +12,7 @@ import { forbidRootArtifactsCheck } from './forbid-root-artifacts.js';
 import { ghCheck } from './gh.js';
 import { gitCheck } from './git.js';
 import { gitignoreBlockCheck } from './gitignore-block.js';
+import { hookScriptPathsCheck } from './hook-script-paths.js';
 import { hooksExecCheck } from './hooks-exec.js';
 import { hooksRegistryCheck } from './hooks-registry.js';
 import { mcpAuthCheck } from './mcp-auth.js';
@@ -33,6 +34,7 @@ export const phase2Checks: CheckDefinition[] = [
   pomogatorHomeCheck,
   hooksRegistryCheck,
   hooksExecCheck,
+  hookScriptPathsCheck,
   envVarsCheck,
   envExampleCheck,
   versionMatchCheck,
@@ -68,6 +70,7 @@ export {
   ghCheck,
   gitCheck,
   gitignoreBlockCheck,
+  hookScriptPathsCheck,
   hooksExecCheck,
   hooksRegistryCheck,
   mcpAuthCheck,

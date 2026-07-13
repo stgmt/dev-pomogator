@@ -2,6 +2,8 @@
 paths:
   - "tools/**/*gate*.ts"
   - "tools/**/*hook*.ts"
+  - "tools/**/*guard*.ts"
+  - "tools/**/*watchdog*.ts"
 ---
 
 # Hook Global State — CWD Scoping

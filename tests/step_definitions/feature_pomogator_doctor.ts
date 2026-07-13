@@ -31,6 +31,7 @@ import {
   type DoctorOptions,
 } from '../../.claude/skills/pomogator-doctor/scripts/engine/index.ts';
 import { acquireLock, LockHeldError } from '../../.claude/skills/pomogator-doctor/scripts/engine/lock.ts';
+import { hookScriptPathsCheck } from '../../.claude/skills/pomogator-doctor/scripts/engine/checks/hook-script-paths.ts';
 import {
   buildHookOutput,
   exitCodeFor,
@@ -53,6 +54,8 @@ class DoctorWorld extends V4World {
   public meridianServer: http.Server | null = null;
   public lockHolder: { release: () => void } | null = null;
   public hookResult: { stdout: string; stderr: string; status: number | null } | null = null;
+  public pluginRoot: string | null = null;
+  public checkResult: { id: string; severity: string; message: string } | null = null;
 }
 
 // Cucumber uses the World set by setWorldConstructor in before-after.ts.
@@ -881,3 +884,69 @@ Then(
     expect([sev1, sev2]).to.include(c13?.severity);
   },
 );
+
+// ---------------------------------------------------------------------------
+// C31 — hook script paths resolve (POMOGATORDOCTOR001_47..49)
+//
+// A hook command runs with the USER'S PROJECT as cwd, but every script it invokes ships
+// inside the PLUGIN. `bash tools/bg-task-guard/stop-guard.sh` therefore failed on every Stop
+// for every user, and nothing caught it: C18 only smoke-tests that bootstrap.cjs runs.
+// These steps drive the real check against a real plugin tree on disk — no mocks.
+// ---------------------------------------------------------------------------
+
+function writePluginHooks(pluginRoot: string, command: string): void {
+  fs.mkdirSync(path.join(pluginRoot, '.claude-plugin'), { recursive: true });
+  fs.writeFileSync(
+    path.join(pluginRoot, '.claude-plugin', 'hooks.json'),
+    JSON.stringify({ hooks: { Stop: [{ matcher: '', hooks: [{ type: 'command', command }] }] } }, null, 2),
+  );
+}
+
+Given(
+  /^a plugin tree whose Stop hook names the script "([^"]+)" by a project-relative path$/,
+  async function (this: DoctorWorld, script: string) {
+    const w = world(this);
+    w.pluginRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'doctor-c31-'));
+    writePluginHooks(w.pluginRoot, `bash ${script}`);
+  },
+);
+
+Given(
+  /^a plugin tree whose Stop hook anchors the script "([^"]+)" to the plugin root$/,
+  async function (this: DoctorWorld, script: string) {
+    const w = world(this);
+    w.pluginRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'doctor-c31-'));
+    writePluginHooks(w.pluginRoot, `bash "\${CLAUDE_PLUGIN_ROOT}/${script}"`);
+  },
+);
+
+Given(/^the plugin ships the script "([^"]+)"$/, async function (this: DoctorWorld, script: string) {
+  const w = world(this);
+  const abs = path.join(w.pluginRoot!, script);
+  fs.mkdirSync(path.dirname(abs), { recursive: true });
+  fs.writeFileSync(abs, '#!/usr/bin/env bash\n');
+});
+
+When(/^I run the hook script paths doctor check$/, async function (this: DoctorWorld) {
+  const w = world(this);
+  // The check prefers CLAUDE_PLUGIN_ROOT over projectRoot; the fixture root must win.
+  const saved = process.env.CLAUDE_PLUGIN_ROOT;
+  delete process.env.CLAUDE_PLUGIN_ROOT;
+  try {
+    w.checkResult = await hookScriptPathsCheck.run({ projectRoot: w.pluginRoot! } as never);
+  } finally {
+    if (saved !== undefined) process.env.CLAUDE_PLUGIN_ROOT = saved;
+  }
+});
+
+Then(/^check C31 is severity "([^"]+)"$/, async function (this: DoctorWorld, severity: string) {
+  const w = world(this);
+  expect(w.checkResult, 'C31 must have produced a result').to.not.be.null;
+  expect(w.checkResult!.id).to.equal('C31');
+  expect(w.checkResult!.severity).to.equal(severity);
+});
+
+Then(/^check C31 message mentions "([^"]+)"$/, async function (this: DoctorWorld, text: string) {
+  const w = world(this);
+  expect(w.checkResult!.message).to.contain(text);
+});

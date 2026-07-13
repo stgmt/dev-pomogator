@@ -3,13 +3,16 @@ import { bunCheck } from './bun.js';
 import { claudeBinPriorityCheck } from './claude-bin-priority.js';
 import { claudeMemPluginCheck } from './claude-mem-plugin.js';
 import { claudeMemWorkerCheck } from './claude-mem-worker.js';
+import { carlCheck } from './carl.js';
 import { contextMenuCheck } from './context-menu.js';
 import { dockerCheck } from './docker.js';
 import { envExampleCheck } from './env-example.js';
 import { envVarsCheck } from './env-vars.js';
 import { forbidRootArtifactsCheck } from './forbid-root-artifacts.js';
+import { ghCheck } from './gh.js';
 import { gitCheck } from './git.js';
 import { gitignoreBlockCheck } from './gitignore-block.js';
+import { hookScriptPathsCheck } from './hook-script-paths.js';
 import { hooksExecCheck } from './hooks-exec.js';
 import { hooksRegistryCheck } from './hooks-registry.js';
 import { mcpAuthCheck } from './mcp-auth.js';
@@ -27,9 +30,11 @@ import { versionMatchCheck } from './version-match.js';
 export const phase2Checks: CheckDefinition[] = [
   nodeVersionCheck,
   gitCheck,
+  ghCheck,
   pomogatorHomeCheck,
   hooksRegistryCheck,
   hooksExecCheck,
+  hookScriptPathsCheck,
   envVarsCheck,
   envExampleCheck,
   versionMatchCheck,
@@ -38,6 +43,7 @@ export const phase2Checks: CheckDefinition[] = [
   statuslineCheck,
   statuslineWidgetsCheck,
   contextMenuCheck,
+  carlCheck,
   forbidRootArtifactsCheck,
 ];
 
@@ -54,14 +60,17 @@ export const allChecks: CheckDefinition[] = [
 export {
   bunCheck,
   claudeBinPriorityCheck,
+  carlCheck,
   claudeMemPluginCheck,
   contextMenuCheck,
   dockerCheck,
   envExampleCheck,
   envVarsCheck,
   forbidRootArtifactsCheck,
+  ghCheck,
   gitCheck,
   gitignoreBlockCheck,
+  hookScriptPathsCheck,
   hooksExecCheck,
   hooksRegistryCheck,
   mcpAuthCheck,

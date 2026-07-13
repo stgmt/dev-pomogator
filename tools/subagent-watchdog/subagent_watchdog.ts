@@ -19,7 +19,7 @@ import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 export type TaskKind = 'agent' | 'background' | 'task';
-export type TaskStatus = 'running' | 'completed' | 'failed' | 'stopped';
+export type TaskStatus = 'running' | 'completed' | 'failed' | 'stopped' | 'killed';
 export type IssueKind = 'stale-running' | 'lost-completion' | 'failed-api-error';
 
 export interface WatchdogIssue {
@@ -71,6 +71,9 @@ export interface AnalyzeResult {
   issues: WatchdogIssue[];
   observedTasks: number;
   transcriptPath: string;
+  /** `<status>` words Claude Code emitted that this file does not know. Logged so
+   *  vocabulary drift surfaces as data instead of wedging a session. */
+  unknownStatuses?: string[];
 }
 
 interface HookInput {
@@ -191,10 +194,15 @@ function updateOutputStats(state: TaskState): void {
   }
 }
 
-function registerNotification(states: Map<string, TaskState>, block: string, tsMs?: number): void {
+function registerNotification(
+  states: Map<string, TaskState>,
+  block: string,
+  unknownStatuses: Set<string>,
+  tsMs?: number,
+): void {
   const taskId = xmlTag(block, 'task-id');
   if (!taskId) return;
-  const status = xmlTag(block, 'status') as TaskStatus | undefined;
+  const status = parseStatus(xmlTag(block, 'status'), unknownStatuses);
   const summary = xmlTag(block, 'summary');
   const outputFile = xmlTag(block, 'output-file');
   const toolUseId = xmlTag(block, 'tool-use-id');
@@ -222,7 +230,13 @@ function registerAgentLaunch(
   if (!/Async agent launched successfully|agent is working in the background/i.test(text)) return;
   const agentId = AGENT_ID_RE.exec(text)?.[1];
   if (!agentId) return;
+  // PROVENANCE. The banner only counts as a launch when it arrives as the
+  // tool_result of a real `Agent` tool_use (its id is in `launches`). Without
+  // this check the scan cannot tell "Claude Code launched an agent" from "the
+  // agent READ a file that merely quotes the banner" — so opening this tool's
+  // own test fixture invents a phantom task and blocks Stop forever.
   const launch = toolUseId ? launches.get(toolUseId) : undefined;
+  if (!launch) return;
   const state = getOrCreate(states, agentId, 'agent');
   state.status ??= 'running';
   state.title ??= launch?.title;
@@ -238,12 +252,16 @@ function registerAgentLaunch(
 
 function registerBackgroundLaunch(
   states: Map<string, TaskState>,
+  bashToolUseIds: Set<string>,
   toolUseId: string | undefined,
   text: string,
   tsMs?: number,
 ): void {
   const taskId = BG_ID_RE.exec(text)?.[1];
   if (!taskId) return;
+  // Same provenance rule as registerAgentLaunch: only a real `Bash` tool_result
+  // starts a background task. Quoted text must never mint one.
+  if (!toolUseId || !bashToolUseIds.has(toolUseId)) return;
   const state = getOrCreate(states, taskId, 'background');
   state.status ??= 'running';
   if (toolUseId) state.toolUseIds.add(toolUseId);
@@ -266,7 +284,12 @@ function registerTaskOutput(states: Map<string, TaskState>, text: string, tsMs?:
   updateOutputStats(state);
 }
 
-function registerAssistantToolUses(record: Record<string, unknown>, launches: Map<string, LaunchState>, tsMs?: number): void {
+function registerAssistantToolUses(
+  record: Record<string, unknown>,
+  launches: Map<string, LaunchState>,
+  bashToolUseIds: Set<string>,
+  tsMs?: number,
+): void {
   const message = record.message as Record<string, unknown> | undefined;
   const content = message?.content;
   if (!Array.isArray(content)) return;
@@ -276,7 +299,12 @@ function registerAssistantToolUses(record: Record<string, unknown>, launches: Ma
     if (p.type !== 'tool_use') continue;
     const id = typeof p.id === 'string' ? p.id : undefined;
     const name = typeof p.name === 'string' ? p.name : undefined;
-    if (!id || name !== 'Agent') continue;
+    if (!id) continue;
+    if (name === 'Bash') {
+      bashToolUseIds.add(id);
+      continue;
+    }
+    if (name !== 'Agent') continue;
     const input = (p.input ?? {}) as Record<string, unknown>;
     launches.set(id, {
       toolUseId: id,
@@ -300,8 +328,28 @@ function registerSidechainAgent(states: Map<string, TaskState>, record: Record<s
   updateOutputStats(state);
 }
 
+const KNOWN_STATUSES = new Set<TaskStatus>(['running', 'completed', 'failed', 'stopped', 'killed']);
+const TERMINAL_STATUSES = new Set<TaskStatus>(['completed', 'failed', 'stopped', 'killed']);
+
+/**
+ * Claude Code owns the `<status>` vocabulary; we only consume it. A value we do
+ * not know MUST NOT be silently coerced to 'running' — that is what wedged the
+ * Stop hook for hours when TaskStop started emitting 'killed', a word this file
+ * never listed. Unknown words are surfaced (see `unknownStatuses`) and treated
+ * as terminal: a session blocked forever by a vocabulary drift is a far worse
+ * failure than one missing report, and the agent still sees the raw
+ * task-notification itself.
+ */
+function parseStatus(raw: string | undefined, unknown: Set<string>): TaskStatus | undefined {
+  if (!raw) return undefined;
+  const value = raw.trim().toLowerCase();
+  if (KNOWN_STATUSES.has(value as TaskStatus)) return value as TaskStatus;
+  unknown.add(value);
+  return 'stopped';
+}
+
 function isFinal(status: TaskStatus | undefined): boolean {
-  return status === 'completed' || status === 'failed' || status === 'stopped';
+  return status !== undefined && TERMINAL_STATUSES.has(status);
 }
 
 function isClaudeApiFailure(summary: string | undefined): boolean {
@@ -372,6 +420,8 @@ export function analyzeTranscript(transcriptPath: string, options: AnalyzeOption
   const maxIssues = options.maxIssues ?? DEFAULT_MAX_ISSUES;
   const states = new Map<string, TaskState>();
   const launches = new Map<string, LaunchState>();
+  const bashToolUseIds = new Set<string>();
+  const unknownStatuses = new Set<string>();
 
   const raw = fs.readFileSync(transcriptPath, 'utf-8');
   for (const line of raw.split(/\r?\n/)) {
@@ -383,7 +433,7 @@ export function analyzeTranscript(transcriptPath: string, options: AnalyzeOption
       continue;
     }
     const tsMs = toMs(parsed.timestamp);
-    registerAssistantToolUses(parsed, launches, tsMs);
+    registerAssistantToolUses(parsed, launches, bashToolUseIds, tsMs);
     registerSidechainAgent(states, parsed, tsMs);
 
     const texts = [
@@ -393,10 +443,10 @@ export function analyzeTranscript(transcriptPath: string, options: AnalyzeOption
     ];
     for (const part of texts) {
       registerAgentLaunch(states, launches, part.toolUseId, part.text, tsMs);
-      registerBackgroundLaunch(states, part.toolUseId, part.text, tsMs);
+      registerBackgroundLaunch(states, bashToolUseIds, part.toolUseId, part.text, tsMs);
       registerTaskOutput(states, part.text, tsMs);
       for (const block of notificationBlocks(part.text)) {
-        registerNotification(states, block, tsMs);
+        registerNotification(states, block, unknownStatuses, tsMs);
       }
     }
   }
@@ -410,7 +460,12 @@ export function analyzeTranscript(transcriptPath: string, options: AnalyzeOption
   }
 
   issues.sort((a, b) => issuePriority(a) - issuePriority(b) || issueAgeOrder(a) - issueAgeOrder(b));
-  return { issues: issues.slice(0, maxIssues), observedTasks: states.size, transcriptPath };
+  return {
+    issues: issues.slice(0, maxIssues),
+    observedTasks: states.size,
+    transcriptPath,
+    ...(unknownStatuses.size > 0 ? { unknownStatuses: [...unknownStatuses] } : {}),
+  };
 }
 
 function issuePriority(issue: WatchdogIssue): number {
@@ -437,7 +492,26 @@ export function formatIssues(issues: WatchdogIssue[]): string {
     .join('\n');
 }
 
-export function buildHookOutput(event: string, result: AnalyzeResult): Record<string, unknown> {
+/**
+ * The ack command we print MUST be runnable as-is. The old one was not: it pointed at
+ * `~/.dev-pomogator/scripts/tsx-runner-bootstrap.cjs` (deleted by migrate-v1-to-v2) and
+ * used a cwd-relative script path, so the one documented escape hatch was dead. We now
+ * emit the canonical plugin bootstrap and bake the resolved project dir into `--cwd`,
+ * which also removes any chance of the ack landing where the Stop hook will not read it.
+ */
+function ackCommand(cwd: string): string {
+  const pluginRoot = process.env.CLAUDE_PLUGIN_ROOT;
+  const bootstrap = pluginRoot
+    ? path.join(pluginRoot, 'tools', '_shared', 'bootstrap.cjs')
+    : path.join('<CLAUDE_PLUGIN_ROOT>', 'tools', '_shared', 'bootstrap.cjs');
+  return (
+    `node -e "require(${JSON.stringify(bootstrap)})" -- ` +
+    '"tools/subagent-watchdog/subagent_watchdog.ts" ' +
+    `--ack <task-id> --cwd ${JSON.stringify(cwd)} --reason "<what you did>"`
+  );
+}
+
+export function buildHookOutput(event: string, result: AnalyzeResult, cwd = process.cwd()): Record<string, unknown> {
   if (result.issues.length === 0) {
     if (event === 'Stop') return { decision: 'approve' };
     return { continue: true, suppressOutput: true };
@@ -447,7 +521,8 @@ export function buildHookOutput(event: string, result: AnalyzeResult): Record<st
     'subagent-watchdog: unresolved background Claude work detected.',
     'The main agent must inspect/resume/stop the listed task(s) before claiming completion.',
     formatIssues(result.issues),
-    'Actions: use TaskOutput/TaskStop when available, inspect the named output file only in bounded chunks, or explicitly report the lost completion. After resolving an old/lost task, acknowledge it with: node -e "require(require(\'path\').join(require(\'os\').homedir(),\'.dev-pomogator\',\'scripts\',\'tsx-runner-bootstrap.cjs\'))" -- ".dev-pomogator/tools/subagent-watchdog/subagent_watchdog.ts" --ack <task-id> --reason "<what you did>".',
+    'Actions: use TaskOutput/TaskStop when available, or inspect the named output file in bounded chunks.',
+    `Only an ack clears this gate — reporting it in prose does not. Acknowledge with:\n  ${ackCommand(cwd)}`,
   ].join('\n');
 
   if (event === 'Stop') {
@@ -461,6 +536,39 @@ function readNumberEnv(name: string, fallback: number): number {
   if (!raw) return fallback;
   const n = Number(raw);
   return Number.isFinite(n) && n >= 0 ? n : fallback;
+}
+
+/**
+ * Windows refuses a UNC path (\\wsl.localhost\...) as a working directory: cmd.exe
+ * prints "UNC paths are not supported. Defaulting to Windows directory" and the
+ * child lands in C:\Windows. A tool that anchors STATE to process.cwd() then writes
+ * it there. That is not hypothetical — `--ack` did exactly this, stranding every
+ * acknowledgement in C:\Windows\.dev-pomogator\ while the Stop hook kept reading the
+ * real project, so the same tasks were reported forever. State must never be
+ * anchored to a system directory.
+ */
+const SYSTEM_ROOT_RE = /^[A-Za-z]:[\\/]+windows([\\/]|$)/i;
+
+function isUnsafeStateRoot(dir: string): boolean {
+  return SYSTEM_ROOT_RE.test(path.resolve(dir));
+}
+
+/**
+ * Resolve the directory that owns watchdog state. `explicit` is the hook's
+ * `input.cwd` (Stop path) or `--cwd` (ack path) — the SAME anchor on both sides,
+ * which is the whole point: a write and a read that disagree is the bug.
+ * Returns undefined when no candidate is trustworthy, so callers fail loudly
+ * instead of silently writing into C:\Windows.
+ */
+function resolveStateRoot(explicit?: string): string | undefined {
+  const candidates = [explicit, process.env.CLAUDE_PROJECT_DIR, process.cwd()];
+  for (const candidate of candidates) {
+    if (!candidate || !candidate.trim()) continue;
+    if (candidate.includes('${')) continue; // unexpanded ${CLAUDE_PROJECT_DIR} literal
+    if (isUnsafeStateRoot(candidate)) continue;
+    return candidate;
+  }
+  return undefined;
 }
 
 function watchdogLogPath(cwd: string): string {
@@ -515,6 +623,46 @@ function appendWatchdogLog(cwd: string, event: string, result: AnalyzeResult): v
   }
 }
 
+function issueSetKey(result: AnalyzeResult): string {
+  return result.issues.map((issue) => issue.taskId).sort().join(',');
+}
+
+/**
+ * How many times in a row we have ALREADY blocked Stop on this exact set of tasks.
+ *
+ * The watchdog used to block unconditionally, so any misclassification became an
+ * unbounded loop: it re-blocked the same four tasks for 18 hours while the agent
+ * hand-edited state files to escape. A watchdog that cannot be satisfied is worse
+ * than one that misses a report — after N identical blocks the agent has demonstrably
+ * seen the message, so we downgrade to a non-blocking warning. Any NEW task resets
+ * the key and blocks again, so real losses are still caught.
+ */
+function countConsecutiveBlocks(cwd: string, key: string): number {
+  if (!key) return 0;
+  try {
+    const file = watchdogLogPath(cwd);
+    if (!fs.existsSync(file)) return 0;
+    const lines = fs.readFileSync(file, 'utf-8').split(/\r?\n/).filter(Boolean);
+    let count = 0;
+    for (let i = lines.length - 1; i >= 0; i--) {
+      let row: { event?: string; issues?: WatchdogIssue[] };
+      try {
+        row = JSON.parse(lines[i]) as { event?: string; issues?: WatchdogIssue[] };
+      } catch {
+        continue;
+      }
+      if (row.event !== 'Stop') continue;
+      const issues = row.issues ?? [];
+      if (issues.length === 0) break;
+      if (issues.map((issue) => issue.taskId).sort().join(',') !== key) break;
+      count++;
+    }
+    return count;
+  } catch {
+    return 0;
+  }
+}
+
 async function readStdin(): Promise<string> {
   return new Promise((resolve) => {
     let data = '';
@@ -531,8 +679,21 @@ export async function runHook(rawInput: string, argv = process.argv): Promise<Re
   if (ackIdx >= 0) {
     const taskId = argv[ackIdx + 1];
     if (!taskId) return { continue: true, suppressOutput: true };
+    const cwdIdx = argv.indexOf('--cwd');
+    const root = resolveStateRoot(cwdIdx >= 0 ? argv[cwdIdx + 1] : undefined);
+    if (!root) {
+      // Silently writing the ack somewhere the Stop hook will never read it is
+      // exactly how this tool wedged a session for 18 hours. Refuse instead.
+      process.stderr.write(
+        'subagent-watchdog: refusing to write the ack — no trustworthy project directory.\n' +
+          `  cwd resolves to a system directory (${process.cwd()}), which happens on Windows when the\n` +
+          '  project lives on a UNC path (\\\\wsl.localhost\\...). Pass the project explicitly:\n' +
+          '    --ack <task-id> --cwd "<project dir>" --reason "<what you did>"\n',
+      );
+      return { continue: true, suppressOutput: true };
+    }
     const reasonIdx = argv.indexOf('--reason');
-    appendAck(process.cwd(), taskId, reasonIdx >= 0 ? argv[reasonIdx + 1] : undefined);
+    appendAck(root, taskId, reasonIdx >= 0 ? argv[reasonIdx + 1] : undefined);
     return { continue: true, suppressOutput: true };
   }
 
@@ -542,7 +703,11 @@ export async function runHook(rawInput: string, argv = process.argv): Promise<Re
     return event === 'Stop' ? { decision: 'approve' } : { continue: true, suppressOutput: true };
   }
 
-  const input = rawInput.trim() ? JSON.parse(rawInput) as HookInput : {};
+  // A UTF-8 BOM on stdin (Windows shells add one when piping) made JSON.parse throw,
+  // main() swallowed it, and the watchdog silently approved — a guard that fails open
+  // on a stray byte is not a guard. Strip it rather than lose the payload.
+  const cleaned = rawInput.replace(/^﻿/, '').trim();
+  const input = cleaned ? JSON.parse(cleaned) as HookInput : {};
   const transcriptPath = input.transcript_path ?? input.transcriptPath;
   if (!transcriptPath || !fs.existsSync(transcriptPath)) {
     return event === 'Stop' ? { decision: 'approve' } : { continue: true, suppressOutput: true };
@@ -553,11 +718,27 @@ export async function runHook(rawInput: string, argv = process.argv): Promise<Re
     lookbackMs: readNumberEnv('SUBAGENT_WATCHDOG_LOOKBACK_HOURS', 24) * 60 * 60_000,
     maxIssues: readNumberEnv('SUBAGENT_WATCHDOG_MAX_ISSUES', DEFAULT_MAX_ISSUES),
   });
-  const cwd = input.cwd ?? process.cwd();
+  const cwd = resolveStateRoot(input.cwd) ?? process.cwd();
   const acked = readAckedTaskIds(cwd);
   result.issues = result.issues.filter((issue) => !acked.has(issue.taskId));
   appendWatchdogLog(cwd, event, result);
-  return buildHookOutput(event, result);
+
+  const maxBlocks = readNumberEnv('SUBAGENT_WATCHDOG_MAX_BLOCKS', 3);
+  if (event === 'Stop' && result.issues.length > 0 && maxBlocks > 0) {
+    if (countConsecutiveBlocks(cwd, issueSetKey(result)) > maxBlocks) {
+      return {
+        continue: true,
+        additionalContext: [
+          `subagent-watchdog: the same ${result.issues.length} task(s) have now blocked Stop ${maxBlocks} times.`,
+          'Downgrading to a warning so the session is not wedged. If this work really is unresolved, resolve it;',
+          'if the watchdog is wrong, this is a bug in the watchdog — report it rather than fighting the gate.',
+          formatIssues(result.issues),
+        ].join('\n'),
+      };
+    }
+  }
+
+  return buildHookOutput(event, result, cwd);
 }
 
 async function main(): Promise<void> {
