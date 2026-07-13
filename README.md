@@ -8,7 +8,7 @@ Canonical Claude Code marketplace plugin plus an explicit Codex plugin whitelist
 - Анализ сессий и автоматическое предложение правил для проекта
 - Защита от типичных LLM-ошибок (лишние файлы в корне, пустые фолбеки)
 - TUI/statusline мониторинг тестов, BDD/specs workflow, hooks-автоматизация
-- Pomogator-doctor diagnostic skill (17 environment checks)
+- Pomogator-doctor diagnostic skill (GitHub CLI readiness plus environment checks)
 
 > **v2.0 BREAKING**: npm install path удалён. Distribution через canonical Anthropic plugin marketplace (`/plugin marketplace add` + `/plugin install`). Cursor support удалён полностью. Existing v1 users — см. [Migration v1 → v2](#migration-v1--v2) ниже.
 
@@ -51,8 +51,8 @@ This Codex path installs only `Codex.nss`, `imports/Codex.nss`, `codex-icon.ico`
 
 После canonical install Claude Code copies plugin к `~/.claude/plugins/cache/stgmt/dev-pomogator/<version>/`:
 
-- **Skills** (47): `/dev-pomogator:create-spec`, `/dev-pomogator:run-tests`, `/dev-pomogator:plan-pomogator`, `/dev-pomogator:pomogator-doctor`, `/dev-pomogator:research-workflow` и др. — invokable через `Skill` tool или slash command
-- **Commands**: `/reflect`, `/simplify`, `/pomogator-doctor` — slash commands из plugin
+- **Skills** (47): `/dev-pomogator:create-spec`, `/dev-pomogator:run-tests`, `/dev-pomogator:plan-pomogator`, `/dev-pomogator:pomogator-doctor`, `/dev-pomogator:report-issue`, `/dev-pomogator:research-workflow` и др. — invokable через `Skill` tool или slash command
+- **Commands**: `/reflect`, `/simplify`, `/pomogator-doctor`, `/report-issue` — slash commands из plugin
 - **Hooks** (37 записей): SessionStart, Stop, PreToolUse, PostToolUse, UserPromptSubmit — declared в `.claude-plugin/hooks.json` plugin manifest
 - **MCP servers**: настраиваются плагином через `.mcp.json`
 - **Rules**: `.claude/rules/` content для context loading
@@ -63,6 +63,10 @@ This Codex path installs only `Codex.nss`, `imports/Codex.nss`, `codex-icon.ico`
 > 📍 **Карта всех встроенных инструментов и связей между ними**: [docs/COMPONENTS.md](docs/COMPONENTS.md) —
 > dev-pomogator это одна система (один плагин), внутри которой инструменты связаны контурами:
 > спеки → валидация → согласованность, тесты → мониторинг → качество, statusline ↔ doctor и т.д.
+
+## Report an issue
+
+Use `/report-issue <description>` (or `/dev-pomogator:report-issue`) to prepare a sanitized GitHub issue draft. The workflow shows the repository, title, body, and exact approval digest before it creates anything. On approval it uses GitHub CLI and opens the result URL. If GitHub CLI is missing, unauthenticated, or errors, it saves a Markdown draft and provides a filled GitHub new-issue URL instead. Authenticate with `gh auth login` to submit through GitHub CLI.
 
 ## Native statusline (repo + cwd + ветка)
 
@@ -96,7 +100,8 @@ dev-pomogator | cwd: ~\dev-pomogator
 |-------|---------|
 | `create-spec` | 4-фазный workflow создания/обновления specs (Discovery → Context → Requirements+Design → Finalization) |
 | `research-workflow` | Hypothesis-FIRST research с triangulation через 3 INDEPENDENT angles + fail-loud markers |
-| `pomogator-doctor` | Environment diagnostic: 17 checks (Node/Git/Bun/Python/MCP/hooks/env vars) с severity grouping |
+| `pomogator-doctor` | Environment diagnostic: GitHub CLI readiness plus Node/Git/Bun/Python/MCP/hooks/env checks with severity grouping |
+| `report-issue` | Sanitized GitHub issue draft with exact-digest approval and GitHub URL fallback |
 | `run-tests` | Centralized test runner с TUI integration (vitest/jest/pytest/dotnet/cargo/go auto-detection) |
 | `tests-create-update` | TDD-first test creation, integration tests preferred over unit |
 | `dev-pomogator-uninstall` | Soft removal of dev-pomogator artifacts из project |
@@ -248,11 +253,11 @@ Flags:
 
 ## Diagnostic Doctor
 
-`/pomogator-doctor` slash command или skill invocation проверяет 17 environment aspects:
+`/pomogator-doctor` slash command или skill invocation проверяет GitHub CLI readiness and other environment aspects:
 
 - 🟢 **Self-sufficient**: Node, Git, plugin cache structure, hooks registry, version match, native statusline (`C-NSL` команда + `C-NSW` виджеты repo/cwd)
 - 🟡 **Needs env vars**: `AUTO_COMMIT_API_KEY` и др. (ищет в `.env` + `.claude/settings.local.json → env`)
-- 🔴 **Needs external deps**: Bun, Python + packages, Docker, MCP servers
+- 🔴 **Needs external deps**: GitHub CLI authentication, Bun, Python + packages, Docker, MCP servers
 
 Output: severity-coded report + actionable hints. Если detected v1 install — предлагает migration script. Если detected canonical install issue — предлагает `/plugin install dev-pomogator@stgmt --force`.
 

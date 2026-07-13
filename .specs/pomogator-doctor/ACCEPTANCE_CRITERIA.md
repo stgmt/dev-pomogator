@@ -247,6 +247,20 @@ WHEN Doctor extracts distinct tool-directory names (first path segment after `.d
 
 WHEN platform=win32 AND a legacy npm-global Claude artifact exists (`~/.npm-global/claude.cmd`, `~/.npm-global/claude`, or `~/.npm-global/node_modules/@anthropic-ai/claude-code`) THEN Doctor SHALL emit check `C30` severity=warning, reinstallable=no, hint includes the removal command + native installer URL `irm https://claude.ai/install.ps1 | iex`. IF no stale artifact exists THEN check `C30` severity=ok. WHEN platform≠win32 THEN check `C30` SHALL be gated out (relevant=false, reason mentions Windows `%USERPROFILE%\.npm-global` layout).
 
+## AC-37 (FR-37) GitHub CLI diagnostic check @feature37
+
+WHEN `gh auth status` exits zero THEN the Doctor SHALL emit an `ok` GitHub CLI result and SHALL expose at most the authenticated account and host, never a token.
+
+WHEN GitHub CLI is absent from `PATH` THEN the Doctor SHALL emit a `warning` result with an installation hint, SHALL NOT attempt installation, and SHALL NOT make the overall Doctor run critical.
+
+WHEN `gh auth status` reports an unauthenticated account, expired token, or invalid token THEN the Doctor SHALL emit a `warning` result whose hint contains `gh auth login` and SHALL not expose credential material.
+
+WHEN `gh auth status` exits non-zero for another reason THEN the Doctor SHALL emit a `warning` result containing only a sanitized diagnostic and exit code, plus a retry or login hint.
+
+WHEN `gh auth status` exceeds its bounded timeout THEN the Doctor SHALL terminate its child process, emit a `warning` result, and retain execution of all remaining checks.
+
+WHEN the Doctor runs on Windows THEN the GitHub CLI check SHALL use the platform-resolved `gh.exe` or `gh.cmd`; WHEN it runs on another supported platform THEN it SHALL use `gh`.
+
 ## AC-36 (FR-36) @feature18
 
 **Требование:** [FR-36](FR.md#fr-36-per-command-hook-sync-manifest-vs-settings-feature18)

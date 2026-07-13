@@ -1,0 +1,22 @@
+# File Changes
+
+| Path | Implementation intent | Requirements | Rationale | Post-implementation status and evidence |
+|---|---|---|---|---|
+| `.claude/skills/report-issue/SKILL.md` | Create | [FR-1](FR.md#fr-1-название), [FR-2](FR.md#fr-2-название), [FR-3](FR.md#fr-3-название), [FR-4](FR.md#fr-4-название), [FR-5](FR.md#fr-5-название) | Canonical user-facing workflow with sanitized preview, digest approval, duplicate handling, local `gh`, and fallback messaging. | IMPLEMENTED; end-to-end behavior is exercised by Docker BDD scenarios `RPT001_01`–`RPT001_06`, all PASSED on 2026-07-13. |
+| `.claude/commands/report-issue.md` | Create | [FR-1](FR.md#fr-1-название) | Explicit slash-command entrypoint delegates to the canonical workflow. | IMPLEMENTED; registered workflow is covered by the passing `RPT001` Docker BDD feature. |
+| `tools/report-issue/types.ts` | Create | [FR-1](FR.md#fr-1-название), [FR-2](FR.md#fr-2-название), [FR-3](FR.md#fr-3-название), [FR-4](FR.md#fr-4-название), [FR-5](FR.md#fr-5-название) | Shared structured command, draft, result, and dependency contracts. | IMPLEMENTED; consumed by the real reporter exercised across PASSED `RPT001_01`–`RPT001_06`. |
+| `tools/report-issue/sanitize.ts` | Create | [FR-1](FR.md#fr-1-название), [FR-4](FR.md#fr-4-название) | Removes credential-shaped values and user home paths before output boundaries. | IMPLEMENTED; `RPT001_01` and `RPT001_06` PASSED, proving sanitized payload and fallback URL behavior. |
+| `tools/report-issue/runtime.ts` | Create | [FR-2](FR.md#fr-2-название), [FR-4](FR.md#fr-4-название) | Bounded local command runner and best-effort platform URL opener. | IMPLEMENTED; `RPT001_02`, `RPT001_04`, and `RPT001_06` PASSED, covering consent and fallback execution paths. |
+| `tools/report-issue/reporter.ts` | Create | [FR-1](FR.md#fr-1-название), [FR-2](FR.md#fr-2-название), [FR-3](FR.md#fr-3-название), [FR-4](FR.md#fr-4-название), [FR-5](FR.md#fr-5-название) | Implements draft, approval, duplicate search, creation, atomic persistence, and canonical-repository fallback. | IMPLEMENTED; real reporter seams are exercised by PASSED `RPT001_01`–`RPT001_06` Docker BDD scenarios. |
+| `tools/report-issue/cli.ts` | Create | [FR-1](FR.md#fr-1-название), [FR-2](FR.md#fr-2-название), [FR-4](FR.md#fr-4-название) | JSON stdin/stdout entrypoint used by the skill and integration tests. | IMPLEMENTED; CLI-backed consent and fallback scenarios `RPT001_02`, `RPT001_04`, and `RPT001_06` PASSED. |
+| `.specs/report-issue/report-issue.feature` | Create | [FR-1](FR.md#fr-1-название), [FR-2](FR.md#fr-2-название), [FR-3](FR.md#fr-3-название), [FR-4](FR.md#fr-4-название), [FR-5](FR.md#fr-5-название) | Canonical source BDD scenarios `RPT001_01` through `RPT001_06`. | IMPLEMENTED; all six scenarios are recorded PASSED by the Docker BDD run on 2026-07-13. |
+| `tests/step_definitions/feature_report_issue.ts` | Create | [FR-1](FR.md#fr-1-название), [FR-2](FR.md#fr-2-название), [FR-3](FR.md#fr-3-название), [FR-4](FR.md#fr-4-название), [FR-5](FR.md#fr-5-название) | Exercises the real reporter through injected process and opener seams without contacting GitHub. | IMPLEMENTED; matching step definitions produced PASSED results for `RPT001_01`–`RPT001_06`. |
+| `cucumber.json` | Edit | [FR-1](FR.md#fr-1-название) | Registers the report-issue source feature in the Docker BDD profile. | IMPLEMENTED; the recorded full Docker BDD run discovered and passed all six `RPT001` scenarios. |
+| `.claude/skills/pomogator-doctor/scripts/engine/checks/gh.ts` | Create | [FR-4](FR.md#fr-4-название) | Linked #40 readiness check distinguishes missing, unauthenticated, and ready local GitHub CLI. | IMPLEMENTED; FR-4 fallback behavior is execution-verified by PASSED `RPT001_04` and `RPT001_06`. |
+| `.claude/skills/pomogator-doctor/scripts/engine/checks/index.ts` | Edit | [FR-4](FR.md#fr-4-название) | Registers the linked GitHub CLI readiness check. | IMPLEMENTED; linked local-GitHub CLI readiness path supports the execution-verified FR-4 fallback. |
+| `README.md` | Edit | [FR-1](FR.md#fr-1-название), [FR-4](FR.md#fr-4-название) | Documents `/report-issue`, local `gh auth login`, and the filled-URL fallback. | IMPLEMENTED; documented fallback matches PASSED `RPT001_04` and `RPT001_06` behavior. |
+
+## Files not changed
+
+- `.claude-plugin/plugin.json` remains unchanged because its skills and commands directories are already auto-discovered.
+- No embedded GitHub token or direct GitHub API client is introduced.

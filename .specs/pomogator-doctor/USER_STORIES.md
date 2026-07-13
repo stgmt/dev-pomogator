@@ -39,3 +39,23 @@
 
 ## US-12 @feature12
 Как **пользователь broken install** у которого в `webapp` doctor hook не зарегистрирован (pomogator-doctor extension не попал в projectPaths при исходной установке), я хочу чтобы installer автоматически регистрировал SessionStart doctor hook во всех target проектах — чтобы проактивный баннер срабатывал без моего явного opt-in, иначе я могу никогда не узнать что `/pomogator-doctor` существует.
+
+### User Story 13: GitHub CLI account diagnosis (Priority: P2)
+
+**Требование:** [FR-37]
+
+As a developer preparing a repository for GitHub-backed workflows, I want pomogator-doctor to diagnose whether the locally installed GitHub CLI can authenticate, so that I can repair GitHub access without exposing my token.
+
+**Why:** GitHub CLI installation, account authentication, and network failures require different remediation; exposing a token in a diagnostic would create a security incident.
+
+**Independent Test:** Run Doctor against deterministic `gh` fixtures for available authenticated, missing executable, unauthenticated or invalid-token, non-zero, and timeout outcomes on Windows and non-Windows command resolution; assert each result is a non-critical warning except success and that no token appears in output.
+
+**Acceptance Scenarios:**
+
+Given GitHub CLI is available and authenticated
+When Doctor runs the GitHub CLI check
+Then it reports the account or host without credential material
+
+Given GitHub CLI is missing, unauthenticated, invalid-token, non-zero, or times out
+When Doctor runs the GitHub CLI check
+Then it emits a warning with an actionable remediation and continues remaining checks

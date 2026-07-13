@@ -4,6 +4,20 @@
 
 - [FR-1..FR-25](REQUIREMENTS.md) — все 25 функциональных требований реализуются в едином shared core модуле `src/doctor/` с 3 точками входа (slash / CLI flag / SessionStart hook)
 
+### Decision: GitHub CLI auth-status probe
+
+**Требование:** [FR-37]
+
+**Rationale:** GitHub-backed workflows require a locally actionable account diagnostic, while an optional or unauthenticated GitHub CLI must not stop Doctor or SessionStart.
+
+**Trade-off:** `gh auth status` adds one bounded child process and can only diagnose a locally installed CLI; avoiding installation and interactive login preserves Doctor's non-mutating, non-blocking contract.
+
+**Alternatives considered:**
+- Calling the GitHub API directly was rejected because it would require separately locating credentials and risk token exposure.
+- Running `gh auth login` was rejected because a diagnostic must not initiate interactive authentication.
+
+Add `.claude/skills/pomogator-doctor/scripts/engine/checks/gh.ts` as a fail-soft child-process check and register it from `checks/index.ts`. Resolve the executable through the platform (`gh.exe` or `gh.cmd` on Windows, `gh` elsewhere), run `gh auth status` with `shell: false`, capture bounded stdout and stderr, and kill the child at the check timeout. Map missing CLI, unauthenticated or token-invalid status, non-zero exits, and timeout to warning results so GitHub diagnostics never block Doctor or SessionStart. Sanitize all output before reporting and retain only account and host on success; tokens are neither persisted nor emitted.
+
 ## Компоненты
 
 - `src/doctor/index.ts` — публичное API `runDoctor(options)` возвращающее `DoctorReport`

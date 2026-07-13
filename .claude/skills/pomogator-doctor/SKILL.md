@@ -1,13 +1,13 @@
 ---
 name: pomogator-doctor
 description: |
-  Diagnostic tool для dev-pomogator plugin: проверяет 20 environment aspects (Node/Git/Bun/Python/MCP servers/claude-mem plugin/hooks registry/env vars/Claude Code version match/native statusLine/statusline widgets repo+cwd/context-menu install drift) и предлагает fix actions (incl. установка нативного statusLine ccstatusline, добавление repo/cwd виджетов, переустановка контекстного меню — всё по подтверждению). Use при подозрениях на broken plugin install, missing dependencies, stale hooks, или когда команды plugin behave unexpectedly. Triggers (Russian): "проверь окружение", "доктор", "диагностика помогатора", "почему не работает плагин". Triggers (English): "check environment", "doctor", "plugin diagnostics", "verify install". Output: severity-coded report (🟢 self-sufficient, 🟡 needs env vars, 🔴 needs external deps) с actionable hints. Можно invoke через slash-command `/pomogator-doctor` (also distributed via plugin) или напрямую как skill.
+  Diagnostic tool для dev-pomogator plugin: проверяет environment aspects including GitHub CLI readiness, Node/Git/Bun/Python/MCP servers/claude-mem plugin/hooks registry/env vars/Claude Code version match/native statusLine/statusline widgets repo+cwd/context-menu install drift) и предлагает fix actions (incl. установка нативного statusLine ccstatusline, добавление repo/cwd виджетов, переустановка контекстного меню — всё по подтверждению). Use при подозрениях на broken plugin install, missing dependencies, stale hooks, или когда команды plugin behave unexpectedly. Triggers (Russian): "проверь окружение", "доктор", "диагностика помогатора", "почему не работает плагин". Triggers (English): "check environment", "doctor", "plugin diagnostics", "verify install". Output: severity-coded report (🟢 self-sufficient, 🟡 needs env vars, 🔴 needs external deps) с actionable hints. Можно invoke через slash-command `/pomogator-doctor` (also distributed via plugin) или напрямую как skill.
 allowed-tools: Read, Bash, Glob, Grep, AskUserQuestion
 ---
 
 # pomogator-doctor — Environment diagnostic
 
-Skill проверяет 21 environment aspect (21 CheckDefinitions в `checks/index.ts`, incl. C-MCPA — MCP auth Context7/Octocode, C-CTXM — context menu install drift) required для dev-pomogator plugin функционирования. Использует self-contained TypeScript engine в `scripts/engine/` для checks; hook вариант в `scripts/doctor-hook.ts` runs at SessionStart events.
+Skill проверяет GitHub CLI readiness alongside the current environment checks (CheckDefinitions в `checks/index.ts`, incl. C-MCPA — MCP auth Context7/Octocode, C-CTXM — context menu install drift) required для dev-pomogator plugin функционирования. Использует self-contained TypeScript engine в `scripts/engine/` для checks; hook вариант в `scripts/doctor-hook.ts` runs at SessionStart events.
 
 ## Когда invoke
 
@@ -64,7 +64,7 @@ Skill проверяет 21 environment aspect (21 CheckDefinitions в `checks/i
 | `types.ts` | CheckDefinition / CheckResult interfaces |
 | `testing.ts` | Test helpers |
 | `checks/index.ts` | Imports + exports all checks |
-| `checks/<name>.ts` | Individual check implementations (17 total) |
+| `checks/<name>.ts` | Individual check implementations |
 
 ## Hook variant (scripts/doctor-hook.ts)
 

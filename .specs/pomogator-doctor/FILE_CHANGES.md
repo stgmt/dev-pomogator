@@ -34,6 +34,14 @@
 | `.claude/skills/pomogator-doctor/scripts/engine/checks/plugin-loader.ts` | create | [FR-13](FR.md#fr-13-commandsskills-plugin-loader-check-feature10): 4-state detection |
 | `.claude/skills/pomogator-doctor/scripts/engine/checks/docker.ts` | create | [FR-14](FR.md#fr-14-docker-devcontainer-cli-check-extension-gated-feature11): extension-gated |
 
+## GitHub CLI diagnostic (FR-37)
+
+| Path | Change | Trace |
+|---|---|---|
+| `.claude/skills/pomogator-doctor/scripts/engine/checks/gh.ts` | Add fail-soft, platform-resolved `gh auth status` check with timeout cleanup, outcome classification, and credential-safe diagnostics. | [FR-37](FR.md#fr-37-github-cli-diagnostic-check-feature37), [AC-37](ACCEPTANCE_CRITERIA.md#ac-37-fr-37-github-cli-diagnostic-check-feature37) |
+| `.claude/skills/pomogator-doctor/scripts/engine/checks/index.ts` | Register the GitHub CLI check in the Doctor check catalogue. | [FR-37](FR.md#fr-37-github-cli-diagnostic-check-feature37) |
+| `tests/features/plugins/pomogator-doctor/doctor-gh-cli.test.ts` | Add BDD step definitions and deterministic fixtures covering Windows/non-Windows executable resolution, missing CLI, unauthenticated and invalid-token state, non-zero exits, timeout cleanup, continued checks, and token redaction. | `@feature37`, [AC-37](ACCEPTANCE_CRITERIA.md#ac-37-fr-37-github-cli-diagnostic-check-feature37) |
+
 ## Extension pomogator-doctor — NEW
 
 | Path | Action | Reason |

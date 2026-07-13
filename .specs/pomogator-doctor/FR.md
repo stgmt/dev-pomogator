@@ -268,6 +268,21 @@ WHEN в проекте установлен ≥1 extension, Doctor SHALL для 
 
 Отличие от `C6` (FR-4 hooks-registry): C6 сверяет `config.managed.hooks` ↔ settings на уровне ИМЁН СОБЫТИЙ (Stop/PreToolUse) — ловит drift настроек от записанного при установке, но НЕ ловит хук который никогда не устанавливался (config его тоже не записал). C31 сверяет МАНИФЕСТ (source of truth) ↔ settings на уровне КОМАНД — ловит declared-but-never-wired. Комплементарны.
 
+## FR-37: GitHub CLI diagnostic check @feature37
+
+The Doctor SHALL run the GitHub CLI diagnostic only when `gh` is resolvable on `PATH`; it SHALL not download, install, or authenticate GitHub CLI. The check SHALL be implemented in `.claude/skills/pomogator-doctor/scripts/engine/checks/gh.ts` and registered by `.claude/skills/pomogator-doctor/scripts/engine/checks/index.ts`.
+
+The check SHALL execute `gh auth status` without a shell and with a bounded timeout. On Windows it SHALL invoke `gh.exe` or `gh.cmd` as resolved by the platform; on other supported platforms it SHALL invoke `gh`. It SHALL report these actionable, mutually distinguishable outcomes without exposing credentials:
+
+1. `ok` when `gh auth status` exits zero; its message MAY identify the authenticated account and host only.
+2. `warning` when GitHub CLI is absent from `PATH`, with a hint to install GitHub CLI; this outcome SHALL not make the overall Doctor run critical.
+3. `warning` when the command completes but reports no authenticated account or an expired or invalid token, with a hint to run `gh auth login`.
+4. `warning` when the command exits non-zero for another diagnostic failure, preserving only the exit code and sanitized stderr in the message and a retry or login hint.
+5. `warning` when the command exceeds its timeout; the child process SHALL be terminated and the hint SHALL name `gh auth login` or checking network or proxy connectivity.
+
+The check SHALL be fail-soft: spawn, parsing, and timeout errors become a CheckResult and SHALL NOT prevent the remaining checks from running. The check SHALL NOT log, serialize, or display access-token values. **AC:** [AC-37](ACCEPTANCE_CRITERIA.md#ac-37-fr-37-github-cli-diagnostic-check-feature37)
+
+
 Meta: `reinstallable: yes`.
 
 **Связанные AC:** [AC-36](ACCEPTANCE_CRITERIA.md#ac-36-fr-36-feature18)

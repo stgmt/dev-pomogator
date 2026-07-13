@@ -1,5 +1,5 @@
 ---
-description: "Диагностика окружения dev-pomogator: Node/Git/Bun/Python/MCP/hooks/env vars с предложением переустановки"
+description: "Диагностика окружения dev-pomogator: GitHub CLI, Node/Git/Bun/Python/MCP/hooks/env vars с предложением переустановки"
 allowed-tools: ["Bash"]
 argument-hint: "[--json | --extension=<name>]"
 ---
@@ -14,17 +14,18 @@ argument-hint: "[--json | --extension=<name>]"
 
 Для каждой проверки — severity (✓/⚠/✗), reinstallable flag и actionable hint.
 
-При обнаружении проблем, решаемых переустановкой (missing plugin cache, stale hooks, version mismatch), команда предложит запустить `/plugin install dev-pomogator@stgmt --force` или migration script (`tools/migrate-v1-to-v2/migrate-v1-to-v2.ts --global`) если v1 install detected. Проблемы вроде отсутствующего API ключа или Bun подсвечиваются отдельно — переустановка их не починит.
+При обнаружении проблем, решаемых переустановкой (missing plugin cache, stale hooks, version mismatch), команда предложит запустить `/plugin install dev-pomogator@stgmt --force` или migration script (`tools/migrate-v1-to-v2/migrate-v1-to-v2.ts --global`) если v1 install detected. Проблемы вроде отсутствующего API ключа, Bun или GitHub CLI подсвечиваются отдельно — переустановка их не починит. Для `/report-issue` при неаутентифицированной CLI предложи `gh auth login`.
 
 ## Инструкция для агента
 
 1. Запусти doctor engine: `npx tsx .claude/skills/pomogator-doctor/scripts/engine/index.ts` через Bash
 2. Если пользователь передал `--json` — передай дальше (`npx tsx ... --json`) и покажи JSON как есть
 3. Если передал `--extension=<name>` — передай дальше для фильтрации checks только по конкретному extension (deprecated после canonical refactor; сохранено для backward compat)
-4. Парс output: severity-grouped report (🟢 self-sufficient / 🟡 needs env vars / 🔴 needs external deps)
-5. Если detected v1 install (legacy `~/.dev-pomogator/` exists) — предложи `npx tsx tools/migrate-v1-to-v2/migrate-v1-to-v2.ts --global` для cleanup
-6. Если detected canonical install issues — предложи `/plugin install dev-pomogator@stgmt --force` или `/reload-plugins`
-7. Exit code 0 (ok) / 1 (warnings) / 2 (critical) — сообщи пользователю итог
+4. Если `C-GH` сообщает missing/unusable GitHub CLI — покажи platform-specific hint; если CLI не аутентифицирована — предложи `gh auth login`.
+5. Парс output: severity-grouped report (🟢 self-sufficient / 🟡 needs env vars / 🔴 needs external deps)
+6. Если detected v1 install (legacy `~/.dev-pomogator/` exists) — предложи `npx tsx tools/migrate-v1-to-v2/migrate-v1-to-v2.ts --global` для cleanup
+7. Если detected canonical install issues — предложи `/plugin install dev-pomogator@stgmt --force` или `/reload-plugins`
+8. Exit code 0 (ok) / 1 (warnings) / 2 (critical) — сообщи пользователю итог
 
 ## Связанные документы
 

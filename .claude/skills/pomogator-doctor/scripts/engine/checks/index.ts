@@ -9,6 +9,7 @@ import { dockerCheck } from './docker.js';
 import { envExampleCheck } from './env-example.js';
 import { envVarsCheck } from './env-vars.js';
 import { forbidRootArtifactsCheck } from './forbid-root-artifacts.js';
+import { ghCheck } from './gh.js';
 import { gitCheck } from './git.js';
 import { gitignoreBlockCheck } from './gitignore-block.js';
 import { hooksExecCheck } from './hooks-exec.js';
@@ -28,6 +29,7 @@ import { versionMatchCheck } from './version-match.js';
 export const phase2Checks: CheckDefinition[] = [
   nodeVersionCheck,
   gitCheck,
+  ghCheck,
   pomogatorHomeCheck,
   hooksRegistryCheck,
   hooksExecCheck,
@@ -63,6 +65,7 @@ export {
   envExampleCheck,
   envVarsCheck,
   forbidRootArtifactsCheck,
+  ghCheck,
   gitCheck,
   gitignoreBlockCheck,
   hooksExecCheck,

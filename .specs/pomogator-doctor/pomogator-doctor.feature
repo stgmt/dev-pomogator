@@ -416,3 +416,21 @@ Feature: POMOGATORDOCTOR001_pomogator-doctor_diagnostic_command
     Then check C3 is severity "ok"
     And check C14 is severity "ok"
     And check C13 severity is "ok" or "warning"
+
+  @feature37
+  Scenario Outline: POMOGATORDOCTOR001_46 GitHub CLI readiness is classified without leaking auth output
+    Given an injectable GitHub CLI probe for platform "<platform>" returns "<outcome>"
+    When I run the injectable GitHub CLI doctor check
+    Then the GitHub CLI doctor result severity is "<severity>"
+    And the GitHub CLI doctor result hint contains "<hint>"
+    And the GitHub CLI doctor result contains no raw auth output
+    And the GitHub CLI probe calls are "<calls>"
+
+    Examples:
+      | platform | outcome         | severity | hint                            | calls                 |
+      | win32    | authenticated   | ok       |                                 | --version,auth status |
+      | linux    | missing         | critical | cli.github.com                  | --version             |
+      | win32    | missing         | critical | winget install GitHub.cli       | --version             |
+      | darwin   | missing         | critical | brew install gh                 | --version             |
+      | win32    | unauthenticated | warning  | gh auth login                   | --version,auth status |
+      | linux    | timeout         | warning  | gh auth login                   | --version,auth status |
