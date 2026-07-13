@@ -169,6 +169,14 @@ describe('subagent watchdog', () => {
     touchOld(output, now - 61 * 60_000);
     const transcript = path.join(dir, 'session.jsonl');
     writeJsonl(transcript, [
+      // A tool_result cannot exist without the tool_use that produced it. The fixture
+      // used to omit it, which is an impossible transcript — and it is exactly the shape
+      // that a merely-QUOTED banner has, so the scan could not tell them apart.
+      {
+        type: 'assistant',
+        timestamp: '2026-07-11T08:59:00.000Z',
+        message: { content: [{ type: 'tool_use', id: 'toolu_agent', name: 'Agent', input: { description: 'stale work' } }] },
+      },
       {
         type: 'user',
         timestamp: '2026-07-11T08:59:10.000Z',

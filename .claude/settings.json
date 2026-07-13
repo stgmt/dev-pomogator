@@ -76,7 +76,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash tools/bg-task-guard/stop-guard.sh",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/tools/bg-task-guard/stop-guard.sh\"",
             "timeout": 60
           }
         ]
