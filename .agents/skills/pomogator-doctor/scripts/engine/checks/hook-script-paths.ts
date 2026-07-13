@@ -20,8 +20,15 @@ const NAME = 'Hook script paths resolve';
  * A command is safe when it either anchors to CLAUDE_PLUGIN_ROOT, or reaches its script
  * through bootstrap.cjs (which resolves CLAUDE_PLUGIN_ROOT itself).
  */
+/**
+ * The leading `/` matters: in an ANCHORED command the script sits behind the anchor
+ * (`bash "${CLAUDE_PLUGIN_ROOT}/tools/x.sh"`), so `tools/` is preceded by a slash, not by
+ * whitespace. Requiring whitespace extracted nothing from anchored commands, which silently
+ * disabled the "script missing from the plugin" branch entirely — caught by
+ * POMOGATORDOCTOR001_49 before this check ever shipped.
+ */
 function extractScriptPaths(command: string): string[] {
-  const matches = command.matchAll(/(?:^|[\s"'])((?:\.\/)?tools\/[\w./-]+\.(?:ts|cjs|mjs|js|sh|py))/g);
+  const matches = command.matchAll(/(?:^|[\s"'/])((?:\.\/)?tools\/[\w./-]+\.(?:ts|cjs|mjs|js|sh|py))/g);
   return [...matches].map((m) => m[1].replace(/^\.\//, ''));
 }
 
