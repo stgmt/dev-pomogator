@@ -143,3 +143,21 @@ WHEN user command выводит многострочный текст с ANSI-�
 WHEN installer запускается на проекте который уже содержит wrapper THEN результирующий settings SHALL содержать ровно один `--user-b64` и один `--managed-b64` аргумент (без вложенных wrappers).
 
 WHEN wrapper получает StatusJSON на stdin THEN wrapper SHALL передать идентичный JSON на stdin обоим командам (user и managed).
+
+## AC-12 (FR-12): Fail-closed canonical CJS test-runner shim
+
+**Требование:** [FR-12]
+
+WHEN the shim receives `--framework <name> -- <command...>` THEN it SHALL execute the command after `--`, not the wrapper option, and SHALL return the child numeric exit status unchanged.
+
+WHEN the shim receives a missing framework value, empty framework value, missing command separator, or empty command THEN it SHALL write an arguments diagnostic to stderr and exit non-zero.
+
+WHEN executable spawn, canonical-wrapper resolution, or loader bootstrap fails THEN it SHALL write a stage-qualified stderr diagnostic and exit non-zero.
+
+WHEN a spawned child is terminated by signal or has no numeric status THEN the shim SHALL exit non-zero.
+
+WHEN `CLAUDE_PLUGIN_ROOT` is available THEN the shim SHALL resolve the canonical TUI wrapper under that root; WHEN it is unavailable THEN it SHALL resolve the equivalent wrapper from the canonical plugin cache before legacy paths.
+
+WHEN executing from Windows with a WSL UNC workspace THEN the shim SHALL not pass that UNC workspace as child `cwd` and SHALL return a non-zero result for a missing executable.
+
+**BDD Scenario:** `PLUGIN011_36`–`PLUGIN011_42` in `test-statusline.feature`.

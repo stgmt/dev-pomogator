@@ -13,6 +13,20 @@
 - [FR-8: Extension Manifest](FR.md#fr-8-extension-manifest-feature5)
 - [FR-11: StatusLine Coexistence Wrapper](FR.md#fr-11-statusline-coexistence-wrapper-feature8)
 
+### Decision: Fail-closed canonical CJS test-runner shim
+
+**Требование:** FR-12
+
+**Rationale:** A test guard that converts a process-start failure into success removes the test gate and creates a fake-green result. Canonical plugin installations and Windows UNC workspaces make path and loader failures expected operational cases that must be observable.
+
+**Alternatives considered:**
+- Preserve the old direct fallback and treat a missing status as zero; rejected because a command that never starts cannot prove a passing test result.
+- Force every run through the TypeScript loader without a direct path; rejected because a missing loader must remain diagnosable rather than silently masked.
+
+**Trade-off:** Failing closed makes environment and installation defects visible to the caller instead of allowing a test invocation to appear green. This is intentionally preferred because an honest non-zero result preserves the test gate.
+
+The shim parses only `--framework` and the command separator, delegates to the canonical TypeScript wrapper only through an explicitly resolved installation path, and treats every launch, loader, signal, and absent-status error as a non-zero stderr failure. Child exit status is propagated unchanged. To preserve Windows UNC compatibility, child processes inherit their usable working directory and the shim resolves its own paths from its installation location.
+
 ## Компоненты
 
 ### 1. Statusline Render Script (`statusline_render.sh`)

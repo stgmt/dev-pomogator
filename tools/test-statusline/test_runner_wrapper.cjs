@@ -7,7 +7,6 @@
 
 const path = require('node:path');
 const fs = require('node:fs');
-const os = require('node:os');
 const { spawnSync } = require('node:child_process');
 
 const scriptDir = __dirname;
@@ -21,15 +20,60 @@ const repoRoot = scriptDir.includes('.dev-pomogator')
     ? path.resolve(scriptDir, '..', '..', '..', '..')
     : path.resolve(scriptDir, '..', '..');
 
-// Candidate locations for the tui-test-runner .ts wrapper, canonical v2 first.
+// Candidate locations for the self-contained v2 bundle. CLAUDE_PLUGIN_ROOT is
+// present for canonical installs; scriptDir/repoRoot covers source and legacy copies.
+// The bundle is required because canonical plugin caches deliberately have no node_modules.
+const pluginRoot = process.env.CLAUDE_PLUGIN_ROOT;
 const tuiWrapperCandidates = [
-  path.join(repoRoot, 'tools', 'tui-test-runner', 'test_runner_wrapper.ts'),
-  path.join(repoRoot, '.dev-pomogator', 'tools', 'tui-test-runner', 'test_runner_wrapper.ts'),
-  path.join(repoRoot, 'extensions', 'tui-test-runner', 'tools', 'tui-test-runner', 'test_runner_wrapper.ts'),
-];
-const tsxRunner = path.join(os.homedir(), '.dev-pomogator', 'scripts', 'tsx-runner.js');
+  pluginRoot && path.join(pluginRoot, 'tools', 'tui-test-runner', 'test_runner_wrapper.bundle.mjs'),
+  path.join(repoRoot, 'tools', 'tui-test-runner', 'test_runner_wrapper.bundle.mjs'),
+  path.join(repoRoot, '.dev-pomogator', 'tools', 'tui-test-runner', 'test_runner_wrapper.bundle.mjs'),
+  path.join(repoRoot, 'extensions', 'tui-test-runner', 'tools', 'tui-test-runner', 'test_runner_wrapper.bundle.mjs'),
+].filter(Boolean);
 
 const args = process.argv.slice(2);
+
+function formatCommand(commandArgs) {
+  return commandArgs.map((arg) => JSON.stringify(arg)).join(' ');
+}
+
+function fail(stage, commandArgs, error) {
+  process.stderr.write(`[test-runner-wrapper] stage=${stage} command=${formatCommand(commandArgs)} error=${error}\n`);
+  process.exit(1);
+}
+
+function directCommandArgs(rawArgs) {
+  for (let i = 0; i < rawArgs.length; i++) {
+    const arg = rawArgs[i];
+    if (arg === '--') return rawArgs.slice(i + 1);
+    if (arg === '--framework') {
+      if (i + 1 >= rawArgs.length || rawArgs[i + 1] === '--') {
+        fail('arguments', rawArgs, 'missing value for --framework');
+      }
+      i++;
+      continue;
+    }
+    if (arg.startsWith('--framework=')) {
+      if (arg.length === '--framework='.length) {
+        fail('arguments', rawArgs, 'missing value for --framework');
+      }
+      continue;
+    }
+    return rawArgs.slice(i);
+  }
+  return [];
+}
+
+function exitForResult(stage, commandArgs, result) {
+  if (result.error) {
+    fail(stage, commandArgs, result.error.message || String(result.error));
+  }
+  if (typeof result.status === 'number') {
+    process.exit(result.status);
+  }
+  const reason = result.signal ? `terminated by signal ${result.signal}` : 'process returned no exit status';
+  fail(stage, commandArgs, reason);
+}
 
 // Read session.env fallback when TEST_STATUSLINE_SESSION not set in env
 // (SessionStart hook writes session.env to .dev-pomogator/.test-status/;
@@ -53,53 +97,32 @@ if (!process.env.TEST_STATUSLINE_SESSION) {
   }
 }
 
-function runViaTsxRunner(scriptPath) {
-  // FR-19: lift the tsx-runner 180s default ceiling for wrapper runs so it never preempts the
-  // wrapper's own graceful timeout (FR-17). tsx-runner already honours a positive TSX_RUNNER_TIMEOUT
-  // (tools/_shared/tsx-runner.js) — we inject a large value here and do NOT modify the runner.
-  const env = { ...process.env };
-  if (!env.TSX_RUNNER_TIMEOUT) env.TSX_RUNNER_TIMEOUT = '1860000';
-  const result = spawnSync('node', ['-e', `require('${tsxRunner.replace(/\\/g, '\\\\')}')`, '--', scriptPath, ...args], {
+function runBundled(scriptPath) {
+  const commandArgs = [scriptPath, ...args];
+  const result = spawnSync(process.execPath, commandArgs, {
     stdio: 'inherit',
-    cwd: repoRoot,
-    env,
+    env: process.env,
   });
-  process.exit(result.status ?? (result.signal ? 1 : 0));
-}
-
-function runViaNpxTsx(scriptPath) {
-  const npxCmd = process.platform === 'win32' ? 'npx.cmd' : 'npx';
-  // FR-19: same TSX_RUNNER_TIMEOUT lift on the npx fallback so the wrapper's child is never
-  // blunt-killed at the 180s ceiling regardless of which loader path runs.
-  const env = { ...process.env };
-  if (!env.TSX_RUNNER_TIMEOUT) env.TSX_RUNNER_TIMEOUT = '1860000';
-  const result = spawnSync(npxCmd, ['tsx', scriptPath, ...args], {
-    stdio: 'inherit',
-    cwd: repoRoot,
-    env,
-  });
-  process.exit(result.status ?? (result.signal ? 1 : 0));
+  exitForResult('bundle', [process.execPath, ...commandArgs], result);
 }
 
 function runDirect() {
-  if (args.length === 0) process.exit(0);
-  const result = spawnSync(args[0], args.slice(1), {
+  const commandArgs = directCommandArgs(args);
+  if (commandArgs.length === 0) {
+    fail('arguments', args, 'no test command supplied');
+  }
+  const result = spawnSync(commandArgs[0], commandArgs.slice(1), {
     stdio: 'inherit',
-    cwd: repoRoot,
     env: process.env,
   });
-  process.exit(result.status ?? (result.signal ? 1 : 0));
+  exitForResult('direct', commandArgs, result);
 }
 
 // Try canonical/installed/source wrapper locations, then direct fallback.
 const wrapperPath = tuiWrapperCandidates.find((p) => fs.existsSync(p)) || null;
 
 if (wrapperPath) {
-  if (fs.existsSync(tsxRunner)) {
-    runViaTsxRunner(wrapperPath);
-  } else {
-    runViaNpxTsx(wrapperPath);
-  }
+  runBundled(wrapperPath);
 } else {
   runDirect();
 }

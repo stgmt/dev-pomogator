@@ -190,6 +190,21 @@ SessionStart hook для валидации целостности hooks в `.cl
 > _Leverage:_ `extensions/test-statusline/tools/test-statusline/statusline_session_start.ts` — readStdin + log паттерн
 > _Leverage:_ `.claude/skills/skills-rules-optimizer/scripts/shared.ts` — `replaceNpxTsxWithPortable()` формат hook commands
 
+## FR-12: Fail-closed CJS test-runner shim for canonical plugin installs @feature9
+
+`tools/test-statusline/test_runner_wrapper.cjs` SHALL be a fail-closed launcher for the canonical `tools/tui-test-runner/test_runner_wrapper.ts` and SHALL never report success unless its selected child process exits with status `0`. This requirement addresses GitHub issue [#106](https://github.com/stgmt/dev-pomogator/issues/106).
+
+1. The shim SHALL consume only its own `--framework <name>` or `--framework=<name>` option and the `--` separator; it SHALL pass every argument after `--` to the selected test command unchanged and SHALL not attempt to execute `--framework` as a binary.
+2. A missing framework value, an empty `--framework=`, a missing `--` command, or an empty command SHALL write a diagnostic to stderr and exit non-zero.
+3. Failure to spawn the selected executable, a child terminated by signal, or a child without a numeric status SHALL write a stage-qualified stderr diagnostic and exit non-zero. A child numeric status SHALL be propagated unchanged, including non-zero statuses.
+4. The shim SHALL resolve the canonical TypeScript wrapper first from `CLAUDE_PLUGIN_ROOT`; when that variable is absent, it SHALL also consider the canonical Claude plugin-cache installation layout before legacy/repository layouts. Resolution SHALL select only the expected relative wrapper path.
+5. If no compatible canonical wrapper can be loaded, or its loader/bootstrap dependency is unavailable, the shim SHALL write stderr and exit non-zero; it SHALL not silently fall back to a successful no-op.
+6. On Windows, including a WSL UNC workspace path, the shim SHALL not supply a UNC workspace as a spawned process `cwd`; spawned commands SHALL inherit a usable working directory while tool paths remain resolved from the shim location or plugin root.
+7. The production code and executable BDD/step-definition implementation are out of scope for this requirements phase; this spec records the required BDD contract for the future implementation.
+
+**Связанные AC:** [AC-12](ACCEPTANCE_CRITERIA.md#ac-12-fr-12-fail-closed-canonical-cjs-test-runner-shim)
+**Use Case:** [UC-4](USE_CASES.md#uc-4-test-runner-wrapper-записывает-прогресс-feature2)
+
 ## FR-11: StatusLine Coexistence Wrapper @feature8
 
 Installer/updater должен сохранять существующий пользовательский `statusLine` и встраивать managed `test-statusline` рядом через wrapper-команду.
