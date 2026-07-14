@@ -340,17 +340,17 @@ Then<CmemWorld>(/^the worker diagnostic reports "([^"]+)" with port "(\d+)"$/, f
   assert.match(this.workerCheckMessage, new RegExp(condition), `expected ${condition}: ${this.workerCheckMessage}`);
 });
 
-Given<CmemWorld>(/^a fake claude-mem home in (not installed|installed healthy|malformed config|installed unreachable) state$/, async function (state: string) {
-  if (state === 'not installed') return;
+Given<CmemWorld>(/^a fake claude-mem home in (absent|installed and healthy|malformed config|installed and unreachable) state$/, async function (state: string) {
+  if (state === 'absent') return;
   fs.mkdirSync(path.join(this.tempDir, '.claude-mem'), { recursive: true });
-  fs.writeFileSync(path.join(this.tempDir, '.claude-mem', '.worker.pid'), '4242');
   if (state === 'malformed config') {
     fs.writeFileSync(path.join(this.tempDir, '.claude-mem', 'settings.json'), '{not-json');
     return;
   }
-  this.workerPort = state === 'installed healthy' ? 37778 : 37779;
+  fs.writeFileSync(path.join(this.tempDir, '.claude-mem', '.worker.pid'), '4242');
+  this.workerPort = state === 'installed and healthy' ? 37778 : 37779;
   workerSettings(this);
-  if (state === 'installed healthy') {
+  if (state === 'installed and healthy') {
     const server = http.createServer((_req, res) => {
       res.writeHead(200, { 'content-type': 'application/json' });
       res.end(JSON.stringify({ status: 'ok', version: 'test-worker-v1' }));
