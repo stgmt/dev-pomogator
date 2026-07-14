@@ -37,6 +37,7 @@ export type EdgeType =
   | 'tagged-by'
   | 'implements'
   | 'last-result'
+  | 'runtime-trace'
   | 'step-binding'
   | 'code-impl';
 
@@ -134,6 +135,14 @@ export interface ScenarioFailingStep {
   errorMessage: string;
 }
 
+export interface ScenarioTraceRef {
+  traceId: string;
+  traceFile?: string;
+  testCaseStartedId?: string;
+  runId?: string;
+  source?: string;
+}
+
 export interface ScenarioNode extends NodeBase {
   type: 'Scenario';
   tags: string[];
@@ -142,6 +151,14 @@ export interface ScenarioNode extends NodeBase {
   lastResult?: 'PASSED' | 'FAILED' | 'SKIPPED' | 'PENDING' | 'UNDEFINED' | 'AMBIGUOUS' | 'UNKNOWN';
   /** ISO 8601 timestamp of the most recent run that produced `lastResult`. */
   lastRunAt?: string;
+  /** True when a once-passing overlay result is older than the scenario/step-def source. */
+  resultStale?: boolean;
+  /** Canonical full-run result retained separately from the newest overlay result. */
+  canonicalResult?: ScenarioNode['lastResult'];
+  /** Canonical full-run timestamp retained separately from the newest overlay result. */
+  canonicalRunAt?: string;
+  /** Runtime trace pointer for the effective result (FR-56f). */
+  trace?: ScenarioTraceRef;
   durationMs?: number;
   failingStep?: ScenarioFailingStep | null;
 }

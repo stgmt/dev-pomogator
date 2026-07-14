@@ -525,7 +525,7 @@ Then(
 // ============================================================================
 
 Given(
-  /^a Claude Code session starts in a TUI project directory$/,
+  /^a Claude Code session starts in a project directory with beta TUI explicitly enabled$/,
   function (this: TuiWorld) {
     // The hook writes the status dir under cwd = repo root (appPath); we drive
     // it with a CLAUDE_ENV_FILE under the scenario tempDir for isolation.
@@ -538,7 +538,7 @@ When(
   function (this: TuiWorld) {
     this.hookResult = runTsx(SESSION_HOOK, {
       input: { session_id: 'bddtest1-abcd-5678', cwd: appPath() },
-      env: { CLAUDE_ENV_FILE: this.hookEnvFile! },
+      env: { CLAUDE_ENV_FILE: this.hookEnvFile!, TEST_STATUSLINE_ENABLED: 'true' },
     });
     if (fs.existsSync(this.hookEnvFile!)) {
       this.hookEnvContent = fs.readFileSync(this.hookEnvFile!, 'utf-8');
@@ -573,11 +573,20 @@ Then(
   },
 );
 
+Given(
+  /^a Claude Code session starts with beta TUI explicitly enabled$/,
+  function (this: TuiWorld) {
+    this.hookEnvFile = path.join(this.tempDir, '.test-tui-env-empty');
+  },
+);
+
 When(
   /^the tui_session_start hook receives empty stdin$/,
   function (this: TuiWorld) {
     // runTsx with no `input` sends no stdin → the hook's empty-stdin path.
-    this.hookResult = runTsx(SESSION_HOOK, {});
+    this.hookResult = runTsx(SESSION_HOOK, {
+      env: { CLAUDE_ENV_FILE: this.hookEnvFile!, TEST_STATUSLINE_ENABLED: 'true' },
+    });
   },
 );
 
@@ -965,28 +974,70 @@ Then(/^the passthrough child process tree should be terminated$/, async function
   assert.ok(await waitForDead(pid, 6000), `expected the passthrough child pid ${pid} to be terminated after the interrupt`);
 });
 
-// --- WRAP001_06: shim lifts the tsx-runner 180s ceiling for wrapper runs ---
-Given(/^the test statusline shim launches the wrapper via tsx-runner$/, function () { /* driven in the When step */ });
-
-When(/^TSX_RUNNER_TIMEOUT is not set in the environment$/, function (this: TuiWorld) {
-  const shim = appPath('tools/test-statusline/test_runner_wrapper.cjs');
-  const echo = `console.log('SEEN_TSX_TIMEOUT=' + (process.env.TSX_RUNNER_TIMEOUT || 'unset'));`;
-  const env: Record<string, string> = { ...process.env, FORCE_COLOR: '0' } as Record<string, string>;
-  delete env.TSX_RUNNER_TIMEOUT;
-  const res = crossSpawn.sync(process.execPath, [shim, 'node', '-e', echo], {
-    encoding: 'utf-8',
-    cwd: REPO_ROOT,
-    env,
-    timeout: 30000,
-  });
-  (this as any).shimOutput = `${res.stdout || ''}${res.stderr || ''}`;
+// --- WRAP001_06: shim delegates to the self-contained bundle ---
+Given(/^the test statusline shim has an isolated plugin bundle$/, function (this: TuiWorld) {
+  const pluginRoot = path.join(this.tempDir, 'plugin-root');
+  const bundleDir = path.join(pluginRoot, 'tools', 'tui-test-runner');
+  fs.mkdirSync(bundleDir, { recursive: true });
+  fs.copyFileSync(
+    appPath('tools/tui-test-runner/test_runner_wrapper.bundle.mjs'),
+    path.join(bundleDir, 'test_runner_wrapper.bundle.mjs'),
+  );
+  (this as any).shimPluginRoot = pluginRoot;
 });
 
-Then(/^the shim should pass a large TSX_RUNNER_TIMEOUT to tsx-runner$/, function (this: TuiWorld) {
-  const out = (this as any).shimOutput as string;
-  const m = out.match(/SEEN_TSX_TIMEOUT=(\d+)/);
-  assert.ok(m, `expected the child to echo a numeric TSX_RUNNER_TIMEOUT, got: ${out.slice(0, 300)}`);
-  assert.ok(Number(m[1]) >= 1_800_000, `expected a large (>=30min) TSX_RUNNER_TIMEOUT, got ${m[1]}`);
+When(/^the shim runs the bundled test command without installed Node dependencies$/, function (this: TuiWorld) {
+  const shim = appPath('tools/test-statusline/test_runner_wrapper.cjs');
+  const res = crossSpawn.sync(process.execPath, [shim, '--framework=generic', '--', process.execPath, '-e', 'process.exit(9)'], {
+    encoding: 'utf-8',
+    cwd: this.tempDir,
+    env: { ...process.env, CLAUDE_PLUGIN_ROOT: (this as any).shimPluginRoot },
+    timeout: 30000,
+  });
+  (this as any).shimStatus = res.status;
+});
+
+Then(/^the shim should preserve the bundled command exit code 9$/, function (this: TuiWorld) {
+  assert.equal((this as any).shimStatus, 9);
+});
+
+Given(/^an isolated plugin copy containing the bundled test runner wrapper$/, function (this: TuiWorld) {
+  const pluginRoot = path.join(this.tempDir, 'installed-plugin');
+  const statuslineDir = path.join(pluginRoot, 'tools', 'test-statusline');
+  const bundleDir = path.join(pluginRoot, 'tools', 'tui-test-runner');
+  fs.mkdirSync(statuslineDir, { recursive: true });
+  fs.mkdirSync(bundleDir, { recursive: true });
+  fs.copyFileSync(appPath('tools/test-statusline/test_runner_wrapper.cjs'), path.join(statuslineDir, 'test_runner_wrapper.cjs'));
+  fs.copyFileSync(appPath('tools/tui-test-runner/test_runner_wrapper.bundle.mjs'), path.join(bundleDir, 'test_runner_wrapper.bundle.mjs'));
+  (this as any).dependencyFreePluginRoot = pluginRoot;
+});
+
+function runDependencyFreePluginWrapper(world: TuiWorld, exitCode: number): void {
+  const pluginRoot = (world as any).dependencyFreePluginRoot as string;
+  const wrapper = path.join(pluginRoot, 'tools', 'test-statusline', 'test_runner_wrapper.cjs');
+  const result = crossSpawn.sync(process.execPath, [wrapper, '--framework=generic', '--', process.execPath, '-e', `process.exit(${exitCode})`], {
+    cwd: world.tempDir,
+    encoding: 'utf-8',
+    env: { ...process.env, CLAUDE_PLUGIN_ROOT: pluginRoot },
+    timeout: 30000,
+  });
+  (world as any).dependencyFreeStatus = result.status;
+}
+
+When(/^the plugin wrapper runs a successful child command without node_modules$/, function (this: TuiWorld) {
+  runDependencyFreePluginWrapper(this, 0);
+});
+
+When(/^the plugin wrapper runs a failing child command without node_modules$/, function (this: TuiWorld) {
+  runDependencyFreePluginWrapper(this, 9);
+});
+
+Then(/^the dependency-free plugin wrapper should exit with code 0$/, function (this: TuiWorld) {
+  assert.equal((this as any).dependencyFreeStatus, 0);
+});
+
+Then(/^the dependency-free plugin wrapper should preserve exit code 9$/, function (this: TuiWorld) {
+  assert.equal((this as any).dependencyFreeStatus, 9);
 });
 
 Given(

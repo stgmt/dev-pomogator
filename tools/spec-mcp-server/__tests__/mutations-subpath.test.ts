@@ -31,6 +31,48 @@ describe('validateSpecChange — subpath gating', () => {
     expect(r.findings).toHaveLength(0);
   });
 
+  it('does not block an unrelated edit for pre-existing staged FR-47 design/story warnings', () => {
+    const siblingDir = path.join(root, '.specs', 'sibling');
+    fs.mkdirSync(siblingDir, { recursive: true });
+    fs.writeFileSync(path.join(siblingDir, 'FR.md'), '## FR-1: Sibling @feature1\n\nSibling body.\n');
+    fs.writeFileSync(path.join(siblingDir, 'TASKS.md'), '## Phase 1\n\n- [x] Sibling task — id: sibling-t1 — Status: DONE | Est: 30m\n  _Requirements: FR-1_\n  **Done When:**\n  - [ ] sibling evidence\n');
+
+    const r = validateSpecChange(root, slug, 'FR.md', { content: '## FR-1: Thing renamed @feature1\n\nDoes a thing.\n' });
+    expect(r.ok).toBe(true);
+    expect(r.findings).toHaveLength(0);
+  });
+
+  it('blocks a graph edit that introduces a new FR without design/story legs', () => {
+    const r = validateSpecChange(root, slug, 'FR.md', {
+      content: '## FR-1: Thing @feature1\n\nDoes a thing.\n\n## FR-2: New uncovered trace leg @feature2\n\nNeeds declared design and story legs.\n',
+    });
+    expect(r.ok).toBe(false);
+    expect(r.findings.some((f) => f.message.startsWith('FR_NO_DESIGN:'))).toBe(true);
+    expect(r.findings.some((f) => f.message.startsWith('FR_NO_STORY:'))).toBe(true);
+  });
+
+  it('ignores pre-existing task truth debt, permits scenario authoring, but blocks a new DONE bypass', () => {
+    const task = (status: 'IN_PROGRESS' | 'DONE', checked: boolean) =>
+      `## Phase 1\n\n- [${status === 'DONE' ? 'x' : ' '}] Task — id: t1 — Status: ${status} | Est: 30m\n  _Requirements: FR-1_\n  **Done When:**\n  - [${checked ? 'x' : ' '}] evidence\n`;
+    fs.writeFileSync(path.join(root, '.specs', slug, 'TASKS.md'), task('DONE', false));
+
+    const unrelated = validateSpecChange(root, slug, 'FR.md', {
+      content: '## FR-1: Thing @feature1\n\nDoes a renamed thing.\n',
+    });
+    expect(unrelated.ok).toBe(true);
+    expect(unrelated.findings).toHaveLength(0);
+
+    const feature = '@feature1\nFeature: Delta gate\n\n  Scenario: DEMO001_01 newly authored scenario\n    Given a real precondition\n    When the behavior executes\n    Then the result is observed\n';
+    const scenario = validateSpecChange(root, slug, 'demo.feature', { content: feature });
+    expect(scenario.ok).toBe(true);
+    expect(scenario.findings).toHaveLength(0);
+
+    fs.writeFileSync(path.join(root, '.specs', slug, 'TASKS.md'), task('IN_PROGRESS', false));
+    const bypass = validateSpecChange(root, slug, 'TASKS.md', { content: task('DONE', false) });
+    expect(bypass.ok).toBe(false);
+    expect(bypass.findings.some((f) => f.message.startsWith('TASK_DONE_CHECKLIST_OPEN:'))).toBe(true);
+  });
+
   it('GATES a subdir doc whose basename is a graph doc (sub/FR.md) — broken anchor is flagged', () => {
     const broken = '## FR-9: Thing @feature9\n\nSee [the rule](FR.md#this-anchor-does-not-exist).\n';
     const r = validateSpecChange(root, slug, 'sub/FR.md', { content: broken });

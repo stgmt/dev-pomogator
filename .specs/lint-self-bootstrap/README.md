@@ -1,6 +1,6 @@
 # Lint Self Bootstrap
 
-Dev-pomogator requires lint verification after code edits, but the current `npm run lint` path can fail before linting if eslint is not installed locally. This spec makes the lint verification path self-sufficient: the required lint runner is declared, locked, and prepared before lint execution.
+Dev-pomogator requires lint verification after code edits, but the current `npm run lint` path can fail before linting if eslint or the packages imported by `eslint.config.mjs` are not installed locally. This spec makes the lint verification path self-sufficient: the complete lint runtime is declared, locked, and prepared before lint execution.
 
 ## Ключевые идеи
 

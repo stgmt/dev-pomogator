@@ -57,6 +57,42 @@ describe('startLifecycle', () => {
     }
   });
 
+  it('refreshGraph re-applies result files and clears stale in-memory run evidence', async () => {
+    fs.mkdirSync(path.join(root, 'tests/features'), { recursive: true });
+    fs.mkdirSync(path.join(root, '.dev-pomogator'), { recursive: true });
+    fs.writeFileSync(
+      path.join(root, 'tests/features/x.feature'),
+      'Feature: X\n  Scenario: one SPECGEN004_531\n    Given y\n  Scenario: two SPECGEN004_532\n    Given z\n',
+    );
+    const handle = await startLifecycle({ repoRoot: root, env: 'host', usePolling: true, pollIntervalMs: 1000 });
+    try {
+      const first = handle.graph.nodes.get('SCEN-one-specgen004-531') as { lastResult?: string; lastRunAt?: string };
+      const second = handle.graph.nodes.get('SCEN-two-specgen004-532') as { lastResult?: string; lastRunAt?: string };
+      first.lastResult = 'PASSED';
+      first.lastRunAt = '2027-01-15T08:00:01.000Z';
+      second.lastResult = 'PASSED';
+      second.lastRunAt = '2027-01-15T08:00:01.000Z';
+      fs.writeFileSync(
+        path.join(root, '.dev-pomogator', '.scenario-results.ndjson'),
+        JSON.stringify({
+          scenario_id: 'SPECGEN004_531',
+          result: 'PASSED',
+          time: '2027-01-15T08:00:02.000Z',
+          uri: 'tests/features/x.feature',
+          line: 2,
+        }) + '\n',
+      );
+
+      handle.refreshGraph();
+
+      expect(first.lastResult).toBe('PASSED');
+      expect(second.lastResult).toBeUndefined();
+      expect(second.lastRunAt).toBeUndefined();
+    } finally {
+      await handle.shutdown();
+    }
+  });
+
   it('shutdown() releases the lock and closes the watcher', async () => {
     const handle = await startLifecycle({ repoRoot: root, env: 'host', skipNdjson: true });
     await handle.shutdown();

@@ -38,10 +38,11 @@
 | CHK-ID | Requirement | Traces To (FR+SC) | Verification Method | Status | Notes |
 |--------|-------------|-------------------|---------------------|--------|-------|
 | CHK-FR1-01 | Fresh checkout does not fail with missing eslint | FR-1, AC-1, @FR-1, UC-1 | BDD scenario | Draft | — |
-| CHK-FR2-01 | Existing local eslint is reused | FR-2, AC-2, @FR-2, UC-2 | BDD scenario | Draft | — |
+| CHK-FR1-02 | Partial local install does not fail with missing ESLint config packages | FR-1, AC-1, @FR-1, UC-1 | BDD scenario | Draft | LINTBOOT006 covers `@eslint/js`, `typescript-eslint`, and `globals`. |
+| CHK-FR2-01 | Existing complete local lint runtime is reused | FR-2, AC-2, @FR-2, UC-2 | BDD scenario | Draft | — |
 | CHK-FR3-01 | Install failure is actionable | FR-3, AC-3, @FR-3, UC-3 | BDD scenario | Draft | — |
 | CHK-FR4-01 | Plugin/dogfood path avoids global eslint | FR-4, AC-4, @FR-4, UC-4 | Manual review | Draft | — |
-| CHK-FR5-01 | Dependency metadata and lockfile stay aligned | FR-5, AC-5, @FR-5, UC-5 | Integration test | Draft | — |
+| CHK-FR5-01 | Dependency metadata and lockfile stay aligned for the whole lint runtime | FR-5, AC-5, @FR-5, UC-5 | Integration test | Draft | — |
 
 ## Verification Process
 

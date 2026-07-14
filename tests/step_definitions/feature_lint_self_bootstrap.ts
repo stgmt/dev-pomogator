@@ -20,8 +20,16 @@ interface LintBootWorld extends V4World {
   };
 }
 
-function writePackage(dir: string): void {
+const LINT_RUNTIME_PACKAGES = ['eslint', '@eslint/js', 'typescript-eslint', 'globals'] as const;
+
+function writePackage(dir: string, withConfigImports = false): void {
   fs.mkdirSync(dir, { recursive: true });
+  const devDependencies: Record<string, string> = { eslint: '^9.39.4' };
+  if (withConfigImports) {
+    devDependencies['@eslint/js'] = '^9.39.4';
+    devDependencies['typescript-eslint'] = '^8.63.0';
+    devDependencies.globals = '^15.15.0';
+  }
   fs.writeFileSync(
     path.join(dir, 'package.json'),
     `${JSON.stringify({
@@ -29,25 +37,44 @@ function writePackage(dir: string): void {
       version: '0.0.0',
       type: 'module',
       scripts: { lint: 'eslint .claude tools' },
-      devDependencies: { eslint: '^9.39.4' },
+      devDependencies,
     }, null, 2)}\n`,
     'utf-8',
   );
+  if (withConfigImports) {
+    fs.writeFileSync(
+      path.join(dir, 'eslint.config.mjs'),
+      "import js from '@eslint/js';\nimport globals from 'globals';\nimport tseslint from 'typescript-eslint';\n\nexport default tseslint.config(js.configs.recommended, { languageOptions: { globals: globals.node } });\n",
+      'utf-8',
+    );
+  }
 }
 
 function fakeEslintPath(dir: string): string {
   return path.join(dir, 'node_modules', '.bin', process.platform === 'win32' ? 'eslint.cmd' : 'eslint');
 }
 
+function writeFakeRuntimePackage(dir: string, packageName: string): void {
+  const packageDir = path.join(dir, 'node_modules', ...packageName.split('/'));
+  fs.mkdirSync(packageDir, { recursive: true });
+  fs.writeFileSync(path.join(packageDir, 'package.json'), JSON.stringify({ name: packageName, version: '0.0.0' }), 'utf-8');
+}
+
 function writeFakeEslint(dir: string, body = 'echo local-eslint'): void {
   const target = fakeEslintPath(dir);
   fs.mkdirSync(path.dirname(target), { recursive: true });
+  writeFakeRuntimePackage(dir, 'eslint');
   if (process.platform === 'win32') {
     fs.writeFileSync(target, `@echo off\r\necho local-eslint\r\n`, 'utf-8');
   } else {
     fs.writeFileSync(target, `#!/bin/sh\n${body}\n`, 'utf-8');
     fs.chmodSync(target, 0o755);
   }
+}
+
+function writeFakeLintRuntime(dir: string): void {
+  writeFakeEslint(dir);
+  for (const packageName of LINT_RUNTIME_PACKAGES) writeFakeRuntimePackage(dir, packageName);
 }
 
 function installCommandFor(dir: string): string {
@@ -61,9 +88,15 @@ function installCommandFor(dir: string): string {
       "const fs = require('node:fs');",
       "const path = require('node:path');",
       `const target = ${JSON.stringify(fakeEslintPath(dir))};`,
+      `const packages = ${JSON.stringify([...LINT_RUNTIME_PACKAGES])};`,
       "fs.mkdirSync(path.dirname(target), { recursive: true });",
       `fs.writeFileSync(target, ${JSON.stringify(fakeBody)});`,
       "try { fs.chmodSync(target, 0o755); } catch {}",
+      "for (const packageName of packages) {",
+      "  const packageDir = path.join(process.cwd(), 'node_modules', ...packageName.split('/'));",
+      "  fs.mkdirSync(packageDir, { recursive: true });",
+      "  fs.writeFileSync(path.join(packageDir, 'package.json'), JSON.stringify({ name: packageName, version: '0.0.0' }));",
+      "}",
     ].join('\n'),
     'utf-8',
   );
@@ -90,6 +123,12 @@ Given(/^a lint fixture package where dependency installation fails$/, function (
   this.lintFixtureDir = path.join(this.tempDir, 'lint-fixture');
   this.lintShouldFailInstall = true;
   writePackage(this.lintFixtureDir);
+});
+
+Given(/^a lint fixture package with eslint executable but missing config packages$/, function (this: LintBootWorld) {
+  this.lintFixtureDir = path.join(this.tempDir, 'lint-fixture');
+  writePackage(this.lintFixtureDir, true);
+  writeFakeEslint(this.lintFixtureDir);
 });
 
 Given(/^the dev-pomogator lint verification configuration is available$/, function (this: LintBootWorld) {
@@ -140,6 +179,24 @@ Then(/^the existing local eslint executable is used$/, function (this: LintBootW
   assert.equal(this.lintResult?.exitCode, 0);
 });
 
+Then(/^the missing lint runtime packages are prepared before lint execution$/, function (this: LintBootWorld) {
+  assert.ok(this.lintFixtureDir, 'lint fixture dir must be set');
+  assert.equal(this.lintResult?.installAttempted, true, `partial runtime should trigger install: ${JSON.stringify(this.lintResult)}`);
+  assert.equal(this.lintResult?.lintAttempted, true, `lint should run after runtime repair: ${JSON.stringify(this.lintResult)}`);
+  for (const packageName of LINT_RUNTIME_PACKAGES) {
+    assert.ok(
+      fs.existsSync(path.join(this.lintFixtureDir, 'node_modules', ...packageName.split('/'))),
+      `runtime package should exist after install: ${packageName}`,
+    );
+  }
+});
+
+Then(/^the result is not a missing ESLint config dependency failure$/, function (this: LintBootWorld) {
+  const output = `${this.lintResult?.stdout ?? ''}\n${this.lintResult?.stderr ?? ''}`;
+  assert.equal(this.lintResult?.exitCode, 0, `lint runtime repair should succeed: ${output}`);
+  assert.doesNotMatch(output, /Cannot find package|ERR_MODULE_NOT_FOUND|Failed to load config/i);
+});
+
 Then(/^the result reports the failed install command and log location$/, function (this: LintBootWorld) {
   assert.equal(this.lintResult?.installAttempted, true);
   assert.match(this.lintResult?.stderr ?? '', /Lint dependency setup failed: command/);
@@ -155,7 +212,9 @@ Then(/^it resolves eslint from project-local tooling$/, function (this: LintBoot
   assert.ok(this.lintInspection, 'lint inspection must be loaded');
   assert.equal(this.lintInspection.lintScript, 'node tools/lint-self-bootstrap/run-lint.cjs');
   const devDeps = this.lintInspection.packageJson.devDependencies as Record<string, unknown>;
-  assert.equal(typeof devDeps.eslint, 'string', 'eslint must be project-local in devDependencies');
+  for (const packageName of LINT_RUNTIME_PACKAGES) {
+    assert.equal(typeof devDeps[packageName], 'string', `${packageName} must be project-local in devDependencies`);
+  }
 });
 
 Then(/^no always-on plugin hook imports eslint directly$/, function (this: LintBootWorld) {
@@ -166,11 +225,18 @@ Then(/^no always-on plugin hook imports eslint directly$/, function (this: LintB
 Then(/^eslint is declared in package metadata$/, function (this: LintBootWorld) {
   assert.ok(this.lintInspection, 'lint inspection must be loaded');
   const devDeps = this.lintInspection.packageJson.devDependencies as Record<string, unknown>;
-  assert.equal(typeof devDeps.eslint, 'string', 'eslint must be declared in devDependencies');
+  for (const packageName of LINT_RUNTIME_PACKAGES) {
+    assert.equal(typeof devDeps[packageName], 'string', `${packageName} must be declared in devDependencies`);
+  }
 });
 
 Then(/^eslint is present in the lockfile$/, function (this: LintBootWorld) {
   assert.ok(this.lintInspection, 'lint inspection must be loaded');
   const packages = this.lintInspection.packageLock.packages as Record<string, unknown>;
-  assert.ok(packages['node_modules/eslint'], 'package-lock must include node_modules/eslint');
+  for (const packageName of LINT_RUNTIME_PACKAGES) {
+    assert.ok(
+      packages[`node_modules/${packageName}`],
+      `package-lock must include node_modules/${packageName}`,
+    );
+  }
 });

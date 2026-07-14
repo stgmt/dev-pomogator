@@ -26,6 +26,10 @@ const LONG_TEXT_A =
   'User logs in with email and password. System validates credentials against the database, issues a JWT token, and redirects to the dashboard route after the login completes successfully.';
 const LONG_TEXT_B =
   'User submits email and password. System checks credentials against the database, issues a JWT token, and redirects to the dashboard for the user after the validation completes correctly.';
+const UNRELATED_TEXT_A =
+  'Invoice ledger captures payment allocation tax reconciliation settlement currency rounding and receipt posting for finance operators after checkout closes.';
+const UNRELATED_TEXT_B =
+  'Keyboard macro stores shortcut profile window focus command palette bindings and hotkey playback for desktop editors after startup completes.';
 
 // ── helpers ──────────────────────────────────────────────────────────────────────
 
@@ -73,6 +77,15 @@ Given(
     const root = this.tempDir;
     seedSpec(root, 'spec-a', { 'FR.md': '## FR-1\nShort.\n' });
     seedSpec(root, 'spec-b', { 'FR.md': '## FR-1\nAlso short.\n' });
+  },
+);
+
+Given(
+  /^two specs each have a same-id FR-1 with unrelated long prose in the full-mode temp repo$/,
+  function (this: FullModeWorld) {
+    const root = this.tempDir;
+    seedSpec(root, 'spec-a', { 'FR.md': `## FR-1: Finance\n${UNRELATED_TEXT_A}\n` });
+    seedSpec(root, 'spec-b', { 'FR.md': `## FR-1: Editor\n${UNRELATED_TEXT_B}\n` });
   },
 );
 
@@ -175,6 +188,37 @@ When(
 );
 
 When(
+  /^runFullMode is called against unrelated same-id FR prose$/,
+  async function (this: FullModeWorld) {
+    const root = this.tempDir;
+    let spawnCalls = 0;
+    const fakeSpawn = async (_p: string) => {
+      spawnCalls++;
+      return JSON.stringify({ result: 'NO_DRIFT_DETECTED' });
+    };
+    const reports = await runFullMode({ repoRoot: root, spawn: fakeSpawn });
+    this.fullModeReports = reports;
+    this.fullModeSpawnCallCount = spawnCalls;
+  },
+);
+
+When(
+  /^runFullMode is called twice with identical pair content and a NO_DRIFT spawn$/,
+  async function (this: FullModeWorld) {
+    const root = this.tempDir;
+    let spawnCalls = 0;
+    const fakeSpawn = async (_p: string) => {
+      spawnCalls++;
+      return JSON.stringify({ result: 'NO_DRIFT_DETECTED' });
+    };
+    await runFullMode({ repoRoot: root, spawn: fakeSpawn });
+    const reports = await runFullMode({ repoRoot: root, spawn: fakeSpawn });
+    this.fullModeReports = reports;
+    this.fullModeSpawnCallCount = spawnCalls;
+  },
+);
+
+When(
   /^runFullMode is called with a spawn that throws "([^"]+)"$/,
   async function (this: FullModeWorld, message: string) {
     const root = this.tempDir;
@@ -261,6 +305,30 @@ Then(
   /^0 spawn calls were made because both FR bodies are shorter than 60 chars$/,
   function (this: FullModeWorld) {
     assert.equal(this.fullModeSpawnCallCount, 0);
+  },
+);
+
+Then(
+  /^0 spawn calls were made because the concept-noun prefilter rejected the pair$/,
+  function (this: FullModeWorld) {
+    const reports = this.fullModeReports!;
+    assert.equal(this.fullModeSpawnCallCount, 0);
+    assert.equal(reports[0].subprocess_calls, 0);
+    assert.equal(reports[0].drift_detected, 0);
+    assert.equal(
+      reports.flatMap((r) => r.findings).some((f) => f.code === 'cross-spec/semantic-drift'),
+      false,
+    );
+  },
+);
+
+Then(
+  /^only the first full-mode run spawned because the second identical pair hit the sha256 cache$/,
+  function (this: FullModeWorld) {
+    const reports = this.fullModeReports!;
+    assert.equal(this.fullModeSpawnCallCount, 1);
+    assert.equal(reports[0].subprocess_calls, 0);
+    assert.equal(reports[0].drift_detected, 0);
   },
 );
 

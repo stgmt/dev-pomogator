@@ -41,9 +41,10 @@ import path from 'node:path';
 import { parseMarkdownFile } from './parsers/md.ts';
 import { parseGherkinFile } from './parsers/gherkin.ts';
 import { parseNdjsonFile, applyTestResults } from './parsers/ndjson.ts';
+import { parseScenarioOverlayFile, applyScenarioOverlayResults } from './parsers/scenario-overlay.ts';
 import { parseTasksFile } from './parsers/tasks.ts';
 import { rebuildBacklinks } from './builder.ts';
-import type { SpecGraph, ScenarioNode, ParserOutput } from './types.ts';
+import type { Edge, SpecGraph, ScenarioNode, ParserOutput } from './types.ts';
 
 export interface WatchOptions {
   /** Absolute repo root — every emitted path is resolved against it. */
@@ -54,6 +55,8 @@ export interface WatchOptions {
   featureRoots?: string[];
   /** Path to the NDJSON last-run file. Default `.dev-pomogator/.last-test-run.ndjson`. */
   ndjsonPath?: string;
+  /** Path to the append-only scenario overlay. Default `.dev-pomogator/.scenario-results.ndjson`. */
+  scenarioOverlayPath?: string;
   /**
    * Force chokidar's polling backend (NFR-Reliability-4). Auto-detected on
    * Windows + WSL bind mounts; explicit `true` is for tests + Docker.
@@ -146,15 +149,80 @@ function applySlice(
   };
 }
 
-function classify(relativePath: string): 'md' | 'feature' | 'ndjson' | 'unknown' {
+function classify(relativePath: string): 'md' | 'feature' | 'ndjson' | 'overlay' | 'unknown' {
   if (relativePath.endsWith('.feature')) return 'feature';
   if (relativePath.endsWith('.md')) return 'md';
+  if (relativePath.endsWith('.scenario-results.ndjson')) return 'overlay';
   if (relativePath.endsWith('.ndjson')) return 'ndjson';
   return 'unknown';
 }
 
 function toPosixRelative(repoRoot: string, absPath: string): string {
   return path.relative(repoRoot, absPath).split(path.sep).join('/');
+}
+
+function refreshResultEdges(graph: SpecGraph, scenarios: ScenarioNode[]): void {
+  const scenarioIds = new Set(scenarios.map((s) => s.id));
+  graph.edges = graph.edges.filter(
+    (e) => (e.type !== 'last-result' && e.type !== 'runtime-trace') || !scenarioIds.has(e.from),
+  );
+  const emitted = new Set<string>();
+  const additions: Edge[] = [];
+  for (const s of scenarios) {
+    if (s.lastResult) {
+      const key = `${s.id}|result|${s.lastResult}`;
+      if (!emitted.has(key)) {
+        emitted.add(key);
+        additions.push({ from: s.id, to: `RESULT-${s.id}-${s.lastResult}`, type: 'last-result' });
+      }
+    }
+    if (s.trace?.traceId) {
+      const key = `${s.id}|trace|${s.trace.traceId}`;
+      if (!emitted.has(key)) {
+        emitted.add(key);
+        additions.push({ from: s.id, to: `TRACE-${s.trace.traceId}`, type: 'runtime-trace' });
+      }
+    }
+  }
+  graph.edges.push(...additions);
+}
+
+interface ResultPathOptions {
+  ndjsonPath?: string;
+  scenarioOverlayPath?: string;
+}
+
+function collectScenarios(graph: SpecGraph): ScenarioNode[] {
+  const scenarios: ScenarioNode[] = [];
+  for (const node of graph.nodes.values()) {
+    if (node.type === 'Scenario') scenarios.push(node);
+  }
+  return scenarios;
+}
+
+function clearResultEvidence(scenario: ScenarioNode): void {
+  delete scenario.lastResult;
+  delete scenario.lastRunAt;
+  delete scenario.resultStale;
+  delete scenario.canonicalResult;
+  delete scenario.canonicalRunAt;
+  delete scenario.trace;
+  delete scenario.durationMs;
+  delete scenario.failingStep;
+}
+
+/**
+ * Re-apply canonical NDJSON + filtered overlay evidence to the current scenario set.
+ * Mirrors the cold-build semantics: a scenario absent from the current result files
+ * becomes `not_run`, never a stale in-memory result from a prior run.
+ */
+export function refreshResultFiles(graph: SpecGraph, repoRoot: string, opts: ResultPathOptions = {}): void {
+  const scenarios = collectScenarios(graph);
+  for (const scenario of scenarios) clearResultEvidence(scenario);
+  applyTestResults(scenarios, parseNdjsonFile(path.resolve(repoRoot, opts.ndjsonPath ?? '.dev-pomogator/.last-test-run.ndjson')));
+  applyScenarioOverlayResults(scenarios, parseScenarioOverlayFile(path.resolve(repoRoot, opts.scenarioOverlayPath ?? '.dev-pomogator/.scenario-results.ndjson')), { repoRoot });
+  refreshResultEdges(graph, scenarios);
+  rebuildBacklinks(graph);
 }
 
 /**
@@ -165,6 +233,7 @@ export function applyChange(
   graph: SpecGraph,
   repoRoot: string,
   relativePath: string,
+  resultPaths: ResultPathOptions = {},
 ): { nodesDelta: number; edgesDelta: number } {
   const absPath = path.resolve(repoRoot, relativePath);
   const kind = classify(relativePath);
@@ -199,19 +268,18 @@ export function applyChange(
     if (!fs.existsSync(absPath)) return { nodesDelta: 0, edgesDelta: 0 };
     const slice = parseGherkinFile(absPath, repoRoot);
     const delta = applySlice(graph, slice);
-    rebuildBacklinks(graph);
+    // A feature edit replaces Scenario nodes; re-apply the persisted result
+    // files so the live graph keeps the same effective evidence as a cold build
+    // (and can mark once-passing overlay rows stale after the source mtime bump).
+    refreshResultFiles(graph, repoRoot, resultPaths);
     return delta;
   }
-  if (kind === 'ndjson') {
+  if (kind === 'ndjson' || kind === 'overlay') {
     if (!fs.existsSync(absPath)) return { nodesDelta: 0, edgesDelta: 0 };
-    const patch = parseNdjsonFile(absPath);
-    // NDJSON only mutates existing ScenarioNodes; no node/edge add.
-    const scenarios: ScenarioNode[] = [];
-    for (const node of graph.nodes.values()) {
-      if (node.type === 'Scenario') scenarios.push(node);
-    }
-    applyTestResults(scenarios, patch);
-    rebuildBacklinks(graph);
+    // Result files are replace-current-state inputs. Rebuild their effective view
+    // from scratch so removed/filtered-away scenarios become not_run just like a
+    // cold build, instead of retaining stale lastResult fields in the live MCP graph.
+    refreshResultFiles(graph, repoRoot, resultPaths);
     return { nodesDelta: 0, edgesDelta: 0 };
   }
   return { nodesDelta: 0, edgesDelta: 0 };
@@ -245,6 +313,7 @@ export function startWatching(graph: SpecGraph, opts: WatchOptions): FSWatcher {
   const mdRoots = opts.mdRoots ?? ['.specs'];
   const featureRoots = opts.featureRoots ?? ['.specs', 'tests/features'];
   const ndjsonPath = opts.ndjsonPath ?? '.dev-pomogator/.last-test-run.ndjson';
+  const scenarioOverlayPath = opts.scenarioOverlayPath ?? '.dev-pomogator/.scenario-results.ndjson';
 
   const watched: string[] = [];
   for (const r of mdRoots) {
@@ -256,14 +325,16 @@ export function startWatching(graph: SpecGraph, opts: WatchOptions): FSWatcher {
     if (fs.existsSync(abs)) watched.push(abs);
   }
   watched.push(path.resolve(repoRoot, ndjsonPath));
+  watched.push(path.resolve(repoRoot, scenarioOverlayPath));
 
   const watcher = chokidar.watch(watched, {
     ignored: (p: string) =>
       /(?:^|\/)(?:node_modules|\.git|dist|\.dev-pomogator-tmp|\.stryker-tmp|__pycache__)(?:\/|$)/.test(
         p.split(path.sep).join('/'),
       ) &&
-      // Allow the canonical ndjson path even though it lives under .dev-pomogator/.
-      !p.endsWith('.last-test-run.ndjson'),
+      // Allow the canonical ndjson + overlay paths even though they live under .dev-pomogator/.
+      !p.endsWith('.last-test-run.ndjson') &&
+      !p.endsWith('.scenario-results.ndjson'),
     ignoreInitial: true,
     usePolling: opts.usePolling ?? false,
     interval: opts.interval ?? 100,
@@ -277,7 +348,7 @@ export function startWatching(graph: SpecGraph, opts: WatchOptions): FSWatcher {
     if (classify(relativePath) === 'unknown') return;
     const start = process.hrtime.bigint();
     try {
-      const { nodesDelta, edgesDelta } = applyChange(graph, repoRoot, relativePath);
+      const { nodesDelta, edgesDelta } = applyChange(graph, repoRoot, relativePath, { ndjsonPath, scenarioOverlayPath });
       const durationMs = Number(process.hrtime.bigint() - start) / 1_000_000;
       opts.onPatch?.({ kind, file: relativePath, durationMs, nodesDelta, edgesDelta });
     } catch (err) {

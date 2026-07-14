@@ -54,12 +54,15 @@ function qualifySlice(slice, slug) {
   }
 }
 function scenarioKey(s) {
-  const m = s.match(/s[pc]e[cn]gen004[_-](\d+)/i);
-  return m ? `specgen004_${m[1]}` : null;
+  const m = s.match(/\b([a-z][a-z0-9]*(?:gen)?\d{3})[_-](\d+)\b/i);
+  if (!m) return null;
+  const prefix = m[1].toLowerCase() === "scengen004" ? "specgen004" : m[1].toLowerCase();
+  return `${prefix}_${m[2]}`;
 }
 function bucketScenarios(scenarios) {
   const out = {
     passed: [],
+    stale: [],
     pending: [],
     not_run: [],
     undefined: [],
@@ -68,7 +71,7 @@ function bucketScenarios(scenarios) {
     skipped: []
   };
   for (const s of scenarios) {
-    const bucket = s.result ? RESULT_TO_BUCKET[s.result.toUpperCase()] ?? "undefined" : "not_run";
+    const bucket = s.result ? s.stale && s.result.toUpperCase() === "PASSED" ? "stale" : RESULT_TO_BUCKET[s.result.toUpperCase()] ?? "undefined" : "not_run";
     out[bucket].push(s.id);
   }
   return out;
@@ -89,23 +92,25 @@ function mapTasksToScenarios(tasks, scenarios) {
   }
   const out = /* @__PURE__ */ new Map();
   for (const task of tasks) {
-    const ids = /* @__PURE__ */ new Set();
+    const explicitIds = /* @__PURE__ */ new Set();
+    const taggedIds = /* @__PURE__ */ new Set();
+    const refIds = /* @__PURE__ */ new Set();
     const sameSpec = (sid) => task.spec === void 0 || scenarioSpec.get(sid) === task.spec;
-    for (const m of task.doneWhen.matchAll(/s[pc]e[cn]gen004[_-]\d+/gi)) {
+    for (const m of task.doneWhen.matchAll(/\b[a-z][a-z0-9]*(?:gen)?\d{3}[_-]\d+\b/gi)) {
       const k = scenarioKey(m[0]);
       const sid = k && byKey.get(k);
-      if (sid) ids.add(sid);
+      if (sid) explicitIds.add(sid);
     }
     for (const m of task.doneWhen.matchAll(/@feature\d+/gi)) {
-      for (const sid of byTag.get(m[0].toLowerCase()) ?? []) if (sameSpec(sid)) ids.add(sid);
+      for (const sid of byTag.get(m[0].toLowerCase()) ?? []) if (sameSpec(sid)) taggedIds.add(sid);
     }
     for (const ref of task.refs) {
       const n = ref.match(/FR-(\d+)/i);
       if (n) {
-        for (const sid of byTag.get(`@feature${n[1]}`) ?? []) if (sameSpec(sid)) ids.add(sid);
+        for (const sid of byTag.get(`@feature${n[1]}`) ?? []) if (sameSpec(sid)) refIds.add(sid);
       }
     }
-    out.set(task.id, [...ids]);
+    out.set(task.id, [...explicitIds.size > 0 ? explicitIds : taggedIds.size > 0 ? taggedIds : refIds]);
   }
   return out;
 }
@@ -115,18 +120,62 @@ function verifiedStatus(scenarioIds, bucketById, verdict) {
   if (verdict === "WEAK" || verdict === "FAKE-POSITIVE-RISK") return "IN_PROGRESS";
   return "DONE";
 }
+function taskTruthIssues(task, scenarioIds, bucketById, scenarioById, verified) {
+  if (task.status !== "done") return [];
+  const evidence = scenarioIds.map((id) => ({
+    id,
+    bucket: bucketById.get(id) ?? "unverified",
+    source: scenarioById.get(id)?.source
+  }));
+  const issues = [];
+  if (verified !== "DONE") {
+    issues.push({
+      code: "TASK_DONE_UNVERIFIED",
+      taskId: task.id,
+      message: scenarioIds.length > 0 ? `Status: DONE but mapped scenario evidence is not all canonical PASSED (${evidence.map((s) => `${s.id}=${s.bucket}`).join(", ")})` : "Status: DONE but no mapped scenario evidence exists",
+      scenarios: evidence
+    });
+  }
+  if (/^\s*-\s*\[\s\]/m.test(task.doneWhen)) {
+    issues.push({
+      code: "TASK_DONE_CHECKLIST_OPEN",
+      taskId: task.id,
+      message: "Status: DONE but Done When contains unchecked checkbox item(s)",
+      scenarios: evidence
+    });
+  }
+  const filteredOnly = scenarioIds.length > 0 && scenarioIds.every((id) => {
+    const scenario = scenarioById.get(id);
+    return bucketById.get(id) === "passed" && scenario?.source?.includes("filtered") && scenario.canonicalResult?.toUpperCase() !== "PASSED";
+  });
+  if (filteredOnly) {
+    issues.push({
+      code: "TASK_DONE_FILTERED_ONLY",
+      taskId: task.id,
+      message: "Status: DONE is backed only by filtered-run evidence; canonical full-run proof is required for DONE truth",
+      scenarios: evidence
+    });
+  }
+  return issues;
+}
 function computeCoverage(tasks, scenarios, testQualityByTask = {}) {
   const buckets = bucketScenarios(scenarios);
   const bucketById = /* @__PURE__ */ new Map();
   for (const b of Object.keys(buckets)) for (const id of buckets[b]) bucketById.set(id, b);
+  const scenarioById = new Map(scenarios.map((s) => [s.id, s]));
   const taskMap = mapTasksToScenarios(tasks, scenarios);
+  const taskById = new Map(tasks.map((t) => [t.id, t]));
   const tasksOut = {};
   for (const [taskId, scenarioIds] of taskMap) {
     const verdict = testQualityByTask[taskId];
+    const verified = verifiedStatus(scenarioIds, bucketById, verdict);
+    const task = taskById.get(taskId);
+    const issues = task ? taskTruthIssues(task, scenarioIds, bucketById, scenarioById, verified) : [];
     tasksOut[taskId] = {
-      verified_status: verifiedStatus(scenarioIds, bucketById, verdict),
+      verified_status: issues.length > 0 ? "IN_PROGRESS" : verified,
       scenarios: scenarioIds,
-      ...verdict ? { test_quality: verdict } : {}
+      ...verdict ? { test_quality: verdict } : {},
+      ...issues.length > 0 ? { truth_issues: issues } : {}
     };
   }
   const totals = { scenarios: scenarios.length };
@@ -13782,6 +13831,10 @@ function applyTestResults(scenarios, patch) {
     if (!fields) continue;
     s.lastResult = fields.lastResult;
     s.lastRunAt = fields.lastRunAt;
+    s.canonicalResult = fields.lastResult;
+    s.canonicalRunAt = fields.lastRunAt;
+    s.resultStale = false;
+    s.trace = void 0;
     s.durationMs = fields.durationMs;
     s.failingStep = fields.failingStep;
     applied++;
@@ -13794,8 +13847,219 @@ var init_ndjson = __esm({
   }
 });
 
+// tools/spec-graph/parsers/scenario-overlay.ts
+import fs5 from "node:fs";
+import path4 from "node:path";
+import { fileURLToPath } from "node:url";
+function normalizeStatus2(raw) {
+  if (typeof raw !== "string") return "UNKNOWN";
+  const upper = raw.toUpperCase();
+  return STATUSES.has(upper) ? upper : "UNKNOWN";
+}
+function parseTimeMs(raw) {
+  if (typeof raw !== "string" || raw.length === 0) return void 0;
+  const ms = Date.parse(raw);
+  return Number.isFinite(ms) ? ms : void 0;
+}
+function normalizeUri(raw) {
+  if (typeof raw !== "string" || raw.length === 0) return void 0;
+  return raw.replace(/\\/g, "/");
+}
+function locationKey(uri, line) {
+  if (!uri || typeof line !== "number") return void 0;
+  return `${uri}:${line}`;
+}
+function keepNewest(map, key, row) {
+  if (!key) return;
+  const prev = map.get(key);
+  if (!prev || row.timeMs >= prev.timeMs) map.set(key, row);
+}
+function parseScenarioOverlay(source) {
+  const byScenarioKey = /* @__PURE__ */ new Map();
+  const byLocation = /* @__PURE__ */ new Map();
+  for (const line of source.split(/\r?\n/)) {
+    if (!line.trim()) continue;
+    let raw;
+    try {
+      raw = JSON.parse(line);
+    } catch {
+      continue;
+    }
+    const scenarioId = typeof raw.scenario_id === "string" ? raw.scenario_id : "";
+    const timeMs = parseTimeMs(raw.time);
+    if (!scenarioId || timeMs === void 0) continue;
+    const row = {
+      scenarioId,
+      result: normalizeStatus2(raw.result),
+      time: raw.time,
+      timeMs,
+      uri: normalizeUri(raw.uri),
+      line: typeof raw.line === "number" ? raw.line : void 0,
+      runId: typeof raw.run_id === "string" ? raw.run_id : void 0,
+      source: typeof raw.source === "string" ? raw.source : void 0,
+      traceId: typeof raw.trace_id === "string" ? raw.trace_id : void 0,
+      traceFile: normalizeUri(raw.trace_file),
+      testCaseStartedId: typeof raw.test_case_started_id === "string" ? raw.test_case_started_id : void 0
+    };
+    keepNewest(byScenarioKey, scenarioKey(scenarioId) ?? scenarioId.toLowerCase(), row);
+    keepNewest(byLocation, locationKey(row.uri, row.line), row);
+  }
+  return { byScenarioKey, byLocation };
+}
+function parseScenarioOverlayFile(absPath) {
+  if (!fs5.existsSync(absPath)) return { byScenarioKey: /* @__PURE__ */ new Map(), byLocation: /* @__PURE__ */ new Map() };
+  return parseScenarioOverlay(fs5.readFileSync(absPath, "utf-8"));
+}
+function resolvePath(repoRoot, p) {
+  if (p.startsWith("file://")) return fileURLToPath(p);
+  return path4.isAbsolute(p) ? p : path4.resolve(repoRoot, p);
+}
+function mtimeMs(absPath) {
+  try {
+    return fs5.statSync(absPath).mtimeMs;
+  } catch {
+    return void 0;
+  }
+}
+function traceIndex(repoRoot, traceFile) {
+  if (!traceFile) return null;
+  const abs = resolvePath(repoRoot, traceFile);
+  const cached = traceCache.get(abs);
+  if (cached !== void 0) return cached;
+  if (!fs5.existsSync(abs)) {
+    traceCache.set(abs, null);
+    return null;
+  }
+  const stepDefinitionUri = /* @__PURE__ */ new Map();
+  const testCaseStepDefs = /* @__PURE__ */ new Map();
+  const startedToCase = /* @__PURE__ */ new Map();
+  for (const line of fs5.readFileSync(abs, "utf-8").split(/\r?\n/)) {
+    if (!line.trim()) continue;
+    let env;
+    try {
+      env = JSON.parse(line);
+    } catch {
+      continue;
+    }
+    const stepDefinition = env.stepDefinition;
+    if (stepDefinition?.id && typeof stepDefinition.sourceReference?.uri === "string") {
+      stepDefinitionUri.set(stepDefinition.id, stepDefinition.sourceReference.uri.replace(/\\/g, "/"));
+      continue;
+    }
+    const testCase = env.testCase;
+    if (testCase?.id) {
+      const ids = [];
+      for (const step of testCase.testSteps ?? []) {
+        for (const id of step.stepDefinitionIds ?? []) ids.push(id);
+      }
+      testCaseStepDefs.set(testCase.id, ids);
+      continue;
+    }
+    const started = env.testCaseStarted;
+    if (started?.id && started.testCaseId) {
+      startedToCase.set(started.id, started.testCaseId);
+      continue;
+    }
+  }
+  const stepDefinitionUrisByStartedId = /* @__PURE__ */ new Map();
+  for (const [startedId2, testCaseId] of startedToCase) {
+    const uris = [...new Set((testCaseStepDefs.get(testCaseId) ?? []).map((id) => stepDefinitionUri.get(id)).filter((u) => typeof u === "string" && u.length > 0))];
+    if (uris.length > 0) stepDefinitionUrisByStartedId.set(startedId2, uris);
+  }
+  const index = { stepDefinitionUrisByStartedId };
+  traceCache.set(abs, index);
+  return index;
+}
+function startedId(row) {
+  if (row.testCaseStartedId) return row.testCaseStartedId;
+  const m = row.traceId?.match(/#([^#]+)$/);
+  return m?.[1];
+}
+function applyTraceRef(scenario, row) {
+  if (!row.traceId) {
+    scenario.trace = void 0;
+    return;
+  }
+  scenario.trace = {
+    traceId: row.traceId,
+    traceFile: row.traceFile,
+    testCaseStartedId: startedId(row),
+    runId: row.runId,
+    source: row.source
+  };
+}
+function freshnessThresholdMs(repoRoot, scenario, row) {
+  const candidates = [];
+  const featureMtime = mtimeMs(resolvePath(repoRoot, scenario.file));
+  if (featureMtime !== void 0) candidates.push(featureMtime);
+  const trace = traceIndex(repoRoot, row.traceFile);
+  const start = startedId(row);
+  for (const uri of start && trace ? trace.stepDefinitionUrisByStartedId.get(start) ?? [] : []) {
+    const ms = mtimeMs(resolvePath(repoRoot, uri));
+    if (ms !== void 0) candidates.push(ms);
+  }
+  return candidates.length > 0 ? Math.max(...candidates) : void 0;
+}
+function findByLocation(patch, scenario) {
+  const exactKey = `${scenario.file}:${scenario.line}`;
+  const exact = patch.byLocation.get(exactKey);
+  if (exact) return exact;
+  const suffix = `/${scenario.file}:${scenario.line}`;
+  for (const [key, row] of patch.byLocation) {
+    if (key.endsWith(suffix)) return row;
+  }
+  return void 0;
+}
+function applyScenarioOverlayResults(scenarios, patch, opts) {
+  let applied = 0;
+  for (const scenario of scenarios) {
+    const key = scenarioKey(scenario.id);
+    const byId = key ? patch.byScenarioKey.get(key) : void 0;
+    const byLocation = findByLocation(patch, scenario);
+    const row = byId && byLocation ? byId.timeMs >= byLocation.timeMs ? byId : byLocation : byId ?? byLocation;
+    if (!row) continue;
+    const currentMs = parseTimeMs(scenario.lastRunAt);
+    const overlayWins = currentMs === void 0 || row.timeMs > currentMs;
+    const overlayEffective = overlayWins || row.timeMs === currentMs;
+    if (overlayWins) {
+      scenario.lastResult = row.result;
+      scenario.lastRunAt = row.time;
+      applyTraceRef(scenario, row);
+      scenario.durationMs = void 0;
+      scenario.failingStep = null;
+      applied++;
+    } else if (overlayEffective && row.traceId) {
+      applyTraceRef(scenario, row);
+    }
+    if (overlayEffective && row.result === "PASSED") {
+      const threshold = freshnessThresholdMs(opts.repoRoot, scenario, row);
+      scenario.resultStale = threshold !== void 0 && row.timeMs < threshold;
+    } else if (overlayEffective) {
+      scenario.resultStale = false;
+    }
+  }
+  return applied;
+}
+var STATUSES, traceCache;
+var init_scenario_overlay = __esm({
+  "tools/spec-graph/parsers/scenario-overlay.ts"() {
+    "use strict";
+    init_coverage();
+    STATUSES = /* @__PURE__ */ new Set([
+      "PASSED",
+      "FAILED",
+      "SKIPPED",
+      "PENDING",
+      "UNDEFINED",
+      "AMBIGUOUS",
+      "UNKNOWN"
+    ]);
+    traceCache = /* @__PURE__ */ new Map();
+  }
+});
+
 // tools/specs-validator/spec-form-parsers.ts
-import fs5 from "fs";
+import fs6 from "fs";
 function parseUserStoryBlocks(content) {
   const lines = content.replace(/\r\n/g, "\n").split("\n");
   const blocks = [];
@@ -13941,13 +14205,65 @@ function parseChkRows(content) {
   }
   return rows;
 }
+function parseRiskRows(content) {
+  const lines = content.replace(/\r\n/g, "\n").split("\n");
+  let headingLineNumber = null;
+  let tableStart = -1;
+  for (let i = 0; i < lines.length; i++) {
+    if (RISK_HEADING.test(lines[i])) {
+      headingLineNumber = i + 1;
+      for (let j = i + 1; j < lines.length; j++) {
+        if (/^\|/.test(lines[j].trim())) {
+          tableStart = j;
+          break;
+        }
+        if (/^##\s/.test(lines[j])) break;
+      }
+      break;
+    }
+  }
+  if (headingLineNumber === null) {
+    return { headingLineNumber: null, rows: [], validRowCount: 0 };
+  }
+  const rows = [];
+  if (tableStart >= 0) {
+    for (let i = tableStart; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line.startsWith("|")) break;
+      if (/^\|[\s-:|]+\|$/.test(line)) continue;
+      const cells = line.split("|").slice(1, -1).map((c) => c.trim());
+      if (cells.length < 4) continue;
+      const [risk, likelihood, impact, mitigation] = cells;
+      if (risk === "Risk" && likelihood === "Likelihood") continue;
+      const isPlaceholder = PLACEHOLDER_MARKERS.test(risk) || PLACEHOLDER_MARKERS.test(mitigation) || /\{[^}]*\}/.test(risk) || /\{[^}]*\}/.test(mitigation);
+      const likelihoodValid = ALLOWED_LEVELS.has(likelihood);
+      const impactValid = ALLOWED_LEVELS.has(impact);
+      const mitigationValid = !!mitigation && !PLACEHOLDER_MARKERS.test(mitigation) && !/\{[^}]*\}/.test(mitigation);
+      rows.push({
+        lineNumber: i + 1,
+        risk,
+        likelihood,
+        impact,
+        mitigation,
+        isPlaceholder,
+        likelihoodValid,
+        impactValid,
+        mitigationValid
+      });
+    }
+  }
+  const validRowCount = rows.filter(
+    (r) => !r.isPlaceholder && r.likelihoodValid && r.impactValid && r.mitigationValid
+  ).length;
+  return { headingLineNumber, rows, validRowCount };
+}
 function runCheckCli(argv) {
   const [flag, kind, file] = argv;
-  const usage = "usage: spec-form-parsers.ts --check <user-stories|tasks|decisions|chk-rows> <file>";
+  const usage = "usage: spec-form-parsers.ts --check <user-stories|tasks|decisions|chk-rows|risks> <file>";
   if (flag !== "--check" || !kind || !file) return { output: usage, exitCode: 2 };
   let content;
   try {
-    content = fs5.readFileSync(file, "utf-8");
+    content = fs6.readFileSync(file, "utf-8");
   } catch (e) {
     return { output: `cannot read ${file}: ${e instanceof Error ? e.message : e}`, exitCode: 2 };
   }
@@ -13973,6 +14289,15 @@ function runCheckCli(argv) {
         if (r.missingFirst) violations.push(`${file}:${r.lineNumber} [${r.id}] invalid: ${r.missingFirst}`);
       }
       break;
+    case "risks": {
+      const assessment = parseRiskRows(content);
+      if (assessment.headingLineNumber === null) {
+        violations.push(`${file}:1 [Risk Assessment] missing: heading`);
+      } else if (assessment.validRowCount < 2) {
+        violations.push(`${file}:${assessment.headingLineNumber} [Risk Assessment] invalid: expected \u22652 populated risk rows, got ${assessment.validRowCount}`);
+      }
+      break;
+    }
     default:
       return { output: usage, exitCode: 2 };
   }
@@ -13980,7 +14305,7 @@ function runCheckCli(argv) {
   return { output: violations.join("\n") + `
 ${violations.length} violation(s) (${kind})`, exitCode: 1 };
 }
-var US_HEADING, US_PRIORITY, PHASE_HEADING, TASK_BULLET, TASK_HEADING, STATUS_TAG, STATUS_PRESENT, EST_TAG, WAIVED_RE, DECISION_HEADING, CHK_ID_VALID, ALLOWED_METHODS, ALLOWED_STATUSES, isDirectRunFormParsers;
+var US_HEADING, US_PRIORITY, PHASE_HEADING, TASK_BULLET, TASK_HEADING, STATUS_TAG, STATUS_PRESENT, EST_TAG, WAIVED_RE, DECISION_HEADING, CHK_ID_VALID, ALLOWED_METHODS, ALLOWED_STATUSES, RISK_HEADING, ALLOWED_LEVELS, PLACEHOLDER_MARKERS, isDirectRunFormParsers;
 var init_spec_form_parsers = __esm({
   "tools/specs-validator/spec-form-parsers.ts"() {
     "use strict";
@@ -14003,6 +14328,9 @@ var init_spec_form_parsers = __esm({
       "N/A"
     ]);
     ALLOWED_STATUSES = /* @__PURE__ */ new Set(["Draft", "In Progress", "Verified", "Blocked"]);
+    RISK_HEADING = /^##\s+Risk Assessment\b/;
+    ALLOWED_LEVELS = /* @__PURE__ */ new Set(["Low", "Medium", "High"]);
+    PLACEHOLDER_MARKERS = /^\{.*\}$|^—$|^-$|^TBD$|^\?+$/;
     isDirectRunFormParsers = process.argv[1]?.endsWith("spec-form-parsers.ts") || process.argv[1]?.endsWith("spec-form-parsers.js");
     if (isDirectRunFormParsers) {
       const { output, exitCode } = runCheckCli(process.argv.slice(2));
@@ -14013,8 +14341,8 @@ var init_spec_form_parsers = __esm({
 });
 
 // tools/spec-graph/parsers/tasks.ts
-import fs6 from "node:fs";
-import path4 from "node:path";
+import fs7 from "node:fs";
+import path5 from "node:path";
 function headerOf(line) {
   if (!/^\s*-\s*\[[ xX~]\]/.test(line)) return null;
   const id = line.match(/\bid:\s*([\w.\-]+)/);
@@ -14082,8 +14410,8 @@ function parseTasks(content, file) {
   return out;
 }
 function parseTasksFile(abs, repoRoot) {
-  const content = fs6.readFileSync(abs, "utf8");
-  const file = path4.relative(repoRoot, abs).replace(/\\/g, "/");
+  const content = fs7.readFileSync(abs, "utf8");
+  const file = path5.relative(repoRoot, abs).replace(/\\/g, "/");
   const slice = { nodes: parseTasks(content, file), edges: [] };
   qualifySlice(slice, specOf(file));
   return { nodes: slice.nodes, edges: [], anchors: [] };
@@ -14105,7 +14433,7 @@ var init_tasks = __esm({
 });
 
 // tools/spec-graph/parsers/file-changes.ts
-import fs7 from "node:fs";
+import fs8 from "node:fs";
 function isGlob(p) {
   return /[*?\[]/.test(p);
 }
@@ -14190,7 +14518,7 @@ function parseFileChanges(mdSource, opts = {}) {
 function parseFileChangesFile(absPath, opts = {}) {
   let source;
   try {
-    source = fs7.readFileSync(absPath, "utf-8");
+    source = fs8.readFileSync(absPath, "utf-8");
   } catch {
     return [];
   }
@@ -14213,7 +14541,7 @@ var init_file_changes = __esm({
 });
 
 // tools/spec-graph/parsers/design.ts
-import fs8 from "node:fs";
+import fs9 from "node:fs";
 function looksLikePath(s) {
   if (!s || s.length > 256) return false;
   if (/\s/.test(s)) return false;
@@ -14293,7 +14621,7 @@ function parseDesign(mdSource, _relativePath) {
 function parseDesignFile(absPath, repoRoot) {
   let source;
   try {
-    source = fs8.readFileSync(absPath, "utf-8");
+    source = fs9.readFileSync(absPath, "utf-8");
   } catch {
     return [];
   }
@@ -14317,11 +14645,11 @@ __export(builder_exports, {
   buildGraphFromCwd: () => buildGraphFromCwd,
   rebuildBacklinks: () => rebuildBacklinks
 });
-import fs9 from "node:fs";
-import path5 from "node:path";
+import fs10 from "node:fs";
+import path6 from "node:path";
 import { createHash } from "node:crypto";
 function walkDir(absDir, suffixes) {
-  if (!fs9.existsSync(absDir)) return [];
+  if (!fs10.existsSync(absDir)) return [];
   const out = [];
   const skipDirs = /* @__PURE__ */ new Set([
     "node_modules",
@@ -14338,12 +14666,12 @@ function walkDir(absDir, suffixes) {
     const current = stack.pop();
     let entries;
     try {
-      entries = fs9.readdirSync(current, { withFileTypes: true });
+      entries = fs10.readdirSync(current, { withFileTypes: true });
     } catch {
       continue;
     }
     for (const entry of entries) {
-      const abs = path5.join(current, entry.name);
+      const abs = path6.join(current, entry.name);
       if (entry.isDirectory()) {
         if (skipDirs.has(entry.name)) continue;
         stack.push(abs);
@@ -14356,13 +14684,17 @@ function walkDir(absDir, suffixes) {
 }
 function buildGraph(opts) {
   const { repoRoot } = opts;
-  const mdRoots = (opts.mdRoots ?? [".specs"]).map((r) => path5.resolve(repoRoot, r));
+  const mdRoots = (opts.mdRoots ?? [".specs"]).map((r) => path6.resolve(repoRoot, r));
   const featureRoots = (opts.featureRoots ?? [".specs", "tests/features"]).map(
-    (r) => path5.resolve(repoRoot, r)
+    (r) => path6.resolve(repoRoot, r)
   );
-  const ndjsonPath = path5.resolve(
+  const ndjsonPath = path6.resolve(
     repoRoot,
     opts.ndjsonPath ?? ".dev-pomogator/.last-test-run.ndjson"
+  );
+  const scenarioOverlayPath = path6.resolve(
+    repoRoot,
+    opts.scenarioOverlayPath ?? ".dev-pomogator/.scenario-results.ndjson"
   );
   const nodes = /* @__PURE__ */ new Map();
   const edges = [];
@@ -14405,7 +14737,7 @@ function buildGraph(opts) {
     ingestSlice(slice);
   }
   for (const abs of mdFiles) {
-    if (path5.basename(abs) !== "TASKS.md") continue;
+    if (path6.basename(abs) !== "TASKS.md") continue;
     let taskSlice;
     try {
       taskSlice = parseTasksFile(abs, repoRoot);
@@ -14414,7 +14746,7 @@ function buildGraph(opts) {
     }
     for (const node of taskSlice.nodes) mergeNode(node);
   }
-  const featureFiles = featureRoots.flatMap((root) => walkDir(root, [".feature"]));
+  const featureFiles = [...new Set(featureRoots.flatMap((root) => walkDir(root, [".feature"])))];
   for (const abs of featureFiles) {
     let slice;
     try {
@@ -14426,9 +14758,9 @@ function buildGraph(opts) {
   }
   const specDirs = /* @__PURE__ */ new Set();
   for (const abs of mdFiles) {
-    const base = path5.basename(abs);
+    const base = path6.basename(abs);
     if (base === "FILE_CHANGES.md" || base === "DESIGN.md") {
-      specDirs.add(path5.dirname(abs));
+      specDirs.add(path6.dirname(abs));
     }
   }
   const fileNodeIdByPath = /* @__PURE__ */ new Map();
@@ -14484,11 +14816,11 @@ function buildGraph(opts) {
     edges.push(edge);
   };
   for (const specDir of specDirs) {
-    const relDir = path5.relative(repoRoot, specDir).split(path5.sep).join("/");
+    const relDir = path6.relative(repoRoot, specDir).split(path6.sep).join("/");
     const slug = specOf(`${relDir}/FILE_CHANGES.md`);
     const qualifyFr = (fr) => slug ? `${slug}:${fr}` : fr;
-    const fcAbs = path5.join(specDir, "FILE_CHANGES.md");
-    if (fs9.existsSync(fcAbs)) {
+    const fcAbs = path6.join(specDir, "FILE_CHANGES.md");
+    if (fs10.existsSync(fcAbs)) {
       let rows = [];
       try {
         rows = parseFileChangesFile(fcAbs, { warnOnceState });
@@ -14503,8 +14835,8 @@ function buildGraph(opts) {
         }
       }
     }
-    const dAbs = path5.join(specDir, "DESIGN.md");
-    if (fs9.existsSync(dAbs)) {
+    const dAbs = path6.join(specDir, "DESIGN.md");
+    if (fs10.existsSync(dAbs)) {
       let refs = [];
       try {
         refs = parseDesignFile(dAbs);
@@ -14539,15 +14871,20 @@ function buildGraph(opts) {
   }
   if (!opts.skipNdjson) {
     const patch = parseNdjsonFile(ndjsonPath);
+    const overlay = parseScenarioOverlayFile(scenarioOverlayPath);
     const scenarioIter = [];
     for (const n of nodes.values()) {
       if (n.type === "Scenario") scenarioIter.push(n);
     }
     const applied = applyTestResults(scenarioIter, patch);
-    if (applied > 0) {
+    const overlayApplied = applyScenarioOverlayResults(scenarioIter, overlay, { repoRoot });
+    if (applied > 0 || overlayApplied > 0) {
       for (const s of scenarioIter) {
         if (s.lastResult) {
           edges.push({ from: s.id, to: `RESULT-${s.id}-${s.lastResult}`, type: "last-result" });
+        }
+        if (s.trace?.traceId) {
+          edges.push({ from: s.id, to: `TRACE-${s.trace.traceId}`, type: "runtime-trace" });
         }
       }
     }
@@ -14583,8 +14920,8 @@ function rebuildBacklinks(graph) {
     list.push({ file: "", line: 0, type: e.type });
   }
 }
-function buildGraphFromCwd(cwd = process.cwd()) {
-  return buildGraph({ repoRoot: cwd, skipNdjson: false });
+function buildGraphFromCwd(cwd = process.cwd(), opts = {}) {
+  return buildGraph({ ...opts, repoRoot: cwd, skipNdjson: opts.skipNdjson ?? false });
 }
 var init_builder = __esm({
   "tools/spec-graph/builder.ts"() {
@@ -14592,6 +14929,7 @@ var init_builder = __esm({
     init_md();
     init_gherkin();
     init_ndjson();
+    init_scenario_overlay();
     init_tasks();
     init_file_changes();
     init_design();
@@ -14863,15 +15201,15 @@ function checkConformance(graph, opts = {}) {
   for (const node of graph.nodes.values()) {
     if (node.type === "Scenario") {
       const s = node;
-      scenarioLikes.push({ id: s.id, tags: s.tags, result: s.lastResult, spec: specOf(s.file) });
+      scenarioLikes.push({ id: s.id, tags: s.tags, result: s.lastResult, stale: s.resultStale, spec: specOf(s.file), source: s.trace?.source, canonicalResult: s.canonicalResult, canonicalRunAt: s.canonicalRunAt });
     } else if (node.type === "Task") {
       const t = node;
-      taskLikes.push({ id: t.id, doneWhen: t.doneWhen ?? "", refs: t.refs, spec: specOf(t.file) });
+      taskLikes.push({ id: t.id, doneWhen: t.doneWhen ?? "", refs: t.refs, spec: specOf(t.file), status: t.status });
     }
   }
-  if (taskLikes.length > 0) {
-    const cov = computeCoverage(taskLikes, scenarioLikes, opts.testQualityByTask);
-    const bucketById = /* @__PURE__ */ new Map();
+  const cov = taskLikes.length > 0 ? computeCoverage(taskLikes, scenarioLikes, opts.testQualityByTask) : null;
+  const bucketById = /* @__PURE__ */ new Map();
+  if (cov) {
     for (const b of Object.keys(cov.buckets)) for (const id of cov.buckets[b]) bucketById.set(id, b);
     for (const node of graph.nodes.values()) {
       if (node.type !== "Task") continue;
@@ -14925,16 +15263,20 @@ function checkConformance(graph, opts = {}) {
     if (node.type !== "Task") continue;
     const task = node;
     if (task.status !== "done") continue;
-    if (/s[pc]e[cn]gen004[_-]\d+/i.test(task.doneWhen ?? "")) continue;
+    if (scenarioKey(task.doneWhen ?? "")) continue;
+    const entry = cov?.tasks[task.id];
+    const greenScenarioCount = entry?.scenarios.filter((id) => bucketById.get(id) === "passed").length ?? 0;
+    if (greenScenarioCount > 0) continue;
     findings.push({
       code: "TASK_NO_OWN_SCENARIO",
       severity: "warning",
       location: { file: task.file, line: task.line },
-      message: `Task ${task.id} is marked DONE but its Done-When cites no SPECGEN id of its OWN \u2014 it only maps to its requirement's scenarios at large, so no test verifies THIS task specifically (FR-46a).`,
+      message: `Task ${task.id} is marked DONE but its Done-When cites no explicit scenario id of its OWN and no mapped covering scenario has passed; FR-wide refs alone are not proof for THIS task (FR-46a/FR-52 F7).`,
       nodeId: task.id,
       suggestions: [
-        { action: "cite_own_scenario", reason: "Reference this task's own SPECGEN004_NN scenario in Done-When (the one that verifies exactly this task), not just the FR.", confidence: "high" },
-        { action: "downgrade", reason: "Or set Status back to IN_PROGRESS until the task has its own passing scenario.", confidence: "high" }
+        { action: "cite_own_scenario", reason: "Reference this task's own SPECGEN004_NN / TESTQUAL001_NN scenario in Done-When when it has a dedicated proof.", confidence: "high" },
+        { action: "accept_consolidated_scenario", reason: "For migrated many\u2192few consolidation, map the task to at least one passing covering scenario via @feature/FR so the shared proof is explicit in the graph.", confidence: "medium" },
+        { action: "downgrade", reason: "Or set Status back to IN_PROGRESS until a dedicated or consolidated covering scenario is green.", confidence: "high" }
       ]
     });
   }

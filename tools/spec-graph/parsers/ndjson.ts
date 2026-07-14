@@ -379,6 +379,10 @@ export function applyTestResults(
     if (!fields) continue;
     s.lastResult = fields.lastResult;
     s.lastRunAt = fields.lastRunAt;
+    s.canonicalResult = fields.lastResult;
+    s.canonicalRunAt = fields.lastRunAt;
+    s.resultStale = false;
+    s.trace = undefined;
     s.durationMs = fields.durationMs;
     s.failingStep = fields.failingStep;
     applied++;

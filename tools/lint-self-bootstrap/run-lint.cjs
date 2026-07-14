@@ -14,17 +14,66 @@ function readPackageJson(cwd) {
   }
 }
 
-function hasDeclaredEslint(pkg) {
+function packageNameFromSpecifier(specifier) {
+  if (
+    specifier.startsWith('.') ||
+    specifier.startsWith('/') ||
+    specifier.startsWith('node:') ||
+    specifier.startsWith('data:')
+  ) {
+    return null;
+  }
+  const parts = specifier.split('/');
+  if (specifier.startsWith('@')) return parts.length >= 2 ? `${parts[0]}/${parts[1]}` : specifier;
+  return parts[0] || null;
+}
+
+function lintConfigPackages(cwd) {
+  const configPath = path.join(cwd, 'eslint.config.mjs');
+  if (!fs.existsSync(configPath)) return [];
+  const content = fs.readFileSync(configPath, 'utf-8');
+  const packages = new Set();
+  for (const match of content.matchAll(/\bimport(?:\s+[^'";]+?\s+from)?\s+['"]([^'"]+)['"]/g)) {
+    const packageName = packageNameFromSpecifier(match[1]);
+    if (packageName) packages.add(packageName);
+  }
+  return [...packages].sort();
+}
+
+function requiredLintPackages(cwd) {
+  return [...new Set(['eslint', ...lintConfigPackages(cwd)])].sort();
+}
+
+function declaredVersion(pkg, packageName) {
   const deps = pkg && pkg.dependencies;
   const devDeps = pkg && pkg.devDependencies;
-  return Boolean(
-    deps && typeof deps.eslint === 'string' ||
-    devDeps && typeof devDeps.eslint === 'string'
-  );
+  if (deps && typeof deps[packageName] === 'string') return deps[packageName];
+  if (devDeps && typeof devDeps[packageName] === 'string') return devDeps[packageName];
+  return null;
+}
+
+function missingDeclaredLintPackages(pkg, requiredPackages) {
+  if (!pkg) return requiredPackages;
+  return requiredPackages.filter((packageName) => !declaredVersion(pkg, packageName));
 }
 
 function localEslintPath(cwd) {
   return path.join(cwd, 'node_modules', '.bin', process.platform === 'win32' ? 'eslint.cmd' : 'eslint');
+}
+
+function localPackagePath(cwd, packageName) {
+  return path.join(cwd, 'node_modules', ...packageName.split('/'));
+}
+
+function missingLocalLintRuntime(cwd, requiredPackages) {
+  const missing = [];
+  const eslintPath = localEslintPath(cwd);
+  if (!fs.existsSync(eslintPath)) missing.push(`executable:${path.relative(cwd, eslintPath)}`);
+  for (const packageName of requiredPackages) {
+    const packagePath = localPackagePath(cwd, packageName);
+    if (!fs.existsSync(packagePath)) missing.push(`package:${packageName}`);
+  }
+  return missing;
 }
 
 function shellRun(command, cwd) {
@@ -57,9 +106,11 @@ function runLintSelfBootstrap(options = {}) {
   const logPath = path.join(logDir, 'install.log');
   const eslintPath = localEslintPath(cwd);
   const lintCommand = options.lintCommand || process.env.LINT_SELF_BOOTSTRAP_LINT_CMD || `"${eslintPath}" .claude tools`;
+  const requiredPackages = requiredLintPackages(cwd);
 
   const pkg = readPackageJson(cwd);
-  if (!hasDeclaredEslint(pkg)) {
+  const missingDeclarations = missingDeclaredLintPackages(pkg, requiredPackages);
+  if (missingDeclarations.length > 0) {
     return {
       exitCode: 1,
       installAttempted: false,
@@ -69,12 +120,13 @@ function runLintSelfBootstrap(options = {}) {
       lintCommand,
       logPath,
       stdout: '',
-      stderr: 'Lint dependency setup failed: package.json does not declare eslint in dependencies or devDependencies.',
+      stderr: `Lint dependency setup failed: package.json does not declare lint runtime package(s): ${missingDeclarations.join(', ')} in dependencies or devDependencies.`,
     };
   }
 
   let installAttempted = false;
-  if (!fs.existsSync(eslintPath)) {
+  let missingRuntime = missingLocalLintRuntime(cwd, requiredPackages);
+  if (missingRuntime.length > 0) {
     installAttempted = true;
     const installResult = shellRun(installCommand, cwd);
     writeInstallLog(logPath, installCommand, installResult);
@@ -93,7 +145,8 @@ function runLintSelfBootstrap(options = {}) {
     }
   }
 
-  if (!fs.existsSync(eslintPath)) {
+  missingRuntime = missingLocalLintRuntime(cwd, requiredPackages);
+  if (missingRuntime.length > 0) {
     return {
       exitCode: 1,
       installAttempted,
@@ -103,7 +156,7 @@ function runLintSelfBootstrap(options = {}) {
       lintCommand,
       logPath,
       stdout: '',
-      stderr: `Lint dependency setup failed: local eslint executable was not found after install. Log: ${logPath}`,
+      stderr: `Lint dependency setup failed: local lint runtime is incomplete after install (missing: ${missingRuntime.join(', ')}). Log: ${logPath}`,
     };
   }
 

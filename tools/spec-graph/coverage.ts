@@ -20,7 +20,7 @@
 // filtered `cucumber --tags X` run silently inflate `undefined` and read as "the
 // spec fell apart" (2026-06-08 incident). Separating them lets the verdict warn
 // "PARTIAL run — N scenarios not_run" instead of mislabelling them unverified.
-export type Bucket = 'passed' | 'pending' | 'undefined' | 'ambiguous' | 'failed' | 'skipped' | 'not_run';
+export type Bucket = 'passed' | 'stale' | 'pending' | 'undefined' | 'ambiguous' | 'failed' | 'skipped' | 'not_run';
 export type VerifiedStatus = 'DONE' | 'IN_PROGRESS' | 'unverified';
 /** Test-body quality verdict from the `strong-tests`/`spec-status` audit (FR-35a). */
 export type TestQualityVerdict = 'STRONG' | 'WEAK' | 'FAKE-POSITIVE-RISK';
@@ -41,11 +41,19 @@ export interface ScenarioLike {
   /** Gherkin tags, e.g. `@feature32`. */
   tags: string[];
   /** Last run result enum (PASSED/FAILED/UNDEFINED/…). ABSENT (`result == null`)
-   *  → the scenario was NOT in the last NDJSON → `not_run` bucket (NOT `undefined`,
+   *  → the scenario was NOT in the last NDJSON/overlay → `not_run` bucket (NOT `undefined`,
    *  which is reserved for a real UNDEFINED-steps result). */
   result?: string;
+  /** True when a PASSED overlay result is older than the scenario/step-def source. */
+  stale?: boolean;
   /** Owning spec slug (from `.specs/<slug>/`). Enables same-spec tag scoping. */
   spec?: string;
+  /** Effective evidence source (for example docker-bdd:full vs docker-bdd:filtered). */
+  source?: string;
+  /** Last result from canonical full-run NDJSON, before any newer overlay wins. */
+  canonicalResult?: string;
+  /** Timestamp of the canonical full-run result. */
+  canonicalRunAt?: string;
 }
 
 export interface TaskLike {
@@ -56,6 +64,8 @@ export interface TaskLike {
   refs: string[];
   /** Owning spec slug (from `.specs/<slug>/`). Enables same-spec tag scoping. */
   spec?: string;
+  /** Hand-set lifecycle status from TASKS.md, supplied when callers need truth-guard diagnostics. */
+  status?: 'todo' | 'ready' | 'in-progress' | 'done' | 'blocked';
 }
 
 /**
@@ -107,11 +117,18 @@ export function qualifySlice(
   }
 }
 
+export interface TaskTruthIssue {
+  code: 'TASK_DONE_UNVERIFIED' | 'TASK_DONE_CHECKLIST_OPEN' | 'TASK_DONE_FILTERED_ONLY';
+  taskId: string;
+  message: string;
+  scenarios: Array<{ id: string; bucket: Bucket | 'unverified'; source?: string }>;
+}
+
 export interface CoverageReport {
   /** Every scenario id grouped into exactly one bucket (conservation invariant). */
   buckets: Record<Bucket, string[]>;
   /** Per-task derived status + the scenarios it was derived from + the test-quality verdict applied (FR-35a). */
-  tasks: Record<string, { verified_status: VerifiedStatus; scenarios: string[]; test_quality?: TestQualityVerdict }>;
+  tasks: Record<string, { verified_status: VerifiedStatus; scenarios: string[]; test_quality?: TestQualityVerdict; truth_issues?: TaskTruthIssue[] }>;
   totals: { scenarios: number } & Record<Bucket, number>;
 }
 
@@ -134,6 +151,7 @@ export function scenarioKey(s: string): string | null {
 export function bucketScenarios(scenarios: ScenarioLike[]): Record<Bucket, string[]> {
   const out: Record<Bucket, string[]> = {
     passed: [],
+    stale: [],
     pending: [],
     not_run: [],
     undefined: [],
@@ -144,8 +162,11 @@ export function bucketScenarios(scenarios: ScenarioLike[]): Record<Bucket, strin
   for (const s of scenarios) {
     // ABSENT result → not_run (filtered/never-run); present enum → its bucket
     // (an unknown present enum still falls to `undefined`, the genuine "ran but
-    // unresolved" bucket).
-    const bucket: Bucket = s.result ? (RESULT_TO_BUCKET[s.result.toUpperCase()] ?? 'undefined') : 'not_run';
+    // unresolved" bucket). A stale pass is its own non-green bucket: it proves the
+    // scenario once passed but the test source changed after that pass.
+    const bucket: Bucket = s.result
+      ? (s.stale && s.result.toUpperCase() === 'PASSED' ? 'stale' : (RESULT_TO_BUCKET[s.result.toUpperCase()] ?? 'undefined'))
+      : 'not_run';
     out[bucket].push(s.id);
   }
   return out;
@@ -238,6 +259,53 @@ export function verifiedStatus(
  * `strong-tests`/`spec-status` audit; a WEAK/FAKE-POSITIVE-RISK verdict caps an
  * otherwise-green task below DONE. Absent → current PASS/FAIL behaviour (fail-open).
  */
+export function taskTruthIssues(
+  task: TaskLike,
+  scenarioIds: string[],
+  bucketById: Map<string, Bucket>,
+  scenarioById: Map<string, ScenarioLike>,
+  verified: VerifiedStatus,
+): TaskTruthIssue[] {
+  if (task.status !== 'done') return [];
+  const evidence = scenarioIds.map((id) => ({
+    id,
+    bucket: bucketById.get(id) ?? 'unverified' as Bucket | 'unverified',
+    source: scenarioById.get(id)?.source,
+  }));
+  const issues: TaskTruthIssue[] = [];
+  if (verified !== 'DONE') {
+    issues.push({
+      code: 'TASK_DONE_UNVERIFIED',
+      taskId: task.id,
+      message: scenarioIds.length > 0
+        ? `Status: DONE but mapped scenario evidence is not all canonical PASSED (${evidence.map((s) => `${s.id}=${s.bucket}`).join(', ')})`
+        : 'Status: DONE but no mapped scenario evidence exists',
+      scenarios: evidence,
+    });
+  }
+  if (/^\s*-\s*\[\s\]/m.test(task.doneWhen)) {
+    issues.push({
+      code: 'TASK_DONE_CHECKLIST_OPEN',
+      taskId: task.id,
+      message: 'Status: DONE but Done When contains unchecked checkbox item(s)',
+      scenarios: evidence,
+    });
+  }
+  const filteredOnly = scenarioIds.length > 0 && scenarioIds.every((id) => {
+    const scenario = scenarioById.get(id);
+    return bucketById.get(id) === 'passed' && scenario?.source?.includes('filtered') && scenario.canonicalResult?.toUpperCase() !== 'PASSED';
+  });
+  if (filteredOnly) {
+    issues.push({
+      code: 'TASK_DONE_FILTERED_ONLY',
+      taskId: task.id,
+      message: 'Status: DONE is backed only by filtered-run evidence; canonical full-run proof is required for DONE truth',
+      scenarios: evidence,
+    });
+  }
+  return issues;
+}
+
 export function computeCoverage(
   tasks: TaskLike[],
   scenarios: ScenarioLike[],
@@ -246,15 +314,21 @@ export function computeCoverage(
   const buckets = bucketScenarios(scenarios);
   const bucketById = new Map<string, Bucket>();
   for (const b of Object.keys(buckets) as Bucket[]) for (const id of buckets[b]) bucketById.set(id, b);
+  const scenarioById = new Map(scenarios.map((s) => [s.id, s]));
 
   const taskMap = mapTasksToScenarios(tasks, scenarios);
+  const taskById = new Map(tasks.map((t) => [t.id, t]));
   const tasksOut: CoverageReport['tasks'] = {};
   for (const [taskId, scenarioIds] of taskMap) {
     const verdict = testQualityByTask[taskId];
+    const verified = verifiedStatus(scenarioIds, bucketById, verdict);
+    const task = taskById.get(taskId);
+    const issues = task ? taskTruthIssues(task, scenarioIds, bucketById, scenarioById, verified) : [];
     tasksOut[taskId] = {
-      verified_status: verifiedStatus(scenarioIds, bucketById, verdict),
+      verified_status: issues.length > 0 ? 'IN_PROGRESS' : verified,
       scenarios: scenarioIds,
       ...(verdict ? { test_quality: verdict } : {}),
+      ...(issues.length > 0 ? { truth_issues: issues } : {}),
     };
   }
 

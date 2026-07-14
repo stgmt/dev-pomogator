@@ -21,13 +21,14 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
-import type { SpecGraph, TaskNode, Node } from '../spec-graph/types.ts';
+import type { SpecGraph, TaskNode, Node, ScenarioNode } from '../spec-graph/types.ts';
 import {
   isLegalTransition,
   canEnterWorkingStatus,
   WORKING_STATUSES,
   type TaskStatus,
 } from '../spec-graph/task-lifecycle.ts';
+import { computeCoverage, specOf, type ScenarioLike, type TaskLike } from '../spec-graph/coverage.ts';
 import { computeFrCensus } from '../spec-graph/fr-census.ts';
 import { parsePhaseId, canConfirmPhaseStop, isLegalPhaseTransition } from '../spec-graph/phase-lifecycle.ts';
 import { validateSpecChange, writeDocAtomic, casCheck } from './mutations.ts';
@@ -57,7 +58,7 @@ export interface SetStatusResult {
   /** FR-48e: on STATUS_DERIVED for an FR, the live `fr-census` verdict — the computed status the caller tried to hand-set. */
   verdict?: string;
   /** Machine-readable refusal class for the tool wrapper. */
-  error?: 'BAD_INPUT' | 'NOT_FOUND' | 'ILLEGAL_TRANSITION' | 'CHAIN_NOT_ASSEMBLED' | 'CAS_MISMATCH' | 'DOOR_REFUSED' | 'STATUS_DERIVED' | 'WAIVED';
+  error?: 'BAD_INPUT' | 'NOT_FOUND' | 'ILLEGAL_TRANSITION' | 'CHAIN_NOT_ASSEMBLED' | 'DONE_TRUTH_UNVERIFIED' | 'CAS_MISMATCH' | 'DOOR_REFUSED' | 'STATUS_DERIVED' | 'WAIVED';
 }
 
 /**
@@ -113,6 +114,24 @@ function findWaivedBlock(repoRoot: string, id: string, spec?: string): string | 
  * the one door, and content never carries a fake stored status (FR-48a
  * single-source — «вердикт не хранится, выводится»).
  */
+function doneTruthIssues(graph: SpecGraph, task: TaskNode): string[] {
+  const scenarios: ScenarioLike[] = [];
+  const tasks: TaskLike[] = [{
+    id: task.id,
+    doneWhen: task.doneWhen ?? '',
+    refs: task.refs,
+    spec: specOf(task.file),
+    status: 'done',
+  }];
+  for (const node of graph.nodes.values()) {
+    if (node.type !== 'Scenario') continue;
+    const s = node as ScenarioNode;
+    scenarios.push({ id: s.id, tags: s.tags, result: s.lastResult, stale: s.resultStale, spec: specOf(s.file), source: s.trace?.source, canonicalResult: s.canonicalResult, canonicalRunAt: s.canonicalRunAt });
+  }
+  const entry = computeCoverage(tasks, scenarios).tasks[task.id];
+  return (entry?.truth_issues ?? []).map((issue) => issue.message);
+}
+
 function refuseDerived(graph: SpecGraph, node: Node, frsWithoutResearch?: Set<string>): SetStatusResult {
   if (node.type === 'FR') {
     const report = computeFrCensus(graph, { spec: node.spec, frsWithoutResearch });
@@ -288,6 +307,22 @@ export function setEntityStatus(
         to: args.to,
         reason: `requirement chain not assembled — missing ${gate.missing.join(', ')}. Author the legs, or mark the task [spec-phase] if it authors them.`,
         missing: gate.missing,
+      };
+    }
+  }
+
+  // FR-61c: closing a task needs evidence-derived truth, not just a checkbox/status token.
+  // DONE is refused when mapped scenarios are not all canonical PASSED, when evidence is
+  // only filtered-run proof, or when Done When still has unchecked items.
+  if (args.to === 'done') {
+    const issues = doneTruthIssues(graph, task);
+    if (issues.length > 0) {
+      return {
+        ok: false,
+        error: 'DONE_TRUTH_UNVERIFIED',
+        from,
+        to: args.to,
+        reason: `cannot mark ${task.id} DONE: ${issues.join('; ')}`,
       };
     }
   }

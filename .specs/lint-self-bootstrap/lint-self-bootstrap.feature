@@ -1,8 +1,8 @@
 Feature: LINTBOOT Lint self-bootstrap
 
   Dev-pomogator requires lint verification after code edits. The lint path must not fail
-  because eslint is absent from a fresh checkout; it should either prepare the local
-  dependency or report an actionable setup failure.
+  because eslint or the packages imported by eslint.config.mjs are absent from a fresh checkout;
+  it should either prepare the complete local runtime or report an actionable setup failure.
 
   @FR-1 @feature1
   Scenario: LINTBOOT001 fresh checkout prepares the local lint runner
@@ -38,3 +38,10 @@ Feature: LINTBOOT Lint self-bootstrap
     When lint dependency declarations are inspected
     Then eslint is declared in package metadata
     And eslint is present in the lockfile
+
+  @FR-1 @FR-2 @FR-5 @feature1 @feature2 @feature5
+  Scenario: LINTBOOT006 incomplete local lint runtime is repaired
+    Given a lint fixture package with eslint executable but missing config packages
+    When the lint self-bootstrap verification runs
+    Then the missing lint runtime packages are prepared before lint execution
+    And the result is not a missing ESLint config dependency failure

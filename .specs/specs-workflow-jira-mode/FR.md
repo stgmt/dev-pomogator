@@ -56,9 +56,13 @@ WARNING for the .feature file, with a message mentioning "Jira trace".
 
 ## FR-7: Jira-mode template files are distributed with the spec-generator @feature106
 
-The following files SHALL exist under `tools/specs-generator/templates/`:
+The Jira-mode markdown templates SHALL exist under `.claude/skills/create-spec/references/templates/` so the canonical plugin ships them with the create-spec skill:
 - `JIRA_SOURCE.md.template`
 - `ATTACHMENTS.md.template`
+
+The Jira cache schema SHALL remain under `tools/specs-generator/templates/`:
 - `JIRA_CACHE.schema.json`
+
+The canonical plugin manifest SHALL export the `.claude/skills` directory via its `skills` field so those templates are distributed without a legacy `extensions/specs-workflow/extension.json` manifest.
 
 **Related AC:** [AC-7](ACCEPTANCE_CRITERIA.md#ac-7-fr-7)

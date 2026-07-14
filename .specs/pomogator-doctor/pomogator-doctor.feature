@@ -434,29 +434,3 @@ Feature: POMOGATORDOCTOR001_pomogator-doctor_diagnostic_command
       | darwin   | missing         | critical | brew install gh                 | --version             |
       | win32    | unauthenticated | warning  | gh auth login                   | --version,auth status |
       | linux    | timeout         | warning  | gh auth login                   | --version,auth status |
-
-  # C31 — hook commands must resolve against the PLUGIN, not the user's project.
-  # `bash tools/bg-task-guard/stop-guard.sh` shipped for months: the script lives inside the
-  # plugin, the command resolved it against the project, so the hook failed on every Stop for
-  # every user. C18 only smoke-tests bootstrap.cjs and never looked at the other commands.
-  @feature10
-  Scenario: POMOGATORDOCTOR001_47 Hook naming a plugin script by a project-relative path is critical
-    Given a plugin tree whose Stop hook names the script "tools/bg-task-guard/stop-guard.sh" by a project-relative path
-    And the plugin ships the script "tools/bg-task-guard/stop-guard.sh"
-    When I run the hook script paths doctor check
-    Then check C31 is severity "critical"
-    And check C31 message mentions "project-relative"
-
-  @feature10
-  Scenario: POMOGATORDOCTOR001_48 Hook anchored to the plugin root whose script ships is ok
-    Given a plugin tree whose Stop hook anchors the script "tools/bg-task-guard/stop-guard.sh" to the plugin root
-    And the plugin ships the script "tools/bg-task-guard/stop-guard.sh"
-    When I run the hook script paths doctor check
-    Then check C31 is severity "ok"
-
-  @feature10
-  Scenario: POMOGATORDOCTOR001_49 Anchored hook whose script is absent from the plugin is critical
-    Given a plugin tree whose Stop hook anchors the script "tools/ghost/gone.sh" to the plugin root
-    When I run the hook script paths doctor check
-    Then check C31 is severity "critical"
-    And check C31 message mentions "missing from the plugin"

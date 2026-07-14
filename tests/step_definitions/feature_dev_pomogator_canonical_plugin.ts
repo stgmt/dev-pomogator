@@ -886,14 +886,13 @@ Then(/^stdout should contain "\/reload-plugins"$/, function (this: V4World) {
 Given(
   /^dev-pomogator v2 source repository \(no extensions\/ or extension\.json — deleted\)$/,
   function (this: V4World) {
-    // The prose says "no extensions/" to describe the v2 distribution model
-    // (canonical plugin, not the old extensions/ layout). The folder may still
-    // exist as legacy tooling — the real assertion is on the plugin.json layout.
-    // Verify we have the canonical .claude-plugin/ structure:
+    // FR-1/FR-8: the v2 repo must not keep a legacy `extensions/` plugin tree.
+    // The canonical distribution lives under .claude-plugin/ + top-level tools/.
     assert.ok(
       fs.existsSync(appPath('.claude-plugin', 'plugin.json')),
       '.claude-plugin/plugin.json not found — this is not a v2 repo',
     );
+    assert.equal(fs.existsSync(appPath('extensions')), false, 'legacy extensions/ tree must be deleted');
   },
 );
 

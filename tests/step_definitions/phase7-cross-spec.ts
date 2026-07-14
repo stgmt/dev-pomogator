@@ -18,7 +18,7 @@ import {
   type ReconcileResult,
 } from '../../.claude/skills/cross-spec-reconcile/scripts/reconcile.ts';
 import { writeReport, emitYaml } from '../../.claude/skills/cross-spec-reconcile/scripts/yaml-writer.ts';
-import { writeSarif } from '../../.claude/skills/cross-spec-reconcile/scripts/sarif.ts';
+import { reconcileCli } from '../../.claude/skills/cross-spec-reconcile/scripts/reconcile-cli.ts';
 import { appendOverride, readOverrides } from '../../.claude/skills/cross-spec-reconcile/scripts/overrides-log.ts';
 import {
   planResolution,
@@ -37,6 +37,7 @@ interface CrossSpecWorld extends V4World {
   summaryYaml?: string;
   yamlWritten?: string;
   sarifWritten?: string;
+  sarifCliResult?: Awaited<ReturnType<typeof reconcileCli>>;
   dryRun?: boolean;
   overrideReason?: string;
   resolveSlug?: string;
@@ -326,9 +327,14 @@ Given(
   },
 );
 
-When(/^the skill completes$/, function (this: CrossSpecWorld) {
-  this.reconcileReports = reconcileLight({ repoRoot: this.tempDir, slugs: ['spec-a'] });
-  this.sarifWritten = writeSarif(this.tempDir, this.reconcileReports[0]);
+When(/^the skill completes$/, async function (this: CrossSpecWorld) {
+  this.sarifCliResult = await reconcileCli(
+    { mode: 'light', dryRun: false, sarif: true, slugs: ['spec-a'] },
+    this.tempDir,
+  );
+  assert.equal(this.sarifCliResult.exitCode, 0);
+  this.sarifWritten = this.sarifCliResult.sarifPaths[0];
+  this.yamlWritten = this.sarifCliResult.reportPaths[0];
 });
 
 Then(
@@ -344,11 +350,12 @@ Then(
 Then(
   /^`\.specs\/\{slug\}\/consistency-report\.sarif` exists alongside `consistency-report\.yaml`$/,
   function (this: CrossSpecWorld) {
-    // Both writes happen here so the scenario can express the contract
-    // declaratively. YAML wasn't written by the prior Then (SARIF-only
-    // path); write it now so the assertion is meaningful.
-    if (this.reconcileReports?.[0]) writeReport(this.tempDir, this.reconcileReports[0]);
+    assert.ok(this.sarifCliResult, 'the real reconcileCli run must complete before artifact assertions');
+    assert.equal(this.sarifCliResult.sarifPaths.length, 1);
+    assert.equal(this.sarifCliResult.reportPaths.length, 1);
     const dir = path.join(this.tempDir, '.specs/spec-a');
+    assert.equal(this.sarifCliResult.sarifPaths[0], path.join(dir, 'consistency-report.sarif'));
+    assert.equal(this.sarifCliResult.reportPaths[0], path.join(dir, 'consistency-report.yaml'));
     assert.ok(fs.existsSync(path.join(dir, 'consistency-report.sarif')));
     assert.ok(fs.existsSync(path.join(dir, 'consistency-report.yaml')));
   },
@@ -367,11 +374,30 @@ When(/^the consistency-report YAML is emitted for that spec$/, function (this: C
 });
 
 Then(/^the YAML carries a summary block with by_severity by_class by_namespace totals and top_3_recommendations$/, function (this: CrossSpecWorld) {
+  const report = this.reconcileReports?.[0];
+  assert.ok(report, 'reconcileLight must produce a real report before YAML assertions');
+  const missingFile = report.findings.find((finding) => finding.code === 'impl-drift/missing-file');
+  assert.ok(missingFile, 'the real reconcile engine must produce the missing-file finding');
+  assert.equal(missingFile.class, 'uncovered');
+  assert.equal(missingFile.severity, 'WARNING');
+  assert.equal(missingFile.expected_path, 'src/missing-xyz.ts');
+  assert.equal(missingFile.suggested_fix, 'Add the implementation, OR mark the FR as OUT_OF_SCOPE, OR remove the reference.');
+
   const y = this.summaryYaml!;
-  assert.ok(y.includes('summary:'), 'summary block must be present');
-  for (const k of ['by_severity:', 'by_class', 'by_namespace', 'totals:', 'top_3_recommendations']) {
-    assert.ok(y.includes(k), `summary must include ${k}`);
-  }
+  assert.match(y, /^summary:$/m, 'summary block must be present');
+  assert.match(y, /^  by_severity:$/m, 'summary.by_severity must be present');
+  assert.match(y, /^    WARNING: 3$/m, 'missing-file plus structural warnings must be counted');
+  assert.match(y, /^  by_class:$/m, 'summary.by_class must be present');
+  assert.match(y, /^    uncovered: 1$/m, 'the missing-file finding must count as uncovered');
+  assert.match(y, /^  by_namespace:$/m, 'summary.by_namespace must be present');
+  assert.match(y, /^    impl-drift: 1$/m, 'the impl-drift namespace must be counted exactly once');
+  assert.match(y, /^  totals:$/m, 'summary.totals must be present');
+  assert.match(y, /^  top_3_recommendations:$/m, 'summary.top_3_recommendations must be present');
+  assert.match(y, /^    - code: impl-drift\/missing-file$/m, 'top recommendation must name the finding code');
+  assert.match(y, /^recommendations:$/m, 'top-level recommendations must be present');
+  assert.match(y, /^  - priority: P1$/m, 'the WARNING recommendation must be P1');
+  assert.match(y, /^    action: "Add the implementation, OR mark the FR as OUT_OF_SCOPE, OR remove the reference\."$/m, 'the recommendation action must come from the real finding');
+  assert.match(y, /^    impact: impl-drift\/missing-file in spec-a$/m, 'the recommendation impact must identify the spec and code');
 });
 
 Then(/^the summary totals include specs_compared and impl_paths_checked as integers$/, function (this: CrossSpecWorld) {

@@ -41,6 +41,7 @@ import type { SpecGraph, TaskNode, ScenarioNode } from './types.ts';
 import {
   mapTasksToScenarios,
   bucketScenarios,
+  computeCoverage,
   specOf,
   type Bucket,
   type ScenarioLike,
@@ -87,14 +88,15 @@ export function computeTaskCensus(
     const nodeSpec = specOf((node as { file: string }).file);
     if (node.type === 'Scenario') {
       const s = node as ScenarioNode;
-      scenarios.push({ id: s.id, tags: s.tags, result: s.lastResult, stale: s.resultStale, spec: nodeSpec });
+      scenarios.push({ id: s.id, tags: s.tags, result: s.lastResult, stale: s.resultStale, spec: nodeSpec, source: s.trace?.source, canonicalResult: s.canonicalResult, canonicalRunAt: s.canonicalRunAt });
     } else if (node.type === 'Task') {
       const t = node as TaskNode;
-      tasks.push({ id: t.id, doneWhen: t.doneWhen ?? '', refs: t.refs, spec: nodeSpec });
+      tasks.push({ id: t.id, doneWhen: t.doneWhen ?? '', refs: t.refs, spec: nodeSpec, status: t.status });
       taskEntries.push({ node: t, slug: nodeSpec ?? '(no-spec)' });
     }
   }
   const map = mapTasksToScenarios(tasks, scenarios);
+  const coverage = computeCoverage(tasks, scenarios);
   const buckets = bucketScenarios(scenarios);
   const bucketById = new Map<string, Bucket>();
   for (const b of Object.keys(buckets) as Bucket[]) for (const id of buckets[b]) bucketById.set(id, b);
@@ -121,8 +123,9 @@ export function computeTaskCensus(
       const hasRed = sids.some((id) => HARD_NEGATIVE.has(bucketById.get(id) ?? 'not_run'));
       const allPassed = sids.length > 0 && sids.every((id) => bucketById.get(id) === 'passed');
       const hasUnconfirmed = sids.some((id) => UNCONFIRMED.has(bucketById.get(id) ?? 'not_run'));
+      const hasTruthIssue = (coverage.tasks[t.id]?.truth_issues?.length ?? 0) > 0;
       if (hasRed) row(slug).doneRed++;
-      else if (!allPassed || hasUnconfirmed) row(slug).doneUnrun++; // stale/not_run/no scenario → can't confirm
+      else if (!allPassed || hasUnconfirmed || hasTruthIssue) row(slug).doneUnrun++; // stale/not_run/no scenario/open checklist → can't confirm
       // allPassed and fresh → genuinely confirmed → not surfaced
     }
   }
@@ -164,10 +167,10 @@ export function findStaleInProgress(graph: SpecGraph): StaleMarker[] {
     const nodeSpec = specOf((node as { file: string }).file);
     if (node.type === 'Scenario') {
       const s = node as ScenarioNode;
-      scenarios.push({ id: s.id, tags: s.tags, result: s.lastResult, stale: s.resultStale, spec: nodeSpec });
+      scenarios.push({ id: s.id, tags: s.tags, result: s.lastResult, stale: s.resultStale, spec: nodeSpec, source: s.trace?.source, canonicalResult: s.canonicalResult, canonicalRunAt: s.canonicalRunAt });
     } else if (node.type === 'Task') {
       const t = node as TaskNode;
-      tasks.push({ id: t.id, doneWhen: t.doneWhen ?? '', refs: t.refs, spec: nodeSpec });
+      tasks.push({ id: t.id, doneWhen: t.doneWhen ?? '', refs: t.refs, spec: nodeSpec, status: t.status });
       taskEntries.push({ node: t, slug: nodeSpec ?? '(no-spec)' });
     }
   }

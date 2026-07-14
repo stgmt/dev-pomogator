@@ -828,3 +828,45 @@ As a maintainer editing specs in a noisy corpus, I want the conformance push to 
 Given thousands of conformance findings are waiting in the PostToolUse push window
 When the window flushes
 Then Claude receives a bounded reminder with counts and an omitted count, while the full journal remains complete
+
+---
+
+### User Story 38: Scenario overlay rows lead back to failure evidence (Priority: P1)
+**Требование:** [FR-56](FR.md#fr-56)
+
+As a maintainer reviewing BDD coverage after a filtered or parallel run, I want each updated scenario result to point back to the archived runtime chunk and scenario start id, so that I can inspect the failing step and error without replacing the canonical full-suite result or grepping raw logs.
+
+**Why:** The overlay is the freshness trail for individual scenario runs; without a runtime pointer it can say "failed" but not "where". Keeping the details in the archived Cucumber messages makes the prompt-time overlay small while preserving the debugging trail.
+
+**Independent Test:** Run the overlay writer against Cucumber message NDJSON with a failing scenario, then assert the overlay row carries `trace_id`/`trace_file`/`test_case_started_id` and `get_scenario_trace(scenario_id)` reconstructs the failing step; delete the chunk and assert the tool returns an expired-trace rerun hint instead of throwing.
+
+**Acceptance Scenarios:**
+
+Given a filtered BDD run writes one scenario overlay row with a trace pointer
+When the maintainer asks for that scenario trace
+Then the trace tool returns the run metadata and failing step from the archived runtime chunk
+
+---
+
+### User Story 24: One honest readiness surface for spec health (Priority: P1)
+**Требование:** [FR-61](FR.md#fr-61)
+
+As a maintainer dogfooding the spec-generator workflow, I want verdict, MCP status, coverage, task board truth, BDD sync, and filtered-run proof to collapse into one honest readiness answer, so that I do not have to reconcile `Status: DONE`, `VERDICT: GREEN`, `TESTS_NOT_RUN`, and filtered Docker evidence by hand.
+
+**Why:** The CARL dogfood incident showed that all raw facts existed, but they were split across surfaces with inconsistent labels: tasks said DONE, canonical coverage said not_run, verdict said GREEN, status used `UNCOVERED_FR` for execution absence, and a filtered Docker run passed without becoming canonical coverage. One product-readable readiness contract prevents false confidence.
+
+**Independent Test:** Build a fixture spec with structural traceability pass, unrun scenarios, DONE-but-unverified tasks, source/executable scenario drift, and a passing filtered Docker artifact; run `spec-verdict` plus `get_spec_status` and assert the result is multi-lane `OVERALL: NOT_READY`, names the exact debt, exposes `FILTERED_PROOF`, and returns a concrete next action.
+
+**Acceptance Scenarios:**
+
+Given a spec has traceability edges but no canonical passed run
+When the maintainer asks for spec health
+Then the readiness surface says execution is not verified and does not label the spec plain GREEN
+
+Given a task is textually DONE but its mapped scenario is not canonical PASSED or its Done When list is incomplete
+When the task is surfaced through status or verdict
+Then the task is shown as evidence-IN_PROGRESS / DONE-but-unverified with the missing evidence named
+
+Given a filtered Docker BDD artifact passes selected scenarios
+When the readiness surface reports coverage
+Then it shows the filtered proof separately from canonical coverage and gives the next action to attach proof or run the full suite

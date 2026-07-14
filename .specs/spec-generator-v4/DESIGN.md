@@ -1261,6 +1261,18 @@ Then a finding is emitted (not silent)
 - Batch auto-fix all findings — rejected: silent wrong edits with no review surface.
 - Read-only report with no resolve path — rejected: leaves the user to hand-apply every fix.
 
+## Decision: FR-56 scenario overlay trace keeps compact result rows linked to archived Cucumber chunks
+**Требование:** [FR-56](FR.md#fr-56)
+
+**Rationale:** FR-56 keeps the durable full-run snapshot intact but adds an append-only per-scenario overlay, so every filtered or explicit-config BDD run can refresh one scenario without clobbering canonical coverage. A compact overlay row is intentionally small (`scenario_id`, result, time, run/source, trace pointer); the detailed failure evidence stays in the archived Cucumber message chunk and is fetched only on demand through the graph/MCP trace path. This preserves fast prompt-time coverage checks while still letting an agent answer "where did this scenario fail?" without grepping raw logs.
+
+**Trade-off:** The overlay reader must tolerate missing/expired trace chunks because history rotation may delete old run files. FR-56 chooses soft degradation in `get_scenario_trace` over pinning every chunk forever: current coverage remains readable, and the trace tool tells the user to rerun when the runtime chunk has expired.
+
+**Alternatives considered:**
+- Make filtered runs overwrite `.last-test-run.ndjson` — rejected: a partial run would erase full-suite truth for unrelated scenarios.
+- Store full failure payloads in `.scenario-results.ndjson` — rejected: the prompt-time overlay scan would grow with logs and stack traces.
+- Fail hard when a trace chunk is missing — rejected: stale runtime history should not break coverage/status; it should request a rerun.
+
 ## Decision: FR-59 caps only the Claude-facing reminder, not the durable log
 **Требование:** [FR-59](FR.md#fr-59)
 
@@ -1270,3 +1282,13 @@ Then a finding is emitted (not silent)
 - Stop writing the conformance findings entirely — rejected: destroys auditability and violates FR-15's durable record.
 - Rely on Claude Code's persisted-output preview — rejected: the transcript still stores raw hook stdout, which was the observed bloat.
 - Cap by line count only — rejected: one very long finding message can still exceed the byte budget.
+
+## Decision: Readiness is a lane-based product contract, not a single structural GREEN
+**Требование:** [FR-61](FR.md#fr-61)
+
+**Rationale:** The CARL dogfood incident proved that the graph already held enough facts, but different surfaces named them differently: `TASKS.md` said DONE, canonical coverage said `not_run`, `spec-verdict` printed plain GREEN, `get_spec_status` used traceability-looking `UNCOVERED_FR` language for execution absence, and a filtered Docker run passed without changing canonical coverage. FR-61 composes those facts into lanes (`STRUCTURE`, `TRACEABILITY`, `EXECUTION`, `TASK_TRUTH`, `BDD_SYNC`, `SEMANTIC`, `FILTERED_PROOF`) and reserves the final readiness label for the AND of all blocking lanes. The old structural/audit success remains visible, but it can no longer launder execution or task-truth debt into a product-readable GREEN.
+**Trade-off:** Users will see more explicit debt even when the structural graph is clean. That is intentional: it separates "the spec is well-formed" from "the work is ready" and makes the next action mechanical.
+**Alternatives considered:**
+- Keep `VERDICT: GREEN` and rely on warning text — rejected: real sessions read the final label as readiness and missed `DONE-but-unverified` debt.
+- Make filtered Docker runs update canonical coverage — rejected: filtered runs are clobber-safe proof, not a full-suite replacement.
+- Put the fix only in `TASKS.md` guards — rejected: task truth, BDD sync, filtered evidence, and status vocabulary must agree across MCP/status/verdict/census.

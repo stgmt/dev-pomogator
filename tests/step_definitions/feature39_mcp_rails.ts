@@ -78,6 +78,8 @@ import { runSpecVerdict } from '../../tools/specs-generator/spec-verdict.ts';
 interface F40World extends F39World {
   applyDenied?: { ok: boolean; error?: string; findings?: Array<{ layer: string; message: string }> };
   appliedOk?: { ok: boolean; bytes?: number };
+  deltaAccepted?: { ok: boolean; error?: string; findings?: Array<{ layer: string; message: string }> };
+  deltaRejected?: { ok: boolean; error?: string; findings?: Array<{ layer: string; message: string }> };
   freshBody?: string;
   newbornVerdict?: { verdict: string; gapList: string[] };
 }
@@ -149,6 +151,46 @@ Then('the corrected change is written atomically and logged', async function (th
   const log = fs.readFileSync(path.join(this.tempDir, '.dev-pomogator', 'logs', 'spec-access.jsonl'), 'utf-8');
   assert.ok(/apply_spec_change.*denied/.test(log), 'the refusal is audited');
   assert.ok(/apply_spec_change.*"ok"/.test(log), 'the accepted write is audited');
+});
+
+// _114 delta branch — accepted legacy debt must not wedge the mutation door
+
+Given('an existing spec with staged FR-47 and task-truth debt', function (this: F40World) {
+  const dir = path.join(this.tempDir, '.specs', 'delta-conformance-demo');
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, 'FR.md'), '## FR-1: Thing @feature1\n\nDoes a thing.\n');
+  fs.writeFileSync(
+    path.join(dir, 'TASKS.md'),
+    '## Phase 1\n\n- [x] Task — id: t1 — Status: DONE | Est: 30m\n  _Requirements: FR-1_\n  **Done When:**\n  - [ ] evidence\n',
+  );
+});
+
+When('the agent applies an unrelated clean edit and then introduces a new unlinked FR', async function (this: F40World) {
+  this.deltaAccepted = await inCorpus(this, () =>
+    callTool(this, 'apply_spec_change', {
+      spec: 'delta-conformance-demo',
+      doc: 'FR.md',
+      content: '## FR-1: Thing @feature1\n\nDoes a renamed thing.\n',
+      reason: 'pre-existing debt delta probe',
+    }),
+  );
+  this.deltaRejected = await inCorpus(this, () =>
+    callTool(this, 'apply_spec_change', {
+      spec: 'delta-conformance-demo',
+      doc: 'FR.md',
+      content: '## FR-1: Thing @feature1\n\nDoes a renamed thing.\n\n## FR-2: New trace leg @feature2\n\nNeeds design and story links.\n',
+      reason: 'new warning delta probe',
+    }),
+  );
+});
+
+Then('pre-existing debt is ignored but the newly introduced conformance debt is refused', function (this: F40World) {
+  assert.equal(this.deltaAccepted!.ok, true, JSON.stringify(this.deltaAccepted));
+  assert.deepEqual(this.deltaAccepted!.findings ?? [], [], 'an unrelated clean edit must carry no inherited findings');
+  assert.equal(this.deltaRejected!.ok, false, 'a newly introduced unlinked FR must be refused');
+  const messages = (this.deltaRejected!.findings ?? []).map((finding) => finding.message);
+  assert.ok(messages.some((message) => message.startsWith('FR_NO_DESIGN:')), messages.join(' | '));
+  assert.ok(messages.some((message) => message.startsWith('FR_NO_STORY:')), messages.join(' | '));
 });
 
 // _115 — a successful write refreshes the graph for the next read

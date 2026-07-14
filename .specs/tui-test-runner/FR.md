@@ -58,7 +58,7 @@ Python TUI читает canonical YAML v2 status file через polling с ин
 
 ## FR-9: TUI Launcher @feature6
 
-Node.js launcher определяет наличие Python, проверяет установку Textual, запускает TUI процесс. При отсутствии Python выводит понятное сообщение об ошибке и exit 0 (fail-open).
+TUI SHALL be a beta capability activated only by explicit user opt-in. Ordinary canonical install and update SHALL NOT detect or install Python, Textual, or PyYAML for TUI. After opt-in, the Node.js launcher SHALL detect Python 3.9+ without invoking a WindowsApps execution alias, verify Textual and PyYAML, and launch the TUI process. If enabled TUI lacks Python or packages, the launcher SHALL emit a targeted diagnostic and exit 0 (fail-open) without interrupting tests or the Claude session.
 
 **Связанные AC:** [AC-9](ACCEPTANCE_CRITERIA.md#ac-9-fr-9-tui-launcher-feature6)
 **Use Case:** [UC-1](USE_CASES.md#uc-1-запуск-tui-и-мониторинг-тестов-feature1)
@@ -130,6 +130,6 @@ Generic (passthrough) путь SHALL использовать тот же async-
 
 ## FR-19: Shim lifts tsx-runner ceiling @feature16
 
-Shim (`test_runner_wrapper.cjs`) SHALL передавать раннеру `TSX_RUNNER_TIMEOUT` не меньше собственного лимита обёртки + запас, чтобы дефолтный 180-секундный потолок tsx-runner не обрубал длинный прогон раньше graceful-таймаута обёртки. Код `tsx-runner.js` не меняется.
+Shim (`test_runner_wrapper.cjs`) SHALL запускать собранный автономный runner bundle без `tsx-runner`, `npx` и установленного `node_modules`. WHEN bundle запускается THEN shim SHALL передать ему аргументы без изменений и вернуть его ненулевой код; WHEN bundle отсутствует THEN shim SHALL выполнить прямую команду и fail-closed при ошибке запуска.
 
-**Связанные AC:** [AC-18](ACCEPTANCE_CRITERIA.md#ac-18-fr-19-shim-lifts-tsx-runner-ceiling-feature16) · сценарий WRAP001_06
+**Связанные AC:** [AC-18](ACCEPTANCE_CRITERIA.md#ac-18-fr-19-shim-lifts-tsx-runner-ceiling-feature16) · сценарии WRAP001_06, WRAP001_07

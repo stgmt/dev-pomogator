@@ -1060,6 +1060,26 @@ System SHALL keep the MCP spec door strict (validation before write, audit log, 
 
 **Evidence:** dogfood from the P32/root-isolation and canonical-plugin sessions: exact-match edits failed on multi-line `old_string` despite visible text, manual sha chaining was required across docs, `.dev-pomogator/.tmp` vs Docker image visibility forced evidence relocation, and future authoring needed FR/AC/TASKS/feature/FILE_CHANGES updates as one conceptual change. User-provided UX backlog explicitly called for append_section/insert_after_heading, CRLF-insensitive matching, propose_patch preview, batch transactions, add_task/amend_requirement tools, read_for_edit anchors, CAS auto-rebase, remediation errors, register_incident_backlog, dry-run conformance summaries, and feature/step-def safety.
 
-**Связанные AC:** AC-60.1..AC-60.4 (to be added in ACCEPTANCE_CRITERIA.md)
+**Связанные AC:** [AC-60.1](ACCEPTANCE_CRITERIA.md#ac-601), [AC-60.2](ACCEPTANCE_CRITERIA.md#ac-602), [AC-60.3](ACCEPTANCE_CRITERIA.md#ac-603), [AC-60.4](ACCEPTANCE_CRITERIA.md#ac-604)
 **Use Case:** UC-24 (MCP authoring UX)
+**User Story:** US-24
+
+---
+
+## FR-61
+
+**Unified readiness UX: one honest status contract across verdict, MCP status, task truth, BDD sync, and filtered evidence**
+
+System SHALL replace the current split-brain spec health experience with a single readiness contract. The dogfood incident is concrete: CARL `TASKS.md` could say `Status: DONE` for all tasks while canonical coverage said `passed:0 / not_run:12`; `spec-verdict` still printed plain `VERDICT: GREEN`; `get_spec_status(view="status")` surfaced `UNCOVERED_FR` in a way that disagreed with `spec-verdict` traceability; the focused Docker BDD proof passed but stayed invisible to canonical MCP coverage because it was filtered; and executable BDD scenarios drifted beyond the source `.specs/<slug>/<slug>.feature`. The system SHALL keep the strict safety properties of FR-32/37/38/46/49/60, but SHALL present them as one product-readable truth.
+
+- **FR-61a (multi-lane verdict, no plain green laundering):** `spec-verdict` SHALL emit separate lanes for `STRUCTURE`, `TRACEABILITY`, `EXECUTION`, `TASK_TRUTH`, `BDD_SYNC`, and `SEMANTIC`; a final `OVERALL` SHALL be `NOT_READY` when any lane contains blocking or honesty debt (`not_run`, failed/undefined/ambiguous scenarios, `DONE-but-unverified`, unchecked `Done When`, source/executable BDD drift, or skipped semantic check when semantic is required). Plain `VERDICT: GREEN` SHALL be reserved for the state where every readiness lane is green, not merely structural/audit/traceability pass.
+- **FR-61b (aligned status gap semantics):** `get_spec_status(view="status")`, `get_spec_status(view="coverage")`, `conformance_check`, and `spec-verdict` SHALL use the same traceability gap vocabulary. Execution-derived absence SHALL be named separately (for example `FR_NOT_EXECUTION_VERIFIED` / `SCENARIO_NOT_RUN`), and SHALL NOT be reported as `UNCOVERED_FR` if the FR has traceability edges but lacks a canonical passed run.
+- **FR-61c (task DONE truth guard):** textual `Status: DONE` in `TASKS.md` SHALL be denied or auto-downgraded to evidence-derived `IN_PROGRESS` when the task's mapped scenarios are not all canonical PASSED, when its own scenario requirement from FR-46 is missing/not passed, or when any `Done When` checkbox remains unchecked. The denial/downgrade SHALL be visible through `set_entity_status`, `apply_spec_change`, `spec-verdict`, and the prompt-time census.
+- **FR-61d (source/executable BDD sync):** the graph SHALL compare source spec features (`.specs/<slug>/<slug>.feature`) with executable Cucumber features (`tests/features/**/<slug>*.feature` and configured paths). Every executable scenario id SHALL have a source scenario or explicit `[EXEC_ONLY]` / `[OUT_OF_SCOPE]` marker; every source scenario SHALL have an executable counterpart or explicit pending marker; FR tags and scenario count claims SHALL be checked for drift.
+- **FR-61e (filtered-run evidence lane):** filtered Docker BDD runs SHALL remain clobber-safe and SHALL NOT update canonical `.last-test-run.ndjson`, but MCP/status/verdict SHALL surface them as `FILTERED_PROOF` evidence: artifact path, selected scenario ids, pass/fail summary, timestamp/source, and a clear note that canonical coverage remains unchanged until a full run lands or an explicit filtered-artifact attachment is accepted.
+- **FR-61f (actionable next step):** when readiness is not green, the status/verdict surface SHALL return one concrete next action (for example: run full Docker BDD, attach a filtered artifact as review evidence, fix BDD sync drift, or reopen/downgrade DONE tasks), so users are not left reconciling multiple contradictory surfaces by hand.
+
+**Evidence:** `audit-reports/specgen-v4-mcp-ux-session-2026-07-09.md` records the dogfood analysis and live CARL examples.
+**Связанные AC:** [AC-61.1](ACCEPTANCE_CRITERIA.md#ac-611), [AC-61.2](ACCEPTANCE_CRITERIA.md#ac-612), [AC-61.3](ACCEPTANCE_CRITERIA.md#ac-613), [AC-61.4](ACCEPTANCE_CRITERIA.md#ac-614), [AC-61.5](ACCEPTANCE_CRITERIA.md#ac-615)
+**Use Case:** UC-24 (MCP authoring/status UX)
 **User Story:** US-24

@@ -2,7 +2,7 @@
 
 ## FR-1: Provide the lint runner required by the project
 
-Dev-pomogator SHALL declare the lint runner used by `npm run lint` in project package metadata so a fresh checkout can install it locally and execute the configured lint script without depending on a global eslint installation.
+Dev-pomogator SHALL declare and self-provision the complete local lint runtime used by `npm run lint` — `eslint` plus the packages imported by `eslint.config.mjs` — so a fresh checkout can run the configured lint script without a manual `npm install` step or a global eslint installation.
 
 **Связанные AC:** [AC-1](ACCEPTANCE_CRITERIA.md#ac-1-fr-1)
 **Use Case:** [UC-1](USE_CASES.md)

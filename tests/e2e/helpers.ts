@@ -1460,26 +1460,6 @@ export async function setupCleanState(platform: 'claude' = 'claude'): Promise<vo
 }
 
 /**
- * Set up an "installed" state by running the real installer.
- *
- * Returns a StateSnapshot that can be used for before/after comparison.
- */
-export async function setupInstalledState(platform: 'claude'): Promise<StateSnapshot> {
-  // Start from a clean state
-  await setupCleanState(platform);
-
-  // Run the installer
-  const flag = '--claude';
-  const { exitCode } = await runInstaller(`${flag} --all`);
-  if (exitCode !== 0) {
-    throw new Error(`Installer failed with exit code ${exitCode} for platform ${platform}`);
-  }
-
-  // Capture and return a state snapshot
-  return captureSnapshot(platform);
-}
-
-/**
  * Set up a "needs-update" state for a specific extension.
  *
  * Uses the needs-update config template with version "0.0.1" so the updater

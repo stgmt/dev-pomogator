@@ -54,11 +54,11 @@ function setupGreenTaskWithVerdict(w: F35World, verdict: TestQualityVerdict): vo
   const taskId = 't-quality';
   w.taskId = taskId;
   // a GREEN (PASSED) scenario linked to a DONE task — so only the verdict decides DONE.
-  w.covScens = [{ id: 'SCEN-specgen004-85x', tags: ['@feature85'], result: 'PASSED' }];
+  w.covScens = [{ id: 'SCEN-specgen004-85-x', tags: ['@feature85'], result: 'PASSED' }];
   w.covTasks = [{ id: taskId, doneWhen: 'SPECGEN004_85 passes', refs: [] }];
   w.verdict = { [taskId]: verdict };
   w.graph = makeGraph(
-    [{ id: 'SCEN-specgen004-85x', tags: ['@feature85'], result: 'PASSED' }],
+    [{ id: 'SCEN-specgen004-85-x', tags: ['@feature85'], result: 'PASSED' }],
     [{ id: taskId, status: 'done', refs: [], doneWhen: 'SPECGEN004_85 passes' }],
   );
 }
@@ -156,7 +156,7 @@ Then('it allows the claim only with an audited skip-test-quality escape logged t
 Given('a side-channel test-quality file recording a WEAK verdict for a green DONE task', function (this: F35World) {
   const taskId = 't-sidechannel';
   this.taskId = taskId;
-  this.covScens = [{ id: 'SCEN-specgen004-137x', tags: ['@feature137'], result: 'PASSED' }];
+  this.covScens = [{ id: 'SCEN-specgen004-137-x', tags: ['@feature137'], result: 'PASSED' }];
   this.covTasks = [{ id: taskId, doneWhen: 'SPECGEN004_137 passes', refs: [] }];
   const repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'tq-sidechannel-'));
   fs.mkdirSync(path.join(repoRoot, '.dev-pomogator'), { recursive: true });

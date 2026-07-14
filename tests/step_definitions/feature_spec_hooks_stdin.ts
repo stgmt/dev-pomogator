@@ -105,7 +105,7 @@ Then(/^the spec-check-log records an UNCOVERED_FR finding from spec-conformance-
 const EXPECTED_TOOLS = [
   'apply_spec_change', 'archive_spec', 'conformance_check', 'create_spec', 'delete_spec_doc',
   'find_by_tags', 'find_orphans', 'find_refs', 'get_archival_proof',
-  'get_node', 'get_spec_status', 'get_test_result',
+  'get_node', 'get_scenario_trace', 'get_spec_status', 'get_test_result',
   'get_trace', 'list_phase_tasks', 'list_spec_docs', 'list_specs',
   'propose_spec_change', 'read_attachment', 'read_spec_doc', 'rename_spec_doc',
   'search', 'set_entity_status', 'set_spec_status', 'validate_anchor',

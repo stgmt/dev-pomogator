@@ -21,6 +21,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { startLifecycle, type LifecycleHandle } from './lifecycle.ts';
 import { buildToolRegistry } from './tools.ts';
+import { configuredFeatureRoots } from '../specs-generator/spec-verdict.ts';
 
 const PRODUCT_NAME = 'dev-pomogator-specs';
 const PRODUCT_VERSION = '0.1.0';
@@ -44,6 +45,7 @@ export async function boot(opts: BootOptions): Promise<{
   // keeps a live door for reads while writes serialise to the lock owner.
   const lifecycle = await startLifecycle({
     repoRoot: opts.repoRoot,
+    featureRoots: configuredFeatureRoots(opts.repoRoot),
     autoDetectWatchMode: true,
     onLockContention: 'readonly',
   });
@@ -61,6 +63,8 @@ export async function boot(opts: BootOptions): Promise<{
   // server keeps only the spec-DOMAIN graph tools (trace / coverage / honesty /
   // conformance + the graph-edge `find_refs` the LSP has no concept of).
   for (const tool of buildToolRegistry(() => lifecycle.graph, {
+    repoRoot: opts.repoRoot,
+    refreshGraph: lifecycle.refreshGraph,
     // P21-1: in a read-only door the write tools refuse with the holder named.
     writeLockHeldBy: () =>
       lifecycle.readOnly && lifecycle.lockHolder

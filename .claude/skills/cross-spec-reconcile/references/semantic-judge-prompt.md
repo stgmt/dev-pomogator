@@ -53,6 +53,7 @@ and marks the affected YAML report `partial: true` with `partial_reasons[]`.
 
 - Skip a pair already flagged mechanically as `cross-spec/contradictory-fr` (no double-count — mechanical already won).
 - Skip a pair where either FR body is `< 60` chars after normalization (not enough to judge).
+- Skip a pair with `< 3` shared concept nouns (PascalCase terms plus non-generic prose words) before any judge spawn.
 - Hard cap `maxCalls` (default **50**) subprocess calls per run (runaway guard); cache hits don't count.
 
 ## Transport (NOT `claude -p`)

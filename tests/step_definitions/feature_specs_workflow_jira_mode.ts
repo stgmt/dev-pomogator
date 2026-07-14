@@ -392,23 +392,18 @@ Then(
 );
 
 Then(
-  /^extension\.json skillFiles for create-spec include the Jira-mode reference templates$/,
+  /^the canonical plugin manifest exports the create-spec skill folder with Jira-mode reference templates$/,
   function () {
     const manifest = JSON.parse(
-      fs.readFileSync(path.join(REPO_ROOT, 'extensions', 'specs-workflow', 'extension.json'), 'utf-8'),
-    ) as { skillFiles?: Record<string, string[]>; toolFiles?: Record<string, string[]> };
-    const createSpecTemplates = (manifest.skillFiles?.['create-spec'] ?? [])
-      .filter((p) => p.includes('/references/templates/'))
-      .sort();
-    const retiredToolTemplates = (manifest.toolFiles?.['specs-generator'] ?? [])
-      .filter((p) => /templates\/(JIRA_SOURCE|ATTACHMENTS)\.md\.template$/.test(p))
-      .sort();
-    assert.deepEqual(createSpecTemplates, [
-      '.claude/skills/create-spec/references/templates/ATTACHMENTS.md.template',
-      '.claude/skills/create-spec/references/templates/AUDIT_REPORT.md.template',
-      '.claude/skills/create-spec/references/templates/JIRA_SOURCE.md.template',
-    ]);
-    assert.deepEqual(retiredToolTemplates, []);
+      fs.readFileSync(path.join(REPO_ROOT, '.claude-plugin', 'plugin.json'), 'utf-8'),
+    ) as { skills?: unknown };
+    const skillDirs = Array.isArray(manifest.skills) ? manifest.skills : [manifest.skills];
+    assert.ok(skillDirs.includes('./.claude/skills'), 'plugin.json must export the canonical skills directory');
+
+    for (const filename of ['JIRA_SOURCE.md.template', 'ATTACHMENTS.md.template']) {
+      const p = path.join(REPO_ROOT, '.claude', 'skills', 'create-spec', 'references', 'templates', filename);
+      assert.ok(fs.existsSync(p), `expected exported create-spec Jira template to exist: ${p}`);
+    }
   },
 );
 

@@ -24,11 +24,12 @@
  */
 
 import { execFileSync, spawnSync } from 'child_process';
+import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { buildGraphFromCwd } from '../spec-graph/builder.ts';
 import { checkConformance } from '../spec-graph/conformance.ts';
-import { computeCoverage, specOf, type ScenarioLike, type TaskLike } from '../spec-graph/coverage.ts';
+import { computeCoverage, scenarioKey, specOf, type ScenarioLike, type TaskLike } from '../spec-graph/coverage.ts';
 import { readVerdicts } from '../spec-graph/test-quality-gate.ts';
 import {
   gapsFromFindings,
@@ -50,9 +51,51 @@ export interface AuditFinding {
   details?: string;
 }
 
+export type ReadinessLaneName =
+  | 'STRUCTURE'
+  | 'TRACEABILITY'
+  | 'EXECUTION'
+  | 'TASK_TRUTH'
+  | 'BDD_SYNC'
+  | 'SEMANTIC'
+  | 'FILTERED_PROOF';
+
+export type ReadinessLaneStatus = 'GREEN' | 'RED' | 'NOT_RUN' | 'SKIPPED' | 'NOT_EVALUATED' | 'NONE';
+
+export type ScenarioLite = Pick<ScenarioNode, 'id' | 'file' | 'line' | 'tags' | 'steps'>;
+
+export interface BddSyncReport {
+  debt: string[];
+}
+
+export interface FilteredProofRun {
+  runId: string;
+  artifact: string | null;
+  selectedScenarioIds: string[];
+  passed: number;
+  nonPassed: number;
+  timestamp: string | null;
+  source: string;
+  canonicalCoverageUnchanged: true;
+  acceptedAttachment: boolean;
+}
+
+export interface FilteredProofReport {
+  latest: FilteredProofRun | null;
+  proofs: string[];
+  artifacts: string[];
+}
+
+export interface ReadinessLane {
+  status: ReadinessLaneStatus;
+  blocking: boolean;
+  summary: string;
+  debt: string[];
+}
+
 export interface SpecVerdictResult {
   specPath: string;
-  /** RED while ANY hard gate holds; GREEN only when every gate passes. */
+  /** RED while ANY hard graph/traceability gate holds; GREEN is NOT the readiness verdict. */
   verdict: 'RED' | 'GREEN';
   /** Structural pre-filter (validate-spec). Pass is NOT a health verdict. */
   prefilter: {
@@ -92,8 +135,16 @@ export interface SpecVerdictResult {
    * blocking subset is TASK_UNTESTED in the traceability gate).
    */
   coverage: {
+    /** Effective newest evidence (canonical + overlay), retained for FR-56 compatibility. */
     buckets: Record<string, number>;
+    /** Canonical full-run-only buckets; filtered proof never changes these. */
+    canonicalBuckets: Record<string, number>;
     unverifiedDoneTasks: string[];
+  };
+  /** FR-61d/e evidence exposed as structured data for MCP/status consumers. */
+  evidence: {
+    bddSync: BddSyncReport;
+    filteredProof: FilteredProofReport;
   };
   /**
    * FR-37c (P14-3): FR-8 semantic drift in the verdict path. `ran` only when
@@ -112,6 +163,12 @@ export interface SpecVerdictResult {
   gapList: string[];
   /** Explicit fail-loud notes (FR-37c discipline). */
   notes: string[];
+  /** FR-61: product-readiness lanes; OVERALL is NOT_READY when any lane blocks readiness. */
+  readiness: {
+    lanes: Record<ReadinessLaneName, ReadinessLane>;
+    overall: 'READY' | 'NOT_READY';
+    nextAction: string;
+  };
 }
 
 interface RunCoreOptions {
@@ -131,6 +188,172 @@ function claudeBinaryPresent(): boolean {
   const bin = process.env.CLAUDE_BIN ?? 'claude';
   const probe = spawnSync(bin, ['--version'], { stdio: 'ignore', timeout: 10_000, shell: process.platform === 'win32' });
   return probe.status === 0;
+}
+
+function hasMarker(s: ScenarioLite, marker: string): boolean {
+  const needle = marker.toUpperCase();
+  const haystack = [s.id, ...s.tags, ...s.steps.map((step) => step.text)].join(' ').toUpperCase();
+  return haystack.includes(needle);
+}
+
+function scenarioCountClaims(text: string): Array<{ text: string; count: number }> {
+  const out: Array<{ text: string; count: number }> = [];
+  const words: Record<string, number> = {
+    one: 1,
+    two: 2,
+    three: 3,
+    four: 4,
+    five: 5,
+    six: 6,
+    seven: 7,
+    eight: 8,
+    nine: 9,
+    ten: 10,
+  };
+  const countRe = /\b(\d+|one|two|three|four|five|six|seven|eight|nine|ten)\s+scenarios?\b/gi;
+  for (const rawLine of text.split(/\r?\n/)) {
+    const line = rawLine.replace(/`[^`]*`/g, '');
+    if (/\bat least\b|\bScenario\s*=|\bFR-\d+\s+scenario\b/i.test(line)) continue;
+    const claimsCount =
+      /\b(scenario count|scenarios total|total scenarios|expected scenarios|source scenarios|executable scenarios)\b/i.test(line) ||
+      /\b(feature|spec|source|executable|file)\b.*\b(has|contains|includes|declares|covers)\b/i.test(line) ||
+      /\bthere\s+(?:are|is)\b/i.test(line);
+    if (!claimsCount) continue;
+    for (const match of line.matchAll(countRe)) {
+      const raw = match[1].toLowerCase();
+      const count = /^\d+$/.test(raw) ? Number(raw) : words[raw];
+      if (Number.isFinite(count)) out.push({ text: match[0], count });
+    }
+  }
+  return out;
+}
+
+export function configuredCucumberPaths(cwd: string): Set<string> {
+  const out = new Set<string>();
+  for (const name of ['cucumber.docker.json', 'cucumber.json']) {
+    const file = path.join(cwd, name);
+    if (!fs.existsSync(file)) continue;
+    try {
+      const json = JSON.parse(fs.readFileSync(file, 'utf-8'));
+      const paths = json?.default?.paths;
+      if (Array.isArray(paths)) for (const p of paths) if (typeof p === 'string') out.add(p.replace(/\\/g, '/'));
+    } catch {
+      // Invalid cucumber config is not a BDD-sync finding; other validators own config syntax.
+    }
+  }
+  return out;
+}
+
+/** Concrete (non-glob) feature roots declared by Cucumber configs, relative to cwd. */
+export function configuredFeatureRoots(cwd: string): string[] {
+  const candidates = new Set<string>(['.specs', 'tests/features']);
+  for (const configured of configuredCucumberPaths(cwd)) {
+    const normalized = configured.replace(/\\/g, '/');
+    const globAt = normalized.search(/[?*{}[\]]/);
+    const prefix = (globAt >= 0 ? normalized.slice(0, globAt) : normalized).replace(/\/+$/, '');
+    if (!prefix) continue;
+    const root = prefix.endsWith('.feature') ? path.posix.dirname(prefix) : prefix;
+    if (root && root !== '.') candidates.add(root);
+  }
+  // Do not scan a child twice when a broader configured root already contains it.
+  // Duplicate parsing would inflate raw-collision counts and can duplicate edges.
+  const ordered = [...candidates].sort((a, b) => {
+    const depth = (value: string): number => value.split('/').length;
+    return depth(a) - depth(b) || a.localeCompare(b);
+  });
+  return ordered.filter((root, index) => !ordered.slice(0, index).some((parent) => root === parent || root.startsWith(`${parent}/`)));
+}
+
+export function compareBddSync(cwd: string, slug: string, sourceScenarios: ScenarioLite[], executableScenarios: ScenarioLite[]): BddSyncReport {
+  const debt: string[] = [];
+  const configuredPaths = configuredCucumberPaths(cwd);
+  const sourceFeature = `.specs/${slug}/${slug.split('/').pop()}.feature`;
+  const sourceFeatureExecutable = configuredPaths.size === 0 || configuredPaths.has(sourceFeature);
+  const sourceByKey = new Map<string, ScenarioLite>();
+  const executableByKey = new Map<string, ScenarioLite[]>();
+  for (const s of sourceScenarios) {
+    const key = scenarioKey(s.id);
+    if (key) sourceByKey.set(key, s);
+  }
+  for (const s of executableScenarios) {
+    const key = scenarioKey(s.id);
+    if (!key) continue;
+    const arr = executableByKey.get(key) ?? [];
+    arr.push(s);
+    executableByKey.set(key, arr);
+  }
+  for (const [key, execs] of executableByKey) {
+    const src = sourceByKey.get(key);
+    if (!src && !execs.some((s) => hasMarker(s, 'EXEC_ONLY') || hasMarker(s, 'OUT_OF_SCOPE'))) {
+      debt.push(`EXEC_ONLY_MISSING_MARKER ${key}: executable scenario has no source counterpart`);
+      continue;
+    }
+    if (!src) continue;
+    const srcFeatureTags = src.tags.filter((t) => /^@feature\d+$/i.test(t)).sort().join(',');
+    for (const ex of execs) {
+      const execFeatureTags = ex.tags.filter((t) => /^@feature\d+$/i.test(t)).sort().join(',');
+      if (srcFeatureTags !== execFeatureTags) debt.push(`FR_TAG_DRIFT ${key}: source=${srcFeatureTags || '(none)'} executable=${execFeatureTags || '(none)'}`);
+    }
+  }
+  for (const [key, src] of sourceByKey) {
+    if (sourceFeatureExecutable) continue;
+    if (!executableByKey.has(key) && !hasMarker(src, 'PENDING') && !src.tags.some((t) => /^@wip$/i.test(t))) {
+      debt.push(`SOURCE_ONLY ${key}: source scenario has no executable counterpart or pending marker`);
+    }
+  }
+  const sourceFeaturePath = path.join(cwd, '.specs', slug, `${slug.split('/').pop()}.feature`);
+  if (fs.existsSync(sourceFeaturePath)) {
+    const text = fs.readFileSync(sourceFeaturePath, 'utf-8');
+    for (const claim of scenarioCountClaims(text)) {
+      if (claim.count !== sourceScenarios.length) debt.push(`SCENARIO_COUNT_DRIFT ${claim.text}: actual source scenario count is ${sourceScenarios.length}`);
+    }
+  }
+  return { debt: [...new Set(debt)] };
+}
+
+export function latestFilteredProof(cwd: string, sourceScenarios: ScenarioLite[]): FilteredProofReport {
+  const keys = new Set(sourceScenarios.map((s) => scenarioKey(s.id)).filter(Boolean) as string[]);
+  const overlayPath = path.join(cwd, '.dev-pomogator', '.scenario-results.ndjson');
+  if (!fs.existsSync(overlayPath)) return { latest: null, proofs: [], artifacts: [] };
+  const byRun = new Map<string, { time: string; artifact?: string; passed: number; failed: number; selected: Set<string>; source?: string }>();
+  for (const line of fs.readFileSync(overlayPath, 'utf-8').split(/\r?\n/)) {
+    if (!line.trim()) continue;
+    let row: Record<string, unknown>;
+    try { row = JSON.parse(line); } catch { continue; }
+    const key = typeof row.scenario_id === 'string' ? scenarioKey(row.scenario_id) : null;
+    if (!key || !keys.has(key)) continue;
+    const source = String(row.source ?? '');
+    if (!/filtered/i.test(source)) continue;
+    const runId = String(row.run_id ?? row.trace_file ?? row.trace_id ?? 'filtered');
+    const entry = byRun.get(runId) ?? { time: String(row.time ?? ''), artifact: typeof row.trace_file === 'string' ? row.trace_file : undefined, passed: 0, failed: 0, selected: new Set<string>(), source };
+    if (String(row.time ?? '') > entry.time) entry.time = String(row.time ?? '');
+    if (typeof row.trace_file === 'string') entry.artifact = row.trace_file;
+    if (String(row.result ?? '').toUpperCase() === 'PASSED') entry.passed++;
+    else entry.failed++;
+    entry.selected.add(key.toUpperCase());
+    entry.source = source || entry.source;
+    byRun.set(runId, entry);
+  }
+  const runs = [...byRun.entries()].sort((a, b) => b[1].time.localeCompare(a[1].time));
+  const latest = runs[0];
+  if (!latest) return { latest: null, proofs: [], artifacts: [] };
+  const [runId, r] = latest;
+  const proof: FilteredProofRun = {
+    runId,
+    artifact: r.artifact ?? null,
+    selectedScenarioIds: [...r.selected].sort().map((key) => key.toUpperCase()),
+    passed: r.passed,
+    nonPassed: r.failed,
+    timestamp: r.time || null,
+    source: r.source ?? 'filtered',
+    canonicalCoverageUnchanged: true,
+    acceptedAttachment: false,
+  };
+  return {
+    latest: proof,
+    proofs: [`${runId}: ${r.passed} passed / ${r.failed} non-passed; selected ${proof.selectedScenarioIds.join(', ')}; source=${proof.source}; at=${proof.timestamp ?? '(unknown)'}; artifact=${proof.artifact ?? '(none)'}; canonical coverage unchanged until full run or accepted attachment`],
+    artifacts: proof.artifact ? [proof.artifact] : [],
+  };
 }
 
 /** Run a specs-generator-core.mjs command, tolerating non-zero exit (findings ≠ crash). */
@@ -202,7 +425,7 @@ export async function runSpecVerdict(
     .replace(/\\/g, '/')
     .replace(/^\.?\/?\.specs\//, '')
     .replace(/\/+$/, '');
-  const graph = buildGraphFromCwd(cwd);
+  const graph = buildGraphFromCwd(cwd, { featureRoots: configuredFeatureRoots(cwd) });
   // FR-35a: the per-task test-quality side-channel caps a green-but-weak DONE task
   // to IN_PROGRESS on this surface too (absent file → {} → no change). Same reader
   // as the Stop-gate and get_coverage — one source of truth.
@@ -223,7 +446,10 @@ export async function runSpecVerdict(
   // P14-3: FR-32 honesty rollup for this spec.
   const taskLikes: TaskLike[] = [];
   const scenLikes: ScenarioLike[] = [];
+  const sourceScenarios: ScenarioLite[] = [];
+  const executableScenarios: ScenarioLite[] = [];
   const doneTaskIds = new Set<string>();
+  const doneTasks = new Map<string, TaskNode>();
   // not_run grouped by feature-file basename — distinguishes a genuinely
   // filtered run of the MAIN feature (transient; re-run) from a feature file
   // that is never in the test config (e.g. a legacy `*.feature` not in
@@ -233,23 +459,54 @@ export async function runSpecVerdict(
     if (!inSpec(n.file)) continue;
     if (n.type === 'Task') {
       const t = n as TaskNode;
-      taskLikes.push({ id: t.id, doneWhen: t.doneWhen ?? '', refs: t.refs, spec: specOf(t.file) });
-      if (t.status === 'done') doneTaskIds.add(t.id);
+      taskLikes.push({ id: t.id, doneWhen: t.doneWhen ?? '', refs: t.refs, spec: specOf(t.file), status: t.status });
+      if (t.status === 'done') {
+        doneTaskIds.add(t.id);
+        doneTasks.set(t.id, t);
+      }
     } else if (n.type === 'Scenario') {
       const s = n as ScenarioNode;
-      scenLikes.push({ id: s.id, tags: s.tags, result: s.lastResult, spec: specOf(s.file) });
-      if (!s.lastResult) {
+      scenLikes.push({ id: s.id, tags: s.tags, result: s.lastResult, stale: s.resultStale, spec: specOf(s.file), source: s.trace?.source, canonicalResult: s.canonicalResult, canonicalRunAt: s.canonicalRunAt });
+      sourceScenarios.push(s);
+      if (!s.canonicalResult) {
         const base = String(s.file).replace(/\\/g, '/').split('/').pop() ?? String(s.file);
         notRunByFile.set(base, (notRunByFile.get(base) ?? 0) + 1);
       }
     }
   }
+  for (const n of graph.nodes.values()) {
+    if (n.type !== 'Scenario') continue;
+    const s = n as ScenarioNode;
+    const file = String(s.file).replace(/\\/g, '/');
+    if (file.includes('/.tmp/') || file.includes('/archive/')) continue;
+    const outsideSpec = !file.startsWith('.specs/');
+    if (outsideSpec && file.toLowerCase().includes(slug.split('/').pop()!.toLowerCase())) executableScenarios.push(s);
+  }
   const cov = computeCoverage(taskLikes, scenLikes, testQualityByTask);
+  const canonicalScenarioLikes = scenLikes.map((scenario) => ({
+    ...scenario,
+    result: scenario.canonicalResult,
+    stale: false,
+    source: scenario.canonicalResult ? 'canonical-full-run' : undefined,
+  }));
+  const canonicalCov = computeCoverage(taskLikes, canonicalScenarioLikes, testQualityByTask);
   const buckets: Record<string, number> = {};
+  const canonicalBuckets: Record<string, number> = {};
   for (const [b, ids] of Object.entries(cov.buckets)) buckets[b] = ids.length;
+  for (const [b, ids] of Object.entries(canonicalCov.buckets)) canonicalBuckets[b] = ids.length;
   const unverifiedDoneTasks = [...doneTaskIds].filter(
-    (id) => cov.tasks[id]?.verified_status !== 'DONE',
+    (id) => canonicalCov.tasks[id]?.verified_status !== 'DONE',
   );
+  const truthIssuesByTask = new Map(
+    [...doneTaskIds].map((id) => [id, canonicalCov.tasks[id]?.truth_issues ?? []]),
+  );
+  const uncheckedDoneWhenTasks = [...truthIssuesByTask]
+    .filter(([, issues]) => issues.some((issue) => issue.code === 'TASK_DONE_CHECKLIST_OPEN'))
+    .map(([id]) => id);
+  const canonicalBucketByScenarioId = new Map<string, string>();
+  for (const [bucket, ids] of Object.entries(canonicalCov.buckets)) {
+    for (const id of ids) canonicalBucketByScenarioId.set(id, bucket);
+  }
 
   // FR-37c (P14-3): FR-8 semantic drift IN the verdict path — ON when a
   // claude binary is present; explicit skip otherwise. Fail-loud always.
@@ -323,7 +580,7 @@ export async function runSpecVerdict(
   // was filtered (`--tags …`) or never ran some scenarios — the coverage picture
   // is partial, NOT a spec defect. Loud note so a filtered debug run can't be
   // misread as "the spec fell apart" (2026-06-08 incident).
-  const notRun = buckets.not_run ?? 0;
+  const notRun = canonicalBuckets.not_run ?? 0;
   if (notRun > 0) {
     const byFile = [...notRunByFile.entries()]
       .sort((a, b) => b[1] - a[1])
@@ -335,6 +592,103 @@ export async function runSpecVerdict(
         `(e.g. a legacy *.feature not in cucumber \`paths\`) is a PERSISTENT gap a full run won't close — add it to paths or retire it.`,
     );
   }
+
+  const executionHardFailures = ['failed', 'undefined', 'ambiguous', 'pending', 'skipped', 'stale']
+    .map((key) => [key, canonicalBuckets[key] ?? 0] as const)
+    .filter(([, count]) => count > 0);
+  const executionDebt = [
+    ...executionHardFailures.map(([key, count]) => `${count} ${key}`),
+    ...(notRun > 0 ? [`SCENARIO_NOT_RUN:${notRun}`] : []),
+  ];
+  const semanticDebt = [
+    ...drifts.map((d) => `${d.frId} ↔ ${d.scenarioId}: ${d.severity}`),
+    ...(judgeFailures > 0 ? [`${judgeFailures} judge subprocess failure(s)`] : []),
+    ...(semanticWanted && semanticNote ? [semanticNote] : []),
+  ];
+  const bddSync = compareBddSync(cwd, slug, sourceScenarios, executableScenarios);
+  const filteredProof = latestFilteredProof(cwd, sourceScenarios);
+  const taskTruthDebt = [...new Set([...unverifiedDoneTasks, ...uncheckedDoneWhenTasks])].map((id) => {
+    const issues = truthIssuesByTask.get(id) ?? [];
+    const parts: string[] = issues.map((issue) => issue.message);
+    if (unverifiedDoneTasks.includes(id) && parts.length === 0) {
+      const scenarios = canonicalCov.tasks[id]?.scenarios ?? [];
+      const evidence = scenarios.length > 0
+        ? scenarios.map((sid) => `${sid}=${canonicalBucketByScenarioId.get(sid) ?? 'unverified'}`).join(', ')
+        : 'no mapped scenario evidence';
+      parts.push(`evidence-derived ${canonicalCov.tasks[id]?.verified_status ?? 'unverified'} (${evidence})`);
+    }
+    return `${id}: ${parts.join('; ')}`;
+  });
+  const lanes: Record<ReadinessLaneName, ReadinessLane> = {
+    STRUCTURE: {
+      status: structuralErrors > 0 || errorFindings.length > 0 || confErrors.length > 0 ? 'RED' : 'GREEN',
+      blocking: structuralErrors > 0 || errorFindings.length > 0 || confErrors.length > 0,
+      summary: `${structuralErrors} structural error(s), ${errorFindings.length} audit error(s), ${confErrors.length} conformance error(s)`,
+      debt: [
+        ...(structuralErrors > 0 ? [`${structuralErrors} structural error(s)`] : []),
+        ...(errorFindings.length > 0 ? [`${errorFindings.length} audit error(s)`] : []),
+        ...(confErrors.length > 0 ? [`${confErrors.length} conformance error(s)`] : []),
+      ],
+    },
+    TRACEABILITY: {
+      status: gaps.length > 0 ? 'RED' : 'GREEN',
+      blocking: gaps.length > 0,
+      summary: gaps.length > 0 ? `${gaps.length} traceability gap(s)` : '0 traceability gaps',
+      debt: gaps.map((g) => `${g.class}: ${g.nodeId}`),
+    },
+    EXECUTION: {
+      status: executionHardFailures.length > 0 ? 'RED' : notRun > 0 ? 'NOT_RUN' : 'GREEN',
+      blocking: executionDebt.length > 0,
+      summary: executionDebt.length > 0 ? executionDebt.join(', ') : 'all known scenarios have passing/acceptable results',
+      debt: executionDebt,
+    },
+    TASK_TRUTH: {
+      status: taskTruthDebt.length > 0 ? 'RED' : 'GREEN',
+      blocking: taskTruthDebt.length > 0,
+      summary: taskTruthDebt.length > 0
+        ? `${unverifiedDoneTasks.length} DONE-but-unverified task(s), ${uncheckedDoneWhenTasks.length} DONE task(s) with unchecked Done When item(s)`
+        : 'no DONE-but-unverified tasks',
+      debt: taskTruthDebt,
+    },
+    BDD_SYNC: {
+      status: bddSync.debt.length > 0 ? 'RED' : 'GREEN',
+      blocking: bddSync.debt.length > 0,
+      summary: bddSync.debt.length > 0 ? `${bddSync.debt.length} source/executable BDD sync drift(s)` : 'no source/executable BDD sync debt reported by the current verdict inputs',
+      debt: bddSync.debt,
+    },
+    SEMANTIC: {
+      status: !semanticWanted ? 'SKIPPED' : semanticDebt.length > 0 ? 'SKIPPED' : 'GREEN',
+      blocking: semanticWanted && semanticDebt.length > 0,
+      summary: !semanticWanted
+        ? 'semantic check explicitly disabled for this run'
+        : semanticDebt.length > 0
+          ? semanticDebt.join(', ')
+          : `${pairsChecked} semantic pair(s) checked with no drift`,
+      debt: !semanticWanted ? [] : semanticDebt,
+    },
+    FILTERED_PROOF: {
+      status: filteredProof.proofs.length > 0 ? 'GREEN' : 'NONE',
+      blocking: false,
+      summary: filteredProof.proofs.length > 0 ? filteredProof.proofs[0] : (notRun > 0 ? 'no filtered proof attached to this verdict output' : 'no filtered proof needed'),
+      debt: [],
+    },
+  };
+  const blockingReadinessLanes = Object.entries(lanes).filter(([, lane]) => lane.blocking);
+  const readiness = {
+    lanes,
+    overall: (blockingReadinessLanes.length > 0 ? 'NOT_READY' : 'READY') as 'READY' | 'NOT_READY',
+    nextAction: (() => {
+      if (lanes.STRUCTURE.blocking) return 'Fix structural/audit/conformance errors, then rerun spec-verdict.';
+      if (lanes.TRACEABILITY.blocking) return 'Add the missing FR/AC/task/scenario traceability links, then rerun spec-verdict.';
+      if (executionHardFailures.length > 0) return 'Inspect the failing/undefined/ambiguous scenarios with get_test_result, fix them, then rerun the full Docker BDD suite.';
+      if (lanes.BDD_SYNC.blocking) return 'Fix source/executable BDD sync drift or mark intentional EXEC_ONLY/OUT_OF_SCOPE/PENDING scenarios, then rerun spec-verdict.';
+      if (notRun > 0 && filteredProof.latest) return `Run the full Docker BDD suite so canonical coverage replaces filtered proof ${filteredProof.latest.runId}, or attach ${filteredProof.latest.artifact ?? 'the filtered artifact'} as review evidence.`;
+      if (notRun > 0) return 'Run the full Docker BDD suite so canonical coverage contains every scenario result.';
+      if (lanes.TASK_TRUTH.blocking) return 'Reopen/downgrade DONE-but-unverified tasks or provide canonical passed scenario evidence.';
+      if (lanes.SEMANTIC.blocking) return 'Run semantic checking with a working claude binary, or explicitly rerun with --no-semantic if semantic review is out of scope.';
+      return 'No readiness blockers detected by spec-verdict.';
+    })(),
+  };
 
   return {
     specPath,
@@ -351,7 +705,8 @@ export async function runSpecVerdict(
       warningCount: specFindings.filter((f) => f.severity === 'warning').length,
       byCode: confByCode,
     },
-    coverage: { buckets, unverifiedDoneTasks },
+    coverage: { buckets, canonicalBuckets, unverifiedDoneTasks },
+    evidence: { bddSync, filteredProof },
     semantic: {
       ran: semanticWanted && binaryPresent,
       binaryPresent,
@@ -362,6 +717,7 @@ export async function runSpecVerdict(
     },
     gapList,
     notes,
+    readiness,
   };
 }
 
@@ -382,7 +738,7 @@ const CONFORMANCE_REMEDIATION: Record<string, string> = {
   LINK_VALIDITY: 'reference is plain text — make it a clickable `[FR-N](FR.md#fr-n-...)` / `[AC-N](ACCEPTANCE_CRITERIA.md#...)` link',
 };
 
-/** Render the verdict for humans. GREEN here means "every composed gate passed". */
+/** Render the verdict for humans. `VERDICT` is the graph gate; `OVERALL` is product readiness (FR-61). */
 export function renderVerdict(r: SpecVerdictResult): string {
   const lines: string[] = [];
   lines.push(`═══ spec-verdict (authoritative, FR-37) — ${r.specPath} ═══`);
@@ -412,8 +768,8 @@ export function renderVerdict(r: SpecVerdictResult): string {
   }
   const notRunCount = (r.coverage.buckets as Record<string, number>).not_run ?? 0;
   lines.push(
-    `coverage (FR-32 honesty): buckets ${JSON.stringify(r.coverage.buckets)}` +
-      (notRunCount > 0 ? ` — ⚠️ ${notRunCount} not_run (no last-run result; see NOT_RUN note for per-feature breakdown)` : '') +
+    `coverage (FR-32 honesty): effective ${JSON.stringify(r.coverage.buckets)}; canonical ${JSON.stringify(r.coverage.canonicalBuckets)}` +
+      (notRunCount > 0 ? ` — ⚠️ ${notRunCount} effective not_run (no latest evidence; see NOT_RUN note for per-feature breakdown)` : '') +
       (r.coverage.unverifiedDoneTasks.length
         ? ` — DONE-but-unverified: ${r.coverage.unverifiedDoneTasks.join(', ')}`
         : ''),
@@ -441,9 +797,26 @@ export function renderVerdict(r: SpecVerdictResult): string {
       lines.push(`  … and ${r.traceabilityGate.gaps.length - 20} more (see --json for the full list)`);
     }
   }
+  lines.push('readiness lanes (FR-61):');
+  const laneOrder: ReadinessLaneName[] = ['STRUCTURE', 'TRACEABILITY', 'EXECUTION', 'TASK_TRUTH', 'BDD_SYNC', 'SEMANTIC', 'FILTERED_PROOF'];
+  for (const name of laneOrder) {
+    const lane = r.readiness.lanes[name];
+    lines.push(`  ${name}: ${lane.status}${lane.blocking ? ' (blocking)' : ''} — ${lane.summary}`);
+    for (const item of lane.debt.slice(0, 8)) lines.push(`    - ${item}`);
+    if (lane.debt.length > 8) lines.push(`    … and ${lane.debt.length - 8} more`);
+  }
   lines.push('notes (fail-loud, FR-37c):');
   for (const n of r.notes) lines.push(`  - ${n}`);
-  lines.push(`VERDICT: ${r.verdict}${r.verdict === 'RED' ? ` — ${r.gapList.length} blocking item(s) in the gap list above` : ''}`);
+  const everyLaneGreen = Object.values(r.readiness.lanes).every((lane) => lane.status === 'GREEN');
+  if (r.verdict === 'RED') {
+    lines.push(`VERDICT: RED — ${r.gapList.length} blocking graph item(s) in the gap list above`);
+  } else if (r.readiness.overall === 'READY' && everyLaneGreen) {
+    lines.push('VERDICT: GREEN');
+  } else {
+    lines.push('VERDICT: GRAPH_GREEN (structure/traceability gates passed; readiness debt remains)');
+  }
+  lines.push(`OVERALL: ${r.readiness.overall}`);
+  lines.push(`NEXT: ${r.readiness.nextAction}`);
   return lines.join('\n');
 }
 
@@ -473,11 +846,17 @@ function parseArgs(argv: string[]): {
   return { specPath, json, semantic, maxPairs };
 }
 
+export function verdictExitCode(result: Pick<SpecVerdictResult, 'verdict' | 'readiness'>): 0 | 1 {
+  return result.verdict === 'RED' || result.readiness.overall === 'NOT_READY' ? 1 : 0;
+}
+
 const isDirectRun =
   process.argv[1]?.endsWith('spec-verdict.ts') || process.argv[1]?.endsWith('spec-verdict.js');
 if (isDirectRun) {
   const { specPath, json, semantic, maxPairs } = parseArgs(process.argv.slice(2));
   const result = await runSpecVerdict(specPath, { semantic, maxPairs });
   console.log(json ? JSON.stringify(result, null, 2) : renderVerdict(result));
-  process.exit(result.verdict === 'RED' ? 1 : 0);
+  // Machine contract follows product readiness, not only the legacy graph gate:
+  // GRAPH_GREEN + OVERALL NOT_READY must be a non-zero exit (FR-61a).
+  process.exit(verdictExitCode(result));
 }

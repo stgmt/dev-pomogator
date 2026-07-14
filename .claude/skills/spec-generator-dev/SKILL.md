@@ -12,7 +12,7 @@ description: >
   generator dev", "maintain the spec plugin", "producer fix", "what produced this defect", "review the spec generator", "false finding", "noisy counter".
   Do NOT use for authoring a spec's CONTENT (create-spec), per-spec health (spec-status /
   spec-verdict), or corpus hygiene runs (corpus-health).
-allowed-tools: Read, Write, Edit, Glob, Grep, Bash, Agent
+allowed-tools: Read, Write, Edit, Glob, Grep, Bash, Agent, mcp__dev-pomogator-specs__list_spec_docs, mcp__dev-pomogator-specs__read_spec_doc, mcp__dev-pomogator-specs__get_spec_status, mcp__dev-pomogator-specs__get_trace, mcp__dev-pomogator-specs__conformance_check, mcp__dev-pomogator-specs__search, mcp__dev-pomogator-specs__propose_spec_change, mcp__dev-pomogator-specs__apply_spec_change
 ---
 
 # spec-generator-dev — миссия и дисциплина развития спек-генератора
@@ -32,6 +32,18 @@ allowed-tools: Read, Write, Edit, Glob, Grep, Bash, Agent
    tasks-парсер, LINK_VALIDITY-чек; одна болезнь, три носителя).
 3. **Регрессия на инцидент** — тест, воспроизводящий именно тот случай, который прорвался.
 4. **Симптом убери последним** — и в коммите назови оба: производителя и класс.
+
+## Обязательный UX-поиск при запуске
+
+Когда этот скилл включился на дефекте/ревью/доработке спек-генератора, он не ограничивается локальным producer-fix. В начале работы ОБЯЗАТЕЛЬНО ищи продуктовые улучшения того же класса:
+
+1. **Собери 3–6 поверхностей правды по одному кейсу.** Для затронутой спеки/FR сравни `spec-verdict`, `get_spec_status`, `get_trace`, `conformance_check`, coverage/task-census/BDD artifacts и сам текст спеки. Если спека читается — через MCP-дверь (`read_spec_doc`/`get_trace`/`search`), не сырым `Read` по `.specs/`.
+2. **Ищи split-brain UX.** Красные флаги: финальный label говорит GREEN, а execution/task truth не готов; один тул пишет `UNCOVERED_FR`, другой говорит traceability pass; `Status: DONE` расходится с canonical coverage; filtered run passed, но его не видно как review evidence; executable `.feature` ушёл дальше source `.specs/<slug>/<slug>.feature`; два похожих API называются одинаково, но покрывают разные правила.
+3. **Сформулируй upstream improvement.** На каждый подтверждённый разрыв предложи контракт уровня продукта: единая vocabulary, lane-based readiness, explicit next action, guard/downgrade вместо warning, first-class filtered proof, sync-checker, better remediation text. Не пиши «почистить документ» как решение, если producer можно научить не порождать путаницу.
+4. **Если improvement относится к spec-generator-v4 — предложи/добавь его в `.specs/spec-generator-v4` как FR/AC/TASK/BDD backlog.** Писать спеки только через MCP-дверь. Минимум для живого backlog: FR/AC, @featureN pending scenario или TASKS-only pin, TASK, FILE_CHANGES row; если меняется пользовательский поток — Story/Use Case/Design decision тоже.
+5. **Отчитай top-N улучшений отдельно от bugfix.** Формат: `Найденный разрыв → почему больно → producer/surface → предлагаемое улучшение → куда добавлено/почему не добавлено`.
+
+Паттерн-образец: CARL dogfood 2026-07-09 показал `TASKS.md Status: DONE` + canonical coverage `not_run` + plain `VERDICT: GREEN` + filtered Docker proof outside canonical coverage + executable-only BDD drift. Правильный ответ был не «переотметить CARL задачи», а FR-61: multi-lane readiness (`OVERALL: NOT_READY`), aligned gap vocabulary, task DONE truth guard, source/executable BDD sync, filtered proof lane, concrete next action.
 
 ## Карта подсистемы (где что порождается)
 

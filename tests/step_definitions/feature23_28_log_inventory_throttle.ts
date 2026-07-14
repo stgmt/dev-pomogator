@@ -18,6 +18,8 @@ import { logEvent, readRecentEvents } from '../../tools/specs-validator/audit-lo
 import { appendFinding, appendFindings } from '../../tools/spec-check-log/writer.ts';
 import { decidePush, type PushDecision } from '../../tools/spec-conformance-push/spec-conformance-push.ts';
 import { parseScenarioResults, appendJsonLinesAtomic } from '../../scripts/bdd-overlay.mjs';
+import { buildGraph } from '../../tools/spec-graph/builder.ts';
+import { buildToolRegistry } from '../../tools/spec-mcp-server/tools.ts';
 import type { Finding } from '../../tools/spec-graph/conformance.ts';
 
 // ── SPECGEN004_122 — FR-23: each tier writes to its own sink ───────────────
@@ -207,10 +209,18 @@ interface F56World extends V4World {
   f56Stream?: string;
   f56Overlay?: string;
   f56Rows?: ReturnType<typeof parseScenarioResults>;
+  f56TraceRepo?: string;
+  f56TraceFile?: string;
+  f56TraceBody?: Record<string, unknown>;
+  f56ExpiredBody?: Record<string, unknown>;
 }
 
 function f56Envelope(e: unknown): string {
   return JSON.stringify(e);
+}
+
+function f56ParseResult(r: { content: Array<{ type: string; text: string }> }): Record<string, unknown> {
+  return JSON.parse(r.content[0].text) as Record<string, unknown>;
 }
 
 function f56Stream(): string {
@@ -258,4 +268,74 @@ Then('appending another run preserves the existing overlay row', function (this:
   const rows = fs.readFileSync(this.f56Overlay!, 'utf8').trim().split('\n').map((line) => JSON.parse(line));
   assert.deepEqual(rows.map((row) => row.scenario_id), ['SPECGEN004_529', 'SPECGEN004_530']);
   assert.deepEqual(rows.map((row) => row.run_id), ['run-526', 'run-527']);
+});
+
+function f56FailedStream(): string {
+  return [
+    f56Envelope({ gherkinDocument: { uri: '.specs/spec-generator-v4/spec-generator-v4.feature', feature: { children: [{ scenario: { id: 'sc-534', location: { line: 3 } } }] } } }),
+    f56Envelope({ pickle: { id: 'pk-534', uri: '.specs/spec-generator-v4/spec-generator-v4.feature', name: 'SPECGEN004_534 scenario trace lookup returns the archived failing step', tags: [{ name: '@feature56' }], astNodeIds: ['sc-534'], steps: [{ id: 'ps-534', text: 'the overlay reader explodes' }] } }),
+    f56Envelope({ testCase: { id: 'tc-534', pickleId: 'pk-534', testSteps: [{ id: 'ts-534', pickleStepId: 'ps-534' }] } }),
+    f56Envelope({ testCaseStarted: { id: 'tcs-534', testCaseId: 'tc-534', timestamp: { seconds: 1_800_000_100, nanos: 0 } } }),
+    f56Envelope({ testStepFinished: { testCaseStartedId: 'tcs-534', testStepId: 'ts-534', testStepResult: { status: 'FAILED', message: 'overlay boom', duration: { seconds: 2, nanos: 500_000_000 } } } }),
+    f56Envelope({ testCaseFinished: { testCaseStartedId: 'tcs-534', timestamp: { seconds: 1_800_000_101, nanos: 0 } } }),
+  ].join('\n');
+}
+
+Given('a Cucumber message run for a failed FR-56 scenario', function (this: F56World) {
+  this.f56TraceRepo = path.join(this.tempDir, 'trace-repo');
+  const feature = path.join(this.f56TraceRepo, '.specs', 'spec-generator-v4', 'spec-generator-v4.feature');
+  this.f56TraceFile = path.join(this.f56TraceRepo, '.dev-pomogator', '.test-history', 'run-534.ndjson');
+  fs.mkdirSync(path.dirname(feature), { recursive: true });
+  fs.mkdirSync(path.dirname(this.f56TraceFile), { recursive: true });
+  fs.writeFileSync(feature, [
+    'Feature: FR-56 trace lookup',
+    '  @feature56',
+    '  Scenario: SPECGEN004_534 scenario trace lookup returns the archived failing step',
+    '    Given the overlay reader explodes',
+  ].join('\n'));
+  const stream = f56FailedStream();
+  fs.writeFileSync(this.f56TraceFile, stream);
+  const rows = parseScenarioResults(stream, {
+    runId: 'run-534',
+    source: 'docker-bdd:filtered',
+    traceFile: '.dev-pomogator/.test-history/run-534.ndjson',
+  });
+  assert.equal(rows.length, 1, 'failed trace fixture must produce one overlay row');
+  assert.equal(rows[0].trace_id, '.dev-pomogator/.test-history/run-534.ndjson#tcs-534');
+  appendJsonLinesAtomic(path.join(this.f56TraceRepo, '.dev-pomogator', '.scenario-results.ndjson'), rows);
+});
+
+When('the scenario trace tool reads that archived run through the graph', async function (this: F56World) {
+  const cwd = process.cwd();
+  process.chdir(this.f56TraceRepo!);
+  try {
+    const graph = buildGraph({ repoRoot: this.f56TraceRepo! });
+    const registry = buildToolRegistry(() => graph);
+    const tool = registry.find((t) => t.name === 'get_scenario_trace');
+    assert.ok(tool, 'get_scenario_trace must be registered in the real MCP registry');
+    this.f56TraceBody = f56ParseResult(await tool.handler({ scenario_id: 'SPECGEN004_534', spec: 'spec-generator-v4' }) as never);
+    fs.unlinkSync(this.f56TraceFile!);
+    this.f56ExpiredBody = f56ParseResult(await tool.handler({ scenario_id: 'SPECGEN004_534', spec: 'spec-generator-v4' }) as never);
+  } finally {
+    process.chdir(cwd);
+  }
+});
+
+Then('the scenario trace response contains the failing step, error text, and run identity', function (this: F56World) {
+  assert.equal(this.f56TraceBody?.ok, true);
+  assert.equal(this.f56TraceBody?.lastResult, 'FAILED');
+  assert.equal(this.f56TraceBody?.run_id, 'run-534');
+  assert.equal(this.f56TraceBody?.source, 'docker-bdd:filtered');
+  assert.equal(this.f56TraceBody?.trace_status, 'available');
+  const failingStep = this.f56TraceBody?.failingStep as { step?: string; errorMessage?: string; status?: string; durationMs?: number } | undefined;
+  assert.equal(failingStep?.step, 'the overlay reader explodes');
+  assert.equal(failingStep?.errorMessage, 'overlay boom');
+  assert.equal(failingStep?.status, 'FAILED');
+  assert.equal(failingStep?.durationMs, 2500);
+});
+
+Then('an expired scenario trace returns a rerun hint instead of throwing', function (this: F56World) {
+  assert.equal(this.f56ExpiredBody?.ok, true);
+  assert.equal(this.f56ExpiredBody?.trace_status, 'expired');
+  assert.match(String(this.f56ExpiredBody?.note ?? ''), /rerun/i);
 });

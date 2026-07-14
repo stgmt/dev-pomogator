@@ -29,7 +29,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { runJudge, type JudgeResult } from '../../../../tools/spec-llm-judge/index.ts';
-import { type Finding, type ReconcileResult, reconcileLight } from './reconcile.ts';
+import { extractConceptNouns, type Finding, type ReconcileResult, reconcileLight } from './reconcile.ts';
 
 const MERIDIAN_MODEL = 'claude-haiku-4-5-20251001';
 const MERIDIAN_TIMEOUT_MS = 120_000;
@@ -106,6 +106,19 @@ export interface FullModeResult extends ReconcileResult {
 
 const MIN_TEXT_LEN = 60;
 const DEFAULT_MAX_CALLS = 50;
+const SEMANTIC_PREFILTER_MIN_SHARED = 3;
+const SEMANTIC_CONCEPT_WORD_RE = /\b[A-Za-z][A-Za-z0-9-]{2,}\b/g;
+const SEMANTIC_CONCEPT_STOPLIST = new Set([
+  'a', 'an', 'and', 'are', 'as', 'at', 'be', 'by', 'for', 'from', 'has', 'have', 'in', 'into', 'is', 'it', 'its',
+  'of', 'on', 'or', 'that', 'the', 'their', 'then', 'this', 'to', 'via', 'when', 'with', 'without',
+  'add', 'adds', 'after', 'against', 'all', 'also', 'before', 'body', 'both', 'can', 'check', 'checks',
+  'code', 'correctly', 'default', 'detect', 'does', 'done', 'each', 'emit', 'emits', 'every', 'exists',
+  'fail', 'fails', 'file', 'files', 'flag', 'flow', 'from', 'given', 'green', 'handles', 'long', 'matching',
+  'mode', 'must', 'only', 'pair', 'pairs', 'pass', 'passed', 'prose', 'read', 'reads', 'report', 'reports',
+  'result', 'returns', 'same', 'scenario', 'shall', 'short', 'shows', 'skip', 'skips', 'spec', 'specs',
+  'successfully', 'system', 'task', 'test', 'tests', 'text', 'then', 'true', 'user', 'users', 'when', 'write',
+  'writes',
+]);
 // JS regex has no `\Z` — emulate end-of-input with `(?=\n#{2,3}\s|$)` and
 // the `s` flag so `.` is unused; use `[\s\S]*?` non-greedy + lookahead.
 const FR_BLOCK_RE = /^#{2,3}\s+(?:Requirement:\s+)?(FR-\d+)(?:[:\s][^\n]*)?\n([\s\S]*?)(?=\n#{2,3}\s|$)/gm;
@@ -139,6 +152,31 @@ function collectFrBlocks(repoRoot: string, slugs: string[]): FrBlock[] {
     }
   }
   return out;
+}
+
+function semanticConcepts(body: string): Set<string> {
+  const concepts = extractConceptNouns(body);
+  let m: RegExpExecArray | null;
+  SEMANTIC_CONCEPT_WORD_RE.lastIndex = 0;
+  while ((m = SEMANTIC_CONCEPT_WORD_RE.exec(body)) !== null) {
+    const word = m[0].toLowerCase();
+    if (word.length < 3 || SEMANTIC_CONCEPT_STOPLIST.has(word)) continue;
+    if (/^fr-?\d+$/i.test(word) || /^ac-?\d+$/i.test(word)) continue;
+    concepts.add(word);
+  }
+  return concepts;
+}
+
+function hasSemanticOverlap(a: FrBlock, b: FrBlock): boolean {
+  const conceptsA = semanticConcepts(a.body);
+  const conceptsB = semanticConcepts(b.body);
+  let shared = 0;
+  for (const concept of conceptsA) {
+    if (!conceptsB.has(concept)) continue;
+    shared++;
+    if (shared >= SEMANTIC_PREFILTER_MIN_SHARED) return true;
+  }
+  return false;
 }
 
 /** Run full-mode reconcile (mechanical + LLM-judge). Async because of subprocess calls. */
@@ -179,6 +217,7 @@ export async function runFullMode(opts: FullModeOptions): Promise<FullModeResult
       const key = `.specs/${a.slug}::.specs/${b.slug}`;
       const keyRev = `.specs/${b.slug}::.specs/${a.slug}`;
       if (alreadyFlagged.has(key) || alreadyFlagged.has(keyRev)) continue;
+      if (!hasSemanticOverlap(a, b)) continue;
       pairs.push([a, b]);
     }
   }

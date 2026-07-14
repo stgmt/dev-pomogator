@@ -113,16 +113,16 @@ Feature: PLUGIN012_TUI_Test_Runner
     And Tests tab should show "No suite details available yet"
 
   @feature7
-  Scenario: SessionStart hook initializes status directory
-    Given a Claude Code session starts in a TUI project directory
+  Scenario: Explicitly enabled beta TUI SessionStart initializes status directory
+    Given a Claude Code session starts in a project directory with beta TUI explicitly enabled
     When the tui_session_start hook receives JSON stdin
     Then the hook should create the .dev-pomogator/.test-status/ directory
     And the hook should write the TEST_STATUSLINE env contract
     And the tui_session_start hook should exit with code 0
 
   @feature7
-  Scenario: SessionStart hook handles empty stdin
-    Given a Claude Code session starts in a TUI project directory
+  Scenario: Explicitly enabled beta TUI SessionStart handles empty stdin
+    Given a Claude Code session starts in a project directory with beta TUI explicitly enabled
     When the tui_session_start hook receives empty stdin
     Then the tui_session_start hook should exit with code 0
 
@@ -493,7 +493,15 @@ Feature: PLUGIN012_TUI_Test_Runner
     Then the passthrough child process tree should be terminated
 
   @feature16
-  Scenario: WRAP001_06 shim lifts the tsx-runner ceiling for wrapper runs
-    Given the test statusline shim launches the wrapper via tsx-runner
-    When TSX_RUNNER_TIMEOUT is not set in the environment
-    Then the shim should pass a large TSX_RUNNER_TIMEOUT to tsx-runner
+  Scenario: WRAP001_06 shim delegates to the self-contained bundle
+    Given the test statusline shim has an isolated plugin bundle
+    When the shim runs the bundled test command without installed Node dependencies
+    Then the shim should preserve the bundled command exit code 9
+
+  @feature16
+  Scenario: WRAP001_07 plugin wrapper runs without installed Node dependencies
+    Given an isolated plugin copy containing the bundled test runner wrapper
+    When the plugin wrapper runs a successful child command without node_modules
+    Then the dependency-free plugin wrapper should exit with code 0
+    When the plugin wrapper runs a failing child command without node_modules
+    Then the dependency-free plugin wrapper should preserve exit code 9
