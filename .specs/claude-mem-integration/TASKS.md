@@ -48,7 +48,7 @@
 
 ## Phase 2: Doctor and registration (Green)
 
-- [ ] Implement doctor canonical state and global MCP checks -- CMEM001_13-CMEM001_17 — id: cmem-t2-01 — Status: TODO | Est: 90m
+- [ ] [spec-phase] Implement doctor canonical state and global MCP checks -- CMEM001_13-CMEM001_17 — id: cmem-t2-01 — Status: BLOCKED | Est: 90m
   _Requirements: [FR-5](FR.md#fr-5-doctor-detection-feature5), [FR-6](FR.md#fr-6-doctor-reads-the-canonical-global-mcp-config-feature6)_
   _Files: `.claude/skills/pomogator-doctor/scripts/engine/checks/claude-mem-plugin.ts`, `.claude/skills/pomogator-doctor/scripts/engine/checks/claude-mem-worker.ts`, `.claude/skills/pomogator-doctor/scripts/engine/checks/mcp-parse.ts`, `.claude/skills/pomogator-doctor/scripts/engine/checks/index.ts`, `.claude/skills/pomogator-doctor/SKILL.md`, `tests/step_definitions/feature_claude_mem_bootstrap.ts`_
   _Dependencies: cmem-t1-01_
