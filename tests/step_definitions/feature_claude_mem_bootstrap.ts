@@ -173,6 +173,24 @@ Given<CmemWorld>(/^a fake home where the claude-mem plugin is already installed$
   writeInstalledPlugin(this.tempDir);
 });
 
+Given<CmemWorld>('the offline default Docker BDD profile', function () {
+  // runHook below injects the test-only recorder seam; the production hook is still spawned.
+});
+
+When<CmemWorld>('the claude-mem lifecycle scenarios run', function () {
+  runHook(this, '{"hook_event_name":"SessionStart"}');
+});
+
+Then<CmemWorld>('no real package download or installation is attempted', function () {
+  readInstallerRecord(this);
+  assert.strictEqual(this.installerRecord.outcome, 'recorded-offline');
+  assert.strictEqual(this.installerRecord.packageSpecifier, 'claude-mem');
+});
+
+Then<CmemWorld>('only recorded launchers and local worker fixtures are used', function () {
+  assert.strictEqual(this.installerRecord.home, this.tempDir);
+});
+
 When<CmemWorld>(/^the claude-mem bootstrap hook runs$/, function () {
   runHook(this, '{"hook_event_name":"SessionStart"}');
 });

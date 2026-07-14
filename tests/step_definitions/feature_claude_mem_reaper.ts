@@ -62,6 +62,7 @@ interface ReaperWorld extends V4World {
   reaperProbeRecord: string;
   canonicalHooks: Record<string, unknown>;
   dogfoodHooks: Record<string, unknown>;
+  codexHooks: Record<string, unknown>;
 }
 
 // ---- pure decision (Scenario Outline @feature7) ----
@@ -216,6 +217,7 @@ Given('a simulated unavailable claude-mem worker has been down longer than the v
 Given('the dev-pomogator hook manifests are available', function (this: ReaperWorld) {
   this.canonicalHooks = JSON.parse(fs.readFileSync(path.join(REPO, '.claude-plugin', 'hooks.json'), 'utf-8')) as Record<string, unknown>;
   this.dogfoodHooks = JSON.parse(fs.readFileSync(path.join(REPO, '.claude', 'settings.json'), 'utf-8')) as Record<string, unknown>;
+  this.codexHooks = JSON.parse(fs.readFileSync(path.join(REPO, '.codex', 'hooks.json'), 'utf-8')) as Record<string, unknown>;
 });
 
 When('the claude-mem reaper hook runs', function (this: ReaperWorld) {
@@ -224,10 +226,6 @@ When('the claude-mem reaper hook runs', function (this: ReaperWorld) {
 
 When('the claude-mem mid-session guard runs before a tool call', function (this: ReaperWorld) {
   runReaperHook(this, { CLAUDE_MEM_REAPER_MID_SESSION: '1' });
-});
-
-When('the claude-mem hook registrations are inspected', function () {
-  // Data was loaded by the Given step; Then steps assert the concrete registration.
 });
 
 Then('the recorded kills are exactly the chroma-mcp pid', function (this: ReaperWorld) {
@@ -256,25 +254,66 @@ Then('no worker health probe is attempted', function (this: ReaperWorld) {
   assert.deepEqual(probes, []);
 });
 
-function hasReaperPreToolUseRegistration(config: Record<string, unknown>, rootEnv: 'CLAUDE_PLUGIN_ROOT' | 'CLAUDE_PROJECT_DIR'): boolean {
+When('the claude-mem hook registrations are inspected', function (this: ReaperWorld) {
+  for (const config of [this.canonicalHooks, this.dogfoodHooks, this.codexHooks]) {
+    const hooks = config.hooks as Record<string, unknown> | undefined;
+    assert.ok(hooks, 'shipped manifest must expose hooks');
+    assert.ok(Array.isArray(hooks.SessionStart), 'shipped manifest must expose SessionStart hooks');
+  }
+});
+
+type HookEntry = { matcher?: string; hooks?: Array<{ command?: string; timeout?: number }> };
+
+function hookEntries(config: Record<string, unknown>, event: 'SessionStart' | 'PreToolUse'): HookEntry[] {
   const hooks = config.hooks as Record<string, unknown> | undefined;
-  const pre = hooks?.PreToolUse as Array<{ matcher?: string; hooks?: Array<{ command?: string }> }> | undefined;
-  return !!pre?.some((entry) =>
-    (entry.matcher === '' || entry.matcher === '*') &&
-    entry.hooks?.some((h) =>
-      typeof h.command === 'string' &&
-      h.command.includes(rootEnv) &&
-      h.command.includes('tools/claude-mem-health/health-check.ts'),
-    ),
-  );
+  const entries = hooks?.[event];
+  assert.ok(Array.isArray(entries), `${event} registrations must be an array`);
+  return entries as HookEntry[];
 }
 
+function assertSessionStartLifecycle(config: Record<string, unknown>, rootEnv: 'CLAUDE_PLUGIN_ROOT' | 'CLAUDE_PROJECT_DIR'): void {
+  const commands = hookEntries(config, 'SessionStart').flatMap((entry) => entry.hooks ?? []);
+  for (const [tool, timeout] of [
+    ['tools/claude-mem-health/health-check.ts', 120],
+    ['tools/claude-mem-bootstrap/install-claude-mem.ts', 30],
+  ] as const) {
+    assert.ok(commands.some((hook) =>
+      hook.command?.includes(rootEnv) && hook.command.includes(tool) && hook.timeout === timeout,
+    ), `SessionStart must register ${tool} through ${rootEnv} with timeout ${timeout}`);
+  }
+}
+
+function assertReaperPreToolUse(config: Record<string, unknown>, rootEnv: 'CLAUDE_PLUGIN_ROOT' | 'CLAUDE_PROJECT_DIR'): void {
+  const entries = hookEntries(config, 'PreToolUse');
+  assert.ok(entries.some((entry) =>
+    (entry.matcher === '' || entry.matcher === '*') &&
+    entry.hooks?.some((hook) =>
+      hook.command?.includes(rootEnv) &&
+      hook.command.includes('tools/claude-mem-health/health-check.ts') &&
+      hook.command.includes('--mid-session') &&
+      hook.timeout === 15,
+    ),
+  ), `PreToolUse must register the mid-session reaper through ${rootEnv}`);
+}
+
+Then('the canonical plugin manifest registers the SessionStart lifecycle hooks', function (this: ReaperWorld) {
+  assertSessionStartLifecycle(this.canonicalHooks, 'CLAUDE_PLUGIN_ROOT');
+});
+
+Then('the dogfood settings register the SessionStart lifecycle hooks', function (this: ReaperWorld) {
+  assertSessionStartLifecycle(this.dogfoodHooks, 'CLAUDE_PROJECT_DIR');
+});
+
+Then('the Codex hooks register the SessionStart lifecycle hooks', function (this: ReaperWorld) {
+  assertSessionStartLifecycle(this.codexHooks, 'CLAUDE_PROJECT_DIR');
+});
+
 Then('the canonical plugin manifest registers the reaper on PreToolUse', function (this: ReaperWorld) {
-  assert.equal(hasReaperPreToolUseRegistration(this.canonicalHooks, 'CLAUDE_PLUGIN_ROOT'), true);
+  assertReaperPreToolUse(this.canonicalHooks, 'CLAUDE_PLUGIN_ROOT');
 });
 
 Then('the dogfood settings register the reaper on PreToolUse', function (this: ReaperWorld) {
-  assert.equal(hasReaperPreToolUseRegistration(this.dogfoodHooks, 'CLAUDE_PROJECT_DIR'), true);
+  assertReaperPreToolUse(this.dogfoodHooks, 'CLAUDE_PROJECT_DIR');
 });
 
 Then('the guard emits a visible memory-not-recording warning', function (this: ReaperWorld) {
