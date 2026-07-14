@@ -104,6 +104,13 @@ SPECS_RW=".dev-pomogator/.tmp/specs-docker-rw-${PROJECT_NAME}"
 rm -rf "$SPECS_RW" 2>/dev/null || true
 mkdir -p "$SPECS_RW"
 cp -R .specs/. "$SPECS_RW"/
+# "Writable" has to mean writable BY THE CONTAINER. The copy is created by the HOST, so it carries
+# the host's uid through the bind mount, and the container runs as `testuser` (uid 1001). When the
+# uids differ — a root shell in WSL, a CI runner, any host uid != 1001 — every scaffold step dies
+# with `EACCES: permission denied, mkdir '/home/testuser/app/.specs/...'`. That silently took out
+# 13 scenarios (SPECJIRA001_*, PLUGIN008_*, SPECGEN004_47x, SBDE001_02) and they read as real
+# failures, not as an environment fault.
+chmod -R a+rwX "$SPECS_RW" 2>/dev/null || true
 echo "[docker-bdd] mounted a writable .specs copy ($SPECS_RW) — real .specs/ untouched"
 SESSION_ARGS=()
 if [ -n "$SESSION" ]; then

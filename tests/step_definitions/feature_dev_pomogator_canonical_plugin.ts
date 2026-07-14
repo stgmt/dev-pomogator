@@ -480,7 +480,20 @@ When(/^user runs "\/plugin install dev-pomogator@stgmt"$/, function (this: V4Wor
 });
 
 Then(/^Claude Code should copy plugin tree в ~\/\.claude\/plugins\/cache\/stgmt\/dev-pomogator\/<version>\/$/, function (this: V4World) {
-  assert.match(this.lastStdout, /CACHE_PLUGIN_JSON=.*\.claude[/\\]plugins[/\\]cache[/\\]stgmt[/\\]dev-pomogator[/\\]2\.0\.3[/\\]\.claude-plugin[/\\]plugin\.json/);
+  // The cache path is version-pinned, so this assertion must read the version from the manifest
+  // — never hardcode it. It used to pin `2.0.3` literally, which turned every release into a
+  // broken test: the 2.0.4 bump (PR #110) took CANON001_40 and _60 red, and CI missed it because
+  // the PR pipeline does not run the full BDD suite. The scenario says "<version>"; honour that.
+  const manifest = JSON.parse(
+    fs.readFileSync(path.join(REPO_ROOT, '.claude-plugin', 'plugin.json'), 'utf-8'),
+  ) as { version: string };
+  const version = manifest.version.replace(/[\\^$.*+?()[\]{}|]/g, '\\$&');
+  assert.match(
+    this.lastStdout,
+    new RegExp(
+      `CACHE_PLUGIN_JSON=.*\\.claude[/\\\\]plugins[/\\\\]cache[/\\\\]stgmt[/\\\\]dev-pomogator[/\\\\]${version}[/\\\\]\\.claude-plugin[/\\\\]plugin\\.json`,
+    ),
+  );
 });
 
 Then(/^plugin\.json should be present в cache$/, function (this: V4World) {
