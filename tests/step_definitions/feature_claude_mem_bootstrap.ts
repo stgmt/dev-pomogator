@@ -340,7 +340,7 @@ Then<CmemWorld>(/^the worker diagnostic reports "([^"]+)" with port "(\d+)"$/, f
   assert.match(this.workerCheckMessage, new RegExp(condition), `expected ${condition}: ${this.workerCheckMessage}`);
 });
 
-Given<CmemWorld>(/^a fake claude-mem home in (absent|installed and healthy|malformed config|installed and unreachable) state$/, async function (state: string) {
+Given<CmemWorld>(/^a fake claude-mem home in (absent|installed and healthy|malformed config|installed unreachable) state$/, async function (state: string) {
   if (state === 'absent') return;
   fs.mkdirSync(path.join(this.tempDir, '.claude-mem'), { recursive: true });
   if (state === 'malformed config') {
@@ -379,7 +379,7 @@ Then<CmemWorld>(/^the claude-mem installation check reports "([^"]+)"$/, functio
 
 Then<CmemWorld>(/^the worker diagnostic reports "([^"]+)"$/, function (condition: string) {
   const expected = condition === 'malformed-config' ? /configuration is malformed/i
-    : condition === 'unreachable-worker' ? /not reachable|unreachable/i
+    : condition === 'absent' || condition === 'unreachable-worker' ? /not reachable|unreachable/i
     : /healthy/i;
   assert.match(this.workerCheckMessage, expected, this.workerCheckMessage);
   assert.ok(Number.isFinite(this.workerCheckDetails.port as number), 'worker result must include resolved port evidence');
