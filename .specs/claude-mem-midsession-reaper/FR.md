@@ -2,7 +2,7 @@
 
 ## FR-1: Reap a wedged claude-mem worker during an active session
 
-The dev-pomogator claude-mem health hook SHALL be able to run during a Claude Code session before tool execution and detect the same Windows wedged-worker state that the existing SessionStart reaper handles: worker health check fails, the configured worker port is still listening, the port owner is not alive, and an orphaned claude-mem-related process is present. When that state is detected, the hook SHALL reuse the existing surgical reaper decision path and target only the orphaned claude-mem socket holder process ids.
+The dev-pomogator claude-mem health hook SHALL be able to run during a Claude Code session before tool execution and detect the same Windows wedged-worker state that the existing SessionStart reaper handles: worker health check fails, the configured worker port is still listening, the port owner is not alive, and an orphaned claude-mem-related process is present. When that state is detected, the hook SHALL reuse the existing surgical reaper decision path and target only the orphaned claude-mem socket holder process ids. This local reaper is mitigation for the zombie-port availability state; it SHALL NOT be represented as a fix for upstream claude-mem `session-init`, whose unbounded HTTP call to the worker can consume Claude Code's 60-second hook budget before this PreToolUse guard can run. The primary fix is an upstream short (3–5 second) deadline with a no-injection fallback, tracked by dev-pomogator issues #92 and #93.
 
 **Связанные AC:** [AC-1](ACCEPTANCE_CRITERIA.md#ac-1-fr-1)
 **Use Case:** [UC-2](USE_CASES.md)

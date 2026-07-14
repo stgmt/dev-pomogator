@@ -4,7 +4,7 @@
 
 **Требование:** [FR-1](FR.md)
 
-WHEN the mid-session guard runs before a tool call AND the claude-mem worker is wedged (port listening, owner PID dead, an orphaned claude-mem process present) THEN the reaper decision SHALL return action `reap` carrying the orphaned socket-holder's pid(s).
+WHEN the mid-session guard runs before a tool call AND the claude-mem worker is wedged (port listening, owner PID dead, an orphaned claude-mem process present) THEN the reaper decision SHALL return action `reap` carrying the orphaned socket-holder's pid(s). This proves only the local zombie-port mitigation and SHALL NOT claim to bound upstream `session-init` HTTP latency; issues #92/#93 require its independent 3–5 second deadline and no-injection fallback.
 
 ## AC-2 (FR-2)
 
