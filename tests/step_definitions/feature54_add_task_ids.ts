@@ -28,6 +28,8 @@ const INPUTS: Record<string, string> = {
   'a title-only header with no Tnn prefix': '- [ ] Создать fixture X -- @feature1 — Status: TODO | Est: 15m',
   'a header with a phase-dashed prefix': '- [ ] **T4-33: do thing** — Status: DONE | Est: 30m',
   'a title-only header with a no-status child': '- [ ] Title -- @feature1 — Status: TODO\n  - [ ] a child observable (no status)\n',
+  'a READY Tnn header missing its id': '- [ ] T03: ready for verification — Status: READY | Est: 10m',
+  'a READY title-only header missing its id': '- [ ] Prepare release notes — Status: READY | Est: 10m',
 };
 
 Given(/^a loose TASKS line — `([^`]+)`$/, function (this: TiWorld, name: string) {

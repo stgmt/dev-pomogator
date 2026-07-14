@@ -21,7 +21,7 @@ import fs from 'node:fs';
 // Multiline, RAW-content regex: `[^\r\n]*?` never crosses a line, so the
 // replace touches ONLY matched header lines and leaves every other byte —
 // including CRLF endings — untouched (no split/join EOL reflow).
-const HEADER = /^([ \t]*-\s*\[[ xX~]\]\s+T(\d+):[^\r\n]*?)(\s+—\s*Status:\s*(?:TODO|IN_PROGRESS|DONE|BLOCKED)\b)/gm;
+const HEADER = /^([ \t]*-\s*\[[ xX~]\]\s+T(\d+):[^\r\n]*?)(\s+—\s*Status:\s*(?:TODO|READY|IN_PROGRESS|DONE|BLOCKED)\b)/gm;
 
 export interface AddIdResult {
   content: string;
@@ -50,7 +50,7 @@ export function addTaskIds(content: string): AddIdResult {
 // specs whose loose tasks are title-only (`- [ ] Создать X -- @feature1 — Status: TODO`)
 // or use a phase-dashed prefix (`T4-33`) the `Tnn:` regex misses. `[^\r\n]*?` keeps it
 // single-line + CRLF-safe; the `(?!.*\bid:)` look-ahead on the head is enforced in code.
-const ANY_HEADER = /^([ \t]*-\s*\[[ xX~]\]\s+[^\r\n]*?)(\s+—\s*Status:\s*(?:TODO|IN_PROGRESS|DONE|BLOCKED)\b)/gm;
+const ANY_HEADER = /^([ \t]*-\s*\[[ xX~]\]\s+[^\r\n]*?)(\s+—\s*Status:\s*(?:TODO|READY|IN_PROGRESS|DONE|BLOCKED)\b)/gm;
 
 /**
  * Add `— id: <slug>` to EVERY task header (with `— Status:`) missing an id — not just
