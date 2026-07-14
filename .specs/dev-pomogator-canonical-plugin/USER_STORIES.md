@@ -115,3 +115,103 @@ When grep `cursor` по всему репозиторию (tools/, package.json,
 Then не найдено ни одной активной ссылки на Cursor (только removal-комментарии)
 And legacy CLI `dev-pomogator --cursor` (если remains) exits с non-zero код и сообщением "Cursor support was removed in v2.0. Use canonical install: /plugin marketplace add stgmt/dev-pomogator"
 And `package.json` description и keywords не содержат "Cursor"
+
+---
+
+### User Story 7: Portable hook dispatch does not block sessions (Priority: P1)
+
+As a dev-pomogator plugin user running Claude Code from POSIX, Windows, or a foreign project directory, I want hook guarding and doctor checks to select the correct Node executable before Node starts and fail open when diagnostics are unavailable, so that prohibited host BDD calls are stopped early without a platform-specific launcher or transient doctor outage blocking ordinary hook work.
+
+**Требование:** [FR-14](FR.md#fr-14-plugin-hook-commands-are-portable-deps-absent-safe-and-fail-open)
+
+**Why:** Canonical plugin hooks must operate from the installed plugin tree rather than the repository CWD, and a Windows-only executable name or global doctor state turns a diagnostic into an outage for unrelated projects.
+
+**Independent Test:** Invoke the real shell launcher from a POSIX environment and two distinct project CWDs; assert that prohibited host BDD is rejected before Node, a permitted invocation uses `node`, and unavailable or malformed doctor state leaves the permitted action running.
+
+**Acceptance Scenarios:**
+
+Given a canonical plugin hook launcher in a POSIX shell from a foreign project CWD
+And doctor state is unavailable or malformed
+When the launcher receives a prohibited host BDD command
+Then it rejects the command before starting Node
+And a permitted hook invocation uses `node`, not `node.exe`
+And the permitted hook invocation continues fail-open
+
+---
+
+### User Story 7: Hook runtime recovery that never blocks work (Priority: P1)
+
+**Требование:** [FR-13], [FR-14]
+
+As a Claude Code user, I want every canonical cached-plugin and dogfood hook launcher to run a portable shell-only pre-Node preflight so that a missing or unusable Node runtime recovers safely rather than breaking my hook workflow.
+
+**Why:** Hook launchers run before their Node entry points; recovery must therefore be independent of Node and must leave Claude Code usable on every failure path.
+
+**Independent Test:** Start a hook from each launcher location with its expected Node executable unavailable or non-runnable. Verify shell preflight does not invoke TypeScript, performs only the allowed recovery/migration attempt, emits concise diagnostic guidance, and exits 0.
+
+**Acceptance Scenarios:**
+
+Given Node cannot be executed by a canonical or dogfood hook launcher
+When the launcher preflight runs
+Then it completes via portable shell without blocking the hook event
+And it returns exit 0 after recording an attempted recovery outcome
+And later Node availability allows normal hook execution.
+
+---
+
+### User Story 8: Cross-platform runtime resolution (Priority: P1)
+
+**Требование:** [FR-13], [FR-14]
+
+As a Windows or POSIX user, I want hook launchers to select the platform-appropriate Node command without relying on their current working directory so that canonical installs and source-tree dogfood behave identically.
+
+**Why:** Windows commonly exposes `node.exe`, whereas POSIX commonly exposes `node`; hook CWD is not a stable plugin-root contract.
+
+**Independent Test:** Invoke each launcher from a non-plugin CWD on POSIX and Windows-compatible fixtures, preserving an argument containing spaces. Verify the resolved script/root comes from launcher location or approved environment, `node.exe` is accepted on Windows, and a non-runnable candidate follows the recovery path.
+
+**Acceptance Scenarios:**
+
+Given a hook starts outside the plugin root
+When the launcher resolves its runtime and target script
+Then it never derives the target from the current working directory
+And it preserves all original hook arguments
+And it treats missing and non-runnable Node candidates consistently.
+
+---
+
+### User Story 9: CWD-scoped once-per-session recovery (Priority: P1)
+
+**Требование:** [FR-13]
+
+As a developer using several repositories in one Claude Code session, I want each project to recover once independently so that a failure in one CWD neither repeats work nor suppresses recovery in another.
+
+**Why:** A process-global marker causes cross-project false sharing; session-only state is insufficient.
+
+**Independent Test:** Trigger two hooks for CWD A and one for CWD B under one session identity, then repeat with a different session identity. Verify one recovery attempt per `(session, normalized CWD)` key and no cross-key suppression.
+
+**Acceptance Scenarios:**
+
+Given recovery has already been attempted for one session and normalized CWD
+When another hook runs with that same key
+Then it does not repeat recovery
+But a different CWD or session receives its own independent attempt.
+
+---
+
+### User Story 10: Safe legacy recovery-state transition and doctor guidance (Priority: P2)
+
+**Требование:** [FR-7], [FR-13]
+
+As an upgrader, I want old unscoped recovery state handled as inert data and actionable doctor guidance when recovery is needed so that upgrading cannot execute stale content or hide the next remedy.
+
+**Why:** Existing legacy markers may collide with the new CWD-scoped model and should never be trusted as executable shell input.
+
+**Independent Test:** Seed a legacy marker plus unrelated state, run preflight, and inspect outcomes. Verify managed legacy state is migrated or retired atomically without evaluation, unrelated state remains unchanged, and doctor output explains runtime status, scoped recovery state, and the next safe action.
+
+**Acceptance Scenarios:**
+
+Given legacy recovery state is present
+When the new preflight processes it
+Then it does not source or execute marker contents
+And it preserves non-managed state
+And `/pomogator-doctor` reports an actionable recovery diagnosis.

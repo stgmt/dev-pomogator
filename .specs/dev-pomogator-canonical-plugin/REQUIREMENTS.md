@@ -31,6 +31,7 @@
 - [FR-10: Update path](FR.md#fr-10-update-path-через-plugin-marketplace-update)
 - [FR-11: Desktop compatibility](FR.md#fr-11-desktop-compatibility-via-canonical-ui)
 - [FR-12: Uninstall](FR.md#fr-12-uninstall-via-plugin-uninstall)
+- [FR-14: portable pre-Node dispatch and fail-open doctor](FR.md#fr-14-plugin-hook-commands-are-portable-deps-absent-safe-and-fail-open) — [AC-9](ACCEPTANCE_CRITERIA.md#ac-9-fr-14), `PLUGINDEPS001_03`
 
 ## Non-Functional Requirements
 
@@ -84,6 +85,11 @@
 | CHK-FR10-01 | marketplace.json version field synchronized с plugin.json version | FR-10, @feature10 | Unit test | Draft | parse оба + assert equal |
 | CHK-FR11-01 | Skills visible в Claude Desktop after canonical install | FR-11, AC-7, @feature11 | Manual review | Draft | Desktop UI verification |
 | CHK-FR12-01 | `/plugin uninstall dev-pomogator@stgmt` removes cache + enabledPlugins entry | FR-12, AC-6, @feature12 | Manual review | Draft | post-uninstall filesystem check |
+
+| CHK-FR14-01 | Every real canonical hook reaches no non-builtin npm dependency when installed without `node_modules` | FR-14, AC-9, @feature14 | BDD scenario | Draft | PLUGINDEPS001_01 and `tools/plugin-deps-guard/check.ts` |
+| CHK-FR14-02 | POSIX pre-Node dispatch rejects host BDD before Node and uses `node`, never `node.exe` | FR-14, AC-9, @feature14 | BDD scenario | Draft | PLUGINDEPS001_03 against the real launcher |
+| CHK-FR14-03 | Foreign-CWD dispatch anchors plugin and dogfood launchers to their documented environment variable | FR-14, AC-9, @feature13, @feature14 | BDD scenario | Draft | HOOKSCWD001_01 and PLUGINDEPS001_03 |
+| CHK-FR14-04 | Unavailable or malformed doctor state preserves a permitted hook invocation | FR-14, AC-9, @feature14 | BDD scenario | Draft | PLUGINDEPS001_03 fail-open branch |
 
 ## Verification Process
 

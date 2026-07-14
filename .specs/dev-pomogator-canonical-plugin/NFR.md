@@ -22,6 +22,8 @@
 - **NFR-R4**: Concurrent migration protection: lock file `<cwd>/.dev-pomogator/.migration.lock` через `flag: 'wx'` (per `atomic-update-lock` rule). Если lock удерживается — error «another migration in progress, wait or remove lock».
 - **NFR-R5**: Marker guard hook tolerates malformed payload: invalid JSON, missing tool_name field, unexpected tool_response shape — все handled через graceful fallback (exit 0 silently).
 
+- **NFR-R6**: On POSIX, the pre-Node hook dispatch must never attempt `node.exe`. If the platform-appropriate `node` command is unavailable or malformed doctor input prevents diagnostics, the dispatch shall fail open for permitted hook work while still rejecting prohibited host BDD before Node is started.
+
 ## Usability
 
 - **NFR-U1**: Migration script при detection v1 install печатает clear progress: «Detected v1 install (version X.Y.Z)», «Backing up N user-modified files», «Removing M project files», «Cleaning K global entries». Флаги `--project-only` / `--global-only` / `--no-global` / `--no-project` документированы в `--help`.

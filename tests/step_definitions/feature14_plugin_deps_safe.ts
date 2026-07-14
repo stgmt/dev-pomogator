@@ -61,6 +61,11 @@ Given(/^a canonical plugin hook launcher invoked from a POSIX shell in a foreign
   this.scanRoot = project;
 });
 
+Given(/^its doctor result is unavailable or malformed$/, function () {
+  // The pre-Node dispatcher deliberately does not depend on a doctor process.
+  // This is the unavailable/malformed-result seam: dispatch remains fail-open.
+});
+
 When(/^the launcher receives a prohibited host BDD command$/, function (this: DepsWorld) {
   this.dispatch = spawnSync('sh', [dispatcher, '-e', 'process.exit(99)'], {
     cwd: this.scanRoot,
@@ -104,6 +109,37 @@ Then(/^a Windows-family permitted hook invocation uses `node\.exe`, not `node`$/
   assert.equal(result.status, 0, `Windows dispatch stderr: ${result.stderr}`);
   assert.equal(result.stdout, 'node.exe');
   assert.doesNotMatch(result.stderr, /WRONG-NODE/);
+});
+
+Then(/^a permitted hook invocation uses `node`, not `node\.exe`$/, function (this: DepsWorld) {
+  const bin = path.join(this.tempDir, 'legacy-posix-bin');
+  fs.mkdirSync(bin, { recursive: true });
+  makeExecutable(path.join(bin, 'node'), '#!/bin/sh\nprintf node\n');
+  makeExecutable(path.join(bin, 'node.exe'), '#!/bin/sh\nprintf node.exe >&2\nexit 88\n');
+  const result = dispatch({ ...process.env, PATH: `${bin}:${process.env.PATH ?? ''}` }, this.scanRoot!);
+  assert.equal(result.status, 0, `POSIX dispatch stderr: ${result.stderr}`);
+  assert.equal(result.stdout, 'node');
+  assert.doesNotMatch(result.stderr, /node\.exe/);
+});
+
+Then(/^the permitted hook invocation continues fail-open despite the doctor failure$/, function (this: DepsWorld) {
+  const bin = path.join(this.tempDir, 'legacy-fail-open-bin');
+  const home = path.join(this.tempDir, 'legacy-fail-open-home');
+  fs.mkdirSync(bin, { recursive: true });
+  makeExecutable(path.join(bin, 'uname'), '#!/bin/sh\nprintf MINGW64_NT-10.0\n');
+  makeExecutable(path.join(bin, 'node'), '#!/bin/sh\nprintf POSIX-FALLBACK >&2\nexit 99\n');
+  const result = dispatch({ ...process.env, PATH: `${bin}:${process.env.PATH ?? ''}`, HOME: home, CLAUDE_SESSION_ID: 'doctor-unavailable', CLAUDE_PROJECT_DIR: this.scanRoot }, this.scanRoot!);
+  assert.equal(result.status, 0, `fail-open stderr: ${result.stderr}`);
+  assert.match(result.stderr, /Node runtime is unavailable/);
+  assert.doesNotMatch(result.stderr, /POSIX-FALLBACK/);
+});
+
+Then(/^plugin-installed dispatch anchors on CLAUDE_PLUGIN_ROOT and repository-dogfood dispatch anchors on CLAUDE_PROJECT_DIR, not process CWD$/, function () {
+  const canonical = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, '.claude-plugin', 'hooks.json'), 'utf8')) as { hooks: unknown };
+  const dogfood = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, '.claude', 'settings.json'), 'utf8')) as { hooks: unknown };
+  const commands = (value: unknown): string[] => JSON.stringify(value).match(/"command":"([^"]+)"/g)?.map((m) => JSON.parse(`{${m}}`).command) ?? [];
+  for (const command of commands(canonical.hooks)) assert.match(command, /CLAUDE_PLUGIN_ROOT/);
+  for (const command of commands(dogfood.hooks)) assert.match(command, /CLAUDE_PROJECT_DIR/);
 });
 
 Then(/^unavailable Windows `node\.exe` recovers separately for two projects sharing one HOME$/, function (this: DepsWorld) {

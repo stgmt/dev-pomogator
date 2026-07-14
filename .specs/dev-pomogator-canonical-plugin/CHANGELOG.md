@@ -13,6 +13,9 @@ All notable changes to this feature will be documented in this file.
 - **Scope-aware install** через canonical `--scope user|project|local` flags Anthropic mechanism. Default = user (per plugin-marketplaces.md). FR-5.
 - **Desktop UI integration** through canonical «**+** → Plugins» browser. Verified per `desktop-quickstart.md`. FR-11.
 
+### Planned
+- **Hook runtime recovery** — planned portable POSIX/Git-atomic best-effort preflight before Node bootstrap. Recovery is once per Claude-session plus canonical-project-CWD key; lock, marker, filesystem, recovery, and diagnostic failures fail open while normal dispatch continues. POSIX dispatch accepts only `node`; Windows dispatch accepts only `node.exe`; no cross-platform fallback is allowed. Canonical-plugin and repository-dogfood paths remain parity-tested. Migration is explicit `--global`-only and must preserve project sentinels byte-for-byte on success, dry-run, already-migrated, and failure paths. `plugin-deps` owns the hook-runtime BDD scenarios, steps, fixtures, and runtime proof; evidence must record the resolved `origin/main` commit, not `HEAD`, worktree, cache, or user-global state. The rollout includes migration guidance, `/pomogator-doctor` diagnostics, and Docker BDD end-to-end proof.
+
 ### Changed
 - **Distribution model**: npm-based install (`npm i -g dev-pomogator && dev-pomogator --claude`) → canonical Anthropic marketplace install (`/plugin marketplace add` + `/plugin install`). FR-3, FR-4.
 - **Activation**: file placement в `~/.claude/plugins/` → `enabledPlugins` declaration в settings.json + `/reload-plugins` (CLI) or Desktop restart. Anthropic-managed automatically через `/plugin install`. FR-6.

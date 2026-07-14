@@ -85,3 +85,14 @@ WHEN кто-либо запускает legacy CLI entry point (если ост�
 THEN CLI SHALL exit с non-zero exit code (≥1)
 AND stderr SHALL содержать message "Cursor support was removed in v2.0. Use canonical install: /plugin marketplace add stgmt/dev-pomogator."
 AND no install actions SHALL быть выполнены.
+
+## AC-9 (FR-14)
+
+**Требование:** [FR-14](FR.md#fr-14-plugin-hook-commands-are-portable-deps-absent-safe-and-fail-open)
+
+WHEN a canonical-plugin or repository-dogfood hook is invoked from a POSIX environment or a foreign project CWD
+THEN its shell pre-dispatch SHALL block a prohibited host BDD command before Node runs
+AND on POSIX SHALL invoke `node`, not `node.exe`
+AND its doctor decision SHALL be isolated to the active session and project CWD
+AND a missing, failed, or malformed doctor result SHALL preserve the original hook action rather than block it.
+AND plugin-installed dispatch SHALL resolve its launcher from `CLAUDE_PLUGIN_ROOT` and repository-dogfood dispatch from `CLAUDE_PROJECT_DIR`, never from process CWD.
