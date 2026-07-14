@@ -10,7 +10,11 @@
  */
 
 import { describe, it, expect } from 'vitest';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import { buildToolRegistry, sliceSection } from '../tools.ts';
+import { configuredFeatureRoots } from '../../specs-generator/spec-verdict.ts';
 import type {
   SpecGraph,
   FrNode,
@@ -73,8 +77,23 @@ const tool = (name: string) => {
 };
 
 describe('tool registry — shape', () => {
-  it('registers exactly 24 tools with canonical names', () => {
-    expect(registry).toHaveLength(24);
+  it('derives de-duplicated feature roots from concrete and glob Cucumber paths', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'configured-feature-roots-'));
+    try {
+      fs.writeFileSync(path.join(root, 'cucumber.json'), JSON.stringify({ default: { paths: [
+        '.specs/demo/demo.feature',
+        'tests/features/**/*.feature',
+        'acceptance/custom/**/*.feature',
+        'acceptance/custom/nested/one.feature',
+      ] } }));
+      expect(configuredFeatureRoots(root)).toEqual(['.specs', 'acceptance/custom', 'tests/features']);
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('registers exactly 25 tools with canonical names', () => {
+    expect(registry).toHaveLength(25);
     const names = registry.map((t) => t.name).sort();
     expect(names).toEqual(
       [
@@ -88,6 +107,7 @@ describe('tool registry — shape', () => {
         'find_refs', // FR-7b spec-domain graph reference-finder (NOT markdown nav)
         'get_archival_proof', // FR-45a graph+prose safety proof for archiving
         'get_node',
+        'get_scenario_trace', // FR-56 runtime trace lookup
         'get_spec_status', // FR-38 full lifecycle + linked last-run summary
         'get_test_result',
         'get_trace',
@@ -226,7 +246,7 @@ describe('get_trace', () => {
       ok: boolean;
       node: { id: string };
       acceptance_criteria: { id: string }[];
-      scenarios: { id: string }[];
+      scenarios: Array<{ id: string; runtime_trace: { lastResult: string; trace_status: string } }>;
       tasks: { id: string }[];
       explanation_for_agent: string;
     };
@@ -234,6 +254,7 @@ describe('get_trace', () => {
     expect(body.node.id).toBe('FR-1');
     expect(body.acceptance_criteria.map((a) => a.id)).toEqual(['AC-1']);
     expect(body.scenarios.map((s) => s.id)).toEqual(['SCEN-login-ok']);
+    expect(body.scenarios[0].runtime_trace).toMatchObject({ lastResult: 'UNKNOWN', trace_status: 'not_recorded' });
     expect(body.tasks.map((t) => t.id)).toEqual(['TASK-impl-login']);
     expect(body.explanation_for_agent.length).toBeLessThanOrEqual(500);
     expect(body.explanation_for_agent).toContain('FR-1');
@@ -474,9 +495,69 @@ describe('find_orphans + get_test_result + get_spec_status (view=counts) + list_
 
   it('get_test_result returns UNKNOWN when scenario has no run record', async () => {
     const r = await tool('get_test_result').handler({ scenario_id: 'SCEN-login-ok' });
-    const body = parseResult(r) as { ok: boolean; lastResult: string };
+    const body = parseResult(r) as { ok: boolean; lastResult: string; runtime_trace: { trace_status: string } };
     expect(body.ok).toBe(true);
     expect(body.lastResult).toBe('UNKNOWN');
+    expect(body.runtime_trace.trace_status).toBe('not_recorded');
+  });
+
+  it('get_scenario_trace returns failing step detail from the archived runtime chunk', async () => {
+    const cwd = process.cwd();
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'scenario-trace-'));
+    try {
+      process.chdir(root);
+      const traceFile = path.join(root, '.dev-pomogator', '.test-history', 'run-56.ndjson');
+      fs.mkdirSync(path.dirname(traceFile), { recursive: true });
+      fs.writeFileSync(traceFile, [
+        JSON.stringify({ pickle: { id: 'pk1', steps: [{ id: 'ps1', text: 'the overlay reader fails' }] } }),
+        JSON.stringify({ testCase: { id: 'tc1', pickleId: 'pk1', testSteps: [{ id: 'ts1', pickleStepId: 'ps1' }] } }),
+        JSON.stringify({ testCaseStarted: { id: 'tcs1', testCaseId: 'tc1' } }),
+        JSON.stringify({ testStepFinished: { testCaseStartedId: 'tcs1', testStepId: 'ts1', testStepResult: { status: 'FAILED', message: 'boom', duration: { seconds: 1, nanos: 250_000_000 } } } }),
+      ].join('\n'));
+
+      const g = makeGraph();
+      const s = g.nodes.get('SCEN-login-ok') as ScenarioNode;
+      s.lastResult = 'FAILED';
+      s.lastRunAt = '2027-01-15T08:00:01.000Z';
+      s.trace = {
+        traceId: '.dev-pomogator/.test-history/run-56.ndjson#tcs1',
+        traceFile: '.dev-pomogator/.test-history/run-56.ndjson',
+        testCaseStartedId: 'tcs1',
+        runId: 'run-56',
+        source: 'run-bdd:filtered',
+      };
+      const reg = buildToolRegistry(() => g);
+      const r = await reg.find((t) => t.name === 'get_scenario_trace')!.handler({ scenario_id: 'SCEN-login-ok' });
+      const body = parseResult(r as never) as { ok: boolean; trace_status: string; failingStep: { step: string; errorMessage: string; status: string; durationMs: number }; run_id: string };
+
+      expect(body.ok).toBe(true);
+      expect(body.trace_status).toBe('available');
+      expect(body.run_id).toBe('run-56');
+      expect(body.failingStep).toMatchObject({ step: 'the overlay reader fails', errorMessage: 'boom', status: 'FAILED', durationMs: 1250 });
+    } finally {
+      process.chdir(cwd);
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('get_scenario_trace degrades gracefully when the runtime chunk expired', async () => {
+    const g = makeGraph();
+    const s = g.nodes.get('SCEN-login-ok') as ScenarioNode;
+    s.lastResult = 'PASSED';
+    s.resultStale = true;
+    s.trace = {
+      traceId: '.dev-pomogator/.test-history/missing.ndjson#tcs1',
+      traceFile: '.dev-pomogator/.test-history/missing.ndjson',
+      testCaseStartedId: 'tcs1',
+    };
+    const reg = buildToolRegistry(() => g);
+    const r = await reg.find((t) => t.name === 'get_scenario_trace')!.handler({ scenario_id: 'SCEN-login-ok' });
+    const body = parseResult(r as never) as { ok: boolean; trace_status: string; stale: boolean; note: string };
+
+    expect(body.ok).toBe(true);
+    expect(body.stale).toBe(true);
+    expect(body.trace_status).toBe('expired');
+    expect(body.note).toMatch(/rerun/i);
   });
 
   it('get_spec_status view=counts returns per-spec counts', async () => {
@@ -487,6 +568,88 @@ describe('find_orphans + get_test_result + get_spec_status (view=counts) + list_
     expect(auth.ac).toBe(1);
     expect(auth.scenario).toBe(2);
     expect(auth.task).toBe(2);
+  });
+
+  it('get_spec_status refreshes graph state before reporting results', async () => {
+    let refreshed = false;
+    const reg = buildToolRegistry(() => makeGraph(), { refreshGraph: () => { refreshed = true; } });
+    const status = reg.find((t) => t.name === 'get_spec_status')!;
+
+    await status.handler({ spec: 'auth', view: 'status' });
+
+    expect(refreshed).toBe(true);
+  });
+
+  it('get_spec_status exposes filtered proof while canonical coverage stays not_run (FR-61e)', async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'status-filtered-proof-'));
+    try {
+      fs.mkdirSync(path.join(root, '.specs', 'auth'), { recursive: true });
+      fs.mkdirSync(path.join(root, '.dev-pomogator'), { recursive: true });
+      fs.writeFileSync(path.join(root, '.specs', 'auth', 'auth.feature'), '@feature1\nFeature: Auth\n  Scenario: AUTH001_1 login\n    Given login\n');
+      fs.writeFileSync(path.join(root, 'cucumber.json'), JSON.stringify({ default: { paths: ['.specs/auth/auth.feature'] } }));
+      fs.writeFileSync(
+        path.join(root, '.dev-pomogator', '.scenario-results.ndjson'),
+        JSON.stringify({
+          scenario_id: 'AUTH001_1', result: 'PASSED', time: '2099-01-01T00:00:00.000Z',
+          run_id: 'filtered-auth-1', source: 'docker-bdd:filtered',
+          trace_file: '.dev-pomogator/.test-history/filtered-auth-1.ndjson',
+          uri: '.specs/auth/auth.feature', line: 3,
+        }) + '\n',
+      );
+      const g = makeGraph();
+      const source = scen('auth:SCEN-auth001-1-login', ['@feature1'], '.specs/auth/auth.feature', 3);
+      source.lastResult = 'PASSED';
+      source.lastRunAt = '2099-01-01T00:00:00.000Z';
+      source.trace = { traceId: 'filtered-auth-1#tcs', traceFile: '.dev-pomogator/.test-history/filtered-auth-1.ndjson', runId: 'filtered-auth-1', source: 'docker-bdd:filtered' };
+      g.nodes.set(source.id, source);
+      g.nodes.set('auth:FR-1', fr('auth:FR-1', 'Login', '.specs/auth/FR.md'));
+      const done = task('auth:TASK-filtered-proof', ['FR-1']);
+      done.status = 'done';
+      done.doneWhen = '- [x] SPECGEN AUTH001_1 passes';
+      g.nodes.set(done.id, done);
+      g.edges.push({ from: 'auth:FR-1', to: source.id, type: 'tested-by' });
+      const reg = buildToolRegistry(() => g, { repoRoot: root });
+      const status = reg.find((t) => t.name === 'get_spec_status')!;
+
+      const body = parseResult(await status.handler({ spec: 'auth', view: 'status' })) as {
+        lifecycle: string;
+        canonical_coverage: { totals: Record<string, number> };
+        filtered_proof: { runId: string; artifact: string; selectedScenarioIds: string[]; passed: number; nonPassed: number; timestamp: string; source: string; canonicalCoverageUnchanged: boolean; acceptedAttachment: boolean };
+        readiness: { overall: string; next_action: string; lanes: { TASK_TRUTH: { status: string; debt: string[] } } };
+      };
+
+      expect(body.lifecycle).toBe('TESTS_NOT_RUN');
+      expect(body.canonical_coverage.totals.passed).toBe(0);
+      expect(body.canonical_coverage.totals.not_run).toBe(3);
+      expect(body.filtered_proof).toEqual({
+        runId: 'filtered-auth-1',
+        artifact: '.dev-pomogator/.test-history/filtered-auth-1.ndjson',
+        selectedScenarioIds: ['AUTH001_1'],
+        passed: 1,
+        nonPassed: 0,
+        timestamp: '2099-01-01T00:00:00.000Z',
+        source: 'docker-bdd:filtered',
+        canonicalCoverageUnchanged: true,
+        acceptedAttachment: false,
+      });
+      expect(body.readiness.overall).toBe('NOT_READY');
+      expect(body.readiness.lanes.TASK_TRUTH.status).toBe('RED');
+      expect(body.readiness.lanes.TASK_TRUTH.debt).toEqual([
+        expect.stringMatching(/auth:TASK-filtered-proof.*canonical PASSED.*not_run/i),
+      ]);
+      expect(body.readiness.next_action).toMatch(/filtered-auth-1|full Docker BDD|attach/i);
+
+      const coverage = parseResult(await status.handler({ spec: 'auth', view: 'coverage' })) as {
+        execution_gaps: { SCENARIO_NOT_RUN: number };
+        canonical_coverage: { totals: Record<string, number> };
+        filtered_proof: { runId: string };
+      };
+      expect(coverage.execution_gaps.SCENARIO_NOT_RUN).toBe(3);
+      expect(coverage.canonical_coverage.totals.not_run).toBe(3);
+      expect(coverage.filtered_proof.runId).toBe('filtered-auth-1');
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
   });
 
   it('get_spec_status view=counts keeps NESTED specs as distinct cells (coverage.ts::specOf, FR-36)', async () => {

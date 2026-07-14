@@ -49,6 +49,12 @@ function killTuiByPidFile(pidFile: string): void {
 
 async function main(): Promise<void> {
   try {
+    if (process.env.TEST_STATUSLINE_ENABLED !== 'true') {
+      log('DEBUG', 'Beta TUI test runner not explicitly enabled');
+      process.stdout.write('{}');
+      return;
+    }
+
     const raw = await readStdin();
     if (!raw.trim()) {
       process.stdout.write('{}');

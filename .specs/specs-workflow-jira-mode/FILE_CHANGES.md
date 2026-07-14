@@ -8,7 +8,7 @@
 
 | Path | Action | Reason |
 |------|--------|--------|
-| `{путь/к/файлу1}` | create | [FR-1](FR.md#fr-1-название) |
-| `{путь/к/файлу2}` | create | [FR-2](FR.md#fr-2-название) |
+| `{путь/к/файлу1}` | create | [FR-1](FR.md#fr-1-jirasourcemd-presence-triggers-jirasourcepreserved-tracing-checks-feature100) |
+| `{путь/к/файлу2}` | create | [FR-2](FR.md#fr-2-jira-imperative-trace-in-frmd-section-suppresses-the-jirasourcepreserved-warning-for-that-section-feature101) |
 | `{путь/к/файлу3}` | create | {причина} |
 

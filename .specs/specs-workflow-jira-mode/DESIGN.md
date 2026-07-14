@@ -2,8 +2,8 @@
 
 ## Реализуемые требования
 
-- [FR-1: {Название}](FR.md#fr-1-название)
-- [FR-2: {Название}](FR.md#fr-2-название)
+- [FR-1: {Название}](FR.md#fr-1-jirasourcemd-presence-triggers-jirasourcepreserved-tracing-checks-feature100)
+- [FR-2: {Название}](FR.md#fr-2-jira-imperative-trace-in-frmd-section-suppresses-the-jirasourcepreserved-warning-for-that-section-feature101)
 
 ## Компоненты
 

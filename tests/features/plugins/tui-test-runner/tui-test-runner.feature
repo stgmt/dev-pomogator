@@ -111,15 +111,15 @@ Feature: PLUGIN012_TUI_Test_Runner
     And Tests tab should show "No suite details available yet"
 
   # @feature7
-  Scenario: SessionStart hook initializes status directory
-    Given a Claude Code session starts in a project directory
+  Scenario: Explicitly enabled beta TUI SessionStart initializes status directory
+    Given a Claude Code session starts in a project directory with beta TUI explicitly enabled
     When tui_session_start hook receives JSON stdin
     Then hook should create .dev-pomogator/.test-status/ directory
     And hook should exit with code 0
 
   # @feature7
-  Scenario: SessionStart hook handles empty stdin
-    Given a Claude Code session starts
+  Scenario: Explicitly enabled beta TUI SessionStart handles empty stdin
+    Given a Claude Code session starts with beta TUI explicitly enabled
     When tui_session_start hook receives empty stdin
     Then hook should exit with code 0
 

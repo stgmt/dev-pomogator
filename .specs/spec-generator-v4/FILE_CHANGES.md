@@ -151,7 +151,7 @@
 
 | Path | Action | Reason |
 |------|--------|--------|
-| `.specs/spec-generator-v4/*.md` | edit | Already filled (Phase 1-2 of spec workflow) ([FR-1](FR.md#fr-1)..[FR-16](FR.md#fr-16)) |
+| spec-generator-v4 spec markdown docs | edit | Already filled (Phase 1-2 of spec workflow); concrete doc rows are tracked in the phase tables above and below ([FR-1](FR.md#fr-1)..[FR-16](FR.md#fr-16)) |
 | `.specs/spec-generator-v4/.progress.json` | edit | Tracked by `spec-status.ts` automatically (DO NOT manually edit) ([FR-12](FR.md#fr-12)) |
 | `CHANGELOG.md` | edit | v4.0.0 release notes — root-level в canonical v2 layout ([FR-1](FR.md#fr-1)..[FR-16](FR.md#fr-16)) |
 | `README.md` | edit | Update with v4 features — root-level в canonical v2 layout ([FR-4](FR.md#fr-4)) |
@@ -310,7 +310,7 @@ This block enumerates the spec-doc edits applied as part of the v3→v4 transiti
 
 | Path | Action | Reason |
 |------|--------|--------|
-| `tools/spec-mcp-server/mutations.ts` | edit | Add high-level section/anchor mutation primitives, EOL-normalized replacement diagnostics, proposal storage, transaction validation, and non-conflicting CAS auto-rebase on top of the existing validation-before-write pipeline ([FR-60](FR.md#fr-60)) |
+| `tools/spec-mcp-server/mutations.ts` | edit | Add high-level section/anchor mutation primitives plus FR-40 delta validation: pre-existing staged conformance/task-truth debt does not wedge unrelated edits, while net-new debt is refused; EOL-normalized diagnostics, transaction validation, and CAS behavior stay on the same validation-before-write pipeline ([FR-40](FR.md#fr-40), [FR-60](FR.md#fr-60)) |
 | `tools/spec-mcp-server/tools.ts` | edit | Expose MCP schemas/handlers for `read_for_edit`, anchor/section insert operations, `propose_patch`, `apply_proposed_patch`, `apply_spec_transaction`, and domain authoring helpers ([FR-60](FR.md#fr-60)) |
 | `tools/spec-mcp-server/__tests__/mutations-high-level-authoring.test.ts` | create | Regression coverage for section insert, EOL-normalized replace, diagnostic miss categories, multi-doc rollback, proposal apply, and CAS auto-rebase/refusal ([FR-60](FR.md#fr-60)) |
 | `tests/step_definitions/feature60_high_level_authoring.ts` | create | BDD step definitions for SPECGEN004_520..525 once the high-level authoring API is implemented; must drive the real MCP mutation layer, not mocks ([FR-60](FR.md#fr-60)) |
@@ -320,6 +320,28 @@ This block enumerates the spec-doc edits applied as part of the v3→v4 transiti
 | `.specs/spec-generator-v4/TASKS.md` | edit | Add Phase 33 implementation backlog P33-1..P33-5 ([FR-60](FR.md#fr-60)) |
 | `.specs/spec-generator-v4/spec-generator-v4.feature` | edit | Add @feature60 @wip acceptance scenarios SPECGEN004_520..525 as pending executable pins ([FR-60](FR.md#fr-60)) |
 | `.specs/spec-generator-v4/FILE_CHANGES.md` | edit | Track Phase 33 planned implementation and spec-document changes ([FR-60](FR.md#fr-60)) |
+
+## Phase 34 — FR-61 unified readiness UX
+
+| Path | Action | Reason |
+|------|--------|--------|
+| `tools/specs-generator/spec-verdict.ts` | edit | Add readiness lanes and OVERALL NOT_READY semantics so structural success cannot hide execution/task/BDD-sync debt ([FR-61](FR.md#fr-61)) |
+| `tools/spec-mcp-server/tools.ts` | edit | Align get_spec_status gap vocabulary and expose filtered proof/readiness next-action data through the MCP status surface ([FR-61](FR.md#fr-61)) |
+| `tools/spec-graph/coverage.ts` | edit | Separate traceability coverage from execution verification and surface filtered-run proof without updating canonical full-run coverage ([FR-61](FR.md#fr-61)) |
+| `tools/spec-graph/conformance.ts` | edit | Add task DONE truth and source/executable BDD sync findings used by verdict/status/census ([FR-61](FR.md#fr-61)) |
+| `tools/spec-graph/parsers/gherkin.ts` | edit | Preserve source/executable feature origin and scenario ids/tags needed for BDD sync drift checks ([FR-61](FR.md#fr-61)) |
+| `tools/spec-graph/task-census.ts` | edit | Show evidence-derived IN_PROGRESS / DONE-but-unverified task truth in prompt-time census ([FR-61](FR.md#fr-61)) |
+| `tests/step_definitions/feature61_unified_readiness.ts` | create | BDD steps for SPECGEN004_534..538 using real verdict/status/task/BDD-sync surfaces ([FR-61](FR.md#fr-61)) |
+| `.claude/skills/spec-generator-dev/SKILL.md` | edit | Require spec-generator-dev runs to compare truth surfaces, detect split-brain UX, and propose/add upstream improvements through the MCP spec door ([FR-61](FR.md#fr-61)) |
+| `.specs/spec-generator-v4/FR.md` | edit | Add FR-61 unified readiness UX requirement from CARL/spec-generator dogfood evidence ([FR-61](FR.md#fr-61)) |
+| `.specs/spec-generator-v4/ACCEPTANCE_CRITERIA.md` | edit | Add AC-61.1..AC-61.5 for readiness lanes, status vocabulary, task truth, BDD sync, and filtered proof ([FR-61](FR.md#fr-61)) |
+| `.specs/spec-generator-v4/USER_STORIES.md` | edit | Add US-24 describing one honest readiness surface for spec health ([FR-61](FR.md#fr-61)) |
+| `.specs/spec-generator-v4/USE_CASES.md` | edit | Add UC-24 unified readiness answer flow and next-action behavior ([FR-61](FR.md#fr-61)) |
+| `.specs/spec-generator-v4/REQUIREMENTS.md` | edit | Add FR-61 matrix and CHK-FR61-01..05 verification rows ([FR-61](FR.md#fr-61)) |
+| `.specs/spec-generator-v4/DESIGN.md` | edit | Add lane-based readiness design decision and rejected alternatives ([FR-61](FR.md#fr-61)) |
+| `.specs/spec-generator-v4/TASKS.md` | edit | Add Phase 34 backlog P34-1..P34-5 for implementation and regressions ([FR-61](FR.md#fr-61)) |
+| `.specs/spec-generator-v4/spec-generator-v4.feature` | edit | Add @feature61 @wip scenarios SPECGEN004_539..543 as pending executable pins ([FR-61](FR.md#fr-61)) |
+| `.specs/spec-generator-v4/FILE_CHANGES.md` | edit | Track Phase 34 planned implementation and spec-document changes ([FR-61](FR.md#fr-61)) |
 
 ## Total counts
 
@@ -341,4 +363,5 @@ This block enumerates the spec-doc edits applied as part of the v3→v4 transiti
 | Phase 32 (FR-49a scope-aware next router) | 8 (all edit) |
 | Phase 32b (FR-49h transcript todo replay reconciliation) | 8 (all edit) |
 | Phase 33 (FR-60 high-level MCP authoring API) | 10 (2 create + 8 edit) |
-| **Total** | **158 rows (~94 create + 64 edit; Phase 31/32/32b/33 plus T6-45 BDD evidence traced through 2026-07-09)** |
+| Phase 34 (FR-61 unified readiness UX) | 17 (1 create + 16 edit) |
+| **Total** | **175 rows (~95 create + 80 edit; Phase 31/32/32b/33/34 plus T6-45 BDD evidence traced through 2026-07-09)** |

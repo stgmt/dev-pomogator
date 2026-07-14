@@ -3229,8 +3229,8 @@ var require_utils = __commonJS({
       }
       return ind;
     }
-    function removeDotSegments(path22) {
-      let input = path22;
+    function removeDotSegments(path24) {
+      let input = path24;
       const output = [];
       let nextSlash = -1;
       let len = 0;
@@ -3482,8 +3482,8 @@ var require_schemes = __commonJS({
         wsComponent.secure = void 0;
       }
       if (wsComponent.resourceName) {
-        const [path22, query] = wsComponent.resourceName.split("?");
-        wsComponent.path = path22 && path22 !== "/" ? path22 : void 0;
+        const [path24, query] = wsComponent.resourceName.split("?");
+        wsComponent.path = path24 && path24 !== "/" ? path24 : void 0;
         wsComponent.query = query;
         wsComponent.resourceName = void 0;
       }
@@ -4238,8 +4238,8 @@ var require_core = __commonJS({
             return this;
           }
           case "object": {
-            const cacheKey = schemaKeyRef;
-            this._cache.delete(cacheKey);
+            const cacheKey2 = schemaKeyRef;
+            this._cache.delete(cacheKey2);
             let id = schemaKeyRef[this.opts.schemaId];
             if (id) {
               id = (0, resolve_1.normalizeId)(id);
@@ -6876,12 +6876,12 @@ var require_dist = __commonJS({
         throw new Error(`Unknown format "${name}"`);
       return f;
     };
-    function addFormats(ajv, list, fs25, exportName) {
+    function addFormats(ajv, list, fs27, exportName) {
       var _a3;
       var _b;
       (_a3 = (_b = ajv.opts.code).formats) !== null && _a3 !== void 0 ? _a3 : _b.formats = (0, codegen_1._)`require("ajv-formats/dist/formats").${exportName}`;
       for (const f of list)
-        ajv.addFormat(f, fs25[f]);
+        ajv.addFormat(f, fs27[f]);
     }
     module.exports = exports = formatsPlugin;
     Object.defineProperty(exports, "__esModule", { value: true });
@@ -19265,7 +19265,7 @@ var init_esm = __esm({
         this._directoryFilter = normalizeFilter(opts.directoryFilter);
         const statMethod = opts.lstat ? lstat : stat;
         if (wantBigintFsStats) {
-          this._stat = (path22) => statMethod(path22, { bigint: true });
+          this._stat = (path24) => statMethod(path24, { bigint: true });
         } else {
           this._stat = statMethod;
         }
@@ -19290,8 +19290,8 @@ var init_esm = __esm({
             const par = this.parent;
             const fil = par && par.files;
             if (fil && fil.length > 0) {
-              const { path: path22, depth } = par;
-              const slice = fil.splice(0, batch).map((dirent) => this._formatEntry(dirent, path22));
+              const { path: path24, depth } = par;
+              const slice = fil.splice(0, batch).map((dirent) => this._formatEntry(dirent, path24));
               const awaited = await Promise.all(slice);
               for (const entry of awaited) {
                 if (!entry)
@@ -19331,20 +19331,20 @@ var init_esm = __esm({
           this.reading = false;
         }
       }
-      async _exploreDir(path22, depth) {
+      async _exploreDir(path24, depth) {
         let files;
         try {
-          files = await readdir(path22, this._rdOptions);
+          files = await readdir(path24, this._rdOptions);
         } catch (error51) {
           this._onError(error51);
         }
-        return { files, depth, path: path22 };
+        return { files, depth, path: path24 };
       }
-      async _formatEntry(dirent, path22) {
+      async _formatEntry(dirent, path24) {
         let entry;
         const basename3 = this._isDirent ? dirent.name : dirent;
         try {
-          const fullPath = presolve(pjoin(path22, basename3));
+          const fullPath = presolve(pjoin(path24, basename3));
           entry = { path: prelative(this._root, fullPath), fullPath, basename: basename3 };
           entry[this._statsProp] = this._isDirent ? dirent : await this._stat(fullPath);
         } catch (err) {
@@ -19405,16 +19405,16 @@ import { watchFile, unwatchFile, watch as fs_watch } from "fs";
 import { open, stat as stat2, lstat as lstat2, realpath as fsrealpath } from "fs/promises";
 import * as sysPath from "path";
 import { type as osType } from "os";
-function createFsWatchInstance(path22, options, listener, errHandler, emitRaw) {
+function createFsWatchInstance(path24, options, listener, errHandler, emitRaw) {
   const handleEvent = (rawEvent, evPath) => {
-    listener(path22);
-    emitRaw(rawEvent, evPath, { watchedPath: path22 });
-    if (evPath && path22 !== evPath) {
-      fsWatchBroadcast(sysPath.resolve(path22, evPath), KEY_LISTENERS, sysPath.join(path22, evPath));
+    listener(path24);
+    emitRaw(rawEvent, evPath, { watchedPath: path24 });
+    if (evPath && path24 !== evPath) {
+      fsWatchBroadcast(sysPath.resolve(path24, evPath), KEY_LISTENERS, sysPath.join(path24, evPath));
     }
   };
   try {
-    return fs_watch(path22, {
+    return fs_watch(path24, {
       persistent: options.persistent
     }, handleEvent);
   } catch (error51) {
@@ -19758,12 +19758,12 @@ var init_handler = __esm({
         listener(val1, val2, val3);
       });
     };
-    setFsWatchListener = (path22, fullPath, options, handlers) => {
+    setFsWatchListener = (path24, fullPath, options, handlers) => {
       const { listener, errHandler, rawEmitter } = handlers;
       let cont = FsWatchInstances.get(fullPath);
       let watcher;
       if (!options.persistent) {
-        watcher = createFsWatchInstance(path22, options, listener, errHandler, rawEmitter);
+        watcher = createFsWatchInstance(path24, options, listener, errHandler, rawEmitter);
         if (!watcher)
           return;
         return watcher.close.bind(watcher);
@@ -19774,7 +19774,7 @@ var init_handler = __esm({
         addAndConvert(cont, KEY_RAW, rawEmitter);
       } else {
         watcher = createFsWatchInstance(
-          path22,
+          path24,
           options,
           fsWatchBroadcast.bind(null, fullPath, KEY_LISTENERS),
           errHandler,
@@ -19789,7 +19789,7 @@ var init_handler = __esm({
             cont.watcherUnusable = true;
           if (isWindows && error51.code === "EPERM") {
             try {
-              const fd = await open(path22, "r");
+              const fd = await open(path24, "r");
               await fd.close();
               broadcastErr(error51);
             } catch (err) {
@@ -19820,7 +19820,7 @@ var init_handler = __esm({
       };
     };
     FsWatchFileInstances = /* @__PURE__ */ new Map();
-    setFsWatchFileListener = (path22, fullPath, options, handlers) => {
+    setFsWatchFileListener = (path24, fullPath, options, handlers) => {
       const { listener, rawEmitter } = handlers;
       let cont = FsWatchFileInstances.get(fullPath);
       const copts = cont && cont.options;
@@ -19842,7 +19842,7 @@ var init_handler = __esm({
             });
             const currmtime = curr.mtimeMs;
             if (curr.size !== prev.size || currmtime > prev.mtimeMs || currmtime === 0) {
-              foreach(cont.listeners, (listener2) => listener2(path22, curr));
+              foreach(cont.listeners, (listener2) => listener2(path24, curr));
             }
           })
         };
@@ -19870,13 +19870,13 @@ var init_handler = __esm({
        * @param listener on fs change
        * @returns closer for the watcher instance
        */
-      _watchWithNodeFs(path22, listener) {
+      _watchWithNodeFs(path24, listener) {
         const opts = this.fsw.options;
-        const directory = sysPath.dirname(path22);
-        const basename3 = sysPath.basename(path22);
+        const directory = sysPath.dirname(path24);
+        const basename3 = sysPath.basename(path24);
         const parent = this.fsw._getWatchedDir(directory);
         parent.add(basename3);
-        const absolutePath = sysPath.resolve(path22);
+        const absolutePath = sysPath.resolve(path24);
         const options = {
           persistent: opts.persistent
         };
@@ -19886,12 +19886,12 @@ var init_handler = __esm({
         if (opts.usePolling) {
           const enableBin = opts.interval !== opts.binaryInterval;
           options.interval = enableBin && isBinaryPath(basename3) ? opts.binaryInterval : opts.interval;
-          closer = setFsWatchFileListener(path22, absolutePath, options, {
+          closer = setFsWatchFileListener(path24, absolutePath, options, {
             listener,
             rawEmitter: this.fsw._emitRaw
           });
         } else {
-          closer = setFsWatchListener(path22, absolutePath, options, {
+          closer = setFsWatchListener(path24, absolutePath, options, {
             listener,
             errHandler: this._boundHandleError,
             rawEmitter: this.fsw._emitRaw
@@ -19913,7 +19913,7 @@ var init_handler = __esm({
         let prevStats = stats;
         if (parent.has(basename3))
           return;
-        const listener = async (path22, newStats) => {
+        const listener = async (path24, newStats) => {
           if (!this.fsw._throttle(THROTTLE_MODE_WATCH, file2, 5))
             return;
           if (!newStats || newStats.mtimeMs === 0) {
@@ -19927,11 +19927,11 @@ var init_handler = __esm({
                 this.fsw._emit(EV.CHANGE, file2, newStats2);
               }
               if ((isMacos || isLinux || isFreeBSD) && prevStats.ino !== newStats2.ino) {
-                this.fsw._closeFile(path22);
+                this.fsw._closeFile(path24);
                 prevStats = newStats2;
                 const closer2 = this._watchWithNodeFs(file2, listener);
                 if (closer2)
-                  this.fsw._addPathCloser(path22, closer2);
+                  this.fsw._addPathCloser(path24, closer2);
               } else {
                 prevStats = newStats2;
               }
@@ -19963,7 +19963,7 @@ var init_handler = __esm({
        * @param item basename of this item
        * @returns true if no more processing is needed for this entry.
        */
-      async _handleSymlink(entry, directory, path22, item) {
+      async _handleSymlink(entry, directory, path24, item) {
         if (this.fsw.closed) {
           return;
         }
@@ -19973,7 +19973,7 @@ var init_handler = __esm({
           this.fsw._incrReadyCount();
           let linkPath;
           try {
-            linkPath = await fsrealpath(path22);
+            linkPath = await fsrealpath(path24);
           } catch (e) {
             this.fsw._emitReady();
             return true;
@@ -19983,12 +19983,12 @@ var init_handler = __esm({
           if (dir.has(item)) {
             if (this.fsw._symlinkPaths.get(full) !== linkPath) {
               this.fsw._symlinkPaths.set(full, linkPath);
-              this.fsw._emit(EV.CHANGE, path22, entry.stats);
+              this.fsw._emit(EV.CHANGE, path24, entry.stats);
             }
           } else {
             dir.add(item);
             this.fsw._symlinkPaths.set(full, linkPath);
-            this.fsw._emit(EV.ADD, path22, entry.stats);
+            this.fsw._emit(EV.ADD, path24, entry.stats);
           }
           this.fsw._emitReady();
           return true;
@@ -20017,9 +20017,9 @@ var init_handler = __esm({
             return;
           }
           const item = entry.path;
-          let path22 = sysPath.join(directory, item);
+          let path24 = sysPath.join(directory, item);
           current.add(item);
-          if (entry.stats.isSymbolicLink() && await this._handleSymlink(entry, directory, path22, item)) {
+          if (entry.stats.isSymbolicLink() && await this._handleSymlink(entry, directory, path24, item)) {
             return;
           }
           if (this.fsw.closed) {
@@ -20028,8 +20028,8 @@ var init_handler = __esm({
           }
           if (item === target || !target && !previous.has(item)) {
             this.fsw._incrReadyCount();
-            path22 = sysPath.join(dir, sysPath.relative(dir, path22));
-            this._addToNodeFs(path22, initialAdd, wh, depth + 1);
+            path24 = sysPath.join(dir, sysPath.relative(dir, path24));
+            this._addToNodeFs(path24, initialAdd, wh, depth + 1);
           }
         }).on(EV.ERROR, this._boundHandleError);
         return new Promise((resolve3, reject) => {
@@ -20098,13 +20098,13 @@ var init_handler = __esm({
        * @param depth Child path actually targeted for watch
        * @param target Child path actually targeted for watch
        */
-      async _addToNodeFs(path22, initialAdd, priorWh, depth, target) {
+      async _addToNodeFs(path24, initialAdd, priorWh, depth, target) {
         const ready = this.fsw._emitReady;
-        if (this.fsw._isIgnored(path22) || this.fsw.closed) {
+        if (this.fsw._isIgnored(path24) || this.fsw.closed) {
           ready();
           return false;
         }
-        const wh = this.fsw._getWatchHelpers(path22);
+        const wh = this.fsw._getWatchHelpers(path24);
         if (priorWh) {
           wh.filterPath = (entry) => priorWh.filterPath(entry);
           wh.filterDir = (entry) => priorWh.filterDir(entry);
@@ -20120,8 +20120,8 @@ var init_handler = __esm({
           const follow = this.fsw.options.followSymlinks;
           let closer;
           if (stats.isDirectory()) {
-            const absPath = sysPath.resolve(path22);
-            const targetPath = follow ? await fsrealpath(path22) : path22;
+            const absPath = sysPath.resolve(path24);
+            const targetPath = follow ? await fsrealpath(path24) : path24;
             if (this.fsw.closed)
               return;
             closer = await this._handleDir(wh.watchPath, stats, initialAdd, depth, target, wh, targetPath);
@@ -20131,29 +20131,29 @@ var init_handler = __esm({
               this.fsw._symlinkPaths.set(absPath, targetPath);
             }
           } else if (stats.isSymbolicLink()) {
-            const targetPath = follow ? await fsrealpath(path22) : path22;
+            const targetPath = follow ? await fsrealpath(path24) : path24;
             if (this.fsw.closed)
               return;
             const parent = sysPath.dirname(wh.watchPath);
             this.fsw._getWatchedDir(parent).add(wh.watchPath);
             this.fsw._emit(EV.ADD, wh.watchPath, stats);
-            closer = await this._handleDir(parent, stats, initialAdd, depth, path22, wh, targetPath);
+            closer = await this._handleDir(parent, stats, initialAdd, depth, path24, wh, targetPath);
             if (this.fsw.closed)
               return;
             if (targetPath !== void 0) {
-              this.fsw._symlinkPaths.set(sysPath.resolve(path22), targetPath);
+              this.fsw._symlinkPaths.set(sysPath.resolve(path24), targetPath);
             }
           } else {
             closer = this._handleFile(wh.watchPath, stats, initialAdd);
           }
           ready();
           if (closer)
-            this.fsw._addPathCloser(path22, closer);
+            this.fsw._addPathCloser(path24, closer);
           return false;
         } catch (error51) {
           if (this.fsw._handleError(error51)) {
             ready();
-            return path22;
+            return path24;
           }
         }
       }
@@ -20199,26 +20199,26 @@ function createPattern(matcher) {
   }
   return () => false;
 }
-function normalizePath(path22) {
-  if (typeof path22 !== "string")
+function normalizePath(path24) {
+  if (typeof path24 !== "string")
     throw new Error("string expected");
-  path22 = sysPath2.normalize(path22);
-  path22 = path22.replace(/\\/g, "/");
+  path24 = sysPath2.normalize(path24);
+  path24 = path24.replace(/\\/g, "/");
   let prepend = false;
-  if (path22.startsWith("//"))
+  if (path24.startsWith("//"))
     prepend = true;
   const DOUBLE_SLASH_RE2 = /\/\//;
-  while (path22.match(DOUBLE_SLASH_RE2))
-    path22 = path22.replace(DOUBLE_SLASH_RE2, "/");
+  while (path24.match(DOUBLE_SLASH_RE2))
+    path24 = path24.replace(DOUBLE_SLASH_RE2, "/");
   if (prepend)
-    path22 = "/" + path22;
-  return path22;
+    path24 = "/" + path24;
+  return path24;
 }
 function matchPatterns(patterns, testString, stats) {
-  const path22 = normalizePath(testString);
+  const path24 = normalizePath(testString);
   for (let index = 0; index < patterns.length; index++) {
     const pattern = patterns[index];
-    if (pattern(path22, stats)) {
+    if (pattern(path24, stats)) {
       return true;
     }
   }
@@ -20278,19 +20278,19 @@ var init_esm2 = __esm({
       }
       return str;
     };
-    normalizePathToUnix = (path22) => toUnix(sysPath2.normalize(toUnix(path22)));
-    normalizeIgnored = (cwd = "") => (path22) => {
-      if (typeof path22 === "string") {
-        return normalizePathToUnix(sysPath2.isAbsolute(path22) ? path22 : sysPath2.join(cwd, path22));
+    normalizePathToUnix = (path24) => toUnix(sysPath2.normalize(toUnix(path24)));
+    normalizeIgnored = (cwd = "") => (path24) => {
+      if (typeof path24 === "string") {
+        return normalizePathToUnix(sysPath2.isAbsolute(path24) ? path24 : sysPath2.join(cwd, path24));
       } else {
-        return path22;
+        return path24;
       }
     };
-    getAbsolutePath = (path22, cwd) => {
-      if (sysPath2.isAbsolute(path22)) {
-        return path22;
+    getAbsolutePath = (path24, cwd) => {
+      if (sysPath2.isAbsolute(path24)) {
+        return path24;
       }
-      return sysPath2.join(cwd, path22);
+      return sysPath2.join(cwd, path24);
     };
     EMPTY_SET = Object.freeze(/* @__PURE__ */ new Set());
     DirEntry = class {
@@ -20345,10 +20345,10 @@ var init_esm2 = __esm({
     STAT_METHOD_F = "stat";
     STAT_METHOD_L = "lstat";
     WatchHelper = class {
-      constructor(path22, follow, fsw) {
+      constructor(path24, follow, fsw) {
         this.fsw = fsw;
-        const watchPath = path22;
-        this.path = path22 = path22.replace(REPLACER_RE, "");
+        const watchPath = path24;
+        this.path = path24 = path24.replace(REPLACER_RE, "");
         this.watchPath = watchPath;
         this.fullWatchPath = sysPath2.resolve(watchPath);
         this.dirParts = [];
@@ -20470,20 +20470,20 @@ var init_esm2 = __esm({
         this._closePromise = void 0;
         let paths = unifyPaths(paths_);
         if (cwd) {
-          paths = paths.map((path22) => {
-            const absPath = getAbsolutePath(path22, cwd);
+          paths = paths.map((path24) => {
+            const absPath = getAbsolutePath(path24, cwd);
             return absPath;
           });
         }
-        paths.forEach((path22) => {
-          this._removeIgnoredPath(path22);
+        paths.forEach((path24) => {
+          this._removeIgnoredPath(path24);
         });
         this._userIgnored = void 0;
         if (!this._readyCount)
           this._readyCount = 0;
         this._readyCount += paths.length;
-        Promise.all(paths.map(async (path22) => {
-          const res = await this._nodeFsHandler._addToNodeFs(path22, !_internal, void 0, 0, _origAdd);
+        Promise.all(paths.map(async (path24) => {
+          const res = await this._nodeFsHandler._addToNodeFs(path24, !_internal, void 0, 0, _origAdd);
           if (res)
             this._emitReady();
           return res;
@@ -20505,17 +20505,17 @@ var init_esm2 = __esm({
           return this;
         const paths = unifyPaths(paths_);
         const { cwd } = this.options;
-        paths.forEach((path22) => {
-          if (!sysPath2.isAbsolute(path22) && !this._closers.has(path22)) {
+        paths.forEach((path24) => {
+          if (!sysPath2.isAbsolute(path24) && !this._closers.has(path24)) {
             if (cwd)
-              path22 = sysPath2.join(cwd, path22);
-            path22 = sysPath2.resolve(path22);
+              path24 = sysPath2.join(cwd, path24);
+            path24 = sysPath2.resolve(path24);
           }
-          this._closePath(path22);
-          this._addIgnoredPath(path22);
-          if (this._watched.has(path22)) {
+          this._closePath(path24);
+          this._addIgnoredPath(path24);
+          if (this._watched.has(path24)) {
             this._addIgnoredPath({
-              path: path22,
+              path: path24,
               recursive: true
             });
           }
@@ -20579,38 +20579,38 @@ var init_esm2 = __esm({
        * @param stats arguments to be passed with event
        * @returns the error if defined, otherwise the value of the FSWatcher instance's `closed` flag
        */
-      async _emit(event, path22, stats) {
+      async _emit(event, path24, stats) {
         if (this.closed)
           return;
         const opts = this.options;
         if (isWindows)
-          path22 = sysPath2.normalize(path22);
+          path24 = sysPath2.normalize(path24);
         if (opts.cwd)
-          path22 = sysPath2.relative(opts.cwd, path22);
-        const args = [path22];
+          path24 = sysPath2.relative(opts.cwd, path24);
+        const args = [path24];
         if (stats != null)
           args.push(stats);
         const awf = opts.awaitWriteFinish;
         let pw;
-        if (awf && (pw = this._pendingWrites.get(path22))) {
+        if (awf && (pw = this._pendingWrites.get(path24))) {
           pw.lastChange = /* @__PURE__ */ new Date();
           return this;
         }
         if (opts.atomic) {
           if (event === EVENTS.UNLINK) {
-            this._pendingUnlinks.set(path22, [event, ...args]);
+            this._pendingUnlinks.set(path24, [event, ...args]);
             setTimeout(() => {
-              this._pendingUnlinks.forEach((entry, path23) => {
+              this._pendingUnlinks.forEach((entry, path25) => {
                 this.emit(...entry);
                 this.emit(EVENTS.ALL, ...entry);
-                this._pendingUnlinks.delete(path23);
+                this._pendingUnlinks.delete(path25);
               });
             }, typeof opts.atomic === "number" ? opts.atomic : 100);
             return this;
           }
-          if (event === EVENTS.ADD && this._pendingUnlinks.has(path22)) {
+          if (event === EVENTS.ADD && this._pendingUnlinks.has(path24)) {
             event = EVENTS.CHANGE;
-            this._pendingUnlinks.delete(path22);
+            this._pendingUnlinks.delete(path24);
           }
         }
         if (awf && (event === EVENTS.ADD || event === EVENTS.CHANGE) && this._readyEmitted) {
@@ -20628,16 +20628,16 @@ var init_esm2 = __esm({
               this.emitWithAll(event, args);
             }
           };
-          this._awaitWriteFinish(path22, awf.stabilityThreshold, event, awfEmit);
+          this._awaitWriteFinish(path24, awf.stabilityThreshold, event, awfEmit);
           return this;
         }
         if (event === EVENTS.CHANGE) {
-          const isThrottled = !this._throttle(EVENTS.CHANGE, path22, 50);
+          const isThrottled = !this._throttle(EVENTS.CHANGE, path24, 50);
           if (isThrottled)
             return this;
         }
         if (opts.alwaysStat && stats === void 0 && (event === EVENTS.ADD || event === EVENTS.ADD_DIR || event === EVENTS.CHANGE)) {
-          const fullPath = opts.cwd ? sysPath2.join(opts.cwd, path22) : path22;
+          const fullPath = opts.cwd ? sysPath2.join(opts.cwd, path24) : path24;
           let stats2;
           try {
             stats2 = await stat3(fullPath);
@@ -20668,23 +20668,23 @@ var init_esm2 = __esm({
        * @param timeout duration of time to suppress duplicate actions
        * @returns tracking object or false if action should be suppressed
        */
-      _throttle(actionType, path22, timeout) {
+      _throttle(actionType, path24, timeout) {
         if (!this._throttled.has(actionType)) {
           this._throttled.set(actionType, /* @__PURE__ */ new Map());
         }
         const action = this._throttled.get(actionType);
         if (!action)
           throw new Error("invalid throttle");
-        const actionPath = action.get(path22);
+        const actionPath = action.get(path24);
         if (actionPath) {
           actionPath.count++;
           return false;
         }
         let timeoutObject;
         const clear = () => {
-          const item = action.get(path22);
+          const item = action.get(path24);
           const count = item ? item.count : 0;
-          action.delete(path22);
+          action.delete(path24);
           clearTimeout(timeoutObject);
           if (item)
             clearTimeout(item.timeoutObject);
@@ -20692,7 +20692,7 @@ var init_esm2 = __esm({
         };
         timeoutObject = setTimeout(clear, timeout);
         const thr = { timeoutObject, clear, count: 0 };
-        action.set(path22, thr);
+        action.set(path24, thr);
         return thr;
       }
       _incrReadyCount() {
@@ -20706,44 +20706,44 @@ var init_esm2 = __esm({
        * @param event
        * @param awfEmit Callback to be called when ready for event to be emitted.
        */
-      _awaitWriteFinish(path22, threshold, event, awfEmit) {
+      _awaitWriteFinish(path24, threshold, event, awfEmit) {
         const awf = this.options.awaitWriteFinish;
         if (typeof awf !== "object")
           return;
         const pollInterval = awf.pollInterval;
         let timeoutHandler;
-        let fullPath = path22;
-        if (this.options.cwd && !sysPath2.isAbsolute(path22)) {
-          fullPath = sysPath2.join(this.options.cwd, path22);
+        let fullPath = path24;
+        if (this.options.cwd && !sysPath2.isAbsolute(path24)) {
+          fullPath = sysPath2.join(this.options.cwd, path24);
         }
         const now = /* @__PURE__ */ new Date();
         const writes = this._pendingWrites;
         function awaitWriteFinishFn(prevStat) {
           statcb(fullPath, (err, curStat) => {
-            if (err || !writes.has(path22)) {
+            if (err || !writes.has(path24)) {
               if (err && err.code !== "ENOENT")
                 awfEmit(err);
               return;
             }
             const now2 = Number(/* @__PURE__ */ new Date());
             if (prevStat && curStat.size !== prevStat.size) {
-              writes.get(path22).lastChange = now2;
+              writes.get(path24).lastChange = now2;
             }
-            const pw = writes.get(path22);
+            const pw = writes.get(path24);
             const df = now2 - pw.lastChange;
             if (df >= threshold) {
-              writes.delete(path22);
+              writes.delete(path24);
               awfEmit(void 0, curStat);
             } else {
               timeoutHandler = setTimeout(awaitWriteFinishFn, pollInterval, curStat);
             }
           });
         }
-        if (!writes.has(path22)) {
-          writes.set(path22, {
+        if (!writes.has(path24)) {
+          writes.set(path24, {
             lastChange: now,
             cancelWait: () => {
-              writes.delete(path22);
+              writes.delete(path24);
               clearTimeout(timeoutHandler);
               return event;
             }
@@ -20754,8 +20754,8 @@ var init_esm2 = __esm({
       /**
        * Determines whether user has asked to ignore this path.
        */
-      _isIgnored(path22, stats) {
-        if (this.options.atomic && DOT_RE.test(path22))
+      _isIgnored(path24, stats) {
+        if (this.options.atomic && DOT_RE.test(path24))
           return true;
         if (!this._userIgnored) {
           const { cwd } = this.options;
@@ -20765,17 +20765,17 @@ var init_esm2 = __esm({
           const list = [...ignoredPaths.map(normalizeIgnored(cwd)), ...ignored];
           this._userIgnored = anymatch(list, void 0);
         }
-        return this._userIgnored(path22, stats);
+        return this._userIgnored(path24, stats);
       }
-      _isntIgnored(path22, stat4) {
-        return !this._isIgnored(path22, stat4);
+      _isntIgnored(path24, stat4) {
+        return !this._isIgnored(path24, stat4);
       }
       /**
        * Provides a set of common helpers and properties relating to symlink handling.
        * @param path file or directory pattern being watched
        */
-      _getWatchHelpers(path22) {
-        return new WatchHelper(path22, this.options.followSymlinks, this);
+      _getWatchHelpers(path24) {
+        return new WatchHelper(path24, this.options.followSymlinks, this);
       }
       // Directory helpers
       // -----------------
@@ -20807,63 +20807,63 @@ var init_esm2 = __esm({
        * @param item      base path of item/directory
        */
       _remove(directory, item, isDirectory) {
-        const path22 = sysPath2.join(directory, item);
-        const fullPath = sysPath2.resolve(path22);
-        isDirectory = isDirectory != null ? isDirectory : this._watched.has(path22) || this._watched.has(fullPath);
-        if (!this._throttle("remove", path22, 100))
+        const path24 = sysPath2.join(directory, item);
+        const fullPath = sysPath2.resolve(path24);
+        isDirectory = isDirectory != null ? isDirectory : this._watched.has(path24) || this._watched.has(fullPath);
+        if (!this._throttle("remove", path24, 100))
           return;
         if (!isDirectory && this._watched.size === 1) {
           this.add(directory, item, true);
         }
-        const wp = this._getWatchedDir(path22);
+        const wp = this._getWatchedDir(path24);
         const nestedDirectoryChildren = wp.getChildren();
-        nestedDirectoryChildren.forEach((nested) => this._remove(path22, nested));
+        nestedDirectoryChildren.forEach((nested) => this._remove(path24, nested));
         const parent = this._getWatchedDir(directory);
         const wasTracked = parent.has(item);
         parent.remove(item);
         if (this._symlinkPaths.has(fullPath)) {
           this._symlinkPaths.delete(fullPath);
         }
-        let relPath = path22;
+        let relPath = path24;
         if (this.options.cwd)
-          relPath = sysPath2.relative(this.options.cwd, path22);
+          relPath = sysPath2.relative(this.options.cwd, path24);
         if (this.options.awaitWriteFinish && this._pendingWrites.has(relPath)) {
           const event = this._pendingWrites.get(relPath).cancelWait();
           if (event === EVENTS.ADD)
             return;
         }
-        this._watched.delete(path22);
+        this._watched.delete(path24);
         this._watched.delete(fullPath);
         const eventName = isDirectory ? EVENTS.UNLINK_DIR : EVENTS.UNLINK;
-        if (wasTracked && !this._isIgnored(path22))
-          this._emit(eventName, path22);
-        this._closePath(path22);
+        if (wasTracked && !this._isIgnored(path24))
+          this._emit(eventName, path24);
+        this._closePath(path24);
       }
       /**
        * Closes all watchers for a path
        */
-      _closePath(path22) {
-        this._closeFile(path22);
-        const dir = sysPath2.dirname(path22);
-        this._getWatchedDir(dir).remove(sysPath2.basename(path22));
+      _closePath(path24) {
+        this._closeFile(path24);
+        const dir = sysPath2.dirname(path24);
+        this._getWatchedDir(dir).remove(sysPath2.basename(path24));
       }
       /**
        * Closes only file-specific watchers
        */
-      _closeFile(path22) {
-        const closers = this._closers.get(path22);
+      _closeFile(path24) {
+        const closers = this._closers.get(path24);
         if (!closers)
           return;
         closers.forEach((closer) => closer());
-        this._closers.delete(path22);
+        this._closers.delete(path24);
       }
-      _addPathCloser(path22, closer) {
+      _addPathCloser(path24, closer) {
         if (!closer)
           return;
-        let list = this._closers.get(path22);
+        let list = this._closers.get(path24);
         if (!list) {
           list = [];
-          this._closers.set(path22, list);
+          this._closers.set(path24, list);
         }
         list.push(closer);
       }
@@ -21248,8 +21248,8 @@ function getErrorMap() {
 
 // node_modules/zod/v3/helpers/parseUtil.js
 var makeIssue = (params) => {
-  const { data, path: path22, errorMaps, issueData } = params;
-  const fullPath = [...path22, ...issueData.path || []];
+  const { data, path: path24, errorMaps, issueData } = params;
+  const fullPath = [...path24, ...issueData.path || []];
   const fullIssue = {
     ...issueData,
     path: fullPath
@@ -21364,11 +21364,11 @@ var errorUtil;
 
 // node_modules/zod/v3/types.js
 var ParseInputLazyPath = class {
-  constructor(parent, value, path22, key) {
+  constructor(parent, value, path24, key) {
     this._cachedPath = [];
     this.parent = parent;
     this.data = value;
-    this._path = path22;
+    this._path = path24;
     this._key = key;
   }
   get path() {
@@ -25288,10 +25288,10 @@ function mergeDefs(...defs) {
 function cloneDef(schema) {
   return mergeDefs(schema._zod.def);
 }
-function getElementAtPath(obj, path22) {
-  if (!path22)
+function getElementAtPath(obj, path24) {
+  if (!path24)
     return obj;
-  return path22.reduce((acc, key) => acc?.[key], obj);
+  return path24.reduce((acc, key) => acc?.[key], obj);
 }
 function promiseAllObject(promisesObj) {
   const keys = Object.keys(promisesObj);
@@ -25700,11 +25700,11 @@ function explicitlyAborted(x, startIndex = 0) {
   }
   return false;
 }
-function prefixIssues(path22, issues) {
+function prefixIssues(path24, issues) {
   return issues.map((iss) => {
     var _a3;
     (_a3 = iss).path ?? (_a3.path = []);
-    iss.path.unshift(path22);
+    iss.path.unshift(path24);
     return iss;
   });
 }
@@ -25851,16 +25851,16 @@ function flattenError(error51, mapper = (issue2) => issue2.message) {
 }
 function formatError(error51, mapper = (issue2) => issue2.message) {
   const fieldErrors = { _errors: [] };
-  const processError = (error52, path22 = []) => {
+  const processError = (error52, path24 = []) => {
     for (const issue2 of error52.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
-        issue2.errors.map((issues) => processError({ issues }, [...path22, ...issue2.path]));
+        issue2.errors.map((issues) => processError({ issues }, [...path24, ...issue2.path]));
       } else if (issue2.code === "invalid_key") {
-        processError({ issues: issue2.issues }, [...path22, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path24, ...issue2.path]);
       } else if (issue2.code === "invalid_element") {
-        processError({ issues: issue2.issues }, [...path22, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path24, ...issue2.path]);
       } else {
-        const fullpath = [...path22, ...issue2.path];
+        const fullpath = [...path24, ...issue2.path];
         if (fullpath.length === 0) {
           fieldErrors._errors.push(mapper(issue2));
         } else {
@@ -25887,17 +25887,17 @@ function formatError(error51, mapper = (issue2) => issue2.message) {
 }
 function treeifyError(error51, mapper = (issue2) => issue2.message) {
   const result = { errors: [] };
-  const processError = (error52, path22 = []) => {
+  const processError = (error52, path24 = []) => {
     var _a3, _b;
     for (const issue2 of error52.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
-        issue2.errors.map((issues) => processError({ issues }, [...path22, ...issue2.path]));
+        issue2.errors.map((issues) => processError({ issues }, [...path24, ...issue2.path]));
       } else if (issue2.code === "invalid_key") {
-        processError({ issues: issue2.issues }, [...path22, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path24, ...issue2.path]);
       } else if (issue2.code === "invalid_element") {
-        processError({ issues: issue2.issues }, [...path22, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path24, ...issue2.path]);
       } else {
-        const fullpath = [...path22, ...issue2.path];
+        const fullpath = [...path24, ...issue2.path];
         if (fullpath.length === 0) {
           result.errors.push(mapper(issue2));
           continue;
@@ -25929,8 +25929,8 @@ function treeifyError(error51, mapper = (issue2) => issue2.message) {
 }
 function toDotPath(_path) {
   const segs = [];
-  const path22 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
-  for (const seg of path22) {
+  const path24 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
+  for (const seg of path24) {
     if (typeof seg === "number")
       segs.push(`[${seg}]`);
     else if (typeof seg === "symbol")
@@ -39055,13 +39055,13 @@ function resolveRef(ref, ctx) {
   if (!ref.startsWith("#")) {
     throw new Error("External $ref is not supported, only local refs (#/...) are allowed");
   }
-  const path22 = ref.slice(1).split("/").filter(Boolean);
-  if (path22.length === 0) {
+  const path24 = ref.slice(1).split("/").filter(Boolean);
+  if (path24.length === 0) {
     return ctx.rootSchema;
   }
   const defsKey = ctx.version === "draft-2020-12" ? "$defs" : "definitions";
-  if (path22[0] === defsKey) {
-    const key = path22[1];
+  if (path24[0] === defsKey) {
+    const key = path24[1];
     if (!key || !ctx.defs[key]) {
       throw new Error(`Reference not found: ${ref}`);
     }
@@ -44954,8 +44954,8 @@ var StdioServerTransport = class {
 
 // tools/spec-mcp-server/server.ts
 import { pathToFileURL as pathToFileURL2 } from "node:url";
-import fs24 from "node:fs";
-import path21 from "node:path";
+import fs26 from "node:fs";
+import path23 from "node:path";
 
 // tools/spec-mcp-server/lifecycle.ts
 import fs14 from "node:fs";
@@ -45071,18 +45071,62 @@ function verifiedStatus(scenarioIds, bucketById, verdict) {
   if (verdict === "WEAK" || verdict === "FAKE-POSITIVE-RISK") return "IN_PROGRESS";
   return "DONE";
 }
+function taskTruthIssues(task, scenarioIds, bucketById, scenarioById, verified) {
+  if (task.status !== "done") return [];
+  const evidence = scenarioIds.map((id) => ({
+    id,
+    bucket: bucketById.get(id) ?? "unverified",
+    source: scenarioById.get(id)?.source
+  }));
+  const issues = [];
+  if (verified !== "DONE") {
+    issues.push({
+      code: "TASK_DONE_UNVERIFIED",
+      taskId: task.id,
+      message: scenarioIds.length > 0 ? `Status: DONE but mapped scenario evidence is not all canonical PASSED (${evidence.map((s) => `${s.id}=${s.bucket}`).join(", ")})` : "Status: DONE but no mapped scenario evidence exists",
+      scenarios: evidence
+    });
+  }
+  if (/^\s*-\s*\[\s\]/m.test(task.doneWhen)) {
+    issues.push({
+      code: "TASK_DONE_CHECKLIST_OPEN",
+      taskId: task.id,
+      message: "Status: DONE but Done When contains unchecked checkbox item(s)",
+      scenarios: evidence
+    });
+  }
+  const filteredOnly = scenarioIds.length > 0 && scenarioIds.every((id) => {
+    const scenario = scenarioById.get(id);
+    return bucketById.get(id) === "passed" && scenario?.source?.includes("filtered") && scenario.canonicalResult?.toUpperCase() !== "PASSED";
+  });
+  if (filteredOnly) {
+    issues.push({
+      code: "TASK_DONE_FILTERED_ONLY",
+      taskId: task.id,
+      message: "Status: DONE is backed only by filtered-run evidence; canonical full-run proof is required for DONE truth",
+      scenarios: evidence
+    });
+  }
+  return issues;
+}
 function computeCoverage(tasks, scenarios, testQualityByTask = {}) {
   const buckets = bucketScenarios(scenarios);
   const bucketById = /* @__PURE__ */ new Map();
   for (const b of Object.keys(buckets)) for (const id of buckets[b]) bucketById.set(id, b);
+  const scenarioById = new Map(scenarios.map((s) => [s.id, s]));
   const taskMap = mapTasksToScenarios(tasks, scenarios);
+  const taskById = new Map(tasks.map((t) => [t.id, t]));
   const tasksOut = {};
   for (const [taskId, scenarioIds] of taskMap) {
     const verdict = testQualityByTask[taskId];
+    const verified = verifiedStatus(scenarioIds, bucketById, verdict);
+    const task = taskById.get(taskId);
+    const issues = task ? taskTruthIssues(task, scenarioIds, bucketById, scenarioById, verified) : [];
     tasksOut[taskId] = {
-      verified_status: verifiedStatus(scenarioIds, bucketById, verdict),
+      verified_status: issues.length > 0 ? "IN_PROGRESS" : verified,
       scenarios: scenarioIds,
-      ...verdict ? { test_quality: verdict } : {}
+      ...verdict ? { test_quality: verdict } : {},
+      ...issues.length > 0 ? { truth_issues: issues } : {}
     };
   }
   const totals = { scenarios: scenarios.length };
@@ -46370,6 +46414,8 @@ function applyTestResults(scenarios, patch) {
     if (!fields) continue;
     s.lastResult = fields.lastResult;
     s.lastRunAt = fields.lastRunAt;
+    s.canonicalResult = fields.lastResult;
+    s.canonicalRunAt = fields.lastRunAt;
     s.resultStale = false;
     s.trace = void 0;
     s.durationMs = fields.durationMs;
@@ -47238,7 +47284,7 @@ function buildGraph(opts) {
     }
     for (const node of taskSlice.nodes) mergeNode(node);
   }
-  const featureFiles = featureRoots.flatMap((root) => walkDir(root, [".feature"]));
+  const featureFiles = [...new Set(featureRoots.flatMap((root) => walkDir(root, [".feature"])))];
   for (const abs of featureFiles) {
     let slice;
     try {
@@ -47412,8 +47458,8 @@ function rebuildBacklinks(graph) {
     list.push({ file: "", line: 0, type: e.type });
   }
 }
-function buildGraphFromCwd(cwd = process.cwd()) {
-  return buildGraph({ repoRoot: cwd, skipNdjson: false });
+function buildGraphFromCwd(cwd = process.cwd(), opts = {}) {
+  return buildGraph({ ...opts, repoRoot: cwd, skipNdjson: opts.skipNdjson ?? false });
 }
 
 // tools/spec-graph/incremental.ts
@@ -47501,11 +47547,23 @@ function collectScenarios(graph) {
   }
   return scenarios;
 }
-function applyResultFiles(graph, repoRoot, opts = {}) {
+function clearResultEvidence(scenario) {
+  delete scenario.lastResult;
+  delete scenario.lastRunAt;
+  delete scenario.resultStale;
+  delete scenario.canonicalResult;
+  delete scenario.canonicalRunAt;
+  delete scenario.trace;
+  delete scenario.durationMs;
+  delete scenario.failingStep;
+}
+function refreshResultFiles(graph, repoRoot, opts = {}) {
   const scenarios = collectScenarios(graph);
+  for (const scenario of scenarios) clearResultEvidence(scenario);
   applyTestResults(scenarios, parseNdjsonFile(path6.resolve(repoRoot, opts.ndjsonPath ?? ".dev-pomogator/.last-test-run.ndjson")));
   applyScenarioOverlayResults(scenarios, parseScenarioOverlayFile(path6.resolve(repoRoot, opts.scenarioOverlayPath ?? ".dev-pomogator/.scenario-results.ndjson")), { repoRoot });
   refreshResultEdges(graph, scenarios);
+  rebuildBacklinks(graph);
 }
 function applyChange(graph, repoRoot, relativePath, resultPaths = {}) {
   const absPath = path6.resolve(repoRoot, relativePath);
@@ -47528,21 +47586,12 @@ function applyChange(graph, repoRoot, relativePath, resultPaths = {}) {
     if (!fs10.existsSync(absPath)) return { nodesDelta: 0, edgesDelta: 0 };
     const slice = parseGherkinFile(absPath, repoRoot);
     const delta = applySlice(graph, slice);
-    applyResultFiles(graph, repoRoot, resultPaths);
-    rebuildBacklinks(graph);
+    refreshResultFiles(graph, repoRoot, resultPaths);
     return delta;
   }
   if (kind === "ndjson" || kind === "overlay") {
     if (!fs10.existsSync(absPath)) return { nodesDelta: 0, edgesDelta: 0 };
-    const scenarios = collectScenarios(graph);
-    if (kind === "overlay") {
-      applyScenarioOverlayResults(scenarios, parseScenarioOverlayFile(absPath), { repoRoot });
-    } else {
-      applyTestResults(scenarios, parseNdjsonFile(absPath));
-      applyScenarioOverlayResults(scenarios, parseScenarioOverlayFile(path6.resolve(repoRoot, resultPaths.scenarioOverlayPath ?? ".dev-pomogator/.scenario-results.ndjson")), { repoRoot });
-    }
-    refreshResultEdges(graph, scenarios);
-    rebuildBacklinks(graph);
+    refreshResultFiles(graph, repoRoot, resultPaths);
     return { nodesDelta: 0, edgesDelta: 0 };
   }
   return { nodesDelta: 0, edgesDelta: 0 };
@@ -47632,14 +47681,15 @@ function computeTaskCensus(graph, opts = {}) {
     const nodeSpec = specOf(node.file);
     if (node.type === "Scenario") {
       const s = node;
-      scenarios.push({ id: s.id, tags: s.tags, result: s.lastResult, stale: s.resultStale, spec: nodeSpec });
+      scenarios.push({ id: s.id, tags: s.tags, result: s.lastResult, stale: s.resultStale, spec: nodeSpec, source: s.trace?.source, canonicalResult: s.canonicalResult, canonicalRunAt: s.canonicalRunAt });
     } else if (node.type === "Task") {
       const t = node;
-      tasks.push({ id: t.id, doneWhen: t.doneWhen ?? "", refs: t.refs, spec: nodeSpec });
+      tasks.push({ id: t.id, doneWhen: t.doneWhen ?? "", refs: t.refs, spec: nodeSpec, status: t.status });
       taskEntries.push({ node: t, slug: nodeSpec ?? "(no-spec)" });
     }
   }
   const map2 = mapTasksToScenarios(tasks, scenarios);
+  const coverage = computeCoverage(tasks, scenarios);
   const buckets = bucketScenarios(scenarios);
   const bucketById = /* @__PURE__ */ new Map();
   for (const b of Object.keys(buckets)) for (const id of buckets[b]) bucketById.set(id, b);
@@ -47663,8 +47713,9 @@ function computeTaskCensus(graph, opts = {}) {
       const hasRed = sids.some((id) => HARD_NEGATIVE.has(bucketById.get(id) ?? "not_run"));
       const allPassed = sids.length > 0 && sids.every((id) => bucketById.get(id) === "passed");
       const hasUnconfirmed = sids.some((id) => UNCONFIRMED.has(bucketById.get(id) ?? "not_run"));
+      const hasTruthIssue = (coverage.tasks[t.id]?.truth_issues?.length ?? 0) > 0;
       if (hasRed) row(slug).doneRed++;
-      else if (!allPassed || hasUnconfirmed) row(slug).doneUnrun++;
+      else if (!allPassed || hasUnconfirmed || hasTruthIssue) row(slug).doneUnrun++;
     }
   }
   const specs = [...per.values()].filter((s) => s.open + s.doneRed + s.doneUnrun > 0).sort((a, b) => b.open + b.doneRed + b.doneUnrun - (a.open + a.doneRed + a.doneUnrun));
@@ -48049,6 +48100,18 @@ async function startLifecycle(opts) {
     } catch {
     }
   };
+  const refreshResultsAndCensus = () => {
+    if (!opts.skipNdjson) {
+      try {
+        refreshResultFiles(graph, opts.repoRoot, {
+          ndjsonPath: opts.ndjsonPath,
+          scenarioOverlayPath: opts.scenarioOverlayPath
+        });
+      } catch {
+      }
+    }
+    refreshCensus();
+  };
   refreshCensus();
   const intervalMs = opts.heartbeatMs ?? 15e3;
   const heartbeatTimer = readOnly ? void 0 : setInterval(() => lock.heartbeat(), intervalMs);
@@ -48101,7 +48164,7 @@ async function startLifecycle(opts) {
     }
     lock.release();
   };
-  return { graph, watcher, lock, watchMode, pollIntervalMs, readOnly, lockHolder, shutdown };
+  return { graph, watcher, lock, watchMode, pollIntervalMs, readOnly, lockHolder, refreshGraph: refreshResultsAndCensus, shutdown };
 }
 
 // tools/spec-graph/legs.ts
@@ -48355,10 +48418,10 @@ function checkConformance(graph, opts = {}) {
   for (const node of graph.nodes.values()) {
     if (node.type === "Scenario") {
       const s = node;
-      scenarioLikes.push({ id: s.id, tags: s.tags, result: s.lastResult, stale: s.resultStale, spec: specOf(s.file) });
+      scenarioLikes.push({ id: s.id, tags: s.tags, result: s.lastResult, stale: s.resultStale, spec: specOf(s.file), source: s.trace?.source, canonicalResult: s.canonicalResult, canonicalRunAt: s.canonicalRunAt });
     } else if (node.type === "Task") {
       const t = node;
-      taskLikes.push({ id: t.id, doneWhen: t.doneWhen ?? "", refs: t.refs, spec: specOf(t.file) });
+      taskLikes.push({ id: t.id, doneWhen: t.doneWhen ?? "", refs: t.refs, spec: specOf(t.file), status: t.status });
     }
   }
   const cov = taskLikes.length > 0 ? computeCoverage(taskLikes, scenarioLikes, opts.testQualityByTask) : null;
@@ -48548,8 +48611,8 @@ function summariseGaps(gaps) {
 }
 
 // tools/spec-mcp-server/tools.ts
-import fs23 from "node:fs";
-import path20 from "node:path";
+import fs25 from "node:fs";
+import path22 from "node:path";
 
 // tools/spec-mcp-server/spec-access-log.ts
 import fs15 from "node:fs";
@@ -48604,8 +48667,8 @@ function rotateIfNeeded(file2) {
 }
 
 // tools/spec-mcp-server/tools.ts
-import { spawnSync as spawnSync2 } from "node:child_process";
-import { fileURLToPath as fileURLToPath3 } from "node:url";
+import { spawnSync as spawnSync3 } from "node:child_process";
+import { fileURLToPath as fileURLToPath4 } from "node:url";
 
 // tools/spec-mcp-server/mutations.ts
 import fs17 from "node:fs";
@@ -48948,19 +49011,111 @@ function anchorFindings(repoRoot, slug, doc, next) {
   }
   return out;
 }
+function buildMutationGraph(repoRoot, evidenceRoot, slug, doc, next) {
+  const specDir = path13.join(repoRoot, ".specs", slug);
+  if (!fs17.existsSync(specDir)) throw new Error(`spec ${slug} does not exist`);
+  fs17.mkdirSync(path13.dirname(path13.join(specDir, doc)), { recursive: true });
+  fs17.writeFileSync(path13.join(specDir, doc), next);
+  return buildGraph({
+    repoRoot,
+    // Truth validation needs canonical execution evidence, but not filtered overlay rows:
+    // apply_spec_change must not let a filtered debug pass launder a DONE task.
+    ndjsonPath: path13.join(evidenceRoot, ".dev-pomogator", ".last-test-run.ndjson"),
+    scenarioOverlayPath: path13.join(repoRoot, ".dev-pomogator", ".scenario-results.ndjson")
+  });
+}
+function deltaByKey(before, after, keyOf) {
+  const remaining = /* @__PURE__ */ new Map();
+  for (const value of before) {
+    const key = keyOf(value);
+    remaining.set(key, (remaining.get(key) ?? 0) + 1);
+  }
+  return after.filter((value) => {
+    const key = keyOf(value);
+    const left = remaining.get(key) ?? 0;
+    if (left === 0) return true;
+    remaining.set(key, left - 1);
+    return false;
+  });
+}
+function conformanceKey(f) {
+  return `${f.code}|${f.nodeId ?? ""}|${f.relatedId ?? ""}|${f.location.file}`;
+}
+function deltaWarningFindings(before, after) {
+  const stagedCodes = /* @__PURE__ */ new Set(["FR_NO_DESIGN", "FR_NO_STORY", "TOOTHLESS_DECISION", "TOOTHLESS_STORY"]);
+  const staged = (findings) => findings.filter((f) => f.severity === "warning" && stagedCodes.has(f.code));
+  return deltaByKey(staged(before), staged(after), conformanceKey);
+}
+function taskTruthFindings(graph, targetSpec) {
+  const scenarios = [];
+  const tasks = [];
+  const taskLines = /* @__PURE__ */ new Map();
+  for (const node of graph.nodes.values()) {
+    const nodeSpec = specOf(node.file);
+    if (node.type === "Scenario") {
+      const scenario = node;
+      scenarios.push({
+        id: scenario.id,
+        tags: scenario.tags,
+        result: scenario.lastResult,
+        stale: scenario.resultStale,
+        spec: nodeSpec,
+        source: scenario.trace?.source,
+        canonicalResult: scenario.canonicalResult,
+        canonicalRunAt: scenario.canonicalRunAt
+      });
+    } else if (node.type === "Task" && nodeSpec === targetSpec) {
+      const task = node;
+      tasks.push({ id: task.id, doneWhen: task.doneWhen ?? "", refs: task.refs, spec: nodeSpec, status: task.status });
+      taskLines.set(task.id, task.line);
+    }
+  }
+  const coverage = computeCoverage(tasks, scenarios);
+  return Object.entries(coverage.tasks).flatMap(([taskId, entry]) => (entry.truth_issues ?? []).map((issue2) => ({ taskId, issue: issue2 }))).map(({ taskId, issue: issue2 }) => ({
+    layer: "conformance",
+    line: taskLines.get(taskId),
+    message: `${issue2.code}: ${issue2.message}`,
+    taskId,
+    code: issue2.code
+  }));
+}
 function conformanceFindings(repoRoot, slug, doc, next) {
   const tmpRoot = fs17.mkdtempSync(path13.join(os.tmpdir(), "spec-mutate-"));
   try {
     const srcDir = path13.join(repoRoot, ".specs", slug);
     const dstDir = path13.join(tmpRoot, ".specs", slug);
     fs17.cpSync(srcDir, dstDir, { recursive: true });
-    fs17.writeFileSync(path13.join(dstDir, doc), next);
-    const graph = buildGraph({ repoRoot: tmpRoot, skipNdjson: true });
-    return checkConformance(graph).filter((f) => f.severity === "error").map((f) => ({
-      layer: "conformance",
-      line: f.location.line,
-      message: `${f.code}: ${f.message}`
-    }));
+    const beforeGraph = buildGraph({
+      repoRoot: tmpRoot,
+      ndjsonPath: path13.join(repoRoot, ".dev-pomogator", ".last-test-run.ndjson"),
+      scenarioOverlayPath: path13.join(tmpRoot, ".dev-pomogator", ".scenario-results.ndjson")
+    });
+    const graph = buildMutationGraph(tmpRoot, repoRoot, slug, doc, next);
+    const before = checkConformance(beforeGraph);
+    const after = checkConformance(graph);
+    const newErrors = deltaByKey(
+      before.filter((f) => f.severity === "error"),
+      after.filter((f) => f.severity === "error"),
+      conformanceKey
+    );
+    const newTruthFindings = path13.basename(doc).toLowerCase() === "tasks.md" ? deltaByKey(
+      taskTruthFindings(beforeGraph, slug),
+      taskTruthFindings(graph, slug),
+      (finding) => `${finding.code}|${finding.taskId}`
+    ) : [];
+    return [
+      ...newErrors.map((f) => ({
+        layer: "conformance",
+        line: f.location.line,
+        message: `${f.code}: ${f.message}`
+      })),
+      ...deltaWarningFindings(before, after).map((f) => ({
+        layer: "conformance",
+        line: f.location.line,
+        message: `${f.code}: ${f.message}`
+      })),
+      ...newTruthFindings
+    ];
   } catch (e) {
     return [{ layer: "conformance", message: `conformance validation failed: ${e instanceof Error ? e.message : e}` }];
   } finally {
@@ -49175,7 +49330,7 @@ function computeFrCensus(graph, opts = {}) {
       taskLikes.push({ id: t.id, doneWhen: t.doneWhen ?? "", refs: t.refs, spec: specOf(t.file) });
     } else if (n.type === "Scenario") {
       const s = n;
-      scenLikes.push({ id: s.id, tags: s.tags, result: s.lastResult, stale: s.resultStale, spec: specOf(s.file) });
+      scenLikes.push({ id: s.id, tags: s.tags, result: s.lastResult, stale: s.resultStale, spec: specOf(s.file), source: s.trace?.source, canonicalResult: s.canonicalResult, canonicalRunAt: s.canonicalRunAt });
     }
   }
   const cov = computeCoverage(taskLikes, scenLikes);
@@ -49429,6 +49584,23 @@ function findWaivedBlock(repoRoot, id, spec) {
   }
   return null;
 }
+function doneTruthIssues(graph, task) {
+  const scenarios = [];
+  const tasks = [{
+    id: task.id,
+    doneWhen: task.doneWhen ?? "",
+    refs: task.refs,
+    spec: specOf(task.file),
+    status: "done"
+  }];
+  for (const node of graph.nodes.values()) {
+    if (node.type !== "Scenario") continue;
+    const s = node;
+    scenarios.push({ id: s.id, tags: s.tags, result: s.lastResult, stale: s.resultStale, spec: specOf(s.file), source: s.trace?.source, canonicalResult: s.canonicalResult, canonicalRunAt: s.canonicalRunAt });
+  }
+  const entry = computeCoverage(tasks, scenarios).tasks[task.id];
+  return (entry?.truth_issues ?? []).map((issue2) => issue2.message);
+}
 function refuseDerived(graph, node, frsWithoutResearch) {
   if (node.type === "FR") {
     const report = computeFrCensus(graph, { spec: node.spec, frsWithoutResearch });
@@ -49560,6 +49732,18 @@ function setEntityStatus(graph, repoRoot, args, frsWithoutResearch) {
       };
     }
   }
+  if (args.to === "done") {
+    const issues = doneTruthIssues(graph, task);
+    if (issues.length > 0) {
+      return {
+        ok: false,
+        error: "DONE_TRUTH_UNVERIFIED",
+        from,
+        to: args.to,
+        reason: `cannot mark ${task.id} DONE: ${issues.join("; ")}`
+      };
+    }
+  }
   const slug = task.spec ?? "";
   const doc = path18.basename(task.file);
   const abs = path18.join(repoRoot, ".specs", slug, doc);
@@ -49610,6 +49794,748 @@ function readVerdicts(repoRoot) {
   }
 }
 
+// tools/specs-generator/spec-verdict.ts
+import { execFileSync, spawnSync as spawnSync2 } from "child_process";
+import fs24 from "fs";
+import path21 from "path";
+import { fileURLToPath as fileURLToPath3 } from "url";
+
+// tools/spec-llm-judge/deny-list.ts
+var DENY_PATTERNS = [
+  // Screaming-snake env-var style — case-SENSITIVE so plain English words
+  // ("password", "token") in legitimate spec prose don't match.
+  { name: "secret-id-envvar", re: /\b(API[_-]?KEY|BEARER|SECRET[_-]?KEY|PASSWORD|TOKEN|ACCESS[_-]?KEY)\b/ },
+  // Common assignment shape: `API_KEY=sk-...`, `password = "..."`. Matches
+  // case-insensitively because the `=` makes the intent unambiguous.
+  { name: "secret-id-assign", re: /\b(api[_-]?key|secret[_-]?key|password|access[_-]?key|token)\s*[:=]\s*['"]?[\w.\-]{6,}/i },
+  // HTTP `Authorization: Bearer <opaque>` header pattern.
+  { name: "bearer-header", re: /\bAuthorization\s*:\s*Bearer\s+[\w.\-]+/i },
+  { name: "aws-key", re: /\b(AKIA|ASIA)[0-9A-Z]{16}\b/ },
+  { name: "dotfile", re: /\.(env|npmrc|netrc|git-credentials)\b/i },
+  { name: "pem-key", re: /\.(pem|key|pfx|p12)\b/i },
+  { name: "pem-header", re: /-----BEGIN[ A-Z]*PRIVATE KEY-----/ },
+  { name: "jwt-shape", re: /\beyJ[A-Za-z0-9_-]{6,}\.[A-Za-z0-9_-]{6,}\.[A-Za-z0-9_-]{6,}\b/ }
+];
+function checkDenyList(text) {
+  for (const p of DENY_PATTERNS) {
+    const m = text.match(p.re);
+    if (m) {
+      return {
+        denied: true,
+        pattern: p.name,
+        match: m[0].length > 80 ? m[0].slice(0, 77) + "\u2026" : m[0]
+      };
+    }
+  }
+  return { denied: false };
+}
+
+// tools/spec-llm-judge/cache.ts
+import fs23 from "node:fs";
+import path20 from "node:path";
+import crypto3 from "node:crypto";
+var CACHE_DIR_REL = ".dev-pomogator/.cross-spec-cache";
+function cacheKey(frText, scenarioText) {
+  return crypto3.createHash("sha256").update(frText).update("\n::\n").update(scenarioText).digest("hex");
+}
+function entryPath(repoRoot, key) {
+  return path20.join(repoRoot, CACHE_DIR_REL, `${key}.json`);
+}
+function readEntry(repoRoot, key) {
+  const p = entryPath(repoRoot, key);
+  if (!fs23.existsSync(p)) return null;
+  try {
+    return JSON.parse(fs23.readFileSync(p, "utf8"));
+  } catch {
+    return null;
+  }
+}
+function writeEntry(repoRoot, key, entry) {
+  const p = entryPath(repoRoot, key);
+  fs23.mkdirSync(path20.dirname(p), { recursive: true });
+  const tmp = `${p}.tmp.${process.pid}`;
+  fs23.writeFileSync(tmp, JSON.stringify(entry, null, 2));
+  fs23.renameSync(tmp, p);
+}
+
+// tools/spec-check-log/writer.ts
+var ROTATION_BYTES = 10 * 1024 * 1024;
+
+// tools/spec-llm-judge/index.ts
+function buildPrompt(frText, scenarioText) {
+  return [
+    "You are a strict spec-conformance auditor.",
+    "Compare the following FR text with the Scenario steps. Answer with a",
+    "single JSON object on stdout (no prose, no markdown fences):",
+    '  {"result": "NO_DRIFT_DETECTED"}  OR',
+    '  {"result": "DRIFT", "explanation": "<1-2 sentences>", "severity": "warning"|"error"}',
+    "",
+    "--- FR ---",
+    frText,
+    "--- Scenario ---",
+    scenarioText
+  ].join("\n");
+}
+function parseSubprocessOutput(stdout) {
+  try {
+    const obj = JSON.parse(stdout.trim());
+    if (obj.result === "NO_DRIFT_DETECTED") return { result: "NO_DRIFT_DETECTED" };
+    if (obj.result === "DRIFT" && typeof obj.explanation === "string") {
+      const sev = obj.severity === "error" ? "error" : "warning";
+      return { result: "DRIFT", explanation: obj.explanation, severity: sev };
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+async function runJudge(opts) {
+  const key = cacheKey(opts.frText, opts.scenarioText);
+  if (opts.spec_llm_judge_deny === true) {
+    return { result: "SKIPPED_OPT_OUT", cache_key: key, from_cache: false };
+  }
+  const cached2 = readEntry(opts.repoRoot, key);
+  if (cached2) {
+    if (cached2.verdict.result === "NO_DRIFT_DETECTED") {
+      return { result: "CACHE_HIT", cache_key: key, from_cache: true };
+    }
+    return {
+      result: "DRIFT",
+      explanation: cached2.verdict.explanation,
+      severity: cached2.verdict.severity,
+      cache_key: key,
+      from_cache: true
+    };
+  }
+  const prompt = buildPrompt(opts.frText, opts.scenarioText);
+  const verdict = checkDenyList(prompt);
+  if (verdict.denied) {
+    return {
+      result: "SKIPPED_DENY_LIST",
+      deny_pattern: verdict.pattern,
+      cache_key: key,
+      from_cache: false
+    };
+  }
+  const spawn = opts.spawn ?? defaultSpawn;
+  let stdout;
+  try {
+    stdout = await spawn(prompt);
+  } catch (e) {
+    return {
+      result: "SUBPROCESS_FAILED",
+      error: e instanceof Error ? e.message : String(e),
+      cache_key: key,
+      from_cache: false
+    };
+  }
+  const parsed = parseSubprocessOutput(stdout);
+  if (!parsed) {
+    return {
+      result: "SUBPROCESS_FAILED",
+      error: `unparseable stdout: ${stdout.slice(0, 200)}`,
+      cache_key: key,
+      from_cache: false
+    };
+  }
+  const entry = {
+    fr_id: opts.frId,
+    scenario_id: opts.scenarioId,
+    verdict: parsed,
+    generated_at: (/* @__PURE__ */ new Date()).toISOString(),
+    model: opts.model
+  };
+  writeEntry(opts.repoRoot, key, entry);
+  return parsed.result === "NO_DRIFT_DETECTED" ? { result: "NO_DRIFT_DETECTED", cache_key: key, from_cache: false } : { result: "DRIFT", explanation: parsed.explanation, severity: parsed.severity, cache_key: key, from_cache: false };
+}
+function defaultSpawn(prompt) {
+  return new Promise((resolve3, reject) => {
+    import("node:child_process").then(({ spawn }) => {
+      const bin = process.env.CLAUDE_BIN ?? "claude";
+      const child = spawn(bin, ["-p", prompt], { stdio: ["ignore", "pipe", "pipe"] });
+      const chunks = [];
+      const errChunks = [];
+      child.stdout.on("data", (c) => chunks.push(c));
+      child.stderr.on("data", (c) => errChunks.push(c));
+      child.on("error", reject);
+      child.on("exit", (code) => {
+        if (code === 0) resolve3(Buffer.concat(chunks).toString("utf8"));
+        else reject(new Error(`claude -p exited ${code}: ${Buffer.concat(errChunks).toString("utf8").slice(0, 200)}`));
+      });
+    }, reject);
+  });
+}
+
+// tools/specs-generator/spec-verdict.ts
+var __dirname = path21.dirname(fileURLToPath3(import.meta.url));
+var corePath = path21.join(__dirname, "specs-generator-core.mjs");
+function claudeBinaryPresent() {
+  const bin = process.env.CLAUDE_BIN ?? "claude";
+  const probe = spawnSync2(bin, ["--version"], { stdio: "ignore", timeout: 1e4, shell: process.platform === "win32" });
+  return probe.status === 0;
+}
+function hasMarker(s, marker) {
+  const needle = marker.toUpperCase();
+  const haystack = [s.id, ...s.tags, ...s.steps.map((step) => step.text)].join(" ").toUpperCase();
+  return haystack.includes(needle);
+}
+function scenarioCountClaims(text) {
+  const out = [];
+  const words = {
+    one: 1,
+    two: 2,
+    three: 3,
+    four: 4,
+    five: 5,
+    six: 6,
+    seven: 7,
+    eight: 8,
+    nine: 9,
+    ten: 10
+  };
+  const countRe = /\b(\d+|one|two|three|four|five|six|seven|eight|nine|ten)\s+scenarios?\b/gi;
+  for (const rawLine of text.split(/\r?\n/)) {
+    const line = rawLine.replace(/`[^`]*`/g, "");
+    if (/\bat least\b|\bScenario\s*=|\bFR-\d+\s+scenario\b/i.test(line)) continue;
+    const claimsCount = /\b(scenario count|scenarios total|total scenarios|expected scenarios|source scenarios|executable scenarios)\b/i.test(line) || /\b(feature|spec|source|executable|file)\b.*\b(has|contains|includes|declares|covers)\b/i.test(line) || /\bthere\s+(?:are|is)\b/i.test(line);
+    if (!claimsCount) continue;
+    for (const match of line.matchAll(countRe)) {
+      const raw = match[1].toLowerCase();
+      const count = /^\d+$/.test(raw) ? Number(raw) : words[raw];
+      if (Number.isFinite(count)) out.push({ text: match[0], count });
+    }
+  }
+  return out;
+}
+function configuredCucumberPaths(cwd) {
+  const out = /* @__PURE__ */ new Set();
+  for (const name of ["cucumber.docker.json", "cucumber.json"]) {
+    const file2 = path21.join(cwd, name);
+    if (!fs24.existsSync(file2)) continue;
+    try {
+      const json2 = JSON.parse(fs24.readFileSync(file2, "utf-8"));
+      const paths = json2?.default?.paths;
+      if (Array.isArray(paths)) {
+        for (const p of paths) if (typeof p === "string") out.add(p.replace(/\\/g, "/"));
+      }
+    } catch {
+    }
+  }
+  return out;
+}
+function configuredFeatureRoots(cwd) {
+  const candidates = /* @__PURE__ */ new Set([".specs", "tests/features"]);
+  for (const configured of configuredCucumberPaths(cwd)) {
+    const normalized = configured.replace(/\\/g, "/");
+    const globAt = normalized.search(/[?*{}[\]]/);
+    const prefix = (globAt >= 0 ? normalized.slice(0, globAt) : normalized).replace(/\/+$/, "");
+    if (!prefix) continue;
+    const root = prefix.endsWith(".feature") ? path21.posix.dirname(prefix) : prefix;
+    if (root && root !== ".") candidates.add(root);
+  }
+  const ordered = [...candidates].sort((a, b) => {
+    const depth = (value) => value.split("/").length;
+    return depth(a) - depth(b) || a.localeCompare(b);
+  });
+  return ordered.filter((root, index) => !ordered.slice(0, index).some((parent) => root === parent || root.startsWith(`${parent}/`)));
+}
+function compareBddSync(cwd, slug, sourceScenarios, executableScenarios) {
+  const debt = [];
+  const configuredPaths = configuredCucumberPaths(cwd);
+  const sourceFeature = `.specs/${slug}/${slug.split("/").pop()}.feature`;
+  const sourceFeatureExecutable = configuredPaths.size === 0 || configuredPaths.has(sourceFeature);
+  const sourceByKey = /* @__PURE__ */ new Map();
+  const executableByKey = /* @__PURE__ */ new Map();
+  for (const s of sourceScenarios) {
+    const key = scenarioKey(s.id);
+    if (key) sourceByKey.set(key, s);
+  }
+  for (const s of executableScenarios) {
+    const key = scenarioKey(s.id);
+    if (!key) continue;
+    const arr = executableByKey.get(key) ?? [];
+    arr.push(s);
+    executableByKey.set(key, arr);
+  }
+  for (const [key, execs] of executableByKey) {
+    const src = sourceByKey.get(key);
+    if (!src && !execs.some((s) => hasMarker(s, "EXEC_ONLY") || hasMarker(s, "OUT_OF_SCOPE"))) {
+      debt.push(`EXEC_ONLY_MISSING_MARKER ${key}: executable scenario has no source counterpart`);
+      continue;
+    }
+    if (!src) continue;
+    const srcFeatureTags = src.tags.filter((t) => /^@feature\d+$/i.test(t)).sort().join(",");
+    for (const ex of execs) {
+      const execFeatureTags = ex.tags.filter((t) => /^@feature\d+$/i.test(t)).sort().join(",");
+      if (srcFeatureTags !== execFeatureTags) debt.push(`FR_TAG_DRIFT ${key}: source=${srcFeatureTags || "(none)"} executable=${execFeatureTags || "(none)"}`);
+    }
+  }
+  for (const [key, src] of sourceByKey) {
+    if (sourceFeatureExecutable) continue;
+    if (!executableByKey.has(key) && !hasMarker(src, "PENDING") && !src.tags.some((t) => /^@wip$/i.test(t))) {
+      debt.push(`SOURCE_ONLY ${key}: source scenario has no executable counterpart or pending marker`);
+    }
+  }
+  const sourceFeaturePath = path21.join(cwd, ".specs", slug, `${slug.split("/").pop()}.feature`);
+  if (fs24.existsSync(sourceFeaturePath)) {
+    const text = fs24.readFileSync(sourceFeaturePath, "utf-8");
+    for (const claim of scenarioCountClaims(text)) {
+      if (claim.count !== sourceScenarios.length) debt.push(`SCENARIO_COUNT_DRIFT ${claim.text}: actual source scenario count is ${sourceScenarios.length}`);
+    }
+  }
+  return { debt: [...new Set(debt)] };
+}
+function latestFilteredProof(cwd, sourceScenarios) {
+  const keys = new Set(sourceScenarios.map((s) => scenarioKey(s.id)).filter(Boolean));
+  const overlayPath = path21.join(cwd, ".dev-pomogator", ".scenario-results.ndjson");
+  if (!fs24.existsSync(overlayPath)) return { latest: null, proofs: [], artifacts: [] };
+  const byRun = /* @__PURE__ */ new Map();
+  for (const line of fs24.readFileSync(overlayPath, "utf-8").split(/\r?\n/)) {
+    if (!line.trim()) continue;
+    let row;
+    try {
+      row = JSON.parse(line);
+    } catch {
+      continue;
+    }
+    const key = typeof row.scenario_id === "string" ? scenarioKey(row.scenario_id) : null;
+    if (!key || !keys.has(key)) continue;
+    const source = String(row.source ?? "");
+    if (!/filtered/i.test(source)) continue;
+    const runId2 = String(row.run_id ?? row.trace_file ?? row.trace_id ?? "filtered");
+    const entry = byRun.get(runId2) ?? { time: String(row.time ?? ""), artifact: typeof row.trace_file === "string" ? row.trace_file : void 0, passed: 0, failed: 0, selected: /* @__PURE__ */ new Set(), source };
+    if (String(row.time ?? "") > entry.time) entry.time = String(row.time ?? "");
+    if (typeof row.trace_file === "string") entry.artifact = row.trace_file;
+    if (String(row.result ?? "").toUpperCase() === "PASSED") entry.passed++;
+    else entry.failed++;
+    entry.selected.add(key.toUpperCase());
+    entry.source = source || entry.source;
+    byRun.set(runId2, entry);
+  }
+  const runs = [...byRun.entries()].sort((a, b) => b[1].time.localeCompare(a[1].time));
+  const latest = runs[0];
+  if (!latest) return { latest: null, proofs: [], artifacts: [] };
+  const [runId, r] = latest;
+  const proof = {
+    runId,
+    artifact: r.artifact ?? null,
+    selectedScenarioIds: [...r.selected].sort().map((key) => key.toUpperCase()),
+    passed: r.passed,
+    nonPassed: r.failed,
+    timestamp: r.time || null,
+    source: r.source ?? "filtered",
+    canonicalCoverageUnchanged: true,
+    acceptedAttachment: false
+  };
+  return {
+    latest: proof,
+    proofs: [`${runId}: ${r.passed} passed / ${r.failed} non-passed; selected ${proof.selectedScenarioIds.join(", ")}; source=${proof.source}; at=${proof.timestamp ?? "(unknown)"}; artifact=${proof.artifact ?? "(none)"}; canonical coverage unchanged until full run or accepted attachment`],
+    artifacts: proof.artifact ? [proof.artifact] : []
+  };
+}
+function runCoreJson(command, specPath, opts) {
+  const absSpecPath = path21.resolve(opts.cwd ?? process.cwd(), specPath);
+  const args = [corePath, command, "-Path", absSpecPath];
+  let stdout;
+  try {
+    stdout = execFileSync("node", args, {
+      cwd: opts.cwd ?? process.cwd(),
+      encoding: "utf-8",
+      maxBuffer: 64 * 1024 * 1024,
+      timeout: 12e4,
+      // a hung core must not hang the verdict (skills import this in P14-4)
+      stdio: ["ignore", "pipe", "pipe"],
+      // Point the generator's repo root at the caller's corpus root, so the
+      // verdict works on fixture dirs and foreign repos (FR-37/P14-5), not
+      // only on dev-pomogator's own .specs/.
+      env: { ...process.env, SPECS_GENERATOR_ROOT: opts.cwd ?? process.cwd() }
+    });
+  } catch (err) {
+    if (err && typeof err.stdout === "string" && err.stdout.trim().startsWith("{")) {
+      stdout = err.stdout;
+    } else {
+      throw new Error(
+        `spec-verdict: \`${command}\` failed for ${specPath}: ${err?.message ?? err}
+${String(err?.stderr ?? "").slice(0, 800)}`
+      );
+    }
+  }
+  const parsed = JSON.parse(stdout);
+  if (parsed && typeof parsed.error === "string") {
+    throw new Error(`spec-verdict: \`${command}\` errored for ${absSpecPath}: ${parsed.error}`);
+  }
+  return parsed;
+}
+async function runSpecVerdict(specPath, opts = {}) {
+  const validation = runCoreJson("validate-spec", specPath, opts);
+  const audit = runCoreJson("audit-spec", specPath, opts);
+  const structuralErrors = Array.isArray(validation.errors) ? validation.errors.length : 0;
+  const warnings = Array.isArray(validation.warnings) ? validation.warnings.length : 0;
+  const errorFindings = (audit.findings ?? []).filter(
+    (f) => f.severity === "ERROR"
+  );
+  const byClass = {};
+  for (const f of errorFindings) (byClass[f.check] ??= []).push(f);
+  const cwd = opts.cwd ?? process.cwd();
+  const slug = specPath.replace(/\\/g, "/").replace(/^\.?\/?\.specs\//, "").replace(/\/+$/, "");
+  const graph = buildGraphFromCwd(cwd, { featureRoots: configuredFeatureRoots(cwd) });
+  const testQualityByTask = readVerdicts(cwd);
+  const allFindings = checkConformance(graph, { testQualityByTask });
+  const inSpec = (file2) => String(file2).replace(/\\/g, "/").includes(`.specs/${slug}/`);
+  const specFindings = allFindings.filter((f) => inSpec(f.location.file));
+  const gaps = gapsFromFindings(specFindings, {});
+  const confErrors = specFindings.filter((f) => f.severity === "error");
+  const confByCode = {};
+  for (const f of specFindings) confByCode[f.code] = (confByCode[f.code] ?? 0) + 1;
+  const taskLikes = [];
+  const scenLikes = [];
+  const sourceScenarios = [];
+  const executableScenarios = [];
+  const doneTaskIds = /* @__PURE__ */ new Set();
+  const doneTasks = /* @__PURE__ */ new Map();
+  const notRunByFile = /* @__PURE__ */ new Map();
+  for (const n of graph.nodes.values()) {
+    if (!inSpec(n.file)) continue;
+    if (n.type === "Task") {
+      const t = n;
+      taskLikes.push({ id: t.id, doneWhen: t.doneWhen ?? "", refs: t.refs, spec: specOf(t.file), status: t.status });
+      if (t.status === "done") {
+        doneTaskIds.add(t.id);
+        doneTasks.set(t.id, t);
+      }
+    } else if (n.type === "Scenario") {
+      const s = n;
+      scenLikes.push({ id: s.id, tags: s.tags, result: s.lastResult, stale: s.resultStale, spec: specOf(s.file), source: s.trace?.source, canonicalResult: s.canonicalResult, canonicalRunAt: s.canonicalRunAt });
+      sourceScenarios.push(s);
+      if (!s.canonicalResult) {
+        const base = String(s.file).replace(/\\/g, "/").split("/").pop() ?? String(s.file);
+        notRunByFile.set(base, (notRunByFile.get(base) ?? 0) + 1);
+      }
+    }
+  }
+  for (const n of graph.nodes.values()) {
+    if (n.type !== "Scenario") continue;
+    const s = n;
+    const file2 = String(s.file).replace(/\\/g, "/");
+    if (file2.includes("/.tmp/") || file2.includes("/archive/")) continue;
+    const outsideSpec = !file2.startsWith(".specs/");
+    if (outsideSpec && file2.toLowerCase().includes(slug.split("/").pop().toLowerCase())) executableScenarios.push(s);
+  }
+  const cov = computeCoverage(taskLikes, scenLikes, testQualityByTask);
+  const canonicalScenarioLikes = scenLikes.map((scenario) => ({
+    ...scenario,
+    result: scenario.canonicalResult,
+    stale: false,
+    source: scenario.canonicalResult ? "canonical-full-run" : void 0
+  }));
+  const canonicalCov = computeCoverage(taskLikes, canonicalScenarioLikes, testQualityByTask);
+  const buckets = {};
+  const canonicalBuckets = {};
+  for (const [b, ids] of Object.entries(cov.buckets)) buckets[b] = ids.length;
+  for (const [b, ids] of Object.entries(canonicalCov.buckets)) canonicalBuckets[b] = ids.length;
+  const unverifiedDoneTasks = [...doneTaskIds].filter(
+    (id) => canonicalCov.tasks[id]?.verified_status !== "DONE"
+  );
+  const truthIssuesByTask = new Map(
+    [...doneTaskIds].map((id) => [id, canonicalCov.tasks[id]?.truth_issues ?? []])
+  );
+  const uncheckedDoneWhenTasks = [...truthIssuesByTask].filter(([, issues]) => issues.some((issue2) => issue2.code === "TASK_DONE_CHECKLIST_OPEN")).map(([id]) => id);
+  const canonicalBucketByScenarioId = /* @__PURE__ */ new Map();
+  for (const [bucket, ids] of Object.entries(canonicalCov.buckets)) {
+    for (const id of ids) canonicalBucketByScenarioId.set(id, bucket);
+  }
+  const semanticWanted = opts.semantic !== false;
+  const binaryPresent = opts.judgeSpawn ? true : semanticWanted && claudeBinaryPresent();
+  const drifts = [];
+  let pairsChecked = 0;
+  let judgeFailures = 0;
+  let semanticNote;
+  if (semanticWanted && binaryPresent) {
+    const pairs = [];
+    for (const e of graph.edges) {
+      if (e.type !== "tested-by") continue;
+      const fr = graph.nodes.get(e.from);
+      const scen = graph.nodes.get(e.to);
+      if (!fr || fr.type !== "FR" || !scen || scen.type !== "Scenario") continue;
+      if (!inSpec(fr.file)) continue;
+      pairs.push({ fr, scen });
+    }
+    const limit = opts.maxPairs ?? Number.POSITIVE_INFINITY;
+    for (const { fr, scen } of pairs.slice(0, limit)) {
+      const res = await runJudge({
+        repoRoot: cwd,
+        frId: fr.id,
+        frText: `${fr.title}
+${fr.body ?? ""}`,
+        scenarioId: scen.id,
+        scenarioText: scen.steps.map((s) => `${s.keyword} ${s.text}`).join("\n"),
+        spawn: opts.judgeSpawn
+      });
+      pairsChecked++;
+      if (res.result === "DRIFT") {
+        drifts.push({
+          frId: fr.id,
+          scenarioId: scen.id,
+          severity: res.severity ?? "warning",
+          explanation: res.explanation ?? ""
+        });
+      } else if (res.result === "SUBPROCESS_FAILED") {
+        judgeFailures++;
+      }
+    }
+    if (pairs.length > pairsChecked) {
+      semanticNote = `SEMANTIC_TRUNCATED \u2014 ${pairsChecked} of ${pairs.length} FR\u2194Scenario pairs checked (maxPairs); the rest are UNCHECKED, not "no drift" (FR-37c)`;
+    } else if (judgeFailures > 0) {
+      semanticNote = `SEMANTIC_DEGRADED \u2014 ${judgeFailures} judge subprocess failure(s); those pairs are UNCHECKED, not "no drift" (FR-37c)`;
+    }
+  } else {
+    semanticNote = 'SEMANTIC_SKIPPED \u2014 no claude binary available (or semantic disabled); unchecked content is NOT "no drift" (FR-37c)';
+  }
+  const gapList = [
+    ...(validation.errors ?? []).map(
+      (e) => `[STRUCTURAL] ${e.file ?? ""}: ${e.message ?? JSON.stringify(e)}`
+    ),
+    ...errorFindings.map((f) => `[${f.check}] ${f.message}`),
+    ...gaps.map((g) => `[${g.class}] ${g.file}:${g.line} \u2014 ${g.message}`),
+    ...confErrors.map((f) => `[CONFORMANCE:${f.code}] ${f.location.file}:${f.location.line} \u2014 ${f.message}`),
+    ...drifts.map((d) => `[SEMANTIC_DRIFT:${d.severity}] ${d.frId} \u2194 ${d.scenarioId} \u2014 ${d.explanation}`)
+  ];
+  const verdict = gapList.length > 0 ? "RED" : "GREEN";
+  const notes = [];
+  if (semanticNote) notes.push(semanticNote);
+  const notRun = canonicalBuckets.not_run ?? 0;
+  if (notRun > 0) {
+    const byFile = [...notRunByFile.entries()].sort((a, b) => b[1] - a[1]).map(([f, n]) => `${f}:${n}`).join(", ");
+    notes.push(
+      `NOT_RUN \u2014 ${notRun} scenario(s) have no result in the last run (not_run, NOT "undefined"/unverified), by feature: ${byFile}. A count on the MAIN feature \u21D2 the last run was FILTERED (re-run the full suite). A feature absent from the test config (e.g. a legacy *.feature not in cucumber \`paths\`) is a PERSISTENT gap a full run won't close \u2014 add it to paths or retire it.`
+    );
+  }
+  const executionHardFailures = ["failed", "undefined", "ambiguous", "pending", "skipped", "stale"].map((key) => [key, canonicalBuckets[key] ?? 0]).filter(([, count]) => count > 0);
+  const executionDebt = [
+    ...executionHardFailures.map(([key, count]) => `${count} ${key}`),
+    ...notRun > 0 ? [`SCENARIO_NOT_RUN:${notRun}`] : []
+  ];
+  const semanticDebt = [
+    ...drifts.map((d) => `${d.frId} \u2194 ${d.scenarioId}: ${d.severity}`),
+    ...judgeFailures > 0 ? [`${judgeFailures} judge subprocess failure(s)`] : [],
+    ...semanticWanted && semanticNote ? [semanticNote] : []
+  ];
+  const bddSync = compareBddSync(cwd, slug, sourceScenarios, executableScenarios);
+  const filteredProof = latestFilteredProof(cwd, sourceScenarios);
+  const taskTruthDebt = [.../* @__PURE__ */ new Set([...unverifiedDoneTasks, ...uncheckedDoneWhenTasks])].map((id) => {
+    const issues = truthIssuesByTask.get(id) ?? [];
+    const parts = issues.map((issue2) => issue2.message);
+    if (unverifiedDoneTasks.includes(id) && parts.length === 0) {
+      const scenarios = canonicalCov.tasks[id]?.scenarios ?? [];
+      const evidence = scenarios.length > 0 ? scenarios.map((sid) => `${sid}=${canonicalBucketByScenarioId.get(sid) ?? "unverified"}`).join(", ") : "no mapped scenario evidence";
+      parts.push(`evidence-derived ${canonicalCov.tasks[id]?.verified_status ?? "unverified"} (${evidence})`);
+    }
+    return `${id}: ${parts.join("; ")}`;
+  });
+  const lanes = {
+    STRUCTURE: {
+      status: structuralErrors > 0 || errorFindings.length > 0 || confErrors.length > 0 ? "RED" : "GREEN",
+      blocking: structuralErrors > 0 || errorFindings.length > 0 || confErrors.length > 0,
+      summary: `${structuralErrors} structural error(s), ${errorFindings.length} audit error(s), ${confErrors.length} conformance error(s)`,
+      debt: [
+        ...structuralErrors > 0 ? [`${structuralErrors} structural error(s)`] : [],
+        ...errorFindings.length > 0 ? [`${errorFindings.length} audit error(s)`] : [],
+        ...confErrors.length > 0 ? [`${confErrors.length} conformance error(s)`] : []
+      ]
+    },
+    TRACEABILITY: {
+      status: gaps.length > 0 ? "RED" : "GREEN",
+      blocking: gaps.length > 0,
+      summary: gaps.length > 0 ? `${gaps.length} traceability gap(s)` : "0 traceability gaps",
+      debt: gaps.map((g) => `${g.class}: ${g.nodeId}`)
+    },
+    EXECUTION: {
+      status: executionHardFailures.length > 0 ? "RED" : notRun > 0 ? "NOT_RUN" : "GREEN",
+      blocking: executionDebt.length > 0,
+      summary: executionDebt.length > 0 ? executionDebt.join(", ") : "all known scenarios have passing/acceptable results",
+      debt: executionDebt
+    },
+    TASK_TRUTH: {
+      status: taskTruthDebt.length > 0 ? "RED" : "GREEN",
+      blocking: taskTruthDebt.length > 0,
+      summary: taskTruthDebt.length > 0 ? `${unverifiedDoneTasks.length} DONE-but-unverified task(s), ${uncheckedDoneWhenTasks.length} DONE task(s) with unchecked Done When item(s)` : "no DONE-but-unverified tasks",
+      debt: taskTruthDebt
+    },
+    BDD_SYNC: {
+      status: bddSync.debt.length > 0 ? "RED" : "GREEN",
+      blocking: bddSync.debt.length > 0,
+      summary: bddSync.debt.length > 0 ? `${bddSync.debt.length} source/executable BDD sync drift(s)` : "no source/executable BDD sync debt reported by the current verdict inputs",
+      debt: bddSync.debt
+    },
+    SEMANTIC: {
+      status: !semanticWanted ? "SKIPPED" : semanticDebt.length > 0 ? "SKIPPED" : "GREEN",
+      blocking: semanticWanted && semanticDebt.length > 0,
+      summary: !semanticWanted ? "semantic check explicitly disabled for this run" : semanticDebt.length > 0 ? semanticDebt.join(", ") : `${pairsChecked} semantic pair(s) checked with no drift`,
+      debt: !semanticWanted ? [] : semanticDebt
+    },
+    FILTERED_PROOF: {
+      status: filteredProof.proofs.length > 0 ? "GREEN" : "NONE",
+      blocking: false,
+      summary: filteredProof.proofs.length > 0 ? filteredProof.proofs[0] : notRun > 0 ? "no filtered proof attached to this verdict output" : "no filtered proof needed",
+      debt: []
+    }
+  };
+  const blockingReadinessLanes = Object.entries(lanes).filter(([, lane]) => lane.blocking);
+  const readiness = {
+    lanes,
+    overall: blockingReadinessLanes.length > 0 ? "NOT_READY" : "READY",
+    nextAction: (() => {
+      if (lanes.STRUCTURE.blocking) return "Fix structural/audit/conformance errors, then rerun spec-verdict.";
+      if (lanes.TRACEABILITY.blocking) return "Add the missing FR/AC/task/scenario traceability links, then rerun spec-verdict.";
+      if (executionHardFailures.length > 0) return "Inspect the failing/undefined/ambiguous scenarios with get_test_result, fix them, then rerun the full Docker BDD suite.";
+      if (lanes.BDD_SYNC.blocking) return "Fix source/executable BDD sync drift or mark intentional EXEC_ONLY/OUT_OF_SCOPE/PENDING scenarios, then rerun spec-verdict.";
+      if (notRun > 0 && filteredProof.latest) return `Run the full Docker BDD suite so canonical coverage replaces filtered proof ${filteredProof.latest.runId}, or attach ${filteredProof.latest.artifact ?? "the filtered artifact"} as review evidence.`;
+      if (notRun > 0) return "Run the full Docker BDD suite so canonical coverage contains every scenario result.";
+      if (lanes.TASK_TRUTH.blocking) return "Reopen/downgrade DONE-but-unverified tasks or provide canonical passed scenario evidence.";
+      if (lanes.SEMANTIC.blocking) return "Run semantic checking with a working claude binary, or explicitly rerun with --no-semantic if semantic review is out of scope.";
+      return "No readiness blockers detected by spec-verdict.";
+    })()
+  };
+  return {
+    specPath,
+    verdict,
+    prefilter: {
+      structuralErrors,
+      warnings,
+      note: 'pre-filter only \u2014 a structural pass is NOT reportable as "valid/clean/done" (FR-37a)'
+    },
+    auditGate: { errorCount: errorFindings.length, byClass },
+    traceabilityGate: { gapCount: gaps.length, byClass: summariseGaps(gaps), gaps },
+    conformance: {
+      errorCount: confErrors.length,
+      warningCount: specFindings.filter((f) => f.severity === "warning").length,
+      byCode: confByCode
+    },
+    coverage: { buckets, canonicalBuckets, unverifiedDoneTasks },
+    evidence: { bddSync, filteredProof },
+    semantic: {
+      ran: semanticWanted && binaryPresent,
+      binaryPresent,
+      pairsChecked,
+      drifts,
+      failures: judgeFailures,
+      note: semanticNote
+    },
+    gapList,
+    notes,
+    readiness
+  };
+}
+var CONFORMANCE_REMEDIATION = {
+  FR_NO_STORY: "add a `**\u0422\u0440\u0435\u0431\u043E\u0432\u0430\u043D\u0438\u0435:** [FR-N]` line INSIDE a `### User Story` block (the story\u2192FR covers edge is built only from that line)",
+  FR_NO_DESIGN: "add a `**\u0422\u0440\u0435\u0431\u043E\u0432\u0430\u043D\u0438\u0435:** [FR-N]` line INSIDE a `### Decision` block in DESIGN.md",
+  TOOTHLESS_STORY: "the `### User Story` block declares no `**\u0422\u0440\u0435\u0431\u043E\u0432\u0430\u043D\u0438\u0435:** [FR-N]` \u2014 add one (else its story leg dangles)",
+  TOOTHLESS_DECISION: "the `### Decision` block declares no `**\u0422\u0440\u0435\u0431\u043E\u0432\u0430\u043D\u0438\u0435:** [FR-N]` \u2014 add one (else its design leg dangles)",
+  UNCOVERED_FR: "FR has no covering AC \u2014 add an `## AC-N (FR-N)` with `**\u0422\u0440\u0435\u0431\u043E\u0432\u0430\u043D\u0438\u0435:** [FR-N](FR.md#...)` + a tagged @featureN scenario",
+  UNTAGGED_SCENARIO: "scenario carries no `@featureN` tag \u2014 add the tag mapping it to its FR",
+  TASK_UNTESTED: "task has no covering scenario \u2014 add a clickable `[FR-N]` ref + a @featureN scenario",
+  LINK_VALIDITY: "reference is plain text \u2014 make it a clickable `[FR-N](FR.md#fr-n-...)` / `[AC-N](ACCEPTANCE_CRITERIA.md#...)` link"
+};
+function renderVerdict(r) {
+  const lines = [];
+  lines.push(`\u2550\u2550\u2550 spec-verdict (authoritative, FR-37) \u2014 ${r.specPath} \u2550\u2550\u2550`);
+  lines.push(
+    `pre-filter (validate-spec, structural): ${r.prefilter.structuralErrors} errors / ${r.prefilter.warnings} warnings \u2014 ${r.prefilter.note}`
+  );
+  if (r.auditGate.errorCount === 0) {
+    lines.push("audit gate (audit-spec): 0 ERROR findings \u2014 gate PASSES");
+  } else {
+    const classCount = Object.keys(r.auditGate.byClass).length;
+    lines.push(`audit gate (audit-spec): ${r.auditGate.errorCount} ERROR across ${classCount} class(es) \u2014 gate FAILS:`);
+    for (const [cls, findings] of Object.entries(r.auditGate.byClass)) {
+      lines.push(`  [${cls}] \xD7${findings.length}`);
+      for (const f of findings) lines.push(`    - ${f.message}`);
+    }
+  }
+  lines.push(
+    `conformance (one graph, spec-scoped): ${r.conformance.errorCount} error / ${r.conformance.warningCount} warning \u2014 ` + Object.entries(r.conformance.byCode).map(([c, n]) => `${c}:${n}`).join(", ")
+  );
+  for (const code of Object.keys(r.conformance.byCode)) {
+    const hint = CONFORMANCE_REMEDIATION[code];
+    if (hint) lines.push(`  fix ${code}: ${hint}`);
+  }
+  const notRunCount = r.coverage.buckets.not_run ?? 0;
+  lines.push(
+    `coverage (FR-32 honesty): effective ${JSON.stringify(r.coverage.buckets)}; canonical ${JSON.stringify(r.coverage.canonicalBuckets)}` + (notRunCount > 0 ? ` \u2014 \u26A0\uFE0F ${notRunCount} effective not_run (no latest evidence; see NOT_RUN note for per-feature breakdown)` : "") + (r.coverage.unverifiedDoneTasks.length ? ` \u2014 DONE-but-unverified: ${r.coverage.unverifiedDoneTasks.join(", ")}` : "")
+  );
+  if (r.semantic.ran) {
+    lines.push(
+      `semantic (FR-8): ${r.semantic.pairsChecked} pair(s) checked \u2014 ${r.semantic.drifts.length} drift(s), ${r.semantic.failures} failure(s)` + (r.semantic.note ? ` \u2014 ${r.semantic.note}` : "")
+    );
+  } else {
+    lines.push(`semantic (FR-8): ${r.semantic.note}`);
+  }
+  if (r.traceabilityGate.gapCount === 0) {
+    lines.push("traceability gate (FR-37b, cell\u2192atom): 0 gaps \u2014 gate PASSES");
+  } else {
+    const tb = r.traceabilityGate.byClass;
+    lines.push(
+      `traceability gate (FR-37b, cell\u2192atom): ${r.traceabilityGate.gapCount} gap(s) \u2014 gate FAILS (UNCOVERED_FR: ${tb.UNCOVERED_FR}, TASK_UNTESTED: ${tb.TASK_UNTESTED}, UNTAGGED_SCENARIO: ${tb.UNTAGGED_SCENARIO}):`
+    );
+    for (const g of r.traceabilityGate.gaps.slice(0, 20)) {
+      lines.push(`  [${g.class}] ${g.nodeId} @ ${g.file}:${g.line}`);
+    }
+    if (r.traceabilityGate.gaps.length > 20) {
+      lines.push(`  \u2026 and ${r.traceabilityGate.gaps.length - 20} more (see --json for the full list)`);
+    }
+  }
+  lines.push("readiness lanes (FR-61):");
+  const laneOrder = ["STRUCTURE", "TRACEABILITY", "EXECUTION", "TASK_TRUTH", "BDD_SYNC", "SEMANTIC", "FILTERED_PROOF"];
+  for (const name of laneOrder) {
+    const lane = r.readiness.lanes[name];
+    lines.push(`  ${name}: ${lane.status}${lane.blocking ? " (blocking)" : ""} \u2014 ${lane.summary}`);
+    for (const item of lane.debt.slice(0, 8)) lines.push(`    - ${item}`);
+    if (lane.debt.length > 8) lines.push(`    \u2026 and ${lane.debt.length - 8} more`);
+  }
+  lines.push("notes (fail-loud, FR-37c):");
+  for (const n of r.notes) lines.push(`  - ${n}`);
+  const everyLaneGreen = Object.values(r.readiness.lanes).every((lane) => lane.status === "GREEN");
+  if (r.verdict === "RED") {
+    lines.push(`VERDICT: RED \u2014 ${r.gapList.length} blocking graph item(s) in the gap list above`);
+  } else if (r.readiness.overall === "READY" && everyLaneGreen) {
+    lines.push("VERDICT: GREEN");
+  } else {
+    lines.push("VERDICT: GRAPH_GREEN (structure/traceability gates passed; readiness debt remains)");
+  }
+  lines.push(`OVERALL: ${r.readiness.overall}`);
+  lines.push(`NEXT: ${r.readiness.nextAction}`);
+  return lines.join("\n");
+}
+function parseArgs(argv) {
+  let specPath = "";
+  let json2 = false;
+  let semantic = true;
+  let maxPairs;
+  for (let i = 0; i < argv.length; i++) {
+    const a = argv[i];
+    if (a === "-Path" || a === "--path") specPath = argv[++i] ?? "";
+    else if (a === "--json") json2 = true;
+    else if (a === "--no-semantic") semantic = false;
+    else if (a === "--max-pairs") maxPairs = Number(argv[++i]);
+    else if (!a.startsWith("-") && !specPath) specPath = a;
+  }
+  if (!specPath) {
+    console.error("Usage: spec-verdict.ts -Path .specs/<slug> [--json] [--no-semantic] [--max-pairs N]");
+    process.exit(2);
+  }
+  return { specPath, json: json2, semantic, maxPairs };
+}
+function verdictExitCode(result) {
+  return result.verdict === "RED" || result.readiness.overall === "NOT_READY" ? 1 : 0;
+}
+var isDirectRun2 = process.argv[1]?.endsWith("spec-verdict.ts") || process.argv[1]?.endsWith("spec-verdict.js");
+if (isDirectRun2) {
+  const { specPath, json: json2, semantic, maxPairs } = parseArgs(process.argv.slice(2));
+  const result = await runSpecVerdict(specPath, { semantic, maxPairs });
+  console.log(json2 ? JSON.stringify(result, null, 2) : renderVerdict(result));
+  process.exit(verdictExitCode(result));
+}
+
 // tools/spec-mcp-server/tools.ts
 function resolveNodeRef(graph, nodeId, spec) {
   if (spec) {
@@ -49640,7 +50566,7 @@ function scenarioCoverageIndex(graph) {
   for (const n of graph.nodes.values()) {
     if (n.type === "Scenario") {
       const s = n;
-      scens.push({ id: s.id, tags: s.tags, result: s.lastResult, stale: s.resultStale, spec: specOf(s.file) });
+      scens.push({ id: s.id, tags: s.tags, result: s.lastResult, stale: s.resultStale, spec: specOf(s.file), source: s.trace?.source, canonicalResult: s.canonicalResult, canonicalRunAt: s.canonicalRunAt });
     }
   }
   const bucketById = /* @__PURE__ */ new Map();
@@ -49658,8 +50584,8 @@ function durationToMs(d) {
   return (dd.seconds ?? 0) * 1e3 + Math.round((dd.nanos ?? 0) / 1e6);
 }
 function resolveRuntimePath(repoRoot, p) {
-  if (p.startsWith("file://")) return fileURLToPath3(p);
-  return path20.isAbsolute(p) ? p : path20.resolve(repoRoot, p);
+  if (p.startsWith("file://")) return fileURLToPath4(p);
+  return path22.isAbsolute(p) ? p : path22.resolve(repoRoot, p);
 }
 function traceTarget(s) {
   const ref = s.trace;
@@ -49680,7 +50606,7 @@ function readTraceFailure(repoRoot, s) {
     return { trace_status: "not_recorded", failingStep: fallback };
   }
   const abs = resolveRuntimePath(repoRoot, target.traceFile);
-  if (!fs23.existsSync(abs)) {
+  if (!fs25.existsSync(abs)) {
     return {
       trace_status: "expired",
       failingStep: fallback,
@@ -49690,7 +50616,7 @@ function readTraceFailure(repoRoot, s) {
   const pickleStepText = /* @__PURE__ */ new Map();
   const testStepToPickleStep = /* @__PURE__ */ new Map();
   const finishes = [];
-  for (const line of fs23.readFileSync(abs, "utf-8").split(/\r?\n/)) {
+  for (const line of fs25.readFileSync(abs, "utf-8").split(/\r?\n/)) {
     if (!line.trim()) continue;
     let env;
     try {
@@ -50012,7 +50938,7 @@ function markdownLinkLocation(graph, anchor, spec) {
   const targetSlug = decodeAnchorSlug(m.groups.slug);
   const files = /* @__PURE__ */ new Set();
   if (targetDoc.startsWith(".specs/")) files.add(targetDoc);
-  if (fs23.existsSync(path20.resolve(process.cwd(), targetDoc))) files.add(targetDoc);
+  if (fs25.existsSync(path22.resolve(process.cwd(), targetDoc))) files.add(targetDoc);
   if (spec) files.add(normalizeDocPath(`.specs/${spec}/${targetDoc}`));
   for (const node of graph.nodes.values()) {
     const file2 = normalizeDocPath(node.file);
@@ -50027,9 +50953,9 @@ function markdownLinkLocation(graph, anchor, spec) {
       if (normalizeDocPath(node.file) !== file2) continue;
       if (nodeHeadingSlugCandidates(node).includes(targetSlug)) return { file: node.file, line: node.line };
     }
-    const abs = path20.resolve(process.cwd(), file2);
-    if (!fs23.existsSync(abs) || !fs23.statSync(abs).isFile()) continue;
-    const lines = fs23.readFileSync(abs, "utf-8").split(/\r?\n/);
+    const abs = path22.resolve(process.cwd(), file2);
+    if (!fs25.existsSync(abs) || !fs25.statSync(abs).isFile()) continue;
+    const lines = fs25.readFileSync(abs, "utf-8").split(/\r?\n/);
     let inFence = false;
     for (let i = 0; i < lines.length; i += 1) {
       const raw = lines[i];
@@ -50378,7 +51304,9 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
       view: external_exports.enum(["status", "counts", "coverage"]).optional()
     },
     handler: async ({ spec, view }) => {
+      registryOpts.refreshGraph?.();
       const graph = getGraph();
+      const repoRoot = registryOpts.repoRoot ?? process.cwd();
       const v = view ?? "status";
       const executionGaps = (scopeSpec, scenarios, buckets) => {
         const scenarioBucket = /* @__PURE__ */ new Map();
@@ -50441,21 +51369,34 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
           if (spec && nodeSpec !== spec) continue;
           if (node.type === "Scenario") {
             const s = node;
-            scenarios.push({ id: s.id, tags: s.tags, result: s.lastResult, stale: s.resultStale, spec: nodeSpec });
+            scenarios.push({ id: s.id, tags: s.tags, result: s.lastResult, stale: s.resultStale, spec: nodeSpec, source: s.trace?.source, canonicalResult: s.canonicalResult, canonicalRunAt: s.canonicalRunAt });
           } else if (node.type === "Task") {
             const t = node;
-            tasks.push({ id: t.id, doneWhen: t.doneWhen ?? "", refs: t.refs, spec: nodeSpec });
+            tasks.push({ id: t.id, doneWhen: t.doneWhen ?? "", refs: t.refs, spec: nodeSpec, status: t.status });
           }
         }
-        const testQualityByTask = readVerdicts(process.cwd());
+        const testQualityByTask = readVerdicts(repoRoot);
         const coverage = computeCoverage(tasks, scenarios, testQualityByTask);
+        const canonicalScenarios = scenarios.map((scenario) => ({
+          ...scenario,
+          result: scenario.canonicalResult,
+          stale: false,
+          source: scenario.canonicalResult ? "canonical-full-run" : void 0
+        }));
+        const canonicalCoverage = computeCoverage(tasks, canonicalScenarios, testQualityByTask);
         return asJsonResult({
           ok: true,
           view: "coverage",
           spec: spec ?? null,
           scope: spec ? "spec" : "corpus",
           ...coverage,
-          execution_gaps: executionGaps(spec, scenarios, coverage.buckets)
+          canonical_coverage: {
+            buckets: canonicalCoverage.buckets,
+            totals: canonicalCoverage.totals,
+            task_verification: canonicalCoverage.tasks
+          },
+          execution_gaps: executionGaps(spec, canonicalScenarios, canonicalCoverage.buckets),
+          filtered_proof: spec ? latestFilteredProof(repoRoot, [...graph.nodes.values()].filter((node) => node.type === "Scenario" && specOf(node.file) === spec).map((node) => node)).latest : null
         });
       }
       if (typeof spec !== "string" || spec.length === 0) {
@@ -50480,12 +51421,12 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
         else if (n.type === "Task") {
           counts.tasks++;
           const t = n;
-          statusTasks.push({ id: t.id, doneWhen: t.doneWhen ?? "", refs: t.refs, spec: nodeSpec });
+          statusTasks.push({ id: t.id, doneWhen: t.doneWhen ?? "", refs: t.refs, spec: nodeSpec, status: t.status });
         } else if (n.type === "Scenario") {
           counts.scenarios++;
           const s = n;
           scens.push(s);
-          statusScenarios.push({ id: s.id, tags: s.tags, result: s.lastResult, stale: s.resultStale, spec: nodeSpec });
+          statusScenarios.push({ id: s.id, tags: s.tags, result: s.lastResult, stale: s.resultStale, spec: nodeSpec, source: s.trace?.source, canonicalResult: s.canonicalResult, canonicalRunAt: s.canonicalRunAt });
         }
       }
       if (counts.fr + counts.ac + counts.scenarios + counts.tasks === 0) {
@@ -50499,35 +51440,64 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
       const summary = { passed: 0, failed: 0, pending: 0, undefined: 0, ambiguous: 0, skipped: 0, touched: 0 };
       let lastAt = null;
       for (const s of scens) {
-        if (!s.lastResult) continue;
+        if (!s.canonicalResult) continue;
         summary.touched++;
-        const r = s.lastResult.toUpperCase();
+        const r = s.canonicalResult.toUpperCase();
         if (r === "PASSED") summary.passed++;
         else if (r === "FAILED") summary.failed++;
         else if (r === "PENDING") summary.pending++;
         else if (r === "UNDEFINED") summary.undefined++;
         else if (r === "AMBIGUOUS") summary.ambiguous++;
         else if (r === "SKIPPED") summary.skipped++;
-        if (s.lastRunAt && (!lastAt || s.lastRunAt > lastAt)) lastAt = s.lastRunAt;
+        if (s.canonicalRunAt && (!lastAt || s.canonicalRunAt > lastAt)) lastAt = s.canonicalRunAt;
       }
       const last_run = summary.touched > 0 ? { at: lastAt, source: ".dev-pomogator/.last-test-run.ndjson", summary } : null;
-      const statusCoverage = computeCoverage(statusTasks, statusScenarios, readVerdicts(process.cwd()));
-      const statusExecutionGaps = executionGaps(slug, statusScenarios, statusCoverage.buckets);
+      const statusCoverage = computeCoverage(statusTasks, statusScenarios, readVerdicts(repoRoot));
+      const canonicalStatusScenarios = statusScenarios.map((scenario) => ({
+        ...scenario,
+        result: scenario.canonicalResult,
+        stale: false,
+        source: scenario.canonicalResult ? "canonical-full-run" : void 0
+      }));
+      const canonicalStatusCoverage = computeCoverage(statusTasks, canonicalStatusScenarios, readVerdicts(repoRoot));
+      const statusExecutionGaps = executionGaps(slug, canonicalStatusScenarios, canonicalStatusCoverage.buckets);
+      const sourceScenarios = scens.filter((scenario) => specOf(scenario.file) === slug);
+      const executableScenarios = [];
+      const slugTail = slug.split("/").pop().toLowerCase();
+      for (const node of graph.nodes.values()) {
+        if (node.type !== "Scenario") continue;
+        const scenario = node;
+        const file2 = String(scenario.file).replace(/\\/g, "/");
+        if (file2.includes("/.tmp/") || file2.includes("/archive/")) continue;
+        const outsideSpec = !file2.startsWith(".specs/");
+        if (outsideSpec && file2.toLowerCase().includes(slugTail)) executableScenarios.push(scenario);
+      }
+      const bddSync = compareBddSync(repoRoot, slug, sourceScenarios, executableScenarios);
+      const filteredProof = latestFilteredProof(repoRoot, sourceScenarios);
+      const taskTruthDebt = Object.entries(canonicalStatusCoverage.tasks).flatMap(([taskId, task]) => (task.truth_issues ?? []).map((issue2) => `${taskId}: ${issue2.message}`));
+      const executionHardCount = canonicalStatusCoverage.totals.failed + canonicalStatusCoverage.totals.undefined + canonicalStatusCoverage.totals.ambiguous + canonicalStatusCoverage.totals.pending + canonicalStatusCoverage.totals.skipped + canonicalStatusCoverage.totals.stale;
       let lifecycle;
       if (counts.scenarios === 0) lifecycle = "SPEC_ONLY";
       else if (!last_run) lifecycle = "TESTS_NOT_RUN";
       else if (summary.failed > 0 || summary.ambiguous > 0) lifecycle = "RED";
-      else if (summary.pending + summary.undefined + summary.skipped > 0 || statusCoverage.totals.not_run > 0 || statusCoverage.totals.stale > 0) lifecycle = "PARTIAL";
+      else if (summary.pending + summary.undefined + summary.skipped > 0 || canonicalStatusCoverage.totals.not_run > 0 || canonicalStatusCoverage.totals.stale > 0) lifecycle = "PARTIAL";
       else lifecycle = "GREEN";
       const gaps = summariseGaps(gapsFromFindings(checkConformance(graph), { spec: slug }));
+      const readinessLanes = {
+        TRACEABILITY: { status: Object.values(gaps).some((count) => count > 0) ? "RED" : "GREEN" },
+        EXECUTION: { status: executionHardCount > 0 ? "RED" : canonicalStatusCoverage.totals.not_run > 0 ? "NOT_RUN" : "GREEN" },
+        TASK_TRUTH: { status: taskTruthDebt.length > 0 ? "RED" : "GREEN", debt: taskTruthDebt },
+        BDD_SYNC: { status: bddSync.debt.length > 0 ? "RED" : "GREEN", debt: bddSync.debt },
+        FILTERED_PROOF: { status: filteredProof.latest ? "GREEN" : "NONE", latest: filteredProof.latest }
+      };
       const hints = {
         SPEC_ONLY: "Docs only \u2014 no scenarios written yet. Next: author the .feature (FR-38a).",
-        TESTS_NOT_RUN: `${counts.scenarios} scenario(s) written but never run/ingested. Next: run the suite so NDJSON lands.`,
+        TESTS_NOT_RUN: `${counts.scenarios} scenario(s) are SCENARIO_NOT_RUN; no canonical execution has been ingested. Next: run the suite so NDJSON lands.`,
         RED: `${summary.failed + summary.ambiguous} failing of ${summary.touched} touched. Next: get_test_result per scenario.`,
-        PARTIAL: statusExecutionGaps.SCENARIO_NOT_RUN > 0 ? `${statusExecutionGaps.SCENARIO_NOT_RUN} scenario(s) are SCENARIO_NOT_RUN after the last ingested run; NOT execution-complete.` : statusCoverage.totals.stale > 0 ? `${statusCoverage.totals.stale} stale passed scenario(s) need rerun after source changes; NOT execution-complete.` : `${summary.pending + summary.undefined + summary.skipped} scenario(s) undefined/pending/skipped, 0 failed \u2014 written but not implemented; NOT green.`,
+        PARTIAL: statusExecutionGaps.SCENARIO_NOT_RUN > 0 ? `${statusExecutionGaps.SCENARIO_NOT_RUN} scenario(s) are SCENARIO_NOT_RUN after the last ingested run; NOT execution-complete.` : canonicalStatusCoverage.totals.stale > 0 ? `${canonicalStatusCoverage.totals.stale} stale passed scenario(s) need rerun after source changes; NOT execution-complete.` : `${summary.pending + summary.undefined + summary.skipped} scenario(s) undefined/pending/skipped, 0 failed \u2014 written but not implemented; NOT green.`,
         GREEN: `All ${summary.touched} touched scenario(s) passed at ${lastAt}.`
       };
-      const progress = readProgressState(path20.join(process.cwd(), ".specs", slug));
+      const progress = readProgressState(path22.join(repoRoot, ".specs", slug));
       const phases = PHASE_ORDER.map((name) => ({
         id: `${slug}:phase:${name}`,
         name,
@@ -50541,7 +51511,7 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
         spec: slug,
         // Explicit SPEC-level marker (set_spec_status). `backlog` ⇒ excluded from the task-census /
         // Stop-gate open-work count — its open tasks are parked by intent, not counted as work due now.
-        spec_status: readSpecStatus(process.cwd(), slug),
+        spec_status: readSpecStatus(repoRoot, slug),
         lifecycle,
         counts,
         last_run,
@@ -50551,6 +51521,16 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
           totals: statusCoverage.totals,
           task_verification: statusCoverage.tasks
         },
+        canonical_coverage: {
+          totals: canonicalStatusCoverage.totals,
+          task_verification: canonicalStatusCoverage.tasks
+        },
+        readiness: {
+          overall: Object.values(readinessLanes).some((lane) => lane.status === "RED" || lane.status === "NOT_RUN") ? "NOT_READY" : "READY",
+          lanes: readinessLanes,
+          next_action: bddSync.debt.length > 0 ? "Fix source/executable BDD sync drift or mark intentional exceptions." : statusExecutionGaps.SCENARIO_NOT_RUN > 0 && filteredProof.latest ? `Run the full Docker BDD suite so canonical coverage replaces filtered proof ${filteredProof.latest.runId}, or attach ${filteredProof.latest.artifact ?? "the filtered artifact"} as review evidence.` : hints[lifecycle]
+        },
+        filtered_proof: filteredProof.latest,
         phases,
         hint: hints[lifecycle]
       });
@@ -50567,8 +51547,8 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
         logSpecAccess("list_spec_docs", args, "denied");
         return asJsonResult({ ok: false, error: "UNSAFE_SPEC", spec: slug, hint: "slug must stay within .specs/ (no traversal)" });
       }
-      const dir = path20.join(process.cwd(), ".specs", slug);
-      if (!fs23.existsSync(dir) || !fs23.statSync(dir).isDirectory()) {
+      const dir = path22.join(process.cwd(), ".specs", slug);
+      if (!fs25.existsSync(dir) || !fs25.statSync(dir).isDirectory()) {
         logSpecAccess("list_spec_docs", args, "not_found");
         return asJsonResult({ ok: false, error: "SPEC_NOT_FOUND", spec: slug });
       }
@@ -50576,10 +51556,10 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
       const attachments = [];
       const ATTACH_RE = /\.(png|jpe?g|gif|webp|bmp|pdf|svg)$/i;
       const walk = (abs, rel) => {
-        for (const e of fs23.readdirSync(abs, { withFileTypes: true })) {
+        for (const e of fs25.readdirSync(abs, { withFileTypes: true })) {
           const childRel = rel ? `${rel}/${e.name}` : e.name;
           if (e.isDirectory()) {
-            walk(path20.join(abs, e.name), childRel);
+            walk(path22.join(abs, e.name), childRel);
           } else if (e.isFile()) {
             if (/\.(md|feature)$/.test(e.name) || e.name === ".progress.json" || e.name === ".jira-cache.json") docs.push(childRel);
             else if (ATTACH_RE.test(e.name)) attachments.push(childRel);
@@ -50616,9 +51596,9 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
         return asJsonResult({ ok: false, error: resolved.reason === "TRAVERSAL" ? "DOC_TRAVERSAL" : "UNSAFE_SPEC", spec: slug, doc: String(doc), hint: "doc must stay within .specs/<spec>/ (no traversal/abs path)" });
       }
       const rel = resolved.rel;
-      const base = path20.basename(rel);
+      const base = path22.basename(rel);
       const okName = /\.(md|feature)$/.test(base) || base === ".progress.json" || base === ".jira-cache.json";
-      if (!okName || !fs23.existsSync(resolved.abs) || !fs23.statSync(resolved.abs).isFile()) {
+      if (!okName || !fs25.existsSync(resolved.abs) || !fs25.statSync(resolved.abs).isFile()) {
         logSpecAccess("read_spec_doc", args, "not_found");
         return asJsonResult({
           ok: false,
@@ -50628,7 +51608,7 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
           hint: "Call list_spec_docs({spec}) for the valid inventory. Binary attachments \u2192 read_attachment."
         });
       }
-      const full = fs23.readFileSync(resolved.abs, "utf-8");
+      const full = fs25.readFileSync(resolved.abs, "utf-8");
       const lines = full.split(/\r?\n/);
       const totalLines = lines.length;
       const totalBytes = full.length;
@@ -50723,7 +51703,7 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
         return asJsonResult({ ok: false, error: resolved.reason === "TRAVERSAL" ? "DOC_TRAVERSAL" : "UNSAFE_SPEC", spec: slug, path: String(docPath), hint: "path must stay within .specs/<spec>/ (no traversal/abs path)" });
       }
       const rel = resolved.rel;
-      const ext = path20.extname(rel).toLowerCase();
+      const ext = path22.extname(rel).toLowerCase();
       const MIME = {
         ".png": "image/png",
         ".jpg": "image/jpeg",
@@ -50735,11 +51715,11 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
         ".svg": "image/svg+xml"
       };
       const mime = MIME[ext];
-      if (!mime || !fs23.existsSync(resolved.abs) || !fs23.statSync(resolved.abs).isFile()) {
+      if (!mime || !fs25.existsSync(resolved.abs) || !fs25.statSync(resolved.abs).isFile()) {
         logSpecAccess("read_attachment", args, "not_found");
         return asJsonResult({ ok: false, error: "ATTACHMENT_NOT_FOUND", spec: slug, path: rel, hint: "Call list_spec_docs({spec}).attachments for the valid inventory." });
       }
-      const buf = fs23.readFileSync(resolved.abs);
+      const buf = fs25.readFileSync(resolved.abs);
       logSpecAccess("read_attachment", args, "ok");
       return asJsonResult({ ok: true, spec: slug, path: rel, mime, bytes: buf.length, base64: buf.toString("base64") });
     }
@@ -50937,13 +51917,13 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
         return asJsonResult({ ok: false, error: resolved.reason === "TRAVERSAL" ? "DOC_TRAVERSAL" : "UNSAFE_SPEC", spec: slug, doc: String(doc) });
       }
       const rel = resolved.rel;
-      const base = path20.basename(rel);
+      const base = path22.basename(rel);
       const deletable = /\.(md|feature|png|jpe?g|gif|webp|bmp|pdf|svg)$/i.test(base);
       if (!deletable) {
         logSpecAccess("delete_spec_doc", args, "denied");
         return asJsonResult({ ok: false, error: "NOT_DELETABLE", spec: slug, doc: rel, hint: "Only *.md/*.feature and binary attachments are agent-deletable; .progress.json/.jira-cache.json are single-writer artifacts." });
       }
-      if (!fs23.existsSync(resolved.abs) || !fs23.statSync(resolved.abs).isFile()) {
+      if (!fs25.existsSync(resolved.abs) || !fs25.statSync(resolved.abs).isFile()) {
         logSpecAccess("delete_spec_doc", args, "not_found");
         return asJsonResult({ ok: false, error: "DOC_NOT_FOUND", spec: slug, doc: rel });
       }
@@ -50976,8 +51956,8 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
           hint: "Nodes in this doc are referenced from other files \u2014 retarget/remove those references first (find_refs shows them), or this deletion strands dangling edges."
         });
       }
-      const bytes = fs23.statSync(resolved.abs).size;
-      fs23.unlinkSync(resolved.abs);
+      const bytes = fs25.statSync(resolved.abs).size;
+      fs25.unlinkSync(resolved.abs);
       registryOpts.refreshGraph?.();
       logSpecAccess("delete_spec_doc", args, "ok");
       return asJsonResult({ ok: true, spec: slug, doc: rel, deleted: true, bytes });
@@ -51024,11 +52004,11 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
         logSpecAccess("rename_spec_doc", args, "error");
         return asJsonResult({ ok: false, error: "NOOP_RENAME", hint: "source and destination resolve to the same path" });
       }
-      if (!fs23.existsSync(src.abs) || !fs23.statSync(src.abs).isFile()) {
+      if (!fs25.existsSync(src.abs) || !fs25.statSync(src.abs).isFile()) {
         logSpecAccess("rename_spec_doc", args, "not_found");
         return asJsonResult({ ok: false, error: "DOC_NOT_FOUND", spec: slug, doc: src.rel });
       }
-      if (fs23.existsSync(dst.abs)) {
+      if (fs25.existsSync(dst.abs)) {
         logSpecAccess("rename_spec_doc", args, "denied");
         return asJsonResult({ ok: false, error: "DEST_EXISTS", spec: toSlug, doc: dst.rel, hint: "destination already exists \u2014 pick a free name or delete it first (no silent clobber)" });
       }
@@ -51040,7 +52020,7 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
           return asJsonResult({ ok: false, error: "CAS_MISMATCH", spec: slug, doc: src.rel, expected_sha: expectedSha, actual_sha: cas.actualSha, hint: "source changed since you read it (another session?) \u2014 re-read for the fresh sha and retry" });
         }
       }
-      const content = fs23.readFileSync(src.abs, "utf-8");
+      const content = fs25.readFileSync(src.abs, "utf-8");
       const srcRelFile = `.specs/${slug}/${src.rel}`;
       const dstRelFile = `.specs/${toSlug}/${dst.rel}`;
       const inbound = findInboundLinks(cwd, srcRelFile);
@@ -51070,11 +52050,11 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
       let rewroteFiles = 0;
       if (rewriteInbound && inbound.length > 0) {
         for (const edit of rewriteInboundLinks(cwd, inbound, dstRelFile)) {
-          fs23.writeFileSync(path20.join(cwd, edit.file), edit.content, "utf-8");
+          fs25.writeFileSync(path22.join(cwd, edit.file), edit.content, "utf-8");
           rewroteFiles++;
         }
       }
-      fs23.unlinkSync(src.abs);
+      fs25.unlinkSync(src.abs);
       registryOpts.refreshGraph?.();
       logSpecAccess("rename_spec_doc", args, "ok");
       return asJsonResult({ ok: true, spec: slug, from: src.rel, to_spec: toSlug, to: dst.rel, sha: docSha(content), inbound_count: inbound.length, rewrote_inbound_files: rewroteFiles, findings: [] });
@@ -51096,12 +52076,12 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
         logSpecAccess("create_spec", { slug: name }, "error");
         return asJsonResult({ ok: false, error: "RESERVED_SLUG", hint: "slug collides with a Windows reserved device name" });
       }
-      if (fs23.existsSync(path20.join(process.cwd(), ".specs", name))) {
+      if (fs25.existsSync(path22.join(process.cwd(), ".specs", name))) {
         logSpecAccess("create_spec", { slug: name }, "denied");
         return asJsonResult({ ok: false, error: "SPEC_EXISTS", spec: name });
       }
-      const core = path20.join(path20.dirname(fileURLToPath3(import.meta.url)), "..", "specs-generator", "specs-generator-core.mjs");
-      const r = spawnSync2(process.execPath, [core, "scaffold-spec", "-Name", name], {
+      const core = path22.join(path22.dirname(fileURLToPath4(import.meta.url)), "..", "specs-generator", "specs-generator-core.mjs");
+      const r = spawnSync3(process.execPath, [core, "scaffold-spec", "-Name", name], {
         cwd: process.cwd(),
         encoding: "utf-8",
         timeout: 6e4,
@@ -51116,7 +52096,7 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
       }
       registryOpts.refreshGraph?.();
       logSpecAccess("create_spec", { slug: name }, "ok");
-      const docs = fs23.readdirSync(path20.join(process.cwd(), ".specs", name)).sort();
+      const docs = fs25.readdirSync(path22.join(process.cwd(), ".specs", name)).sort();
       return asJsonResult({ ok: true, spec: name, docs, hint: "Born verdict-GREEN; fill via apply_spec_change." });
     }
   });
@@ -51136,12 +52116,12 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
       if (fromSpec === slug || isArchivedSlug(fromSpec)) continue;
       add(e.from, e.to, String(e.type));
     }
-    const specsDir = path20.join(process.cwd(), ".specs");
-    if (fs23.existsSync(specsDir)) {
+    const specsDir = path22.join(process.cwd(), ".specs");
+    if (fs25.existsSync(specsDir)) {
       const linkRe = new RegExp(`(?:\\.specs/|\\.\\./|/|\\]\\()${slug.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\$&")}/`);
       const walk = (dir, otherSlug) => {
-        for (const ent of fs23.readdirSync(dir, { withFileTypes: true })) {
-          const abs = path20.join(dir, ent.name);
+        for (const ent of fs25.readdirSync(dir, { withFileTypes: true })) {
+          const abs = path22.join(dir, ent.name);
           if (ent.isDirectory()) {
             walk(abs, otherSlug);
             continue;
@@ -51149,19 +52129,19 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
           if (!/\.(md|feature)$/.test(ent.name)) continue;
           let body = "";
           try {
-            body = fs23.readFileSync(abs, "utf-8");
+            body = fs25.readFileSync(abs, "utf-8");
           } catch {
             continue;
           }
           if (linkRe.test(body)) {
-            add(`.specs/${otherSlug}/${path20.relative(path20.join(specsDir, otherSlug), abs).replace(/\\/g, "/")}`, `.specs/${slug}/`, "md-link");
+            add(`.specs/${otherSlug}/${path22.relative(path22.join(specsDir, otherSlug), abs).replace(/\\/g, "/")}`, `.specs/${slug}/`, "md-link");
           }
         }
       };
-      for (const ent of fs23.readdirSync(specsDir, { withFileTypes: true })) {
+      for (const ent of fs25.readdirSync(specsDir, { withFileTypes: true })) {
         if (!ent.isDirectory() || ent.name.startsWith(".")) continue;
         if (ent.name === slug || isArchivedSlug(ent.name)) continue;
-        walk(path20.join(specsDir, ent.name), ent.name);
+        walk(path22.join(specsDir, ent.name), ent.name);
       }
     }
     return out;
@@ -51206,22 +52186,22 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
         logSpecAccess("archive_spec", { slug: s }, "denied");
         return asJsonResult({ ok: false, error: "ARCHIVE_BLOCKED", slug: s, live_inbound_count: refs.length, live_inbound_refs: refs.slice(0, 50), hint: "live specs still reference this \u2014 redirect those refs first, or it is a KEEP false positive" });
       }
-      const srcAbs = path20.join(cwd, ".specs", s);
-      const dstAbs = path20.join(cwd, ".specs", "archive", s);
-      if (!fs23.existsSync(srcAbs) || !fs23.statSync(srcAbs).isDirectory()) {
+      const srcAbs = path22.join(cwd, ".specs", s);
+      const dstAbs = path22.join(cwd, ".specs", "archive", s);
+      if (!fs25.existsSync(srcAbs) || !fs25.statSync(srcAbs).isDirectory()) {
         logSpecAccess("archive_spec", { slug: s }, "not_found");
         return asJsonResult({ ok: false, error: "SPEC_NOT_FOUND", slug: s });
       }
-      if (fs23.existsSync(dstAbs)) {
+      if (fs25.existsSync(dstAbs)) {
         logSpecAccess("archive_spec", { slug: s }, "denied");
         return asJsonResult({ ok: false, error: "DEST_EXISTS", slug: s, hint: "already archived (no clobber)" });
       }
-      fs23.mkdirSync(path20.dirname(dstAbs), { recursive: true });
-      fs23.renameSync(srcAbs, dstAbs);
+      fs25.mkdirSync(path22.dirname(dstAbs), { recursive: true });
+      fs25.renameSync(srcAbs, dstAbs);
       try {
-        const ledger = path20.join(cwd, ".dev-pomogator", "logs", "spec-archive.jsonl");
-        fs23.mkdirSync(path20.dirname(ledger), { recursive: true });
-        fs23.appendFileSync(ledger, JSON.stringify({ ts: (/* @__PURE__ */ new Date()).toISOString(), slug: s, reason: String(reason ?? ""), from: `.specs/${s}/`, to: `.specs/archive/${s}/` }) + "\n");
+        const ledger = path22.join(cwd, ".dev-pomogator", "logs", "spec-archive.jsonl");
+        fs25.mkdirSync(path22.dirname(ledger), { recursive: true });
+        fs25.appendFileSync(ledger, JSON.stringify({ ts: (/* @__PURE__ */ new Date()).toISOString(), slug: s, reason: String(reason ?? ""), from: `.specs/${s}/`, to: `.specs/archive/${s}/` }) + "\n");
       } catch {
       }
       registryOpts.refreshGraph?.();
@@ -51238,6 +52218,7 @@ var PRODUCT_VERSION = "0.1.0";
 async function boot(opts) {
   const lifecycle = await startLifecycle({
     repoRoot: opts.repoRoot,
+    featureRoots: configuredFeatureRoots(opts.repoRoot),
     autoDetectWatchMode: true,
     onLockContention: "readonly"
   });
@@ -51249,6 +52230,8 @@ async function boot(opts) {
   }
   const server = new McpServer({ name: PRODUCT_NAME, version: PRODUCT_VERSION });
   for (const tool of buildToolRegistry(() => lifecycle.graph, {
+    repoRoot: opts.repoRoot,
+    refreshGraph: lifecycle.refreshGraph,
     // P21-1: in a read-only door the write tools refuse with the holder named.
     writeLockHeldBy: () => lifecycle.readOnly && lifecycle.lockHolder ? {
       pid: lifecycle.lockHolder.pid,
@@ -51261,8 +52244,8 @@ async function boot(opts) {
   return { server, lifecycle };
 }
 function resolveRepoRoot(env, cwd) {
-  if (env && !env.includes("${") && fs24.existsSync(path21.join(env, ".specs"))) return env;
-  if (env && (env.includes("${") || !fs24.existsSync(path21.join(env, ".specs")))) {
+  if (env && !env.includes("${") && fs26.existsSync(path23.join(env, ".specs"))) return env;
+  if (env && (env.includes("${") || !fs26.existsSync(path23.join(env, ".specs")))) {
     process.stderr.write(
       `[${PRODUCT_NAME}] DEV_POMOGATOR_REPO_ROOT="${env}" is not a repo with .specs/ \u2014 using cwd ${cwd}
 `

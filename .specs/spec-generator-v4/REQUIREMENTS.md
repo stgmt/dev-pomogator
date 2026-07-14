@@ -21,6 +21,7 @@
 | [FR-15](FR.md#fr-15) | Side-channel conformance log | [AC-15.1](ACCEPTANCE_CRITERIA.md#ac-151), [AC-15.2](ACCEPTANCE_CRITERIA.md#ac-152) | @feature15 | Draft |
 | [FR-16](FR.md#fr-16) | GitHub Codespaces support | [AC-16.1](ACCEPTANCE_CRITERIA.md#ac-161), [AC-16.2](ACCEPTANCE_CRITERIA.md#ac-162) | @feature16 | Draft |
 | [FR-58](FR.md#fr-58) | Inherited v3 form-contract scenarios have explicit owner | [AC-58.1](ACCEPTANCE_CRITERIA.md#ac-581), [AC-58.2](ACCEPTANCE_CRITERIA.md#ac-582), [AC-58.3](ACCEPTANCE_CRITERIA.md#ac-583) | @feature58 | Draft |
+| [FR-61](FR.md#fr-61) | Unified readiness UX across verdict/status/task/BDD evidence | [AC-61.1](ACCEPTANCE_CRITERIA.md#ac-611), [AC-61.2](ACCEPTANCE_CRITERIA.md#ac-612), [AC-61.3](ACCEPTANCE_CRITERIA.md#ac-613), [AC-61.4](ACCEPTANCE_CRITERIA.md#ac-614), [AC-61.5](ACCEPTANCE_CRITERIA.md#ac-615) | @feature61 | Draft |
 
 ## Functional Requirements
 
@@ -41,6 +42,7 @@
 - [FR-15: Side-channel conformance log](FR.md#fr-15)
 - [FR-16: GitHub Codespaces support](FR.md#fr-16)
 - [FR-58: Inherited v3 form-contract scenarios have explicit owner](FR.md#fr-58)
+- [FR-61: Unified readiness UX across verdict/status/task/BDD evidence](FR.md#fr-61)
 
 ## Non-Functional Requirements
 
@@ -131,6 +133,11 @@
 | CHK-FR59-01 | FR-59 bounded agent-facing reminder with counts/samples/omitted pointer via AC-59.1 | FR-59, AC-59.1, @feature59, UC-2 | BDD scenario | Draft | SPECGEN004_513 + focused vitest |
 | CHK-FR59-02 | FR-59 durable spec-check-log remains complete via AC-59.2 | FR-59, AC-59.2, @feature59, UC-2 | BDD scenario | Draft | Real appendFindings writer proof |
 | CHK-FR59-03 | FR-59 compact prompt banners and rebuilt bundle via AC-59.3 | FR-59, AC-59.3, @feature59, UC-2 | Integration test | Draft | build:push + real artifact probe |
+| CHK-FR61-01 | FR-61 multi-lane readiness verdict via AC-61.1 | FR-61, AC-61.1, @feature61, UC-24 | BDD scenario | Draft | SPECGEN004_539 — structural pass but readiness NOT_READY |
+| CHK-FR61-02 | FR-61 aligned status gap vocabulary via AC-61.2 | FR-61, AC-61.2, @feature61, UC-24 | BDD scenario | Draft | SPECGEN004_540 — no false UNCOVERED_FR for execution absence |
+| CHK-FR61-03 | FR-61 task DONE truth guard via AC-61.3 | FR-61, AC-61.3, @feature61, UC-24 | BDD scenario | Draft | SPECGEN004_541 — door/verdict/census downgrade evidence-missing DONE |
+| CHK-FR61-04 | FR-61 BDD source/executable sync via AC-61.4 | FR-61, AC-61.4, @feature61, UC-24 | BDD scenario | Draft | SPECGEN004_542 — executable-only/source-only/tag/count drift |
+| CHK-FR61-05 | FR-61 filtered proof lane via AC-61.5 | FR-61, AC-61.5, @feature61, UC-24 | BDD scenario | Draft | SPECGEN004_543 — filtered artifact visible without canonical coverage poison |
 
 ## Verification Process
 
@@ -152,9 +159,9 @@
 
 ## Summary Counts
 
-- Total CHKs: 65 (57 prior + 5 Phase 8 gap-close + 3 FR-59 bounded-reminder rows)
+- Total CHKs: 70 (57 prior + 5 Phase 8 gap-close + 3 FR-59 bounded-reminder rows + 5 FR-61 readiness rows)
 - Verified: 0
 - In Progress: 0
-- Draft: 65
+- Draft: 70
 - Blocked: 0
 - Blocked: 0

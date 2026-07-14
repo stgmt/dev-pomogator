@@ -38,8 +38,9 @@ describe('bucketScenarios — conservation invariant', () => {
     { id: 'e', tags: [], result: 'AMBIGUOUS' },
     { id: 'f', tags: [], result: 'FAILED' },
     { id: 'g', tags: [], result: 'SKIPPED' },
-    { id: 'h', tags: [] }, // no result → undefined
+    { id: 'h', tags: [] }, // no result → not_run
     { id: 'i', tags: [], result: 'WEIRD' }, // unknown → undefined
+    { id: 'j', tags: [], result: 'PASSED', stale: true }, // stale pass → stale
   ];
   const buckets = bucketScenarios(scenarios);
 
@@ -49,16 +50,18 @@ describe('bucketScenarios — conservation invariant', () => {
   });
   it('routes results to the right buckets', () => {
     expect(buckets.passed.sort()).toEqual(['a', 'b']);
+    expect(buckets.stale).toEqual(['j']);
     expect(buckets.pending).toEqual(['c']);
     expect(buckets.ambiguous).toEqual(['e']);
     expect(buckets.failed).toEqual(['f']);
     expect(buckets.skipped).toEqual(['g']);
   });
-  it('separates not_run (ABSENT result) from undefined (UNDEFINED-steps or unknown present)', () => {
-    // 2026-06-08 fix: a scenario absent from the last NDJSON (`h`) is `not_run`,
-    // NOT `undefined`. `d` (real UNDEFINED result) + `i` (unknown present enum)
-    // stay `undefined` — so a filtered run inflates not_run, not undefined.
+  it('separates not_run, stale passed evidence, and undefined step failures', () => {
+    // A scenario absent from the last NDJSON/overlay (`h`) is `not_run`, NOT
+    // `undefined`. A once-passing overlay older than source (`j`) is `stale`,
+    // which is also non-green but distinct from never-run evidence.
     expect(buckets.not_run).toEqual(['h']);
+    expect(buckets.stale).toEqual(['j']);
     expect(buckets.undefined.sort()).toEqual(['d', 'i']);
   });
 });
@@ -154,6 +157,9 @@ describe('verifiedStatus', () => {
   it('IN_PROGRESS when any mapped scenario is non-green (never DONE)', () => {
     expect(verifiedStatus(['s1', 's3'], bucketById)).toBe('IN_PROGRESS');
   });
+  it('IN_PROGRESS for stale passed evidence', () => {
+    expect(verifiedStatus(['s1', 'stale-scenario'], new Map([...bucketById, ['stale-scenario', 'stale']]))).toBe('IN_PROGRESS');
+  });
 });
 
 describe('computeCoverage — end to end', () => {
@@ -189,5 +195,28 @@ describe('computeCoverage — end to end', () => {
     );
     expect(scopedReport.tasks['strong-tests:t29'].scenarios).toEqual(['SCEN-testqual001-10-go-detector']);
     expect(scopedReport.tasks['strong-tests:t29'].verified_status).toBe('DONE');
+  });
+
+  it('FR-61c: a filtered-only pass cannot verify textual DONE', () => {
+    const filteredOnly = computeCoverage(
+      [{ id: 'task', doneWhen: 'SPECGEN004_543 passes', refs: [], status: 'done' }],
+      [{ id: 'SCEN-specgen004-543-filtered', tags: [], result: 'PASSED', source: 'docker-bdd:filtered' }],
+    );
+    expect(filteredOnly.tasks.task.verified_status).toBe('IN_PROGRESS');
+    expect(filteredOnly.tasks.task.truth_issues).toEqual([
+      expect.objectContaining({ code: 'TASK_DONE_FILTERED_ONLY' }),
+    ]);
+  });
+
+  it('FR-61c: newer filtered evidence does not invalidate an existing canonical pass', () => {
+    const fullAndFiltered = computeCoverage(
+      [{ id: 'task', doneWhen: 'SPECGEN004_543 passes', refs: [], status: 'done' }],
+      [{
+        id: 'SCEN-specgen004-543-filtered', tags: [], result: 'PASSED', source: 'docker-bdd:filtered',
+        canonicalResult: 'PASSED', canonicalRunAt: '2027-01-01T00:00:00.000Z',
+      }],
+    );
+    expect(fullAndFiltered.tasks.task.verified_status).toBe('DONE');
+    expect(fullAndFiltered.tasks.task.truth_issues).toBeUndefined();
   });
 });

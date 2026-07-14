@@ -770,7 +770,7 @@ WHEN `verifyBatch` is called with a mix of killable and surviving mutants THEN `
 
 WHEN the SKILL.md frontmatter of each child phase-assistant skill (`discovery-forms`, `requirements-chk-matrix`, `task-board-forms`) is inspected THEN the first 800 characters SHALL NOT contain auto-trigger phrases (`when the user`, `whenever`, `use this skill whenever`); WHEN the `requirements-chk-matrix` SKILL.md is inspected THEN it SHALL explicitly reference Jira trace preservation; these properties are verified by the `@feature55` BDD scenarios migrated from SPECGEN003_16/17/21/24.
 
-## AC-56.1
+## AC-56.1 (FR-56)
 
 **Требование:** [FR-56](FR.md#fr-56)
 
@@ -865,3 +865,33 @@ WHEN a spec change spans FR.md, ACCEPTANCE_CRITERIA.md, TASKS.md, `.feature`, an
 **Требование:** [FR-60](FR.md#fr-60)
 
 WHEN an agent registers incident-driven backlog or amends a requirement THEN domain helpers (`register_incident_backlog`, `amend_requirement`, `add_backlog_task`, `add_acceptance_criterion`) SHALL render canonical markdown, maintain FR↔AC↔TASK traceability links, enforce unique ids, and SHALL NOT add executable `.feature` scenarios unless matching step-definition work is included or the caller explicitly chooses a TASKS-only acceptance pin.
+
+## AC-61.1
+
+**Требование:** [FR-61](FR.md#fr-61)
+
+WHEN `spec-verdict` is run for a spec with structurally valid docs and traceability pass but any `not_run` scenario, failed/undefined/ambiguous scenario, `DONE-but-unverified` task, unchecked `Done When`, BDD source/executable drift, or required semantic skip THEN the output SHALL show per-lane statuses (`STRUCTURE`, `TRACEABILITY`, `EXECUTION`, `TASK_TRUTH`, `BDD_SYNC`, `SEMANTIC`) and final `OVERALL: NOT_READY`; plain `VERDICT: GREEN` SHALL appear only when every lane is green.
+
+## AC-61.2
+
+**Требование:** [FR-61](FR.md#fr-61)
+
+WHEN `get_spec_status(view="status")`, `get_spec_status(view="coverage")`, `conformance_check`, and `spec-verdict` report the same spec THEN traceability gaps SHALL use one shared vocabulary; execution absence SHALL be reported with execution-specific codes such as `SCENARIO_NOT_RUN` or `FR_NOT_EXECUTION_VERIFIED`, not as `UNCOVERED_FR` when traceability edges exist.
+
+## AC-61.3
+
+**Требование:** [FR-61](FR.md#fr-61)
+
+WHEN a task is marked `Status: DONE` while any mapped scenario is not canonical PASSED, its FR-46 own scenario is missing/not passed, or a `Done When` checkbox remains unchecked THEN `set_entity_status` and `apply_spec_change` SHALL deny or downgrade the task, and `spec-verdict` plus the prompt-time census SHALL surface the task as evidence-derived `IN_PROGRESS` / `DONE-but-unverified` with the concrete missing evidence.
+
+## AC-61.4
+
+**Требование:** [FR-61](FR.md#fr-61)
+
+WHEN source spec features and executable Cucumber features are compared THEN every executable scenario id SHALL have a source scenario or explicit `[EXEC_ONLY]` / `[OUT_OF_SCOPE]` marker, every source scenario SHALL have an executable counterpart or explicit pending marker, FR tags SHALL match, and stale scenario-count prose such as “ten scenarios” SHALL be flagged when the actual count differs.
+
+## AC-61.5
+
+**Требование:** [FR-61](FR.md#fr-61)
+
+WHEN a filtered Docker BDD run passes scenarios for a spec THEN canonical coverage SHALL remain unchanged unless a full run lands or an explicit filtered-artifact attachment is accepted, but MCP status/verdict SHALL expose a `FILTERED_PROOF` lane with artifact path, selected scenario ids, pass/fail summary, timestamp/source, and a next action explaining whether to run the full suite, attach the artifact, fix BDD sync drift, or reopen/downgrade tasks.

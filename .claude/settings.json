@@ -6,7 +6,7 @@
     "SPEC_AUTHORING_ENFORCE": "true",
     "PROMPT_SUGGEST_ENABLED": "true",
     "PROMPT_SUGGEST_TTL": "600000",
-    "TEST_STATUSLINE_ENABLED": "true",
+    "TEST_STATUSLINE_ENABLED": "false",
     "TEST_STATUSLINE_FRAMEWORK": "auto"
   },
   "hooks": {
@@ -77,16 +77,6 @@
           {
             "type": "command",
             "command": "bash tools/bg-task-guard/stop-guard.sh",
-            "timeout": 60
-          }
-        ]
-      },
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node -e \"require(require('path').join(process.env.CLAUDE_PROJECT_DIR || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/tui-test-runner/tui_stop.ts\"",
             "timeout": 60
           }
         ]
@@ -209,16 +199,6 @@
           {
             "type": "command",
             "command": "node -e \"require(require('path').join(process.env.CLAUDE_PROJECT_DIR || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/native-statusline/install_native_statusline.ts\"",
-            "timeout": 120
-          }
-        ]
-      },
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "node -e \"require(require('path').join(process.env.CLAUDE_PROJECT_DIR || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/tui-test-runner/tui_session_start.ts\"",
             "timeout": 120
           }
         ]

@@ -12,6 +12,7 @@ import { randomUUID } from 'node:crypto';
 import { reconcileLight, type Finding } from '../reconcile.ts';
 import { emitYaml, writeReport } from '../yaml-writer.ts';
 import { buildSarif, writeSarif } from '../sarif.ts';
+import { parseReconcileArgs, reconcileCli } from '../reconcile-cli.ts';
 import { appendOverride, readOverrides } from '../overrides-log.ts';
 
 function seedSpec(root: string, slug: string, files: Record<string, string>): void {
@@ -1008,13 +1009,79 @@ describe('emitYaml + writeReport', () => {
     expect(out).toContain('summary:');
     expect(out).toContain('  by_class: {}');
     expect(out).toContain('  top_3_recommendations: []');
+    expect(out).toContain('recommendations: []');
     expect(out).toContain('    findings: 0');
+  });
+
+  it('FR-17: emits a top-level recommendations section with priority/action/impact', () => {
+    const out = emitYaml(
+      fakeReport([
+        { code: 'impl-drift/missing-file', class: 'uncovered', severity: 'WARNING', suggested_fix: 'add missing file' },
+      ]),
+    );
+    expect(out).toContain('recommendations:');
+    expect(out).toContain('  - priority: P1');
+    expect(out).toContain('    action: add missing file');
+    expect(out).toContain('    impact: impl-drift/missing-file in demo');
   });
 
   it('writeReport writes atomically to the canonical location', () => {
     const target = writeReport(root, fakeReport([]));
     expect(target).toBe(path.join(root, '.specs/demo/consistency-report.yaml'));
     expect(fs.existsSync(target)).toBe(true);
+  });
+
+  it('writeReport preserves resolution and override fields when refreshing an existing finding', () => {
+    const target = writeReport(
+      root,
+      fakeReport([
+        {
+          code: 'impl-drift/missing-file',
+          class: 'uncovered',
+          severity: 'WARNING',
+          referenced_in: '.specs/demo/FR.md:1',
+          expected_path: 'src/x.ts',
+        },
+      ]),
+    );
+    fs.writeFileSync(
+      target,
+      fs.readFileSync(target, 'utf8').replace(
+        '    expected_path: src/x.ts\n',
+        '    expected_path: src/x.ts\n' +
+          '    acknowledged_by: user\n' +
+          '    override_reason: "covered elsewhere"\n' +
+          '    override_timestamp: "2026-05-30T04:01:00Z"\n' +
+          '    resolution_status: acknowledged\n' +
+          '    resolved_at: "2026-05-30T04:01:00Z"\n' +
+          '    defer_reason: "follow-up"\n',
+      ),
+    );
+    writeReport(
+      root,
+      fakeReport([
+        {
+          code: 'impl-drift/missing-file',
+          class: 'uncovered',
+          severity: 'WARNING',
+          referenced_in: '.specs/demo/FR.md:1',
+          expected_path: 'src/x.ts',
+          suggested_fix: 'create src/x.ts',
+        },
+      ]),
+    );
+    const refreshed = fs.readFileSync(target, 'utf8');
+    for (const field of [
+      'acknowledged_by: user',
+      'override_reason: "covered elsewhere"',
+      'override_timestamp: "2026-05-30T04:01:00Z"',
+      'resolution_status: acknowledged',
+      'resolved_at: "2026-05-30T04:01:00Z"',
+      'defer_reason: "follow-up"',
+    ]) {
+      expect(refreshed).toContain(field);
+    }
+    expect(refreshed).toContain('suggested_fix: create src/x.ts');
   });
 });
 
@@ -1054,6 +1121,28 @@ describe('SARIF emitter', () => {
       expect(target).toBe(path.join(tmp, '.specs/x/consistency-report.sarif'));
       const body = JSON.parse(fs.readFileSync(target, 'utf8')) as { version: string };
       expect(body.version).toBe('2.1.0');
+    } finally {
+      fs.rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+
+  it('reconcileCli writes SARIF when .spec-config.json output_formats includes sarif', async () => {
+    const tmp = path.join(os.tmpdir(), `sarif-config-${randomUUID()}`);
+    seedSpec(tmp, 'spec-a', {
+      'FR.md': '## FR-1\n\nImplemented in `src/missing-config.ts`.\n',
+    });
+    fs.writeFileSync(
+      path.join(tmp, '.spec-config.json'),
+      JSON.stringify({ output_formats: ['yaml', 'sarif'] }, null, 2) + '\n',
+    );
+    try {
+      const res = await reconcileCli(parseReconcileArgs([]), tmp);
+      expect(res.exitCode).toBe(0);
+      expect(res.reportPaths).toHaveLength(1);
+      expect(res.sarifPaths).toHaveLength(1);
+      expect(res.sarifPaths[0]).toBe(path.join(tmp, '.specs/spec-a/consistency-report.sarif'));
+      const sarif = JSON.parse(fs.readFileSync(res.sarifPaths[0], 'utf8')) as { version: string };
+      expect(sarif.version).toBe('2.1.0');
     } finally {
       fs.rmSync(tmp, { recursive: true, force: true });
     }

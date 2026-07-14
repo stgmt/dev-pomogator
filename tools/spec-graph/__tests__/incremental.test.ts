@@ -22,7 +22,7 @@ import os from 'node:os';
 import { randomUUID } from 'node:crypto';
 import { buildGraph } from '../builder.ts';
 import { applyChange, applyUnlink, dropFileSlice, startWatching } from '../incremental.ts';
-import type { TaskNode } from '../types.ts';
+import type { ScenarioNode, TaskNode } from '../types.ts';
 
 function percentile(sortedMs: number[], p: number): number {
   if (sortedMs.length === 0) return 0;
@@ -203,6 +203,104 @@ describe('incremental — applyChange / applyUnlink / dropFileSlice', () => {
     const after = [...graph.nodes.values()].filter((n) => n.type === 'Scenario').length;
     expect(after, 'a second Scenario must be spliced in').toBeGreaterThan(before);
     expect(delta.nodesDelta).toBeGreaterThan(0);
+  });
+
+  it('applyChange on an overlay file refreshes effective results and last-result edges', () => {
+    fs.mkdirSync(path.join(root, 'tests/features'), { recursive: true });
+    fs.mkdirSync(path.join(root, '.dev-pomogator'), { recursive: true });
+    fs.writeFileSync(
+      path.join(root, 'tests/features/x.feature'),
+      'Feature: X\n  Scenario: one SPECGEN004_531\n    Given y\n',
+    );
+    fs.writeFileSync(
+      path.join(root, '.dev-pomogator', '.scenario-results.ndjson'),
+      JSON.stringify({
+        scenario_id: 'SPECGEN004_531',
+        result: 'PASSED',
+        time: '2027-01-15T08:00:01.000Z',
+        run_id: 'run-531',
+        source: 'run-bdd:filtered',
+        trace_id: '.dev-pomogator/.test-history/run-531.ndjson#tcs-531',
+        trace_file: '.dev-pomogator/.test-history/run-531.ndjson',
+        test_case_started_id: 'tcs-531',
+        uri: 'tests/features/x.feature',
+        line: 2,
+      }) + '\n',
+    );
+    const graph = buildGraph({ repoRoot: root, skipNdjson: true });
+    const scen = graph.nodes.get('SCEN-one-specgen004-531') as ScenarioNode;
+    expect(scen.lastResult).toBeUndefined();
+
+    const delta = applyChange(graph, root, '.dev-pomogator/.scenario-results.ndjson');
+
+    expect(delta).toEqual({ nodesDelta: 0, edgesDelta: 0 });
+    expect(scen.lastResult).toBe('PASSED');
+    expect(scen.canonicalResult).toBeUndefined();
+    expect(scen.canonicalRunAt).toBeUndefined();
+    expect(scen.trace).toMatchObject({ traceId: '.dev-pomogator/.test-history/run-531.ndjson#tcs-531' });
+    expect(graph.edges).toContainEqual({ from: 'SCEN-one-specgen004-531', to: 'RESULT-SCEN-one-specgen004-531-PASSED', type: 'last-result' });
+    expect(graph.edges).toContainEqual({ from: 'SCEN-one-specgen004-531', to: 'TRACE-.dev-pomogator/.test-history/run-531.ndjson#tcs-531', type: 'runtime-trace' });
+  });
+
+  it('result-file refresh clears scenarios absent from the replacement run (MCP freshness regression)', () => {
+    fs.mkdirSync(path.join(root, 'tests/features'), { recursive: true });
+    fs.mkdirSync(path.join(root, '.dev-pomogator'), { recursive: true });
+    fs.writeFileSync(
+      path.join(root, 'tests/features/x.feature'),
+      'Feature: X\n  Scenario: one SPECGEN004_531\n    Given y\n  Scenario: two SPECGEN004_532\n    Given z\n',
+    );
+    const graph = buildGraph({ repoRoot: root, skipNdjson: true });
+    const first = graph.nodes.get('SCEN-one-specgen004-531') as ScenarioNode;
+    const second = graph.nodes.get('SCEN-two-specgen004-532') as ScenarioNode;
+    first.lastResult = 'PASSED';
+    first.lastRunAt = '2027-01-15T08:00:01.000Z';
+    second.lastResult = 'PASSED';
+    second.lastRunAt = '2027-01-15T08:00:01.000Z';
+
+    fs.writeFileSync(
+      path.join(root, '.dev-pomogator', '.scenario-results.ndjson'),
+      JSON.stringify({
+        scenario_id: 'SPECGEN004_531',
+        result: 'PASSED',
+        time: '2027-01-15T08:00:02.000Z',
+        uri: 'tests/features/x.feature',
+        line: 2,
+      }) + '\n',
+    );
+
+    applyChange(graph, root, '.dev-pomogator/.scenario-results.ndjson');
+
+    expect(first.lastResult).toBe('PASSED');
+    expect(second.lastResult).toBeUndefined();
+    expect(second.lastRunAt).toBeUndefined();
+    expect(graph.edges).not.toContainEqual({ from: 'SCEN-two-specgen004-532', to: 'RESULT-SCEN-two-specgen004-532-PASSED', type: 'last-result' });
+  });
+
+  it('recomputes overlay freshness when the same effective row is re-applied after source edits', () => {
+    fs.mkdirSync(path.join(root, 'tests/features'), { recursive: true });
+    fs.mkdirSync(path.join(root, '.dev-pomogator'), { recursive: true });
+    const featurePath = path.join(root, 'tests/features/x.feature');
+    fs.writeFileSync(
+      featurePath,
+      'Feature: X\n  Scenario: one SPECGEN004_532\n    Given y\n',
+    );
+    fs.utimesSync(featurePath, new Date('1999-01-01T00:00:00.000Z'), new Date('1999-01-01T00:00:00.000Z'));
+    const row = {
+      scenario_id: 'SPECGEN004_532',
+      result: 'PASSED',
+      time: '2000-01-01T00:00:00.000Z',
+      uri: 'tests/features/x.feature',
+      line: 2,
+    };
+    fs.writeFileSync(path.join(root, '.dev-pomogator', '.scenario-results.ndjson'), JSON.stringify(row) + '\n');
+    const graph = buildGraph({ repoRoot: root });
+    const scen = graph.nodes.get('SCEN-one-specgen004-532') as ScenarioNode;
+    expect(scen.resultStale).toBe(false);
+
+    fs.utimesSync(featurePath, new Date('2001-01-01T00:00:00.000Z'), new Date('2001-01-01T00:00:00.000Z'));
+    applyChange(graph, root, 'tests/features/x.feature');
+    const refreshed = graph.nodes.get('SCEN-one-specgen004-532') as ScenarioNode;
+    expect(refreshed.resultStale).toBe(true);
   });
 
   it('applyChange on a non-spec extension is a no-op (classify=unknown branch)', () => {

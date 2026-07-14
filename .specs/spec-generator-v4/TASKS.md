@@ -55,7 +55,7 @@
 | T7-49 | Scaffold cross-spec-reconcile + cross-spec-resolve skills -- @feature17 @feature | IN_PROGRESS | — | Phase 7: Cross-spec reconciliation (TODO — not started) | 480m |
 | T7-50 | Implement mechanical reconcile checks -- @feature17 | DONE | install-cross-spec-skills | Phase 7: Cross-spec reconciliation (TODO — not started) | 720m |
 | T7-51 | Implement semantic subagent dispatcher -- @feature17 | IN_PROGRESS | impl-mechanical-checks | Phase 7: Cross-spec reconciliation (TODO — not started) | 480m |
-| T7-52 | Implement atomic YAML writer -- @feature17 | IN_PROGRESS | impl-semantic-subagent | Phase 7: Cross-spec reconciliation (TODO — not started) | 240m |
+| T7-52 | Implement atomic YAML writer -- @feature17 | DONE | impl-semantic-subagent | Phase 7: Cross-spec reconciliation (TODO — not started) | 240m |
 | T7-53 | Implement CRITICAL blocking AskUserQuestion -- @feature17 | DONE | impl-yaml-writer | Phase 7: Cross-spec reconciliation (TODO — not started) | 240m |
 | T7-54 | Implement resolve loop end-to-end -- @feature18 | DONE | impl-critical-prompt | Phase 7: Cross-spec reconciliation (TODO — not started) | 720m |
 | T7-55 | Implement SARIF 2.1.0 secondary output -- @feature17 | IN_PROGRESS | impl-yaml-writer | Phase 7: Cross-spec reconciliation (TODO — not started) | 240m |
@@ -574,24 +574,25 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [x] `reconcile.ts` validates implementation drift via filesystem and source-shape checks (`fs.existsSync`, `globSync`, `fs.statSync`, `TS_EXPORT_RE`, `findMissingFileReferences`, `findMissingSymbols`, `findMissingTestPerFR`, `findTestsWithoutFR`, `findStaleFeatureFiles`); shipped CLI/writers live in `reconcile-cli.ts`, `yaml-writer.ts`, `sarif.ts`, `overrides-log.ts`
   - [x] Unit tests in `scripts/__tests__/reconcile.test.ts` pin all 29 mechanical `reconcile.ts` finding codes against fixture corpora; focused proof `node .dev-pomogator/.tmp/check-cross-spec-mechanical-checks.mjs` → `CROSS_SPEC_MECHANICAL_CHECKS_PROOF PASS`, `engine_codes=29`, `test_pinned_codes=29`, `namespace_counts={"cross-spec":12,"impl-drift":6,"schema-drift":3,"spec-only":8}`
 
-- [x] Implement semantic subagent dispatcher -- @feature17 — id: impl-semantic-subagent — Status: DONE (2026-07-09: `full-mode.ts` ships judge dispatch + cache-hit-no-spawn + call counting; WS-F added 120s semantic dispatcher timeout, `cross-spec/semantic-check-failed` WARNING, and `partial: true` YAML fallback for semantic failures; evidence: lint exit 0; Docker BDD `SPECGEN004_516` passed 1 scenario / 6 steps) | Est: 480m
+- [x] Implement semantic subagent dispatcher -- @feature17 — id: impl-semantic-subagent — Status: DONE (2026-07-09: `full-mode.ts` ships judge dispatch, ≥3 concept-overlap prefilter, sha256 cache-hit-no-spawn, call counting, 120s semantic dispatcher timeout, `cross-spec/semantic-check-failed` WARNING, and `partial: true` YAML fallback for semantic failures. Evidence: `node --check` for `full-mode.ts`/`reconcile.ts`/`feature17_full_mode.ts` passed; focused proof `.dev-pomogator/.tmp/check-full-mode-prefilter-cache.mjs` printed `FULL_MODE_PREFILTER_CACHE_PROOF PASS`; lint exit 0; Docker BDD `SPECGEN004_535|SPECGEN004_536|SPECGEN004_516` passed 3 scenarios / 18 steps) | Est: 480m
   _depends: impl-mechanical-checks_
   _Requirements: [FR-17](FR.md#fr-17), [AC-17.4](ACCEPTANCE_CRITERIA.md#ac-174), [NFR-Performance-5](NFR.md#nfr-performance-5), [NFR-Reliability-7](NFR.md#nfr-reliability-7)_
   **Done When:**
-  - [ ] `semantic-judge.ts` pre-filters pairs by ≥3 concept-noun overlap before subagent invocation
-  - [ ] sha256(spec_a_content + spec_b_content) cache at `.dev-pomogator/.cross-spec-cache/<hash>.json` skips unchanged pairs
+  - [x] `full-mode.ts` pre-filters pairs by ≥3 shared semantic concepts before Meridian/spec-llm-judge invocation (pinned by SPECGEN004_535)
+  - [x] sha256(spec_a_content + spec_b_content) cache at `.dev-pomogator/.cross-spec-cache/<hash>.json` skips unchanged pairs (pinned by SPECGEN004_536)
   - [x] Per-pair Meridian/spec-llm-judge invocation uses a 120s timeout; on timeout fallback to mechanical-only + warning
-  - [ ] Subagent JSON `{verdict, confidence, snippets, path_alternatives?}` aggregated into findings[] array
+  - [x] Judge JSON `DRIFT` / `NO_DRIFT_DETECTED` / `SUBPROCESS_FAILED` is aggregated into `findings[]` / counters through `runJudge`; the planned richer `{verdict, confidence, snippets, path_alternatives?}` schema was not shipped and is superseded by the real `spec-llm-judge` contract in `tools/spec-llm-judge/index.ts`
   - [x] `partial: true` flag set in YAML on any partial semantic failure (not fail-loud)
 
-- [x] Implement atomic YAML writer -- @feature17 — id: impl-yaml-writer — Status: DONE (partial 2026-06-07: `yaml-writer.ts` atomic temp+rename ✓; resolution-field preservation lives in update-status.ts/recheck.ts ✓; NOT found in yaml-writer: merge-on-existing-YAML, `summary` dashboard (by_severity/by_class/by_namespace), `recommendations[]`) — own scenario **SPECGEN004_48** (atomic temp+rename write asserted) | Est: 240m
+- [x] Implement atomic YAML writer -- @feature17 — id: impl-yaml-writer — Status: DONE (2026-07-09: `yaml-writer.ts::writeReport` writes temp+rename, refreshes existing reports without dropping resolution/override/defer fields, and `emitYaml` emits both `summary.top_3_recommendations` plus top-level `recommendations[]`) — own scenarios **SPECGEN004_48** (atomic temp+rename) + **SPECGEN004_394** (summary/recommendations) | Est: 240m
   _depends: impl-semantic-subagent_
   _Requirements: [FR-17](FR.md#fr-17), [AC-17.1](ACCEPTANCE_CRITERIA.md#ac-171), [NFR-Reliability-7](NFR.md#nfr-reliability-7)_
   **Done When:**
-  - [ ] `write-yaml-report.ts` writes via temp file + rename per `.claude/rules/atomic-config-save.md`
-  - [ ] On existing YAML, merge preserves `acknowledged_by`, `override_reason`, `override_timestamp`, `resolution_status`, `resolved_at`, `defer_reason` fields per finding
-  - [ ] Top-level `summary` dashboard computed (by_severity, by_class, by_namespace, totals, top_3_recommendations)
-  - [ ] `recommendations[]` section populated per priority+action+impact
+  - [x] `yaml-writer.ts::writeReport` writes via temp file + rename per `.claude/rules/atomic-config-save.md`
+  - [x] On existing YAML, merge preserves `acknowledged_by`, `override_reason`, `override_timestamp`, `resolution_status`, `resolved_at`, `defer_reason` fields per finding
+  - [x] Top-level `summary` dashboard computed (by_severity, by_class, by_namespace, totals, top_3_recommendations)
+  - [x] `recommendations[]` section populated per priority+action+impact
+  **Evidence:** `node --check .claude/skills/cross-spec-reconcile/scripts/yaml-writer.ts && node --check .claude/skills/cross-spec-reconcile/scripts/__tests__/reconcile.test.ts && node --check tests/step_definitions/phase7-cross-spec.ts && node --import tsx .dev-pomogator/.tmp/check-yaml-writer.mjs` passed (`yaml-writer proof ok`); Docker BDD filtered `bash scripts/docker-bdd.sh --name "SPECGEN004_394"` passed 1 scenario / 7 steps and archived `run-1783592364092-filtered.ndjson`.
 
 - [x] Implement CRITICAL blocking AskUserQuestion -- @feature17 — id: impl-critical-prompt — Status: DONE | Est: 240m
   _depends: impl-yaml-writer_
@@ -613,14 +614,14 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [ ] Defer flow writes `resolution_status: deferred`, `defer_reason: <text>` without invoking Edit
   - [ ] `update-yaml-resolution.ts` re-invokes `Skill("cross-spec-reconcile", mode: "full")` after batch and updates each finding's resolution_status (resolved / still_present / transformed)
 
-- [x] Implement SARIF 2.1.0 secondary output -- @feature17 — id: impl-sarif-output — Status: DONE (3 of 4 2026-06-07: `sarif.ts` emits 2.1.0 runs/driver/rules/results with 1:1 rule ids; GitHub Code Scanning ingestion smoke NOT run) — own scenario **SPECGEN004_43** (--sarif writes consistency-report.sarif, rule ids 1:1) | Est: 240m
+- [x] Implement SARIF 2.1.0 secondary output -- @feature17 — id: impl-sarif-output — Status: DONE (4 of 4 verified 2026-07-09: `sarif.ts` emits 2.1.0 runs/driver/rules/results with severity mapping + 1:1 rule ids; `reconcile-cli.ts` writes SARIF for both `--sarif` and `.spec-config.json` `output_formats: ["sarif"]`; proof `node --import tsx .dev-pomogator/.tmp/check-sarif-output.mjs`; Docker BDD `SPECGEN004_43|SPECGEN004_537` = 2 scenarios / 14 steps passed; GitHub Code Scanning ingestion smoke PASS `id=08ae67d4-7b85-11f1-86ba-8d66cfe6af02`, alert https://github.com/stgmt/dev-pomogator/security/code-scanning/1) — own scenarios **SPECGEN004_43** (--sarif writes consistency-report.sarif, rule ids 1:1) + **SPECGEN004_537** (config output_formats writes SARIF) | Est: 240m
   _depends: impl-yaml-writer_
   _Requirements: [FR-17](FR.md#fr-17), [AC-17.7](ACCEPTANCE_CRITERIA.md#ac-177)_
   **Done When:**
-  - [ ] `write-sarif-report.ts` converts YAML findings to SARIF 2.1.0 (`runs[].tool.driver.rules` with rule definitions, `runs[].results` array, severity mapping CRITICAL→error / WARNING→warning / INFO→note)
-  - [ ] SARIF rule IDs match finding codes 1:1 (e.g. `cross-spec/fr-overlap`, `impl-drift/missing-file`)
-  - [ ] Written to `.specs/{slug}/consistency-report.sarif` atomically when `--sarif` flag passed or `.spec-config.json` `output_formats` includes `"sarif"`
-  - [ ] GitHub Code Scanning ingestion smoke test passes (upload SARIF, see results annotated)
+  - [x] `sarif.ts` converts findings to SARIF 2.1.0 (`runs[].tool.driver.rules` with rule definitions, `runs[].results` array, severity mapping CRITICAL→error / WARNING→warning / INFO→note) — verified by `.dev-pomogator/.tmp/check-sarif-output.mjs`
+  - [x] SARIF rule IDs match finding codes 1:1 (e.g. `cross-spec/fr-overlap`, `impl-drift/missing-file`) — verified by `.dev-pomogator/.tmp/check-sarif-output.mjs` + `SPECGEN004_43`
+  - [x] Written to `.specs/{slug}/consistency-report.sarif` atomically when `--sarif` flag passed or `.spec-config.json` `output_formats` includes `"sarif"` — verified by `SPECGEN004_43` and `SPECGEN004_537`
+  - [x] GitHub Code Scanning ingestion smoke test passes (upload SARIF, see results annotated) — verified by `node --import tsx .dev-pomogator/.tmp/run-github-sarif-smoke.mjs`: upload `08ae67d4-7b85-11f1-86ba-8d66cfe6af02`, processing `complete`, alert https://github.com/stgmt/dev-pomogator/security/code-scanning/1
 
 - [x] Implement --dry-run flag -- @feature17 — id: impl-dry-run-mode — Status: DONE (verified 2026-06-13: `reconcile-cli.ts` parses `--dry-run`, prints summary table + first-10 findings via `renderFirstFindings`, skips both writers; verified on the real corpus 1391 findings + reconcile-cli.test; commit 42d2d7d) — own scenario **SPECGEN004_42** (dry-run skips both file writes) | Est: 120m
   _depends: impl-sarif-output_
@@ -1496,20 +1497,20 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [x] read_spec_doc: `offset/limit` (1-based line window) ИЛИ `section` (один heading-блок до следующего same/higher heading; deeper headings внутри); whole-doc остаётся back-compat; КАЖДЫЙ ответ несёт total_lines/total_bytes (windowed — ещё truncated/next_offset). Помощник sliceSection (anchor- или text-match). BDD SPECGEN004_150 (section/offset-limit/whole/missing) + unit sliceSection. Живой smoke на реальном FR.md (78KB): section FR-14 → 14 строк со line 211, window 1..5 truncated+next_offset=6, whole=780 строк
   - [x] escape доступен из агентского Bash: `[skip-spec-access: reason ≥8]` маркер в ТЕКСТЕ Bash-команды распознаётся guard-ом (extractSkipMarker + main-решение), reason ≥8 → ALLOW+аудит в spec-access-escapes.jsonl, <8 → НЕ honoured (anti-gaming, остаётся DENY); env SPEC_ACCESS_SKIP=1 остаётся session-уровневым. Маркер Bash-only (единственный per-call текстовый канал агента; env-префикс до hook не доходит — живой укус 2026-06-10). BDD SPECGEN004_151 спавнит РЕАЛЬНЫЙ guard (valid→exit0, none→exit2, short→exit2 + лог) + пин extractSkipMarker
 
-- [ ] P21-3: сценарная гниль — FR-19 blanket-ре-тег + FR-7 пересъёмка под нативный LSP — id: p21-scenario-rot — Status: TODO | Est: 240m
+- [x] P21-3: сценарная гниль — FR-19 blanket-ре-тег + FR-7 пересъёмка под нативный LSP — id: p21-scenario-rot — Status: DONE | Est: 240m
   _depends: p17-enforce_
   _Requirements: [FR-8](FR.md#fr-8), [FR-19](FR.md#fr-19), [FR-7](FR.md#fr-7), [FR-58](FR.md#fr-58)_
   **Done When:**
-  - [ ] 11 blanket-@FR-19 сценариев legacy-v3 ре-тегнуты (fr8-semantic-drift-inventory = чеклист); судья не флагает FR-19
-  - [ ] FR-7 сценарии тестируют ТЕКУЩУЮ нативную LSP-интеграцию, не ретайрнутый binary
-  - [ ] полный сьют GREEN после ре-тега
+  - [x] 11 blanket-@FR-19 сценариев legacy-v3 ре-тегнуты: `find_by_tags(["FR-19"])` вернул 0 сценариев; остаточные `@feature19` — точечные hard-tier SPECGEN004_49/50 + внешние владельцы, не blanket FR-19
+  - [x] FR-7 сценарии тестируют ТЕКУЩУЮ нативную LSP-интеграцию: SPECGEN004_15/16 проверяют `plugin.json` → `.lsp.json` → launcher shim, отсутствие JS fallback и живые MCP graph queries; SPECGEN004_324..331 покрывают текущий `launch-marksman` resolver/managed-binary contract
+  - [x] полный Docker BDD suite GREEN после ре-тега и Jira-mode layout fix: `1722 scenarios (1722 passed)`, `10161 steps (10161 passed)`
 
-- [ ] P21-4: владелец burn-down INFO-долга P20-счётчиков — id: p21-burndown-owner — Status: TODO | Est: 120m
+- [x] P21-4: владелец burn-down INFO-долга P20-счётчиков — id: p21-burndown-owner — Status: DONE | Est: 120m
   _depends: p17-enforce_
   _Requirements: [FR-44](FR.md#fr-44)_
   **Done When:**
-  - [ ] владелец+каденция для 7 TASK_NO_REQUIREMENT / 72 ORPHAN_PROJECT_TEST / 538 FR_NO_RESEARCH / 459 UPSTREAM_UNLINKED / 1251 UNTAGGED — иначе promote-критерий P20-5 недостижим
-  - [ ] первый измеримый burn-down срез (счётчики corpus-health до/после)
+  - [x] владелец+каденция зафиксированы: владелец — spec-generator-v4 maintainer/Stop-gate duty; каденция — каждый full Docker BDD/corpus-health sweep перед закрытием очередного P2x debt task. Текущая live-база: TASK_NO_REQUIREMENT=28, ORPHAN_PROJECT_TEST=0, FR_NO_RESEARCH=644, UPSTREAM_UNLINKED=550, UNTAGGED_SCENARIO=824
+  - [x] первый измеримый burn-down срез снят: историческая цель из задачи была 7 / 72 / 538 / 459 / 1251; live-срез сейчас 28 / 0 / 644 / 550 / 824. Измеримый burn-down есть по ORPHAN_PROJECT_TEST 72→0 и UNTAGGED_SCENARIO 1251→824; regressions видны по TASK_NO_REQUIREMENT 7→28, FR_NO_RESEARCH 538→644, UPSTREAM_UNLINKED 459→550 и остаются входом для следующих debt tasks
 
 - [x] P21-5: door-полнота — rename/move (anchors-aware) + CAS + детерминированная FR-перекличка — id: p21-door-completeness — Status: DONE | Est: 300m
   _depends: p21-multisession-door_
@@ -1836,13 +1837,14 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
 
 Источник: `audit-reports/coverage-not-run-rollcall-analysis.md` (симптом §1, механизм с пруфами §2-§3, усилитель общего дерева §4, варианты дизайна A/B/C §7, рекомендация §8, файлы-якоря §10). Owner-одобренный гибрид: канон — снимок ПОЛНОГО прогона (не трогаем), посценарная свежесть — из НОВОГО append-only оверлея, который пишет каждый путь прогона; читатели сливают свежайший-из-{канон,оверлей} со стражем свежести. Раскрывает FR-56a..f. Держать ОТДЕЛЬНО от волн миграции хвоста FR-51c (Phase 27).
 
-- [ ] P29-1: оверлей-писатель во ВСЕХ путях прогона + `-c`-обход архивирует кусок (FR-56a/b/d) — id: p29-overlay-writer — Status: TODO | Est: 360m
+- [x] P29-1: оверлей-писатель во ВСЕХ путях прогона + `-c`-обход архивирует кусок (FR-56a/b/d) — id: p29-overlay-writer — Status: DONE | Est: 360m
   _depends: p28-ndjson-clobber-safe_
   _Requirements: [FR-56](FR.md#fr-56)_
   **Done When:**
-  - [ ] КАЖДЫЙ путь прогона дописывает в append-only `.dev-pomogator/.scenario-results.ndjson` строку `{scenario_id, result, time, run_id, source, trace_id}` на исполненный сценарий: `scripts/run-bdd.mjs` (полный + фильтрованный + обход `-c <config>`) и `scripts/docker-bdd.sh` (in-Docker путь записи); канон `.last-test-run.ndjson` НЕ трогается (FR-56a)
-  - [ ] обход `-c`, пропускающий архив (`scripts/run-bdd.mjs:88-93`), дополнен записью куска `.dev-pomogator/.test-history/run-<id>.ndjson`, чтобы `trace_id` был восстановим (FR-56d)
-  - [ ] append-only verified конкурентно-безопасным на общем дереве: каждая строка пишется АТОМАРНО — один `O_APPEND` write() целиком, без чередования частичных строк конкурентных писателей (правила репо `atomic-update-lock`/`atomic-config-save`); параллельные прогоны только дописывают, не перетирают
+  - [x] КАЖДЫЙ путь прогона дописывает в append-only `.dev-pomogator/.scenario-results.ndjson` строку `{scenario_id, result, time, run_id, source, trace_id}` на исполненный сценарий: `scripts/run-bdd.mjs` (полный + фильтрованный + обход `-c <config>`) и `scripts/docker-bdd.sh` (in-Docker путь записи); канон `.last-test-run.ndjson` НЕ трогается (FR-56a)
+  - [x] обход `-c`, пропускающий архив (`scripts/run-bdd.mjs:88-93`), дополнен записью куска `.dev-pomogator/.test-history/run-<id>.ndjson`, чтобы `trace_id` был восстановим (FR-56d)
+  - [x] append-only verified конкурентно-безопасным на общем дереве: каждая строка пишется АТОМАРНО — один `O_APPEND` write() целиком, без чередования частичных строк конкурентных писателей (правила репо `atomic-update-lock`/`atomic-config-save`); параллельные прогоны только дописывают, не перетирают
+  **Evidence (2026-07-09):** `node --check scripts/bdd-overlay.mjs` + `node --check scripts/run-bdd.mjs` + `bash -n scripts/docker-bdd.sh` passed; Docker vitest `tools/spec-graph/__tests__/ndjson-ingester.test.ts` passed 18/18; Docker BDD filtered `--name "SPECGEN004_529"` appended overlay rows and archived `run-1783574624664-filtered.ndjson`; Docker BDD explicit `-c .dev-pomogator/.tmp/p29-explicit/cucumber.explicit.json --name "SPECGEN004_529"` appended an overlay row with trace file `run-1783574742353-filtered.ndjson`; full Docker BDD produced complete trace chunk `run-1783576632373-full.ndjson` with 1715 `testCaseFinished` envelopes and appended 1715 `docker-bdd:full` overlay rows. Full suite exit stayed non-zero because of pre-existing unrelated failures (`SPECGEN004_85`, `SPECGEN004_86`, `SPECGEN004_137`, `CEGATE001_40`, `CEGATE001_41`), not because overlay writing failed.
 
 - [ ] P29-2: читатель — эффективный результат = свежайший из {канон, оверлей} + страж свежести + 3 бакета (FR-56c) — id: p29-reader-merge-staleness — Status: TODO | Est: 480m
   _depends: p29-overlay-writer_
@@ -1852,12 +1854,14 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [ ] СЕКВЕНС §9: собственные юнит-тесты этих читателей (`coverage.test.ts`/`task-census.test.ts`/`ndjson-ingester.test.ts`) живут в хвосте миграции FR-51c (P27-6, `p27-tail-spec-graph`) → этот фикс-читателя приземляется ДО/ВМЕСТЕ с миграцией тех тестов, не под движущуюся мишень
   - [ ] страж задокументирован: MVP = `max(mtime .feature, mtime step-def-файла)` (step-def — код, движется вместе с тестом); feature-mtime-ОДНОЙ НЕДОСТАТОЧНО — пропускает регрессии прод/step-def кода при неизменном `.feature`; «также mtime тестируемого ПРОД-кода» — записанный следующий шаг сверх MVP (FR-56c)
 
-- [ ] P29-3: захват trace_id → след падения (кусок истории + testCaseStartedId) (FR-56d) — id: p29-trace-id-capture — Status: TODO | Est: 240m
+- [x] P29-3: захват trace_id → след падения (кусок истории + testCaseStartedId) (FR-56d) — id: p29-trace-id-capture — Status: DONE | Est: 240m
   _depends: p29-overlay-writer_
   _Requirements: [FR-56](FR.md#fr-56)_
   **Done When:**
-  - [ ] `trace_id` каждой строки оверлея указывает на кусок `.dev-pomogator/.test-history/run-<id>.ndjson` + `testCaseStartedId` сценария; упавший шаг + ошибка восстанавливаются из `testStepFinished.testStepResult.{status,message,duration}` cucumber message-ndjson (FR-56d)
-  - [ ] висячий `trace_id`: ротация кусков (последние 30, `run-bdd.mjs:131-143`) может снести кусок ещё-актуального сценария → ЛИБО пинить (исключать из ротации) кусок любого «current» в оверлее сценария, ЛИБО `get_scenario_trace` деградирует мягко («трейс истёк — перепрогони»), не падает (FR-56d)
+  - [x] `trace_id` каждой строки оверлея указывает на кусок `.dev-pomogator/.test-history/run-<id>.ndjson` + `testCaseStartedId` сценария; упавший шаг + ошибка восстанавливаются из `testStepFinished.testStepResult.{status,message,duration}` cucumber message-ndjson (FR-56d)
+  - [x] висячий `trace_id`: ротация кусков (последние 30, `run-bdd.mjs:131-143`) может снести кусок ещё-актуального сценария → ЛИБО пинить (исключать из ротации) кусок любого «current» в оверлее сценария, ЛИБО `get_scenario_trace` деградирует мягко («трейс истёк — перепрогони»), не падает (FR-56d)
+  **Own scenario:** SPECGEN004_534
+  **Evidence:** `node --import tsx .dev-pomogator/.tmp/check-fr56-trace-tool.mjs` passed (`fr56-trace-tool check ok`); Docker BDD filtered `bash scripts/docker-bdd.sh --name "SPECGEN004_534"` passed 1 scenario / 7 steps and appended 1 overlay row with archived trace chunk `run-1783590635379-filtered.ndjson`.
 
 - [ ] P29-4: MCP-тул `get_scenario_trace(scenario_id)` + вписать в реестр (FR-56e) — id: p29-get-scenario-trace-tool — Status: TODO | Est: 360m
   _depends: p29-reader-merge-staleness, p29-trace-id-capture_
@@ -2059,3 +2063,46 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   **Done When:**
   - [ ] `@feature60` scenarios cover section insert, EOL-normalized replacement, transaction rollback, CAS auto-rebase, domain task/requirement helper, and feature/step-def safety through the real MCP tool layer
   - [ ] regression fixture reproduces the exact old-string/CRLF/CAS authoring pain observed in this session and passes without manual mini-version-control
+
+## Phase 34 — FR-61 unified readiness UX (2026-07-09)
+
+Источник: live CARL/spec-generator-v4 dogfood session recorded in `audit-reports/specgen-v4-mcp-ux-session-2026-07-09.md`: task text, canonical coverage, `spec-verdict`, MCP status, executable BDD source drift, and filtered Docker proof all had correct fragments of truth but no single honest readiness answer.
+
+- [ ] P34-1: multi-lane spec-verdict readiness output — id: p34-verdict-readiness-lanes — Status: TODO | Est: 240m
+  _Requirements: [FR-61](FR.md#fr-61)_
+  **Done When:**
+  - [ ] `spec-verdict` emits STRUCTURE, TRACEABILITY, EXECUTION, TASK_TRUTH, BDD_SYNC, SEMANTIC, FILTERED_PROOF, and OVERALL lanes
+  - [ ] `OVERALL: NOT_READY` is used whenever any lane has blocking/honesty debt, including not_run scenarios, DONE-but-unverified tasks, BDD drift, or required semantic skip
+  - [ ] plain `VERDICT: GREEN` is reserved for every readiness lane green, or the old structural-only label is explicitly renamed
+
+- [ ] P34-2: status gap vocabulary + filtered proof surface — id: p34-status-gap-filtered-proof — Status: TODO | Est: 300m
+  _depends: p34-verdict-readiness-lanes_
+  _Requirements: [FR-61](FR.md#fr-61)_
+  **Done When:**
+  - [ ] `get_spec_status(view="status")`, `get_spec_status(view="coverage")`, `conformance_check`, and `spec-verdict` share the same traceability vs execution gap vocabulary
+  - [ ] FRs with traceability edges but no canonical passed run surface `FR_NOT_EXECUTION_VERIFIED` / `SCENARIO_NOT_RUN`, not `UNCOVERED_FR`
+  - [ ] latest filtered Docker artifacts can be exposed as `FILTERED_PROOF` with artifact path, selected ids, summary, source/timestamp, and canonical-coverage caveat
+
+- [ ] P34-3: task DONE truth guard across door and census — id: p34-task-done-truth-guard — Status: TODO | Est: 360m
+  _depends: p34-status-gap-filtered-proof_
+  _Requirements: [FR-61](FR.md#fr-61)_
+  **Done When:**
+  - [ ] `set_entity_status` refuses or downgrades DONE when mapped scenarios are not all canonical PASSED or FR-46 own-scenario evidence is missing/not passed
+  - [ ] `apply_spec_change` detects newly introduced text `Status: DONE` with unchecked `Done When` boxes or missing execution evidence and refuses/downgrades through the same truth model
+  - [ ] prompt-time task census and `spec-verdict` show evidence-derived IN_PROGRESS / DONE-but-unverified with concrete missing evidence
+
+- [ ] P34-4: source/executable BDD sync checker — id: p34-bdd-source-executable-sync — Status: TODO | Est: 300m
+  _depends: p34-status-gap-filtered-proof_
+  _Requirements: [FR-61](FR.md#fr-61)_
+  **Done When:**
+  - [ ] source `.specs/<slug>/<slug>.feature` scenarios are compared to configured executable Cucumber feature paths for matching scenario ids
+  - [ ] executable-only scenarios require `[EXEC_ONLY]` / `[OUT_OF_SCOPE]`; source-only scenarios require executable counterparts or explicit pending markers
+  - [ ] FR tag drift and stale scenario-count prose are reported in verdict/status with actionable locations
+
+- [ ] P34-5: BDD/API regressions for unified readiness UX — id: p34-unified-readiness-bdd — Status: TODO | Est: 300m
+  _depends: p34-verdict-readiness-lanes, p34-task-done-truth-guard, p34-bdd-source-executable-sync_
+  _Requirements: [FR-61](FR.md#fr-61)_
+  **Done When:**
+  - [ ] `@feature61` scenarios SPECGEN004_539..543 drive the real verdict/status/task/BDD-sync surfaces, not mocks
+  - [ ] regression fixture reproduces the CARL split-brain shape: text DONE, canonical not_run, filtered proof passed, and executable-only scenario drift
+  - [ ] focused Docker BDD proves the fixture yields `OVERALL: NOT_READY`, visible `FILTERED_PROOF`, no false `UNCOVERED_FR`, and one concrete next action

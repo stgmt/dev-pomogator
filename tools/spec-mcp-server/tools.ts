@@ -73,6 +73,7 @@ import {
 } from '../spec-graph/coverage.ts';
 import { readVerdicts } from '../spec-graph/test-quality-gate.ts';
 import { marksmanSlug } from '../anchor-integrity/marksman-slug.mjs';
+import { compareBddSync, latestFilteredProof, type ScenarioLite } from '../specs-generator/spec-verdict.ts';
 
 /**
  * FR-36d (P13-3): resolve a tool-supplied node reference against the
@@ -121,13 +122,164 @@ function scenarioCoverageIndex(graph: SpecGraph): { scens: ScenarioLike[]; bucke
   for (const n of graph.nodes.values()) {
     if (n.type === 'Scenario') {
       const s = n as ScenarioNode;
-      scens.push({ id: s.id, tags: s.tags, result: s.lastResult, spec: specOf(s.file) });
+      scens.push({ id: s.id, tags: s.tags, result: s.lastResult, stale: s.resultStale, spec: specOf(s.file), source: s.trace?.source, canonicalResult: s.canonicalResult, canonicalRunAt: s.canonicalRunAt });
     }
   }
   const bucketById = new Map<string, Bucket>();
   const b = bucketScenarios(scens);
   for (const k of Object.keys(b) as Bucket[]) for (const id of b[k]) bucketById.set(id, k);
   return { scens, bucketById };
+}
+
+function normalizeTraceStatus(raw: unknown): string {
+  return typeof raw === 'string' && raw.length > 0 ? raw.toUpperCase() : 'UNKNOWN';
+}
+
+function durationToMs(d: unknown): number | null {
+  if (!d || typeof d !== 'object') return null;
+  const dd = d as { seconds?: number; nanos?: number };
+  if (typeof dd.seconds !== 'number' && typeof dd.nanos !== 'number') return null;
+  return (dd.seconds ?? 0) * 1000 + Math.round((dd.nanos ?? 0) / 1_000_000);
+}
+
+function resolveRuntimePath(repoRoot: string, p: string): string {
+  if (p.startsWith('file://')) return fileURLToPath(p);
+  return path.isAbsolute(p) ? p : path.resolve(repoRoot, p);
+}
+
+function traceTarget(s: ScenarioNode): {
+  traceId?: string;
+  traceFile?: string;
+  testCaseStartedId?: string;
+  runId?: string;
+  source?: string;
+} {
+  const ref = s.trace;
+  const traceId = ref?.traceId;
+  const hash = traceId?.lastIndexOf('#') ?? -1;
+  return {
+    traceId,
+    traceFile: ref?.traceFile ?? (traceId && hash > 0 ? traceId.slice(0, hash) : undefined),
+    testCaseStartedId: ref?.testCaseStartedId ?? (traceId && hash >= 0 ? traceId.slice(hash + 1) : undefined),
+    runId: ref?.runId,
+    source: ref?.source,
+  };
+}
+
+function readTraceFailure(repoRoot: string, s: ScenarioNode): {
+  trace_status: 'not_recorded' | 'available' | 'expired';
+  failingStep: { step: string; errorMessage: string; status?: string; durationMs?: number | null } | null;
+  note?: string;
+} {
+  const target = traceTarget(s);
+  const fallback = s.failingStep ? { ...s.failingStep } : null;
+  if (!target.traceId || !target.traceFile) {
+    return { trace_status: 'not_recorded', failingStep: fallback };
+  }
+  const abs = resolveRuntimePath(repoRoot, target.traceFile);
+  if (!fs.existsSync(abs)) {
+    return {
+      trace_status: 'expired',
+      failingStep: fallback,
+      note: 'Trace chunk expired or was rotated away — rerun the scenario to refresh runtime detail.',
+    };
+  }
+
+  const pickleStepText = new Map<string, string>();
+  const testStepToPickleStep = new Map<string, string>();
+  const finishes: Array<{ testStepId?: string; status: string; message: string; durationMs: number | null }> = [];
+
+  for (const line of fs.readFileSync(abs, 'utf-8').split(/\r?\n/)) {
+    if (!line.trim()) continue;
+    let env: Record<string, unknown>;
+    try {
+      env = JSON.parse(line) as Record<string, unknown>;
+    } catch {
+      continue;
+    }
+
+    const pickle = env.pickle as { steps?: Array<{ id?: string; text?: string }> } | undefined;
+    if (pickle?.steps) {
+      for (const step of pickle.steps) {
+        if (step.id && typeof step.text === 'string') pickleStepText.set(step.id, step.text);
+      }
+      continue;
+    }
+
+    const testCase = env.testCase as { testSteps?: Array<{ id?: string; pickleStepId?: string }> } | undefined;
+    if (testCase?.testSteps) {
+      for (const step of testCase.testSteps) {
+        if (step.id && step.pickleStepId) testStepToPickleStep.set(step.id, step.pickleStepId);
+      }
+      continue;
+    }
+
+    const stepFinished = env.testStepFinished as
+      | {
+          testCaseStartedId?: string;
+          testStepId?: string;
+          testStepResult?: { status?: string; message?: string; duration?: unknown };
+        }
+      | undefined;
+    if (stepFinished?.testCaseStartedId !== target.testCaseStartedId || !stepFinished.testStepResult) continue;
+    finishes.push({
+      testStepId: stepFinished.testStepId,
+      status: normalizeTraceStatus(stepFinished.testStepResult.status),
+      message: stepFinished.testStepResult.message ?? '',
+      durationMs: durationToMs(stepFinished.testStepResult.duration),
+    });
+  }
+
+  const bad = finishes.find((f) => f.status === 'FAILED') ?? finishes.find((f) => f.status !== 'PASSED');
+  if (!bad) return { trace_status: 'available', failingStep: fallback };
+  const pickleStepId = bad.testStepId ? testStepToPickleStep.get(bad.testStepId) : undefined;
+  return {
+    trace_status: 'available',
+    failingStep: {
+      step: pickleStepId ? (pickleStepText.get(pickleStepId) ?? '') : '',
+      errorMessage: bad.message,
+      status: bad.status,
+      durationMs: bad.durationMs,
+    },
+  };
+}
+
+function scenarioTracePayload(repoRoot: string, s: ScenarioNode): Record<string, unknown> {
+  const target = traceTarget(s);
+  const detail = readTraceFailure(repoRoot, s);
+  return {
+    scenario_id: s.id,
+    lastResult: s.lastResult ?? 'UNKNOWN',
+    lastRunAt: s.lastRunAt ?? null,
+    stale: s.resultStale === true,
+    run_id: target.runId ?? null,
+    source: target.source ?? null,
+    trace_id: target.traceId ?? null,
+    trace_file: target.traceFile ?? null,
+    test_case_started_id: target.testCaseStartedId ?? null,
+    trace_status: detail.trace_status,
+    failingStep: detail.failingStep,
+    note: detail.note ?? (s.resultStale === true ? 'Last pass is stale — rerun this scenario to refresh evidence.' : undefined),
+  };
+}
+
+function resolveScenarioRef(graph: SpecGraph, scenarioId: string, spec?: string): { node?: ScenarioNode; candidates?: string[] } {
+  const resolved = resolveNodeRef(graph, scenarioId, spec);
+  if (resolved.candidates) return { candidates: resolved.candidates };
+  if (resolved.node?.type === 'Scenario') return { node: resolved.node as ScenarioNode };
+
+  const key = scenarioKey(scenarioId);
+  if (!key) return {};
+  const matches: ScenarioNode[] = [];
+  for (const node of graph.nodes.values()) {
+    if (node.type !== 'Scenario') continue;
+    const s = node as ScenarioNode;
+    if (spec && specOf(s.file) !== spec) continue;
+    if (scenarioKey(s.id) === key) matches.push(s);
+  }
+  if (matches.length === 1) return { node: matches[0] };
+  if (matches.length > 1) return { candidates: matches.map((s) => s.id).sort() };
+  return {};
 }
 
 /** Scenarios linked to a node (FR → @feature<N>, Task → refs map, else tested-by ids). */
@@ -589,6 +741,8 @@ function markdownLinkLocation(graph: SpecGraph, anchor: string, spec?: string): 
 }
 
 export interface RegistryOptions {
+  /** Repository root used for disk-backed status evidence. Defaults to process.cwd(). */
+  repoRoot?: string;
   /**
    * FR-40c graph freshness after a mutation. Inside the running MCP server the
    * FR-14 watcher patches the graph on the disk write — leave unset there.
@@ -716,6 +870,7 @@ export function buildToolRegistry(
           // the same computeCodeImpl — additive field, node-level code_impl
           // (and FR aggregation for _60-_64) is unchanged.
           code_impl: computeCodeImpl(s, graph),
+          runtime_trace: scenarioTracePayload(process.cwd(), s),
         })),
         // FR-46d / FR-52e: surface the task's OWN scenario (the explicit scenario id it cites
         // in Done-When, e.g. SPECGEN004_NN / TESTQUAL001_NN) + its last result, so task↔own-
@@ -902,9 +1057,32 @@ export function buildToolRegistry(
         scenario_id: s.id,
         lastResult: s.lastResult ?? 'UNKNOWN',
         lastRunAt: s.lastRunAt ?? null,
+        stale: s.resultStale === true,
         durationMs: s.durationMs ?? null,
         failingStep: s.failingStep ?? null,
+        runtime_trace: scenarioTracePayload(process.cwd(), s),
       });
+    },
+  });
+
+  // ─── 7b) get_scenario_trace — FR-56 runtime detail ───────────────────────
+  tools.push({
+    name: 'get_scenario_trace',
+    description:
+      'FR-56e: return one Scenario result plus runtime trace detail: latest result, ' +
+      'run_id/time/source, trace chunk path, and the failing step/error when the ' +
+      'scenario failed or its last pass is stale. Missing rotated chunks degrade ' +
+      'gracefully with trace_status:"expired".',
+    inputShape: {
+      scenario_id: z.string(),
+      spec: z.string().optional(),
+    } as const satisfies z.ZodRawShape,
+    handler: async ({ scenario_id, spec }) => {
+      const graph = getGraph();
+      const { node, candidates } = resolveScenarioRef(graph, scenario_id as string, spec as string | undefined);
+      if (candidates) return ambiguousBareId(scenario_id as string, candidates);
+      if (!node) return asJsonResult({ ok: false, error: 'SCENARIO_NOT_FOUND', scenario_id });
+      return asJsonResult({ ok: true, ...scenarioTracePayload(process.cwd(), node) });
     },
   });
 
@@ -1031,8 +1209,47 @@ export function buildToolRegistry(
       view: z.enum(['status', 'counts', 'coverage']).optional(),
     } as const satisfies z.ZodRawShape,
     handler: async ({ spec, view }) => {
+      registryOpts.refreshGraph?.();
       const graph = getGraph();
+      const repoRoot = registryOpts.repoRoot ?? process.cwd();
       const v = (view as 'status' | 'counts' | 'coverage' | undefined) ?? 'status';
+      const executionGaps = (
+        scopeSpec: string | undefined,
+        scenarios: ScenarioLike[],
+        buckets: Record<Bucket, string[]>,
+      ): {
+        SCENARIO_NOT_RUN: number;
+        scenario_ids: string[];
+        FR_NOT_EXECUTION_VERIFIED: number;
+        fr_ids: string[];
+      } => {
+        const scenarioBucket = new Map<string, Bucket>();
+        for (const [bucket, ids] of Object.entries(buckets) as Array<[Bucket, string[]]>) {
+          for (const id of ids) scenarioBucket.set(id, bucket);
+        }
+        const scenarioIds = new Set(scenarios.map((s) => s.id));
+        const frToScenarios = new Map<string, string[]>();
+        for (const e of graph.edges) {
+          if (e.type !== 'tested-by') continue;
+          const fr = graph.nodes.get(e.from);
+          if (!fr || fr.type !== 'FR') continue;
+          if (scopeSpec && specOf(fr.file) !== scopeSpec) continue;
+          if (!scenarioIds.has(e.to)) continue;
+          const arr = frToScenarios.get(e.from) ?? [];
+          arr.push(e.to);
+          frToScenarios.set(e.from, arr);
+        }
+        const frIds = [...frToScenarios.entries()]
+          .filter(([, ids]) => ids.length > 0 && !ids.some((id) => scenarioBucket.get(id) === 'passed'))
+          .map(([fr]) => fr)
+          .sort();
+        return {
+          SCENARIO_NOT_RUN: buckets.not_run.length,
+          scenario_ids: buckets.not_run,
+          FR_NOT_EXECUTION_VERIFIED: frIds.length,
+          fr_ids: frIds,
+        };
+      };
 
       // view 'counts' — structural atom tallies (folds in former get_coverage_summary).
       // `spec` → that one spec; no `spec` → the per-spec table across the corpus.
@@ -1078,16 +1295,41 @@ export function buildToolRegistry(
           if (spec && nodeSpec !== spec) continue; // FR-32 scoping: per-spec when asked
           if (node.type === 'Scenario') {
             const s = node as ScenarioNode;
-            scenarios.push({ id: s.id, tags: s.tags, result: s.lastResult, spec: nodeSpec });
+            scenarios.push({ id: s.id, tags: s.tags, result: s.lastResult, stale: s.resultStale, spec: nodeSpec, source: s.trace?.source, canonicalResult: s.canonicalResult, canonicalRunAt: s.canonicalRunAt });
           } else if (node.type === 'Task') {
             const t = node as TaskNode;
-            tasks.push({ id: t.id, doneWhen: t.doneWhen ?? '', refs: t.refs, spec: nodeSpec });
+            tasks.push({ id: t.id, doneWhen: t.doneWhen ?? '', refs: t.refs, spec: nodeSpec, status: t.status });
           }
         }
         // FR-35a: per-task test-quality side-channel — a DONE task with a WEAK /
         // FAKE-POSITIVE-RISK test reads IN_PROGRESS here too (absent file → {}).
-        const testQualityByTask = readVerdicts(process.cwd());
-        return asJsonResult({ ok: true, view: 'coverage', spec: spec ?? null, scope: spec ? 'spec' : 'corpus', ...computeCoverage(tasks, scenarios, testQualityByTask) });
+        const testQualityByTask = readVerdicts(repoRoot);
+        const coverage = computeCoverage(tasks, scenarios, testQualityByTask);
+        const canonicalScenarios = scenarios.map((scenario) => ({
+          ...scenario,
+          result: scenario.canonicalResult,
+          stale: false,
+          source: scenario.canonicalResult ? 'canonical-full-run' : undefined,
+        }));
+        const canonicalCoverage = computeCoverage(tasks, canonicalScenarios, testQualityByTask);
+        return asJsonResult({
+          ok: true,
+          view: 'coverage',
+          spec: spec ?? null,
+          scope: spec ? 'spec' : 'corpus',
+          ...coverage,
+          canonical_coverage: {
+            buckets: canonicalCoverage.buckets,
+            totals: canonicalCoverage.totals,
+            task_verification: canonicalCoverage.tasks,
+          },
+          execution_gaps: executionGaps(spec, canonicalScenarios, canonicalCoverage.buckets),
+          filtered_proof: spec
+            ? latestFilteredProof(repoRoot, [...graph.nodes.values()]
+                .filter((node): node is ScenarioNode => node.type === 'Scenario' && specOf(node.file) === spec)
+                .map((node) => node as ScenarioLite)).latest
+            : null,
+        });
       }
 
       // view 'status' (default) — per-spec lifecycle (FR-38). Requires a spec.
@@ -1105,14 +1347,22 @@ export function buildToolRegistry(
 
       const counts = { fr: 0, ac: 0, scenarios: 0, tasks: 0 };
       const scens: ScenarioNode[] = [];
+      const statusScenarios: ScenarioLike[] = [];
+      const statusTasks: TaskLike[] = [];
       for (const n of graph.nodes.values()) {
         if (!inSpec(n.file)) continue;
+        const nodeSpec = specOf(n.file);
         if (n.type === 'FR') counts.fr++;
         else if (n.type === 'AC') counts.ac++;
-        else if (n.type === 'Task') counts.tasks++;
-        else if (n.type === 'Scenario') {
+        else if (n.type === 'Task') {
+          counts.tasks++;
+          const t = n as TaskNode;
+          statusTasks.push({ id: t.id, doneWhen: t.doneWhen ?? '', refs: t.refs, spec: nodeSpec, status: t.status });
+        } else if (n.type === 'Scenario') {
           counts.scenarios++;
-          scens.push(n as ScenarioNode);
+          const s = n as ScenarioNode;
+          scens.push(s);
+          statusScenarios.push({ id: s.id, tags: s.tags, result: s.lastResult, stale: s.resultStale, spec: nodeSpec, source: s.trace?.source, canonicalResult: s.canonicalResult, canonicalRunAt: s.canonicalRunAt });
         }
       }
       if (counts.fr + counts.ac + counts.scenarios + counts.tasks === 0) {
@@ -1129,37 +1379,80 @@ export function buildToolRegistry(
       const summary = { passed: 0, failed: 0, pending: 0, undefined: 0, ambiguous: 0, skipped: 0, touched: 0 };
       let lastAt: string | null = null;
       for (const s of scens) {
-        if (!s.lastResult) continue;
+        if (!s.canonicalResult) continue;
         summary.touched++;
-        const r = s.lastResult.toUpperCase();
+        const r = s.canonicalResult.toUpperCase();
         if (r === 'PASSED') summary.passed++;
         else if (r === 'FAILED') summary.failed++;
         else if (r === 'PENDING') summary.pending++;
         else if (r === 'UNDEFINED') summary.undefined++;
         else if (r === 'AMBIGUOUS') summary.ambiguous++;
         else if (r === 'SKIPPED') summary.skipped++;
-        if (s.lastRunAt && (!lastAt || s.lastRunAt > lastAt)) lastAt = s.lastRunAt;
+        if (s.canonicalRunAt && (!lastAt || s.canonicalRunAt > lastAt)) lastAt = s.canonicalRunAt;
       }
       const last_run =
         summary.touched > 0
           ? { at: lastAt, source: '.dev-pomogator/.last-test-run.ndjson', summary }
           : null;
+      const statusCoverage = computeCoverage(statusTasks, statusScenarios, readVerdicts(repoRoot));
+      const canonicalStatusScenarios = statusScenarios.map((scenario) => ({
+        ...scenario,
+        result: scenario.canonicalResult,
+        stale: false,
+        source: scenario.canonicalResult ? 'canonical-full-run' : undefined,
+      }));
+      const canonicalStatusCoverage = computeCoverage(statusTasks, canonicalStatusScenarios, readVerdicts(repoRoot));
+      const statusExecutionGaps = executionGaps(slug, canonicalStatusScenarios, canonicalStatusCoverage.buckets);
+      const sourceScenarios = scens.filter((scenario) => specOf(scenario.file) === slug) as ScenarioLite[];
+      const executableScenarios: ScenarioLite[] = [];
+      const slugTail = slug.split('/').pop()!.toLowerCase();
+      for (const node of graph.nodes.values()) {
+        if (node.type !== 'Scenario') continue;
+        const scenario = node as ScenarioNode;
+        const file = String(scenario.file).replace(/\\/g, '/');
+        if (file.includes('/.tmp/') || file.includes('/archive/')) continue;
+        const outsideSpec = !file.startsWith('.specs/');
+        if (outsideSpec && file.toLowerCase().includes(slugTail)) executableScenarios.push(scenario);
+      }
+      const bddSync = compareBddSync(repoRoot, slug, sourceScenarios, executableScenarios);
+      const filteredProof = latestFilteredProof(repoRoot, sourceScenarios);
+      const taskTruthDebt = Object.entries(canonicalStatusCoverage.tasks)
+        .flatMap(([taskId, task]) => (task.truth_issues ?? []).map((issue) => `${taskId}: ${issue.message}`));
+      const executionHardCount = canonicalStatusCoverage.totals.failed + canonicalStatusCoverage.totals.undefined + canonicalStatusCoverage.totals.ambiguous + canonicalStatusCoverage.totals.pending + canonicalStatusCoverage.totals.skipped + canonicalStatusCoverage.totals.stale;
 
-      // FR-38a: the exhaustive lifecycle enum.
+      // FR-38a/FR-61: lifecycle is execution-honest. A filtered run with all
+      // touched scenarios passed is still PARTIAL while any authored scenario is
+      // `not_run`/`stale`; the detailed reason is exposed in `execution_gaps`.
       let lifecycle: 'SPEC_ONLY' | 'TESTS_NOT_RUN' | 'RED' | 'PARTIAL' | 'GREEN';
       if (counts.scenarios === 0) lifecycle = 'SPEC_ONLY';
       else if (!last_run) lifecycle = 'TESTS_NOT_RUN';
       else if (summary.failed > 0 || summary.ambiguous > 0) lifecycle = 'RED';
-      else if (summary.pending + summary.undefined + summary.skipped > 0) lifecycle = 'PARTIAL';
+      else if (
+        summary.pending + summary.undefined + summary.skipped > 0 ||
+        canonicalStatusCoverage.totals.not_run > 0 ||
+        canonicalStatusCoverage.totals.stale > 0
+      ) lifecycle = 'PARTIAL';
       else lifecycle = 'GREEN';
 
       // FR-38c: the FR-37b gap counts for this cell + an agent hint.
       const gaps = summariseGaps(gapsFromFindings(checkConformance(graph), { spec: slug }));
+      const readinessLanes = {
+        TRACEABILITY: { status: Object.values(gaps).some((count) => count > 0) ? 'RED' : 'GREEN' },
+        EXECUTION: { status: executionHardCount > 0 ? 'RED' : canonicalStatusCoverage.totals.not_run > 0 ? 'NOT_RUN' : 'GREEN' },
+        TASK_TRUTH: { status: taskTruthDebt.length > 0 ? 'RED' : 'GREEN', debt: taskTruthDebt },
+        BDD_SYNC: { status: bddSync.debt.length > 0 ? 'RED' : 'GREEN', debt: bddSync.debt },
+        FILTERED_PROOF: { status: filteredProof.latest ? 'GREEN' : 'NONE', latest: filteredProof.latest },
+      };
       const hints: Record<typeof lifecycle, string> = {
         SPEC_ONLY: 'Docs only — no scenarios written yet. Next: author the .feature (FR-38a).',
-        TESTS_NOT_RUN: `${counts.scenarios} scenario(s) written but never run/ingested. Next: run the suite so NDJSON lands.`,
+        TESTS_NOT_RUN: `${counts.scenarios} scenario(s) are SCENARIO_NOT_RUN; no canonical execution has been ingested. Next: run the suite so NDJSON lands.`,
         RED: `${summary.failed + summary.ambiguous} failing of ${summary.touched} touched. Next: get_test_result per scenario.`,
-        PARTIAL: `${summary.pending + summary.undefined + summary.skipped} scenario(s) undefined/pending/skipped, 0 failed — written but not implemented; NOT green.`,
+        PARTIAL:
+          statusExecutionGaps.SCENARIO_NOT_RUN > 0
+            ? `${statusExecutionGaps.SCENARIO_NOT_RUN} scenario(s) are SCENARIO_NOT_RUN after the last ingested run; NOT execution-complete.`
+            : canonicalStatusCoverage.totals.stale > 0
+              ? `${canonicalStatusCoverage.totals.stale} stale passed scenario(s) need rerun after source changes; NOT execution-complete.`
+              : `${summary.pending + summary.undefined + summary.skipped} scenario(s) undefined/pending/skipped, 0 failed — written but not implemented; NOT green.`,
         GREEN: `All ${summary.touched} touched scenario(s) passed at ${lastAt}.`,
       };
 
@@ -1167,7 +1460,7 @@ export function buildToolRegistry(
       // settable handle (`<slug>:phase:<Phase>`) + authored state HERE — the only
       // place the agent learns the id to pass to set_entity_status (else the phase
       // authored-path is unusable, violating FR-48c).
-      const progress = readProgressState(path.join(process.cwd(), '.specs', slug));
+      const progress = readProgressState(path.join(repoRoot, '.specs', slug));
       const phases = PHASE_ORDER.map((name) => ({
         id: `${slug}:phase:${name}`,
         name,
@@ -1182,11 +1475,31 @@ export function buildToolRegistry(
         spec: slug,
         // Explicit SPEC-level marker (set_spec_status). `backlog` ⇒ excluded from the task-census /
         // Stop-gate open-work count — its open tasks are parked by intent, not counted as work due now.
-        spec_status: readSpecStatus(process.cwd(), slug),
+        spec_status: readSpecStatus(repoRoot, slug),
         lifecycle,
         counts,
         last_run,
         gaps,
+        execution_gaps: statusExecutionGaps,
+        coverage: {
+          totals: statusCoverage.totals,
+          task_verification: statusCoverage.tasks,
+        },
+        canonical_coverage: {
+          totals: canonicalStatusCoverage.totals,
+          task_verification: canonicalStatusCoverage.tasks,
+        },
+        readiness: {
+          overall: Object.values(readinessLanes).some((lane) => lane.status === 'RED' || lane.status === 'NOT_RUN') ? 'NOT_READY' : 'READY',
+          lanes: readinessLanes,
+          next_action:
+            bddSync.debt.length > 0
+              ? 'Fix source/executable BDD sync drift or mark intentional exceptions.'
+              : statusExecutionGaps.SCENARIO_NOT_RUN > 0 && filteredProof.latest
+                ? `Run the full Docker BDD suite so canonical coverage replaces filtered proof ${filteredProof.latest.runId}, or attach ${filteredProof.latest.artifact ?? 'the filtered artifact'} as review evidence.`
+                : hints[lifecycle],
+        },
+        filtered_proof: filteredProof.latest,
         phases,
         hint: hints[lifecycle],
       });

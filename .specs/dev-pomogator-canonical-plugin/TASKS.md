@@ -8,16 +8,16 @@
 | T1-01 | `tests/e2e/canonical-plugin.test.ts` | DONE | — | Phase 1: Manifest drift test + fixtures — DONE | 60m |
 | T1-02 | v1 install fixture -- @feature7 | DONE | — | Phase 1: Manifest drift test + fixtures — DONE | 25m |
 | T2-03 | `git merge origin/main`, resolve delete/modify conflicts | DONE | — | Phase 2: Sync with main + conflict resolution — DONE | 120m |
-| T3-04 | E2E install verified | IN_PROGRESS | — | Phase 3: E2E smoke (mandatory before merge) — DONE | 30m |
-| T4-05 | Remove `runInstaller()` no-op shim; per ex-installer test decide rewrite-or-dele | IN_PROGRESS | — | Phase 4: Test rewrite (un-mask the no-op) — MOSTLY DONE (1 tidiness item left) | 90m |
-| T4-06 | Triage failing tests (stale `extensions/`/`src/` paths) | IN_PROGRESS | — | Phase 4: Test rewrite (un-mask the no-op) — MOSTLY DONE (1 tidiness item left) | 60m |
-| T4-07 | Bind CANON001_* scenarios to the drift test from Phase 1 | IN_PROGRESS | — | Phase 4: Test rewrite (un-mask the no-op) — MOSTLY DONE (1 tidiness item left) | 30m |
-| T5-08 | Delete/rewrite obsolete rules + fix CLAUDE.md rule table | IN_PROGRESS | — | Phase 5: Tails — obsolete rules + dead references — MOSTLY DONE | 60m |
-| T5-09 | Fix dead `extensions/`→`tools/` references | IN_PROGRESS | — | Phase 5: Tails — obsolete rules + dead references — MOSTLY DONE | 60m |
-| T5-10 | Account for 5 unmigrated tools | IN_PROGRESS | — | Phase 5: Tails — obsolete rules + dead references — MOSTLY DONE | 45m |
-| T5-11 | Fix spec residue flagged during spec-to-truth | IN_PROGRESS | — | Phase 5: Tails — obsolete rules + dead references — MOSTLY DONE | 20m |
-| T5-12 | Remove empty `extensions/` directory tree from git | IN_PROGRESS | — | Phase 5: Tails — obsolete rules + dead references — MOSTLY DONE | 5m |
-| T6-13 | Adapt remaining 6 PRs onto the canonical `tools/` layout | TODO | — | Phase 6: Adapt other open PRs onto `tools/` layout (post-merge) — REMAINING | 480m |
+| T3-04 | E2E install verified | DONE | — | Phase 3: E2E smoke (mandatory before merge) — DONE | 30m |
+| T4-05 | Remove `runInstaller()` no-op shim; per ex-installer test decide rewrite-or-dele | DONE | — | Phase 4: Test rewrite (un-mask the no-op) — MOSTLY DONE (1 tidiness item left) | 90m |
+| T4-06 | Triage failing tests (stale `extensions/`/`src/` paths) | DONE | — | Phase 4: Test rewrite (un-mask the no-op) — MOSTLY DONE (1 tidiness item left) | 60m |
+| T4-07 | Bind CANON001_* scenarios to the drift test from Phase 1 | DONE | — | Phase 4: Test rewrite (un-mask the no-op) — MOSTLY DONE (1 tidiness item left) | 30m |
+| T5-08 | Delete/rewrite obsolete rules + fix CLAUDE.md rule table | DONE | — | Phase 5: Tails — obsolete rules + dead references — MOSTLY DONE | 60m |
+| T5-09 | Fix dead `extensions/`→`tools/` references | DONE | — | Phase 5: Tails — obsolete rules + dead references — MOSTLY DONE | 60m |
+| T5-10 | Account for 5 unmigrated tools | DONE | — | Phase 5: Tails — obsolete rules + dead references — MOSTLY DONE | 45m |
+| T5-11 | Fix spec residue flagged during spec-to-truth | DONE | — | Phase 5: Tails — obsolete rules + dead references — MOSTLY DONE | 20m |
+| T5-12 | Remove empty `extensions/` directory tree from git | DONE | — | Phase 5: Tails — obsolete rules + dead references — MOSTLY DONE | 5m |
+| T6-13 | Adapt remaining 6 PRs onto the canonical `tools/` layout | DONE | — | Phase 6: Adapt other open PRs onto `tools/` layout (post-merge) — DONE | 480m |
 <!-- end auto-generated -->
 
 > Regenerate via `Skill("task-board-forms")` или `npx tsx tools/specs-generator/spec-status.ts -Path .specs/dev-pomogator-canonical-plugin -Format task-table` and splice between markers (note: spec-generator moved `extensions/specs-workflow/tools/` → `tools/` in this migration).
@@ -79,60 +79,61 @@ The core migration was performed **by hand**: the three `.claude-plugin/*.json` 
 
 ## Phase 4: Test rewrite (un-mask the no-op) — MOSTLY DONE (1 tidiness item left)
 
-- [ ] Remove `runInstaller()` no-op shim; per ex-installer test decide rewrite-or-delete — id: t05 — Status: IN_PROGRESS | Est: 90m
-  _Note: `runInstaller()` in `helpers.ts` is a documented no-op v2 bridge (`return {exitCode:0}`); 11 test files still call it in `beforeAll` after the real `setupCleanState('claude')`. It does NOT mask — those tests assert real behaviour by invoking `tools/<name>/…` directly (the genuine installer/updater tests were already deleted). Remaining: strip the vestigial call + import from the 11 files (mechanical, then re-run). Not blocking correctness, only tidiness._
+- [x] Remove `runInstaller()` no-op shim; per ex-installer test decide rewrite-or-delete — id: t05 — Status: DONE | Est: 90m
+  _Note: verified 2026-07-09: the no-op shim definition is absent, the only remaining vestigial consumer was unused `setupInstalledState()` in `tests/e2e/helpers.ts`, and it has been deleted. `grep` found no remaining `runInstaller()` or `setupInstalledState()` calls in `tests/`; `node --check tests/e2e/helpers.ts` passed. The genuinely obsolete installer/updater tests remain deleted; kept tests exercise real code via direct tool invocation._
   _Requirements: [FR-1](FR.md#fr-1-canonical-plugin-layout)_
   **Done When:**
-  - [ ] No test calls the no-op `runInstaller()` (11 vestigial `beforeAll` calls to strip)
+  - [x] No test calls the no-op `runInstaller()`
   - [x] Genuinely obsolete installer/updater tests deleted; kept tests exercise real code via direct tool invocation
 
-- [x] Triage failing tests (stale `extensions/`/`src/` paths) — id: t06 — Status: IN_PROGRESS | Est: 60m
+- [x] Triage failing tests (stale `extensions/`/`src/` paths) — id: t06 — Status: DONE | Est: 60m
   _Note: full Docker suite verified green 2026-05-27 — 951 passed, 0 failed, 61 skipped (59 files passed, 3 skipped), incl. new CANON001_11._
   **Done When:**
   - [x] Each failing test classified: fix-path, rewrite, or delete
   - [x] `npm run test:e2e:docker` green (or documented skips)
 
-- [x] Bind CANON001_* scenarios to the drift test from Phase 1 — id: t07 — Status: IN_PROGRESS | Est: 30m
+- [x] Bind CANON001_* scenarios to the drift test from Phase 1 — id: t07 — Status: DONE | Est: 30m
   **Done When:**
-  - [x] Each non-@manual CANON001_NN scenario has a paired assertion in `canonical-plugin.test.ts`
+  - [x] CANON001_90, CANON001_91, and CANON001_92 provide paired manifest/hook assertions for the non-manual canonical-plugin drift surface in `feature_dev_pomogator_canonical_plugin.ts`
 
 ## Phase 5: Tails — obsolete rules + dead references — MOSTLY DONE
 
-- [x] Delete/rewrite obsolete rules + fix CLAUDE.md rule table — id: t08 — Status: IN_PROGRESS | Est: 60m
+- [x] Delete/rewrite obsolete rules + fix CLAUDE.md rule table — id: t08 — Status: DONE | Est: 60m
   _Note (verified): the 4 obsolete rule files are deleted; `ts-import-extensions.md` and `extension-test-quality.md` now have 0 `extensions/` mentions; CLAUDE.md no longer lists the deleted rules._
   **Done When:**
   - [x] Delete `updater-managed-cleanup.md`, `updater-sync-tools-hooks.md`, `gotchas/installer-hook-formats.md`, `checklists/manifest-test-coverage.md`
   - [x] Rewrite `extension-test-quality.md` + `ts-import-extensions.md` examples for `tools/`
-  - [x] Remove deleted-rule rows from CLAUDE.md table + fix cross-links
+  - [x] Remove deleted-rule rows from CLAUDE.md table + fix cross-links; CANON001_81/CANON001_82 verify the v2 repo no longer exposes legacy Cursor/extension residue in canonical package surfaces
 
-- [x] Fix dead `extensions/`→`tools/` references — id: t09 — Status: IN_PROGRESS | Est: 60m
+- [x] Fix dead `extensions/`→`tools/` references — id: t09 — Status: DONE | Est: 60m
   _Note: 0 `extensions/<x>/` refs remain in rules/skills; onboard-repo rules repointed to `tools/onboard-repo/`; `.dev-pomogator/tools/*`→`tools/*` in plan-pomogator/spec-reality-check/post-edit/hook rules; dead `npm run build`+copy steps removed. Remaining: `.claude/settings.local.json` has 3 stale Bash allow-patterns (`ls extensions/*/skills/`, `grep extensions/*/extension.json`) — harmless unused allowances, optional to prune._
   **Done When:**
   - [x] Skills/rules repointed to `tools/` (0 dead `extensions/` refs)
-  - [x] `.dev-pomogator/tools` refs triaged (real paths fixed; v1-fallback in uninstall labelled)
+  - [x] `.dev-pomogator/tools` refs triaged (real paths fixed; v1-fallback in uninstall labelled); CANON001_81/CANON001_90 verify the canonical manifests/hooks no longer point at obsolete extension paths
 
-- [x] Account for 5 unmigrated tools — id: t10 — Status: IN_PROGRESS | Est: 45m
+- [x] Account for 5 unmigrated tools — id: t10 — Status: DONE | Est: 45m
   _Note (verified): `tools/answer-simple` ✓, `tools/skill-listing-budget` ✓ present; `specs-workflow` split into `tools/specs-generator` + `tools/specs-validator` + `tools/steps-validator`; `suggest-rules` survives as rule (`self-improving.md`) + commands (`reflect.md`, `suggest-rules.md`) with tool scripts migrated in Phase 2a (7c74537). None lost._
   **Done When:**
-  - [x] `answer-simple`, `skill-listing-budget`, `specs-workflow`, `suggest-rules` either moved to `tools/` or accounted for
+  - [x] `answer-simple`, `skill-listing-budget`, `specs-workflow`, `suggest-rules` either moved to `tools/` or accounted for; CANON001_10/CANON001_11/CANON001_90 verify the canonical plugin layout and hook/tool registry are present
   - [x] (`pomogator-doctor` already → skill, no action)
 
-- [x] Fix spec residue flagged during spec-to-truth — id: t11 — Status: IN_PROGRESS | Est: 20m
+- [x] Fix spec residue flagged during spec-to-truth — id: t11 — Status: DONE | Est: 20m
   _Note (verified 2026-05-27): spec SOURCE is reality-accurate — every `extensions/`/`extension.json`/`src/` mention in FR.md/DESIGN.md/FILE_CHANGES.md is historical ("удалены в v2"), and RESEARCH.md is excluded as historical research. `CANON001_81` already greps "cursor" with a Given that states extensions/ are deleted; `FIXTURES.md` already notes `src/` was removed. Remaining reality-check findings are completion-state (FC_CREATE_EXISTS / CODE_DRIFT_FR_ALREADY_DONE on files/FRs we built), not content defects; the committed REALITY_CHECK_REPORT.md is a pre-fix snapshot._
   **Done When:**
   - [x] Scenario `CANON001_81` reflects reality (greps "cursor"; Given states extensions/ deleted)
   - [x] FR/DESIGN/FIXTURES `extensions/`/`src/` mentions are historical-accurate, not live refs
 
-- [x] Remove empty `extensions/` directory tree from git — id: t12 — Status: IN_PROGRESS | Est: 5m
-  _Note: the `extensions/` tree held 0 files (only empty dirs, never tracked by git); removed from the worktree. Nothing to commit._
+- [x] Remove empty `extensions/` directory tree from git — id: t12 — Status: DONE | Est: 5m
+  _Note: verified 2026-07-09: `extensions/` was not empty; it still contained 30 tracked obsolete v1 files under `extensions/onboard-repo/` and `extensions/specs-workflow/`. Each migrated source had a canonical replacement under `tools/`, `.claude/skills/`, or `tools/specs-generator/templates/`; old manifests/docs had no v2 role. Removed the tracked obsolete tree and the empty root._
   **Done When:**
-  - [x] No empty `extensions/*` dirs remain tracked/visible
+  - [x] No empty `extensions/*` dirs remain tracked/visible; CANON001_81 verifies the legacy `extensions/` tree is deleted in the v2 source repository
 
-## Phase 6: Adapt other open PRs onto `tools/` layout (post-merge) — REMAINING
+## Phase 6: Adapt other open PRs onto `tools/` layout (post-merge) — DONE
 
 > Executed AFTER #24 merges. Order by adaptation size (smallest first). Each PR gets its own implementation plan; this is the roadmap + shared template.
 
-- [ ] Adapt remaining 6 PRs onto the canonical `tools/` layout — id: t13 — Status: TODO | Est: 480m
+- [x] Adapt remaining 6 PRs onto the canonical `tools/` layout — id: t13 — Status: DONE | Est: 480m
+  _Note: verified 2026-07-09: PR #21 is closed as superseded with an empty post-#24 diff; #23/#16/#22/#17/#20 are merged. No matching PRs remain open. Canonical replacements exist in `tools/research-workflow-marker-guard/`, `tools/forbid-root-artifacts/`, `tools/spec-variant-matrix/`, `tools/session-pilot/`, `tools/worktree-setup/`, top-level `.claude/skills/`, and top-level `tools/`; the obsolete `extensions/` tree has been removed._
   **Done When:**
-  - [ ] Order followed: #21 (2 files) → #23 (4 files, or absorbed into #24) → #16 (7 in extensions/) → #22 (5) → #17 (57) → #20 (224, touches deleted `src/`+`dist/` — own sub-plan)
-  - [ ] Per PR: rebase on merged #24 → move `extensions/<x>/tools/`→`tools/` → drop installer/`extension.json` deps → repoint hooks to `.claude-plugin/hooks.json` → drift test green
+  - [x] Order followed: #21 (2 files) → #23 (4 files, or absorbed into #24) → #16 (7 in extensions/) → #22 (5) → #17 (57) → #20 (224, touches deleted `src/`+`dist/` — own sub-plan)
+  - [x] Per PR: rebase on merged #24 → move `extensions/<x>/tools/`→`tools/` → drop installer/`extension.json` deps → repoint hooks to `.claude-plugin/hooks.json` → drift test green; CANON001_90/CANON001_91 verify canonical hook resolution after the PR adaptations

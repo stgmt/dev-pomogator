@@ -1,7 +1,7 @@
 ---
 name: spec-generator-orchestrator
 description: Thin end-to-end orchestrator for the spec-generator-v4 workflow (scaffold → conformance → coverage → reconcile → resolve → honesty-gate). Owns ONLY the feature map + a human-merge self-improve ledger; delegates every unit of work to existing worker skills and MCP tools — never re-implements worker logic. Triggers on "run the spec workflow / orchestrate specs / end-to-end spec pipeline".
-allowed-tools: Read, Write, Edit, Glob, Grep, Bash, Skill, AskUserQuestion, mcp__dev-pomogator-specs__get_trace, mcp__dev-pomogator-specs__get_spec_status, mcp__dev-pomogator-specs__get_test_result, mcp__dev-pomogator-specs__find_orphans, mcp__dev-pomogator-specs__conformance_check
+allowed-tools: Read, Write, Edit, Glob, Grep, Bash, Skill, AskUserQuestion, mcp__dev-pomogator-specs__get_trace, mcp__dev-pomogator-specs__get_spec_status, mcp__dev-pomogator-specs__get_test_result, mcp__dev-pomogator-specs__get_scenario_trace, mcp__dev-pomogator-specs__find_orphans, mcp__dev-pomogator-specs__conformance_check
 ---
 
 # spec-generator-orchestrator
@@ -111,7 +111,7 @@ npx tsx .claude/skills/spec-generator-orchestrator/scripts/drift-check.ts
 
 - Skills: `create-spec`, `cross-spec-reconcile`, `cross-spec-resolve`,
   `spec-backlog`, `architecture-research-workflow`.
-- MCP tools: `get_trace`, `get_spec_status` (view coverage/counts/status), `get_test_result`, `find_orphans`,
+- MCP tools: `get_trace`, `get_spec_status` (view coverage/counts/status), `get_test_result`, `get_scenario_trace`, `find_orphans`,
   conformance guard/push hooks.
 - Workers MAY run as isolated sub-agents for parallelism (mirrors spec-backlog
   dispatch).

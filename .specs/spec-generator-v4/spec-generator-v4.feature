@@ -1003,6 +1003,12 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     And the corrected change is written atomically and logged
 
   @FR-40
+  Scenario: SPECGEN004_544 mutation validation gates only debt introduced by the candidate edit
+    Given an existing spec with staged FR-47 and task-truth debt
+    When the agent applies an unrelated clean edit and then introduces a new unlinked FR
+    Then pre-existing debt is ignored but the newly introduced conformance debt is refused
+
+  @FR-40
   Scenario: SPECGEN004_115 a successful MCP write refreshes the graph for the next read
     Given an accepted spec change written through MCP
     When the agent reads the affected node afterwards
@@ -2435,6 +2441,18 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Then 0 spawn calls were made because both FR bodies are shorter than 60 chars
 
   @feature17
+  Scenario: SPECGEN004_535 runFullMode prefilters unrelated same-id FR pairs before semantic spawn
+    Given two specs each have a same-id FR-1 with unrelated long prose in the full-mode temp repo
+    When runFullMode is called against unrelated same-id FR prose
+    Then 0 spawn calls were made because the concept-noun prefilter rejected the pair
+
+  @feature17
+  Scenario: SPECGEN004_536 runFullMode cache hit skips semantic spawn for unchanged pair content
+    Given two specs each have a FR-1 with long matching prose in the full-mode temp repo
+    When runFullMode is called twice with identical pair content and a NO_DRIFT spawn
+    Then only the first full-mode run spawned because the second identical pair hit the sha256 cache
+
+  @feature17
   Scenario: SPECGEN004_516 runFullMode marks partial when the semantic dispatcher fails
     Given two specs each have a FR-1 with long matching prose in the full-mode temp repo
     When runFullMode is called with a spawn that throws "semantic dispatcher timeout after 120000ms"
@@ -2535,6 +2553,13 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
   Scenario: SPECGEN004_359 reconcileCli --sarif also writes consistency-report.sarif
     Given a reconcile-cli temp repo with one spec that has a missing impl path
     When reconcileCli is called with dry-run=false sarif=true
+    Then the reconcileCli sarifPaths.length=1 and the sarif file exists on disk
+
+  @feature17
+  Scenario: SPECGEN004_537 reconcileCli config output_formats also writes consistency-report.sarif
+    Given a reconcile-cli temp repo with one spec that has a missing impl path
+    And .spec-config.json requests the sarif output format
+    When reconcileCli is called with dry-run=false sarif=false while config requests sarif
     Then the reconcileCli sarifPaths.length=1 and the sarif file exists on disk
 
   @feature17
@@ -3335,6 +3360,13 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Then the scenario overlay contains one row with result, run identity, source, and trace id
     And appending another run preserves the existing overlay row
 
+  @feature56
+  Scenario: SPECGEN004_534 scenario trace lookup returns the archived failing step
+    Given a Cucumber message run for a failed FR-56 scenario
+    When the scenario trace tool reads that archived run through the graph
+    Then the scenario trace response contains the failing step, error text, and run identity
+    And an expired scenario trace returns a rerun hint instead of throwing
+
   @feature49
   Scenario: SPECGEN004_530 stop hook keeps previous substantive intent across terse follow-up prompts
     Given a Pinator-fix mandate followed by a terse continuation prompt and a live judge endpoint
@@ -3387,3 +3419,40 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Then the generated markdown follows the canonical form contracts and keeps FR to AC to TASK traceability links
     And ids are unique within the affected spec documents
     And executable feature scenarios are refused unless matching step-definition work is included or the caller explicitly selects a TASKS-only acceptance pin
+
+  # ── FR-61: unified readiness UX (pending implementation) ────────────────────
+
+  @feature61
+  Scenario: SPECGEN004_539 spec verdict separates structural health from readiness
+    Given a spec is structurally valid and traceable but has unrun scenarios and DONE-but-unverified tasks
+    When spec-verdict summarizes that spec
+    Then the output shows STRUCTURE, TRACEABILITY, EXECUTION, TASK_TRUTH, BDD_SYNC, SEMANTIC, and FILTERED_PROOF lanes
+    And the final readiness label is OVERALL NOT_READY rather than plain VERDICT GREEN
+
+  @feature61
+  Scenario: SPECGEN004_540 MCP status and verdict use aligned gap semantics
+    Given an FR has traceability edges but no canonical passed execution evidence
+    When get_spec_status and spec-verdict report the spec
+    Then execution absence is reported as SCENARIO_NOT_RUN or FR_NOT_EXECUTION_VERIFIED
+    And the same condition is not reported as UNCOVERED_FR
+
+  @feature61
+  Scenario: SPECGEN004_541 task DONE truth guard downgrades evidence-missing work
+    Given a task is textually marked DONE with an unchecked Done When item or a mapped scenario that is not canonical PASSED
+    When the status mutation door and verdict evaluate that task
+    Then the DONE status is denied or downgraded to evidence-derived IN_PROGRESS
+    And the missing scenario or checklist evidence is named to the agent
+
+  @feature61
+  Scenario: SPECGEN004_542 source and executable BDD scenarios stay synchronized
+    Given a source spec feature and an executable tests/features feature disagree on scenario ids, FR tags, or scenario count prose
+    When the BDD sync checker runs
+    Then executable-only scenarios require EXEC_ONLY or OUT_OF_SCOPE markers
+    And source-only scenarios require an explicit pending marker or executable counterpart
+
+  @feature61
+  Scenario: SPECGEN004_543 filtered Docker BDD proof is visible without poisoning canonical coverage
+    Given a filtered Docker BDD run passes selected scenario ids for a spec
+    When MCP status or spec-verdict reports coverage evidence
+    Then canonical coverage remains unchanged until a full run or accepted attachment lands
+    And a FILTERED_PROOF lane shows the artifact path, selected ids, pass/fail summary, timestamp, source, and next action

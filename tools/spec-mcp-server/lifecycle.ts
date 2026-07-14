@@ -23,7 +23,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import type { FSWatcher } from 'chokidar';
 import { buildGraph } from '../spec-graph/builder.ts';
-import { startWatching, type PatchEvent } from '../spec-graph/incremental.ts';
+import { refreshResultFiles, startWatching, type PatchEvent } from '../spec-graph/incremental.ts';
 import { computeTaskCensus, writeTaskCensusCache } from '../spec-graph/task-census.ts';
 import { backlogSpecs } from '../spec-graph/spec-status-store.ts';
 import {
@@ -140,6 +140,8 @@ export interface LifecycleOptions {
    * door for reads while writes serialise to the single lock owner.
    */
   onLockContention?: 'throw' | 'readonly';
+  /** Append-only scenario overlay file. Default: `.dev-pomogator/.scenario-results.ndjson`. */
+  scenarioOverlayPath?: string;
   /** Optional sink for watcher patch events — telemetry / logs. */
   onPatch?: (e: PatchEvent) => void;
   /** Optional sink for watcher errors. Default: log to stderr. */
@@ -165,6 +167,8 @@ export interface LifecycleHandle {
   readOnly: boolean;
   /** P21-1: the owning session's lock record — present only when {@link readOnly}. */
   lockHolder?: LockRecord;
+  /** Re-apply result files and refresh derived census state on demand. */
+  refreshGraph(): void;
   /** Release watcher + heartbeat + lock. Idempotent. */
   shutdown(): Promise<void>;
 }
@@ -199,6 +203,7 @@ export async function startLifecycle(opts: LifecycleOptions): Promise<LifecycleH
     mdRoots: opts.mdRoots,
     featureRoots: opts.featureRoots,
     ndjsonPath: opts.ndjsonPath,
+    scenarioOverlayPath: opts.scenarioOverlayPath,
     skipNdjson: opts.skipNdjson,
   });
 
@@ -214,6 +219,19 @@ export async function startLifecycle(opts: LifecycleOptions): Promise<LifecycleH
     } catch {
       // census cache is advisory — a write failure must never break the door
     }
+  };
+  const refreshResultsAndCensus = (): void => {
+    if (!opts.skipNdjson) {
+      try {
+        refreshResultFiles(graph, opts.repoRoot, {
+          ndjsonPath: opts.ndjsonPath,
+          scenarioOverlayPath: opts.scenarioOverlayPath,
+        });
+      } catch {
+        // Result evidence is advisory for reads; never break the door if a result file is mid-write.
+      }
+    }
+    refreshCensus();
   };
   refreshCensus();
 
@@ -257,6 +275,7 @@ export async function startLifecycle(opts: LifecycleOptions): Promise<LifecycleH
     mdRoots: opts.mdRoots,
     featureRoots: opts.featureRoots,
     ndjsonPath: opts.ndjsonPath,
+    scenarioOverlayPath: opts.scenarioOverlayPath,
     usePolling,
     interval: usePolling ? pollIntervalMs : undefined,
     // P21-6: every on-disk spec change (door writes included) refreshes the
@@ -283,5 +302,5 @@ export async function startLifecycle(opts: LifecycleOptions): Promise<LifecycleH
     lock.release();
   };
 
-  return { graph, watcher, lock, watchMode, pollIntervalMs, readOnly, lockHolder, shutdown };
+  return { graph, watcher, lock, watchMode, pollIntervalMs, readOnly, lockHolder, refreshGraph: refreshResultsAndCensus, shutdown };
 }

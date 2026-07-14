@@ -37,6 +37,7 @@ import type {
 import { parseMarkdownFile } from './parsers/md.ts';
 import { parseGherkinFile } from './parsers/gherkin.ts';
 import { parseNdjsonFile, applyTestResults } from './parsers/ndjson.ts';
+import { parseScenarioOverlayFile, applyScenarioOverlayResults } from './parsers/scenario-overlay.ts';
 import { parseTasksFile } from './parsers/tasks.ts';
 import { parseFileChangesFile, type FileChangeRow } from './parsers/file-changes.ts';
 import { parseDesignFile, type DesignFileRef } from './parsers/design.ts';
@@ -57,7 +58,9 @@ export interface BuildOptions {
   featureRoots?: string[];
   /** NDJSON file to ingest. Default: `.dev-pomogator/.last-test-run.ndjson`. */
   ndjsonPath?: string;
-  /** Skip the NDJSON ingest step entirely (useful in unit tests). */
+  /** Append-only scenario overlay file. Default: `.dev-pomogator/.scenario-results.ndjson`. */
+  scenarioOverlayPath?: string;
+  /** Skip the NDJSON/overlay ingest step entirely (useful in unit tests). */
   skipNdjson?: boolean;
 }
 
@@ -110,6 +113,10 @@ export function buildGraph(opts: BuildOptions): SpecGraph {
   const ndjsonPath = path.resolve(
     repoRoot,
     opts.ndjsonPath ?? '.dev-pomogator/.last-test-run.ndjson',
+  );
+  const scenarioOverlayPath = path.resolve(
+    repoRoot,
+    opts.scenarioOverlayPath ?? '.dev-pomogator/.scenario-results.ndjson',
   );
 
   const nodes = new Map<string, Node>();
@@ -184,7 +191,7 @@ export function buildGraph(opts: BuildOptions): SpecGraph {
   }
 
   // 2) Gherkin slices
-  const featureFiles = featureRoots.flatMap((root) => walkDir(root, ['.feature']));
+  const featureFiles = [...new Set(featureRoots.flatMap((root) => walkDir(root, ['.feature'])))];
   for (const abs of featureFiles) {
     let slice;
     try {
@@ -356,21 +363,26 @@ export function buildGraph(opts: BuildOptions): SpecGraph {
     }
   }
 
-  // 3) NDJSON patch onto the scenarios we just collected.
+  // 3) Canonical NDJSON + append-only overlay patch onto the scenarios we just collected.
   if (!opts.skipNdjson) {
     const patch = parseNdjsonFile(ndjsonPath);
+    const overlay = parseScenarioOverlayFile(scenarioOverlayPath);
     const scenarioIter: ScenarioNode[] = [];
     for (const n of nodes.values()) {
       if (n.type === 'Scenario') scenarioIter.push(n);
     }
     const applied = applyTestResults(scenarioIter, patch);
-    if (applied > 0) {
+    const overlayApplied = applyScenarioOverlayResults(scenarioIter, overlay, { repoRoot });
+    if (applied > 0 || overlayApplied > 0) {
       // Emit a `last-result` edge per patched scenario so downstream tooling
       // can find «what was the last test run for FR-N» without consulting
       // the Scenario node directly.
       for (const s of scenarioIter) {
         if (s.lastResult) {
           edges.push({ from: s.id, to: `RESULT-${s.id}-${s.lastResult}`, type: 'last-result' });
+        }
+        if (s.trace?.traceId) {
+          edges.push({ from: s.id, to: `TRACE-${s.trace.traceId}`, type: 'runtime-trace' });
         }
       }
     }
@@ -424,6 +436,6 @@ export function rebuildBacklinks(graph: SpecGraph): void {
  * Convenience entry — build a graph from the current working directory.
  * Useful for CLI / benchmarking. Wraps `buildGraph` with sane defaults.
  */
-export function buildGraphFromCwd(cwd: string = process.cwd()): SpecGraph {
-  return buildGraph({ repoRoot: cwd, skipNdjson: false });
+export function buildGraphFromCwd(cwd: string = process.cwd(), opts: Omit<BuildOptions, 'repoRoot'> = {}): SpecGraph {
+  return buildGraph({ ...opts, repoRoot: cwd, skipNdjson: opts.skipNdjson ?? false });
 }

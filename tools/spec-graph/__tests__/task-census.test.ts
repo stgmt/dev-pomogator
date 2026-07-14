@@ -44,6 +44,7 @@ function makeGraph(): SpecGraph {
     ['demoA:T-notrun', task('demoA:T-notrun', 'demoA', 'done', 'closed by SPECGEN004_03')], // unrun
     ['demoA:T-stale', task('demoA:T-stale', 'demoA', 'done', 'closed by SPECGEN004_04')], // stale pass → unrun/unconfirmed
     ['demoA:T-mixed', task('demoA:T-mixed', 'demoA', 'done', 'SPECGEN004_02 and SPECGEN004_03')], // red wins
+    ['demoA:T-unchecked', task('demoA:T-unchecked', 'demoA', 'done', 'SPECGEN004_01\n- [ ] unchecked acceptance evidence')], // all-passed but checklist-open → unconfirmed
     // demoB tasks
     ['demoB:T-inprog', task('demoB:T-inprog', 'demoB', 'in-progress', '')],
     ['demoB:T-noscen', task('demoB:T-noscen', 'demoB', 'done', 'pure docs, no scenario')], // unrun (no scen)
@@ -56,14 +57,14 @@ describe('computeTaskCensus — per-spec signals', () => {
     const c = computeTaskCensus(makeGraph());
     const a = c.specs.find((s) => s.slug === 'demoA')!;
     const b = c.specs.find((s) => s.slug === 'demoB')!;
-    expect(a).toMatchObject({ open: 1, doneRed: 2, doneUnrun: 2 }); // T-fail + T-mixed red; T-notrun + T-stale unrun; T-pass silent
+    expect(a).toMatchObject({ open: 1, doneRed: 2, doneUnrun: 3 }); // T-fail + T-mixed red; T-notrun + T-stale + T-unchecked unrun; T-pass silent
     expect(b).toMatchObject({ open: 1, doneRed: 0, doneUnrun: 1 }); // T-noscen unrun
   });
 
   it('aggregates corpus totals and sorts specs by unfinished count desc', () => {
     const c = computeTaskCensus(makeGraph());
-    expect(c.total).toEqual({ open: 2, doneRed: 2, doneUnrun: 3 });
-    expect(c.specs[0].slug).toBe('demoA'); // 5 unfinished > demoB's 2
+    expect(c.total).toEqual({ open: 2, doneRed: 2, doneUnrun: 4 });
+    expect(c.specs[0].slug).toBe('demoA'); // 6 unfinished > demoB's 2
   });
 
   it('excludes not_run from doneRed (filtered-run poison resistance) and lets red win over not_run', () => {
@@ -71,16 +72,16 @@ describe('computeTaskCensus — per-spec signals', () => {
     const a = c.specs.find((s) => s.slug === 'demoA')!;
     // T-notrun (only a not_run scenario) and T-stale (only stale passed evidence)
     // are doneUnrun, NOT doneRed.
-    expect(a.doneUnrun).toBe(2);
+    expect(a.doneUnrun).toBe(3);
     // T-mixed (failed + not_run) counts as red, not double-counted
     expect(a.doneRed).toBe(2);
   });
 
   it('an all-passed DONE task is silent (genuinely confirmed)', () => {
     const c = computeTaskCensus(makeGraph());
-    // demoA has 6 tasks; T-pass contributes to none of the three buckets
+    // demoA has 7 tasks; T-pass contributes to none of the three buckets
     const a = c.specs.find((s) => s.slug === 'demoA')!;
-    expect(a.open + a.doneRed + a.doneUnrun).toBe(5); // not 6
+    expect(a.open + a.doneRed + a.doneUnrun).toBe(6); // not 7
   });
 });
 
@@ -176,7 +177,7 @@ describe('task-census cache + история rotation', () => {
     const fewer: typeof c = { total: { open: 1, doneRed: 0, doneUnrun: 0 }, specs: [{ slug: 'demoA', open: 1, doneRed: 0, doneUnrun: 0 }] };
     writeTaskCensusCache(root, fewer, 't3');
     const prev = readTaskCensusPrev(root)!;
-    expect(sumTotal(prev)).toBe(7); // the t2 snapshot (2+2+3)
+    expect(sumTotal(prev)).toBe(sumTotal(c)); // the exact t2 snapshot, not a duplicated magic total
     expect(sumTotal(readTaskCensusCache(root)!)).toBe(1);
   });
 

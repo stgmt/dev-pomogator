@@ -68,6 +68,6 @@ export function getConfig(projectDir: string, sessionId: string): TuiTestRunnerC
     statusDir,
     logFile: path.join(statusDir, `test.${prefix}.log`),
     pythonPath: process.env.TUI_PYTHON_PATH || (process.platform === 'win32' ? 'python' : 'python3'),
-    enabled: process.env.TEST_STATUSLINE_ENABLED !== 'false',
+    enabled: process.env.TEST_STATUSLINE_ENABLED === 'true',
   };
 }

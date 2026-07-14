@@ -4,8 +4,8 @@
  * Spec writes go THROUGH the server: the change is applied IN MEMORY, the
  * result is validated by the EXISTING engine (no second validator — the
  * anti-pattern FR-40a forbids), and only a clean result touches the disk
- * (atomic temp+rename). Any error-severity finding → refusal with the
- * findings list; the agent fixes and retries.
+ * (atomic temp+rename). Any newly introduced error, staged warning, or TASKS
+ * truth violation → refusal with findings; the agent fixes and retries.
  *
  * Validation layers (all reuse, none re-implemented):
  *   1. form contracts   — spec-form-parsers by doc basename (the same parsers
@@ -13,9 +13,9 @@
  *   2. anchors          — anchor-integrity `checkLinks` over the spec's md
  *                         files with the changed doc swapped in-memory;
  *   3. conformance      — `checkConformance` over a graph built from a TEMP
- *                         CLONE of the spec dir with the change applied
- *                         (error severity only; the real tree is untouched
- *                         until validation passes).
+ *                         CLONE of the spec dir; errors/staged warnings are
+ *                         delta-gated, and TASKS writes also gate new truth
+ *                         violations. The real tree stays untouched until pass.
  *
  * Graph freshness (FR-40c): inside the running MCP server the FR-14 watcher
  * patches the graph on the write; callers without a watcher (tests, one-shot
@@ -29,8 +29,10 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { checkLinks } from '../anchor-integrity/check.mjs';
 import { buildGraph } from '../spec-graph/builder.ts';
-import { checkConformance } from '../spec-graph/conformance.ts';
+import { checkConformance, type Finding } from '../spec-graph/conformance.ts';
 import { featureStrengthFindings } from '../spec-graph/feature-strength.ts';
+import { computeCoverage, specOf, type ScenarioLike, type TaskLike } from '../spec-graph/coverage.ts';
+import type { ScenarioNode, SpecGraph, TaskNode } from '../spec-graph/types.ts';
 import { withWriteLock } from './lock-manager.ts';
 import {
   parseTaskBlocks,
@@ -305,21 +307,129 @@ function anchorFindings(repoRoot: string, slug: string, doc: string, next: strin
 }
 
 /** Layer 3 — conformance over a TEMP CLONE with the change applied. */
+function buildMutationGraph(repoRoot: string, evidenceRoot: string, slug: string, doc: string, next: string): SpecGraph {
+  const specDir = path.join(repoRoot, '.specs', slug);
+  if (!fs.existsSync(specDir)) throw new Error(`spec ${slug} does not exist`);
+  fs.mkdirSync(path.dirname(path.join(specDir, doc)), { recursive: true });
+  fs.writeFileSync(path.join(specDir, doc), next);
+  return buildGraph({
+    repoRoot,
+    // Truth validation needs canonical execution evidence, but not filtered overlay rows:
+    // apply_spec_change must not let a filtered debug pass launder a DONE task.
+    ndjsonPath: path.join(evidenceRoot, '.dev-pomogator', '.last-test-run.ndjson'),
+    scenarioOverlayPath: path.join(repoRoot, '.dev-pomogator', '.scenario-results.ndjson'),
+  });
+}
+
+function deltaByKey<T>(before: T[], after: T[], keyOf: (value: T) => string): T[] {
+  const remaining = new Map<string, number>();
+  for (const value of before) {
+    const key = keyOf(value);
+    remaining.set(key, (remaining.get(key) ?? 0) + 1);
+  }
+  return after.filter((value) => {
+    const key = keyOf(value);
+    const left = remaining.get(key) ?? 0;
+    if (left === 0) return true;
+    remaining.set(key, left - 1);
+    return false;
+  });
+}
+
+function conformanceKey(f: Finding): string {
+  return `${f.code}|${f.nodeId ?? ''}|${f.relatedId ?? ''}|${f.location.file}`;
+}
+
+function deltaWarningFindings(before: Finding[], after: Finding[]): Finding[] {
+  const stagedCodes = new Set(['FR_NO_DESIGN', 'FR_NO_STORY', 'TOOTHLESS_DECISION', 'TOOTHLESS_STORY']);
+  const staged = (findings: Finding[]) => findings.filter((f) => f.severity === 'warning' && stagedCodes.has(f.code));
+  return deltaByKey(staged(before), staged(after), conformanceKey);
+}
+
+interface TaskTruthFinding extends MutationFinding {
+  taskId: string;
+  code: string;
+}
+
+function taskTruthFindings(graph: SpecGraph, targetSpec: string): TaskTruthFinding[] {
+  const scenarios: ScenarioLike[] = [];
+  const tasks: TaskLike[] = [];
+  const taskLines = new Map<string, number>();
+  for (const node of graph.nodes.values()) {
+    const nodeSpec = specOf((node as { file: string }).file);
+    if (node.type === 'Scenario') {
+      const scenario = node as ScenarioNode;
+      scenarios.push({
+        id: scenario.id,
+        tags: scenario.tags,
+        result: scenario.lastResult,
+        stale: scenario.resultStale,
+        spec: nodeSpec,
+        source: scenario.trace?.source,
+        canonicalResult: scenario.canonicalResult,
+        canonicalRunAt: scenario.canonicalRunAt,
+      });
+    } else if (node.type === 'Task' && nodeSpec === targetSpec) {
+      const task = node as TaskNode;
+      tasks.push({ id: task.id, doneWhen: task.doneWhen ?? '', refs: task.refs, spec: nodeSpec, status: task.status });
+      taskLines.set(task.id, task.line);
+    }
+  }
+  const coverage = computeCoverage(tasks, scenarios);
+  return Object.entries(coverage.tasks)
+    .flatMap(([taskId, entry]) => (entry.truth_issues ?? []).map((issue) => ({ taskId, issue })))
+    .map(({ taskId, issue }) => ({
+      layer: 'conformance' as const,
+      line: taskLines.get(taskId),
+      message: `${issue.code}: ${issue.message}`,
+      taskId,
+      code: issue.code,
+    }));
+}
+
 function conformanceFindings(repoRoot: string, slug: string, doc: string, next: string): MutationFinding[] {
   const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'spec-mutate-'));
   try {
     const srcDir = path.join(repoRoot, '.specs', slug);
     const dstDir = path.join(tmpRoot, '.specs', slug);
     fs.cpSync(srcDir, dstDir, { recursive: true });
-    fs.writeFileSync(path.join(dstDir, doc), next);
-    const graph = buildGraph({ repoRoot: tmpRoot, skipNdjson: true });
-    return checkConformance(graph)
-      .filter((f) => f.severity === 'error')
-      .map((f) => ({
+    const beforeGraph = buildGraph({
+      repoRoot: tmpRoot,
+      ndjsonPath: path.join(repoRoot, '.dev-pomogator', '.last-test-run.ndjson'),
+      scenarioOverlayPath: path.join(tmpRoot, '.dev-pomogator', '.scenario-results.ndjson'),
+    });
+    const graph = buildMutationGraph(tmpRoot, repoRoot, slug, doc, next);
+    const before = checkConformance(beforeGraph);
+    const after = checkConformance(graph);
+    const newErrors = deltaByKey(
+      before.filter((f) => f.severity === 'error'),
+      after.filter((f) => f.severity === 'error'),
+      conformanceKey,
+    );
+    // Task-truth findings gate textual task-status mutations. Applying them to every
+    // graph document creates a bootstrap deadlock: adding a new .feature scenario is
+    // necessarily NOT_RUN until after the write, so the door would refuse the very
+    // scenario needed to establish canonical evidence.
+    const newTruthFindings = path.basename(doc).toLowerCase() === 'tasks.md'
+      ? deltaByKey(
+          taskTruthFindings(beforeGraph, slug),
+          taskTruthFindings(graph, slug),
+          (finding) => `${finding.code}|${finding.taskId}`,
+        )
+      : [];
+    return [
+      ...newErrors.map((f) => ({
         layer: 'conformance' as const,
         line: f.location.line,
         message: `${f.code}: ${f.message}`,
-      }));
+      })),
+      ...deltaWarningFindings(before, after).map((f) => ({
+        layer: 'conformance' as const,
+        line: f.location.line,
+        message: `${f.code}: ${f.message}`,
+      })),
+      ...newTruthFindings,
+    ];
   } catch (e) {
     return [{ layer: 'conformance', message: `conformance validation failed: ${e instanceof Error ? e.message : e}` }];
   } finally {

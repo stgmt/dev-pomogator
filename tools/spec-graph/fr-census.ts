@@ -137,7 +137,7 @@ export function computeFrCensus(
       taskLikes.push({ id: t.id, doneWhen: t.doneWhen ?? '', refs: t.refs, spec: specOf(t.file) });
     } else if (n.type === 'Scenario') {
       const s = n as ScenarioNode;
-      scenLikes.push({ id: s.id, tags: s.tags, result: s.lastResult, spec: specOf(s.file) });
+      scenLikes.push({ id: s.id, tags: s.tags, result: s.lastResult, stale: s.resultStale, spec: specOf(s.file), source: s.trace?.source, canonicalResult: s.canonicalResult, canonicalRunAt: s.canonicalRunAt });
     }
   }
   const cov = computeCoverage(taskLikes, scenLikes);

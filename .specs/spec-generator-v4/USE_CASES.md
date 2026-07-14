@@ -268,6 +268,24 @@ Reconcile detects `cross-spec/stale-spec-outstanding-but-done` (spec A's README/
 
 ---
 
+## UC-24
+
+**Unified readiness answer for a spec with split evidence**
+
+A maintainer reviews a spec after implementation, but the raw surfaces disagree: task text says DONE, canonical coverage has not_run scenarios, a focused Docker run passed, and executable BDD scenarios may not match source spec scenarios.
+
+- Maintainer asks for readiness through `spec-verdict` or MCP status.
+- The system computes lanes from one graph and evidence set: structure/audit, traceability, execution, task truth, BDD source↔executable sync, semantic status, and filtered proof.
+- The result reports `OVERALL: NOT_READY` when any lane has blocking or honesty debt, even if structural traceability passes.
+- Task truth uses canonical coverage and `Done When` evidence; textual `Status: DONE` is denied/downgraded when evidence is missing.
+- BDD sync compares `.specs/<slug>/<slug>.feature` against configured executable feature paths and flags source-only/executable-only/scenario-count/tag drift unless explicitly marked.
+- Filtered Docker artifacts are shown as review evidence (`FILTERED_PROOF`) without overwriting canonical full-run coverage.
+- The response ends with one concrete next action: run full Docker BDD, attach/accept the filtered artifact, fix BDD sync drift, or reopen/downgrade tasks.
+
+**Linked stories:** US-24
+
+---
+
 ## Edge Cases
 
 ### EC-1: Spec file deleted while MCP server running

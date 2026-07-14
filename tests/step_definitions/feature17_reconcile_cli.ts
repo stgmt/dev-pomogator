@@ -75,6 +75,16 @@ Given(
   },
 );
 
+Given(
+  /^\.spec-config\.json requests the sarif output format$/,
+  function (this: ReconcileCliWorld) {
+    fs.writeFileSync(
+      path.join(this.tempDir, '.spec-config.json'),
+      JSON.stringify({ output_formats: ['yaml', 'sarif'] }, null, 2) + '\n',
+    );
+  },
+);
+
 // ── When steps ────────────────────────────────────────────────────────────────
 
 When(
@@ -138,6 +148,14 @@ When(
   /^reconcileCli is called with dry-run=false sarif=true$/,
   async function (this: ReconcileCliWorld) {
     const args = parseReconcileArgs(['--sarif']);
+    this.cliResult = await reconcileCli(args, this.tempDir);
+  },
+);
+
+When(
+  /^reconcileCli is called with dry-run=false sarif=false while config requests sarif$/,
+  async function (this: ReconcileCliWorld) {
+    const args = parseReconcileArgs([]);
     this.cliResult = await reconcileCli(args, this.tempDir);
   },
 );

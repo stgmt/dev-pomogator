@@ -14,7 +14,7 @@ description: >
   NOT use for: markdown link/anchor NAVIGATION or rename (markdown-lsp / Marksman), bulk
   broken-anchor scan+fix (anchor-fix), the honest per-task DONE verdict (get_spec_status view
   coverage / spec-status), or cross-spec drift (cross-spec-reconcile).
-allowed-tools: mcp__dev-pomogator-specs__get_trace, mcp__dev-pomogator-specs__find_by_tags, mcp__dev-pomogator-specs__conformance_check, mcp__dev-pomogator-specs__search, mcp__dev-pomogator-specs__get_node, mcp__dev-pomogator-specs__get_spec_status, mcp__dev-pomogator-specs__list_phase_tasks, mcp__dev-pomogator-specs__get_test_result, mcp__dev-pomogator-specs__find_orphans, mcp__dev-pomogator-specs__validate_anchor, mcp__dev-pomogator-specs__list_specs, mcp__dev-pomogator-specs__find_refs, mcp__dev-pomogator-specs__list_spec_docs, mcp__dev-pomogator-specs__read_spec_doc, mcp__dev-pomogator-specs__read_attachment, Bash, Read
+allowed-tools: mcp__dev-pomogator-specs__get_trace, mcp__dev-pomogator-specs__find_by_tags, mcp__dev-pomogator-specs__conformance_check, mcp__dev-pomogator-specs__search, mcp__dev-pomogator-specs__get_node, mcp__dev-pomogator-specs__get_spec_status, mcp__dev-pomogator-specs__list_phase_tasks, mcp__dev-pomogator-specs__get_test_result, mcp__dev-pomogator-specs__get_scenario_trace, mcp__dev-pomogator-specs__find_orphans, mcp__dev-pomogator-specs__validate_anchor, mcp__dev-pomogator-specs__list_specs, mcp__dev-pomogator-specs__find_refs, mcp__dev-pomogator-specs__list_spec_docs, mcp__dev-pomogator-specs__read_spec_doc, mcp__dev-pomogator-specs__read_attachment, Bash, Read
 ---
 
 # spec-graph-query — one cheatsheet for the spec-graph MCP
@@ -51,6 +51,7 @@ file-local by design (FR-36b).
 | Tasks under a phase heading | `list_phase_tasks` | `{ phase: "Phase 2: MCP server + hooks" }` |
 | Per-spec FR/AC/Scenario/Task **counts** (structural census) | `get_spec_status` | `{ view: "counts" }` (bare) or `{ spec, view: "counts" }` |
 | Honest FR-32 per-scenario buckets + per-task DONE verdict | `get_spec_status` | `{ spec: "<slug>", view: "coverage" }` |
+| Runtime trace detail for ONE scenario — run id/source, trace chunk, stale marker, failing step/error if available | `get_scenario_trace` | `{ scenario_id: "<slug>:SCEN-..." }` |
 | Does ONE anchor (compact id or slug) resolve? | `validate_anchor` | `{ anchor: "ac-7-1" }` |
 | List ONE spec's readable docs + binary attachments (recurses subdirs: ARCHITECTURE/, attachments/) (FR-39a/P19-6) | `list_spec_docs` | `{ spec: "spec-generator-v4" }` → `{ docs[], attachments[] }` |
 | Read a WHOLE spec document — prose outside graph nodes (README/DESIGN/RESUME or a SUBPATH `ARCHITECTURE/AXIS-1.md`); audited (FR-39a/b) | `read_spec_doc` | `{ spec: "...", doc: "RESUME.md" }` |
@@ -68,6 +69,7 @@ All return `{ ok, ... }`; `ok:false` (or `registered:false`) when nothing matche
 ## The 6 you already use (here for completeness)
 `get_trace` (full traceability for a node), `conformance_check` (structural findings),
 `search` (free-text over the graph), `get_test_result` (a scenario's last run),
+`get_scenario_trace` (the scenario's archived runtime chunk + failing-step detail),
 `find_orphans` (nodes with no inbound coverage), `get_spec_status` (the umbrella status tool —
 `view: "coverage"` is the **honest** FR-32 per-task DONE verdict; `view: "counts"` is just the
 structural census). **Always pass `get_spec_status({ spec: "<slug>", view: "coverage" })`** for a

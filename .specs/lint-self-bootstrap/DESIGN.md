@@ -10,9 +10,10 @@
 
 ## Компоненты
 
-- `package.json` — declares the lint script and the local lint dependency.
-- `package-lock.json` — pins the lint dependency so installs are reproducible.
-- `tools/lint-self-bootstrap/run-lint.ts` — optional lightweight wrapper for preparing lint dependencies before executing eslint.
+- `package.json` — declares the lint script and the complete local lint runtime dependency set used by `eslint.config.mjs`.
+- `package-lock.json` — pins the lint runtime dependency set so installs are reproducible.
+- `tools/lint-self-bootstrap/run-lint.cjs` — builtins-only runtime wrapper that verifies and prepares the complete lint runtime before executing eslint.
+- `tools/lint-self-bootstrap/run-lint.ts` — thin TypeScript delegate for BDD and internal callers without duplicating bootstrap logic.
 - `tests/step_definitions/feature_lint_self_bootstrap.ts` — BDD steps that exercise the real package metadata and lint bootstrap behavior.
 
 ## Где лежит реализация
@@ -33,11 +34,11 @@
 
 ## Алгоритм
 
-1. Declare eslint as a local development dependency and update the lockfile.
-2. Keep `npm run lint` on a supported path that resolves local project binaries instead of global tools.
-3. If a wrapper is needed, check whether `node_modules/.bin/eslint` exists before installing.
-4. If the binary is missing, run the supported dependency installation command and capture its result.
-5. Execute lint only after dependencies are prepared; otherwise print a clear setup error.
+1. Declare `eslint` and every package imported by `eslint.config.mjs` as local development dependencies and update the lockfile.
+2. Keep `npm run lint` on a supported wrapper path that resolves project-local tooling instead of global tools.
+3. The wrapper computes the required runtime set from package metadata (`eslint`, `@eslint/js`, `typescript-eslint`, `globals`) and checks both the executable and package directories before deciding the runtime is ready.
+4. If any required executable/package is missing, run the supported dependency installation command and capture its result.
+5. After install, re-check the whole runtime set; execute lint only after dependencies are prepared, otherwise print a clear setup error naming the missing package(s) and log location.
 
 ## API
 
@@ -94,6 +95,7 @@ Each BDD scenario creates package fixture files under `V4World.tempDir`; the exi
 |-------------|------|------------|-----------|
 | Minimal package metadata | generated under `V4World.tempDir` | Simulates package metadata with and without eslint declaration. | per-scenario |
 | Fake local eslint binary | generated under `V4World.tempDir/node_modules/.bin/` | Proves reuse path without network install. | per-scenario |
+| Fake lint runtime packages | generated under `V4World.tempDir/node_modules/{eslint,@eslint/js,typescript-eslint,globals}` | Proves the wrapper treats config-imported packages as part of readiness, not only the eslint binary. | per-scenario |
 
 ### Shared Context / State Management
 

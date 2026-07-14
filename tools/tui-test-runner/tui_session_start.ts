@@ -43,8 +43,8 @@ async function main(): Promise<void> {
     }
 
     // Check if extension is enabled
-    if (process.env.TEST_STATUSLINE_ENABLED === 'false') {
-      log('DEBUG', 'TUI test runner disabled');
+    if (process.env.TEST_STATUSLINE_ENABLED !== 'true') {
+      log('DEBUG', 'Beta TUI test runner not explicitly enabled');
       process.stdout.write('{}');
       return;
     }

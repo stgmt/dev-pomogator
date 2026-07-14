@@ -58,3 +58,10 @@
   - [x] `npm run lint` reaches eslint and reports real lint status.
   - [x] Focused Docker BDD run for `LINTBOOT` scenarios passes.
   - [x] Spec status reports no uncovered FR or untagged scenario gaps.
+
+- [x] Repair incomplete ESLint config runtime -- LINTBOOT006 — id: lintboot-06 — Status: DONE | Est: 45m
+  _Requirements: [FR-1](FR.md), [FR-2](FR.md), [FR-5](FR.md)_
+  **Done When:**
+  - [x] The wrapper treats `eslint.config.mjs` imports (`@eslint/js`, `typescript-eslint`, `globals`) as required runtime packages.
+  - [x] A partial `node_modules` with only the eslint executable triggers dependency preparation before lint execution.
+  - [x] The focused `LINTBOOT006` Docker BDD scenario passes and `npm run lint` still reaches a real lint result.

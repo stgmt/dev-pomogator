@@ -59,7 +59,7 @@ export function mapTestVerdictsToTasks(
       tasks.push({ id: t.id, doneWhen: t.doneWhen ?? '', refs: t.refs, spec: specOf(t.file) });
     } else if (n.type === 'Scenario') {
       const s = n as ScenarioNode;
-      scenarios.push({ id: s.id, tags: s.tags, result: s.lastResult, spec: specOf(s.file) });
+      scenarios.push({ id: s.id, tags: s.tags, result: s.lastResult, stale: s.resultStale, spec: specOf(s.file), source: s.trace?.source, canonicalResult: s.canonicalResult, canonicalRunAt: s.canonicalRunAt });
     }
   }
   // scenario CODE → worst verdict among tests that name it (full id or prefix).

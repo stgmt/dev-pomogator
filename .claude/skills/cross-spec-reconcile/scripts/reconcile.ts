@@ -1815,6 +1815,21 @@ function findTestsWithoutFR(
   return out;
 }
 
+/** Extract non-generic CamelCase/PascalCase concept nouns from prose. */
+export function extractConceptNouns(body: string): Set<string> {
+  const concepts = new Set<string>();
+  let m: RegExpExecArray | null;
+  CONCEPT_NOUN_RE.lastIndex = 0;
+  while ((m = CONCEPT_NOUN_RE.exec(body)) !== null) {
+    // Dogfood batch-9: skip generic spec-ecosystem nouns (Schema,
+    // Changelog, Acceptance, Criteria, ...) — they appear in
+    // nearly every spec and produce ~2200 noise findings.
+    if (CONCEPT_NOUN_STOPLIST.has(m[0])) continue;
+    concepts.add(m[0]);
+  }
+  return concepts;
+}
+
 function findConceptOverlap(
   bySlug: Map<string, { body: string; path: string }[]>,
 ): Finding[] {
@@ -1823,15 +1838,7 @@ function findConceptOverlap(
   for (const [slug, files] of bySlug.entries()) {
     const concepts = new Set<string>();
     for (const f of files) {
-      let m: RegExpExecArray | null;
-      CONCEPT_NOUN_RE.lastIndex = 0;
-      while ((m = CONCEPT_NOUN_RE.exec(f.body)) !== null) {
-        // Dogfood batch-9: skip generic spec-ecosystem nouns (Schema,
-        // Changelog, Acceptance, Criteria, ...) — they appear in
-        // nearly every spec and produce ~2200 noise findings.
-        if (CONCEPT_NOUN_STOPLIST.has(m[0])) continue;
-        concepts.add(m[0]);
-      }
+      for (const concept of extractConceptNouns(f.body)) concepts.add(concept);
     }
     conceptsBySlug.set(slug, concepts);
   }

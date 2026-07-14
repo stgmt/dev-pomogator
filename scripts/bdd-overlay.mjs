@@ -1,4 +1,3 @@
-#!/usr/bin/env node
 /**
  * Append-only scenario-result overlay writer (FR-56 / P29-1).
  *
@@ -45,7 +44,7 @@ function slugifyName(name) {
   return String(name ?? '')
     .toLowerCase()
     .normalize('NFKD')
-    .replace(/[̀-ͯ]/g, '')
+    .replace(/[\u0300-\u036f]/g, '')
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '') || 'unnamed';
 }

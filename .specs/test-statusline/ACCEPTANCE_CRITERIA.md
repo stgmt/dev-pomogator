@@ -146,7 +146,7 @@ WHEN wrapper получает StatusJSON на stdin THEN wrapper SHALL пере�
 
 ## AC-12 (FR-12): Fail-closed canonical CJS test-runner shim
 
-**Требование:** [FR-12]
+**Требование:** [FR-12](FR.md#fr-12-fail-closed-cjs-test-runner-shim-for-canonical-plugin-installs-feature9)
 
 WHEN the shim receives `--framework <name> -- <command...>` THEN it SHALL execute the command after `--`, not the wrapper option, and SHALL return the child numeric exit status unchanged.
 

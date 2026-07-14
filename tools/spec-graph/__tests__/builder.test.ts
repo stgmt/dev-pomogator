@@ -133,6 +133,128 @@ describe('buildGraph — cold-start integration', () => {
     );
   });
 
+  it('merges append-only overlay results after canonical NDJSON', () => {
+    fs.writeFileSync(
+      path.join(root, 'tests/features/auth.feature'),
+      'Feature: Auth\n  Scenario: Login SPECGEN004_529\n    Given x\n    Then y\n',
+    );
+
+    const canonical = [
+      JSON.stringify({
+        gherkinDocument: {
+          uri: 'tests/features/auth.feature',
+          feature: { children: [{ scenario: { id: 'sc-1', location: { line: 2 } } }] },
+        },
+      }),
+      JSON.stringify({ pickle: { id: 'pk-1', uri: 'tests/features/auth.feature', name: 'Login SPECGEN004_529', astNodeIds: ['sc-1'] } }),
+      JSON.stringify({ testCase: { id: 'tc-1', pickleId: 'pk-1' } }),
+      JSON.stringify({ testCaseStarted: { id: 'tcs-1', testCaseId: 'tc-1', timestamp: { seconds: 1_700_000_000, nanos: 0 } } }),
+      JSON.stringify({ testCaseFinished: { testCaseStartedId: 'tcs-1', testStepResult: { status: 'FAILED' }, timestamp: { seconds: 1_700_000_001, nanos: 0 } } }),
+    ];
+    fs.mkdirSync(path.join(root, '.dev-pomogator'), { recursive: true });
+    fs.writeFileSync(path.join(root, '.dev-pomogator', '.last-test-run.ndjson'), canonical.join('\n'));
+    fs.writeFileSync(
+      path.join(root, '.dev-pomogator', '.scenario-results.ndjson'),
+      JSON.stringify({
+        scenario_id: 'SPECGEN004_529',
+        result: 'PASSED',
+        time: '2027-01-15T08:00:01.000Z',
+        run_id: 'run-529',
+        source: 'run-bdd:filtered',
+        trace_id: '.dev-pomogator/.test-history/run-529.ndjson#tcs-529',
+        trace_file: '.dev-pomogator/.test-history/run-529.ndjson',
+        test_case_started_id: 'tcs-529',
+        uri: 'tests/features/auth.feature',
+        line: 2,
+      }) + '\n',
+    );
+
+    const graph = buildGraph({ repoRoot: root });
+    const scen = graph.nodes.get('SCEN-login-specgen004-529') as ScenarioNode | undefined;
+    expect(scen?.lastResult).toBe('PASSED');
+    expect(scen?.lastRunAt).toBe('2027-01-15T08:00:01.000Z');
+    expect(scen?.canonicalResult).toBe('FAILED');
+    expect(scen?.canonicalRunAt).toBe('2023-11-14T22:13:20.000Z');
+    expect(scen?.resultStale).toBe(false);
+    expect(scen?.trace).toMatchObject({
+      traceId: '.dev-pomogator/.test-history/run-529.ndjson#tcs-529',
+      traceFile: '.dev-pomogator/.test-history/run-529.ndjson',
+      testCaseStartedId: 'tcs-529',
+      runId: 'run-529',
+      source: 'run-bdd:filtered',
+    });
+    expect(graph.edges).toEqual(
+      expect.arrayContaining([
+        { from: 'SCEN-login-specgen004-529', to: 'RESULT-SCEN-login-specgen004-529-PASSED', type: 'last-result' },
+        { from: 'SCEN-login-specgen004-529', to: 'TRACE-.dev-pomogator/.test-history/run-529.ndjson#tcs-529', type: 'runtime-trace' },
+      ]),
+    );
+  });
+
+  it('marks an overlay pass stale when feature source is newer than the pass', () => {
+    const featurePath = path.join(root, 'tests/features/auth.feature');
+    fs.writeFileSync(
+      featurePath,
+      'Feature: Auth\n  Scenario: Login SPECGEN004_530\n    Given x\n',
+    );
+    fs.utimesSync(featurePath, new Date('2001-01-01T00:00:00.000Z'), new Date('2001-01-01T00:00:00.000Z'));
+    fs.mkdirSync(path.join(root, '.dev-pomogator'), { recursive: true });
+    fs.writeFileSync(
+      path.join(root, '.dev-pomogator', '.scenario-results.ndjson'),
+      JSON.stringify({
+        scenario_id: 'SPECGEN004_530',
+        result: 'PASSED',
+        time: '2000-01-01T00:00:00.000Z',
+        uri: 'tests/features/auth.feature',
+        line: 2,
+      }) + '\n',
+    );
+
+    const graph = buildGraph({ repoRoot: root });
+    const scen = graph.nodes.get('SCEN-login-specgen004-530') as ScenarioNode | undefined;
+    expect(scen?.lastResult).toBe('PASSED');
+    expect(scen?.resultStale).toBe(true);
+  });
+
+  it('marks an overlay pass stale when a traced step definition is newer than the pass', () => {
+    const featurePath = path.join(root, 'tests/features/auth.feature');
+    const stepPath = path.join(root, 'tests/step_definitions/auth.ts');
+    fs.mkdirSync(path.dirname(stepPath), { recursive: true });
+    fs.writeFileSync(
+      featurePath,
+      'Feature: Auth\n  Scenario: Login SPECGEN004_531\n    Given x\n',
+    );
+    fs.writeFileSync(stepPath, 'export const step = true;\n');
+    fs.utimesSync(featurePath, new Date('1999-01-01T00:00:00.000Z'), new Date('1999-01-01T00:00:00.000Z'));
+    fs.utimesSync(stepPath, new Date('2001-01-01T00:00:00.000Z'), new Date('2001-01-01T00:00:00.000Z'));
+    fs.mkdirSync(path.join(root, '.dev-pomogator', '.test-history'), { recursive: true });
+    fs.writeFileSync(
+      path.join(root, '.dev-pomogator', '.test-history', 'run-531.ndjson'),
+      [
+        JSON.stringify({ stepDefinition: { id: 'sd-1', sourceReference: { uri: 'tests/step_definitions/auth.ts' } } }),
+        JSON.stringify({ testCase: { id: 'tc-1', testSteps: [{ stepDefinitionIds: ['sd-1'] }] } }),
+        JSON.stringify({ testCaseStarted: { id: 'tcs-1', testCaseId: 'tc-1' } }),
+      ].join('\n'),
+    );
+    fs.writeFileSync(
+      path.join(root, '.dev-pomogator', '.scenario-results.ndjson'),
+      JSON.stringify({
+        scenario_id: 'SPECGEN004_531',
+        result: 'PASSED',
+        time: '2000-01-01T00:00:00.000Z',
+        uri: 'tests/features/auth.feature',
+        line: 2,
+        trace_file: '.dev-pomogator/.test-history/run-531.ndjson',
+        test_case_started_id: 'tcs-1',
+      }) + '\n',
+    );
+
+    const graph = buildGraph({ repoRoot: root });
+    const scen = graph.nodes.get('SCEN-login-specgen004-531') as ScenarioNode | undefined;
+    expect(scen?.lastResult).toBe('PASSED');
+    expect(scen?.resultStale).toBe(true);
+  });
+
   it('survives a malformed `.feature` file without aborting the rest', () => {
     fs.writeFileSync(
       path.join(root, '.specs/auth/FR.md'),

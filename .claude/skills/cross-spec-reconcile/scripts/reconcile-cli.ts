@@ -17,6 +17,8 @@
 // @see .specs/spec-generator-v4/FR.md FR-17
 // @see .claude/skills/cross-spec-reconcile/SKILL.md (## Flags)
 
+import fs from 'node:fs';
+import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { reconcileLight, type ReconcileResult, type Severity, type Finding } from './reconcile.ts';
 import { runFullMode } from './full-mode.ts';
@@ -63,7 +65,7 @@ export interface ReconcileCliResult {
   exitCode: number;
   /** Paths of YAML reports written (empty under --dry-run). */
   reportPaths: string[];
-  /** Paths of SARIF reports written (only with --sarif, not --dry-run). */
+  /** Paths of SARIF reports written (only when --sarif or config requests it, not --dry-run). */
   sarifPaths: string[];
   totalFindings: number;
   bySeverity: Record<Severity, number>;
@@ -71,6 +73,13 @@ export interface ReconcileCliResult {
 
 const USAGE =
   'usage: reconcile-cli [--mode light|full] [--dry-run] [--sarif] [--slug <name> ...]\n';
+
+function configRequestsSarif(repoRoot: string): boolean {
+  const configPath = path.join(repoRoot, '.spec-config.json');
+  if (!fs.existsSync(configPath)) return false;
+  const parsed = JSON.parse(fs.readFileSync(configPath, 'utf8')) as { output_formats?: unknown };
+  return Array.isArray(parsed.output_formats) && parsed.output_formats.includes('sarif');
+}
 
 function countSeverity(results: readonly ReconcileResult[]): Record<Severity, number> {
   const by: Record<Severity, number> = { CRITICAL: 0, WARNING: 0, INFO: 0 };
@@ -144,12 +153,13 @@ export async function reconcileCli(
       ? await runFullMode({ repoRoot, slugs, spawn })
       : reconcileLight({ repoRoot, slugs });
 
+  const sarifRequested = args.sarif || configRequestsSarif(repoRoot);
   const reportPaths: string[] = [];
   const sarifPaths: string[] = [];
   if (!args.dryRun) {
     for (const r of results) {
       reportPaths.push(writeReport(repoRoot, r));
-      if (args.sarif) sarifPaths.push(writeSarif(repoRoot, r));
+      if (sarifRequested) sarifPaths.push(writeSarif(repoRoot, r));
     }
   }
 
@@ -169,7 +179,7 @@ export async function reconcileCli(
     }
     lines.push('(--dry-run: no consistency-report.yaml written)');
   } else {
-    lines.push(`wrote ${reportPaths.length} consistency-report.yaml${args.sarif ? ` + ${sarifPaths.length} .sarif` : ''}`);
+    lines.push(`wrote ${reportPaths.length} consistency-report.yaml${sarifRequested ? ` + ${sarifPaths.length} .sarif` : ''}`);
   }
   if (bySeverity.CRITICAL > 0) {
     lines.push(`⚠️  ${bySeverity.CRITICAL} CRITICAL finding(s) — the skill body must raise the blocking AskUserQuestion (SKILL.md).`);
