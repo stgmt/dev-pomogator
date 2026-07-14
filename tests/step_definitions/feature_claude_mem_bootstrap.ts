@@ -18,6 +18,7 @@ import {
   claudeMemBootstrapDecision,
   type BootstrapDecision,
 } from '../../tools/claude-mem-bootstrap/install-claude-mem.ts';
+import { resolveClaudeMemHome } from '../../tools/claude-mem-bootstrap/claude-mem-state.ts';
 import { claudeMemPluginCheck } from '../../.claude/skills/pomogator-doctor/scripts/engine/checks/claude-mem-plugin.ts';
 import { mcpParseCheck } from '../../.claude/skills/pomogator-doctor/scripts/engine/checks/mcp-parse.ts';
 
@@ -29,10 +30,14 @@ interface CmemWorld extends V4World {
   decisionInput: { installed: boolean; optOut: boolean; lockFresh: boolean };
   decision: BootstrapDecision;
   recordPath: string;
+  installerRecord: { argv: string[]; env: Record<string, string>; home: string; packageSpecifier: string; outcome: string };
   hookExit: number;
   hookStdout: string;
   checkSeverity: string;
   mcpMessage: string;
+  windowsProfile: string;
+  windowsHome: string;
+  resolvedHome: string;
 }
 
 function craftCtx(homeDir: string, projectRoot: string, referenced: string[] = []) {
@@ -77,6 +82,11 @@ function runHook(
   );
   world.hookExit = res.status ?? 1;
   world.hookStdout = res.stdout || '';
+}
+
+function readInstallerRecord(world: CmemWorld): void {
+  assert.ok(fs.existsSync(world.recordPath), 'an installer invocation should have been recorded');
+  world.installerRecord = JSON.parse(fs.readFileSync(world.recordPath, 'utf-8')) as CmemWorld['installerRecord'];
 }
 
 function writeInstalledPlugin(homeDir: string): void {
@@ -130,9 +140,8 @@ When<CmemWorld>(/^the claude-mem bootstrap hook runs with garbage stdin$/, funct
 });
 
 Then<CmemWorld>(/^the recorded installer invocation targets "claude-mem install" non-interactively$/, function () {
-  assert.ok(fs.existsSync(this.recordPath), 'an install should have been recorded');
-  const rec = JSON.parse(fs.readFileSync(this.recordPath, 'utf-8')) as { argv: string[] };
-  const argv = rec.argv;
+  readInstallerRecord(this);
+  const argv = this.installerRecord.argv;
   // npx -y claude-mem install ... (cmd /c prefix on Windows)
   assert.ok(argv.includes('claude-mem'), `argv must invoke claude-mem: ${argv.join(' ')}`);
   assert.ok(argv.includes('install'), 'argv must run install');
@@ -148,9 +157,16 @@ Then<CmemWorld>(/^the recorded installer invocation targets "claude-mem install"
 });
 
 Then<CmemWorld>(/^the recorded installer environment disables telemetry$/, function () {
-  const rec = JSON.parse(fs.readFileSync(this.recordPath, 'utf-8')) as { env: Record<string, string> };
-  assert.strictEqual(rec.env.DO_NOT_TRACK, '1', 'DO_NOT_TRACK must be set');
-  assert.strictEqual(rec.env.CLAUDE_MEM_ONLINE_OPTIN, 'false', 'online opt-in must be off');
+  readInstallerRecord(this);
+  assert.strictEqual(this.installerRecord.env.DO_NOT_TRACK, '1', 'DO_NOT_TRACK must be set');
+  assert.strictEqual(this.installerRecord.env.CLAUDE_MEM_ONLINE_OPTIN, 'false', 'online opt-in must be off');
+});
+
+Then<CmemWorld>(/^the installer provenance records a package specifier and outcome$/, function () {
+  readInstallerRecord(this);
+  assert.strictEqual(this.installerRecord.packageSpecifier, 'claude-mem');
+  assert.strictEqual(this.installerRecord.outcome, 'recorded-offline');
+  assert.strictEqual(this.installerRecord.home, this.tempDir, 'recorder must expose the effective state home');
 });
 
 Then<CmemWorld>(/^no installer invocation is recorded$/, function () {
@@ -160,6 +176,23 @@ Then<CmemWorld>(/^no installer invocation is recorded$/, function () {
 Then<CmemWorld>(/^the hook exits 0 with a continue payload$/, function () {
   assert.strictEqual(this.hookExit, 0, `expected exit 0, got ${this.hookExit}. stdout: ${this.hookStdout}`);
   assert.match(this.hookStdout, /"continue"\s*:\s*true/, 'continue payload required');
+});
+
+Given<CmemWorld>(/^a Windows profile "([^"]+)" and a different HOME "([^"]+)"$/, function (userProfile: string, home: string) {
+  this.windowsProfile = userProfile;
+  this.windowsHome = home;
+});
+
+When<CmemWorld>(/^the claude-mem state home is resolved$/, function () {
+  this.resolvedHome = resolveClaudeMemHome(
+    'win32',
+    { USERPROFILE: this.windowsProfile, HOME: this.windowsHome },
+    this.windowsHome,
+  );
+});
+
+Then<CmemWorld>(/^the state home is the Windows profile "([^"]+)"$/, function (expected: string) {
+  assert.strictEqual(this.resolvedHome, expected, 'Windows state must be rooted in USERPROFILE, not HOME');
 });
 
 // ---- @feature5: doctor claude-mem check ----

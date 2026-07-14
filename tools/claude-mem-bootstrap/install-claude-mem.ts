@@ -24,6 +24,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { claudeMemPaths, resolveClaudeMemHome } from './claude-mem-state.ts';
 import { log as logShared } from '../_shared/hook-utils.ts';
 
 const LOG_PREFIX = 'claude-mem-bootstrap';
@@ -100,7 +101,7 @@ export function claudeMemBootstrapDecision(state: {
  */
 export function isClaudeMemInstalled(homeDir: string): boolean {
   try {
-    const manifest = path.join(homeDir, '.claude', 'plugins', 'installed_plugins.json');
+    const manifest = claudeMemPaths(homeDir).manifest;
     const raw = fs.readFileSync(manifest, 'utf-8');
     const data = JSON.parse(raw) as { plugins?: Record<string, unknown[]> };
     const plugins = data.plugins ?? {};
@@ -113,18 +114,15 @@ export function isClaudeMemInstalled(homeDir: string): boolean {
     /* missing/malformed → fall through to worker-file check */
   }
   try {
-    const memDir = path.join(homeDir, '.claude-mem');
-    return (
-      fs.existsSync(path.join(memDir, '.worker.pid')) ||
-      fs.existsSync(path.join(memDir, 'claude-mem.db'))
-    );
+    const paths = claudeMemPaths(homeDir);
+    return fs.existsSync(paths.workerPid) || fs.existsSync(paths.database);
   } catch {
     return false;
   }
 }
 
 function lockPath(homeDir: string): string {
-  return path.join(homeDir, '.dev-pomogator', '.claude-mem-bootstrap.lock');
+  return claudeMemPaths(homeDir).lock;
 }
 
 export function lockIsFresh(homeDir: string, now: number, backoffMs = BACKOFF_MS): boolean {
@@ -194,7 +192,7 @@ async function main(): Promise<void> {
   await drainStdin();
 
   const optOut = (process.env.DEV_POMOGATOR_CLAUDE_MEM ?? '').toLowerCase() === 'off';
-  const homeDir = os.homedir();
+  const homeDir = resolveClaudeMemHome(process.platform, process.env, os.homedir());
   const installed = optOut ? false : isClaudeMemInstalled(homeDir);
   const lockFresh = optOut || installed ? false : lockIsFresh(homeDir, Date.now());
 

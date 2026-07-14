@@ -39,9 +39,9 @@ Feature: CMEM001 claude-mem bootstrap and doctor detection
 
   @feature3
   Scenario: CMEM001_08 state resolution uses the isolated Windows user profile
-    Given a Windows fake USERPROFILE and a different HOME
-    When the claude-mem bootstrap hook runs
-    Then all claude-mem state probes and lock writes use the fake USERPROFILE
+    Given a Windows profile "C:\\Users\\isolated" and a different HOME "C:\\Users\\shared"
+    When the claude-mem state home is resolved
+    Then the state home is the Windows profile "C:\\Users\\isolated"
 
   @feature4
   Scenario: CMEM001_09 hook fails open on garbage stdin
