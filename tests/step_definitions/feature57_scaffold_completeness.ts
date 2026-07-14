@@ -78,6 +78,8 @@ interface ScaffoldWorld extends V4World {
   sentinels?: Set<string>;
   scanFindings?: Array<{ line: number; sentinel: string }>;
   auditFindings?: Array<{ check: string; severity: string; message: string }>;
+  confirmStopResult?: { status: number | null; stdout: string; stderr: string };
+  confirmStopProgressPath?: string;
   verdictText?: string;
   createdSpecDirs?: string[];
   templateOwnership?: TemplateOwnershipResult;
@@ -226,6 +228,37 @@ Then(/^the scaffold classifier reports exactly one finding naming that placehold
 
 Then(/^the scaffold classifier reports zero findings$/, function (this: ScaffoldWorld) {
   assert.equal(this.scanFindings!.length, 0, JSON.stringify(this.scanFindings));
+});
+
+// ── SPECGEN004_507 — ConfirmStop gates phase-local structural errors ─────────
+
+Given(/^a Requirements-stop fixture with a template placeholder and a broken phase link$/, function (this: ScaffoldWorld) {
+  const slug = 'fr57-confirm-stop';
+  const dir = makeSpecDir.call(this, slug, {
+    'REQUIREMENTS.md': `# ${STUB_SENTINEL}\n\n[FR-1](FR.md#missing-anchor)\n`,
+    'DESIGN.md': '# Design\n\n## BDD Test Infrastructure\n\n**Classification:** TEST_DATA_NONE\n',
+  }, false);
+  this.confirmStopProgressPath = path.join(dir, '.progress.json');
+});
+
+When(/^spec-status confirms the Requirements STOP on that fixture$/, function (this: ScaffoldWorld) {
+  const slug = path.basename((this.createdSpecDirs ?? []).at(-1)!);
+  const r = spawnSync(process.execPath, [SPECS_GENERATOR_CORE, 'spec-status', '-Path', `.specs/${slug}`, '-ConfirmStop', 'Requirements', '-Format', 'json'], {
+    encoding: 'utf-8', cwd: REPO_ROOT, timeout: 60_000,
+  });
+  this.confirmStopResult = { status: r.status, stdout: r.stdout ?? '', stderr: r.stderr ?? '' };
+});
+
+Then(/^ConfirmStop fails without recording the Requirements stop$/, function (this: ScaffoldWorld) {
+  assert.notEqual(this.confirmStopResult!.status, 0, `ConfirmStop unexpectedly succeeded: ${this.confirmStopResult!.stdout}`);
+  const progress = JSON.parse(fs.readFileSync(this.confirmStopProgressPath!, 'utf-8'));
+  assert.notEqual(progress.phases.Requirements.stopConfirmed, true);
+});
+
+Then(/^the ConfirmStop error names the placeholder and broken link$/, function (this: ScaffoldWorld) {
+  const output = `${this.confirmStopResult!.stdout}\n${this.confirmStopResult!.stderr}`;
+  assert.match(output, /placeholder.*\{Краткое описание фичи\}/i);
+  assert.match(output, /broken link.*FR\.md#missing-anchor/i);
 });
 
 // ── SPECGEN004_472 — claims-done stub README → ERROR ────────────────────────

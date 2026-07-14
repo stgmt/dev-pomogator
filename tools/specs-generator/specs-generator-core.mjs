@@ -872,6 +872,7 @@ async function commandValidateSpec(argv) {
   // alone into a tmp repo and a top-level import would crash with ERR_MODULE_NOT_FOUND.
   const { marksmanSlug } = await import('../anchor-integrity/marksman-slug.mjs');
   const { checkLinks } = await import('../anchor-integrity/check.mjs');
+  const { extractTemplateSentinels, scanDocumentForScaffold } = await import('./scaffold-sentinels.mjs');
   const options = parseArgs(argv, [
     { flag: '-Path', key: 'inputPath', type: 'string', required: true },
     { flag: '-ErrorsOnly', key: 'errorsOnly', type: 'boolean', default: false },
@@ -926,6 +927,7 @@ async function commandValidateSpec(argv) {
   let filesWithErrors = 0;
   let filesWithWarnings = 0;
   let totalPlaceholders = 0;
+  const scaffoldSentinels = extractTemplateSentinels(path.join(SCRIPT_DIR, 'templates'));
 
   log('INFO', `Validating: ${options.inputPath}`);
   log('INFO', 'Checking STRUCTURE rule...');
@@ -962,16 +964,12 @@ async function commandValidateSpec(argv) {
     let fileHasErrors = false;
     let fileHasWarnings = false;
 
-    const placeholderMatches = content.match(/\{[^}]+\}/g) || [];
-    for (const placeholder of placeholderMatches) {
-      if (isJsonLikePlaceholder(placeholder)) {
-        continue;
-      }
-
+    for (const { line, sentinel } of scanDocumentForScaffold(content, scaffoldSentinels)) {
       warnings.push({
         file: fileName,
+        line,
         rule: 'PLACEHOLDER',
-        message: `Unfilled placeholder found: ${placeholder}`,
+        message: `Unfilled placeholder found: ${sentinel}`,
       });
       fileHasWarnings = true;
       totalPlaceholders += 1;
@@ -1321,7 +1319,42 @@ async function commandValidateSpec(argv) {
   return isValid ? 0 : 1;
 }
 
-function commandSpecStatus(argv) {
+async function validateStopPhase(targetDir, phaseFiles) {
+  const { extractTemplateSentinels, scanDocumentForScaffold } = await import('./scaffold-sentinels.mjs');
+  const { checkLinks } = await import('../anchor-integrity/check.mjs');
+  const findings = [];
+  const phaseFileSet = new Set(phaseFiles);
+  const sentinels = extractTemplateSentinels(path.join(SCRIPT_DIR, 'templates'));
+  const markdownFiles = listDirectoryEntries(targetDir, 'file')
+    .map((entry) => entry.name)
+    .filter((fileName) => fileName.endsWith('.md'));
+
+  for (const fileName of phaseFiles) {
+    const content = safeReadText(path.join(targetDir, fileName));
+    if (!content) {
+      findings.push(`${fileName}: required phase document is missing or empty`);
+      continue;
+    }
+    for (const { line, sentinel } of scanDocumentForScaffold(content, sentinels)) {
+      findings.push(`${fileName}:${line}: unfilled placeholder ${sentinel}`);
+    }
+  }
+
+  const filesForLinks = markdownFiles.map((fileName) => ({
+    file: fileName,
+    content: safeReadText(path.join(targetDir, fileName)) ?? '',
+  }));
+  for (const broken of checkLinks(filesForLinks)) {
+    if (phaseFileSet.has(broken.file)) {
+      const target = broken.targetRaw ? `${broken.targetRaw}#${broken.brokenAnchor}` : `#${broken.brokenAnchor}`;
+      findings.push(`${broken.file}:${broken.line}: broken link ${target}`);
+    }
+  }
+
+  return findings;
+}
+
+async function commandSpecStatus(argv) {
   const options = parseArgs(argv, [
     { flag: '-Path', key: 'inputPath', type: 'string', required: true },
     { flag: '-Brief', key: 'brief', type: 'boolean', default: false },
@@ -1483,6 +1516,17 @@ function commandSpecStatus(argv) {
         log('ERROR', 'ConfirmStop Requirements blocked: DESIGN.md missing BDD Test Infrastructure Classification');
         return 1;
       }
+    }
+
+    const phaseFiles = phases[options.confirmStop] ?? [];
+    const validationFindings = await validateStopPhase(targetDir, phaseFiles);
+    if (validationFindings.length > 0) {
+      process.stderr.write(
+        `ERROR: ConfirmStop ${options.confirmStop} blocked by phase validation:\n` +
+        validationFindings.map((finding) => `- ${finding}`).join('\n') + '\n',
+      );
+      log('ERROR', `ConfirmStop ${options.confirmStop} blocked by ${validationFindings.length} validation finding(s)`);
+      return 1;
     }
 
     const phaseState = progressState.phases[options.confirmStop];
