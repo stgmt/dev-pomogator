@@ -17,7 +17,7 @@
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { execSync } from "node:child_process";
+import { execFileSync, execSync } from "node:child_process";
 
 // ============================================================================
 // Types
@@ -277,14 +277,86 @@ export function hasUncommittedChanges(cwd: string): boolean {
   }
 }
 
+/**
+ * A path whose FIRST component is an unexpanded shell/Windows variable — `%windir%`,
+ * `${CLAUDE_PROJECT_DIR}`, `$HOME`. Such a directory is never the agent's work: it is created
+ * when a tool builds a path out of a variable that was never expanded, or runs with its cwd
+ * collapsed to somewhere else entirely.
+ *
+ * This is not defensive theatre. `%windir%/Panther/UnattendGC/{diagerr,diagwrn}.xml` — real
+ * Windows Setup logs — reached `main` in fec62086 exactly this way and then shipped to every
+ * user, because the marketplace serves this repo as-is.
+ */
+export function isStrayVariablePath(p: string): boolean {
+  const first = p.split(/[/\\]/)[0] ?? "";
+  return /^%.*%$/.test(first) || /^\$/.test(first);
+}
+
+/**
+ * Paths git would stage right now: tracked modifications, deletions AND untracked files.
+ * `--porcelain -z` gives NUL-separated, unquoted paths, so filenames with spaces or
+ * non-ASCII survive intact (plain `--porcelain` would quote them and we would stage a
+ * literal `"…"` path).
+ */
+export function collectStageablePaths(cwd: string): string[] {
+  const raw = execFileSync("git", ["status", "--porcelain", "-z"], {
+    cwd,
+    encoding: "utf-8",
+    timeout: 10000,
+  });
+
+  const fields = raw.split("\0").filter((f) => f.length > 0);
+  const paths: string[] = [];
+  for (let i = 0; i < fields.length; i++) {
+    const entry = fields[i];
+    const status = entry.slice(0, 2);
+    paths.push(entry.slice(3));
+    // A rename/copy entry is followed by its ORIGIN path in the next NUL field; stage both so
+    // the rename is recorded rather than showing up as add+delete.
+    if (status.includes("R") || status.includes("C")) {
+      const origin = fields[++i];
+      if (origin) paths.push(origin);
+    }
+  }
+  return paths;
+}
+
 export function gitCommit(cwd: string, message: string, bypassHooksOnFailure: boolean = true): GitCommitResult {
-  // Stage all changes (failure here is not recoverable)
+  // Stage by EXPLICIT path, never `git add -A`.
+  //
+  // `git add -A` is forbidden by this repo's own no-git-add-all-shared-tree rule, and for good
+  // reason: it sweeps in whatever happens to be sitting in the tree — a parallel session's files,
+  // or junk a cwd-collapsed tool dropped at the root. auto-commit ran it anyway, which is how
+  // `%windir%/` was committed and shipped. Enumerate, drop stray-variable paths, stage the rest.
+  //
+  // Failure here is not recoverable.
+  let staged: string[];
   try {
-    execSync("git add -A", {
-      cwd,
-      encoding: "utf-8",
-      timeout: 10000,
-    });
+    const candidates = collectStageablePaths(cwd);
+    const stray = candidates.filter(isStrayVariablePath);
+    staged = candidates.filter((p) => !isStrayVariablePath(p));
+
+    if (stray.length > 0) {
+      // Never drop paths silently — a skipped file must be visible, not inferred.
+      process.stderr.write(
+        `auto-commit: refusing to stage ${stray.length} stray path(s) built from an unexpanded ` +
+          `variable: ${stray.join(", ")}\n`,
+      );
+    }
+    if (staged.length === 0) {
+      throw new Error("nothing stageable after filtering");
+    }
+
+    // Windows caps a command line at ~32k chars, and a large session can touch hundreds of
+    // files — stage in batches so a big changeset does not fail where `-A` used to succeed.
+    const BATCH = 100;
+    for (let i = 0; i < staged.length; i += BATCH) {
+      execFileSync("git", ["add", "--", ...staged.slice(i, i + BATCH)], {
+        cwd,
+        encoding: "utf-8",
+        timeout: 10000,
+      });
+    }
   } catch (e) {
     throw new Error(`Failed to stage changes: ${e instanceof Error ? e.message : String(e)}`);
   }

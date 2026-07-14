@@ -157,6 +157,14 @@ fi
 mkdir -p "$(dirname "$RESULT_REL")"
 : > "$RESULT_REL"
 
+# ...but the file is pre-created by the HOST, under the HOST's uid, while the container writes
+# it as `testuser` (uid 1001). When those uids differ — a root shell in WSL, a CI runner, any
+# host uid != 1001 — the formatter fails with EACCES and the BDD suite does not run AT ALL.
+# The bind mount carries host permissions verbatim, so the only fix on this side is to make the
+# pre-created target writable by whoever the container turns out to be.
+chmod a+rw "$RESULT_REL" 2>/dev/null || true
+chmod a+rwx "$(dirname "$RESULT_REL")" 2>/dev/null || true
+
 CONFIG_MOUNT_ARGS=()
 if [ -n "$EXPLICIT_CONFIG_PATH" ] && [ -f "$EXPLICIT_CONFIG_PATH" ] && [[ "$EXPLICIT_CONFIG_PATH" == .dev-pomogator/.tmp/* ]]; then
   config_dir=$(dirname "$EXPLICIT_CONFIG_PATH")
