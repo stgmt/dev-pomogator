@@ -147,6 +147,11 @@ export function parseGherkin(source: string, relativePath: string): ParserOutput
     const node: ScenarioNode = {
       id: scenarioId,
       type: 'Scenario',
+      // The raw Gherkin scenario name, kept verbatim (not slugified into the id)
+      // so a test result can be reconciled BY NAME when the executed feature and
+      // the spec's canonical feature live at different paths/lines — the case
+      // where the `${uri}:${line}` join alone silently drops every result.
+      title: scenario.name,
       file: relativePath,
       line,
       tags,

@@ -145,6 +145,14 @@ export interface ScenarioTraceRef {
 
 export interface ScenarioNode extends NodeBase {
   type: 'Scenario';
+  /**
+   * Raw Gherkin scenario name, kept verbatim (the id only carries a slugified
+   * form). Used to reconcile a test result BY NAME when the executed feature and
+   * the spec's canonical mirror feature live at different paths/lines — where the
+   * `${uri}:${line}` join alone drops every result (features-in-test-project +
+   * tag-mapped-to-spec layout).
+   */
+  title?: string;
   tags: string[];
   pickleId?: string;
   steps: ScenarioStep[];
