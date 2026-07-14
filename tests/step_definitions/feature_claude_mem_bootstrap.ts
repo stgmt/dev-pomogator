@@ -8,8 +8,9 @@
  *   - the real doctor checks `claudeMemPluginCheck` + `mcpParseCheck` run with a crafted ctx.
  * Per-scenario isolation comes from the V4World fresh `tempDir`, used as a fake HOME.
  */
-import { Given, When, Then } from '@cucumber/cucumber';
-import { spawnSync } from 'node:child_process';
+import { After, Given, When, Then } from '@cucumber/cucumber';
+import { spawn, spawnSync } from 'node:child_process';
+import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import assert from 'node:assert/strict';
@@ -38,6 +39,47 @@ interface CmemWorld extends V4World {
   windowsProfile: string;
   windowsHome: string;
   resolvedHome: string;
+  workerServer: http.Server;
+  workerPort: number;
+  healthHookExit: number;
+  healthHookStdout: string;
+  healthHookStderr: string;
+  healthHookElapsedMs: number;
+}
+
+After(async function (this: CmemWorld) {
+  await closeWorker(this);
+});
+
+function workerSettings(world: CmemWorld): void {
+  const settingsDir = path.join(world.tempDir, '.claude-mem');
+  fs.mkdirSync(settingsDir, { recursive: true });
+  fs.writeFileSync(path.join(settingsDir, 'settings.json'), JSON.stringify({ CLAUDE_MEM_WORKER_PORT: world.workerPort }));
+}
+
+async function closeWorker(world: CmemWorld): Promise<void> {
+  if (world.workerServer?.listening) await new Promise<void>((resolve) => world.workerServer.close(() => resolve()));
+}
+
+async function invokeHealthHook(world: CmemWorld): Promise<void> {
+  const started = Date.now();
+  const child = spawn(process.execPath, ['-e', "require(require('path').resolve('tools/_shared/bootstrap.cjs'))", 'tools/claude-mem-health/health-check.ts'], {
+    cwd: REPO,
+    env: { ...process.env, HOME: world.tempDir, CLAUDE_MEM_REAPER_HOME: world.tempDir, CLAUDE_MEM_REAPER_SNAPSHOT: JSON.stringify({ platform: 'win32', portListening: false, portOwnerAlive: false, procs: [] }) },
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+  let stdout = '';
+  let stderr = '';
+  child.stdout.on('data', (chunk: Buffer) => { stdout += chunk.toString(); });
+  child.stderr.on('data', (chunk: Buffer) => { stderr += chunk.toString(); });
+  await new Promise<void>((resolve) => child.once('close', () => resolve()));
+  world.healthHookElapsedMs = Date.now() - started;
+  world.healthHookExit = child.exitCode ?? -1;
+  world.healthHookStdout = stdout;
+  world.healthHookStderr = stderr;
+  // The feature's shared hook assertion predates the health scenarios.
+  world.hookExit = world.healthHookExit;
+  world.hookStdout = world.healthHookStdout;
 }
 
 function craftCtx(homeDir: string, projectRoot: string, referenced: string[] = []) {
@@ -189,6 +231,46 @@ When<CmemWorld>(/^the claude-mem state home is resolved$/, function () {
     { USERPROFILE: this.windowsProfile, HOME: this.windowsHome },
     this.windowsHome,
   );
+});
+
+Given<CmemWorld>(/^a local claude-mem worker that is (refusing connections|returning non-200|accepting silently)$/, async function (workerState: string) {
+  const server = http.createServer((_req, res) => {
+    if (workerState === 'returning non-200') {
+      res.writeHead(503, { 'content-type': 'application/json' });
+      res.end(JSON.stringify({ error: 'unavailable' }));
+    }
+  });
+  if (workerState === 'refusing connections') {
+    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', () => server.close(() => resolve())));
+  } else {
+    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+    this.workerServer = server;
+    this.workerPort = (server.address() as { port: number }).port;
+  }
+  if (workerState === 'refusing connections') {
+    const probe = http.createServer();
+    await new Promise<void>((resolve) => probe.listen(0, '127.0.0.1', () => {
+      this.workerPort = (probe.address() as { port: number }).port;
+      probe.close(() => resolve());
+    }));
+  }
+  workerSettings(this);
+});
+
+When<CmemWorld>(/^the bounded claude-mem health hook runs$/, async function () {
+  await invokeHealthHook(this);
+});
+
+Then<CmemWorld>(/^no claude-mem context is emitted$/, function () {
+  const payload = JSON.parse(this.healthHookStdout) as { continue?: unknown; suppressOutput?: unknown; additionalContext?: unknown };
+  assert.deepStrictEqual(payload, { continue: true, suppressOutput: true }, 'fail-open health hook must only emit its continue control payload');
+  assert.strictEqual(payload.additionalContext, undefined, 'fail-open health hook must not fabricate memory context');
+  assert.strictEqual(this.healthHookStderr.trim(), '', 'fail-open health hook must not emit an error payload');
+});
+
+Then<CmemWorld>(/^no worker request handle remains$/, function () {
+  assert.strictEqual(this.healthHookExit, 0);
+  assert.ok(this.healthHookElapsedMs < 5_000, `health hook ran ${this.healthHookElapsedMs}ms rather than releasing its request`);
 });
 
 Then<CmemWorld>(/^the state home is the Windows profile "([^"]+)"$/, function (expected: string) {

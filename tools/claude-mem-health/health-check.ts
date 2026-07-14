@@ -436,7 +436,10 @@ export async function reapWedgedWorker(homeDir?: string): Promise<ReaperVerdict>
       f = { ...EMPTY_SNAPSHOT };
     }
     platform = f.platform ?? 'win32';
-    healthOk = f.healthOk ?? false;
+    // A snapshot models Windows-only process inspection in cross-platform BDD.
+    // Omitting healthOk deliberately preserves the real HTTP probe, so the fixture
+    // cannot fake a refused, non-200, or stalled worker into a green health result.
+    healthOk = typeof f.healthOk === 'boolean' ? f.healthOk : await probeHealth(readWorkerPort(home));
     snap = { ...EMPTY_SNAPSHOT, ...f, procs: normalizeProcs(f.procs) };
   } else {
     if (platform !== 'win32') {
