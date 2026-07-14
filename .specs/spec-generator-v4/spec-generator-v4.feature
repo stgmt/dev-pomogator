@@ -2908,6 +2908,20 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
   Scenario: SPECGEN004_470 addTaskIdsAnyHeader preserves every Status token byte-for-byte
     Then every Status token is byte-unchanged across 40 generated docs
 
+  @feature54
+  Scenario: SPECGEN004_471 addTaskIds inserts an id before a READY status on a Tnn header
+    Given a loose TASKS line — `a READY Tnn header missing its id`
+    When the addTaskIds rework runs over it
+    Then the rework adds 1 id
+    And the reworked content contains `T03: ready for verification — id: t03 — Status: READY`
+
+  @feature54
+  Scenario: SPECGEN004_472 addTaskIdsAnyHeader inserts an id before a READY status on a title-only header
+    Given a loose TASKS line — `a READY title-only header missing its id`
+    When the addTaskIdsAnyHeader rework runs over it
+    Then the rework adds 1 id
+    And the reworked content contains `Prepare release notes — id: t01 — Status: READY`
+
   # --- hooks-stdin-e2e: real-stdin guard/push + MCP bundle ---
 
   @feature5
@@ -3214,6 +3228,13 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Given a scaffold-sentinel fixture document with lowercase single-token braces, a fenced code block, an inline code span, and an empty JSON brace
     When the scaffold-sentinel classifier scans the fixture document
     Then the scaffold classifier reports zero findings
+
+  @feature57
+  Scenario: SPECGEN004_507 ConfirmStop blocks phase-local placeholders and broken links
+    Given a Requirements-stop fixture with a template placeholder and a broken phase link
+    When spec-status confirms the Requirements STOP on that fixture
+    Then ConfirmStop fails without recording the Requirements stop
+    And the ConfirmStop error names the placeholder and broken link
 
   @feature57
   Scenario: SPECGEN004_472 audit emits SCAFFOLD_INCOMPLETE ERROR for a claims-done spec with a stub README
