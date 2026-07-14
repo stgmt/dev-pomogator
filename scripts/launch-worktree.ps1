@@ -59,7 +59,8 @@ $MainRepoRoot = git rev-parse --show-toplevel 2>$null
 if (-not $MainRepoRoot) {
     $MainRepoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 }
-$MainRepoRoot = (Resolve-Path $MainRepoRoot).Path
+# .ProviderPath, not .Path: UNC paths otherwise carry a PowerShell provider prefix.
+$MainRepoRoot = [System.IO.Path]::GetFullPath((Resolve-Path -LiteralPath $MainRepoRoot).ProviderPath)
 
 $WorktreeBaseDir = Split-Path -Parent $MainRepoRoot
 $RepoName = Split-Path -Leaf $MainRepoRoot

@@ -732,7 +732,7 @@ export async function runHook(rawInput: string, argv = process.argv): Promise<Re
   // A UTF-8 BOM on stdin (Windows shells add one when piping) made JSON.parse throw,
   // main() swallowed it, and the watchdog silently approved — a guard that fails open
   // on a stray byte is not a guard. Strip it rather than lose the payload.
-  const cleaned = rawInput.replace(/^﻿/, '').trim();
+  const cleaned = rawInput.replace(/^\uFEFF/, '').trim();
   const input = cleaned ? JSON.parse(cleaned) as HookInput : {};
   const transcriptPath = input.transcript_path ?? input.transcriptPath;
   if (!transcriptPath || !fs.existsSync(transcriptPath)) {

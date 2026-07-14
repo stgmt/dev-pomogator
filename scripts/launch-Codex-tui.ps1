@@ -35,24 +35,71 @@ function Write-LaunchLog {
     try { Add-Content -Path $script:LaunchLogFile -Value "[$ts] $Message" -Encoding UTF8 } catch {}
 }
 
+# --- UNC-safe path handling ---------------------------------------------------------------------
+# See scripts/launch-claude-tui.ps1 for the full rationale. In short: PathInfo.Path is
+# PROVIDER-QUALIFIED for UNC ("Microsoft.PowerShell.Core\FileSystem::\\srv\share"), which wt.exe -d
+# parses as a RELATIVE path (dying with 0x8007010b) and which lands the trust entry under a phantom
+# key. .ProviderPath is the bare path and is identical to .Path for drive-backed paths, so this is a
+# no-op off UNC. GetFullPath normalizes separators (git reports //server/share) without disturbing
+# POSIX paths under pwsh/Linux.
+function Resolve-FsPath {
+    param([Parameter(Mandatory)][string]$Path)
+    $resolved = (Resolve-Path -LiteralPath $Path).ProviderPath
+    return [System.IO.Path]::GetFullPath($resolved)
+}
+
+# cmd.exe cannot hold a UNC working directory (it defaults to C:\Windows), so UNC projects get a
+# PowerShell-hosted pane. Two leading separators only: a POSIX /root/project must NOT match.
+function Test-UncPath {
+    param([string]$Path)
+    return [bool]($Path -match '^[\\/]{2}[^\\/]')
+}
+
+function Quote-PsSingle {
+    param([string]$Value)
+    return "'" + ($Value -replace "'", "''") + "'"
+}
+
+# Inside a UNC pane a .cmd/.bat shim re-enters cmd.exe, which refuses the UNC working directory and
+# drops the child into C:\Windows (verified with a node child: process.cwd()===C:\Windows). npm's
+# cmd-shim writes a sibling .ps1 next to every .cmd; PowerShell runs it in-process and the UNC cwd
+# survives. See scripts/launch-claude-tui.ps1 for the full rationale.
+function Resolve-UncSafeExecutable {
+    param([string]$Path, [string]$Label)
+    if ($Path -notmatch '\.(cmd|bat)$') { return $Path }
+    $ps1Shim = [System.IO.Path]::ChangeExtension($Path, '.ps1')
+    if (Test-Path -LiteralPath $ps1Shim) {
+        Write-LaunchLog "UNC: $Label is a cmd shim; using its sibling PowerShell shim instead: $ps1Shim"
+        return $ps1Shim
+    }
+    # ASCII only in code lines: powershell.exe 5.1 decodes a BOM-less file as Windows-1252, where the
+    # trailing byte of a UTF-8 em-dash becomes U+201D, which the parser accepts as a closing double
+    # quote - silently truncating the string and breaking the whole script.
+    Write-LaunchLog "UNC: WARNING $Label is a cmd shim ($Path) with no sibling .ps1 - cmd.exe cannot hold a UNC cwd, so the session may start in C:\Windows"
+    return $Path
+}
+
 function Get-CodexExitLogBatch {
     param([string]$Dir)
+    $escapedDir = $Dir -replace '%', '%%'
+    $escapedLog = $script:LaunchLogFile -replace '%', '%%'
     @"
-set CM_EXIT=%ERRORLEVEL%
-if not "%CM_EXIT%"=="0" (
-  echo [%date% %time%] ERROR: codex exited with code %CM_EXIT% (dir=$Dir) >> "$script:LaunchLogFile"
+set CM_EXIT=%%ERRORLEVEL%%
+if not "%%CM_EXIT%%"=="0" (
+  echo [%%date%% %%time%%] ERROR: codex exited with code %%CM_EXIT%% (dir=$escapedDir) >> "$escapedLog"
 ) else (
-  echo [%date% %time%] codex exited 0 (dir=$Dir) >> "$script:LaunchLogFile"
+  echo [%%date%% %%time%%] codex exited 0 (dir=$escapedDir) >> "$escapedLog"
 )
 "@
 }
 
 function Quote-BatchToken {
     param([string]$Value)
-    if ($Value -match '[\s&()^]') {
-        return '"' + ($Value -replace '"', '""') + '"'
+    $escaped = $Value -replace '%', '%%'
+    if ($escaped -match '[\s&()^]') {
+        return '"' + ($escaped -replace '"', '""') + '"'
     }
-    return $Value
+    return $escaped
 }
 
 function Format-BatchCommand {
@@ -60,6 +107,18 @@ function Format-BatchCommand {
         [string]$Executable,
         [string[]]$Arguments = @()
     )
+
+    # cmd.exe cannot EXECUTE a .ps1 - it falls through to the shell file association and the pane
+    # hangs instead of starting the CLI. npm's cmd-shim installs x.cmd AND x.ps1 side by side and
+    # Get-Command returns the .ps1 (ExternalScript outranks Application), so every npm-installed CLI
+    # arrives here as a .ps1. See scripts/launch-claude-tui.ps1 for the full rationale.
+    if ($Executable -match '\.ps1$') {
+        $command = 'powershell -NoProfile -ExecutionPolicy Bypass -File ' + (Quote-BatchToken $Executable)
+        if ($Arguments.Count -gt 0) {
+            $command += ' ' + ($Arguments -join ' ')
+        }
+        return $command
+    }
 
     # Batch shims (.cmd/.bat) must be invoked with CALL from another .cmd,
     # otherwise the launcher never resumes to log CM_EXIT after the CLI exits.
@@ -69,6 +128,20 @@ function Format-BatchCommand {
         $command += ' ' + ($Arguments -join ' ')
     }
     return $command
+}
+
+# Mirror image of Resolve-UncSafeExecutable, for the cmd-hosted panes: a cmd pane needs something
+# CALL can run, so prefer the sibling .cmd when Get-Command handed back a .ps1 shim.
+function Resolve-BatchSafeExecutable {
+    param([string]$Path, [string]$Label)
+    if ($Path -notmatch '\.ps1$') { return $Path }
+    $cmdShim = [System.IO.Path]::ChangeExtension($Path, '.cmd')
+    if (Test-Path -LiteralPath $cmdShim) {
+        Write-LaunchLog "$Label is a PowerShell shim; using its sibling cmd shim for the cmd pane: $cmdShim"
+        return $cmdShim
+    }
+    Write-LaunchLog "$Label is a PowerShell shim ($Path) with no sibling .cmd; driving it through powershell"
+    return $Path
 }
 
 function Format-TomlBasicString {
@@ -82,7 +155,7 @@ function Ensure-CodexProjectTrust {
 
     $codexDir = Join-Path $homeDir '.codex'
     $configPath = Join-Path $codexDir 'config.toml'
-    $dirKey = (Resolve-Path $Dir).Path
+    $dirKey = Resolve-FsPath $Dir
     $header = '[projects.' + (Format-TomlBasicString -Value $dirKey) + ']'
 
     try { if (-not (Test-Path $codexDir)) { New-Item -ItemType Directory -Path $codexDir -Force | Out-Null } } catch {}
@@ -130,7 +203,7 @@ function Ensure-CodexProjectTrust {
 function Get-CodexCommandWithArgs {
     param([string[]]$Arguments = @())
     $codex = Get-Command codex -ErrorAction SilentlyContinue
-    $codexPath = if ($codex) { $codex.Source } else { 'codex' }
+    $codexPath = Resolve-BatchSafeExecutable -Path $(if ($codex) { $codex.Source } else { 'codex' }) -Label 'codex'
     Write-LaunchLog "codex command: $codexPath"
     return Format-BatchCommand -Executable $codexPath -Arguments $Arguments
 }
@@ -138,7 +211,7 @@ function Get-CodexCommandWithArgs {
 function Get-CodexCommand {
     param([string]$Dir)
 
-    $codexArgs = @('-C', ('"' + $Dir + '"'))
+    $codexArgs = @('-C', (Quote-BatchToken $Dir))
     if ($Yolo) {
         $codexArgs += @('--dangerously-bypass-approvals-and-sandbox', '--dangerously-bypass-hook-trust')
     }
@@ -153,20 +226,71 @@ function Start-CodexOnly {
     }
     Write-LaunchLog "launching codex-only (Yolo=$Yolo) dir=$Dir"
 
-    if ($env:CONTEXT_MENU_NONINTERACTIVE -eq '1') {
-        Write-LaunchLog 'noninteractive mode requested -> skipping wt.exe'
+    $skipTerminal = $env:CONTEXT_MENU_NONINTERACTIVE -eq '1'
+    if ($skipTerminal) {
+        Write-LaunchLog 'noninteractive mode requested -> generating launcher but skipping wt.exe'
+    }
+
+    $launcherRoot = if ($env:TEMP) { $env:TEMP } else { [System.IO.Path]::GetTempPath() }
+    $launcherDir = Join-Path $launcherRoot 'dev-pomogator-launch'
+    if (-not (Test-Path $launcherDir)) { New-Item -ItemType Directory -Path $launcherDir -Force | Out-Null }
+
+    # UNC project: cmd.exe would refuse the cwd and default to C:\Windows. Host the pane in
+    # PowerShell, which carries a UNC cwd natively. Drive-backed projects keep the cmd pane below.
+    if (Test-UncPath $Dir) {
+        $codexOnlyLauncherPs = Join-Path $launcherDir ("codex-only-pane.$PID.$([guid]::NewGuid().ToString('N').Substring(0, 8)).ps1")
+        $codex = Get-Command codex -ErrorAction SilentlyContinue
+        $codexExe = Resolve-UncSafeExecutable -Path $(if ($codex) { $codex.Source } else { 'codex' }) -Label 'codex'
+        if ($codexExe -match '\.(cmd|bat)$') {
+            throw "Codex resolves to a cmd shim without a sibling PowerShell shim; refusing an unsafe UNC launch: $codexExe"
+        }
+        Write-LaunchLog "codex command: $codexExe"
+        $qDir = Quote-PsSingle $Dir
+        $qExe = Quote-PsSingle $codexExe
+        $qLog = Quote-PsSingle $script:LaunchLogFile
+        $codexPsArgs = @((Quote-PsSingle '-C'), $qDir)
+        if ($Yolo) {
+            $codexPsArgs += @((Quote-PsSingle '--dangerously-bypass-approvals-and-sandbox'), (Quote-PsSingle '--dangerously-bypass-hook-trust'))
+        }
+        $codexPsArgLine = $codexPsArgs -join ' '
+        # Caller-supplied values are emitted as QUOTED PS LITERALS and concatenated, never
+        # interpolated into a double-quoted string in the generated file: a project path may legally
+        # contain '$' (a double-quoted pane string would expand it) or "'" (breaks a naive literal).
+        @"
+`$ErrorActionPreference = 'Continue'
+`$dpDir = $qDir
+`$dpLog = $qLog
+`$Host.UI.RawUI.WindowTitle = 'Codex - ' + `$dpDir
+Set-Location -LiteralPath `$dpDir
+Write-Host '[dev-pomogator] Codex context-menu no-TUI launch (UNC-safe PowerShell pane)'
+Write-Host ('[dev-pomogator] cwd=' + (Get-Location).ProviderPath)
+Write-Host ('[dev-pomogator] command=' + $qExe)
+& $qExe --version
+Write-Host '[dev-pomogator] starting Codex in 2 seconds...'
+Start-Sleep -Seconds 2
+& $qExe $codexPsArgLine
+`$cmExit = `$LASTEXITCODE
+`$ts = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
+`$status = if (`$cmExit -ne 0) { 'ERROR: codex exited with code ' + `$cmExit } else { 'codex exited 0' }
+try { Add-Content -LiteralPath `$dpLog -Value ('[' + `$ts + '] ' + `$status + ' (dir=' + `$dpDir + ')') -Encoding UTF8 } catch {}
+if (`$cmExit -ne 0) { Read-Host 'Press Enter to close' }
+"@ | Set-Content -Path $codexOnlyLauncherPs -Encoding UTF8
+
+        Write-LaunchLog "UNC project dir -> PowerShell pane: $codexOnlyLauncherPs"
+        if (-not $skipTerminal) {
+            wt.exe powershell -NoLogo -ExecutionPolicy Bypass -NoExit -File $codexOnlyLauncherPs
+        }
         return
     }
 
-    $launcherDir = Join-Path $env:TEMP 'dev-pomogator-launch'
-    if (-not (Test-Path $launcherDir)) { New-Item -ItemType Directory -Path $launcherDir -Force | Out-Null }
-    $codexOnlyLauncher = Join-Path $launcherDir 'codex-only-pane.cmd'
+    $codexOnlyLauncher = Join-Path $launcherDir ("codex-only-pane.$PID.$([guid]::NewGuid().ToString('N').Substring(0, 8)).cmd")
+    $batchDir = Quote-BatchToken $Dir
     $codexCmd = Get-CodexCommand -Dir $Dir
     $codexVersionCmd = Get-CodexCommandWithArgs -Arguments @('--version')
     @"
 @echo off
-title Codex YOLO - $Dir
-cd /d "$Dir"
+title Codex YOLO
+cd /d $batchDir
 echo [dev-pomogator] Codex context-menu no-TUI launch
 echo [dev-pomogator] cwd=%CD%
 echo [dev-pomogator] command=$codexCmd
@@ -179,12 +303,14 @@ $(Get-CodexExitLogBatch -Dir $Dir)
 if not "%CM_EXIT%"=="0" pause
 "@ | Set-Content -Path $codexOnlyLauncher -Encoding ASCII
 
-    wt.exe -d $Dir cmd /k $codexOnlyLauncher
+    if (-not $skipTerminal) {
+        wt.exe -d $Dir cmd /k $codexOnlyLauncher
+    }
 }
 
 Write-LaunchLog '=== launch-Codex-tui.ps1 invoked ==='
 Write-LaunchLog "args: ProjectDir='$ProjectDir' Yolo=$Yolo raw=[$($args -join ' ')] pid=$PID"
-Write-LaunchLog "host: PSVersion=$($PSVersionTable.PSVersion) user=$env:USERNAME cwd=$($PWD.Path)"
+Write-LaunchLog "host: PSVersion=$($PSVersionTable.PSVersion) user=$env:USERNAME cwd=$($PWD.ProviderPath)"
 
 $ErrorActionPreference = 'Stop'
 
@@ -194,16 +320,27 @@ try {
             $ProjectDir = (git rev-parse --show-toplevel 2>$null)
         } catch {}
         if (-not $ProjectDir) {
-            $ProjectDir = $PWD.Path
+            $ProjectDir = $PWD.ProviderPath
         }
     }
-    $ProjectDir = (Resolve-Path $ProjectDir).Path
+    $ProjectDir = Resolve-FsPath $ProjectDir
     Write-LaunchLog "resolved ProjectDir: $ProjectDir"
 
     if ($NoTui) {
         Write-LaunchLog "NoTui requested -> launching Codex only"
         Start-CodexOnly $ProjectDir
         Write-LaunchLog 'launch OK (codex-only, -NoTui)'
+        exit 0
+    }
+
+    # A UNC project cannot be hosted by cmd.exe in the split-pane layout (it would land in
+    # C:\Windows and the TUI would write its status file to the wrong tree). Route the launch
+    # through the PowerShell-hosted codex-only pane instead. Checked before the trust grant so
+    # Start-CodexOnly performs it exactly once.
+    if (Test-UncPath $ProjectDir) {
+        Write-LaunchLog 'UNC project dir -> TUI split-pane unsupported (cmd.exe cannot hold a UNC cwd); launching Codex only'
+        Start-CodexOnly $ProjectDir
+        Write-LaunchLog 'launch OK (codex-only, UNC project dir)'
         exit 0
     }
 
@@ -252,7 +389,8 @@ try {
         Ensure-CodexProjectTrust -Dir $ProjectDir
     }
 
-    $launcherDir = Join-Path $env:TEMP 'dev-pomogator-launch'
+    $launcherRoot = if ($env:TEMP) { $env:TEMP } else { [System.IO.Path]::GetTempPath() }
+    $launcherDir = Join-Path $launcherRoot 'dev-pomogator-launch'
     if (-not (Test-Path $launcherDir)) { New-Item -ItemType Directory -Path $launcherDir -Force | Out-Null }
     $codexPaneLauncher = Join-Path $launcherDir "codex-pane-$sessionPrefix.cmd"
     $codexCmd = Get-CodexCommand -Dir $ProjectDir
