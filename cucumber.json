@@ -51,9 +51,26 @@
       "tests/step_definitions/**/*.ts",
       "tests/hooks/**/*.ts"
     ],
-    "tags": "not @wip and not @manual and not @windows-only",
+    "tags": "not @wip and not @manual and not @windows-only and not @e2e",
     "format": [
       "message:.dev-pomogator/.last-test-run.ndjson",
+      "progress-bar"
+    ],
+    "publishQuiet": true
+  },
+  "claude-mem-real-install": {
+    "paths": [
+      ".specs/claude-mem-integration/claude-mem-integration.feature"
+    ],
+    "import": [
+      "tests/step_definitions/**/*.ts",
+      "tests/hooks/**/*.ts"
+    ],
+    "tags": "@feature6",
+    "name": [
+      "CMEM001_18"
+    ],
+    "format": [
       "progress-bar"
     ],
     "publishQuiet": true
