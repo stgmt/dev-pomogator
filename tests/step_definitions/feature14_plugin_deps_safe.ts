@@ -8,6 +8,7 @@
 import { Given, When, Then } from '@cucumber/cucumber';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { findDepsUnsafeHooks } from '../../tools/plugin-deps-guard/check.ts';
@@ -154,7 +155,17 @@ Then(/^plugin-installed dispatch anchors on CLAUDE_PLUGIN_ROOT and repository-do
   assert.ok(canonicalCommands.length > 0, 'canonical manifest must contain hook commands');
   assert.ok(dogfoodCommands.length > 0, 'dogfood settings must contain hook commands');
   for (const command of canonicalCommands) assert.match(command, /CLAUDE_PLUGIN_ROOT/);
-  for (const command of dogfoodCommands) assert.match(command, /CLAUDE_PROJECT_DIR/);
+  // Shell-only hooks may remain plugin-root anchored. Every dispatcher-backed
+  // dogfood command must resolve its child through the real project anchor,
+  // rather than a raw CWD. The prior dispatcher scenarios execute the real
+  // shell runtime from a foreign CWD; this assertion covers the configuration
+  // branch passed to that runtime.
+  const dispatchedDogfood = dogfoodCommands.filter((value) => value.includes('hook-runtime.sh'));
+  assert.ok(dispatchedDogfood.length > 0, 'dogfood settings must route hooks through the runtime dispatcher');
+  for (const command of dispatchedDogfood) {
+    assert.match(command, /CLAUDE_PROJECT_DIR/);
+    assert.doesNotMatch(command, /process\.cwd\(\).*tools\/_shared\/bootstrap/);
+  }
 });
 
 Then(/^unavailable Windows `node\.exe` recovers separately for two projects sharing one HOME$/, function (this: DepsWorld) {
