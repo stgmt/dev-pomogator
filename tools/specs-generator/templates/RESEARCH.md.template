@@ -46,6 +46,20 @@
 
 {Краткое описание: какие правила/паттерны ограничивают какие требования.}
 
+## Proof of Concept
+
+> Required only when `**PoC Required:** yes` is set for an external/new mechanism.
+> Record provenance, the exact command, real repository-artifact output, and `**Verdict:** WORKS|PARTIAL|FAILS`.
+
+**PoC Required:** no
+
+## Cost Estimate
+
+> Required with a positive PoC marker. Include `**Runtime/CI:**` and `**Maintenance:**`; add distribution/deps-absent burden when user-distributed.
+
+**Runtime/CI:** N/A — PoC not required
+**Maintenance:** N/A — PoC not required
+
 ## Risk Assessment
 
 > Auto-populated by Skill `discovery-forms` during Phase 1. Hook `risk-assessment-guard` enforces:

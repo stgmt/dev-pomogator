@@ -1498,6 +1498,26 @@ async function commandSpecStatus(argv) {
   }
 
   if (options.confirmStop) {
+    // Discovery evidence gate (GitHub #58): the explicit trigger marker makes
+    // PoC/cost proof mandatory only for specs that adopt an external/new mechanism.
+    // Hard-OUT specs omit the marker and retain the ordinary Discovery workflow.
+    if (options.confirmStop === 'Discovery') {
+      const researchContent = safeReadText(path.join(targetDir, 'RESEARCH.md')) ?? '';
+      const requiresPoc = /\*\*PoC Required:\*\*\s*yes\b/i.test(researchContent);
+      if (requiresPoc) {
+        const hasPoc = /##\s+Proof of Concept\b[\s\S]*?\*\*Verdict:\*\*\s*(WORKS|PARTIAL|FAILS)\b/i.test(researchContent);
+        const hasCost = /##\s+Cost Estimate\b[\s\S]*?\*\*Runtime\/CI:\*\*\s*\S+[\s\S]*?\*\*Maintenance:\*\*\s*\S+/i.test(researchContent);
+        if (!hasPoc || !hasCost) {
+          process.stderr.write(
+            'ERROR: RESEARCH.md declares "**PoC Required:** yes" but lacks complete Proof of Concept and/or Cost Estimate evidence. ' +
+            'Add provenance, command, real output, WORKS|PARTIAL|FAILS verdict, Runtime/CI, and Maintenance before confirming Discovery STOP.\n',
+          );
+          log('ERROR', 'ConfirmStop Discovery blocked: required PoC/cost evidence is incomplete');
+          return 1;
+        }
+      }
+    }
+
     // BDD-enforcement gate (SBDE001_02): confirming the Requirements STOP requires
     // DESIGN.md to carry a `## BDD Test Infrastructure` section WITH a
     // `**Classification:**` field (TEST_DATA_ACTIVE / TEST_DATA_NONE). This forces the

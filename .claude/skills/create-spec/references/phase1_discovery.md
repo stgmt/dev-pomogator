@@ -64,6 +64,8 @@ ls ~/.claude/projects/${encoded}/memory/feedback_*.md 2>/dev/null
 
    `research-workflow` skill пройдёт 4 фазы (Уточнение → Исследование → Верификация → Отчёт) и вернёт verified findings — их вписать в `RESEARCH.md` секцию `## Технические находки`. В Jira-mode секция `## Problem` ссылается на `JIRA_SOURCE.md`: `См. JIRA_SOURCE.md ## Description (Verbatim)` — не дублировать текст. Секция `## Risk Assessment` уже добавлена `discovery-forms` skill'ом на шаге 3 — при ручном заполнении hook `risk-assessment-guard` требует ≥2 non-placeholder rows.
 
+   **PoC/cost decision (GitHub #58):** set `**PoC Required:** yes` only for an external tool/binary/package, a new parser or ingester of external output, a runtime dependency, or a new CI gate/hook mechanism. Invoke `Skill("research-workflow")`, then record `## Proof of Concept` (provenance, exact command, real output, `**Verdict:** WORKS|PARTIAL|FAILS`) and `## Cost Estimate` (`**Runtime/CI:**`, `**Maintenance:**`, and distribution/deps-absent burden when applicable). `spec-status -ConfirmStop Discovery` blocks incomplete marked evidence. **Hard-OUT:** do not set the marker for documentation-only work, refactors without a new dependency, an already-used in-repository mechanism, or a bug fix without a new tool.
+
 6. **Проверить статус:** `tools/specs-generator/spec-status.ts -Path ".specs/{feature}"`
 
 ## STOP #1

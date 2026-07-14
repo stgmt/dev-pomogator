@@ -289,6 +289,7 @@ Skill вызывается **`create-spec` skill во время Phase 1 step 5*
 3. Required Reading List — основан на spec topic
 4. Output → `.specs/{feature}/RESEARCH.md` секция `## Технические находки`
 5. **CRITICAL**: При записи в RESEARCH.md — сохранить markers [VERIFIED]/[UNVERIFIED]; consumer (FR.md, DESIGN.md) должен видеть risk-уровни, не sanitized facts.
+6. **PoC/cost trigger (GitHub #58):** mark `**PoC Required:** yes` only when the spec adapts/installs an external tool or binary, introduces a new parser/ingester of external output, adds a runtime dependency, or proposes a new CI gate/hook mechanism. Then add `## Proof of Concept` with provenance (repo/version/commit), exact command, real repository-artifact output, and `**Verdict:** WORKS|PARTIAL|FAILS`; also add `## Cost Estimate` with non-placeholder `**Runtime/CI:**` and `**Maintenance:**` entries plus distribution/deps-absent bundle burden when user-distributed. `spec-status -ConfirmStop Discovery` denies incomplete marked evidence. **Hard-OUT:** do not mark or require it for documentation-only work, refactors with no new dependency, existing in-repo mechanisms, or bug fixes with no new tool.
 
 После завершения, если существует папка спеки:
 

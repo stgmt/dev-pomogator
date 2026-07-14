@@ -32,7 +32,38 @@ interface SgWorld extends V4World {
   sgSpecName?: string;
   // multi-step carry: phase-confirming scenarios confirm in sequence
   sgPhaseConfirmed?: string[];
+  sgPocSpecName?: string;
 }
+
+// ────────────────────────────────────────────────────────────────────────────
+// GitHub #58 — Discovery PoC/cost STOP evidence
+// ────────────────────────────────────────────────────────────────────────────
+
+Given('a complete Discovery spec declares PoC Required yes without evidence', function (this: SgWorld) {
+  seedPocDiscoverySpec(this, '# Research\n\n**PoC Required:** yes\n\n## Findings\n\nTriggered external tool research.\n');
+});
+
+Given('a complete Discovery spec declares PoC Required yes with complete evidence', function (this: SgWorld) {
+  seedPocDiscoverySpec(this,
+    '# Research\n\n**PoC Required:** yes\n\n## Proof of Concept\n\nProvenance: https://example.test/tool commit abc123\n\nCommand: `node tool.js`\n\nReal output: `scanned 48 repository skills`\n\n**Verdict:** WORKS\n\n## Cost Estimate\n\n**Runtime/CI:** 2 minutes per pull request\n**Maintenance:** Pin and review the external tool quarterly\n');
+});
+
+Given('a complete Discovery spec for an existing in-repo mechanism has no PoC marker', function (this: SgWorld) {
+  seedPocDiscoverySpec(this, '# Research\n\n## Findings\n\nExisting in-repository mechanism is reused without a new dependency.\n');
+});
+
+When('specs-generator confirms the Discovery STOP for the PoC spec', function (this: SgWorld) {
+  runCore.call(this, 'spec-status', '-Path', `.specs/${this.sgPocSpecName!}`, '-ConfirmStop', 'Discovery');
+});
+
+Then('the specs-generator result should fail with missing PoC and cost evidence', function (this: SgWorld) {
+  assert.notEqual(this.sgExitCode, 0, 'triggered Discovery STOP must fail without PoC/cost evidence');
+  assert.match(this.lastStderr, /Proof of Concept and\/or Cost Estimate evidence/);
+});
+
+Then('the specs-generator result should succeed', function (this: SgWorld) {
+  assert.equal(this.sgExitCode, 0, `expected successful Discovery STOP; stderr: ${this.lastStderr}`);
+});
 
 // ────────────────────────────────────────────────────────────────────────────
 // Helpers
@@ -64,6 +95,16 @@ function runCore(this: SgWorld, command: string, ...args: string[]): void {
  * SPECS_GENERATOR_ROOT).  Pass the dedicated fixture corpus as cwd so the
  * result is deterministic and never walks the live repo tree.
  */
+function seedPocDiscoverySpec(world: SgWorld, research: string): void {
+  const slug = 'poc-stop';
+  const dir = path.join(world.tempDir, '.specs', slug);
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, 'USER_STORIES.md'), '# User Stories\n\n## US-1\n\nComplete Discovery story content.\n');
+  fs.writeFileSync(path.join(dir, 'USE_CASES.md'), '# Use Cases\n\n## UC-1\n\nComplete Discovery use-case content.\n');
+  fs.writeFileSync(path.join(dir, 'RESEARCH.md'), research);
+  world.sgPocSpecName = slug;
+}
+
 function runAnalyze(this: SgWorld, extraArgs: string[] = []): void {
   const res = spawnSync(process.execPath, [CORE_MJS, 'analyze-features', '-Format', 'json', ...extraArgs], {
     encoding: 'utf-8',

@@ -464,6 +464,24 @@ Feature: PLUGIN006 Specs Generator Scripts
     When I run validate-spec.ts on "valid-spec"
     Then the result should have valid=true
 
+  @feature62
+  Scenario: Discovery STOP is denied when a triggered PoC has no evidence
+    Given a complete Discovery spec declares PoC Required yes without evidence
+    When specs-generator confirms the Discovery STOP for the PoC spec
+    Then the specs-generator result should fail with missing PoC and cost evidence
+
+  @feature62
+  Scenario: Discovery STOP accepts complete triggered PoC evidence
+    Given a complete Discovery spec declares PoC Required yes with complete evidence
+    When specs-generator confirms the Discovery STOP for the PoC spec
+    Then the specs-generator result should succeed
+
+  @feature62
+  Scenario: Discovery STOP hard-OUT does not require PoC for an existing mechanism
+    Given a complete Discovery spec for an existing in-repo mechanism has no PoC marker
+    When specs-generator confirms the Discovery STOP for the PoC spec
+    Then the specs-generator result should succeed
+
   # audit-spec.ts false-positive fixes
 
   @feature61
