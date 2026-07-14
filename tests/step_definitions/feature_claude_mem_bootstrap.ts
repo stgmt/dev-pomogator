@@ -340,9 +340,54 @@ Then<CmemWorld>(/^the worker diagnostic reports "([^"]+)" with port "(\d+)"$/, f
   assert.match(this.workerCheckMessage, new RegExp(condition), `expected ${condition}: ${this.workerCheckMessage}`);
 });
 
+Given<CmemWorld>(/^a fake claude-mem home in (not installed|installed healthy|malformed config|installed unreachable) state$/, async function (state: string) {
+  if (state === 'not installed') return;
+  fs.mkdirSync(path.join(this.tempDir, '.claude-mem'), { recursive: true });
+  fs.writeFileSync(path.join(this.tempDir, '.claude-mem', '.worker.pid'), '4242');
+  if (state === 'malformed config') {
+    fs.writeFileSync(path.join(this.tempDir, '.claude-mem', 'settings.json'), '{not-json');
+    return;
+  }
+  this.workerPort = state === 'installed healthy' ? 37778 : 37779;
+  workerSettings(this);
+  if (state === 'installed healthy') {
+    const server = http.createServer((_req, res) => {
+      res.writeHead(200, { 'content-type': 'application/json' });
+      res.end(JSON.stringify({ status: 'ok', version: 'test-worker-v1' }));
+    });
+    await new Promise<void>((resolve) => server.listen(this.workerPort, '127.0.0.1', resolve));
+    this.workerServer = server;
+  }
+});
+
+When<CmemWorld>(/^the doctor claude-mem checks run$/, async function () {
+  const [installation, worker] = await Promise.all([
+    claudeMemPluginCheck.run(craftCtx(this.tempDir, REPO) as never),
+    claudeMemWorkerCheck.run(craftCtx(this.tempDir, REPO) as never),
+  ]);
+  const installCheck = Array.isArray(installation) ? installation[0] : installation!;
+  const workerCheck = Array.isArray(worker) ? worker[0] : worker!;
+  this.checkSeverity = installCheck.severity;
+  this.installationMessage = installCheck.message;
+  this.workerCheckMessage = workerCheck.message;
+  this.workerCheckDetails = (workerCheck.details ?? {}) as Record<string, unknown>;
+});
+
+Then<CmemWorld>(/^the claude-mem installation check reports "([^"]+)"$/, function (expected: string) {
+  assert.strictEqual(this.checkSeverity, expected);
+});
+
+Then<CmemWorld>(/^the worker diagnostic reports "([^"]+)"$/, function (condition: string) {
+  const expected = condition === 'malformed-config' ? /configuration is malformed/i
+    : condition === 'unreachable-worker' ? /not reachable|unreachable/i
+    : /healthy/i;
+  assert.match(this.workerCheckMessage, expected, this.workerCheckMessage);
+  assert.ok(Number.isFinite(this.workerCheckDetails.port as number), 'worker result must include resolved port evidence');
+});
+
 // ---- @feature6: doctor reads ~/.claude.json ----
 Given<CmemWorld>(
-  /^a referenced MCP server "([^"]+)" registered in the global "~\/\.claude\.json"$/,
+  /^a referenced MCP server "([^"]+)" registered in global "~\/\.claude\.json"$/,
   function (name: string) {
     fs.writeFileSync(
       path.join(this.tempDir, '.claude.json'),
@@ -350,6 +395,13 @@ Given<CmemWorld>(
     );
   },
 );
+
+Given<CmemWorld>(/^a separate project MCP configuration$/, function () {
+  fs.writeFileSync(
+    path.join(this.tempDir, '.mcp.json'),
+    JSON.stringify({ mcpServers: { 'project-only': { command: 'node', args: ['worker.cjs'] } } }),
+  );
+});
 
 When<CmemWorld>(/^the doctor MCP-parse check runs for referenced server "([^"]+)"$/, async function (name: string) {
   const ctx = craftCtx(this.tempDir, this.tempDir, [name]);

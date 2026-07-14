@@ -90,7 +90,7 @@ export const claudeMemWorkerCheck: CheckDefinition = {
       const msg = wedged
         ? `worker wedged on :${port} (port bound but no HTTP response; ${failures} consecutive hook failures)`
         : `worker not reachable on :${port} (${failures} consecutive hook failures)`;
-      return buildResult(META, sev, msg, { hint: HEAL_HINT, details: { port, consecutiveFailures: failures, wedged } });
+      return buildResult(META, sev, msg, { hint: HEAL_HINT, details: { port, configuration, consecutiveFailures: failures, wedged } });
     } finally {
       clearTimeout(timer);
       ctx.signal.removeEventListener('abort', onAbort);
