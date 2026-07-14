@@ -2,6 +2,14 @@
 
 Список файлов, которые будут добавлены/изменены при реализации фичи.
 
+| File | Change | Requirement |
+|---|---|---|
+| `tools/_shared/hook-dispatch.sh` | Add shared POSIX shell pre-Node dispatch for canonical plugin and dogfood hooks: reject host BDD before Node, select POSIX `node` versus Windows `node.exe`, and delegate the guarded target. | [FR-14](FR.md#fr-14-plugin-hook-commands-are-portable-deps-absent-safe-and-fail-open) |
+| `tools/pomogator-doctor/scripts/doctor-hook.ts` and launcher state helper | Key doctor state by Claude Code session and project CWD; treat unavailable, failed, and malformed results as fail-open diagnostics. | [FR-14](FR.md#fr-14-plugin-hook-commands-are-portable-deps-absent-safe-and-fail-open) |
+| `.claude-plugin/hooks.json`, `.claude/settings.json` | Route plugin-installed and repository dogfood hooks through the shared dispatch layer without changing target hook semantics. | [FR-14](FR.md#fr-14-plugin-hook-commands-are-portable-deps-absent-safe-and-fail-open) |
+| `tests/features/dev-pomogator-canonical-plugin.feature`, `tests/step_definitions/feature_dev_pomogator_canonical_plugin.ts` | Implement `PLUGINDEPS001_03` against the real launcher for POSIX pre-Node rejection, executable choice, `CLAUDE_PLUGIN_ROOT` / `CLAUDE_PROJECT_DIR` CWD isolation, and doctor fail-open behavior. | [FR-14](FR.md#fr-14-plugin-hook-commands-are-portable-deps-absent-safe-and-fail-open), [AC-9](ACCEPTANCE_CRITERIA.md#ac-9-fr-14) |
+
+
 См. также: [README.md](README.md) и [TASKS.md](TASKS.md).
 
 | Path | Action | Reason |

@@ -244,4 +244,21 @@ dev-pomogator/
 - ADDED: marketplace.json schema validation test
 - ADDED: drift test (`canonical-plugin.test.ts`) — hooks.json commands ↔ on-disk tools/ sync + manifest schema validity
 - KEPT: migration script test (re-scoped — теперь cleanup-only, не copy-to-user-scope)
-- KEPT: cursor-removal regression test
+- KEPT: cursor-removal
+
+### Decision: Portable shell dispatch and CWD-keyed fail-open doctor
+
+**Требование:** [FR-14](FR.md#fr-14-plugin-hook-commands-are-portable-deps-absent-safe-and-fail-open)
+
+**Rationale:** A canonical plugin runs outside the repository and can be launched by POSIX or Windows shells. Guarding only after Node begins leaves a prohibited host BDD command too late to reject, while a Windows-only executable name or global doctor cache breaks unrelated POSIX and multi-repository sessions.
+
+Canonical plugin and repository dogfood hook entries use a shared POSIX-shell pre-dispatch script. It performs the host-BDD guard before any Node process is created, selects `node` on POSIX and `node.exe` only on Windows, then delegates to the existing target. Doctor state is cached using both Claude Code session identity and canonical project CWD so a verdict cannot bleed into another repository. All doctor transport, parse, and startup errors take the fail-open branch and preserve the target hook invocation.
+
+**Alternatives considered:**
+- A Node-first launcher was rejected because it cannot guarantee pre-Node BDD rejection.
+- A process-global doctor cache was rejected because CWD changes cause state leakage.
+- Fail-closed doctor checks were rejected because diagnostics must not stop ordinary hook work.
+
+**Trade-off:** The dispatch layer is deliberately small and shell-only rather than importing TypeScript diagnostics before selection; this duplicates a narrow amount of argument classification but preserves portability and prevents a broken doctor from becoming a global tool-call outage.
+
+**Verification:** `PLUGINDEPS001_03` invokes the launcher from POSIX and a foreign CWD, proves early host-BDD rejection and `node` selection, proves `CLAUDE_PLUGIN_ROOT` / `CLAUDE_PROJECT_DIR` anchoring rather than process-CWD lookup, and proves permitted work continues when doctor data is unavailable or malformed. The scenario uses the real launcher, not a mocked dispatch function.

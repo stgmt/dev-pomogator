@@ -213,3 +213,37 @@ my-plugin/
 | `.git/info/exclude` не существует если в проекте нет `.git/` (проект инициализирован но без git) | Low | Medium | Pre-flight check: detect `.git/` директорию; если нет — error "use --scope user OR git init"; явная диагностика, не silent fail |
 | MCP `--scope user` баг (#54803) — если v2 регистрирует MCP в user-scope, они невидимы в `claude mcp list` | Low | Medium | Регистрировать MCP в plugin's `.mcp.json` (`<plugin>/.mcp.json`), не через `claude mcp add --scope user` — bypassим баг |
 | Существующие cursor-using teams (если есть) — breaking при v2 upgrade | Low | Low | Cursor support уже отвергается с v1.5 (`src/index.ts:44-47`); фактических пользователей не должно быть; CHANGELOG.md явно фиксирует removal |
+
+## Hook runtime recovery discovery (2026-07-15)
+
+### Evidence and constraints
+
+- [VERIFIED: existing spec FR-13] Canonical hook resolution must use `CLAUDE_PROJECT_DIR`, `CLAUDE_PLUGIN_ROOT`, or the launcher/script location; it must never calculate its script path from the process CWD. This recovery work extends that existing CWD-independence requirement rather than replacing it.
+- [VERIFIED: existing spec FR-14] Plugin hook launchers must remain usable when installed dependencies are absent. A recovery path that itself requires a Node package would reintroduce the same dead-integration failure.
+- [VERIFIED: POSIX Shell Command Language, Shell Parameters](https://pubs.opengroup.org/onlinepubs/9799919799/utilities/V3_chap02.html) Shell parameters and quoted expansion can preserve positional arguments; therefore the pre-Node layer must be portable shell only and forward arguments without reparsing them.
+- [VERIFIED: Node.js command-line API](https://nodejs.org/api/cli.html) Node is normally launched as a command-line executable. On Windows, `node.exe` is a conventional executable name; launcher discovery must explicitly support that form instead of assuming the POSIX spelling.
+- [ASSUMED pending implementation audit] Claude Code provides a stable session identifier to hook environments. If unavailable, the implementation must choose and document a fail-open session surrogate rather than silently using an unscoped process-global marker.
+
+### Decision record
+
+1. **Pre-Node boundary:** Put runtime detection, recovery eligibility, state-key construction, and legacy-marker handling in a portable shell launcher. Do not use TypeScript, `tsx`, package installation, or a Node-based helper before Node is proven executable.
+2. **Normal execution:** Only after a runnable runtime is detected may the launcher delegate to the existing Node hook entry point. It must preserve original positional arguments exactly and resolve all plugin-local paths from launcher location or approved environment, never `pwd`/CWD.
+3. **Runtime candidates:** POSIX accepts `node`; Windows accepts `node.exe` as well. A candidate that exists but cannot execute is handled as unavailable and enters the same bounded, fail-open recovery branch.
+4. **State identity:** The idempotence key is `(session identity, normalized project CWD)`. State must be CWD-scoped so that two projects sharing a session do not suppress one another; a repeated hook for the same key must not duplicate recovery.
+5. **Safe migration:** Legacy unscoped marker content is data, never shell code. The migration either atomically converts known managed state to the new key or retires it; it preserves unrelated state and is idempotent.
+6. **Observability:** `/pomogator-doctor` must show runtime availability, the relevant scoped recovery state/outcome, and a concrete next action. Diagnostics are concise and must not turn a recovery failure into a blocking hook exit.
+
+### Rejected alternatives
+
+- **Node/TypeScript recovery script:** rejected because it cannot start when the runtime whose absence it handles is missing or unusable.
+- **One global once-marker:** rejected because it creates cross-project suppression within a single session and conflicts with the CWD-scoped requirement.
+- **Fail-closed hook exit:** rejected because the request requires fail-open recovery; the launcher must return exit 0 when preflight/recovery cannot complete.
+- **Sourcing legacy marker files:** rejected because marker contents are untrusted state, not executable configuration.
+
+### Verification focus for later phases
+
+- Exercise canonical cached-plugin and dogfood source-tree launchers from a non-plugin CWD.
+- Cover missing and non-runnable `node`/`node.exe`, exact argument forwarding, and subsequent healthy Node execution.
+- Prove one recovery attempt for a repeated `(session, CWD)` key and independent attempts for different session or normalized CWD keys.
+- Seed legacy plus unrelated state; prove no evaluation, atomic managed-state transition, and preservation of unrelated state.
+- Verify doctor output offers the same bounded, actionable recovery diagnosis without changing hook exit semantics.

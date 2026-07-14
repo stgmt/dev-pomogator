@@ -318,3 +318,13 @@ Feature: CANON001 Canonical Claude Code Marketplace Plugin
     Then the commit contains the agent's changed files
     And the commit contains no path under "%windir%"
     And the stray directory is left untracked in the working tree
+
+  @feature14
+  Scenario: PLUGINDEPS001_03 portable pre-Node dispatch preserves the hook on doctor failure
+    Given a canonical plugin hook launcher invoked from a POSIX shell in a foreign project CWD
+    And its doctor result is unavailable or malformed
+    When the launcher receives a prohibited host BDD command
+    Then the shell dispatch rejects the command before Node starts
+    And a permitted hook invocation uses `node`, not `node.exe`
+    And the permitted hook invocation continues fail-open despite the doctor failure
+    And plugin-installed dispatch anchors on CLAUDE_PLUGIN_ROOT and repository-dogfood dispatch anchors on CLAUDE_PROJECT_DIR, not process CWD

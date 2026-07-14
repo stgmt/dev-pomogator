@@ -22,6 +22,18 @@
 
 > Regenerate via `Skill("task-board-forms")` или `npx tsx tools/specs-generator/spec-status.ts -Path .specs/dev-pomogator-canonical-plugin -Format task-table` and splice between markers (note: spec-generator moved `extensions/specs-workflow/tools/` → `tools/` in this migration).
 
+## Phase 7: Hook runtime recovery — TODO
+
+- [ ] Recover hook runtime before Node bootstrap — id: t14 — Status: TODO | Est: 180m
+  _Requirements: FR-7 migration isolation, FR-13 CWD, and FR-14 deps-absent-safe._
+  _BDD ownership: `plugin-deps` owns the hook-runtime BDD scenarios, step definitions, fixtures, and runtime proof; this task links to that ownership and must not duplicate `PLUGINDEPS001_01`–`PLUGINDEPS001_03`._
+  **Evidence baseline:** Resolve and record the tested `origin/main` commit. `HEAD`, a worktree branch, plugin cache contents, and user-global state are not acceptance baselines.
+  **Done When:**
+  - [ ] The v1 migration path is explicit `--global`-only: on success, dry-run, already-migrated, and failure it leaves a project sentinel set byte-for-byte unchanged, including `<cwd>/.claude/**`, `<cwd>/.dev-pomogator/**`, `<cwd>/.gitignore`, and project settings.
+  - [ ] A portable POSIX/Git-atomic, best-effort preflight creates its per-session and canonical-project-CWD state before Node bootstrap. Lock, marker, filesystem, or recovery failure is non-fatal: normal hook dispatch continues and actionable diagnostics are emitted.
+  - [ ] Dispatch is platform-specific: POSIX accepts only `node`; Windows accepts only `node.exe`; no cross-platform launcher fallback is used. A failed diagnostic never suppresses Node bootstrap.
+  - [ ] The `plugin-deps` BDD evidence records the `origin/main` commit and proves global-only migration isolation, canonical-plugin/repository-dogfood parity, session-plus-project-CWD once-only recovery, POSIX/Git atomic best effort, fail-open dispatch, and the platform-specific launcher contract. `PLUGINDEPS001_03` must be defined and passing before it is acceptance evidence.
+
 ## Reality note (2026-05-27)
 
 The core migration was performed **by hand**: the three `.claude-plugin/*.json` manifests were authored directly, every tool was moved `extensions/<ext>/tools/<tool>/` → `tools/<tool>/`, and `src/` + `extensions/` + `dist/` + `bin` were deleted. There is **no build aggregator** (`buildCanonicalPlugin()` / `npm run build:plugin` never existed). Manifest↔disk sync is guarded by a **drift test**, not a build step. Tasks below reflect what is DONE (the hand migration) vs what REMAINS to make PR #24 merge-ready, per the readiness review (60 commits behind main, e2e never run, tests don't cover the new layout, obsolete rules + dead references).

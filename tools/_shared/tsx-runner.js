@@ -144,7 +144,8 @@ const scriptArgs = args.slice(1);
     if (fs.existsSync(scriptPath)) return; // target resolved fine — normal path
 
     const osMod = require('os');
-    const worktreePath = process.cwd();
+    // Prefer Claude's project anchor: process.cwd() may be nested or collapse a UNC path.
+    const worktreePath = path.resolve(process.env.CLAUDE_PROJECT_DIR || process.cwd());
     const sessionId = process.env.CLAUDE_SESSION_ID || `pid:${process.ppid}`;
     const hookEvent = process.env.CLAUDE_HOOK_EVENT || 'unknown';
     const logDir = path.join(osMod.homedir(), '.dev-pomogator');

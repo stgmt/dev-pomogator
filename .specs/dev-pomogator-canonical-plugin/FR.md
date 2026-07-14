@@ -108,6 +108,8 @@ dev-pomogator должен документировать в README + CHANGELOG:
 
 Migration explicit и user-driven — никакого silent magic. Подход canonical: dev-pomogator плагин сам не пишет в project files (Anthropic plugin model rules), поэтому migration не может быть автоматической при `/plugin install`.
 
+`--global-only` is an isolation boundary: it SHALL inspect and mutate only recognized global v1 artifacts and matching global settings entries. It SHALL NOT inspect or mutate the caller project, its `.claude/`, `.gitignore`, project `.dev-pomogator/`, or unrelated v2 files under the shared global home. Acceptance comparison baselines SHALL resolve from `origin/main` only and record that commit; feature/worktree state, plugin cache, and user-global state are not baselines.
+
 **Связанные AC:** [AC-4](ACCEPTANCE_CRITERIA.md#ac-4-fr-7), [AC-5](ACCEPTANCE_CRITERIA.md#ac-5-fr-7)
 **Use Case:** [UC-2](USE_CASES.md#uc-2-upgrade-v1-v2-from-existing-project-install)
 
@@ -181,8 +183,12 @@ The plugin's hook commands SHALL resolve their bootstrap loader and target scrip
 
 **Связанные AC:** [AC-1](ACCEPTANCE_CRITERIA.md#ac-1-fr-1-fr-9)
 
-## FR-14: Plugin hook commands are deps-absent-safe
+## FR-14: Plugin hook commands are portable, deps-absent-safe, and fail-open
 
 The plugin install ships NO `node_modules`, so every `.claude-plugin/hooks.json` command SHALL be deps-absent-safe: it either launches a bundled `*.bundle.mjs` (npm deps inlined by esbuild) or a script whose transitive import chain is node-builtins-only. A raw `.ts`/`.cjs` hook that (transitively) imports a real npm package crashes `ERR_MODULE_NOT_FOUND` for plugin users — `tools/plugin-deps-guard/check.ts::findDepsUnsafeHooks` SHALL detect such hooks (returning the `script -> packages` offenders; `[]` when clean) so the dead-integration never ships silently (the dogfood repo has `node_modules` and hides it).
+
+Every canonical-plugin and repository-dogfood hook launcher SHALL run guard and interpreter selection in a POSIX-shell-compatible pre-Node dispatch layer. The guard SHALL reject a prohibited host BDD command before Node starts. On POSIX the launcher SHALL invoke `node`, never the Windows-only `node.exe`; Windows launch paths may invoke `node.exe`.
+
+Plugin-installed and repository-dogfood launch paths SHALL cache a doctor result per Claude Code session and normalized project CWD, without sharing it with a different CWD. The installed-plugin launcher SHALL resolve from `CLAUDE_PLUGIN_ROOT` and the repository-dogfood launcher from `CLAUDE_PROJECT_DIR`, never from process CWD or an implicit Git-relative location. If doctor state is unavailable, startup fails, or the result is malformed, dispatch SHALL fail open: preserve the original hook action and emit a diagnostic when possible rather than block the session.
 
 **Связанные AC:** [AC-1](ACCEPTANCE_CRITERIA.md#ac-1-fr-1-fr-9)

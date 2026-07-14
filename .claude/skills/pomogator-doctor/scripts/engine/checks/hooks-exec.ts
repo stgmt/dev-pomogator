@@ -9,8 +9,8 @@ import { buildResult, fileExists } from './_helpers.js';
 
 const META = {
   id: 'C18',
-  fr: 'FR-1',
-  name: 'Hooks execute (tsx-runner smoke)',
+  fr: 'FR-14',
+  name: 'Hooks execute (portable runtime-dispatch smoke)',
   group: 'self-sufficient',
   reinstallable: true,
 } as const;

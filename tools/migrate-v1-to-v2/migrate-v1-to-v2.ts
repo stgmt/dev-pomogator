@@ -312,21 +312,22 @@ function detectV1Global(devPomogatorHome: string): boolean {
 function globalCleanup(result: MigrationResult, dryRun: boolean): void {
   const home = homedir();
   const devPomogatorHome = resolveWithinHome(join(home, '.dev-pomogator'));
-  if (devPomogatorHome && existsSync(devPomogatorHome)) {
-    if (!detectV1Global(devPomogatorHome)) {
-      result.warnings.push(
-        `Skipped ${devPomogatorHome}: no v1 global install detected (v2 still owns this directory).`,
-      );
-    } else {
-      for (const rel of V1_GLOBAL_ARTIFACTS) {
-        const target = resolveWithinHome(join(devPomogatorHome, rel));
-        if (target) safeRemove(target, result, dryRun);
-      }
-    }
+  const isV1Global = !!devPomogatorHome && existsSync(devPomogatorHome) && detectV1Global(devPomogatorHome);
+  if (!isV1Global) {
+    result.warnings.push(
+      `Skipped ${devPomogatorHome ?? join(home, '.dev-pomogator')}: no v1 global install detected (v2 still owns this directory).`,
+    );
+    return;
   }
 
-  const configHome = resolveWithinHome(join(home, '.config', 'dev-pomogator'));
-  if (configHome) safeRemove(configHome, result, dryRun);
+  // `--global-only` is deliberately narrower than the old v1 cleanup: never
+  // delete a shared configuration directory or rewrite settings merely because
+  // they contain a familiar string. A recognized v1 runner is the required
+  // ownership proof for every global mutation below.
+  for (const rel of V1_GLOBAL_ARTIFACTS) {
+    const target = resolveWithinHome(join(devPomogatorHome!, rel));
+    if (target) safeRemove(target, result, dryRun);
+  }
 
   const globalSettings = join(home, '.claude', 'settings.json');
   result.globalSettingsUpdated = smartMergeSettingsRemoval(

@@ -4,8 +4,8 @@ import type { CheckContext, CheckDefinition, CheckResult } from '../types.js';
 import { CANONICAL_REINSTALL_HINT } from './canonical.js';
 
 const ID = 'C31';
-const FR = 'FR-1';
-const NAME = 'Hook script paths resolve';
+const FR = 'FR-14';
+const NAME = 'Hook runtime dispatch and script paths resolve';
 
 /**
  * Hook commands run with the USER'S PROJECT as cwd, but every script a hook invokes
