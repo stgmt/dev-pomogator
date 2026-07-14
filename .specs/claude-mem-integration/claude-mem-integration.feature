@@ -57,6 +57,7 @@ Feature: CMEM001 claude-mem bootstrap and doctor detection
     And no claude-mem context is emitted
     And no worker request handle remains
 
+
     Examples:
       | n  | case                 | workerState          |
       | 10 | connection is refused | refusing connections |

@@ -37,7 +37,7 @@
   - [ ] Detached launch evidence records arguments, environment, effective home, and resolved or explicitly unverified version.
   - [ ] Manifest, PID, database, opt-out, and fresh-lock paths do not launch the installer.
 
-- [ ] Bound health failures with local worker fixtures -- CMEM001_09-CMEM001_12 — id: cmem-t1-02 — Status: TODO | Est: 45m
+- [ ] Bound health failures with local worker fixtures -- CMEM001_09-CMEM001_12 — id: cmem-t1-02 — Status: IN_PROGRESS | Est: 45m
   _Requirements: [FR-4](FR.md#fr-4-fail-open-builtins-only-feature4)_
   _Files: `tools/claude-mem-health/health-check.ts`, `tests/fixtures/claude-mem/black-hole-worker.cjs`, `tests/fixtures/claude-mem/responsive-worker.cjs`, `tests/step_definitions/feature_claude_mem_bootstrap.ts`_
   _Dependencies: cmem-t0-01_
