@@ -21,7 +21,7 @@ import {
 } from '../../tools/claude-mem-bootstrap/install-claude-mem.ts';
 import { resolveClaudeMemHome } from '../../tools/claude-mem-bootstrap/claude-mem-state.ts';
 import { claudeMemPluginCheck } from '../../.claude/skills/pomogator-doctor/scripts/engine/checks/claude-mem-plugin.ts';
-import { claudeMemWorkerCheck } from '../../.claude/skills/pomogator-doctor/scripts/engine/checks/claude-mem-worker.ts';
+import { claudeMemWorkerCheck, readWorkerPort } from '../../.claude/skills/pomogator-doctor/scripts/engine/checks/claude-mem-worker.ts';
 import { mcpParseCheck } from '../../.claude/skills/pomogator-doctor/scripts/engine/checks/mcp-parse.ts';
 
 const REPO = process.env.APP_DIR || process.cwd();
@@ -319,6 +319,7 @@ Given<CmemWorld>(/^a doctor-visible claude-mem worker that is (healthy|unreachab
 Given<CmemWorld>(/^a malformed claude-mem worker configuration$/, function () {
   fs.mkdirSync(path.join(this.tempDir, '.claude-mem'), { recursive: true });
   fs.writeFileSync(path.join(this.tempDir, '.claude-mem', 'settings.json'), '{not-json');
+  assert.deepStrictEqual(readWorkerPort(this.tempDir), { port: 37777, configuration: 'malformed' });
 });
 
 When<CmemWorld>(/^the doctor claude-mem worker check runs$/, async function () {
