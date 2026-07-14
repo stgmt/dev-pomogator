@@ -166,6 +166,10 @@ Given(/^a plan-validator plan with an extra section appended after File Changes$
   this.pvPlan = VALID_PLAN + '\n## Extra Section\nSome extra content.\n';
 });
 
+Given(/^a plan-validator plan with the "([^"]+)" inventory subsection removed$/, function (this: PvWorld, subsection: string) {
+  this.pvPlan = pvRemoveSubsection(this.pvPlan, subsection);
+});
+
 Given(/^a plan-validator plan with sections "([^"]+)" and "([^"]+)" swapped$/, function (this: PvWorld, s1: string, s2: string) {
   // Find line numbers for s1 and s2 headings and swap their blocks
   const lines = VALID_PLAN.split('\n');

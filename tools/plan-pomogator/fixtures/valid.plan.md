@@ -18,6 +18,21 @@
 1. Валидатор проверяет наличие обязательных секций и их порядок
 2. При ошибках выдаёт actionable hints с точными инструкциями по исправлению
 
+## 📚 Existing-Spec Inventory
+
+### Domain/Lifecycle
+- Specs: `.specs/plan-pomogator-plain-language` — status verified from `.progress.json`; `FR.md`, `TASKS.md`, and `.feature` reviewed; no sub-specs found.
+
+### Installation/Runtime
+- Installation/config/Docker/hooks/doctor: `.claude-plugin/hooks.json` — plan gate is registered through the canonical plugin hook manifest.
+- Skills/references/rules/templates/allowed-tools/CLAUDE.md: `.carl/rules/plan-pomogator/plan-pomogator.md` — source rule and plan template contract reviewed.
+
+### Verification
+- BDD: `tests/features/plugins/plan-pomogator/PLUGIN007_plan-validator.feature`; existing non-BDD coverage: `tools/plan-pomogator/__tests__/test-spec-gate.test.ts`; lint command: `npm run lint`.
+
+### Repository Baseline
+- SHA: `b8d90e5c51fae8493905c111ce8a47e9bfd1210f`; worktree status: clean; unresolved findings: N/A.
+
 ## 👤 User Stories
 - Как разработчик, я хочу автоматическую проверку структуры плана, чтобы не пропустить обязательные секции.
 

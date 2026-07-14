@@ -20,6 +20,23 @@
 1. {Требование из диалога}
 2. {Требование из диалога}
 
+## 📚 Existing-Spec Inventory
+
+> До проектирования проверь существующие спеки и распределённые точки владения. Для каждого пункта укажи проверенный путь, slug/статус/документ или `N/A` с причиной; не угадывай статус по README.
+
+### Domain/Lifecycle
+- Specs: `{.specs/<slug>}` — lifecycle status, `FR.md`/`TASKS.md`/`.feature`, связанные sub-specs и пересечения владения.
+
+### Installation/Runtime
+- Installation/config/Docker/hooks/doctor: `{path}` — владелец и контракт запуска/конфигурации.
+- Skills/references/rules/templates/allowed-tools/CLAUDE.md: `{path}` — что уже задаёт поведение.
+
+### Verification
+- BDD: `{tests/...feature}`; existing non-BDD coverage: `{path}`; lint/test skill and canonical command: `{path or command}`.
+
+### Repository Baseline
+- SHA: `{git rev-parse HEAD}`; worktree status: `{git status --short}`; unresolved findings or `N/A`.
+
 ## 👤 User Stories
 - Как {роль}, я хочу {цель}, чтобы {ценность}.
 

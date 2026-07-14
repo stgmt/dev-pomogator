@@ -20,6 +20,7 @@ export interface ValidationResult {
 export const REQUIRED_SECTIONS: Array<{ name: string; regex: RegExp }> = [
   { name: 'Простыми словами', regex: /^##\s+(?:💬\s+)?Простыми словами\s*$/ },
   { name: 'Context', regex: /^##\s+(?:🎯\s+)?Context\s*$/ },
+  { name: 'Existing-Spec Inventory', regex: /^##\s+(?:📚\s+)?Existing-Spec Inventory\s*$/ },
   { name: 'User Stories', regex: /^##\s+(?:👤\s+)?User Stories\s*$/ },
   { name: 'Use Cases', regex: /^##\s+(?:🔀\s+)?Use Cases\s*$/ },
   { name: 'Requirements', regex: /^##\s+(?:📐\s+)?Requirements\s*$/ },
@@ -98,6 +99,32 @@ function validateSections(lines: string[], errors: ValidationError[]): Map<strin
   }
 
   return indices;
+}
+
+function validateExistingSpecInventory(lines: string[], indices: Map<string, number>, errors: ValidationError[]): void {
+  const inventoryIndex = indices.get('Existing-Spec Inventory');
+  if (inventoryIndex === undefined) return;
+
+  const { start, end } = getSectionRange(lines, inventoryIndex);
+  const inventoryText = lines.slice(start + 1, end).join('\n');
+  const requiredHeadings = [
+    'Domain/Lifecycle',
+    'Installation/Runtime',
+    'Verification',
+    'Repository Baseline',
+  ];
+
+  for (const heading of requiredHeadings) {
+    const headingRegex = new RegExp(`^###\\s+${heading.replace('/', '\\/')}\\s*$`, 'm');
+    if (!headingRegex.test(inventoryText)) {
+      addError(
+        errors,
+        start,
+        `В Existing-Spec Inventory отсутствует подраздел: ${heading}`,
+        `Добавь: ### ${heading} с проверенными путями, статусом или N/A и причиной`,
+      );
+    }
+  }
 }
 
 function validateRequirements(lines: string[], indices: Map<string, number>, errors: ValidationError[]): void {
@@ -785,6 +812,7 @@ export function validatePlanPhased(filePathOrLines: string | string[]): Validati
 
   const indices = validateSections(lines, phase1);
   validateHumanSummarySection(lines, indices, phase1);
+  validateExistingSpecInventory(lines, indices, phase1);
   validateRequirements(lines, indices, phase1);
   validateTodos(lines, indices, phase1);
   validateVerificationPlan(lines, indices, phase1);

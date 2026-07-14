@@ -80,7 +80,14 @@ Form submit handler не имеет loading state management через React us
    - Содержимое: живой язык без технического жаргона. AI обязан вывести содержимое в чат как обычное сообщение перед ExitPlanMode.
    - Валидируется через `REQUIRED_SECTIONS` массив в `validate-plan.ts:20-29` (Phase 1 mandatory).
 
-1. **👤 User Stories**
+1. **📚 Existing-Spec Inventory** — обязательная pre-plan инвентаризация до проектирования
+   - **Domain/Lifecycle**: найди все релевантные `.specs/<slug>/`, их lifecycle status (из фактического артефакта, не README), `FR.md`/`TASKS.md`/`.feature`, sub-specs и пересечения владения.
+   - **Installation/Runtime**: проверь installation/config/Docker/hooks/doctor; затем skills, references, rules, templates, `allowed-tools` и `CLAUDE.md`. Для каждого результата зафиксируй путь и текущий контракт, либо `N/A` с причиной.
+   - **Verification**: инвентаризируй BDD `.feature`, существующие non-BDD тесты, skill/команду для lint и тестов. Не создавай новый non-BDD тест, если достаточно существующего BDD покрытия.
+   - **Repository Baseline**: зафиксируй точные выводы `git rev-parse HEAD` (SHA) и `git status --short`, а также открытые findings или `N/A`.
+   - Результаты должны быть конкретными: пути + slug/status/docs; пустой перечень или «проверено» без доказательства запрещены. Этот раздел валидируется Phase 1 подразделами `Domain/Lifecycle`, `Installation/Runtime`, `Verification`, `Repository Baseline`.
+
+2. **👤 User Stories**
    - Список user stories в формате "Как {роль}, я хочу {цель}, чтобы {ценность}".
 
 2. **Use Cases**
@@ -211,6 +218,7 @@ Phase 4 выдаёт **предупреждения** (не блокирует E
 - [ ] 10 секций с emoji в порядке: 💬 Простыми словами → 🎯 Context → 👤 User Stories → 🔀 Use Cases → 📐 Requirements → 🔧 Implementation Plan → 💥 Impact Analysis → 📋 Todos → ✅ DoD → 📁 File Changes
 - [ ] **`## 💬 Простыми словами` секция первая в плане** + три непустые подсекции (Сейчас / Как должно быть / Правильно понял?) + содержимое отправлено в чат как обычное сообщение перед ExitPlanMode + подтверждено пользователем (см. `## Two-Stage Plan Presentation Workflow`)
 - [ ] Context → `### Extracted Requirements` → ≥2 нумерованных пунктов (`1. ...`, `2. ...`)
+- [ ] Existing-Spec Inventory: `Domain/Lifecycle`, `Installation/Runtime`, `Verification`, `Repository Baseline`; каждый содержит доказуемые пути, slug/status/docs, BDD/non-BDD, allowed-tools/CLAUDE.md, lint/tests и SHA либо N/A с причиной
 - [ ] Requirements: `### FR` → `### Acceptance Criteria (EARS)` → `### NFR` (Performance, Security, Reliability, Usability) → `### Assumptions`
 - [ ] Todos: `### 📋 \`todo-id\`` + `> описание` + `- **files:**` + `- **changes:**` + `- **refs:**` + `- **deps:**` — блоки разделены `---`
 - [ ] Todos: каждый todo содержит `- **changes:**` с конкретными sub-bullets (что найти/добавить/удалить/заменить)

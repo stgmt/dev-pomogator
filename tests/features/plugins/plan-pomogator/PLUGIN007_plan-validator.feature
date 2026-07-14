@@ -64,6 +64,19 @@ Feature: PLUGIN007 plan-validator — core validation engine
     When the plan-validator runs phased validation
     Then the plan-validator phase 1 has at least one error
 
+  @feature4
+  Scenario: PLUGIN007_45_01 phase 1 requires the pre-plan Existing-Spec Inventory
+    Given a plan-validator plan missing the "Existing-Spec Inventory" section
+    When the plan-validator runs phased validation
+    Then the plan-validator phase 1 has an error containing "Existing-Spec Inventory"
+
+  @feature4
+  Scenario: PLUGIN007_45_02 phase 1 requires every inventory ownership subsection
+    Given a plan-validator plan from the valid fixture
+    And a plan-validator plan with the "Verification" inventory subsection removed
+    When the plan-validator runs phased validation
+    Then the plan-validator phase 1 has an error containing "Verification"
+
   # ---------------------------------------------------------------------------
   # Phase 2 — Requirements subsections and Extracted Requirements
   # ---------------------------------------------------------------------------
