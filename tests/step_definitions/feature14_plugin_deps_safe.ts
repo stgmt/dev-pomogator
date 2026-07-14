@@ -137,9 +137,24 @@ Then(/^the permitted hook invocation continues fail-open despite the doctor fail
 Then(/^plugin-installed dispatch anchors on CLAUDE_PLUGIN_ROOT and repository-dogfood dispatch anchors on CLAUDE_PROJECT_DIR, not process CWD$/, function () {
   const canonical = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, '.claude-plugin', 'hooks.json'), 'utf8')) as { hooks: unknown };
   const dogfood = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, '.claude', 'settings.json'), 'utf8')) as { hooks: unknown };
-  const commands = (value: unknown): string[] => JSON.stringify(value).match(/"command":"([^"]+)"/g)?.map((m) => JSON.parse(`{${m}}`).command) ?? [];
-  for (const command of commands(canonical.hooks)) assert.match(command, /CLAUDE_PLUGIN_ROOT/);
-  for (const command of commands(dogfood.hooks)) assert.match(command, /CLAUDE_PROJECT_DIR/);
+  const commands = (value: unknown): string[] => {
+    const found: string[] = [];
+    const visit = (node: unknown): void => {
+      if (!node || typeof node !== 'object') return;
+      if ('command' in node && typeof (node as { command?: unknown }).command === 'string') {
+        found.push((node as { command: string }).command);
+      }
+      for (const child of Object.values(node)) visit(child);
+    };
+    visit(value);
+    return found;
+  };
+  const canonicalCommands = commands(canonical.hooks);
+  const dogfoodCommands = commands(dogfood.hooks);
+  assert.ok(canonicalCommands.length > 0, 'canonical manifest must contain hook commands');
+  assert.ok(dogfoodCommands.length > 0, 'dogfood settings must contain hook commands');
+  for (const command of canonicalCommands) assert.match(command, /CLAUDE_PLUGIN_ROOT/);
+  for (const command of dogfoodCommands) assert.match(command, /CLAUDE_PROJECT_DIR/);
 });
 
 Then(/^unavailable Windows `node\.exe` recovers separately for two projects sharing one HOME$/, function (this: DepsWorld) {
