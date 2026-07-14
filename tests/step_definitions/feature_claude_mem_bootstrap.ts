@@ -21,6 +21,7 @@ import {
 } from '../../tools/claude-mem-bootstrap/install-claude-mem.ts';
 import { resolveClaudeMemHome } from '../../tools/claude-mem-bootstrap/claude-mem-state.ts';
 import { claudeMemPluginCheck } from '../../.claude/skills/pomogator-doctor/scripts/engine/checks/claude-mem-plugin.ts';
+import { claudeMemWorkerCheck } from '../../.claude/skills/pomogator-doctor/scripts/engine/checks/claude-mem-worker.ts';
 import { mcpParseCheck } from '../../.claude/skills/pomogator-doctor/scripts/engine/checks/mcp-parse.ts';
 
 const REPO = process.env.APP_DIR || process.cwd();
@@ -35,6 +36,9 @@ interface CmemWorld extends V4World {
   hookExit: number;
   hookStdout: string;
   checkSeverity: string;
+  installationMessage: string;
+  workerCheckMessage: string;
+  workerCheckDetails: Record<string, unknown>;
   mcpMessage: string;
   windowsProfile: string;
   windowsHome: string;
@@ -280,11 +284,59 @@ Then<CmemWorld>(/^the state home is the Windows profile "([^"]+)"$/, function (e
 // ---- @feature5: doctor claude-mem check ----
 When<CmemWorld>(/^the doctor claude-mem check runs$/, async function () {
   const res = await claudeMemPluginCheck.run(craftCtx(this.tempDir, REPO) as never);
-  this.checkSeverity = Array.isArray(res) ? res[0].severity : res!.severity;
+  const check = Array.isArray(res) ? res[0] : res!;
+  this.checkSeverity = check.severity;
+  this.installationMessage = check.message;
 });
 
 Then<CmemWorld>(/^the claude-mem check severity is "([^"]+)"$/, function (expected: string) {
   assert.strictEqual(this.checkSeverity, expected);
+});
+
+Then<CmemWorld>(/^the installation diagnostic says claude-mem is installed$/, function () {
+  assert.match(this.installationMessage, /installed/i);
+});
+
+// ---- @feature5: doctor worker diagnostic ----
+Given<CmemWorld>(/^a doctor-visible claude-mem installation$/, function () {
+  fs.mkdirSync(path.join(this.tempDir, '.claude-mem'), { recursive: true });
+  fs.writeFileSync(path.join(this.tempDir, '.claude-mem', '.worker.pid'), '4242');
+});
+
+Given<CmemWorld>(/^a doctor-visible claude-mem worker that is (healthy|unreachable) on port "(\d+)"$/, async function (state: string, port: string) {
+  this.workerPort = Number(port);
+  workerSettings(this);
+  if (state === 'healthy') {
+    const server = http.createServer((_req, res) => {
+      res.writeHead(200, { 'content-type': 'application/json' });
+      res.end(JSON.stringify({ status: 'ok', version: 'test-worker-v1' }));
+    });
+    await new Promise<void>((resolve) => server.listen(this.workerPort, '127.0.0.1', resolve));
+    this.workerServer = server;
+  }
+});
+
+Given<CmemWorld>(/^a malformed claude-mem worker configuration$/, function () {
+  fs.mkdirSync(path.join(this.tempDir, '.claude-mem'), { recursive: true });
+  fs.writeFileSync(path.join(this.tempDir, '.claude-mem', 'settings.json'), '{not-json');
+});
+
+When<CmemWorld>(/^the doctor claude-mem worker check runs$/, async function () {
+  const res = await claudeMemWorkerCheck.run(craftCtx(this.tempDir, REPO) as never);
+  const check = Array.isArray(res) ? res[0] : res!;
+  this.checkSeverity = check.severity;
+  this.workerCheckMessage = check.message;
+  this.workerCheckDetails = (check.details ?? {}) as Record<string, unknown>;
+});
+
+Then<CmemWorld>(/^the worker diagnostic reports "([^"]+)" with port "(\d+)"$/, function (condition: string, port: string) {
+  assert.strictEqual(this.workerCheckDetails.port, Number(port), 'worker diagnostic must expose its resolved port');
+  if (condition === 'malformed-config') {
+    assert.match(this.workerCheckMessage, /configuration is malformed/i, this.workerCheckMessage);
+    assert.strictEqual(this.workerCheckDetails.configuration, 'malformed');
+    return;
+  }
+  assert.match(this.workerCheckMessage, new RegExp(condition), `expected ${condition}: ${this.workerCheckMessage}`);
 });
 
 // ---- @feature6: doctor reads ~/.claude.json ----

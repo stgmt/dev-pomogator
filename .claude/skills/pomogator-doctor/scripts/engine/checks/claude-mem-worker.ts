@@ -22,15 +22,16 @@ const DEFAULT_PORT = 37777;
 const PROBE_TIMEOUT_MS = 800; // a down worker is instant ECONNREFUSED; cap a black-holed (wedged) port.
 const WEDGE_CRITICAL_FAILURES = 30; // >= this many consecutive hook failures = actively blocking the user.
 
-function readWorkerPort(homeDir: string): number {
+export function readWorkerPort(homeDir: string): { port: number; configuration: 'configured' | 'missing' | 'malformed' } {
   try {
     const raw = fs.readFileSync(path.join(homeDir, '.claude-mem', 'settings.json'), 'utf-8');
     const p = parseInt(String((JSON.parse(raw) as Record<string, unknown>).CLAUDE_MEM_WORKER_PORT), 10);
-    if (Number.isFinite(p) && p > 0) return p;
-  } catch {
-    /* absent/malformed → default */
+    return Number.isFinite(p) && p > 0
+      ? { port: p, configuration: 'configured' }
+      : { port: DEFAULT_PORT, configuration: 'malformed' };
+  } catch (error) {
+    return { port: DEFAULT_PORT, configuration: (error as NodeJS.ErrnoException).code === 'ENOENT' ? 'missing' : 'malformed' };
   }
-  return DEFAULT_PORT;
 }
 
 function readConsecutiveFailures(homeDir: string): number {
@@ -56,8 +57,14 @@ export const claudeMemWorkerCheck: CheckDefinition = {
       : { relevant: false, reason: 'claude-mem not installed' };
   },
   async run(ctx: CheckContext): Promise<CheckResult> {
-    const port = readWorkerPort(ctx.homeDir);
+    const { port, configuration } = readWorkerPort(ctx.homeDir);
     const failures = readConsecutiveFailures(ctx.homeDir);
+    if (configuration === 'malformed') {
+      return buildResult(META, 'warning', `worker configuration is malformed; cannot resolve port (default :${port})`, {
+        hint: 'Repair ~/.claude-mem/settings.json and restart the worker.',
+        details: { port, configuration, consecutiveFailures: failures },
+      });
+    }
     const ctrl = new AbortController();
     const onAbort = () => ctrl.abort();
     ctx.signal.addEventListener('abort', onAbort);
@@ -68,13 +75,13 @@ export const claudeMemWorkerCheck: CheckDefinition = {
         return failures > 0
           ? buildResult(META, 'warning', `worker up on :${port} but ${failures} recent hook failure(s) recorded`, {
               hint: 'Transient — the counter resets once hooks reach the worker again.',
-              details: { port, consecutiveFailures: failures },
+              details: { port, configuration, consecutiveFailures: failures },
             })
-          : buildResult(META, 'ok', `worker healthy on :${port}`, { details: { port } });
+          : buildResult(META, 'ok', `worker healthy on :${port}`, { details: { port, configuration } });
       }
       return buildResult(META, 'warning', `worker on :${port} responded ${res.status} (not healthy)`, {
         hint: HEAL_HINT,
-        details: { port, status: res.status, consecutiveFailures: failures },
+        details: { port, configuration, status: res.status, consecutiveFailures: failures },
       });
     } catch (err) {
       const timedOut = err instanceof Error && err.name === 'AbortError';
