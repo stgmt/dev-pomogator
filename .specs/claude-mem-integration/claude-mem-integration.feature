@@ -123,3 +123,13 @@ Feature: CMEM001 claude-mem bootstrap and doctor detection
     When the claude-mem lifecycle scenarios run
     Then no real package download or installation is attempted
     And only recorded launchers and local worker fixtures are used
+
+  @feature4 @feature7
+  Scenario: CMEM001_27 lifecycle manifests register fail-open bootstrap and reaper hooks
+    Given the dev-pomogator hook manifests are available
+    When the claude-mem hook registrations are inspected
+    Then the canonical plugin manifest registers the SessionStart lifecycle hooks
+    And the dogfood settings register the SessionStart lifecycle hooks
+    And the Codex hooks register the SessionStart lifecycle hooks
+    And the canonical plugin manifest registers the reaper on PreToolUse
+    And the dogfood settings register the reaper on PreToolUse

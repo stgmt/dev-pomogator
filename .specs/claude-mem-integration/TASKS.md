@@ -57,7 +57,7 @@
   - [ ] Installation, configuration, worker reachability, port, and version evidence are independently reported.
   - [ ] No failed component is labelled verified.
 
-- [ ] Register canonical-plugin and dogfood lifecycle hooks -- hook registration — id: cmem-t2-02 — Status: TODO | Est: 45m
+- [ ] Register canonical-plugin and dogfood lifecycle hooks -- hook registration — id: cmem-t2-02 — Status: IN_PROGRESS | Est: 45m
   _Requirements: [FR-4](FR.md#fr-4-fail-open-builtins-only-feature4), [FR-7](FR.md#fr-7-worker-reaper-heals-a-wedged-port-feature7)_
   _Files: `.claude-plugin/hooks.json`, `.claude/settings.json`, `.codex/hooks.json`_
   _Dependencies: cmem-t1-02_
@@ -65,6 +65,7 @@
   - [ ] Canonical-plugin and repository-dogfood lifecycle registrations are consistent.
   - [ ] Installed-plugin and repository paths resolve correctly.
   - [ ] Registration preserves fail-open behavior.
+  _Filtered evidence: Docker BDD `CMEM001_26|CMEM001_27` passed 2 scenarios / 11 steps on 2026-07-14. `CMEM001_27` checks canonical-plugin, repository-dogfood, and Codex SessionStart registration, root variables/timeouts, and Claude PreToolUse `--mid-session`; `CMEM001_26` verifies the bootstrap recorder seam does not install packages. Canonical full-profile proof remains required before DONE._
 
 ## Phase 3: Windows recovery and profile proof
 
