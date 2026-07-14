@@ -480,7 +480,20 @@ When(/^user runs "\/plugin install dev-pomogator@stgmt"$/, function (this: V4Wor
 });
 
 Then(/^Claude Code should copy plugin tree в ~\/\.claude\/plugins\/cache\/stgmt\/dev-pomogator\/<version>\/$/, function (this: V4World) {
-  assert.match(this.lastStdout, /CACHE_PLUGIN_JSON=.*\.claude[/\\]plugins[/\\]cache[/\\]stgmt[/\\]dev-pomogator[/\\]2\.0\.3[/\\]\.claude-plugin[/\\]plugin\.json/);
+  // The cache path is version-pinned, so this assertion must read the version from the manifest
+  // — never hardcode it. It used to pin `2.0.3` literally, which turned every release into a
+  // broken test: the 2.0.4 bump (PR #110) took CANON001_40 and _60 red, and CI missed it because
+  // the PR pipeline does not run the full BDD suite. The scenario says "<version>"; honour that.
+  const manifest = JSON.parse(
+    fs.readFileSync(path.join(REPO_ROOT, '.claude-plugin', 'plugin.json'), 'utf-8'),
+  ) as { version: string };
+  const version = manifest.version.replace(/[\\^$.*+?()[\]{}|]/g, '\\$&');
+  assert.match(
+    this.lastStdout,
+    new RegExp(
+      `CACHE_PLUGIN_JSON=.*\\.claude[/\\\\]plugins[/\\\\]cache[/\\\\]stgmt[/\\\\]dev-pomogator[/\\\\]${version}[/\\\\]\\.claude-plugin[/\\\\]plugin\\.json`,
+    ),
+  );
 });
 
 Then(/^plugin\.json should be present в cache$/, function (this: V4World) {
@@ -1219,3 +1232,68 @@ Then(
     assert.strictEqual((result.stdout || '').trim(), '0', `expected "0" log entries, got: ${result.stdout}`);
   },
 );
+
+// ---------------------------------------------------------------------------
+// CANON001_130 — auto-commit must not sweep stray paths into the shipped repo
+//
+// The marketplace serves this repo as-is, so whatever auto-commit stages reaches every user.
+// `git add -A` swept `%windir%/Panther/UnattendGC/*.xml` into fec62086 and shipped it. These
+// steps drive the REAL gitCommit() against a REAL git repo — no mocks.
+// ---------------------------------------------------------------------------
+
+interface AutoCommitWorld extends V4World {
+  acRepo?: string;
+}
+
+Given(
+  /^a git repo containing the agent's changes and a stray "([^"]+)" directory at the root$/,
+  function (this: AutoCommitWorld, stray: string) {
+    const repo = fs.mkdtempSync(path.join(os.tmpdir(), 'canon130-'));
+    const git = (...args: string[]): void => {
+      const r = spawnSync('git', args, { cwd: repo, encoding: 'utf-8' });
+      assert.strictEqual(r.status, 0, `git ${args.join(' ')} failed: ${r.stderr}`);
+    };
+    git('init', '-q');
+    git('config', 'user.email', 'bdd@example.com');
+    git('config', 'user.name', 'BDD');
+    fs.writeFileSync(path.join(repo, 'seed.txt'), 'seed\n');
+    git('add', 'seed.txt');
+    git('commit', '-q', '-m', 'seed');
+
+    // The agent's real work: one modified file, one new file.
+    fs.writeFileSync(path.join(repo, 'seed.txt'), 'changed\n');
+    fs.writeFileSync(path.join(repo, 'real.ts'), 'export const x = 1;\n');
+
+    // The junk a cwd-collapsed tool dropped at the root.
+    const junk = path.join(repo, stray, 'Panther', 'UnattendGC');
+    fs.mkdirSync(junk, { recursive: true });
+    fs.writeFileSync(path.join(junk, 'diagerr.xml'), '<xml/>\n');
+
+    this.acRepo = repo;
+  },
+);
+
+When(/^auto-commit stages and commits$/, async function (this: AutoCommitWorld) {
+  const mod = await import('../../tools/auto-commit/auto_commit_core.ts');
+  mod.gitCommit(this.acRepo!, 'bdd: agent work', false);
+});
+
+Then(/^the commit contains the agent's changed files$/, function (this: AutoCommitWorld) {
+  const files = execSync('git show --name-only --format= HEAD', { cwd: this.acRepo!, encoding: 'utf-8' })
+    .trim()
+    .split('\n')
+    .filter(Boolean);
+  assert.ok(files.includes('real.ts'), `new file missing from commit: ${files.join(', ')}`);
+  assert.ok(files.includes('seed.txt'), `modified file missing from commit: ${files.join(', ')}`);
+});
+
+Then(/^the commit contains no path under "([^"]+)"$/, function (this: AutoCommitWorld, stray: string) {
+  const files = execSync('git show --name-only --format= HEAD', { cwd: this.acRepo!, encoding: 'utf-8' });
+  assert.ok(!files.includes(stray), `stray path leaked into the commit:\n${files}`);
+});
+
+Then(/^the stray directory is left untracked in the working tree$/, function (this: AutoCommitWorld) {
+  const status = execSync('git status --porcelain', { cwd: this.acRepo!, encoding: 'utf-8' });
+  assert.match(status, /windir/, `stray path should remain untracked, got:\n${status}`);
+  fs.rmSync(this.acRepo!, { recursive: true, force: true });
+});

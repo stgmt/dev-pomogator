@@ -306,3 +306,15 @@ Feature: CANON001 Canonical Claude Code Marketplace Plugin
     Given a synthetic plugin tree whose raw-.ts hook imports a real npm package
     When the deps-safety guard scans that tree
     Then the guard flags the offending hook citing `zod`
+
+  # The marketplace serves this repo AS-IS ("source": "./"), so anything auto-commit sweeps into
+  # the tree ships to every user. That is not hypothetical: `%windir%/Panther/UnattendGC/*.xml` —
+  # real Windows Setup logs — reached main in fec62086 via `git add -A` and shipped. auto-commit
+  # must stage by explicit path and never sweep a directory built from an unexpanded variable.
+  @feature2
+  Scenario: CANON001_130 auto-commit stages the agent's work but refuses a stray variable path
+    Given a git repo containing the agent's changes and a stray "%windir%" directory at the root
+    When auto-commit stages and commits
+    Then the commit contains the agent's changed files
+    And the commit contains no path under "%windir%"
+    And the stray directory is left untracked in the working tree
