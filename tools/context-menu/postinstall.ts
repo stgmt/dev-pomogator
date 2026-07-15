@@ -18,6 +18,17 @@ import * as path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const PREFIX = '[context-menu]';
+export const NILESOFT_WINGET_ARGS = [
+  'install',
+  '--exact',
+  '--id',
+  'Nilesoft.Shell',
+  '--source',
+  'winget',
+  '--accept-package-agreements',
+  '--accept-source-agreements',
+  '--disable-interactivity',
+] as const;
 const NILESOFT_DIR = 'C:\\Program Files\\Nilesoft Shell';
 const SHELL_NSS = path.join(NILESOFT_DIR, 'shell.nss');
 const IMPORTS_DIR = path.join(NILESOFT_DIR, 'imports');
@@ -70,13 +81,10 @@ function isNilesoftInstalled(): boolean {
 function installNilesoft(): boolean {
   log('Installing Nilesoft Shell via winget...');
   try {
-    execSync(
-      'winget install Nilesoft.NilesoftShell --accept-package-agreements --accept-source-agreements',
-      { stdio: 'inherit', timeout: 120000 },
-    );
+    execFileSync('winget', [...NILESOFT_WINGET_ARGS], { stdio: 'inherit', timeout: 120000 });
     return fs.existsSync(SHELL_NSS);
   } catch {
-    log('winget install failed. Install manually: winget install Nilesoft.NilesoftShell');
+    log(`winget install failed. Install manually: winget ${NILESOFT_WINGET_ARGS.join(' ')}`);
     return false;
   }
 }
@@ -90,7 +98,7 @@ export function generateNss(): string {
 // Single entry by design: admin + --dangerously-skip-permissions + TUI.
 // Routes through launch-claude-tui.ps1 so launch logging and workspace trust
 // auto-grant happen before invoking Claude Code.
-item(type='dir|back' admin=true title='Claude Code (YOLO + TUI)' image='@app.dir\\imports\\claude-icon.ico' cmd='powershell.exe' args='-ExecutionPolicy Bypass -File "${launchScript}" -Yolo -ProjectDir "@sel.dir"')
+item(type='dir|back' admin=true title='Claude Code (YOLO + TUI)' cmd='powershell.exe' args='-ExecutionPolicy Bypass -File "${launchScript}" -Yolo -ProjectDir "@sel.dir"')
 `;
 }
 
@@ -567,13 +575,17 @@ function main(): void {
     }
   }
 
-  const claudeScriptReady = plan.copyClaude ? copyLaunchScript() : false;
-  const codexScriptReady = plan.copyCodex ? copyCodexLaunchScript() : false;
+  const claudeScriptReady = plan.copyClaude ? copyLaunchScript() : true;
+  const codexScriptReady = plan.copyCodex ? copyCodexLaunchScript() : true;
+  if (!claudeScriptReady || !codexScriptReady) {
+    log('Launch scripts are incomplete; NSS files and shell imports were not changed');
+    return;
+  }
 
-  const claudeChanged = plan.writeClaudeNss && claudeScriptReady
+  const claudeChanged = plan.writeClaudeNss
     ? writeNssFile(CLAUDE_NSS, generateNss(), 'claude-code.nss')
     : false;
-  const codexChanged = plan.writeCodexNss && codexScriptReady
+  const codexChanged = plan.writeCodexNss
     ? writeNssFile(CODEX_NSS, generateCodexNss(), 'Codex.nss')
     : false;
   const codexIconChanged = plan.writeCodexIcon ? ensureCodexIcon() : false;
