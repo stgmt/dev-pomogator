@@ -16,6 +16,10 @@ const REPO_ROOT = process.env.APP_DIR || process.cwd();
 const POSTINSTALL_SCRIPT = path.join(REPO_ROOT, 'tools', 'context-menu', 'postinstall.ts');
 const LAUNCH_SCRIPT = path.join(REPO_ROOT, 'scripts', 'launch-claude-tui.ps1');
 const CODEX_LAUNCH_SCRIPT = path.join(REPO_ROOT, 'scripts', 'launch-Codex-tui.ps1');
+const WORKTREE_LAUNCH_SCRIPTS = [
+  path.join(REPO_ROOT, 'scripts', 'launch-worktree.ps1'),
+  path.join(REPO_ROOT, 'tools', 'devcontainer', 'launch-worktree.ps1'),
+];
 const INSTALL_CODEX_CONTEXT_MENU_SCRIPT = path.join(REPO_ROOT, 'scripts', 'install-codex-context-menu.ps1');
 
 // ============================================================================
@@ -31,6 +35,10 @@ interface G8World extends V4World {
   g8CodexConfigPath?: string;
   g8LogPath?: string;
   g8TargetDir?: string;
+  g8ExtraPath?: string;
+  g8CodexPaneBefore?: Set<string>;
+  g8GeneratedCodexPane?: string;
+  worktreeLauncherContents?: string[];
   codexOnlyPlan?: import('../../tools/context-menu/postinstall.ts').InstallPlan;
   codexOnlyShellImports?: string;
   fallbackCodexIcon?: Buffer;
@@ -52,18 +60,42 @@ function runLaunchScript(world: G8World, extraArgs: string[], scriptPath = LAUNC
   world.g8FakeHome = fakeHome;
   world.g8LogPath = path.join(fakeHome, '.dev-pomogator', 'logs', 'context-menu-launch.log');
 
+  // g8ExtraPath lets a scenario control what `claude` resolves to (e.g. an npm-style shim pair).
+  const pathValue = world.g8ExtraPath
+    ? world.g8ExtraPath + path.delimiter + (process.env.PATH ?? '')
+    : process.env.PATH;
+
   const result = spawnSync(
     'pwsh',
     ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', scriptPath, ...extraArgs],
     {
       encoding: 'utf-8',
       timeout: 15000,
-      env: { ...process.env, USERPROFILE: fakeHome, HOME: fakeHome, CONTEXT_MENU_NONINTERACTIVE: '1' },
+      env: {
+        ...process.env,
+        PATH: pathValue,
+        USERPROFILE: fakeHome,
+        HOME: fakeHome,
+        CONTEXT_MENU_NONINTERACTIVE: '1',
+      },
     },
   );
   world.lastExitCode = result.status;
   world.lastStdout = result.stdout || '';
   world.lastStderr = result.stderr || '';
+}
+
+const GENERATED_LAUNCHER_DIR = path.join(os.tmpdir(), 'dev-pomogator-launch');
+
+function generatedPanes(pattern: RegExp): string[] {
+  if (!fs.existsSync(GENERATED_LAUNCHER_DIR)) return [];
+  return fs.readdirSync(GENERATED_LAUNCHER_DIR)
+    .filter((name) => pattern.test(name))
+    .map((name) => path.join(GENERATED_LAUNCHER_DIR, name));
+}
+
+function removeGeneratedPanes(pattern: RegExp): void {
+  for (const target of generatedPanes(pattern)) fs.rmSync(target, { force: true });
 }
 
 // Lazily imported real module (import guard prevents side effects)
@@ -120,6 +152,10 @@ When(/^the launch-claude-tui\.ps1 script file is read$/, function (this: V4World
 
 Given(/^the launch-Codex-tui\.ps1 script file is read$/, function (this: V4World) {
   this.lastStdout = fs.readFileSync(CODEX_LAUNCH_SCRIPT, 'utf-8');
+});
+
+When(/^the worktree launcher scripts are read$/, function (this: G8World) {
+  this.worktreeLauncherContents = WORKTREE_LAUNCH_SCRIPTS.map((file) => fs.readFileSync(file, 'utf-8'));
 });
 
 When(/^the install-codex-context-menu\.ps1 script file is read$/, function (this: V4World) {
@@ -647,5 +683,85 @@ Then(/^the NSS "([^"]+)" entry command should not call claude directly$/, functi
   }
   if (match[1].trim() === 'claude' || match[1].includes('cmd /k claude')) {
     throw new Error(`Expected the "${title}" entry NOT to call claude directly, got cmd='${match[1]}'`);
+  }
+});
+
+// ============================================================================
+// @feature15 (Codex/worktree UNC and escaped-path regressions)
+// CTXMENU001_26..29
+// ============================================================================
+
+Given(/^pwsh is available and no stale generated Codex panes exist$/, function (this: G8World) {
+  if (!pwshAvailable()) return 'pending';
+  removeGeneratedPanes(/^codex-only-pane\..*\.(cmd|ps1)$/);
+  this.g8CodexPaneBefore = new Set(generatedPanes(/^codex-only-pane\..*\.(cmd|ps1)$/));
+});
+
+Given(/^Codex resolves to a PowerShell shim beside a cmd shim$/, function (this: G8World) {
+  const binDir = path.join(this.tempDir, 'fake-codex-bin');
+  fs.mkdirSync(binDir, { recursive: true });
+  fs.writeFileSync(path.join(binDir, 'codex.ps1'), 'exit 0\n', 'utf-8');
+  fs.writeFileSync(path.join(binDir, 'codex.cmd'), '@echo off\r\n', 'utf-8');
+  this.g8ExtraPath = binDir;
+});
+
+When(/^launch-Codex-tui\.ps1 is invoked non-interactively for a UNC project$/, function (this: G8World) {
+  if (process.platform !== 'win32') return 'pending';
+  const fakeUnc = `\\\\wsl.localhost\\Ubuntu\\tmp\\ctxmenu-${path.basename(this.tempDir)}`;
+  runLaunchScript(this, ['-Yolo', '-NoTui', '-ProjectDir', fakeUnc], CODEX_LAUNCH_SCRIPT);
+});
+
+When(/^launch-Codex-tui\.ps1 is invoked non-interactively for a drive project containing percent signs$/, function (this: G8World) {
+  const target = path.join(this.tempDir, 'project-%PATH%-literal');
+  fs.mkdirSync(target, { recursive: true });
+  this.g8TargetDir = target;
+  runLaunchScript(this, ['-Yolo', '-NoTui', '-ProjectDir', target], CODEX_LAUNCH_SCRIPT);
+});
+
+Then(/^exactly one unique Codex (PowerShell|cmd) pane should exist$/, function (this: G8World, kind: string) {
+  const extension = kind === 'PowerShell' ? 'ps1' : 'cmd';
+  const panes = generatedPanes(new RegExp(`^codex-only-pane\\..*\\.${extension}$`))
+    .filter((pane) => !this.g8CodexPaneBefore?.has(pane));
+  if (panes.length !== 1) {
+    throw new Error(`Expected exactly one new unique Codex ${extension} pane, found ${panes.length}: ${panes.join(', ')}\nstdout: ${this.lastStdout}\nstderr: ${this.lastStderr}`);
+  }
+  this.g8GeneratedCodexPane = panes[0];
+});
+
+Then(/^the Codex PowerShell pane should set the selected project with Set-Location -LiteralPath$/, function (this: G8World) {
+  const content = fs.readFileSync(this.g8GeneratedCodexPane!, 'utf-8');
+  if (!content.includes('Set-Location -LiteralPath')) {
+    throw new Error(`Expected the real generated PowerShell pane to set a literal project path:\n${content}`);
+  }
+});
+
+Then(/^the Codex launch script should not pass a UNC project to wt\.exe -d$/, function (this: G8World) {
+  const content = fs.readFileSync(CODEX_LAUNCH_SCRIPT, 'utf-8');
+  if (/wt\.exe\s+-d\s+\$Dir\s+powershell/i.test(content)) {
+    throw new Error('Codex launcher still injects the UNC project into wt.exe -d');
+  }
+});
+
+Then(/^the Codex cmd pane should preserve the literal selected project path$/, function (this: G8World) {
+  const content = fs.readFileSync(this.g8GeneratedCodexPane!, 'utf-8');
+  const escaped = this.g8TargetDir!.replace(/%/g, '%%');
+  if (!content.includes(escaped) || content.split(/\r?\n/).some((line) => line.includes(this.g8TargetDir!) && !line.includes(escaped))) {
+    throw new Error(`Expected percent signs to be escaped in the generated batch pane.\nExpected escaped: ${escaped}\nContent:\n${content}`);
+  }
+});
+
+Then(/^no generated Codex PowerShell pane should exist$/, function () {
+  const panes = generatedPanes(/^codex-only-pane\..*\.ps1$/);
+  if (panes.length !== 0) {
+    throw new Error(`Expected no Codex PowerShell pane for a drive project, found: ${panes.join(', ')}`);
+  }
+});
+
+Then(/^every worktree launcher should resolve MainRepoRoot through ProviderPath$/, function (this: G8World) {
+  const bad = (this.worktreeLauncherContents ?? []).filter((content) =>
+    !content.includes('(Resolve-Path -LiteralPath $MainRepoRoot).ProviderPath') ||
+    content.includes('(Resolve-Path $MainRepoRoot).Path'));
+  if ((this.worktreeLauncherContents?.length ?? 0) !== 2 || bad.length !== 0) {
+    throw new Error(`Expected both real worktree launchers to use ProviderPath; invalid count=${bad.length}`);
   }
 });

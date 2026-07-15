@@ -193,3 +193,30 @@ Feature: CTXMENU001_Context_Menu_Setup
     When the fallback Codex icon is generated
     Then the fallback Codex icon should be a valid ICO file
     And the Codex NSS content should contain "codex-icon.ico"
+
+  @feature15
+  Scenario: CTXMENU001_26 Codex resolves a selected project to a bare filesystem path
+    Given the launch-Codex-tui.ps1 script file is read
+    Then the Codex launch script should contain "ProviderPath"
+
+  @feature15
+  Scenario: CTXMENU001_27 a UNC Codex launch uses a unique PowerShell pane without wt.exe working-directory injection
+    Given pwsh is available and no stale generated Codex panes exist
+    And Codex resolves to a PowerShell shim beside a cmd shim
+    When launch-Codex-tui.ps1 is invoked non-interactively for a UNC project
+    Then exactly one unique Codex PowerShell pane should exist
+    And the Codex PowerShell pane should set the selected project with Set-Location -LiteralPath
+    And the Codex launch script should not pass a UNC project to wt.exe -d
+
+  @feature15
+  Scenario: CTXMENU001_28 a drive-backed Codex project gets a unique cmd pane with escaped paths
+    Given pwsh is available and no stale generated Codex panes exist
+    When launch-Codex-tui.ps1 is invoked non-interactively for a drive project containing percent signs
+    Then exactly one unique Codex cmd pane should exist
+    And the Codex cmd pane should preserve the literal selected project path
+    And no generated Codex PowerShell pane should exist
+
+  @feature15
+  Scenario: CTXMENU001_29 worktree launchers resolve repository roots through ProviderPath
+    When the worktree launcher scripts are read
+    Then every worktree launcher should resolve MainRepoRoot through ProviderPath
