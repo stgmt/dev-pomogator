@@ -195,8 +195,49 @@ function Ensure-WorkspaceTrust {
 # auto-grant + --dangerously-skip-permissions). Routes claude through a tiny generated .cmd so the
 # pane can log claude's own exit code after the user closes/exits it (FR-6) — wt.exe itself is
 # fire-and-forget and cannot report the exit code of what it spawned.
+# --- UNC-safe launcher support ------------------------------------------------------------------
+# cmd.exe CANNOT be the launcher shell for WSL/UNC project dirs. It refuses any UNC path as its
+# current directory: `cd /d "\\..."` fails, and cmd started with a UNC startup dir (wt.exe -d
+# "\\..." cmd /k) fails at launch with 0x8007010b ("The directory name is invalid.") BEFORE the
+# .cmd is even read — this is the exact right-click error WSL users hit. `pushd` cannot rescue it
+# either: \\wsl.localhost\ is a 9P provider, not an SMB share, so there is no drive letter to map
+# (pushd returns errorlevel 1). PowerShell has no such limitation — Set-Location -LiteralPath
+# handles a UNC path natively and the child process (claude.exe / python.exe) inherits the UNC cwd
+# fine (verified: claude.exe --version runs with cwd=\\wsl.localhost\...). So every pane is now
+# generated as a .ps1 run by powershell.exe, not a .cmd run by cmd.exe.
+function ConvertTo-FsPath {
+    param([string]$Path)
+    # (Resolve-Path).Path prepends a provider qualifier for UNC paths — e.g.
+    # "Microsoft.PowerShell.Core\FileSystem::\\wsl.localhost\...". Strip it so title/env/Set-Location
+    # see only the bare filesystem path. Also normalize forward slashes (git rev-parse --show-toplevel
+    # returns //wsl.localhost/...) back to backslashes for a canonical Windows path.
+    $p = $Path -replace '^Microsoft\.PowerShell\.Core\\FileSystem::', ''
+    if ($p -like '//*') { $p = $p -replace '/', '\' }
+    return $p
+}
+function Get-WtDirArgs {
+    param([string]$Dir)
+    # wt.exe -d sets the pane's startup directory. Each pane Set-Locations itself, so -d is a nicety;
+    # skip it for UNC (avoid any wt edge case), keep it for local paths.
+    if ($Dir -like '\\*') { return @() }
+    return @('-d', $Dir)
+}
+function Get-ClaudeExe {
+    $claude = Get-Command claude -ErrorAction SilentlyContinue
+    $claudePath = if ($claude) { $claude.Source } else { 'claude' }
+    Write-LaunchLog "claude command: $claudePath"
+    return $claudePath
+}
+function Format-PsArgs {
+    param([string[]]$Arguments = @())
+    # Render args for the PowerShell call operator, single-quoted: & 'exe' 'a' 'b'
+    if (-not $Arguments -or $Arguments.Count -eq 0) { return '' }
+    return ' ' + (($Arguments | ForEach-Object { "'" + ($_ -replace "'", "''") + "'" }) -join ' ')
+}
+
 function Start-ClaudeOnly {
     param([string]$Dir)
+    $Dir = ConvertTo-FsPath $Dir
     if ($Yolo) {
         Ensure-WorkspaceTrust -Dir $Dir
     }
@@ -205,32 +246,39 @@ function Start-ClaudeOnly {
     $launcherRoot = if ($env:TEMP) { $env:TEMP } else { [System.IO.Path]::GetTempPath() }
     $launcherDir = Join-Path $launcherRoot 'dev-pomogator-launch'
     if (-not (Test-Path $launcherDir)) { New-Item -ItemType Directory -Path $launcherDir -Force | Out-Null }
-    $claudeOnlyLauncher = Join-Path $launcherDir 'claude-only-pane.cmd'
+    $claudeOnlyLauncher = Join-Path $launcherDir 'claude-only-pane.ps1'
+    $claudeExe = Get-ClaudeExe
     $claudeArgs = if ($Yolo) { @('--dangerously-skip-permissions') } else { @() }
-    $claudeCmd = Get-ClaudeCommand -Arguments $claudeArgs
-    $claudeVersionCmd = Get-ClaudeCommand -Arguments @('--version')
+    $claudeArgsPs = Format-PsArgs $claudeArgs
+    # command= echo is embedded in a single-quoted literal in the generated .ps1; double any single
+    # quotes ($claudeArgsPs wraps args in ') so they don't break out of that literal at runtime.
+    $cmdDisplay = ($claudeExe + $claudeArgsPs) -replace "'", "''"
     $dirForEnv = $Dir -replace '\\', '/'
     $sessionPrefix = 'notui-' + ([guid]::NewGuid().ToString('N').Substring(0, 8))
+    $logFileLit = $script:LaunchLogFile
     @"
-@echo off
-title Claude Code YOLO - $Dir
-cd /d "$Dir"
-set TEST_STATUSLINE_SESSION=$sessionPrefix
-set TEST_STATUSLINE_PROJECT=$dirForEnv
-echo [dev-pomogator] Claude context-menu no-TUI launch
-echo [dev-pomogator] cwd=%CD%
-echo [dev-pomogator] session=%TEST_STATUSLINE_SESSION%
-echo [dev-pomogator] command=$claudeCmd
-where claude
-$claudeVersionCmd
-echo [dev-pomogator] starting Claude Code in 2 seconds...
-timeout /t 2 /nobreak >nul
-$claudeCmd
-$(Get-ClaudeExitLogBatch -Dir $Dir)
-if not "%CM_EXIT%"=="0" pause
-"@ | Set-Content -Path $claudeOnlyLauncher -Encoding ASCII
+`$ErrorActionPreference = 'Continue'
+`$Host.UI.RawUI.WindowTitle = 'Claude Code YOLO - $Dir'
+Set-Location -LiteralPath '$Dir'
+`$env:TEST_STATUSLINE_SESSION = '$sessionPrefix'
+`$env:TEST_STATUSLINE_PROJECT = '$dirForEnv'
+Write-Host '[dev-pomogator] Claude context-menu no-TUI launch (UNC-safe PowerShell pane)'
+Write-Host ('[dev-pomogator] cwd=' + (Get-Location).ProviderPath)
+Write-Host ('[dev-pomogator] session=' + `$env:TEST_STATUSLINE_SESSION)
+Write-Host '[dev-pomogator] command=$cmdDisplay'
+& '$claudeExe' '--version'
+Write-Host '[dev-pomogator] starting Claude Code in 2 seconds...'
+Start-Sleep -Seconds 2
+& '$claudeExe'$claudeArgsPs
+`$cmExit = `$LASTEXITCODE
+`$ts = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
+`$status = if (`$cmExit -ne 0) { 'ERROR: claude exited with code ' + `$cmExit } else { 'claude exited 0' }
+try { Add-Content -LiteralPath '$logFileLit' -Value ('[' + `$ts + '] ' + `$status + ' (dir=$Dir)') -Encoding UTF8 } catch {}
+if (`$cmExit -ne 0) { Read-Host 'Press Enter to close' }
+"@ | Set-Content -Path $claudeOnlyLauncher -Encoding UTF8
 
-    wt.exe -d $Dir cmd /k $claudeOnlyLauncher
+    $wtDir = Get-WtDirArgs $Dir
+    wt.exe $wtDir powershell.exe -NoProfile -ExecutionPolicy Bypass -NoExit -File $claudeOnlyLauncher
 }
 
 Write-LaunchLog '=== launch-claude-tui.ps1 invoked ==='
@@ -249,7 +297,10 @@ try {
             $ProjectDir = $PWD.Path
         }
     }
-    $ProjectDir = (Resolve-Path $ProjectDir).Path
+    # .ProviderPath (not .Path): for a UNC path .Path is provider-qualified
+    # ("Microsoft.PowerShell.Core\FileSystem::\\wsl.localhost\..."); .ProviderPath is the bare
+    # filesystem path. ConvertTo-FsPath strips any residual qualifier and normalizes slashes.
+    $ProjectDir = ConvertTo-FsPath (Resolve-Path $ProjectDir).ProviderPath
     $projectDirForEnv = $ProjectDir -replace '\\', '/'
     Write-LaunchLog "resolved ProjectDir: $ProjectDir"
 
@@ -337,28 +388,36 @@ try {
         Ensure-WorkspaceTrust -Dir $ProjectDir
     }
 
-    $claudeLauncher = Join-Path $launcherDir 'claude-pane.cmd'
+    $claudeLauncher = Join-Path $launcherDir 'claude-pane.ps1'
+    $claudeExe = Get-ClaudeExe
     $claudeArgs = if ($Yolo) { @('--dangerously-skip-permissions') } else { @() }
-    $claudeCmd = Get-ClaudeCommand -Arguments $claudeArgs
+    $claudeArgsPs = Format-PsArgs $claudeArgs
+    $logFileLit = $script:LaunchLogFile
     @"
-@echo off
-set TEST_STATUSLINE_SESSION=$sessionPrefix
-set TEST_STATUSLINE_PROJECT=$projectDirForEnv
-$claudeCmd
-$(Get-ClaudeExitLogBatch -Dir $ProjectDir)
-"@ | Set-Content -Path $claudeLauncher -Encoding ASCII
+`$ErrorActionPreference = 'Continue'
+Set-Location -LiteralPath '$ProjectDir'
+`$env:TEST_STATUSLINE_SESSION = '$sessionPrefix'
+`$env:TEST_STATUSLINE_PROJECT = '$projectDirForEnv'
+& '$claudeExe'$claudeArgsPs
+`$cmExit = `$LASTEXITCODE
+`$ts = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
+`$status = if (`$cmExit -ne 0) { 'ERROR: claude exited with code ' + `$cmExit } else { 'claude exited 0' }
+try { Add-Content -LiteralPath '$logFileLit' -Value ('[' + `$ts + '] ' + `$status + ' (dir=$ProjectDir)') -Encoding UTF8 } catch {}
+"@ | Set-Content -Path $claudeLauncher -Encoding UTF8
 
-    $tuiLauncher = Join-Path $launcherDir 'tui-pane.cmd'
+    $tuiLauncher = Join-Path $launcherDir 'tui-pane.ps1'
     @"
-@echo off
-set PYTHONPATH=$tuiParent
-$python -m tui --status-file "$statusFile" --log-file "$logFile" --framework auto
-pause
-"@ | Set-Content -Path $tuiLauncher -Encoding ASCII
+Set-Location -LiteralPath '$ProjectDir'
+`$env:PYTHONPATH = '$tuiParent'
+& '$python' -m tui --status-file '$statusFile' --log-file '$logFile' --framework auto
+Read-Host 'Press Enter to close'
+"@ | Set-Content -Path $tuiLauncher -Encoding UTF8
 
-    # wt.exe with split-pane
+    # wt.exe with split-pane. powershell.exe panes (not cmd) so WSL/UNC project dirs work; each
+    # pane Set-Locations itself, so -d is only added for local paths (Get-WtDirArgs).
     Write-LaunchLog "launching wt.exe (Yolo=$Yolo) session=$sessionPrefix"
-    wt.exe -d $ProjectDir cmd /k $claudeLauncher `; split-pane -H -s 0.07 -d $ProjectDir cmd /k $tuiLauncher
+    $wtDir = Get-WtDirArgs $ProjectDir
+    wt.exe $wtDir powershell.exe -NoProfile -ExecutionPolicy Bypass -NoExit -File $claudeLauncher `; split-pane -H -s 0.07 $wtDir powershell.exe -NoProfile -ExecutionPolicy Bypass -NoExit -File $tuiLauncher
 
     Write-LaunchLog "launch OK (claude+tui) status=$statusFile"
     Write-Host "Launched Windows Terminal with Claude Code + TUI"

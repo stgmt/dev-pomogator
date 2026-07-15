@@ -568,12 +568,15 @@ Then(/^the log should contain the resolved project dir$/, function (this: G8Worl
 });
 
 Then(/^the generated Claude launcher should set TEST_STATUSLINE_PROJECT with forward slashes$/, function () {
-  const launcherPath = path.join(os.tmpdir(), 'dev-pomogator-launch', 'claude-only-pane.cmd');
+  // UNC-safe: the pane is now a PowerShell launcher (.ps1 run by powershell.exe), not a .cmd —
+  // cmd.exe cannot hold a WSL/UNC path as its cwd (0x8007010b). The env var is set the PowerShell
+  // way: $env:TEST_STATUSLINE_PROJECT = '<forward-slash path>'.
+  const launcherPath = path.join(os.tmpdir(), 'dev-pomogator-launch', 'claude-only-pane.ps1');
   if (!fs.existsSync(launcherPath)) {
     throw new Error(`Expected generated launcher to exist at ${launcherPath}`);
   }
   const content = fs.readFileSync(launcherPath, 'utf-8');
-  const line = content.split(/\r?\n/).find((candidate) => candidate.startsWith('set TEST_STATUSLINE_PROJECT='));
+  const line = content.split(/\r?\n/).find((candidate) => candidate.startsWith('$env:TEST_STATUSLINE_PROJECT'));
   if (!line) {
     throw new Error(`Expected generated launcher to set TEST_STATUSLINE_PROJECT. Content:\n${content}`);
   }
