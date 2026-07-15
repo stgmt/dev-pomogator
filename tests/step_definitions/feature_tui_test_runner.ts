@@ -255,8 +255,8 @@ Given(/^the wrapper invocation directory differs from TEST_STATUSLINE_PROJECT$/,
 When(/^the sessioned wrapper runs a child that prints its working directory$/, function (this: TuiWorld) {
   const invocationDir = this.wrapperInvocationDir!;
   const result = crossSpawn.sync(
-    'npx',
-    ['tsx', appPath(TUI_PKG, 'test_runner_wrapper.ts'), '--framework=generic', '--', process.execPath, '-e', 'process.stdout.write(process.cwd())'],
+    process.execPath,
+    [appPath(TUI_PKG, 'test_runner_wrapper.bundle.mjs'), '--framework=generic', '--', process.execPath, '-e', 'process.stdout.write(process.cwd())'],
     {
       cwd: invocationDir,
       encoding: 'utf-8',
