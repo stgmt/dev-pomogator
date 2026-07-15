@@ -30,7 +30,7 @@
  * @see .specs/tui-test-runner/tui-test-runner.feature
  * @see .claude/skills/bdd-migrator/SKILL.md
  */
-import { Given, When, Then, After } from '@cucumber/cucumber';
+import { Given, When, Then, Before, After } from '@cucumber/cucumber';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import crossSpawn from 'cross-spawn';
@@ -353,7 +353,7 @@ Given(
   function (this: TuiWorld) {
     // yaml-v2-failed.yaml carries 2 passed + 3 failed tests in one suite; the
     // sort behaviour (matched-pattern cards first) is identical and headless.
-    this.tempDir = this.tempDir; // (World already fresh per scenario)
+    assert.ok(this.tempDir, 'World temp directory should exist for the scenario');
   },
 );
 
@@ -1388,6 +1388,155 @@ Then(
     assert.equal(c.dockerProjectName, 'devpom-test-dispatchbdd1');
   },
 );
+
+// --- @feature20: explicit spec-door batch dispatch contract -----------------
+// The endpoint below is a concrete transaction recorder: it receives the exact
+// request produced by the real dispatcher and never executes a command itself.
+// This lets the scenarios prove the important safety boundary — no local
+// fallback or partial execution — without replacing the dispatcher with a mock.
+interface BatchWorldState {
+  endpointCalls: Array<readonly { command: string; framework: string }[]>;
+  endpointAvailable: boolean;
+  executeAttempts: number;
+  transaction?: { transactionId: string; outcomes: Array<{ command: string; framework: string; exitCode: number }> };
+  error?: Error;
+}
+
+function batchState(world: TuiWorld): BatchWorldState {
+  const state = (world as any).batchState as BatchWorldState | undefined;
+  if (state) return state;
+  const fresh: BatchWorldState = { endpointCalls: [], endpointAvailable: true, executeAttempts: 0 };
+  Object.assign(world as any, { batchState: fresh });
+  return fresh;
+}
+
+async function invokeBatch(world: TuiWorld, commands: Array<{ framework: string; filter?: string }>, batch: boolean): Promise<void> {
+  const dispatch = await import(pathToFileURL(appPath(TUI_PKG, 'dispatch.ts')).href);
+  const state = batchState(world);
+  if (!batch) {
+    // The default route stays the existing single-command builder. It must not
+    // ask the batch endpoint to do anything.
+    (world as any).singleCommand = dispatch.buildTestCommand(commands[0]);
+    return;
+  }
+  const endpoint = state.endpointAvailable
+    ? {
+        transact: async (submitted: readonly { command: string; framework: string }[]) => {
+          state.endpointCalls.push(submitted);
+          return {
+            transactionId: 'wrap002-transaction',
+            outcomes: submitted.map((command) => ({ ...command, exitCode: 0 })),
+          };
+        },
+      }
+    : undefined;
+  try {
+    state.transaction = await dispatch.dispatchBatch(commands, endpoint);
+  } catch (error) {
+    state.error = error as Error;
+  }
+}
+
+Given(/^a supported single test command$/, function (this: TuiWorld) {
+  batchState(this);
+});
+
+When(/^`\/run-tests` is invoked without `--batch`$/, async function (this: TuiWorld) {
+  await invokeBatch(this, [{ framework: 'pytest', filter: 'unit' }], false);
+});
+
+Then(/^no spec-door batch transaction is requested$/, function (this: TuiWorld) {
+  const state = batchState(this);
+  assert.equal(state.endpointCalls.length, 0);
+  assert.match((this as any).singleCommand.command, /python -m pytest/);
+});
+
+Given(/^two supported dispatch-table commands in declared order$/, function (this: TuiWorld) {
+  batchState(this);
+  (this as any).batchCommands = [
+    { framework: 'pytest', filter: 'first' },
+    { framework: 'jest', filter: 'second' },
+  ];
+});
+
+When(/^`\/run-tests --batch` is invoked$/, async function (this: TuiWorld) {
+  await invokeBatch(this, (this as any).batchCommands ?? [{ framework: 'pytest', filter: 'unit' }], true);
+});
+
+Then(/^the spec-door transaction receives both commands in that order$/, function (this: TuiWorld) {
+  const [submitted] = batchState(this).endpointCalls;
+  assert.equal(submitted.length, 2);
+  assert.deepEqual(submitted.map((command) => command.framework), ['pytest', 'jest']);
+});
+
+Given(/^a batch containing one command outside the dispatch table$/, function (this: TuiWorld) {
+  batchState(this);
+  (this as any).batchCommands = [{ framework: 'pytest' }, { framework: 'not-a-framework' }];
+});
+
+Then(/^the spec-door endpoint rejects the transaction$/, function (this: TuiWorld) {
+  const state = batchState(this);
+  assert.match(state.error?.message ?? '', /outside the dispatch table/);
+  assert.equal(state.error?.name, 'BatchDispatchError');
+});
+
+Then(/^no command from that batch is executed$/, function (this: TuiWorld) {
+  const state = batchState(this);
+  assert.equal(state.endpointCalls.length, 0);
+  assert.equal(state.executeAttempts, 0);
+});
+
+Given(/^a valid batch of supported dispatch-table commands$/, function (this: TuiWorld) {
+  (this as any).batchCommands = [{ framework: 'pytest', filter: 'one' }, { framework: 'jest', filter: 'two' }];
+  batchState(this);
+});
+
+When(/^the spec-door transaction succeeds$/, async function (this: TuiWorld) {
+  await invokeBatch(this, (this as any).batchCommands, true);
+});
+
+Then(/^the result contains a transaction identifier$/, function (this: TuiWorld) {
+  assert.equal(batchState(this).transaction?.transactionId, 'wrap002-transaction');
+});
+
+Then(/^the result contains one outcome for each submitted command$/, function (this: TuiWorld) {
+  const state = batchState(this);
+  assert.equal(state.transaction?.outcomes.length, state.endpointCalls[0].length);
+  assert.deepEqual(state.transaction?.outcomes.map((outcome) => outcome.framework), ['pytest', 'jest']);
+});
+
+Given(/^the spec-door batch endpoint is unavailable$/, function (this: TuiWorld) {
+  batchState(this).endpointAvailable = false;
+});
+
+Then(/^the skill reports an actionable endpoint error$/, function (this: TuiWorld) {
+  const error = batchState(this).error;
+  assert.equal(error?.name, 'BatchDispatchError');
+  assert.match(error?.message ?? '', /unavailable.*rerun without --batch/i);
+});
+
+Then(/^no local partial batch is executed$/, function (this: TuiWorld) {
+  const state = batchState(this);
+  assert.equal(state.endpointCalls.length, 0);
+  assert.equal(state.executeAttempts, 0);
+});
+
+Given(/^a batch command fails endpoint validation$/, function (this: TuiWorld) {
+  batchState(this);
+  (this as any).batchCommands = [{ framework: 'invalid-framework' }];
+});
+
+Then(/^the transaction is rejected atomically$/, function (this: TuiWorld) {
+  const state = batchState(this);
+  assert.equal(state.endpointCalls.length, 0);
+  assert.match(state.error?.message ?? '', /outside the dispatch table/);
+});
+
+Then(/^the command results identify the rejected batch$/, function (this: TuiWorld) {
+  const error = batchState(this).error;
+  assert.equal(error?.name, 'BatchDispatchError');
+  assert.match(error?.message ?? '', /invalid-framework/);
+});
 
 // --- @feature14: wrapper spawns npx child cross-platform (spawn real wrapper) -
 When(

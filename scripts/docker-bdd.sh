@@ -190,6 +190,7 @@ docker compose -f docker-compose.test.yml run --rm -T \
   "${CONFIG_MOUNT_ARGS[@]}" \
   -v "$(pwd)/cucumber.docker.json:/home/testuser/app/cucumber.docker.json:ro" \
   -v "$(pwd)/${SPECS_RW}:/home/testuser/app/.specs" \
+  -v "$(pwd)/.dev-pomogator:/home/testuser/app/.dev-pomogator" \
   test scripts/run-bdd.mjs "${CUCUMBER_ARGS[@]}" 2>&1 | tee -a "$LOG_FILE"
 STATUS=${PIPESTATUS[0]}
 rm -rf "$SPECS_RW" 2>/dev/null || true

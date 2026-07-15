@@ -43,6 +43,72 @@ export interface TestCommand {
   dockerProjectName?: string;
 }
 
+export interface BatchCommand {
+  framework: TestFramework;
+  filter?: string;
+  extraArgs?: string;
+  docker?: boolean;
+}
+
+export interface BatchOutcome {
+  command: string;
+  framework: TestFramework;
+  exitCode: number;
+}
+
+export interface BatchTransaction {
+  transactionId: string;
+  outcomes: BatchOutcome[];
+}
+
+export class BatchDispatchError extends Error {
+  constructor(
+    message: string,
+    public readonly code: 'BATCH_ENDPOINT_UNAVAILABLE' | 'BATCH_VALIDATION_FAILED',
+  ) {
+    super(message);
+    this.name = 'BatchDispatchError';
+  }
+}
+
+export interface BatchEndpoint {
+  transact(commands: readonly TestCommand[]): Promise<BatchTransaction>;
+}
+
+/** Obtain the spec-door endpoint from the caller; never execute a batch locally. */
+export function resolveBatchEndpoint(endpoint?: BatchEndpoint): BatchEndpoint | undefined {
+  return endpoint;
+}
+
+function validateDispatchCommand(command: BatchCommand): TestCommand {
+  if (!DISPATCH[command.framework]) {
+    throw new BatchDispatchError(
+      `Batch command framework "${command.framework}" is outside the dispatch table.`,
+      'BATCH_VALIDATION_FAILED',
+    );
+  }
+  return buildTestCommand(command);
+}
+
+/**
+ * Submit an explicitly requested dispatch-table batch. Commands are validated
+ * before the endpoint sees any of them, preserving atomic rejection semantics.
+ */
+export async function dispatchBatch(
+  commands: readonly BatchCommand[],
+  endpoint: BatchEndpoint | undefined,
+): Promise<BatchTransaction> {
+  const validated = commands.map(validateDispatchCommand);
+  if (!endpoint) {
+    throw new BatchDispatchError(
+      'The spec-door batch endpoint is unavailable; rerun without --batch or restore the endpoint.',
+      'BATCH_ENDPOINT_UNAVAILABLE',
+    );
+  }
+  return endpoint.transact(validated);
+}
+
+
 /** Generate unique project name for Docker Compose isolation */
 function generateProjectName(sessionPrefix?: string): string {
   const prefix = sessionPrefix || process.env.TEST_STATUSLINE_SESSION;

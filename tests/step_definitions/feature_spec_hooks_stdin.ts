@@ -155,6 +155,8 @@ Given(/^an auth spec with a v4 progress file and a Discovery user story in the M
   fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(path.join(dir, 'FR.md'), '## FR-1: Login\n');
   fs.writeFileSync(path.join(dir, 'USER_STORIES.md'), '## User Story 1: As a user\n');
+  fs.writeFileSync(path.join(dir, 'USE_CASES.md'), '## UC-1: Log in\n');
+  fs.writeFileSync(path.join(dir, 'RESEARCH.md'), '## Research\n');
   const mk = () => ({ completedAt: null, stopConfirmed: false, stopConfirmedAt: null });
   fs.writeFileSync(path.join(dir, '.progress.json'), JSON.stringify({
     version: 4, featureSlug: 'auth', createdAt: '2026-01-01T00:00:00.000Z', currentPhase: 'Discovery',

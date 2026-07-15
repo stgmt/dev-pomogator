@@ -381,7 +381,22 @@ export function checkConformance(
       if (task.status !== 'done') continue;
       const entry = cov.tasks[task.id];
       if (!entry) continue;
-      if (entry.verified_status === 'IN_PROGRESS') {
+      // A task with no mapped scenario is unverified even if it carries unrelated
+      // traceability findings. Emit the dedicated FR-35c finding before the
+      // generic status branch, so the Stop gate receives its blocking signal.
+      if (entry.scenarios.length === 0) {
+        findings.push({
+          code: 'TASK_UNTESTED',
+          severity: 'warning',
+          location: { file: task.file, line: task.line },
+          message: `Task ${task.id} is marked DONE but has ZERO linked scenarios — no test backs the claim (Done-When references no SPECGEN id / @feature tag, and refs map to no scenario).`,
+          nodeId: task.id,
+          suggestions: [
+            { action: 'write_test', reason: 'Add a BDD scenario and reference its SPECGEN id (or @feature tag) in Done-When, so the DONE claim is backed by a real test.', confidence: 'high' },
+            { action: 'downgrade', reason: 'Or set Status back to IN_PROGRESS until a test exists — a DONE task with no test is unverifiable.', confidence: 'high' },
+          ],
+        });
+      } else if (entry.verified_status === 'IN_PROGRESS') {
         const allGreen = entry.scenarios.length > 0 && entry.scenarios.every((id) => bucketById.get(id) === 'passed');
         if (allGreen && (entry.test_quality === 'WEAK' || entry.test_quality === 'FAKE-POSITIVE-RISK')) {
           // FR-35a: every mapped scenario is green, but the test BODY audits as weak /
@@ -410,21 +425,6 @@ export function checkConformance(
             ],
           });
         }
-      } else if (entry.verified_status === 'unverified') {
-        // FR-35c: a task marked DONE with ZERO linked scenarios must NOT be silent.
-        // "mark done, write no test" is the naeb the gate previously missed (it only
-        // fired on a linked-but-red scenario). Complements FR/@feature NOT_COVERED.
-        findings.push({
-          code: 'TASK_UNTESTED',
-          severity: 'warning',
-          location: { file: task.file, line: task.line },
-          message: `Task ${task.id} is marked DONE but has ZERO linked scenarios — no test backs the claim (Done-When references no SPECGEN id / @feature tag, and refs map to no scenario).`,
-          nodeId: task.id,
-          suggestions: [
-            { action: 'write_test', reason: 'Add a BDD scenario and reference its SPECGEN id (or @feature tag) in Done-When, so the DONE claim is backed by a real test.', confidence: 'high' },
-            { action: 'downgrade', reason: 'Or set Status back to IN_PROGRESS until a test exists — a DONE task with no test is unverifiable.', confidence: 'high' },
-          ],
-        });
       }
     }
   }

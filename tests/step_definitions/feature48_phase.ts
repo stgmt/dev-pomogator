@@ -53,7 +53,9 @@ Given('a temp spec whose Discovery STOP is not yet confirmed', function (this: P
   const spec = path.join(root, '.specs', 'demo');
   fs.mkdirSync(spec, { recursive: true });
   fs.writeFileSync(path.join(spec, 'FR.md'), '## FR-1: Something\n');
-  fs.writeFileSync(path.join(spec, 'USER_STORIES.md'), '## User Story 1: As a user\n'); // Discovery input present
+  fs.writeFileSync(path.join(spec, 'USER_STORIES.md'), '## User Story 1: As a user\n');
+  fs.writeFileSync(path.join(spec, 'USE_CASES.md'), '## UC-1: Something\n');
+  fs.writeFileSync(path.join(spec, 'RESEARCH.md'), '## Research\n');
   fs.writeFileSync(path.join(spec, '.progress.json'), unconfirmedProgress());
   this.phRoot = root;
 });

@@ -350,7 +350,7 @@ Given(/^a spec with unfilled \{placeholder\} templates$/, function (this: SgWorl
   this.sgFixtureName = 'valid-spec';
   // Write a USER_STORIES.md with an unfilled placeholder
   const usPath = path.join(this.tempDir, '.specs', 'valid-spec', 'USER_STORIES.md');
-  fs.writeFileSync(usPath, '# User Stories\n\n{placeholder_not_filled}\n');
+  fs.writeFileSync(usPath, '# User Stories\n\nAs a {роль}, I want {цель}, чтобы {ценность}.\n');
 });
 
 Given(/^a spec with non-EARS acceptance criteria$/, function (this: SgWorld) {
@@ -561,6 +561,8 @@ Given(/^a valid spec fixture exists with all files complete$/, function (this: S
 // @feature42 — partial spec fixture with incomplete files
 Given(/^a partial spec fixture exists with incomplete files$/, function (this: SgWorld) {
   loadFixture.call(this, 'partial-spec');
+  const discovery = path.join(this.tempDir, '.specs', 'partial-spec');
+  fs.writeFileSync(path.join(discovery, 'RESEARCH.md'), '# Research\n\n## Project Context & Constraints\n\n> Skipped: no additional context analysis required.\n');
 });
 
 // @feature43 — spec with .progress.json

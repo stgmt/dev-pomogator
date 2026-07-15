@@ -57,7 +57,10 @@ export async function runQuiet(
     // The banner-on-warning contract of buildHookOutput itself is unchanged (interactive path).
     const homeDir = options.homeDir ?? os.homedir();
     const installed = fs.existsSync(path.join(homeDir, '.dev-pomogator', 'config.json'));
-    if (!installed || report.summary.critical === 0) {
+    const actionableCritical = report.results.some(
+      (result) => result.severity === 'critical' && result.group !== 'needs-external',
+    );
+    if (!installed || !actionableCritical) {
       return { continue: true, suppressOutput: true };
     }
     return buildHookOutput(report);

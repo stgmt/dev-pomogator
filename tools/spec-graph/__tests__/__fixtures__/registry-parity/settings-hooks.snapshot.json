@@ -10,9 +10,9 @@
     "prompt_suggest_stop",
     "simplify_stop",
     "stop-guard",
+    "subagent_watchdog --event Stop",
     "test-spec-gate",
-    "test_quality_gate_stop",
-    "tui_stop"
+    "test_quality_gate_stop"
   ],
   "SessionStart": [
     "apply_skill_budget",
@@ -28,7 +28,7 @@
     "patch_bun_runner",
     "session-summary-hook",
     "statusline_session_start",
-    "tui_session_start"
+    "subagent_watchdog --event SessionStart"
   ],
   "PreToolUse": [
     "build_guard",
@@ -51,6 +51,7 @@
     "ingest",
     "mark-bg-task",
     "research-workflow-marker-guard",
+    "subagent_watchdog --event PostToolUse",
     "spec-conformance-push"
   ],
   "UserPromptSubmit": [
@@ -58,6 +59,7 @@
     "prompt-capture",
     "prompt_suggest_submit",
     "runner",
+    "subagent_watchdog --event UserPromptSubmit",
     "validate-specs"
   ]
 }

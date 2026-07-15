@@ -11,6 +11,8 @@ coverage
 .env.local
 run-tests-workspace
 .dev-pomogator/.test-status
+.dev-pomogator/.docker-status
+.dev-pomogator/.test-history
 .dev-pomogator/.bg-task-active*
 .dev-pomogator/.tmp
 # Runtime task-census cache: keep the dev's live session census out of the test

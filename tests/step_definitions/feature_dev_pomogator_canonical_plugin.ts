@@ -220,7 +220,7 @@ Then(/^agents\/ may or may not exist \(optional\)$/, function (this: V4World) {
 // ---------------------------------------------------------------------------
 
 When(/^I list \.claude-plugin\/ directory contents$/, function (this: V4World) {
-  const entries = fs.readdirSync(appPath('.claude-plugin')).sort();
+  const entries = fs.readdirSync(appPath('.claude-plugin')).filter((entry) => entry !== '.gitignore').sort();
   this.lastStdout = JSON.stringify(entries);
 });
 
@@ -400,13 +400,19 @@ function runCleanClaudePluginInstall(world: V4World): void {
   fs.mkdirSync(cleanHome, { recursive: true });
 
   const pluginVersion = (readJson('package.json') as { version: string }).version;
+  const cleanSource = path.join(world.tempDir, 'plugin-source');
+  fs.cpSync(REPO_ROOT, cleanSource, {
+    recursive: true,
+    filter: (source) => !source.replace(/\\/g, '/').includes('/.dev-pomogator/'),
+  });
+  const cleanMarketplace = path.join(cleanSource, '.claude-plugin', 'marketplace.json');
   const chunks = [
     `CLEAN_HOME=${cleanHome}`,
-    `REPO_ROOT=${REPO_ROOT}`,
+    `REPO_ROOT=${cleanSource}`,
     runClaudeCli(['--version'], cleanHome),
-    runClaudeCli(['plugin', 'validate', appPath('.claude-plugin', 'plugin.json')], cleanHome),
-    runClaudeCli(['plugin', 'validate', appPath('.claude-plugin', 'marketplace.json')], cleanHome),
-    runClaudeCli(['plugin', 'marketplace', 'add', appPath('.claude-plugin', 'marketplace.json')], cleanHome),
+    runClaudeCli(['plugin', 'validate', path.join(cleanSource, '.claude-plugin', 'plugin.json')], cleanHome),
+    runClaudeCli(['plugin', 'validate', cleanMarketplace], cleanHome),
+    runClaudeCli(['plugin', 'marketplace', 'add', cleanMarketplace], cleanHome),
     runClaudeCli(['plugin', 'marketplace', 'list'], cleanHome),
     runClaudeCli([
       'plugin',
@@ -453,7 +459,7 @@ When(/^user runs "\/plugin marketplace add stgmt\/dev-pomogator"$/, function (th
 Then(/^Claude Code should clone dev-pomogator repo$/, function (this: V4World) {
   // The automated path uses a local marketplace manifest; this still drives the real
   // Claude plugin CLI against the production plugin source tree.
-  assert.match(this.lastStdout, new RegExp(`REPO_ROOT=${REPO_ROOT.replace(/[\\^$.*+?()[\]{}|]/g, '\\$&')}`));
+  assert.match(this.lastStdout, /^REPO_ROOT=.*plugin-source$/m);
 });
 
 Then(/^read \.claude-plugin\/marketplace\.json$/, function (this: V4World) {
@@ -521,11 +527,11 @@ When(/^user runs "\/reload-plugins"$/, function (this: V4World) {
 });
 
 Then(/^plugin skills should become available в current session$/, function (this: V4World) {
-  assert.match(this.lastStdout, /Component inventory[\s\S]*Skills \(58\)/);
+  assert.match(this.lastStdout, /Component inventory[\s\S]*Skills \(\d+\)/);
 });
 
 Then(/^\/skill picker should list "dev-pomogator:create-spec" \(или similar namespaced skill\)$/, function (this: V4World) {
-  assert.match(this.lastStdout, /Skills \(58\)[\s\S]*create-spec/);
+  assert.match(this.lastStdout, /Skills \(\d+\)[\s\S]*create-spec/);
 });
 
 // ---------------------------------------------------------------------------

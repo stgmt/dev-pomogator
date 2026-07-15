@@ -203,12 +203,12 @@ Given(/^temp home fixture "valid" with plugin\.json declaring command "([^"]+)" 
 
 Given(/^AUTO_COMMIT_API_KEY is set via envInSettingsLocal$/, async function (this: DoctorWorld) {
   if (!this.home) {
-    this.home = buildTempHome({ envInSettingsLocal: { AUTO_COMMIT_API_KEY: 'sk-test' } });
-  } else {
-    // rebuild with the key set
-    this.home.cleanup();
-    this.home = buildTempHome({ envInSettingsLocal: { AUTO_COMMIT_API_KEY: 'sk-test' } });
+    this.home = buildTempHome();
   }
+  const settingsPath = path.join(this.home.projectDir, '.claude', 'settings.local.json');
+  const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8')) as Record<string, unknown>;
+  settings.env = { ...((settings.env as Record<string, string> | undefined) ?? {}), AUTO_COMMIT_API_KEY: 'sk-test' };
+  fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2));
 });
 
 Given(/^a hanging fake MCP server is spawned and wired via \.mcp\.json$/, async function (this: DoctorWorld) {
@@ -363,6 +363,17 @@ const HOOK_PATH = path.resolve(
 const NODE_MAJOR = parseInt(process.versions.node.split('.')[0], 10);
 const useStripTypes = NODE_MAJOR >= 22;
 
+function readAutoCommitKey(projectDir: string): string {
+  try {
+    const settings = JSON.parse(
+      fs.readFileSync(path.join(projectDir, '.claude', 'settings.local.json'), 'utf8'),
+    ) as { env?: Record<string, string> };
+    return settings.env?.AUTO_COMMIT_API_KEY ?? '';
+  } catch {
+    return '';
+  }
+}
+
 function runHookSpawn(homeDir: string, projectDir: string, input = '{}') {
   const [cmd, args] = useStripTypes
     ? [process.execPath, ['--experimental-strip-types', HOOK_PATH]]
@@ -371,7 +382,12 @@ function runHookSpawn(homeDir: string, projectDir: string, input = '{}') {
     encoding: 'utf-8',
     timeout: 15_000,
     cwd: projectDir,
-    env: { ...process.env, HOME: homeDir, USERPROFILE: homeDir },
+    env: {
+      ...process.env,
+      HOME: homeDir,
+      USERPROFILE: homeDir,
+      AUTO_COMMIT_API_KEY: readAutoCommitKey(projectDir),
+    },
     input,
   });
 }
@@ -382,7 +398,7 @@ When(/^SessionStart hook invokes doctor-hook\.ts with --quiet$/, async function 
   const res = runHookSpawn(
     this.home.homeDir,
     this.home.projectDir,
-    JSON.stringify({ sessionId: 'test', reason: 'startup' }),
+    JSON.stringify({ session_id: 'test', hook_event_name: 'SessionStart', cwd: this.home.projectDir }),
   );
   this.hookResult = { stdout: res.stdout, stderr: res.stderr, status: res.status };
   this.lastStdout = res.stdout;
@@ -395,7 +411,7 @@ When(/^I invoke doctor-hook\.ts via SessionStart spawn with standard input$/, as
   const res = runHookSpawn(
     this.home.homeDir,
     this.home.projectDir,
-    JSON.stringify({ sessionId: 'test', reason: 'startup' }),
+    JSON.stringify({ session_id: 'test', hook_event_name: 'SessionStart', cwd: this.home.projectDir }),
   );
   this.hookResult = { stdout: res.stdout, stderr: res.stderr, status: res.status };
   this.lastStdout = res.stdout;
@@ -663,7 +679,7 @@ Then(/^the hook stdout has suppressOutput=true$/, async function (this: DoctorWo
     continue: boolean;
     suppressOutput?: boolean;
   };
-  expect(payload.suppressOutput).to.be.true;
+  expect(payload.suppressOutput, `unexpected quiet-hook payload: ${JSON.stringify(payload)}; stderr: ${this.hookResult?.stderr ?? ''}`).to.be.true;
 });
 
 Then(/^the hook stdout is valid JSON with continue=true even on corrupt config$/, async function (this: DoctorWorld) {
