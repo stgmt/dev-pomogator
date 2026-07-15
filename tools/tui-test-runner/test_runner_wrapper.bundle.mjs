@@ -912,7 +912,7 @@ function forceKillProcessTree(pid, opts = {}) {
 
 // tools/tui-test-runner/test_runner_wrapper.ts
 var SESSION = process.env.TEST_STATUSLINE_SESSION || "";
-var PROJECT = process.env.TEST_STATUSLINE_PROJECT || process.cwd();
+var PROJECT = process.cwd();
 var KNOWN_FRAMEWORKS = /* @__PURE__ */ new Set([
   "vitest",
   "jest",
