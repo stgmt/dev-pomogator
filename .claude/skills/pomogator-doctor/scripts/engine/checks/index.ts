@@ -25,6 +25,7 @@ import { pomogatorHomeCheck } from './pomogator-home.js';
 import { pythonCheck } from './python.js';
 import { statuslineCheck } from './statusline.js';
 import { statuslineWidgetsCheck } from './statusline-widgets.js';
+import { tuiTestRunnerCheck } from './tui-test-runner.js';
 import { versionMatchCheck } from './version-match.js';
 
 export const phase2Checks: CheckDefinition[] = [
@@ -42,6 +43,7 @@ export const phase2Checks: CheckDefinition[] = [
   claudeBinPriorityCheck,
   statuslineCheck,
   statuslineWidgetsCheck,
+  tuiTestRunnerCheck,
   contextMenuCheck,
   carlCheck,
   forbidRootArtifactsCheck,
@@ -83,5 +85,6 @@ export {
   pythonCheck,
   statuslineCheck,
   statuslineWidgetsCheck,
+  tuiTestRunnerCheck,
   versionMatchCheck,
 };

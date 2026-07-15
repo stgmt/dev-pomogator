@@ -38,6 +38,8 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { runDoctor } from '../../.claude/skills/pomogator-doctor/scripts/engine/index.ts';
+import type { DoctorReport } from '../../.claude/skills/pomogator-doctor/scripts/engine/index.ts';
 import { V4World } from '../hooks/before-after.ts';
 
 // --- Self-contained runners ---------------------------------------------------
@@ -194,6 +196,11 @@ print(json.dumps({
 interface TuiWorld extends V4World {
   wrapperInvocationDir?: string;
   wrapperChildCwd?: string;
+  doctorReport?: DoctorReport;
+  doctorEnv?: {
+    enabled: string | undefined;
+    project: string | undefined;
+  };
   // analyst
   analystResult?: { failed: number; tests: string[]; pattern_ids: (string | null)[]; hints: (string | null)[] };
   // statusline / monitoring
@@ -277,6 +284,64 @@ When(/^the sessioned wrapper runs a child that prints its working directory$/, f
 
 Then(/^the child working directory should be the wrapper invocation directory$/, function (this: TuiWorld) {
   assert.equal(path.resolve(this.wrapperChildCwd!), path.resolve(this.wrapperInvocationDir!));
+});
+
+Before({ tags: '@feature14' }, function (this: TuiWorld) {
+  this.doctorEnv = {
+    enabled: process.env.TEST_STATUSLINE_ENABLED,
+    project: process.env.TEST_STATUSLINE_PROJECT,
+  };
+});
+
+After({ tags: '@feature14' }, function (this: TuiWorld) {
+  const restore = (name: 'TEST_STATUSLINE_ENABLED' | 'TEST_STATUSLINE_PROJECT', value: string | undefined) => {
+    if (value === undefined) delete process.env[name];
+    else process.env[name] = value;
+  };
+  restore('TEST_STATUSLINE_ENABLED', this.doctorEnv?.enabled);
+  restore('TEST_STATUSLINE_PROJECT', this.doctorEnv?.project);
+});
+
+Given(/^TEST_STATUSLINE_ENABLED is absent$/, function () {
+  delete process.env.TEST_STATUSLINE_ENABLED;
+});
+
+Given(/^TEST_STATUSLINE_ENABLED is false$/, function () {
+  process.env.TEST_STATUSLINE_ENABLED = 'false';
+});
+
+Given(/^TEST_STATUSLINE_ENABLED is true$/, function () {
+  process.env.TEST_STATUSLINE_ENABLED = 'true';
+});
+
+Given(/^TEST_STATUSLINE_PROJECT is a different worktree$/, function () {
+  process.env.TEST_STATUSLINE_PROJECT = path.join(os.tmpdir(), 'stale-tui-worktree');
+});
+
+Given(/^TEST_STATUSLINE_PROJECT matches the invocation project$/, function () {
+  process.env.TEST_STATUSLINE_PROJECT = REPO_ROOT;
+});
+
+When(/^pomogator-doctor runs for the TUI runner$/, async function (this: TuiWorld) {
+  this.doctorReport = await runDoctor({ projectRoot: REPO_ROOT });
+});
+
+Then(/^the TUI test runner check should be absent from the report$/, function (this: TuiWorld) {
+  assert.ok(!this.doctorReport!.gatedOut.some((entry) => entry.id === 'C-TTR'));
+  assert.ok(!this.doctorReport!.results.some((entry) => entry.id === 'C-TTR'));
+});
+
+Then(/^the TUI test runner check should warn about the worktree mismatch$/, function (this: TuiWorld) {
+  const check = this.doctorReport!.results.find((entry) => entry.id === 'C-TTR');
+  assert.equal(check?.severity, 'warning');
+  assert.match(check?.message ?? '', /session project .* differs from invocation project/);
+  assert.match(check?.hint ?? '', /new Claude session in this worktree/);
+});
+
+Then(/^the TUI test runner check should be OK for the invocation project$/, function (this: TuiWorld) {
+  const check = this.doctorReport!.results.find((entry) => entry.id === 'C-TTR');
+  assert.equal(check?.severity, 'ok');
+  assert.match(check?.message ?? '', new RegExp(REPO_ROOT.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
 });
 
 // ============================================================================
