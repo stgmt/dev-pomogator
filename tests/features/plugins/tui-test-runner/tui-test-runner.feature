@@ -194,6 +194,12 @@ Feature: PLUGIN012_TUI_Test_Runner
     Then wrapper should complete with exit code 0
     And stdout should contain a semver version
 
+  # @feature14
+  Scenario: Wrapper uses invocation CWD when SessionStart project is stale
+    Given the wrapper invocation directory differs from TEST_STATUSLINE_PROJECT
+    When the sessioned wrapper runs a child that prints its working directory
+    Then the child working directory should be the wrapper invocation directory
+
   # @feature13
   Scenario: Dispatch builds correct wrapper command with framework argument
     Given a test dispatch configuration with framework "pytest" and filter "auth"

@@ -192,6 +192,8 @@ print(json.dumps({
 `;
 
 interface TuiWorld extends V4World {
+  wrapperInvocationDir?: string;
+  wrapperChildCwd?: string;
   // analyst
   analystResult?: { failed: number; tests: string[]; pattern_ids: (string | null)[]; hints: (string | null)[] };
   // statusline / monitoring
@@ -240,6 +242,41 @@ Given(/^dev-pomogator is installed$/, function (this: TuiWorld) {
 
 Given(/^tui-test-runner extension is enabled$/, function (this: TuiWorld) {
   // No-op: enablement is implicit when driving the real modules in-process.
+});
+
+// ============================================================================
+// @feature14 — Wrapper execution root is the invocation CWD, not stale session env
+// ============================================================================
+
+Given(/^the wrapper invocation directory differs from TEST_STATUSLINE_PROJECT$/, function (this: TuiWorld) {
+  this.wrapperInvocationDir = fs.mkdtempSync(path.join(os.tmpdir(), 'wrapper-invocation-'));
+});
+
+When(/^the sessioned wrapper runs a child that prints its working directory$/, function (this: TuiWorld) {
+  const invocationDir = this.wrapperInvocationDir!;
+  const result = crossSpawn.sync(
+    'npx',
+    ['tsx', appPath(TUI_PKG, 'test_runner_wrapper.ts'), '--framework=generic', '--', process.execPath, '-e', 'process.stdout.write(process.cwd())'],
+    {
+      cwd: invocationDir,
+      encoding: 'utf-8',
+      env: {
+        ...process.env,
+        FORCE_COLOR: '0',
+        TEST_STATUSLINE_SESSION: 'cwdproof1',
+        TEST_STATUSLINE_PROJECT: REPO_ROOT,
+        TEST_SKIP_DISCOVERY: '1',
+        TEST_STATUS_DIR: '.status',
+      },
+      timeout: 25000,
+    },
+  );
+  assert.equal(result.status, 0, `wrapper failed: ${result.stderr || ''}`);
+  this.wrapperChildCwd = result.stdout.trim();
+});
+
+Then(/^the child working directory should be the wrapper invocation directory$/, function (this: TuiWorld) {
+  assert.equal(path.resolve(this.wrapperChildCwd!), path.resolve(this.wrapperInvocationDir!));
 });
 
 // ============================================================================
