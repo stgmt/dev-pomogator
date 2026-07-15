@@ -44,6 +44,9 @@ interface G8World extends V4World {
   fallbackCodexIcon?: Buffer;
   codexExecutableCandidates?: string[];
   codexIconFileCandidates?: string[];
+  nilesoftArgs?: readonly string[];
+  contextMenuSkillContents?: string[];
+  postinstallSource?: string;
 }
 
 function pwshAvailable(): boolean {
@@ -117,6 +120,10 @@ Given(/^the context-menu postinstall module is imported$/, async function (this:
   await getPostinstall();
 });
 
+Given(/^the context-menu postinstall source is read$/, function (this: G8World) {
+  this.postinstallSource = fs.readFileSync(POSTINSTALL_SCRIPT, 'utf-8');
+});
+
 Given(/^a temporary directory exists for context-menu copy test$/, async function (this: V4World) {
   // tempDir already created by World Before hook — nothing extra needed
 });
@@ -124,6 +131,23 @@ Given(/^a temporary directory exists for context-menu copy test$/, async functio
 // ============================================================================
 // When steps
 // ============================================================================
+
+When(/^the Nilesoft winget arguments are generated$/, async function (this: G8World) {
+  const mod = await getPostinstall();
+  this.nilesoftArgs = mod.NILESOFT_WINGET_ARGS;
+});
+
+When(/^the context-menu skill files are read$/, function (this: G8World) {
+  this.contextMenuSkillContents = [
+    fs.readFileSync(path.join(REPO_ROOT, '.claude', 'skills', 'context-menu', 'SKILL.md'), 'utf-8'),
+    fs.readFileSync(path.join(REPO_ROOT, '.agents', 'skills', 'context-menu', 'SKILL.md'), 'utf-8'),
+  ];
+});
+
+When(/^the Claude NSS content is generated$/, async function (this: V4World) {
+  const mod = await getPostinstall();
+  this.lastStdout = mod.generateNss();
+});
 
 When(/^generateNss is called$/, async function (this: V4World) {
   const mod = await getPostinstall();
@@ -683,6 +707,63 @@ Then(/^the NSS "([^"]+)" entry command should not call claude directly$/, functi
   }
   if (match[1].trim() === 'claude' || match[1].includes('cmd /k claude')) {
     throw new Error(`Expected the "${title}" entry NOT to call claude directly, got cmd='${match[1]}'`);
+  }
+});
+
+// ============================================================================
+// @feature16 (GitHub #103 canonical plugin context-menu installation)
+// CTXMENU001_30..33
+// ============================================================================
+
+Then(/^the Nilesoft winget arguments should equal the canonical Nilesoft\.Shell contract$/, function (this: G8World) {
+  const expected = [
+    'install', '--exact', '--id', 'Nilesoft.Shell', '--source', 'winget',
+    '--accept-package-agreements', '--accept-source-agreements', '--disable-interactivity',
+  ];
+  if (JSON.stringify(this.nilesoftArgs) !== JSON.stringify(expected)) {
+    throw new Error(`Unexpected winget args: ${JSON.stringify(this.nilesoftArgs)}`);
+  }
+});
+
+Then(/^the Nilesoft winget arguments should not contain "([^"]+)"$/, function (this: G8World, value: string) {
+  if (this.nilesoftArgs?.includes(value)) {
+    throw new Error(`Forbidden winget package id remains: ${value}`);
+  }
+});
+
+Then(/^both context-menu skills should resolve bootstrap from CLAUDE_PLUGIN_ROOT before process cwd$/, function (this: G8World) {
+  const expected = 'process.env.CLAUDE_PLUGIN_ROOT || process.cwd()';
+  const invalid = (this.contextMenuSkillContents ?? []).filter((content) =>
+    !content.includes(expected) || content.includes("join(process.cwd(),'tools','_shared','bootstrap.cjs')"));
+  if ((this.contextMenuSkillContents?.length ?? 0) !== 2 || invalid.length !== 0) {
+    throw new Error(`Expected both distributed context-menu skills to use plugin-root-first resolution; invalid=${invalid.length}`);
+  }
+});
+
+Then(/^Nilesoft availability should be required before every context-menu artifact write$/, function (this: G8World) {
+  const source = this.postinstallSource ?? '';
+  const mainStart = source.indexOf('export function main');
+  const installedCheck = source.indexOf('if (!isNilesoftInstalled())', mainStart);
+  const failedInstallCheck = source.indexOf('if (!installNilesoft())', installedCheck);
+  const gate = installedCheck >= 0 && failedInstallCheck > installedCheck ? installedCheck : -1;
+  const firstWrite = Math.min(
+    ...['copyLaunchScript()', 'copyCodexLaunchScript()', 'writeNssFile(', 'ensureCodexIcon()', 'ensureShellImports(']
+      .map((needle) => source.indexOf(needle, gate))
+      .filter((index) => index >= 0),
+  );
+  if (gate < 0 || firstWrite < 0 || gate > firstWrite) {
+    throw new Error(`Nilesoft availability gate must precede every artifact write: gate=${gate}, firstWrite=${firstWrite}`);
+  }
+});
+
+Then(/^the Claude NSS should not reference an icon that the install plan does not produce$/, async function (this: V4World) {
+  const mod = await getPostinstall();
+  const nss = this.lastStdout;
+  const images = [...nss.matchAll(/image='@app\.dir\\imports\\([^']+)'/g)].map((match) => match[1]);
+  const produced = new Set(mod.installPlanForMode('all').iconFiles);
+  const dangling = images.filter((image) => !produced.has(image));
+  if (dangling.length !== 0) {
+    throw new Error(`Claude NSS contains dangling icon targets: ${dangling.join(', ')}`);
   }
 });
 

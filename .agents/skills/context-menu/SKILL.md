@@ -44,7 +44,13 @@ winget list Nilesoft.Shell
 - Not found → install:
 
 ```bash
-winget install Nilesoft.Shell --accept-package-agreements --accept-source-agreements
+winget install --exact --id Nilesoft.Shell --source winget --accept-package-agreements --accept-source-agreements --disable-interactivity
+```
+
+Run the bundled installer from the canonical plugin root (or the repository root during dogfood):
+
+```bash
+node -e "require(require('path').join(process.env.CLAUDE_PLUGIN_ROOT || process.cwd(),'tools','_shared','bootstrap.cjs'))" -- "tools/context-menu/postinstall.ts"
 ```
 
 After install verify directory exists:

@@ -220,3 +220,26 @@ Feature: CTXMENU001_Context_Menu_Setup
   Scenario: CTXMENU001_29 worktree launchers resolve repository roots through ProviderPath
     When the worktree launcher scripts are read
     Then every worktree launcher should resolve MainRepoRoot through ProviderPath
+
+  @feature16
+  Scenario: CTXMENU001_30 Nilesoft uses the canonical exact non-interactive winget contract
+    Given the context-menu postinstall module is imported
+    When the Nilesoft winget arguments are generated
+    Then the Nilesoft winget arguments should equal the canonical Nilesoft.Shell contract
+    And the Nilesoft winget arguments should not contain "Nilesoft.NilesoftShell"
+
+  @feature16
+  Scenario: CTXMENU001_31 context-menu skill resolves bootstrap from the installed plugin root
+    When the context-menu skill files are read
+    Then both context-menu skills should resolve bootstrap from CLAUDE_PLUGIN_ROOT before process cwd
+
+  @feature16
+  Scenario: CTXMENU001_32 failed Nilesoft availability prevents every context-menu write
+    Given the context-menu postinstall source is read
+    Then Nilesoft availability should be required before every context-menu artifact write
+
+  @feature16
+  Scenario: CTXMENU001_33 generated NSS contains no dangling icon reference
+    Given the context-menu postinstall module is imported
+    When the Claude NSS content is generated
+    Then the Claude NSS should not reference an icon that the install plan does not produce

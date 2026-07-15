@@ -44,7 +44,7 @@ Windows only. If not Windows, tell the user Nilesoft Shell is Windows-only.
 
 ```bash
 winget list Nilesoft.Shell
-winget install Nilesoft.Shell --accept-package-agreements --accept-source-agreements
+winget install --exact --id Nilesoft.Shell --source winget --accept-package-agreements --accept-source-agreements --disable-interactivity
 ```
 
 2. Check/install Windows Terminal:
@@ -57,7 +57,7 @@ winget install Microsoft.WindowsTerminal --accept-package-agreements --accept-so
 3. From the plugin/repo root, run the installer:
 
 ```bash
-node -e "require(require('path').join(process.cwd(),'tools','_shared','bootstrap.cjs'))" -- "tools/context-menu/postinstall.ts"
+node -e "require(require('path').join(process.env.CLAUDE_PLUGIN_ROOT || process.cwd(),'tools','_shared','bootstrap.cjs'))" -- "tools/context-menu/postinstall.ts"
 ```
 
 `postinstall.ts` is the source of truth. It copies both launch scripts to `~/.dev-pomogator/scripts/`, writes both NSS files under `C:\Program Files\Nilesoft Shell\imports\`, ensures both imports in `shell.nss`, and reloads Nilesoft Shell.
@@ -134,5 +134,5 @@ If right-click behavior does not match source changes, run `/pomogator-doctor`. 
 If stale, re-run:
 
 ```bash
-node -e "require(require('path').join(process.cwd(),'tools','_shared','bootstrap.cjs'))" -- "tools/context-menu/postinstall.ts"
+node -e "require(require('path').join(process.env.CLAUDE_PLUGIN_ROOT || process.cwd(),'tools','_shared','bootstrap.cjs'))" -- "tools/context-menu/postinstall.ts"
 ```
