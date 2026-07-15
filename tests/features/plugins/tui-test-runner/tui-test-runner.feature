@@ -194,6 +194,38 @@ Feature: PLUGIN012_TUI_Test_Runner
     Then wrapper should complete with exit code 0
     And stdout should contain a semver version
 
+  # @feature14
+  Scenario: Wrapper uses invocation CWD when SessionStart project is stale
+    Given the wrapper invocation directory differs from TEST_STATUSLINE_PROJECT
+    When the sessioned wrapper runs a child that prints its working directory
+    Then the child working directory should be the wrapper invocation directory
+
+  # @feature14
+  Scenario: Doctor is quiet for an absent or false TUI enable flag
+    Given TEST_STATUSLINE_ENABLED is absent
+    When pomogator-doctor runs for the TUI runner
+    Then the TUI test runner check should be absent from the report
+
+  # @feature14
+  Scenario: Doctor is quiet for a false TUI enable flag
+    Given TEST_STATUSLINE_ENABLED is false
+    When pomogator-doctor runs for the TUI runner
+    Then the TUI test runner check should be absent from the report
+
+  # @feature14
+  Scenario: Doctor warns about an enabled stale-session worktree
+    Given TEST_STATUSLINE_ENABLED is true
+    And TEST_STATUSLINE_PROJECT is a different worktree
+    When pomogator-doctor runs for the TUI runner
+    Then the TUI test runner check should warn about the worktree mismatch
+
+  # @feature14
+  Scenario: Doctor confirms an enabled runner with matching session project
+    Given TEST_STATUSLINE_ENABLED is true
+    And TEST_STATUSLINE_PROJECT matches the invocation project
+    When pomogator-doctor runs for the TUI runner
+    Then the TUI test runner check should be OK for the invocation project
+
   # @feature13
   Scenario: Dispatch builds correct wrapper command with framework argument
     Given a test dispatch configuration with framework "pytest" and filter "auth"

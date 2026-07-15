@@ -175,3 +175,15 @@ WHEN dotnet-тест-команда несёт `--no-build` THEN build guard SHA
 IF фреймворк интерпретируемый (pytest/go/rust) OR задан `SKIP_BUILD_CHECK=1` OR команда не тестовая THEN build guard SHALL разрешить с кодом 0.
 
 IF hook получает невалидный JSON или ошибку stat THEN build guard SHALL fail-open (код 0).
+
+## AC-20 (FR-20): Opt-in batched spec-door transaction @feature20
+
+WHEN `/run-tests` is invoked without `--batch`, THEN it SHALL use the existing single-command execution path and SHALL NOT call an MCP batch transaction endpoint.
+
+WHEN `/run-tests --batch` is invoked with two or more dispatch-table commands, THEN it SHALL submit exactly those commands in dispatch order through the spec-door MCP transaction endpoint.
+
+WHEN any command in the proposed batch is not a dispatch-table command or fails endpoint validation, THEN the endpoint SHALL reject the transaction before execution and SHALL execute none of the commands.
+
+WHEN the transaction succeeds, THEN the skill SHALL report its transaction identifier and one outcome for every submitted command.
+
+WHEN the batch endpoint is unavailable, THEN `/run-tests --batch` SHALL fail with an actionable error and SHALL NOT silently execute an unverified partial batch.

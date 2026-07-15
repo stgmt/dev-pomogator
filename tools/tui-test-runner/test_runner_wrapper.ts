@@ -19,7 +19,10 @@ import { YamlWriter } from './yaml_writer.ts';
 import { signalProcessTree, forceKillProcessTree, resolveSelfTimeoutMs, resolveKillGraceMs } from '../_shared/process-tree.ts';
 
 const SESSION = process.env.TEST_STATUSLINE_SESSION || '';
-const PROJECT = process.env.TEST_STATUSLINE_PROJECT || process.cwd();
+// TEST_STATUSLINE_PROJECT is created at SessionStart and can point at a different
+// worktree after the user changes directories. The invocation CWD is authoritative:
+// it determines both framework detection and the child command's working directory.
+const PROJECT = process.cwd();
 
 const KNOWN_FRAMEWORKS = new Set<TestFramework>([
   'vitest',
