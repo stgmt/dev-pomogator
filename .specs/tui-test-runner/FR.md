@@ -133,3 +133,10 @@ Generic (passthrough) путь SHALL использовать тот же async-
 Shim (`test_runner_wrapper.cjs`) SHALL запускать собранный автономный runner bundle без `tsx-runner`, `npx` и установленного `node_modules`. WHEN bundle запускается THEN shim SHALL передать ему аргументы без изменений и вернуть его ненулевой код; WHEN bundle отсутствует THEN shim SHALL выполнить прямую команду и fail-closed при ошибке запуска.
 
 **Связанные AC:** [AC-18](ACCEPTANCE_CRITERIA.md#ac-18-fr-19-shim-lifts-tsx-runner-ceiling-feature16) · сценарии WRAP001_06, WRAP001_07
+
+## FR-20: Opt-in batched spec-door transaction for `/run-tests` @feature20
+
+The `/run-tests` skill SHALL keep its existing one-command-per-request behavior by default. Only when the caller explicitly sets `--batch` SHALL it submit the complete validated command batch to the `dev-pomogator-specs` MCP spec-door transaction endpoint. The batch request SHALL contain only commands produced by the dispatch table, SHALL preserve their declared order, and SHALL be rejected atomically when any command fails validation; the endpoint SHALL execute no subset of a rejected batch. The skill SHALL surface the MCP transaction identifier and per-command result summary, and SHALL preserve the existing single-command fallback when `--batch` is absent.
+
+**Связанные AC:** [AC-20](ACCEPTANCE_CRITERIA.md#ac-20-fr-20-opt-in-batched-spec-door-transaction-feature20)
+**BDD:** WRAP002_01–WRAP002_06

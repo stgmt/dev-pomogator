@@ -1,9 +1,29 @@
 # User Stories
 
-- Как разработчик, я хочу видеть прогресс тестов в реальном времени в богатом TUI интерфейсе с 4 вкладками, чтобы не переключаться между терминалами и быстро замечать проблемы. @feature1
-- Как разработчик, я хочу просматривать иерархию тестов (suite → test) с цветовыми статусами и фильтрацией, чтобы быстро находить упавшие тесты. @feature2
-- Как разработчик, я хочу видеть логи тестов с подсветкой синтаксиса в реальном времени, чтобы отслеживать выполнение без отдельного `tail -f`. @feature3
-- Как разработчик, я хочу автоматический анализ ошибок с группировкой по паттернам и рекомендациями, чтобы быстрее находить root cause. @feature4
-- Как разработчик, я хочу использовать один TUI для любого тест-фреймворка (vitest, jest, pytest, dotnet), чтобы не переучиваться при смене проекта. @feature5
-- Как разработчик, я хочу запускать TUI в отдельном терминале и видеть обновления без перезапуска, чтобы TUI работал параллельно с Claude Code сессией. @feature6
-- Как разработчик, я хочу чтобы TUI расширение было дополнительным к statusline и оба работали одновременно, чтобы иметь и быстрый glance и детальный view. @feature7
+### User Story: Monitor a test run @feature1
+
+**Требование:** [FR-1]
+
+Как разработчик, я хочу видеть ход тестового запуска в четырёх вкладках TUI, чтобы быстро понять его состояние.
+
+### User Story: Run framework tests through one entry point @feature11
+
+**Требование:** [FR-11]
+
+Как разработчик, я хочу запускать поддерживаемые тестовые фреймворки через `/run-tests`, чтобы использовать единый безопасный путь запуска.
+
+### User Story 20: Opt-in batched test execution (Priority: P1) @feature20
+
+**Требование:** [FR-20]
+
+As a developer running several supported test commands, I want to explicitly request an atomic spec-door batch, so that I receive one verifiable result while ordinary single-command `/run-tests` behavior remains unchanged.
+
+**Why:** A local sequential loop could execute earlier commands before discovering a later invalid one; an endpoint transaction validates the entire requested batch before it has side effects.
+
+**Independent Test:** Invoke `/run-tests` without `--batch` and assert no transaction is requested; invoke it with an invalid `--batch` command and assert the endpoint reports rejection with zero command executions.
+
+**Acceptance Scenarios:**
+
+Given supported dispatch-table commands
+When `/run-tests --batch` submits them to the spec-door endpoint
+Then the response has a transaction id and one result for each command

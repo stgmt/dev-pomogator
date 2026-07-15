@@ -183,6 +183,20 @@ interface TestEvent {
 }
 ```
 
+### Decision: Opt-in spec-door batch transaction
+
+**Требование:** [FR-20]
+
+The `/run-tests` skill keeps the current dispatch and single-command path as its default. `--batch` is the sole opt-in switch: it collects ordered dispatch-table commands, sends them once to a spec-door MCP transaction endpoint for preflight validation, and renders the returned transaction id and per-command outcomes. Validation occurs before execution, so a rejected batch has no execution side effects; endpoint unavailability is returned to the caller rather than falling back to a partial local run.
+
+**Rationale:** Default-off preserves existing skill behavior and prevents an implicit behavior change. A single endpoint transaction makes validation and all-or-nothing execution observable at the spec-door boundary.
+
+**Trade-off:** Batch mode adds a dependency on the MCP endpoint and does not provide a silent local fallback; callers must opt in only where atomic multi-command behavior is more valuable than standalone execution.
+
+**Alternatives considered:**
+- Sequential local execution was rejected because a later invalid command could follow already executed commands.
+- Implicit batching was rejected because it would alter existing `/run-tests` behavior.
+
 ## Reuse Plan (Leverage)
 
 | Source | Target | What is reused |

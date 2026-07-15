@@ -232,6 +232,7 @@ Feature: PLUGIN012_TUI_Test_Runner
 
   @feature14
   Scenario: Passthrough spawns npx child commands cross-platform
+
     Given dev-pomogator is installed
     When the test runner wrapper passes through an npx version child
     Then the wrapper should exit zero and print a semver version
@@ -505,3 +506,43 @@ Feature: PLUGIN012_TUI_Test_Runner
     Then the dependency-free plugin wrapper should exit with code 0
     When the plugin wrapper runs a failing child command without node_modules
     Then the dependency-free plugin wrapper should preserve exit code 9
+
+  @feature20 @WRAP002_01
+  Scenario: Default run-tests remains single-command
+    Given a supported single test command
+    When `/run-tests` is invoked without `--batch`
+    Then no spec-door batch transaction is requested
+
+  @feature20 @WRAP002_02
+  Scenario: Batch submits ordered dispatch commands
+    Given two supported dispatch-table commands in declared order
+    When `/run-tests --batch` is invoked
+    Then the spec-door transaction receives both commands in that order
+
+  @feature20 @WRAP002_03
+  Scenario: Invalid batch is rejected before execution
+    Given a batch containing one command outside the dispatch table
+    When `/run-tests --batch` is invoked
+    Then the spec-door endpoint rejects the transaction
+    And no command from that batch is executed
+
+  @feature20 @WRAP002_04
+  Scenario: Successful batch reports all command outcomes
+    Given a valid batch of supported dispatch-table commands
+    When the spec-door transaction succeeds
+    Then the result contains a transaction identifier
+    And the result contains one outcome for each submitted command
+
+  @feature20 @WRAP002_05
+  Scenario: Unavailable batch endpoint does not fall back partially
+    Given the spec-door batch endpoint is unavailable
+    When `/run-tests --batch` is invoked
+    Then the skill reports an actionable endpoint error
+    And no local partial batch is executed
+
+  @feature20 @WRAP002_06
+  Scenario: Batch preserves ordinary command validation
+    Given a batch command fails endpoint validation
+    When `/run-tests --batch` is invoked
+    Then the transaction is rejected atomically
+    And the command results identify the rejected batch
