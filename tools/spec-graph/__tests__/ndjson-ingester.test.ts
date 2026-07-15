@@ -411,3 +411,60 @@ describe('applyTestResults — mutates only matching scenarios', () => {
     expect(applyTestResults([s], parseNdjson(stream))).toBe(0);
   });
 });
+
+describe('applyTestResults — name fallback for the features-in-test-project / mirror-in-spec layout', () => {
+  function named(id: string, file: string, line: number, title: string): ScenarioNode {
+    return { id, type: 'Scenario', file, line, title, tags: [], steps: [] };
+  }
+
+  // The executed feature and the spec's canonical mirror are DIFFERENT files at
+  // DIFFERENT lines, so location + suffix both miss; only the scenario NAME lines up.
+  const ran = (name: string, status: 'PASSED' | 'FAILED' = 'PASSED'): string =>
+    buildNdjsonStream({
+      uri: 'source-code/tests/Features/Marketplace.feature',
+      scenarioId: 'sc-run',
+      scenarioLine: 42,
+      pickleId: 'pk-run',
+      pickleName: name,
+      testCaseId: 'tc-run',
+      testCaseStartedId: 'tcs-run',
+      status,
+    });
+
+  it('reconciles a green result by NAME when path and line cannot match', () => {
+    const s = named('reel:SCEN-x', '.specs/reel/reel.feature', 1000, 'MARKETPLACE002_Policy sync');
+    const applied = applyTestResults([s], parseNdjson(ran('MARKETPLACE002_Policy sync')));
+    expect(applied).toBe(1);
+    expect(s.lastResult).toBe('PASSED');
+  });
+
+  it('leaves a scenario whose NAME never ran as not_run (no fabrication)', () => {
+    const s = named('reel:SCEN-y', '.specs/reel/reel.feature', 1001, 'MARKETPLACE013_Visual rejection');
+    const applied = applyTestResults([s], parseNdjson(ran('MARKETPLACE002_Policy sync')));
+    expect(applied).toBe(0);
+    expect(s.lastResult).toBeUndefined();
+  });
+
+  it('exact location still wins — name fallback only fires AFTER a location miss', () => {
+    const s = named('SCEN-a', 'source-code/tests/Features/Marketplace.feature', 42, 'MARKETPLACE002_Policy sync');
+    const applied = applyTestResults([s], parseNdjson(ran('MARKETPLACE002_Policy sync')));
+    expect(applied).toBe(1);
+    expect(s.lastResult).toBe('PASSED');
+  });
+
+  it('does NOT apply an AMBIGUOUS name (same name, differing results) by fallback', () => {
+    const passed = ran('DUP');
+    const failed = buildNdjsonStream({
+      uri: 'source-code/tests/Features/Other.feature',
+      scenarioId: 'sc-2', scenarioLine: 7,
+      pickleId: 'pk-2', pickleName: 'DUP',
+      testCaseId: 'tc-2', testCaseStartedId: 'tcs-2', status: 'FAILED',
+      failingMessage: 'boom',
+    });
+    const patch = parseNdjson(`${passed}\n${failed}`);
+    expect(patch.byName.get('DUP')).toBeNull();
+    const s = named('reel:SCEN-z', '.specs/reel/reel.feature', 1002, 'DUP');
+    expect(applyTestResults([s], patch)).toBe(0);
+    expect(s.lastResult).toBeUndefined();
+  });
+});

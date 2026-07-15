@@ -46,6 +46,17 @@ interface PickleInfo {
 export interface TestResultPatch {
   /** Indexed by `${uri}:${line}` so the builder can match without a graph build first. */
   byLocation: Map<string, ScenarioResultFields>;
+  /**
+   * Indexed by raw scenario NAME — a fallback for when the executed feature and
+   * the spec's canonical feature are DIFFERENT files (features live in a test
+   * project and map to specs by tag, while the spec keeps a mirror `.feature`
+   * under `.specs/<slug>/`). There the `${uri}:${line}` join never matches and
+   * every result is dropped, so the scenario reads not_run though it is green.
+   *
+   * A name that occurs more than once with DIFFERING results maps to `null`
+   * (ambiguous) and is never applied — name-fallback must not guess.
+   */
+  byName: Map<string, ScenarioResultFields | null>;
 }
 
 export interface ScenarioResultFields {
@@ -311,7 +322,9 @@ export function parseNdjson(source: string): TestResultPatch {
   }
 
   // Flatten testCaseResult → byLocation keyed `${uri}:${line}` for the builder
-  // to merge into the existing scenario nodes the Gherkin parser produced.
+  // to merge into the existing scenario nodes the Gherkin parser produced. Also
+  // build byName (keyed by raw scenario name) as the cross-path fallback.
+  const byName = new Map<string, ScenarioResultFields | null>();
   for (const [tcId, acc] of testCaseResult) {
     const pickleId = testCaseToPickle.get(tcId);
     if (!pickleId) continue;
@@ -333,14 +346,27 @@ export function parseNdjson(source: string): TestResultPatch {
     if (!prev || statusSeverity(fields.lastResult) > statusSeverity(prev.lastResult)) {
       byLocation.set(key, fields);
     }
+
+    // byName: only unambiguous names are usable. A name seen twice with a
+    // DIFFERENT result (two distinct scenarios sharing a name, or an Outline's
+    // mixed example rows) is poisoned to `null` so name-fallback never guesses —
+    // those are still reconciled precisely by location above.
+    if (info.name) {
+      if (!byName.has(info.name)) {
+        byName.set(info.name, fields);
+      } else {
+        const seen = byName.get(info.name);
+        if (seen && seen.lastResult !== fields.lastResult) byName.set(info.name, null);
+      }
+    }
   }
 
-  return { byLocation };
+  return { byLocation, byName };
 }
 
 /** Read NDJSON from disk and parse. Returns empty patch when the file is absent. */
 export function parseNdjsonFile(absPath: string): TestResultPatch {
-  if (!fs.existsSync(absPath)) return { byLocation: new Map() };
+  if (!fs.existsSync(absPath)) return { byLocation: new Map(), byName: new Map() };
   return parseNdjson(fs.readFileSync(absPath, 'utf-8'));
 }
 
@@ -375,6 +401,15 @@ export function applyTestResults(
       const suffix = `/${s.file}:${s.line}`;
       const hit = keys.find((k) => k.endsWith(suffix));
       if (hit) fields = patch.byLocation.get(hit);
+    }
+    // Name fallback — ONLY after location misses, so co-located features keep
+    // their exact `${uri}:${line}` behaviour untouched. Fires for the tag/mirror
+    // layout: the spec's canonical `.feature` and the executed feature are
+    // different files, so location can never match, but the scenario NAME does.
+    // `byName` yields `null` for ambiguous names, which we must not apply.
+    if (!fields && s.title) {
+      const named = patch.byName.get(s.title);
+      if (named) fields = named;
     }
     if (!fields) continue;
     s.lastResult = fields.lastResult;

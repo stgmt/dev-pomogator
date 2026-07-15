@@ -17,6 +17,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { execFileSync } from 'node:child_process';
 
 export type TaskKind = 'agent' | 'background' | 'task';
 export type TaskStatus = 'running' | 'completed' | 'failed' | 'stopped' | 'killed';
@@ -560,12 +561,37 @@ function isUnsafeStateRoot(dir: string): boolean {
  * Returns undefined when no candidate is trustworthy, so callers fail loudly
  * instead of silently writing into C:\Windows.
  */
+/**
+ * The git repository root of `dir`, or undefined if `dir` is not in a repo (or
+ * git is unavailable). Canonicalises every candidate to the SAME anchor: the
+ * Stop hook fires from whatever subdirectory is current, so `input.cwd` varies
+ * per invocation — an ack written under one subdir's `.dev-pomogator/` is then
+ * invisible to a Stop reading from another. Collapsing to the repo root makes
+ * write (ack) and read (Stop) agree regardless of the firing directory.
+ */
+function gitToplevel(dir: string): string | undefined {
+  try {
+    const out = execFileSync('git', ['-C', dir, 'rev-parse', '--show-toplevel'], {
+      encoding: 'utf-8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    }).trim();
+    return out || undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 function resolveStateRoot(explicit?: string): string | undefined {
   const candidates = [explicit, process.env.CLAUDE_PROJECT_DIR, process.cwd()];
   for (const candidate of candidates) {
     if (!candidate || !candidate.trim()) continue;
     if (candidate.includes('${')) continue; // unexpanded ${CLAUDE_PROJECT_DIR} literal
     if (isUnsafeStateRoot(candidate)) continue;
+    // Anchor to the repo root so the state dir is stable across invocations that
+    // fire from different subdirectories. Fall back to the candidate itself when
+    // it is not inside a git repo (or git is unavailable).
+    const root = gitToplevel(candidate);
+    if (root && !isUnsafeStateRoot(root)) return root;
     return candidate;
   }
   return undefined;
