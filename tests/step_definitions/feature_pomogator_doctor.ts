@@ -358,10 +358,8 @@ When(/^I call buildHookOutput on the DoctorReport in-process$/, async function (
 // Hook spawn (for _04, _05, _15)
 const HOOK_PATH = path.resolve(
   process.cwd(),
-  '.claude/skills/pomogator-doctor/scripts/doctor-hook.ts',
+  '.claude/skills/pomogator-doctor/scripts/engine/doctor.bundle.mjs',
 );
-const NODE_MAJOR = parseInt(process.versions.node.split('.')[0], 10);
-const useStripTypes = NODE_MAJOR >= 22;
 
 function readAutoCommitKey(projectDir: string): string {
   try {
@@ -375,9 +373,8 @@ function readAutoCommitKey(projectDir: string): string {
 }
 
 function runHookSpawn(homeDir: string, projectDir: string, input = '{}') {
-  const [cmd, args] = useStripTypes
-    ? [process.execPath, ['--experimental-strip-types', HOOK_PATH]]
-    : [process.execPath, [path.resolve('node_modules/tsx/dist/cli.mjs'), HOOK_PATH]];
+  const cmd = process.execPath;
+  const args = [HOOK_PATH, '--hook'];
   return spawnSync(cmd, args, {
     encoding: 'utf-8',
     timeout: 15_000,

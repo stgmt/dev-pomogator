@@ -66,26 +66,6 @@ function hookHomeDir(): string {
   return path.resolve(process.env.HOME || process.env.USERPROFILE || os.homedir());
 }
 
-function pluginRootFromScriptsDir(scriptsDir: string): string {
-  return path.resolve(process.env.CLAUDE_PLUGIN_ROOT || path.join(scriptsDir, '..', '..', '..', '..'));
-}
-
-async function runCarlPreflight(scriptsDir: string, projectRoot: string): Promise<void> {
-  const pluginRoot = pluginRootFromScriptsDir(scriptsDir);
-  const installPath = path.join(pluginRoot, 'tools', 'carl', 'install.ts');
-  if (!fs.existsSync(installPath)) return;
-
-  const mod = (await import(pathToFileURL(installPath).href)) as {
-    install?: (options: { project: string; platform: 'claude-code'; repair: boolean }) => unknown;
-  };
-  if (typeof mod.install !== 'function') return;
-
-  await Promise.race([
-    Promise.resolve(mod.install({ project: projectRoot, platform: 'claude-code', repair: true })),
-    new Promise<void>((resolve) => setTimeout(resolve, 8_000)),
-  ]);
-}
-
 async function main(): Promise<void> {
   try {
     const hookInput = await readStdin();
@@ -97,12 +77,6 @@ async function main(): Promise<void> {
     const projectRoot = projectRootFromHookInput(hookInput);
     const homeDir = hookHomeDir();
     const doctorPath = path.join(__dirname, 'engine', 'index.ts');
-
-    try {
-      await runCarlPreflight(__dirname, projectRoot);
-    } catch (error) {
-      logError(`CARL preflight failed: ${error instanceof Error ? error.message : String(error)}`);
-    }
 
     if (fs.existsSync(doctorPath)) {
       const mod = (await import(pathToFileURL(doctorPath).href)) as {

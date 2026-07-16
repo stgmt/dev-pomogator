@@ -245,9 +245,27 @@ export function scorePromptRelevance(planContent: string, promptTexts: string[])
   // down), while a plan copied from a different task scores ~0.0. Deny only on near-zero
   // grounding so technical-heavy-but-relevant plans are never falsely blocked.
   const precision = groundedWeight / totalWeight;
-  if (precision < 0.15) return -20;
-  if (precision < 0.3) return -10;
+
+  // A reviewed plan legitimately expands a terse task into implementation detail. Precision alone
+  // punishes that detail, so also measure whether substantive prompt vocabulary survived in the
+  // requirements. Keep the vocabulary bounded so pasted prompts cannot dominate this side either.
+  const promptTerms = [...promptFreq.entries()]
+    .filter(([term, frequency]) => !STOPWORDS.has(term) && frequency <= FLOOD)
+    .map(([term]) => term)
+    .slice(0, 40);
+  const promptRecall = promptTerms.length > 0
+    ? promptTerms.filter((term) => reqText.includes(term)).length / promptTerms.length
+    : 0;
+  const grounding = Math.max(precision, promptRecall);
+
+  if (grounding < 0.15) return -20;
+  if (grounding < 0.3) return -10;
   return 0;
+}
+
+/** Score against the same provenance window used by the live Phase 2.5 gate. */
+export function scorePromptHistoryRelevance(planContent: string, prompts: string[]): number {
+  return scorePromptRelevance(planContent, selectRelevanceWindow(prompts));
 }
 
 /**

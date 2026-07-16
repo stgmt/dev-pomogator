@@ -28,7 +28,12 @@ import {
 } from '../../.claude/skills/spec-reality-check/scripts/verify.ts';
 import type { AuditFinding } from '../../.claude/skills/spec-reality-check/scripts/verify.ts';
 import { extractSpecRefs } from '../../.claude/skills/spec-reality-check/scripts/verify-hook.ts';
-import { scorePromptRelevance, formatDenyErrors, phase25RelevanceDenyError } from '../../tools/plan-pomogator/plan-gate.ts';
+import {
+  scorePromptRelevance,
+  scorePromptHistoryRelevance,
+  formatDenyErrors,
+  phase25RelevanceDenyError,
+} from '../../tools/plan-pomogator/plan-gate.ts';
 import type { ValidationError } from '../../tools/plan-pomogator/validate-plan.ts';
 
 const REPO_ROOT = process.cwd();
@@ -464,4 +469,32 @@ Then(/^текст содержит "line 0:"/, function (this: SrcWorld) {
   const err = this.denyErrors![0];
   assert.equal(typeof err.line, 'number', 'Phase 2.5 deny payload is a structured ValidationError (numeric line)');
   assert.ok(err.message.length > 0, 'deny message is non-empty');
+});
+
+const REVIEW_SHORTHAND_HISTORY = [
+  'Fix GitHub issue 102 in pomogator doctor: implement executable engine CLI, installed cache runtime, CARL diagnostics and plugin deps guard',
+  'ниче не понял',
+  'делай',
+  'го',
+  'что дальше?',
+  'ревью плана',
+];
+
+Given(/^план, чьи Extracted Requirements отражают исходную содержательную задачу$/, function (this: SrcWorld) {
+  this.planContent =
+    '## Context\n\n### Extracted Requirements\n' +
+    '1. Fix GitHub issue 102 in pomogator doctor with executable engine CLI\n' +
+    '2. Verify installed cache runtime, CARL diagnostics and plugin deps guard\n';
+});
+
+Given(/^скопированный план, чьи Extracted Requirements не относятся к исходной задаче$/, function (this: SrcWorld) {
+  this.planContent = PLAN_REQS_FIXTURE;
+});
+
+Given(/^prompt-история с исходной задачей и хвостом/, function (this: SrcWorld) {
+  this.promptTexts = [...REVIEW_SHORTHAND_HISTORY];
+});
+
+When(/^provenance-aware Phase 2\.5 оценивает план против prompt-истории$/, function (this: SrcWorld) {
+  this.score = scorePromptHistoryRelevance(this.planContent!, this.promptTexts!);
 });

@@ -1,10 +1,11 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { allChecks } from './checks/index.js';
 import { DOCTOR_SCHEMA_VERSION } from './constants.js';
 import { acquireLock, LockHeldError } from './lock.js';
-import { buildHookOutput, formatChalk } from './reporter.js';
+import { buildHookOutput, exitCodeFor, formatChalk, formatJson } from './reporter.js';
 import { executeChecks } from './runner.js';
 import type { CheckDefinition, DoctorOptions, DoctorReport, HookOutput } from './types.js';
 
@@ -76,6 +77,82 @@ export async function runVerbose(
 ): Promise<string> {
   const report = await runDoctor(options, checks);
   return formatChalk(report);
+}
+
+interface CliArgs {
+  json: boolean;
+  fix: boolean;
+  hook: boolean;
+  extension?: string;
+}
+
+function usage(): string {
+  return 'Usage: pomogator-doctor [--json] [--extension=<name>] [--fix]';
+}
+
+function parseCliArgs(args: string[]): CliArgs {
+  const parsed: CliArgs = { json: false, fix: false, hook: false };
+  for (const arg of args) {
+    if (arg === '--json') parsed.json = true;
+    else if (arg === '--fix') parsed.fix = true;
+    else if (arg === '--hook') parsed.hook = true;
+    else if (arg.startsWith('--extension=') && arg.length > '--extension='.length) {
+      parsed.extension = arg.slice('--extension='.length);
+    } else throw new Error(`Unknown argument: ${arg}`);
+  }
+  return parsed;
+}
+
+async function main(args = process.argv.slice(2)): Promise<void> {
+  let cli: CliArgs;
+  try {
+    cli = parseCliArgs(args);
+  } catch (error) {
+    process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n${usage()}\n`);
+    process.exitCode = 2;
+    return;
+  }
+
+  process.env.DEV_POMOGATOR_DOCTOR_BUNDLE = '1';
+  if (cli.hook) {
+    let input = '';
+    if (!process.stdin.isTTY) {
+      for await (const chunk of process.stdin) input += String(chunk);
+    }
+    let projectRoot = process.env.CLAUDE_PROJECT_DIR || process.cwd();
+    try {
+      const payload = JSON.parse(input) as { cwd?: unknown };
+      if (typeof payload.cwd === 'string' && payload.cwd.trim()) projectRoot = payload.cwd;
+    } catch {
+      // Hook input is best-effort.
+    }
+    const output = await Promise.race([
+      runQuiet({ projectRoot, homeDir: process.env.HOME || process.env.USERPROFILE, fix: false }),
+      new Promise<HookOutput>((resolve) => setTimeout(
+        () => resolve({ continue: true, suppressOutput: true }),
+        10_000,
+      )),
+    ]);
+    process.stdout.write(`${JSON.stringify(output)}\n`);
+    return;
+  }
+
+  const report = await runDoctor({
+    projectRoot: process.env.CLAUDE_PROJECT_DIR || process.cwd(),
+    homeDir: process.env.HOME || process.env.USERPROFILE,
+    extension: cli.extension,
+    fix: cli.fix,
+  });
+  process.stdout.write(`${cli.json ? formatJson(report) : formatChalk(report)}\n`);
+  process.exitCode = exitCodeFor(report);
+}
+
+const invokedPath = process.argv[1] ? path.resolve(process.argv[1]) : '';
+if (invokedPath && import.meta.url === pathToFileURL(invokedPath).href) {
+  void main().catch((error) => {
+    process.stderr.write(`pomogator-doctor failed: ${error instanceof Error ? error.message : String(error)}\n`);
+    process.exitCode = 2;
+  });
 }
 
 export function lockPathFor(homeDir: string): string {

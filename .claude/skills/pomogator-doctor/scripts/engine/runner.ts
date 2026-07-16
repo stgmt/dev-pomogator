@@ -41,6 +41,7 @@ export async function executeChecks(
       homeDir,
       signal: controller.signal,
       packageVersion,
+      fix: options.fix ?? false,
     };
 
     const { relevant, gatedOut } = gateChecks(checks, ctx, options.extension);
