@@ -29,6 +29,7 @@ export interface DoctorOptions {
   interactive?: boolean;
   json?: boolean;
   quiet?: boolean;
+  fix?: boolean;
   extension?: string;
   timeout?: number;
   homeDir?: string;
@@ -112,6 +113,7 @@ export interface CheckContext {
   homeDir: string;
   signal: AbortSignal;
   packageVersion: string | null;
+  fix: boolean;
 }
 
 export type CheckFn = (ctx: CheckContext) => Promise<CheckResult | CheckResult[] | null>;

@@ -600,6 +600,6 @@ function main(): void {
 }
 
 const __filename = fileURLToPath(import.meta.url);
-if (process.argv[1] === __filename) {
+if (path.basename(process.argv[1] ?? '') === 'postinstall.ts' && process.argv[1] === __filename) {
   main();
 }

@@ -228,7 +228,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "sh \"${CLAUDE_PLUGIN_ROOT:-${CLAUDE_PROJECT_DIR:-.}}/tools/_shared/hook-runtime.sh\" -e \"require(require('path').join(process.env.CLAUDE_PLUGIN_ROOT || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \".claude/skills/pomogator-doctor/scripts/doctor-hook.ts\"",
+            "command": "sh \"${CLAUDE_PLUGIN_ROOT:-${CLAUDE_PROJECT_DIR:-.}}/tools/_shared/hook-runtime.sh\" node \"${CLAUDE_PLUGIN_ROOT:-${CLAUDE_PROJECT_DIR:-.}}/.claude/skills/pomogator-doctor/scripts/engine/doctor.bundle.mjs\" --hook",
             "timeout": 10
           }
         ]

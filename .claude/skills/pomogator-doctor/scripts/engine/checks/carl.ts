@@ -147,7 +147,7 @@ export const carlCheck: CheckDefinition = {
     return { relevant: true };
   },
   async run(ctx: CheckContext): Promise<CheckResult> {
-    return checkCarlProject({ projectRoot: ctx.projectRoot, pluginRoot: pluginRootFrom(ctx), repair: true });
+    return checkCarlProject({ projectRoot: ctx.projectRoot, pluginRoot: pluginRootFrom(ctx), repair: ctx.fix });
   },
 };
 
@@ -184,7 +184,7 @@ async function main(): Promise<void> {
 }
 
 const invokedPath = process.argv[1] ? pathToFileURL(path.resolve(process.argv[1])).href : '';
-if (import.meta.url === invokedPath) {
+if (path.basename(process.argv[1] ?? '') === 'carl.ts' && import.meta.url === invokedPath) {
   main().catch((error) => {
     process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
     process.exit(1);
