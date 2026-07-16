@@ -737,9 +737,7 @@ Given(
 
     // Mutation-resistant pre-flight: run --dry-run NOW (before the real migration destroys
     // .dev-pomogator/) to capture what WOULD be backed up, and verify custom-skill is included.
-    // After the real migration, .dev-pomogator/.user-overrides/ is destroyed (design quirk
-    // of the script: safeRemove('.dev-pomogator') runs AFTER backupUserModifiedFiles), so
-    // the backup cannot be read post-migration. Dry-run captures the count before destruction.
+    // Dry-run proves the same custom files are selected without writing the sibling backup.
     const script = appPath('tools', 'migrate-v1-to-v2', 'migrate-v1-to-v2.ts');
     const dryRunResult = spawnSync(
       process.execPath,
@@ -747,7 +745,7 @@ Given(
       { cwd: this.tempDir, encoding: 'utf-8', env: { ...process.env } },
     );
     const dryStdout = (dryRunResult.stdout ?? '') + (dryRunResult.stderr ?? '');
-    const m = dryStdout.match(/Backed up to \.user-overrides\/: (\d+)/);
+    const m = dryStdout.match(/Backed up to \.dev-pomogator-v1-overrides\/: (\d+)/);
     assert.ok(m, `dry-run output missing backup count line:\n${dryStdout}`);
     const backupCount = parseInt(m[1], 10);
     // Fixture has my-skill/SKILL.md + custom-skill/SKILL.md under .claude/skills/ => count >= 2
@@ -761,25 +759,26 @@ Given(
 );
 
 Then(
-  /^file should be copied to \.dev-pomogator\/\.user-overrides\/\.claude\/skills\/custom-skill\/SKILL\.md$/,
+  /^file should be copied to \.dev-pomogator-v1-overrides\/\.claude\/skills\/custom-skill\/SKILL\.md$/,
   function (this: V4World) {
-    // Reconciliation: the migration script backs up files to .dev-pomogator/.user-overrides/
-    // THEN safeRemove('.dev-pomogator') destroys the backup — only .migrated-to-v2 is
-    // re-created. The backup destination is unreachable post-run (a quirk of the migration
-    // flow: .user-overrides/ is inside .dev-pomogator/ which is in the removal target list).
-    //
-    // Mutation-resistant evidence: the dry-run in the Given step already confirmed a count
-    // >= 2 files would be backed up (including custom-skill). Here we confirm the real run
-    // also reported the same or higher count — meaning backupUserModifiedFiles ran for real.
-    const m = this.lastStdout.match(/Backed up to \.user-overrides\/: (\d+)/);
-    assert.ok(m, `real-run output missing backup count line:\n${this.lastStdout}`);
-    const realCount = parseInt(m[1], 10);
-    const dryRunBackupCount = (this as unknown as Record<string, unknown>)['_dryRunBackupCount'] as number;
-    assert.ok(
-      realCount >= dryRunBackupCount,
-      `Real backup count (${realCount}) < dry-run count (${dryRunBackupCount}) — backup was broken:\n${this.lastStdout}`,
+    const backupPath = path.join(
+      this.tempDir,
+      '.dev-pomogator-v1-overrides',
+      '.claude',
+      'skills',
+      'custom-skill',
+      'SKILL.md',
     );
-    // Confirm the migration marker was written (full completion)
+    assert.ok(fs.existsSync(backupPath), `surviving backup not found: ${backupPath}`);
+    assert.equal(
+      fs.readFileSync(backupPath, 'utf-8'),
+      '---\nname: custom-skill\n---\ncustom content\n',
+      'backup content must remain byte-for-byte readable after migration',
+    );
+    assert.ok(
+      !fs.existsSync(path.join(this.tempDir, '.dev-pomogator', '.user-overrides')),
+      'backup must not remain under the deleted v1 tree',
+    );
     const markerPath = path.join(this.tempDir, '.dev-pomogator', '.migrated-to-v2');
     assert.ok(fs.existsSync(markerPath), `.migrated-to-v2 marker not found — migration did not complete`);
   },

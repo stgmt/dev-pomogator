@@ -51,6 +51,9 @@ AND SHALL print next steps: «Run `/plugin marketplace add stgmt/dev-pomogator` 
 
 ## AC-5 (FR-7)
 
+**CANON001_101 — Global-only isolation:** When `tools/migrate-v1-to-v2.ts --global-only` executes against project sentinels in `<cwd>/.claude/**`, `<cwd>/.dev-pomogator/**`, `<cwd>/.dev-pomogator-v1-overrides/**`, `<cwd>/.gitignore`, and project settings, success, `--dry-run`, already-migrated, and induced-failure outcomes SHALL preserve every sentinel byte-for-byte. The evidence SHALL record the resolved `origin/main` commit and SHALL NOT use `HEAD`, a worktree, cache, or user-global state as its comparison baseline.
+
+
 **Требование:** [FR-7](FR.md#fr-7-migration-v1-v2-documentation-optional-cleanup-script)
 
 WHEN cleanup script выполняется на проекте без v1 install (`<cwd>/.dev-pomogator/` отсутствует или version >= 2.0.0)

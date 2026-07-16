@@ -78,6 +78,7 @@
 | CHK-FR7-03 | Cleanup script backups user-modified files | FR-7, AC-4, @feature7 | Integration test | Draft | content hash mismatch fixture |
 | CHK-FR7-04 | Cleanup script removes .gitignore managed block | FR-7, AC-4, @feature7 | Integration test | Draft | .gitignore content assertion |
 | CHK-FR7-05 | Cleanup script idempotent (no v1 → exit 0 informational) | FR-7, AC-5, @feature7 | Integration test | Draft | re-run after cleanup |
+| CHK-FR7-06 | `--global-only` preserves the complete project sentinel set byte-for-byte across success, `--dry-run`, already-migrated, and induced-failure paths | FR-7, AC-5, @feature7 | BDD scenario | Draft | CANON001_101; sentinels include `.dev-pomogator/**` and `.dev-pomogator-v1-overrides/**`; record resolved `origin/main` commit |
 | CHK-FR8-01 | edge-debug-port manifest has platforms=["claude"] (no cursor) | FR-8, AC-8, @feature8 | Unit test | Draft | tests/e2e/cursor-removal.test.ts |
 | CHK-FR8-02 | --cursor on legacy CLI exits non-zero с v2 error message | FR-8, AC-8, @feature8 | Integration test | Draft | spawnSync assertion |
 | CHK-FR8-03 | package.json description and keywords have no Cursor | FR-8, @feature8 | Unit test | Draft | parse + assert |

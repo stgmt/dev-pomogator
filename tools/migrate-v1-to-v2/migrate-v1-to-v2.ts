@@ -142,7 +142,9 @@ function removeManagedGitignoreBlock(projectRoot: string, result: MigrationResul
 function backupUserModifiedFiles(projectRoot: string, result: MigrationResult, dryRun: boolean): void {
   const skillsRoot = join(projectRoot, '.claude', 'skills');
   const rulesRoot = join(projectRoot, '.claude', 'rules');
-  const overrideRoot = join(projectRoot, '.dev-pomogator', '.user-overrides');
+  // Keep backups outside the v1 tree: projectCleanup removes `.dev-pomogator/` below.
+  // A sibling directory survives cleanup and repeated idempotent runs.
+  const overrideRoot = join(projectRoot, '.dev-pomogator-v1-overrides');
   for (const root of [skillsRoot, rulesRoot]) {
     if (!existsSync(root)) continue;
     walkDir(root, (filePath) => {
@@ -349,7 +351,7 @@ function printSummary(result: MigrationResult, flags: Flags): void {
   }
   console.log(`${noun} files: ${result.removedFiles.length}`);
   console.log(`${noun} directories: ${result.removedDirs.length}`);
-  console.log(`Backed up to .user-overrides/: ${result.backupFiles.length}`);
+  console.log(`Backed up to .dev-pomogator-v1-overrides/: ${result.backupFiles.length}`);
   console.log(`.gitignore block removed: ${result.gitignoreBlockRemoved}`);
   console.log(`.claude/settings.local.json updated: ${result.settingsLocalUpdated}`);
   if (flags.global) console.log(`~/.claude/settings.json updated: ${result.globalSettingsUpdated}`);
