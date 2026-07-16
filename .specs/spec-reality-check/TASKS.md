@@ -180,3 +180,11 @@
   - [x] `extensions/plan-pomogator/tools/plan-pomogator/plan-gate.ts:308-311` исправлен
   - [x] Phase 2.5 deny errors теперь читаемые (не "line undefined: undefined")
   - [x] Committed as `b8a2bca`
+
+- [ ] Phase 2.5 provenance-aware relevance regression -- @feature15 — id: t21 — Status: TODO | Est: 45m
+  _Requirements: [FR-15](FR.md#fr-15-bug-fix-plan-gate-phase-25-already-shipped-feature15)_
+  _Files: `tools/plan-pomogator/plan-gate.ts`, `tests/step_definitions/feature_spec_reality_check.ts`_
+  **Done When:**
+  - [ ] SRC003_04 passes: low-signal review/refinement tail retains the earlier substantive task
+  - [ ] SRC003_05 passes: a genuinely copied/off-topic plan remains denied
+  - [ ] Existing SRC003_01..03 remain green
