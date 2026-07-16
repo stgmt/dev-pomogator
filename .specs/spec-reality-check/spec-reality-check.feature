@@ -190,3 +190,17 @@ Feature: SRC001 spec-reality-check skill
     Given payload отказа Phase 2.5 из plan-gate
     When payload отказа отрендерен общим форматтером deny
     Then текст содержит "line 0:" с непустым сообщением и без "undefined"
+
+  @feature15
+  Scenario: SRC003_04 review shorthand preserves the substantive task provenance
+    Given план, чьи Extracted Requirements отражают исходную содержательную задачу
+    And prompt-история с исходной задачей и хвостом "ниче не понял", "делай", "го", "что дальше?", "ревью плана"
+    When provenance-aware Phase 2.5 оценивает план против prompt-истории
+    Then relevance score > -20 (Phase 2.5 allows review refinement)
+
+  @feature15
+  Scenario: SRC003_05 copied plan remains denied despite review shorthand
+    Given скопированный план, чьи Extracted Requirements не относятся к исходной задаче
+    And prompt-история с исходной задачей и хвостом "ниче не понял", "делай", "го", "что дальше?", "ревью плана"
+    When provenance-aware Phase 2.5 оценивает план против prompt-истории
+    Then relevance score <= -20 (Phase 2.5 still denies contamination)

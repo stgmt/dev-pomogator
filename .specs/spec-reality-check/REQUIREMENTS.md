@@ -86,7 +86,9 @@
 | CHK-FR12-01 | spec-review category 15 invoked | FR-12, AC-12, @feature12 | Manual review | Draft | Trace via session log |
 | CHK-FR13-01 | create-spec Phase 3 invocation | FR-13, AC-13, @feature13 | Manual review | Draft | Trace via session log |
 | CHK-FR14-01 | Graceful parser fallback | FR-14, AC-14, @feature14 | Unit test | Draft | — |
-| CHK-FR15-01 | plan-gate Phase 2.5 fix | FR-15, AC-15, @feature15 | Manual review | Verified | Commit b8a2bca |
+| CHK-FR15-01 | plan-gate Phase 2.5 readable deny | FR-15, AC-15, @feature15 | BDD scenario | Verified | SRC003_03; commit b8a2bca |
+| CHK-FR15-02 | Review shorthand retains substantive task provenance | FR-15, AC-15, @feature15 | BDD scenario | Draft | SRC003_04 |
+| CHK-FR15-03 | Copied/off-topic plan remains denied | FR-15, AC-15, @feature15 | BDD scenario | Draft | SRC003_05 |
 
 ## Verification Process
 
@@ -108,8 +110,8 @@
 
 ## Summary Counts
 
-- Total CHKs: 19
+- Total CHKs: 21
 - Verified: 1
 - In Progress: 0
-- Draft: 18
+- Draft: 20
 - Blocked: 0

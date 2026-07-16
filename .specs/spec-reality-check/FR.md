@@ -100,7 +100,7 @@ Skill применён на `.specs/dev-pomogator-canonical-plugin/` — обн�
 
 ## FR-15: Bug fix plan-gate Phase 2.5 — ALREADY SHIPPED @feature15
 
-Bug fix в `extensions/plan-pomogator/tools/plan-pomogator/plan-gate.ts` Phase 2.5 — `denyAndExit` принимает `ValidationError[]` объекты, но Phase 2.5 вызывал его с `string[]`. Printer выводил "line undefined: undefined" вместо реального сообщения. Fix — конвертировать array в `[{line: 0, message, hint}]` перед `denyAndExit` (строки 308-311). **Shipped в commit b8a2bca 2026-05-23**.
+`tools/plan-pomogator/plan-gate.ts` Phase 2.5 SHALL keep the readable `ValidationError[]` deny payload shipped in commit `b8a2bca` and SHALL score plan relevance against provenance that retains the earlier substantive task when the recent tail contains only review/refinement shorthand such as «ниче не понял», «делай», «го», «что дальше?» and «ревью плана». The selection SHALL remain deterministic and SHALL continue denying a genuinely copied/off-topic plan; copying shorthand into `Extracted Requirements` is not an acceptable remediation.
 
 **Связанные AC:** [AC-15](ACCEPTANCE_CRITERIA.md#ac-15-fr-15-feature15)
 **Use Case:** [Edge case 1](USE_CASES.md#edge-case-1-fail-open-на-exception-в-hook)

@@ -88,3 +88,7 @@ WHEN `verify.ts` парсит FILE_CHANGES.md row которая не содер
 **Требование:** [FR-15](FR.md#fr-15-bug-fix-plan-gate-phase-25-already-shipped-feature15)
 
 WHEN `plan-gate.ts` Phase 2.5 detects relevance score ≤ -20 AND вызывает `denyAndExit` THEN argument SHALL быть `ValidationError[]` objects (не string array) AND printer выводит реальный `line N: message\n💡 hint` format. **Shipped в commit b8a2bca**.
+
+WHEN an earlier substantive user task is followed only by low-signal review/refinement prompts such as «ниче не понял», «делай», «го», «что дальше?» and «ревью плана» AND the plan requirements match that substantive task THEN Phase 2.5 SHALL retain the task provenance and allow the plan.
+
+WHEN the plan requirements are genuinely off-topic relative to the substantive task THEN the same provenance-aware evaluation SHALL still deny it at the existing threshold, regardless of the review/refinement tail.

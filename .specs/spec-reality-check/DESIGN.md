@@ -151,6 +151,14 @@
 - Fail-closed (block on hook exception) — rejected потому что bad UX, AI заблокирован broken infrastructure
 - No try/catch (let process crash) — rejected потому что Claude Code intercepts process exit codes; crash может cascade в session-killing
 
+## Decision: provenance-aware Phase 2.5 prompt window
+
+**Требование:** [FR-15](FR.md#fr-15-bug-fix-plan-gate-phase-25-already-shipped-feature15)
+
+**Rationale:** A plan review/refinement turn is not a new domain task. Phase 2.5 must retain at least one earlier substantive prompt when the newest prompts are low-signal conversational directives or review requests. Selection remains deterministic: classify low-signal prompts by token count plus a small explicit conversational vocabulary, walk backward from the newest prompt, retain all recent prompts, and continue until a substantive prompt is included. Scoring still compares only `Extracted Requirements` terms against selected user prompts.
+
+**Trade-off:** The classifier intentionally recognizes a narrow set of short conversational phrases and may need extension for new languages. It avoids semantic LLM calls and preserves deterministic hook latency. Because the earlier substantive prompt is added rather than replacing the recent tail, a copied/off-topic plan still has no matching domain terms and remains denied. Alternatives rejected: always selecting the last five prompts (the observed false deny), selecting the entire stored history (old-task contamination), and exempting every «review plan» turn from relevance checks (would allow copied plans).
+
 ## BDD Test Infrastructure (ОБЯЗАТЕЛЬНО)
 
 **TEST_DATA:** TEST_DATA_ACTIVE
