@@ -163,7 +163,7 @@ Feature: CANON001 Canonical Claude Code Marketplace Plugin
     Given test fixture project с v1 install
     And .claude/skills/custom-skill/SKILL.md has content hash mismatch from upstream
     When migration script runs
-    Then file should be copied to .dev-pomogator/.user-overrides/.claude/skills/custom-skill/SKILL.md
+    Then file should be copied to .dev-pomogator-v1-overrides/.claude/skills/custom-skill/SKILL.md
     And original file should still be removed from .claude/skills/
 
   @feature7
@@ -183,6 +183,15 @@ Feature: CANON001 Canonical Claude Code Marketplace Plugin
     And stdout should contain "/reload-plugins"
 
   # =========================================================================
+  @feature7
+  Scenario: CANON001_101 Global-only migration preserves collision-free project sentinels
+  Given a project sentinel set contains byte-bearing `.dev-pomogator` and `.dev-pomogator-v1-overrides` directories
+  And the migration baseline is the resolved `origin/main` commit
+  When the user runs global-only migration through success, dry-run, already-migrated, and induced-failure outcomes
+  Then every project sentinel remains byte-for-byte unchanged
+  And the evidence records the resolved `origin/main` commit
+  And no collision occurs between `.dev-pomogator` and `.dev-pomogator-v1-overrides`
+
   # @feature8 — Cursor support removal (FR-8)
   # =========================================================================
 

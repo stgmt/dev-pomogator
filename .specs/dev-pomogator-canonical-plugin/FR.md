@@ -108,7 +108,7 @@ dev-pomogator должен документировать в README + CHANGELOG:
 
 Migration explicit и user-driven — никакого silent magic. Подход canonical: dev-pomogator плагин сам не пишет в project files (Anthropic plugin model rules), поэтому migration не может быть автоматической при `/plugin install`.
 
-`--global-only` is an isolation boundary: it SHALL inspect and mutate only recognized global v1 artifacts and matching global settings entries. It SHALL NOT inspect or mutate the caller project, its `.claude/`, `.gitignore`, project `.dev-pomogator/`, or unrelated v2 files under the shared global home. Acceptance comparison baselines SHALL resolve from `origin/main` only and record that commit; feature/worktree state, plugin cache, and user-global state are not baselines.
+`--global-only` is an isolation boundary: it SHALL inspect and mutate only recognized global v1 artifacts and matching global settings entries. It SHALL NOT inspect, read, write, remove, merge, or create the caller project, its `.claude/**`, `.gitignore`, `.dev-pomogator/**`, `.dev-pomogator-v1-overrides/**`, project settings, or unrelated v2 files under the shared global home. On success, `--dry-run`, already-migrated, and failure paths, the complete project sentinel set SHALL remain byte-for-byte unchanged. Acceptance comparison baselines SHALL resolve from `origin/main` only and record that commit; feature/worktree state, plugin cache, and user-global state are not baselines.
 
 **Связанные AC:** [AC-4](ACCEPTANCE_CRITERIA.md#ac-4-fr-7), [AC-5](ACCEPTANCE_CRITERIA.md#ac-5-fr-7)
 **Use Case:** [UC-2](USE_CASES.md#uc-2-upgrade-v1-v2-from-existing-project-install)

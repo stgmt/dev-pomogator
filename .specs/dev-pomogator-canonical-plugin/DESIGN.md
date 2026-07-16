@@ -230,6 +230,20 @@ dev-pomogator/
 
 > Секция НЕ может быть удалена.
 
+### Decision: Global-only migration preserves project sentinels
+
+**Требование:** [FR-7](FR.md#fr-7-migration-v1-v2-documentation-optional-cleanup-script)
+
+**Rationale:** A global-only repair must not become a disguised project cleanup. A project can contain v1 residue, active v2 configuration, and user recovery material at the same time; observing or rewriting it makes the global operation non-local and can delete recovery evidence.
+
+**Alternatives considered:**
+- Permit project inspection in `--global-only` mode — rejected because it turns a global repair into an unbounded project mutation.
+- Preserve only paths known to the current implementation — rejected because a new managed path could invalidate the safety guarantee without changing the mode contract.
+
+**Trade-off:** `--global-only` cannot opportunistically clean a project, so users must choose an explicit project-scoped workflow when that is intended. The narrower contract requires byte-for-byte sentinel fixtures for success, dry-run, already-migrated, and failure branches, but makes the global path independently auditable and safe to retry.
+
+**Verification:** `CANON001_101` uses collision-free `.dev-pomogator/**` and `.dev-pomogator-v1-overrides/**` fixtures, compares the full sentinel set byte-for-byte in all four outcomes, and records the resolved `origin/main` commit instead of `HEAD`, worktree, cache, or user-global state.
+
 **TEST_DATA:** TEST_DATA_NONE
 **TEST_FORMAT:** BDD
 **Framework:** vitest (TS) — используется для e2e тестов с BDD-style describe/it имитирующими Gherkin сценарии
