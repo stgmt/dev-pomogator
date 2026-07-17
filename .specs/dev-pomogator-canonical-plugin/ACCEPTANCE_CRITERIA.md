@@ -112,4 +112,12 @@ WHEN review receives an approved registry-backed HTTP hook and the documented pl
 THEN it SHALL return no findings
 AND the registry SHALL declare bearer-environment authentication without containing a bearer token value.
 
-**BDD:** `CORE024_01`, `CORE024_02` in `tests/features/core/CORE024_hook-review.feature`; `tests/step_definitions/feature24_hook_review.ts`.
+WHEN the hook service restarts after the parent Claude Code process has loaded the provisioned credential
+THEN the credential bytes SHALL remain unchanged
+AND authenticated native Stop dispatch SHALL NOT return HTTP 401.
+
+WHEN the persisted credential differs from the parent-process credential
+THEN bootstrap and doctor SHALL report one restart-required fingerprint mismatch without printing the token
+AND SHALL remain fail-open.
+
+**BDD:** `CORE024_01`, `CORE024_02`, `CORE024_06`, `CORE024_07` in `tests/features/core/CORE024_hook-review.feature`; `tests/step_definitions/feature24_hook_review.ts`.

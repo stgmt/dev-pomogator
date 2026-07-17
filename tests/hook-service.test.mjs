@@ -37,7 +37,7 @@ test('HS_01: health and registration require the token', async () => {
     assert.equal(rejectedHealth.status, 401);
     const health = await fetch(`${base}/health`, { headers: { 'x-dev-pomogator-token': 'secret' } });
     assert.equal(health.status, 200);
-    assert.deepEqual(await health.json(), { service: 'dev-pomogator-hook-service', version: '1.0.0' });
+    assert.deepEqual(await health.json(), { service: 'dev-pomogator-hook-service', version: '1.0.0', tokenFingerprint: '2bb80d537b1d' });
     const unauthorized = await post(`${base}/v1/register`, { session_id: 's1' });
     assert.equal(unauthorized.status, 401);
     assert.deepEqual(await unauthorized.json(), { error: 'unauthorized' });
