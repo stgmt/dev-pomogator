@@ -41,21 +41,20 @@ Use LLM-driven decision making for context-aware validation:
 
 ### Command Hooks
 
-Execute bash commands for deterministic checks:
+For dev-pomogator-managed hooks, steady-state events must use the approved authenticated local HTTP hook registry. Do **not** author `bash`, `sh`, `.sh`, or inline `node -e` commands for `PreToolUse`, `PostToolUse`, `Stop`, `SubagentStop`, `UserPromptSubmit`, `SessionEnd`, `PreCompact`, or `Notification`; Windows starts a shell process per event.
 
 ```json
 {
-  "type": "command",
-  "command": "bash ${CLAUDE_PLUGIN_ROOT}/scripts/validate.sh",
-  "timeout": 60
+  "type": "http",
+  "url": "http://127.0.0.1:<approved-port>/hooks"
 }
 ```
 
-**Use for:**
-- Fast deterministic validations
-- File system operations
-- External tool integrations
-- Performance-critical checks
+Register the same `{ event, matcher, route }` in the approved hook registry. The only command-hook exception is a narrowly documented `SessionStart` `hook-service-bootstrap` command that starts or verifies the service; it must not process normal hook events. Run `npm run check:hook-review` before push.
+
+**Use command hooks only for:**
+- The documented SessionStart bootstrap
+- Non-managed, explicitly reviewed compatibility integrations
 
 ## Hook Configuration Formats
 

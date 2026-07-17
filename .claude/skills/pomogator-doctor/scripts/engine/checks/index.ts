@@ -13,6 +13,7 @@ import { ghCheck } from './gh.js';
 import { gitCheck } from './git.js';
 import { gitignoreBlockCheck } from './gitignore-block.js';
 import { hookScriptPathsCheck } from './hook-script-paths.js';
+import { hookServiceCheck } from './hook-service.js';
 import { hooksExecCheck } from './hooks-exec.js';
 import { hooksRegistryCheck } from './hooks-registry.js';
 import { mcpAuthCheck } from './mcp-auth.js';
@@ -36,6 +37,7 @@ export const phase2Checks: CheckDefinition[] = [
   hooksRegistryCheck,
   hooksExecCheck,
   hookScriptPathsCheck,
+  hookServiceCheck,
   envVarsCheck,
   envExampleCheck,
   versionMatchCheck,
@@ -73,6 +75,7 @@ export {
   gitCheck,
   gitignoreBlockCheck,
   hookScriptPathsCheck,
+  hookServiceCheck,
   hooksExecCheck,
   hooksRegistryCheck,
   mcpAuthCheck,

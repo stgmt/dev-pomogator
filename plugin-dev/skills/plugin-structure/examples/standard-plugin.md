@@ -28,7 +28,7 @@ code-quality/
 ├── hooks/
 │   ├── hooks.json
 │   └── scripts/
-│       └── validate-commit.sh
+│       └── hook-service-bootstrap.cjs  # SessionStart-only bootstrap; hot-path hooks use HTTP
 └── scripts/
     ├── run-linter.sh
     └── generate-report.py
@@ -444,9 +444,8 @@ See language-specific guides for:
       "matcher": ".*",
       "hooks": [
         {
-          "type": "command",
-          "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/validate-commit.sh",
-          "timeout": 45
+          "type": "http",
+          "url": "http://127.0.0.1:<approved-port>/hooks"
         }
       ]
     }
@@ -454,7 +453,9 @@ See language-specific guides for:
 }
 ```
 
-### hooks/scripts/validate-commit.sh
+The matching `{ event, matcher, route }` must be registered in the approved hook registry. Hot-path managed hooks never invoke Bash, `sh`, `.sh`, or inline `node -e`; use the documented SessionStart bootstrap only to establish the local service.
+
+### Legacy validation logic (move behind the HTTP service, not a hook shell command)
 
 ```bash
 #!/bin/bash

@@ -1,0 +1,23 @@
+﻿{
+    "startedAt":  "2026-07-17T09:03:06.3311251+03:00",
+    "endedAt":  "2026-07-17T10:03:08.7808650+03:00",
+    "durationSeconds":  3602,
+    "security4798DuringWindow":  358,
+    "beforePagedPoolBytes":  11113988096,
+    "afterPagedPoolBytes":  11237130240,
+    "pagedPoolDeltaBytes":  123142144,
+    "beforeNonPagedPoolBytes":  9786957824,
+    "afterNonPagedPoolBytes":  9837010944,
+    "nonPagedPoolDeltaBytes":  50053120,
+    "wslPidBefore":  43132,
+    "wslPidAfter":  43132,
+    "wslPrivateBytesBefore":  19463467008,
+    "wslPrivateBytesAfter":  19604172800,
+    "poolmonAvailable":  false,
+    "security4798ByProcess":  {
+        "C:\\Program Files\\Git\\usr\\bin\\bash.exe":  354,
+        "C:\\Program Files\\Git\\usr\\bin\\sh.exe":  4
+    },
+    "interpretation":  "Kernel pool still grew during this system-wide window while the current active sessions continued using the old shell-routed plugin cache. This run therefore establishes a concurrent-load baseline, not an after-deployment causal result. The isolated new HTTP path separately passed 100/100 events without invoking a shell. PoolMon was unavailable, so tag-level attribution remains unverified and WPR/WinDbg is required if growth persists after deployment.",
+    "note":  "WSL remained on the same PID for the full window. PoolMon was unavailable on PATH."
+}

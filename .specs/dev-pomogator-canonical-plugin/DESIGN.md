@@ -150,7 +150,7 @@ dev-pomogator/
 
 ## API
 
-Этот плагин не экспортирует HTTP/network API. Build-step нет (манифеста hand-authored). Внутренний TypeScript API — drift test + migration:
+Этот плагин не экспортирует public HTTP/network API. Внутренний local HTTP hook-service transport is specified by FR-15–FR-24; it is not a public plugin API. Build-step нет (манифеста hand-authored). Внутренний TypeScript API — drift test + migration:
 
 ### Drift test (`tests/e2e/canonical-plugin.test.ts`)
 
@@ -276,3 +276,11 @@ Canonical plugin and repository dogfood hook entries use a shared POSIX-shell pr
 **Trade-off:** The dispatch layer is deliberately small and shell-only rather than importing TypeScript diagnostics before selection; this duplicates a narrow amount of argument classification but preserves portability and prevents a broken doctor from becoming a global tool-call outage.
 
 **Verification:** `PLUGINDEPS001_03` invokes the launcher from POSIX and a foreign CWD, proves early host-BDD rejection and `node` selection, proves `CLAUDE_PLUGIN_ROOT` / `CLAUDE_PROJECT_DIR` anchoring rather than process-CWD lookup, and proves permitted work continues when doctor data is unavailable or malformed. The scenario uses the real launcher, not a mocked dispatch function.
+
+## HTTP hook-review policy (FR-15–FR-24)
+
+The shell-free policy has two declarative inputs: `.claude-plugin/hooks.json` is the registration surface and the approved local `tools/hook-review` registry is transport authority. Managed hot-path hooks use `type: "http"`; the registry binds accepted event/matcher pairs to a local route and declares `bearer-env` authentication by variable name. The gate does not contact the route and cannot expose a token.
+
+The gate rejects hot-path `bash`, `sh`, `.sh`, and inline `node -e`, unapproved HTTP routes, and route/event/matcher drift. The documented `SessionStart` plugin-root service bootstrap is the sole command exception. `CORE024_01` covers the negative policy surface; `CORE024_02` proves the approved HTTP plus bootstrap path.
+
+**Trade-off:** local registry metadata adds a review-time source of truth, but makes Windows shell regressions and manifest/registry drift testable without a live service or credential.

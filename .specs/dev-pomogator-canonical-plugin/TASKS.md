@@ -22,16 +22,21 @@
 
 > Regenerate via `Skill("task-board-forms")` или `npx tsx tools/specs-generator/spec-status.ts -Path .specs/dev-pomogator-canonical-plugin -Format task-table` and splice between markers (note: spec-generator moved `extensions/specs-workflow/tools/` → `tools/` in this migration).
 
-## Phase 7: Hook runtime recovery — TODO
+## Phase 7: Issue #123 hook runtime recovery — IN_PROGRESS
 
 - [ ] Recover hook runtime before Node bootstrap — id: t14 — Status: TODO | Est: 180m
   _Requirements: FR-7 migration isolation, FR-13 CWD, and FR-14 deps-absent-safe._
   _BDD ownership: `plugin-deps` owns the hook-runtime BDD scenarios, step definitions, fixtures, and runtime proof; this task links to that ownership and must not duplicate `PLUGINDEPS001_01`–`PLUGINDEPS001_03`._
-  **Evidence baseline:** Resolve and record the tested `origin/main` commit. `HEAD`, a worktree branch, plugin cache contents, and user-global state are not acceptance baselines.
+  **Issue #123 scope:** runtime/authentication/migration/review/doctor/focused-test verification. The acceptance baseline is the resolved `origin/main` commit only: `HEAD`, a worktree branch, installed-plugin cache contents, user-global state, and a `node_modules`-present repository are not acceptance evidence.
+  **Evidence baseline:** Resolve and record the tested `origin/main` commit. Run the deps-absent proof against the installed canonical-plugin artifact without installed-cache or repository dependency leakage. Record the Docker/WSL environment, including the one-hour limit and any `4798`/`PoolMon` operational observation, separately from product acceptance evidence.
   **Done When:**
   - [ ] The v1 migration path is explicit `--global`-only: on success, dry-run, already-migrated, and failure it leaves a project sentinel set byte-for-byte unchanged, including `<cwd>/.claude/**`, `<cwd>/.dev-pomogator/**`, `<cwd>/.gitignore`, and project settings.
   - [ ] A portable POSIX/Git-atomic, best-effort preflight creates its per-session and canonical-project-CWD state before Node bootstrap. Lock, marker, filesystem, or recovery failure is non-fatal: normal hook dispatch continues and actionable diagnostics are emitted.
   - [ ] Dispatch is platform-specific: POSIX accepts only `node`; Windows accepts only `node.exe`; no cross-platform launcher fallback is used. A failed diagnostic never suppresses Node bootstrap.
+  - [ ] Authentication uses only the documented runtime path; absent, invalid, or unavailable auth is diagnostic and fail-open where the hook contract requires it, and it cannot make Node bootstrap depend on installed-cache state.
+  - [ ] The runtime review covers canonical-plugin and repository-dogfood parity, `CORE024` compatibility where it exercises the same launcher boundary, and the 100-event recovery sequence without asserting pass from a cache-hit or dependency-present run.
+  - [ ] `/pomogator-doctor` reports actionable recovery diagnostics without changing dispatch behavior; focused tests identify the `origin/main` commit, environment, and exact launcher/deps-absent evidence.
+  - [ ] The issue PR is opened and reviewed; merge and post-merge cleanup remain TODO until independent review and the required focused Docker/WSL evidence are green.
   - [ ] The `plugin-deps` BDD evidence records the `origin/main` commit and proves global-only migration isolation, canonical-plugin/repository-dogfood parity, session-plus-project-CWD once-only recovery, POSIX/Git atomic best effort, fail-open dispatch, and the platform-specific launcher contract. `PLUGINDEPS001_03` must be defined and passing before it is acceptance evidence.
 
 ## Reality note (2026-05-27)
@@ -149,3 +154,14 @@ The core migration was performed **by hand**: the three `.claude-plugin/*.json` 
   **Done When:**
   - [x] Order followed: #21 (2 files) → #23 (4 files, or absorbed into #24) → #16 (7 in extensions/) → #22 (5) → #17 (57) → #20 (224, touches deleted `src/`+`dist/` — own sub-plan)
   - [x] Per PR: rebase on merged #24 → move `extensions/<x>/tools/`→`tools/` → drop installer/`extension.json` deps → repoint hooks to `.claude-plugin/hooks.json` → drift test green; CANON001_90/CANON001_91 verify canonical hook resolution after the PR adaptations
+
+## Phase 8: Shell-free HTTP hook policy — TODO
+
+- [ ] Specify and verify managed HTTP hook registrations — id: t15 — Status: TODO | Est: 120m
+  _Requirements: FR-15–FR-24; AC-10; CORE024_01–CORE024_02._
+  _Ownership: documentation, requirements, and BDD contract updates only. `tools/hook-review/`, `tools/hook-service/`, and `.claude-plugin/hooks.json` implementation changes remain separately owned._
+  **Done When:**
+  - [ ] Managed hot-path registrations are reviewed against an approved local HTTP registry with bearer-environment authentication but no persisted token value.
+  - [ ] `CORE024_01` rejects shell, inline Node, unapproved transport, and registry drift with actionable findings.
+  - [ ] `CORE024_02` accepts the approved HTTP registration and narrow SessionStart bootstrap exception.
+  - [ ] Targeted BDD and specification conformance are recorded; the review tests do not require a live service.

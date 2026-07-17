@@ -276,3 +276,25 @@ dev-pomogator NEVER пишет это поле directly — Anthropic-managed ч
 - `source: "./"` resolves к **marketplace repo root**, не к `.claude-plugin/` директории.
 - `V1InstallInfo.userModifiedFiles[]` paths ОБЯЗАНЫ проходить `resolveWithinProject()` guard (no path traversal). Backup paths ОБЯЗАНЫ остаться внутри `<projectPath>/.dev-pomogator/.user-overrides/`.
 - `MigrationResult.markerWrittenAt` записывается ТОЛЬКО после успешного завершения всех steps. Partial migration не пишет marker → idempotent retry possible.
+
+## HTTP hook-review contract (FR-15–FR-24)
+
+The local review registry is a transport contract, not bearer-token storage.
+
+```json
+{
+  "transport": {
+    "type": "http",
+    "url": "http://127.0.0.1:47777/hooks",
+    "authentication": { "type": "bearer-env", "env": "DEV_POMOGATOR_HOOK_TOKEN" }
+  },
+  "hooks": [{ "event": "PreToolUse", "matcher": "Write|Edit", "route": "http://127.0.0.1:47777/hooks" }]
+}
+```
+
+- `transport.type` MUST be `"http"`.
+- `authentication.type` MUST be `"bearer-env"`; `env` names an injected token variable. Token values are forbidden.
+- A managed `type: "http"` manifest hook is approved only when URL, event, and matcher match a registry entry.
+- Managed hot-path `bash`, `sh`, `.sh`, and inline `node -e` are invalid.
+- The documented `SessionStart` plugin-root bootstrap is the sole command exception.
+- Review is offline: no request, service response, or secret value is required.

@@ -247,3 +247,10 @@ my-plugin/
 - Prove one recovery attempt for a repeated `(session, CWD)` key and independent attempts for different session or normalized CWD keys.
 - Seed legacy plus unrelated state; prove no evaluation, atomic managed-state transition, and preservation of unrelated state.
 - Verify doctor output offers the same bounded, actionable recovery diagnosis without changing hook exit semantics.
+
+## HTTP hook policy evidence (2026-07-17)
+
+- **[VERIFIED: repository BDD]** `tests/features/core/CORE024_hook-review.feature` defines `CORE024_01` for shell, inline Node, unapproved transport, and registry drift rejection, and `CORE024_02` for an approved HTTP hook with the SessionStart bootstrap exception.
+- **[VERIFIED: repository step definition]** `tests/step_definitions/feature24_hook_review.ts` invokes `reviewHookManifest()` with temporary JSON inputs. Its approved registry uses `transport.type: "http"`, a loopback route, and `authentication.type: "bearer-env"` with `DEV_POMOGATOR_HOOK_TOKEN`; no token value is present.
+- **[VERIFIED: repository boundary]** `tools/hook-review/check.ts` is the review gate exercised by the BDD step definitions. The tests exercise gate contract, not a live service, so review remains deterministic and network-free.
+- **[ASSUMED: implementation ownership]** Service implementation and production manifest transition are owned by shell-free-hooks implementation work. This change specifies/tests the contract only and does not claim the uncommitted runtime is wired into `.claude-plugin/hooks.json`.

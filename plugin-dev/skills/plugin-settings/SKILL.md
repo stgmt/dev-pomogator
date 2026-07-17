@@ -15,6 +15,8 @@ Plugins can store user-configurable settings and state in `.claude/plugin-name.l
 - Structure: YAML frontmatter + markdown body
 - Purpose: Per-project plugin configuration and state
 - Usage: Read from hooks, commands, and agents
+
+For dev-pomogator-managed hook settings, keep the steady-state hook path in the approved authenticated localhost HTTP registry. Do not add Bash parsing to per-event hooks on Windows. If a local service must be started, the only command-hook exception is the documented `SessionStart` `hook-service-bootstrap`; settings can be read by that service after startup.
 - Lifecycle: User-managed (not in git, should be in `.gitignore`)
 
 ## File Structure

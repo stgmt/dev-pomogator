@@ -23,6 +23,9 @@
 - **NFR-R5**: Marker guard hook tolerates malformed payload: invalid JSON, missing tool_name field, unexpected tool_response shape — все handled через graceful fallback (exit 0 silently).
 
 - **NFR-R6**: On POSIX, the pre-Node hook dispatch must never attempt `node.exe`. If the platform-appropriate `node` command is unavailable or malformed doctor input prevents diagnostics, the dispatch shall fail open for permitted hook work while still rejecting prohibited host BDD before Node is started.
+- **NFR-R7**: The authenticated loopback hook service SHALL sustain the observed 14 SessionStart calls and 39 steady-state HTTP calls per verified session without a caller bypassing the shared service.
+- **NFR-R8**: Every service request SHALL use only the allowlisted `CLAUDE_ENV_FILE` environment variables and its authentication header; unallowlisted environment values SHALL NOT enter request headers or payloads.
+- **NFR-R9**: State and settings persistence SHALL use byte-level CAS and recover the last known valid bytes after a conflict, failed write, or partial startup; a failed mutation SHALL NOT corrupt the newer on-disk version.
 
 ## Usability
 
@@ -37,3 +40,10 @@
 - **NFR-U3**: PostToolUse marker guard warning message includes actionable hint: «See AP-1..AP-8 anti-patterns в `.claude/skills/research-workflow/SKILL.md`» — пользователь может узнать почему его research result was flagged.
 - **NFR-U4**: Error messages в legacy CLI entry point (если remains для migration utility) содержат actionable guidance для canonical install: "Cursor support was removed in v2.0. Use canonical install: /plugin marketplace add stgmt/dev-pomogator + /plugin install dev-pomogator@stgmt."
 - **NFR-U5**: Migration script после Phase 2 hook commands rewrite печатает summary number rewritten hooks: «Rewrote N hook commands in .claude/settings.json + M in .claude/settings.local.json».
+
+## Hook HTTP policy
+
+- **NFR-H1**: Review is offline and deterministic: the same manifest and registry inputs yield the same ordered findings and no network I/O.
+- **NFR-H2**: Bearer tokens are never persisted in manifests, registry fixtures, test output, or findings; only an environment-variable identifier is permitted.
+- **NFR-H3**: Managed HTTP registrations require no per-event `bash`, `sh`, `.sh`, or `node -e` launch on Windows. The documented SessionStart bootstrap is narrow exception.
+- **NFR-H4**: Findings name the failing contract so maintainers can correct a manifest or registry entry without inspecting gate internals.

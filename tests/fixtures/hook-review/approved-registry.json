@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "routes": {
+    "PreToolUse/0/0": {
+      "matcher": "Write|Edit",
+      "target": "tools/example.ts",
+      "args": [],
+      "timeout": 30
+    }
+  }
+}

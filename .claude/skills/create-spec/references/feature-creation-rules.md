@@ -1,5 +1,9 @@
 # Правила создания .feature (без отрыва от реальности)
 
+## Windows-safe managed hooks
+
+When authoring a dev-pomogator-managed hook feature, specify the approved authenticated localhost HTTP registry and its matching `{ event, matcher, route }` entry. Forbid `bash`, `sh`, `.sh`, and inline `node -e` in steady-state hook events. Permit `SessionStart` `hook-service-bootstrap` only as a documented bootstrap exception. Add a BDD scenario that drives `tools/hook-review/check.ts`; pre-push/CI runs `npm run check:hook-review`.
+
 ## 1) Сначала искать существующие .feature
 
 Искать в:

@@ -91,6 +91,9 @@
 | CHK-FR14-02 | POSIX pre-Node dispatch rejects host BDD before Node and uses `node`, never `node.exe` | FR-14, AC-9, @feature14 | BDD scenario | Draft | PLUGINDEPS001_03 against the real launcher |
 | CHK-FR14-03 | Foreign-CWD dispatch anchors plugin and dogfood launchers to their documented environment variable | FR-14, AC-9, @feature13, @feature14 | BDD scenario | Draft | HOOKSCWD001_01 and PLUGINDEPS001_03 |
 | CHK-FR14-04 | Unavailable or malformed doctor state preserves a permitted hook invocation | FR-14, AC-9, @feature14 | BDD scenario | Draft | PLUGINDEPS001_03 fail-open branch |
+| CHK-FR13-01 | One authenticated hook service projects only allowlisted `CLAUDE_ENV_FILE` values and sends its authentication header | FR-13, AC-9 | Integration test | Draft | `hook-service.test.mjs` (9/9 evidence) |
+| CHK-FR13-02 | The hook service covers 14 SessionStart and 39 steady-state HTTP contract calls and recovers byte-CAS conflicts, failed writes, and partial startup | FR-13, AC-9 | BDD scenario | Draft | CORE024 (32 scenarios; 223 HTTP-call evidence) |
+| CHK-FR14-05 | Installed-cache doctor/review functions remain deps-absent-safe during the WSL endurance soak; evidence does not mark unexecuted work DONE | FR-14, AC-9 | Integration test | Draft | 2026-07-17: 4,798 calls, post-run PoolMon |
 
 ## Verification Process
 
@@ -118,3 +121,31 @@
 - In Progress: 0
 - Draft: 24
 - Blocked: 0
+
+## HTTP hook policy traceability (issue #123)
+
+| ID | Name | Linked AC | @featureN | Status |
+|----|------|-----------|-----------|--------|
+| [FR-15](FR.md#fr-15-managed-hot-path-hooks-are-http-registrations) | Managed hot-path HTTP registrations | [AC-10](ACCEPTANCE_CRITERIA.md#ac-10-fr-15-fr-24) | @feature15 | Draft |
+| [FR-16](FR.md#fr-16-http-hook-routes-are-registry-approved) | Registry-approved routes | [AC-10](ACCEPTANCE_CRITERIA.md#ac-10-fr-15-fr-24) | @feature16 | Draft |
+| [FR-17](FR.md#fr-17-http-hook-transport-declares-bearer-environment-authentication) | Bearer-environment declaration | [AC-10](ACCEPTANCE_CRITERIA.md#ac-10-fr-15-fr-24) | @feature17 | Draft |
+| [FR-18](FR.md#fr-18-hook-review-rejects-unapproved-http-transport) | Reject unapproved transport | [AC-10](ACCEPTANCE_CRITERIA.md#ac-10-fr-15-fr-24) | @feature18 | Draft |
+| [FR-19](FR.md#fr-19-sessionstart-bootstrap-is-the-only-command-exception) | SessionStart exception | [AC-10](ACCEPTANCE_CRITERIA.md#ac-10-fr-15-fr-24) | @feature19 | Draft |
+| [FR-20](FR.md#fr-20-http-hook-commands-remain-shell-free-on-windows) | Windows shell-free policy | [AC-10](ACCEPTANCE_CRITERIA.md#ac-10-fr-15-fr-24) | @feature20 | Draft |
+| [FR-21](FR.md#fr-21-hook-review-gate-is-deterministic-and-offline) | Offline deterministic review | [AC-10](ACCEPTANCE_CRITERIA.md#ac-10-fr-15-fr-24) | @feature21 | Draft |
+| [FR-22](FR.md#fr-22-hook-review-findings-are-actionable) | Actionable findings | [AC-10](ACCEPTANCE_CRITERIA.md#ac-10-fr-15-fr-24) | @feature22 | Draft |
+| [FR-23](FR.md#fr-23-hook-registry-is-the-transport-source-of-truth) | Registry transport source of truth | [AC-10](ACCEPTANCE_CRITERIA.md#ac-10-fr-15-fr-24) | @feature23 | Draft |
+| [FR-24](FR.md#fr-24-http-hook-policy-has-executable-bdd-coverage) | Executable HTTP policy BDD | [AC-10](ACCEPTANCE_CRITERIA.md#ac-10-fr-15-fr-24) | @feature24 | Draft |
+
+| CHK-ID | Requirement | Traces To (FR+SC) | Verification Method | Status | Notes |
+|--------|-------------|-------------------|---------------------|--------|-------|
+| CHK-FR15-01 | Reject managed hot-path shell, `.sh`, and inline Node registrations | FR-15, AC-10, @feature15 | BDD scenario | Draft | CORE024_01 |
+| CHK-FR16-01 | Require managed HTTP URL/event/matcher to match local registry | FR-16, AC-10, @feature16 | BDD scenario | Draft | CORE024_01/02 |
+| CHK-FR17-01 | Declare bearer-env authentication without a token value | FR-17, AC-10, @feature17 | BDD scenario | Draft | CORE024_02 fixture |
+| CHK-FR18-01 | Report unapproved transport and registry drift separately | FR-18, AC-10, @feature18 | BDD scenario | Draft | CORE024_01 |
+| CHK-FR19-01 | Permit documented SessionStart bootstrap only | FR-19, AC-10, @feature19 | BDD scenario | Draft | CORE024_02 |
+| CHK-FR20-01 | Prohibit per-event shell/inline Node launchers | FR-20, AC-10, @feature20 | BDD scenario | Draft | CORE024_01 |
+| CHK-FR21-01 | Review needs no service or token | FR-21, AC-10, @feature21 | BDD scenario | Draft | CORE024 step definitions |
+| CHK-FR22-01 | Findings identify violation; clean input yields none | FR-22, AC-10, @feature22 | BDD scenario | Draft | CORE024_01/02 |
+| CHK-FR23-01 | Registry owns route/event/matcher/auth metadata | FR-23, AC-10, @feature23 | BDD scenario | Draft | CORE024 registry fixture |
+| CHK-FR24-01 | Positive and negative BDD calls real gate | FR-24, AC-10, @feature24 | BDD scenario | Draft | CORE024_01/02 |

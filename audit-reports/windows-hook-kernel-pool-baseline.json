@@ -1,0 +1,43 @@
+﻿{
+    "capturedAt":  "2026-07-17T00:45:44.1273744+03:00",
+    "osBuild":  "26200",
+    "ubr":  8653,
+    "pool":  [
+                 {
+                     "path":  "\\\\master\\memory\\pool nonpaged bytes",
+                     "value":  8819793920
+                 },
+                 {
+                     "path":  "\\\\master\\memory\\pool paged bytes",
+                     "value":  10523992064
+                 },
+                 {
+                     "path":  "\\\\master\\memory\\available mbytes",
+                     "value":  3972
+                 }
+             ],
+    "security4798Last2h":  [
+                               {
+                                   "process":  "C:\\Program Files\\Git\\usr\\bin\\bash.exe",
+                                   "count":  3096
+                               },
+                               {
+                                   "process":  "C:\\Program Files\\Git\\usr\\bin\\grep.exe",
+                                   "count":  8
+                               },
+                               {
+                                   "process":  "C:\\Program Files\\Git\\usr\\bin\\sh.exe",
+                                   "count":  4
+                               },
+                               {
+                                   "process":  "C:\\Program Files\\Git\\usr\\bin\\head.exe",
+                                   "count":  3
+                               }
+                           ],
+    "wsl":  {
+                "id":  43132,
+                "workingSet":  13641330688,
+                "private":  22041186304
+            },
+    "note":  "WSL allocation intentional and out of scope"
+}

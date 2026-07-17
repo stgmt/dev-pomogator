@@ -8,7 +8,7 @@ Refactor dev-pomogator из кастомной installer-системы (`npm i 
 - **Canonical plugin layout** — `.claude-plugin/plugin.json` + `skills/`, `commands/`, `hooks/`, `.mcp.json`, `agents/` per Anthropic plugin spec.
 - **Default install scope = user** (Anthropic canonical default) — доступно во всех проектах + видимо в Claude Desktop. Project и local scopes доступны через `--scope` flag.
 - **Hand-maintained manifests + drift test**: три canonical манифеста (`.claude-plugin/plugin.json`, `marketplace.json`, `hooks.json`) поддерживаются вручную в repo root. Drift test (`tests/e2e/canonical-plugin.test.ts`) guard'ит синхронизацию — каждая hooks.json команда резолвится в on-disk скрипт под `tools/` (и vice-versa) + manifest schema validity. Build-step'а нет.
-- **Migration v1 → v2**: documentation-first + optional standalone cleanup script (`tools/migrate-v1-to-v2.ts`) запускаемый user'ом через `npx tsx` без npm install. Anthropic plugin model запрещает project file writes из plugin runtime, поэтому migration не automatic.
+- **Migration v1 → v2**: documentation-first + optional standalone cleanup script (`tools/migrate-v1-to-v2.ts`) запускаемый user'ом через `npx tsx` без npm install. Anthropic plugin model запрещает project file writes из plugin runtime, поэтому migration не automatic. Issue #123 narrows the pending recovery acceptance path to explicit `--global`-only behavior: success, dry-run, already-migrated, and failure paths must leave the complete project sentinel set byte-for-byte unchanged.
 - **Cursor support удалён полностью** — manifests, code paths, `package.json` metadata. CLI legacy entry point (если remains для migration utility) обновляет error message с canonical install hint.
 
 ## Planned hook runtime recovery
@@ -50,3 +50,7 @@ A portable POSIX/Git-atomic best-effort shell preflight will recover the launche
 - [FILE_CHANGES.md](FILE_CHANGES.md) — список затронутых файлов с FR-references (≈30 files: ~10 create, ~10 edit, ~6 delete старого v2 design)
 - [FIXTURES.md](FIXTURES.md) — 8 fixtures (4 static v1-install + 4 runtime factories)
 - [CHANGELOG.md](CHANGELOG.md) — v2.0 BREAKING changes + полный migration guide (script + manual)
+
+## Issue #123 — Windows shell-free HTTP hook policy (2026-07-17)
+
+FR-15–FR-24 and AC-10 specify registry-backed HTTP managed hooks: hot-path `bash`, `sh`, `.sh`, and inline `node -e` are prohibited; the plugin-root `SessionStart` service bootstrap is the only reviewed command exception. `CORE024_01` and `CORE024_02` in `tests/features/core/CORE024_hook-review.feature` exercise the real gate through local temporary inputs, so review is offline and never needs a running service or token. Production manifest/service changes are intentionally outside this documentation-and-BDD-only task.
