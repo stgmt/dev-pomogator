@@ -1,0 +1,15 @@
+﻿{
+    "startedAt":  "2026-07-17T09:03:06.3311251+03:00",
+    "endedAt":  "2026-07-17T10:03:08.7808650+03:00",
+    "total":  358,
+    "byProcess":  [
+                      {
+                          "process":  "C:\\Program Files\\Git\\usr\\bin\\bash.exe",
+                          "count":  354
+                      },
+                      {
+                          "process":  "C:\\Program Files\\Git\\usr\\bin\\sh.exe",
+                          "count":  4
+                      }
+                  ]
+}

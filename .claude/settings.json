@@ -1,22 +1,29 @@
 {
-  "env": {
-    "AUTO_COMMIT_LLM_URL": "https://aipomogator.ru/go/v1",
-    "AUTO_COMMIT_LLM_MODEL": "openrouter/deepseek/deepseek-v3.2",
-    "SPEC_ACCESS_ENFORCE": "true",
-    "SPEC_AUTHORING_ENFORCE": "true",
-    "PROMPT_SUGGEST_ENABLED": "true",
-    "PROMPT_SUGGEST_TTL": "600000",
-    "TEST_STATUSLINE_ENABLED": "false",
-    "TEST_STATUSLINE_FRAMEWORK": "auto"
-  },
   "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT:-${CLAUDE_PROJECT_DIR:-.}}/tools/hook-service/session-bootstrap.mjs\"",
+            "timeout": 120
+          }
+        ]
+      }
+    ],
     "Stop": [
       {
         "matcher": "",
         "hooks": [
           {
-            "type": "command",
-            "command": "sh \"${CLAUDE_PROJECT_DIR:-${CLAUDE_PLUGIN_ROOT:-.}}/tools/_shared/hook-runtime.sh\" -e \"require(require('path').join(process.env.CLAUDE_PROJECT_DIR || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/auto-commit/auto_commit_stop.ts\"",
+            "type": "http",
+            "url": "http://127.0.0.1:42619/v1/dispatch/Stop%2F0%2F0",
+            "headers": {
+              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
+            },
+            "allowedEnvVars": [
+              "DEV_POMOGATOR_HOOK_TOKEN"
+            ],
             "timeout": 60
           }
         ]
@@ -25,8 +32,14 @@
         "matcher": "",
         "hooks": [
           {
-            "type": "command",
-            "command": "sh \"${CLAUDE_PROJECT_DIR:-${CLAUDE_PLUGIN_ROOT:-.}}/tools/_shared/hook-runtime.sh\" -e \"require(require('path').join(process.env.CLAUDE_PROJECT_DIR || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/auto-simplify/simplify_stop.ts\"",
+            "type": "http",
+            "url": "http://127.0.0.1:42619/v1/dispatch/Stop%2F1%2F0",
+            "headers": {
+              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
+            },
+            "allowedEnvVars": [
+              "DEV_POMOGATOR_HOOK_TOKEN"
+            ],
             "timeout": 60
           }
         ]
@@ -35,8 +48,14 @@
         "matcher": "",
         "hooks": [
           {
-            "type": "command",
-            "command": "sh \"${CLAUDE_PROJECT_DIR:-${CLAUDE_PLUGIN_ROOT:-.}}/tools/_shared/hook-runtime.sh\" -e \"require(require('path').join(process.env.CLAUDE_PROJECT_DIR || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/plan-pomogator/test-spec-gate.ts\"",
+            "type": "http",
+            "url": "http://127.0.0.1:42619/v1/dispatch/Stop%2F2%2F0",
+            "headers": {
+              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
+            },
+            "allowedEnvVars": [
+              "DEV_POMOGATOR_HOOK_TOKEN"
+            ],
             "timeout": 60
           }
         ]
@@ -45,8 +64,14 @@
         "matcher": "",
         "hooks": [
           {
-            "type": "command",
-            "command": "sh \"${CLAUDE_PROJECT_DIR:-${CLAUDE_PLUGIN_ROOT:-.}}/tools/_shared/hook-runtime.sh\" -e \"const cp=require('child_process'),p=require('path');const b=p.join(process.env.CLAUDE_PROJECT_DIR||process.cwd(),'tools','prompt-suggest','prompt_suggest_stop.bundle.mjs');const c=cp.spawn(process.execPath,[b],{stdio:'inherit'});c.on('exit',x=>{if(x)process.stderr.write('[dev-pomogator] WARNING: prompt-suggest stop-hook did NOT run (exit '+x+') -- next-step suggestion skipped\\n');process.exit(0)});c.on('error',e=>{process.stderr.write('[dev-pomogator] WARNING: prompt-suggest stop-hook failed to spawn -- '+e.message+'\\n');process.exit(0)});\"",
+            "type": "http",
+            "url": "http://127.0.0.1:42619/v1/dispatch/Stop%2F3%2F0",
+            "headers": {
+              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
+            },
+            "allowedEnvVars": [
+              "DEV_POMOGATOR_HOOK_TOKEN"
+            ],
             "timeout": 60
           }
         ]
@@ -55,8 +80,14 @@
         "matcher": "",
         "hooks": [
           {
-            "type": "command",
-            "command": "sh \"${CLAUDE_PROJECT_DIR:-${CLAUDE_PLUGIN_ROOT:-.}}/tools/_shared/hook-runtime.sh\" -e \"require(require('path').join(process.env.CLAUDE_PROJECT_DIR || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/learnings-capture/capture.ts\" --event Stop",
+            "type": "http",
+            "url": "http://127.0.0.1:42619/v1/dispatch/Stop%2F4%2F0",
+            "headers": {
+              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
+            },
+            "allowedEnvVars": [
+              "DEV_POMOGATOR_HOOK_TOKEN"
+            ],
             "timeout": 60
           }
         ]
@@ -65,8 +96,14 @@
         "matcher": "",
         "hooks": [
           {
-            "type": "command",
-            "command": "sh \"${CLAUDE_PROJECT_DIR:-${CLAUDE_PLUGIN_ROOT:-.}}/tools/_shared/hook-runtime.sh\" -e \"require(require('path').join(process.env.CLAUDE_PROJECT_DIR || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/test-quality/dedup_stop.ts\"",
+            "type": "http",
+            "url": "http://127.0.0.1:42619/v1/dispatch/Stop%2F5%2F0",
+            "headers": {
+              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
+            },
+            "allowedEnvVars": [
+              "DEV_POMOGATOR_HOOK_TOKEN"
+            ],
             "timeout": 60
           }
         ]
@@ -75,200 +112,14 @@
         "matcher": "",
         "hooks": [
           {
-            "type": "command",
-            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/tools/bg-task-guard/stop-guard.sh\"",
-            "timeout": 60
-          }
-        ]
-      },
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "sh \"${CLAUDE_PROJECT_DIR:-${CLAUDE_PLUGIN_ROOT:-.}}/tools/_shared/hook-runtime.sh\" -e \"const cp=require('child_process'),p=require('path');const b=p.join(process.env.CLAUDE_PROJECT_DIR||process.cwd(),'tools','claim-evidence-gate','claim_evidence_gate_stop.bundle.mjs');const c=cp.spawn(process.execPath,[b],{stdio:'inherit'});c.on('exit',x=>{if(x)process.stderr.write('[dev-pomogator] WARNING: claim-evidence-gate did NOT evaluate this stop (exit '+x+') -- enforcement skipped\\n');process.exit(0)});c.on('error',e=>{process.stderr.write('[dev-pomogator] WARNING: claim-evidence-gate failed to spawn -- '+e.message+'\\n');process.exit(0)});\"",
-            "timeout": 60
-          }
-        ]
-      },
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "sh \"${CLAUDE_PROJECT_DIR:-${CLAUDE_PLUGIN_ROOT:-.}}/tools/_shared/hook-runtime.sh\" -e \"require(require('path').join(process.env.CLAUDE_PROJECT_DIR || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/answer-simple/answer_simple_stop.ts\"",
-            "timeout": 60
-          }
-        ]
-      },
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "sh \"${CLAUDE_PROJECT_DIR:-${CLAUDE_PLUGIN_ROOT:-.}}/tools/_shared/hook-runtime.sh\" -e \"require(require('path').join(process.env.CLAUDE_PROJECT_DIR || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/anchor-integrity/anchor_gate_stop.ts\"",
-            "timeout": 30
-          }
-        ]
-      },
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "sh \"${CLAUDE_PROJECT_DIR:-${CLAUDE_PLUGIN_ROOT:-.}}/tools/_shared/hook-runtime.sh\" -e \"const cp=require('child_process'),p=require('path');const b=p.join(process.env.CLAUDE_PLUGIN_ROOT||process.cwd(),'tools','spec-graph','test_quality_gate_stop.bundle.mjs');const c=cp.spawn(process.execPath,[b],{stdio:'inherit'});c.on('exit',x=>process.exit(x??0));c.on('error',()=>process.exit(0));\"",
-            "timeout": 30
-          }
-        ]
-      },
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "sh \"${CLAUDE_PROJECT_DIR:-${CLAUDE_PLUGIN_ROOT:-.}}/tools/_shared/hook-runtime.sh\" -e \"const cp=require('child_process'),p=require('path');const b=p.join(process.env.CLAUDE_PLUGIN_ROOT||process.cwd(),'tools','spec-backlog','auto-ingest-hook.bundle.mjs');const c=cp.spawn(process.execPath,[b],{stdio:'inherit'});c.on('exit',x=>process.exit(x??0));c.on('error',()=>process.exit(0));\"",
-            "timeout": 60
-          }
-        ]
-      },
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "sh \"${CLAUDE_PROJECT_DIR:-${CLAUDE_PLUGIN_ROOT:-.}}/tools/_shared/hook-runtime.sh\" -e \"require(require('path').join(process.env.CLAUDE_PROJECT_DIR || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/subagent-watchdog/subagent_watchdog.ts\" --event Stop",
-            "timeout": 15
-          }
-        ]
-      }
-    ],
-    "SessionStart": [
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "sh \"${CLAUDE_PROJECT_DIR:-${CLAUDE_PLUGIN_ROOT:-.}}/tools/_shared/hook-runtime.sh\" \"tools/claude-subscription-proxy/ensure-up.cjs\"",
-            "timeout": 30
-          }
-        ]
-      },
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "sh \"${CLAUDE_PROJECT_DIR:-${CLAUDE_PLUGIN_ROOT:-.}}/tools/_shared/hook-runtime.sh\" -e \"require(require('path').join(process.env.CLAUDE_PROJECT_DIR || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/bun-oom-guard/patch_bun_runner.ts\"",
-            "timeout": 120
-          }
-        ]
-      },
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "sh \"${CLAUDE_PROJECT_DIR:-${CLAUDE_PLUGIN_ROOT:-.}}/tools/_shared/hook-runtime.sh\" -e \"require(require('path').join(process.env.CLAUDE_PROJECT_DIR || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/claude-mem-health/health-check.ts\"",
-            "timeout": 120
-          }
-        ]
-      },
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "sh \"${CLAUDE_PROJECT_DIR:-${CLAUDE_PLUGIN_ROOT:-.}}/tools/_shared/hook-runtime.sh\" -e \"require(require('path').join(process.env.CLAUDE_PROJECT_DIR || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/claude-mem-bootstrap/install-claude-mem.ts\"",
-            "timeout": 30
-          }
-        ]
-      },
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "sh \"${CLAUDE_PROJECT_DIR:-${CLAUDE_PLUGIN_ROOT:-.}}/tools/_shared/hook-runtime.sh\" -e \"require(require('path').join(process.env.CLAUDE_PROJECT_DIR || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/mcp-setup/mcp-bootstrap.ts\"",
-            "timeout": 30
-          }
-        ]
-      },
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "sh \"${CLAUDE_PROJECT_DIR:-${CLAUDE_PLUGIN_ROOT:-.}}/tools/_shared/hook-runtime.sh\" -e \"require(require('path').join(process.env.CLAUDE_PROJECT_DIR || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/test-statusline/statusline_session_start.ts\"",
-            "timeout": 120
-          }
-        ]
-      },
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "sh \"${CLAUDE_PROJECT_DIR:-${CLAUDE_PLUGIN_ROOT:-.}}/tools/_shared/hook-runtime.sh\" -e \"require(require('path').join(process.env.CLAUDE_PROJECT_DIR || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/native-statusline/install_native_statusline.ts\"",
-            "timeout": 120
-          }
-        ]
-      },
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "sh \"${CLAUDE_PROJECT_DIR:-${CLAUDE_PLUGIN_ROOT:-.}}/tools/_shared/hook-runtime.sh\" -e \"require(require('path').join(process.env.CLAUDE_PROJECT_DIR || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/marksman-installer/ensure-marksman.ts\"",
-            "timeout": 10
-          }
-        ]
-      },
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "sh \"${CLAUDE_PROJECT_DIR:-${CLAUDE_PLUGIN_ROOT:-.}}/tools/_shared/hook-runtime.sh\" -e \"require(require('path').join(process.env.CLAUDE_PROJECT_DIR || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/forbid-root-artifacts/install-hook.ts\"",
-            "timeout": 60
-          }
-        ]
-      },
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "sh \"${CLAUDE_PROJECT_DIR:-${CLAUDE_PLUGIN_ROOT:-.}}/tools/_shared/hook-runtime.sh\" -e \"require(require('path').join(process.env.CLAUDE_PROJECT_DIR || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \".claude/skills/pomogator-doctor/scripts/doctor-hook.ts\"",
-            "timeout": 10
-          }
-        ]
-      },
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "sh \"${CLAUDE_PROJECT_DIR:-${CLAUDE_PLUGIN_ROOT:-.}}/tools/_shared/hook-runtime.sh\" -e \"require(require('path').join(process.env.CLAUDE_PROJECT_DIR || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/skill-listing-budget/apply_skill_budget.ts\"",
-            "timeout": 30
-          }
-        ]
-      },
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "sh \"${CLAUDE_PROJECT_DIR:-${CLAUDE_PLUGIN_ROOT:-.}}/tools/_shared/hook-runtime.sh\" -e \"require(require('path').join(process.env.CLAUDE_PROJECT_DIR || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/spec-backlog/session-summary-hook.ts\"",
-            "timeout": 10
-          }
-        ]
-      },
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "sh \"${CLAUDE_PROJECT_DIR:-${CLAUDE_PLUGIN_ROOT:-.}}/tools/_shared/hook-runtime.sh\" -e \"require(require('path').join(process.env.CLAUDE_PROJECT_DIR || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/session-pilot/autostart_hook.ts\"",
+            "type": "http",
+            "url": "http://127.0.0.1:42619/v1/dispatch/Stop%2F6%2F0",
+            "headers": {
+              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
+            },
+            "allowedEnvVars": [
+              "DEV_POMOGATOR_HOOK_TOKEN"
+            ],
             "timeout": 15
           }
         ]
@@ -277,9 +128,95 @@
         "matcher": "",
         "hooks": [
           {
-            "type": "command",
-            "command": "sh \"${CLAUDE_PROJECT_DIR:-${CLAUDE_PLUGIN_ROOT:-.}}/tools/_shared/hook-runtime.sh\" -e \"require(require('path').join(process.env.CLAUDE_PROJECT_DIR || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/subagent-watchdog/subagent_watchdog.ts\" --event SessionStart",
-            "timeout": 15
+            "type": "http",
+            "url": "http://127.0.0.1:42619/v1/dispatch/Stop%2F7%2F0",
+            "headers": {
+              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
+            },
+            "allowedEnvVars": [
+              "DEV_POMOGATOR_HOOK_TOKEN"
+            ],
+            "timeout": 60
+          }
+        ]
+      },
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "http",
+            "url": "http://127.0.0.1:42619/v1/dispatch/Stop%2F8%2F0",
+            "headers": {
+              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
+            },
+            "allowedEnvVars": [
+              "DEV_POMOGATOR_HOOK_TOKEN"
+            ],
+            "timeout": 60
+          }
+        ]
+      },
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "http",
+            "url": "http://127.0.0.1:42619/v1/dispatch/Stop%2F9%2F0",
+            "headers": {
+              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
+            },
+            "allowedEnvVars": [
+              "DEV_POMOGATOR_HOOK_TOKEN"
+            ],
+            "timeout": 60
+          }
+        ]
+      },
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "http",
+            "url": "http://127.0.0.1:42619/v1/dispatch/Stop%2F10%2F0",
+            "headers": {
+              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
+            },
+            "allowedEnvVars": [
+              "DEV_POMOGATOR_HOOK_TOKEN"
+            ],
+            "timeout": 30
+          }
+        ]
+      },
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "http",
+            "url": "http://127.0.0.1:42619/v1/dispatch/Stop%2F11%2F0",
+            "headers": {
+              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
+            },
+            "allowedEnvVars": [
+              "DEV_POMOGATOR_HOOK_TOKEN"
+            ],
+            "timeout": 30
+          }
+        ]
+      },
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "http",
+            "url": "http://127.0.0.1:42619/v1/dispatch/Stop%2F12%2F0",
+            "headers": {
+              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
+            },
+            "allowedEnvVars": [
+              "DEV_POMOGATOR_HOOK_TOKEN"
+            ],
+            "timeout": 60
           }
         ]
       }
@@ -289,8 +226,14 @@
         "matcher": "",
         "hooks": [
           {
-            "type": "command",
-            "command": "sh \"${CLAUDE_PROJECT_DIR:-${CLAUDE_PLUGIN_ROOT:-.}}/tools/_shared/hook-runtime.sh\" -e \"require(require('path').join(process.env.CLAUDE_PROJECT_DIR || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/claude-mem-health/health-check.ts\" --mid-session",
+            "type": "http",
+            "url": "http://127.0.0.1:42619/v1/dispatch/PreToolUse%2F0%2F0",
+            "headers": {
+              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
+            },
+            "allowedEnvVars": [
+              "DEV_POMOGATOR_HOOK_TOKEN"
+            ],
             "timeout": 15
           }
         ]
@@ -299,8 +242,14 @@
         "matcher": "ExitPlanMode",
         "hooks": [
           {
-            "type": "command",
-            "command": "sh \"${CLAUDE_PROJECT_DIR:-${CLAUDE_PLUGIN_ROOT:-.}}/tools/_shared/hook-runtime.sh\" -e \"require(require('path').join(process.env.CLAUDE_PROJECT_DIR || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/plan-pomogator/plan-gate.ts\"",
+            "type": "http",
+            "url": "http://127.0.0.1:42619/v1/dispatch/PreToolUse%2F1%2F0",
+            "headers": {
+              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
+            },
+            "allowedEnvVars": [
+              "DEV_POMOGATOR_HOOK_TOKEN"
+            ],
             "timeout": 60
           }
         ]
@@ -309,33 +258,69 @@
         "matcher": "Write|Edit",
         "hooks": [
           {
-            "type": "command",
-            "command": "sh \"${CLAUDE_PROJECT_DIR:-${CLAUDE_PLUGIN_ROOT:-.}}/tools/_shared/hook-runtime.sh\" -e \"require(require('path').join(process.env.CLAUDE_PROJECT_DIR || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/specs-validator/phase-gate.ts\"",
+            "type": "http",
+            "url": "http://127.0.0.1:42619/v1/dispatch/PreToolUse%2F2%2F0",
+            "headers": {
+              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
+            },
+            "allowedEnvVars": [
+              "DEV_POMOGATOR_HOOK_TOKEN"
+            ],
             "timeout": 60
           },
           {
-            "type": "command",
-            "command": "sh \"${CLAUDE_PROJECT_DIR:-${CLAUDE_PLUGIN_ROOT:-.}}/tools/_shared/hook-runtime.sh\" -e \"require(require('path').join(process.env.CLAUDE_PROJECT_DIR || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/specs-validator/extension-json-meta-guard.ts\"",
+            "type": "http",
+            "url": "http://127.0.0.1:42619/v1/dispatch/PreToolUse%2F2%2F1",
+            "headers": {
+              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
+            },
+            "allowedEnvVars": [
+              "DEV_POMOGATOR_HOOK_TOKEN"
+            ],
             "timeout": 60
           },
           {
-            "type": "command",
-            "command": "sh \"${CLAUDE_PROJECT_DIR:-${CLAUDE_PLUGIN_ROOT:-.}}/tools/_shared/hook-runtime.sh\" -e \"require(require('path').join(process.env.CLAUDE_PROJECT_DIR || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/specs-validator/form-guards-dispatch.ts\"",
+            "type": "http",
+            "url": "http://127.0.0.1:42619/v1/dispatch/PreToolUse%2F2%2F2",
+            "headers": {
+              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
+            },
+            "allowedEnvVars": [
+              "DEV_POMOGATOR_HOOK_TOKEN"
+            ],
             "timeout": 60
           },
           {
-            "type": "command",
-            "command": "sh \"${CLAUDE_PROJECT_DIR:-${CLAUDE_PLUGIN_ROOT:-.}}/tools/_shared/hook-runtime.sh\" -e \"const cp=require('child_process'),p=require('path');const b=p.join(process.env.CLAUDE_PLUGIN_ROOT||process.cwd(),'tools','spec-conformance-guard','spec-conformance-guard.bundle.mjs');const c=cp.spawn(process.execPath,[b],{stdio:'inherit'});c.on('exit',x=>process.exit(x??0));c.on('error',()=>process.exit(0));\"",
+            "type": "http",
+            "url": "http://127.0.0.1:42619/v1/dispatch/PreToolUse%2F2%2F3",
+            "headers": {
+              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
+            },
+            "allowedEnvVars": [
+              "DEV_POMOGATOR_HOOK_TOKEN"
+            ],
             "timeout": 30
           },
           {
-            "type": "command",
-            "command": "sh \"${CLAUDE_PROJECT_DIR:-${CLAUDE_PLUGIN_ROOT:-.}}/tools/_shared/hook-runtime.sh\" -e \"require(require('path').join(process.env.CLAUDE_PROJECT_DIR || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/bdd-only-test-guard/guard.ts\"",
+            "type": "http",
+            "url": "http://127.0.0.1:42619/v1/dispatch/PreToolUse%2F2%2F4",
+            "headers": {
+              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
+            },
+            "allowedEnvVars": [
+              "DEV_POMOGATOR_HOOK_TOKEN"
+            ],
             "timeout": 30
           },
           {
-            "type": "command",
-            "command": "sh \"${CLAUDE_PROJECT_DIR:-${CLAUDE_PLUGIN_ROOT:-.}}/tools/_shared/hook-runtime.sh\" -e \"require(require('path').join(process.env.CLAUDE_PROJECT_DIR || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/reqnroll-ce-guard/ce_slash_guard.ts\"",
+            "type": "http",
+            "url": "http://127.0.0.1:42619/v1/dispatch/PreToolUse%2F2%2F5",
+            "headers": {
+              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
+            },
+            "allowedEnvVars": [
+              "DEV_POMOGATOR_HOOK_TOKEN"
+            ],
             "timeout": 30
           }
         ]
@@ -344,8 +329,14 @@
         "matcher": "Bash",
         "hooks": [
           {
-            "type": "command",
-            "command": "sh \"${CLAUDE_PROJECT_DIR:-${CLAUDE_PLUGIN_ROOT:-.}}/tools/_shared/hook-runtime.sh\" -e \"require(require('path').join(process.env.CLAUDE_PROJECT_DIR || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/tui-test-runner/build_guard.ts\"",
+            "type": "http",
+            "url": "http://127.0.0.1:42619/v1/dispatch/PreToolUse%2F3%2F0",
+            "headers": {
+              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
+            },
+            "allowedEnvVars": [
+              "DEV_POMOGATOR_HOOK_TOKEN"
+            ],
             "timeout": 30
           }
         ]
@@ -354,8 +345,14 @@
         "matcher": "Bash",
         "hooks": [
           {
-            "type": "command",
-            "command": "sh \"${CLAUDE_PROJECT_DIR:-${CLAUDE_PLUGIN_ROOT:-.}}/tools/_shared/hook-runtime.sh\" -e \"require(require('path').join(process.env.CLAUDE_PROJECT_DIR || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/tui-test-runner/test_guard.ts\"",
+            "type": "http",
+            "url": "http://127.0.0.1:42619/v1/dispatch/PreToolUse%2F4%2F0",
+            "headers": {
+              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
+            },
+            "allowedEnvVars": [
+              "DEV_POMOGATOR_HOOK_TOKEN"
+            ],
             "timeout": 30
           }
         ]
@@ -364,8 +361,14 @@
         "matcher": "Read|Grep|Glob|Edit|Write|Bash",
         "hooks": [
           {
-            "type": "command",
-            "command": "sh \"${CLAUDE_PROJECT_DIR:-${CLAUDE_PLUGIN_ROOT:-.}}/tools/_shared/hook-runtime.sh\" -e \"require(require('path').join(process.env.CLAUDE_PROJECT_DIR || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/specs-validator/spec-access-guard.ts\"",
+            "type": "http",
+            "url": "http://127.0.0.1:42619/v1/dispatch/PreToolUse%2F5%2F0",
+            "headers": {
+              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
+            },
+            "allowedEnvVars": [
+              "DEV_POMOGATOR_HOOK_TOKEN"
+            ],
             "timeout": 30
           }
         ]
@@ -374,8 +377,14 @@
         "matcher": "mcp__dev-pomogator-specs__apply_spec_change|Write",
         "hooks": [
           {
-            "type": "command",
-            "command": "sh \"${CLAUDE_PROJECT_DIR:-${CLAUDE_PLUGIN_ROOT:-.}}/tools/_shared/hook-runtime.sh\" -e \"require(require('path').join(process.env.CLAUDE_PROJECT_DIR || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/spec-authoring-steer/steer.ts\"",
+            "type": "http",
+            "url": "http://127.0.0.1:42619/v1/dispatch/PreToolUse%2F6%2F0",
+            "headers": {
+              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
+            },
+            "allowedEnvVars": [
+              "DEV_POMOGATOR_HOOK_TOKEN"
+            ],
             "timeout": 30
           }
         ]
@@ -386,48 +395,14 @@
         "matcher": "",
         "hooks": [
           {
-            "type": "command",
-            "command": "sh \"${CLAUDE_PROJECT_DIR:-${CLAUDE_PLUGIN_ROOT:-.}}/tools/_shared/hook-runtime.sh\" -e \"require(require('path').join(process.env.CLAUDE_PROJECT_DIR || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/plan-pomogator/prompt-capture.ts\"",
-            "timeout": 60
-          }
-        ]
-      },
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "sh \"${CLAUDE_PROJECT_DIR:-${CLAUDE_PLUGIN_ROOT:-.}}/tools/_shared/hook-runtime.sh\" -e \"require(require('path').join(process.env.CLAUDE_PROJECT_DIR || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/prompt-suggest/prompt_suggest_submit.ts\"",
-            "timeout": 60
-          }
-        ]
-      },
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "sh \"${CLAUDE_PROJECT_DIR:-${CLAUDE_PLUGIN_ROOT:-.}}/tools/_shared/hook-runtime.sh\" -e \"require(require('path').join(process.env.CLAUDE_PROJECT_DIR || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/specs-validator/validate-specs.ts\"",
-            "timeout": 60
-          }
-        ]
-      },
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "sh \"${CLAUDE_PROJECT_DIR:-${CLAUDE_PLUGIN_ROOT:-.}}/tools/_shared/hook-runtime.sh\" -e \"require(require('path').join(process.env.CLAUDE_PROJECT_DIR || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/learnings-capture/capture.ts\" --event UserPromptSubmit",
-            "timeout": 60
-          }
-        ]
-      },
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "sh \"${CLAUDE_PROJECT_DIR:-${CLAUDE_PLUGIN_ROOT:-.}}/tools/_shared/hook-runtime.sh\" -e \"require(require('path').join(process.env.CLAUDE_PROJECT_DIR || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/carl/runner.ts\"",
+            "type": "http",
+            "url": "http://127.0.0.1:42619/v1/dispatch/UserPromptSubmit%2F0%2F0",
+            "headers": {
+              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
+            },
+            "allowedEnvVars": [
+              "DEV_POMOGATOR_HOOK_TOKEN"
+            ],
             "timeout": 10
           }
         ]
@@ -436,8 +411,78 @@
         "matcher": "",
         "hooks": [
           {
-            "type": "command",
-            "command": "sh \"${CLAUDE_PROJECT_DIR:-${CLAUDE_PLUGIN_ROOT:-.}}/tools/_shared/hook-runtime.sh\" -e \"require(require('path').join(process.env.CLAUDE_PROJECT_DIR || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/subagent-watchdog/subagent_watchdog.ts\" --event UserPromptSubmit",
+            "type": "http",
+            "url": "http://127.0.0.1:42619/v1/dispatch/UserPromptSubmit%2F1%2F0",
+            "headers": {
+              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
+            },
+            "allowedEnvVars": [
+              "DEV_POMOGATOR_HOOK_TOKEN"
+            ],
+            "timeout": 60
+          }
+        ]
+      },
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "http",
+            "url": "http://127.0.0.1:42619/v1/dispatch/UserPromptSubmit%2F2%2F0",
+            "headers": {
+              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
+            },
+            "allowedEnvVars": [
+              "DEV_POMOGATOR_HOOK_TOKEN"
+            ],
+            "timeout": 60
+          }
+        ]
+      },
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "http",
+            "url": "http://127.0.0.1:42619/v1/dispatch/UserPromptSubmit%2F3%2F0",
+            "headers": {
+              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
+            },
+            "allowedEnvVars": [
+              "DEV_POMOGATOR_HOOK_TOKEN"
+            ],
+            "timeout": 60
+          }
+        ]
+      },
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "http",
+            "url": "http://127.0.0.1:42619/v1/dispatch/UserPromptSubmit%2F4%2F0",
+            "headers": {
+              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
+            },
+            "allowedEnvVars": [
+              "DEV_POMOGATOR_HOOK_TOKEN"
+            ],
+            "timeout": 60
+          }
+        ]
+      },
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "http",
+            "url": "http://127.0.0.1:42619/v1/dispatch/UserPromptSubmit%2F5%2F0",
+            "headers": {
+              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
+            },
+            "allowedEnvVars": [
+              "DEV_POMOGATOR_HOOK_TOKEN"
+            ],
             "timeout": 15
           }
         ]
@@ -448,23 +493,63 @@
         "matcher": "Write|Edit",
         "hooks": [
           {
-            "type": "command",
-            "command": "sh \"${CLAUDE_PROJECT_DIR:-${CLAUDE_PLUGIN_ROOT:-.}}/tools/_shared/hook-runtime.sh\" -e \"require(require('path').join(process.env.CLAUDE_PROJECT_DIR || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/test-quality/compliance_check.ts\"",
+            "type": "http",
+            "url": "http://127.0.0.1:42619/v1/dispatch/PostToolUse%2F0%2F0",
+            "headers": {
+              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
+            },
+            "allowedEnvVars": [
+              "DEV_POMOGATOR_HOOK_TOKEN"
+            ],
             "timeout": 60
           },
           {
-            "type": "command",
-            "command": "sh \"${CLAUDE_PROJECT_DIR:-${CLAUDE_PLUGIN_ROOT:-.}}/tools/_shared/hook-runtime.sh\" -e \"const cp=require('child_process'),p=require('path');const b=p.join(process.env.CLAUDE_PLUGIN_ROOT||process.cwd(),'tools','spec-conformance-push','spec-conformance-push.bundle.mjs');const c=cp.spawn(process.execPath,[b],{stdio:'inherit'});c.on('exit',x=>process.exit(x??0));c.on('error',()=>process.exit(0));\"",
+            "type": "http",
+            "url": "http://127.0.0.1:42619/v1/dispatch/PostToolUse%2F0%2F1",
+            "headers": {
+              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
+            },
+            "allowedEnvVars": [
+              "DEV_POMOGATOR_HOOK_TOKEN"
+            ],
             "timeout": 30
           },
           {
-            "type": "command",
-            "command": "sh \"${CLAUDE_PROJECT_DIR:-${CLAUDE_PLUGIN_ROOT:-.}}/tools/_shared/hook-runtime.sh\" -e \"require(require('path').join(process.env.CLAUDE_PROJECT_DIR || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/anchor-integrity/anchor_check_post.ts\"",
+            "type": "http",
+            "url": "http://127.0.0.1:42619/v1/dispatch/PostToolUse%2F0%2F2",
+            "headers": {
+              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
+            },
+            "allowedEnvVars": [
+              "DEV_POMOGATOR_HOOK_TOKEN"
+            ],
             "timeout": 30
           },
           {
-            "type": "command",
-            "command": "sh \"${CLAUDE_PROJECT_DIR:-${CLAUDE_PLUGIN_ROOT:-.}}/tools/_shared/hook-runtime.sh\" -e \"require(require('path').join(process.env.CLAUDE_PROJECT_DIR || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/bdd-quality-judge/hook.ts\"",
+            "type": "http",
+            "url": "http://127.0.0.1:42619/v1/dispatch/PostToolUse%2F0%2F3",
+            "headers": {
+              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
+            },
+            "allowedEnvVars": [
+              "DEV_POMOGATOR_HOOK_TOKEN"
+            ],
+            "timeout": 15
+          }
+        ]
+      },
+      {
+        "matcher": "Agent|TaskOutput",
+        "hooks": [
+          {
+            "type": "http",
+            "url": "http://127.0.0.1:42619/v1/dispatch/PostToolUse%2F1%2F0",
+            "headers": {
+              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
+            },
+            "allowedEnvVars": [
+              "DEV_POMOGATOR_HOOK_TOKEN"
+            ],
             "timeout": 15
           }
         ]
@@ -473,13 +558,25 @@
         "matcher": "Bash",
         "hooks": [
           {
-            "type": "command",
-            "command": "sh \"${CLAUDE_PROJECT_DIR:-${CLAUDE_PLUGIN_ROOT:-.}}/tools/_shared/hook-runtime.sh\" -e \"require(require('path').join(process.env.CLAUDE_PROJECT_DIR || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/bg-task-guard/mark-bg-task.ts\"",
+            "type": "http",
+            "url": "http://127.0.0.1:42619/v1/dispatch/PostToolUse%2F2%2F0",
+            "headers": {
+              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
+            },
+            "allowedEnvVars": [
+              "DEV_POMOGATOR_HOOK_TOKEN"
+            ],
             "timeout": 60
           },
           {
-            "type": "command",
-            "command": "sh \"${CLAUDE_PROJECT_DIR:-${CLAUDE_PLUGIN_ROOT:-.}}/tools/_shared/hook-runtime.sh\" -e \"require(require('path').join(process.env.CLAUDE_PROJECT_DIR || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/bash-post-test/ingest.ts\"",
+            "type": "http",
+            "url": "http://127.0.0.1:42619/v1/dispatch/PostToolUse%2F2%2F1",
+            "headers": {
+              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
+            },
+            "allowedEnvVars": [
+              "DEV_POMOGATOR_HOOK_TOKEN"
+            ],
             "timeout": 30
           }
         ]
@@ -488,42 +585,18 @@
         "matcher": "Skill",
         "hooks": [
           {
-            "type": "command",
-            "command": "sh \"${CLAUDE_PROJECT_DIR:-${CLAUDE_PLUGIN_ROOT:-.}}/tools/_shared/hook-runtime.sh\" -e \"require(require('path').join(process.env.CLAUDE_PROJECT_DIR || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/research-workflow-marker-guard/research-workflow-marker-guard.ts\"",
+            "type": "http",
+            "url": "http://127.0.0.1:42619/v1/dispatch/PostToolUse%2F3%2F0",
+            "headers": {
+              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
+            },
+            "allowedEnvVars": [
+              "DEV_POMOGATOR_HOOK_TOKEN"
+            ],
             "timeout": 10
-          }
-        ]
-      },
-      {
-        "matcher": "Agent|TaskOutput",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "sh \"${CLAUDE_PROJECT_DIR:-${CLAUDE_PLUGIN_ROOT:-.}}/tools/_shared/hook-runtime.sh\" -e \"require(require('path').join(process.env.CLAUDE_PROJECT_DIR || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/subagent-watchdog/subagent_watchdog.ts\" --event PostToolUse",
-            "timeout": 15
           }
         ]
       }
     ]
-  },
-  "enabledPlugins": {
-    "skill-creator@claude-plugins-official": true
-  },
-  "permissions": {
-    "allow": [
-      "mcp__dev-pomogator-specs__*"
-    ],
-    "deny": [
-      "Read(./.specs/**)",
-      "Edit(./.specs/**)",
-      "Write(./.specs/**)"
-    ]
-  },
-  "devPomogatorCarl": {
-    "managedBy": "dev-pomogator",
-    "managed": true,
-    "component": "carl",
-    "hookEvent": "UserPromptSubmit",
-    "command": "node --import tsx tools/carl/runner.ts"
   }
 }

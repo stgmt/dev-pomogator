@@ -170,7 +170,7 @@ function applyContextDiet(projectRootInput) {
     });
   }
   const status = ruleFiles.length === 0 ? "no-rules" : warnings.length > 0 ? "partial" : "applied";
-  const result = {
+  const result2 = {
     ok: true,
     mode: ruleFiles.length === 0 ? "additive" : "lazy-managed",
     status,
@@ -184,8 +184,8 @@ function applyContextDiet(projectRootInput) {
     entries,
     warnings
   };
-  atomicWriteJson(path4.join(projectRoot, REPORT_REL), result);
-  return result;
+  atomicWriteJson(path4.join(projectRoot, REPORT_REL), result2);
+  return result2;
 }
 function usage() {
   process.stderr.write([
@@ -218,12 +218,12 @@ function parseArgs(argv) {
 function main() {
   try {
     const args = parseArgs(process.argv.slice(2));
-    const result = applyContextDiet(args.project);
+    const result2 = applyContextDiet(args.project);
     if (args.json) {
-      process.stdout.write(`${JSON.stringify(result, null, 2)}
+      process.stdout.write(`${JSON.stringify(result2, null, 2)}
 `);
     } else {
-      process.stdout.write(`CARL context diet ${result.status}: ${result.rulesManaged}/${result.rulesTotal} rules, ~${result.estimatedTokensBefore} -> ~${result.estimatedTokensAfter} tokens in auto-loaded rules
+      process.stdout.write(`CARL context diet ${result2.status}: ${result2.rulesManaged}/${result2.rulesTotal} rules, ~${result2.estimatedTokensBefore} -> ~${result2.estimatedTokensAfter} tokens in auto-loaded rules
 `);
     }
   } catch (error) {
@@ -1083,10 +1083,10 @@ function install(args) {
 function main4() {
   try {
     const args = parseArgs4(process.argv.slice(2));
-    const result = install(args);
-    process.stdout.write(`${JSON.stringify(result, null, 2)}
+    const result2 = install(args);
+    process.stdout.write(`${JSON.stringify(result2, null, 2)}
 `);
-    if (result.status === "user-conflict") process.exit(1);
+    if (result2.status === "user-conflict") process.exit(1);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     process.stderr.write(`${message}
@@ -1411,16 +1411,16 @@ function generateFallbackCodexIcon() {
 }
 function uniquePaths(paths) {
   const seen = /* @__PURE__ */ new Set();
-  const result = [];
+  const result2 = [];
   for (const candidate of paths) {
     const normalized = path9.normalize(candidate);
     const key = process.platform === "win32" ? normalized.toLowerCase() : normalized;
     if (!seen.has(key)) {
       seen.add(key);
-      result.push(normalized);
+      result2.push(normalized);
     }
   }
-  return result;
+  return result2;
 }
 function codexExecutableCandidates(env2 = process.env) {
   const candidates = [];
@@ -2644,9 +2644,9 @@ var require_range = __commonJS({
         if (rangeMap.size > 1 && rangeMap.has("")) {
           rangeMap.delete("");
         }
-        const result = [...rangeMap.values()];
-        cache.set(memoKey, result);
-        return result;
+        const result2 = [...rangeMap.values()];
+        cache.set(memoKey, result2);
+        return result2;
       }
       intersects(range, options) {
         if (!(range instanceof _Range)) {
@@ -2700,16 +2700,16 @@ var require_range = __commonJS({
     var isNullSet = (c) => c.value === "<0.0.0-0";
     var isAny = (c) => c.value === "";
     var isSatisfiable = (comparators, options) => {
-      let result = true;
+      let result2 = true;
       const remainingComparators = comparators.slice();
       let testComparator = remainingComparators.pop();
-      while (result && remainingComparators.length) {
-        result = remainingComparators.every((otherComparator) => {
+      while (result2 && remainingComparators.length) {
+        result2 = remainingComparators.every((otherComparator) => {
           return testComparator.intersects(otherComparator, options);
         });
         testComparator = remainingComparators.pop();
       }
-      return result;
+      return result2;
     };
     var parseComparator = (comp, options) => {
       comp = comp.replace(re[t.BUILD], "");
@@ -3600,9 +3600,9 @@ var require_semver2 = __commonJS({
 });
 
 // .claude/skills/pomogator-doctor/scripts/engine/index.ts
-import fs28 from "node:fs";
+import fs29 from "node:fs";
 import os8 from "node:os";
-import path28 from "node:path";
+import path29 from "node:path";
 import { pathToFileURL as pathToFileURL6 } from "node:url";
 
 // .claude/skills/pomogator-doctor/scripts/engine/checks/_helpers.ts
@@ -3645,18 +3645,18 @@ function fileExists(p) {
   }
 }
 function checkBinaryVersion(bin, args = ["--version"], pattern) {
-  const result = spawnSync(bin, args, {
+  const result2 = spawnSync(bin, args, {
     encoding: "utf-8",
     timeout: DOCTOR_TIMEOUTS.SPAWN_MS
   });
-  const combined = ((result.stdout ?? "") + (result.stderr ?? "")).trim();
-  if (result.status === 0 && (!pattern || pattern.test(combined))) {
+  const combined = ((result2.stdout ?? "") + (result2.stderr ?? "")).trim();
+  if (result2.status === 0 && (!pattern || pattern.test(combined))) {
     return { ok: true, output: combined };
   }
   return {
     ok: false,
     output: combined,
-    error: result.error?.message
+    error: result2.error?.message
   };
 }
 function parseDotenvContent(content) {
@@ -3937,8 +3937,8 @@ function collectIssues(manifest, projectRoot, pluginRoot) {
 async function repairCarl(projectRoot) {
   try {
     const mod = await Promise.resolve().then(() => (init_install(), install_exports));
-    const result = mod.install({ project: projectRoot, platform: "claude-code", repair: true });
-    return { ok: Boolean(result.ok), status: result };
+    const result2 = mod.install({ project: projectRoot, platform: "claude-code", repair: true });
+    return { ok: Boolean(result2.ok), status: result2 };
   } catch (error) {
     return { ok: false, error: error instanceof Error ? error.message : String(error) };
   }
@@ -4025,10 +4025,10 @@ function parseArgs5(argv) {
 }
 async function main5() {
   const args = parseArgs5(process.argv.slice(2));
-  const result = await checkCarlProject({ projectRoot: args.project, pluginRoot: pluginRootFrom(), repair: args.repair });
-  process.stdout.write(`${JSON.stringify(result, null, 2)}
+  const result2 = await checkCarlProject({ projectRoot: args.project, pluginRoot: pluginRootFrom(), repair: args.repair });
+  process.stdout.write(`${JSON.stringify(result2, null, 2)}
 `);
-  if (result.severity === "critical") process.exit(1);
+  if (result2.severity === "critical") process.exit(1);
 }
 var invokedPath5 = process.argv[1] ? pathToFileURL5(path8.resolve(process.argv[1])).href : "";
 if (path8.basename(process.argv[1] ?? "") === "carl.ts" && import.meta.url === invokedPath5) {
@@ -4389,18 +4389,18 @@ function classifyGhReadiness(version, auth) {
   return "available";
 }
 function runGh(args) {
-  const result = spawnSync2("gh", args, {
+  const result2 = spawnSync2("gh", args, {
     encoding: "utf8",
     timeout: DOCTOR_TIMEOUTS.SPAWN_MS,
     windowsHide: true,
     // `gh auth status` intentionally writes account details to stderr. Discard it.
     stdio: "ignore"
   });
-  const errorCode = result.error?.code;
+  const errorCode = result2.error?.code;
   return {
-    status: result.status,
+    status: result2.status,
     errorCode,
-    timedOut: errorCode === "ETIMEDOUT" || result.signal === "SIGTERM"
+    timedOut: errorCode === "ETIMEDOUT" || result2.signal === "SIGTERM"
   };
 }
 function createGhCheck(runner = runGh, platform = process.platform) {
@@ -4608,11 +4608,83 @@ function build2(severity, message, hint) {
   };
 }
 
+// .claude/skills/pomogator-doctor/scripts/engine/checks/hook-service.ts
+import fs18 from "node:fs";
+import path17 from "node:path";
+var requiredRuntimeFiles = [
+  "tools/hook-service/server.mjs",
+  "tools/hook-service/ensure-up.mjs",
+  "tools/hook-service/session-bootstrap.mjs",
+  "tools/hook-service/migrate-managed-hooks.mjs",
+  "tools/hook-service/registry.json",
+  ".claude-plugin/hooks.legacy.json"
+];
+function result(severity, message, details) {
+  return {
+    id: "C32",
+    fr: "FR-24",
+    name: "Shell-free hook service",
+    group: "self-sufficient",
+    severity,
+    reinstallable: severity !== "ok",
+    message,
+    hint: severity === "ok" ? void 0 : "Reinstall or update dev-pomogator to regenerate the managed HTTP hook transport.",
+    reinstallHint: severity === "ok" ? void 0 : CANONICAL_REINSTALL_HINT,
+    durationMs: 0,
+    details
+  };
+}
+var hookServiceCheck = {
+  id: "C32",
+  fr: "FR-24",
+  name: "Shell-free hook service",
+  group: "self-sufficient",
+  reinstallable: true,
+  pool: "fs",
+  async run(ctx) {
+    const root = ctx.projectRoot;
+    const absent = requiredRuntimeFiles.filter((file) => !fs18.existsSync(path17.join(root, file)));
+    if (absent.length) return result("warning", `shell-free hook service is not installed (${absent.join(", ")})`, { absent });
+    let manifest;
+    let registry;
+    try {
+      manifest = JSON.parse(fs18.readFileSync(path17.join(root, ".claude-plugin/hooks.json"), "utf8"));
+      registry = JSON.parse(fs18.readFileSync(path17.join(root, "tools/hook-service/registry.json"), "utf8"));
+    } catch (error) {
+      return result("critical", `cannot parse shell-free hook assets: ${error.message}`);
+    }
+    const problems = [];
+    const bootstrap = manifest.hooks?.SessionStart?.flatMap((group) => group.hooks ?? []) ?? [];
+    if (bootstrap.length !== 1 || bootstrap[0]?.type !== "command" || !bootstrap[0]?.command?.includes("tools/hook-service/session-bootstrap.mjs")) {
+      problems.push("SessionStart must have exactly one hook-service bootstrap");
+    }
+    for (const [event, groups] of Object.entries(manifest.hooks ?? {})) {
+      if (event === "SessionStart") continue;
+      groups.forEach((group, groupIndex) => (group.hooks ?? []).forEach((hook, hookIndex) => {
+        const id = `${event}/${groupIndex}/${hookIndex}`;
+        const expected = `http://127.0.0.1:42619/v1/dispatch/${encodeURIComponent(id)}`;
+        if (hook.type !== "http" || hook.url !== expected) problems.push(`${id} is not the canonical loopback HTTP route`);
+        if (hook.headers?.["x-dev-pomogator-token"] !== "${DEV_POMOGATOR_HOOK_TOKEN}") problems.push(`${id} is missing the canonical hook-service token header`);
+        if (!hook.allowedEnvVars?.includes("DEV_POMOGATOR_HOOK_TOKEN")) problems.push(`${id} does not allow DEV_POMOGATOR_HOOK_TOKEN`);
+        const route = registry.routes?.[id];
+        const target = route?.target;
+        if (!target || path17.isAbsolute(target) || target.split(/[\\/]/).includes("..") || !fs18.existsSync(path17.join(root, target))) {
+          problems.push(`${id} has no valid registry target`);
+        }
+        if (route?.timeout !== hook.timeout) problems.push(`${id} timeout drifts from registry`);
+        if ((route?.matcher ?? "") !== (group.matcher ?? "")) problems.push(`${id} matcher drifts from registry`);
+      }));
+    }
+    if (problems.length) return result("critical", problems.join("; "), { problems });
+    return result("ok", "one SessionStart bootstrap and all managed hook routes use the local HTTP service");
+  }
+};
+
 // .claude/skills/pomogator-doctor/scripts/engine/checks/hooks-exec.ts
 import { spawnSync as spawnSync3 } from "node:child_process";
-import fs18 from "node:fs";
+import fs19 from "node:fs";
 import os5 from "node:os";
-import path17 from "node:path";
+import path18 from "node:path";
 import { fileURLToPath as fileURLToPath4 } from "node:url";
 var META10 = {
   id: "C18",
@@ -4624,12 +4696,12 @@ var META10 = {
 function locateBootstrap(projectRoot) {
   const override = process.env.DEV_POMOGATOR_DOCTOR_BOOTSTRAP;
   if (override) return fileExists(override) ? override : override;
-  const here = path17.dirname(fileURLToPath4(import.meta.url));
+  const here = path18.dirname(fileURLToPath4(import.meta.url));
   const candidates = [
     // checks → engine → scripts → pomogator-doctor → skills → .claude → <root>
-    path17.resolve(here, "..", "..", "..", "..", "..", "..", "tools", "_shared", "bootstrap.cjs"),
-    path17.join(projectRoot, "tools", "_shared", "bootstrap.cjs"),
-    ...process.env.CLAUDE_PLUGIN_ROOT ? [path17.join(process.env.CLAUDE_PLUGIN_ROOT, "tools", "_shared", "bootstrap.cjs")] : []
+    path18.resolve(here, "..", "..", "..", "..", "..", "..", "tools", "_shared", "bootstrap.cjs"),
+    path18.join(projectRoot, "tools", "_shared", "bootstrap.cjs"),
+    ...process.env.CLAUDE_PLUGIN_ROOT ? [path18.join(process.env.CLAUDE_PLUGIN_ROOT, "tools", "_shared", "bootstrap.cjs")] : []
   ];
   return candidates.find(fileExists) ?? null;
 }
@@ -4646,10 +4718,10 @@ var hooksExecCheck = {
         { hint: "Reinstall dev-pomogator: /plugin install dev-pomogator@stgmt --force" }
       );
     }
-    const probe = path17.join(os5.tmpdir(), `dp-hook-probe-${process.pid}-${process.hrtime.bigint()}.ts`);
+    const probe = path18.join(os5.tmpdir(), `dp-hook-probe-${process.pid}-${process.hrtime.bigint()}.ts`);
     const MARKER = "HOOK_EXEC_OK";
     try {
-      fs18.writeFileSync(probe, `const marker: string = '${MARKER}';
+      fs19.writeFileSync(probe, `const marker: string = '${MARKER}';
 process.stdout.write(marker);
 `);
       const res = spawnSync3(process.execPath, ["-e", `require(${JSON.stringify(bootstrap)})`, "--", probe], {
@@ -4680,7 +4752,7 @@ process.stdout.write(marker);
       );
     } finally {
       try {
-        fs18.unlinkSync(probe);
+        fs19.unlinkSync(probe);
       } catch {
       }
     }
@@ -4688,8 +4760,8 @@ process.stdout.write(marker);
 };
 
 // .claude/skills/pomogator-doctor/scripts/engine/checks/hooks-registry.ts
-import fs19 from "node:fs";
-import path18 from "node:path";
+import fs20 from "node:fs";
+import path19 from "node:path";
 var hooksRegistryCheck = {
   id: "C6",
   fr: "FR-4",
@@ -4698,10 +4770,10 @@ var hooksRegistryCheck = {
   reinstallable: true,
   pool: "fs",
   async run(ctx) {
-    const settingsPath = path18.join(ctx.projectRoot, ".claude", "settings.local.json");
+    const settingsPath = path19.join(ctx.projectRoot, ".claude", "settings.local.json");
     let settings = {};
     try {
-      settings = JSON.parse(fs19.readFileSync(settingsPath, "utf-8"));
+      settings = JSON.parse(fs20.readFileSync(settingsPath, "utf-8"));
     } catch (error) {
       const code = error.code;
       if (code === "ENOENT") {
@@ -4743,26 +4815,26 @@ function build3(severity, message, hint) {
 }
 
 // .claude/skills/pomogator-doctor/scripts/engine/checks/mcp-parse.ts
-import fs20 from "node:fs";
-import path19 from "node:path";
+import fs21 from "node:fs";
+import path20 from "node:path";
 function readMcpConfigs(ctx) {
-  const result = /* @__PURE__ */ new Map();
+  const result2 = /* @__PURE__ */ new Map();
   const paths = [
-    path19.join(ctx.projectRoot, ".mcp.json"),
+    path20.join(ctx.projectRoot, ".mcp.json"),
     // Canonical user-global MCP config is ~/.claude.json (NOT ~/.claude/mcp.json, which
     // Claude Code never creates) — the latter made every globally-registered MCP invisible.
-    path19.join(ctx.homeDir, ".claude.json")
+    path20.join(ctx.homeDir, ".claude.json")
   ];
   for (const p of paths) {
     try {
-      const parsed = JSON.parse(fs20.readFileSync(p, "utf-8"));
+      const parsed = JSON.parse(fs21.readFileSync(p, "utf-8"));
       for (const [name, cfg] of Object.entries(parsed.mcpServers ?? {})) {
-        if (!result.has(name)) result.set(name, { name, ...cfg });
+        if (!result2.has(name)) result2.set(name, { name, ...cfg });
       }
     } catch {
     }
   }
-  return result;
+  return result2;
 }
 function isPluginProvidedMcp(name) {
   return name.startsWith("plugin_") || name.startsWith("claude_ai_") || name === "claude-in-chrome";
@@ -5073,7 +5145,7 @@ var mcpProbeCheck = {
 };
 
 // .claude/skills/pomogator-doctor/scripts/engine/checks/meridian.ts
-import path20 from "node:path";
+import path21 from "node:path";
 var META12 = {
   id: "C17",
   fr: "FR-49",
@@ -5085,9 +5157,9 @@ var PROBE_TIMEOUT_MS3 = 500;
 var proxyUrl = () => process.env.MERIDIAN_URL || "http://127.0.0.1:3456";
 function optedIn(ctx) {
   if ((process.env.CLAIM_GATE_JUDGE ?? "true").toLowerCase() !== "false") return { in: true };
-  const base = readDotenvFile(path20.join(ctx.projectRoot, ".env")).ANTHROPIC_BASE_URL ?? "";
+  const base = readDotenvFile(path21.join(ctx.projectRoot, ".env")).ANTHROPIC_BASE_URL ?? "";
   if (/:3456|meridian|claude-subscription/i.test(base)) return { in: true };
-  if (fileExists(path20.join(ctx.projectRoot, "tools", "claude-subscription-proxy", "docker-compose.yml"))) {
+  if (fileExists(path21.join(ctx.projectRoot, "tools", "claude-subscription-proxy", "docker-compose.yml"))) {
     return { in: true };
   }
   return {
@@ -5180,16 +5252,16 @@ var nodeVersionCheck = {
 };
 
 // .claude/skills/pomogator-doctor/scripts/engine/checks/plugin-loader.ts
-import fs21 from "node:fs";
-import path21 from "node:path";
+import fs22 from "node:fs";
+import path22 from "node:path";
 function readPluginManifest(projectRoot) {
   const candidates = [
-    path21.join(projectRoot, ".dev-pomogator", ".claude-plugin", "plugin.json"),
-    path21.join(projectRoot, ".claude-plugin", "plugin.json")
+    path22.join(projectRoot, ".dev-pomogator", ".claude-plugin", "plugin.json"),
+    path22.join(projectRoot, ".claude-plugin", "plugin.json")
   ];
   for (const p of candidates) {
     try {
-      return JSON.parse(fs21.readFileSync(p, "utf-8"));
+      return JSON.parse(fs22.readFileSync(p, "utf-8"));
     } catch {
       continue;
     }
@@ -5197,27 +5269,27 @@ function readPluginManifest(projectRoot) {
   return null;
 }
 function enumerateFromPath(rel, kind, projectRoot) {
-  const abs = path21.resolve(projectRoot, rel);
+  const abs = path22.resolve(projectRoot, rel);
   let stat;
   try {
-    stat = fs21.statSync(abs);
+    stat = fs22.statSync(abs);
   } catch {
     return [{ name: rel, kind, physicalPath: abs }];
   }
   if (stat.isFile()) {
-    const name = kind === "command" ? path21.basename(abs).replace(/\.md$/, "") : path21.basename(abs);
+    const name = kind === "command" ? path22.basename(abs).replace(/\.md$/, "") : path22.basename(abs);
     return [{ name, kind, physicalPath: abs }];
   }
   let dirents;
   try {
-    dirents = fs21.readdirSync(abs, { withFileTypes: true });
+    dirents = fs22.readdirSync(abs, { withFileTypes: true });
   } catch {
     return [{ name: rel, kind, physicalPath: abs }];
   }
   if (kind === "command") {
-    return dirents.filter((e) => e.isFile() && e.name.endsWith(".md")).map((e) => ({ name: e.name.replace(/\.md$/, ""), kind, physicalPath: path21.join(abs, e.name) }));
+    return dirents.filter((e) => e.isFile() && e.name.endsWith(".md")).map((e) => ({ name: e.name.replace(/\.md$/, ""), kind, physicalPath: path22.join(abs, e.name) }));
   }
-  return dirents.filter((e) => e.isDirectory()).map((e) => ({ name: e.name, skillMd: path21.join(abs, e.name, "SKILL.md") })).filter((d) => exists(d.skillMd)).map((d) => ({ name: d.name, kind, physicalPath: d.skillMd }));
+  return dirents.filter((e) => e.isDirectory()).map((e) => ({ name: e.name, skillMd: path22.join(abs, e.name, "SKILL.md") })).filter((d) => exists(d.skillMd)).map((d) => ({ name: d.name, kind, physicalPath: d.skillMd }));
 }
 function normalizeDeclared(manifest, projectRoot) {
   const out = [];
@@ -5238,32 +5310,32 @@ function normalizeDeclared(manifest, projectRoot) {
   return out;
 }
 function classify(declaredName, kind, projectRoot, homeDir) {
-  const projectDir = kind === "command" ? path21.join(projectRoot, ".claude", "commands") : path21.join(projectRoot, ".claude", "skills");
-  const projectPath = kind === "command" ? path21.join(projectDir, `${declaredName}.md`) : path21.join(projectDir, declaredName);
+  const projectDir = kind === "command" ? path22.join(projectRoot, ".claude", "commands") : path22.join(projectRoot, ".claude", "skills");
+  const projectPath = kind === "command" ? path22.join(projectDir, `${declaredName}.md`) : path22.join(projectDir, declaredName);
   if (exists(projectPath)) return "OK-physical";
-  const pluginRoot = path21.join(homeDir, ".claude", "plugins");
+  const pluginRoot = path22.join(homeDir, ".claude", "plugins");
   if (searchPluginRegistry(pluginRoot, declaredName, kind)) return "OK-dynamic";
   return "BROKEN-missing";
 }
 function searchPluginRegistry(pluginRoot, name, kind) {
   let entries;
   try {
-    entries = fs21.readdirSync(pluginRoot, { withFileTypes: true });
+    entries = fs22.readdirSync(pluginRoot, { withFileTypes: true });
   } catch {
     return false;
   }
   const needle = kind === "command" ? `${name}.md` : name;
   for (const entry of entries) {
     if (!entry.isDirectory()) continue;
-    const nested = path21.join(pluginRoot, entry.name);
+    const nested = path22.join(pluginRoot, entry.name);
     if (containsEntry(nested, kind, needle)) return true;
   }
   return false;
 }
 function containsEntry(root, kind, needle) {
-  const target = kind === "command" ? path21.join(root, "commands") : path21.join(root, "skills");
+  const target = kind === "command" ? path22.join(root, "commands") : path22.join(root, "skills");
   try {
-    const inside = fs21.readdirSync(target, { withFileTypes: true });
+    const inside = fs22.readdirSync(target, { withFileTypes: true });
     return inside.some((e) => e.name === needle);
   } catch {
     return false;
@@ -5271,7 +5343,7 @@ function containsEntry(root, kind, needle) {
 }
 function exists(p) {
   try {
-    fs21.accessSync(p, fs21.constants.F_OK);
+    fs22.accessSync(p, fs22.constants.F_OK);
     return true;
   } catch {
     return false;
@@ -5354,8 +5426,8 @@ var pluginLoaderCheck = {
 };
 
 // .claude/skills/pomogator-doctor/scripts/engine/checks/pomogator-home.ts
-import fs22 from "node:fs";
-import path22 from "node:path";
+import fs23 from "node:fs";
+import path23 from "node:path";
 var MAKE = (id, name, severity, message, hint) => ({
   id,
   fr: "FR-3",
@@ -5377,7 +5449,7 @@ var pomogatorHomeCheck = {
   pool: "fs",
   async run(ctx) {
     const results = [];
-    const configPath = path22.join(ctx.homeDir, ".dev-pomogator", "config.json");
+    const configPath = path23.join(ctx.homeDir, ".dev-pomogator", "config.json");
     if (ctx.configError) {
       const message = ctx.configError.message;
       if (message.includes("not found") && isCanonicalInstall(ctx.projectRoot)) {
@@ -5406,7 +5478,7 @@ var pomogatorHomeCheck = {
     results.push(
       configOk ? MAKE("C3", "~/.dev-pomogator/config.json", "ok", `config.json present at ${configPath}`) : MAKE("C3", "~/.dev-pomogator/config.json", "critical", `config.json missing: ${configPath}`)
     );
-    const bootstrapPath = path22.join(
+    const bootstrapPath = path23.join(
       ctx.homeDir,
       ".dev-pomogator",
       "scripts",
@@ -5428,8 +5500,8 @@ var pomogatorHomeCheck = {
     );
     const missingTools = [];
     for (const ext of ctx.installedExtensions) {
-      const toolDir = path22.join(ctx.homeDir, ".dev-pomogator", "tools", ext.name);
-      if (!fs22.existsSync(toolDir)) missingTools.push(ext.name);
+      const toolDir = path23.join(ctx.homeDir, ".dev-pomogator", "tools", ext.name);
+      if (!fs23.existsSync(toolDir)) missingTools.push(ext.name);
     }
     if (missingTools.length === 0 && ctx.installedExtensions.length > 0) {
       results.push(
@@ -5456,7 +5528,7 @@ var pomogatorHomeCheck = {
 };
 function fileExists2(p) {
   try {
-    fs22.accessSync(p, fs22.constants.F_OK);
+    fs23.accessSync(p, fs23.constants.F_OK);
     return true;
   } catch {
     return false;
@@ -5561,8 +5633,8 @@ var pythonCheck = {
 };
 
 // .claude/skills/pomogator-doctor/scripts/engine/checks/statusline.ts
-import fs23 from "node:fs";
-import path23 from "node:path";
+import fs24 from "node:fs";
+import path24 from "node:path";
 var OWNERSHIP_MARKER = "ccstatusline";
 var statuslineCheck = {
   id: "C-NSL",
@@ -5572,7 +5644,7 @@ var statuslineCheck = {
   reinstallable: false,
   pool: "fs",
   async run(ctx) {
-    const settingsFile = path23.join(ctx.homeDir, ".claude", "settings.json");
+    const settingsFile = path24.join(ctx.homeDir, ".claude", "settings.json");
     const base = {
       id: "C-NSL",
       fr: "FR-7",
@@ -5584,10 +5656,10 @@ var statuslineCheck = {
     let command;
     let unreadable = false;
     try {
-      const parsed = JSON.parse(fs23.readFileSync(settingsFile, "utf-8"));
+      const parsed = JSON.parse(fs24.readFileSync(settingsFile, "utf-8"));
       command = typeof parsed.statusLine?.command === "string" ? parsed.statusLine.command : void 0;
     } catch {
-      unreadable = fs23.existsSync(settingsFile);
+      unreadable = fs24.existsSync(settingsFile);
     }
     if (command && command.includes(OWNERSHIP_MARKER)) {
       return { ...base, severity: "ok", message: "native statusLine (ccstatusline) configured" };
@@ -5622,8 +5694,8 @@ var statuslineCheck = {
 };
 
 // .claude/skills/pomogator-doctor/scripts/engine/checks/statusline-widgets.ts
-import fs24 from "node:fs";
-import path24 from "node:path";
+import fs25 from "node:fs";
+import path25 from "node:path";
 var OWNERSHIP_MARKER2 = "ccstatusline";
 var REQUIRED_WIDGET_TYPES = ["git-root-dir", "current-working-dir"];
 var STOCK_DEFAULT_TYPES = /* @__PURE__ */ new Set([
@@ -5650,10 +5722,10 @@ var statuslineWidgetsCheck = {
       reinstallable: false,
       durationMs: 0
     };
-    const settingsFile = path24.join(ctx.homeDir, ".claude", "settings.json");
+    const settingsFile = path25.join(ctx.homeDir, ".claude", "settings.json");
     let command;
     try {
-      const parsed = JSON.parse(fs24.readFileSync(settingsFile, "utf-8"));
+      const parsed = JSON.parse(fs25.readFileSync(settingsFile, "utf-8"));
       command = typeof parsed.statusLine?.command === "string" ? parsed.statusLine.command : void 0;
     } catch {
       command = void 0;
@@ -5665,15 +5737,15 @@ var statuslineWidgetsCheck = {
         message: "statusLine is not ccstatusline \u2014 widget config not applicable (see C-NSL)"
       };
     }
-    const configFile = path24.join(ctx.homeDir, ".config", "ccstatusline", "settings.json");
+    const configFile = path25.join(ctx.homeDir, ".config", "ccstatusline", "settings.json");
     const fixHint = `Apply NOW: node -e "require(require('path').join(process.env.CLAUDE_PLUGIN_ROOT||'.','tools','_shared','bootstrap.cjs'))" -- "tools/native-statusline/apply-statusline.ts" (adds git-root-dir + current-working-dir widgets; custom layouts are never touched).`;
     let lines;
     let unreadable = false;
     try {
-      const parsed = JSON.parse(fs24.readFileSync(configFile, "utf-8"));
+      const parsed = JSON.parse(fs25.readFileSync(configFile, "utf-8"));
       lines = Array.isArray(parsed.lines) ? parsed.lines : void 0;
     } catch {
-      unreadable = fs24.existsSync(configFile);
+      unreadable = fs25.existsSync(configFile);
     }
     if (unreadable) {
       return {
@@ -5721,8 +5793,8 @@ var statuslineWidgetsCheck = {
 };
 
 // .claude/skills/pomogator-doctor/scripts/engine/checks/tui-test-runner.ts
-import fs25 from "node:fs";
-import path25 from "node:path";
+import fs26 from "node:fs";
+import path26 from "node:path";
 var TUI_TEST_RUNNER_DIR = "tools/tui-test-runner";
 var tuiTestRunnerCheck = {
   id: "C-TTR",
@@ -5741,9 +5813,9 @@ var tuiTestRunnerCheck = {
     if (process.env.TEST_STATUSLINE_ENABLED !== "true") {
       return [];
     }
-    const invocationProject = path25.resolve(ctx.projectRoot);
+    const invocationProject = path26.resolve(ctx.projectRoot);
     const sessionProject = process.env.TEST_STATUSLINE_PROJECT;
-    if (sessionProject && path25.resolve(sessionProject) !== invocationProject) {
+    if (sessionProject && path26.resolve(sessionProject) !== invocationProject) {
       return {
         ...base,
         severity: "warning",
@@ -5751,10 +5823,10 @@ var tuiTestRunnerCheck = {
         hint: "Start a new Claude session in this worktree so TEST_STATUSLINE_PROJECT matches the invocation CWD."
       };
     }
-    const runnerDir = path25.join(invocationProject, TUI_TEST_RUNNER_DIR);
-    const wrapper = path25.join(runnerDir, "test_runner_wrapper.ts");
-    const sessionStart = path25.join(runnerDir, "tui_session_start.ts");
-    const missing = [wrapper, sessionStart].filter((file) => !fs25.existsSync(file));
+    const runnerDir = path26.join(invocationProject, TUI_TEST_RUNNER_DIR);
+    const wrapper = path26.join(runnerDir, "test_runner_wrapper.ts");
+    const sessionStart = path26.join(runnerDir, "tui_session_start.ts");
+    const missing = [wrapper, sessionStart].filter((file) => !fs26.existsSync(file));
     if (missing.length > 0) {
       return {
         ...base,
@@ -5845,6 +5917,7 @@ var phase2Checks = [
   hooksRegistryCheck,
   hooksExecCheck,
   hookScriptPathsCheck,
+  hookServiceCheck,
   envVarsCheck,
   envExampleCheck,
   versionMatchCheck,
@@ -5866,8 +5939,8 @@ var allChecks = [
 ];
 
 // .claude/skills/pomogator-doctor/scripts/engine/lock.ts
-import fs26 from "node:fs";
-import path26 from "node:path";
+import fs27 from "node:fs";
+import path27 from "node:path";
 var LockHeldError = class extends Error {
   constructor(lockPath, holderPid) {
     super(`Another doctor run in progress (PID=${holderPid})`);
@@ -5890,25 +5963,25 @@ function isPidAlive(pid) {
   }
 }
 function acquireLock(lockPath) {
-  fs26.mkdirSync(path26.dirname(lockPath), { recursive: true });
+  fs27.mkdirSync(path27.dirname(lockPath), { recursive: true });
   const pid = process.pid;
   try {
-    fs26.writeFileSync(lockPath, String(pid), { flag: "wx" });
+    fs27.writeFileSync(lockPath, String(pid), { flag: "wx" });
     return makeHandle(lockPath, pid);
   } catch (error) {
     if (error.code !== "EEXIST") throw error;
   }
   let holderPid = Number.NaN;
   try {
-    holderPid = Number.parseInt(fs26.readFileSync(lockPath, "utf-8").trim(), 10);
+    holderPid = Number.parseInt(fs27.readFileSync(lockPath, "utf-8").trim(), 10);
   } catch {
     holderPid = Number.NaN;
   }
   if (Number.isFinite(holderPid) && isPidAlive(holderPid)) {
     throw new LockHeldError(lockPath, holderPid);
   }
-  fs26.rmSync(lockPath, { force: true });
-  fs26.writeFileSync(lockPath, String(pid), { flag: "wx" });
+  fs27.rmSync(lockPath, { force: true });
+  fs27.writeFileSync(lockPath, String(pid), { flag: "wx" });
   return makeHandle(lockPath, pid);
 }
 function makeHandle(lockPath, pid) {
@@ -5920,8 +5993,8 @@ function makeHandle(lockPath, pid) {
       if (released) return;
       released = true;
       try {
-        const written = fs26.readFileSync(lockPath, "utf-8").trim();
-        if (written === String(pid)) fs26.rmSync(lockPath, { force: true });
+        const written = fs27.readFileSync(lockPath, "utf-8").trim();
+        if (written === String(pid)) fs27.rmSync(lockPath, { force: true });
       } catch {
       }
     }
@@ -6092,11 +6165,11 @@ function assembleStyles() {
         if (value === 0) {
           return 30;
         }
-        let result = 30 + (Math.round(blue) << 2 | Math.round(green) << 1 | Math.round(red));
+        let result2 = 30 + (Math.round(blue) << 2 | Math.round(green) << 1 | Math.round(red));
         if (value === 2) {
-          result += 60;
+          result2 += 60;
         }
-        return result;
+        return result2;
       },
       enumerable: false
     },
@@ -6451,23 +6524,23 @@ function formatChalk(report) {
   lines.push("");
   const byGroup = /* @__PURE__ */ new Map();
   for (const group of GROUP_ORDER) byGroup.set(group, []);
-  for (const result of report.results) {
-    const list = byGroup.get(result.group) ?? [];
-    list.push(result);
-    byGroup.set(result.group, list);
+  for (const result2 of report.results) {
+    const list = byGroup.get(result2.group) ?? [];
+    list.push(result2);
+    byGroup.set(result2.group, list);
   }
   for (const group of GROUP_ORDER) {
     const list = byGroup.get(group) ?? [];
     if (list.length === 0) continue;
     lines.push(source_default.bold(`${GROUP_EMOJI[group]} ${GROUP_LABEL[group]}`));
-    for (const result of list) {
-      const glyph = colorize(SEVERITY_GLYPH[result.severity], result.severity);
-      const name = result.extension ? `${result.name} (${result.extension})` : result.name;
-      lines.push(`  ${glyph} ${source_default.bold(result.id.padEnd(12))} ${name}`);
-      lines.push(`      ${source_default.gray(result.message)}`);
-      if (result.hint) lines.push(`      ${source_default.cyan("hint:")} ${result.hint}`);
-      if (result.reinstallable && result.severity !== "ok" && result.reinstallHint) {
-        lines.push(`      ${source_default.magenta("reinstall:")} ${result.reinstallHint}`);
+    for (const result2 of list) {
+      const glyph = colorize(SEVERITY_GLYPH[result2.severity], result2.severity);
+      const name = result2.extension ? `${result2.name} (${result2.extension})` : result2.name;
+      lines.push(`  ${glyph} ${source_default.bold(result2.id.padEnd(12))} ${name}`);
+      lines.push(`      ${source_default.gray(result2.message)}`);
+      if (result2.hint) lines.push(`      ${source_default.cyan("hint:")} ${result2.hint}`);
+      if (result2.reinstallable && result2.severity !== "ok" && result2.reinstallHint) {
+        lines.push(`      ${source_default.magenta("reinstall:")} ${result2.reinstallHint}`);
       }
     }
     lines.push("");
@@ -6483,12 +6556,12 @@ function formatChalk(report) {
   lines.push(`Duration: ${report.durationMs}ms`);
   return lines.join("\n");
 }
-function redactForJson(result) {
-  const { details, ...rest } = result;
+function redactForJson(result2) {
+  const { details, ...rest } = result2;
   const out = { ...rest };
   if (details && Object.keys(details).length > 0) out.details = details;
-  if (result.envStatus) {
-    out.envStatus = { name: result.envStatus.name, status: result.envStatus.status };
+  if (result2.envStatus) {
+    out.envStatus = { name: result2.envStatus.name, status: result2.envStatus.status };
   }
   return out;
 }
@@ -6528,9 +6601,9 @@ function exitCodeFor(report) {
 }
 
 // .claude/skills/pomogator-doctor/scripts/engine/runner.ts
-import fs27 from "node:fs";
+import fs28 from "node:fs";
 import os7 from "node:os";
-import path27 from "node:path";
+import path28 from "node:path";
 
 // node_modules/yocto-queue/index.js
 var Node = class {
@@ -6614,10 +6687,10 @@ function pLimit(concurrency) {
   };
   const run = async (function_, resolve5, arguments_) => {
     activeCount++;
-    const result = (async () => function_(...arguments_))();
-    resolve5(result);
+    const result2 = (async () => function_(...arguments_))();
+    resolve5(result2);
     try {
-      await result;
+      await result2;
     } catch {
     }
     next();
@@ -6770,9 +6843,9 @@ function buildSummary(results, totalPossible) {
   };
 }
 function loadConfig(homeDir) {
-  const configPath = path27.join(homeDir, ".dev-pomogator", "config.json");
+  const configPath = path28.join(homeDir, ".dev-pomogator", "config.json");
   try {
-    const raw = fs27.readFileSync(configPath, "utf-8");
+    const raw = fs28.readFileSync(configPath, "utf-8");
     const parsed = JSON.parse(raw);
     return { config: parsed, configError: null };
   } catch (error) {
@@ -6791,10 +6864,10 @@ function loadConfig(homeDir) {
 function collectReferencedMcpServers(projectRoot, homeDir) {
   const refs = /* @__PURE__ */ new Set();
   const roots = [
-    path27.join(projectRoot, ".claude", "rules"),
-    path27.join(projectRoot, ".claude", "skills"),
-    path27.join(homeDir, ".claude", "rules"),
-    path27.join(homeDir, ".claude", "skills")
+    path28.join(projectRoot, ".claude", "rules"),
+    path28.join(projectRoot, ".claude", "skills"),
+    path28.join(homeDir, ".claude", "rules"),
+    path28.join(homeDir, ".claude", "skills")
   ];
   const pattern = /mcp__([A-Za-z0-9_-]+)__/g;
   for (const root of roots) {
@@ -6811,7 +6884,7 @@ function collectReferencedMcpServers(projectRoot, homeDir) {
 function walkMarkdown(root, onContent) {
   let entries;
   try {
-    entries = fs27.readdirSync(root, { withFileTypes: true });
+    entries = fs28.readdirSync(root, { withFileTypes: true });
   } catch (error) {
     if (error.code !== "ENOENT") {
       process.stderr.write(`[doctor] walkMarkdown failed for ${root}: ${error.message}
@@ -6820,12 +6893,12 @@ function walkMarkdown(root, onContent) {
     return;
   }
   for (const entry of entries) {
-    const full = path27.join(root, entry.name);
+    const full = path28.join(root, entry.name);
     if (entry.isDirectory()) {
       walkMarkdown(full, onContent);
     } else if (entry.isFile() && full.endsWith(".md")) {
       try {
-        onContent(fs27.readFileSync(full, "utf-8"));
+        onContent(fs28.readFileSync(full, "utf-8"));
       } catch (error) {
         if (error.code !== "ENOENT") {
           process.stderr.write(`[doctor] read failed for ${full}: ${error.message}
@@ -6837,12 +6910,12 @@ function walkMarkdown(root, onContent) {
 }
 function readPackageVersion(projectRoot) {
   const candidates = [
-    path27.join(projectRoot, "node_modules", "dev-pomogator", "package.json"),
-    path27.join(projectRoot, "package.json")
+    path28.join(projectRoot, "node_modules", "dev-pomogator", "package.json"),
+    path28.join(projectRoot, "package.json")
   ];
   for (const p of candidates) {
     try {
-      const parsed = JSON.parse(fs27.readFileSync(p, "utf-8"));
+      const parsed = JSON.parse(fs28.readFileSync(p, "utf-8"));
       if (parsed.version && parsed.name === "dev-pomogator") return parsed.version;
       if (parsed.version) return parsed.version;
     } catch {
@@ -6855,7 +6928,7 @@ function readPackageVersion(projectRoot) {
 // .claude/skills/pomogator-doctor/scripts/engine/index.ts
 async function runDoctor(options = {}, checks = allChecks) {
   const homeDir = options.homeDir ?? os8.homedir();
-  const lockPath = path28.join(homeDir, ".dev-pomogator", "doctor.lock");
+  const lockPath = path29.join(homeDir, ".dev-pomogator", "doctor.lock");
   const lock = acquireLock(lockPath);
   try {
     return await executeChecks(options, checks);
@@ -6867,9 +6940,9 @@ async function runQuiet(options = {}, checks = allChecks) {
   try {
     const report = await runDoctor({ ...options, quiet: true }, checks);
     const homeDir = options.homeDir ?? os8.homedir();
-    const installed = fs28.existsSync(path28.join(homeDir, ".dev-pomogator", "config.json"));
+    const installed = fs29.existsSync(path29.join(homeDir, ".dev-pomogator", "config.json"));
     const actionableCritical = report.results.some(
-      (result) => result.severity === "critical" && result.group !== "needs-external"
+      (result2) => result2.severity === "critical" && result2.group !== "needs-external"
     );
     if (!installed || !actionableCritical) {
       return { continue: true, suppressOutput: true };
@@ -6942,7 +7015,7 @@ ${usage6()}
 `);
   process.exitCode = exitCodeFor(report);
 }
-var invokedPath6 = process.argv[1] ? path28.resolve(process.argv[1]) : "";
+var invokedPath6 = process.argv[1] ? path29.resolve(process.argv[1]) : "";
 if (invokedPath6 && import.meta.url === pathToFileURL6(invokedPath6).href) {
   void main7().catch((error) => {
     process.stderr.write(`pomogator-doctor failed: ${error instanceof Error ? error.message : String(error)}
@@ -6951,7 +7024,7 @@ if (invokedPath6 && import.meta.url === pathToFileURL6(invokedPath6).href) {
   });
 }
 function lockPathFor(homeDir) {
-  return path28.join(homeDir, ".dev-pomogator", "doctor.lock");
+  return path29.join(homeDir, ".dev-pomogator", "doctor.lock");
 }
 function emptyReport() {
   return {

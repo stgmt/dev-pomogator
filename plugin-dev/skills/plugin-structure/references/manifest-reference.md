@@ -279,9 +279,8 @@ Hook configuration location or inline definition.
         "matcher": "Write",
         "hooks": [
           {
-            "type": "command",
-            "command": "bash ${CLAUDE_PLUGIN_ROOT}/scripts/validate.sh",
-            "timeout": 30
+            "type": "http",
+            "url": "http://127.0.0.1:<approved-port>/hooks"
           }
         ]
       }
@@ -289,6 +288,8 @@ Hook configuration location or inline definition.
   }
 }
 ```
+
+For dev-pomogator-managed hot-path events, register the same `{ event, matcher, route }` in the approved hook registry and use its authenticated localhost HTTP transport. Do not use `bash`, `sh`, `.sh`, or inline `node -e`; the documented `SessionStart` `hook-service-bootstrap` is the only command-hook exception.
 
 **Use cases**:
 - Simple plugins: Inline configuration (< 50 lines)

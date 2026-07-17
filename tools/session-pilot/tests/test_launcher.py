@@ -234,7 +234,22 @@ def test_SP053_autostart_hook_registered_in_both_manifests():
         d = json.loads(manifest_path.read_text(encoding="utf-8"))
         ss = d.get("hooks", {}).get("SessionStart", [])
         cmds = [h.get("command", "") for e in ss for h in e.get("hooks", [])]
-        return any("session-pilot/autostart_hook.ts" in c for c in cmds)
+        if any("session-pilot/autostart_hook.ts" in c for c in cmds):
+            return True
+
+        # Shell-free hook transport aggregates all legacy SessionStart handlers
+        # behind one distributed bootstrap. Prove the autostart route travels in
+        # the generated registry rather than requiring a per-handler command.
+        if any("hook-service/session-bootstrap.mjs" in c for c in cmds):
+            registry_path = root / "tools" / "hook-service" / "registry.json"
+            if registry_path.is_file():
+                registry = json.loads(registry_path.read_text(encoding="utf-8"))
+                return any(
+                    route.get("target") == "tools/session-pilot/autostart_hook.ts"
+                    and route.get("event") == "SessionStart"
+                    for route in registry.get("routes", {}).values()
+                )
+        return False
 
     assert _wired(root / ".claude-plugin" / "hooks.json"), \
         "autostart_hook.ts NOT in .claude-plugin/hooks.json -> won't travel to other machines"

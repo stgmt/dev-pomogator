@@ -152,9 +152,13 @@ fi
 - Can detect secrets in content
 - Easy to extend criteria
 
+## Windows-safe managed hook migration
+
+For dev-pomogator-managed hooks, migrate all steady-state events to the approved authenticated localhost HTTP registry; add the exact `{ event, matcher, route }` record to that registry. Do not replace one shell command with another, and do not use inline `node -e`. The only retained command hook is a documented `SessionStart` `hook-service-bootstrap` that starts or checks the service. Run `npm run check:hook-review` before push.
+
 ## When to Keep Command Hooks
 
-Command hooks still have their place:
+Command hooks still have their place outside the managed hot path:
 
 ### 1. Deterministic Performance Checks
 

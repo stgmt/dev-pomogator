@@ -2,6 +2,8 @@
 
 Список файлов, которые будут добавлены/изменены при реализации фичи.
 
+Hook-service scope: `tools/hook-service/` owns the shared authenticated loopback transport, allowlisted `CLAUDE_ENV_FILE` projection, authentication header, byte-CAS state/settings persistence, and recovery [FR-13](FR.md#fr-13-plugin-hooks-use-one-authenticated-loopback-service). `tests/hook-service.test.mjs`, `tests/features/core024.feature`, and the installed-cache deps-absent WSL soak harness provide contract, recovery, and endurance evidence without changing task truth [FR-13](FR.md#fr-13-plugin-hooks-use-one-authenticated-loopback-service), [FR-14](FR.md#fr-14-plugin-hook-commands-are-portable-deps-absent-safe-and-fail-open).
+
 | File | Change | Requirement |
 |---|---|---|
 | `tools/_shared/hook-dispatch.sh` | Add shared POSIX shell pre-Node dispatch for canonical plugin and dogfood hooks: reject host BDD before Node, select POSIX `node` versus Windows `node.exe`, and delegate the guarded target. | [FR-14](FR.md#fr-14-plugin-hook-commands-are-portable-deps-absent-safe-and-fail-open) |
@@ -35,3 +37,8 @@
 | `CLAUDE.md` | edit | Update Architecture section: canonical marketplace plugin distribution, hand-maintained manifests + drift test, deprecated npm install path |
 | `README.md` | edit | NEW install commands: `/plugin marketplace add stgmt/dev-pomogator` + `/plugin install dev-pomogator@stgmt`; remove npm install instructions; v1→v2 migration guide |
 | `.specs/dev-pomogator-canonical-plugin/CHANGELOG.md` | edit | Update v2.0 BREAKING changes для canonical marketplace approach (removes npm postinstall + .gitignore writes; adds marketplace.json) |
+
+| `tools/hook-review/check.ts` | Review declarative registrations against the approved local HTTP registry; reject shell/inline Node hot paths, unapproved transport, and registry drift while permitting the documented SessionStart bootstrap. | [FR-15](FR.md#fr-15-managed-hot-path-hooks-are-http-registrations)–[FR-23](FR.md#fr-23-hook-registry-is-the-transport-source-of-truth) |
+| `tools/hook-service/` | Provide the local authenticated HTTP hook-service runtime named by the reviewed transport contract. | [FR-16](FR.md#fr-16-http-hook-routes-are-registry-approved), [FR-17](FR.md#fr-17-http-hook-transport-declares-bearer-environment-authentication), [FR-20](FR.md#fr-20-http-hook-commands-remain-shell-free-on-windows) |
+| `tests/features/core/CORE024_hook-review.feature`, `tests/step_definitions/feature24_hook_review.ts` | Execute negative and positive HTTP hook-review BDD scenarios against the real review gate. | [FR-24](FR.md#fr-24-http-hook-policy-has-executable-bdd-coverage), [AC-10](ACCEPTANCE_CRITERIA.md#ac-10-fr-15-fr-24) |
+| `.specs/dev-pomogator-canonical-plugin/*` | Specify the HTTP policy, evidence boundary, contract, verification, and ownership for issue #123. | [FR-15](FR.md#fr-15-managed-hot-path-hooks-are-http-registrations)–[FR-24](FR.md#fr-24-http-hook-policy-has-executable-bdd-coverage) |

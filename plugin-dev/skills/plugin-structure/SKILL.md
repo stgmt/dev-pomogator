@@ -212,19 +212,20 @@ hooks/
     └── check-style.sh   # Hook script
 ```
 
-**Configuration format**:
+**Configuration format (managed Windows-safe hooks)**:
 ```json
 {
   "PreToolUse": [{
     "matcher": "Write|Edit",
     "hooks": [{
-      "type": "command",
-      "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/scripts/validate.sh",
-      "timeout": 30
+      "type": "http",
+      "url": "http://127.0.0.1:<approved-port>/hooks"
     }]
   }]
 }
 ```
+
+The `{ event, matcher, route }` entry must also appear in the approved hook registry. Never use `bash`, `sh`, a `.sh` script, or inline `node -e` for a managed hot-path event: each creates a Windows shell process. A documented `SessionStart` `hook-service-bootstrap` command is the sole bootstrap exception.
 
 **Available events**: PreToolUse, PostToolUse, Stop, SubagentStop, SessionStart, SessionEnd, UserPromptSubmit, PreCompact, Notification
 

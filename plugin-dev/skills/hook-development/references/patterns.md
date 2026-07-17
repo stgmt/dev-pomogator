@@ -2,6 +2,8 @@
 
 This reference provides common, proven patterns for implementing Claude Code hooks. Use these patterns as starting points for typical hook use cases.
 
+> Windows authoring rule: dev-pomogator-managed hot-path hooks use the approved authenticated localhost HTTP registry. Do not copy the legacy Bash examples below into `PreToolUse`, `PostToolUse`, `Stop`, `SubagentStop`, `UserPromptSubmit`, `SessionEnd`, `PreCompact`, or `Notification`. A `SessionStart` `hook-service-bootstrap` may start or verify that service only. Validate registrations with `npm run check:hook-review`.
+
 ## Pattern 1: Security Validation
 
 Block dangerous file writes using prompt-based hooks:

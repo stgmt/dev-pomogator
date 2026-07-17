@@ -152,19 +152,31 @@ Then(/^plugin-installed dispatch anchors on CLAUDE_PLUGIN_ROOT and repository-do
   };
   const canonicalCommands = commands(canonical.hooks);
   const dogfoodCommands = commands(dogfood.hooks);
-  assert.ok(canonicalCommands.length > 0, 'canonical manifest must contain hook commands');
-  assert.ok(dogfoodCommands.length > 0, 'dogfood settings must contain hook commands');
-  for (const command of canonicalCommands) assert.match(command, /CLAUDE_PLUGIN_ROOT/);
-  // Shell-only hooks may remain plugin-root anchored. Every dispatcher-backed
-  // dogfood command must resolve its child through the real project anchor,
-  // rather than a raw CWD. The prior dispatcher scenarios execute the real
-  // shell runtime from a foreign CWD; this assertion covers the configuration
-  // branch passed to that runtime.
-  const dispatchedDogfood = dogfoodCommands.filter((value) => value.includes('hook-runtime.sh'));
-  assert.ok(dispatchedDogfood.length > 0, 'dogfood settings must route hooks through the runtime dispatcher');
-  for (const command of dispatchedDogfood) {
-    assert.match(command, /CLAUDE_PROJECT_DIR/);
-    assert.doesNotMatch(command, /process\.cwd\(\).*tools\/_shared\/bootstrap/);
+  assert.deepEqual(canonicalCommands, [
+    'node "${CLAUDE_PLUGIN_ROOT:-${CLAUDE_PROJECT_DIR:-.}}/tools/hook-service/session-bootstrap.mjs"',
+  ], 'canonical manifest must retain only the cross-CWD SessionStart bootstrap command');
+  assert.deepEqual(dogfoodCommands, canonicalCommands, 'dogfood and canonical bootstrap commands must stay identical');
+
+  const httpHooks = (value: unknown): Array<{ url: string; headers?: Record<string, string>; allowedEnvVars?: string[] }> => {
+    const found: Array<{ url: string; headers?: Record<string, string>; allowedEnvVars?: string[] }> = [];
+    const visit = (node: unknown): void => {
+      if (!node || typeof node !== 'object') return;
+      if ('type' in node && (node as { type?: unknown }).type === 'http' && 'url' in node) {
+        found.push(node as { url: string; headers?: Record<string, string>; allowedEnvVars?: string[] });
+      }
+      for (const child of Object.values(node)) visit(child);
+    };
+    visit(value);
+    return found;
+  };
+  const canonicalHttp = httpHooks(canonical.hooks);
+  const dogfoodHttp = httpHooks(dogfood.hooks);
+  assert.equal(canonicalHttp.length, 39, 'canonical manifest must expose all steady-state routes over HTTP');
+  assert.deepEqual(dogfoodHttp, canonicalHttp, 'dogfood HTTP routes must match canonical routes');
+  for (const hook of canonicalHttp) {
+    assert.match(hook.url, /^http:\/\/127\.0\.0\.1:42619\/v1\/dispatch\//);
+    assert.equal(hook.headers?.['x-dev-pomogator-token'], '${DEV_POMOGATOR_HOOK_TOKEN}');
+    assert.ok(hook.allowedEnvVars?.includes('DEV_POMOGATOR_HOOK_TOKEN'));
   }
 });
 

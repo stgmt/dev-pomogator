@@ -337,3 +337,19 @@ Feature: CANON001 Canonical Claude Code Marketplace Plugin
     And a permitted hook invocation uses `node`, not `node.exe`
     And the permitted hook invocation continues fail-open despite the doctor failure
     And plugin-installed dispatch anchors on CLAUDE_PLUGIN_ROOT and repository-dogfood dispatch anchors on CLAUDE_PROJECT_DIR, not process CWD
+
+  # --- FR-15–FR-24: shell-free HTTP managed hook policy ---
+
+  @feature15 @feature16 @feature17 @feature18 @feature20 @feature21 @feature22 @feature23 @feature24
+  Scenario: CORE024_01 hook review rejects shell, inline Node, unapproved transport, and registry drift
+    Given an approved local HTTP hook registry
+    And a managed hook manifest containing shell, inline Node, drifted, and unapproved hook commands
+    When I run the hook review gate
+    Then the gate rejects every prohibited managed hook with its reason
+
+  @feature15 @feature16 @feature17 @feature19 @feature21 @feature22 @feature23 @feature24
+  Scenario: CORE024_02 hook review permits approved HTTP hook and SessionStart bootstrap
+    Given an approved local HTTP hook registry
+    And a managed hook manifest containing an approved HTTP hook and documented SessionStart bootstrap
+    When I run the hook review gate
+    Then the hook review gate exits successfully

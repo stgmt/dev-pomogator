@@ -99,3 +99,17 @@ AND on POSIX SHALL invoke `node`, not `node.exe`
 AND its doctor decision SHALL be isolated to the active session and project CWD
 AND a missing, failed, or malformed doctor result SHALL preserve the original hook action rather than block it.
 AND plugin-installed dispatch SHALL resolve its launcher from `CLAUDE_PLUGIN_ROOT` and repository-dogfood dispatch from `CLAUDE_PROJECT_DIR`, never from process CWD.
+
+## AC-10 (FR-15–FR-24)
+
+**Requirement:** [FR-15](FR.md#fr-15-managed-hot-path-hooks-are-http-registrations)–[FR-24](FR.md#fr-24-http-hook-policy-has-executable-bdd-coverage)
+
+WHEN review receives managed shell, inline Node, registry-drift, and unapproved HTTP registrations
+THEN it SHALL return one actionable finding for each prohibited registration without network I/O
+AND SHALL distinguish shell/inline Node, unapproved authenticated transport, and registry drift.
+
+WHEN review receives an approved registry-backed HTTP hook and the documented plugin-root `SessionStart` bootstrap
+THEN it SHALL return no findings
+AND the registry SHALL declare bearer-environment authentication without containing a bearer token value.
+
+**BDD:** `CORE024_01`, `CORE024_02` in `tests/features/core/CORE024_hook-review.feature`; `tests/step_definitions/feature24_hook_review.ts`.

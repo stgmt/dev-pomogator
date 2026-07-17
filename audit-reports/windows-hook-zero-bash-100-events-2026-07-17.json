@@ -1,0 +1,24 @@
+{
+  "capturedAt": "2026-07-17",
+  "platform": "Windows 11",
+  "scope": "dev-pomogator shell-free HTTP hook service",
+  "pluginRoot": "E:/repos/dev-pomogator-shell-free-hooks",
+  "method": {
+    "bootstrap": "node tools/hook-service/session-bootstrap.mjs with isolated DEV_POMOGATOR_STATE_DIR",
+    "events": 100,
+    "route": "UserPromptSubmit/1/0",
+    "transport": "authenticated HTTP POST to 127.0.0.1:42619",
+    "eventDriver": "node.exe fetch; no shell command used per event"
+  },
+  "result": {
+    "bootstrapExitCode": 0,
+    "eventsAttempted": 100,
+    "eventsPassed": 100,
+    "eventsFailed": 0,
+    "devPomogatorBashStarts": 0,
+    "bashProcessCountBefore": 34,
+    "bashProcessCountAfter": 3
+  },
+  "interpretation": "The 100-event driver started only node.exe and all events completed over authenticated loopback HTTP. No dev-pomogator command in the measured path invoked bash.exe. The machine-wide bash process count decreased during the run; that count includes unrelated concurrent sessions and is not used as a causal kernel-pool claim.",
+  "remainingEvidence": "A separate one-hour Security 4798 and PoolMon before/after comparison with WSL running is still required before attributing kernel-pool growth to the old hook transport."
+}

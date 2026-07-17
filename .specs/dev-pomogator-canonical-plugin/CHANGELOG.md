@@ -10,6 +10,13 @@ All notable changes to this feature will be documented in this file.
 - **`.claude-plugin/plugin.json`** — canonical plugin manifest с required name + optional version/description/author per Anthropic plugins-reference.md. FR-1, FR-9.
 - **Hand-authored canonical манифеста** в `.claude-plugin/` (`plugin.json`, `marketplace.json`, `hooks.json`) — поддерживаются вручную, не генерируются. Drift test (`tests/e2e/canonical-plugin.test.ts`) guard'ит синхронизацию: каждая hooks.json команда резолвится в on-disk скрипт под `tools/` (и vice-versa) + manifest schema validity. FR-1, FR-9.
 - **`tools/migrate-v1-to-v2.ts`** — standalone optional cleanup script для пользователей переходящих с v1 install. User-driven (запускается explicitly через `npx tsx`), не часть plugin install flow (Anthropic plugin model запрещает project file writes из plugin runtime). FR-7.
+
+### Issue #123 pending recovery verification
+
+- Runtime/authentication/migration/review/doctor/focused-test acceptance remains **IN_PROGRESS**. The only acceptance baseline is the resolved `origin/main` commit; `HEAD`, worktrees, user-global state, installed caches, and a repository with `node_modules` are not substitutes.
+- The pending proof is an installed canonical-plugin, dependencies-absent run with no installed-cache leakage. It must show portable POSIX/Git-atomic best effort, session-plus-canonical-project-CWD once-only recovery, fail-open dispatch, and POSIX `node` versus Windows `node.exe` selection.
+- `plugin-deps` retains BDD ownership. `PLUGINDEPS001_03` must be defined and passing before it becomes acceptance evidence. `/pomogator-doctor`, focused Docker/WSL tests, `CORE024` boundary compatibility, and the 100-event recovery sequence are required review inputs; the WSL one-hour limit and any `4798`/`PoolMon` observation are operational records, not product-pass signals.
+- PR review is pending. Merge and post-merge cleanup are TODO until the independent review and required focused evidence are green.
 - **Scope-aware install** через canonical `--scope user|project|local` flags Anthropic mechanism. Default = user (per plugin-marketplaces.md). FR-5.
 - **Desktop UI integration** through canonical «**+** → Plugins» browser. Verified per `desktop-quickstart.md`. FR-11.
 
@@ -84,3 +91,8 @@ b. **Manual cleanup** (если предпочитаете контроль):
 ## [1.x] - до этой спеки
 
 См. existing `.specs/personal-pomogator/CHANGELOG.md` для FR-1..FR-9 personal-pomogator scope (gitignore marker, settings.local.json, self-guard, uninstall scope) — v2 spec заменяет ту architecture canonical Anthropic mechanism.
+
+## Unreleased — issue #123: Windows shell-free HTTP hooks
+
+- Added FR-15–FR-24 and AC-10 for registry-approved, bearer-environment-authenticated HTTP managed hooks, the SessionStart exception, Windows shell-free policy, offline review, actionable findings, and executable BDD coverage.
+- Documented the implementation boundary: hook-review/service/runtime and manifest changes are separately owned; this change reconciles specification with existing CORE024 BDD evidence.
