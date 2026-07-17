@@ -207,7 +207,7 @@ Each managed HTTP URL SHALL match an approved local registry entry for the same 
 
 ## FR-17: HTTP hook transport declares bearer-environment authentication
 
-The approved registry SHALL declare HTTP transport with `bearer-env` authentication and the environment-variable name that provides the token. Token values SHALL not be committed.
+The approved registry SHALL declare HTTP transport with `bearer-env` authentication and the environment-variable name that provides the token. `DEV_POMOGATOR_HOOK_TOKEN` SHALL be provisioned before manifest activation and loaded by the Claude Code parent process before native HTTP dispatch. The credential SHALL remain byte-stable across ordinary hook-service restarts. Token values SHALL not be committed, embedded in URLs, or printed. A late `CLAUDE_ENV_FILE` write SHALL NOT count as evidence that the parent process can authenticate native HTTP hooks.
 
 **AC:** [AC-10](ACCEPTANCE_CRITERIA.md#ac-10-fr-15-fr-24)
 

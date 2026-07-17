@@ -4,6 +4,7 @@ import { spawn } from 'node:child_process';
 import http from 'node:http';
 import { join, resolve, relative, isAbsolute, win32 } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { fingerprint } from './credential.mjs';
 
 export const HOST = '127.0.0.1', PORT = 42619, VERSION = '1.0.0';
 export const stateDir = () => process.env.DEV_POMOGATOR_STATE_DIR || join(process.env.LOCALAPPDATA || process.env.XDG_STATE_HOME || process.env.HOME || '.', 'dev-pomogator', 'hook-service');
@@ -98,7 +99,7 @@ export async function startServer({ pluginRoot, token, port = PORT } = {}) {
       if (!local(request)) return json(response, 403, { error: 'loopback only' });
       const url = new URL(request.url || '/', `http://${HOST}:${port}`);
       if (!tokenMatches(request.headers['x-dev-pomogator-token'], token)) return json(response, 401, { error: 'unauthorized' });
-      if (url.pathname === '/health') return json(response, 200, { service: 'dev-pomogator-hook-service', version: VERSION });
+      if (url.pathname === '/health') return json(response, 200, { service: 'dev-pomogator-hook-service', version: VERSION, tokenFingerprint: fingerprint(token) });
       if (request.method !== 'POST') return json(response, 405, { error: 'POST required' });
       let input;
       try { input = JSON.parse(await body(request)); } catch { return json(response, 400, { error: 'invalid JSON' }); }
