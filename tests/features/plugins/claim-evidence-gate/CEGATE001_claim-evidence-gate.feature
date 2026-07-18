@@ -310,3 +310,27 @@ Feature: CEGATE001 Claim-Evidence Gate
     Given a sequence of door edits across two specs ending with one spec last, then ending with the other last, then one ending on a .feature-only edit, then no edits at all
     When the gate determines the most recently edited spec
     Then it returns the spec truly edited last, treats a .feature-only edit as not taking ownership, and returns null when nothing was edited
+
+  # @feature11
+  Scenario: CEGATE001_58 A flag-less async Agent launch of the newer harness counts as in-flight
+    Given an Agent was launched without any run_in_background field and only its launch-ACK arrived
+    When the gate counts in-flight helpers for the flag-less launch
+    Then it reports the flag-less agent as in flight because the ACK never clears it
+
+  # @feature11
+  Scenario: CEGATE001_59 A flag-less launch is cleared by its completion notification or a sync-mode result
+    Given one flag-less launch got its task-notification completion and another got a sync-mode final report tool_result
+    When the gate counts in-flight helpers after both completions
+    Then it reports zero in flight for both completion shapes
+
+  # @feature11
+  Scenario: CEGATE001_60 SendMessage to a spawned agent re-arms the wait until its notification lands
+    Given a SendMessage resumed a spawned agent and only its resumed-in-background ACK arrived
+    When the gate counts in-flight helpers for the resumed agent
+    Then it reports the resumed agent as in flight, and zero once its task-notification lands
+
+  # @feature11
+  Scenario: CEGATE001_61 The real incident stop text passes the awaits-result hint
+    Given the verbatim stop text of the 2026-07-18 incident that awaits four collector reports
+    When the awaits-result hint is tested against that text
+    Then the hint matches, so the judge sees the next step as consuming the pending reports

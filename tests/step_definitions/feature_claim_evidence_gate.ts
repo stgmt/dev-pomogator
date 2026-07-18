@@ -15,7 +15,7 @@ import path from 'node:path';
 import os from 'node:os';
 import assert from 'node:assert/strict';
 import { classify, firstUnsupported, stripCode } from '../../tools/claim-evidence-gate/claim_classifier.ts';
-import { extractTurnWindow, bgInFlightInWindow, lastUserPrompt, agentBgInFlightCount, agentBgInFlight, sessionUserPrompts, latestActionableStopFeedback } from '../../tools/claim-evidence-gate/turn_window.ts';
+import { extractTurnWindow, bgInFlightInWindow, lastUserPrompt, agentBgInFlightCount, agentBgInFlight, sessionUserPrompts, latestActionableStopFeedback, AWAITS_RESULT_RE } from '../../tools/claim-evidence-gate/turn_window.ts';
 import { agentOpenTodoCount, liveOpenForUncensusedSlugs, lastEditedSpecSlug } from '../../tools/spec-graph/task-census.ts';
 import { gateSelfEdit, selfMarkedBlockedOrBacklog } from '../../tools/claim-evidence-gate/game_guard_facts.ts';
 import { buildJudgeNoTokenDemand, resolveEndpoint, isJudgeArmed } from '../../tools/claim-evidence-gate/meridian-judge.ts';
@@ -733,4 +733,85 @@ When<CegWorld>('the gate determines the most recently edited spec', function () 
 });
 Then<CegWorld>('it returns the spec truly edited last, treats a .feature-only edit as not taking ownership, and returns null when nothing was edited', function () {
   assert.deepEqual(this.cegRecencyResults, ['alpha', 'beta', 'alpha', null], `lastEditedSpecSlug results wrong: ${JSON.stringify(this.cegRecencyResults)}`);
+});
+
+// ── CEGATE001_58..61: flag-less async agents of the newer harness (FR-32..FR-34) ─────────────────
+// Fixture shapes trimmed from the REAL lm-saas transcript 0704ee11 (incident 2026-07-18): the newer
+// harness launches Agent WITHOUT a run_in_background field, ACKs with «Async agent launched
+// successfully…», completes via a task-notification carrying the launch's tool_use id; SendMessage
+// resumes an agent with its own id + «resumed from transcript in the background» ACK.
+const FLAGLESS_ACK =
+  'Async agent launched successfully. (This tool result is internal metadata — never quote or paste any part of it, including the agentId below, into a user-facing reply.)\nagentId: a9540dcf60b8fd473';
+const SENDMSG_ACK =
+  '{"success":true,"message":"Agent \\"a9540dcf60b8fd473\\" had no active task; resumed from transcript in the background with your message. You\'ll be notified when it finishes."}';
+const cegNotif = (id: string): Block =>
+  U(`<task-notification>\n<task-id>a9540dcf60b8fd473</task-id>\n<tool-use-id>${id}</tool-use-id>\n<status>completed</status>\n<summary>Agent "OpenRouter happyhorse pricing research" finished</summary>\n</task-notification>`);
+const cegToolResult = (id: string, content: string): Block => ({ type: 'user', message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: id, content }] } });
+const cegFlaglessLaunch = (id: string, description: string): Block =>
+  A([{ type: 'tool_use', id, name: 'Agent', input: { description, prompt: 'Проследи прайсинг happyhorse до нуля на витрине' } }]);
+const cegJoin = (rows: Block[]): string => rows.map((r) => JSON.stringify(r)).join('\n');
+
+Given<CegWorld>('an Agent was launched without any run_in_background field and only its launch-ACK arrived', function (this: CegWorld & { cegFlaglessRaw?: string }) {
+  this.cegFlaglessRaw = cegJoin([
+    U('разберись с прайсингом'),
+    cegFlaglessLaunch('toolu_01Uk', 'OpenRouter happyhorse pricing research'),
+    cegToolResult('toolu_01Uk', FLAGLESS_ACK),
+    A([txt('Жду отчёт сборщика.')]),
+  ]);
+});
+When<CegWorld>('the gate counts in-flight helpers for the flag-less launch', function (this: CegWorld & { cegFlaglessRaw?: string; cegFlaglessCount?: number }) {
+  this.cegFlaglessCount = agentBgInFlightCount(this.cegFlaglessRaw!);
+});
+Then<CegWorld>('it reports the flag-less agent as in flight because the ACK never clears it', function (this: CegWorld & { cegFlaglessCount?: number }) {
+  assert.equal(this.cegFlaglessCount, 1, `flag-less launch not counted in flight: ${this.cegFlaglessCount}`);
+});
+
+Given<CegWorld>('one flag-less launch got its task-notification completion and another got a sync-mode final report tool_result', function (this: CegWorld & { cegDoneNotifRaw?: string; cegDoneSyncRaw?: string }) {
+  this.cegDoneNotifRaw = cegJoin([
+    U('разберись с прайсингом'),
+    cegFlaglessLaunch('toolu_01Uk', 'OpenRouter happyhorse pricing research'),
+    cegToolResult('toolu_01Uk', FLAGLESS_ACK),
+    cegNotif('toolu_01Uk'),
+    A([txt('Отчёт получен, свожу.')]),
+  ]);
+  this.cegDoneSyncRaw = cegJoin([
+    U('разберись с прайсингом'),
+    cegFlaglessLaunch('toolu_02Sy', 'Trace catalog pricing pipeline zeros'),
+    cegToolResult('toolu_02Sy', 'Итог: happyhorse в конфигах не найден, цена приходит нулём из relay. Полный список файлов ниже.'),
+    A([txt('Результат в руках, продолжаю.')]),
+  ]);
+});
+When<CegWorld>('the gate counts in-flight helpers after both completions', function (this: CegWorld & { cegDoneNotifRaw?: string; cegDoneSyncRaw?: string; cegDonePair?: number[] }) {
+  this.cegDonePair = [agentBgInFlightCount(this.cegDoneNotifRaw!), agentBgInFlightCount(this.cegDoneSyncRaw!)];
+});
+Then<CegWorld>('it reports zero in flight for both completion shapes', function (this: CegWorld & { cegDonePair?: number[] }) {
+  assert.deepEqual(this.cegDonePair, [0, 0], `completion shapes did not clear: ${JSON.stringify(this.cegDonePair)}`);
+});
+
+Given<CegWorld>('a SendMessage resumed a spawned agent and only its resumed-in-background ACK arrived', function (this: CegWorld & { cegSendRaw?: string; cegSendDoneRaw?: string }) {
+  const rows = [
+    U('запроси полный отчёт'),
+    A([{ type: 'tool_use', id: 'toolu_017k', name: 'SendMessage', input: { to: 'a9540dcf60b8fd473', summary: 'Верни полные находки исследования прайсинга' } }]),
+    cegToolResult('toolu_017k', SENDMSG_ACK),
+    A([txt('Запросил у сборщика полный отчёт — жду.')]),
+  ];
+  this.cegSendRaw = cegJoin(rows);
+  this.cegSendDoneRaw = cegJoin([...rows.slice(0, 3), cegNotif('toolu_017k'), rows[3]]);
+});
+When<CegWorld>('the gate counts in-flight helpers for the resumed agent', function (this: CegWorld & { cegSendRaw?: string; cegSendDoneRaw?: string; cegSendPair?: number[] }) {
+  this.cegSendPair = [agentBgInFlightCount(this.cegSendRaw!), agentBgInFlightCount(this.cegSendDoneRaw!)];
+});
+Then<CegWorld>('it reports the resumed agent as in flight, and zero once its task-notification lands', function (this: CegWorld & { cegSendPair?: number[] }) {
+  assert.deepEqual(this.cegSendPair, [1, 0], `SendMessage lifecycle wrong: ${JSON.stringify(this.cegSendPair)}`);
+});
+
+Given<CegWorld>('the verbatim stop text of the 2026-07-18 incident that awaits four collector reports', function (this: CegWorld & { cegIncidentText?: string }) {
+  this.cegIncidentText =
+    'Запросил у сборщика полный отчёт — он перезапущен и вернёт находки текстом.\n\nДальше: жду отчёты всех четырёх сборщиков (уведомления придут автоматически), затем свожу анализ и оформляю спеку.';
+});
+When<CegWorld>('the awaits-result hint is tested against that text', function (this: CegWorld & { cegIncidentText?: string; cegAwaitsHint?: boolean }) {
+  this.cegAwaitsHint = AWAITS_RESULT_RE.test(this.cegIncidentText!);
+});
+Then<CegWorld>('the hint matches, so the judge sees the next step as consuming the pending reports', function (this: CegWorld & { cegAwaitsHint?: boolean }) {
+  assert.equal(this.cegAwaitsHint, true, 'AWAITS_RESULT_RE must match the real incident stop text');
 });

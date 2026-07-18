@@ -190,6 +190,7 @@ function bgCommandInFlight(rawTranscript) {
   return lastLaunchIdx >= 0 && lastLaunchIdx > lastCompletionIdx;
 }
 var BG_RESULT_DONE_RE = /completed|came to rest|exit code|finished/i;
+var BG_LAUNCH_ACK_RE = /launched successfully|resumed from transcript|running in the background|You'?ll be notified when it finish|Message (?:sent|delivered|queued)/i;
 var BG_TAG_ID_RE = /<tool-use-id>([^<]+)<\/tool-use-id>/g;
 function agentBgInFlightCount(rawTranscript) {
   const lines = parseLines(rawTranscript);
@@ -200,9 +201,9 @@ function agentBgInFlightCount(rawTranscript) {
       const bb = b;
       if (bb?.type !== "tool_use") continue;
       const nm = String(bb.name ?? "").toLowerCase();
-      if (nm !== "agent" && nm !== "task") continue;
+      if (nm !== "agent" && nm !== "task" && nm !== "sendmessage") continue;
       const inp = bb.input;
-      if (!inp || typeof inp !== "object" || inp.run_in_background !== true) continue;
+      if (inp && typeof inp === "object" && inp.run_in_background === false) continue;
       const id = typeof bb.id === "string" ? bb.id : "";
       if (id) inFlight.add(id);
     }
@@ -218,7 +219,7 @@ function agentBgInFlightCount(rawTranscript) {
       } catch {
         content = "";
       }
-      if (BG_RESULT_DONE_RE.test(content)) inFlight.delete(bb.tool_use_id);
+      if (!BG_LAUNCH_ACK_RE.test(content)) inFlight.delete(bb.tool_use_id);
     }
     let serialized = "";
     try {
@@ -234,6 +235,7 @@ function agentBgInFlightCount(rawTranscript) {
   }
   return inFlight.size;
 }
+var AWAITS_RESULT_RE = /когда\s+придёт|как\s+придёт|по\s+результату|результат[ауые]?\b[^.]{0,40}(?:обработ|свер|прочит|проверю|коммич|закоммич)|если\s+(?:\d|зел[её]н|green|ок\b|чисто)|при\s+зел[её]н|жд[уё]м?\s+(?:отч[её]т|результат)|отч[её]т\w*[^.]{0,40}прид(?:ут|[её]т)|прид(?:ут|[её]т)\s+автоматически|после\s+(?:отч[её]т|результат)\w*|затем\s+(?:свожу|свед|обработ|оформ|проанализ|сверю)|when\s+it\s+(?:returns|lands|completes|finishes)|on\s+the\s+result|once\s+it\s+(?:returns|lands|completes)|waiting\s+for\s+(?:the\s+)?reports?|once\s+the\s+reports?\s+(?:arrive|land|come)/i;
 var HOOK_INJECTION_RE = /^\s*(📋|👉|…ещё|\[specs-validator\]|⚠️|PHASE GATE WARNING|Stop hook feedback|Stop hook blocking error|UserPromptSubmit hook|<\/?task-notification|<(?:task-id|tool-use-id|output-file|status|summary)|<\/?command-(?:name|message|args)|<\/?local-command-(?:stdout|caveat)|\[SYSTEM NOTIFICATION|This is an automated|Do NOT interpret|[A-Za-z][\w.-]*:\s*\d+\s*(?:open|⏸))/u;
 var ACTIONABLE_STOP_FEEDBACK_RE = /(?:Stop hook feedback|Stop hook blocking error)[\s\S]{0,1200}(?:TASK_UNTESTED|done without a strong test|Strengthen the test|blocking error|blocked|не закрыто|Нужно:|run\s+\S|fix\s+\S|почини|исправь|доделай)/i;
 var INTERRUPTED_PROMPT_RE = /^\s*\[Request interrupted by user(?: for tool use)?\]\s*$/i;
@@ -1040,7 +1042,6 @@ async function main() {
   const selfMarkedBlockedOrBacklogThisTurn = selfMarkedBlockedOrBacklog(toolUses);
   const agentBgCount = agentBgInFlightCount(rawTranscript);
   const awaitingAsync = bgInFlightInWindow(rawTranscript) || bgJobMarkerActive(repoRoot) || agentBgCount > 0 || bgCommandInFlight(rawTranscript);
-  const AWAITS_RESULT_RE = /когда\s+придёт|как\s+придёт|по\s+результату|результат[ауые]?\b[^.]{0,40}(?:обработ|свер|прочит|проверю|коммич|закоммич)|если\s+(?:\d|зел[её]н|green|ок\b|чисто)|при\s+зел[её]н|when\s+it\s+(?:returns|lands|completes|finishes)|on\s+the\s+result|once\s+it\s+(?:returns|lands|completes)/i;
   const nextStepAwaitsResult = awaitingAsync && AWAITS_RESULT_RE.test(claimText);
   nextStep = selectNextStepRoute({
     transcriptPath: tx,

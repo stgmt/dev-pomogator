@@ -161,8 +161,12 @@ PY
 fi
 # Windows/WSL bind mounts can let shell `touch` create a file while Node's
 # formatter open(create) fails with ENOENT; pre-create/truncate the target.
+# The host may run as root while the container is testuser (uid 1001) — a 644
+# root-owned pre-created file EACCESes the in-container formatter and the run
+# silently produces an empty ndjson; make the target world-writable.
 mkdir -p "$(dirname "$RESULT_REL")"
 : > "$RESULT_REL"
+chmod 666 "$RESULT_REL" 2>/dev/null || true
 
 # ...but the file is pre-created by the HOST, under the HOST's uid, while the container writes
 # it as `testuser` (uid 1001). When those uids differ — a root shell in WSL, a CI runner, any

@@ -231,27 +231,42 @@ export function bgCommandInFlight(rawTranscript: string): boolean {
  * the done-pattern, so it never falsely clears a still-running agent.
  */
 const BG_RESULT_DONE_RE = /completed|came to rest|exit code|finished/i;
+// FR-32/FR-33 (2026-07-18): the launch-ACK shapes the harness writes IMMEDIATELY after an async
+// spawn / SendMessage — the only tool_result that must NEVER clear an in-flight id. Verified on the
+// real lm-saas transcript 0704ee11: Agent → «Async agent launched successfully…»; SendMessage →
+// «…resumed from transcript in the background… You'll be notified when it finishes».
+const BG_LAUNCH_ACK_RE =
+  /launched successfully|resumed from transcript|running in the background|You'?ll be notified when it finish|Message (?:sent|delivered|queued)/i;
 const BG_TAG_ID_RE = /<tool-use-id>([^<]+)<\/tool-use-id>/g; // any id inside the tag; only consulted on a done-text line
 /** Count of backgrounded helper agents still in flight, paired by tool_use id (0 if none / unreadable). */
 export function agentBgInFlightCount(rawTranscript: string): number {
   const lines = parseLines(rawTranscript);
-  const inFlight = new Set<string>(); // tool_use ids of run_in_background Agent/Task spawns (main chain)
+  const inFlight = new Set<string>(); // tool_use ids of async Agent/Task/SendMessage spawns (main chain)
   for (const e of lines) {
     if (e.isSidechain || role(e) !== 'assistant') continue;
     for (const b of contentBlocks(e)) {
       const bb = b as Record<string, unknown>;
       if (bb?.type !== 'tool_use') continue;
       const nm = String(bb.name ?? '').toLowerCase();
-      if (nm !== 'agent' && nm !== 'task') continue;
+      // FR-33: SendMessage RESUMES a spawned agent — same async lifecycle (ACK now, task-notification
+      // later, carrying the SendMessage's own tool_use id), so it re-arms the wait like a fresh launch.
+      if (nm !== 'agent' && nm !== 'task' && nm !== 'sendmessage') continue;
       const inp = bb.input as Record<string, unknown> | undefined;
-      if (!inp || typeof inp !== 'object' || inp.run_in_background !== true) continue;
+      // FR-32: the newer harness has NO run_in_background field on Agent/Task — agents are async by
+      // default — so the flag being ABSENT counts as a bg launch. Only an explicit `false` (the old
+      // sync mode) opts out. The old `=== true` filter is what blinded the gate to 4 in-flight
+      // collectors (incident 2026-07-18) and made the judge see «pending background task: NO».
+      if (inp && typeof inp === 'object' && inp.run_in_background === false) continue;
       const id = typeof bb.id === 'string' ? bb.id : '';
       if (id) inFlight.add(id);
     }
   }
   if (inFlight.size === 0) return 0;
   // completions come in TWO harness shapes (both carry the launch's tool_use id) — clear on either:
-  //   (1) a structured `tool_result` block whose `tool_use_id` is a launch id + done-text (shell shape);
+  //   (1) a structured `tool_result` block whose `tool_use_id` is a launch id and is NOT a launch-ACK —
+  //       the old sync-mode final report, a shell-shape done-text, or a kill/interrupt record all mean
+  //       «no longer in flight». Requiring done-text here would leave flag-less sync launches (old
+  //       harness) in-flight FOREVER and permanently disarm the gate — the unsafe direction.
   //   (2) a «<tool-use-id>toolu_…</tool-use-id>» tag inside a task-notification line with done-text — the
   //       shape a backgrounded AGENT's completion takes (NOT a tool_result). The agent case used this, which
   //       is why a tool_result-only scan saw 0 completions and over-counted. Scan both.
@@ -265,7 +280,7 @@ export function agentBgInFlightCount(rawTranscript: string): number {
       } catch {
         content = '';
       }
-      if (BG_RESULT_DONE_RE.test(content)) inFlight.delete(bb.tool_use_id);
+      if (!BG_LAUNCH_ACK_RE.test(content)) inFlight.delete(bb.tool_use_id);
     }
     let serialized = '';
     try {
@@ -284,6 +299,16 @@ export function agentBgInFlightCount(rawTranscript: string): number {
 export function agentBgInFlight(rawTranscript: string): boolean {
   return agentBgInFlightCount(rawTranscript) > 0;
 }
+
+// 1+3 (2026-06-21): a genuine bg wait whose named next step CONSUMES the pending result (can't run until
+// it lands) is NOT an announce-and-stop; the judge weighs this deterministic hint. FR-34 (2026-07-18):
+// also match report-waiting phrasings — the real incident stop («жду отчёты всех четырёх сборщиков
+// (уведомления придут автоматически), затем свожу анализ…») matched NOTHING here, so the judge saw
+// «consumes the pending result: no» and kicked a legitimate wait. Only meaningful while awaitingAsync=true
+// (AND-ed at the use site in the stop hook), so widening it cannot grant a free stop without a real bg
+// wait. Lives here (pure module) so tests can pin it without importing the hook's main().
+export const AWAITS_RESULT_RE =
+  /когда\s+придёт|как\s+придёт|по\s+результату|результат[ауые]?\b[^.]{0,40}(?:обработ|свер|прочит|проверю|коммич|закоммич)|если\s+(?:\d|зел[её]н|green|ок\b|чисто)|при\s+зел[её]н|жд[уё]м?\s+(?:отч[её]т|результат)|отч[её]т\w*[^.]{0,40}прид(?:ут|[её]т)|прид(?:ут|[её]т)\s+автоматически|после\s+(?:отч[её]т|результат)\w*|затем\s+(?:свожу|свед|обработ|оформ|проанализ|сверю)|when\s+it\s+(?:returns|lands|completes|finishes)|on\s+the\s+result|once\s+it\s+(?:returns|lands|completes)|waiting\s+for\s+(?:the\s+)?reports?|once\s+the\s+reports?\s+(?:arrive|land|come)/i;
 
 // Hook-injected lines that ride along on a user turn but are NOT the user's typed ask — the spec-tasks
 // banner, specs-validator output, gate kicks, task-notifications, system reminders. Stripped before

@@ -43,3 +43,10 @@
 
 - **AC-19**: WHEN последняя user-role запись является actionable Stop-hook feedback / blocking error with concrete remediation (for example `TASK_UNTESTED` / `Strengthen the test` / `Нужно:`) AND the next assistant turn stops without mutating/door tool work and without a real async wait THEN the hook SHALL block with `stop-feedback-unaddressed`, even if the latest human prompt was review/analysis-only. *(CEGATE001_56)*
 - **AC-20**: WHEN the latest prompt is a normal human review request (not Stop-hook feedback) AND the assistant delivers a review without claiming completion THEN the hook SHALL approve. *(CEGATE001_57)*
+
+## Async-агенты нового harness без `run_in_background` (FR-32, FR-33, FR-34)
+
+- **AC-21**: WHEN транскрипт содержит запуск `Agent` БЕЗ поля `run_in_background`, за которым следует только launch-ACK tool_result («Async agent launched successfully…») THEN `agentBgInFlightCount` SHALL вернуть ≥1 (агент в полёте). *(CEGATE001_58)*
+- **AC-22**: WHEN за флаг-less запуском следует task-notification с его `<tool-use-id>` и done-текстом (`<status>completed</status>`) OR tool_result с тем же id, не являющийся launch-ACK (старый sync-режим) THEN этот запуск SHALL быть очищен (count 0). *(CEGATE001_59)*
+- **AC-23**: WHEN транскрипт содержит `SendMessage` c ACK «resumed … in the background» и БЕЗ последующего task-notification с его id THEN `agentBgInFlightCount` SHALL вернуть ≥1; после task-notification с этим id — 0. *(CEGATE001_60)*
+- **AC-24**: WHEN текст стопа — «жду отчёты всех четырёх сборщиков (уведомления придут автоматически), затем свожу анализ и оформляю спеку» AND `awaitingAsync=true` THEN `nextStepAwaitsResult` SHALL быть true (реальный текст инцидента 2026-07-18). *(CEGATE001_61)*

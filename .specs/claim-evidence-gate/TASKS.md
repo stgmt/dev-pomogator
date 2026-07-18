@@ -65,3 +65,15 @@
   - [x] CEGATE001_56 blocks a review-only response after `TASK_UNTESTED` / strong-test Stop-hook feedback
   - [x] CEGATE001_57 approves an ordinary human review request with no Stop-hook feedback
   - [x] `claim_evidence_gate_stop.bundle.mjs` is rebuilt and the real bundle contains `stop-feedback-unaddressed`
+
+## Phase 7: Flag-less async agents of the new harness (FR-32..FR-34, incident 2026-07-18)
+
+- [x] Count flag-less Agent/Task + SendMessage as in-flight; widen the awaits-result hint -- @feature11 — id: fr32-flagless-async — Status: DONE | Est: 60m
+  _Requirements: FR-32, FR-33, FR-34_
+  **Done When:**
+  - [x] CEGATE001_58: Agent launch WITHOUT `run_in_background` + launch-ACK only → `agentBgInFlightCount` ≥ 1
+  - [x] CEGATE001_59: task-notification with the launch's `<tool-use-id>` + done-text clears it; a non-ACK tool_result (old sync mode) also clears it
+  - [x] CEGATE001_60: SendMessage ACK counts as in-flight until its task-notification lands
+  - [x] CEGATE001_61: the real 2026-07-18 stop text («жду отчёты…, затем свожу анализ») passes `AWAITS_RESULT_RE`
+  - [x] fixtures are trimmed from the REAL lm-saas transcript `0704ee11` (real-fixtures discipline, not hand-fabricated shapes)
+  - [x] `claim_evidence_gate_stop.bundle.mjs` rebuilt (52/52 CEGATE001 green in Docker, incl. the 4 new; runtime-verified on the real incident transcript: 4 in-flight at the kicked stop, 0 false phantoms)

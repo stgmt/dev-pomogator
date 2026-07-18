@@ -32,7 +32,7 @@ import path from 'node:path';
 
 import { log as _logShared, normalizePath } from '../_shared/hook-utils.ts';
 import { markerPath, readMarker, writeMarkerAtomic, isWithinCooldown, hashFileList } from '../_shared/marker-utils.ts';
-import { extractTurnWindow, bgInFlightInWindow, agentBgInFlightCount, bgCommandInFlight, sessionUserPrompts, effectiveUserRequest, latestActionableStopFeedback } from './turn_window.ts';
+import { extractTurnWindow, bgInFlightInWindow, agentBgInFlightCount, bgCommandInFlight, sessionUserPrompts, effectiveUserRequest, latestActionableStopFeedback, AWAITS_RESULT_RE } from './turn_window.ts';
 import { firstUnsupported, isSpecCompletionClaim } from './claim_classifier.ts';
 import { readTaskCensusCache, scopeCensusToSlugs, sessionEditedSpecSlugs, lastEditedSpecSlug, agentOpenTodoCount, liveOpenForUncensusedSlugs, selectNextStepRoute, type NextStepRoute, type TaskCensusCache } from '../spec-graph/task-census.ts';
 import { judgeStop, judgeAvailable, buildJudgeNoTokenDemand, isJudgeArmed } from './meridian-judge.ts';
@@ -301,8 +301,6 @@ async function main(): Promise<void> {
   // it lands — «когда придёт — обработаю/коммичу», «если 19/19 — коммичу») is NOT an announce-and-stop. The
   // gate computes a deterministic HINT from the claim text (only meaningful while awaiting); the judge weighs
   // it so "wait + result-dependent next" → APPROVE while "wait + a separate task it could do now" → BLOCK.
-  const AWAITS_RESULT_RE =
-    /когда\s+придёт|как\s+придёт|по\s+результату|результат[ауые]?\b[^.]{0,40}(?:обработ|свер|прочит|проверю|коммич|закоммич)|если\s+(?:\d|зел[её]н|green|ок\b|чисто)|при\s+зел[её]н|when\s+it\s+(?:returns|lands|completes|finishes)|on\s+the\s+result|once\s+it\s+(?:returns|lands|completes)/i;
   const nextStepAwaitsResult = awaitingAsync && AWAITS_RESULT_RE.test(claimText);
   // FR-49a: one shared, scoped next-step route for every Stop-gate surface. Priority:
   // agent's own todo → active async → current spec → none. The current-spec branch is
