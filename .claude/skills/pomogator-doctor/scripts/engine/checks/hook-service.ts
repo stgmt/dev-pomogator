@@ -55,8 +55,7 @@ export const hookServiceCheck: CheckDefinition = {
         const id = `${event}/${groupIndex}/${hookIndex}`;
         const expected = `http://127.0.0.1:42619/v1/dispatch/${encodeURIComponent(id)}`;
         if (hook.type !== 'http' || hook.url !== expected) problems.push(`${id} is not the canonical loopback HTTP route`);
-        if (hook.headers?.['x-dev-pomogator-token'] !== '${DEV_POMOGATOR_HOOK_TOKEN}') problems.push(`${id} is missing the canonical hook-service token header`);
-        if (!hook.allowedEnvVars?.includes('DEV_POMOGATOR_HOOK_TOKEN')) problems.push(`${id} does not allow DEV_POMOGATOR_HOOK_TOKEN`);
+        if (hook.headers || hook.allowedEnvVars) problems.push(`${id} must not declare hook-service authentication metadata`);
         const route = registry.routes?.[id];
         const target = route?.target;
         if (!target || path.isAbsolute(target) || target.split(/[\\/]/).includes('..') || !fs.existsSync(path.join(root, target))) {

@@ -4,7 +4,6 @@ import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { reviewHookManifest } from '../../tools/hook-review/check.mjs';
-import { provisionCredential } from '../../tools/hook-service/credential.mjs';
 
 type Finding = { file: string; event?: string; message: string };
 import { V4World } from '../hooks/before-after.ts';
@@ -104,24 +103,6 @@ When(/^I inspect every managed HTTP route authentication contract$/, function (t
   this.findings = reviewHookManifest(this.manifestFile!, this.registryFile!, process.cwd());
 });
 
-Then(/^every route uses the hook token environment reference and no literal token$/, function (this: HookReviewWorld) {
+Then(/^every route has no authentication metadata$/, function (this: HookReviewWorld) {
   assert.deepEqual(this.findings, []);
-});
-
-Given(/^an empty isolated hook credential state$/, function (this: HookReviewWorld) {
-  this.credentialRoot = fs.mkdtempSync(path.join(this.tempDir, 'hook-credential-bdd-'));
-  this.credentialPath = path.join(this.credentialRoot, 'token');
-});
-
-When(/^eight hook-service starters provision the credential concurrently$/, async function (this: HookReviewWorld) {
-  this.credentialResults = await Promise.all(
-    Array.from({ length: 8 }, () => provisionCredential(this.credentialPath!)),
-  );
-});
-
-Then(/^they share one persisted credential and only one starter creates it$/, function (this: HookReviewWorld) {
-  const tokens = this.credentialResults.map((result: any) => result.token);
-  assert.equal(new Set(tokens).size, 1);
-  assert.equal(this.credentialResults.filter((result: any) => result.created).length, 1);
-  assert.equal(fs.readFileSync(this.credentialPath!, 'utf8'), tokens[0]);
 });

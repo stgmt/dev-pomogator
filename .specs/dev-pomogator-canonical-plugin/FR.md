@@ -179,7 +179,7 @@ dev-pomogator не реализует custom uninstall code — Anthropic mechan
 
 ## FR-13: Plugin hooks use one authenticated loopback service
 
-The plugin's hook commands SHALL resolve their bootstrap loader and target script regardless of the process working directory. The `hooks.json` command anchors the `bootstrap.cjs` require on `process.env.CLAUDE_PROJECT_DIR` (falling back to `.`) and `tsx-runner.resolveScriptPath` resolves the script argument against `CLAUDE_PROJECT_DIR` / `CLAUDE_PLUGIN_ROOT` — NEVER a cwd-relative `path.resolve('tools/...')`. A Stop hook spawned with the shell CWD left inside a subdirectory (or an unrelated tmpdir) SHALL still load and exit 0, not die with `Cannot find module .../bootstrap.cjs`. The hook suite SHALL use one authenticated loopback hook service rather than independently spawning HTTP clients. The service contract covers all 14 SessionStart hook calls and the 39 steady-state hook HTTP calls observed in the verification corpus. Each request SHALL obtain its environment only from explicitly allowlisted `CLAUDE_ENV_FILE` variables, send the service authentication header, and exclude any unallowlisted environment value. Persistent state and settings updates SHALL use byte-level compare-and-swap against the expected prior bytes; a conflict SHALL retain the newer on-disk value. On partial startup, failed write, or service recovery, the launcher SHALL retain or restore the last known valid state and settings before resuming permitted hook work.
+The plugin's hook commands SHALL resolve their bootstrap loader and target script regardless of the process working directory. The `hooks.json` command anchors the `bootstrap.cjs` require on `process.env.CLAUDE_PROJECT_DIR` (falling back to `.`) and `tsx-runner.resolveScriptPath` resolves the script argument against `CLAUDE_PROJECT_DIR` / `CLAUDE_PLUGIN_ROOT` — NEVER a cwd-relative `path.resolve('tools/...')`. A Stop hook spawned with the shell CWD left inside a subdirectory (or an unrelated tmpdir) SHALL still load and exit 0, not die with `Cannot find module .../bootstrap.cjs`. The hook suite SHALL use one loopback-only hook service rather than independently spawning HTTP clients. The service SHALL bind to `127.0.0.1`, reject non-loopback peers, and accept loopback health, registration, and approved dispatch requests without bearer credentials. The service contract covers all 14 SessionStart hook calls and the 39 steady-state hook HTTP calls observed in the verification corpus. Session identity and parallel-session behavior SHALL be carried by session registration, not by a shared credential. The service SHALL append allowlist-first lifecycle records to `%LOCALAPPDATA%/dev-pomogator/hook-service/events.jsonl` on Windows and `${XDG_STATE_HOME:-$HOME/.local/state}/dev-pomogator/hook-service/events.jsonl` on POSIX for startup, registration, dispatch success, deny, failure, timeout, shutdown, and bootstrap fail-open outcomes. Records SHALL contain safe route/outcome/duration and non-sensitive service/root/registry digests, but SHALL NOT persist request bodies, prompts, hook stdout/stderr, headers, environment values, secrets, stack traces, or raw paths. Logging failure SHALL remain fail-open. Health and state SHALL identify the active plugin root and registry by digest so another checkout or installed cache cannot be silently reused. Persistent state, audit rotation, and settings updates SHALL use lock-bounded atomic writes or byte-level compare-and-swap; a conflict SHALL retain the newer on-disk value. On partial startup, failed write, or service recovery, the launcher SHALL retain or restore the last known valid state and settings before resuming permitted hook work.
 
 **Связанные AC:** [AC-1](ACCEPTANCE_CRITERIA.md#ac-1-fr-1-fr-9)
 
@@ -197,58 +197,58 @@ Plugin-installed and repository-dogfood launch paths SHALL cache a doctor result
 
 All managed hot-path registrations SHALL use `type: "http"`, not `bash`, `sh`, a `.sh` launcher, or inline `node -e`. The documented `SessionStart` bootstrap in FR-19 is the only command exception.
 
-**AC:** [AC-10](ACCEPTANCE_CRITERIA.md#ac-10-fr-15-fr-24)
+**AC:** [AC-10](ACCEPTANCE_CRITERIA.md#ac-10-fr-15fr-24)
 
 ## FR-16: HTTP hook routes are registry-approved
 
 Each managed HTTP URL SHALL match an approved local registry entry for the same event and matcher. A missing match is registry drift and SHALL be rejected before release.
 
-**AC:** [AC-10](ACCEPTANCE_CRITERIA.md#ac-10-fr-15-fr-24)
+**AC:** [AC-10](ACCEPTANCE_CRITERIA.md#ac-10-fr-15fr-24)
 
 ## FR-17: HTTP hook transport declares bearer-environment authentication
 
-The approved registry SHALL declare HTTP transport with `bearer-env` authentication and the environment-variable name that provides the token. `DEV_POMOGATOR_HOOK_TOKEN` SHALL be provisioned before manifest activation and loaded by the Claude Code parent process before native HTTP dispatch. The credential SHALL remain byte-stable across ordinary hook-service restarts. Token values SHALL not be committed, embedded in URLs, or printed. A late `CLAUDE_ENV_FILE` write SHALL NOT count as evidence that the parent process can authenticate native HTTP hooks.
+The approved registry SHALL declare loopback HTTP transport without authentication metadata. Managed hook manifests SHALL NOT include bearer headers, token environment references, or per-hook token allowlists. The hook service SHALL accept credential-free requests only from loopback peers and SHALL continue to authorize executable work through exact registry route, event, matcher, and target validation. Parallel Claude Code sessions SHALL reuse the service through session registration without credential coordination.
 
-**AC:** [AC-10](ACCEPTANCE_CRITERIA.md#ac-10-fr-15-fr-24)
+**AC:** [AC-10](ACCEPTANCE_CRITERIA.md#ac-10-fr-15fr-24)
 
 ## FR-18: Hook review rejects unapproved HTTP transport
 
 The review gate SHALL reject unapproved HTTP URLs and registry event/matcher drift, and SHALL distinguish unapproved transport from registry drift in its findings.
 
-**AC:** [AC-10](ACCEPTANCE_CRITERIA.md#ac-10-fr-15-fr-24)
+**AC:** [AC-10](ACCEPTANCE_CRITERIA.md#ac-10-fr-15fr-24)
 
 ## FR-19: SessionStart bootstrap is the only command exception
 
 A `SessionStart` command hook MAY start the local hook service through the documented `CLAUDE_PLUGIN_ROOT` bootstrap. It is not a managed hot-path command and is the only command exception.
 
-**AC:** [AC-10](ACCEPTANCE_CRITERIA.md#ac-10-fr-15-fr-24)
+**AC:** [AC-10](ACCEPTANCE_CRITERIA.md#ac-10-fr-15fr-24)
 
 ## FR-20: HTTP hook commands remain shell-free on Windows
 
 The managed HTTP path SHALL not launch a per-event shell or inline Node process on Windows. The rule is checked from manifest/registry contract, not launcher naming.
 
-**AC:** [AC-10](ACCEPTANCE_CRITERIA.md#ac-10-fr-15-fr-24)
+**AC:** [AC-10](ACCEPTANCE_CRITERIA.md#ac-10-fr-15fr-24)
 
 ## FR-21: Hook-review gate is deterministic and offline
 
 Hook review SHALL read only its supplied manifest and approved local registry. It SHALL not make an HTTP request, start a hook service, or require a live token.
 
-**AC:** [AC-10](ACCEPTANCE_CRITERIA.md#ac-10-fr-15-fr-24)
+**AC:** [AC-10](ACCEPTANCE_CRITERIA.md#ac-10-fr-15fr-24)
 
 ## FR-22: Hook-review findings are actionable
 
 Each rejected registration SHALL identify shell/inline-Node hot path, unapproved authenticated transport, or registry drift. A clean approved manifest plus the allowed bootstrap SHALL produce no findings.
 
-**AC:** [AC-10](ACCEPTANCE_CRITERIA.md#ac-10-fr-15-fr-24)
+**AC:** [AC-10](ACCEPTANCE_CRITERIA.md#ac-10-fr-15fr-24)
 
 ## FR-23: Hook registry is the transport source of truth
 
 The approved local registry SHALL define accepted HTTP route, event, matcher, and authentication scheme. The manifest declares registrations and never embeds bearer credentials.
 
-**AC:** [AC-10](ACCEPTANCE_CRITERIA.md#ac-10-fr-15-fr-24)
+**AC:** [AC-10](ACCEPTANCE_CRITERIA.md#ac-10-fr-15fr-24)
 
 ## FR-24: HTTP hook policy has executable BDD coverage
 
 Executable BDD SHALL cover a negative shell/inline-Node/unapproved-transport/registry-drift scenario and a positive approved-HTTP-plus-SessionStart-bootstrap scenario using the real review gate.
 
-**AC:** [AC-10](ACCEPTANCE_CRITERIA.md#ac-10-fr-15-fr-24)
+**AC:** [AC-10](ACCEPTANCE_CRITERIA.md#ac-10-fr-15fr-24)

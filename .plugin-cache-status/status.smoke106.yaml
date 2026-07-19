@@ -1,0 +1,22 @@
+version: 2
+session_id: smoke106
+pid: 37072
+started_at: "2026-07-13T10:34:54.965Z"
+updated_at: "2026-07-13T10:34:55.271Z"
+state: passed
+framework: generic
+total: 0
+passed: 0
+failed: 0
+skipped: 0
+running: 0
+percent: 0
+duration_ms: 0
+error_message: ""
+log_file: .plugin-cache-status/test.smoke106.log
+suites: []
+phases:
+  - name: tests
+    status: completed
+    started_at: "2026-07-13T10:34:54.965Z"
+    duration_ms: 306

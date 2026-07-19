@@ -24,32 +24,32 @@ async function fixture() {
 
 async function withService(run) {
   const root = await fixture();
-  const server = await startServer({ pluginRoot: root, token: 'secret', port: 0 });
+  const server = await startServer({ pluginRoot: root, port: 0 });
   const port = server.address().port;
   try { await run(`http://127.0.0.1:${port}`); } finally { await new Promise(resolveClose => server.close(resolveClose)); await rm(root, { recursive: true, force: true }); }
 }
 
 const post = (url, body, headers = {}) => fetch(url, { method: 'POST', headers: { 'content-type': 'application/json', ...headers }, body: JSON.stringify(body) });
 
-test('HS_01: health and registration require the token', async () => {
+test('HS_01: loopback health and registration require no bearer credential', async () => {
   await withService(async base => {
-    const rejectedHealth = await fetch(`${base}/health`);
-    assert.equal(rejectedHealth.status, 401);
-    const health = await fetch(`${base}/health`, { headers: { 'x-dev-pomogator-token': 'secret' } });
+    const health = await fetch(`${base}/health`);
     assert.equal(health.status, 200);
-    assert.deepEqual(await health.json(), { service: 'dev-pomogator-hook-service', version: '1.0.0', tokenFingerprint: '2bb80d537b1d' });
-    const unauthorized = await post(`${base}/v1/register`, { session_id: 's1' });
-    assert.equal(unauthorized.status, 401);
-    assert.deepEqual(await unauthorized.json(), { error: 'unauthorized' });
+    const body = await health.json();
+    assert.equal(body.service, 'dev-pomogator-hook-service');
+    assert.equal(body.version, '1.0.0');
+    assert.match(body.serviceId, /^1\.0\.0-[a-f0-9]{16}-[a-f0-9]{16}$/);
+    assert.match(body.rootDigest, /^[a-f0-9]{16}$/);
+    assert.match(body.registryDigest, /^[a-f0-9]{16}$/);
+    const registered = await post(`${base}/v1/register`, { session_id: 's1' });
+    assert.equal(registered.status, 200);
+    assert.deepEqual(await registered.json(), { registered: true });
   });
 });
 
-test('HS_02: every dispatch authenticates independently without session state', async () => {
+test('HS_02: approved loopback dispatch requires no session credential', async () => {
   await withService(async base => {
-    const rejected = await post(`${base}/v1/dispatch/UserPromptSubmit%2F0%2F0`, { session_id: 's1' });
-    assert.equal(rejected.status, 401);
-    assert.deepEqual(await rejected.json(), { error: 'unauthorized' });
-    const dispatched = await post(`${base}/v1/dispatch/UserPromptSubmit%2F0%2F0`, { session_id: 's1' }, { 'x-dev-pomogator-token': 'secret' });
+    const dispatched = await post(`${base}/v1/dispatch/UserPromptSubmit%2F0%2F0`, { session_id: 's1' });
     assert.equal(dispatched.status, 200);
     assert.deepEqual(await dispatched.json(), { additionalContext: 'allow' });
   });
@@ -57,10 +57,10 @@ test('HS_02: every dispatch authenticates independently without session state', 
 
 test('HS_03: hook output maps plaintext and exit 2 to event-valid JSON', async () => {
   await withService(async base => {
-    const sessionStart = await post(`${base}/v1/dispatch/SessionStart%2F0%2F0`, { session_id: 's1' }, { 'x-dev-pomogator-token': 'secret' });
+    const sessionStart = await post(`${base}/v1/dispatch/SessionStart%2F0%2F0`, { session_id: 's1' });
     assert.equal(sessionStart.status, 200);
     assert.deepEqual(await sessionStart.json(), { additionalContext: 'context' });
-    const denied = await post(`${base}/v1/dispatch/PreToolUse%2F0%2F0`, { session_id: 's1' }, { 'x-dev-pomogator-token': 'secret' });
+    const denied = await post(`${base}/v1/dispatch/PreToolUse%2F0%2F0`, { session_id: 's1' });
     assert.equal(denied.status, 200);
     assert.deepEqual(await denied.json(), { hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'deny', permissionDecisionReason: 'blocked' } });
   });
@@ -80,7 +80,7 @@ test('HS_05: generated manifest keeps one bootstrap and exposes every remaining 
   const otherHooks = Object.entries(manifest.hooks).filter(([event]) => event !== 'SessionStart').flatMap(([, groups]) => groups.flatMap(group => group.hooks));
   assert.equal(sessionHooks.length, 14);
   assert.equal(otherHooks.length, 39);
-  assert.equal(otherHooks.every(hook => hook.type === 'http' && hook.url.startsWith('http://127.0.0.1:42619/v1/dispatch/') && hook.headers?.['x-dev-pomogator-token'] === '${DEV_POMOGATOR_HOOK_TOKEN}' && hook.allowedEnvVars?.includes('DEV_POMOGATOR_HOOK_TOKEN')), true);
+  assert.equal(otherHooks.every(hook => hook.type === 'http' && hook.url.startsWith('http://127.0.0.1:42619/v1/dispatch/') && hook.headers === undefined && hook.allowedEnvVars === undefined), true);
   const generated = JSON.parse(await readFile(join(root, '.claude-plugin', 'hooks.json'), 'utf8'));
   assert.equal(generated.hooks.SessionStart.flatMap(group => group.hooks).length, 1);
   assert.equal(generated.hooks.SessionStart[0].hooks[0].command.includes('session-bootstrap.mjs'), true);

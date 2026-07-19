@@ -175,8 +175,8 @@ Then(/^plugin-installed dispatch anchors on CLAUDE_PLUGIN_ROOT and repository-do
   assert.deepEqual(dogfoodHttp, canonicalHttp, 'dogfood HTTP routes must match canonical routes');
   for (const hook of canonicalHttp) {
     assert.match(hook.url, /^http:\/\/127\.0\.0\.1:42619\/v1\/dispatch\//);
-    assert.equal(hook.headers?.['x-dev-pomogator-token'], '${DEV_POMOGATOR_HOOK_TOKEN}');
-    assert.ok(hook.allowedEnvVars?.includes('DEV_POMOGATOR_HOOK_TOKEN'));
+    assert.equal(hook.headers, undefined);
+    assert.equal(hook.allowedEnvVars, undefined);
   }
 });
 

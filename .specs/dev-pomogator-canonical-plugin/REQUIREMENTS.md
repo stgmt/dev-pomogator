@@ -126,16 +126,16 @@
 
 | ID | Name | Linked AC | @featureN | Status |
 |----|------|-----------|-----------|--------|
-| [FR-15](FR.md#fr-15-managed-hot-path-hooks-are-http-registrations) | Managed hot-path HTTP registrations | [AC-10](ACCEPTANCE_CRITERIA.md#ac-10-fr-15-fr-24) | @feature15 | Draft |
-| [FR-16](FR.md#fr-16-http-hook-routes-are-registry-approved) | Registry-approved routes | [AC-10](ACCEPTANCE_CRITERIA.md#ac-10-fr-15-fr-24) | @feature16 | Draft |
-| [FR-17](FR.md#fr-17-http-hook-transport-declares-bearer-environment-authentication) | Bearer-environment declaration | [AC-10](ACCEPTANCE_CRITERIA.md#ac-10-fr-15-fr-24) | @feature17 | Draft |
-| [FR-18](FR.md#fr-18-hook-review-rejects-unapproved-http-transport) | Reject unapproved transport | [AC-10](ACCEPTANCE_CRITERIA.md#ac-10-fr-15-fr-24) | @feature18 | Draft |
-| [FR-19](FR.md#fr-19-sessionstart-bootstrap-is-the-only-command-exception) | SessionStart exception | [AC-10](ACCEPTANCE_CRITERIA.md#ac-10-fr-15-fr-24) | @feature19 | Draft |
-| [FR-20](FR.md#fr-20-http-hook-commands-remain-shell-free-on-windows) | Windows shell-free policy | [AC-10](ACCEPTANCE_CRITERIA.md#ac-10-fr-15-fr-24) | @feature20 | Draft |
-| [FR-21](FR.md#fr-21-hook-review-gate-is-deterministic-and-offline) | Offline deterministic review | [AC-10](ACCEPTANCE_CRITERIA.md#ac-10-fr-15-fr-24) | @feature21 | Draft |
-| [FR-22](FR.md#fr-22-hook-review-findings-are-actionable) | Actionable findings | [AC-10](ACCEPTANCE_CRITERIA.md#ac-10-fr-15-fr-24) | @feature22 | Draft |
-| [FR-23](FR.md#fr-23-hook-registry-is-the-transport-source-of-truth) | Registry transport source of truth | [AC-10](ACCEPTANCE_CRITERIA.md#ac-10-fr-15-fr-24) | @feature23 | Draft |
-| [FR-24](FR.md#fr-24-http-hook-policy-has-executable-bdd-coverage) | Executable HTTP policy BDD | [AC-10](ACCEPTANCE_CRITERIA.md#ac-10-fr-15-fr-24) | @feature24 | Draft |
+| [FR-15](FR.md#fr-15-managed-hot-path-hooks-are-http-registrations) | Managed hot-path HTTP registrations | [AC-10](ACCEPTANCE_CRITERIA.md#ac-10-fr-15fr-24) | @feature15 | Draft |
+| [FR-16](FR.md#fr-16-http-hook-routes-are-registry-approved) | Registry-approved routes | [AC-10](ACCEPTANCE_CRITERIA.md#ac-10-fr-15fr-24) | @feature16 | Draft |
+| [FR-17](FR.md#fr-17-http-hook-transport-declares-bearer-environment-authentication) | Bearer-environment declaration | [AC-10](ACCEPTANCE_CRITERIA.md#ac-10-fr-15fr-24) | @feature17 | Draft |
+| [FR-18](FR.md#fr-18-hook-review-rejects-unapproved-http-transport) | Reject unapproved transport | [AC-10](ACCEPTANCE_CRITERIA.md#ac-10-fr-15fr-24) | @feature18 | Draft |
+| [FR-19](FR.md#fr-19-sessionstart-bootstrap-is-the-only-command-exception) | SessionStart exception | [AC-10](ACCEPTANCE_CRITERIA.md#ac-10-fr-15fr-24) | @feature19 | Draft |
+| [FR-20](FR.md#fr-20-http-hook-commands-remain-shell-free-on-windows) | Windows shell-free policy | [AC-10](ACCEPTANCE_CRITERIA.md#ac-10-fr-15fr-24) | @feature20 | Draft |
+| [FR-21](FR.md#fr-21-hook-review-gate-is-deterministic-and-offline) | Offline deterministic review | [AC-10](ACCEPTANCE_CRITERIA.md#ac-10-fr-15fr-24) | @feature21 | Draft |
+| [FR-22](FR.md#fr-22-hook-review-findings-are-actionable) | Actionable findings | [AC-10](ACCEPTANCE_CRITERIA.md#ac-10-fr-15fr-24) | @feature22 | Draft |
+| [FR-23](FR.md#fr-23-hook-registry-is-the-transport-source-of-truth) | Registry transport source of truth | [AC-10](ACCEPTANCE_CRITERIA.md#ac-10-fr-15fr-24) | @feature23 | Draft |
+| [FR-24](FR.md#fr-24-http-hook-policy-has-executable-bdd-coverage) | Executable HTTP policy BDD | [AC-10](ACCEPTANCE_CRITERIA.md#ac-10-fr-15fr-24) | @feature24 | Draft |
 
 | CHK-ID | Requirement | Traces To (FR+SC) | Verification Method | Status | Notes |
 |--------|-------------|-------------------|---------------------|--------|-------|

@@ -38,6 +38,6 @@ export async function renderHttpManifest(pluginRoot, {port = 42619} = {}) {
   const manifest = JSON.parse(await readFile(join(pluginRoot, '.claude-plugin', 'hooks.legacy.json'), 'utf8'));
   const registry = await buildRegistry(pluginRoot);
   const hooks = {};
-  for (const [event, groups] of Object.entries(manifest.hooks)) hooks[event] = groups.map((group, groupIndex) => ({...group, hooks:group.hooks.map((hook, hookIndex) => ({type:'http', url:`http://127.0.0.1:${port}/v1/dispatch/${encodeURIComponent(`${event}/${groupIndex}/${hookIndex}`)}`, headers:{'x-dev-pomogator-token':'${DEV_POMOGATOR_HOOK_TOKEN}'}, allowedEnvVars:['DEV_POMOGATOR_HOOK_TOKEN'], timeout:hook.timeout}))}));
+  for (const [event, groups] of Object.entries(manifest.hooks)) hooks[event] = groups.map((group, groupIndex) => ({...group, hooks:group.hooks.map((hook, hookIndex) => ({type:'http', url:`http://127.0.0.1:${port}/v1/dispatch/${encodeURIComponent(`${event}/${groupIndex}/${hookIndex}`)}`, timeout:hook.timeout}))}));
   return {hooks};
 }

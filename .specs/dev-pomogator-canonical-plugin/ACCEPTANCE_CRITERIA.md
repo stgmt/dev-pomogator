@@ -110,7 +110,7 @@ AND SHALL distinguish shell/inline Node, unapproved authenticated transport, and
 
 WHEN review receives an approved registry-backed HTTP hook and the documented plugin-root `SessionStart` bootstrap
 THEN it SHALL return no findings
-AND the registry SHALL declare bearer-environment authentication without containing a bearer token value.
+AND the manifest SHALL declare loopback-only HTTP routes without authentication headers or token-environment allowlists.
 
 WHEN the hook service restarts after the parent Claude Code process has loaded the provisioned credential
 THEN the credential bytes SHALL remain unchanged

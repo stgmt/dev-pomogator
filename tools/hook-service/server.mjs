@@ -1,22 +1,14 @@
-import { timingSafeEqual } from 'node:crypto';
 import { mkdir, readFile, rename, writeFile, unlink } from 'node:fs/promises';
 import { spawn } from 'node:child_process';
 import http from 'node:http';
 import { join, resolve, relative, isAbsolute, win32 } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { fingerprint } from './credential.mjs';
+import { correlationId, digest, writeAudit } from './audit.mjs';
 
 export const HOST = '127.0.0.1', PORT = 42619, VERSION = '1.0.0';
 export const stateDir = () => process.env.DEV_POMOGATOR_STATE_DIR || join(process.env.LOCALAPPDATA || process.env.XDG_STATE_HOME || process.env.HOME || '.', 'dev-pomogator', 'hook-service');
 export const stateFile = () => join(stateDir(), 'service.json');
-export const tokenFile = () => join(stateDir(), 'token');
 const MAX_BODY_BYTES = 2_000_000;
-
-const tokenMatches = (actual, expected) => {
-  const candidate = Buffer.from(String(actual || ''));
-  const secret = Buffer.from(String(expected || ''));
-  return candidate.length === secret.length && candidate.length > 0 && timingSafeEqual(candidate, secret);
-};
 
 const json = (response, status, value) => {
   response.writeHead(status, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' });
@@ -92,24 +84,34 @@ export async function execute(entry, input, root, event) {
   });
 }
 
-export async function startServer({ pluginRoot, token, port = PORT } = {}) {
+export async function startServer({ pluginRoot, port = PORT } = {}) {
   const registry = await loadRegistry(pluginRoot);
+  const rootDigest = digest(resolve(pluginRoot));
+  const registryDigest = digest(JSON.stringify(registry));
+  const serviceId = `${VERSION}-${rootDigest}-${registryDigest}`;
   const server = http.createServer(async (request, response) => {
+    const id = correlationId();
+    const started = Date.now();
+    let route;
     try {
       if (!local(request)) return json(response, 403, { error: 'loopback only' });
       const url = new URL(request.url || '/', `http://${HOST}:${port}`);
-      if (!tokenMatches(request.headers['x-dev-pomogator-token'], token)) return json(response, 401, { error: 'unauthorized' });
-      if (url.pathname === '/health') return json(response, 200, { service: 'dev-pomogator-hook-service', version: VERSION, tokenFingerprint: fingerprint(token) });
+      if (url.pathname === '/health') return json(response, 200, { service: 'dev-pomogator-hook-service', version: VERSION, serviceId, rootDigest, registryDigest });
       if (request.method !== 'POST') return json(response, 405, { error: 'POST required' });
       let input;
-      try { input = JSON.parse(await body(request)); } catch { return json(response, 400, { error: 'invalid JSON' }); }
-      if (url.pathname === '/v1/register') return json(response, 200, { registered: Boolean(input.session_id) });
-      const id = decodeURIComponent(url.pathname.replace('/v1/dispatch/', ''));
-      const entry = registry.routes[id];
-      if (!entry || url.pathname !== `/v1/dispatch/${encodeURIComponent(id)}`) return json(response, 404, { error: 'unknown route' });
-      return json(response, 200, await execute(entry, input, pluginRoot, id.split('/')[0]));
+      try { input = JSON.parse(await body(request)); } catch { await writeAudit({ id, outcome:'invalid_request', code:'invalid_json', durationMs:Date.now()-started, serviceId, rootDigest, registryDigest }); return json(response, 400, { error: 'invalid JSON' }); }
+      if (url.pathname === '/v1/register') { await writeAudit({ id, outcome:'registered', event:'SessionStart', durationMs:Date.now()-started, serviceId, rootDigest, registryDigest }); return json(response, 200, { registered: Boolean(input.session_id) }); }
+      route = decodeURIComponent(url.pathname.replace('/v1/dispatch/', ''));
+      const entry = registry.routes[route];
+      if (!entry || url.pathname !== `/v1/dispatch/${encodeURIComponent(route)}`) return json(response, 404, { error: 'unknown route' });
+      const result = await execute(entry, input, pluginRoot, route.split('/')[0]);
+      const denied = result?.decision === 'block' || result?.hookSpecificOutput?.permissionDecision === 'deny';
+      await writeAudit({ id, route, event:entry.event, outcome:denied?'denied':'success', durationMs:Date.now()-started, timeoutMs:(entry.timeout||30)*1000, serviceId, rootDigest, registryDigest });
+      return json(response, 200, result);
     } catch (error) {
-      return json(response, 503, { error: 'hook runtime unavailable', detail: error.message });
+      const timeout = error?.message === 'hook timed out';
+      await writeAudit({ id, route, outcome:timeout?'timeout':'failed', code:timeout?'hook_timeout':'runtime_unavailable', durationMs:Date.now()-started, serviceId, rootDigest, registryDigest });
+      return json(response, 503, { error: 'hook runtime unavailable', code: timeout ? 'hook_timeout' : 'runtime_unavailable' });
     }
   });
   await new Promise((resolveListen, reject) => {
@@ -127,11 +129,15 @@ async function atomicState(path, content) {
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const pluginRoot = process.env.DEV_POMOGATOR_PLUGIN_ROOT || process.cwd();
-  const token = (await readFile(tokenFile(), 'utf8')).trim();
   await mkdir(stateDir(), { recursive: true, mode: 0o700 });
-  const server = await startServer({ pluginRoot, token });
-  await atomicState(stateFile(), `${JSON.stringify({ pid: process.pid, port: PORT, version: VERSION })}\n`);
-  const close = () => server.close(async () => { await unlink(stateFile()).catch(() => {}); process.exit(0); });
+  const registry = await loadRegistry(pluginRoot);
+  const rootDigest = digest(resolve(pluginRoot));
+  const registryDigest = digest(JSON.stringify(registry));
+  const serviceId = `${VERSION}-${rootDigest}-${registryDigest}`;
+  const server = await startServer({ pluginRoot });
+  await atomicState(stateFile(), `${JSON.stringify({ pid: process.pid, port: PORT, version: VERSION, serviceId, rootDigest, registryDigest })}\n`);
+  await writeAudit({ outcome:'startup', serviceId, rootDigest, registryDigest });
+  const close = () => server.close(async () => { await writeAudit({ outcome:'shutdown', serviceId, rootDigest, registryDigest }); await unlink(stateFile()).catch(() => {}); process.exit(0); });
   process.on('SIGTERM', close);
   process.on('SIGINT', close);
 }

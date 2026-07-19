@@ -1,7 +1,6 @@
 import { ensureUp } from './ensure-up.mjs';
 import { loadRegistry, execute } from './server.mjs';
 import { migrateManagedHooks, recoverManagedHooks } from './migrate-managed-hooks.mjs';
-import { fingerprint, persistCredentialForNextProcess } from './credential.mjs';
 
 async function reconcileManagedHooks(root) {
   const settingsPath = process.env.DEV_POMOGATOR_MANAGED_SETTINGS_PATH;
@@ -42,17 +41,9 @@ try {
   await reconcileManagedHooks(root);
   const service = await ensureUp(root);
   if (!service.ready || typeof input.session_id !== 'string' || !input.session_id) process.exit(0);
-  const processToken = process.env.DEV_POMOGATOR_HOOK_TOKEN || '';
-  if (processToken !== service.token) {
-    await persistCredentialForNextProcess(service.token).catch(() => {});
-    process.stdout.write(JSON.stringify({
-      additionalContext: `dev-pomogator HTTP hooks need one Claude Code restart (credential ${fingerprint(service.token)} is not loaded by this process).`,
-    }));
-    process.exit(0);
-  }
   const registered = await fetch(`http://127.0.0.1:${service.port}/v1/register`, {
     method: 'POST',
-    headers: { 'content-type': 'application/json', 'x-dev-pomogator-token': service.token },
+    headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ session_id: input.session_id }),
     signal: AbortSignal.timeout(3000),
   });

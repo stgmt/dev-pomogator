@@ -37,13 +37,13 @@ Feature: CORE024 Windows shell-free hook authoring gate
     Then every installed HTTP route has matching matcher timeout and target semantics
 
   # @feature17 @feature23
-  Scenario: CORE024_06 Every managed HTTP route uses environment bearer auth without a literal secret
+  Scenario: CORE024_06 Every managed HTTP route is credential-free and loopback-only
     Given the canonical hook manifest and registry paths
     When I inspect every managed HTTP route authentication contract
-    Then every route uses the hook token environment reference and no literal token
+    Then every route has no authentication metadata
 
   # @feature13 @feature17
-  Scenario: CORE024_07 Concurrent credential provisioning is stable across service restarts
-    Given an empty isolated hook credential state
-    When eight hook-service starters provision the credential concurrently
-    Then they share one persisted credential and only one starter creates it
+  Scenario: CORE024_07 Parallel sessions require no credential coordination
+    Given the canonical hook manifest and registry paths
+    When I inspect every managed HTTP route authentication contract
+    Then every route has no authentication metadata

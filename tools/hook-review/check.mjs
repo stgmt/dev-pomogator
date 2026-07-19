@@ -52,10 +52,8 @@ export function reviewHookManifest(manifestFile, registryFile, root = process.cw
           continue;
         }
         manifestRouteIds.add(id);
-        if (hook.headers?.['x-dev-pomogator-token'] !== '${DEV_POMOGATOR_HOOK_TOKEN}' ||
-            !Array.isArray(hook.allowedEnvVars) || hook.allowedEnvVars.length !== 1 ||
-            hook.allowedEnvVars[0] !== 'DEV_POMOGATOR_HOOK_TOKEN') {
-          findings.push(finding(manifestFile, event, 'managed HTTP hooks must use only the DEV_POMOGATOR_HOOK_TOKEN environment bearer'));
+        if (hook.headers || hook.allowedEnvVars) {
+          findings.push(finding(manifestFile, event, 'managed loopback HTTP hooks must not declare authentication headers or token environment allowlists'));
         }
         const registered = registry.routes?.[id];
         if (!registered || registered.matcher !== matcher || registered.timeout !== hook.timeout) {

@@ -69,7 +69,7 @@
 
 ## Phase 3: Windows recovery and profile proof
 
-- [ ] Implement conservative native-Windows worker reaper -- CMEM001_19-CMEM001_25 — id: cmem-t3-01 — Status: TODO | Est: 90m
+- [ ] Implement conservative native-Windows worker reaper -- CMEM001_19-CMEM001_25 — id: cmem-t3-01 — Status: IN_PROGRESS | Est: 90m
   _Requirements: [FR-7](FR.md#fr-7-worker-reaper-heals-a-wedged-port-feature7)_
   _Files: `tools/claude-mem-health/health-check.ts`, `tests/step_definitions/feature_claude_mem_reaper.ts`_
   _Dependencies: cmem-t2-02_

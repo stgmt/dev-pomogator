@@ -18,12 +18,6 @@
           {
             "type": "http",
             "url": "http://127.0.0.1:42619/v1/dispatch/Stop%2F0%2F0",
-            "headers": {
-              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
-            },
-            "allowedEnvVars": [
-              "DEV_POMOGATOR_HOOK_TOKEN"
-            ],
             "timeout": 60
           }
         ]
@@ -34,12 +28,6 @@
           {
             "type": "http",
             "url": "http://127.0.0.1:42619/v1/dispatch/Stop%2F1%2F0",
-            "headers": {
-              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
-            },
-            "allowedEnvVars": [
-              "DEV_POMOGATOR_HOOK_TOKEN"
-            ],
             "timeout": 60
           }
         ]
@@ -50,12 +38,6 @@
           {
             "type": "http",
             "url": "http://127.0.0.1:42619/v1/dispatch/Stop%2F2%2F0",
-            "headers": {
-              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
-            },
-            "allowedEnvVars": [
-              "DEV_POMOGATOR_HOOK_TOKEN"
-            ],
             "timeout": 60
           }
         ]
@@ -66,12 +48,6 @@
           {
             "type": "http",
             "url": "http://127.0.0.1:42619/v1/dispatch/Stop%2F3%2F0",
-            "headers": {
-              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
-            },
-            "allowedEnvVars": [
-              "DEV_POMOGATOR_HOOK_TOKEN"
-            ],
             "timeout": 60
           }
         ]
@@ -82,12 +58,6 @@
           {
             "type": "http",
             "url": "http://127.0.0.1:42619/v1/dispatch/Stop%2F4%2F0",
-            "headers": {
-              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
-            },
-            "allowedEnvVars": [
-              "DEV_POMOGATOR_HOOK_TOKEN"
-            ],
             "timeout": 60
           }
         ]
@@ -98,12 +68,6 @@
           {
             "type": "http",
             "url": "http://127.0.0.1:42619/v1/dispatch/Stop%2F5%2F0",
-            "headers": {
-              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
-            },
-            "allowedEnvVars": [
-              "DEV_POMOGATOR_HOOK_TOKEN"
-            ],
             "timeout": 60
           }
         ]
@@ -114,12 +78,6 @@
           {
             "type": "http",
             "url": "http://127.0.0.1:42619/v1/dispatch/Stop%2F6%2F0",
-            "headers": {
-              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
-            },
-            "allowedEnvVars": [
-              "DEV_POMOGATOR_HOOK_TOKEN"
-            ],
             "timeout": 15
           }
         ]
@@ -130,12 +88,6 @@
           {
             "type": "http",
             "url": "http://127.0.0.1:42619/v1/dispatch/Stop%2F7%2F0",
-            "headers": {
-              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
-            },
-            "allowedEnvVars": [
-              "DEV_POMOGATOR_HOOK_TOKEN"
-            ],
             "timeout": 60
           }
         ]
@@ -146,12 +98,6 @@
           {
             "type": "http",
             "url": "http://127.0.0.1:42619/v1/dispatch/Stop%2F8%2F0",
-            "headers": {
-              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
-            },
-            "allowedEnvVars": [
-              "DEV_POMOGATOR_HOOK_TOKEN"
-            ],
             "timeout": 60
           }
         ]
@@ -162,12 +108,6 @@
           {
             "type": "http",
             "url": "http://127.0.0.1:42619/v1/dispatch/Stop%2F9%2F0",
-            "headers": {
-              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
-            },
-            "allowedEnvVars": [
-              "DEV_POMOGATOR_HOOK_TOKEN"
-            ],
             "timeout": 60
           }
         ]
@@ -178,12 +118,6 @@
           {
             "type": "http",
             "url": "http://127.0.0.1:42619/v1/dispatch/Stop%2F10%2F0",
-            "headers": {
-              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
-            },
-            "allowedEnvVars": [
-              "DEV_POMOGATOR_HOOK_TOKEN"
-            ],
             "timeout": 30
           }
         ]
@@ -194,12 +128,6 @@
           {
             "type": "http",
             "url": "http://127.0.0.1:42619/v1/dispatch/Stop%2F11%2F0",
-            "headers": {
-              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
-            },
-            "allowedEnvVars": [
-              "DEV_POMOGATOR_HOOK_TOKEN"
-            ],
             "timeout": 30
           }
         ]
@@ -210,12 +138,6 @@
           {
             "type": "http",
             "url": "http://127.0.0.1:42619/v1/dispatch/Stop%2F12%2F0",
-            "headers": {
-              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
-            },
-            "allowedEnvVars": [
-              "DEV_POMOGATOR_HOOK_TOKEN"
-            ],
             "timeout": 60
           }
         ]
@@ -228,12 +150,6 @@
           {
             "type": "http",
             "url": "http://127.0.0.1:42619/v1/dispatch/PreToolUse%2F0%2F0",
-            "headers": {
-              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
-            },
-            "allowedEnvVars": [
-              "DEV_POMOGATOR_HOOK_TOKEN"
-            ],
             "timeout": 15
           }
         ]
@@ -244,12 +160,6 @@
           {
             "type": "http",
             "url": "http://127.0.0.1:42619/v1/dispatch/PreToolUse%2F1%2F0",
-            "headers": {
-              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
-            },
-            "allowedEnvVars": [
-              "DEV_POMOGATOR_HOOK_TOKEN"
-            ],
             "timeout": 60
           }
         ]
@@ -260,67 +170,31 @@
           {
             "type": "http",
             "url": "http://127.0.0.1:42619/v1/dispatch/PreToolUse%2F2%2F0",
-            "headers": {
-              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
-            },
-            "allowedEnvVars": [
-              "DEV_POMOGATOR_HOOK_TOKEN"
-            ],
             "timeout": 60
           },
           {
             "type": "http",
             "url": "http://127.0.0.1:42619/v1/dispatch/PreToolUse%2F2%2F1",
-            "headers": {
-              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
-            },
-            "allowedEnvVars": [
-              "DEV_POMOGATOR_HOOK_TOKEN"
-            ],
             "timeout": 60
           },
           {
             "type": "http",
             "url": "http://127.0.0.1:42619/v1/dispatch/PreToolUse%2F2%2F2",
-            "headers": {
-              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
-            },
-            "allowedEnvVars": [
-              "DEV_POMOGATOR_HOOK_TOKEN"
-            ],
             "timeout": 60
           },
           {
             "type": "http",
             "url": "http://127.0.0.1:42619/v1/dispatch/PreToolUse%2F2%2F3",
-            "headers": {
-              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
-            },
-            "allowedEnvVars": [
-              "DEV_POMOGATOR_HOOK_TOKEN"
-            ],
             "timeout": 30
           },
           {
             "type": "http",
             "url": "http://127.0.0.1:42619/v1/dispatch/PreToolUse%2F2%2F4",
-            "headers": {
-              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
-            },
-            "allowedEnvVars": [
-              "DEV_POMOGATOR_HOOK_TOKEN"
-            ],
             "timeout": 30
           },
           {
             "type": "http",
             "url": "http://127.0.0.1:42619/v1/dispatch/PreToolUse%2F2%2F5",
-            "headers": {
-              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
-            },
-            "allowedEnvVars": [
-              "DEV_POMOGATOR_HOOK_TOKEN"
-            ],
             "timeout": 30
           }
         ]
@@ -331,12 +205,6 @@
           {
             "type": "http",
             "url": "http://127.0.0.1:42619/v1/dispatch/PreToolUse%2F3%2F0",
-            "headers": {
-              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
-            },
-            "allowedEnvVars": [
-              "DEV_POMOGATOR_HOOK_TOKEN"
-            ],
             "timeout": 30
           }
         ]
@@ -347,12 +215,6 @@
           {
             "type": "http",
             "url": "http://127.0.0.1:42619/v1/dispatch/PreToolUse%2F4%2F0",
-            "headers": {
-              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
-            },
-            "allowedEnvVars": [
-              "DEV_POMOGATOR_HOOK_TOKEN"
-            ],
             "timeout": 30
           }
         ]
@@ -363,12 +225,6 @@
           {
             "type": "http",
             "url": "http://127.0.0.1:42619/v1/dispatch/PreToolUse%2F5%2F0",
-            "headers": {
-              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
-            },
-            "allowedEnvVars": [
-              "DEV_POMOGATOR_HOOK_TOKEN"
-            ],
             "timeout": 30
           }
         ]
@@ -379,12 +235,6 @@
           {
             "type": "http",
             "url": "http://127.0.0.1:42619/v1/dispatch/PreToolUse%2F6%2F0",
-            "headers": {
-              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
-            },
-            "allowedEnvVars": [
-              "DEV_POMOGATOR_HOOK_TOKEN"
-            ],
             "timeout": 30
           }
         ]
@@ -397,12 +247,6 @@
           {
             "type": "http",
             "url": "http://127.0.0.1:42619/v1/dispatch/UserPromptSubmit%2F0%2F0",
-            "headers": {
-              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
-            },
-            "allowedEnvVars": [
-              "DEV_POMOGATOR_HOOK_TOKEN"
-            ],
             "timeout": 10
           }
         ]
@@ -413,12 +257,6 @@
           {
             "type": "http",
             "url": "http://127.0.0.1:42619/v1/dispatch/UserPromptSubmit%2F1%2F0",
-            "headers": {
-              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
-            },
-            "allowedEnvVars": [
-              "DEV_POMOGATOR_HOOK_TOKEN"
-            ],
             "timeout": 60
           }
         ]
@@ -429,12 +267,6 @@
           {
             "type": "http",
             "url": "http://127.0.0.1:42619/v1/dispatch/UserPromptSubmit%2F2%2F0",
-            "headers": {
-              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
-            },
-            "allowedEnvVars": [
-              "DEV_POMOGATOR_HOOK_TOKEN"
-            ],
             "timeout": 60
           }
         ]
@@ -445,12 +277,6 @@
           {
             "type": "http",
             "url": "http://127.0.0.1:42619/v1/dispatch/UserPromptSubmit%2F3%2F0",
-            "headers": {
-              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
-            },
-            "allowedEnvVars": [
-              "DEV_POMOGATOR_HOOK_TOKEN"
-            ],
             "timeout": 60
           }
         ]
@@ -461,12 +287,6 @@
           {
             "type": "http",
             "url": "http://127.0.0.1:42619/v1/dispatch/UserPromptSubmit%2F4%2F0",
-            "headers": {
-              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
-            },
-            "allowedEnvVars": [
-              "DEV_POMOGATOR_HOOK_TOKEN"
-            ],
             "timeout": 60
           }
         ]
@@ -477,12 +297,6 @@
           {
             "type": "http",
             "url": "http://127.0.0.1:42619/v1/dispatch/UserPromptSubmit%2F5%2F0",
-            "headers": {
-              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
-            },
-            "allowedEnvVars": [
-              "DEV_POMOGATOR_HOOK_TOKEN"
-            ],
             "timeout": 15
           }
         ]
@@ -495,45 +309,21 @@
           {
             "type": "http",
             "url": "http://127.0.0.1:42619/v1/dispatch/PostToolUse%2F0%2F0",
-            "headers": {
-              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
-            },
-            "allowedEnvVars": [
-              "DEV_POMOGATOR_HOOK_TOKEN"
-            ],
             "timeout": 60
           },
           {
             "type": "http",
             "url": "http://127.0.0.1:42619/v1/dispatch/PostToolUse%2F0%2F1",
-            "headers": {
-              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
-            },
-            "allowedEnvVars": [
-              "DEV_POMOGATOR_HOOK_TOKEN"
-            ],
             "timeout": 30
           },
           {
             "type": "http",
             "url": "http://127.0.0.1:42619/v1/dispatch/PostToolUse%2F0%2F2",
-            "headers": {
-              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
-            },
-            "allowedEnvVars": [
-              "DEV_POMOGATOR_HOOK_TOKEN"
-            ],
             "timeout": 30
           },
           {
             "type": "http",
             "url": "http://127.0.0.1:42619/v1/dispatch/PostToolUse%2F0%2F3",
-            "headers": {
-              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
-            },
-            "allowedEnvVars": [
-              "DEV_POMOGATOR_HOOK_TOKEN"
-            ],
             "timeout": 15
           }
         ]
@@ -544,12 +334,6 @@
           {
             "type": "http",
             "url": "http://127.0.0.1:42619/v1/dispatch/PostToolUse%2F1%2F0",
-            "headers": {
-              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
-            },
-            "allowedEnvVars": [
-              "DEV_POMOGATOR_HOOK_TOKEN"
-            ],
             "timeout": 15
           }
         ]
@@ -560,23 +344,11 @@
           {
             "type": "http",
             "url": "http://127.0.0.1:42619/v1/dispatch/PostToolUse%2F2%2F0",
-            "headers": {
-              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
-            },
-            "allowedEnvVars": [
-              "DEV_POMOGATOR_HOOK_TOKEN"
-            ],
             "timeout": 60
           },
           {
             "type": "http",
             "url": "http://127.0.0.1:42619/v1/dispatch/PostToolUse%2F2%2F1",
-            "headers": {
-              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
-            },
-            "allowedEnvVars": [
-              "DEV_POMOGATOR_HOOK_TOKEN"
-            ],
             "timeout": 30
           }
         ]
@@ -587,12 +359,6 @@
           {
             "type": "http",
             "url": "http://127.0.0.1:42619/v1/dispatch/PostToolUse%2F3%2F0",
-            "headers": {
-              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
-            },
-            "allowedEnvVars": [
-              "DEV_POMOGATOR_HOOK_TOKEN"
-            ],
             "timeout": 10
           }
         ]
