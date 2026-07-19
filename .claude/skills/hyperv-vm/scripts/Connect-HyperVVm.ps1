@@ -1,30 +1,36 @@
 [CmdletBinding()]
-param([Parameter(Mandatory)][string]$ConfigPath)
+param(
+    [Parameter(Mandatory)][string]$ConfigPath,
+    [switch]$EnrollHostKey
+)
 
 . "$PSScriptRoot\Common.ps1"
-$imported = Import-HyperVVmConfig $ConfigPath
-$config = $imported.Value
+$config = Import-HyperVVmConfig -ConfigPath $ConfigPath
 $vm = Get-VM -Name $config.Name -ErrorAction Stop
 if ($vm.State -ne 'Running') { throw "VM is not running: $($vm.State)" }
 
 if ($config.Guest -eq 'windows-ltsc') {
     [pscustomobject]@{
-        Transport = 'PowerShellDirect'
+        Method = 'PowerShellDirect'
         Command = "New-PSSession -VMName '$($config.Name)' -Credential (Get-Credential '$($config.Access.AdminUser)')"
         RdpEnabled = [bool]$config.Access.EnableRdp
         RdpCommand = if ($config.Access.EnableRdp) { "vmconnect.exe localhost '$($config.Name)'" } else { $null }
     }
-    exit
+    return
 }
 
-$addresses = @(Get-VMNetworkAdapter -VMName $config.Name).IPAddresses | Where-Object { $_ -match '^\d+\.\d+\.\d+\.\d+$' -and $_ -notmatch '^169\.254\.' }
-if ($addresses.Count -ne 1) { throw "Expected one IPv4 address, found $($addresses.Count): $($addresses -join ', ')" }
-$key = Resolve-ConfigPath $imported.Directory $config.Access.SshPrivateKeyPath
-$knownHosts = Join-Path (Get-StatePaths $imported).State 'known_hosts'
+$connection = if ($EnrollHostKey) {
+    Initialize-UbuntuKnownHost -Config $config -Confirm:$false
+} else {
+    Get-UbuntuSshConnection -Config $config
+}
+if (-not (Test-Path -LiteralPath $connection.KnownHosts)) {
+    throw "Pinned host key is not enrolled. Run Connect-HyperVVm.ps1 -ConfigPath '$ConfigPath' -EnrollHostKey after checking Access.SshHostKeyFingerprint."
+}
 [pscustomobject]@{
-    Transport = 'SSH'
-    Address = $addresses[0]
-    User = $config.Access.AdminUser
-    KnownHosts = $knownHosts
-    Command = "ssh -i `"$key`" -o StrictHostKeyChecking=yes -o UserKnownHostsFile=`"$knownHosts`" $($config.Access.AdminUser)@$($addresses[0])"
+    Method = 'SSH'
+    Address = $connection.Address
+    User = $connection.User
+    KnownHosts = $connection.KnownHosts
+    Command = "ssh -i `"$($connection.PrivateKey)`" -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=`"$($connection.KnownHosts)`" $($connection.User)@$($connection.Address)"
 }

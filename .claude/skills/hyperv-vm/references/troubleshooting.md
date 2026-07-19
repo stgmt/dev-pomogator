@@ -22,7 +22,7 @@
 ## Ubuntu guest
 
 - No IP address: inspect switch/DHCP and `Get-VMNetworkAdapter`; do not guess an address.
-- SSH host key changed: confirm the VM identity and state bundle before removing the old key.
+- SSH host key changed: never bypass strict checking. Confirm the VM identity and state bundle, then run `Connect-HyperVVm.ps1 -EnrollHostKey`; enrollment accepts the scanned key only when its SHA-256 fingerprint matches config or `state.json`.
 - cloud-init incomplete: inspect `cloud-init status --long` and `/var/log/cloud-init-output.log`.
 - Docker access denied: use `sudo` or deliberately add the user to `docker`; document that this is
   root-equivalent access.

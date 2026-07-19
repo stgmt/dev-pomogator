@@ -1,27 +1,30 @@
 [CmdletBinding()]
 param(
-    [Parameter(Mandatory)][string]$Before,
-    [Parameter(Mandatory)][string]$After
+    [Parameter(Mandatory,Position=0)][string]$Before,
+    [Parameter(Mandatory,Position=1)][string]$After
 )
 
-$beforeData = Get-Content -LiteralPath $Before -Raw | ConvertFrom-Json
-$afterData = Get-Content -LiteralPath $After -Raw | ConvertFrom-Json
-$invalid = [Collections.Generic.List[string]]::new()
-foreach ($field in 'VMId','LimitsFingerprint','StabilizationSeconds','Workload') {
-    if ($beforeData.$field -ne $afterData.$field) { $invalid.Add("$field differs") }
+$beforePath=(Resolve-Path -LiteralPath $Before).Path
+$afterPath=(Resolve-Path -LiteralPath $After).Path
+if ($beforePath -eq $afterPath) { throw 'Before and after reports must be different files' }
+$beforeData = Get-Content -LiteralPath $beforePath -Raw | ConvertFrom-Json
+$afterData = Get-Content -LiteralPath $afterPath -Raw | ConvertFrom-Json
+if ($beforeData.Phase -ne 'before' -or $afterData.Phase -ne 'after') { throw 'Reports must have Phase=before and Phase=after respectively' }
+foreach ($field in 'VMId','ConfigFingerprint','LimitsFingerprint','StabilizationSeconds','WorkloadFingerprint') {
+    if ($beforeData.$field -ne $afterData.$field) { throw "Comparison invalid: $field changed" }
 }
-if ($invalid.Count) {
-    [pscustomobject]@{ Valid = $false; Reasons = @($invalid); Before = $Before; After = $After }
-    exit 1
-}
+$beforeTime=[datetime]$beforeData.CapturedAt; $afterTime=[datetime]$afterData.CapturedAt
+if ($afterTime -le $beforeTime) { throw 'After measurement must be newer than before measurement' }
 
-$rows = foreach ($metric in 'VMAssignedMB','VMDemandMB') {
-    $old = [double]$beforeData.$metric
-    $new = [double]$afterData.$metric
-    [pscustomobject]@{ Metric=$metric; Before=$old; After=$new; Delta=[math]::Round($new-$old,1); Percent=if($old){[math]::Round((($new-$old)/$old)*100,1)}else{$null} }
+$rows=@()
+foreach($metric in 'VMAssignedMB','VMDemandMB'){
+    if ($null -eq $beforeData.$metric -or $null -eq $afterData.$metric) { throw "Missing required metric: $metric" }
+    $old=[double]$beforeData.$metric; $new=[double]$afterData.$metric
+    $rows += [pscustomobject]@{Metric=$metric;Before=$old;After=$new;Delta=[math]::Round($new-$old,1);Percent=if($old){[math]::Round((($new-$old)/$old)*100,1)}else{$null}}
 }
-if ($beforeData.Guest.PSObject.Properties.Name -contains 'UsedMB') {
-    $old = [double]$beforeData.Guest.UsedMB; $new = [double]$afterData.Guest.UsedMB
-    $rows += [pscustomobject]@{ Metric='GuestUsedMB'; Before=$old; After=$new; Delta=[math]::Round($new-$old,1); Percent=if($old){[math]::Round((($new-$old)/$old)*100,1)}else{$null} }
+foreach($metric in 'UsedMB','AvailableMB'){
+    if ($null -eq $beforeData.Guest.$metric -or $null -eq $afterData.Guest.$metric) { throw "Missing required guest metric: $metric" }
+    $old=[double]$beforeData.Guest.$metric; $new=[double]$afterData.Guest.$metric
+    $rows += [pscustomobject]@{Metric="Guest$metric";Before=$old;After=$new;Delta=[math]::Round($new-$old,1);Percent=if($old){[math]::Round((($new-$old)/$old)*100,1)}else{$null}}
 }
-[pscustomobject]@{ Valid=$true; LimitsUnchanged=$true; Rows=@($rows) }
+[pscustomobject]@{Valid=$true;LimitsUnchanged=$true;WorkloadUnchanged=$true;Before=$beforeTime;After=$afterTime;Rows=$rows}

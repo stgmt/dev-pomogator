@@ -35,6 +35,9 @@
         SshPublicKeyPath = '~\.ssh\id_ed25519.pub'
         SshPrivateKeyPath = '~\.ssh\id_ed25519'
         SshPrivateKeyPassphraseEnv = 'HYPERV_VM_SSH_PASSPHRASE'
+        # Filled after New-HyperVVmProvisioningMedia.ps1 reports the generated host-key fingerprint.
+        # Optional input. If empty, Apply generates a per-VM host key and records its fingerprint in state.json.
+        SshHostKeyFingerprint = ''
         EnablePasswordSsh = $false
     }
     Features = @{

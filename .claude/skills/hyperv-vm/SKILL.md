@@ -64,9 +64,18 @@ and expected reboots.
 & "$skill\scripts\Invoke-HyperVVm.ps1" -Action Apply -ConfigPath .\vm.psd1
 ```
 
+`Apply` creates unattended/NoCloud media, journals before mutation, creates the VM, attaches media,
+and starts it. After Windows OOBE, run `Finalize-WindowsGuest.ps1`; when it reports a required
+reboot, reboot and execute the emitted WSL/Docker setup command. For Ubuntu, wait for
+`cloud-init status --wait`, then pin the generated host identity before the first SSH command:
+
+```powershell
+& "$skill\scripts\Connect-HyperVVm.ps1" -ConfigPath .\vm.psd1 -EnrollHostKey
+```
+
 Profiles:
 
-- `windows-ltsc`: Generation 2, UEFI/Secure Boot, optional vTPM, unattended install, PowerShell
+- `windows-ltsc`: Generation 2, UEFI/Secure Boot, unattended install, PowerShell
   Direct verification, optional RDP. If `InstallWslDocker` is true, enable nested virtualization,
   WSL2, Ubuntu, systemd, Docker CE, BuildKit GC, sparse VHD, and a prune timer.
 - `ubuntu-server`: Generation 2, Microsoft UEFI CA Secure Boot, cloud-init NoCloud ISO, SSH key
@@ -120,7 +129,7 @@ are disabled.
 
 ```powershell
 & "$skill\scripts\Measure-HyperVVm.ps1" -ConfigPath .\vm.psd1 -Phase after
-& "$skill\scripts\Compare-HyperVVmMeasurements.ps1" -Before .\reports\before.json -After .\reports\after.json
+& "$skill\scripts\Compare-HyperVVmMeasurements.ps1" -Before .\hyperv-vm-reports\before.json -After .\hyperv-vm-reports\after.json
 & "$skill\scripts\Test-HyperVVm.ps1" -ConfigPath .\vm.psd1
 ```
 

@@ -56,8 +56,9 @@ Changing a cap is reported as capacity tuning, never as guest optimization.
 
 ## Optimization and rollback
 
-Every optimization records prior service modes, policy/registry values, firewall profiles, update
-services/tasks, service-host threshold, WSL config, and VM memory settings. Rollback restores only
-values changed by this skill. Missing/foreign values are left untouched and reported.
+Every optimization atomically records prior service modes, policy/registry values, firewall profiles,
+service-host threshold, and WSL config before mutation. `Restore-HyperVVm.ps1` consumes that versioned
+snapshot, restores only captured values, and archives it only after success. Repeated optimization is
+refused until the active snapshot is restored; missing/foreign values are left untouched and reported.
 
 Security/update changes are separate profile flags and are never implied by `Conservative`.
