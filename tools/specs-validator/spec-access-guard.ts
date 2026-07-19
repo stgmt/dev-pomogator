@@ -375,42 +375,19 @@ function logEscape(repoRoot: string, reason: string): void {
 }
 
 /**
- * Is enforce ON? Sources, first DEFINED one wins:
- *   1. SPEC_ACCESS_ENFORCE — manual (dogfood/CI).
- *   2/3. CLAUDE_PLUGIN_OPTION_spec_access_enforce — the plugin's
- *   `userConfig.spec_access_enforce` toggle (casing matched both ways), exported by
- *   Claude Code to plugin subprocesses. Env inherits through bootstrap→tsx-runner→guard.
- *
- * UNSET on every source → ON, matching `plugin.json` (`"default": true`, description
- * "When ON (default)"). Claude Code exports `CLAUDE_PLUGIN_OPTION_*` only for options the
- * user TOUCHED at enable time; a manifest default never materialises in the subprocess env.
- * The previous opt-in form (`onish(a) || onish(b) || onish(c)`) therefore resolved to
- * `false` on every installation that did not hand-edit settings.json — the guard detected
- * violations correctly but only ever logged them, and the declared default was a phantom.
- * Field evidence (lm-saas, one week of real sessions): 525 `shadow` decisions, 0 `denied`.
- *
- * OFF is now an EXPLICIT act (`false`/`0`) — which is what "Turn OFF only to downgrade to
- * shadow (log-only)" in the manifest description always implied. Escape hatches unchanged:
- * SPEC_ACCESS_SKIP=1 and the per-call `[skip-spec-access: <reason ≥8>]` Bash marker.
- * Exported pure for the BDD bind.
+ * Is enforce ON? Set manually (SPEC_ACCESS_ENFORCE — dogfood/CI) OR via the plugin's
+ * `userConfig.spec_access_enforce` toggle, which Claude Code auto-exports to plugin
+ * subprocesses as `CLAUDE_PLUGIN_OPTION_<key>` (casing matched both ways) — so INSTALLED
+ * users get enforce from the enable-time toggle, no settings.json hand-editing. Env
+ * inherits through the bootstrap→tsx-runner→guard chain. Exported pure for the BDD bind.
  */
 export function enforceEnabled(env: NodeJS.ProcessEnv = process.env): boolean {
-  const tri = (v: string | undefined): boolean | undefined => {
-    if (v === undefined) return undefined;
-    const s = v.trim().toLowerCase();
-    if (s === 'true' || s === '1') return true;
-    if (s === 'false' || s === '0') return false;
-    return undefined; // empty/unparsable → treat as unset, fall through to the next source
-  };
-  for (const raw of [
-    env.SPEC_ACCESS_ENFORCE,
-    env.CLAUDE_PLUGIN_OPTION_spec_access_enforce,
-    env.CLAUDE_PLUGIN_OPTION_SPEC_ACCESS_ENFORCE,
-  ]) {
-    const decided = tri(raw);
-    if (decided !== undefined) return decided;
-  }
-  return true; // plugin.json → userConfig.spec_access_enforce.default
+  const onish = (v: string | undefined): boolean => v === 'true' || v === '1';
+  return (
+    onish(env.SPEC_ACCESS_ENFORCE) ||
+    onish(env.CLAUDE_PLUGIN_OPTION_spec_access_enforce) ||
+    onish(env.CLAUDE_PLUGIN_OPTION_SPEC_ACCESS_ENFORCE)
+  );
 }
 
 async function main(): Promise<void> {
