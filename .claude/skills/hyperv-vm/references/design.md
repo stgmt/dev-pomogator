@@ -6,6 +6,7 @@
 - Keep secrets outside repository artifacts and generated media.
 - Support reliable login: PowerShell Direct/RDP for Windows; SSH keys for Linux.
 - Install Docker CE without Docker Desktop, including WSL2 Docker on Windows guests.
+- Repair nested virtualization safely for an existing Windows 11 Hyper-V guest.
 - Make optimization measurable, role-based, reversible, and independent from resource caps.
 
 ## State machine
@@ -31,6 +32,29 @@ credential is set.
 - PowerShell Direct is the primary transport and verification channel.
 - WSL2 requires nested virtualization and a Windows build supported by the selected WSL release.
 - Docker runs under Ubuntu systemd; no Docker Desktop dependency.
+
+## Existing Windows 11 guest profile
+
+An existing guest follows a separate, bounded state machine:
+
+`observed -> shutdown-approved -> off -> processor-updated -> restarted -> runtime-verified`
+
+`Set-HyperVVmNestedVirtualization.ps1` runs only on the parent host with administrator rights. It
+captures VM identity, processor state, and the network-adapter state before mutation. A running VM
+is changed only with `-AllowGuestShutdown`; shutdown is graceful and a timeout preserves the VM for
+manual recovery instead of using `-TurnOff`. Rollback validates VM identity, restores only captured
+values, and archives the snapshot after success. The existing-guest repair is generation-neutral:
+Generation 1 and Generation 2 guests are reported and handled without reprovisioning, while the
+new-VM Windows profile remains Generation 2.
+
+Topology is classified from SMBIOS plus `HypervisorPresent`; raw processor flags are evidence but
+not a topology oracle. On a root partition with an active hypervisor, false VM-monitor/SLAT fields
+do not override a successful WSL2 kernel probe. On the Windows guest, verification requires both
+the parent `ExposeVirtualizationExtensions` flag and live guest evidence: PowerShell Direct,
+distribution version 2, `microsoft-standard-WSL2`, WSL processes, and optionally Docker daemon.
+
+MAC spoofing is orthogonal to processor virtualization. It remains off unless explicitly requested
+for a layer-2 forwarding design; ordinary NAT/double-NAT does not silently enable it.
 
 ## Ubuntu profile
 

@@ -10,6 +10,7 @@ $paths = Get-StatePaths -Config $config
 $vhdRoot = Resolve-ConfigPath -Config $config -Path $config.Disk.RootDirectory
 $vhdPath = Join-Path $vhdRoot "$($config.Name).vhdx"
 $configFingerprint = Get-ConfigFingerprint -Config $config
+$macAddressSpoofing = $config.Network.ContainsKey('EnableMacAddressSpoofing') -and [bool]$config.Network.EnableMacAddressSpoofing
 
 $plan = [ordered]@{
     Guest = $config.Guest
@@ -23,6 +24,7 @@ $plan = [ordered]@{
     InstallSource = Resolve-ConfigPath -Config $config -Path $config.Install.Source
     ExpectedSha256 = $config.Install.ExpectedSha256
     NestedVirtualization = $config.Features.NestedVirtualization
+    MacAddressSpoofing = $macAddressSpoofing
     Docker = [bool]($config.Features.InstallDocker -or $config.Features.InstallWslDocker)
     Access = if ($config.Guest -eq 'windows-ltsc') { 'PowerShell Direct and optional RDP' } else { 'SSH with pinned host key' }
     HighRisk = [ordered]@{
@@ -85,7 +87,7 @@ try {
         Set-VMMemory -VMName $config.Name -DynamicMemoryEnabled $false -StartupBytes $memoryStartup
     }
     Set-VMProcessor -VMName $config.Name -ExposeVirtualizationExtensions ([bool]$config.Features.NestedVirtualization)
-    Set-VMNetworkAdapter -VMName $config.Name -MacAddressSpoofing $(if ($config.Features.NestedVirtualization) { 'On' } else { 'Off' })
+    Set-VMNetworkAdapter -VMName $config.Name -MacAddressSpoofing $(if ($macAddressSpoofing) { 'On' } else { 'Off' })
     $secureBootTemplate = if ($config.Guest -eq 'windows-ltsc') { 'MicrosoftWindows' } else { 'MicrosoftUEFICertificateAuthority' }
     Set-VMFirmware -VMName $config.Name -EnableSecureBoot On -SecureBootTemplate $secureBootTemplate
     $installDvd = Add-VMDvdDrive -VMName $config.Name -Path $preflight.InstallSource -Passthru
@@ -102,13 +104,21 @@ try {
     Write-AtomicJson -InputObject $journal -Path $paths.StateFile
     [pscustomobject]$journal
 } catch {
+    $originalError = $_
+    $cleanupComplete = -not $created
     if ($created) {
-        Stop-VM -Name $config.Name -TurnOff -Force -ErrorAction SilentlyContinue
-        Remove-VM -Name $config.Name -Force -ErrorAction SilentlyContinue
+        try {
+            Stop-HyperVVmGracefully -VMName $config.Name -TimeoutSeconds 300 | Out-Null
+            Remove-VM -Name $config.Name -Force -ErrorAction Stop
+            $cleanupComplete = $true
+        } catch {
+            $cleanupComplete = $false
+            $journal['CleanupError'] = $_.Exception.Message
+        }
     }
-    if (Test-Path -LiteralPath $vhdPath) { Remove-Item -LiteralPath $vhdPath -Force -ErrorAction SilentlyContinue }
-    $journal.Stage = 'failed-cleaned'
-    $journal.Error = $_.Exception.Message
+    if ($cleanupComplete -and (Test-Path -LiteralPath $vhdPath)) { Remove-Item -LiteralPath $vhdPath -Force -ErrorAction SilentlyContinue }
+    $journal.Stage = if ($cleanupComplete) { 'failed-cleaned' } else { 'failed-preserved-for-safe-recovery' }
+    $journal.Error = $originalError.Exception.Message
     Write-AtomicJson -InputObject $journal -Path $paths.StateFile
-    throw
+    throw $originalError
 }

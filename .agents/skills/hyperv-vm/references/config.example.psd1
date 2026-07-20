@@ -19,6 +19,8 @@
     Network = @{
         SwitchName = 'Default Switch'
         AllowUntrustedNetwork = $false
+        # Opt-in only. Nested virtualization does not imply layer-2 forwarding.
+        EnableMacAddressSpoofing = $false
     }
     Install = @{
         Source = 'C:\ISO\official-image.iso'

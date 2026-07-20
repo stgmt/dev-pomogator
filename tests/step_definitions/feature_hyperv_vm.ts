@@ -137,3 +137,77 @@ Then('every canonical file has one byte-identical agent mirror', function (this:
   assert.deepEqual(mirror, canonical);
   for (const file of canonical) assert.deepEqual(fs.readFileSync(path.join(skillRoot, file)), fs.readFileSync(path.join(mirrorRoot, file)), file);
 });
+
+Given('an existing Windows 11 nested virtualization repair implementation', function (this: V4World) {
+  this.stdout = JSON.stringify({
+    repair: fs.readFileSync(path.join(scripts, 'Set-HyperVVmNestedVirtualization.ps1'), 'utf8'),
+    common: fs.readFileSync(path.join(scripts, 'Common.ps1'), 'utf8'),
+    invoke: fs.readFileSync(path.join(scripts, 'Invoke-HyperVVm.ps1'), 'utf8'),
+  });
+});
+
+When('the nested virtualization repair scripts are parsed', function () {
+  parsePowerShell(path.join(scripts, 'Set-HyperVVmNestedVirtualization.ps1'));
+  parsePowerShell(path.join(scripts, 'Common.ps1'));
+});
+
+Then('a running guest requires explicit graceful shutdown approval before processor mutation', function (this: V4World) {
+  const { repair, common } = JSON.parse(this.stdout ?? '{}') as { repair: string; common: string };
+  assert.match(repair, /ALLOW_GUEST_SHUTDOWN_REQUIRED/);
+  assert.match(repair, /Stop-HyperVVmGracefully/);
+  assert.match(repair, /VM_MUST_BE_OFF/);
+  assert.ok(repair.indexOf('Stop-HyperVVmGracefully') < repair.indexOf('Set-VMProcessor'));
+  assert.match(common, /Stop-VM -Name \$VMName -Confirm:\$false -ErrorAction Stop/);
+  assert.doesNotMatch(repair + common, /Stop-VM[^\r\n]*-(?:TurnOff|Force)/);
+  assert.match(repair, /Generation = \$vm\.Generation/);
+  assert.doesNotMatch(repair, /Only Generation 2|Generation -ne 2/);
+});
+
+Then('rollback restores captured processor and opt-in network state', function (this: V4World) {
+  const { repair, invoke } = JSON.parse(this.stdout ?? '{}') as { repair: string; invoke: string };
+  for (const evidence of ['PreviousExposeVirtualizationExtensions', 'PreviousNetworkAdapters', 'Write-AtomicJson', 'Move-Item -LiteralPath $StatePath']) {
+    assert.match(repair, new RegExp(evidence.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+  }
+  assert.match(repair, /\[switch\]\$EnableMacAddressSpoofing/);
+  assert.match(repair, /\$Action -eq 'Apply' -and \$EnableMacAddressSpoofing/);
+  assert.match(invoke, /EnableMacAddressSpoofing/);
+  assert.doesNotMatch(invoke, /if \(\$config\.Features\.NestedVirtualization\)[\s\S]{0,200}MacAddressSpoofing/);
+});
+
+Given('Windows guest nested virtualization verification scripts', function (this: V4World) {
+  this.stdout = JSON.stringify({
+    nested: fs.readFileSync(path.join(scripts, 'Test-HyperVVmNestedVirtualization.ps1'), 'utf8'),
+    lifecycle: fs.readFileSync(path.join(scripts, 'Test-HyperVVm.ps1'), 'utf8'),
+    common: fs.readFileSync(path.join(scripts, 'Common.ps1'), 'utf8'),
+  });
+});
+
+When('the nested virtualization verification scripts are parsed', function () {
+  parsePowerShell(path.join(scripts, 'Test-HyperVVmNestedVirtualization.ps1'));
+  parsePowerShell(path.join(scripts, 'Test-HyperVVm.ps1'));
+  parsePowerShell(path.join(scripts, 'Common.ps1'));
+});
+
+Then('verification requires real WSL2 kernel process and Docker evidence', function (this: V4World) {
+  const { nested, lifecycle } = JSON.parse(this.stdout ?? '{}') as { nested: string; lifecycle: string };
+  const combined = nested + lifecycle;
+  for (const evidence of ['uname -r', 'microsoft-standard-WSL2', 'vmmemWSL,wslservice', 'docker info', 'docker run --rm hello-world']) {
+    assert.match(combined, new RegExp(evidence.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+  }
+  assert.match(nested, /if \(\$failed\.Count\) \{ exit 1 \}/);
+});
+
+Then('active-hypervisor CPU flags are not treated as conclusive', function (this: V4World) {
+  const { common } = JSON.parse(this.stdout ?? '{}') as { common: string };
+  assert.match(common, /Get-WindowsVirtualizationTopology/);
+  for (const role of ['HyperVGuest', 'HyperVRootHost', 'PhysicalHost']) assert.match(common, new RegExp(role));
+  assert.match(common, /CpuFlagsConclusive = -not \$hypervisorPresent/);
+});
+
+Then('E_UNEXPECTED collects bounded guest event diagnostics', function (this: V4World) {
+  const { nested, lifecycle } = JSON.parse(this.stdout ?? '{}') as { nested: string; lifecycle: string };
+  const combined = nested + lifecycle;
+  for (const evidence of ['E_UNEXPECTED', 'Microsoft-Windows-Lxss/Operational', 'Microsoft-Windows-Hyper-V-Compute-Admin', 'Microsoft-Windows-Hyper-V-Worker-Admin', 'Microsoft-Windows-Host-Network-Service-Admin', 'MaxEvents 10', 'Substring(0, 500)']) {
+    assert.match(combined, new RegExp(evidence.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+  }
+});

@@ -41,3 +41,18 @@ Feature: HYPERV001 Reusable Hyper-V VM lifecycle
     Given the canonical Hyper-V skill tree
     When the mirror parity check runs
     Then every canonical file has one byte-identical agent mirror
+
+  @FR-3
+  Scenario: HYPERV001_07 existing Windows 11 guest gets reversible nested virtualization
+    Given an existing Windows 11 nested virtualization repair implementation
+    When the nested virtualization repair scripts are parsed
+    Then a running guest requires explicit graceful shutdown approval before processor mutation
+    And rollback restores captured processor and opt-in network state
+
+  @FR-5
+  Scenario: HYPERV001_08 Windows 11 guest verification proves a real WSL2 runtime
+    Given Windows guest nested virtualization verification scripts
+    When the nested virtualization verification scripts are parsed
+    Then verification requires real WSL2 kernel process and Docker evidence
+    And active-hypervisor CPU flags are not treated as conclusive
+    And E_UNEXPECTED collects bounded guest event diagnostics

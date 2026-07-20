@@ -2,6 +2,8 @@
 
 ## Prerequisite failures
 
+- `ADMIN_REQUIRED`: rerun on the parent Hyper-V host in an elevated PowerShell session. Do not
+  interpret an access-denied `Get-VM` call as an absent VM or missing Hyper-V role.
 - Hyper-V cmdlets missing: enable Hyper-V on a supported Windows edition and complete the required
   feature activation before retrying.
 - No virtual switch: create/select one explicitly; do not silently attach to an arbitrary switch.
@@ -15,7 +17,19 @@
 - WSL reports `WSL_E_OS_NOT_SUPPORTED`: compare the Windows build against the chosen WSL release;
   install an official servicing update, reboot only when the package requires it, then retry.
 - Nested WSL fails: confirm `ExposeVirtualizationExtensions`, guest VirtualMachinePlatform and WSL
-  features, and sufficient host virtualization support.
+  features, and sufficient host virtualization support. Read the processor flag with
+  `Get-VMProcessor` on the parent host; it cannot be repaired from inside the Windows guest.
+- A root host reports `VMMonitorModeExtensions=False` or `SLAT=False`: do not conclude that nested
+  virtualization is missing. First classify root host versus guest and run a real WSL kernel probe.
+  An active Hyper-V host can stop exposing meaningful raw capability flags to the root partition.
+- `ALLOW_GUEST_SHUTDOWN_REQUIRED`: save guest work, obtain explicit downtime approval, and rerun
+  `Set-HyperVVmNestedVirtualization.ps1 -Action Apply -AllowGuestShutdown`. The script deliberately
+  refuses hard power-off.
+- `GRACEFUL_SHUTDOWN_TIMEOUT`: inspect guest integration services and shut the guest down manually.
+  Do not retry with `-TurnOff` unless the user separately authorizes possible data loss.
+- `E_UNEXPECTED`: use `Test-HyperVVmNestedVirtualization.ps1` to capture the host processor flag,
+  guest topology, WSL processes, kernel probe, and bounded Lxss/Host Compute/Hyper-V event evidence.
+  The error is a symptom, not proof of a nested-virtualization root cause.
 - Unattend fails: inspect `Windows\Panther\setuperr.log` and `UnattendGC`; validate computer-name,
   pass, component architecture, image index, partition types, and media drive discovery.
 
@@ -35,6 +49,9 @@
   `buildkitd.toml`.
 - sparse conversion fails: terminate the distro, verify current WSL syntax/version, and preserve a
   VHD backup before `--allow-unsafe`.
+- Docker networking fails only inside the nested guest: start with NAT/double-NAT diagnostics.
+  Enable MAC spoofing only when the network design needs layer-2 forwarding; it is an explicit
+  `-EnableMacAddressSpoofing` action and is rollback-tracked.
 
 ## Measurement anomalies
 

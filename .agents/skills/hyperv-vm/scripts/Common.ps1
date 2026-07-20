@@ -57,6 +57,65 @@ function Write-AtomicJson {
     }
 }
 
+function Get-WindowsVirtualizationTopology {
+    [CmdletBinding()]
+    param(
+        $ComputerSystem,
+        $Processor
+    )
+
+    if ($null -eq $ComputerSystem) { $ComputerSystem = Get-CimInstance Win32_ComputerSystem }
+    if ($null -eq $Processor) { $Processor = Get-CimInstance Win32_Processor | Select-Object -First 1 }
+
+    $manufacturer = [string]$ComputerSystem.Manufacturer
+    $model = [string]$ComputerSystem.Model
+    $hypervisorPresent = [bool]$ComputerSystem.HypervisorPresent
+    $isHyperVGuest = $manufacturer -eq 'Microsoft Corporation' -and $model -eq 'Virtual Machine'
+    $role = if ($isHyperVGuest) {
+        'HyperVGuest'
+    } elseif ($hypervisorPresent) {
+        'HyperVRootHost'
+    } else {
+        'PhysicalHost'
+    }
+
+    [pscustomobject]@{
+        Role = $role
+        Manufacturer = $manufacturer
+        Model = $model
+        HypervisorPresent = $hypervisorPresent
+        VirtualizationFirmwareEnabled = [bool]$Processor.VirtualizationFirmwareEnabled
+        VMMonitorModeExtensions = [bool]$Processor.VMMonitorModeExtensions
+        SecondLevelAddressTranslationExtensions = [bool]$Processor.SecondLevelAddressTranslationExtensions
+        CpuFlagsConclusive = -not $hypervisorPresent
+        Note = if ($hypervisorPresent) { 'CPU virtualization flags alone are not a valid failure verdict after a hypervisor is active' } else { 'CPU virtualization flags describe the non-virtualized host directly' }
+    }
+}
+
+function Stop-HyperVVmGracefully {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)][string]$VMName,
+        [ValidateRange(10, 3600)][int]$TimeoutSeconds = 300
+    )
+
+    $vm = Get-VM -Name $VMName -ErrorAction Stop
+    if ($vm.State -eq 'Off') { return $vm }
+    if ($vm.State -ne 'Running') { throw "VM_STATE_UNSAFE: $VMName is $($vm.State); only Running or Off is supported" }
+
+    Stop-VM -Name $VMName -Confirm:$false -ErrorAction Stop
+    $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
+    do {
+        Start-Sleep -Seconds 1
+        $vm = Get-VM -Name $VMName -ErrorAction Stop
+    } while ($vm.State -ne 'Off' -and (Get-Date) -lt $deadline)
+
+    if ($vm.State -ne 'Off') {
+        throw "GRACEFUL_SHUTDOWN_TIMEOUT: $VMName did not reach Off within $TimeoutSeconds seconds; hard power-off was not attempted"
+    }
+    $vm
+}
+
 function Get-StatePaths {
     param([Parameter(Mandatory)]$Config)
     $state = Resolve-ConfigPath -Config $Config -Path $Config.StateDirectory
@@ -158,10 +217,11 @@ function Get-HyperVVmWorkloadIdentity {
         Invoke-Command -VMName $Config.Name -Credential $credential -ArgumentList $distribution -ScriptBlock {
             param($Distribution)
             $wsl = "$env:ProgramFiles\WSL\wsl.exe"
-            if (-not (Test-Path -LiteralPath $wsl)) { return [pscustomobject]@{ OSBuild=(Get-CimInstance Win32_OperatingSystem).BuildNumber; DockerVersion=$null; Containers=@() } }
+            if (-not (Test-Path -LiteralPath $wsl)) { return [pscustomobject]@{ OSBuild=(Get-CimInstance Win32_OperatingSystem).BuildNumber; WslKernel=$null; DockerVersion=$null; Containers=@() } }
+            $wslKernel = & $wsl -d $Distribution -u root -e uname -r 2>$null
             $dockerVersion = & $wsl -d $Distribution -u root -e sh -lc 'docker version --format {{.Server.Version}} 2>/dev/null || true'
             $containers = @(& $wsl -d $Distribution -u root -e sh -lc 'docker ps --format {{.Image}} 2>/dev/null | sort')
-            [pscustomobject]@{ OSBuild=(Get-CimInstance Win32_OperatingSystem).BuildNumber; DockerVersion=($dockerVersion -join '').Trim(); Containers=$containers }
+            [pscustomobject]@{ OSBuild=(Get-CimInstance Win32_OperatingSystem).BuildNumber; WslKernel=($wslKernel -join '').Trim(); DockerVersion=($dockerVersion -join '').Trim(); Containers=$containers }
         }
     } else {
         $raw = @(Invoke-UbuntuSsh -Config $Config -Command "printf 'KERNEL='; uname -r; printf 'DOCKER='; docker version --format '{{.Server.Version}}' 2>/dev/null || true; docker ps --format '{{.Image}}' 2>/dev/null | sort")

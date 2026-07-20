@@ -2,13 +2,14 @@
 name: hyperv-vm
 description: >-
   Provision, connect to, measure, optimize, verify, and roll back reusable Hyper-V virtual
-  machines. Supports Windows LTSC guests with PowerShell Direct/RDP and Ubuntu Server guests
-  with SSH; can install WSL2 plus Docker CE without Docker Desktop, sparse VHD, BuildKit cache
-  GC, equal-limit memory profiling, and opt-in security/update policies. Triggers: "create VM",
-  "Hyper-V VM", "Windows LTSC VM", "Ubuntu VM", "виртуальная машина", "виртуалка",
-  "настрой VM", "оптимизируй VM", "подключись к VM".
+  machines. Supports new Windows LTSC/Ubuntu guests and existing Windows 11 Hyper-V guests with
+  PowerShell Direct/RDP or SSH; can repair nested virtualization, install WSL2 plus Docker CE
+  without Docker Desktop, manage sparse VHD and BuildKit cache GC, compare equal-limit memory,
+  and apply opt-in security/update policies. Triggers: "create VM", "Hyper-V VM",
+  "Windows LTSC VM", "Windows 11 guest", "WSL2 in Hyper-V", "nested virtualization",
+  "Ubuntu VM", "виртуальная машина", "виртуалка", "настрой VM", "оптимизируй VM".
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash, AskUserQuestion, WebSearch, WebFetch
-argument-hint: "<plan|apply|connect|measure|optimize|verify|rollback> [-ConfigPath <path>]"
+argument-hint: "<plan|apply|nested-plan|nested-apply|nested-verify|nested-rollback|connect|measure|optimize|verify|rollback>"
 ---
 
 # hyperv-vm
@@ -29,6 +30,14 @@ Git, unattended XML, cloud-init, logs, reports, or issue bodies.
    disabling require separate explicit approval. These flags default to false.
 6. Reboots are never a first-line remediation. Reboot only when setup/feature activation requires
    it or when the user explicitly asks for end-to-end provisioning.
+7. Distinguish the parent/root Hyper-V host from a Windows guest before diagnosing CPU flags.
+   Once a hypervisor is active, `VMMonitorModeExtensions=False` and `SLAT=False` alone are not a
+   failure verdict. A real WSL2 kernel response is stronger evidence than those two WMI fields.
+8. Processor settings for an existing Windows guest change only on the parent Hyper-V host, in an
+   elevated PowerShell session, while the VM is `Off`. A running guest requires explicit downtime
+   approval and graceful shutdown; never substitute `Stop-VM -TurnOff` silently.
+9. Nested virtualization does not require MAC spoofing for every topology. Keep it opt-in and use
+   it only when the network design needs layer-2 forwarding rather than NAT/double-NAT.
 
 ## Configuration
 
@@ -43,6 +52,54 @@ Never accept plaintext passwords in the config. Windows unattended installation 
 one-time bootstrap secret; `Finalize-WindowsGuest.ps1` rotates it to the runtime secret before
 verification and deletes autologon values. Linux uses an SSH public key by default; password SSH
 is opt-in.
+
+## Existing Windows 11 guest: nested virtualization repair
+
+Use this path when Windows 11 already exists as a Hyper-V guest and WSL2 needs virtualization
+extensions from the parent. Do not run the processor mutation inside the guest. This repair path
+is generation-neutral: it reports the existing generation/configuration version and changes only
+the processor flag plus an explicitly requested network setting. New provisioning remains Gen 2.
+
+First produce a read-only plan on the parent host:
+
+```powershell
+$skill = '<plugin-root>\.claude\skills\hyperv-vm'
+& "$skill\scripts\Set-HyperVVmNestedVirtualization.ps1" `
+  -VMName '<existing-windows-11-vm>' -Action Plan
+```
+
+After showing the VM identity, generation, configuration version, state, processor count, current
+flag, and state path, apply with explicit downtime approval:
+
+```powershell
+& "$skill\scripts\Set-HyperVVmNestedVirtualization.ps1" `
+  -VMName '<existing-windows-11-vm>' -Action Apply -AllowGuestShutdown
+```
+
+The script records the previous processor/network state atomically, performs only a graceful
+guest shutdown, changes `ExposeVirtualizationExtensions` while the VM is `Off`, restarts a guest
+that was previously running, and waits for an OK heartbeat. `-EnableMacAddressSpoofing` is a
+separate explicit option; it is not implied by nested virtualization.
+
+Verify from both sides with a secure PowerShell Direct credential:
+
+```powershell
+& "$skill\scripts\Test-HyperVVmNestedVirtualization.ps1" `
+  -VMName '<existing-windows-11-vm>' -WslDistribution 'Ubuntu-24.04'
+```
+
+Verification requires the host processor flag, Windows guest identity, `wsl --status`, distro
+version 2, a real `microsoft-standard-WSL2` kernel response, `vmmemWSL`/`wslservice`, and Docker
+daemon evidence unless `-SkipDocker` was requested. `E_UNEXPECTED` triggers bounded WSL/Host
+Compute/Hyper-V event collection; it is not automatically classified as a nested-virtualization
+root cause.
+
+Rollback is also offline and restores only state captured by the corresponding apply:
+
+```powershell
+& "$skill\scripts\Set-HyperVVmNestedVirtualization.ps1" `
+  -VMName '<existing-windows-11-vm>' -Action Rollback -AllowGuestShutdown
+```
 
 ## Workflow
 

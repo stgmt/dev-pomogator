@@ -4,17 +4,23 @@ param([Parameter(Mandatory)][string]$ConfigPath)
 . "$PSScriptRoot\Common.ps1"
 $config = Import-HyperVVmConfig -ConfigPath $ConfigPath
 $issues = [Collections.Generic.List[string]]::new()
+$topology = Get-WindowsVirtualizationTopology
 
 $principal = [Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()
-if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) { $issues.Add('PowerShell must be elevated') }
+$isAdministrator = $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+if (-not $isAdministrator) { $issues.Add('ADMIN_REQUIRED: PowerShell must be elevated before Hyper-V inventory or mutation') }
 
 $getVm = Get-Command Get-VM -ErrorAction SilentlyContinue
 if (-not $getVm) {
     $issues.Add('Hyper-V PowerShell module is unavailable')
-} else {
-    if (-not (Get-VMSwitch -Name $config.Network.SwitchName -ErrorAction SilentlyContinue)) { $issues.Add("VMSwitch not found: $($config.Network.SwitchName)") }
-    $existing = Get-VM -Name $config.Name -ErrorAction SilentlyContinue
-    if ($existing) { $issues.Add("VM already exists: $($config.Name). Replacement is intentionally not automated") }
+} elseif ($isAdministrator) {
+    try {
+        if (-not (Get-VMSwitch -Name $config.Network.SwitchName -ErrorAction SilentlyContinue)) { $issues.Add("VMSwitch not found: $($config.Network.SwitchName)") }
+        $existing = Get-VM -Name $config.Name -ErrorAction SilentlyContinue
+        if ($existing) { $issues.Add("VM already exists: $($config.Name). Replacement is intentionally not automated") }
+    } catch {
+        $issues.Add("HYPERV_INVENTORY_FAILED: $($_.Exception.Message)")
+    }
 }
 
 $source = Resolve-ConfigPath -Config $config -Path $config.Install.Source
@@ -45,5 +51,7 @@ if (-not $config.Disk.Dynamic) { $issues.Add('Fixed VHD creation is not supporte
     SourceSha256 = $actual
     SwitchName = $config.Network.SwitchName
     ConfigFingerprint = Get-ConfigFingerprint -Config $config
+    HostTopology = $topology
+    IsAdministrator = $isAdministrator
 }
 if ($issues.Count) { exit 1 }
