@@ -1003,7 +1003,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     And the corrected change is written atomically and logged
 
   @FR-40
-  Scenario: SPECGEN004_544 mutation validation gates only debt introduced by the candidate edit
+  Scenario: SPECGEN004_553 mutation validation gates only debt introduced by the candidate edit
     Given an existing spec with staged FR-47 and task-truth debt
     When the agent applies an unrelated clean edit and then introduces a new unlinked FR
     Then pre-existing debt is ignored but the newly introduced conformance debt is refused
@@ -3396,7 +3396,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
 
   # ── FR-60: high-level MCP authoring API (pending implementation) ─────────────
 
-  @feature60 @wip
+  @feature60
   Scenario: SPECGEN004_520 section-targeted append preserves validation and EOL style
     Given a spec document has an existing Phase heading and a known EOL style
     When an agent proposes an MCP append_to_section operation targeting that Phase heading
@@ -3404,21 +3404,21 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     And the preview preserves the document EOL style
     And the same form, anchor, and conformance checks run before any write is applied
 
-  @feature60 @wip
+  @feature60
   Scenario: SPECGEN004_521 read_for_edit returns section metadata and safe insertion tokens
     Given an agent reads a spec section for edit through the MCP door
     When the read_for_edit response is returned
     Then it includes eol_style, heading_anchor, section_sha, start_line, end_line, and append or insert tokens
     And a follow-up insert using those tokens targets the same section even when unrelated document text changes elsewhere
 
-  @feature60 @wip
+  @feature60
   Scenario: SPECGEN004_522 replacement diagnostics distinguish EOL whitespace multi-match and missing-anchor misses
     Given an MCP literal replacement fails to find old_string in a spec document
     When the server analyzes the failed replacement
     Then the response classifies the miss as EOL-only, whitespace-only, multi-match, changed body under the same anchor, or missing anchor
     And with normalize_eol true a CRLF/LF-only mismatch is accepted while the persisted file keeps its original EOL style
 
-  @feature60 @wip
+  @feature60
   Scenario: SPECGEN004_523 multi-document proposal previews graph impact and applies atomically
     Given a proposed spec change spans FR.md, ACCEPTANCE_CRITERIA.md, TASKS.md, the feature file, and FILE_CHANGES.md
     When the agent calls propose_patch and then apply_spec_transaction
@@ -3426,14 +3426,14 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     And applying the proposal writes all documents atomically or leaves every document unchanged
     And the audit log records the transaction as one conceptual spec mutation
 
-  @feature60 @wip
+  @feature60
   Scenario: SPECGEN004_524 anchor-targeted CAS mismatch auto-rebases only non-conflicting changes
     Given an anchor-targeted MCP mutation was prepared from an older document sha
     When another session has changed unrelated text outside the target anchor
     Then the mutation auto-rebases and applies against the fresh document
     But when the target anchor body or preconditions changed the server refuses with fresh anchor context for the caller
 
-  @feature60 @wip
+  @feature60
   Scenario: SPECGEN004_525 domain helpers render canonical traceable markdown and enforce feature safety
     Given an agent registers incident-driven backlog or amends a requirement through a domain helper
     When the helper renders FR, AC, TASK, and optional feature changes
@@ -3477,3 +3477,67 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     When MCP status or spec-verdict reports coverage evidence
     Then canonical coverage remains unchanged until a full run or accepted attachment lands
     And a FILTERED_PROOF lane shows the artifact path, selected ids, pass/fail summary, timestamp, source, and next action
+
+  @feature62 @FR-62 @wip
+  Scenario: SPECGEN004_553 inherited, closed, and noninteractive stdin root handoff is deterministic
+    Given a real fixture checkout has equivalent Windows and WSL roots and tracked readiness inputs
+    And SPECS_GENERATOR_ROOT is supplied as an environment override while stdin is independently inherited, closed, or noninteractive
+    When spec-status and MCP resolve the root in order through validated SPECS_GENERATOR_ROOT, caller or project cwd, and findRepoRoot(SCRIPT_DIR)
+    Then neither command waits indefinitely for stdin or reads the root from stdin
+    And valid SPECS_GENERATOR_ROOT selects the same tracked artifact set as the caller project fallback
+
+  @feature62 @FR-62 @wip
+  Scenario: SPECGEN004_554 WSL-only root precheck accepts only caller or project WSL roots
+    Given a WSL-only command resolves its candidate root from the caller or project WSL worktree
+    When the root precheck runs through CLI and MCP
+    Then each surface accepts only a validated caller or project WSL root
+    And it reports NOT_READY with the observed root, unsafe artifact, and corrective action without substituting a plugin-cache, C Windows cwd, or UNC-relative root
+
+  @feature63 @FR-63 @wip
+  Scenario: SPECGEN004_555 precheck MCP and verdict derive one FR AC scenario inventory
+    Given a real fixture has graph-mapped FRs, ACs, scenarios, baseline and run identities, and duplicate inventory candidates
+    When precheck, MCP status, and spec-verdict evaluate the fixture
+    Then each surface reports the same deduplicated FR, AC, and scenario inventory with mandatory readiness lanes
+    And a structural-only result remains NOT_READY
+
+  @feature63 @FR-63 @wip
+  Scenario: SPECGEN004_556 full-run evidence preserves source time recency and outcome taxonomy
+    Given a BDD run has source, timestamp, recency, baseline, run identity, and PASSED, UNKNOWN, not_recorded, stale, or filtered evidence states
+    When the readiness evaluator serializes graph evidence
+    Then each state remains explicit and no source, time, or recency field is discarded
+    And filtered proof cannot replace canonical full-run execution evidence
+
+  @feature63 @FR-63 @wip
+  Scenario: SPECGEN004_557 AC readiness exposes empty test paths and never-run FR taxonomy requires every mandatory lane
+    Given mapped AC ids include an AC with test_paths=[] and a never-run FR and readiness lanes have mixed pass and missing evidence
+    When the FR-61 readiness taxonomy evaluates the candidate
+    Then the result exposes the AC ids, test_paths=[], and explicit never-run classification while AND-gating every mandatory lane
+    And it reports the next action without treating dependency-absent evidence as source-tree success or dependency-absent FR-64 evidence as FR-63 success
+
+  @feature64 @FR-64 @wip
+  Scenario: SPECGEN004_558 graph conformance classifies source spec test generated temp smoke and silent evidence
+    Given a real spec fixture contains source, spec-test, generated, temporary, smoke, unclassified, and silent evidence records
+    When graph conformance and release inventory run with baseline evidence sha `0b291bac`
+    Then canonical records retain explicit provenance, intentional classification, traceability edges, and baseline evidence sha `0b291bac`
+    And unclassified or silent inventory evidence is surfaced and cleaned rather than accepted as implementation proof
+
+  @feature64 @FR-64 @wip
+  Scenario: SPECGEN004_559 Docker-only verification records current pre and post release inventory
+    Given a real Docker BDD fixture has classified and cleaned tracked before and after inventories, including temporary and untracked paths, and PASSED, FAILED, PENDING, UNDEFINED, AMBIGUOUS, and NOT_RUN units
+    When /run-tests runs the Docker-only release inventory gate
+    Then every tracked in-scope unit must be PASSED, every outcome remains distinct, and every in-scope unit satisfies the AND gate
+    And additions, removals, duplicates, and untracked paths are explicitly classified; unclassified untracked paths violate cardinality or conservation rather than becoming release-ready
+
+  @feature64 @FR-64 @wip
+  Scenario: SPECGEN004_560 dependency-absent launcher status and MCP remain provenance-safe
+    Given an installed plugin fixture has repository development dependencies absent
+    When the installed launcher, status surface, and MCP execute the fixture
+    Then a missing runtime import, bundle, or asset is reported with installed-runtime provenance and does not become a source-tree pass
+    And a complete installed fixture records its baseline, run identity, and evidence source
+
+  @feature64 @FR-64 @wip
+  Scenario: SPECGEN004_561 release evidence controls one candidate through integration-first verification
+    Given a single PR, GitHub release candidate, or tag is prepared with README, TASKS, CHANGELOG, and release notes
+    When integration-first verification or post-release monitoring detects a tracked-file or dependency-absent failure after release
+    Then the PR identity, GitHub release candidate, or tag, run identity, owner, monitoring signal, rollback action, and follow-up verification are recorded
+    And not_recorded or never-run evidence prevents a release-ready claim

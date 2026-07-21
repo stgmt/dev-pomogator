@@ -1476,6 +1476,34 @@ This appendix preserves the research and risk-assessment content from `.specs/sp
 
 Source code for v3 form-guards remains at `tools/specs-validator/*.ts` (production). The four design decisions are reproduced in DESIGN.md paragraph (o). The 28 BDD scenarios are preserved at `.specs/spec-generator-v4/legacy-v3.feature` and continue to be tested by `tests/e2e/spec-generator-v3.test.ts`. v3's performance budgets are preserved in NFR.md under «Legacy v3 budgets». The v3 production release entry is preserved in CHANGELOG.md as `[0.1.0-v3]`.
 
+## 2026-07-18 — Readiness production-finalization research
+
+### Windows host / WSL-hosted `spec-status`
+
+[VERIFIED: GitHub issue #126, https://github.com/stgmt/dev-pomogator/issues/126, accessed 2026-07-19] The defect is an inherited-stdin/script-root resolution path: an installed plugin can execute from its cache `SCRIPT_DIR` while the target project is elsewhere. For `spec-status` and its MCP path, target files must resolve in strict precedence: `SPECS_GENERATOR_ROOT`, then the caller/project cwd, and finally `SCRIPT_DIR` only when no project root is usable. The answer must expose its selected source and refuse readiness rather than treating the plugin cache as project evidence.
+
+[VERIFIED: `.claude/skills/spec-status/scripts/precheck.ts` and MCP `tools/specs-generator/spec-verdict.ts` inventory supplied for production-finalization, 2026-07-19] The precheck is the appropriate seam for inherited-stdin caller-root selection, `SCRIPT_DIR` fallback reporting, and actionable refusal because it runs before status is presented. The MCP inventory in `tools/specs-generator/spec-verdict.ts` must consume that same precedence contract so CLI and MCP answers cannot diverge.
+
+### Installed-plugin, dependency-absent release proof
+
+[VERIFIED: GitHub #45 dirty-tree/full-suite pre/post tracked-state inventory, 2026-07-19] GitHub #45 identifies a test-isolation evidence set: the dirty-tree state and full-suite result must be recorded before the linked PR, tag, and release, then compared with the corresponding tracked state after release. Production finalization binds those pre/post observations to the exact artifact and retains monitoring and rollback controls.
+
+[VERIFIED: installed-plugin PR/tag/release v1.5.0, 2026-07-19] Source-tree tests can resolve development dependencies that are absent from the installed plugin. The production proof must install the release candidate, remove or hide repository `node_modules`, and invoke public `spec-status` plus the MCP path through the installed launcher. Missing bundled files or undeclared imports are release-blocking failures, not warnings.
+
+[VERIFIED: `.claude/rules/testing/dead-integration-guard.md`] Installed is not integrated: a shipped runtime path needs an actual consumer and an end-to-end check against the real distributed artifact. This supports testing the launcher rather than importing source modules directly.
+
+### Evidence-state reconciliation and graph identity
+
+[VERIFIED: 2026-07-19 MCP re-read] The pre-update MCP inventory contains 512 scenarios: 506 PASSED plus `SPECGEN004_520..525` UNKNOWN/not_recorded. The six unrecorded readiness scenarios are a mandatory evidence gap, so this pre-update aggregate is NOT_READY until evidence for all six is recorded and reconciled.
+
+[VERIFIED: run `1784225474521` recorded 506 PASSED scenarios, 2026-07-16] The run establishes executed evidence for 506 recorded scenarios; it does not establish PASSED evidence for `SPECGEN004_520..525`.
+
+[VERIFIED: existing FR-61 / US-24 / UC-24] The readiness model already requires multi-lane output and `OVERALL: NOT_READY` whenever execution, task truth, BDD synchronization, or filtered-proof honesty debt remains. The new host and installed-runtime paths must feed that existing contract, not introduce a parallel status label.
+
+[VERIFIED: 2026-07-19 MCP `get_node` and FR.md re-read] FR-62, FR-63, and FR-64 are canonical graph nodes in `FR.md` at lines 1089, 1103, and 1117 respectively; their defined mappings are FR-62 ↔ US-39/UC-25, FR-63 ↔ US-40/US-42/UC-26/UC-28, and FR-64 ↔ US-41/US-43/UC-27/UC-29.
+
+[ASSUMED: requirements-phase conformance must validate the complete new nodes and mappings through MCP] Node existence and declared links do not yet prove that all graph edges, ACs, scenarios, and implementation evidence are complete. Requirements authoring must run MCP conformance/graph inspection and address any missing or dangling edges; until then, completion is not implementation-ready.
+
 ### Z.6 Hook output context bloat
 
 Live transcript analysis in `audit-reports/hook-output-context-bloat-biet-handoff.md` found that the PostToolUse conformance push can print hundreds of kilobytes into Claude Code history: one captured hook event had `attachment.stdout len=713574`, and later events repeated around `stdoutLen=716640` for roughly 2690 findings. The source producer is `tools/spec-conformance-push/spec-conformance-push.ts`: the formatter iterates every finding for the agent-facing reminder, while `appendFindings(...)` already persists the full audit record separately. The fix is to cap only the agent-facing reminder and keep the durable log complete. [VERIFIED: handoff report + source inspection]

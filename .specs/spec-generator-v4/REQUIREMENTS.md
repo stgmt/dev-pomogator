@@ -43,6 +43,9 @@
 - [FR-16: GitHub Codespaces support](FR.md#fr-16)
 - [FR-58: Inherited v3 form-contract scenarios have explicit owner](FR.md#fr-58)
 - [FR-61: Unified readiness UX across verdict/status/task/BDD evidence](FR.md#fr-61)
+- [FR-62: Cross-host root resolution](FR.md#fr-62)
+- [FR-63: Canonical readiness precheck](FR.md#fr-63)
+- [FR-64: Graph-native release inventory](FR.md#fr-64)
 
 ## Non-Functional Requirements
 
@@ -138,6 +141,17 @@
 | CHK-FR61-03 | FR-61 task DONE truth guard via AC-61.3 | FR-61, AC-61.3, @feature61, UC-24 | BDD scenario | Draft | SPECGEN004_541 — door/verdict/census downgrade evidence-missing DONE |
 | CHK-FR61-04 | FR-61 BDD source/executable sync via AC-61.4 | FR-61, AC-61.4, @feature61, UC-24 | BDD scenario | Draft | SPECGEN004_542 — executable-only/source-only/tag/count drift |
 | CHK-FR61-05 | FR-61 filtered proof lane via AC-61.5 | FR-61, AC-61.5, @feature61, UC-24 | BDD scenario | Draft | SPECGEN004_543 — filtered artifact visible without canonical coverage poison |
+| CHK-FR60-01 | FR-60 anchor/section authoring and EOL preservation | FR-60, AC-60.1, AC-60.2, @feature60, UC-24 | BDD scenario | Draft | SPECGEN004_520..522 — not_recorded |
+| CHK-FR60-02 | FR-60 transaction, CAS, and domain-helper safety | FR-60, AC-60.3, AC-60.4, @feature60, UC-24 | BDD scenario | Draft | SPECGEN004_523..525 — not_recorded |
+| CHK-FR62-01 | FR-62 root precedence: SPECS_GENERATOR_ROOT, caller project cwd, SCRIPT_DIR, inherited/closed/noninteractive stdin | FR-62, AC-62.1, @feature62, UC-25 | Integration test | Draft | SPECGEN004_553 — not-run root precedence |
+| CHK-FR62-02 | FR-62 unsafe root refusal and shared surface contract | FR-62, AC-62.2, AC-62.3, @feature62, UC-25 | BDD scenario | Draft | SPECGEN004_554 — not-run Windows-host Code-to-WSL cache/UNC refusal |
+| CHK-FR63-01 | FR-63 graph-derived FR/AC/scenario inventory through precheck, MCP, and verdict; structural-only is NOT_READY | FR-63, AC-63.1, @feature63, UC-26, UC-28 | Integration test | Draft | SPECGEN004_555 — not-run |
+| CHK-FR63-02 | FR-63 preserves full-run source, timestamp, recency, baseline/run identity, and passed/unknown/not_recorded/stale/filtered taxonomy | FR-63, AC-63.2, @feature63, UC-28 | BDD scenario | Draft | SPECGEN004_556 — not-run |
+| CHK-FR63-03 | FR-61 AC readiness and never-run FR taxonomy AND-gate mandatory lanes and surface the next action | FR-61, AC-61.1, @feature63, UC-24 | BDD scenario | Draft | SPECGEN004_557 — not-run |
+| CHK-FR64-01 | FR-64 source/spec-test/generated/temp/smoke/unclassified/silent inventory is graph-native | FR-64, AC-64.1, @feature64, UC-27 | BDD scenario | Draft | SPECGEN004_558 — not-run |
+| CHK-FR64-02 | FR-64 Docker-only current pre/post tracked-file inventory preserves all-unit taxonomy and conservation | FR-64, AC-64.2, @feature64, UC-29 | Integration test | Draft | SPECGEN004_559 — not-run |
+| CHK-FR64-03 | FR-64 installed launcher, status, and MCP dependency-absent provenance is explicit | FR-64, AC-64.3, @feature64, UC-29 | BDD scenario | Draft | SPECGEN004_560 — not-run |
+| CHK-FR64-04 | FR-64 one PR/tag/GitHub release candidate records documentation, rollback, monitoring, and follow-up | FR-64, AC-64.4, @feature64, UC-29 | Integration test | Draft | SPECGEN004_561 — not-run |
 
 ## Verification Process
 
@@ -159,9 +173,9 @@
 
 ## Summary Counts
 
-- Total CHKs: 70 (57 prior + 5 Phase 8 gap-close + 3 FR-59 bounded-reminder rows + 5 FR-61 readiness rows)
+- Total CHKs: 81 (57 prior + 5 Phase 8 gap-close + 3 FR-59 bounded-reminder rows + 5 FR-61 readiness rows + 2 FR-60 rows + 2 FR-62 rows + 3 FR-63 rows + 4 FR-64 rows)
 - Verified: 0
 - In Progress: 0
-- Draft: 70
+- Draft: 81
 - Blocked: 0
-- Blocked: 0
+- Evidence note: run `1784225474521` records the five FR-61 scenarios as canonical PASSED; FR-60 `SPECGEN004_520..525` and FR-62..64 evidence remain `not_recorded` until their real Docker/installed-runtime tests run.

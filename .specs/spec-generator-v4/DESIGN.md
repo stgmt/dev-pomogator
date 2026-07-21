@@ -1292,3 +1292,60 @@ Then a finding is emitted (not silent)
 - Keep `VERDICT: GREEN` and rely on warning text — rejected: real sessions read the final label as readiness and missed `DONE-but-unverified` debt.
 - Make filtered Docker runs update canonical coverage — rejected: filtered runs are clobber-safe proof, not a full-suite replacement.
 - Put the fix only in `TASKS.md` guards — rejected: task truth, BDD sync, filtered evidence, and status vocabulary must agree across MCP/status/verdict/census.
+
+## Decision: MCP mutations are anchor-aware transactions, not a string-replacement protocol (FR-60)
+
+**Требование:** [FR-60](FR.md#fr-60)
+
+**Rationale:** The public MCP door in `tools/spec-mcp-server/mutations.ts` and `tools/spec-mcp-server/tools.ts` exposes section/anchor operations rather than forcing every caller to recreate version control around exact `old_string`. `read_for_edit` returns heading and section tokens, section SHA, lines, EOL, and indentation. `append_to_section`, `insert_after_heading`, and `insert_at_eof` preserve document EOL and indentation. EOL-tolerant replacement normalizes only during matching and reports distinct normalized-EOL, changed-anchor-body, whitespace-only, multiple-match, and missing-anchor remediation.
+
+A proposal has anchors, preview, graph IDs, validation findings, resulting SHAs, and a short-lived `proposal_id`. `apply_proposed_patch` is one-shot and idempotent: replay returns its recorded outcome. CAS auto-rebase is allowed only inside TTL while the anchor and every precondition still hold; otherwise it refuses with fresh anchor context. Multi-document staging validates every document and edge before an all-or-none commit, writes one audit event, cleans staging state, and provides recovery helpers for interrupted transactions.
+
+Helpers (`add_backlog_task`, `add_phase`, `amend_requirement`, `add_acceptance_criterion`, `register_incident_backlog`) render canonical markdown, allocate unique IDs, and maintain FR/AC/task/file-change traceability. They cannot create an executable `.feature` scenario without matching step-definition work; `add_acceptance_pin` and TASKS-only are explicit alternatives.
+
+**Trade-off:** Proposal, TTL, staging, and recovery state cost more than `str_replace`; partial multi-document writes and silently retargeted rebases are worse.
+
+### Decision: FR-62 establishes project root without trusting stdin or collapsed CWD
+
+**Требование:** [FR-62](FR.md#fr-62)
+
+**Rationale:** Root resolution precedes readiness and release-inventory construction. Production code currently has two distinct inputs: `tools/specs-generator/specs-generator-core.mjs:252-258` resolves `SPECS_GENERATOR_ROOT` or `findRepoRoot(SCRIPT_DIR)`, while `tools/specs-generator/spec-status.ts:9-13` launches the installed script with `cwd: process.cwd()` and inherited stdio. The planned shared resolver must choose, in order, validated `SPECS_GENERATOR_ROOT`, validated caller/project CWD, then `findRepoRoot(SCRIPT_DIR)`; it records `stdin_mode` and a bounded timeout without treating stdin as root input, and must not describe the current `spec-status.ts` behavior as already inherited. Each canonical candidate must identify the selected repository/worktree and its tracked-file inventory before readiness consumes it.
+
+Stdin is independent: absent, closed, non-interactive (`!isTTY`), malformed, or ignored stdin neither selects root nor hangs. A confirmation path is allowed only for an interactive TTY and has a bounded timeout; stdin never supplies a root. Windows-hosted-to-WSL installed-plugin proof exercises the selected caller project. When caller CWD is absent or ambiguous, SCRIPT_DIR fallback applies only after candidate validation. UNC and collapsed Windows CWD (including `C:\Windows`) are rejected when not the selected worktree. The resolver returns `NOT_READY` with candidate source, canonical identity, rejection, and next action rather than report a plugin cache or another checkout.
+
+**Trade-off:** Ambiguous shells can yield NOT_READY. A wrong-target inventory is worse than refusal.
+
+**Alternatives considered:**
+- Prefer `process.cwd()` unconditionally (rejected) — UNC/collapse and cross-host launches can select `C:\Windows` or an unrelated directory.
+- Prefer `SCRIPT_DIR` unconditionally (rejected) — an installed plugin cache is not the caller's target project.
+- Accept root from stdin (rejected) — closed/piped stdin makes automation nondeterministic and can hang.
+
+### Decision: FR-63 exposes one graph-and-evidence readiness model through MCP and verdict
+
+**Требование:** [FR-63](FR.md#fr-63)
+
+**Rationale:** `spec-status`, MCP `get_spec_status`, `conformance_check`, and `spec-verdict` must consume a shared canonical graph/evidence adapter and normalized readiness model; presentation layers adapt that model but do not reclassify it. Current defects are explicit: `precheck.ts:64-72` discovers FILE_CHANGES test evidence with a regex, `precheck.ts:82` has no canonical-ID deduplication, and `precheck.ts:109` considers only `.test-status`. The planned adapter creates one unique inventory keyed by canonical IDs for graph-derived FR, AC, scenario, task, and FILE_CHANGES nodes, then attaches provenance-rich evidence (source, graph snapshot, runtime root, timestamp, recency, full-or-filtered run scope, and next action) while retaining PASSED, FAILED, PENDING, UNDEFINED, AMBIGUOUS, and NOT_RUN. `audit-spec` and task-census consume the same canonical inventory for structural and task-truth reporting; they do not make a second readiness classifier.
+
+The FR-61 lane classifier is the sole readiness reducer. Blocking lanes combine with AND and emit stable YAML/JSON plus individual lane results. `precheck` derives FILE_CHANGES identity from the graph, never from a test-file regex; `.dev-pomogator/.test-status` is only one execution-evidence source, not identity or readiness authority. Structural success cannot launder missing execution, unverified tasks, mock-only evidence, or absent distributed-runtime proof into GREEN; missing, stale, source-tree-only, or mock-only mandatory evidence is NOT_READY.
+
+**Trade-off:** A shared adapter and provenance model cost more than independent parsing, but prevent divergent green labels and make readiness reproducible.
+
+**Alternatives considered:**
+- Keep separate precheck, MCP, and verdict implementations (rejected) — their inventory and reducer rules will drift.
+- Parse human-oriented command output for evidence (rejected) — presentation text is not a stable canonical model.
+- Treat status YAML or `.test-status` as graph truth (rejected) — execution artifacts cannot prove traceability, deduplicate nodes, or detect malformed edges.
+
+### Decision: FR-64 gates publication on a complete, releasable inventory
+
+**Требование:** [FR-64](FR.md#fr-64)
+
+**Rationale:** A release manifest records graph IDs/edges for FR, story, use case, AC, scenario, task, and FILE_CHANGES. The canonical inventory classifies every candidate input as source, spec-test, declared generated/release artifact, temporary, smoke, unclassified, or silent; the status, verdict, MCP, audit-spec, and task-census views render that one classification rather than reconstruct it. Temporary output is removed before the pre-inventory and again after a failed gate; an unexpected or undeclared file is a failure, not a cleanup suggestion. Malformed IDs, dangling edges, missing story/use-case coverage, and prose-only references fail conformance. Completeness is an all-unit AND roll-up, so no passed subset greens pending, undefined, failed, ambiguous, or not-run siblings. Pre/post tracked-file inventories are checked against the manifest to reject undeclared, untracked, or missing paths.
+
+The gate runs a clean-candidate Docker full suite before and after packaging, including installed-runtime and dependency-absent smoke execution. Filtered proof is diagnostic only and never release authority. It records actual/planned SHA, selected root, graph snapshot, manifest sections, test evidence, dependency-absent result, and actual dirty-tree state. Publication is transactional: validate manifest and clean candidate; produce and verify the package; publish artifact; create/verify the tag and one PR/release record; then publish documentation and monitoring metadata. If any later publication step fails, rollback removes or revokes the newly published artifact/tag when supported, restores the prior published artifact/tag, removes temporary output, and records the recovery against the same manifest/snapshot. Owner, monitoring signal, rollback trigger, and follow-up are mandatory before publication.
+
+**Trade-off:** Pre/post Docker suites, dependency-absent smoke, temporary-file hygiene, and transactional release checks take longer and block on dirty-tree or documentation debt; a source-only package is not releasable.
+
+**Alternatives considered:**
+- Release on graph-green alone (rejected) — graph completeness does not prove packaging, runtime, or source conservation.
+- Treat filtered tests as release proof (rejected) — a selected subset cannot establish full-suite readiness.
+- Run a suite from a dirty candidate (rejected) — temporary or unrelated files can create false evidence.

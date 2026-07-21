@@ -5,7 +5,7 @@ description: >
   in REQUIREMENTS.md and populates ## Key Decisions with Rationale + Trade-off + Alternatives
   blocks in DESIGN.md. Called by create-spec Phase 2 (Requirements + Design)
   step 4b. Preserves Jira trace lines byte-for-byte. Returns JSON summary of CHKs and decisions.
-allowed-tools: mcp__dev-pomogator-specs__read_spec_doc, mcp__dev-pomogator-specs__list_spec_docs, mcp__dev-pomogator-specs__apply_spec_change, mcp__dev-pomogator-specs__propose_spec_change, Bash, AskUserQuestion
+allowed-tools: mcp__dev-pomogator-specs__read_spec_doc, mcp__dev-pomogator-specs__list_spec_docs, mcp__dev-pomogator-specs__apply_spec_change, mcp__dev-pomogator-specs__propose_spec_change, mcp__dev-pomogator-specs__append_to_section, mcp__dev-pomogator-specs__insert_after_heading, mcp__dev-pomogator-specs__insert_at_eof, mcp__dev-pomogator-specs__replace_in_section, Bash, AskUserQuestion
 ---
 
 # Requirements CHK Matrix
@@ -45,6 +45,16 @@ Both outputs pass form-guards `requirements-chk-guard` and `design-decision-guar
 > mutation door validates form contracts (the v3 CHK/Decision shapes) BEFORE the
 > disk write, so a malformed row is refused with findings instead of silently
 > landing. Never a raw `Read`/`Write`/`Edit`/`grep` of `.specs/`.
+>
+> **FR-60 section doors (preferred for stable-heading fills):** address the
+> target section by its heading anchor instead of copying an exact `old_string` —
+> `append_to_section({ spec, doc, heading, text })` appends CHK rows / Summary
+> Counts / a Decision block to the END of a section, `insert_after_heading`
+> inserts immediately AFTER the heading (`## Verification Matrix`,
+> `## Key Decisions`), `insert_at_eof` appends at end-of-file (no heading), and
+> `replace_in_section({ heading, old_string, new_string })` is the EOL-tolerant
+> in-section replace (CRLF-safe, auto-rebase on `expected_sha`). Same
+> form/anchor/conformance validation-before-write as `apply_spec_change`.
 
 ### Step 1 — Parse FR / AC / feature / UC
 

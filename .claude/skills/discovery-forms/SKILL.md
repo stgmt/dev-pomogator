@@ -4,7 +4,7 @@ description: >
   Populates USER_STORIES.md with v3-form blocks (Priority + Why + Independent Test + Acceptance Scenarios)
   and appends ## Risk Assessment to RESEARCH.md. Called by create-spec Phase 1 (Discovery) step 3.
   Returns structured JSON summary listing stories populated, risks added, and files touched.
-allowed-tools: mcp__dev-pomogator-specs__read_spec_doc, mcp__dev-pomogator-specs__list_spec_docs, mcp__dev-pomogator-specs__apply_spec_change, mcp__dev-pomogator-specs__propose_spec_change, Bash, AskUserQuestion
+allowed-tools: mcp__dev-pomogator-specs__read_spec_doc, mcp__dev-pomogator-specs__list_spec_docs, mcp__dev-pomogator-specs__apply_spec_change, mcp__dev-pomogator-specs__propose_spec_change, mcp__dev-pomogator-specs__append_to_section, mcp__dev-pomogator-specs__insert_after_heading, mcp__dev-pomogator-specs__insert_at_eof, mcp__dev-pomogator-specs__replace_in_section, Bash, AskUserQuestion
 ---
 
 # Discovery Forms
@@ -44,6 +44,15 @@ If `.progress.json` is missing or pre-v3, exit early with a note — form-guards
 > mutation door validates the v3 form (user-story / risk-assessment) BEFORE the
 > disk write. Never a raw `Read`/`Write`/`Edit`/`grep` of `.specs/`. Running
 > `spec-form-parsers.ts` to self-check is fine (engine CLI carve-out).
+>
+> **FR-60 section doors (preferred for stable-heading fills):** address the
+> target section by its heading anchor instead of copying an exact `old_string` —
+> `append_to_section({ spec, doc, heading, text })` appends a story block / the
+> Risk Assessment to the END of a section, `insert_after_heading` inserts
+> immediately AFTER the heading, `insert_at_eof` appends at end-of-file (no
+> heading), and `replace_in_section({ heading, old_string, new_string })` is the
+> EOL-tolerant in-section replace (CRLF-safe, auto-rebase on `expected_sha`).
+> Same form/anchor/conformance validation-before-write as `apply_spec_change`.
 
 ### Step 1 — Inventory existing content
 

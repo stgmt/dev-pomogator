@@ -2,7 +2,7 @@
 name: create-spec
 description: |
   Creates and manages feature specifications under .specs/{slug}/ via 13-file scaffold + 4-phase STOP-confirmed workflow (Discovery → Context → Requirements+Design → Finalization) + Phase 3+ Audit. EN triggers: "create / make / draft / write / sketch / outline specs", "spec out X", "scaffold a spec", "update / show / status specs". RU triggers: "создай / сделай / набросай / напиши / опиши спеки", "новые спеки для X", "спеки по фиче", "обнови / покажи / статус спеков". Matches terse phrasings like "ок спеки по фиче сделай". Invokes Skill("research-workflow") during Phase 1 step 5 for technical research. Do NOT use for plan-pomogator development plans, read-only spec viewing, or non-spec workflows.
-allowed-tools: mcp__dev-pomogator-specs__read_spec_doc, mcp__dev-pomogator-specs__list_spec_docs, mcp__dev-pomogator-specs__read_attachment, mcp__dev-pomogator-specs__apply_spec_change, mcp__dev-pomogator-specs__propose_spec_change, mcp__dev-pomogator-specs__create_spec, mcp__dev-pomogator-specs__delete_spec_doc, mcp__dev-pomogator-specs__rename_spec_doc, Read, Write, Edit, Glob, Grep, Bash, AskUserQuestion, Skill, Agent, WebFetch, WebSearch
+allowed-tools: mcp__dev-pomogator-specs__read_spec_doc, mcp__dev-pomogator-specs__list_spec_docs, mcp__dev-pomogator-specs__read_attachment, mcp__dev-pomogator-specs__apply_spec_change, mcp__dev-pomogator-specs__propose_spec_change, mcp__dev-pomogator-specs__create_spec, mcp__dev-pomogator-specs__delete_spec_doc, mcp__dev-pomogator-specs__rename_spec_doc, mcp__dev-pomogator-specs__append_to_section, mcp__dev-pomogator-specs__insert_after_heading, mcp__dev-pomogator-specs__insert_at_eof, mcp__dev-pomogator-specs__replace_in_section, mcp__dev-pomogator-specs__propose_patch, mcp__dev-pomogator-specs__apply_proposed_patch, mcp__dev-pomogator-specs__apply_spec_transaction, mcp__dev-pomogator-specs__add_backlog_task, mcp__dev-pomogator-specs__add_phase, mcp__dev-pomogator-specs__amend_requirement, mcp__dev-pomogator-specs__add_acceptance_criterion, mcp__dev-pomogator-specs__register_incident_backlog, Read, Write, Edit, Glob, Grep, Bash, AskUserQuestion, Skill, Agent, WebFetch, WebSearch
 argument-hint: "<feature-slug>"
 ---
 
@@ -39,6 +39,11 @@ create-spec — это ДВЕРЬ (юзер входит сюда как сей�
 | Переименовать/переместить doc (anchors-aware) | `rename_spec_doc` | `{ spec, doc, to_doc, reason, rewrite_inbound? }` |
 | Проверить без записи (dry-run, те же гейты) | `propose_spec_change` | `{ spec, doc, content\|old/new, reason }` |
 | Прочитать цельный документ / перечень | `read_spec_doc` / `list_spec_docs` | `{ spec[, doc] }` |
+| Дописать в секцию по стабильному якорю заголовка (без old_string; FR-60 P33-1) | `append_to_section` / `insert_after_heading` / `insert_at_eof` | `{ spec, doc, heading?, text, expected_sha? }` |
+| Якорная замена внутри секции, EOL-толерантная (FR-60 P33-2) | `replace_in_section` | `{ spec, doc, heading, old_string, new_string, expected_sha? }` |
+| Dry-run мульти-документного патча (FR+AC+TASKS+.feature+FILE_CHANGES; FR-60 P33-3) | `propose_patch` | `{ edits[], reason }` |
+| Применить валидный proposal / one-shot all-or-nothing запись (FR-60 P33-3) | `apply_proposed_patch` / `apply_spec_transaction` | `{ proposal_id, reason }` / `{ edits[], reason }` |
+| Доменные интенты: задача/фаза/правка FR/новый AC/инцидент в бэклог (FR-60d P33-4) | `add_backlog_task` / `add_phase` / `amend_requirement` / `add_acceptance_criterion` / `register_incident_backlog` | `{ spec, ..., reason }` |
 
 Сервер валидирует form-контракты + якоря (delta-only) + conformance ДО касания диска и отказывает с findings list — НЕ переписывай эту логику в скилле. `.progress.json` НЕ мутабелен через MCP: writer contract = `scaffold-spec.ts` bootstrap only + `spec-status.ts` state-transition/repair only.
 

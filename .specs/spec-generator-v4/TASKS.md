@@ -1863,13 +1863,15 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   **Own scenario:** SPECGEN004_534
   **Evidence:** `node --import tsx .dev-pomogator/.tmp/check-fr56-trace-tool.mjs` passed (`fr56-trace-tool check ok`); Docker BDD filtered `bash scripts/docker-bdd.sh --name "SPECGEN004_534"` passed 1 scenario / 7 steps and appended 1 overlay row with archived trace chunk `run-1783590635379-filtered.ndjson`.
 
-- [ ] P29-4: MCP-тул `get_scenario_trace(scenario_id)` + вписать в реестр (FR-56e) — id: p29-get-scenario-trace-tool — Status: TODO | Est: 360m
+- [x] P29-4: MCP-тул `get_scenario_trace(scenario_id)` + вписать в реестр (FR-56e) — id: p29-get-scenario-trace-tool — Status: DONE | Est: 360m
   _depends: p29-reader-merge-staleness, p29-trace-id-capture_
   _Requirements: [FR-56](FR.md#fr-56)_
   **Done When:**
-  - [ ] `tools/spec-mcp-server/` отдаёт `get_scenario_trace(scenario_id)` → свежайший результат + (если failed/stale) упавший шаг + текст ошибки + run_id/time/source + путь к куску, одним вызовом без grep'а (FR-56e)
-  - [ ] кусок отсутствует/истёк (ротация снесла) → `get_scenario_trace` деградирует мягко («трейс истёк — перепрогони для обновления»), не падает; пиннинг актуального куска (исключение из ротации) ИЛИ graceful-degrade — на выбор реализации (FR-56d)
-  - [ ] тул вписан в реестр тулов (`buildToolRegistry`) + dep-safe — иначе мёртв у пользователей плагина (dead-integration)
+  - [x] `tools/spec-mcp-server/` отдаёт `get_scenario_trace(scenario_id)` → свежайший результат + (если failed/stale) упавший шаг + текст ошибки + run_id/time/source + путь к куску, одним вызовом без grep'а (FR-56e)
+  - [x] кусок отсутствует/истёк (ротация снесла) → `get_scenario_trace` деградирует мягко («трейс истёк — перепрогони для обновления»), не падает; пиннинг актуального куска (исключение из ротации) ИЛИ graceful-degrade — на выбор реализации (FR-56d)
+  - [x] тул вписан в реестр тулов (`buildToolRegistry`) + dep-safe — иначе мёртв у пользователей плагина (dead-integration)
+  **Own scenario:** SPECGEN004_534
+  **Evidence:** `tools/spec-mcp-server/tools.ts:1068`, regression coverage at `tools/spec-mcp-server/__tests__/tools.test.ts:504` and `:543`, and canonical Docker BDD `run_id=1784225474521` passed `SPECGEN004_534` on 2026-07-16; the trace was `.dev-pomogator/.test-history/run-1784225474521-full.ndjson#efe06920-cf8c-47f7-be43-c6c66c2ffa08` (`docker-bdd:full`). P29-4 itself is DONE on this independent evidence. P29-2 and the full FR-56 chain remain open; their incomplete dependency work does not undo P29-4's completed task evidence.
 
 - [ ] P29-5: граф — рантайм-трейс-ребро на ScenarioNode + продление цепочки до →result→trace→logs (FR-56f) — id: p29-graph-runtime-trace-edge — Status: TODO | Est: 300m
   _depends: p29-reader-merge-staleness_
@@ -2071,7 +2073,7 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
 - [ ] P34-1: multi-lane spec-verdict readiness output — id: p34-verdict-readiness-lanes — Status: TODO | Est: 240m
   _Requirements: [FR-61](FR.md#fr-61)_
   **Done When:**
-  - [ ] `spec-verdict` emits STRUCTURE, TRACEABILITY, EXECUTION, TASK_TRUTH, BDD_SYNC, SEMANTIC, FILTERED_PROOF, and OVERALL lanes
+  - [x] `spec-verdict` emits STRUCTURE, TRACEABILITY, EXECUTION, TASK_TRUTH, BDD_SYNC, SEMANTIC, FILTERED_PROOF, and OVERALL lanes
   - [ ] `OVERALL: NOT_READY` is used whenever any lane has blocking/honesty debt, including not_run scenarios, DONE-but-unverified tasks, BDD drift, or required semantic skip
   - [ ] plain `VERDICT: GREEN` is reserved for every readiness lane green, or the old structural-only label is explicitly renamed
 
@@ -2106,3 +2108,65 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [ ] `@feature61` scenarios SPECGEN004_539..543 drive the real verdict/status/task/BDD-sync surfaces, not mocks
   - [ ] regression fixture reproduces the CARL split-brain shape: text DONE, canonical not_run, filtered proof passed, and executable-only scenario drift
   - [ ] focused Docker BDD proves the fixture yields `OVERALL: NOT_READY`, visible `FILTERED_PROOF`, no false `UNCOVERED_FR`, and one concrete next action
+  **Acceptance evidence only:** canonical Docker run `1784225474521` passed `SPECGEN004_539`–`SPECGEN004_543`; P34-1 through P34-5 remain TODO until each task’s own implementation/checklist evidence is reconciled. The pass set does not override `OVERALL: NOT_READY`.
+
+## Phase 35 — Release-critical root, evidence, and release honesty (FR-62..64, TDD ordered)
+
+- [ ] P35-1: RED cross-host root BDD and fixtures — id: p35-fr62-red-bdd — Status: TODO | Est: 120m
+  _Requirements: [FR-62](FR.md#fr-62)_
+  **Done When:**
+  - [ ] Collision-free `SPECGEN004_553` and `SPECGEN004_554`, regex step definitions, and producer-faithful valid-root/wrong-root fixtures are red before implementation; inputs include `SPECS_GENERATOR_ROOT`, caller CWD, WSL `/mnt/<drive>/`, UNC plugin-cache, `C:\\Windows`, and closed/noninteractive stdin.
+
+- [ ] P35-2: Implement deterministic cross-host root handoff — id: p35-fr62-implement-root — Status: TODO | Est: 120m
+  _depends: p35-fr62-red-bdd_
+  _Requirements: [FR-62](FR.md#fr-62)_
+  **Done When:**
+  - [ ] Core, `spec-status`, and launcher resolve valid caller/project `SPECS_GENERATOR_ROOT` then validated caller/project CWD then `findRepoRoot(SCRIPT_DIR)`; they never read stdin, ignore child/confirmation input, reject plugin-cache, `C:\\Windows`, and invalid UNC-relative roots, and CLI/MCP inspect the same tracked artifact.
+
+- [ ] P35-3: Docker verification and root reconciliation — id: p35-fr62-docker-reconcile — Status: TODO | Est: 60m
+  _depends: p35-fr62-implement-root_
+  _Requirements: [FR-62](FR.md#fr-62)_
+  **Done When:**
+  - [ ] Docker-only installed/runtime BDD proves happy and wrong-root paths, shared precheck code is refactored only after red-to-green, and wrong roots return provenance-bearing `NOT_READY`, never fixture-only or mock-only proof.
+
+## Phase 36 — Graph/evidence agreement and mandatory readiness lanes (FR-63, TDD ordered)
+
+- [ ] P36-1: RED readiness-provenance BDD and fixtures — id: p36-fr63-red-bdd — Status: TODO | Est: 140m
+  _depends: p35-fr62-docker-reconcile_
+  _Requirements: [FR-63](FR.md#fr-63)_
+  **Done When:**
+  - [ ] Red `SPECGEN004_555`–`SPECGEN004_557`, regex step definitions, and duplicate-AC/stale/missing/source-only/mock-only/`not_recorded` fixtures exist; `SPECGEN004_557` has `test_paths=[]`, stays never-run, and exposes baseline, run identity, source, remediation, and absent executable proof.
+
+- [ ] P36-2: Implement one graph and mandatory readiness lanes — id: p36-fr63-implement-provenance — Status: TODO | Est: 180m
+  _depends: p36-fr63-red-bdd_
+  _Requirements: [FR-63](FR.md#fr-63)_
+  **Done When:**
+  - [ ] `precheck.ts`, canonical `spec-status`, MCP, and `spec-verdict` derive the same graph-based AC/scenario inventory and evidence provenance; structural-only remains `NOT_READY` and missing/never-run/mock-only/source-tree-only lanes cannot invent execution proof.
+
+- [ ] P36-3: Docker verification and readiness reconciliation — id: p36-fr63-docker-reconcile — Status: TODO | Est: 100m
+  _depends: p36-fr63-implement-provenance_
+  _Requirements: [FR-63](FR.md#fr-63)_
+  **Done When:**
+  - [ ] Docker exercises every runtime entry point and reconciles CLI/MCP/verdict baseline/run/never-run inventory; `SPECGEN004_557` never normalizes to a source-tree pass, and dependency absence remains exclusively FR-64 scope.
+
+## Phase 37 — All-unit release gate, checkpoint inventory, and release operations (FR-64, TDD ordered)
+
+- [ ] P37-1: RED release-gate BDD and installed fixtures — id: p37-fr64-red-bdd — Status: TODO | Est: 160m
+  _depends: p36-fr63-docker-reconcile_
+  _Requirements: [FR-64](FR.md#fr-64)_
+  **Done When:**
+  - [ ] Red collision-free `SPECGEN004_558`–`SPECGEN004_561`, regex step definitions, and real installed-artifact fixtures exist: `SPECGEN004_558` graph classification; `SPECGEN004_559` full-current-pass plus tracked-file conservation/all-unit AND; `SPECGEN004_560` dependency-absent installed runtime; and `SPECGEN004_561` release controls and post-release follow-up.
+
+- [ ] P37-2: Implement all-unit release inventory — id: p37-fr64-implement-gate — Status: TODO | Est: 200m
+  _depends: p37-fr64-red-bdd_
+  _Requirements: [FR-64](FR.md#fr-64)_
+  **Done When:**
+  - [ ] Conformance parses canonical FR/story/use-case/AC/scenario/task/file-change IDs and explicit links, reports `FR_NO_STORY`, `FR_NO_USE_CASE`, malformed IDs, and dangling edges, and enforces all-unit AND over PASSED, FAILED, PENDING, UNDEFINED, AMBIGUOUS, and NOT_RUN with current tracked-file conservation (512 historical + 9 planned = 521).
+
+- [ ] P37-3: Docker release verification and operations reconciliation — id: p37-fr64-docker-operations — Status: TODO | Est: 120m
+  _depends: p37-fr64-implement-gate_
+  _Requirements: [FR-64](FR.md#fr-64)_
+  **Done When:**
+  - [ ] Docker-only real installed-artifact verification proves happy, negative, and invariant paths; reconciles clean candidate and #45 pre/post keep/remove/generated/temp/smoke inventory; records `/run-tests` evidence, README/TASKS/CHANGELOG, one PR, tag/GitHub release, rollback/delete, monitoring owner/signal/action, and post-release verification. Mock-only and dependency-absent verdict assertions are non-release evidence.
+
+  **v1.5.0 evidence baseline:** Smart verdict has 0 structural errors, 30 warnings, `GRAPH_GREEN` traceability with 0 gaps, and `OVERALL: NOT_READY`. The current 521-source-scenario inventory is 0 passed, 507 stale, and 14 not recorded; the separate historical canonical full run is 506 passed plus 15 `not_run` (521). Forty-five legacy `DONE` tasks are execution-unverified. Full run `1784225474521` passed `SPECGEN004_529`, `SPECGEN004_534`, and `SPECGEN004_539`–`SPECGEN004_543`; this is task-specific support only, not proof of future FR-62–64 work. FR-64 remains an all-unit AND gate: every in-scope unit requires real evidence, including planned `SPECGEN004_553`–`SPECGEN004_561`, before release readiness.

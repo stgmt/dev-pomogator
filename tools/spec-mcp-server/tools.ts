@@ -42,6 +42,15 @@ import { logSpecAccess } from './spec-access-log.ts';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { validateSpecChange, writeDocAtomic, isSafeSlug, resolveSpecDoc, docSha, casCheck, validateTarget, findInboundLinks, rewriteInboundLinks, isArchivedSlug, type SpecChange } from './mutations.ts';
+import { applySectionChange, applyReplaceChange, readForEdit, proposePatch, applyProposedPatch, applySpecTransactionCore, type SectionOpKind, type PatchEdit, type PatchEditPreview } from './section-ops.ts';
+import {
+  addBacklogTask,
+  addPhase,
+  amendRequirement,
+  addAcceptanceCriterion,
+  registerIncidentBacklog,
+  type DomainAuthoringResult,
+} from './domain-authoring.ts';
 import { writeSpecStatus, readSpecStatus } from '../spec-graph/spec-status-store.ts';
 import { withWriteLock, type WriteLockBusyError } from './lock-manager.ts';
 import { setEntityStatus } from './set-status.ts';
@@ -1571,9 +1580,10 @@ export function buildToolRegistry(
       offset: z.number().int().min(1).optional(),
       limit: z.number().int().min(1).optional(),
       section: z.string().optional(),
+      read_for_edit: z.boolean().optional(),
     } as const satisfies z.ZodRawShape,
-    handler: async ({ spec, doc, offset, limit, section }) => {
-      const args = { spec, doc, offset, limit, section };
+    handler: async ({ spec, doc, offset, limit, section, read_for_edit }) => {
+      const args = { spec, doc, offset, limit, section, read_for_edit };
       const slug = String(spec).replace(/\\/g, '/').replace(/^\.?\/?\.specs\//, '').replace(/\/+$/, '');
       if (!isSafeSlug(slug)) {
         logSpecAccess('read_spec_doc', args, 'denied');
@@ -1606,6 +1616,19 @@ export function buildToolRegistry(
       // P21-5: whole-doc CAS token — pass it back as apply_spec_change({expected_sha})
       // to make the write conditional (refuses if another session changed the doc).
       const sha = docSha(full);
+
+      // FR-60e (P33-1): read-for-edit mode — section metadata + stable append/insert
+      // tokens so a follow-up section op re-targets the same heading without an exact
+      // old_string. `section` (optional) scopes the metadata to ONE heading.
+      if (read_for_edit === true) {
+        const meta = readForEdit(process.cwd(), slug, rel, section !== undefined ? String(section) : undefined);
+        if (!meta.ok) {
+          logSpecAccess('read_spec_doc', args, 'not_found');
+          return asJsonResult({ ok: false, error: meta.error === 'DOC_NOT_FOUND' ? 'DOC_NOT_FOUND' : 'UNSAFE_SPEC', spec: slug, doc: rel, hint: meta.hint });
+        }
+        logSpecAccess('read_spec_doc', args, 'ok');
+        return asJsonResult({ ok: true, spec: slug, doc: rel, mode: 'read_for_edit', ...meta });
+      }
 
       // P21-2 (a): section mode — one heading block out of a big doc.
       if (section !== undefined) {
@@ -1812,6 +1835,543 @@ export function buildToolRegistry(
         throw e;
       }
     },
+  });
+
+  // ─── 19) FR-60a section ops — stable-heading append/insert (P33-1) ───────
+  // Shared driver: address a section by its STABLE heading anchor (no exact
+  // old_string), PRESERVE the doc EOL, and run the SAME validation-before-write
+  // path apply_spec_change runs (form + anchors + conformance) via applySectionChange.
+  // A clean result is written atomically; a non-clean one leaves the doc untouched.
+  const runSectionOp = (toolName: string, kind: SectionOpKind, args: Record<string, unknown>): ToolResult => {
+    const slug = slugOf(args.spec);
+    const doc = docOf(args.doc);
+    const op = {
+      kind,
+      heading: typeof args.heading === 'string' ? (args.heading as string) : undefined,
+      text: typeof args.text === 'string' ? (args.text as string) : '',
+    };
+    const expectedSha = typeof args.expected_sha === 'string' ? (args.expected_sha as string) : null;
+    try {
+      return withWriteLock(process.cwd(), () => {
+        // P21-5 optimistic CAS — refuse a write against a stale read (opt-in).
+        if (expectedSha !== null) {
+          const cas = casCheck(process.cwd(), slug, doc, expectedSha);
+          if (!cas.ok) {
+            logSpecAccess(toolName, args, 'denied');
+            return asJsonResult({
+              ok: false, error: 'CAS_MISMATCH', spec: slug, doc, expected_sha: expectedSha, actual_sha: cas.actualSha,
+              hint: 'The doc changed since you read it. Re-read (read_spec_doc read_for_edit:true) for the fresh sha/tokens and retry.',
+            });
+          }
+        }
+        const r = applySectionChange(process.cwd(), slug, doc, op);
+        if (!r.ok) {
+          logSpecAccess(toolName, args, 'denied');
+          return asJsonResult({
+            ok: false, error: r.error ?? 'SECTION_OP_FAILED', spec: slug, doc,
+            eol_style: r.eol_style, resolved: r.resolved, heading_anchor: r.heading_anchor, findings: r.findings,
+            hint: r.error === 'HEADING_NOT_FOUND'
+              ? 'No heading matched — pass the heading text or its Marksman anchor (read_spec_doc read_for_edit:true lists anchors).'
+              : 'Fix the findings and retry; the document was left unchanged.',
+          });
+        }
+        registryOpts.refreshGraph?.();
+        logSpecAccess(toolName, args, 'ok');
+        return asJsonResult({
+          ok: true, spec: slug, doc, kind, eol_style: r.eol_style, resolved: r.resolved,
+          heading_anchor: r.heading_anchor, start_line: r.start_line, end_line: r.end_line,
+          section_sha: r.section_sha, sha: r.sha, bytes: r.bytes, written: r.written === true,
+          preview: r.preview, findings: [],
+        });
+      });
+    } catch (e) {
+      if ((e as WriteLockBusyError).code === 'WRITE_LOCK_BUSY') {
+        logSpecAccess(toolName, args, 'denied');
+        const h = (e as WriteLockBusyError).holder;
+        return asJsonResult({ ok: false, error: 'WRITE_LOCK_BUSY', spec: slug, doc, held_by: h ?? null, hint: 'Another session is writing a spec RIGHT NOW — retry in a moment.' });
+      }
+      throw e;
+    }
+  };
+
+  const SECTION_OP_SHAPE = {
+    spec: z.string(),
+    doc: z.string(),
+    heading: z.string().optional(),
+    text: z.string(),
+    expected_sha: z.string().optional(),
+  } as const satisfies z.ZodRawShape;
+
+  tools.push({
+    name: 'append_to_section',
+    description:
+      'FR-60a (P33-1): append text to the END of a stable-heading section — address the section by ' +
+      'its heading text or Marksman anchor (NO exact old_string). Preserves the document EOL style ' +
+      '(CRLF stays CRLF) and runs the SAME form/anchor/conformance validation-before-write as ' +
+      'apply_spec_change; a clean result is written atomically. Pass expected_sha (from read_spec_doc ' +
+      'read_for_edit:true) for optimistic CAS.',
+    inputShape: SECTION_OP_SHAPE,
+    handler: async (args) => runSectionOp('append_to_section', 'append_to_section', args as Record<string, unknown>),
+  });
+
+  tools.push({
+    name: 'insert_after_heading',
+    description:
+      'FR-60a (P33-1): insert text IMMEDIATELY AFTER a stable heading — address the heading by text or ' +
+      "Marksman anchor (NO exact old_string). Preserves the document EOL style and runs the same " +
+      'form/anchor/conformance validation-before-write as apply_spec_change. Pass expected_sha (from ' +
+      'read_spec_doc read_for_edit:true) for optimistic CAS.',
+    inputShape: SECTION_OP_SHAPE,
+    handler: async (args) => runSectionOp('insert_after_heading', 'insert_after_heading', args as Record<string, unknown>),
+  });
+
+  tools.push({
+    name: 'insert_at_eof',
+    description:
+      'FR-60a (P33-1): append text at END-OF-FILE — no heading needed. Preserves the document EOL style ' +
+      'and runs the same form/anchor/conformance validation-before-write as apply_spec_change. Pass ' +
+      'expected_sha (from read_spec_doc) for optimistic CAS.',
+    inputShape: SECTION_OP_SHAPE,
+    handler: async (args) => runSectionOp('insert_at_eof', 'insert_at_eof', args as Record<string, unknown>),
+  });
+
+  // ─── 19b) FR-60 P33-2 replace_in_section — EOL-tolerant, anchor-targeted replace ──
+  // Address a section by its STABLE heading anchor, replace old_string→new_string within
+  // it. On a miss the door diagnoses WHY (eol_only / whitespace_only / multi_match /
+  // changed_body / missing_anchor) with a safe next-operation hint instead of a bare
+  // "not found". normalize_eol:true accepts a CRLF/LF-only mismatch while the persisted
+  // file keeps its original EOL. A stale expected_sha AUTO-REBASES a non-conflicting
+  // change (target section intact in the fresh doc) and refuses a real conflict with
+  // fresh anchor context (CAS_CONFLICT + fresh sha + section_sha + live anchors).
+  const REPLACE_SHAPE = {
+    spec: z.string(),
+    doc: z.string(),
+    heading: z.string(),
+    old_string: z.string(),
+    new_string: z.string(),
+    replace_all: z.boolean().optional(),
+    normalize_eol: z.boolean().optional(),
+    /** Whole-doc CAS token from read_spec_doc — enables auto-rebase on a concurrent edit. */
+    expected_sha: z.string().optional(),
+    /** Section precondition (section_sha from read_for_edit) — a mismatch ⇒ changed_body. */
+    expected_section_sha: z.string().optional(),
+  } as const satisfies z.ZodRawShape;
+
+  tools.push({
+    name: 'replace_in_section',
+    description:
+      'FR-60 (P33-2): EOL-tolerant, ANCHOR-TARGETED literal replacement — address the section by its ' +
+      'heading text or Marksman anchor, replace old_string→new_string within it, preserving the document ' +
+      'EOL style. On a miss the door diagnoses WHY (eol_only / whitespace_only / multi_match / changed_body ' +
+      '/ missing_anchor) with a safe next-operation hint, instead of a bare "not found". normalize_eol:true ' +
+      'accepts a CRLF/LF-only mismatch while the persisted file keeps its original EOL. Runs the SAME ' +
+      'form/anchor/conformance validation-before-write as apply_spec_change. Pass expected_sha (from ' +
+      'read_spec_doc) to AUTO-REBASE a non-conflicting change over a concurrent edit; a real conflict refuses ' +
+      'with CAS_CONFLICT + fresh anchor context. Pass expected_section_sha (from read_for_edit) as a precondition.',
+    inputShape: REPLACE_SHAPE,
+    handler: async (args) => {
+      const slug = slugOf(args.spec);
+      const doc = docOf(args.doc);
+      const op = {
+        heading: String(args.heading),
+        old_string: String(args.old_string),
+        new_string: String(args.new_string),
+        replace_all: args.replace_all === true,
+        normalize_eol: args.normalize_eol === true,
+        expected_section_sha: typeof args.expected_section_sha === 'string' ? (args.expected_section_sha as string) : undefined,
+      };
+      const expectedSha = typeof args.expected_sha === 'string' ? (args.expected_sha as string) : undefined;
+      try {
+        return withWriteLock(process.cwd(), () => {
+          const r = applyReplaceChange(process.cwd(), slug, doc, op, expectedSha);
+          if (!r.ok) {
+            logSpecAccess('replace_in_section', args, 'denied');
+            return asJsonResult({
+              ok: false, error: r.error ?? 'REPLACE_FAILED', spec: slug, doc,
+              eol_style: r.eol_style, resolved: r.resolved, rebased: r.rebased === true,
+              heading_anchor: r.heading_anchor, start_line: r.start_line, end_line: r.end_line,
+              section_sha: r.section_sha, sha: r.sha,
+              diagnostic: r.diagnostic, available_anchors: r.available_anchors, findings: r.findings,
+              hint: r.diagnostic?.hint ?? (r.error === 'CAS_CONFLICT'
+                ? 'The doc changed AND the target section conflicts. Re-read (read_spec_doc read_for_edit:true) for the fresh sha/section_sha/anchors, rebase your change, and retry.'
+                : 'The replacement was not applied; the document was left unchanged. Act on the diagnostic hint and retry.'),
+            });
+          }
+          registryOpts.refreshGraph?.();
+          logSpecAccess('replace_in_section', args, 'ok');
+          return asJsonResult({
+            ok: true, spec: slug, doc, eol_style: r.eol_style, resolved: r.resolved,
+            rebased: r.rebased === true, normalized: r.normalized === true,
+            heading_anchor: r.heading_anchor, start_line: r.start_line, end_line: r.end_line,
+            section_sha: r.section_sha, sha: r.sha, bytes: r.bytes, written: r.written === true,
+            preview: r.preview, findings: [],
+          });
+        });
+      } catch (e) {
+        if ((e as WriteLockBusyError).code === 'WRITE_LOCK_BUSY') {
+          logSpecAccess('replace_in_section', args, 'denied');
+          const h = (e as WriteLockBusyError).holder;
+          return asJsonResult({ ok: false, error: 'WRITE_LOCK_BUSY', spec: slug, doc, held_by: h ?? null, hint: 'Another session is writing a spec RIGHT NOW — retry in a moment.' });
+        }
+        throw e;
+      }
+    },
+  });
+
+  // ─── 19c) FR-60 P33-3 propose_patch / apply_proposed_patch / apply_spec_transaction ──
+  // Multi-document authoring transaction: preview the graph impact of a SET of section / replace /
+  // content edits across documents (e.g. FR.md + ACCEPTANCE_CRITERIA.md + TASKS.md + the .feature +
+  // FILE_CHANGES.md), then apply them ALL-OR-NOTHING with ONE audit event. propose_patch is the free
+  // dry-run (mints a proposal_id); apply_proposed_patch replays a stored proposal IF STILL VALID;
+  // apply_spec_transaction validates + writes in one shot. Every edit runs the SAME form/anchor/
+  // conformance validation-before-write as apply_spec_change — no second validator. Because the preview
+  // core writes nothing, a single failed edit leaves EVERY document byte-identical (SPECGEN004_523).
+  const PATCH_SECTION_SHAPE = z.object({
+    kind: z.enum(['append_to_section', 'insert_after_heading', 'insert_at_eof']),
+    heading: z.string().optional(),
+    text: z.string(),
+  });
+  const PATCH_REPLACE_SHAPE = z.object({
+    heading: z.string(),
+    old_string: z.string(),
+    new_string: z.string(),
+    replace_all: z.boolean().optional(),
+    normalize_eol: z.boolean().optional(),
+    expected_section_sha: z.string().optional(),
+  });
+  const PATCH_EDIT_SHAPE = z.object({
+    spec: z.string(),
+    doc: z.string(),
+    section: PATCH_SECTION_SHAPE.optional(),
+    replace: PATCH_REPLACE_SHAPE.optional(),
+    content: z.string().optional(),
+    /** Whole-doc CAS token from read_for_edit — a mismatch fails that edit (strict at txn level). */
+    expected_sha: z.string().optional(),
+  });
+  const PATCH_SHAPE = {
+    edits: z.array(PATCH_EDIT_SHAPE).min(1),
+    reason: z.string(),
+  } as const satisfies z.ZodRawShape;
+
+  const toPatchEdits = (raw: unknown): PatchEdit[] =>
+    (raw as Array<Record<string, unknown>>).map((e) => ({
+      spec: String(e.spec),
+      doc: String(e.doc),
+      section: e.section as PatchEdit['section'],
+      replace: e.replace as PatchEdit['replace'],
+      content: typeof e.content === 'string' ? (e.content as string) : undefined,
+      expected_sha: typeof e.expected_sha === 'string' ? (e.expected_sha as string) : undefined,
+    }));
+
+  // Map a prepared edit to its PUBLIC preview — strips the full `next` content (the reply carries the
+  // diff + resulting sha/tokens instead, keeping a 5-doc proposal compact).
+  const publicEditPreview = (p: PatchEditPreview): Record<string, unknown> => ({
+    spec: p.spec, doc: p.doc, ok: p.ok, eol_style: p.eol_style,
+    heading_anchor: p.heading_anchor, start_line: p.start_line, end_line: p.end_line,
+    section_sha: p.section_sha, sha: p.sha, append_token: p.append_token, insert_token: p.insert_token,
+    diff: p.diff, findings: p.findings, diagnostic: p.diagnostic, error: p.error,
+  });
+
+  // Graph nodes defined IN any target doc — the "affected graph nodes" of the proposal/transaction.
+  const affectedNodes = (edits: PatchEdit[]): string[] => {
+    const graph = getGraph();
+    const targetFiles = new Set(edits.map((e) => `.specs/${slugOf(e.spec)}/${docOf(e.doc)}`));
+    const out: string[] = [];
+    for (const n of graph.nodes.values()) {
+      if (targetFiles.has(String(n.file).replace(/\\/g, '/'))) out.push(n.id);
+    }
+    return out.sort();
+  };
+
+  tools.push({
+    name: 'propose_patch',
+    description:
+      'FR-60 (P33-3): DRY-RUN a MULTI-DOCUMENT spec patch — preview the graph impact of a SET of edits (each ' +
+      'a section insert {section:{kind,heading?,text}}, an anchor-targeted replace {replace:{heading,old_string,' +
+      'new_string,...}}, or a whole-doc {content}) across documents (e.g. FR.md + ACCEPTANCE_CRITERIA.md + TASKS.md ' +
+      '+ the .feature + FILE_CHANGES.md) WITHOUT writing. Returns, per edit: the resolved heading anchor, a line ' +
+      'diff, the resulting sha + append/insert section tokens, and the form/anchor/conformance findings — plus the ' +
+      'affected graph nodes across all target docs and a `proposal_id`. Pass that id to apply_proposed_patch to apply ' +
+      'it if still valid, or call apply_spec_transaction with the same edits for a one-shot all-or-nothing write.',
+    inputShape: PATCH_SHAPE,
+    handler: async (args) => {
+      const edits = toPatchEdits(args.edits);
+      const preview = proposePatch(process.cwd(), edits);
+      logSpecAccess('propose_patch', { edits: edits.length, reason: args.reason }, preview.ok ? 'ok' : 'denied');
+      return asJsonResult({
+        ok: preview.ok, dry_run: true, proposal_id: preview.proposal_id,
+        affected_nodes: affectedNodes(edits),
+        findings: preview.findings,
+        edits: preview.edits.map(publicEditPreview),
+        hint: preview.ok
+          ? 'All edits validate clean — nothing was written (dry run). apply_proposed_patch({proposal_id}) applies this if still valid; apply_spec_transaction re-validates + writes in one shot.'
+          : 'At least one edit failed validation — nothing was written. Fix the flagged edits (see per-edit findings) and re-propose.',
+      });
+    },
+  });
+
+  tools.push({
+    name: 'apply_proposed_patch',
+    description:
+      'FR-60 (P33-3): apply a proposal minted by propose_patch — IF STILL VALID. Re-runs every edit against the ' +
+      'FRESH on-disk content, re-validates (form/anchor/conformance), and writes ALL-OR-NOTHING with ONE audit event. ' +
+      'A proposal that no longer validates (a doc changed, an anchor moved, a CAS precondition broke) is REFUSED with ' +
+      'its findings — never applied stale. Consumed on success.',
+    inputShape: { proposal_id: z.string(), reason: z.string() } as const satisfies z.ZodRawShape,
+    handler: async (args) => {
+      try {
+        return withWriteLock(process.cwd(), () => {
+          const r = applyProposedPatch(process.cwd(), String(args.proposal_id));
+          if (!r.ok) {
+            logSpecAccess('apply_proposed_patch', { proposal_id: args.proposal_id, reason: args.reason }, 'denied');
+            return asJsonResult({
+              ok: false, error: r.error ?? 'VALIDATION_FAILED', proposal_id: r.proposal_id,
+              findings: r.findings, edits: r.edits.map(publicEditPreview),
+              hint: r.error === 'PROPOSAL_NOT_FOUND'
+                ? 'No such proposal_id — propose_patch first (proposals live for the server process and are consumed on apply).'
+                : 'The proposal is no longer valid against the fresh docs; nothing was written. Re-propose and retry.',
+            });
+          }
+          registryOpts.refreshGraph?.();
+          logSpecAccess('apply_proposed_patch', { proposal_id: args.proposal_id, edits: r.edits.length, reason: args.reason }, 'ok');
+          return asJsonResult({
+            ok: true, written: true, proposal_id: r.proposal_id, shas: r.shas,
+            edits: r.edits.map(publicEditPreview), findings: [],
+          });
+        });
+      } catch (e) {
+        if ((e as WriteLockBusyError).code === 'WRITE_LOCK_BUSY') {
+          logSpecAccess('apply_proposed_patch', { proposal_id: args.proposal_id }, 'denied');
+          const h = (e as WriteLockBusyError).holder;
+          return asJsonResult({ ok: false, error: 'WRITE_LOCK_BUSY', proposal_id: args.proposal_id, held_by: h ?? null, hint: 'Another session is writing a spec RIGHT NOW — retry in a moment.' });
+        }
+        throw e;
+      }
+    },
+  });
+
+  tools.push({
+    name: 'apply_spec_transaction',
+    description:
+      'FR-60 (P33-3): validate + atomically write a MULTI-DOCUMENT spec change ALL-OR-NOTHING — one conceptual ' +
+      'mutation across FR.md / ACCEPTANCE_CRITERIA.md / TASKS.md / the .feature / FILE_CHANGES.md (any set of docs). ' +
+      'Every edit (a section insert {section}, an anchor-targeted replace {replace}, or a whole-doc {content}) runs ' +
+      'the SAME form/anchor/conformance validation-before-write as apply_spec_change; if ANY edit fails, NOTHING is ' +
+      'written and every doc stays byte-identical. A clean set is written doc-by-doc atomically and logged as ONE ' +
+      'audit event; returns the resulting sha per doc + the affected graph nodes. (propose_patch is the free dry-run.)',
+    inputShape: PATCH_SHAPE,
+    handler: async (args) => {
+      const edits = toPatchEdits(args.edits);
+      try {
+        return withWriteLock(process.cwd(), () => {
+          const r = applySpecTransactionCore(process.cwd(), edits);
+          if (!r.ok) {
+            logSpecAccess('apply_spec_transaction', { edits: edits.length, reason: args.reason }, 'denied');
+            return asJsonResult({
+              ok: false, error: r.error ?? 'VALIDATION_FAILED',
+              findings: r.findings, edits: r.edits.map(publicEditPreview),
+              hint: 'At least one edit failed validation — NOTHING was written; every document is unchanged. Fix the flagged edits (see per-edit findings) and retry.',
+            });
+          }
+          registryOpts.refreshGraph?.();
+          logSpecAccess('apply_spec_transaction', { edits: edits.length, docs: edits.map((e) => `${slugOf(e.spec)}/${docOf(e.doc)}`), reason: args.reason }, 'ok');
+          return asJsonResult({
+            ok: true, written: true, shas: r.shas, affected_nodes: affectedNodes(edits),
+            edits: r.edits.map(publicEditPreview), findings: [],
+          });
+        });
+      } catch (e) {
+        if ((e as WriteLockBusyError).code === 'WRITE_LOCK_BUSY') {
+          logSpecAccess('apply_spec_transaction', { edits: edits.length }, 'denied');
+          const h = (e as WriteLockBusyError).holder;
+          return asJsonResult({ ok: false, error: 'WRITE_LOCK_BUSY', held_by: h ?? null, hint: 'Another session is writing a spec RIGHT NOW — retry in a moment.' });
+        }
+        throw e;
+      }
+    },
+  });
+
+  // ─── 19d) FR-60 P33-4 domain authoring helpers + feature/step-def safety ──────
+  // High-level INTENT operations (add_backlog_task / add_phase / amend_requirement /
+  // add_acceptance_criterion / register_incident_backlog) that render CANONICAL,
+  // TRACEABLE markdown across FR/AC/TASKS/feature/FILE_CHANGES and enforce FEATURE
+  // SAFETY: an executable .feature scenario is refused unless every step matches a real
+  // step-definition, or the caller explicitly passes tasks_only:true (downgraded to a
+  // TASKS-only acceptance pin). Every render goes through the P33-3 transaction core —
+  // the SAME form/anchor/conformance validation-before-write + all-or-nothing atomicity
+  // (no second validator). Handlers: write-lock + ONE audit event + graph refresh.
+  const DOMAIN_FEATURE_SHAPE = z.object({
+    scenario_id: z.string(),
+    title: z.string(),
+    steps: z.array(z.string()).min(1),
+  });
+
+  // Shared reply mapper — the domain result IS the MCP reply body (plus spec echo).
+  const domainReply = (toolName: string, spec: string, r: DomainAuthoringResult): ToolResult => {
+    logSpecAccess(toolName, { spec }, r.ok ? 'ok' : 'denied');
+    if (r.ok) registryOpts.refreshGraph?.();
+    return asJsonResult({ ...r, spec: slugOf(spec) });
+  };
+
+  const runDomainLocked = (toolName: string, args: Record<string, unknown>, fn: () => DomainAuthoringResult): ToolResult => {
+    try {
+      return withWriteLock(process.cwd(), () => domainReply(toolName, String(args.spec), fn()));
+    } catch (e) {
+      if ((e as WriteLockBusyError).code === 'WRITE_LOCK_BUSY') {
+        logSpecAccess(toolName, args, 'denied');
+        const h = (e as WriteLockBusyError).holder;
+        return asJsonResult({ ok: false, error: 'WRITE_LOCK_BUSY', held_by: h ?? null, hint: 'Another session is writing a spec RIGHT NOW — retry in a moment.' });
+      }
+      throw e;
+    }
+  };
+
+  const toFeature = (raw: unknown): { scenarioId: string; title: string; steps: string[] } | undefined => {
+    if (raw === undefined || raw === null) return undefined;
+    const f = raw as Record<string, unknown>;
+    return { scenarioId: String(f.scenario_id), title: String(f.title), steps: (f.steps as unknown[]).map(String) };
+  };
+
+  tools.push({
+    name: 'add_backlog_task',
+    description:
+      'FR-60d (P33-4): add a CANONICAL, FR-TRACED task block under a Phase in TASKS.md — the form contracts ' +
+      '(Status/Est/Done-When) + the `_Requirements: [FR-N](FR.md#anchor)_` trace are rendered for you, ids are ' +
+      'kept unique, and the write runs the SAME form/anchor/conformance validation-before-write as apply_spec_change ' +
+      '(all-or-nothing, EOL preserved). Pass feature:{scenario_id,title,steps} to ALSO plant the scenario in the ' +
+      'spec .feature — REFUSED (STEP_DEFS_MISSING) unless every step matches a real step-definition under ' +
+      'tests/step_definitions/, or pass tasks_only:true to downgrade to a TASKS-only acceptance pin instead.',
+    inputShape: {
+      spec: z.string(),
+      phase: z.string(),
+      title: z.string(),
+      id: z.string().optional(),
+      est_minutes: z.number().int().positive().optional(),
+      depends: z.string().optional(),
+      requirements: z.array(z.string()).optional(),
+      done_when: z.array(z.string()).optional(),
+      feature: DOMAIN_FEATURE_SHAPE.optional(),
+      tasks_only: z.boolean().optional(),
+      reason: z.string(),
+    } as const satisfies z.ZodRawShape,
+    handler: async (args) =>
+      runDomainLocked('add_backlog_task', args as Record<string, unknown>, () =>
+        addBacklogTask(process.cwd(), {
+          spec: String(args.spec), phase: String(args.phase), title: String(args.title),
+          id: typeof args.id === 'string' ? (args.id as string) : undefined,
+          estMinutes: typeof args.est_minutes === 'number' ? (args.est_minutes as number) : undefined,
+          depends: typeof args.depends === 'string' ? (args.depends as string) : undefined,
+          requirements: Array.isArray(args.requirements) ? (args.requirements as unknown[]).map(String) : undefined,
+          doneWhen: Array.isArray(args.done_when) ? (args.done_when as unknown[]).map(String) : undefined,
+          feature: toFeature(args.feature),
+          tasksOnly: args.tasks_only === true,
+        }),
+      ),
+  });
+
+  tools.push({
+    name: 'add_phase',
+    description:
+      'FR-60d (P33-4): add a canonical `## Phase N — Title (date)` heading at the end of TASKS.md — the number ' +
+      'auto-increments past the highest existing phase (or pass it explicitly; duplicates are refused). Runs the ' +
+      'SAME form/anchor/conformance validation-before-write as apply_spec_change (EOL preserved, atomic).',
+    inputShape: {
+      spec: z.string(),
+      title: z.string(),
+      number: z.number().int().optional(),
+      source: z.string().optional(),
+      reason: z.string(),
+    } as const satisfies z.ZodRawShape,
+    handler: async (args) =>
+      runDomainLocked('add_phase', args as Record<string, unknown>, () =>
+        addPhase(process.cwd(), {
+          spec: String(args.spec), title: String(args.title),
+          number: typeof args.number === 'number' ? (args.number as number) : undefined,
+          source: typeof args.source === 'string' ? (args.source as string) : undefined,
+        }),
+      ),
+  });
+
+  tools.push({
+    name: 'amend_requirement',
+    description:
+      'FR-60d (P33-4): amend an EXISTING FR in FR.md — append body text to its section and/or maintain its ' +
+      '`**Связанные AC:**` line with links to existing ACs (created when absent, appended when present). The ' +
+      'FR↔AC links use the exact live-heading anchors, so the anchor layer passes; the write runs the SAME ' +
+      'form/anchor/conformance validation-before-write as apply_spec_change (EOL preserved, atomic).',
+    inputShape: {
+      spec: z.string(),
+      fr: z.string(),
+      text: z.string().optional(),
+      related_ac_ids: z.array(z.string()).optional(),
+      reason: z.string(),
+    } as const satisfies z.ZodRawShape,
+    handler: async (args) =>
+      runDomainLocked('amend_requirement', args as Record<string, unknown>, () =>
+        amendRequirement(process.cwd(), {
+          spec: String(args.spec), fr: String(args.fr),
+          text: typeof args.text === 'string' ? (args.text as string) : undefined,
+          relatedAcIds: Array.isArray(args.related_ac_ids) ? (args.related_ac_ids as unknown[]).map(String) : undefined,
+        }),
+      ),
+  });
+
+  tools.push({
+    name: 'add_acceptance_criterion',
+    description:
+      'FR-60d (P33-4): add a canonical AC to ACCEPTANCE_CRITERIA.md for an EXISTING FR — short-form `## AC-N.M` ' +
+      'heading + the `**Требование:** [FR-N](FR.md#anchor)` line (the FR-to-AC covers edge the graph parses), and the ' +
+      'FR-side `**Связанные AC:**` link. The id auto-assigns the next free minor of the FR (or pass it explicitly; ' +
+      'duplicates are refused). Runs the SAME form/anchor/conformance validation-before-write as apply_spec_change ' +
+      '(EOL preserved, atomic).',
+    inputShape: {
+      spec: z.string(),
+      fr: z.string(),
+      title: z.string(),
+      body: z.string().optional(),
+      id: z.string().optional(),
+      reason: z.string(),
+    } as const satisfies z.ZodRawShape,
+    handler: async (args) =>
+      runDomainLocked('add_acceptance_criterion', args as Record<string, unknown>, () =>
+        addAcceptanceCriterion(process.cwd(), {
+          spec: String(args.spec), fr: String(args.fr), title: String(args.title),
+          body: typeof args.body === 'string' ? (args.body as string) : undefined,
+          id: typeof args.id === 'string' ? (args.id as string) : undefined,
+        }),
+      ),
+  });
+
+  tools.push({
+    name: 'register_incident_backlog',
+    description:
+      'FR-60d (P33-4): capture an incident as a canonical, FR-TRACED task in the `## Backlog` section of TASKS.md ' +
+      '(the section is created on demand) — id auto-generated from date+summary (unique), trace + form contracts ' +
+      'rendered for you. Pass feature:{scenario_id,title,steps} to ALSO plant a regression scenario — REFUSED ' +
+      '(STEP_DEFS_MISSING) unless every step matches a real step-definition under tests/step_definitions/, or pass ' +
+      'tasks_only:true to downgrade to a TASKS-only acceptance pin. Runs the SAME validation-before-write as ' +
+      'apply_spec_change (EOL preserved, atomic).',
+    inputShape: {
+      spec: z.string(),
+      summary: z.string(),
+      date: z.string().optional(),
+      requirements: z.array(z.string()).optional(),
+      done_when: z.array(z.string()).optional(),
+      feature: DOMAIN_FEATURE_SHAPE.optional(),
+      tasks_only: z.boolean().optional(),
+      reason: z.string(),
+    } as const satisfies z.ZodRawShape,
+    handler: async (args) =>
+      runDomainLocked('register_incident_backlog', args as Record<string, unknown>, () =>
+        registerIncidentBacklog(process.cwd(), {
+          spec: String(args.spec), summary: String(args.summary),
+          date: typeof args.date === 'string' ? (args.date as string) : undefined,
+          requirements: Array.isArray(args.requirements) ? (args.requirements as unknown[]).map(String) : undefined,
+          doneWhen: Array.isArray(args.done_when) ? (args.done_when as unknown[]).map(String) : undefined,
+          feature: toFeature(args.feature),
+          tasksOnly: args.tasks_only === true,
+        }),
+      ),
   });
 
   // ─── 18b) set_spec_status — explicit SPEC-level backlog marker (no status math) ──
