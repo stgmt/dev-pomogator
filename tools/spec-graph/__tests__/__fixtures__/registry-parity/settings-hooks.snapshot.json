@@ -17,7 +17,7 @@
   "SessionStart": [
     "apply_skill_budget",
     "autostart_hook",
-    "doctor-hook",
+    "doctor",
     "ensure-marksman",
     "ensure-up",
     "health-check",
@@ -51,8 +51,8 @@
     "ingest",
     "mark-bg-task",
     "research-workflow-marker-guard",
-    "subagent_watchdog --event PostToolUse",
-    "spec-conformance-push"
+    "spec-conformance-push",
+    "subagent_watchdog --event PostToolUse"
   ],
   "UserPromptSubmit": [
     "capture --event UserPromptSubmit",
