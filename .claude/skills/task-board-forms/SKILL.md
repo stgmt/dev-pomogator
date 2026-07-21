@@ -5,7 +5,7 @@ description: >
   the ## Task Summary Table header via spec-status.ts -Format task-table. Idempotent
   (replaces auto-generated block between markers). Called by create-spec Phase 3
   (Finalization) step 1b. Returns JSON summary of tasks enriched.
-allowed-tools: mcp__dev-pomogator-specs__read_spec_doc, mcp__dev-pomogator-specs__list_spec_docs, mcp__dev-pomogator-specs__apply_spec_change, mcp__dev-pomogator-specs__propose_spec_change, Bash, AskUserQuestion
+allowed-tools: mcp__dev-pomogator-specs__read_spec_doc, mcp__dev-pomogator-specs__list_spec_docs, mcp__dev-pomogator-specs__apply_spec_change, mcp__dev-pomogator-specs__propose_spec_change, mcp__dev-pomogator-specs__append_to_section, mcp__dev-pomogator-specs__insert_after_heading, mcp__dev-pomogator-specs__insert_at_eof, mcp__dev-pomogator-specs__replace_in_section, Bash, AskUserQuestion
 ---
 
 # Task Board Forms
@@ -45,6 +45,16 @@ Tasks in Phase -1 (Infrastructure) are exempt from Done When by form-guard desig
 > ({ old_string, new_string }) — the mutation door re-checks the task form
 > (Status/Est/Done When) before the disk write. Never a raw `Edit`/`Write`/`grep`
 > of `.specs/`.
+>
+> **FR-60 section doors (preferred for stable-heading fills):** address the
+> target section by its heading anchor instead of copying an exact `old_string` —
+> `replace_in_section({ spec, doc: "TASKS.md", heading, old_string, new_string })`
+> rewrites a task block / the summary-table block EOL-tolerantly (CRLF-safe,
+> auto-rebase on `expected_sha`), `append_to_section({ heading, text })` appends
+> to the END of a Phase section, `insert_after_heading` inserts immediately AFTER
+> a heading (e.g. the regenerated `## Task Summary Table`), and `insert_at_eof`
+> appends at end-of-file (no heading). Same form/anchor/conformance
+> validation-before-write as `apply_spec_change`.
 
 ### Step 1 — Parse existing task blocks
 

@@ -82,6 +82,22 @@ export const REFERENCED_CAPABILITIES: readonly string[] = [
   'create_spec',
   'delete_spec_doc', // P19-4 the D of the CRUD door — doc-level, FR-43 guards whole-spec retirement
   'rename_spec_doc', // P21-5 rename/move door — anchors-aware, same create-spec owner
+  // FR-60 (P33) section-editing + multi-doc transaction + domain-authoring doors —
+  // anchor-addressed, EOL-preserving authoring with the SAME validation-before-write
+  // as apply_spec_change; same create-spec authoring owner as the FR-40 mutation
+  // door (FR-42c), with the form-filler sub-skills on the section primitives.
+  'append_to_section',
+  'insert_after_heading',
+  'insert_at_eof',
+  'replace_in_section',
+  'propose_patch',
+  'apply_proposed_patch',
+  'apply_spec_transaction',
+  'add_backlog_task',
+  'add_phase',
+  'amend_requirement',
+  'add_acceptance_criterion',
+  'register_incident_backlog',
   'set_entity_status', // FR-48d centralized validated status transition — consumed by task-status
   'set_spec_status', // explicit SPEC-level backlog marker (excluded from census/pinator) — consumed by task-status
   'get_archival_proof', // FR-45a archival safety proof (graph + prose inbound refs)
@@ -137,6 +153,27 @@ export const TOOL_CONSUMERS: Readonly<Record<string, readonly string[]>> = {
   create_spec: ['create-spec'],
   delete_spec_doc: ['create-spec'], // P19-4 D-door — same mutation-door owner
   rename_spec_doc: ['create-spec'], // P21-5 rename/move door — same mutation-door owner (FR-42c)
+  // FR-60 (P33-1/P33-2) section-editing doors — anchor-addressed, EOL-preserving
+  // primitives with the SAME validation-before-write as apply_spec_change. Consumed
+  // by create-spec + the spec-authoring form-filler sub-skills, which fill/patch the
+  // v3 form-docs through a stable-heading address instead of exact old_string surgery.
+  append_to_section: ['create-spec', 'discovery-forms', 'requirements-chk-matrix', 'task-board-forms'],
+  insert_after_heading: ['create-spec', 'discovery-forms', 'requirements-chk-matrix', 'task-board-forms'],
+  insert_at_eof: ['create-spec', 'discovery-forms', 'requirements-chk-matrix', 'task-board-forms'],
+  replace_in_section: ['create-spec', 'discovery-forms', 'requirements-chk-matrix', 'task-board-forms'],
+  // FR-60 (P33-3) multi-document transaction door — all-or-nothing writes across
+  // FR/AC/TASKS/.feature/FILE_CHANGES; same mutation-door owner as the single-doc
+  // door (create-spec, FR-42c). propose_patch is the free dry-run of the transaction.
+  propose_patch: ['create-spec'],
+  apply_proposed_patch: ['create-spec'],
+  apply_spec_transaction: ['create-spec'],
+  // FR-60d (P33-4) domain-authoring intents — canonical FR/AC/TASKS renders through
+  // the P33-3 transaction core; driven by the create-spec authoring entry.
+  add_backlog_task: ['create-spec'],
+  add_phase: ['create-spec'],
+  amend_requirement: ['create-spec'],
+  add_acceptance_criterion: ['create-spec'],
+  register_incident_backlog: ['create-spec'],
   set_entity_status: ['task-status'], // FR-48d — the status-lifecycle command, driven by the task-status skill
   set_spec_status: ['task-status'], // explicit SPEC-level backlog marker — same status-lifecycle skill (spec sibling of set_entity_status)
   get_archival_proof: ['spec-archive'], // FR-45a — the archival agent drives the proof
