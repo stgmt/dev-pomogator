@@ -38,6 +38,7 @@ import {
   type TraceabilityGapClass,
 } from '../spec-graph/traceability.ts';
 import { runJudge, type JudgeResult } from '../spec-llm-judge/index.ts';
+import { buildReadinessInventory, type ReadinessInventory } from '../spec-graph/readiness-inventory.ts';
 import type { FrNode, ScenarioNode, TaskNode } from '../spec-graph/types.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -146,6 +147,13 @@ export interface SpecVerdictResult {
     bddSync: BddSyncReport;
     filteredProof: FilteredProofReport;
   };
+  /**
+   * FR-63 (foundation): the ONE graph-derived, deduplicated FR/AC/scenario
+   * inventory with per-AC `test_paths`, FR-level never-run classification and
+   * the evidence provenance/recency taxonomy. The SAME projection precheck
+   * and the MCP status surface report (AC-63.1 — one inventory, one graph).
+   */
+  inventory: ReadinessInventory;
   /**
    * FR-37c (P14-3): FR-8 semantic drift in the verdict path. `ran` only when
    * a claude binary is present; otherwise an explicit SEMANTIC_SKIPPED note —
@@ -426,6 +434,10 @@ export async function runSpecVerdict(
     .replace(/^\.?\/?\.specs\//, '')
     .replace(/\/+$/, '');
   const graph = buildGraphFromCwd(cwd, { featureRoots: configuredFeatureRoots(cwd) });
+  // FR-63 (foundation): the shared graph-derived readiness inventory — the SAME
+  // projection precheck + MCP status report (AC-63.1). Derived from the one
+  // graph above; never assembled from a second source of truth.
+  const inventory = buildReadinessInventory(graph, { spec: slug });
   // FR-35a: the per-task test-quality side-channel caps a green-but-weak DONE task
   // to IN_PROGRESS on this surface too (absent file → {} → no change). Same reader
   // as the Stop-gate and get_coverage — one source of truth.
@@ -706,6 +718,7 @@ export async function runSpecVerdict(
       byCode: confByCode,
     },
     coverage: { buckets, canonicalBuckets, unverifiedDoneTasks },
+    inventory,
     evidence: { bddSync, filteredProof },
     semantic: {
       ran: semanticWanted && binaryPresent,
@@ -773,6 +786,16 @@ export function renderVerdict(r: SpecVerdictResult): string {
       (r.coverage.unverifiedDoneTasks.length
         ? ` — DONE-but-unverified: ${r.coverage.unverifiedDoneTasks.join(', ')}`
         : ''),
+  );
+  // FR-63 (foundation): the shared deduplicated inventory — per-AC test_paths,
+  // FR-level never-run classification, evidence taxonomy (additive line).
+  const neverRunFrs = r.inventory.frs.filter((fr) => fr.never_run).map((fr) => fr.id);
+  const emptyTestPathAcs = r.inventory.acs.filter((ac) => ac.test_paths.length === 0).map((ac) => ac.id);
+  lines.push(
+    `inventory (FR-63, one graph): ${r.inventory.counts.fr} FR / ${r.inventory.counts.ac} AC / ${r.inventory.counts.scenario} scenario (deduplicated)` +
+      (neverRunFrs.length ? ` — never-run FRs: ${neverRunFrs.join(', ')}` : '') +
+      (emptyTestPathAcs.length ? ` — ACs with test_paths=[]: ${emptyTestPathAcs.join(', ')}` : '') +
+      (r.inventory.duplicates.length ? ` — duplicate candidates deduplicated: ${r.inventory.duplicates.map((d) => `${d.kind}:${d.key}`).join(', ')}` : ''),
   );
   if (r.semantic.ran) {
     lines.push(

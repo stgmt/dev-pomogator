@@ -15,11 +15,23 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { detectActiveSpec, isValidSlug } from './autodetect.ts';
 import { classifyAcClaims, parseAcIds, type AcClaim } from './ac-claims.ts';
 import { classifyTestFile, type TestQualityReport } from './test-quality.ts';
 import { classifyTestStatusDir, type RecencyReport } from './yaml-recency.ts';
 import { collectBlockers, type Blocker } from './env-blockers.ts';
+// The shared FR-63 inventory/evaluator is dependency-free (pure graph logic) —
+// safe to import directly. The graph BUILDER, however, pulls in
+// @cucumber/gherkin, which installed plugin users may not have — it stays a
+// DYNAMIC, fail-open import below (FR-63c dependency-safe command path).
+import { resolveTargetProjectRoot, type RootResolution } from '../../../../tools/spec-graph/root-resolution.ts';
+import {
+  buildReadinessInventory,
+  evaluateReadiness,
+  MANDATORY_READINESS_LANES,
+  type ReadinessInventory,
+} from '../../../../tools/spec-graph/readiness-inventory.ts';
 
 export interface ContextBundle {
   spec_slug: string;
@@ -43,6 +55,13 @@ export interface PrecheckResult {
   reason: string;
   bundle: ContextBundle | null;
   deterministic: DeterministicFindings | null;
+  root_resolution?: RootResolution;
+}
+
+const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
+
+export function resolvePrecheckRoot(repoRoot: string = process.cwd()): RootResolution {
+  return resolveTargetProjectRoot({ envRoot: process.env.SPECS_GENERATOR_ROOT, cwd: repoRoot, scriptDir: SCRIPT_DIR });
 }
 
 const CRED_LINE =
@@ -128,7 +147,13 @@ function parseArgs(argv: string[]): { slug: string | null; specsRoot: string; pl
 }
 
 export function precheck(argv: string[], repoRoot: string = process.cwd()): PrecheckResult {
-  const { slug, specsRoot, plansDir } = parseArgs(argv);
+  const rootResolution = resolvePrecheckRoot(repoRoot);
+  if (rootResolution.status === 'NOT_READY' || !rootResolution.root) {
+    return { active: false, reason: `NOT_READY: ${rootResolution.corrective_action}`, bundle: null, deterministic: null, root_resolution: rootResolution };
+  }
+  repoRoot = rootResolution.root;
+  const { slug, specsRoot: parsedSpecsRoot, plansDir } = parseArgs(argv);
+  const specsRoot = argv.includes('--specs-root') ? parsedSpecsRoot : path.join(repoRoot, '.specs');
 
   let specSlug: string;
   let specPath: string;
@@ -156,11 +181,105 @@ export function precheck(argv: string[], repoRoot: string = process.cwd()): Prec
   const testPaths = resolveTestPaths(specPath, repoRoot);
   const bundle = buildContextBundle(specSlug, specPath, testPaths);
   const deterministic = runDeterministic(specPath, testPaths, repoRoot);
-  return { active: true, reason, bundle, deterministic };
+  return { active: true, reason, bundle, deterministic, root_resolution: rootResolution };
+}
+
+export interface PrecheckReadiness {
+  overall: 'READY' | 'NOT_READY';
+  mandatory_lanes: readonly string[];
+  next_action: string;
+  lanes: Record<string, { status: string; blocking: boolean; debt: string[] }>;
+}
+
+export interface PrecheckWithInventoryResult extends PrecheckResult {
+  /**
+   * FR-63 (foundation): the SAME graph-derived, deduplicated FR/AC/scenario
+   * inventory the MCP status surface and spec-verdict report (AC-63.1) —
+   * per-AC test_paths, FR never-run classification, evidence provenance.
+   * Null when no active spec or the graph cannot be built.
+   */
+  inventory: ReadinessInventory | null;
+  /** Why the inventory is absent: missing runtime deps (FR-64 scope) or a graph failure. Never masked. */
+  inventory_error: 'DEPENDENCY_ABSENT' | 'GRAPH_UNAVAILABLE' | null;
+  /** Mandatory-lane AND evaluation over the inventory (AC-63.3). Null when no active spec. */
+  readiness: PrecheckReadiness | null;
+}
+
+function toPrecheckReadiness(evaluation: {
+  overall: 'READY' | 'NOT_READY';
+  mandatory_lanes: readonly string[];
+  next_action: string;
+  lanes: Record<string, { status: string; blocking: boolean; debt: string[] }>;
+}): PrecheckReadiness {
+  return {
+    overall: evaluation.overall,
+    mandatory_lanes: evaluation.mandatory_lanes,
+    next_action: evaluation.next_action,
+    lanes: evaluation.lanes,
+  };
+}
+
+/**
+ * The full precheck surface (FR-63): the dependency-safe deterministic
+ * precheck PLUS the graph-derived inventory + mandatory-lane readiness the
+ * MCP status surface and spec-verdict also report — one graph, one answer.
+ *
+ * Dependency-safe by construction: the graph builder (which needs
+ * @cucumber/gherkin) is imported dynamically; when it is absent the result
+ * reports `inventory_error: 'DEPENDENCY_ABSENT'` and an explicit NOT_READY —
+ * dependency absence is NEVER laundered into readiness (FR-63b/c; the
+ * packaging/release side of absence is FR-64's job, not a success signal).
+ */
+export async function precheckWithInventory(
+  argv: string[],
+  repoRoot: string = process.cwd(),
+): Promise<PrecheckWithInventoryResult> {
+  const base = precheck(argv, repoRoot);
+  if (!base.active || !base.bundle) {
+    return { ...base, inventory: null, inventory_error: null, readiness: null };
+  }
+  const slug = base.bundle.spec_slug;
+  let buildGraphFromCwd: (cwd: string) => import('../../../../tools/spec-graph/types.ts').SpecGraph;
+  try {
+    ({ buildGraphFromCwd } = await import('../../../../tools/spec-graph/builder.ts'));
+  } catch (err) {
+    const code = (err as NodeJS.ErrnoException)?.code ?? '';
+    const dependencyAbsent =
+      code === 'ERR_MODULE_NOT_FOUND' || code === 'MODULE_NOT_FOUND' || code === 'ERR_UNSUPPORTED_NODE_IMPORT_FLAG';
+    return {
+      ...base,
+      inventory: null,
+      inventory_error: dependencyAbsent ? 'DEPENDENCY_ABSENT' : 'GRAPH_UNAVAILABLE',
+      readiness: {
+        overall: 'NOT_READY',
+        mandatory_lanes: MANDATORY_READINESS_LANES,
+        next_action: dependencyAbsent
+          ? 'The spec graph cannot be built here (runtime dependencies absent) — dependency absence is NOT readiness proof; run inside the repository with dependencies installed (packaging is FR-64 scope).'
+          : `The spec graph failed to build (${(err as Error)?.message ?? err}) — unreadable evidence is NOT readiness proof.`,
+        lanes: Object.fromEntries(
+          MANDATORY_READINESS_LANES.map((lane) => [
+            lane,
+            lane === 'EXECUTION'
+              ? { status: dependencyAbsent ? 'DEPENDENCY_ABSENT' : 'NOT_EVALUATED', blocking: true, debt: [] }
+              : { status: 'NOT_EVALUATED', blocking: true, debt: [] },
+          ]),
+        ) as PrecheckReadiness['lanes'],
+      },
+    };
+  }
+  const graph = buildGraphFromCwd(repoRoot);
+  const inventory = buildReadinessInventory(graph, { spec: slug });
+  const evaluation = evaluateReadiness({ inventory });
+  return {
+    ...base,
+    inventory,
+    inventory_error: null,
+    readiness: toPrecheckReadiness(evaluation),
+  };
 }
 
 const isDirectRun = process.argv[1]?.endsWith('precheck.ts') || process.argv[1]?.endsWith('precheck.js');
 if (isDirectRun) {
-  const result = precheck(process.argv.slice(2));
+  const result = await precheckWithInventory(process.argv.slice(2));
   process.stdout.write(JSON.stringify(result, null, 2) + '\n');
 }
