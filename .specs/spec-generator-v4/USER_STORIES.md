@@ -870,3 +870,121 @@ Then the task is shown as evidence-IN_PROGRESS / DONE-but-unverified with the mi
 Given a filtered Docker BDD artifact passes selected scenarios
 When the readiness surface reports coverage
 Then it shows the filtered proof separately from canonical coverage and gives the next action to attach proof or run the full suite
+
+---
+
+### User Story 39: Trust the readiness gate from a Windows host through WSL (Priority: P1)
+
+**Требование:** FR-62
+
+As a maintainer using an installed plugin cache from a Windows host while the target project is in WSL, I want `spec-status` and the MCP readiness answer to resolve the project root by environment override, then caller/project cwd, then `SCRIPT_DIR` fallback, so that an installed script never mistakes its plugin-cache directory for the target project.
+
+**Why:** Issue #126 is a script-root resolution defect, not a generic Windows-to-WSL repository-identity or tracked-file-inventory problem. `SPECS_GENERATOR_ROOT` is an environment override; inherited noninteractive stdin must independently never block. A cached installed plugin can resolve its own `SCRIPT_DIR` successfully while reading no target-project files, so target-root precedence must remain explicit.
+
+**Independent Test:** Run the installed `spec-status` precheck from a fixture with distinct plugin-cache `SCRIPT_DIR` and WSL project roots; assert `SPECS_GENERATOR_ROOT` wins when set, otherwise a valid caller/project cwd wins, and `SCRIPT_DIR` is used only as final fallback with the selected source reported. Invoke the same paths with inherited noninteractive stdin and assert they complete without waiting for input.
+
+**Acceptance Scenarios:**
+
+Given `SPECS_GENERATOR_ROOT` is set to a target project while an installed plugin runs from its cache
+When `spec-status` or MCP readiness resolves the project root
+Then it uses the environment override rather than the cache `SCRIPT_DIR`
+
+Given `SPECS_GENERATOR_ROOT` is absent and the caller working directory is a valid target project
+When readiness resolves the project root
+Then it uses that caller/project cwd before considering `SCRIPT_DIR`
+
+Given neither an environment override nor a valid caller project is available
+When root resolution must use `SCRIPT_DIR`
+Then it reports the fallback source and does not mistake the cache as target-project evidence
+
+Given stdin is inherited but noninteractive
+When `spec-status` or its MCP path runs root resolution
+Then it completes without waiting for stdin and applies the same root precedence
+
+---
+
+### User Story 40: Ship a dependency-safe installed readiness command (Priority: P1)
+
+**Требование:** FR-63
+
+As a plugin user who installs a released dev-pomogator version without this repository's development dependencies, I want the installed `spec-status` and MCP readiness path to execute using only shipped runtime assets, so that a local-source green run does not become a missing-module failure after installation.
+
+**Why:** Development `node_modules` can conceal an undeclared runtime import; release confidence requires the same command through the installed-plugin launcher with dependencies absent.
+
+**Independent Test:** Package and install the release artifact in an isolated fixture, hide development dependencies, invoke the public readiness command and its MCP-backed path, and assert both return a structured readiness answer rather than a module-resolution error.
+
+**Acceptance Scenarios:**
+
+Given a user installs the released plugin without repository `node_modules`
+When they invoke the documented readiness command
+Then it starts through the installed launcher and returns the readiness result without requiring undeclared packages
+
+Given an installed runtime import is not included in the release artifact
+When the dependency-absent verification runs
+Then it fails with the missing asset/import identified before release publication
+
+---
+
+### User Story 41: Keep graph identifiers parseable and traceable (Priority: P1)
+
+**Требование:** FR-64
+
+As a spec author, I want proposed FR, user-story, and use-case identifiers to remain graph-parseable and explicitly linked while the spec evolves, so that an added requirement cannot become an `FR_NO_STORY` orphan or a prose-only identifier.
+
+**Why:** IDs that only resemble traceability syntax can look complete in Markdown while being invisible to the graph, status tools, and the readiness gate.
+
+**Independent Test:** Add proposed linked FR/US/UC records to a fixture, build the graph, and assert each record is discoverable with its relationship; introduce an unlinked or malformed ID and assert conformance returns the specific orphan finding.
+
+**Acceptance Scenarios:**
+
+Given a proposed requirement has an explicitly linked user story and use case
+When the graph is built
+Then all three records are parseable nodes with their intended traceability edges
+
+Given a requirement-like identifier has no linked user story or is not graph-parseable
+When conformance runs
+Then it reports the precise `FR_NO_STORY` or identifier finding rather than treating prose as coverage
+
+---
+
+### User Story 42: Receive one evidence-backed readiness answer from status, verdict, and MCP (Priority: P1)
+
+**Требование:** FR-63
+
+As a maintainer deciding whether a spec is ready, I want `spec-status`, the MCP surface, and `spec-verdict` to agree on the same graph and evidence, including AC/scenario discovery and recency, so that a green-looking partial result cannot overrule missing or stale readiness evidence.
+
+**Why:** Separate status paths can each be locally plausible while disagreeing on discovered scenarios, AC mappings, recency, or which evidence is authoritative; readiness requires every mandatory lane, not any one passing lane.
+
+**Independent Test:** Build a fixture with mapped ACs, newly discovered and stale scenarios, current and expired evidence, then invoke CLI status, MCP status, and verdict; assert identical mandatory-lane results, `NOT_READY` when any required discovery/recency lane is absent, and a shared next action.
+
+**Acceptance Scenarios:**
+
+Given spec-status, MCP status, and spec-verdict read one spec with the same graph snapshot
+When the readiness answer is requested through each surface
+Then each surface reports the same AC/scenario discovery, evidence-recency, and overall readiness result
+
+Given an acceptance criterion or scenario is undiscovered, missing evidence, or only backed by stale evidence
+When readiness is calculated
+Then the overall answer is NOT_READY and names the missing or stale mandatory lane
+
+---
+
+### User Story 43: Release ownership proves, monitors, and can roll back readiness delivery (Priority: P1)
+
+**Требование:** FR-64
+
+As the release owner, I want a GitHub #45 test-isolation inventory and release proof spanning the checks before and after the linked PR, tag, and release, so that readiness functionality is not declared shipped merely because source tests passed.
+
+**Why:** GitHub #45 identifies test-isolation work. Its production proof must establish the affected test inventory before release, bind the dependency-absent artifact evidence to the PR/tag/release, and retain post-release monitoring and rollback ownership.
+
+**Independent Test:** Produce a release fixture linked to GitHub #45 with its test-isolation inventory and PR/tag/release metadata; assert finalization rejects publication without pre-release inventory evidence, dependency-absent proof, post-release monitoring owner/signal, and rollback target, and permits a complete record.
+
+**Acceptance Scenarios:**
+
+Given GitHub #45 has a recorded test-isolation inventory before its linked PR, tag, and release
+When the release owner records production finalization
+Then the record links the inventory, artifact evidence, PR/tag/release metadata, owner, monitoring signal, and rollback target
+
+Given the #45 inventory, dependency-absent proof, post-release monitoring, or rollback information is missing
+When publication readiness is evaluated
+Then it is NOT_READY with the missing release-control item and next action

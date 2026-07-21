@@ -343,6 +343,42 @@ This block enumerates the spec-doc edits applied as part of the v3→v4 transiti
 | `.specs/spec-generator-v4/spec-generator-v4.feature` | edit | Add @feature61 @wip scenarios SPECGEN004_539..543 as pending executable pins ([FR-61](FR.md#fr-61)) |
 | `.specs/spec-generator-v4/FILE_CHANGES.md` | edit | Track Phase 34 planned implementation and spec-document changes ([FR-61](FR.md#fr-61)) |
 
+## Phase 35 — FR-62/FR-63/FR-64 integration-first readiness evidence
+
+| Path | Action | Requirement and verification |
+|---|---|---|
+| `tools/specs-generator/specs-generator-core.mjs` | edit | Root precedence `SPECS_GENERATOR_ROOT` → caller project cwd → `SCRIPT_DIR`; inherited/closed/noninteractive `stdin_mode` with timeout; reject Windows-host Code-to-WSL plugin cache, `C:\Windows`, and invalid UNC roots. [FR-62](FR.md#fr-62), [AC-62.1](ACCEPTANCE_CRITERIA.md#ac-621) |
+| `tools/specs-generator/spec-status.ts` | edit | Shared root precheck; reject `C:\Windows` CWD collapse, UNC-relative, plugin-cache, cross-worktree, and untracked inputs with remediation. [FR-62](FR.md#fr-62), [AC-62.2](ACCEPTANCE_CRITERIA.md#ac-622) |
+| `.claude/skills/spec-status/scripts/precheck.ts` | edit | Graph-derived FR/AC/scenario snapshot, full-run source/time/recency, baseline/run identity, passed/unknown/not_recorded/stale/filtered taxonomy, AND readiness, and next action. [FR-63](FR.md#fr-63), [AC-63.1](ACCEPTANCE_CRITERIA.md#ac-631), [AC-63.2](ACCEPTANCE_CRITERIA.md#ac-632) |
+| `tools/specs-generator/spec-verdict.ts` | edit | Consume the canonical precheck snapshot and preserve FR/AC/scenario provenance, recency, mandatory lanes, and remediation. [FR-63](FR.md#fr-63) |
+| `tools/spec-mcp-server/tools.ts` | edit | Expose the canonical precheck, trace/test-result identity, runtime root, and remediation through MCP. [FR-63](FR.md#fr-63) |
+| `tools/spec-graph/conformance.ts` | edit | Classify evidence and preserve all-unit outcomes for inventory decisions. [FR-64](FR.md#fr-64), [AC-64.1](ACCEPTANCE_CRITERIA.md#ac-641), [AC-64.2](ACCEPTANCE_CRITERIA.md#ac-642) |
+| `tools/spec-graph/coverage.ts` | edit | Surface evidence provenance without treating mock-only or filtered evidence as ready. [FR-64](FR.md#fr-64), [AC-64.1](ACCEPTANCE_CRITERIA.md#ac-641) |
+| `tools/spec-graph/task-census.ts` | edit | Report evidence-derived task truth to the release inventory. [FR-64](FR.md#fr-64) |
+| `tools/specs-generator/audit-spec.ts` | edit | Include graph-native evidence classifications in audit inventory output. [FR-64](FR.md#fr-64), [AC-64.1](ACCEPTANCE_CRITERIA.md#ac-641) |
+| `tools/specs-generator/spec-status.ts` | edit | Expose classified inventory through the CLI status surface. [FR-64](FR.md#fr-64), [AC-64.2](ACCEPTANCE_CRITERIA.md#ac-642) |
+| `tools/specs-generator/spec-verdict.ts` | edit | Expose classified inventory through the verdict surface. [FR-64](FR.md#fr-64), [AC-64.2](ACCEPTANCE_CRITERIA.md#ac-642) |
+| `tools/spec-mcp-server/tools.ts` | edit | Expose classified inventory through MCP. [FR-64](FR.md#fr-64), [AC-64.2](ACCEPTANCE_CRITERIA.md#ac-642) |
+| `tools/specs-generator/release-inventory.ts` | create | Compare tracked files path-by-path, classify or disposition silent junk, and record dependency-absent results, owner, signal, rollback, and follow-up. [FR-64](FR.md#fr-64), [AC-64.2](ACCEPTANCE_CRITERIA.md#ac-642), [AC-64.3](ACCEPTANCE_CRITERIA.md#ac-643), [AC-64.4](ACCEPTANCE_CRITERIA.md#ac-644) |
+| `tests/step_definitions/feature62_cross_host_readiness.ts` | create | Bind collision-free real BDD contracts for cross-host root handling. [FR-62](FR.md#fr-62) |
+| `tests/step_definitions/feature63_canonical_precheck.ts` | create | Bind real BDD contracts for canonical precheck evidence and NOT_READY states. [FR-63](FR.md#fr-63) |
+| `tests/step_definitions/feature64_release_inventory.ts` | create | Bind real BDD contracts for tracked-file conservation and release inventory. [FR-64](FR.md#fr-64) |
+| `tests/fixtures/specgen004-readiness/root-resolution.json` | create | Provide producer-faithful root and unsafe-host fixtures. [FR-62](FR.md#fr-62) |
+| `tests/fixtures/specgen004-readiness/precheck-evidence.ndjson` | create | Provide full-run, filtered, stale, and dependency-absent evidence fixtures. [FR-63](FR.md#fr-63) |
+| `tests/fixtures/specgen004-readiness/release-inventory.json` | create | Provide current tracked-file, owner, rollback, and monitoring fixtures. [FR-64](FR.md#fr-64) |
+| `.specs/spec-generator-v4/spec-generator-v4.feature` | edit | Define collision-free `SPECGEN004_553..561` Docker BDD contracts. [FR-62](FR.md#fr-62), [FR-63](FR.md#fr-63), [FR-64](FR.md#fr-64) |
+| `cucumber.json` | edit | Register the Docker BDD contracts and message output. [FR-62](FR.md#fr-62), [FR-63](FR.md#fr-63), [FR-64](FR.md#fr-64) |
+| `.specs/spec-generator-v4/README.md` | edit | Document the release-candidate evidence invocation and owner handoff. [FR-64](FR.md#fr-64), [AC-64.4](ACCEPTANCE_CRITERIA.md#ac-644) |
+| `.specs/spec-generator-v4/TASKS.md` | edit | Track implementation and integration-first verification work. [FR-62](FR.md#fr-62), [FR-63](FR.md#fr-63), [FR-64](FR.md#fr-64) |
+| `.specs/spec-generator-v4/CHANGELOG.md` | edit | Record the release-facing readiness behavior. [FR-64](FR.md#fr-64), [AC-64.4](ACCEPTANCE_CRITERIA.md#ac-644) |
+| `.specs/spec-generator-v4/FR.md` | edit | Define FR-62 through FR-64 and their traceability links. [FR-62](FR.md#fr-62), [FR-63](FR.md#fr-63), [FR-64](FR.md#fr-64) |
+| `.specs/spec-generator-v4/ACCEPTANCE_CRITERIA.md` | edit | Define EARS AC-62.1 through AC-64.4. [FR-62](FR.md#fr-62), [FR-63](FR.md#fr-63), [FR-64](FR.md#fr-64) |
+| `.specs/spec-generator-v4/REQUIREMENTS.md` | edit | Add the CHK matrix and explicit `not_recorded` readiness evidence. [FR-62](FR.md#fr-62), [FR-63](FR.md#fr-63), [FR-64](FR.md#fr-64) |
+| `.specs/spec-generator-v4/DESIGN.md` | edit | Record root handoff, canonical-precheck, and release-inventory trade-offs. [FR-62](FR.md#fr-62), [FR-63](FR.md#fr-63), [FR-64](FR.md#fr-64) |
+| `.specs/spec-generator-v4/FILE_CHANGES.md` | edit | Maintain this implementation-first, one-row-per-file inventory. [FR-62](FR.md#fr-62), [FR-63](FR.md#fr-63), [FR-64](FR.md#fr-64) |
+
+| `.specs/spec-generator-v4/spec-generator-v4_SCHEMA.md` | edit | Define root-resolution, canonical-precheck, and release-inventory records. [FR-62](FR.md#fr-62), [FR-63](FR.md#fr-63), [FR-64](FR.md#fr-64) |
+
 ## Total counts
 
 | Phase | Files |

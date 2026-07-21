@@ -2,7 +2,17 @@
 
 All notable changes to this feature will be documented in this file.
 
-## [Unreleased]
+## [Unreleased] — Spec Generator v4 production finalization
+
+Latest published release: `v1.5.0` (historical baseline). Current work on `release/spec-generator-v4-finalization` is **NOT_READY** and is not a release.
+
+Release branch: `release/spec-generator-v4-finalization`. Current source evidence is 0 passed, 507 stale, and 14 not recorded; the separate historical canonical full run is 506 passed plus 15 `not_run`. P29-4 is DONE on independent registered-tool, regression, and canonical BDD evidence; P34 remains TODO and its pass set is acceptance evidence only. FR-64 assigns `SPECGEN004_559` to full-current-pass plus tracked-file conservation/all-unit AND, `SPECGEN004_560` to dependency-absent installed runtime, and `SPECGEN004_561` to release controls and post-release follow-up.
+
+**Release decision:** `NOT_READY`. This is a documentation and evidence checkpoint, not a production release or phase transition.
+
+- Smart verdict has 0 structural errors, 30 warnings, and traceability `GRAPH_GREEN` with 0 gaps, but remains `OVERALL: NOT_READY`: the current 521-source-scenario inventory is 0 passed, 506 stale, and 15 not recorded; the canonical historical Docker full run separately is 506 passed plus 15 `not_run` (521 total). Forty-five `DONE` tasks are execution-unverified. This is the release baseline, not a production-release assertion.
+- Canonical full Docker run `1784225474521` passed `SPECGEN004_529`, `SPECGEN004_534`, and `SPECGEN004_539`–`SPECGEN004_543`. P29-4 has registered-tool, regression-test, and scenario evidence but stays TODO while P29-2 and P29-5 through P29-7 are incomplete. `SPECGEN004_539`–`543` are acceptance evidence only; P34-1 through P34-5 remain TODO pending each task’s own checklist reconciliation. This run must not convert unrelated pending work to green.
+- Release-critical execution remains TDD-ordered: FR-62 resolves valid caller/project `SPECS_GENERATOR_ROOT`, then validated caller/project `process.cwd()`, then `findRepoRoot(SCRIPT_DIR)`; child/confirmation input is ignored, stdin is never read, and `C:\\Windows`, plugin-cache, and invalid UNC-relative roots reject. FR-63 one graph/evidence agreement across `precheck.ts`, canonical `spec-status`, MCP, and `spec-verdict`, including observed duplicate-AC `SPECGEN004_557` evidence with AC `test_paths=[]` and never-run explicitly preserved; dependency absence belongs only to FR-64. FR-64 all-unit AND release gate, especially `SPECGEN004_560` tracked-file/all-unit conservation and `SPECGEN004_561` dependency-absent installed-runtime and release-control evidence, plus Docker BDD, checkpoint inventory, clean candidate, all-canonical-pass proof, no unexplained tracked-file delta including #45, documentation, one PR, tag/GitHub release, rollback, monitoring, and post-release verification. Requirements, scenario IDs, and task board entries for FR-62–64 remain in authoring and must not be represented as complete.
 
 ### Planned (v4.3 — MCP-rails wave, FR-39/40/41 + Phase 17)
 

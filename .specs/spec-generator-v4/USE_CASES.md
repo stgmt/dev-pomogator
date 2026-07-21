@@ -335,3 +335,88 @@ MCP server start: SQLite integrity check (`PRAGMA integrity_check`) fails. Auto-
 ### EC-12: User invokes `architecture-research-workflow` on tiny feature (Phase 6)
 
 Auto-detection should prevent this, but user can force via `--use-arch-research`. Skill detects scope mismatch in Stage 0 problem-framing: if symptom is single-line bug, skill prompts: "This appears small (1-2 files affected). Continue with 7-stage workflow or downgrade to `research-workflow`? [downgrade/continue]"
+
+---
+
+## UC-25
+
+**Windows-hosted agent obtains WSL-hosted readiness**
+
+A maintainer invokes an installed plugin cached outside the WSL target project, reproducing GitHub issue #126.
+
+- The precheck resolves the target root in strict precedence: environment override `SPECS_GENERATOR_ROOT`, then a valid caller/project cwd, then `SCRIPT_DIR` only as a final fallback.
+- The plugin-cache `SCRIPT_DIR` is never treated as the target project merely because the script itself exists there.
+- Inherited noninteractive stdin is handled independently: the precheck and MCP path do not wait for input before applying the root-precedence rule.
+- The result reports which resolution source was selected, so diagnosis distinguishes environment override, caller project, and fallback.
+- Required release tracked-file inventory belongs to FR-64, not this #126 root-resolution use case.
+
+**Requirement:** FR-62
+
+**Linked stories:** US-39
+
+---
+
+## UC-26
+
+**Release candidate proves installed-plugin readiness without development dependencies**
+
+A release candidate is installed into an isolated plugin fixture where repository `node_modules` are unavailable.
+
+- The fixture invokes the documented `spec-status` entrypoint and a representative MCP readiness request through the installed launcher.
+- Both paths resolve only bundled or declared runtime assets.
+- A missing runtime asset or undeclared import makes verification fail with the import/asset named; source-tree success does not override this failure.
+
+**Requirement:** FR-63
+
+**Linked stories:** US-40
+
+---
+
+## UC-27
+
+**New readiness requirements retain graph-native traceability**
+
+An author introduces the Windows/WSL, installed-runtime, and readiness-evidence requirements during the requirements phase.
+
+- Each new FR uses the canonical graph-parseable heading and points to one user story and one use case.
+- The linked US and UC point back to the FR using the same identifier.
+- Conformance rebuilds the graph and rejects a requirement whose identifier is malformed or lacks its user-story edge with `FR_NO_STORY` or the applicable identifier finding.
+
+**Requirement:** FR-64
+
+**Linked stories:** US-41
+
+---
+
+## UC-28
+
+**Every readiness surface agrees on mandatory graph evidence**
+
+A maintainer checks a spec through the CLI, MCP, and verdict while its graph contains acceptance criteria, discovered scenarios, and a mixture of current and stale evidence.
+
+- `spec-status`, the MCP result, and `spec-verdict` consume the same graph snapshot and evidence classification.
+- AC-to-scenario discovery and evidence recency are mandatory AND-readiness lanes: a result is ready only when every required lane is current and satisfied.
+- A missing discovery edge, absent evidence, or stale evidence produces the same NOT_READY reason and next action through all three surfaces.
+- A passing subset, filtered proof, or structural-only green result cannot overwrite a failing mandatory lane.
+
+**Requirement:** FR-63
+
+**Linked stories:** US-42
+
+---
+
+## UC-29
+
+**Release owner finalizes and operates the readiness release**
+
+A release owner finalizes the GitHub #45 test-isolation change through its linked PR, tag, and published release.
+
+- Before release, the owner records the affected test-isolation inventory and binds it to the proposed artifact.
+- At release, the finalization record links the installed-plugin dependency-absent proof to the exact PR, tag, release, and artifact.
+- After release, it names an accountable owner, a monitoring signal, and a rollback target or procedure.
+- Publication readiness is denied until pre-release inventory, release evidence, and post-release controls are all present; a source-tree test result alone is insufficient.
+- If monitoring detects installed-runtime failure, the release owner follows the recorded rollback path and preserves the inventory and evidence trail.
+
+**Requirement:** FR-64
+
+**Linked stories:** US-43

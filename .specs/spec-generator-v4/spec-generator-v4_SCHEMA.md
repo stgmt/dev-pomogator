@@ -599,3 +599,74 @@ Severity mapping: CRITICAL → `level: "error"`, WARNING → `level: "warning"`,
 Each finding emitted as `runs[0].results[]` entry referencing the rule via `ruleId`, with `locations[]` populated from finding `location` field (`physicalLocation.artifactLocation.uri` + `region.startLine`).
 
 This mapping enables GitHub Code Scanning ingestion (PR annotations) and VS Code SARIF Viewer extension display with zero additional schema work.
+
+---
+
+## FR-62 through FR-64 readiness evidence records
+
+### Root resolution
+
+```json
+{
+  "source": "stdin|caller_project|script_dir",
+  "stdin_mode": "inherited|closed|noninteractive|absent|malformed",
+  "stdin_timeout_ms": 250,
+  "root_precedence": ["SPECS_GENERATOR_ROOT", "caller_project_cwd", "SCRIPT_DIR"],
+  "resolved_root": "/canonical/project/root",
+  "observed_paths": ["C:\\repo", "/mnt/c/repo"],
+  "worktree_id": "git-common-dir-or-head",
+  "tracked_artifacts": [".specs/example/FR.md"],
+  "status": "RESOLVED|NOT_READY",
+  "reason_code": "ROOT_CWD_COLLAPSE|ROOT_UNC_RELATIVE|ROOT_PLUGIN_CACHE|ROOT_WORKTREE_MISMATCH|ROOT_UNTRACKED_ARTIFACT",
+  "next_action": "string"
+}
+```
+
+`stdin_mode` is always present and a bounded `stdin_timeout_ms` records whether inherited input was consumed without waiting. Root precedence is `SPECS_GENERATOR_ROOT`, then caller project cwd, then `SCRIPT_DIR`. Inherited valid input supplies `SPECS_GENERATOR_ROOT`; closed or noninteractive input falls back deterministically and never waits. A Windows-host Code-to-WSL installed-plugin cache, Windows/WSL mismatch, `C:\\Windows` collapse, and UNC-relative roots are refusal states, never alternate roots.
+
+### Canonical precheck
+
+```json
+{
+  "graph_snapshot_id": "sha256",
+  "runtime_root": "/installed-or-project-root",
+  "inventory": {"acceptance_criteria": ["AC-63.1"], "scenarios": ["SPECGEN004_546"]},
+  "baseline_id": "optional",
+  "run_id": "optional",
+  "evidence_source": "docker-bdd|installed-runtime|mock-only|source-only|spec-test|generated|temp|smoke|unclassified|silent|not_recorded",
+  "source_path": "string",
+  "recorded_at": "ISO-8601",
+  "recency": "current|stale|unknown",
+  "run_scope": "full|filtered",
+  "outcome": "PASSED|FAILED|PENDING|UNDEFINED|AMBIGUOUS|NOT_RUN",
+  "mandatory_lanes": {"discovery": "PASS|FAIL", "recency": "PASS|FAIL", "provenance": "PASS|FAIL"},
+  "overall": "READY|NOT_READY",
+  "next_action": "string"
+}
+```
+
+CLI, MCP, and `spec-verdict` serialize identical graph snapshot semantics for FRs, ACs, and scenarios. Full-run source, time, recency, baseline, run identity, and passed/unknown/not_recorded/stale/filtered taxonomy are preserved. Mock-only, source-only, `not_recorded`, stale, filtered-only, and never-run evidence are explicit NOT_READY inputs; every mandatory lane is AND-gated and no green lane overrides them.
+
+### Release inventory
+
+```json
+{
+  "commit": "0b291bac",
+  "pre_tracked": ["path"],
+  "post_tracked": ["path"],
+  "added": ["path"],
+  "removed": ["path"],
+  "duplicates": ["path"],
+  "untracked": ["path"],
+  "silent_junk": [{"path": "path", "classification": "remove|explicit-disposition"}],
+  "evidence_inventory": [{"path": "path", "classification": "source|spec-test|generated|temp|smoke|unclassified|silent", "provenance": "string"}],
+  "evidence": [{"test_path": "string", "baseline_id": "string", "run_id": "string", "outcome": "PASSED|FAILED|PENDING|UNDEFINED|AMBIGUOUS|NOT_RUN"}],
+  "owner": "string",
+  "monitoring_signal": "string",
+  "rollback_action": "string",
+  "follow_up_verification": "string",
+  "release_ready": false
+}
+```
+
+Tracked-file comparison is path-by-path, cardinality-conserving, current pre/post snapshot based, and all-unit AND-gated. An untracked, unclassified, or silent-junk path prevents release-ready until removed or explicitly dispositioned. Dependency-absent launcher/status/MCP evidence uses the same explicit outcome taxonomy. Each single PR/tag/GitHub release candidate records owner, monitoring signal, rollback action, follow-up verification, release notes, and integration-first run identity.

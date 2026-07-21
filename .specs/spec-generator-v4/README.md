@@ -1,9 +1,16 @@
-# Spec Generator V4
+# Spec Generator v4 production finalization
 
-> **Status:** 🚀 **LIVE on `feat/phase-2a-mcp-server-and-hooks` / PR #32** — Phase 0/1/2/3/4/6/7 shipped (Phase 5 migration helper landed; Phase 4 SQLite gated behind opt-in flag). 33 commits, 159 files, +20,394/-137 lines, **188 tests PASS**, **PR mergeable + CI green**.
-> **Implementation timeline:** approved 2026-05-18 → in active polish through 2026-06-02.
+**NOT_READY — Unreleased work on `release/spec-generator-v4-finalization`. Latest published release: `v1.5.0` (historical baseline).**
+
+Current graph: 64 FR, 171 AC, 521 scenarios, 238 tasks. Effective evidence: 0 passed, 507 stale, 14 `not_run`. Historical canonical run: 506 passed, 15 `not_run`. Forty-five legacy `DONE` tasks remain execution-unverified.
 
 ---
+
+## Current evidence and release readiness (2026-07-19)
+
+The preceding PR #32, its 188-pass result, and its CI/mergeability wording are historical-only evidence, not current release readiness. P29-4 has registered-tool, regression-test, and `SPECGEN004_534` evidence but remains TODO because P29-2 and P29-5 through P29-7 remain incomplete. Likewise, `SPECGEN004_539`–`543` are acceptance evidence only; P34-1 through P34-5 remain TODO pending each task’s own checklist reconciliation. The latest smart verdict is graph-green for traceability (0 gaps) but `OVERALL: NOT_READY`: canonical Docker The current 521-source-scenario inventory has 0 passed, 506 stale, and 15 not recorded; the canonical historical full run separately records 506 passed plus 15 `not_run` (521 total). The smart verdict has 0 structural errors, 30 warnings, and `GRAPH_GREEN` traceability with 0 gaps, but remains `OVERALL: NOT_READY`. Forty-five `DONE` tasks remain execution-unverified. This is evidence, not a release-complete claim. The canonical full run `1784225474521` passed `SPECGEN004_529`, `SPECGEN004_534`, and `SPECGEN004_539`–`SPECGEN004_543`; its results support the P29/P34 reconciliation work but do not erase the open readiness inventory.
+
+Release-critical work remains ordered TDD-first: FR-62 target-project identity, then FR-63 mandatory readiness lanes and provenance, then FR-64 graph identity and release proof. FR-62 resolves only a valid caller/project `SPECS_GENERATOR_ROOT`, then validated caller/project `process.cwd()`, then `findRepoRoot(SCRIPT_DIR)`. Child/confirmation input is ignored and stdin is never read; inherited, closed, or noninteractive stdin cannot delay readiness. `C:\\Windows`, plugin-cache, and invalid UNC-relative paths are rejected rather than becoming target roots. Planned evidence includes Windows-host-to-WSL installed-plugin paths, dependency-absent runtime verification, Docker-only BDD happy/negative/invariant coverage, tracked-file pre/post inventories, and rollback/post-release records. Requirement and scenario IDs for FR-62–64 are still being finalized; this README intentionally records only the current baseline rather than pre-claiming their completion.
 
 ## TL;DR — что умеет уже сегодня
 

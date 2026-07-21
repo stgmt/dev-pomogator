@@ -1083,3 +1083,68 @@ System SHALL replace the current split-brain spec health experience with a singl
 **Связанные AC:** [AC-61.1](ACCEPTANCE_CRITERIA.md#ac-611), [AC-61.2](ACCEPTANCE_CRITERIA.md#ac-612), [AC-61.3](ACCEPTANCE_CRITERIA.md#ac-613), [AC-61.4](ACCEPTANCE_CRITERIA.md#ac-614), [AC-61.5](ACCEPTANCE_CRITERIA.md#ac-615)
 **Use Case:** UC-24 (MCP authoring/status UX)
 **User Story:** US-24
+
+---
+
+## FR-62
+
+**Cross-host target-project identity (#126).** `spec-status` and MCP readiness SHALL resolve the target project in strict order: valid explicit `SPECS_GENERATOR_ROOT`; validated caller/project root; then `findRepoRoot(SCRIPT_DIR)`. `SPECS_GENERATOR_ROOT` is an environment override only, never a stdin payload. Inherited, closed, and noninteractive stdin SHALL not be consumed for root resolution; any child or confirmation path SHALL terminate within its bounded timeout and return a structured result. `process.cwd()` is only a validated caller/project candidate and SHALL never authorize `C:\Windows`, an unrelated plugin cache, an UNC-relative path, or another accidental root. The resolver SHALL normalize Windows-drive and host-to-WSL `/mnt/<drive>/` forms and establish target-project identity; tracked-file inventory invariants remain the FR-64 release gate.
+
+- **FR-62a (ordered independent sources):** The resolver SHALL identify the selected `env_override`, `caller_project`, or `script_dir` source and rejected predecessors. An invalid, empty, out-of-worktree, or collapsed `process.cwd()` candidate SHALL be diagnosed before fallback and SHALL not change a valid explicit or caller-selected project.
+- **FR-62b (Windows-to-WSL installed-cache proof):** Before returning readiness, CLI and MCP SHALL prove the selected identity across Windows-hosted Code, WSL shell hop, repository root, and installed-plugin cache. They SHALL report all observed forms and show that the installed cache provides the executable while the caller-selected repository remains the target.
+- **FR-62c (actionable refusal):** If target identity or path translation is unproven, the result SHALL be structured `NOT_READY`, name observed and rejected paths, and state the correction. It SHALL not substitute a CWD, UNC-relative path, or plugin-cache directory as the target project.
+
+**Связанные AC:** [AC-62.1](ACCEPTANCE_CRITERIA.md#ac-621), [AC-62.2](ACCEPTANCE_CRITERIA.md#ac-622), [AC-62.3](ACCEPTANCE_CRITERIA.md#ac-623)
+**Use Case:** UC-25
+**User Story:** US-39
+
+---
+
+## FR-63
+
+**Canonical readiness precheck and verdict.** `spec-status`, the MCP status surface, and `spec-verdict` SHALL read the same graph snapshot and apply one mandatory-lane AND gate over AC/scenario discovery, mapping, evidence recency, canonical outcome, and provenance. A structural-only or partially discovered result SHALL be NOT_READY; no single green lane may override absent, stale, duplicate, or unrecorded required evidence.
+
+- **FR-63a (shared discovery and recency):** `precheck.ts` SHALL use graph-derived AC and scenario identities, including its `parseAcIds(...).map` input and `.dev-pomogator/.test-status` evidence, while MCP and `spec-verdict` consume the equivalent graph/test-result nodes. They SHALL deduplicate inventory, report baseline/run identity and recency, classify `not_recorded` and never-run evidence explicitly, and return the same next action.
+- **FR-63b (MCP provenance and refusal):** Every readiness result SHALL identify the graph snapshot, runtime root, trace or test-result identity, evidence source, mandatory-lane state, and missing-evidence next action. Mock-only, source-tree-only, or stale evidence SHALL not satisfy the gate.
+- **FR-63c (release-safe ownership boundary):** The command path SHALL be dependency-safe when installed, but dependency-absent packaging, documentation, PR/tag/release control, rollback, and monitoring are release-inventory duties of FR-64.
+
+**Связанные AC:** [AC-63.1](ACCEPTANCE_CRITERIA.md#ac-631), [AC-63.2](ACCEPTANCE_CRITERIA.md#ac-632), [AC-63.3](ACCEPTANCE_CRITERIA.md#ac-633)
+**Use Case:** UC-26, UC-28
+**User Story:** US-40, US-42
+
+---
+
+## FR-64
+
+**Graph-native inventory and controlled release evidence.** The generator SHALL parse, index, and conformance-check every FR, story, use case, AC, scenario, task, file-change record, and implementation edge using canonical identifiers and explicit links. It SHALL classify each unit as PASSED, FAILED, PENDING, UNDEFINED, AMBIGUOUS, or NOT_RUN; apply all-unit AND aggregation; and never convert missing or mock-only evidence to implementation proof.
+
+- **FR-64a (parseable traceability):** Every FR SHALL link to a graph-parseable story and use case, and every AC, scenario, task, file-change record, and implementation edge SHALL retain canonical IDs. Conformance SHALL emit `FR_NO_STORY`, `FR_NO_USE_CASE`, malformed-identifier, or dangling-edge findings rather than accepting prose resemblance.
+- **FR-64b (conserved release inventory):** Pre/post Git tracked-file inventories SHALL use cardinality and conservation checks to expose additions, removals, duplicates, and untracked artifacts. A release-ready result requires every in-scope unit, inventory check, and real installed-runtime/Docker BDD happy, negative, and invariant result.
+- **FR-64c (PR, tag, rollback, and monitoring control):** Release evidence for commit `0b291bac` and subsequent PR/tag candidates SHALL record test paths, baseline/run identities, dependency-absent result, documentation updates, responsible owner, monitoring signal, rollback action, and post-release follow-up verification. `not_recorded` and never-run outcomes SHALL remain explicit; mock-only tests SHALL not satisfy this control.
+
+**Связанные AC:** [AC-64.1](ACCEPTANCE_CRITERIA.md#ac-641), [AC-64.2](ACCEPTANCE_CRITERIA.md#ac-642), [AC-64.3](ACCEPTANCE_CRITERIA.md#ac-643), [AC-64.4](ACCEPTANCE_CRITERIA.md#ac-644)
+**Use Case:** UC-27, UC-29
+**User Story:** US-41, US-43
+
+---
+
+## FR-62..64 implementation clarification
+
+**FR-63 correction:**
+
+**Observed regression invariant:** precheck SHALL not duplicate AC identifiers; SHALL not return `test_paths=[]` where executable scenario/step paths exist; and SHALL not state that tests never ran where canonical run evidence exists. Each violation is a mandatory-lane defect and SHALL return `NOT_READY` with source/provenance and remediation.
+ `.claude/skills/spec-status/scripts/precheck.ts`, MCP status, and `tools/specs-generator/spec-verdict.ts` SHALL share a graph-derived, deduplicated AC/scenario inventory and mandatory-lane AND gate. They SHALL preserve the FR-61 evidence taxonomy: `PASSED`, `FAILED`, `PENDING`, `UNDEFINED`, `AMBIGUOUS`, `NOT_RUN`, and `not_recorded`. Structural-only, duplicate, stale, source-only, mock-only, empty-`test_paths`, or never-run evidence SHALL return `NOT_READY`. Readiness evidence updates SHALL use CAS or equivalent conditional retry so a concurrent writer cannot overwrite fresher evidence or fabricate green status.
+
+**FR-63c correction:** Dependency-safe installed runtime is mandatory; dependency-absent result, README/TASKS/CHANGELOG updates, PR/tag/release candidate evidence, rollback, monitoring, and post-release follow-up are FR-64 release-inventory controls. Documentation alone SHALL not satisfy a readiness lane.
+
+**FR-64 correction:**
+
+- **FR-64d (current Docker-only execution):** Release readiness SHALL be based on a current-worktree `/run-tests` invocation executed only through the Docker BDD runner. The current result SHALL contain zero non-passing in-scope scenarios: no `FAILED`, `PENDING`, `UNDEFINED`, `AMBIGUOUS`, `NOT_RUN`, or `not_recorded` outcome may be collapsed to `PASSED` or accepted as green.
+- **FR-64e (candidate evidence and artifacts):** A dependency-absent run for every GitHub PR/tag/release candidate SHALL bind the current artifact, invocation, GitHub candidate identity, and result to the release record. Pre/post inventories SHALL account for tracked, untracked, temporary, generated, and smoke artifacts; untracked, temporary, and smoke-only paths SHALL be classified and excluded or removed deliberately rather than silently entering the release. The record SHALL retain tag, owner, monitoring signal, rollback action, and post-release verification.
+ Graph-native inventory SHALL evaluate the current worktree and current `/run-tests` evidence, not prose or historic source-only output. It SHALL CAS-protect inventory/evidence updates; compare pre/post artifacts and tracked paths; classify every artifact keep/remove/generated/temporary/smoke-only; retain every FR evidence state; and require Docker-only installed-runtime, dependency-absent, PR/tag/release-candidate, tag, monitoring, rollback, and follow-up evidence under all-unit AND semantics.
+
+FR-62 is traced exclusively to US-39 and UC-25. The root resolver is noninteractive and uses explicit `SPECS_GENERATOR_ROOT`, validated caller/project root, then `SCRIPT_DIR`; it rejects cache, untracked, UNC-relative, and cross-worktree substitutions with `NOT_READY`, and preserves the selected artifact across Windows-host Code to WSL shell hops.
+
+FR-63 is traced to US-40, US-42, UC-26, and UC-28. `.claude/skills/spec-status/scripts/precheck.ts`, MCP status, and `tools/specs-generator/spec-verdict.ts` share graph-derived, deduplicated AC/scenario inventory; every mandatory lane uses AND semantics, with `not_recorded`, never-run, mock-only, source-only, and stale evidence returning `NOT_READY`. The installed command and MCP path must work dependency-absent.
+
+FR-64 is traced to US-41, US-43, UC-27, and UC-29. The release inventory classifies each path keep/remove/generated/temporary/smoke-only, deduplicates it, and applies pre/post tracked-file conservation. Docker-only installed-runtime evidence preserves `PASSED`, `FAILED`, `PENDING`, `UNDEFINED`, `AMBIGUOUS`, and `NOT_RUN`; GitHub #45, README, TASKS, CHANGELOG, PR/tag evidence, owner, monitoring, rollback, and follow-up are AND-gated.

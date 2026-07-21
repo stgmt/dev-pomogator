@@ -895,3 +895,76 @@ WHEN source spec features and executable Cucumber features are compared THEN eve
 **Требование:** [FR-61](FR.md#fr-61)
 
 WHEN a filtered Docker BDD run passes scenarios for a spec THEN canonical coverage SHALL remain unchanged unless a full run lands or an explicit filtered-artifact attachment is accepted, but MCP status/verdict SHALL expose a `FILTERED_PROOF` lane with artifact path, selected scenario ids, pass/fail summary, timestamp/source, and a next action explaining whether to run the full suite, attach the artifact, fix BDD sync drift, or reopen/downgrade tasks.
+
+---
+
+## AC-62.1
+**Требование:** [FR-62](FR.md#fr-62)
+
+WHEN `spec-status` or its confirmation child starts with inherited, closed, or non-interactive stdin
+THEN it SHALL NOT read a project root from stdin
+AND it SHALL terminate within the configured timeout with a structured result instead of hanging.
+
+## AC-62.2
+**Требование:** [FR-62](FR.md#fr-62)
+
+WHEN the target repository is resolved
+THEN a valid `SPECS_GENERATOR_ROOT` environment override SHALL take precedence, otherwise a validated caller/project cwd SHALL be used, and `findRepoRoot(SCRIPT_DIR)` SHALL be used only as the final fallback
+AND `C:\Windows`, an unrelated plugin cache, or an invalid UNC-relative cwd SHALL NOT silently become the target.
+
+## AC-62.3
+**Требование:** [FR-62](FR.md#fr-62)
+
+WHEN a Windows-hosted Code session selects a target project, crosses a WSL shell hop, and invokes CLI, MCP, or create-spec from an installed plugin cache
+THEN `specs-generator-core.mjs`, `spec-status.ts`, and create-spec SHALL preserve the caller-selected project identity through one shared root-resolution contract
+AND their documentation and structured result SHALL distinguish the Windows, WSL, target-project, and installed-cache paths.
+
+## AC-63.1
+**Требование:** [FR-63](FR.md#fr-63)
+
+WHEN `precheck.ts`, MCP `get_spec_status`, and `spec-verdict` inspect one graph snapshot
+THEN each canonical FR, AC, and scenario SHALL be counted exactly once and all three surfaces SHALL report the same inventory
+AND duplicated AC or scenario rows SHALL fail the uniqueness invariant.
+
+## AC-63.2
+**Требование:** [FR-63](FR.md#fr-63)
+
+WHEN canonical execution evidence exists
+THEN precheck, MCP status, and `spec-verdict` SHALL discover the executable BDD and step-definition paths and preserve run id, source, timestamp, and recency
+AND they SHALL distinguish PASSED from `UNKNOWN`, `not_recorded`, stale, and filtered-only evidence instead of returning `test_paths: []` or `tests never executed`.
+
+## AC-63.3
+**Требование:** [FR-63](FR.md#fr-63)
+
+WHEN one readiness snapshot is rendered by precheck, MCP status, and `spec-verdict`
+THEN traceability, execution, task-truth, BDD-sync, semantic, and filtered-proof gaps SHALL use the FR-61 taxonomy
+AND all surfaces SHALL return the same AND-composed overall readiness and next action.
+
+## AC-64.1
+**Требование:** [FR-64](FR.md#fr-64)
+
+WHEN checkpoint `0b291bac` is prepared for release
+THEN every changed path SHALL be classified as production source, intentional spec/test evidence, generated artifact, temporary file, or smoke output
+AND unclassified or silently shipped temporary/smoke content SHALL keep the release `NOT_READY`.
+
+## AC-64.2
+**Требование:** [FR-64](FR.md#fr-64)
+
+WHEN the clean release candidate is verified through the centralized Docker-only `/run-tests` workflow
+THEN every current source scenario SHALL have canonical PASSED evidence and FAILED, PENDING, UNDEFINED, AMBIGUOUS, and NOT_RUN SHALL all be zero
+AND tracked-file state before and after the suite SHALL be identical as required by GitHub issue #45.
+
+## AC-64.3
+**Требование:** [FR-64](FR.md#fr-64)
+
+WHEN the packaged canonical plugin is installed with repository development dependencies unavailable
+THEN its real launcher, `spec-status`, and MCP readiness path SHALL execute using shipped assets only
+AND a missing import, bundle, or asset SHALL fail the release rather than being hidden by a source-tree pass.
+
+## AC-64.4
+**Требование:** [FR-64](FR.md#fr-64)
+
+WHEN publication is proposed through one release pull request, its release tag, its GitHub release, or its canonical run
+THEN the pull request, tag, and GitHub release SHALL identify the same candidate commit, and README, TASKS, CHANGELOG, and release notes SHALL record the responsible owner, dependency-absent evidence, tracked-file inventory, monitoring signal, rollback action, and post-release follow-up before publication can be claimed
+AND any post-release regression, non-pass, `not_recorded`, never-run, missing, or failed all-unit AND-gate evidence SHALL block the candidate, roll back to the previous tag before retry, trigger monitoring as applicable, and keep the publication result `NOT_READY`.
+

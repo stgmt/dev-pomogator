@@ -1,8 +1,12 @@
 # Spec Review: spec-generator-v4
 
-**Phase:** Complete (Manual final review)
-**Generated:** 2026-05-18
-**Scope:** All 10 spec-time categories (1-10) + 14 — full pre-implementation pass
+**Phase:** Unreleased production finalization — `NOT_READY`
+**Generated:** 2026-05-18; corrected 2026-07-19
+
+Latest published release: `v1.5.0` (historical baseline). Current work is on `release/spec-generator-v4-finalization`; it is not a release. Current graph: 64 FR, 171 AC, 521 scenarios, 238 tasks. Effective evidence: 0 passed, 507 stale, 14 `not_run`; historical canonical run: 506 passed, 15 `not_run`. Audit and conformance have 0 error-severity findings, but execution evidence and unfinished tasks keep `OVERALL: NOT_READY`.
+
+P29-4 is DONE on independent registered-tool, regression, and `SPECGEN004_534` evidence; P29-2 and the remaining FR-56 chain are open. P34-1..P34-5 remain TODO; `SPECGEN004_539`–`543` are acceptance evidence only. FR-64 maps `SPECGEN004_559` to full-current-pass plus tracked-file conservation/all-unit AND, `SPECGEN004_560` to dependency-absent installed runtime, and `SPECGEN004_561` to release controls and post-release follow-up.
+**Scope:** Finalization reconciliation for FR-60 through FR-64
 
 ## Summary
 
@@ -13,7 +17,23 @@
 | P2 (improvements) | 4 | ℹ️ logged |
 | P3 (informational) | 5 | ℹ️ logged |
 
-**Overall verdict:** READY for implementation — no blockers, P2/P3 are quality improvements that can be addressed during impl phase.
+**Overall verdict:** NOT_READY — remaining blockers are execution evidence and unfinished task work. This correction supersedes the earlier Phase-3+ report; it does not modify requirements or finalization documents.
+
+## Phase-3+ AUDIT_REPORT — corrected 2026-07-19 (FR-60 through FR-64)
+
+| ID | Severity | Finding | Evidence | Required closure |
+|---|---|---|---|---|
+| AUD-60-01 | P0 | FR-60 remains unready: P33-1 through P33-5 are TODO and `SPECGEN004_520` through `525` are `UNKNOWN/not_recorded`. | FR-60 trace; scenario traces 520 through 525; TASKS P33 | Implement, bind executable steps, and obtain full Docker BDD evidence. |
+| AUD-62-01 | P0 | FR-62 has one linked TODO Phase 35 task; `SPECGEN004_553` and `SPECGEN004_554` are `UNKNOWN/not_recorded`. Root precedence is valid caller/project `SPECS_GENERATOR_ROOT`, then validated caller/project `process.cwd()`, then `findRepoRoot(SCRIPT_DIR)`; child input is ignored and stdin is never read. | FR-62 trace; scenarios 553 and 554; TASKS Phase 35 | Implement root resolution, unsafe-root refusal, and no-hang noninteractive behavior; obtain full Docker BDD proof. |
+| AUD-63-01 | P0 | FR-63 has one linked TODO Phase 36 task and planned scenarios `SPECGEN004_555` through `557`, all `UNKNOWN/not_recorded`. `SPECGEN004_557` is the observed duplicate-AC case with `test_paths=[]` and deliberately never-run; it must preserve baseline/run/source/remediation rather than a false source-tree pass. Dependency absence is FR-64 only. | FR-63 trace; scenarios 555 through 557; TASKS Phase 36 | Implement and run graph/provenance scenarios while retaining the never-run duplicate-AC observation. |
+| AUD-64-01 | P0 | FR-64 has one linked TODO Phase 37 task and planned scenarios `SPECGEN004_558` through `561`, all `UNKNOWN/not_recorded`; graph/release controls lack execution evidence. `SPECGEN004_560` owns all-unit AND and tracked-file conservation; `SPECGEN004_561` owns dependency-absent installed-runtime plus release-control/post-release proof. | FR-64 trace; scenarios 558 through 561; TASKS Phase 37 | Implement and run graph conformance, all-unit, dependency-absent installed-runtime, and release-control scenarios. |
+| AUD-REQ-01 | Closed | The requirements CHK matrix covers FR-60, FR-62, FR-63, and FR-64: CHK-FR60-01..02, CHK-FR62-01..02, CHK-FR63-01..02, and CHK-FR64-01..03. Release mappings must use collision-free scenarios 520 through 525 and 553 through 561; fixture IDs 544 through 552 are excluded from release evidence. | REQUIREMENTS.md CHK inventory; TASKS P33/P35; feature scenarios 520 through 525 and 553 through 561 | Requirements agent must finish the matching CHK/feature renumbering. |
+| AUD-56-01 | Open | P29-4 has registered-tool, regression-test, and `SPECGEN004_534` evidence from run `1784225474521`, but remains TODO because P29-2 and P29-5 through P29-7 are unfinished. | P29-2, P29-4..P29-7; scenario trace 534; TASKS | Finish reader/merge/staleness, graph trace edge, real-engine BDD, and overlay compaction before closure. |
+| AUD-61-01 | Open | FR-61 scenarios 539 through 543 passed in full Docker BDD run `1784225474521`, but P34-1..P34-5 remain TODO until each task’s own code/checklist evidence is reconciled. The pass set demonstrates acceptance behavior only; it does not override the execution-derived `OVERALL: NOT_READY` baseline or mark all P34 work DONE. | FR-61 trace; scenario traces 539 through 543; TASKS P34 | Reconcile each task against its own checklist; retain `OVERALL: NOT_READY`. |
+
+**Scope/evidence:** v1.5.0 finalization covers FR-60 through FR-64, CHK inventory, P33 through P37, scenarios 520 through 525, 539 through 543, and planned 553 through 561. Full Docker BDD run `1784225474521` provides task-specific evidence only for its recorded scenario IDs. Current smart-verdict baseline: 0 structural errors, 30 warnings, `GRAPH_GREEN` traceability with 0 gaps, 0 passed / 506 stale / 15 not recorded among 521 scenarios, and `OVERALL: NOT_READY`; 45 DONE tasks remain execution-unverified. FR-64 is an all-unit AND gate, not an any-unit rollup. Corpus-wide orphan warnings were excluded as unrelated.
+
+**Finalization review checkpoint:** TASKS, README, CHANGELOG, and these notes reconcile to the same `NOT_READY` v1.5.0 baseline. P29-4 evidence and the `SPECGEN004_539`–`543` pass set are scoped evidence only; neither closes their surrounding TODO groups. No phase transition was performed.
 
 ## P0 Findings
 
