@@ -3396,7 +3396,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
 
   # ── FR-60: high-level MCP authoring API (pending implementation) ─────────────
 
-  @feature60 @wip
+  @feature60
   Scenario: SPECGEN004_520 section-targeted append preserves validation and EOL style
     Given a spec document has an existing Phase heading and a known EOL style
     When an agent proposes an MCP append_to_section operation targeting that Phase heading

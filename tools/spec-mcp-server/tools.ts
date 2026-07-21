@@ -42,6 +42,7 @@ import { logSpecAccess } from './spec-access-log.ts';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { validateSpecChange, writeDocAtomic, isSafeSlug, resolveSpecDoc, docSha, casCheck, validateTarget, findInboundLinks, rewriteInboundLinks, isArchivedSlug, type SpecChange } from './mutations.ts';
+import { applySectionChange, readForEdit, type SectionOpKind } from './section-ops.ts';
 import { writeSpecStatus, readSpecStatus } from '../spec-graph/spec-status-store.ts';
 import { withWriteLock, type WriteLockBusyError } from './lock-manager.ts';
 import { setEntityStatus } from './set-status.ts';
@@ -1571,9 +1572,10 @@ export function buildToolRegistry(
       offset: z.number().int().min(1).optional(),
       limit: z.number().int().min(1).optional(),
       section: z.string().optional(),
+      read_for_edit: z.boolean().optional(),
     } as const satisfies z.ZodRawShape,
-    handler: async ({ spec, doc, offset, limit, section }) => {
-      const args = { spec, doc, offset, limit, section };
+    handler: async ({ spec, doc, offset, limit, section, read_for_edit }) => {
+      const args = { spec, doc, offset, limit, section, read_for_edit };
       const slug = String(spec).replace(/\\/g, '/').replace(/^\.?\/?\.specs\//, '').replace(/\/+$/, '');
       if (!isSafeSlug(slug)) {
         logSpecAccess('read_spec_doc', args, 'denied');
@@ -1606,6 +1608,19 @@ export function buildToolRegistry(
       // P21-5: whole-doc CAS token — pass it back as apply_spec_change({expected_sha})
       // to make the write conditional (refuses if another session changed the doc).
       const sha = docSha(full);
+
+      // FR-60e (P33-1): read-for-edit mode — section metadata + stable append/insert
+      // tokens so a follow-up section op re-targets the same heading without an exact
+      // old_string. `section` (optional) scopes the metadata to ONE heading.
+      if (read_for_edit === true) {
+        const meta = readForEdit(process.cwd(), slug, rel, section !== undefined ? String(section) : undefined);
+        if (!meta.ok) {
+          logSpecAccess('read_spec_doc', args, 'not_found');
+          return asJsonResult({ ok: false, error: meta.error === 'DOC_NOT_FOUND' ? 'DOC_NOT_FOUND' : 'UNSAFE_SPEC', spec: slug, doc: rel, hint: meta.hint });
+        }
+        logSpecAccess('read_spec_doc', args, 'ok');
+        return asJsonResult({ ok: true, spec: slug, doc: rel, mode: 'read_for_edit', ...meta });
+      }
 
       // P21-2 (a): section mode — one heading block out of a big doc.
       if (section !== undefined) {
@@ -1812,6 +1827,104 @@ export function buildToolRegistry(
         throw e;
       }
     },
+  });
+
+  // ─── 19) FR-60a section ops — stable-heading append/insert (P33-1) ───────
+  // Shared driver: address a section by its STABLE heading anchor (no exact
+  // old_string), PRESERVE the doc EOL, and run the SAME validation-before-write
+  // path apply_spec_change runs (form + anchors + conformance) via applySectionChange.
+  // A clean result is written atomically; a non-clean one leaves the doc untouched.
+  const runSectionOp = (toolName: string, kind: SectionOpKind, args: Record<string, unknown>): ToolResult => {
+    const slug = slugOf(args.spec);
+    const doc = docOf(args.doc);
+    const op = {
+      kind,
+      heading: typeof args.heading === 'string' ? (args.heading as string) : undefined,
+      text: typeof args.text === 'string' ? (args.text as string) : '',
+    };
+    const expectedSha = typeof args.expected_sha === 'string' ? (args.expected_sha as string) : null;
+    try {
+      return withWriteLock(process.cwd(), () => {
+        // P21-5 optimistic CAS — refuse a write against a stale read (opt-in).
+        if (expectedSha !== null) {
+          const cas = casCheck(process.cwd(), slug, doc, expectedSha);
+          if (!cas.ok) {
+            logSpecAccess(toolName, args, 'denied');
+            return asJsonResult({
+              ok: false, error: 'CAS_MISMATCH', spec: slug, doc, expected_sha: expectedSha, actual_sha: cas.actualSha,
+              hint: 'The doc changed since you read it. Re-read (read_spec_doc read_for_edit:true) for the fresh sha/tokens and retry.',
+            });
+          }
+        }
+        const r = applySectionChange(process.cwd(), slug, doc, op);
+        if (!r.ok) {
+          logSpecAccess(toolName, args, 'denied');
+          return asJsonResult({
+            ok: false, error: r.error ?? 'SECTION_OP_FAILED', spec: slug, doc,
+            eol_style: r.eol_style, resolved: r.resolved, heading_anchor: r.heading_anchor, findings: r.findings,
+            hint: r.error === 'HEADING_NOT_FOUND'
+              ? 'No heading matched — pass the heading text or its Marksman anchor (read_spec_doc read_for_edit:true lists anchors).'
+              : 'Fix the findings and retry; the document was left unchanged.',
+          });
+        }
+        registryOpts.refreshGraph?.();
+        logSpecAccess(toolName, args, 'ok');
+        return asJsonResult({
+          ok: true, spec: slug, doc, kind, eol_style: r.eol_style, resolved: r.resolved,
+          heading_anchor: r.heading_anchor, start_line: r.start_line, end_line: r.end_line,
+          section_sha: r.section_sha, sha: r.sha, bytes: r.bytes, written: r.written === true,
+          preview: r.preview, findings: [],
+        });
+      });
+    } catch (e) {
+      if ((e as WriteLockBusyError).code === 'WRITE_LOCK_BUSY') {
+        logSpecAccess(toolName, args, 'denied');
+        const h = (e as WriteLockBusyError).holder;
+        return asJsonResult({ ok: false, error: 'WRITE_LOCK_BUSY', spec: slug, doc, held_by: h ?? null, hint: 'Another session is writing a spec RIGHT NOW — retry in a moment.' });
+      }
+      throw e;
+    }
+  };
+
+  const SECTION_OP_SHAPE = {
+    spec: z.string(),
+    doc: z.string(),
+    heading: z.string().optional(),
+    text: z.string(),
+    expected_sha: z.string().optional(),
+  } as const satisfies z.ZodRawShape;
+
+  tools.push({
+    name: 'append_to_section',
+    description:
+      'FR-60a (P33-1): append text to the END of a stable-heading section — address the section by ' +
+      'its heading text or Marksman anchor (NO exact old_string). Preserves the document EOL style ' +
+      '(CRLF stays CRLF) and runs the SAME form/anchor/conformance validation-before-write as ' +
+      'apply_spec_change; a clean result is written atomically. Pass expected_sha (from read_spec_doc ' +
+      'read_for_edit:true) for optimistic CAS.',
+    inputShape: SECTION_OP_SHAPE,
+    handler: async (args) => runSectionOp('append_to_section', 'append_to_section', args as Record<string, unknown>),
+  });
+
+  tools.push({
+    name: 'insert_after_heading',
+    description:
+      'FR-60a (P33-1): insert text IMMEDIATELY AFTER a stable heading — address the heading by text or ' +
+      "Marksman anchor (NO exact old_string). Preserves the document EOL style and runs the same " +
+      'form/anchor/conformance validation-before-write as apply_spec_change. Pass expected_sha (from ' +
+      'read_spec_doc read_for_edit:true) for optimistic CAS.',
+    inputShape: SECTION_OP_SHAPE,
+    handler: async (args) => runSectionOp('insert_after_heading', 'insert_after_heading', args as Record<string, unknown>),
+  });
+
+  tools.push({
+    name: 'insert_at_eof',
+    description:
+      'FR-60a (P33-1): append text at END-OF-FILE — no heading needed. Preserves the document EOL style ' +
+      'and runs the same form/anchor/conformance validation-before-write as apply_spec_change. Pass ' +
+      'expected_sha (from read_spec_doc) for optimistic CAS.',
+    inputShape: SECTION_OP_SHAPE,
+    handler: async (args) => runSectionOp('insert_at_eof', 'insert_at_eof', args as Record<string, unknown>),
   });
 
   // ─── 18b) set_spec_status — explicit SPEC-level backlog marker (no status math) ──
