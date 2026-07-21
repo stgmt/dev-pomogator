@@ -42,7 +42,7 @@ import { logSpecAccess } from './spec-access-log.ts';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { validateSpecChange, writeDocAtomic, isSafeSlug, resolveSpecDoc, docSha, casCheck, validateTarget, findInboundLinks, rewriteInboundLinks, isArchivedSlug, type SpecChange } from './mutations.ts';
-import { applySectionChange, applyReplaceChange, readForEdit, type SectionOpKind } from './section-ops.ts';
+import { applySectionChange, applyReplaceChange, readForEdit, proposePatch, applyProposedPatch, applySpecTransactionCore, type SectionOpKind, type PatchEdit, type PatchEditPreview } from './section-ops.ts';
 import { writeSpecStatus, readSpecStatus } from '../spec-graph/spec-status-store.ts';
 import { withWriteLock, type WriteLockBusyError } from './lock-manager.ts';
 import { setEntityStatus } from './set-status.ts';
@@ -2004,6 +2004,179 @@ export function buildToolRegistry(
           logSpecAccess('replace_in_section', args, 'denied');
           const h = (e as WriteLockBusyError).holder;
           return asJsonResult({ ok: false, error: 'WRITE_LOCK_BUSY', spec: slug, doc, held_by: h ?? null, hint: 'Another session is writing a spec RIGHT NOW — retry in a moment.' });
+        }
+        throw e;
+      }
+    },
+  });
+
+  // ─── 19c) FR-60 P33-3 propose_patch / apply_proposed_patch / apply_spec_transaction ──
+  // Multi-document authoring transaction: preview the graph impact of a SET of section / replace /
+  // content edits across documents (e.g. FR.md + ACCEPTANCE_CRITERIA.md + TASKS.md + the .feature +
+  // FILE_CHANGES.md), then apply them ALL-OR-NOTHING with ONE audit event. propose_patch is the free
+  // dry-run (mints a proposal_id); apply_proposed_patch replays a stored proposal IF STILL VALID;
+  // apply_spec_transaction validates + writes in one shot. Every edit runs the SAME form/anchor/
+  // conformance validation-before-write as apply_spec_change — no second validator. Because the preview
+  // core writes nothing, a single failed edit leaves EVERY document byte-identical (SPECGEN004_523).
+  const PATCH_SECTION_SHAPE = z.object({
+    kind: z.enum(['append_to_section', 'insert_after_heading', 'insert_at_eof']),
+    heading: z.string().optional(),
+    text: z.string(),
+  });
+  const PATCH_REPLACE_SHAPE = z.object({
+    heading: z.string(),
+    old_string: z.string(),
+    new_string: z.string(),
+    replace_all: z.boolean().optional(),
+    normalize_eol: z.boolean().optional(),
+    expected_section_sha: z.string().optional(),
+  });
+  const PATCH_EDIT_SHAPE = z.object({
+    spec: z.string(),
+    doc: z.string(),
+    section: PATCH_SECTION_SHAPE.optional(),
+    replace: PATCH_REPLACE_SHAPE.optional(),
+    content: z.string().optional(),
+    /** Whole-doc CAS token from read_for_edit — a mismatch fails that edit (strict at txn level). */
+    expected_sha: z.string().optional(),
+  });
+  const PATCH_SHAPE = {
+    edits: z.array(PATCH_EDIT_SHAPE).min(1),
+    reason: z.string(),
+  } as const satisfies z.ZodRawShape;
+
+  const toPatchEdits = (raw: unknown): PatchEdit[] =>
+    (raw as Array<Record<string, unknown>>).map((e) => ({
+      spec: String(e.spec),
+      doc: String(e.doc),
+      section: e.section as PatchEdit['section'],
+      replace: e.replace as PatchEdit['replace'],
+      content: typeof e.content === 'string' ? (e.content as string) : undefined,
+      expected_sha: typeof e.expected_sha === 'string' ? (e.expected_sha as string) : undefined,
+    }));
+
+  // Map a prepared edit to its PUBLIC preview — strips the full `next` content (the reply carries the
+  // diff + resulting sha/tokens instead, keeping a 5-doc proposal compact).
+  const publicEditPreview = (p: PatchEditPreview): Record<string, unknown> => ({
+    spec: p.spec, doc: p.doc, ok: p.ok, eol_style: p.eol_style,
+    heading_anchor: p.heading_anchor, start_line: p.start_line, end_line: p.end_line,
+    section_sha: p.section_sha, sha: p.sha, append_token: p.append_token, insert_token: p.insert_token,
+    diff: p.diff, findings: p.findings, diagnostic: p.diagnostic, error: p.error,
+  });
+
+  // Graph nodes defined IN any target doc — the "affected graph nodes" of the proposal/transaction.
+  const affectedNodes = (edits: PatchEdit[]): string[] => {
+    const graph = getGraph();
+    const targetFiles = new Set(edits.map((e) => `.specs/${slugOf(e.spec)}/${docOf(e.doc)}`));
+    const out: string[] = [];
+    for (const n of graph.nodes.values()) {
+      if (targetFiles.has(String(n.file).replace(/\\/g, '/'))) out.push(n.id);
+    }
+    return out.sort();
+  };
+
+  tools.push({
+    name: 'propose_patch',
+    description:
+      'FR-60 (P33-3): DRY-RUN a MULTI-DOCUMENT spec patch — preview the graph impact of a SET of edits (each ' +
+      'a section insert {section:{kind,heading?,text}}, an anchor-targeted replace {replace:{heading,old_string,' +
+      'new_string,...}}, or a whole-doc {content}) across documents (e.g. FR.md + ACCEPTANCE_CRITERIA.md + TASKS.md ' +
+      '+ the .feature + FILE_CHANGES.md) WITHOUT writing. Returns, per edit: the resolved heading anchor, a line ' +
+      'diff, the resulting sha + append/insert section tokens, and the form/anchor/conformance findings — plus the ' +
+      'affected graph nodes across all target docs and a `proposal_id`. Pass that id to apply_proposed_patch to apply ' +
+      'it if still valid, or call apply_spec_transaction with the same edits for a one-shot all-or-nothing write.',
+    inputShape: PATCH_SHAPE,
+    handler: async (args) => {
+      const edits = toPatchEdits(args.edits);
+      const preview = proposePatch(process.cwd(), edits);
+      logSpecAccess('propose_patch', { edits: edits.length, reason: args.reason }, preview.ok ? 'ok' : 'denied');
+      return asJsonResult({
+        ok: preview.ok, dry_run: true, proposal_id: preview.proposal_id,
+        affected_nodes: affectedNodes(edits),
+        findings: preview.findings,
+        edits: preview.edits.map(publicEditPreview),
+        hint: preview.ok
+          ? 'All edits validate clean — nothing was written (dry run). apply_proposed_patch({proposal_id}) applies this if still valid; apply_spec_transaction re-validates + writes in one shot.'
+          : 'At least one edit failed validation — nothing was written. Fix the flagged edits (see per-edit findings) and re-propose.',
+      });
+    },
+  });
+
+  tools.push({
+    name: 'apply_proposed_patch',
+    description:
+      'FR-60 (P33-3): apply a proposal minted by propose_patch — IF STILL VALID. Re-runs every edit against the ' +
+      'FRESH on-disk content, re-validates (form/anchor/conformance), and writes ALL-OR-NOTHING with ONE audit event. ' +
+      'A proposal that no longer validates (a doc changed, an anchor moved, a CAS precondition broke) is REFUSED with ' +
+      'its findings — never applied stale. Consumed on success.',
+    inputShape: { proposal_id: z.string(), reason: z.string() } as const satisfies z.ZodRawShape,
+    handler: async (args) => {
+      try {
+        return withWriteLock(process.cwd(), () => {
+          const r = applyProposedPatch(process.cwd(), String(args.proposal_id));
+          if (!r.ok) {
+            logSpecAccess('apply_proposed_patch', { proposal_id: args.proposal_id, reason: args.reason }, 'denied');
+            return asJsonResult({
+              ok: false, error: r.error ?? 'VALIDATION_FAILED', proposal_id: r.proposal_id,
+              findings: r.findings, edits: r.edits.map(publicEditPreview),
+              hint: r.error === 'PROPOSAL_NOT_FOUND'
+                ? 'No such proposal_id — propose_patch first (proposals live for the server process and are consumed on apply).'
+                : 'The proposal is no longer valid against the fresh docs; nothing was written. Re-propose and retry.',
+            });
+          }
+          registryOpts.refreshGraph?.();
+          logSpecAccess('apply_proposed_patch', { proposal_id: args.proposal_id, edits: r.edits.length, reason: args.reason }, 'ok');
+          return asJsonResult({
+            ok: true, written: true, proposal_id: r.proposal_id, shas: r.shas,
+            edits: r.edits.map(publicEditPreview), findings: [],
+          });
+        });
+      } catch (e) {
+        if ((e as WriteLockBusyError).code === 'WRITE_LOCK_BUSY') {
+          logSpecAccess('apply_proposed_patch', { proposal_id: args.proposal_id }, 'denied');
+          const h = (e as WriteLockBusyError).holder;
+          return asJsonResult({ ok: false, error: 'WRITE_LOCK_BUSY', proposal_id: args.proposal_id, held_by: h ?? null, hint: 'Another session is writing a spec RIGHT NOW — retry in a moment.' });
+        }
+        throw e;
+      }
+    },
+  });
+
+  tools.push({
+    name: 'apply_spec_transaction',
+    description:
+      'FR-60 (P33-3): validate + atomically write a MULTI-DOCUMENT spec change ALL-OR-NOTHING — one conceptual ' +
+      'mutation across FR.md / ACCEPTANCE_CRITERIA.md / TASKS.md / the .feature / FILE_CHANGES.md (any set of docs). ' +
+      'Every edit (a section insert {section}, an anchor-targeted replace {replace}, or a whole-doc {content}) runs ' +
+      'the SAME form/anchor/conformance validation-before-write as apply_spec_change; if ANY edit fails, NOTHING is ' +
+      'written and every doc stays byte-identical. A clean set is written doc-by-doc atomically and logged as ONE ' +
+      'audit event; returns the resulting sha per doc + the affected graph nodes. (propose_patch is the free dry-run.)',
+    inputShape: PATCH_SHAPE,
+    handler: async (args) => {
+      const edits = toPatchEdits(args.edits);
+      try {
+        return withWriteLock(process.cwd(), () => {
+          const r = applySpecTransactionCore(process.cwd(), edits);
+          if (!r.ok) {
+            logSpecAccess('apply_spec_transaction', { edits: edits.length, reason: args.reason }, 'denied');
+            return asJsonResult({
+              ok: false, error: r.error ?? 'VALIDATION_FAILED',
+              findings: r.findings, edits: r.edits.map(publicEditPreview),
+              hint: 'At least one edit failed validation — NOTHING was written; every document is unchanged. Fix the flagged edits (see per-edit findings) and retry.',
+            });
+          }
+          registryOpts.refreshGraph?.();
+          logSpecAccess('apply_spec_transaction', { edits: edits.length, docs: edits.map((e) => `${slugOf(e.spec)}/${docOf(e.doc)}`), reason: args.reason }, 'ok');
+          return asJsonResult({
+            ok: true, written: true, shas: r.shas, affected_nodes: affectedNodes(edits),
+            edits: r.edits.map(publicEditPreview), findings: [],
+          });
+        });
+      } catch (e) {
+        if ((e as WriteLockBusyError).code === 'WRITE_LOCK_BUSY') {
+          logSpecAccess('apply_spec_transaction', { edits: edits.length }, 'denied');
+          const h = (e as WriteLockBusyError).holder;
+          return asJsonResult({ ok: false, error: 'WRITE_LOCK_BUSY', held_by: h ?? null, hint: 'Another session is writing a spec RIGHT NOW — retry in a moment.' });
         }
         throw e;
       }

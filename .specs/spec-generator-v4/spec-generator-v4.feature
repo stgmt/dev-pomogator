@@ -3404,7 +3404,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     And the preview preserves the document EOL style
     And the same form, anchor, and conformance checks run before any write is applied
 
-  @feature60 @wip
+  @feature60
   Scenario: SPECGEN004_521 read_for_edit returns section metadata and safe insertion tokens
     Given an agent reads a spec section for edit through the MCP door
     When the read_for_edit response is returned
@@ -3418,7 +3418,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Then the response classifies the miss as EOL-only, whitespace-only, multi-match, changed body under the same anchor, or missing anchor
     And with normalize_eol true a CRLF/LF-only mismatch is accepted while the persisted file keeps its original EOL style
 
-  @feature60 @wip
+  @feature60
   Scenario: SPECGEN004_523 multi-document proposal previews graph impact and applies atomically
     Given a proposed spec change spans FR.md, ACCEPTANCE_CRITERIA.md, TASKS.md, the feature file, and FILE_CHANGES.md
     When the agent calls propose_patch and then apply_spec_transaction

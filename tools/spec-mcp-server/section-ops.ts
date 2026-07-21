@@ -29,6 +29,7 @@
  * @see ./mutations.ts (validateSpecChange / writeDocAtomic / resolveSpecDoc / docSha — all reused, none re-implemented)
  */
 import fs from 'node:fs';
+import { randomUUID } from 'node:crypto';
 import { marksmanSlug } from '../anchor-integrity/marksman-slug.mjs';
 import {
   validateSpecChange,
@@ -710,4 +711,291 @@ export function applyReplaceChange(
     return failTransform(result.error === 'HEADING_REQUIRED' ? 'HEADING_REQUIRED' : 'REPLACE_FAILED');
   }
   return finalizeWrite({ normalized: result.normalized === true });
+}
+
+// ─── FR-60 P33-3 — multi-document proposal + atomic spec transaction ──────────
+//
+// `apply_spec_change` and the section / replace ops above each address ONE document.
+// A real authoring intent — "add a requirement" — spans FR.md + ACCEPTANCE_CRITERIA.md +
+// TASKS.md + the .feature + FILE_CHANGES.md AT ONCE, and splitting it into five independent
+// writes leaves a window where the spec is half-edited (an FR with no AC, a task with no
+// scenario). P33-3 raises the surface to a MULTI-DOCUMENT TRANSACTION:
+//   * `proposePatch` previews the graph impact of a SET of edits across documents — the
+//     resolved anchors, a line diff, the resulting sha/section tokens, the form/anchor/
+//     conformance findings per doc — and mints a `proposal_id`;
+//   * `applyProposedPatch` replays a stored proposal IF STILL VALID (re-validated against
+//     the fresh docs);
+//   * `applySpecTransactionCore` validates EVERY edit and writes ALL-OR-NOTHING.
+// Reuses validateSpecChange + writeDocAtomic + docSha/casCheck from mutations.ts — NO second
+// validator, NO second version-control layer. The all-or-nothing guarantee is validation-
+// before-write: `preparePatch` is pure read + validate (it writes NOTHING), so a single failed
+// edit leaves EVERY document byte-identical; only when ALL edits are clean does each doc get
+// written atomically (temp + rename). The caller (tools.ts) wraps the write in the short
+// write-lock + ONE audit event, so the whole transaction reads as one conceptual mutation.
+//
+// @see .specs/spec-generator-v4/spec-generator-v4.feature SPECGEN004_523
+// @see .specs/spec-generator-v4/TASKS.md p33-proposal-transaction (Phase 33, P33-3)
+
+/** Normalize a spec slug / doc the same way the mutation door does (tools.ts slugOf/docOf). */
+const normSlug = (s: string): string =>
+  String(s).replace(/\\/g, '/').replace(/^\.?\/?\.specs\//, '').replace(/\/+$/, '');
+const normDoc = (d: string): string => String(d).replace(/\\/g, '/').replace(/^\/+/, '');
+
+/**
+ * One edit within a multi-document proposal / transaction. Exactly ONE of `section`,
+ * `replace`, or `content` is set:
+ *   - `section` → an anchor-targeted insert (append_to_section / insert_after_heading / insert_at_eof);
+ *   - `replace` → an anchor-targeted literal replacement (P33-2: EOL-tolerant + diagnostics);
+ *   - `content` → a whole-document replace.
+ * `expected_sha` is an optional whole-doc CAS precondition (the sha from read_for_edit).
+ */
+export interface PatchEdit {
+  spec: string;
+  doc: string;
+  section?: SectionOp;
+  replace?: ReplaceOp;
+  content?: string;
+  expected_sha?: string;
+}
+
+/** A line-level preview diff — lines added / removed going from the current doc to the result. */
+export interface PatchDiff {
+  added: string[];
+  removed: string[];
+}
+
+/** Per-document preview of one patch edit — the building block of a proposal / transaction. */
+export interface PatchEditPreview {
+  spec: string;
+  doc: string;
+  ok: boolean;
+  eol_style: EolStyle;
+  /** The stable heading anchor the edit resolved (null for EOF / whole-doc edits). */
+  heading_anchor: string | null;
+  start_line: number | null;
+  end_line: number | null;
+  /** Section sha of the RESULTING doc at the target anchor (null when not section-targeted). */
+  section_sha: string | null;
+  /** Whole-doc sha of the RESULTING doc — the new CAS token for this doc. */
+  sha: string | null;
+  append_token?: string;
+  insert_token?: string;
+  diff: PatchDiff;
+  findings: MutationFinding[];
+  diagnostic?: ReplaceDiagnostic;
+  error?: 'TARGET' | 'DOC_NOT_FOUND' | 'BAD_EDIT' | 'CAS_MISMATCH' | 'HEADING_REQUIRED' | 'HEADING_NOT_FOUND' | 'REPLACE_FAILED' | 'VALIDATION_FAILED';
+  /** Internal: the full resulting content (used for the atomic write; stripped from the MCP reply). */
+  next?: string;
+}
+
+/** Multiset line diff — lines added / removed going from `current` to `next` (EOL-agnostic). */
+function lineDiff(current: string, next: string): PatchDiff {
+  const before = current.split(/\r\n|\n/);
+  const after = next.split(/\r\n|\n/);
+  const beforeCounts = new Map<string, number>();
+  for (const l of before) beforeCounts.set(l, (beforeCounts.get(l) ?? 0) + 1);
+  const afterCounts = new Map<string, number>();
+  for (const l of after) afterCounts.set(l, (afterCounts.get(l) ?? 0) + 1);
+  const added: string[] = [];
+  for (const l of after) {
+    const left = beforeCounts.get(l) ?? 0;
+    if (left > 0) beforeCounts.set(l, left - 1);
+    else added.push(l);
+  }
+  const removed: string[] = [];
+  for (const l of before) {
+    const left = afterCounts.get(l) ?? 0;
+    if (left > 0) afterCounts.set(l, left - 1);
+    else removed.push(l);
+  }
+  return { added, removed };
+}
+
+/**
+ * Resolve + transform + VALIDATE one patch edit WITHOUT writing — the per-doc unit of a
+ * proposal / transaction. The produced content runs through the SAME `validateSpecChange`
+ * (form + anchors + conformance) `apply_spec_change` runs; `next` holds the full resulting
+ * content (kept for the atomic write), while `diff` / `sha` / tokens describe it for the preview.
+ */
+function preparePatchEdit(repoRoot: string, edit: PatchEdit): PatchEditPreview {
+  const slug = normSlug(edit.spec);
+  const doc = normDoc(edit.doc);
+  const base: PatchEditPreview = {
+    spec: slug, doc, ok: false, eol_style: 'lf', heading_anchor: null,
+    start_line: null, end_line: null, section_sha: null, sha: null,
+    diff: { added: [], removed: [] }, findings: [],
+  };
+
+  // Exactly one edit shape must be supplied (section | replace | content).
+  const shapes = [edit.section !== undefined, edit.replace !== undefined, edit.content !== undefined].filter(Boolean).length;
+  if (shapes !== 1) return { ...base, error: 'BAD_EDIT' };
+
+  const read = readDoc(repoRoot, slug, doc);
+  if (!read.ok) return { ...base, error: read.error };
+  const current = read.current;
+  const eol = detectEol(current);
+
+  // Compute the resulting content + the anchor the edit resolved (no disk, no validation yet).
+  let next: string;
+  let anchor: string | null;
+  let span: { startLine: number | null; endLine: number | null };
+  let sectionTargeted = false;
+  let diagnostic: ReplaceDiagnostic | undefined;
+
+  if (edit.section) {
+    const t = applySectionOpToContent(current, edit.section);
+    if (!t.ok || t.next === undefined) {
+      return { ...base, eol_style: eol, heading_anchor: t.locator.headingAnchor, start_line: t.locator.startLine, end_line: t.locator.endLine, error: t.error ?? 'HEADING_NOT_FOUND' };
+    }
+    next = t.next;
+    anchor = t.locator.headingAnchor;
+    span = { startLine: t.locator.startLine, endLine: t.locator.endLine };
+    sectionTargeted = edit.section.kind !== 'insert_at_eof';
+  } else if (edit.replace) {
+    const r = replaceInSectionContent(current, edit.replace);
+    if (!r.ok || r.next === undefined) {
+      return {
+        ...base, eol_style: eol, heading_anchor: r.locator.headingAnchor,
+        start_line: r.locator.startLine, end_line: r.locator.endLine, section_sha: r.section_sha,
+        diagnostic: r.diagnostic, error: r.error === 'HEADING_REQUIRED' ? 'HEADING_REQUIRED' : 'REPLACE_FAILED',
+      };
+    }
+    next = r.next;
+    anchor = r.locator.headingAnchor;
+    span = { startLine: r.locator.startLine, endLine: r.locator.endLine };
+    sectionTargeted = true;
+    diagnostic = undefined;
+  } else {
+    next = edit.content as string;
+    const lines = splitLogical(current);
+    anchor = null;
+    span = { startLine: 1, endLine: lines.length };
+    sectionTargeted = false;
+  }
+
+  // Optional whole-doc CAS precondition — a mismatch fails the edit (strict at the transaction
+  // level; the anchor-level auto-rebase stays a single-doc concern of replace_in_section, P33-2).
+  if (edit.expected_sha !== undefined) {
+    const cas = casCheck(repoRoot, slug, doc, edit.expected_sha);
+    if (!cas.ok) return { ...base, eol_style: eol, heading_anchor: anchor, start_line: span.startLine, end_line: span.endLine, error: 'CAS_MISMATCH' };
+  }
+
+  // Validate the resulting content through the SAME door apply_spec_change uses — no second validator.
+  const validation = validateSpecChange(repoRoot, slug, doc, { content: next });
+
+  // Re-locate the target anchor in the RESULTING doc for a fresh span / section_sha / tokens.
+  const nextLines = splitLogical(next);
+  const resultLocator = sectionTargeted && anchor
+    ? locateSection(nextLines, anchor)
+    : { found: true, headingLevel: null, headingText: null, headingAnchor: anchor, startLine: 1, endLine: nextLines.length };
+  const tokens = sectionTokens(resultLocator.found ? resultLocator : { found: false, headingLevel: null, headingText: null, headingAnchor: anchor, startLine: null, endLine: null });
+
+  return {
+    spec: slug, doc, ok: validation.ok, eol_style: eol,
+    heading_anchor: anchor,
+    start_line: resultLocator.startLine, end_line: resultLocator.endLine,
+    section_sha: sectionTargeted && resultLocator.found ? sectionSha(next, resultLocator) : null,
+    sha: docSha(next),
+    append_token: tokens.appendToken, insert_token: tokens.insertToken,
+    diff: lineDiff(current, next),
+    findings: validation.findings,
+    diagnostic,
+    error: validation.ok ? undefined : 'VALIDATION_FAILED',
+    next,
+  };
+}
+
+/** Aggregate preview of a multi-document patch (the propose_patch / transaction dry-run shape). */
+export interface PatchPreview {
+  /** True only when EVERY edit validates clean (AND, not OR — one bad edit fails the patch). */
+  ok: boolean;
+  edits: PatchEditPreview[];
+  /** All findings across every edit. */
+  findings: MutationFinding[];
+}
+
+/**
+ * Prepare (resolve + transform + validate) EVERY edit of a multi-document patch WITHOUT writing —
+ * the shared preview core of proposePatch / applySpecTransactionCore. Writes nothing, so it is safe
+ * to call as a free dry-run; `ok` is true only when ALL edits validate clean.
+ */
+export function preparePatch(repoRoot: string, edits: PatchEdit[]): PatchPreview {
+  const prepared: PatchEditPreview[] = [];
+  const findings: MutationFinding[] = [];
+  let ok = true;
+  for (const edit of edits) {
+    const p = preparePatchEdit(repoRoot, edit);
+    prepared.push(p);
+    findings.push(...p.findings);
+    if (!p.ok) ok = false;
+  }
+  return { ok, edits: prepared, findings };
+}
+
+/** Outcome of an all-or-nothing multi-document write. */
+export interface TransactionResult {
+  ok: boolean;
+  edits: PatchEditPreview[];
+  findings: MutationFinding[];
+  written?: boolean;
+  /** `<spec>/<doc>` → resulting whole-doc sha, for every written doc. */
+  shas?: Record<string, string>;
+  error?: 'VALIDATION_FAILED' | 'PROPOSAL_NOT_FOUND';
+}
+
+/**
+ * Validate EVERY edit and write ALL-OR-NOTHING. `preparePatch` writes nothing (pure read +
+ * validate), so a single failed edit leaves EVERY document byte-identical; only when all edits
+ * are clean is each doc written atomically (temp + rename). The caller (tools.ts) wraps this in
+ * the short write-lock + ONE audit event so the whole set reads as one conceptual spec mutation.
+ */
+export function applySpecTransactionCore(repoRoot: string, edits: PatchEdit[]): TransactionResult {
+  const preview = preparePatch(repoRoot, edits);
+  if (!preview.ok) {
+    return { ok: false, edits: preview.edits, findings: preview.findings, error: 'VALIDATION_FAILED' };
+  }
+  const shas: Record<string, string> = {};
+  for (const p of preview.edits) {
+    writeDocAtomic(repoRoot, p.spec, p.doc, p.next as string);
+    shas[`${p.spec}/${p.doc}`] = p.sha as string;
+  }
+  return { ok: true, edits: preview.edits, findings: [], written: true, shas };
+}
+
+/** A stored proposal — the edit set proposePatch captured, replayable by applyProposedPatch. */
+interface StoredProposal {
+  id: string;
+  edits: PatchEdit[];
+  createdAt: string;
+}
+
+/** In-memory proposal registry (lives for the server process; consumed on a successful apply). */
+const proposalStore = new Map<string, StoredProposal>();
+
+/**
+ * DRY-RUN a multi-document patch: preview every edit's graph impact and mint a `proposal_id` the
+ * caller can hand to applyProposedPatch. Stores the edit SET (not the computed content) — apply
+ * re-validates against the fresh docs, so a proposal is applied only IF STILL VALID.
+ */
+export function proposePatch(repoRoot: string, edits: PatchEdit[]): PatchPreview & { proposal_id: string } {
+  const preview = preparePatch(repoRoot, edits);
+  const proposal_id = randomUUID();
+  proposalStore.set(proposal_id, { id: proposal_id, edits, createdAt: new Date().toISOString() });
+  return { ...preview, proposal_id };
+}
+
+/**
+ * Apply a stored proposal IF STILL VALID: re-run every edit against the fresh on-disk content,
+ * re-validate (form/anchor/conformance), and write all-or-nothing. A proposal that no longer
+ * validates (a doc changed, an anchor moved, a CAS precondition broke) is REFUSED with its
+ * findings — never applied stale. Consumed (dropped from the store) on a successful apply.
+ */
+export function applyProposedPatch(repoRoot: string, proposalId: string): TransactionResult & { proposal_id: string } {
+  const stored = proposalStore.get(proposalId);
+  if (!stored) {
+    return { ok: false, edits: [], findings: [], error: 'PROPOSAL_NOT_FOUND', proposal_id: proposalId };
+  }
+  const result = applySpecTransactionCore(repoRoot, stored.edits);
+  if (result.ok) proposalStore.delete(proposalId);
+  return { ...result, proposal_id: proposalId };
 }
