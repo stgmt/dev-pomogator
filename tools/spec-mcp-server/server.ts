@@ -16,12 +16,12 @@
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { pathToFileURL } from 'node:url';
-import fs from 'node:fs';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import path from 'node:path';
 import { startLifecycle, type LifecycleHandle } from './lifecycle.ts';
 import { buildToolRegistry } from './tools.ts';
 import { configuredFeatureRoots } from '../specs-generator/spec-verdict.ts';
+import { resolveTargetProjectRoot, type RootResolution } from '../spec-graph/root-resolution.ts';
 
 const PRODUCT_NAME = 'dev-pomogator-specs';
 const PRODUCT_VERSION = '0.1.0';
@@ -93,18 +93,26 @@ export async function boot(opts: BootOptions): Promise<{
  * back to a raw `Read` of `.specs/` (2026-06-08 P17-6 live diagnosis). Reject an
  * `${…}` placeholder or a `.specs`-less path, then fall back to cwd.
  */
+export function resolveMcpRoot(env: string | undefined, cwd: string, scriptDir: string): RootResolution {
+  // DEV_POMOGATOR_REPO_ROOT predates FR-62; accept it as the MCP spelling of
+  // the explicit override while the shared contract retains its source label.
+  return resolveTargetProjectRoot({ envRoot: env ?? process.env.SPECS_GENERATOR_ROOT, cwd, scriptDir });
+}
+
+/** Backward-compatible string helper retained for the FR-39 consumer. */
 export function resolveRepoRoot(env: string | undefined, cwd: string): string {
-  if (env && !env.includes('${') && fs.existsSync(path.join(env, '.specs'))) return env;
-  if (env && (env.includes('${') || !fs.existsSync(path.join(env, '.specs')))) {
-    process.stderr.write(
-      `[${PRODUCT_NAME}] DEV_POMOGATOR_REPO_ROOT="${env}" is not a repo with .specs/ — using cwd ${cwd}\n`,
-    );
-  }
-  return cwd;
+  const result = resolveMcpRoot(env, cwd, path.dirname(fileURLToPath(import.meta.url)));
+  return result.root ?? cwd;
 }
 
 async function main(): Promise<void> {
-  const repoRoot = resolveRepoRoot(process.env.DEV_POMOGATOR_REPO_ROOT, process.cwd());
+  const resolution = resolveMcpRoot(process.env.SPECS_GENERATOR_ROOT ?? process.env.DEV_POMOGATOR_REPO_ROOT, process.cwd(), path.dirname(fileURLToPath(import.meta.url)));
+  if (resolution.status === 'NOT_READY' || !resolution.root) {
+    process.stderr.write(`[${PRODUCT_NAME}] NOT_READY ${JSON.stringify(resolution)}\n`);
+    process.exitCode = 2;
+    return;
+  }
+  const repoRoot = resolution.root;
   const { server, lifecycle } = await boot({ repoRoot });
 
   const shutdownAndExit = async (code: number): Promise<void> => {

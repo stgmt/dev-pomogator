@@ -36,6 +36,7 @@
 import { z } from 'zod';
 import { checkConformance, type Finding } from '../spec-graph/conformance.ts';
 import { gapsFromFindings, summariseGaps } from '../spec-graph/traceability.ts';
+import { buildReadinessInventory } from '../spec-graph/readiness-inventory.ts';
 import fs from 'node:fs';
 import path from 'node:path';
 import { logSpecAccess } from './spec-access-log.ts';
@@ -1487,6 +1488,11 @@ export function buildToolRegistry(
         spec_status: readSpecStatus(repoRoot, slug),
         lifecycle,
         counts,
+        // FR-63 (foundation): the SAME graph-derived deduplicated inventory
+        // precheck + spec-verdict report (AC-63.1 — one graph, one inventory),
+        // with per-AC test_paths, FR never-run classification and the evidence
+        // provenance/recency taxonomy (AC-63.2).
+        inventory: buildReadinessInventory(graph, { spec: slug }),
         last_run,
         gaps,
         execution_gaps: statusExecutionGaps,
