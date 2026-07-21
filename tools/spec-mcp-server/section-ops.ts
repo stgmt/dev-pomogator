@@ -36,6 +36,7 @@ import {
   validateTarget,
   resolveSpecDoc,
   docSha,
+  casCheck,
   type MutationFinding,
 } from './mutations.ts';
 
@@ -390,4 +391,323 @@ export function applySectionChange(repoRoot: string, slug: string, doc: string, 
   const abs = writeDocAtomic(repoRoot, slug, doc, proposed.preview);
   void abs;
   return { ...proposed, written: true, sha: docSha(proposed.preview), bytes: proposed.preview.length };
+}
+
+// ─── FR-60 P33-2 — EOL-tolerant replace + remediation diagnostics + CAS auto-rebase ───
+//
+// `apply_spec_change` addresses a change by an EXACT `old_string`; when that literal
+// misses, the agent only learns "not found" and must hand-roll the forensics (was it
+// CRLF? trailing whitespace? did the section move?). P33-2 raises that surface: an
+// ANCHOR-TARGETED replacement (`replace_in_section`) that, on a miss, classifies WHY
+// into one of five ACTIONABLE diagnostics — eol_only / whitespace_only / multi_match /
+// changed_body / missing_anchor — each with a safe next-operation hint. Two more
+// invariants the RED scenarios pin:
+//   * normalize_eol:true accepts a CRLF/LF-ONLY mismatch while the persisted file keeps
+//     its ORIGINAL EOL (the replacement is done in LF space and re-joined to the doc EOL);
+//   * a stale whole-doc CAS sha (another session wrote the doc) AUTO-REBASES an anchor-
+//     targeted change when it is NON-CONFLICTING (the target section still accepts the
+//     replacement in the FRESH content) and REFUSES a real conflict with fresh anchor
+//     context (fresh sha + section_sha + the live anchor list). Reuses docSha/casCheck
+//     from mutations.ts — no second version-control layer.
+//
+// @see .specs/spec-generator-v4/spec-generator-v4.feature SPECGEN004_522 / SPECGEN004_524
+// @see .specs/spec-generator-v4/TASKS.md p33-replace-diagnostics-rebase (Phase 33, P33-2)
+
+/** The five classes a failed anchor-targeted replacement is diagnosed as. */
+export type ReplaceMissKind = 'eol_only' | 'whitespace_only' | 'multi_match' | 'changed_body' | 'missing_anchor';
+
+/** An actionable diagnosis of WHY a literal replacement missed (not a generic error). */
+export interface ReplaceDiagnostic {
+  kind: ReplaceMissKind;
+  message: string;
+  /** A safe next-operation hint the caller can act on without re-deriving the cause. */
+  hint: string;
+  /** Present for `multi_match`: how many occurrences within the section. */
+  occurrences?: number;
+}
+
+/** An anchor-targeted literal replacement within a section. */
+export interface ReplaceOp {
+  /** Heading TEXT or its Marksman anchor — the stable address of the target section. */
+  heading: string;
+  old_string: string;
+  new_string: string;
+  /** Replace every occurrence within the section (default: require a unique match). */
+  replace_all?: boolean;
+  /** Accept a CRLF/LF-ONLY mismatch; the persisted file keeps its original EOL. */
+  normalize_eol?: boolean;
+  /** Optional precondition: the `section_sha` the caller read. A mismatch ⇒ changed_body. */
+  expected_section_sha?: string;
+}
+
+/** Pure result of applying a replace to in-memory content (no disk, no validation). */
+export interface ReplaceResult {
+  ok: boolean;
+  /** The full would-be document content, EOL preserved. Absent on a diagnosed miss. */
+  next?: string;
+  eol: EolStyle;
+  locator: SectionLocator;
+  /** Fresh sha of the target section (for re-targeting context; null when not found). */
+  section_sha: string | null;
+  /** True when normalize_eol bridged an EOL-only mismatch. */
+  normalized?: boolean;
+  diagnostic?: ReplaceDiagnostic;
+  error?: 'HEADING_REQUIRED' | 'REPLACE_FAILED';
+}
+
+const NOT_FOUND_LOCATOR: SectionLocator = {
+  found: false, headingLevel: null, headingText: null, headingAnchor: null, startLine: null, endLine: null,
+};
+
+/** Count non-overlapping occurrences of `needle` in `haystack` (empty needle ⇒ 0). */
+function countOccurrences(haystack: string, needle: string): number {
+  if (needle === '') return 0;
+  return haystack.split(needle).length - 1;
+}
+
+/** Every heading anchor in a document — the fresh re-target context on a missing/conflicted anchor. */
+export function listHeadingAnchors(content: string): string[] {
+  const out: string[] = [];
+  for (const line of splitLogical(content)) {
+    const m = HEADING_RE.exec(line);
+    if (m) out.push(marksmanSlug(m[2]));
+  }
+  return out;
+}
+
+/**
+ * Apply an anchor-targeted replacement to `content`, PRESERVING its EOL style. Pure —
+ * never touches disk. The replacement is performed in LF space (the section body and
+ * `old_string`/`new_string` are EOL-normalized) and the result is re-joined with the
+ * document's detected EOL, so a CRLF document yields a result with NO bare `\n`.
+ *
+ * On a miss it returns a DIAGNOSTIC classifying the cause instead of a generic error:
+ *   missing_anchor → the heading no longer resolves;
+ *   changed_body   → the anchor resolves but `old_string` is gone (or the pinned
+ *                    `expected_section_sha` no longer matches) — the body moved;
+ *   multi_match    → `old_string` is not unique within the section (and !replace_all);
+ *   eol_only       → matches only after EOL normalization (needs normalize_eol to accept);
+ *   whitespace_only→ matches only after whitespace normalization (spacing differs).
+ */
+export function replaceInSectionContent(content: string, op: ReplaceOp): ReplaceResult {
+  const eol = detectEol(content);
+  const nl = eol === 'crlf' ? '\r\n' : '\n';
+  const lines = splitLogical(content);
+
+  if (op.heading === '') {
+    return {
+      ok: false, eol, locator: NOT_FOUND_LOCATOR, section_sha: null, error: 'HEADING_REQUIRED',
+      diagnostic: { kind: 'missing_anchor', message: 'no heading supplied to target the replacement', hint: 'Pass heading — the section heading text or its Marksman anchor.' },
+    };
+  }
+
+  const loc = locateSection(lines, op.heading);
+  if (!loc.found) {
+    const anchors = listHeadingAnchors(content);
+    return {
+      ok: false, eol, locator: loc, section_sha: null, error: 'REPLACE_FAILED',
+      diagnostic: {
+        kind: 'missing_anchor',
+        message: `no heading matched "${op.heading}" — the anchor is gone or misspelled`,
+        hint: `Re-target with read_spec_doc(read_for_edit:true). Available anchors: ${anchors.length > 0 ? anchors.join(', ') : '(none)'}.`,
+      },
+    };
+  }
+
+  const freshSha = sectionSha(content, loc);
+
+  // Precondition: the caller pinned the exact section body they read (the section_sha
+  // from read_for_edit). If it moved, that is a "changed body under the same anchor" —
+  // refuse even if old_string still happens to be present (the caller's view is stale).
+  if (op.expected_section_sha !== undefined && op.expected_section_sha !== freshSha) {
+    return {
+      ok: false, eol, locator: loc, section_sha: freshSha, error: 'REPLACE_FAILED',
+      diagnostic: {
+        kind: 'changed_body',
+        message: `the section under anchor "${op.heading}" changed since you read it (section_sha mismatch)`,
+        hint: 'Re-read the section (read_spec_doc read_for_edit:true) for the fresh body + section_sha, then retry.',
+      },
+    };
+  }
+
+  // Body span (0-based): the lines AFTER the heading through the section's last body line.
+  const bodyStartIdx = loc.startLine as number; // heading is startLine-1; body starts at startLine
+  const bodyEndIdx = (loc.endLine as number) - 1;
+  const bodyLines = lines.slice(bodyStartIdx, bodyEndIdx + 1);
+  const rawBody = bodyLines.join(nl); // original EOL
+  const normBody = bodyLines.join('\n'); // EOL-normalized (LF)
+  const wantRaw = op.old_string;
+  const wantNorm = op.old_string.replace(/\r\n/g, '\n');
+  const exactCount = countOccurrences(rawBody, wantRaw);
+  const normCount = countOccurrences(normBody, wantNorm);
+
+  const applyNormalized = (replaceAll: boolean): string => {
+    const newNorm = op.new_string.replace(/\r\n/g, '\n');
+    const replaced = replaceAll ? normBody.split(wantNorm).join(newNorm) : normBody.replace(wantNorm, newNorm);
+    const newBodyLines = replaced.split('\n');
+    return [...lines.slice(0, bodyStartIdx), ...newBodyLines, ...lines.slice(bodyEndIdx + 1)].join(nl);
+  };
+
+  // multi_match: not unique within the section (and the caller did not ask for replace_all).
+  if (normCount > 1 && op.replace_all !== true) {
+    return {
+      ok: false, eol, locator: loc, section_sha: freshSha, error: 'REPLACE_FAILED',
+      diagnostic: {
+        kind: 'multi_match', occurrences: normCount,
+        message: `old_string is not unique — ${normCount} occurrences within the section`,
+        hint: 'Pass replace_all:true to replace every occurrence, or a longer old_string that is unique within the section.',
+      },
+    };
+  }
+
+  if (normCount >= 1) {
+    // Applies (EOL-tolerant). Distinguish a clean exact match from an EOL-only miss.
+    const normalized = exactCount === 0; // matched only once EOL was normalized
+    if (normalized && op.normalize_eol !== true) {
+      return {
+        ok: false, eol, locator: loc, section_sha: freshSha, error: 'REPLACE_FAILED',
+        diagnostic: {
+          kind: 'eol_only',
+          message: `old_string matches only after EOL normalization (document is ${eol.toUpperCase()}, old_string uses ${eol === 'crlf' ? 'LF' : 'CRLF'})`,
+          hint: `Pass normalize_eol:true to accept this CRLF/LF-only mismatch — the persisted file keeps its ${eol.toUpperCase()} EOL.`,
+        },
+      };
+    }
+    return { ok: true, next: applyNormalized(op.replace_all === true), eol, locator: loc, section_sha: freshSha, normalized };
+  }
+
+  // normCount === 0 — absent even after EOL normalization. Is it a whitespace-only miss?
+  const wsBody = normBody.replace(/\s+/g, ' ').trim();
+  const wsWant = wantNorm.replace(/\s+/g, ' ').trim();
+  if (wsWant !== '' && countOccurrences(wsBody, wsWant) >= 1) {
+    return {
+      ok: false, eol, locator: loc, section_sha: freshSha, error: 'REPLACE_FAILED',
+      diagnostic: {
+        kind: 'whitespace_only',
+        message: 'old_string matches only after whitespace normalization (spacing/indentation differs)',
+        hint: 'Copy the exact current text from read_spec_doc(read_for_edit:true) — its whitespace differs from your old_string.',
+      },
+    };
+  }
+
+  // Anchor resolves but the expected text is gone — the body changed under the anchor.
+  return {
+    ok: false, eol, locator: loc, section_sha: freshSha, error: 'REPLACE_FAILED',
+    diagnostic: {
+      kind: 'changed_body',
+      message: `the section under anchor "${op.heading}" no longer contains old_string — the body changed under the same anchor`,
+      hint: 'Re-read the section (read_spec_doc read_for_edit:true) for the fresh body + section_sha, then retry.',
+    },
+  };
+}
+
+/** Outcome of an anchor-targeted replace run through validation-before-write + CAS. */
+export interface ReplaceOutcome {
+  ok: boolean;
+  /** The full would-be / written content (EOL preserved). Absent on a diagnosed miss. */
+  preview?: string;
+  eol_style: EolStyle;
+  /** True once the heading anchor resolved. */
+  resolved: boolean;
+  /** True when a stale CAS sha was auto-rebased over a concurrent (non-conflicting) edit. */
+  rebased?: boolean;
+  /** True when normalize_eol bridged an EOL-only mismatch. */
+  normalized?: boolean;
+  heading_anchor: string | null;
+  start_line: number | null;
+  end_line: number | null;
+  /** Fresh sha of the target section (post-write on success; current on a miss). */
+  section_sha: string | null;
+  /** Fresh whole-doc sha — the new CAS token (post-write on success; the conflicting sha on CAS_CONFLICT). */
+  sha?: string;
+  diagnostic?: ReplaceDiagnostic;
+  /** Live heading anchors for re-targeting (on missing_anchor / CAS_CONFLICT). */
+  available_anchors?: string[];
+  findings: MutationFinding[];
+  written?: boolean;
+  bytes?: number;
+  error?: 'TARGET' | 'DOC_NOT_FOUND' | 'HEADING_REQUIRED' | 'REPLACE_FAILED' | 'CAS_CONFLICT' | 'VALIDATION_FAILED';
+}
+
+/**
+ * Resolve + (EOL-tolerant) replace + VALIDATE + atomically WRITE an anchor-targeted
+ * change — with FR-60 P33-2 CAS AUTO-REBASE. When `expectedSha` is supplied and no
+ * longer matches the doc (another session wrote it since the caller read it):
+ *   - NON-CONFLICTING (the target section still accepts the replacement in the FRESH
+ *     content) → rebase: validate + write against the fresh doc, `rebased:true`;
+ *   - CONFLICT (the anchor is gone or its body/precondition changed) → refuse with
+ *     `CAS_CONFLICT` + fresh anchor context (fresh sha, section_sha, live anchors).
+ * The produced content runs through the SAME `validateSpecChange` (form + anchors +
+ * conformance) `apply_spec_change` runs; only a clean result is written, atomically.
+ */
+export function applyReplaceChange(
+  repoRoot: string,
+  slug: string,
+  doc: string,
+  op: ReplaceOp,
+  expectedSha?: string,
+): ReplaceOutcome {
+  const read = readDoc(repoRoot, slug, doc);
+  if (!read.ok) {
+    return { ok: false, eol_style: 'lf', resolved: false, heading_anchor: null, start_line: null, end_line: null, section_sha: null, findings: [], error: read.error };
+  }
+  const current = read.current;
+  const eol = detectEol(current);
+  // `current` is the FRESH on-disk content — so `result` already reflects any concurrent
+  // edit, which is exactly what the auto-rebase decision needs.
+  const result = replaceInSectionContent(current, op);
+
+  const failTransform = (error: ReplaceOutcome['error'], extra: Partial<ReplaceOutcome> = {}): ReplaceOutcome => ({
+    ok: false,
+    eol_style: eol,
+    resolved: result.locator.found,
+    heading_anchor: result.locator.headingAnchor,
+    start_line: result.locator.startLine,
+    end_line: result.locator.endLine,
+    section_sha: result.section_sha,
+    diagnostic: result.diagnostic,
+    findings: [],
+    error,
+    available_anchors: result.diagnostic?.kind === 'missing_anchor' ? listHeadingAnchors(current) : undefined,
+    ...extra,
+  });
+
+  const finalizeWrite = (extra: Partial<ReplaceOutcome> = {}): ReplaceOutcome => {
+    const next = result.next as string;
+    const validation = validateSpecChange(repoRoot, slug, doc, { content: next });
+    if (!validation.ok) {
+      return {
+        ok: false, preview: next, eol_style: eol, resolved: true,
+        heading_anchor: result.locator.headingAnchor, start_line: result.locator.startLine, end_line: result.locator.endLine,
+        section_sha: result.section_sha, findings: validation.findings, error: 'VALIDATION_FAILED',
+      };
+    }
+    writeDocAtomic(repoRoot, slug, doc, next);
+    const newLoc = locateSection(splitLogical(next), op.heading);
+    return {
+      ok: true, preview: next, eol_style: eol, resolved: true,
+      heading_anchor: newLoc.headingAnchor ?? result.locator.headingAnchor,
+      start_line: newLoc.startLine, end_line: newLoc.endLine,
+      section_sha: sectionSha(next, newLoc), findings: [], written: true, bytes: next.length, sha: docSha(next),
+      ...extra,
+    };
+  };
+
+  // P21-5 optimistic CAS, reused — with the P33-2 auto-rebase on top.
+  if (expectedSha !== undefined) {
+    const cas = casCheck(repoRoot, slug, doc, expectedSha);
+    if (!cas.ok) {
+      if (result.ok && result.next !== undefined) {
+        // Non-conflicting: the target section is intact in the fresh doc → rebase + apply.
+        return finalizeWrite({ rebased: true, normalized: result.normalized === true });
+      }
+      // Real conflict: refuse with fresh anchor context for the caller.
+      return failTransform('CAS_CONFLICT', { sha: cas.actualSha ?? undefined, available_anchors: listHeadingAnchors(current) });
+    }
+  }
+
+  if (!result.ok || result.next === undefined) {
+    return failTransform(result.error === 'HEADING_REQUIRED' ? 'HEADING_REQUIRED' : 'REPLACE_FAILED');
+  }
+  return finalizeWrite({ normalized: result.normalized === true });
 }

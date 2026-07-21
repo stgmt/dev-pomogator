@@ -42,7 +42,7 @@ import { logSpecAccess } from './spec-access-log.ts';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { validateSpecChange, writeDocAtomic, isSafeSlug, resolveSpecDoc, docSha, casCheck, validateTarget, findInboundLinks, rewriteInboundLinks, isArchivedSlug, type SpecChange } from './mutations.ts';
-import { applySectionChange, readForEdit, type SectionOpKind } from './section-ops.ts';
+import { applySectionChange, applyReplaceChange, readForEdit, type SectionOpKind } from './section-ops.ts';
 import { writeSpecStatus, readSpecStatus } from '../spec-graph/spec-status-store.ts';
 import { withWriteLock, type WriteLockBusyError } from './lock-manager.ts';
 import { setEntityStatus } from './set-status.ts';
@@ -1925,6 +1925,89 @@ export function buildToolRegistry(
       'expected_sha (from read_spec_doc) for optimistic CAS.',
     inputShape: SECTION_OP_SHAPE,
     handler: async (args) => runSectionOp('insert_at_eof', 'insert_at_eof', args as Record<string, unknown>),
+  });
+
+  // ─── 19b) FR-60 P33-2 replace_in_section — EOL-tolerant, anchor-targeted replace ──
+  // Address a section by its STABLE heading anchor, replace old_string→new_string within
+  // it. On a miss the door diagnoses WHY (eol_only / whitespace_only / multi_match /
+  // changed_body / missing_anchor) with a safe next-operation hint instead of a bare
+  // "not found". normalize_eol:true accepts a CRLF/LF-only mismatch while the persisted
+  // file keeps its original EOL. A stale expected_sha AUTO-REBASES a non-conflicting
+  // change (target section intact in the fresh doc) and refuses a real conflict with
+  // fresh anchor context (CAS_CONFLICT + fresh sha + section_sha + live anchors).
+  const REPLACE_SHAPE = {
+    spec: z.string(),
+    doc: z.string(),
+    heading: z.string(),
+    old_string: z.string(),
+    new_string: z.string(),
+    replace_all: z.boolean().optional(),
+    normalize_eol: z.boolean().optional(),
+    /** Whole-doc CAS token from read_spec_doc — enables auto-rebase on a concurrent edit. */
+    expected_sha: z.string().optional(),
+    /** Section precondition (section_sha from read_for_edit) — a mismatch ⇒ changed_body. */
+    expected_section_sha: z.string().optional(),
+  } as const satisfies z.ZodRawShape;
+
+  tools.push({
+    name: 'replace_in_section',
+    description:
+      'FR-60 (P33-2): EOL-tolerant, ANCHOR-TARGETED literal replacement — address the section by its ' +
+      'heading text or Marksman anchor, replace old_string→new_string within it, preserving the document ' +
+      'EOL style. On a miss the door diagnoses WHY (eol_only / whitespace_only / multi_match / changed_body ' +
+      '/ missing_anchor) with a safe next-operation hint, instead of a bare "not found". normalize_eol:true ' +
+      'accepts a CRLF/LF-only mismatch while the persisted file keeps its original EOL. Runs the SAME ' +
+      'form/anchor/conformance validation-before-write as apply_spec_change. Pass expected_sha (from ' +
+      'read_spec_doc) to AUTO-REBASE a non-conflicting change over a concurrent edit; a real conflict refuses ' +
+      'with CAS_CONFLICT + fresh anchor context. Pass expected_section_sha (from read_for_edit) as a precondition.',
+    inputShape: REPLACE_SHAPE,
+    handler: async (args) => {
+      const slug = slugOf(args.spec);
+      const doc = docOf(args.doc);
+      const op = {
+        heading: String(args.heading),
+        old_string: String(args.old_string),
+        new_string: String(args.new_string),
+        replace_all: args.replace_all === true,
+        normalize_eol: args.normalize_eol === true,
+        expected_section_sha: typeof args.expected_section_sha === 'string' ? (args.expected_section_sha as string) : undefined,
+      };
+      const expectedSha = typeof args.expected_sha === 'string' ? (args.expected_sha as string) : undefined;
+      try {
+        return withWriteLock(process.cwd(), () => {
+          const r = applyReplaceChange(process.cwd(), slug, doc, op, expectedSha);
+          if (!r.ok) {
+            logSpecAccess('replace_in_section', args, 'denied');
+            return asJsonResult({
+              ok: false, error: r.error ?? 'REPLACE_FAILED', spec: slug, doc,
+              eol_style: r.eol_style, resolved: r.resolved, rebased: r.rebased === true,
+              heading_anchor: r.heading_anchor, start_line: r.start_line, end_line: r.end_line,
+              section_sha: r.section_sha, sha: r.sha,
+              diagnostic: r.diagnostic, available_anchors: r.available_anchors, findings: r.findings,
+              hint: r.diagnostic?.hint ?? (r.error === 'CAS_CONFLICT'
+                ? 'The doc changed AND the target section conflicts. Re-read (read_spec_doc read_for_edit:true) for the fresh sha/section_sha/anchors, rebase your change, and retry.'
+                : 'The replacement was not applied; the document was left unchanged. Act on the diagnostic hint and retry.'),
+            });
+          }
+          registryOpts.refreshGraph?.();
+          logSpecAccess('replace_in_section', args, 'ok');
+          return asJsonResult({
+            ok: true, spec: slug, doc, eol_style: r.eol_style, resolved: r.resolved,
+            rebased: r.rebased === true, normalized: r.normalized === true,
+            heading_anchor: r.heading_anchor, start_line: r.start_line, end_line: r.end_line,
+            section_sha: r.section_sha, sha: r.sha, bytes: r.bytes, written: r.written === true,
+            preview: r.preview, findings: [],
+          });
+        });
+      } catch (e) {
+        if ((e as WriteLockBusyError).code === 'WRITE_LOCK_BUSY') {
+          logSpecAccess('replace_in_section', args, 'denied');
+          const h = (e as WriteLockBusyError).holder;
+          return asJsonResult({ ok: false, error: 'WRITE_LOCK_BUSY', spec: slug, doc, held_by: h ?? null, hint: 'Another session is writing a spec RIGHT NOW — retry in a moment.' });
+        }
+        throw e;
+      }
+    },
   });
 
   // ─── 18b) set_spec_status — explicit SPEC-level backlog marker (no status math) ──

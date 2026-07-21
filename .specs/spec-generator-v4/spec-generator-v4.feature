@@ -3411,7 +3411,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Then it includes eol_style, heading_anchor, section_sha, start_line, end_line, and append or insert tokens
     And a follow-up insert using those tokens targets the same section even when unrelated document text changes elsewhere
 
-  @feature60 @wip
+  @feature60
   Scenario: SPECGEN004_522 replacement diagnostics distinguish EOL whitespace multi-match and missing-anchor misses
     Given an MCP literal replacement fails to find old_string in a spec document
     When the server analyzes the failed replacement
@@ -3426,7 +3426,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     And applying the proposal writes all documents atomically or leaves every document unchanged
     And the audit log records the transaction as one conceptual spec mutation
 
-  @feature60 @wip
+  @feature60
   Scenario: SPECGEN004_524 anchor-targeted CAS mismatch auto-rebases only non-conflicting changes
     Given an anchor-targeted MCP mutation was prepared from an older document sha
     When another session has changed unrelated text outside the target anchor
