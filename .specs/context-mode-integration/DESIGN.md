@@ -168,15 +168,15 @@ See [context-mode-integration_SCHEMA.md](context-mode-integration_SCHEMA.md). St
 |-----------|-----|-----------|------------|------------------------|
 | `tests/step_definitions/*.ts` | step definitions | per feature | Existing BDD steps for specs | Yes, add a feature-specific file. |
 
-### Новые hooks
+### Новые step definitions
 
-| Hook файл | Тип | Тег/Scope | Что делает | По аналогии с |
-|-----------|-----|-----------|------------|---------------|
-| `tests/step_definitions/feature_context_mode_integration.ts` | AfterScenario | `@context-mode-fixture` | Removes temp Claude homes, fake plugin trees, and captured process fixtures | existing step definition cleanup patterns |
+| Файл | Scope | Что делает | По аналогии с |
+|------|-------|------------|---------------|
+| `tests/step_definitions/feature_context_mode_integration.ts` | `@feature1`..`@feature9` | Binds executable CTXMODE scenarios to real-shaped fixtures, setup/doctor modules, hook-safety checks, and documentation assertions. | existing feature-specific step definition files |
 
 ### Cleanup Strategy
 
-Each scenario creates an isolated temp home containing real-shaped `installed_plugins.json`, `.claude-plugin/plugin.json`, optional global settings, and fake process/handshake fixtures. AfterScenario removes the temp root and clears env overrides.
+Each scenario creates an isolated temp home containing real-shaped `installed_plugins.json`, `.claude-plugin/plugin.json`, optional global settings, and fake process/handshake fixtures. The shared Cucumber temp-dir cleanup in `tests/hooks/before-after.ts` removes the temp root after the scenario; context-mode steps do not require a feature-specific hook tag.
 
 ### Test Data & Fixtures
 
