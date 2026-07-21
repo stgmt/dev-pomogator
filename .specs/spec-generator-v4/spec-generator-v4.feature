@@ -3433,7 +3433,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Then the mutation auto-rebases and applies against the fresh document
     But when the target anchor body or preconditions changed the server refuses with fresh anchor context for the caller
 
-  @feature60 @wip
+  @feature60
   Scenario: SPECGEN004_525 domain helpers render canonical traceable markdown and enforce feature safety
     Given an agent registers incident-driven backlog or amends a requirement through a domain helper
     When the helper renders FR, AC, TASK, and optional feature changes

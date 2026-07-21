@@ -43,6 +43,14 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { validateSpecChange, writeDocAtomic, isSafeSlug, resolveSpecDoc, docSha, casCheck, validateTarget, findInboundLinks, rewriteInboundLinks, isArchivedSlug, type SpecChange } from './mutations.ts';
 import { applySectionChange, applyReplaceChange, readForEdit, proposePatch, applyProposedPatch, applySpecTransactionCore, type SectionOpKind, type PatchEdit, type PatchEditPreview } from './section-ops.ts';
+import {
+  addBacklogTask,
+  addPhase,
+  amendRequirement,
+  addAcceptanceCriterion,
+  registerIncidentBacklog,
+  type DomainAuthoringResult,
+} from './domain-authoring.ts';
 import { writeSpecStatus, readSpecStatus } from '../spec-graph/spec-status-store.ts';
 import { withWriteLock, type WriteLockBusyError } from './lock-manager.ts';
 import { setEntityStatus } from './set-status.ts';
@@ -2181,6 +2189,189 @@ export function buildToolRegistry(
         throw e;
       }
     },
+  });
+
+  // ─── 19d) FR-60 P33-4 domain authoring helpers + feature/step-def safety ──────
+  // High-level INTENT operations (add_backlog_task / add_phase / amend_requirement /
+  // add_acceptance_criterion / register_incident_backlog) that render CANONICAL,
+  // TRACEABLE markdown across FR/AC/TASKS/feature/FILE_CHANGES and enforce FEATURE
+  // SAFETY: an executable .feature scenario is refused unless every step matches a real
+  // step-definition, or the caller explicitly passes tasks_only:true (downgraded to a
+  // TASKS-only acceptance pin). Every render goes through the P33-3 transaction core —
+  // the SAME form/anchor/conformance validation-before-write + all-or-nothing atomicity
+  // (no second validator). Handlers: write-lock + ONE audit event + graph refresh.
+  const DOMAIN_FEATURE_SHAPE = z.object({
+    scenario_id: z.string(),
+    title: z.string(),
+    steps: z.array(z.string()).min(1),
+  });
+
+  // Shared reply mapper — the domain result IS the MCP reply body (plus spec echo).
+  const domainReply = (toolName: string, spec: string, r: DomainAuthoringResult): ToolResult => {
+    logSpecAccess(toolName, { spec }, r.ok ? 'ok' : 'denied');
+    if (r.ok) registryOpts.refreshGraph?.();
+    return asJsonResult({ ...r, spec: slugOf(spec) });
+  };
+
+  const runDomainLocked = (toolName: string, args: Record<string, unknown>, fn: () => DomainAuthoringResult): ToolResult => {
+    try {
+      return withWriteLock(process.cwd(), () => domainReply(toolName, String(args.spec), fn()));
+    } catch (e) {
+      if ((e as WriteLockBusyError).code === 'WRITE_LOCK_BUSY') {
+        logSpecAccess(toolName, args, 'denied');
+        const h = (e as WriteLockBusyError).holder;
+        return asJsonResult({ ok: false, error: 'WRITE_LOCK_BUSY', held_by: h ?? null, hint: 'Another session is writing a spec RIGHT NOW — retry in a moment.' });
+      }
+      throw e;
+    }
+  };
+
+  const toFeature = (raw: unknown): { scenarioId: string; title: string; steps: string[] } | undefined => {
+    if (raw === undefined || raw === null) return undefined;
+    const f = raw as Record<string, unknown>;
+    return { scenarioId: String(f.scenario_id), title: String(f.title), steps: (f.steps as unknown[]).map(String) };
+  };
+
+  tools.push({
+    name: 'add_backlog_task',
+    description:
+      'FR-60d (P33-4): add a CANONICAL, FR-TRACED task block under a Phase in TASKS.md — the form contracts ' +
+      '(Status/Est/Done-When) + the `_Requirements: [FR-N](FR.md#anchor)_` trace are rendered for you, ids are ' +
+      'kept unique, and the write runs the SAME form/anchor/conformance validation-before-write as apply_spec_change ' +
+      '(all-or-nothing, EOL preserved). Pass feature:{scenario_id,title,steps} to ALSO plant the scenario in the ' +
+      'spec .feature — REFUSED (STEP_DEFS_MISSING) unless every step matches a real step-definition under ' +
+      'tests/step_definitions/, or pass tasks_only:true to downgrade to a TASKS-only acceptance pin instead.',
+    inputShape: {
+      spec: z.string(),
+      phase: z.string(),
+      title: z.string(),
+      id: z.string().optional(),
+      est_minutes: z.number().int().positive().optional(),
+      depends: z.string().optional(),
+      requirements: z.array(z.string()).optional(),
+      done_when: z.array(z.string()).optional(),
+      feature: DOMAIN_FEATURE_SHAPE.optional(),
+      tasks_only: z.boolean().optional(),
+      reason: z.string(),
+    } as const satisfies z.ZodRawShape,
+    handler: async (args) =>
+      runDomainLocked('add_backlog_task', args as Record<string, unknown>, () =>
+        addBacklogTask(process.cwd(), {
+          spec: String(args.spec), phase: String(args.phase), title: String(args.title),
+          id: typeof args.id === 'string' ? (args.id as string) : undefined,
+          estMinutes: typeof args.est_minutes === 'number' ? (args.est_minutes as number) : undefined,
+          depends: typeof args.depends === 'string' ? (args.depends as string) : undefined,
+          requirements: Array.isArray(args.requirements) ? (args.requirements as unknown[]).map(String) : undefined,
+          doneWhen: Array.isArray(args.done_when) ? (args.done_when as unknown[]).map(String) : undefined,
+          feature: toFeature(args.feature),
+          tasksOnly: args.tasks_only === true,
+        }),
+      ),
+  });
+
+  tools.push({
+    name: 'add_phase',
+    description:
+      'FR-60d (P33-4): add a canonical `## Phase N — Title (date)` heading at the end of TASKS.md — the number ' +
+      'auto-increments past the highest existing phase (or pass it explicitly; duplicates are refused). Runs the ' +
+      'SAME form/anchor/conformance validation-before-write as apply_spec_change (EOL preserved, atomic).',
+    inputShape: {
+      spec: z.string(),
+      title: z.string(),
+      number: z.number().int().optional(),
+      source: z.string().optional(),
+      reason: z.string(),
+    } as const satisfies z.ZodRawShape,
+    handler: async (args) =>
+      runDomainLocked('add_phase', args as Record<string, unknown>, () =>
+        addPhase(process.cwd(), {
+          spec: String(args.spec), title: String(args.title),
+          number: typeof args.number === 'number' ? (args.number as number) : undefined,
+          source: typeof args.source === 'string' ? (args.source as string) : undefined,
+        }),
+      ),
+  });
+
+  tools.push({
+    name: 'amend_requirement',
+    description:
+      'FR-60d (P33-4): amend an EXISTING FR in FR.md — append body text to its section and/or maintain its ' +
+      '`**Связанные AC:**` line with links to existing ACs (created when absent, appended when present). The ' +
+      'FR↔AC links use the exact live-heading anchors, so the anchor layer passes; the write runs the SAME ' +
+      'form/anchor/conformance validation-before-write as apply_spec_change (EOL preserved, atomic).',
+    inputShape: {
+      spec: z.string(),
+      fr: z.string(),
+      text: z.string().optional(),
+      related_ac_ids: z.array(z.string()).optional(),
+      reason: z.string(),
+    } as const satisfies z.ZodRawShape,
+    handler: async (args) =>
+      runDomainLocked('amend_requirement', args as Record<string, unknown>, () =>
+        amendRequirement(process.cwd(), {
+          spec: String(args.spec), fr: String(args.fr),
+          text: typeof args.text === 'string' ? (args.text as string) : undefined,
+          relatedAcIds: Array.isArray(args.related_ac_ids) ? (args.related_ac_ids as unknown[]).map(String) : undefined,
+        }),
+      ),
+  });
+
+  tools.push({
+    name: 'add_acceptance_criterion',
+    description:
+      'FR-60d (P33-4): add a canonical AC to ACCEPTANCE_CRITERIA.md for an EXISTING FR — short-form `## AC-N.M` ' +
+      'heading + the `**Требование:** [FR-N](FR.md#anchor)` line (the FR-to-AC covers edge the graph parses), and the ' +
+      'FR-side `**Связанные AC:**` link. The id auto-assigns the next free minor of the FR (or pass it explicitly; ' +
+      'duplicates are refused). Runs the SAME form/anchor/conformance validation-before-write as apply_spec_change ' +
+      '(EOL preserved, atomic).',
+    inputShape: {
+      spec: z.string(),
+      fr: z.string(),
+      title: z.string(),
+      body: z.string().optional(),
+      id: z.string().optional(),
+      reason: z.string(),
+    } as const satisfies z.ZodRawShape,
+    handler: async (args) =>
+      runDomainLocked('add_acceptance_criterion', args as Record<string, unknown>, () =>
+        addAcceptanceCriterion(process.cwd(), {
+          spec: String(args.spec), fr: String(args.fr), title: String(args.title),
+          body: typeof args.body === 'string' ? (args.body as string) : undefined,
+          id: typeof args.id === 'string' ? (args.id as string) : undefined,
+        }),
+      ),
+  });
+
+  tools.push({
+    name: 'register_incident_backlog',
+    description:
+      'FR-60d (P33-4): capture an incident as a canonical, FR-TRACED task in the `## Backlog` section of TASKS.md ' +
+      '(the section is created on demand) — id auto-generated from date+summary (unique), trace + form contracts ' +
+      'rendered for you. Pass feature:{scenario_id,title,steps} to ALSO plant a regression scenario — REFUSED ' +
+      '(STEP_DEFS_MISSING) unless every step matches a real step-definition under tests/step_definitions/, or pass ' +
+      'tasks_only:true to downgrade to a TASKS-only acceptance pin. Runs the SAME validation-before-write as ' +
+      'apply_spec_change (EOL preserved, atomic).',
+    inputShape: {
+      spec: z.string(),
+      summary: z.string(),
+      date: z.string().optional(),
+      requirements: z.array(z.string()).optional(),
+      done_when: z.array(z.string()).optional(),
+      feature: DOMAIN_FEATURE_SHAPE.optional(),
+      tasks_only: z.boolean().optional(),
+      reason: z.string(),
+    } as const satisfies z.ZodRawShape,
+    handler: async (args) =>
+      runDomainLocked('register_incident_backlog', args as Record<string, unknown>, () =>
+        registerIncidentBacklog(process.cwd(), {
+          spec: String(args.spec), summary: String(args.summary),
+          date: typeof args.date === 'string' ? (args.date as string) : undefined,
+          requirements: Array.isArray(args.requirements) ? (args.requirements as unknown[]).map(String) : undefined,
+          doneWhen: Array.isArray(args.done_when) ? (args.done_when as unknown[]).map(String) : undefined,
+          feature: toFeature(args.feature),
+          tasksOnly: args.tasks_only === true,
+        }),
+      ),
   });
 
   // ─── 18b) set_spec_status — explicit SPEC-level backlog marker (no status math) ──
