@@ -6,6 +6,13 @@ so this file is the **single index**: each principle → what it is → where it
 This is a map, not the source of truth; the FRs (`.specs/spec-generator-v4/FR.md`) and the rules table
 in `CLAUDE.md` are. Start here when you ask "how does this repo keep specs/tests honest?".
 
+## How to use this map
+
+For the user journey and tool selection, start with
+[Specifications with verifiable readiness](../README.md#спецификации-с-проверяемой-готовностью).
+This map explains the underlying principles and points to their mechanisms. It is not a current status
+report for a release, CI run, or individual spec; obtain those facts from fresh checks and evidence.
+
 ## The one health command
 
 A spec is "valid / clean / done" ONLY by the **smart verdict**, never a bare structural pass:
