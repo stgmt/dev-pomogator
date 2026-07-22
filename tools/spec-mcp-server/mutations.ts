@@ -469,6 +469,143 @@ function conformanceFindings(repoRoot: string, slug: string, doc: string, next: 
   }
 }
 
+export interface SpecPatchValidationInput {
+  slug: string;
+  doc: string;
+  current: string;
+  next: string;
+}
+
+export interface SpecPatchValidationResult {
+  findings: MutationFinding[];
+  byDocument: Map<string, MutationFinding[]>;
+}
+
+/**
+ * Validate a multi-document patch against ONE fully staged graph. Single-document
+ * validation intentionally compares one overlay with the current tree; doing that
+ * N times for a transaction creates a cyclic bootstrap deadlock when two new links
+ * point at anchors/nodes introduced by sibling edits. This validator preserves the
+ * same form, anchor, conformance, strength, and task-truth gates, but computes their
+ * delta only after every document in the patch has been staged in a temp clone.
+ */
+export function validateSpecPatch(repoRoot: string, inputs: SpecPatchValidationInput[]): SpecPatchValidationResult {
+  const byDocument = new Map<string, MutationFinding[]>();
+  const keyOf = (slug: string, doc: string): string => `${slug}/${doc.replace(/\\/g, '/')}`;
+  const add = (key: string, finding: MutationFinding): void => {
+    const bucket = byDocument.get(key) ?? [];
+    bucket.push(finding);
+    byDocument.set(key, bucket);
+  };
+
+  for (const input of inputs) {
+    const key = keyOf(input.slug, input.doc);
+    for (const finding of formDeltaFindings(input.doc, input.current, input.next)) add(key, finding);
+    if (input.doc.toLowerCase().endsWith('.feature')) {
+      for (const finding of featureStrengthFindings(input.current, input.next)) {
+        add(key, { layer: 'strength', line: finding.line, message: finding.message });
+      }
+    }
+  }
+
+  const grouped = new Map<string, SpecPatchValidationInput[]>();
+  for (const input of inputs) grouped.set(input.slug, [...(grouped.get(input.slug) ?? []), input]);
+
+  for (const [slug, changes] of grouped) {
+    const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'spec-patch-'));
+    try {
+      const srcDir = path.join(repoRoot, '.specs', slug);
+      const dstDir = path.join(tmpRoot, '.specs', slug);
+      fs.cpSync(srcDir, dstDir, { recursive: true });
+
+      const beforeAnchors = checkLinks(specMdFiles(tmpRoot, slug)) as BrokenAnchor[];
+      const beforeGraph = buildGraph({
+        repoRoot: tmpRoot,
+        ndjsonPath: path.join(repoRoot, '.dev-pomogator', '.last-test-run.ndjson'),
+        scenarioOverlayPath: path.join(tmpRoot, '.dev-pomogator', '.scenario-results.ndjson'),
+      });
+
+      for (const change of changes) {
+        const abs = path.join(dstDir, change.doc);
+        fs.mkdirSync(path.dirname(abs), { recursive: true });
+        fs.writeFileSync(abs, change.next);
+      }
+
+      const editedKeys = new Set(changes.map((change) => keyOf(slug, change.doc)));
+      const fallbackKey = keyOf(slug, changes[0].doc);
+      const locationKey = (file: string | undefined): string => {
+        if (!file) return fallbackKey;
+        const normalized = file.replace(/\\/g, '/');
+        const marker = `.specs/${slug}/`;
+        const at = normalized.indexOf(marker);
+        const candidate = at >= 0 ? keyOf(slug, normalized.slice(at + marker.length)) : fallbackKey;
+        return editedKeys.has(candidate) ? candidate : fallbackKey;
+      };
+
+      const remainingAnchors = new Map<string, number>();
+      for (const broken of beforeAnchors) {
+        const key = anchorKey(broken);
+        remainingAnchors.set(key, (remainingAnchors.get(key) ?? 0) + 1);
+      }
+      for (const broken of checkLinks(specMdFiles(tmpRoot, slug)) as BrokenAnchor[]) {
+        const anchor = anchorKey(broken);
+        const left = remainingAnchors.get(anchor) ?? 0;
+        if (left > 0) {
+          remainingAnchors.set(anchor, left - 1);
+          continue;
+        }
+        add(locationKey(broken.file), {
+          layer: 'anchor',
+          line: broken.line,
+          message: `broken anchor #${broken.brokenAnchor} → ${broken.targetFile} (${broken.file})`,
+        });
+      }
+
+      const afterGraph = buildGraph({
+        repoRoot: tmpRoot,
+        ndjsonPath: path.join(repoRoot, '.dev-pomogator', '.last-test-run.ndjson'),
+        scenarioOverlayPath: path.join(tmpRoot, '.dev-pomogator', '.scenario-results.ndjson'),
+      });
+      const before = checkConformance(beforeGraph);
+      const after = checkConformance(afterGraph);
+      const conformance = [
+        ...deltaByKey(
+          before.filter((finding) => finding.severity === 'error'),
+          after.filter((finding) => finding.severity === 'error'),
+          conformanceKey,
+        ),
+        ...deltaWarningFindings(before, after),
+      ];
+      for (const finding of conformance) {
+        add(locationKey(finding.location.file), {
+          layer: 'conformance',
+          line: finding.location.line,
+          message: `${finding.code}: ${finding.message}`,
+        });
+      }
+
+      if (changes.some((change) => path.basename(change.doc).toLowerCase() === 'tasks.md')) {
+        const newTruth = deltaByKey(
+          taskTruthFindings(beforeGraph, slug),
+          taskTruthFindings(afterGraph, slug),
+          (finding) => `${finding.code}|${finding.taskId}`,
+        );
+        const tasks = changes.find((change) => path.basename(change.doc).toLowerCase() === 'tasks.md')!;
+        for (const finding of newTruth) add(keyOf(slug, tasks.doc), finding);
+      }
+    } catch (error) {
+      add(keyOf(slug, changes[0].doc), {
+        layer: 'conformance',
+        message: `patch validation failed: ${error instanceof Error ? error.message : error}`,
+      });
+    } finally {
+      fs.rmSync(tmpRoot, { recursive: true, force: true });
+    }
+  }
+
+  return { findings: [...byDocument.values()].flat(), byDocument };
+}
+
 export interface ValidateResult {
   ok: boolean;
   next?: string;
