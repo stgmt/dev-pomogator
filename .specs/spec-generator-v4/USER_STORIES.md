@@ -988,3 +988,21 @@ Then the record links the inventory, artifact evidence, PR/tag/release metadata,
 Given the #45 inventory, dependency-absent proof, post-release monitoring, or rollback information is missing
 When publication readiness is evaluated
 Then it is NOT_READY with the missing release-control item and next action
+
+---
+
+### User Story 44: Reject shallow delivery plans for externally observable paid APIs (Priority: P1)
+
+**Требование:** FR-65
+
+As a spec author and reviewer, I want every external, deployed, authenticated, or paid acceptance claim mapped to implementation, contract-test, and semantic live-evidence tasks, so that a route returning JSON or a single unauthenticated status cannot masquerade as a delivered product contract.
+
+**Why:** The #140 incident passed route and unauthenticated checks while public fields, version compatibility, input UX, redaction, funded execution, settlement, and result readback remained unproved.
+
+**Independent Test:** Run the real acceptance coverage analyzer and audit against a synthetic paid-SPA corpus containing a shallow task plan, a blocking unknown, and a complete plan; assert deterministic missing lanes, hard-gate failure for the first two, and no coverage finding only for the complete plan.
+
+**Acceptance Scenarios:**
+
+Given public contract and paid-flow acceptance has only route-exists and unauthenticated tasks
+When generator finalization or review evaluates acceptance delivery coverage
+Then the phase is blocked with the missing implementation, test, billing, and semantic deploy lanes

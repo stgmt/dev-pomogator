@@ -1148,3 +1148,18 @@ FR-62 is traced exclusively to US-39 and UC-25. The root resolver is noninteract
 FR-63 is traced to US-40, US-42, UC-26, and UC-28. `.claude/skills/spec-status/scripts/precheck.ts`, MCP status, and `tools/specs-generator/spec-verdict.ts` share graph-derived, deduplicated AC/scenario inventory; every mandatory lane uses AND semantics, with `not_recorded`, never-run, mock-only, source-only, and stale evidence returning `NOT_READY`. The installed command and MCP path must work dependency-absent.
 
 FR-64 is traced to US-41, US-43, UC-27, and UC-29. The release inventory classifies each path keep/remove/generated/temporary/smoke-only, deduplicates it, and applies pre/post tracked-file conservation. Docker-only installed-runtime evidence preserves `PASSED`, `FAILED`, `PENDING`, `UNDEFINED`, `AMBIGUOUS`, and `NOT_RUN`; GitHub #45, README, TASKS, CHANGELOG, PR/tag evidence, owner, monitoring, rollback, and follow-up are AND-gated.
+
+## FR-65
+
+**Acceptance-to-delivery coverage for external, deployed, authenticated, and paid contracts**
+
+The spec generator SHALL classify externally observable acceptance claims and SHALL produce a deterministic coverage plan before Finalization can stop. Every triggered claim SHALL map explicitly to its AC id and to implementation analysis, regression verification, and semantic live/deploy evidence; an FR-only task reference is insufficient for a claim-level contract.
+
+- **FR-65a (text-driven classifier):** public API/catalog/policy/DTO fields, versioned contracts, UI input schemas, redaction boundaries, auth/balance/paid/settlement flows, result or artifact readback, and deployed response semantics SHALL be detected from AC text without project-specific field names.
+- **FR-65b (required lanes):** public-shape claims require DTO/source-of-truth mapping, a contract regression, and live status/content-type/body readback; version claims require producer/consumer compatibility or an explicit architecture decision; paid/auth claims require unauthenticated, insufficient-balance, funded success, settlement/idempotency, and result/artifact readback lanes with controlled-spend guardrails when production execution is costly. UI input claims require a renderable schema or an explicit no-schema UX decision; public/internal detail claims require allowlist/redaction proof.
+- **FR-65c (blocking unknowns):** if an implementation surface cannot be inferred, the generated plan SHALL contain an AC-linked `Status: BLOCKED` investigation task rather than omit the acceptance. The hard gate remains red until the investigation is resolved into implementation/test/evidence tasks.
+- **FR-65d (one deterministic gate):** `audit-spec`/`spec-verdict`, `create-spec` Finalization, `task-board-forms`, and `spec-review` SHALL share the same acceptance-coverage vocabulary. A reviewer SHALL emit a blocking `ACCEPTANCE_DELIVERY_COVERAGE` finding when any required lane is absent. The regression corpus SHALL model the #140 root `/api` vs prefixed `/go/api`, HTML infrastructure 404 vs JSON auth/billing boundaries, registry publication, slug/settlement mapping, and semantic live readback.
+
+**Связанные AC:** [AC-65.1](ACCEPTANCE_CRITERIA.md#ac-651), [AC-65.2](ACCEPTANCE_CRITERIA.md#ac-652), [AC-65.3](ACCEPTANCE_CRITERIA.md#ac-653), [AC-65.4](ACCEPTANCE_CRITERIA.md#ac-654)
+**Use Case:** [UC-30](USE_CASES.md#uc-30)
+**User Story:** US-44

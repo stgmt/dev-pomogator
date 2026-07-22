@@ -420,3 +420,20 @@ A release owner finalizes the GitHub #45 test-isolation change through its linke
 **Requirement:** FR-64
 
 **Linked stories:** US-43
+
+---
+
+## UC-30
+
+**Generator expands and audits a paid deployed API contract**
+
+A feature request claims a public catalog/policy surface and an authenticated paid execution flow. The generator classifies each AC, emits an AC-linked coverage plan, and refuses Finalization until every required lane is owned.
+
+- Public response claims map to source-of-truth/DTO work, contract regression, and semantic live readback.
+- Version, UI input, and redaction claims map to compatibility or explicit design decisions.
+- Paid execution maps to unauthenticated, insufficient-balance, funded success, idempotent settlement, and artifact/result readback proof.
+- An unknown implementation surface becomes a blocking investigation task rather than disappearing.
+
+**Requirement:** FR-65
+
+**Linked stories:** US-44

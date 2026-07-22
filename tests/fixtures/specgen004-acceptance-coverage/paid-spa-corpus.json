@@ -1,0 +1,17 @@
+{
+  "acceptance": "# Acceptance Criteria\n\n## AC-1.1\n\nWHEN the externally observable public API catalog exposes a contractVersion, renderable UI input schema, and omits internal runtime detail THEN the deployed response contract is stable and redacted.\n\n## AC-1.2\n\nWHEN a costly production paid execution is requested THEN authentication, balance admission, funded dispatch, idempotent settlement, and artifact readback are proven live.\n",
+  "plans": {
+    "shallow": "# Tasks\n\n### T1 route smoke — Status: TODO\n_Acceptance: AC-1.1_\nCheck that the route exists and does not return nginx 404.\n\n### T2 auth smoke — Status: TODO\n_Acceptance: AC-1.2_\nCheck unauthenticated 401.\n",
+    "blocked": "# Tasks\n\n### T1 unknown public surface — Status: BLOCKED\n_Acceptance: AC-1.1, AC-1.2_\nInvestigate where the paid API is implemented.\n",
+    "complete": "# Tasks\n\n### T1 public contract implementation and verification — Status: TODO\n_Acceptance: AC-1.1_\nMap DTO and registry source of truth; add producer/consumer compatibility, renderable input schema, allowlist redaction, and contract regression test. Verify root /api versus route prefix /go/api with semantic status/content-type/body readback.\n\n### T2 paid admission settlement and result proof — Status: TODO\n_Acceptance: AC-1.2_\nVerify unauthenticated 401, insufficient-balance 402, funded success, settlement idempotency, and artifact readback. Run a controlled-spend smoke with a test account and spend guardrail, asserting semantic status/content-type/body.\n"
+  },
+  "deploymentEvidence": {
+    "root": "/api",
+    "prefix": "/go/api",
+    "infrastructure404": { "status": 404, "contentType": "text/html" },
+    "unauthenticated": { "status": 401, "contentType": "application/json" },
+    "insufficientBalance": { "status": 402, "contentType": "application/json" },
+    "funded": { "status": 200, "contentType": "application/json" },
+    "requires": ["registry publication", "slug mapping", "settlement", "artifact readback"]
+  }
+}

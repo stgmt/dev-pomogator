@@ -179,3 +179,12 @@
 - Draft: 81
 - Blocked: 0
 - Evidence note: run `1784225474521` records the five FR-61 scenarios as canonical PASSED; FR-60 `SPECGEN004_520..525` and FR-62..64 evidence remain `not_recorded` until their real Docker/installed-runtime tests run.
+
+## FR-65 acceptance-to-delivery checks
+
+| Check ID | Requirement | Acceptance / Scenario | Verification |
+|---|---|---|---|
+| CHK-FR65-01 | [FR-65a](FR.md#fr-65) | [AC-65.1](ACCEPTANCE_CRITERIA.md#ac-651), SPECGEN004_565 | Text-driven public/version/input/redaction classification |
+| CHK-FR65-02 | [FR-65b](FR.md#fr-65) | [AC-65.2](ACCEPTANCE_CRITERIA.md#ac-652), SPECGEN004_565 | Paid/auth lane completeness and controlled smoke |
+| CHK-FR65-03 | [FR-65c](FR.md#fr-65) | [AC-65.3](ACCEPTANCE_CRITERIA.md#ac-653), SPECGEN004_565 | Blocking investigation cannot pass the gate |
+| CHK-FR65-04 | [FR-65d](FR.md#fr-65) | [AC-65.4](ACCEPTANCE_CRITERIA.md#ac-654), SPECGEN004_565 | audit/spec-verdict/reviewer share one finding vocabulary |

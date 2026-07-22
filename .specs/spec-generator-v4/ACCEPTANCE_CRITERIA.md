@@ -968,3 +968,28 @@ WHEN publication is proposed through one release pull request, its release tag, 
 THEN the pull request, tag, and GitHub release SHALL identify the same candidate commit, and README, TASKS, CHANGELOG, and release notes SHALL record the responsible owner, dependency-absent evidence, tracked-file inventory, monitoring signal, rollback action, and post-release follow-up before publication can be claimed
 AND any post-release regression, non-pass, `not_recorded`, never-run, missing, or failed all-unit AND-gate evidence SHALL block the candidate, roll back to the previous tag before retry, trigger monitoring as applicable, and keep the publication result `NOT_READY`.
 
+
+## AC-65.1
+
+**Требование:** [FR-65](FR.md#fr-65)
+
+WHEN an acceptance claim exposes a public API, catalog, policy, DTO field/value, version, UI input schema, or internal detail THEN the coverage analyzer SHALL emit AC-linked required lanes for DTO/config/source-of-truth implementation mapping, producer/consumer compatibility or an architecture decision, input-schema or no-schema UX decision, allowlist/redaction, a regression contract test, and live response-shape evidence as applicable.
+
+## AC-65.2
+
+**Требование:** [FR-65](FR.md#fr-65)
+
+WHEN acceptance includes authenticated or paid admission, balance, reservation, dispatch, settlement, or result delivery THEN the generated plan SHALL map that AC to unauthenticated `401`, insufficient-balance `402`, funded success, settlement/idempotency, and result/artifact readback verification; IF production execution is costly or unsafe THEN a controlled smoke task SHALL name test accounts and spend guardrails.
+
+## AC-65.3
+
+**Требование:** [FR-65](FR.md#fr-65)
+
+WHEN no implementation surface can be inferred for an externally observable acceptance claim THEN the plan SHALL contain an AC-linked `Status: BLOCKED` investigation task and the audit SHALL remain ERROR until implementation, test, and semantic evidence lanes are concrete; silently omitting the claim SHALL never pass.
+
+## AC-65.4
+
+**Требование:** [FR-65](FR.md#fr-65)
+
+WHEN `audit-spec`, `spec-verdict`, or the Phase-3 reviewer inspects a high-risk spec THEN a missing AC-to-implementation/test/deploy-evidence mapping SHALL produce blocking `ACCEPTANCE_DELIVERY_COVERAGE`; AND the synthetic paid-SPA corpus SHALL distinguish root `/api` from prefixed `/go/api`, HTML infrastructure `404` from JSON auth/billing boundaries, and require registry publication, slug/settlement mapping, funded execution, and semantic status/content-type/body readback rather than accepting endpoint existence.
+

@@ -2170,3 +2170,28 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [ ] Docker-only real installed-artifact verification proves happy, negative, and invariant paths; reconciles clean candidate and #45 pre/post keep/remove/generated/temp/smoke inventory; records `/run-tests` evidence, README/TASKS/CHANGELOG, one PR, tag/GitHub release, rollback/delete, monitoring owner/signal/action, and post-release verification. Mock-only and dependency-absent verdict assertions are non-release evidence.
 
   **v1.5.0 evidence baseline:** Smart verdict has 0 structural errors, 30 warnings, `GRAPH_GREEN` traceability with 0 gaps, and `OVERALL: NOT_READY`. The current 521-source-scenario inventory is 0 passed, 507 stale, and 14 not recorded; the separate historical canonical full run is 506 passed plus 15 `not_run` (521). Forty-five legacy `DONE` tasks are execution-unverified. Full run `1784225474521` passed `SPECGEN004_529`, `SPECGEN004_534`, and `SPECGEN004_539`–`SPECGEN004_543`; this is task-specific support only, not proof of future FR-62–64 work. FR-64 remains an all-unit AND gate: every in-scope unit requires real evidence, including planned `SPECGEN004_553`–`SPECGEN004_561`, before release readiness.
+
+## Phase 38 — Acceptance-to-delivery coverage hard-gate (FR-65, TDD ordered)
+
+- [x] P38-1: RED paid-SPA acceptance coverage corpus — id: p38-fr65-red-bdd — Status: DONE | Est: 120m
+  _Requirements: [FR-65](FR.md#fr-65)_
+  _Acceptance: AC-65.1, AC-65.2, AC-65.3, AC-65.4_
+  **Done When:**
+  - [x] `SPECGEN004_565` drives the real analyzer and audit over shallow, blocked-investigation, and complete synthetic paid-SPA plans
+  - [x] the shallow plan fails for DTO/source-of-truth, contract regression, version/input/redaction, 401/402/funded, settlement/idempotency, artifact readback, and semantic status/content-type/body lanes
+
+- [x] P38-2: Implement deterministic acceptance coverage analyzer and audit gate — id: p38-fr65-coverage-engine — Status: DONE | Est: 240m
+  _depends: p38-fr65-red-bdd_
+  _Requirements: [FR-65](FR.md#fr-65)_
+  _Acceptance: AC-65.1, AC-65.2, AC-65.3, AC-65.4_
+  **Done When:**
+  - [x] a pure text-driven classifier emits AC-keyed public DTO/config/source-of-truth, producer/consumer or architecture-decision, input-schema/UX fallback, allowlist/redaction, regression-test, live status/content-type/body, 401, 402, funded-success, settlement/idempotency, controlled-spend, and result/artifact readback requirements
+  - [x] `audit-spec` and `spec-verdict` hard-fail `ACCEPTANCE_DELIVERY_COVERAGE` for missing lanes or unresolved `Status: BLOCKED` investigation tasks and pass the complete corpus
+
+- [x] P38-3: Wire generator and reviewer to the shared coverage vocabulary — id: p38-fr65-workflow-review — Status: DONE | Est: 120m
+  _depends: p38-fr65-coverage-engine_
+  _Requirements: [FR-65](FR.md#fr-65)_
+  _Acceptance: AC-65.1, AC-65.2, AC-65.3, AC-65.4_
+  **Done When:**
+  - [x] `create-spec` Finalization and `task-board-forms` consume the analyzer plan and emit AC-linked implementation/test/deploy-evidence tasks or a blocking investigation
+  - [x] `spec-review` reports deterministic acceptance-delivery findings as P0, and Docker BDD proves root `/api` vs `/go/api`, HTML 404 vs JSON auth/billing, registry/slug/settlement mapping, and semantic readback cannot be reduced to endpoint existence
