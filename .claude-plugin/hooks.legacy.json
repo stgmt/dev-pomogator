@@ -138,6 +138,16 @@
         "hooks": [
           {
             "type": "command",
+            "command": "sh \"${CLAUDE_PLUGIN_ROOT:-${CLAUDE_PROJECT_DIR:-.}}/tools/_shared/hook-runtime.sh\" -e \"require(require('path').join(process.env.CLAUDE_PLUGIN_ROOT || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/anchor-integrity/anchor_gate_stop.ts\" --capture-baseline",
+            "timeout": 30
+          }
+        ]
+      },
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
             "command": "sh \"${CLAUDE_PLUGIN_ROOT:-${CLAUDE_PROJECT_DIR:-.}}/tools/_shared/hook-runtime.sh\" -e \"require(require('path').join(process.env.CLAUDE_PLUGIN_ROOT || '.', 'tools', 'claude-subscription-proxy', 'ensure-up.cjs'))\"",
             "timeout": 30
           }

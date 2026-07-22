@@ -99,76 +99,85 @@
       "matcher": ""
     },
     "SessionStart/0/0": {
+      "target": "tools/anchor-integrity/anchor_gate_stop.ts",
+      "args": [
+        "--capture-baseline"
+      ],
+      "event": "SessionStart",
+      "timeout": 30,
+      "matcher": ""
+    },
+    "SessionStart/1/0": {
       "target": "tools/claude-subscription-proxy/ensure-up.cjs",
       "args": [],
       "event": "SessionStart",
       "timeout": 30,
       "matcher": ""
     },
-    "SessionStart/1/0": {
+    "SessionStart/2/0": {
       "target": "tools/bun-oom-guard/patch_bun_runner.ts",
       "args": [],
       "event": "SessionStart",
       "timeout": 120,
       "matcher": ""
     },
-    "SessionStart/2/0": {
+    "SessionStart/3/0": {
       "target": "tools/marksman-installer/ensure-marksman.ts",
       "args": [],
       "event": "SessionStart",
       "timeout": 10,
       "matcher": ""
     },
-    "SessionStart/3/0": {
+    "SessionStart/4/0": {
       "target": "tools/forbid-root-artifacts/install-hook.ts",
       "args": [],
       "event": "SessionStart",
       "timeout": 60,
       "matcher": ""
     },
-    "SessionStart/4/0": {
+    "SessionStart/5/0": {
       "target": "tools/claude-mem-health/health-check.ts",
       "args": [],
       "event": "SessionStart",
       "timeout": 120,
       "matcher": ""
     },
-    "SessionStart/5/0": {
+    "SessionStart/6/0": {
       "target": "tools/claude-mem-bootstrap/install-claude-mem.ts",
       "args": [],
       "event": "SessionStart",
       "timeout": 30,
       "matcher": ""
     },
-    "SessionStart/6/0": {
+    "SessionStart/7/0": {
       "target": "tools/context-mode-setup/setup.ts",
       "args": [],
       "event": "SessionStart",
       "timeout": 30,
       "matcher": ""
     },
-    "SessionStart/7/0": {
+    "SessionStart/8/0": {
       "target": "tools/mcp-setup/mcp-bootstrap.ts",
       "args": [],
       "event": "SessionStart",
       "timeout": 30,
       "matcher": ""
     },
-    "SessionStart/8/0": {
+    "SessionStart/9/0": {
       "target": "tools/test-statusline/statusline_session_start.ts",
       "args": [],
       "event": "SessionStart",
       "timeout": 120,
       "matcher": ""
     },
-    "SessionStart/9/0": {
+    "SessionStart/10/0": {
       "target": "tools/native-statusline/install_native_statusline.ts",
       "args": [],
       "event": "SessionStart",
       "timeout": 120,
       "matcher": ""
     },
-    "SessionStart/10/0": {
+    "SessionStart/11/0": {
       "target": ".claude/skills/pomogator-doctor/scripts/engine/doctor.bundle.mjs",
       "args": [
         "--hook"
@@ -177,21 +186,21 @@
       "timeout": 10,
       "matcher": ""
     },
-    "SessionStart/11/0": {
+    "SessionStart/12/0": {
       "target": "tools/skill-listing-budget/apply_skill_budget.ts",
       "args": [],
       "event": "SessionStart",
       "timeout": 30,
       "matcher": ""
     },
-    "SessionStart/12/0": {
+    "SessionStart/13/0": {
       "target": "tools/spec-backlog/session-summary-hook.ts",
       "args": [],
       "event": "SessionStart",
       "timeout": 10,
       "matcher": ""
     },
-    "SessionStart/13/0": {
+    "SessionStart/14/0": {
       "target": "tools/subagent-watchdog/subagent_watchdog.ts",
       "args": [
         "--event",
@@ -201,7 +210,7 @@
       "timeout": 15,
       "matcher": ""
     },
-    "SessionStart/14/0": {
+    "SessionStart/15/0": {
       "target": "tools/session-pilot/autostart_hook.ts",
       "args": [],
       "event": "SessionStart",

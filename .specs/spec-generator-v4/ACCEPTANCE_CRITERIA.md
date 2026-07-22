@@ -456,7 +456,7 @@ WHEN `marksmanSlug(text)` is computed for any id-shape (`FR-7`, `## FR-7: Title`
 
 **Требование:** [FR-34b](FR.md#fr-34)
 
-WHEN a Write/Edit to `.specs/**/*.md` orphans ≥1 inbound anchor THEN the PostToolUse hook SHALL inject a `<system-reminder>` within the throttle window naming the broken links; AND the Stop-gate SHALL block declaring the work "done" until the anchors resolve OR `[skip-anchor-fix: <reason ≥8 chars>]` is present (logged to `.claude/logs/`).
+WHEN two sessions share one worktree and each edits a different `.specs/**/*.md` file THEN each PostToolUse hook SHALL journal only its own touched file; AND the Stop-gate SHALL compare staged and unstaged fingerprints against that session's SessionStart baseline without mutating the Git index; AND it SHALL block only the current session's unresolved anchors while excluding pre-existing and other-session dirty specs; AND absent reliable baseline/touch evidence it SHALL report `provenance unknown` and fail open; AND `[skip-anchor-fix: <reason ≥8 chars>]` remains an audited escape logged to `.claude/logs/`.
 
 ## AC-34.4
 
