@@ -33,6 +33,7 @@ import { randomUUID } from 'node:crypto';
 import { marksmanSlug } from '../anchor-integrity/marksman-slug.mjs';
 import {
   validateSpecChange,
+  validateSpecPatch,
   writeDocAtomic,
   validateTarget,
   resolveSpecDoc,
@@ -817,7 +818,7 @@ function lineDiff(current: string, next: string): PatchDiff {
  * (form + anchors + conformance) `apply_spec_change` runs; `next` holds the full resulting
  * content (kept for the atomic write), while `diff` / `sha` / tokens describe it for the preview.
  */
-function preparePatchEdit(repoRoot: string, edit: PatchEdit): PatchEditPreview {
+function preparePatchEdit(repoRoot: string, edit: PatchEdit, deferValidation = false): PatchEditPreview {
   const slug = normSlug(edit.spec);
   const doc = normDoc(edit.doc);
   const base: PatchEditPreview = {
@@ -881,7 +882,9 @@ function preparePatchEdit(repoRoot: string, edit: PatchEdit): PatchEditPreview {
   }
 
   // Validate the resulting content through the SAME door apply_spec_change uses — no second validator.
-  const validation = validateSpecChange(repoRoot, slug, doc, { content: next });
+  const validation = deferValidation
+    ? { ok: true, findings: [] as MutationFinding[] }
+    : validateSpecChange(repoRoot, slug, doc, { content: next });
 
   // Re-locate the target anchor in the RESULTING doc for a fresh span / section_sha / tokens.
   const nextLines = splitLogical(next);
@@ -921,15 +924,41 @@ export interface PatchPreview {
  */
 export function preparePatch(repoRoot: string, edits: PatchEdit[]): PatchPreview {
   const prepared: PatchEditPreview[] = [];
-  const findings: MutationFinding[] = [];
-  let ok = true;
+  const seen = new Set<string>();
   for (const edit of edits) {
-    const p = preparePatchEdit(repoRoot, edit);
+    const target = `${normSlug(edit.spec)}/${normDoc(edit.doc)}`;
+    if (seen.has(target)) {
+      prepared.push({
+        spec: normSlug(edit.spec), doc: normDoc(edit.doc), ok: false, eol_style: 'lf',
+        heading_anchor: null, start_line: null, end_line: null, section_sha: null, sha: null,
+        diff: { added: [], removed: [] }, findings: [{ layer: 'change', message: `duplicate transaction target: ${target}` }],
+        error: 'BAD_EDIT',
+      });
+      continue;
+    }
+    seen.add(target);
+    const p = preparePatchEdit(repoRoot, edit, true);
     prepared.push(p);
-    findings.push(...p.findings);
-    if (!p.ok) ok = false;
   }
-  return { ok, edits: prepared, findings };
+
+  const batchInputs = prepared
+    .filter((preview) => preview.next !== undefined && preview.error === undefined)
+    .map((preview) => ({
+      slug: preview.spec,
+      doc: preview.doc,
+      current: readDoc(repoRoot, preview.spec, preview.doc).current,
+      next: preview.next as string,
+    }));
+  const batch = batchInputs.length > 0 ? validateSpecPatch(repoRoot, batchInputs) : { findings: [], byDocument: new Map<string, MutationFinding[]>() };
+  for (const preview of prepared) {
+    if (preview.error !== undefined) continue;
+    const docFindings = batch.byDocument.get(`${preview.spec}/${preview.doc}`) ?? [];
+    preview.findings = docFindings;
+    preview.ok = docFindings.length === 0;
+    preview.error = preview.ok ? undefined : 'VALIDATION_FAILED';
+  }
+  const findings = prepared.flatMap((preview) => preview.findings);
+  return { ok: prepared.length === edits.length && prepared.every((preview) => preview.ok), edits: prepared, findings };
 }
 
 /** Outcome of an all-or-nothing multi-document write. */

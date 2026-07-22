@@ -49396,6 +49396,112 @@ function conformanceFindings(repoRoot, slug, doc, next) {
     fs17.rmSync(tmpRoot, { recursive: true, force: true });
   }
 }
+function validateSpecPatch(repoRoot, inputs) {
+  const byDocument = /* @__PURE__ */ new Map();
+  const keyOf = (slug, doc) => `${slug}/${doc.replace(/\\/g, "/")}`;
+  const add = (key, finding) => {
+    const bucket = byDocument.get(key) ?? [];
+    bucket.push(finding);
+    byDocument.set(key, bucket);
+  };
+  for (const input of inputs) {
+    const key = keyOf(input.slug, input.doc);
+    for (const finding of formDeltaFindings(input.doc, input.current, input.next)) add(key, finding);
+    if (input.doc.toLowerCase().endsWith(".feature")) {
+      for (const finding of featureStrengthFindings(input.current, input.next)) {
+        add(key, { layer: "strength", line: finding.line, message: finding.message });
+      }
+    }
+  }
+  const grouped = /* @__PURE__ */ new Map();
+  for (const input of inputs) grouped.set(input.slug, [...grouped.get(input.slug) ?? [], input]);
+  for (const [slug, changes] of grouped) {
+    const tmpRoot = fs17.mkdtempSync(path13.join(os.tmpdir(), "spec-patch-"));
+    try {
+      const srcDir = path13.join(repoRoot, ".specs", slug);
+      const dstDir = path13.join(tmpRoot, ".specs", slug);
+      fs17.cpSync(srcDir, dstDir, { recursive: true });
+      const beforeAnchors = checkLinks(specMdFiles(tmpRoot, slug));
+      const beforeGraph = buildGraph({
+        repoRoot: tmpRoot,
+        ndjsonPath: path13.join(repoRoot, ".dev-pomogator", ".last-test-run.ndjson"),
+        scenarioOverlayPath: path13.join(tmpRoot, ".dev-pomogator", ".scenario-results.ndjson")
+      });
+      for (const change of changes) {
+        const abs = path13.join(dstDir, change.doc);
+        fs17.mkdirSync(path13.dirname(abs), { recursive: true });
+        fs17.writeFileSync(abs, change.next);
+      }
+      const editedKeys = new Set(changes.map((change) => keyOf(slug, change.doc)));
+      const fallbackKey = keyOf(slug, changes[0].doc);
+      const locationKey2 = (file2) => {
+        if (!file2) return fallbackKey;
+        const normalized = file2.replace(/\\/g, "/");
+        const marker = `.specs/${slug}/`;
+        const at = normalized.indexOf(marker);
+        const candidate = at >= 0 ? keyOf(slug, normalized.slice(at + marker.length)) : fallbackKey;
+        return editedKeys.has(candidate) ? candidate : fallbackKey;
+      };
+      const remainingAnchors = /* @__PURE__ */ new Map();
+      for (const broken of beforeAnchors) {
+        const key = anchorKey(broken);
+        remainingAnchors.set(key, (remainingAnchors.get(key) ?? 0) + 1);
+      }
+      for (const broken of checkLinks(specMdFiles(tmpRoot, slug))) {
+        const anchor = anchorKey(broken);
+        const left = remainingAnchors.get(anchor) ?? 0;
+        if (left > 0) {
+          remainingAnchors.set(anchor, left - 1);
+          continue;
+        }
+        add(locationKey2(broken.file), {
+          layer: "anchor",
+          line: broken.line,
+          message: `broken anchor #${broken.brokenAnchor} \u2192 ${broken.targetFile} (${broken.file})`
+        });
+      }
+      const afterGraph = buildGraph({
+        repoRoot: tmpRoot,
+        ndjsonPath: path13.join(repoRoot, ".dev-pomogator", ".last-test-run.ndjson"),
+        scenarioOverlayPath: path13.join(tmpRoot, ".dev-pomogator", ".scenario-results.ndjson")
+      });
+      const before = checkConformance(beforeGraph);
+      const after = checkConformance(afterGraph);
+      const conformance = [
+        ...deltaByKey(
+          before.filter((finding) => finding.severity === "error"),
+          after.filter((finding) => finding.severity === "error"),
+          conformanceKey
+        ),
+        ...deltaWarningFindings(before, after)
+      ];
+      for (const finding of conformance) {
+        add(locationKey2(finding.location.file), {
+          layer: "conformance",
+          line: finding.location.line,
+          message: `${finding.code}: ${finding.message}`
+        });
+      }
+      if (changes.some((change) => path13.basename(change.doc).toLowerCase() === "tasks.md")) {
+        const newTruth = deltaByKey(
+          taskTruthFindings(beforeGraph, slug),
+          taskTruthFindings(afterGraph, slug),
+          (finding) => `${finding.code}|${finding.taskId}`
+        );
+        const tasks = changes.find((change) => path13.basename(change.doc).toLowerCase() === "tasks.md");
+        for (const finding of newTruth) add(keyOf(slug, tasks.doc), finding);
+      }
+    } catch (error51) {
+      add(keyOf(slug, changes[0].doc), {
+        layer: "conformance",
+        message: `patch validation failed: ${error51 instanceof Error ? error51.message : error51}`
+      });
+    } finally {
+      fs17.rmSync(tmpRoot, { recursive: true, force: true });
+    }
+  }
+  return { findings: [...byDocument.values()].flat(), byDocument };
+}
 function validateSpecChange(repoRoot, slug, doc, change) {
   const targetBad = validateTarget(slug, doc);
   if (targetBad) return { ok: false, findings: [targetBad] };
@@ -49952,7 +50058,7 @@ function lineDiff(current, next) {
   }
   return { added, removed };
 }
-function preparePatchEdit(repoRoot, edit) {
+function preparePatchEdit(repoRoot, edit, deferValidation = false) {
   const slug = normSlug(edit.spec);
   const doc = normDoc(edit.doc);
   const base = {
@@ -50018,7 +50124,7 @@ function preparePatchEdit(repoRoot, edit) {
     const cas = casCheck(repoRoot, slug, doc, edit.expected_sha);
     if (!cas.ok) return { ...base, eol_style: eol, heading_anchor: anchor, start_line: span.startLine, end_line: span.endLine, error: "CAS_MISMATCH" };
   }
-  const validation = validateSpecChange(repoRoot, slug, doc, { content: next });
+  const validation = deferValidation ? { ok: true, findings: [] } : validateSpecChange(repoRoot, slug, doc, { content: next });
   const nextLines = splitLogical(next);
   const resultLocator = sectionTargeted && anchor ? locateSection(nextLines, anchor) : { found: true, headingLevel: null, headingText: null, headingAnchor: anchor, startLine: 1, endLine: nextLines.length };
   const tokens = sectionTokens(resultLocator.found ? resultLocator : { found: false, headingLevel: null, headingText: null, headingAnchor: anchor, startLine: null, endLine: null });
@@ -50043,15 +50149,46 @@ function preparePatchEdit(repoRoot, edit) {
 }
 function preparePatch(repoRoot, edits) {
   const prepared = [];
-  const findings = [];
-  let ok = true;
+  const seen = /* @__PURE__ */ new Set();
   for (const edit of edits) {
-    const p = preparePatchEdit(repoRoot, edit);
+    const target = `${normSlug(edit.spec)}/${normDoc(edit.doc)}`;
+    if (seen.has(target)) {
+      prepared.push({
+        spec: normSlug(edit.spec),
+        doc: normDoc(edit.doc),
+        ok: false,
+        eol_style: "lf",
+        heading_anchor: null,
+        start_line: null,
+        end_line: null,
+        section_sha: null,
+        sha: null,
+        diff: { added: [], removed: [] },
+        findings: [{ layer: "change", message: `duplicate transaction target: ${target}` }],
+        error: "BAD_EDIT"
+      });
+      continue;
+    }
+    seen.add(target);
+    const p = preparePatchEdit(repoRoot, edit, true);
     prepared.push(p);
-    findings.push(...p.findings);
-    if (!p.ok) ok = false;
   }
-  return { ok, edits: prepared, findings };
+  const batchInputs = prepared.filter((preview) => preview.next !== void 0 && preview.error === void 0).map((preview) => ({
+    slug: preview.spec,
+    doc: preview.doc,
+    current: readDoc(repoRoot, preview.spec, preview.doc).current,
+    next: preview.next
+  }));
+  const batch = batchInputs.length > 0 ? validateSpecPatch(repoRoot, batchInputs) : { findings: [], byDocument: /* @__PURE__ */ new Map() };
+  for (const preview of prepared) {
+    if (preview.error !== void 0) continue;
+    const docFindings = batch.byDocument.get(`${preview.spec}/${preview.doc}`) ?? [];
+    preview.findings = docFindings;
+    preview.ok = docFindings.length === 0;
+    preview.error = preview.ok ? void 0 : "VALIDATION_FAILED";
+  }
+  const findings = prepared.flatMap((preview) => preview.findings);
+  return { ok: prepared.length === edits.length && prepared.every((preview) => preview.ok), edits: prepared, findings };
 }
 function applySpecTransactionCore(repoRoot, edits) {
   const preview = preparePatch(repoRoot, edits);

@@ -43,8 +43,24 @@ const DOCS: Record<string, string> = {
 
 /** The clean multi-document patch: one section edit per doc, all validation-clean. */
 const CLEAN_EDITS = [
-  { spec: SLUG, doc: 'FR.md', section: { kind: 'append_to_section', heading: 'FR-1: Demo requirement', text: '- transaction touched FR-1' } },
-  { spec: SLUG, doc: 'ACCEPTANCE_CRITERIA.md', section: { kind: 'append_to_section', heading: 'AC-1.1: Demo acceptance', text: '- transaction touched AC-1.1' } },
+  {
+    spec: SLUG,
+    doc: 'FR.md',
+    section: {
+      kind: 'append_to_section',
+      heading: 'FR-1: Demo requirement',
+      text: '- transaction touched FR-1\n\n### Transaction FR proof\n\n[Mutual AC target](ACCEPTANCE_CRITERIA.md#transaction-ac-proof)',
+    },
+  },
+  {
+    spec: SLUG,
+    doc: 'ACCEPTANCE_CRITERIA.md',
+    section: {
+      kind: 'append_to_section',
+      heading: 'AC-1.1: Demo acceptance',
+      text: '- transaction touched AC-1.1\n\n### Transaction AC proof\n\n[Mutual FR target](FR.md#transaction-fr-proof)',
+    },
+  },
   { spec: SLUG, doc: 'TASKS.md', section: { kind: 'insert_at_eof', text: '- transaction touched TASKS' } },
   { spec: SLUG, doc: 'fr60-txn.feature', section: { kind: 'insert_at_eof', text: '# touched by transaction' } },
   { spec: SLUG, doc: 'FILE_CHANGES.md', section: { kind: 'insert_at_eof', text: '- transaction touched FILE_CHANGES' } },
@@ -191,6 +207,8 @@ Then(/^applying the proposal writes all documents atomically or leaves every doc
     assert.notEqual(this.successBytes![name], this.origBytes![name], `${name} was written by the clean transaction`);
   }
   assert.ok(this.successBytes!['FR.md'].includes('- transaction touched FR-1'), 'the FR.md edit landed');
+  assert.ok(this.successBytes!['FR.md'].includes('ACCEPTANCE_CRITERIA.md#transaction-ac-proof'), 'the FR-to-AC staged link landed');
+  assert.ok(this.successBytes!['ACCEPTANCE_CRITERIA.md'].includes('FR.md#transaction-fr-proof'), 'the AC-to-FR staged link landed');
   assert.ok(this.successBytes!['fr60-txn.feature'].includes('# touched by transaction'), 'the .feature edit landed');
   // …OR NONE — the patch with one invalid edit wrote NOTHING (every doc byte-identical).
   const r = this.rollbackPayload!;
