@@ -21,7 +21,9 @@ import {
   McpOnlyResult,
   SetupDecision,
   applyMcpOnlyContextModeConfig,
+  buildContextModeInstallInvocation,
   getContextModeSetupDecision,
+  runContextModeSessionStart,
   runContextModeSetupHook,
 } from '../../tools/context-mode-setup/setup.ts';
 import {
@@ -45,6 +47,8 @@ interface ContextModeWorld extends V4World {
   contextModeHome: string;
   pluginRoot: string;
   setupDecision?: SetupDecision;
+  sessionStartResult?: ReturnType<typeof runContextModeSessionStart>;
+  installCapturePath?: string;
   setupHookRuns?: Array<{ exitCode: 0; decision: SetupDecision }>;
   mcpOnlyResult?: McpOnlyResult;
   settingsBefore?: Record<string, unknown>;
@@ -135,6 +139,37 @@ Then(/^the setup output includes exact plugin install instructions$/, function (
 Then(/^no interactive plugin command is launched from shell$/, function (this: ContextModeWorld) {
   assert.equal(this.setupDecision?.launchedInteractiveCommand, false, 'setup hook must not shell out to interactive /plugin commands');
   assert.equal(this.setupDecision?.exitCode, 0, 'setup decision must be fail-open for SessionStart');
+});
+
+Then(/^SessionStart fires the non-interactive context-mode installer$/, function (this: ContextModeWorld) {
+  const launcher = path.join(this.tempDir, 'capture-context-mode-install.mjs');
+  this.installCapturePath = path.join(this.tempDir, 'context-mode-install.jsonl');
+  fs.writeFileSync(
+    launcher,
+    [
+      "import fs from 'node:fs';",
+      "fs.appendFileSync(process.env.CONTEXT_MODE_INSTALL_CAPTURE, JSON.stringify(process.argv.slice(2)) + '\\n');",
+    ].join('\n'),
+  );
+
+  this.sessionStartResult = runContextModeSessionStart({
+    homeRoot: this.contextModeHome,
+    nowMs: Date.parse('2026-07-22T00:00:00.000Z'),
+    env: {
+      ...process.env,
+      DEV_POMOGATOR_CONTEXT_MODE_INSTALL_LAUNCHER: launcher,
+      CONTEXT_MODE_INSTALL_CAPTURE: this.installCapturePath,
+    },
+  });
+
+  assert.equal(this.sessionStartResult.decision.status, 'INSTALL_MISSING');
+  assert.equal(this.sessionStartResult.decision.launchedInteractiveCommand, false);
+  assert.equal(this.sessionStartResult.decision.launchedInstallerCommand, true);
+  assert.match(this.sessionStartResult.output.additionalContext ?? '', /started the context-mode installer in the background/);
+
+  const captured = fs.readFileSync(this.installCapturePath, 'utf-8').trim().split('\n').map((line) => JSON.parse(line) as string[]);
+  const expected = buildContextModeInstallInvocation(process.platform);
+  assert.deepEqual(captured[0], [expected.cmd, ...expected.args], 'installer must use the non-interactive Claude plugin CLI flow');
 });
 
 Then(/^the shipped SessionStart runtime registers the context-mode setup hook$/, function () {
@@ -266,6 +301,54 @@ Then(/^the doctor status is "([^"]+)"$/, function (this: ContextModeWorld, statu
 Then(/^pomogator-doctor includes the context-mode health check$/, function () {
   assert.ok(allChecks.some((check) => check.id === 'C-CMODE'), 'doctor allChecks must include C-CMODE');
   assert.match(fs.readFileSync(DOCTOR_BUNDLE_PATH, 'utf-8'), /C-CMODE/, 'doctor.bundle.mjs must include the context-mode check');
+});
+
+Then(/^pomogator-doctor can launch the context-mode repair installer$/, async function (this: ContextModeWorld) {
+  const check = allChecks.find((candidate) => candidate.id === 'C-CMODE');
+  assert.ok(check, 'C-CMODE check must be registered');
+
+  const launcher = path.join(this.tempDir, 'capture-context-mode-doctor-install.mjs');
+  this.installCapturePath = path.join(this.tempDir, 'context-mode-doctor-install.jsonl');
+  fs.writeFileSync(
+    launcher,
+    [
+      "import fs from 'node:fs';",
+      "fs.appendFileSync(process.env.CONTEXT_MODE_INSTALL_CAPTURE, JSON.stringify(process.argv.slice(2)) + '\\n');",
+    ].join('\n'),
+  );
+
+  const previousLauncher = process.env.DEV_POMOGATOR_CONTEXT_MODE_INSTALL_LAUNCHER;
+  const previousCapture = process.env.CONTEXT_MODE_INSTALL_CAPTURE;
+  process.env.DEV_POMOGATOR_CONTEXT_MODE_INSTALL_LAUNCHER = launcher;
+  process.env.CONTEXT_MODE_INSTALL_CAPTURE = this.installCapturePath;
+  try {
+    const controller = new AbortController();
+    const result = await check.run({
+      config: null,
+      configError: null,
+      referencedMcpServers: new Set(),
+      installedExtensions: [],
+      projectRoot: REPO_ROOT,
+      homeDir: this.contextModeHome,
+      signal: controller.signal,
+      packageVersion: null,
+      fix: true,
+    });
+    assert.ok(result && !Array.isArray(result), 'C-CMODE check must return one result');
+    assert.equal(result.reinstallable, true, 'missing context-mode must be marked reinstallable/repairable');
+    assert.equal(result.details?.fixAction, 'context-mode-install');
+    assert.equal(result.details?.fixAttempted, true);
+    assert.equal(result.details?.fixLaunched, true);
+  } finally {
+    if (previousLauncher === undefined) delete process.env.DEV_POMOGATOR_CONTEXT_MODE_INSTALL_LAUNCHER;
+    else process.env.DEV_POMOGATOR_CONTEXT_MODE_INSTALL_LAUNCHER = previousLauncher;
+    if (previousCapture === undefined) delete process.env.CONTEXT_MODE_INSTALL_CAPTURE;
+    else process.env.CONTEXT_MODE_INSTALL_CAPTURE = previousCapture;
+  }
+
+  const captured = fs.readFileSync(this.installCapturePath, 'utf-8').trim().split('\n').map((line) => JSON.parse(line) as string[]);
+  const expected = buildContextModeInstallInvocation(process.platform);
+  assert.deepEqual(captured[0], [expected.cmd, ...expected.args], 'doctor repair must use the same non-interactive installer');
 });
 
 When(/^the registry is healthy but the MCP process snapshot is dead$/, function (this: ContextModeWorld) {

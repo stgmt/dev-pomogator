@@ -1,10 +1,10 @@
 # Functional Requirements (FR)
 
-> context-mode integration for dev-pomogator: SessionStart-safe setup guidance, optional MCP-only auto config, doctor classification, live MCP recovery, safe hook degradation, and Windows/worktree usage guidance. Reference pattern: claude-mem bootstrap/health contracts, adapted to context-mode's plugin install constraints.
+> context-mode integration for dev-pomogator: SessionStart-safe auto-install, optional MCP-only auto config, doctor classification/repair, live MCP recovery, safe hook degradation, and Windows/worktree usage guidance. Reference pattern: claude-mem bootstrap/health contracts, adapted to context-mode's plugin install constraints.
 
 ## FR-1: Setup decision and install guidance @feature1
 
-The SessionStart setup component SHALL return an explicit decision status without launching interactive Claude Code commands from shell. It SHALL report `INSTALL_MISSING` with exact user instructions when context-mode is absent, `PLUGIN_REGISTERED` when `enabledPlugins["context-mode@context-mode"] === true`, `MCP_ONLY_CONFIGURED` when the MCP-only path is active, `SKIP_OPTOUT` when `DEV_POMOGATOR_CONTEXT_MODE=off`, and `SKIP_BACKOFF` when a fresh retry lock exists. It SHALL never claim a successful install from malformed JSON or missing plugin evidence.
+The SessionStart setup component SHALL return an explicit decision status without launching interactive Claude Code slash commands from shell. When context-mode is absent, it SHALL report `INSTALL_MISSING`, start the non-interactive Claude plugin CLI installer in the background, stamp a retry lock, and emit exact fallback user instructions. It SHALL report `PLUGIN_REGISTERED` when `enabledPlugins["context-mode@context-mode"] === true`, `MCP_ONLY_CONFIGURED` when the MCP-only path is active, `SKIP_OPTOUT` when `DEV_POMOGATOR_CONTEXT_MODE=off`, and `SKIP_BACKOFF` when a fresh retry lock exists. It SHALL never claim a successful install from malformed JSON or missing plugin evidence.
 
 **Связанные AC:** [AC-1](ACCEPTANCE_CRITERIA.md#ac-1-fr-1)
 
@@ -22,7 +22,7 @@ Setup and repair hooks SHALL be idempotent, fail-open, and builtins-only in the 
 
 ## FR-4: Doctor classification @feature4
 
-`pomogator-doctor` SHALL include a context-mode check that distinguishes at least `OK`, `INSTALL_MISSING`, `CONFIG_POISONED`, `MCP_ONLY_CONFIGURED`, `MCP_DEAD_IN_SESSION`, `HANDSHAKE_FAILED`, and `HOOK_UNSAFE`. The check SHALL use real-shaped artifacts: `installed_plugins.json`, plugin manifest command, live process evidence, and a JSON-RPC initialize handshake where possible.
+`pomogator-doctor` SHALL include a context-mode check that distinguishes at least `OK`, `INSTALL_MISSING`, `CONFIG_POISONED`, `MCP_ONLY_CONFIGURED`, `MCP_DEAD_IN_SESSION`, `HANDSHAKE_FAILED`, and `HOOK_UNSAFE`. The check SHALL use real-shaped artifacts: `installed_plugins.json`, plugin manifest command, live process evidence, and a JSON-RPC initialize handshake where possible. In fix mode, repairable install states SHALL launch the same non-interactive context-mode installer instead of only printing instructions.
 
 **Связанные AC:** [AC-4](ACCEPTANCE_CRITERIA.md#ac-4-fr-4)
 

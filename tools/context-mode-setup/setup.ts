@@ -1,8 +1,10 @@
+import { spawn, spawnSync } from 'node:child_process';
 import path from 'node:path';
 import os from 'node:os';
 import { pathToFileURL } from 'node:url';
 import {
   CONTEXT_MODE_SERVER_NAME,
+  CONTEXT_MODE_PLUGIN_ID,
   INSTALL_INSTRUCTIONS,
   JsonObject,
   claudeGlobalSettingsPath,
@@ -17,6 +19,17 @@ import {
 } from './state.ts';
 
 const DEFAULT_BACKOFF_WINDOW_MS = 6 * 60 * 60 * 1000;
+const CONTEXT_MODE_MARKETPLACE_SOURCE = 'mksglu/context-mode';
+const CONTEXT_MODE_INSTALL_ENV: Record<string, string> = {
+  CI: '1',
+  NO_COLOR: '1',
+};
+
+export interface InstallInvocation {
+  cmd: string;
+  args: string[];
+  env: Record<string, string>;
+}
 
 export type SetupStatus =
   | 'PLUGIN_REGISTERED'
@@ -34,6 +47,7 @@ export interface SetupDecision {
   lockPath: string;
   exitCode: 0;
   launchedInteractiveCommand: false;
+  launchedInstallerCommand: boolean;
 }
 
 export interface ContextModeHookOutput {
@@ -75,7 +89,72 @@ function decision(status: SetupStatus, home: string, evidence: string[], instruc
     lockPath: contextModeRetryLockPath(home),
     exitCode: 0,
     launchedInteractiveCommand: false,
+    launchedInstallerCommand: false,
   };
+}
+
+export function buildContextModeInstallInvocation(platform: NodeJS.Platform = process.platform): InstallInvocation {
+  if (platform === 'win32') {
+    return {
+      cmd: 'cmd',
+      args: [
+        '/c',
+        'claude',
+        'plugin',
+        'marketplace',
+        'add',
+        CONTEXT_MODE_MARKETPLACE_SOURCE,
+        '&&',
+        'claude',
+        'plugin',
+        'install',
+        CONTEXT_MODE_PLUGIN_ID,
+        '-s',
+        'user',
+      ],
+      env: { ...CONTEXT_MODE_INSTALL_ENV },
+    };
+  }
+
+  return {
+    cmd: 'sh',
+    args: [
+      '-lc',
+      `claude plugin marketplace add ${CONTEXT_MODE_MARKETPLACE_SOURCE} && claude plugin install ${CONTEXT_MODE_PLUGIN_ID} -s user`,
+    ],
+    env: { ...CONTEXT_MODE_INSTALL_ENV },
+  };
+}
+
+export function fireContextModeInstaller(env: NodeJS.ProcessEnv = process.env): boolean {
+  const inv = buildContextModeInstallInvocation();
+  const launcher = env.DEV_POMOGATOR_CONTEXT_MODE_INSTALL_LAUNCHER;
+  const childEnv = {
+    ...process.env,
+    ...env,
+    ...inv.env,
+  };
+
+  try {
+    if (launcher) {
+      const result = spawnSync(process.execPath, [launcher, inv.cmd, ...inv.args], {
+        env: childEnv,
+        stdio: 'ignore',
+      });
+      return result.status === 0;
+    }
+
+    const child = spawn(inv.cmd, inv.args, {
+      detached: true,
+      env: childEnv,
+      stdio: 'ignore',
+      windowsHide: true,
+    });
+    child.unref();
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export function getContextModeSetupDecision(options: {
@@ -135,6 +214,7 @@ export function renderSetupHookOutput(decision: SetupDecision): ContextModeHookO
       continue: true,
       additionalContext: [
         'context-mode is not installed for this Claude/Codex home.',
+        ...(decision.launchedInstallerCommand ? ['dev-pomogator started the context-mode installer in the background.'] : []),
         'Install it with:',
         ...instructions.map((line) => `  ${line}`),
         'Opt out: DEV_POMOGATOR_CONTEXT_MODE=off.',
@@ -186,6 +266,17 @@ export function runContextModeSessionStart(options: {
     }
   } else if (decisionValue.status === 'INSTALL_MISSING') {
     stampRetryLock(decisionValue.home, options.nowMs ?? Date.now());
+    const launchedInstallerCommand = fireContextModeInstaller(env);
+    decisionValue = {
+      ...decisionValue,
+      launchedInstallerCommand,
+      evidence: [
+        ...decisionValue.evidence,
+        launchedInstallerCommand
+          ? 'fired detached context-mode installer'
+          : 'failed to fire detached context-mode installer',
+      ],
+    };
   }
 
   return {

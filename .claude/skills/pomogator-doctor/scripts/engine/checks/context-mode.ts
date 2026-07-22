@@ -4,6 +4,7 @@ import {
   runContextModeDoctor,
   type ContextModeDoctorStatus,
 } from '../../../../../../tools/context-mode-health/check.ts';
+import { fireContextModeInstaller } from '../../../../../../tools/context-mode-setup/setup.ts';
 
 const META = {
   id: 'C-CMODE',
@@ -35,8 +36,18 @@ const MESSAGE_BY_STATUS: Record<ContextModeDoctorStatus, string> = {
   ERROR_FAIL_OPEN: 'context-mode health check failed open',
 };
 
+function isInstallRepairable(status: ContextModeDoctorStatus): boolean {
+  return status === 'INSTALL_MISSING' || status === 'CONFIG_POISONED';
+}
+
 function statusHint(status: ContextModeDoctorStatus, remediation: string[]): string {
   const base = remediation.join(' -> ');
+  if (isInstallRepairable(status)) {
+    const fix = 'Run /pomogator-doctor --fix to start the context-mode installer automatically';
+    return process.platform === 'win32'
+      ? `${base}. ${fix}. Windows note: use pwsh -NoProfile for PowerShell commands; ctx shell snippets run under bash.`
+      : `${base}. ${fix}.`;
+  }
   if (process.platform === 'win32') {
     return `${base}. Windows note: use pwsh -NoProfile for PowerShell commands; ctx shell snippets run under bash.`;
   }
@@ -59,9 +70,16 @@ export const contextModeCheck: CheckDefinition = {
             : { skipped: true },
       hookSafety: process.env.DEV_POMOGATOR_CONTEXT_MODE_HOOK_UNSAFE === '1' ? 'unsafe' : 'unknown',
     });
+    const repairable = isInstallRepairable(report.status);
+    const fixAttempted = ctx.fix && repairable;
+    const fixLaunched = fixAttempted ? fireContextModeInstaller() : false;
 
-    return buildResult(META, SEVERITY_BY_STATUS[report.status], MESSAGE_BY_STATUS[report.status], {
+    return buildResult({
+      ...META,
+      reinstallable: repairable,
+    }, SEVERITY_BY_STATUS[report.status], MESSAGE_BY_STATUS[report.status], {
       hint: statusHint(report.status, report.remediation),
+      reinstallHint: repairable ? '/pomogator-doctor --fix (or /plugin install context-mode@context-mode)' : undefined,
       details: {
         status: report.status,
         registration: report.registration,
@@ -71,6 +89,9 @@ export const contextModeCheck: CheckDefinition = {
         manifestCommand: report.manifestCommand,
         evidence: report.evidence,
         remediation: report.remediation,
+        fixAction: repairable ? 'context-mode-install' : undefined,
+        fixAttempted,
+        fixLaunched,
       },
     });
   },

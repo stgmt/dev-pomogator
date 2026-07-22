@@ -7,7 +7,7 @@
   -> [resolve home + opt-out + lock]
   -> [read plugin/MCP evidence]
   -> { SetupDecision }
-  -> [optional MCP-only config or user instruction]
+  -> [optional MCP-only config or detached CLI installer + fallback instructions]
 
 [/pomogator-doctor]
   -> [registry probe]
@@ -31,7 +31,8 @@
   "home": "C:/Users/example/.claude",
   "evidence": ["installed_plugins.json enabledPlugins true"],
   "instructions": ["/plugin marketplace add mksglu/context-mode", "/plugin install context-mode@context-mode", "/reload-plugins"],
-  "lockPath": "C:/Users/example/.dev-pomogator/.context-mode-bootstrap.lock"
+  "lockPath": "C:/Users/example/.dev-pomogator/.context-mode-bootstrap.lock",
+  "launchedInstallerCommand": true
 }
 ```
 

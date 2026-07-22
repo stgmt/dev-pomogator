@@ -4,7 +4,7 @@
 
 **Требование:** [FR-1](FR.md#fr-1-setup-decision-and-install-guidance)
 
-WHEN the context-mode setup hook observes missing plugin evidence THEN the system SHALL exit 0 and emit exact `/plugin marketplace add mksglu/context-mode`, `/plugin install context-mode@context-mode`, and `/reload-plugins` instructions without launching interactive UI.
+WHEN the context-mode setup hook observes missing plugin evidence THEN the system SHALL exit 0, start the non-interactive Claude plugin CLI installer in the background, and emit exact `/plugin marketplace add mksglu/context-mode`, `/plugin install context-mode@context-mode`, and `/reload-plugins` fallback instructions without launching interactive UI.
 
 ## AC-2 (FR-2) @feature2
 
@@ -22,7 +22,7 @@ WHEN setup or repair encounters malformed JSON, filesystem failure, unavailable 
 
 **Требование:** [FR-4](FR.md#fr-4-doctor-classification)
 
-WHEN doctor checks context-mode state THEN it SHALL classify the result into one of the documented statuses using manifest, plugin command, process, and handshake evidence rather than a generic "broken" message.
+WHEN doctor checks context-mode state THEN it SHALL classify the result into one of the documented statuses using manifest, plugin command, process, and handshake evidence rather than a generic "broken" message. WHEN doctor runs in fix mode for `INSTALL_MISSING` or `CONFIG_POISONED` THEN it SHALL launch the same non-interactive repair installer and report the fix action.
 
 ## AC-5 (FR-5) @feature5
 

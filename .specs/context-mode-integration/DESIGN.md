@@ -33,7 +33,7 @@
 1. Setup hook resolves a single Claude home root and opt-out state.
 2. It reads `installed_plugins.json` and optional MCP-only config evidence.
 3. It returns one explicit status [VERIFIED: tools/context-mode-setup/setup.ts]: `PLUGIN_REGISTERED`, `MCP_ONLY_CONFIGURED`, `INSTALL_MISSING`, `SKIP_OPTOUT`, `SKIP_BACKOFF`, or `ERROR_FAIL_OPEN`.
-4. It exits 0 in every branch. Missing install emits exact user instructions; MCP-only path edits settings only when explicitly selected by policy.
+4. It exits 0 in every branch. Missing install fires the detached Claude plugin CLI installer and emits exact fallback user instructions; MCP-only path edits settings only when explicitly selected by policy.
 5. Doctor performs deeper probes: plugin registry, plugin manifest command, live process evidence, JSON-RPC handshake, and hook safety.
 6. Doctor maps evidence to a root-cause status and prints a least-disruptive repair runbook.
 7. Optional force-ctx hook checks tool availability first, then path class, then returns pass-through or CASE-A redirect.
@@ -44,11 +44,11 @@ See [context-mode-integration_SCHEMA.md](context-mode-integration_SCHEMA.md). St
 
 ## Key Decisions
 
-### Decision: Full install remains user-guided because `/plugin` is interactive
+### Decision: Full install uses Claude plugin CLI, not interactive `/plugin`
 
 **Требование:** [FR-1](FR.md#fr-1-setup-decision-and-install-guidance)
 
-**Rationale:** `/plugin` is an interactive Claude Code command. Treating it as a shell command would create a false-green installer and violate the claude-mem-style fail-open contract.
+**Rationale:** `/plugin` is an interactive Claude Code command, but `claude plugin marketplace add` and `claude plugin install` are scriptable CLI commands. SessionStart therefore fires the CLI installer in the background with a retry lock and keeps slash commands as user-visible fallback.
 
 **Trade-off:** First full plugin install still needs a user action unless MCP-only mode is selected.
 

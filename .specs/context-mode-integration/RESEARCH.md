@@ -2,13 +2,13 @@
 
 ## Problem
 
-`context-mode` is useful but fragile as a global Claude Code integration. The canonical issue #139 records two distinct failure classes: plugin config poisoning and mid-session stdio MCP death. The feature must make dev-pomogator install/repair behavior as safe as the existing claude-mem bootstrap/reaper, while not pretending context-mode has the same automatable installer surface.
+`context-mode` is useful but fragile as a global Claude Code integration. The canonical issue #139 records two distinct failure classes: plugin config poisoning and mid-session stdio MCP death. The feature must make dev-pomogator install/repair behavior as safe as the existing claude-mem bootstrap/reaper while using context-mode's own scriptable Claude plugin CLI surface.
 
 ## Hypotheses
 
 | H# | Statement | Status | Evidence |
 |----|-----------|--------|----------|
-| H1 | context-mode full plugin install cannot be executed non-interactively from a SessionStart shell hook via `/plugin`. | [VERIFIED] | #139 and #84 context-mode consolidation; `/plugin` is Claude Code UI, not shell. |
+| H1 | context-mode full plugin install cannot be executed non-interactively from a SessionStart shell hook via `/plugin`, but the Claude plugin CLI exposes a scriptable equivalent. | [VERIFIED] | #139/#84 context-mode consolidation plus local `claude plugin marketplace add --help` and `claude plugin install --help`. |
 | H2 | The claude-mem reference pattern is the right safety model: fail-open, idempotent, builtins-only, opt-out/backoff, doctor evidence. | [VERIFIED] | `tools/claude-mem-bootstrap/install-claude-mem.ts:15-20`, `tools/claude-mem-health/health-check.ts:24-26`. |
 | H3 | context-mode needs root-cause classification, not symptom restart advice. | [VERIFIED] | #139 distinguishes `CONFIG_POISONED` and `MCP_DEAD_IN_SESSION`; feedback memory requires root-cause-not-symptom. |
 | H4 | Windows/worktree frictions must be encoded in docs/tests. | [VERIFIED] | #91: shell=bash, `ctx_execute_file` root confinement, compound shell prefix gotcha. |
@@ -30,7 +30,7 @@ The user directive "устанавливается как claude-mem" means:
 1. Same safety contract: SessionStart-safe, idempotent, fail-open, builtins-only, observable, opt-out/backoff.
 2. Same operational surface: doctor can detect missing/broken state and give a concrete repair.
 3. Same implementation quality: real-shaped fixtures, no hand-typed fantasy config shapes, and no symptom-only classification.
-4. Different install mechanism: claude-mem can run a non-interactive `npx` installer; context-mode full install requires Claude Code `/plugin`, so the feature must guide first install or provide a documented MCP-only path.
+4. Different install mechanism: claude-mem runs a non-interactive `npx` installer; context-mode uses the non-interactive `claude plugin marketplace add` + `claude plugin install` CLI path, with slash-command instructions as fallback.
 
 ## Project Context & Constraints
 

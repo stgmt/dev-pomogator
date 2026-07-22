@@ -2,7 +2,14 @@
 
 ## Install
 
-dev-pomogator cannot run interactive Claude Code `/plugin` commands from a SessionStart shell hook. When context-mode is missing, it should print the commands for the user:
+When context-mode is missing, dev-pomogator's SessionStart hook starts a detached non-interactive Claude plugin CLI install:
+
+```text
+claude plugin marketplace add mksglu/context-mode
+claude plugin install context-mode@context-mode -s user
+```
+
+The hook is fail-open and guarded by a retry lock, so an offline or broken install attempt does not block the session or retry on every prompt. It also prints the manual fallback commands:
 
 ```text
 /plugin marketplace add mksglu/context-mode

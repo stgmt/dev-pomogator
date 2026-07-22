@@ -12,8 +12,9 @@
 1. User opens Claude Code in a repo with dev-pomogator installed.
 2. SessionStart setup checks the Claude home, opt-out, retry lock, and plugin registry.
 3. No context-mode registration is found.
-4. Hook exits 0 and emits exact install instructions plus a short reason.
-5. No interactive command is spawned from shell.
+4. Hook exits 0 and starts the non-interactive Claude plugin CLI installer in the background.
+5. Hook emits exact manual fallback instructions plus a short reason.
+6. No interactive slash command is spawned from shell.
 
 **Expected Result:** Session continues; user receives a precise one-time install path and no repeated noisy repair loop.
 

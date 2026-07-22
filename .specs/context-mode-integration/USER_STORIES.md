@@ -8,7 +8,7 @@
 
 As a dev-pomogator maintainer, I want SessionStart setup to detect when context-mode is missing and print exact Claude Code plugin instructions, so every session stays usable without pretending `/plugin` can run from a shell hook.
 
-**Why:** context-mode full install is interactive Claude Code UI, unlike claude-mem's non-interactive bootstrap path. The setup contract must be idempotent and fail-open while still telling the user exactly what to do.
+**Why:** context-mode slash-command install is interactive UI, but the Claude plugin CLI is scriptable. The setup contract must be idempotent, fail-open, auto-install through that CLI path, and still tell the user exactly what to do if the background install cannot complete.
 
 **Independent Test:** Scenario `CTXMODE001_01 setup decision distinguishes install states` verifies `INSTALL_MISSING`, installed, opt-out, backoff, and MCP-only decisions without launching interactive UI.
 
@@ -16,7 +16,7 @@ As a dev-pomogator maintainer, I want SessionStart setup to detect when context-
 
 Given a fresh Claude Code home without context-mode registration
 When the SessionStart setup hook runs
-Then it exits 0, records `INSTALL_MISSING`, and prints exact `/plugin marketplace add` and `/plugin install` instructions instead of trying to execute `/plugin` from shell
+Then it exits 0, records `INSTALL_MISSING`, starts `claude plugin marketplace add mksglu/context-mode` plus `claude plugin install context-mode@context-mode -s user` in the background, and prints exact `/plugin marketplace add` and `/plugin install` fallback instructions instead of trying to execute interactive `/plugin` from shell
 
 ---
 

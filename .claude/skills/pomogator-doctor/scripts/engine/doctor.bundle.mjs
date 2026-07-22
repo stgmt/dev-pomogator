@@ -1133,8 +1133,8 @@ __export(postinstall_exports, {
 });
 import { execFileSync, execSync } from "node:child_process";
 import * as fs12 from "node:fs";
-import * as os3 from "node:os";
-import * as path11 from "node:path";
+import * as os4 from "node:os";
+import * as path12 from "node:path";
 import { fileURLToPath as fileURLToPath3 } from "node:url";
 function log(message) {
   console.log(`  ${PREFIX} ${message}`);
@@ -1225,10 +1225,10 @@ ${line}` : line;
 `;
 }
 function bundledLaunchScriptPath() {
-  return path11.join(MODULE_DIR2, "..", "..", "scripts", "launch-claude-tui.ps1");
+  return path12.join(MODULE_DIR2, "..", "..", "scripts", "launch-claude-tui.ps1");
 }
 function bundledCodexLaunchScriptPath() {
-  return path11.join(MODULE_DIR2, "..", "..", "scripts", "launch-Codex-tui.ps1");
+  return path12.join(MODULE_DIR2, "..", "..", "scripts", "launch-Codex-tui.ps1");
 }
 function copyLaunchScript(src, dest) {
   const source = src ?? bundledLaunchScriptPath();
@@ -1246,7 +1246,7 @@ function copyScript(source, target, label) {
     return false;
   }
   try {
-    fs12.mkdirSync(path11.dirname(target), { recursive: true });
+    fs12.mkdirSync(path12.dirname(target), { recursive: true });
     fs12.copyFileSync(source, target);
     log(`${label} launch script copied to ${target}`);
     return true;
@@ -1273,7 +1273,7 @@ function ensureImportLines(mode) {
     const content = fs12.readFileSync(SHELL_NSS, "utf-8");
     const updated = generateShellImports(content, mode);
     if (updated === content) return false;
-    const tempFile = path11.join(process.cwd(), "temp-shell.nss");
+    const tempFile = path12.join(process.cwd(), "temp-shell.nss");
     fs12.writeFileSync(tempFile, updated, "utf-8");
     if (elevatedCopy(tempFile, SHELL_NSS)) {
       log(`Added ${installPlanForMode(mode).nssFiles.join(" and ")} imports to shell.nss`);
@@ -1298,7 +1298,7 @@ function writeNssFile(target, content, label) {
   } catch {
   }
   if (existingContent === content) return false;
-  const tempFile = path11.join(process.cwd(), `temp-${path11.basename(target)}`);
+  const tempFile = path12.join(process.cwd(), `temp-${path12.basename(target)}`);
   fs12.writeFileSync(tempFile, content, "utf-8");
   if (elevatedCopy(tempFile, target)) {
     log(`Created ${label}`);
@@ -1413,7 +1413,7 @@ function uniquePaths(paths) {
   const seen = /* @__PURE__ */ new Set();
   const result2 = [];
   for (const candidate of paths) {
-    const normalized = path11.normalize(candidate);
+    const normalized = path12.normalize(candidate);
     const key = process.platform === "win32" ? normalized.toLowerCase() : normalized;
     if (!seen.has(key)) {
       seen.add(key);
@@ -1425,27 +1425,27 @@ function uniquePaths(paths) {
 function codexExecutableCandidates(env2 = process.env) {
   const candidates = [];
   if (env2.LOCALAPPDATA) {
-    candidates.push(path11.join(env2.LOCALAPPDATA, "Programs", "OpenAI", "Codex", "bin", "codex.exe"));
+    candidates.push(path12.join(env2.LOCALAPPDATA, "Programs", "OpenAI", "Codex", "bin", "codex.exe"));
   }
-  const pathEntries = (env2.PATH ?? "").split(path11.delimiter).filter(Boolean);
+  const pathEntries = (env2.PATH ?? "").split(path12.delimiter).filter(Boolean);
   for (const entry of pathEntries) {
-    candidates.push(path11.join(entry, process.platform === "win32" ? "codex.exe" : "codex"));
+    candidates.push(path12.join(entry, process.platform === "win32" ? "codex.exe" : "codex"));
   }
   return uniquePaths(candidates);
 }
 function codexIconFileCandidates(env2 = process.env) {
   const candidates = [];
   if (env2.LOCALAPPDATA) {
-    candidates.push(path11.join(env2.LOCALAPPDATA, "Programs", "OpenAI", "Codex", "resources", "icon.ico"));
-    candidates.push(path11.join(env2.LOCALAPPDATA, "Programs", "OpenAI", "Codex", "app", "resources", "icon.ico"));
+    candidates.push(path12.join(env2.LOCALAPPDATA, "Programs", "OpenAI", "Codex", "resources", "icon.ico"));
+    candidates.push(path12.join(env2.LOCALAPPDATA, "Programs", "OpenAI", "Codex", "app", "resources", "icon.ico"));
   }
-  const windowsApps = env2.ProgramFiles ? path11.join(env2.ProgramFiles, "WindowsApps") : "";
+  const windowsApps = env2.ProgramFiles ? path12.join(env2.ProgramFiles, "WindowsApps") : "";
   if (windowsApps) {
     try {
       for (const entry of fs12.readdirSync(windowsApps, { withFileTypes: true })) {
         if (entry.isDirectory() && /^OpenAI\.Codex_/i.test(entry.name)) {
-          candidates.push(path11.join(windowsApps, entry.name, "app", "resources", "icon.ico"));
-          candidates.push(path11.join(windowsApps, entry.name, "app", "resources", "codex-tray.ico"));
+          candidates.push(path12.join(windowsApps, entry.name, "app", "resources", "icon.ico"));
+          candidates.push(path12.join(windowsApps, entry.name, "app", "resources", "codex-tray.ico"));
         }
       }
     } catch {
@@ -1457,31 +1457,31 @@ function dynamicCodexIconFileCandidates(env2 = process.env) {
   const candidates = codexIconFileCandidates(env2);
   const appxLocation = codexAppxInstallLocation();
   if (appxLocation) {
-    candidates.push(path11.join(appxLocation, "app", "resources", "icon.ico"));
-    candidates.push(path11.join(appxLocation, "app", "resources", "codex-tray.ico"));
+    candidates.push(path12.join(appxLocation, "app", "resources", "icon.ico"));
+    candidates.push(path12.join(appxLocation, "app", "resources", "codex-tray.ico"));
   }
   return uniquePaths(candidates);
 }
 function dynamicCodexExecutableCandidates(env2 = process.env) {
   const candidates = codexExecutableCandidates(env2);
   if (env2.LOCALAPPDATA) {
-    const localCodexBin = path11.join(env2.LOCALAPPDATA, "OpenAI", "Codex", "bin");
+    const localCodexBin = path12.join(env2.LOCALAPPDATA, "OpenAI", "Codex", "bin");
     try {
       for (const entry of fs12.readdirSync(localCodexBin, { withFileTypes: true })) {
         if (entry.isDirectory()) {
-          candidates.push(path11.join(localCodexBin, entry.name, "codex.exe"));
+          candidates.push(path12.join(localCodexBin, entry.name, "codex.exe"));
         }
       }
     } catch {
     }
   }
-  const windowsApps = env2.ProgramFiles ? path11.join(env2.ProgramFiles, "WindowsApps") : "";
+  const windowsApps = env2.ProgramFiles ? path12.join(env2.ProgramFiles, "WindowsApps") : "";
   if (windowsApps) {
     try {
       for (const entry of fs12.readdirSync(windowsApps, { withFileTypes: true })) {
         if (entry.isDirectory() && /^OpenAI\.Codex_/i.test(entry.name)) {
-          candidates.push(path11.join(windowsApps, entry.name, "app", "Codex.exe"));
-          candidates.push(path11.join(windowsApps, entry.name, "app", "resources", "codex.exe"));
+          candidates.push(path12.join(windowsApps, entry.name, "app", "Codex.exe"));
+          candidates.push(path12.join(windowsApps, entry.name, "app", "resources", "codex.exe"));
         }
       }
     } catch {
@@ -1538,7 +1538,7 @@ function extractAssociatedIcon(exePath, targetPath) {
   }
 }
 function ensureCodexIcon() {
-  const tempFile = path11.join(process.cwd(), "temp-codex-icon.ico");
+  const tempFile = path12.join(process.cwd(), "temp-codex-icon.ico");
   const officialIcon = findInstalledCodexIconFile();
   const officialExe = officialIcon ? null : findInstalledCodexExecutable();
   let source = "generated fallback icon";
@@ -1578,7 +1578,7 @@ function ensureCodexIcon() {
   return true;
 }
 function reloadNilesoft() {
-  const shellExe = path11.join(NILESOFT_DIR, "shell.exe");
+  const shellExe = path12.join(NILESOFT_DIR, "shell.exe");
   try {
     execSync(`"${shellExe}" -restart`, { stdio: "pipe", timeout: 1e4 });
     log("Nilesoft Shell reloaded");
@@ -1604,7 +1604,7 @@ function ensureExplorerRunning() {
   } catch {
   }
 }
-function main6() {
+function main7() {
   const mode = parseInstallMode();
   const plan = installPlanForMode(mode);
   if (!isWindows()) {
@@ -1651,20 +1651,20 @@ var init_postinstall = __esm({
       "--disable-interactivity"
     ];
     NILESOFT_DIR = "C:\\Program Files\\Nilesoft Shell";
-    SHELL_NSS = path11.join(NILESOFT_DIR, "shell.nss");
-    IMPORTS_DIR = path11.join(NILESOFT_DIR, "imports");
-    CLAUDE_NSS = path11.join(IMPORTS_DIR, "claude-code.nss");
-    CODEX_NSS = path11.join(IMPORTS_DIR, "Codex.nss");
-    CODEX_ICON = path11.join(IMPORTS_DIR, "codex-icon.ico");
+    SHELL_NSS = path12.join(NILESOFT_DIR, "shell.nss");
+    IMPORTS_DIR = path12.join(NILESOFT_DIR, "imports");
+    CLAUDE_NSS = path12.join(IMPORTS_DIR, "claude-code.nss");
+    CODEX_NSS = path12.join(IMPORTS_DIR, "Codex.nss");
+    CODEX_ICON = path12.join(IMPORTS_DIR, "codex-icon.ico");
     CLAUDE_IMPORT_LINE = "import 'imports/claude-code.nss'";
     CODEX_IMPORT_LINE = "import 'imports/Codex.nss'";
-    MODULE_DIR2 = path11.dirname(fileURLToPath3(import.meta.url));
-    GLOBAL_SCRIPTS_DIR = path11.join(os3.homedir(), ".dev-pomogator", "scripts");
-    GLOBAL_CLAUDE_LAUNCH_SCRIPT = path11.join(GLOBAL_SCRIPTS_DIR, "launch-claude-tui.ps1");
-    GLOBAL_CODEX_LAUNCH_SCRIPT = path11.join(GLOBAL_SCRIPTS_DIR, "launch-Codex-tui.ps1");
+    MODULE_DIR2 = path12.dirname(fileURLToPath3(import.meta.url));
+    GLOBAL_SCRIPTS_DIR = path12.join(os4.homedir(), ".dev-pomogator", "scripts");
+    GLOBAL_CLAUDE_LAUNCH_SCRIPT = path12.join(GLOBAL_SCRIPTS_DIR, "launch-claude-tui.ps1");
+    GLOBAL_CODEX_LAUNCH_SCRIPT = path12.join(GLOBAL_SCRIPTS_DIR, "launch-Codex-tui.ps1");
     __filename = fileURLToPath3(import.meta.url);
-    if (path11.basename(process.argv[1] ?? "") === "postinstall.ts" && process.argv[1] === __filename) {
-      main6();
+    if (path12.basename(process.argv[1] ?? "") === "postinstall.ts" && process.argv[1] === __filename) {
+      main7();
     }
   }
 });
@@ -3601,9 +3601,9 @@ var require_semver2 = __commonJS({
 
 // .claude/skills/pomogator-doctor/scripts/engine/index.ts
 import fs31 from "node:fs";
-import os8 from "node:os";
-import path31 from "node:path";
-import { pathToFileURL as pathToFileURL6 } from "node:url";
+import os9 from "node:os";
+import path32 from "node:path";
+import { pathToFileURL as pathToFileURL7 } from "node:url";
 
 // .claude/skills/pomogator-doctor/scripts/engine/checks/_helpers.ts
 import { spawnSync } from "node:child_process";
@@ -4048,11 +4048,19 @@ import fs10 from "node:fs";
 import path9 from "node:path";
 var CONTEXT_MODE_PLUGIN_ID = "context-mode@context-mode";
 var CONTEXT_MODE_SERVER_NAME = "context-mode";
+var INSTALL_INSTRUCTIONS = [
+  "/plugin marketplace add mksglu/context-mode",
+  "/plugin install context-mode@context-mode",
+  "/reload-plugins"
+];
 function claudePluginsRegistryPath(homeRoot) {
   return path9.join(homeRoot, ".claude", "plugins", "installed_plugins.json");
 }
 function claudeGlobalSettingsPath(homeRoot) {
   return path9.join(homeRoot, ".claude.json");
+}
+function contextModeRetryLockPath(homeRoot) {
+  return path9.join(homeRoot, ".dev-pomogator", ".context-mode-bootstrap.lock");
 }
 function readJsonObject4(filePath) {
   try {
@@ -4125,6 +4133,47 @@ function inspectMcpOnlyConfig(homeRoot) {
     path: settingsPath,
     evidence: active ? [`mcpServers.${CONTEXT_MODE_SERVER_NAME} present`] : [`mcpServers.${CONTEXT_MODE_SERVER_NAME} missing`]
   };
+}
+function isRetryLockFresh(lockPath, nowMs = Date.now(), windowMs = 30 * 60 * 1e3) {
+  try {
+    const raw = fs10.readFileSync(lockPath, "utf-8");
+    const parsed = JSON.parse(raw);
+    if (typeof parsed.stampedAtMs === "number") {
+      return nowMs - parsed.stampedAtMs < windowMs;
+    }
+  } catch {
+  }
+  try {
+    return nowMs - fs10.statSync(lockPath).mtimeMs < windowMs;
+  } catch {
+    return false;
+  }
+}
+function stampRetryLock(homeRoot, nowMs = Date.now()) {
+  const lockPath = contextModeRetryLockPath(homeRoot);
+  fs10.mkdirSync(path9.dirname(lockPath), { recursive: true });
+  fs10.writeFileSync(lockPath, JSON.stringify({ stampedAt: new Date(nowMs).toISOString(), stampedAtMs: nowMs }, null, 2) + "\n");
+  return lockPath;
+}
+function writeJsonAtomic(filePath, value) {
+  fs10.mkdirSync(path9.dirname(filePath), { recursive: true });
+  const tmp = path9.join(path9.dirname(filePath), `.${path9.basename(filePath)}.${process.pid}.${Date.now()}.tmp`);
+  try {
+    fs10.writeFileSync(tmp, JSON.stringify(value, null, 2) + "\n");
+    fs10.renameSync(tmp, filePath);
+  } finally {
+    try {
+      fs10.rmSync(tmp, { force: true });
+    } catch {
+    }
+  }
+}
+function createTimestampedBackup(filePath, now = /* @__PURE__ */ new Date()) {
+  if (!fs10.existsSync(filePath)) return null;
+  const stamp = now.toISOString().replace(/[:.]/g, "-");
+  const backupPath = `${filePath}.bak.${stamp}`;
+  fs10.copyFileSync(filePath, backupPath);
+  return backupPath;
 }
 
 // tools/context-mode-health/handshake.ts
@@ -4221,6 +4270,244 @@ function runContextModeDoctor(options) {
   }
 }
 
+// tools/context-mode-setup/setup.ts
+import { spawn, spawnSync as spawnSync2 } from "node:child_process";
+import path11 from "node:path";
+import os3 from "node:os";
+import { pathToFileURL as pathToFileURL6 } from "node:url";
+var DEFAULT_BACKOFF_WINDOW_MS = 6 * 60 * 60 * 1e3;
+var CONTEXT_MODE_MARKETPLACE_SOURCE = "mksglu/context-mode";
+var CONTEXT_MODE_INSTALL_ENV = {
+  CI: "1",
+  NO_COLOR: "1"
+};
+function buildContextModeMcpServer(pluginRoot = ".") {
+  return {
+    command: "node",
+    args: ["./start.mjs"],
+    cwd: pluginRoot,
+    env: {
+      CONTEXT_MODE_PLATFORM: "codex"
+    },
+    default_tools_approval_mode: "approve"
+  };
+}
+function resolveHomeRoot(env2, platform = process.platform) {
+  if (env2.CLAUDE_HOME) return env2.CLAUDE_HOME;
+  if (platform === "win32" && env2.USERPROFILE) return env2.USERPROFILE;
+  return env2.HOME ?? env2.USERPROFILE ?? os3.homedir() ?? process.cwd();
+}
+function decision(status, home, evidence, instructions = []) {
+  return {
+    status,
+    home,
+    evidence,
+    instructions,
+    lockPath: contextModeRetryLockPath(home),
+    exitCode: 0,
+    launchedInteractiveCommand: false,
+    launchedInstallerCommand: false
+  };
+}
+function buildContextModeInstallInvocation(platform = process.platform) {
+  if (platform === "win32") {
+    return {
+      cmd: "cmd",
+      args: [
+        "/c",
+        "claude",
+        "plugin",
+        "marketplace",
+        "add",
+        CONTEXT_MODE_MARKETPLACE_SOURCE,
+        "&&",
+        "claude",
+        "plugin",
+        "install",
+        CONTEXT_MODE_PLUGIN_ID,
+        "-s",
+        "user"
+      ],
+      env: { ...CONTEXT_MODE_INSTALL_ENV }
+    };
+  }
+  return {
+    cmd: "sh",
+    args: [
+      "-lc",
+      `claude plugin marketplace add ${CONTEXT_MODE_MARKETPLACE_SOURCE} && claude plugin install ${CONTEXT_MODE_PLUGIN_ID} -s user`
+    ],
+    env: { ...CONTEXT_MODE_INSTALL_ENV }
+  };
+}
+function fireContextModeInstaller(env2 = process.env) {
+  const inv = buildContextModeInstallInvocation();
+  const launcher = env2.DEV_POMOGATOR_CONTEXT_MODE_INSTALL_LAUNCHER;
+  const childEnv = {
+    ...process.env,
+    ...env2,
+    ...inv.env
+  };
+  try {
+    if (launcher) {
+      const result2 = spawnSync2(process.execPath, [launcher, inv.cmd, ...inv.args], {
+        env: childEnv,
+        stdio: "ignore"
+      });
+      return result2.status === 0;
+    }
+    const child = spawn(inv.cmd, inv.args, {
+      detached: true,
+      env: childEnv,
+      stdio: "ignore",
+      windowsHide: true
+    });
+    child.unref();
+    return true;
+  } catch {
+    return false;
+  }
+}
+function getContextModeSetupDecision(options) {
+  const env2 = options.env ?? process.env;
+  const home = options.homeRoot ?? resolveHomeRoot(env2);
+  const lockPath = contextModeRetryLockPath(home);
+  if (env2.DEV_POMOGATOR_CONTEXT_MODE === "off") {
+    return decision("SKIP_OPTOUT", home, ["DEV_POMOGATOR_CONTEXT_MODE=off"]);
+  }
+  if (isRetryLockFresh(lockPath, options.nowMs, options.backoffWindowMs)) {
+    return decision("SKIP_BACKOFF", home, [`fresh retry lock: ${lockPath}`]);
+  }
+  const registry = inspectPluginRegistry(home);
+  if (registry.state === "registered") {
+    return decision("PLUGIN_REGISTERED", home, registry.evidence);
+  }
+  if (registry.state === "malformed") {
+    return decision("ERROR_FAIL_OPEN", home, registry.evidence);
+  }
+  const mcpOnly = inspectMcpOnlyConfig(home);
+  if (mcpOnly.active) {
+    return decision("MCP_ONLY_CONFIGURED", home, mcpOnly.evidence);
+  }
+  return decision("INSTALL_MISSING", home, registry.evidence, INSTALL_INSTRUCTIONS);
+}
+function runContextModeSetupHook(options) {
+  try {
+    return { exitCode: 0, decision: getContextModeSetupDecision(options) };
+  } catch (err) {
+    const home = options.homeRoot ?? resolveHomeRoot(options.env ?? process.env);
+    return {
+      exitCode: 0,
+      decision: decision("ERROR_FAIL_OPEN", home, [err instanceof Error ? err.message : String(err)])
+    };
+  }
+}
+function renderSetupHookOutput(decision2) {
+  if (decision2.status === "INSTALL_MISSING") {
+    const instructions = decision2.instructions.length > 0 ? decision2.instructions : INSTALL_INSTRUCTIONS;
+    return {
+      continue: true,
+      additionalContext: [
+        "context-mode is not installed for this Claude/Codex home.",
+        ...decision2.launchedInstallerCommand ? ["dev-pomogator started the context-mode installer in the background."] : [],
+        "Install it with:",
+        ...instructions.map((line) => `  ${line}`),
+        "Opt out: DEV_POMOGATOR_CONTEXT_MODE=off."
+      ].join("\n")
+    };
+  }
+  return { continue: true, suppressOutput: true };
+}
+function runContextModeSessionStart(options) {
+  const env2 = options.env ?? process.env;
+  const decisionResult = runContextModeSetupHook({
+    homeRoot: options.homeRoot,
+    env: env2,
+    nowMs: options.nowMs,
+    backoffWindowMs: options.backoffWindowMs ?? DEFAULT_BACKOFF_WINDOW_MS
+  });
+  let decisionValue = decisionResult.decision;
+  let mcpOnlyResult;
+  if (decisionValue.status === "INSTALL_MISSING" && (env2.DEV_POMOGATOR_CONTEXT_MODE_MCP_ONLY === "1" || env2.DEV_POMOGATOR_CONTEXT_MODE_MCP_ONLY === "true")) {
+    try {
+      mcpOnlyResult = applyMcpOnlyContextModeConfig({
+        homeRoot: decisionValue.home,
+        pluginRoot: options.pluginRoot
+      });
+      decisionValue = {
+        ...decisionValue,
+        status: "MCP_ONLY_CONFIGURED",
+        evidence: [...decisionValue.evidence, `wrote MCP-only config: ${mcpOnlyResult.settingsPath}`],
+        instructions: []
+      };
+    } catch (err) {
+      decisionValue = {
+        ...decisionValue,
+        status: "ERROR_FAIL_OPEN",
+        evidence: [...decisionValue.evidence, err instanceof Error ? err.message : String(err)],
+        instructions: []
+      };
+    }
+  } else if (decisionValue.status === "INSTALL_MISSING") {
+    stampRetryLock(decisionValue.home, options.nowMs ?? Date.now());
+    const launchedInstallerCommand = fireContextModeInstaller(env2);
+    decisionValue = {
+      ...decisionValue,
+      launchedInstallerCommand,
+      evidence: [
+        ...decisionValue.evidence,
+        launchedInstallerCommand ? "fired detached context-mode installer" : "failed to fire detached context-mode installer"
+      ]
+    };
+  }
+  return {
+    decision: decisionValue,
+    output: renderSetupHookOutput(decisionValue),
+    mcpOnlyResult
+  };
+}
+function applyMcpOnlyContextModeConfig(options) {
+  const settingsPath = claudeGlobalSettingsPath(options.homeRoot);
+  const existing = readJsonObject4(settingsPath);
+  const base = existing.state === "ok" && existing.value ? existing.value : {};
+  const currentServers = base.mcpServers && typeof base.mcpServers === "object" && !Array.isArray(base.mcpServers) ? base.mcpServers : {};
+  const settings = {
+    ...base,
+    mcpServers: {
+      ...currentServers,
+      [CONTEXT_MODE_SERVER_NAME]: options.server ?? buildContextModeMcpServer(options.pluginRoot ? path11.resolve(options.pluginRoot) : ".")
+    }
+  };
+  const backupPath = createTimestampedBackup(settingsPath, options.now ?? /* @__PURE__ */ new Date());
+  writeJsonAtomic(settingsPath, settings);
+  return { settingsPath, backupPath, settings };
+}
+async function drainStdin() {
+  try {
+    for await (const _chunk of process.stdin) {
+    }
+  } catch {
+  }
+}
+function writeOutput(output) {
+  try {
+    process.stdout.write(`${JSON.stringify(output)}
+`);
+  } catch {
+  }
+}
+async function main6() {
+  await drainStdin();
+  const result2 = runContextModeSessionStart({
+    env: process.env,
+    pluginRoot: process.env.CLAUDE_PLUGIN_ROOT ?? process.cwd()
+  });
+  writeOutput(result2.output);
+}
+if (process.argv[1] && import.meta.url === pathToFileURL6(process.argv[1]).href) {
+  main6().catch(() => writeOutput({ continue: true, suppressOutput: true })).finally(() => process.exit(0));
+}
+
 // .claude/skills/pomogator-doctor/scripts/engine/checks/context-mode.ts
 var META6 = {
   id: "C-CMODE",
@@ -4249,8 +4536,15 @@ var MESSAGE_BY_STATUS = {
   HOOK_UNSAFE: "context-mode hook safety check reported an unsafe state",
   ERROR_FAIL_OPEN: "context-mode health check failed open"
 };
+function isInstallRepairable(status) {
+  return status === "INSTALL_MISSING" || status === "CONFIG_POISONED";
+}
 function statusHint(status, remediation) {
   const base = remediation.join(" -> ");
+  if (isInstallRepairable(status)) {
+    const fix = "Run /pomogator-doctor --fix to start the context-mode installer automatically";
+    return process.platform === "win32" ? `${base}. ${fix}. Windows note: use pwsh -NoProfile for PowerShell commands; ctx shell snippets run under bash.` : `${base}. ${fix}.`;
+  }
   if (process.platform === "win32") {
     return `${base}. Windows note: use pwsh -NoProfile for PowerShell commands; ctx shell snippets run under bash.`;
   }
@@ -4267,8 +4561,15 @@ var contextModeCheck = {
       handshakeResult: process.env.DEV_POMOGATOR_CONTEXT_MODE_HANDSHAKE === "ok" ? { ok: true } : process.env.DEV_POMOGATOR_CONTEXT_MODE_HANDSHAKE === "failed" ? { ok: false } : { skipped: true },
       hookSafety: process.env.DEV_POMOGATOR_CONTEXT_MODE_HOOK_UNSAFE === "1" ? "unsafe" : "unknown"
     });
-    return buildResult(META6, SEVERITY_BY_STATUS[report.status], MESSAGE_BY_STATUS[report.status], {
+    const repairable = isInstallRepairable(report.status);
+    const fixAttempted = ctx.fix && repairable;
+    const fixLaunched = fixAttempted ? fireContextModeInstaller() : false;
+    return buildResult({
+      ...META6,
+      reinstallable: repairable
+    }, SEVERITY_BY_STATUS[report.status], MESSAGE_BY_STATUS[report.status], {
       hint: statusHint(report.status, report.remediation),
+      reinstallHint: repairable ? "/pomogator-doctor --fix (or /plugin install context-mode@context-mode)" : void 0,
       details: {
         status: report.status,
         registration: report.registration,
@@ -4277,7 +4578,10 @@ var contextModeCheck = {
         hookSafety: report.hookSafety,
         manifestCommand: report.manifestCommand,
         evidence: report.evidence,
-        remediation: report.remediation
+        remediation: report.remediation,
+        fixAction: repairable ? "context-mode-install" : void 0,
+        fixAttempted,
+        fixLaunched
       }
     });
   }
@@ -4285,8 +4589,8 @@ var contextModeCheck = {
 
 // .claude/skills/pomogator-doctor/scripts/engine/checks/context-menu.ts
 import fs13 from "node:fs";
-import os4 from "node:os";
-import path12 from "node:path";
+import os5 from "node:os";
+import path13 from "node:path";
 var META7 = {
   id: "C-CTXM",
   fr: "FR-CTXM",
@@ -4309,9 +4613,9 @@ var contextMenuCheck = {
     return { relevant: true };
   },
   async run(ctx) {
-    const home = ctx.homeDir || os4.homedir();
-    const installedClaudeLaunchScript = path12.join(home, ".dev-pomogator", "scripts", "launch-claude-tui.ps1");
-    const installedCodexLaunchScript = path12.join(home, ".dev-pomogator", "scripts", "launch-Codex-tui.ps1");
+    const home = ctx.homeDir || os5.homedir();
+    const installedClaudeLaunchScript = path13.join(home, ".dev-pomogator", "scripts", "launch-claude-tui.ps1");
+    const installedCodexLaunchScript = path13.join(home, ".dev-pomogator", "scripts", "launch-Codex-tui.ps1");
     const fixHint = `Apply NOW: node -e "require(require('path').join(process.env.CLAUDE_PLUGIN_ROOT||'.','tools','_shared','bootstrap.cjs'))" -- "tools/context-menu/postinstall.ts" (re-copies the launch script + regenerates the NSS + reloads Nilesoft Shell \u2014 same steps /context-menu runs).`;
     let mod;
     try {
@@ -4427,7 +4731,7 @@ var dockerCheck = {
 
 // .claude/skills/pomogator-doctor/scripts/engine/checks/env-example.ts
 import fs14 from "node:fs";
-import path13 from "node:path";
+import path14 from "node:path";
 var envExampleCheck = {
   id: "C8",
   fr: "FR-6",
@@ -4451,7 +4755,7 @@ var envExampleCheck = {
         durationMs: 0
       };
     }
-    const envExamplePath = path13.join(ctx.projectRoot, ".env.example");
+    const envExamplePath = path14.join(ctx.projectRoot, ".env.example");
     try {
       fs14.accessSync(envExamplePath, fs14.constants.F_OK);
       return {
@@ -4483,7 +4787,7 @@ var envExampleCheck = {
 
 // .claude/skills/pomogator-doctor/scripts/engine/checks/env-vars.ts
 import fs15 from "node:fs";
-import path14 from "node:path";
+import path15 from "node:path";
 var envVarsCheck = {
   id: "C7",
   fr: "FR-5",
@@ -4493,7 +4797,7 @@ var envVarsCheck = {
   pool: "fs",
   async run(ctx) {
     const settingsLocalEnv = readSettingsLocalEnv(ctx.projectRoot);
-    const dotenvValues = readDotenvFile(path14.join(ctx.projectRoot, ".env"));
+    const dotenvValues = readDotenvFile(path15.join(ctx.projectRoot, ".env"));
     const results = [];
     for (const ext of ctx.installedExtensions) {
       for (const req of ext.envRequirements ?? []) {
@@ -4537,7 +4841,7 @@ var envVarsCheck = {
   }
 };
 function readSettingsLocalEnv(projectRoot) {
-  const p = path14.join(projectRoot, ".claude", "settings.local.json");
+  const p = path15.join(projectRoot, ".claude", "settings.local.json");
   try {
     const parsed = JSON.parse(fs15.readFileSync(p, "utf-8"));
     return parsed.env ?? {};
@@ -4548,11 +4852,11 @@ function readSettingsLocalEnv(projectRoot) {
 
 // tools/forbid-root-artifacts/doctor-check.ts
 import fs16 from "node:fs";
-import path15 from "node:path";
+import path16 from "node:path";
 var HOOK_ID = "forbid-root-artifacts";
 var REINSTALL = "python .dev-pomogator/tools/forbid-root-artifacts/setup.py";
 function checkRootArtifactsInstall(repoRoot) {
-  const cfg = path15.join(repoRoot, ".pre-commit-config.yaml");
+  const cfg = path16.join(repoRoot, ".pre-commit-config.yaml");
   let content = "";
   try {
     if (fs16.existsSync(cfg)) content = fs16.readFileSync(cfg, "utf8");
@@ -4571,7 +4875,7 @@ function checkRootArtifactsInstall(repoRoot) {
   if (entryPath) {
     let resolves = false;
     try {
-      resolves = fs16.existsSync(path15.join(repoRoot, entryPath));
+      resolves = fs16.existsSync(path16.join(repoRoot, entryPath));
     } catch {
       resolves = false;
     }
@@ -4613,7 +4917,7 @@ var forbidRootArtifactsCheck = {
 };
 
 // .claude/skills/pomogator-doctor/scripts/engine/checks/gh.ts
-import { spawnSync as spawnSync2 } from "node:child_process";
+import { spawnSync as spawnSync3 } from "node:child_process";
 var META9 = {
   id: "C-GH",
   fr: "FR-37",
@@ -4633,7 +4937,7 @@ function classifyGhReadiness(version, auth) {
   return "available";
 }
 function runGh(args) {
-  const result2 = spawnSync2("gh", args, {
+  const result2 = spawnSync3("gh", args, {
     encoding: "utf8",
     timeout: DOCTOR_TIMEOUTS.SPAWN_MS,
     windowsHide: true,
@@ -4693,13 +4997,13 @@ var gitCheck = {
 
 // .claude/skills/pomogator-doctor/scripts/engine/checks/gitignore-block.ts
 import fs18 from "node:fs";
-import path17 from "node:path";
+import path18 from "node:path";
 
 // .claude/skills/pomogator-doctor/scripts/engine/checks/canonical.ts
 import fs17 from "node:fs";
-import path16 from "node:path";
+import path17 from "node:path";
 function readCanonicalManifest(projectRoot) {
-  const manifestPath3 = path16.join(projectRoot, ".claude-plugin", "plugin.json");
+  const manifestPath3 = path17.join(projectRoot, ".claude-plugin", "plugin.json");
   try {
     return JSON.parse(fs17.readFileSync(manifestPath3, "utf-8"));
   } catch {
@@ -4723,7 +5027,7 @@ var gitignoreBlockCheck = {
   pool: "fs",
   async run(ctx) {
     const canonical = isCanonicalInstall(ctx.projectRoot);
-    const gitignorePath = path17.join(ctx.projectRoot, ".gitignore");
+    const gitignorePath = path18.join(ctx.projectRoot, ".gitignore");
     let content;
     try {
       content = fs18.readFileSync(gitignorePath, "utf-8");
@@ -4773,7 +5077,7 @@ function build(severity, message, hint) {
 
 // .claude/skills/pomogator-doctor/scripts/engine/checks/hook-script-paths.ts
 import fs19 from "node:fs";
-import path18 from "node:path";
+import path19 from "node:path";
 var ID = "C31";
 var FR = "FR-14";
 var NAME = "Hook runtime dispatch and script paths resolve";
@@ -4793,7 +5097,7 @@ var hookScriptPathsCheck = {
   pool: "fs",
   async run(ctx) {
     const pluginRoot = process.env.CLAUDE_PLUGIN_ROOT ?? ctx.projectRoot;
-    const hooksPath = path18.join(pluginRoot, ".claude-plugin", "hooks.json");
+    const hooksPath = path19.join(pluginRoot, ".claude-plugin", "hooks.json");
     let raw;
     try {
       raw = fs19.readFileSync(hooksPath, "utf-8");
@@ -4821,7 +5125,7 @@ var hookScriptPathsCheck = {
         continue;
       }
       for (const script of scripts) {
-        if (!fs19.existsSync(path18.join(pluginRoot, script))) missing.push(script);
+        if (!fs19.existsSync(path19.join(pluginRoot, script))) missing.push(script);
       }
     }
     if (unanchored.length === 0 && missing.length === 0) {
@@ -4854,7 +5158,7 @@ function build2(severity, message, hint) {
 
 // .claude/skills/pomogator-doctor/scripts/engine/checks/hook-service.ts
 import fs20 from "node:fs";
-import path19 from "node:path";
+import path20 from "node:path";
 var requiredRuntimeFiles = [
   "tools/hook-service/server.mjs",
   "tools/hook-service/ensure-up.mjs",
@@ -4887,13 +5191,13 @@ var hookServiceCheck = {
   pool: "fs",
   async run(ctx) {
     const root = ctx.projectRoot;
-    const absent = requiredRuntimeFiles.filter((file) => !fs20.existsSync(path19.join(root, file)));
+    const absent = requiredRuntimeFiles.filter((file) => !fs20.existsSync(path20.join(root, file)));
     if (absent.length) return result("warning", `shell-free hook service is not installed (${absent.join(", ")})`, { absent });
     let manifest;
     let registry;
     try {
-      manifest = JSON.parse(fs20.readFileSync(path19.join(root, ".claude-plugin/hooks.json"), "utf8"));
-      registry = JSON.parse(fs20.readFileSync(path19.join(root, "tools/hook-service/registry.json"), "utf8"));
+      manifest = JSON.parse(fs20.readFileSync(path20.join(root, ".claude-plugin/hooks.json"), "utf8"));
+      registry = JSON.parse(fs20.readFileSync(path20.join(root, "tools/hook-service/registry.json"), "utf8"));
     } catch (error) {
       return result("critical", `cannot parse shell-free hook assets: ${error.message}`);
     }
@@ -4912,7 +5216,7 @@ var hookServiceCheck = {
         if (!hook.allowedEnvVars?.includes("DEV_POMOGATOR_HOOK_TOKEN")) problems.push(`${id} does not allow DEV_POMOGATOR_HOOK_TOKEN`);
         const route = registry.routes?.[id];
         const target = route?.target;
-        if (!target || path19.isAbsolute(target) || target.split(/[\\/]/).includes("..") || !fs20.existsSync(path19.join(root, target))) {
+        if (!target || path20.isAbsolute(target) || target.split(/[\\/]/).includes("..") || !fs20.existsSync(path20.join(root, target))) {
           problems.push(`${id} has no valid registry target`);
         }
         if (route?.timeout !== hook.timeout) problems.push(`${id} timeout drifts from registry`);
@@ -4925,10 +5229,10 @@ var hookServiceCheck = {
 };
 
 // .claude/skills/pomogator-doctor/scripts/engine/checks/hooks-exec.ts
-import { spawnSync as spawnSync3 } from "node:child_process";
+import { spawnSync as spawnSync4 } from "node:child_process";
 import fs21 from "node:fs";
-import os5 from "node:os";
-import path20 from "node:path";
+import os6 from "node:os";
+import path21 from "node:path";
 import { fileURLToPath as fileURLToPath4 } from "node:url";
 var META11 = {
   id: "C18",
@@ -4940,12 +5244,12 @@ var META11 = {
 function locateBootstrap(projectRoot) {
   const override = process.env.DEV_POMOGATOR_DOCTOR_BOOTSTRAP;
   if (override) return fileExists(override) ? override : override;
-  const here = path20.dirname(fileURLToPath4(import.meta.url));
+  const here = path21.dirname(fileURLToPath4(import.meta.url));
   const candidates = [
     // checks → engine → scripts → pomogator-doctor → skills → .claude → <root>
-    path20.resolve(here, "..", "..", "..", "..", "..", "..", "tools", "_shared", "bootstrap.cjs"),
-    path20.join(projectRoot, "tools", "_shared", "bootstrap.cjs"),
-    ...process.env.CLAUDE_PLUGIN_ROOT ? [path20.join(process.env.CLAUDE_PLUGIN_ROOT, "tools", "_shared", "bootstrap.cjs")] : []
+    path21.resolve(here, "..", "..", "..", "..", "..", "..", "tools", "_shared", "bootstrap.cjs"),
+    path21.join(projectRoot, "tools", "_shared", "bootstrap.cjs"),
+    ...process.env.CLAUDE_PLUGIN_ROOT ? [path21.join(process.env.CLAUDE_PLUGIN_ROOT, "tools", "_shared", "bootstrap.cjs")] : []
   ];
   return candidates.find(fileExists) ?? null;
 }
@@ -4962,13 +5266,13 @@ var hooksExecCheck = {
         { hint: "Reinstall dev-pomogator: /plugin install dev-pomogator@stgmt --force" }
       );
     }
-    const probe = path20.join(os5.tmpdir(), `dp-hook-probe-${process.pid}-${process.hrtime.bigint()}.ts`);
+    const probe = path21.join(os6.tmpdir(), `dp-hook-probe-${process.pid}-${process.hrtime.bigint()}.ts`);
     const MARKER = "HOOK_EXEC_OK";
     try {
       fs21.writeFileSync(probe, `const marker: string = '${MARKER}';
 process.stdout.write(marker);
 `);
-      const res = spawnSync3(process.execPath, ["-e", `require(${JSON.stringify(bootstrap)})`, "--", probe], {
+      const res = spawnSync4(process.execPath, ["-e", `require(${JSON.stringify(bootstrap)})`, "--", probe], {
         encoding: "utf-8",
         timeout: DOCTOR_TIMEOUTS.SPAWN_MS,
         env: { ...process.env, NODE_NO_WARNINGS: "1" }
@@ -5005,7 +5309,7 @@ process.stdout.write(marker);
 
 // .claude/skills/pomogator-doctor/scripts/engine/checks/hooks-registry.ts
 import fs22 from "node:fs";
-import path21 from "node:path";
+import path22 from "node:path";
 var hooksRegistryCheck = {
   id: "C6",
   fr: "FR-4",
@@ -5014,7 +5318,7 @@ var hooksRegistryCheck = {
   reinstallable: true,
   pool: "fs",
   async run(ctx) {
-    const settingsPath = path21.join(ctx.projectRoot, ".claude", "settings.local.json");
+    const settingsPath = path22.join(ctx.projectRoot, ".claude", "settings.local.json");
     let settings = {};
     try {
       settings = JSON.parse(fs22.readFileSync(settingsPath, "utf-8"));
@@ -5060,14 +5364,14 @@ function build3(severity, message, hint) {
 
 // .claude/skills/pomogator-doctor/scripts/engine/checks/mcp-parse.ts
 import fs23 from "node:fs";
-import path22 from "node:path";
+import path23 from "node:path";
 function readMcpConfigs(ctx) {
   const result2 = /* @__PURE__ */ new Map();
   const paths = [
-    path22.join(ctx.projectRoot, ".mcp.json"),
+    path23.join(ctx.projectRoot, ".mcp.json"),
     // Canonical user-global MCP config is ~/.claude.json (NOT ~/.claude/mcp.json, which
     // Claude Code never creates) — the latter made every globally-registered MCP invisible.
-    path22.join(ctx.homeDir, ".claude.json")
+    path23.join(ctx.homeDir, ".claude.json")
   ];
   for (const p of paths) {
     try {
@@ -5142,7 +5446,7 @@ var mcpParseCheck = {
 };
 
 // tools/mcp-setup/mcp-auth-detect.ts
-import { spawnSync as spawnSync4 } from "node:child_process";
+import { spawnSync as spawnSync5 } from "node:child_process";
 var OCTOCODE_TOKEN_VARS = ["GITHUB_TOKEN", "GH_TOKEN", "OCTOCODE_TOKEN"];
 var CONTEXT7_KEY_VAR = "CONTEXT7_API_KEY";
 function nonEmpty(v) {
@@ -5167,7 +5471,7 @@ function context7Configured(entry, env2) {
 }
 function ghAuthStatus(timeoutMs = 3e3) {
   try {
-    const r = spawnSync4("gh", ["auth", "status"], {
+    const r = spawnSync5("gh", ["auth", "status"], {
       encoding: "utf-8",
       timeout: timeoutMs,
       windowsHide: true
@@ -5225,13 +5529,13 @@ var mcpAuthCheck = {
 };
 
 // .claude/skills/pomogator-doctor/scripts/engine/checks/mcp-probe.ts
-import { spawn } from "node:child_process";
+import { spawn as spawn2 } from "node:child_process";
 import { once } from "node:events";
 var PROBE_TIMEOUT_MS2 = DOCTOR_TIMEOUTS.PROBE_MS;
 async function probeStdioServer(cfg) {
   const started = Date.now();
   if (!cfg.command) return { ok: false, message: "no command defined", durationMs: 0 };
-  const child = spawn(cfg.command, cfg.args ?? [], {
+  const child = spawn2(cfg.command, cfg.args ?? [], {
     stdio: ["pipe", "pipe", "pipe"],
     env: { ...process.env, ...cfg.env ?? {} }
   });
@@ -5389,7 +5693,7 @@ var mcpProbeCheck = {
 };
 
 // .claude/skills/pomogator-doctor/scripts/engine/checks/meridian.ts
-import path23 from "node:path";
+import path24 from "node:path";
 var META13 = {
   id: "C17",
   fr: "FR-49",
@@ -5401,9 +5705,9 @@ var PROBE_TIMEOUT_MS3 = 500;
 var proxyUrl = () => process.env.MERIDIAN_URL || "http://127.0.0.1:3456";
 function optedIn(ctx) {
   if ((process.env.CLAIM_GATE_JUDGE ?? "true").toLowerCase() !== "false") return { in: true };
-  const base = readDotenvFile(path23.join(ctx.projectRoot, ".env")).ANTHROPIC_BASE_URL ?? "";
+  const base = readDotenvFile(path24.join(ctx.projectRoot, ".env")).ANTHROPIC_BASE_URL ?? "";
   if (/:3456|meridian|claude-subscription/i.test(base)) return { in: true };
-  if (fileExists(path23.join(ctx.projectRoot, "tools", "claude-subscription-proxy", "docker-compose.yml"))) {
+  if (fileExists(path24.join(ctx.projectRoot, "tools", "claude-subscription-proxy", "docker-compose.yml"))) {
     return { in: true };
   }
   return {
@@ -5497,11 +5801,11 @@ var nodeVersionCheck = {
 
 // .claude/skills/pomogator-doctor/scripts/engine/checks/plugin-loader.ts
 import fs24 from "node:fs";
-import path24 from "node:path";
+import path25 from "node:path";
 function readPluginManifest(projectRoot) {
   const candidates = [
-    path24.join(projectRoot, ".dev-pomogator", ".claude-plugin", "plugin.json"),
-    path24.join(projectRoot, ".claude-plugin", "plugin.json")
+    path25.join(projectRoot, ".dev-pomogator", ".claude-plugin", "plugin.json"),
+    path25.join(projectRoot, ".claude-plugin", "plugin.json")
   ];
   for (const p of candidates) {
     try {
@@ -5513,7 +5817,7 @@ function readPluginManifest(projectRoot) {
   return null;
 }
 function enumerateFromPath(rel, kind, projectRoot) {
-  const abs = path24.resolve(projectRoot, rel);
+  const abs = path25.resolve(projectRoot, rel);
   let stat;
   try {
     stat = fs24.statSync(abs);
@@ -5521,7 +5825,7 @@ function enumerateFromPath(rel, kind, projectRoot) {
     return [{ name: rel, kind, physicalPath: abs }];
   }
   if (stat.isFile()) {
-    const name = kind === "command" ? path24.basename(abs).replace(/\.md$/, "") : path24.basename(abs);
+    const name = kind === "command" ? path25.basename(abs).replace(/\.md$/, "") : path25.basename(abs);
     return [{ name, kind, physicalPath: abs }];
   }
   let dirents;
@@ -5531,9 +5835,9 @@ function enumerateFromPath(rel, kind, projectRoot) {
     return [{ name: rel, kind, physicalPath: abs }];
   }
   if (kind === "command") {
-    return dirents.filter((e) => e.isFile() && e.name.endsWith(".md")).map((e) => ({ name: e.name.replace(/\.md$/, ""), kind, physicalPath: path24.join(abs, e.name) }));
+    return dirents.filter((e) => e.isFile() && e.name.endsWith(".md")).map((e) => ({ name: e.name.replace(/\.md$/, ""), kind, physicalPath: path25.join(abs, e.name) }));
   }
-  return dirents.filter((e) => e.isDirectory()).map((e) => ({ name: e.name, skillMd: path24.join(abs, e.name, "SKILL.md") })).filter((d) => exists(d.skillMd)).map((d) => ({ name: d.name, kind, physicalPath: d.skillMd }));
+  return dirents.filter((e) => e.isDirectory()).map((e) => ({ name: e.name, skillMd: path25.join(abs, e.name, "SKILL.md") })).filter((d) => exists(d.skillMd)).map((d) => ({ name: d.name, kind, physicalPath: d.skillMd }));
 }
 function normalizeDeclared(manifest, projectRoot) {
   const out = [];
@@ -5554,10 +5858,10 @@ function normalizeDeclared(manifest, projectRoot) {
   return out;
 }
 function classify(declaredName, kind, projectRoot, homeDir) {
-  const projectDir = kind === "command" ? path24.join(projectRoot, ".claude", "commands") : path24.join(projectRoot, ".claude", "skills");
-  const projectPath = kind === "command" ? path24.join(projectDir, `${declaredName}.md`) : path24.join(projectDir, declaredName);
+  const projectDir = kind === "command" ? path25.join(projectRoot, ".claude", "commands") : path25.join(projectRoot, ".claude", "skills");
+  const projectPath = kind === "command" ? path25.join(projectDir, `${declaredName}.md`) : path25.join(projectDir, declaredName);
   if (exists(projectPath)) return "OK-physical";
-  const pluginRoot = path24.join(homeDir, ".claude", "plugins");
+  const pluginRoot = path25.join(homeDir, ".claude", "plugins");
   if (searchPluginRegistry(pluginRoot, declaredName, kind)) return "OK-dynamic";
   return "BROKEN-missing";
 }
@@ -5571,13 +5875,13 @@ function searchPluginRegistry(pluginRoot, name, kind) {
   const needle = kind === "command" ? `${name}.md` : name;
   for (const entry of entries) {
     if (!entry.isDirectory()) continue;
-    const nested = path24.join(pluginRoot, entry.name);
+    const nested = path25.join(pluginRoot, entry.name);
     if (containsEntry(nested, kind, needle)) return true;
   }
   return false;
 }
 function containsEntry(root, kind, needle) {
-  const target = kind === "command" ? path24.join(root, "commands") : path24.join(root, "skills");
+  const target = kind === "command" ? path25.join(root, "commands") : path25.join(root, "skills");
   try {
     const inside = fs24.readdirSync(target, { withFileTypes: true });
     return inside.some((e) => e.name === needle);
@@ -5671,7 +5975,7 @@ var pluginLoaderCheck = {
 
 // .claude/skills/pomogator-doctor/scripts/engine/checks/pomogator-home.ts
 import fs25 from "node:fs";
-import path25 from "node:path";
+import path26 from "node:path";
 var MAKE = (id, name, severity, message, hint) => ({
   id,
   fr: "FR-3",
@@ -5693,7 +5997,7 @@ var pomogatorHomeCheck = {
   pool: "fs",
   async run(ctx) {
     const results = [];
-    const configPath = path25.join(ctx.homeDir, ".dev-pomogator", "config.json");
+    const configPath = path26.join(ctx.homeDir, ".dev-pomogator", "config.json");
     if (ctx.configError) {
       const message = ctx.configError.message;
       if (message.includes("not found") && isCanonicalInstall(ctx.projectRoot)) {
@@ -5722,7 +6026,7 @@ var pomogatorHomeCheck = {
     results.push(
       configOk ? MAKE("C3", "~/.dev-pomogator/config.json", "ok", `config.json present at ${configPath}`) : MAKE("C3", "~/.dev-pomogator/config.json", "critical", `config.json missing: ${configPath}`)
     );
-    const bootstrapPath = path25.join(
+    const bootstrapPath = path26.join(
       ctx.homeDir,
       ".dev-pomogator",
       "scripts",
@@ -5744,7 +6048,7 @@ var pomogatorHomeCheck = {
     );
     const missingTools = [];
     for (const ext of ctx.installedExtensions) {
-      const toolDir = path25.join(ctx.homeDir, ".dev-pomogator", "tools", ext.name);
+      const toolDir = path26.join(ctx.homeDir, ".dev-pomogator", "tools", ext.name);
       if (!fs25.existsSync(toolDir)) missingTools.push(ext.name);
     }
     if (missingTools.length === 0 && ctx.installedExtensions.length > 0) {
@@ -5780,7 +6084,7 @@ function fileExists2(p) {
 }
 
 // .claude/skills/pomogator-doctor/scripts/engine/checks/python.ts
-import { spawnSync as spawnSync5 } from "node:child_process";
+import { spawnSync as spawnSync6 } from "node:child_process";
 function gatherPythonPackages(ctx) {
   const out = [];
   for (const ext of ctx.installedExtensions) {
@@ -5799,7 +6103,7 @@ function requiresPython(ctx) {
 }
 function detectPythonCommand() {
   for (const cmd of ["python3", "python"]) {
-    const res = spawnSync5(cmd, ["--version"], {
+    const res = spawnSync6(cmd, ["--version"], {
       encoding: "utf-8",
       timeout: DOCTOR_TIMEOUTS.SPAWN_MS
     });
@@ -5853,7 +6157,7 @@ var pythonCheck = {
     const packages = gatherPythonPackages(ctx);
     const pkgResults = await Promise.all(
       packages.map(async ({ pkg, extension }) => {
-        const res = spawnSync5(python.command, ["-c", `import ${pkg}`], {
+        const res = spawnSync6(python.command, ["-c", `import ${pkg}`], {
           encoding: "utf-8",
           timeout: DOCTOR_TIMEOUTS.SPAWN_MS
         });
@@ -5878,7 +6182,7 @@ var pythonCheck = {
 
 // .claude/skills/pomogator-doctor/scripts/engine/checks/statusline.ts
 import fs26 from "node:fs";
-import path26 from "node:path";
+import path27 from "node:path";
 var OWNERSHIP_MARKER = "ccstatusline";
 var statuslineCheck = {
   id: "C-NSL",
@@ -5888,7 +6192,7 @@ var statuslineCheck = {
   reinstallable: false,
   pool: "fs",
   async run(ctx) {
-    const settingsFile = path26.join(ctx.homeDir, ".claude", "settings.json");
+    const settingsFile = path27.join(ctx.homeDir, ".claude", "settings.json");
     const base = {
       id: "C-NSL",
       fr: "FR-7",
@@ -5939,7 +6243,7 @@ var statuslineCheck = {
 
 // .claude/skills/pomogator-doctor/scripts/engine/checks/statusline-widgets.ts
 import fs27 from "node:fs";
-import path27 from "node:path";
+import path28 from "node:path";
 var OWNERSHIP_MARKER2 = "ccstatusline";
 var REQUIRED_WIDGET_TYPES = ["git-root-dir", "current-working-dir"];
 var STOCK_DEFAULT_TYPES = /* @__PURE__ */ new Set([
@@ -5966,7 +6270,7 @@ var statuslineWidgetsCheck = {
       reinstallable: false,
       durationMs: 0
     };
-    const settingsFile = path27.join(ctx.homeDir, ".claude", "settings.json");
+    const settingsFile = path28.join(ctx.homeDir, ".claude", "settings.json");
     let command;
     try {
       const parsed = JSON.parse(fs27.readFileSync(settingsFile, "utf-8"));
@@ -5981,7 +6285,7 @@ var statuslineWidgetsCheck = {
         message: "statusLine is not ccstatusline \u2014 widget config not applicable (see C-NSL)"
       };
     }
-    const configFile = path27.join(ctx.homeDir, ".config", "ccstatusline", "settings.json");
+    const configFile = path28.join(ctx.homeDir, ".config", "ccstatusline", "settings.json");
     const fixHint = `Apply NOW: node -e "require(require('path').join(process.env.CLAUDE_PLUGIN_ROOT||'.','tools','_shared','bootstrap.cjs'))" -- "tools/native-statusline/apply-statusline.ts" (adds git-root-dir + current-working-dir widgets; custom layouts are never touched).`;
     let lines;
     let unreadable = false;
@@ -6038,7 +6342,7 @@ var statuslineWidgetsCheck = {
 
 // .claude/skills/pomogator-doctor/scripts/engine/checks/tui-test-runner.ts
 import fs28 from "node:fs";
-import path28 from "node:path";
+import path29 from "node:path";
 var TUI_TEST_RUNNER_DIR = "tools/tui-test-runner";
 var tuiTestRunnerCheck = {
   id: "C-TTR",
@@ -6057,9 +6361,9 @@ var tuiTestRunnerCheck = {
     if (process.env.TEST_STATUSLINE_ENABLED !== "true") {
       return [];
     }
-    const invocationProject = path28.resolve(ctx.projectRoot);
+    const invocationProject = path29.resolve(ctx.projectRoot);
     const sessionProject = process.env.TEST_STATUSLINE_PROJECT;
-    if (sessionProject && path28.resolve(sessionProject) !== invocationProject) {
+    if (sessionProject && path29.resolve(sessionProject) !== invocationProject) {
       return {
         ...base,
         severity: "warning",
@@ -6067,9 +6371,9 @@ var tuiTestRunnerCheck = {
         hint: "Start a new Claude session in this worktree so TEST_STATUSLINE_PROJECT matches the invocation CWD."
       };
     }
-    const runnerDir = path28.join(invocationProject, TUI_TEST_RUNNER_DIR);
-    const wrapper = path28.join(runnerDir, "test_runner_wrapper.ts");
-    const sessionStart = path28.join(runnerDir, "tui_session_start.ts");
+    const runnerDir = path29.join(invocationProject, TUI_TEST_RUNNER_DIR);
+    const wrapper = path29.join(runnerDir, "test_runner_wrapper.ts");
+    const sessionStart = path29.join(runnerDir, "tui_session_start.ts");
     const missing = [wrapper, sessionStart].filter((file) => !fs28.existsSync(file));
     if (missing.length > 0) {
       return {
@@ -6192,7 +6496,7 @@ var allChecks = [
 
 // .claude/skills/pomogator-doctor/scripts/engine/lock.ts
 import fs29 from "node:fs";
-import path29 from "node:path";
+import path30 from "node:path";
 var LockHeldError = class extends Error {
   constructor(lockPath, holderPid) {
     super(`Another doctor run in progress (PID=${holderPid})`);
@@ -6215,7 +6519,7 @@ function isPidAlive(pid) {
   }
 }
 function acquireLock(lockPath) {
-  fs29.mkdirSync(path29.dirname(lockPath), { recursive: true });
+  fs29.mkdirSync(path30.dirname(lockPath), { recursive: true });
   const pid = process.pid;
   try {
     fs29.writeFileSync(lockPath, String(pid), { flag: "wx" });
@@ -6441,7 +6745,7 @@ var ansi_styles_default = ansiStyles;
 
 // node_modules/chalk/source/vendor/supports-color/index.js
 import process2 from "node:process";
-import os6 from "node:os";
+import os7 from "node:os";
 import tty from "node:tty";
 function hasFlag(flag, argv = globalThis.Deno ? globalThis.Deno.args : process2.argv) {
   const prefix = flag.startsWith("-") ? "" : flag.length === 1 ? "-" : "--";
@@ -6506,7 +6810,7 @@ function _supportsColor(haveStream, { streamIsTTY, sniffFlags = true } = {}) {
     return min;
   }
   if (process2.platform === "win32") {
-    const osRelease = os6.release().split(".");
+    const osRelease = os7.release().split(".");
     if (Number(osRelease[0]) >= 10 && Number(osRelease[2]) >= 10586) {
       return Number(osRelease[2]) >= 14931 ? 3 : 2;
     }
@@ -6854,8 +7158,8 @@ function exitCodeFor(report) {
 
 // .claude/skills/pomogator-doctor/scripts/engine/runner.ts
 import fs30 from "node:fs";
-import os7 from "node:os";
-import path30 from "node:path";
+import os8 from "node:os";
+import path31 from "node:path";
 
 // node_modules/yocto-queue/index.js
 var Node = class {
@@ -6984,7 +7288,7 @@ async function executeChecks(options, checks) {
   const timeoutMs = options.timeout ?? DOCTOR_TIMEOUTS.GLOBAL_MS;
   const timer = setTimeout(() => controller.abort(new Error("Doctor timeout")), timeoutMs);
   try {
-    const homeDir = options.homeDir ?? os7.homedir();
+    const homeDir = options.homeDir ?? os8.homedir();
     const projectRoot = options.projectRoot ?? process.cwd();
     const { config, configError } = loadConfig(homeDir);
     const installedExtensions = config?.installedExtensions ?? [];
@@ -7095,7 +7399,7 @@ function buildSummary(results, totalPossible) {
   };
 }
 function loadConfig(homeDir) {
-  const configPath = path30.join(homeDir, ".dev-pomogator", "config.json");
+  const configPath = path31.join(homeDir, ".dev-pomogator", "config.json");
   try {
     const raw = fs30.readFileSync(configPath, "utf-8");
     const parsed = JSON.parse(raw);
@@ -7116,10 +7420,10 @@ function loadConfig(homeDir) {
 function collectReferencedMcpServers(projectRoot, homeDir) {
   const refs = /* @__PURE__ */ new Set();
   const roots = [
-    path30.join(projectRoot, ".claude", "rules"),
-    path30.join(projectRoot, ".claude", "skills"),
-    path30.join(homeDir, ".claude", "rules"),
-    path30.join(homeDir, ".claude", "skills")
+    path31.join(projectRoot, ".claude", "rules"),
+    path31.join(projectRoot, ".claude", "skills"),
+    path31.join(homeDir, ".claude", "rules"),
+    path31.join(homeDir, ".claude", "skills")
   ];
   const pattern = /mcp__([A-Za-z0-9_-]+)__/g;
   for (const root of roots) {
@@ -7145,7 +7449,7 @@ function walkMarkdown(root, onContent) {
     return;
   }
   for (const entry of entries) {
-    const full = path30.join(root, entry.name);
+    const full = path31.join(root, entry.name);
     if (entry.isDirectory()) {
       walkMarkdown(full, onContent);
     } else if (entry.isFile() && full.endsWith(".md")) {
@@ -7162,8 +7466,8 @@ function walkMarkdown(root, onContent) {
 }
 function readPackageVersion(projectRoot) {
   const candidates = [
-    path30.join(projectRoot, "node_modules", "dev-pomogator", "package.json"),
-    path30.join(projectRoot, "package.json")
+    path31.join(projectRoot, "node_modules", "dev-pomogator", "package.json"),
+    path31.join(projectRoot, "package.json")
   ];
   for (const p of candidates) {
     try {
@@ -7179,8 +7483,8 @@ function readPackageVersion(projectRoot) {
 
 // .claude/skills/pomogator-doctor/scripts/engine/index.ts
 async function runDoctor(options = {}, checks = allChecks) {
-  const homeDir = options.homeDir ?? os8.homedir();
-  const lockPath = path31.join(homeDir, ".dev-pomogator", "doctor.lock");
+  const homeDir = options.homeDir ?? os9.homedir();
+  const lockPath = path32.join(homeDir, ".dev-pomogator", "doctor.lock");
   const lock = acquireLock(lockPath);
   try {
     return await executeChecks(options, checks);
@@ -7191,8 +7495,8 @@ async function runDoctor(options = {}, checks = allChecks) {
 async function runQuiet(options = {}, checks = allChecks) {
   try {
     const report = await runDoctor({ ...options, quiet: true }, checks);
-    const homeDir = options.homeDir ?? os8.homedir();
-    const installed = fs31.existsSync(path31.join(homeDir, ".dev-pomogator", "config.json"));
+    const homeDir = options.homeDir ?? os9.homedir();
+    const installed = fs31.existsSync(path32.join(homeDir, ".dev-pomogator", "config.json"));
     const actionableCritical = report.results.some(
       (result2) => result2.severity === "critical" && result2.group !== "needs-external"
     );
@@ -7223,7 +7527,7 @@ function parseCliArgs(args) {
   }
   return parsed;
 }
-async function main7(args = process.argv.slice(2)) {
+async function main8(args = process.argv.slice(2)) {
   let cli;
   try {
     cli = parseCliArgs(args);
@@ -7267,16 +7571,16 @@ ${usage6()}
 `);
   process.exitCode = exitCodeFor(report);
 }
-var invokedPath6 = process.argv[1] ? path31.resolve(process.argv[1]) : "";
-if (invokedPath6 && import.meta.url === pathToFileURL6(invokedPath6).href) {
-  void main7().catch((error) => {
+var invokedPath6 = process.argv[1] ? path32.resolve(process.argv[1]) : "";
+if (invokedPath6 && import.meta.url === pathToFileURL7(invokedPath6).href) {
+  void main8().catch((error) => {
     process.stderr.write(`pomogator-doctor failed: ${error instanceof Error ? error.message : String(error)}
 `);
     process.exitCode = 2;
   });
 }
 function lockPathFor(homeDir) {
-  return path31.join(homeDir, ".dev-pomogator", "doctor.lock");
+  return path32.join(homeDir, ".dev-pomogator", "doctor.lock");
 }
 function emptyReport() {
   return {

@@ -11,6 +11,7 @@ Feature: CTXMODE001_context_mode_integration
     Then the setup status is "INSTALL_MISSING"
     And the setup output includes exact plugin install instructions
     And no interactive plugin command is launched from shell
+    And SessionStart fires the non-interactive context-mode installer
     And the shipped SessionStart runtime registers the context-mode setup hook
 
   @FR-2 @feature2
@@ -35,6 +36,7 @@ Feature: CTXMODE001_context_mode_integration
     When the context-mode doctor check runs
     Then the doctor status is "CONFIG_POISONED"
     And pomogator-doctor includes the context-mode health check
+    And pomogator-doctor can launch the context-mode repair installer
     When the registry is healthy but the MCP process snapshot is dead
     Then the doctor status is "MCP_DEAD_IN_SESSION"
 

@@ -19,10 +19,10 @@
 
 | Area | Evidence |
 |------|----------|
-| SessionStart setup | `tools/context-mode-setup/setup.ts` emits fail-open Claude/Codex hook JSON, install guidance, backoff lock, opt-out, and MCP-only mode. |
+| SessionStart setup | `tools/context-mode-setup/setup.ts` emits fail-open Claude/Codex hook JSON, fires the non-interactive context-mode installer, preserves install guidance as fallback, uses a backoff lock, supports opt-out, and supports MCP-only mode. |
 | Health model | `tools/context-mode-health/*` classifies install missing, config poisoning, process death, handshake, hook safety, Windows friction, and honest value boundary. |
 | Hook distribution | `.claude-plugin/hooks.legacy.json`, `.Codex/hooks.json`, and `tools/hook-service/registry.json` include the context-mode setup target; generated `.claude-plugin/hooks.json` / `.claude/settings.json` route through `session-bootstrap.mjs`. |
-| Doctor integration | `.claude/skills/pomogator-doctor/scripts/engine/checks/context-mode.ts` adds `C-CMODE`; `doctor.bundle.mjs` contains the bundled check. |
+| Doctor integration | `.claude/skills/pomogator-doctor/scripts/engine/checks/context-mode.ts` adds `C-CMODE`; fix mode can launch the same context-mode installer; `doctor.bundle.mjs` contains the bundled check. |
 | BDD integration | `cucumber.json`, `context-mode-integration.feature`, `feature_context_mode_integration.ts`, and `tests/fixtures/context-mode/*` cover all 9 CTXMODE scenarios. |
 | Docs/reporting | `docs/context-mode-integration.md` documents the install path and honest savings boundary. |
 
@@ -46,9 +46,9 @@
 
 ## Verification Evidence
 
-- Setup hook smoke in `main`: `node --import tsx tools/context-mode-setup/setup.ts` with temp home => JSON `{ "continue": true, "additionalContext": ... }` and `.dev-pomogator/.context-mode-bootstrap.lock` created.
-- Doctor bundle smoke in `main`: `node .claude/skills/pomogator-doctor/scripts/engine/doctor.bundle.mjs --json` includes `C-CMODE` with `status: INSTALL_MISSING` and install remediation.
-- `bash scripts/docker-bdd.sh --name "CTXMODE001_"` in `main` => 9 scenarios / 65 steps passed; filtered artifact `.dev-pomogator/.test-history/run-1784677202418-filtered.ndjson`.
+- Setup hook smoke in `main`: `node --import tsx tools/context-mode-setup/setup.ts` with temp home => JSON `{ "continue": true, "additionalContext": ... }`, `.dev-pomogator/.context-mode-bootstrap.lock` created, and installer launcher captured `claude plugin marketplace add mksglu/context-mode && claude plugin install context-mode@context-mode -s user`.
+- Doctor source smoke in `main`: direct `C-CMODE` check with `fix: true` reports `reinstallable: true`, `fixAction: context-mode-install`, `fixLaunched: true`, and captures the same installer invocation.
+- `bash scripts/docker-bdd.sh --name "CTXMODE001_"` in `main` => 9 scenarios / 67 steps passed; filtered artifact `.dev-pomogator/.test-history/run-1784719477427-filtered.ndjson`.
 - `bash scripts/docker-bdd.sh --name "SPECGEN004_372"` in `main` => 1 scenario / 6 steps passed after registry snapshot update.
 - Full `bash scripts/docker-bdd.sh` in `main` => canonical `.dev-pomogator/.last-test-run.ndjson` updated; whole corpus summary: 1832 scenarios (28 failed, 1 undefined, 1 pending, 1802 passed), 10776 steps (28 failed, 6 undefined, 1 pending, 41 skipped, 10700 passed). All 9 `CTXMODE001_*` scenarios are `PASSED` in canonical NDJSON.
 - `npm run lint` => exit 0.
