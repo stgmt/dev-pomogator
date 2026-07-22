@@ -49202,28 +49202,50 @@ function applyChange2(current, change) {
   const next = change.replace_all ? current.split(change.old_string).join(change.new_string) : current.replace(change.old_string, change.new_string);
   return { ok: true, next };
 }
+var FORM_CONTRACTS = {
+  "TASKS.md": "Contract: `- [ ] <title> \u2014 id: <id> \u2014 Status: TODO|READY|IN_PROGRESS|DONE|BLOCKED | Est: <N>m`, followed by `**Done When:**` and at least one `- [ ]` checkbox; or a standalone `_waived: <reason>_` line.",
+  "USER_STORIES.md": 'Contract: `### User Story <N>: <title> (Priority: P1|P2|P3)` with `**Why:**`, `**Independent Test:**`, and `**Acceptance Scenarios:**`. Use `Skill("discovery-forms")` to render it.',
+  "DESIGN.md": "Contract: `### Decision: <title>` with `**Rationale:**`, `**Trade-off:**`, and `**Alternatives considered:**` followed by at least two `- ...` bullets (a table does not count).",
+  "REQUIREMENTS.md": "Contract: a table row `| CHK-FR<n>-<nn> | requirement | FR-N + (AC-N or @featureN or UC-N) | BDD scenario|Unit test|Manual review|Integration test|N/A | Draft|In Progress|Verified|Blocked | notes |`."
+};
 function formFindings(doc, content) {
   const out = [];
+  const base = path13.basename(doc);
+  const contract = FORM_CONTRACTS[base] ?? "";
+  const lines = content.replace(/\r\n/g, "\n").split("\n");
   const push = (blocks, label) => {
     for (const b of blocks) {
-      if (b.missingFirst) out.push({ layer: "form", line: b.lineNumber, message: `${label}: missing ${b.missingFirst}` });
+      if (b.missingFirst) out.push({ layer: "form", line: b.lineNumber, message: `${label}: missing ${b.missingFirst}. ${contract}` });
     }
   };
-  switch (path13.basename(doc)) {
+  switch (base) {
     case "TASKS.md":
       push(parseTaskBlocks(content).filter((b) => !b.waived), "task");
       break;
     case "USER_STORIES.md":
       push(parseUserStoryBlocks(content), "user story");
+      lines.forEach((line, index) => {
+        if (/^###\s+User Story\b/.test(line) && !/^###\s+User Story\s+\d+\b/.test(line)) {
+          out.push({ layer: "form", line: index + 1, message: `user story: invalid heading (a numeric story id is required). ${contract}` });
+        }
+      });
       break;
     case "DESIGN.md":
       push(parseDecisionBlocks(content), "decision");
+      lines.forEach((line, index) => {
+        if (/^###\s+Decision\b/.test(line) && !/^###\s+Decision:/.test(line)) {
+          out.push({ layer: "form", line: index + 1, message: `decision: invalid heading (the colon after Decision is required). ${contract}` });
+        }
+      });
       break;
     case "REQUIREMENTS.md":
       push(parseChkRows(content), "CHK row");
       break;
   }
   return out;
+}
+function formDeltaFindings(doc, before, after) {
+  return deltaByKey(formFindings(doc, before), formFindings(doc, after), (finding) => finding.message);
 }
 function specMdFiles(repoRoot, slug, swapDoc, swapContent) {
   const dir = path13.join(repoRoot, ".specs", slug);
@@ -49407,7 +49429,7 @@ function validateSpecChange(repoRoot, slug, doc, change) {
     return { ok: true, next, findings: [] };
   }
   const findings = [
-    ...formFindings(doc, next),
+    ...formDeltaFindings(doc, current ?? "", next),
     ...isMd ? anchorFindings(repoRoot, slug, doc, next) : [],
     ...isMd || isFeature ? conformanceFindings(repoRoot, slug, doc, next) : [],
     // V2 hard-gate: refuse a .feature write that ADDS a placeholder/[TBD] skeleton
@@ -53063,7 +53085,14 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
           const r = validateSpecChange(process.cwd(), slug, doc, change);
           if (!r.ok) {
             logSpecAccess("apply_spec_change", args, "denied");
-            return asJsonResult({ ok: false, error: "VALIDATION_FAILED", spec: slug, doc, findings: r.findings, hint: "Fix the findings and retry; propose_spec_change is the free dry-run." });
+            return asJsonResult({
+              ok: false,
+              error: "VALIDATION_FAILED",
+              spec: slug,
+              doc,
+              findings: r.findings,
+              hint: "Fix the findings and retry; propose_spec_change is the single-document dry-run. For fresh bootstrap or mutually-dependent FR/Story/Design/AC edits, use propose_patch then apply_proposed_patch, or apply_spec_transaction for one-shot all-or-nothing validation after every document is staged."
+            });
           }
           const abs = writeDocAtomic(process.cwd(), slug, doc, r.next);
           registryOpts.refreshGraph?.();

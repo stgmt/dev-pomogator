@@ -1822,7 +1822,14 @@ export function buildToolRegistry(
           const r = validateSpecChange(process.cwd(), slug, doc, change);
           if (!r.ok) {
             logSpecAccess('apply_spec_change', args, 'denied');
-            return asJsonResult({ ok: false, error: 'VALIDATION_FAILED', spec: slug, doc, findings: r.findings, hint: 'Fix the findings and retry; propose_spec_change is the free dry-run.' });
+            return asJsonResult({
+              ok: false,
+              error: 'VALIDATION_FAILED',
+              spec: slug,
+              doc,
+              findings: r.findings,
+              hint: 'Fix the findings and retry; propose_spec_change is the single-document dry-run. For fresh bootstrap or mutually-dependent FR/Story/Design/AC edits, use propose_patch then apply_proposed_patch, or apply_spec_transaction for one-shot all-or-nothing validation after every document is staged.',
+            });
           }
           const abs = writeDocAtomic(process.cwd(), slug, doc, r.next!);
           registryOpts.refreshGraph?.();
