@@ -456,6 +456,12 @@ Feature: PLUGIN007 plan-validator — core validation engine
     When the plan-validator runs phased validation
     Then the plan-validator phase 1 has an error containing "N/A"
 
+  @feature2
+  Scenario: PLUGIN007_49_03 phase 1 accepts the prescribed emoji Impact Analysis heading
+    Given a plan-validator plan with a destructive action and Impact Analysis set to "| Keyword | Files Found | Action in Plan |"
+    When the plan-validator runs phased validation
+    Then the plan-validator phase 1 has no errors
+
   # ---------------------------------------------------------------------------
   # Phase 1 — Fenced code block in File Changes and Requirements subsection order
   # ---------------------------------------------------------------------------

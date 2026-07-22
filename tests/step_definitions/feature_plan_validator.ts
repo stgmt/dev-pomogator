@@ -908,23 +908,19 @@ Then(/^the plan-validator phase 4 warns about tests without specs$/, function (t
 });
 
 // ---------------------------------------------------------------------------
-// GIVEN — destructive action + explicit Impact Analysis (PLUGIN007_49_02)
+// GIVEN — destructive action + explicit Impact Analysis (PLUGIN007_49_02, _03)
 // ---------------------------------------------------------------------------
 
 Given(/^a plan-validator plan with a destructive action and Impact Analysis set to "([^"]+)"$/, function (this: PvWorld, content: string) {
-  // pvBuildPlanWithFileChanges installs a 'delete' row in File Changes.
-  // The valid fixture has '## 💥 Impact Analysis' which /^##\s+Impact Analysis\b/
-  // cannot match (emoji is not \s), so validateImpactAnalysis would see "missing".
-  // We remove the emoji-prefixed heading and insert a plain '## Impact Analysis'
-  // so the validator finds it and tests the N/A content instead.
+  // Keep the prescribed emoji heading from the real fixture: this step must
+  // exercise the same plan shape that users get from the canonical template.
   let plan = pvBuildPlanWithFileChanges(
     VALID_PLAN,
     '| `old-file.ts` | delete | Remove legacy module |',
   );
-  plan = plan.replace(/\n## 💥 Impact Analysis[\s\S]*?(?=\n## )/, '\n');
   plan = plan.replace(
-    /\n## (?:📁\s+)?File Changes/,
-    `\n## Impact Analysis\n${content}\n\n## 📁 File Changes`,
+    /(\n## 💥 Impact Analysis\n)[\s\S]*?(?=\n## )/,
+    `$1\n${content}\n`,
   );
   this.pvPlan = plan;
 });
