@@ -1,0 +1,14 @@
+{
+  "enabledPlugins": {
+    "context-mode@context-mode": false
+  },
+  "plugins": {
+    "context-mode@context-mode": [
+      {
+        "name": "context-mode",
+        "version": "1.0.169",
+        "path": "/home/test/.claude/plugins/context-mode/context-mode/1.0.169"
+      }
+    ]
+  }
+}

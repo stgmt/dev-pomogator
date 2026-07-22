@@ -4,6 +4,7 @@ import { claudeBinPriorityCheck } from './claude-bin-priority.js';
 import { claudeMemPluginCheck } from './claude-mem-plugin.js';
 import { claudeMemWorkerCheck } from './claude-mem-worker.js';
 import { carlCheck } from './carl.js';
+import { contextModeCheck } from './context-mode.js';
 import { contextMenuCheck } from './context-menu.js';
 import { dockerCheck } from './docker.js';
 import { envExampleCheck } from './env-example.js';
@@ -53,7 +54,15 @@ export const phase2Checks: CheckDefinition[] = [
 
 export const phase3Checks: CheckDefinition[] = [bunCheck, pythonCheck, dockerCheck, meridianCheck];
 
-export const phase4Checks: CheckDefinition[] = [mcpParseCheck, mcpProbeCheck, mcpAuthCheck, pluginLoaderCheck, claudeMemPluginCheck, claudeMemWorkerCheck];
+export const phase4Checks: CheckDefinition[] = [
+  mcpParseCheck,
+  mcpProbeCheck,
+  mcpAuthCheck,
+  pluginLoaderCheck,
+  claudeMemPluginCheck,
+  claudeMemWorkerCheck,
+  contextModeCheck,
+];
 
 export const allChecks: CheckDefinition[] = [
   ...phase2Checks,
@@ -66,6 +75,7 @@ export {
   claudeBinPriorityCheck,
   carlCheck,
   claudeMemPluginCheck,
+  contextModeCheck,
   contextMenuCheck,
   dockerCheck,
   envExampleCheck,

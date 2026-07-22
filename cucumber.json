@@ -33,6 +33,7 @@
       ".specs/codex-init/codex-init.feature",
       ".specs/claude-mem-midsession-reaper/claude-mem-midsession-reaper.feature",
       ".specs/claude-mem-integration/claude-mem-integration.feature",
+      ".specs/context-mode-integration/context-mode-integration.feature",
       ".specs/lint-self-bootstrap/lint-self-bootstrap.feature",
       ".specs/report-issue/report-issue.feature",
       "tests/features/carl-integration.feature",

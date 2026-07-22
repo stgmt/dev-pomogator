@@ -1,0 +1,28 @@
+{
+  "version": 4,
+  "featureSlug": "context-mode-integration",
+  "createdAt": "2026-07-21T19:08:10.070Z",
+  "currentPhase": "Complete",
+  "phases": {
+    "Discovery": {
+      "completedAt": "2026-07-21T19:15:37.855Z",
+      "stopConfirmed": false,
+      "stopConfirmedAt": null
+    },
+    "Context": {
+      "completedAt": "2026-07-21T19:21:12.827Z",
+      "stopConfirmed": false,
+      "stopConfirmedAt": null
+    },
+    "Requirements": {
+      "completedAt": "2026-07-21T19:21:12.828Z",
+      "stopConfirmed": false,
+      "stopConfirmedAt": null
+    },
+    "Finalization": {
+      "completedAt": "2026-07-21T19:21:12.828Z",
+      "stopConfirmed": false,
+      "stopConfirmedAt": null
+    }
+  }
+}

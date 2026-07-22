@@ -1,0 +1,8 @@
+{
+  "ctxToolsAvailable": false,
+  "availableTools": ["Bash", "Read", "Grep"],
+  "operation": {
+    "toolName": "Bash",
+    "command": "Get-Content huge.log"
+  }
+}
