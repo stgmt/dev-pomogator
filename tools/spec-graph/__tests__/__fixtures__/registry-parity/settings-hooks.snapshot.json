@@ -27,6 +27,7 @@
     "mcp-bootstrap",
     "patch_bun_runner",
     "session-summary-hook",
+    "setup",
     "statusline_session_start",
     "subagent_watchdog --event SessionStart"
   ],

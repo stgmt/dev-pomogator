@@ -13,10 +13,15 @@
 | `tools/context-mode-health/value-boundary.ts` | edit | [FR-9](FR.md) |
 | `.specs/context-mode-integration/context-mode-integration.feature` | edit | executable BDD scenarios for [FR-1](FR.md)..[FR-9](FR.md); `@wip` removed after step definitions passed filtered Docker BDD |
 | `./cucumber.json` | edit | wire `.specs/context-mode-integration/context-mode-integration.feature` into the default BDD path set |
-| `.Codex/hooks.json` | edit | optional SessionStart setup/health hook registration, gated by policy |
-| `.claude-plugin/hooks.json` | edit | distribute optional canonical hook registration if chosen |
-| `.agents/skills/pomogator-doctor/SKILL.md` | edit | expose context-mode doctor/remediation guidance |
-| `tests/step_definitions/feature_context_mode_integration.ts` | edit | executable BDD steps for all @feature scenarios |
+| `.Codex/hooks.json` | edit | dogfood SessionStart context-mode setup hook registration for [FR-1](FR.md), [FR-3](FR.md) |
+| `.claude-plugin/hooks.legacy.json` | edit | canonical hook-service source manifest registers the context-mode setup hook for [FR-1](FR.md), [FR-3](FR.md) |
+| `.claude-plugin/hooks.json` | edit | generated canonical HTTP hook manifest stays in sync with hook-service bootstrap |
+| `.claude/settings.json` | edit | generated dogfood Claude settings stay in sync with canonical HTTP hook manifest |
+| `tools/hook-service/registry.json` | edit | generated hook-service route table exposes `tools/context-mode-setup/setup.ts` |
+| `.claude/skills/pomogator-doctor/scripts/engine/checks/context-mode.ts` | edit | runtime doctor check for [FR-4](FR.md), [FR-5](FR.md), [FR-8](FR.md) |
+| `.claude/skills/pomogator-doctor/scripts/engine/checks/index.ts` | edit | includes `contextModeCheck` in phase4/allChecks |
+| `.claude/skills/pomogator-doctor/scripts/engine/doctor.bundle.mjs` | edit | bundled canonical doctor runtime contains `C-CMODE` |
+| `tests/step_definitions/feature_context_mode_integration.ts` | edit | executable BDD steps for all @feature scenarios plus runtime wiring assertions |
 | `tests/fixtures/context-mode/installed_plugins.healthy.json` | edit | real-shaped fixture for [FR-1](FR.md), [FR-4](FR.md) |
 | `tests/fixtures/context-mode/installed_plugins.poisoned.json` | edit | config poisoning fixture for [FR-4](FR.md) |
 | `tests/fixtures/context-mode/installed_plugins.malformed.json` | edit | malformed registry fail-open fixture for [FR-3](FR.md) |

@@ -16,9 +16,9 @@
 
 - `tools/context-mode-setup/` — new builtins-only setup/repair decision engine and SessionStart entrypoint.
 - `tools/context-mode-health/` — new doctor probe helpers for registry, manifest, process, handshake, and hook-safety classification.
-- `.agents/skills/pomogator-doctor/` or canonical doctor engine — add context-mode check row and remediation text.
-- `.Codex/hooks.json` and plugin hook manifest — register SessionStart setup/health if implementation chooses hook deployment.
-- `docs` or skill guidance surface — user-facing install/recovery/value boundary notes.
+- `.claude/skills/pomogator-doctor/scripts/engine/checks/context-mode.ts` — canonical doctor check row and remediation text, bundled into `doctor.bundle.mjs`.
+- `.Codex/hooks.json`, `.claude-plugin/hooks.legacy.json`, and `tools/hook-service/registry.json` — register the SessionStart setup hook in dogfood and shipped hook-service runtime.
+- `docs/context-mode-integration.md` — user-facing install/recovery/value boundary notes.
 - `tests/step_definitions/feature_context_mode_integration.ts` — BDD step definitions using real-shaped fixtures.
 
 ## Где лежит реализация
@@ -32,7 +32,7 @@
 
 1. Setup hook resolves a single Claude home root and opt-out state.
 2. It reads `installed_plugins.json` and optional MCP-only config evidence.
-3. It returns one explicit proposed status [UNVERIFIED]: `PLUGIN_REGISTERED` [UNVERIFIED], `MCP_ONLY_CONFIGURED` [UNVERIFIED], `INSTALL_MISSING` [UNVERIFIED], `SKIP_OPTOUT` [UNVERIFIED], or `SKIP_BACKOFF` [UNVERIFIED].
+3. It returns one explicit status [VERIFIED: tools/context-mode-setup/setup.ts]: `PLUGIN_REGISTERED`, `MCP_ONLY_CONFIGURED`, `INSTALL_MISSING`, `SKIP_OPTOUT`, `SKIP_BACKOFF`, or `ERROR_FAIL_OPEN`.
 4. It exits 0 in every branch. Missing install emits exact user instructions; MCP-only path edits settings only when explicitly selected by policy.
 5. Doctor performs deeper probes: plugin registry, plugin manifest command, live process evidence, JSON-RPC handshake, and hook safety.
 6. Doctor maps evidence to a root-cause status and prints a least-disruptive repair runbook.

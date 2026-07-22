@@ -33,10 +33,13 @@ import {
 import { HookDecision, evaluateContextModeHook } from '../../tools/context-mode-health/hook-safety.ts';
 import { renderWindowsContextModeGuidance } from '../../tools/context-mode-health/windows-guidance.ts';
 import { renderContextModeValueBoundary } from '../../tools/context-mode-health/value-boundary.ts';
+import { allChecks } from '../../.claude/skills/pomogator-doctor/scripts/engine/checks/index.ts';
 
 const REPO_ROOT = path.resolve(import.meta.dirname ?? __dirname, '..', '..');
 const FIXTURE_DIR = path.join(REPO_ROOT, 'tests', 'fixtures', 'context-mode');
 const DOC_PATH = path.join(REPO_ROOT, 'docs', 'context-mode-integration.md');
+const CONTEXT_MODE_SETUP_TARGET = 'tools/context-mode-setup/setup.ts';
+const DOCTOR_BUNDLE_PATH = path.join(REPO_ROOT, '.claude', 'skills', 'pomogator-doctor', 'scripts', 'engine', 'doctor.bundle.mjs');
 
 interface ContextModeWorld extends V4World {
   contextModeHome: string;
@@ -134,6 +137,36 @@ Then(/^no interactive plugin command is launched from shell$/, function (this: C
   assert.equal(this.setupDecision?.exitCode, 0, 'setup decision must be fail-open for SessionStart');
 });
 
+Then(/^the shipped SessionStart runtime registers the context-mode setup hook$/, function () {
+  const legacyHooks = readJson<{ hooks?: { SessionStart?: Array<{ hooks?: Array<{ command?: string }> }> } }>(
+    path.join(REPO_ROOT, '.claude-plugin', 'hooks.legacy.json'),
+  );
+  const httpHooks = readJson<{ hooks?: { SessionStart?: Array<{ hooks?: Array<{ command?: string }> }> } }>(
+    path.join(REPO_ROOT, '.claude-plugin', 'hooks.json'),
+  );
+  const registry = readJson<{ routes?: Record<string, { event?: string; target?: string }> }>(
+    path.join(REPO_ROOT, 'tools', 'hook-service', 'registry.json'),
+  );
+  const legacyCommands = legacyHooks.hooks?.SessionStart?.flatMap((group) => group.hooks?.map((hook) => hook.command ?? '') ?? []) ?? [];
+  const httpCommands = httpHooks.hooks?.SessionStart?.flatMap((group) => group.hooks?.map((hook) => hook.command ?? '') ?? []) ?? [];
+  const registryTargets = Object.values(registry.routes ?? {})
+    .filter((route) => route.event === 'SessionStart')
+    .map((route) => route.target ?? '');
+
+  const codexHooksPath = path.join(REPO_ROOT, '.Codex', 'hooks.json');
+  if (fs.existsSync(codexHooksPath)) {
+    const codexHooks = readJson<{ hooks?: { SessionStart?: Array<{ hooks?: Array<{ command?: string }> }> } }>(codexHooksPath);
+    const codexCommands = codexHooks.hooks?.SessionStart?.flatMap((group) => group.hooks?.map((hook) => hook.command ?? '') ?? []) ?? [];
+    assert.ok(codexCommands.some((command) => command.includes(CONTEXT_MODE_SETUP_TARGET)), '.Codex/hooks.json must dogfood the context-mode setup hook');
+  }
+  assert.ok(
+    legacyCommands.some((command) => command.includes(CONTEXT_MODE_SETUP_TARGET)),
+    '.claude-plugin/hooks.legacy.json must ship the context-mode setup hook',
+  );
+  assert.ok(httpCommands.some((command) => command.includes('tools/hook-service/session-bootstrap.mjs')), '.claude-plugin/hooks.json must enter hook-service through session-bootstrap');
+  assert.ok(registryTargets.includes(CONTEXT_MODE_SETUP_TARGET), 'hook-service registry must expose the context-mode setup target');
+});
+
 Given(/^global Claude settings contain unrelated hooks and MCP servers$/, function (this: ContextModeWorld) {
   this.settingsBefore = {
     hooks: {
@@ -228,6 +261,11 @@ When(/^the context-mode doctor check runs$/, function (this: ContextModeWorld) {
 
 Then(/^the doctor status is "([^"]+)"$/, function (this: ContextModeWorld, status: ContextModeDoctorStatus) {
   assert.equal(this.doctorResult?.status, status, `doctor must classify root cause as ${status}`);
+});
+
+Then(/^pomogator-doctor includes the context-mode health check$/, function () {
+  assert.ok(allChecks.some((check) => check.id === 'C-CMODE'), 'doctor allChecks must include C-CMODE');
+  assert.match(fs.readFileSync(DOCTOR_BUNDLE_PATH, 'utf-8'), /C-CMODE/, 'doctor.bundle.mjs must include the context-mode check');
 });
 
 When(/^the registry is healthy but the MCP process snapshot is dead$/, function (this: ContextModeWorld) {

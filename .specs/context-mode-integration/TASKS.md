@@ -53,10 +53,11 @@
 
 - [ ] Implement setup decision engine — id: CTXMODE-T1-1 — Status: TODO | Est: 90m
   _Requirements: [FR-1](FR.md), [FR-3](FR.md)_
-  _Files: `tools/context-mode-setup/setup.ts`, `tools/context-mode-setup/state.ts`_
+  _Files: `tools/context-mode-setup/setup.ts`, `tools/context-mode-setup/state.ts`, `.Codex/hooks.json`, `.claude-plugin/hooks.legacy.json`, `.claude-plugin/hooks.json`, `.claude/settings.json`, `tools/hook-service/registry.json`_
   **Done When:**
   - [ ] Decision statuses match `SetupDecision` schema.
   - [ ] Opt-out, malformed JSON, installed, missing, and backoff cases exit 0.
+  - [ ] Shipped SessionStart manifests and hook-service registry invoke `tools/context-mode-setup/setup.ts`.
   - [ ] `CTXMODE001_01` and `CTXMODE001_03` scenarios pass.
 
 - [ ] Implement MCP-only config writer — id: CTXMODE-T1-2 — Status: TODO | Est: 90m
@@ -78,10 +79,11 @@
 
 - [ ] Implement doctor probes and classification — id: CTXMODE-T2-1 — Status: TODO | Est: 120m
   _Requirements: [FR-4](FR.md), [FR-5](FR.md)_
-  _Files: `tools/context-mode-health/check.ts`, `tools/context-mode-health/handshake.ts`, `.agents/skills/pomogator-doctor/SKILL.md`_
+  _Files: `tools/context-mode-health/check.ts`, `tools/context-mode-health/handshake.ts`, `.claude/skills/pomogator-doctor/scripts/engine/checks/context-mode.ts`, `.claude/skills/pomogator-doctor/scripts/engine/checks/index.ts`, `.claude/skills/pomogator-doctor/scripts/engine/doctor.bundle.mjs`_
   **Done When:**
   - [ ] Doctor distinguishes `CONFIG_POISONED` and `MCP_DEAD_IN_SESSION` from generic install failure.
   - [ ] Recovery text orders heal -> `/mcp` reconnect -> verify -> full restart last.
+  - [ ] `pomogator-doctor` runtime includes `C-CMODE` in source and bundled doctor output.
   - [ ] `CTXMODE001_04` and `CTXMODE001_05` scenarios pass.
 
 - [ ] Implement hook safety and optional force-ctx policy — id: CTXMODE-T2-2 — Status: TODO | Est: 90m

@@ -1,4 +1,6 @@
 import path from 'node:path';
+import os from 'node:os';
+import { pathToFileURL } from 'node:url';
 import {
   CONTEXT_MODE_SERVER_NAME,
   INSTALL_INSTRUCTIONS,
@@ -10,8 +12,11 @@ import {
   inspectPluginRegistry,
   isRetryLockFresh,
   readJsonObject,
+  stampRetryLock,
   writeJsonAtomic,
 } from './state.ts';
+
+const DEFAULT_BACKOFF_WINDOW_MS = 6 * 60 * 60 * 1000;
 
 export type SetupStatus =
   | 'PLUGIN_REGISTERED'
@@ -29,6 +34,12 @@ export interface SetupDecision {
   lockPath: string;
   exitCode: 0;
   launchedInteractiveCommand: false;
+}
+
+export interface ContextModeHookOutput {
+  continue: true;
+  suppressOutput?: boolean;
+  additionalContext?: string;
 }
 
 export interface McpOnlyResult {
@@ -49,8 +60,10 @@ export function buildContextModeMcpServer(pluginRoot = '.'): JsonObject {
   };
 }
 
-function resolveHomeRoot(env: NodeJS.ProcessEnv): string {
-  return env.CLAUDE_HOME ?? env.HOME ?? env.USERPROFILE ?? process.cwd();
+function resolveHomeRoot(env: NodeJS.ProcessEnv, platform: NodeJS.Platform = process.platform): string {
+  if (env.CLAUDE_HOME) return env.CLAUDE_HOME;
+  if (platform === 'win32' && env.USERPROFILE) return env.USERPROFILE;
+  return env.HOME ?? env.USERPROFILE ?? os.homedir() ?? process.cwd();
 }
 
 function decision(status: SetupStatus, home: string, evidence: string[], instructions: string[] = []): SetupDecision {
@@ -115,6 +128,73 @@ export function runContextModeSetupHook(options: {
   }
 }
 
+export function renderSetupHookOutput(decision: SetupDecision): ContextModeHookOutput {
+  if (decision.status === 'INSTALL_MISSING') {
+    const instructions = decision.instructions.length > 0 ? decision.instructions : INSTALL_INSTRUCTIONS;
+    return {
+      continue: true,
+      additionalContext: [
+        'context-mode is not installed for this Claude/Codex home.',
+        'Install it with:',
+        ...instructions.map((line) => `  ${line}`),
+        'Opt out: DEV_POMOGATOR_CONTEXT_MODE=off.',
+      ].join('\n'),
+    };
+  }
+  return { continue: true, suppressOutput: true };
+}
+
+export function runContextModeSessionStart(options: {
+  homeRoot?: string;
+  env?: NodeJS.ProcessEnv;
+  nowMs?: number;
+  backoffWindowMs?: number;
+  pluginRoot?: string;
+}): { decision: SetupDecision; output: ContextModeHookOutput; mcpOnlyResult?: McpOnlyResult } {
+  const env = options.env ?? process.env;
+  const decisionResult = runContextModeSetupHook({
+    homeRoot: options.homeRoot,
+    env,
+    nowMs: options.nowMs,
+    backoffWindowMs: options.backoffWindowMs ?? DEFAULT_BACKOFF_WINDOW_MS,
+  });
+  let decisionValue = decisionResult.decision;
+  let mcpOnlyResult: McpOnlyResult | undefined;
+
+  if (
+    decisionValue.status === 'INSTALL_MISSING' &&
+    (env.DEV_POMOGATOR_CONTEXT_MODE_MCP_ONLY === '1' || env.DEV_POMOGATOR_CONTEXT_MODE_MCP_ONLY === 'true')
+  ) {
+    try {
+      mcpOnlyResult = applyMcpOnlyContextModeConfig({
+        homeRoot: decisionValue.home,
+        pluginRoot: options.pluginRoot,
+      });
+      decisionValue = {
+        ...decisionValue,
+        status: 'MCP_ONLY_CONFIGURED',
+        evidence: [...decisionValue.evidence, `wrote MCP-only config: ${mcpOnlyResult.settingsPath}`],
+        instructions: [],
+      };
+    } catch (err) {
+      decisionValue = {
+        ...decisionValue,
+        status: 'ERROR_FAIL_OPEN',
+        evidence: [...decisionValue.evidence, err instanceof Error ? err.message : String(err)],
+        instructions: [],
+      };
+    }
+  } else if (decisionValue.status === 'INSTALL_MISSING') {
+    stampRetryLock(decisionValue.home, options.nowMs ?? Date.now());
+  }
+
+  return {
+    decision: decisionValue,
+    output: renderSetupHookOutput(decisionValue),
+    mcpOnlyResult,
+  };
+}
+
 export function applyMcpOnlyContextModeConfig(options: {
   homeRoot: string;
   pluginRoot?: string;
@@ -138,4 +218,37 @@ export function applyMcpOnlyContextModeConfig(options: {
   const backupPath = createTimestampedBackup(settingsPath, options.now ?? new Date());
   writeJsonAtomic(settingsPath, settings);
   return { settingsPath, backupPath, settings };
+}
+
+async function drainStdin(): Promise<void> {
+  try {
+    for await (const _chunk of process.stdin) {
+      // Consume hook protocol stdin so the parent process never blocks on the pipe.
+    }
+  } catch {
+    // fail-open
+  }
+}
+
+function writeOutput(output: ContextModeHookOutput): void {
+  try {
+    process.stdout.write(`${JSON.stringify(output)}\n`);
+  } catch {
+    // fail-open
+  }
+}
+
+async function main(): Promise<void> {
+  await drainStdin();
+  const result = runContextModeSessionStart({
+    env: process.env,
+    pluginRoot: process.env.CLAUDE_PLUGIN_ROOT ?? process.cwd(),
+  });
+  writeOutput(result.output);
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main()
+    .catch(() => writeOutput({ continue: true, suppressOutput: true }))
+    .finally(() => process.exit(0));
 }
