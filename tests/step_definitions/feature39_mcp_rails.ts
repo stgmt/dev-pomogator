@@ -393,7 +393,7 @@ function runGuard(world: GuardWorld, payload: object, enforce: boolean): { statu
   const r = spawnSync(process.execPath, ['--import', 'tsx', GUARD], {
     encoding: 'utf-8',
     input: JSON.stringify({ ...payload, cwd: world.tempDir }),
-    env: enforce ? { ...process.env, SPEC_ACCESS_ENFORCE: 'true' } : { ...process.env, SPEC_ACCESS_ENFORCE: '' },
+    env: enforce ? { ...process.env, SPEC_ACCESS_ENFORCE: 'true' } : { ...process.env, SPEC_ACCESS_ENFORCE: 'false' },
     timeout: 60_000,
   });
   return { status: r.status, stdout: r.stdout ?? '' };
@@ -604,9 +604,9 @@ Given('the plugin userConfig enforce toggle exported to the guard environment', 
 });
 When('the guard computes whether enforce is on', function (this: EnfWorld) {
   this.enfOn = enforceEnabled({ CLAUDE_PLUGIN_OPTION_spec_access_enforce: 'true' } as NodeJS.ProcessEnv);
-  this.enfOff = enforceEnabled({} as NodeJS.ProcessEnv);
+  this.enfOff = enforceEnabled({ SPEC_ACCESS_ENFORCE: 'false' } as NodeJS.ProcessEnv);
 });
-Then('enforce is on, and it is off when no enforce signal is present', function (this: EnfWorld) {
+Then('enforce is on from userConfig and an explicit false turns it off', function (this: EnfWorld) {
   assert.equal(this.enfOn, true);
   assert.equal(this.enfOff, false);
 });
@@ -841,6 +841,92 @@ Then('direct access and whole-tree mutations are structured denies without a run
   }
   assert.deepEqual(result.message, {}, `commit message data must remain allowed: ${JSON.stringify(result.message)}`);
   assert.deepEqual(result.scopedAdd, {}, `an explicitly non-spec pathspec must remain allowed: ${JSON.stringify(result.scopedAdd)}`);
+});
+
+// ── SPECGEN004_564 — issue #134: default-on guard + absolute hook loaders ──
+interface DefaultEnforceWorld extends F39World {
+  enforceMatrix?: Array<{ name: string; actual: boolean; expected: boolean }>;
+  commandHooks?: string[];
+  launcherResult?: { status: number | null; stdout: string; stderr: string };
+}
+
+function collectCommandHooks(value: unknown, result: string[] = []): string[] {
+  if (Array.isArray(value)) {
+    for (const item of value) collectCommandHooks(item, result);
+    return result;
+  }
+  if (value && typeof value === 'object') {
+    const record = value as Record<string, unknown>;
+    if (record.type === 'command' && typeof record.command === 'string') result.push(record.command);
+    for (const child of Object.values(record)) collectCommandHooks(child, result);
+  }
+  return result;
+}
+
+Given('the spec guard environment precedence and canonical command-hook launchers', function (this: DefaultEnforceWorld) {
+  const manifestPath = path.join(process.cwd(), '.claude-plugin', 'hooks.legacy.json');
+  this.commandHooks = collectCommandHooks(JSON.parse(fs.readFileSync(manifestPath, 'utf-8')));
+  assert.ok(this.commandHooks.length > 0, 'canonical legacy manifest must expose command hooks');
+  assert.ok(this.commandHooks.some((command) => command.includes('tools/specs-validator/spec-access-guard.ts')));
+});
+
+When('enforcement signals and a launcher without CLAUDE_PLUGIN_ROOT are exercised', function (this: DefaultEnforceWorld) {
+  const cases: Array<[string, NodeJS.ProcessEnv, boolean]> = [
+    ['unset', {}, true],
+    ['empty falls through to default', { SPEC_ACCESS_ENFORCE: '' }, true],
+    ['manual true', { SPEC_ACCESS_ENFORCE: 'true' }, true],
+    ['manual zero', { SPEC_ACCESS_ENFORCE: '0' }, false],
+    ['first parseable wins', { SPEC_ACCESS_ENFORCE: 'false', CLAUDE_PLUGIN_OPTION_spec_access_enforce: 'true' }, false],
+    ['invalid first falls through', { SPEC_ACCESS_ENFORCE: 'maybe', CLAUDE_PLUGIN_OPTION_spec_access_enforce: 'false' }, false],
+    ['uppercase fallback', { CLAUDE_PLUGIN_OPTION_SPEC_ACCESS_ENFORCE: '1' }, true],
+  ];
+  this.enforceMatrix = cases.map(([name, env, expected]) => ({ name, expected, actual: enforceEnabled(env) }));
+
+  const root = process.cwd();
+  const guardCommand = this.commandHooks!.find((command) => command.includes('tools/specs-validator/spec-access-guard.ts'))!;
+  const env = { ...process.env, CLAUDE_PROJECT_DIR: root };
+  delete env.CLAUDE_PLUGIN_ROOT;
+  delete env.SPEC_ACCESS_ENFORCE;
+  delete env.CLAUDE_PLUGIN_OPTION_spec_access_enforce;
+  delete env.CLAUDE_PLUGIN_OPTION_SPEC_ACCESS_ENFORCE;
+  const launched = spawnSync('sh', ['-c', guardCommand], {
+    cwd: root,
+    env,
+    encoding: 'utf-8',
+    input: JSON.stringify({
+      tool_name: 'Read',
+      tool_input: { file_path: '.specs/demo/FR.md' },
+      cwd: root,
+    }),
+  });
+  this.launcherResult = {
+    status: launched.status,
+    stdout: launched.stdout ?? '',
+    stderr: launched.stderr ?? '',
+  };
+});
+
+Then('the first parseable signal wins, unset signals default to enforce, explicit false disables, and every launcher resolves absolutely', function (this: DefaultEnforceWorld) {
+  for (const row of this.enforceMatrix!) {
+    assert.equal(row.actual, row.expected, `${row.name}: expected ${row.expected}, got ${row.actual}`);
+  }
+
+  const relativePluginLoader = "require('path').join(process.env.CLAUDE_PLUGIN_ROOT";
+  const bootstrapResolve = "require('path').resolve(process.env.CLAUDE_PLUGIN_ROOT";
+  assert.equal(this.commandHooks!.filter((command) => command.includes(relativePluginLoader)).length, 0);
+  assert.equal(
+    this.commandHooks!.filter((command) => command.includes("process.env.CLAUDE_PLUGIN_ROOT || '.'")).every((command) => command.includes("require('path').resolve")),
+    true,
+    'every command-hook loader with a cwd fallback must resolve its target absolutely',
+  );
+  assert.equal(
+    this.commandHooks!.filter((command) => command.includes("'bootstrap.cjs'")).every((command) => command.includes(bootstrapResolve)),
+    true,
+    'every bootstrap command-hook must use the canonical absolute loader',
+  );
+  assert.doesNotMatch(this.launcherResult!.stderr, /MODULE_NOT_FOUND|Cannot find module/);
+  assert.match(this.launcherResult!.stdout, /\"permissionDecision\"\s*:\s*\"deny\"/);
+  assert.match(this.launcherResult!.stdout, /spec-access-guard/);
 });
 
 // ── SPECGEN004_149 — P21-1 multi-session door: EVERY session writes (E-A redesign, owner 2026-06-20) ──
