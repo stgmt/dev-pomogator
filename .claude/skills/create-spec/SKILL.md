@@ -47,6 +47,29 @@ create-spec — это ДВЕРЬ (юзер входит сюда как сей�
 
 Сервер валидирует form-контракты + якоря (delta-only) + conformance ДО касания диска и отказывает с findings list — НЕ переписывай эту логику в скилле. `.progress.json` НЕ мутабелен через MCP: writer contract = `scaffold-spec.ts` bootstrap only + `spec-status.ts` state-transition/repair only.
 
+## Cross-boundary integration checklist
+
+When a feature crosses browser/backend/runtime/provider/service boundaries, Phase 1
+and Phase 2 MUST explicitly name every contract surface before STOP:
+
+- Public consumer contract: browser DTOs, public manifest, public policy, route,
+  schema, display metadata.
+- Private deployment/runtime contract: hostnames, `runtimeBaseUrl`, credentials,
+  provider/runtime config, internal registry, queue names, service discovery.
+- Authority split: which component owns auth, balance, pricing, reserve, dispatch,
+  settlement, artifact readback, and config sync.
+- Redaction boundary: what public DTOs may expose (`runtimeConfigured`, route,
+  `contractVersion`, input schema) and what must remain server-side.
+- Negative/live proof: unauth, insufficient balance/permission, funded success,
+  duplicate/idempotency, artifact/result lookup, and leak checks.
+
+For self-hosted marketplace/API agents, write this invariant verbatim into FR/AC/BDD
+unless the product explicitly chooses another architecture: **manifest/policy is not
+the deployment registry; `runtimeBaseUrl` is private backend config; browser calls a
+same-origin gateway; only the backend dispatches to the runtime.** Do not accept
+`endpoint exists`, `SPA route loads`, or public `runtimeConfigured=true` as deployment
+proof without server-side dispatch/readiness evidence.
+
 ## Phase navigation
 
 | Phase | Reference | Что делает |
