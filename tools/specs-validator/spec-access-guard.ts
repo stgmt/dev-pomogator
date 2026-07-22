@@ -127,6 +127,56 @@ function isEngineToken(tok: string): boolean {
  */
 const GIT_PLUMBING_SAFE = new Set(['add', 'commit', 'status', 'stash']);
 const GIT_CONTENT_LEAK = new Set(['show', 'diff', 'log', 'grep', 'blame', 'cat-file', 'checkout', 'switch']);
+
+/**
+ * Git can mutate every tracked/untracked spec without spelling `.specs/` in the
+ * command. Those implicit whole-tree forms must be classified before the cheap
+ * literal-path fast path below. Quoted strings are data (notably commit messages),
+ * so erase their contents before inspecting flags.
+ */
+export function isWholeTreeGitMutation(rawCmd: string): boolean {
+  const cmd = rawCmd
+    .replace(/<<-?\s*(['"]?)([A-Za-z_]\w*)\1[^\n]*\n[\s\S]*?\n[ \t]*\2[ \t]*(?=\n|$)/g, ' ')
+    .replace(/(^|\s)#.*$/gm, '$1')
+    .replace(/"[^"]*"/g, '""')
+    .replace(/'[^']*'/g, "''");
+  const segments = cmd.split(/&&|\|\||[|;&\n()]+/).map((s) => s.trim()).filter(Boolean);
+  for (const segment of segments) {
+    const argv = segment.replace(/[<>].*$/, '').trim().split(/\s+/).filter(Boolean);
+    let i = 0;
+    while (i < argv.length && /^[A-Za-z_]\w*=/.test(argv[i])) i++;
+    if (argv[i] !== 'git') continue;
+    i++;
+    // Skip common git-global options before the subcommand.
+    while (i < argv.length) {
+      const token = argv[i];
+      if (token === '-C' || token === '-c' || token === '--git-dir' || token === '--work-tree' || token === '--namespace') {
+        i += 2;
+        continue;
+      }
+      if (/^(?:-C|-c|--git-dir=|--work-tree=|--namespace=)/.test(token)) {
+        i++;
+        continue;
+      }
+      if (token.startsWith('-')) {
+        i++;
+        continue;
+      }
+      break;
+    }
+    const sub = argv[i++] ?? '';
+    const rest = argv.slice(i);
+    if (sub === 'add') {
+      const paths = rest.filter((token) => token !== '--' && !token.startsWith('-'));
+      const broadPath = paths.some((token) => token === '.' || token === ':/' || token === ':(top)' || token === ':(top)**');
+      const broadFlag = rest.some((token) => token === '--all' || token === '--update' || /^-[^-]*[Au]/.test(token));
+      if (broadPath || (broadFlag && paths.length === 0)) return true;
+    }
+    if (sub === 'commit' && rest.some((token) => token === '--all' || /^-[^-]*a/.test(token))) return true;
+  }
+  return false;
+}
+
 function isSpecVcsPlumbingOnly(rawCmd: string): boolean {
   // Strip heredoc BODIES, comments AND quoted strings FIRST — a commit message is
   // DATA, not a command: `git commit -m "…(.specs/x)…"` must not be shredded by the
@@ -295,6 +345,7 @@ export function violationOf(data: PreToolUseInput): { tool: string; detail: stri
   }
   if (t === 'Bash') {
     const cmd = inp.command ?? '';
+    if (isWholeTreeGitMutation(cmd)) return { tool: 'Bash', detail: cmd.slice(0, 120) };
     if (!touchesSpecs(cmd)) return null;
     // FR-39f: an engine-CLI invocation is ALLOWED even with .specs/ args.
     if (invokesEngineCli(cmd)) return null;
@@ -451,6 +502,10 @@ async function main(): Promise<void> {
     `         node --import tsx scripts/spec-door.ts search "<query>" | trace <node_id> | list <spec> | read <spec> <doc>\n` +
     `  detail: ${v.detail}\n` +
     escapeLine;
+  // Exit-2 command-hook hosts display stderr; the canonical HTTP hook-service
+  // consumes the structured stdout object below. Emit both so legacy/direct
+  // dispatch and HTTP dispatch preserve the same actionable guard reason.
+  process.stderr.write(reason + '\n');
   process.stdout.write(
     JSON.stringify({
       hookSpecificOutput: {

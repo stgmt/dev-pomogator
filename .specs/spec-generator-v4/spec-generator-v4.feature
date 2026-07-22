@@ -3550,3 +3550,9 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     When integration-first verification or post-release monitoring detects a tracked-file or dependency-absent failure after release
     Then the PR identity, GitHub release candidate, or tag, run identity, owner, monitoring signal, rollback action, and follow-up verification are recorded
     And not_recorded or never-run evidence prevents a release-ready claim
+
+  @feature39 @FR-39
+  Scenario: SPECGEN004_562 the installed spec guard preserves structured denies and catches whole-tree Git mutations
+    Given the canonical hook-service dispatches the real spec-access guard through the bootstrap runner
+    When direct spec access, Git message data, and whole-tree Git mutations run with spec-access enforce on
+    Then direct access and whole-tree mutations are structured denies without a runner failure reason while Git message data is allowed

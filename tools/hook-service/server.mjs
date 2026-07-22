@@ -49,9 +49,20 @@ export function isWithinRoot(root, target) {
   return !rel.startsWith('..') && !path.isAbsolute(rel);
 }
 
-const adaptOutput = (event, stdout, stderr, exitCode) => {
+export const adaptOutput = (event, stdout, stderr, exitCode) => {
   const output = stdout.trim();
   if (exitCode === 2) {
+    // A command hook may emit a structured deny and exit 2. Prefer that decision
+    // over launcher diagnostics on stderr (Windows tsx-runner used to append
+    // `native:fail(2)`, replacing the real guard reason at the HTTP boundary).
+    if (output) {
+      try {
+        const parsed = JSON.parse(output);
+        if (parsed && !Array.isArray(parsed)) return parsed;
+      } catch {
+        // Legacy stderr/text blocking form below.
+      }
+    }
     const reason = stderr.trim() || output || 'Hook blocked';
     if (event === 'PreToolUse') return { hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'deny', permissionDecisionReason: reason } };
     return { decision: 'block', reason };

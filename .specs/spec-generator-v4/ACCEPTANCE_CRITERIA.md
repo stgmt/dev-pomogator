@@ -606,7 +606,7 @@ WHEN any lifecycle state is returned THEN the response SHALL include `counts` (F
 
 **Требование:** [FR-39](FR.md#fr-39)
 
-WHEN агент вызывает Read/Grep/Glob/Edit/Write по пути `.specs/**` при `SPEC_ACCESS_ENFORCE=true` THEN хук `spec-access-guard` SHALL отклонить вызов с указателем на MCP-тулзы И записать событие в `spec-access.jsonl`; в shadow-режиме тот же матч SHALL только логироваться. Движковые in-process чтения (builder/CLI/хуки) SHALL остаться незатронутыми.
+WHEN агент вызывает Read/Grep/Glob/Edit/Write по пути `.specs/**` при `SPEC_ACCESS_ENFORCE=true` THEN хук `spec-access-guard` SHALL отклонить вызов с указателем на MCP-тулзы И записать событие в `spec-access.jsonl`; в shadow-режиме тот же матч SHALL только логироваться. WHEN Bash запускает whole-tree Git-мутацию (`git add -A`/`--all`, `git commit -a`/`-am`) без литерала `.specs/` THEN хук SHALL также вернуть structured deny; WHEN `.specs/` встречается только в тексте обычного commit message без whole-tree mutation THEN вызов SHALL быть разрешён. Structured deny через canonical hook-service/bootstrap runner SHALL сохранять причину guard-а и не заменять её `tsx-runner ... fail(2)`. Движковые in-process чтения (builder/CLI/хуки) SHALL остаться незатронутыми.
 
 ## AC-39.2
 

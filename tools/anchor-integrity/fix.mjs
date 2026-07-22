@@ -183,7 +183,8 @@ function cliMain() {
   const specDoorIdx = args.indexOf('--spec-door');
   const specDoor = specDoorIdx !== -1 ? path.resolve(process.cwd(), args[specDoorIdx + 1]) : undefined;
   const dirs = [];
-  if (args.includes('--all')) {
+  const all = args.includes('--all');
+  if (all) {
     if (door && apply) { process.stderr.write('--door/controlled SPEC_ACCESS_ENFORCE supports one --spec at a time; --all would batch many validated door writes.\n'); process.exit(2); }
     const specsRoot = path.join(repoRoot, '.specs');
     for (const d of fs.readdirSync(specsRoot)) {
@@ -206,7 +207,10 @@ function cliMain() {
       totalDispatched += r.claude.dispatched; totalFlagged += r.claude.flagged;
       if (!r.claude.available) claudeUnavailable = true;
     }
-    if (r.fixable || r.skipped || ('failed' in r && r.failed.length)) {
+    // A single-spec verification pass must expose explicit zeroes so callers can
+    // prove the deterministic fixer converged (`fixable=0`, `written=0`). Keep
+    // --all concise by omitting clean rows from a potentially large corpus.
+    if (!all || r.fixable || r.skipped || ('failed' in r && r.failed.length)) {
       const cl = r.claude ? ` claude=${r.claude.available ? r.claude.dispatched + ' dispatched' : 'unavailable→flagged'}` : '';
       const via = door && apply ? ' via-door' : '';
       const failed = 'failed' in r && r.failed.length ? ` failed=${r.failed.length}` : '';
