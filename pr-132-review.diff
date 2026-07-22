@@ -1,0 +1,1738 @@
+diff --git a/.agents/skills/hyperv-vm/SKILL.md b/.agents/skills/hyperv-vm/SKILL.md
+new file mode 100644
+index 00000000..58f7cba7
+--- /dev/null
++++ b/.agents/skills/hyperv-vm/SKILL.md
+@@ -0,0 +1,160 @@
++---
++name: hyperv-vm
++description: >-
++  Provision, connect to, measure, optimize, verify, and roll back reusable Hyper-V virtual
++  machines. Supports Windows LTSC guests with PowerShell Direct/RDP and Ubuntu Server guests
++  with SSH; can install WSL2 plus Docker CE without Docker Desktop, sparse VHD, BuildKit cache
++  GC, equal-limit memory profiling, and opt-in security/update policies. Triggers: "create VM",
++  "Hyper-V VM", "Windows LTSC VM", "Ubuntu VM", "виртуальная машина", "виртуалка",
++  "настрой VM", "оптимизируй VM", "подключись к VM".
++allowed-tools: Read, Write, Edit, Glob, Grep, Bash, AskUserQuestion, WebSearch, WebFetch
++argument-hint: "<plan|apply|connect|measure|optimize|verify|rollback> [-ConfigPath <path>]"
++---
++
++# hyperv-vm
++
++Use the scripts in this skill. Never paste credentials into generated files, command history,
++Git, unattended XML, cloud-init, logs, reports, or issue bodies.
++
++## Safety and scope
++
++1. Confirm the user controls the host and guest. Do not expose management ports beyond the
++   selected Hyper-V switch.
++2. Run `Test-HyperVVmPrerequisites.ps1` first. Stop on a name collision, missing ISO, insufficient
++   free storage, unavailable switch, unsupported host feature, or failed checksum.
++3. Default to `Plan`/`WhatIf`. `Apply` is permitted only after showing the resolved configuration.
++4. ISO/image acquisition must use an official vendor URL supplied in config, or a local ISO with
++   `expectedSha256`. Never obtain unofficial Windows images or bypass licensing/activation.
++5. Existing VM replacement, VHD deletion, checkpoint deletion, security disabling, and update
++   disabling require separate explicit approval. These flags default to false.
++6. Reboots are never a first-line remediation. Reboot only when setup/feature activation requires
++   it or when the user explicitly asks for end-to-end provisioning.
++
++## Configuration
++
++Copy `references/config.example.psd1` outside the repository and edit it. Required secrets are
++resolved at runtime in this order:
++
++1. PowerShell SecretManagement (`SecretVault` + `SecretName`);
++2. environment variable named by `AdminPasswordEnv` or `SshPrivateKeyPassphraseEnv`;
++3. interactive `Read-Host -AsSecureString` when a terminal is available.
++
++Never accept plaintext passwords in the config. Windows unattended installation uses a generated
++one-time bootstrap secret; `Finalize-WindowsGuest.ps1` rotates it to the runtime secret before
++verification and deletes autologon values. Linux uses an SSH public key by default; password SSH
++is opt-in.
++
++## Workflow
++
++### 1. Plan and validate
++
++```powershell
++$skill = '<plugin-root>\.claude\skills\hyperv-vm'
++& "$skill\scripts\Test-HyperVVmPrerequisites.ps1" -ConfigPath .\vm.psd1
++& "$skill\scripts\Invoke-HyperVVm.ps1" -Action Plan -ConfigPath .\vm.psd1
++```
++
++Show: guest type, VM name, generation, CPU, static/dynamic RAM, VHD size/type, switch, install
++source + SHA-256, management transport, exposed ports, optional profiles, destructive actions,
++and expected reboots.
++
++### 2. Provision
++
++```powershell
++& "$skill\scripts\Invoke-HyperVVm.ps1" -Action Apply -ConfigPath .\vm.psd1
++```
++
++Profiles:
++
++- `windows-ltsc`: Generation 2, UEFI/Secure Boot, optional vTPM, unattended install, PowerShell
++  Direct verification, optional RDP. If `InstallWslDocker` is true, enable nested virtualization,
++  WSL2, Ubuntu, systemd, Docker CE, BuildKit GC, sparse VHD, and a prune timer.
++- `ubuntu-server`: Generation 2, Microsoft UEFI CA Secure Boot, cloud-init NoCloud ISO, SSH key
++  login, optional Docker CE. Verify with SSH using strict host-key checking and a dedicated
++  `known_hosts` file.
++
++### 3. Connect
++
++```powershell
++& "$skill\scripts\Connect-HyperVVm.ps1" -ConfigPath .\vm.psd1
++```
++
++- Windows: prefer PowerShell Direct (`New-PSSession -VMName`) because it requires no guest network
++  or inbound firewall rule. Use RDP only when enabled in config.
++- Ubuntu: use SSH key auth. Discover the guest IP from `Get-VMNetworkAdapter` and fail if ambiguous.
++  Print the exact SSH command but never print the private-key passphrase.
++
++### 4. Measure before optimization
++
++```powershell
++& "$skill\scripts\Measure-HyperVVm.ps1" -ConfigPath .\vm.psd1 -Phase before
++```
++
++Keep VM limits, workload, uptime stabilization delay, Docker state, and container set identical.
++Measure host free RAM, Hyper-V assigned/demand, guest used/available RAM, process/service counts,
++WSL memory, Docker daemon RSS, container count, and configuration fingerprint. A report is invalid
++when limits or fingerprint differ.
++
++### 5. Optimize
++
++```powershell
++& "$skill\scripts\Optimize-HyperVVm.ps1" -ConfigPath .\vm.psd1 -Profile Conservative
++```
++
++`Conservative` is default and reversible:
++
++- Windows: disable only config-selected services irrelevant to the declared role; remove stale
++  autologon; consolidate service hosts only when measured; preserve networking, PowerShell Direct,
++  Hyper-V integration, WSL, Docker, and user-selected access.
++- WSL: `autoMemoryReclaim`, sparse VHD, systemd Docker, BuildKit GC and timer. Do not call a lower
++  memory cap an operating-system optimization.
++- Ubuntu: disable only config-selected unused services/packages and preserve SSH/network/cloud-init
++  until provisioning finishes.
++
++`DisableSecurity`, `DisableFirewall`, and `DisableUpdates` are independent, high-risk opt-ins.
++Warn that they reduce defense, snapshot state first, write rollback metadata, and verify the VM is
++not reachable from untrusted networks. Keep BFE/network dependencies intact when firewall profiles
++are disabled.
++
++### 6. Measure after and verify
++
++```powershell
++& "$skill\scripts\Measure-HyperVVm.ps1" -ConfigPath .\vm.psd1 -Phase after
++& "$skill\scripts\Compare-HyperVVmMeasurements.ps1" -Before .\reports\before.json -After .\reports\after.json
++& "$skill\scripts\Test-HyperVVm.ps1" -ConfigPath .\vm.psd1
++```
++
++Required checks:
++
++- VM running, heartbeat healthy, requested CPU/RAM/VHD/network/nested virtualization;
++- Windows login via PowerShell Direct or Linux login via SSH;
++- WSL distro version 2 when selected;
++- Docker service active and `docker run --rm hello-world` succeeds;
++- sparse VHD and cache policy/timer match config;
++- security/update state matches explicit config;
++- no secret appears in artifacts;
++- before/after limits and workload fingerprints match.
++
++### 7. Roll back
++
++```powershell
++& "$skill\scripts\Invoke-HyperVVm.ps1" -Action Rollback -ConfigPath .\vm.psd1
++```
++
++Rollback uses the state bundle under the configured `StateDirectory`. It restores service startup
++modes, policies, firewall profiles, update settings, service-host threshold, WSL config, and VM
++memory configuration. It does not delete a VM or VHD unless `AllowDelete=true` and the user confirms
++that exact path/name.
++
++## Output
++
++Return:
++
++1. state/report paths;
++2. VM connection method (no secret values);
++3. before/after table with unchanged-limit proof;
++4. verification results and any skipped checks;
++5. rollback command;
++6. risks introduced by opt-in security/update settings.
++
++See `references/design.md` and `references/troubleshooting.md` for contracts and known failure modes.
+diff --git a/.agents/skills/hyperv-vm/references/config.example.psd1 b/.agents/skills/hyperv-vm/references/config.example.psd1
+new file mode 100644
+index 00000000..efe6ecad
+--- /dev/null
++++ b/.agents/skills/hyperv-vm/references/config.example.psd1
+@@ -0,0 +1,67 @@
++@{
++    SchemaVersion = 1
++    Name = 'dev-vm'
++    Guest = 'ubuntu-server' # windows-ltsc | ubuntu-server
++    Generation = 2
++    ProcessorCount = 2
++    Memory = @{
++        Dynamic = $false
++        StartupMB = 4096
++        MinimumMB = 2048
++        MaximumMB = 4096
++        BufferPercent = 10
++    }
++    Disk = @{
++        SizeGB = 80
++        Dynamic = $true
++        RootDirectory = 'D:\Hyper-V'
++    }
++    Network = @{
++        SwitchName = 'Default Switch'
++        AllowUntrustedNetwork = $false
++    }
++    Install = @{
++        Source = 'C:\ISO\official-image.iso'
++        ExpectedSha256 = 'REPLACE_WITH_VENDOR_PUBLISHED_SHA256'
++        Locale = 'en-US'
++        TimeZone = 'UTC'
++    }
++    Access = @{
++        AdminUser = 'vmadmin'
++        AdminPasswordEnv = 'HYPERV_VM_ADMIN_PASSWORD'
++        SecretVault = $null
++        SecretName = $null
++        EnableRdp = $false
++        SshPublicKeyPath = '~\.ssh\id_ed25519.pub'
++        SshPrivateKeyPath = '~\.ssh\id_ed25519'
++        SshPrivateKeyPassphraseEnv = 'HYPERV_VM_SSH_PASSPHRASE'
++        EnablePasswordSsh = $false
++    }
++    Features = @{
++        NestedVirtualization = $true
++        InstallWslDocker = $false
++        InstallDocker = $true
++        WslDistribution = 'Ubuntu-24.04'
++        WslMemoryMB = 3072
++        WslSwapMB = 1024
++        SparseVhd = $true
++        AutoMemoryReclaim = 'dropCache'
++        BuildCacheLimitGB = 25
++    }
++    Optimization = @{
++        Enabled = $true
++        Profile = 'Conservative'
++        DisableServices = @()
++        DisableSecurity = $false
++        DisableFirewall = $false
++        DisableUpdates = $false
++        ConsolidateServiceHosts = $true
++    }
++    Safety = @{
++        AllowReplaceExistingVm = $false
++        AllowDelete = $false
++        RequireOfficialSource = $true
++    }
++    StateDirectory = '.\hyperv-vm-state'
++    ReportDirectory = '.\hyperv-vm-reports'
++}
+diff --git a/.agents/skills/hyperv-vm/references/design.md b/.agents/skills/hyperv-vm/references/design.md
+new file mode 100644
+index 00000000..57d116b6
+--- /dev/null
++++ b/.agents/skills/hyperv-vm/references/design.md
+@@ -0,0 +1,63 @@
++# Hyper-V VM skill design
++
++## Goals
++
++- Reproduce Windows LTSC and Ubuntu Server Hyper-V guests without machine-specific paths.
++- Keep secrets outside repository artifacts and generated media.
++- Support reliable login: PowerShell Direct/RDP for Windows; SSH keys for Linux.
++- Install Docker CE without Docker Desktop, including WSL2 Docker on Windows guests.
++- Make optimization measurable, role-based, reversible, and independent from resource caps.
++
++## State machine
++
++`absent -> planned -> media-ready -> created -> os-installed -> access-ready -> features-ready -> optimized -> verified`
++
++Each transition writes a JSON state record atomically. Re-running resumes at the first incomplete
++transition after validating existing artifacts. A mismatch in VM ID, VHD path, ISO hash, or config
++fingerprint stops execution instead of replacing resources.
++
++## Secret contract
++
++Configuration contains only secret references. Scripts resolve a `SecureString` from
++SecretManagement, an environment variable, or an interactive prompt. Secrets must not be passed in
++PowerShell command-line arguments. Generated unattended/cloud-init media must use either SSH public
++keys or a one-time random bootstrap secret. The bootstrap secret is removed after the final account
++credential is set.
++
++## Windows profile
++
++- Generation 2; Microsoft Windows Secure Boot; optional vTPM.
++- Installation source must be local and hash-verified, or downloaded from a configured official URL.
++- PowerShell Direct is the primary transport and verification channel.
++- WSL2 requires nested virtualization and a Windows build supported by the selected WSL release.
++- Docker runs under Ubuntu systemd; no Docker Desktop dependency.
++
++## Ubuntu profile
++
++- Generation 2; Microsoft UEFI Certificate Authority Secure Boot.
++- Ubuntu Server ISO plus generated NoCloud seed ISO.
++- SSH public-key authentication, `PasswordAuthentication no` by default.
++- Docker CE from Docker's signed apt repository; the user is added to `docker` only when explicitly
++  configured because the group grants root-equivalent access.
++
++## Measurement validity
++
++A before/after comparison is valid only when these fields match:
++
++- VM ID and generation;
++- CPU count;
++- static/dynamic memory settings and all byte limits;
++- WSL memory/swap settings;
++- workload ID and running-container manifest;
++- stabilization delay;
++- guest build/kernel and Docker version.
++
++Changing a cap is reported as capacity tuning, never as guest optimization.
++
++## Optimization and rollback
++
++Every optimization records prior service modes, policy/registry values, firewall profiles, update
++services/tasks, service-host threshold, WSL config, and VM memory settings. Rollback restores only
++values changed by this skill. Missing/foreign values are left untouched and reported.
++
++Security/update changes are separate profile flags and are never implied by `Conservative`.
+diff --git a/.agents/skills/hyperv-vm/references/troubleshooting.md b/.agents/skills/hyperv-vm/references/troubleshooting.md
+new file mode 100644
+index 00000000..f49f186b
+--- /dev/null
++++ b/.agents/skills/hyperv-vm/references/troubleshooting.md
+@@ -0,0 +1,55 @@
++# Troubleshooting
++
++## Prerequisite failures
++
++- Hyper-V cmdlets missing: enable Hyper-V on a supported Windows edition and complete the required
++  feature activation before retrying.
++- No virtual switch: create/select one explicitly; do not silently attach to an arbitrary switch.
++- VM name collision: inspect the existing VM and state bundle. Replace only with explicit approval.
++- ISO checksum mismatch: delete the partial file and obtain it again from the official source.
++
++## Windows guest
++
++- PowerShell Direct says credential invalid: wait for OOBE/account creation, verify the configured
++  user, and inspect Panther logs offline. Do not repeatedly reset credentials blindly.
++- WSL reports `WSL_E_OS_NOT_SUPPORTED`: compare the Windows build against the chosen WSL release;
++  install an official servicing update, reboot only when the package requires it, then retry.
++- Nested WSL fails: confirm `ExposeVirtualizationExtensions`, guest VirtualMachinePlatform and WSL
++  features, and sufficient host virtualization support.
++- Unattend fails: inspect `Windows\Panther\setuperr.log` and `UnattendGC`; validate computer-name,
++  pass, component architecture, image index, partition types, and media drive discovery.
++
++## Ubuntu guest
++
++- No IP address: inspect switch/DHCP and `Get-VMNetworkAdapter`; do not guess an address.
++- SSH host key changed: confirm the VM identity and state bundle before removing the old key.
++- cloud-init incomplete: inspect `cloud-init status --long` and `/var/log/cloud-init-output.log`.
++- Docker access denied: use `sudo` or deliberately add the user to `docker`; document that this is
++  root-equivalent access.
++
++## Docker and WSL
++
++- systemd unavailable: verify `/etc/wsl.conf`, run `wsl --shutdown`, then inspect PID 1.
++- BuildKit GC not enforced: check `/etc/docker/daemon.json`, daemon restart, timer state, and builder
++  driver. `defaultKeepStorage` applies to the Docker driver; custom buildx builders need their own
++  `buildkitd.toml`.
++- sparse conversion fails: terminate the distro, verify current WSL syntax/version, and preserve a
++  VHD backup before `--allow-unsafe`.
++
++## Measurement anomalies
++
++- Working-set totals exceed guest used memory: shared pages are double-counted; use guest used RAM
++  and Hyper-V demand as primary physical metrics.
++- Large before/after drop after a reboot: repeat both sides from equivalent clean boots and identical
++  stabilization delays.
++- Shell processes disappear: check whether a disconnected desktop session was logged off; report
++  this separately from service-host consolidation.
++
++## Security profile
++
++- Firewall profiles off while `mpssvc` remains running is expected; BFE/network dependencies may
++  require the service.
++- Defender tamper protection can reject policy/service changes. Report the refusal; do not bypass
++  endpoint management.
++- Protected Windows Update services may restore themselves. Verify policies, service states, and
++  scheduled tasks after reboot; provide rollback metadata.
+diff --git a/.agents/skills/hyperv-vm/scripts/Common.ps1 b/.agents/skills/hyperv-vm/scripts/Common.ps1
+new file mode 100644
+index 00000000..49a46e6f
+--- /dev/null
++++ b/.agents/skills/hyperv-vm/scripts/Common.ps1
+@@ -0,0 +1,60 @@
++Set-StrictMode -Version Latest
++$ErrorActionPreference = 'Stop'
++
++function Import-HyperVVmConfig {
++    [CmdletBinding()]
++    param([Parameter(Mandatory)][string]$ConfigPath)
++
++    $resolved = (Resolve-Path -LiteralPath $ConfigPath).Path
++    $config = Import-PowerShellDataFile -LiteralPath $resolved
++    if ($config.SchemaVersion -ne 1) { throw "Unsupported SchemaVersion: $($config.SchemaVersion)" }
++    if ($config.Guest -notin 'windows-ltsc','ubuntu-server') { throw "Unsupported Guest: $($config.Guest)" }
++    if ($config.Generation -ne 2) { throw 'Only Hyper-V Generation 2 is supported' }
++    if (-not $config.Name -or $config.Name -notmatch '^[A-Za-z0-9._-]{1,64}$') { throw 'Invalid VM name' }
++    if ([int]$config.ProcessorCount -lt 1) { throw 'ProcessorCount must be positive' }
++    if ([int]$config.Memory.StartupMB -lt 1024) { throw 'Startup memory must be at least 1024 MB' }
++    if ([int]$config.Disk.SizeGB -lt 20) { throw 'Disk size must be at least 20 GB' }
++    if ($config.Access.ContainsKey('AdminPassword')) { throw 'Plaintext AdminPassword is forbidden' }
++    if ($config.Access.ContainsKey('SshPrivateKeyPassphrase')) { throw 'Plaintext SSH passphrases are forbidden' }
++
++    [pscustomobject]@{ Path = $resolved; Directory = Split-Path $resolved; Value = $config }
++}
++
++function Get-FileSha256 {
++    param([Parameter(Mandatory)][string]$Path)
++    (Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash.ToUpperInvariant()
++}
++
++function Get-ConfigFingerprint {
++    param([Parameter(Mandatory)][hashtable]$Config)
++    $json = $Config | ConvertTo-Json -Depth 20 -Compress
++    $sha = [Security.Cryptography.SHA256]::Create()
++    try { ([BitConverter]::ToString($sha.ComputeHash([Text.Encoding]::UTF8.GetBytes($json)))).Replace('-','') }
++    finally { $sha.Dispose() }
++}
++
++function Resolve-ConfigPath {
++    param([string]$Base, [string]$Path)
++    if ($Path.StartsWith('~')) {
++        $Path = Join-Path ([Environment]::GetFolderPath('UserProfile')) $Path.Substring(1).TrimStart('\','/')
++    }
++    if ([IO.Path]::IsPathRooted($Path)) { return [IO.Path]::GetFullPath($Path) }
++    [IO.Path]::GetFullPath((Join-Path $Base $Path))
++}
++
++function Write-AtomicJson {
++    param([Parameter(Mandatory)]$InputObject, [Parameter(Mandatory)][string]$Path)
++    $parent = Split-Path -Parent $Path
++    New-Item -ItemType Directory -Force -Path $parent | Out-Null
++    $temp = "$Path.$PID.tmp"
++    $InputObject | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $temp -Encoding UTF8
++    Move-Item -LiteralPath $temp -Destination $Path -Force
++}
++
++function Get-StatePaths {
++    param([Parameter(Mandatory)]$Imported)
++    $config = $Imported.Value
++    $state = Resolve-ConfigPath $Imported.Directory $config.StateDirectory
++    $reports = Resolve-ConfigPath $Imported.Directory $config.ReportDirectory
++    [pscustomobject]@{ State = $state; Reports = $reports; StateFile = Join-Path $state 'state.json' }
++}
+diff --git a/.agents/skills/hyperv-vm/scripts/Compare-HyperVVmMeasurements.ps1 b/.agents/skills/hyperv-vm/scripts/Compare-HyperVVmMeasurements.ps1
+new file mode 100644
+index 00000000..2e52f9aa
+--- /dev/null
++++ b/.agents/skills/hyperv-vm/scripts/Compare-HyperVVmMeasurements.ps1
+@@ -0,0 +1,27 @@
++[CmdletBinding()]
++param(
++    [Parameter(Mandatory)][string]$Before,
++    [Parameter(Mandatory)][string]$After
++)
++
++$beforeData = Get-Content -LiteralPath $Before -Raw | ConvertFrom-Json
++$afterData = Get-Content -LiteralPath $After -Raw | ConvertFrom-Json
++$invalid = [Collections.Generic.List[string]]::new()
++foreach ($field in 'VMId','LimitsFingerprint','StabilizationSeconds','Workload') {
++    if ($beforeData.$field -ne $afterData.$field) { $invalid.Add("$field differs") }
++}
++if ($invalid.Count) {
++    [pscustomobject]@{ Valid = $false; Reasons = @($invalid); Before = $Before; After = $After }
++    exit 1
++}
++
++$rows = foreach ($metric in 'VMAssignedMB','VMDemandMB') {
++    $old = [double]$beforeData.$metric
++    $new = [double]$afterData.$metric
++    [pscustomobject]@{ Metric=$metric; Before=$old; After=$new; Delta=[math]::Round($new-$old,1); Percent=if($old){[math]::Round((($new-$old)/$old)*100,1)}else{$null} }
++}
++if ($beforeData.Guest.PSObject.Properties.Name -contains 'UsedMB') {
++    $old = [double]$beforeData.Guest.UsedMB; $new = [double]$afterData.Guest.UsedMB
++    $rows += [pscustomobject]@{ Metric='GuestUsedMB'; Before=$old; After=$new; Delta=[math]::Round($new-$old,1); Percent=if($old){[math]::Round((($new-$old)/$old)*100,1)}else{$null} }
++}
++[pscustomobject]@{ Valid=$true; LimitsUnchanged=$true; Rows=@($rows) }
+diff --git a/.agents/skills/hyperv-vm/scripts/Connect-HyperVVm.ps1 b/.agents/skills/hyperv-vm/scripts/Connect-HyperVVm.ps1
+new file mode 100644
+index 00000000..a0820c77
+--- /dev/null
++++ b/.agents/skills/hyperv-vm/scripts/Connect-HyperVVm.ps1
+@@ -0,0 +1,30 @@
++[CmdletBinding()]
++param([Parameter(Mandatory)][string]$ConfigPath)
++
++. "$PSScriptRoot\Common.ps1"
++$imported = Import-HyperVVmConfig $ConfigPath
++$config = $imported.Value
++$vm = Get-VM -Name $config.Name -ErrorAction Stop
++if ($vm.State -ne 'Running') { throw "VM is not running: $($vm.State)" }
++
++if ($config.Guest -eq 'windows-ltsc') {
++    [pscustomobject]@{
++        Transport = 'PowerShellDirect'
++        Command = "New-PSSession -VMName '$($config.Name)' -Credential (Get-Credential '$($config.Access.AdminUser)')"
++        RdpEnabled = [bool]$config.Access.EnableRdp
++        RdpCommand = if ($config.Access.EnableRdp) { "vmconnect.exe localhost '$($config.Name)'" } else { $null }
++    }
++    exit
++}
++
++$addresses = @(Get-VMNetworkAdapter -VMName $config.Name).IPAddresses | Where-Object { $_ -match '^\d+\.\d+\.\d+\.\d+$' -and $_ -notmatch '^169\.254\.' }
++if ($addresses.Count -ne 1) { throw "Expected one IPv4 address, found $($addresses.Count): $($addresses -join ', ')" }
++$key = Resolve-ConfigPath $imported.Directory $config.Access.SshPrivateKeyPath
++$knownHosts = Join-Path (Get-StatePaths $imported).State 'known_hosts'
++[pscustomobject]@{
++    Transport = 'SSH'
++    Address = $addresses[0]
++    User = $config.Access.AdminUser
++    KnownHosts = $knownHosts
++    Command = "ssh -i `"$key`" -o StrictHostKeyChecking=yes -o UserKnownHostsFile=`"$knownHosts`" $($config.Access.AdminUser)@$($addresses[0])"
++}
+diff --git a/.agents/skills/hyperv-vm/scripts/Finalize-WindowsGuest.ps1 b/.agents/skills/hyperv-vm/scripts/Finalize-WindowsGuest.ps1
+new file mode 100644
+index 00000000..f826593b
+--- /dev/null
++++ b/.agents/skills/hyperv-vm/scripts/Finalize-WindowsGuest.ps1
+@@ -0,0 +1,35 @@
++[CmdletBinding()]
++param(
++    [Parameter(Mandatory)][string]$ConfigPath,
++    [string]$SecretVault,
++    [string]$SecretName
++)
++
++. "$PSScriptRoot\Common.ps1"
++$imported = Import-HyperVVmConfig $ConfigPath
++$config = $imported.Value
++if ($config.Guest -ne 'windows-ltsc') { throw 'This script is only for windows-ltsc guests' }
++
++$securePassword = $null
++if ($SecretVault -and $SecretName -and (Get-Command Get-Secret -ErrorAction SilentlyContinue)) {
++    $securePassword = Get-Secret -Vault $SecretVault -Name $SecretName
++} elseif ($config.Access.AdminPasswordEnv -and [Environment]::GetEnvironmentVariable($config.Access.AdminPasswordEnv)) {
++    $securePassword = ConvertTo-SecureString ([Environment]::GetEnvironmentVariable($config.Access.AdminPasswordEnv)) -AsPlainText -Force
++} else { $securePassword = Read-Host "Password for $($config.Access.AdminUser)" -AsSecureString }
++$credential = [pscredential]::new($config.Access.AdminUser,$securePassword)
++
++Invoke-Command -VMName $config.Name -Credential $credential -ArgumentList $config -ScriptBlock {
++    param($config)
++    Remove-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon' DefaultPassword -ErrorAction SilentlyContinue
++    New-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon' AutoAdminLogon '0' -PropertyType String -Force | Out-Null
++    Remove-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon' AutoLogonCount -ErrorAction SilentlyContinue
++    if ($config.Access.EnableRdp) {
++        Set-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server' fDenyTSConnections 0
++        Enable-NetFirewallRule -DisplayGroup 'Remote Desktop' -ErrorAction SilentlyContinue
++    }
++    if ($config.Features.InstallWslDocker) {
++        $wslConfig = "[wsl2]`nmemory=$($config.Features.WslMemoryMB)MB`nswap=$($config.Features.WslSwapMB)MB`n`n[experimental]`nsparseVhd=$([string]$config.Features.SparseVhd).ToLowerInvariant()`nautoMemoryReclaim=$($config.Features.AutoMemoryReclaim)`n"
++        Set-Content "$env:USERPROFILE\.wslconfig" $wslConfig -Encoding ASCII
++    }
++    [pscustomobject]@{ User=$env:USERNAME; OS=(Get-CimInstance Win32_OperatingSystem).Caption; Finalized=$true }
++}
+diff --git a/.agents/skills/hyperv-vm/scripts/Invoke-HyperVVm.ps1 b/.agents/skills/hyperv-vm/scripts/Invoke-HyperVVm.ps1
+new file mode 100644
+index 00000000..07626340
+--- /dev/null
++++ b/.agents/skills/hyperv-vm/scripts/Invoke-HyperVVm.ps1
+@@ -0,0 +1,83 @@
++[CmdletBinding(SupportsShouldProcess)]
++param(
++    [Parameter(Mandatory)][ValidateSet('Plan','Apply','Rollback')][string]$Action,
++    [Parameter(Mandatory)][string]$ConfigPath
++)
++
++. "$PSScriptRoot\Common.ps1"
++$imported = Import-HyperVVmConfig $ConfigPath
++$config = $imported.Value
++$paths = Get-StatePaths $imported
++$source = Resolve-ConfigPath $imported.Directory $config.Install.Source
++$vhdDirectory = Join-Path $config.Disk.RootDirectory $config.Name
++$vhdPath = Join-Path $vhdDirectory "$($config.Name).vhdx"
++$fingerprint = Get-ConfigFingerprint $config
++
++$plan = [pscustomobject]@{
++    Action = $Action
++    Name = $config.Name
++    Guest = $config.Guest
++    Generation = 2
++    CPU = $config.ProcessorCount
++    Memory = $config.Memory
++    VhdPath = $vhdPath
++    VhdSizeGB = $config.Disk.SizeGB
++    Switch = $config.Network.SwitchName
++    InstallSource = $source
++    ExpectedSha256 = $config.Install.ExpectedSha256
++    NestedVirtualization = $config.Features.NestedVirtualization
++    Docker = $config.Features.InstallDocker -or $config.Features.InstallWslDocker
++    Access = if ($config.Guest -eq 'windows-ltsc') { 'PowerShell Direct' } else { 'SSH key' }
++    HighRisk = [pscustomobject]@{
++        DisableSecurity = $config.Optimization.DisableSecurity
++        DisableFirewall = $config.Optimization.DisableFirewall
++        DisableUpdates = $config.Optimization.DisableUpdates
++        ReplaceExistingVm = $config.Safety.AllowReplaceExistingVm
++        AllowDelete = $config.Safety.AllowDelete
++    }
++    ConfigFingerprint = $fingerprint
++}
++if ($Action -eq 'Plan') { $plan; exit 0 }
++
++if ($Action -eq 'Rollback') {
++    $rollback = Join-Path $paths.State 'rollback.ps1'
++    if (-not (Test-Path $rollback)) { throw "Rollback script not found: $rollback" }
++    if ($PSCmdlet.ShouldProcess($config.Name, 'restore recorded VM and guest settings')) { & $rollback -ConfigPath $imported.Path }
++    exit
++}
++
++& "$PSScriptRoot\Test-HyperVVmPrerequisites.ps1" -ConfigPath $imported.Path | Out-Host
++if (-not $PSCmdlet.ShouldProcess($config.Name, "create $($config.Guest) Hyper-V VM")) { exit }
++
++if (Get-VM -Name $config.Name -ErrorAction SilentlyContinue) {
++    throw 'Replacement is intentionally not automated. Export/remove the existing VM after explicit review, then rerun.'
++}
++New-Item -ItemType Directory -Force -Path $vhdDirectory,$paths.State,$paths.Reports | Out-Null
++
++$memoryBytes = [int64]$config.Memory.StartupMB * 1MB
++New-VM -Name $config.Name -Generation 2 -MemoryStartupBytes $memoryBytes -NewVHDPath $vhdPath -NewVHDSizeBytes ([int64]$config.Disk.SizeGB * 1GB) -SwitchName $config.Network.SwitchName | Out-Null
++Set-VM -Name $config.Name -ProcessorCount $config.ProcessorCount -CheckpointType Production
++if ($config.Memory.Dynamic) {
++    Set-VMMemory -VMName $config.Name -DynamicMemoryEnabled $true -StartupBytes $memoryBytes -MinimumBytes ([int64]$config.Memory.MinimumMB * 1MB) -MaximumBytes ([int64]$config.Memory.MaximumMB * 1MB) -Buffer $config.Memory.BufferPercent
++} else { Set-VMMemory -VMName $config.Name -DynamicMemoryEnabled $false -StartupBytes $memoryBytes }
++Set-VMProcessor -VMName $config.Name -ExposeVirtualizationExtensions ([bool]$config.Features.NestedVirtualization)
++Set-VMNetworkAdapter -VMName $config.Name -MacAddressSpoofing $(if ($config.Features.NestedVirtualization) { 'On' } else { 'Off' })
++$template = if ($config.Guest -eq 'windows-ltsc') { 'MicrosoftWindows' } else { 'MicrosoftUEFICertificateAuthority' }
++Set-VMFirmware -VMName $config.Name -EnableSecureBoot On -SecureBootTemplate $template
++
++$dvd = Add-VMDvdDrive -VMName $config.Name -Path $source -Passthru
++Set-VMFirmware -VMName $config.Name -FirstBootDevice $dvd
++$state = [pscustomobject]@{
++    SchemaVersion = 1
++    Stage = 'created'
++    VMName = $config.Name
++    VMId = (Get-VM $config.Name).VMId.Guid
++    VhdPath = $vhdPath
++    InstallSource = $source
++    InstallSha256 = Get-FileSha256 $source
++    ConfigFingerprint = $fingerprint
++    CreatedAt = Get-Date -Format o
++    Next = if ($config.Guest -eq 'windows-ltsc') { 'Generate unattended media and run Finalize-WindowsGuest.ps1 after setup' } else { 'Generate NoCloud seed media and verify SSH' }
++}
++Write-AtomicJson $state $paths.StateFile
++$state
+diff --git a/.agents/skills/hyperv-vm/scripts/Measure-HyperVVm.ps1 b/.agents/skills/hyperv-vm/scripts/Measure-HyperVVm.ps1
+new file mode 100644
+index 00000000..7476b828
+--- /dev/null
++++ b/.agents/skills/hyperv-vm/scripts/Measure-HyperVVm.ps1
+@@ -0,0 +1,66 @@
++[CmdletBinding()]
++param(
++    [Parameter(Mandatory)][string]$ConfigPath,
++    [Parameter(Mandatory)][ValidateSet('before','after')][string]$Phase,
++    [int]$StabilizationSeconds = 120
++)
++
++. "$PSScriptRoot\Common.ps1"
++$imported = Import-HyperVVmConfig $ConfigPath
++$config = $imported.Value
++$paths = Get-StatePaths $imported
++New-Item -ItemType Directory -Force -Path $paths.Reports | Out-Null
++Start-Sleep -Seconds $StabilizationSeconds
++$vm = Get-VM $config.Name -ErrorAction Stop
++$hostOs = Get-CimInstance Win32_OperatingSystem
++$memoryFingerprint = [ordered]@{
++    ProcessorCount = $vm.ProcessorCount
++    DynamicMemory = $vm.DynamicMemoryEnabled
++    StartupMB = $vm.MemoryStartup / 1MB
++    MinimumMB = $vm.MemoryMinimum / 1MB
++    MaximumMB = $vm.MemoryMaximum / 1MB
++    WslMemoryMB = $config.Features.WslMemoryMB
++    WslSwapMB = $config.Features.WslSwapMB
++}
++
++if ($config.Guest -eq 'windows-ltsc') {
++    $credential = Get-Credential -UserName $config.Access.AdminUser -Message "Credential for PowerShell Direct to $($config.Name)"
++    $guest = Invoke-Command -VMName $config.Name -Credential $credential -ScriptBlock {
++        $os = Get-CimInstance Win32_OperatingSystem
++        $processes = @(Get-Process)
++        $svchost = @($processes | Where-Object Name -eq 'svchost')
++        [pscustomobject]@{
++            OS = $os.Caption
++            Version = $os.Version
++            UsedMB = [math]::Round(($os.TotalVisibleMemorySize - $os.FreePhysicalMemory) / 1KB, 1)
++            AvailableMB = [math]::Round($os.FreePhysicalMemory / 1KB, 1)
++            ProcessCount = $processes.Count
++            SvchostCount = $svchost.Count
++            SvchostWorkingSetMB = [math]::Round(($svchost | Measure-Object WorkingSet64 -Sum).Sum / 1MB, 1)
++            DockerProcesses = @($processes | Where-Object Name -in 'wslservice','vmmemWSL' | Select-Object Name,@{n='WorkingSetMB';e={[math]::Round($_.WorkingSet64/1MB,1)}})
++        }
++    }
++} else {
++    $connection = & "$PSScriptRoot\Connect-HyperVVm.ps1" -ConfigPath $imported.Path
++    $raw = & ssh -i (Resolve-ConfigPath $imported.Directory $config.Access.SshPrivateKeyPath) -o StrictHostKeyChecking=yes -o "UserKnownHostsFile=$($connection.KnownHosts)" "$($connection.User)@$($connection.Address)" "awk '/MemTotal|MemAvailable/ {print `$1`$2}' /proc/meminfo; ps -e --no-headers | wc -l; docker version --format '{{.Server.Version}}' 2>/dev/null || true"
++    $guest = [pscustomobject]@{ Raw = @($raw) }
++}
++
++$dockerManifest = if ($config.Guest -eq 'windows-ltsc') { 'verified separately through WSL' } else { 'queried over SSH' }
++$result = [pscustomobject]@{
++    SchemaVersion = 1
++    Phase = $Phase
++    Timestamp = Get-Date -Format o
++    VMName = $config.Name
++    VMId = $vm.VMId.Guid
++    ConfigFingerprint = Get-ConfigFingerprint $config
++    LimitsFingerprint = Get-ConfigFingerprint $memoryFingerprint
++    StabilizationSeconds = $StabilizationSeconds
++    HostFreeMB = [math]::Round($hostOs.FreePhysicalMemory / 1KB, 1)
++    VMAssignedMB = [math]::Round($vm.MemoryAssigned / 1MB, 1)
++    VMDemandMB = [math]::Round($vm.MemoryDemand / 1MB, 1)
++    Guest = $guest
++    Workload = $dockerManifest
++}
++Write-AtomicJson $result (Join-Path $paths.Reports "$Phase.json")
++$result
+diff --git a/.agents/skills/hyperv-vm/scripts/Optimize-HyperVVm.ps1 b/.agents/skills/hyperv-vm/scripts/Optimize-HyperVVm.ps1
+new file mode 100644
+index 00000000..3605a318
+--- /dev/null
++++ b/.agents/skills/hyperv-vm/scripts/Optimize-HyperVVm.ps1
+@@ -0,0 +1,60 @@
++[CmdletBinding(SupportsShouldProcess)]
++param(
++    [Parameter(Mandatory)][string]$ConfigPath,
++    [ValidateSet('Conservative')][string]$Profile = 'Conservative'
++)
++
++. "$PSScriptRoot\Common.ps1"
++$imported = Import-HyperVVmConfig $ConfigPath
++$config = $imported.Value
++$paths = Get-StatePaths $imported
++if (-not $config.Optimization.Enabled) { throw 'Optimization.Enabled is false' }
++if (($config.Optimization.DisableSecurity -or $config.Optimization.DisableFirewall -or $config.Optimization.DisableUpdates) -and $config.Network.AllowUntrustedNetwork) { throw 'High-risk optimization is forbidden on an untrusted network' }
++if (-not $PSCmdlet.ShouldProcess($config.Name, "apply $Profile guest optimization")) { exit }
++
++if ($config.Guest -eq 'ubuntu-server') {
++    [pscustomobject]@{ Guest='ubuntu-server'; Status='planned'; Message='Apply only config-listed service disables over SSH; automatic package removal is intentionally unsupported.' }
++    exit
++}
++
++$credential = Get-Credential -UserName $config.Access.AdminUser -Message "Credential for PowerShell Direct to $($config.Name)"
++$optimization = $config.Optimization
++$snapshot = Invoke-Command -VMName $config.Name -Credential $credential -ArgumentList $optimization -ScriptBlock {
++    param($optimization)
++    $services = foreach ($name in @($optimization.DisableServices)) {
++        $service = Get-CimInstance Win32_Service -Filter "Name='$name'" -ErrorAction SilentlyContinue
++        if ($service) { [pscustomobject]@{ Name=$name; State=$service.State; StartMode=$service.StartMode } }
++    }
++    $before = [pscustomobject]@{
++        Timestamp = Get-Date -Format o
++        Services = @($services)
++        SvcHostSplitThresholdInKB = (Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control').SvcHostSplitThresholdInKB
++        Firewall = @(Get-NetFirewallProfile | Select-Object Name,Enabled)
++        UpdatePolicy = Get-ItemProperty 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU' -ErrorAction SilentlyContinue | Select-Object NoAutoUpdate,AUOptions
++    }
++    foreach ($name in @($optimization.DisableServices)) {
++        Stop-Service $name -Force -ErrorAction SilentlyContinue
++        Set-Service $name -StartupType Disabled -ErrorAction SilentlyContinue
++    }
++    if ($optimization.ConsolidateServiceHosts) {
++        $memoryKB = [long]((Get-CimInstance Win32_PhysicalMemory | Measure-Object Capacity -Sum).Sum / 1KB)
++        Set-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control' SvcHostSplitThresholdInKB $memoryKB -Type DWord
++    }
++    New-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon' AutoAdminLogon '0' -PropertyType String -Force | Out-Null
++    Remove-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon' AutoLogonCount -ErrorAction SilentlyContinue
++    if ($optimization.DisableFirewall) { Set-NetFirewallProfile -Profile Domain,Private,Public -Enabled False }
++    if ($optimization.DisableUpdates) {
++        New-Item 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU' -Force | Out-Null
++        New-ItemProperty 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU' NoAutoUpdate 1 -PropertyType DWord -Force | Out-Null
++        foreach($name in 'wuauserv','BITS'){Stop-Service $name -Force -ErrorAction SilentlyContinue;Set-Service $name -StartupType Disabled}
++    }
++    if ($optimization.DisableSecurity) {
++        New-Item 'HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender' -Force | Out-Null
++        New-ItemProperty 'HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender' DisableAntiVirus 1 -PropertyType DWord -Force | Out-Null
++        Set-MpPreference -DisableRealtimeMonitoring $true -ErrorAction SilentlyContinue
++    }
++    $before
++}
++$stateFile = Join-Path $paths.State 'optimization-before.json'
++Write-AtomicJson $snapshot $stateFile
++[pscustomobject]@{ Guest='windows-ltsc'; Profile=$Profile; RebootRequired=$true; StatePath=$stateFile }
+diff --git a/.agents/skills/hyperv-vm/scripts/Test-HyperVVm.ps1 b/.agents/skills/hyperv-vm/scripts/Test-HyperVVm.ps1
+new file mode 100644
+index 00000000..82213d99
+--- /dev/null
++++ b/.agents/skills/hyperv-vm/scripts/Test-HyperVVm.ps1
+@@ -0,0 +1,47 @@
++[CmdletBinding()]
++param([Parameter(Mandatory)][string]$ConfigPath)
++
++. "$PSScriptRoot\Common.ps1"
++$imported = Import-HyperVVmConfig $ConfigPath
++$config = $imported.Value
++$vm = Get-VM $config.Name -ErrorAction Stop
++$checks = [Collections.Generic.List[object]]::new()
++function Add-Check([string]$Name,[bool]$Passed,[string]$Detail) { $checks.Add([pscustomobject]@{Name=$Name;Passed=$Passed;Detail=$Detail}) }
++
++Add-Check 'VM running' ($vm.State -eq 'Running') $vm.State.ToString()
++Add-Check 'CPU count' ($vm.ProcessorCount -eq $config.ProcessorCount) "$($vm.ProcessorCount)"
++Add-Check 'Startup memory' (($vm.MemoryStartup/1MB) -eq $config.Memory.StartupMB) "$($vm.MemoryStartup/1MB) MB"
++Add-Check 'Nested virtualization' ((Get-VMProcessor $vm).ExposeVirtualizationExtensions -eq [bool]$config.Features.NestedVirtualization) "$((Get-VMProcessor $vm).ExposeVirtualizationExtensions)"
++Add-Check 'Heartbeat' ((Get-VMIntegrationService -VMName $config.Name -Name Heartbeat).PrimaryStatusDescription -eq 'OK') ((Get-VMIntegrationService -VMName $config.Name -Name Heartbeat).PrimaryStatusDescription)
++
++if ($config.Guest -eq 'windows-ltsc') {
++    $credential = Get-Credential -UserName $config.Access.AdminUser -Message "Credential for PowerShell Direct to $($config.Name)"
++    $guest = Invoke-Command -VMName $config.Name -Credential $credential -ArgumentList $config -ScriptBlock {
++        param($config)
++        $result = [ordered]@{ Login=$true; OS=(Get-CimInstance Win32_OperatingSystem).Caption }
++        if ($config.Features.InstallWslDocker) {
++            $wsl = "$env:ProgramFiles\WSL\wsl.exe"
++            $result.Wsl = (& $wsl -l -v 2>$null | Out-String)
++            $result.Docker = (& $wsl -d $config.Features.WslDistribution -u root -- bash -lc "systemctl is-active docker; docker run --rm hello-world >/dev/null; echo OK" 2>$null | Out-String)
++            $result.WslConfig = Get-Content "$env:USERPROFILE\.wslconfig" -Raw -ErrorAction SilentlyContinue
++        }
++        [pscustomobject]$result
++    }
++    Add-Check 'PowerShell Direct login' $guest.Login $guest.OS
++    if ($config.Features.InstallWslDocker) {
++        Add-Check 'WSL2 distro' ($guest.Wsl -match [regex]::Escape($config.Features.WslDistribution) -and $guest.Wsl -match '\s2\s') $guest.Wsl.Trim()
++        Add-Check 'Docker hello-world' ($guest.Docker -match 'active' -and $guest.Docker -match 'OK') $guest.Docker.Trim()
++        Add-Check 'Sparse config' ((-not $config.Features.SparseVhd) -or $guest.WslConfig -match 'sparseVhd=true') 'wslconfig'
++        Add-Check 'Build cache limit' ($guest.Docker -match 'OK') "$($config.Features.BuildCacheLimitGB) GB configured by provisioning"
++    }
++} else {
++    $connection = & "$PSScriptRoot\Connect-HyperVVm.ps1" -ConfigPath $imported.Path
++    $key = Resolve-ConfigPath $imported.Directory $config.Access.SshPrivateKeyPath
++    $output = & ssh -i $key -o BatchMode=yes -o StrictHostKeyChecking=yes -o "UserKnownHostsFile=$($connection.KnownHosts)" "$($connection.User)@$($connection.Address)" 'printf LOGIN_OK; systemctl is-active docker 2>/dev/null || true; docker run --rm hello-world >/dev/null 2>&1 && printf DOCKER_OK || true'
++    Add-Check 'SSH key login' ($output -match 'LOGIN_OK') ($output -join ' ')
++    if ($config.Features.InstallDocker) { Add-Check 'Docker hello-world' ($output -match 'active' -and $output -match 'DOCKER_OK') ($output -join ' ') }
++}
++
++$result = [pscustomobject]@{ Passed = @($checks | Where-Object {-not $_.Passed}).Count -eq 0; Checks = @($checks) }
++$result
++if (-not $result.Passed) { exit 1 }
+diff --git a/.agents/skills/hyperv-vm/scripts/Test-HyperVVmPrerequisites.ps1 b/.agents/skills/hyperv-vm/scripts/Test-HyperVVmPrerequisites.ps1
+new file mode 100644
+index 00000000..beae73b5
+--- /dev/null
++++ b/.agents/skills/hyperv-vm/scripts/Test-HyperVVmPrerequisites.ps1
+@@ -0,0 +1,38 @@
++[CmdletBinding()]
++param([Parameter(Mandatory)][string]$ConfigPath)
++
++. "$PSScriptRoot\Common.ps1"
++$imported = Import-HyperVVmConfig $ConfigPath
++$config = $imported.Value
++$issues = [Collections.Generic.List[string]]::new()
++
++$principal = [Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()
++if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) { $issues.Add('PowerShell is not elevated') }
++if (-not (Get-Command Get-VM -ErrorAction SilentlyContinue)) { $issues.Add('Hyper-V PowerShell module is unavailable') }
++if (-not (Get-VMSwitch -Name $config.Network.SwitchName -ErrorAction SilentlyContinue)) { $issues.Add("VMSwitch not found: $($config.Network.SwitchName)") }
++
++$source = Resolve-ConfigPath $imported.Directory $config.Install.Source
++if (-not (Test-Path -LiteralPath $source -PathType Leaf)) { $issues.Add("Install source not found: $source") }
++elseif ($config.Install.ExpectedSha256 -match '^[A-Fa-f0-9]{64}$') {
++    $actual = Get-FileSha256 $source
++    if ($actual -ne $config.Install.ExpectedSha256.ToUpperInvariant()) { $issues.Add("Install source SHA-256 mismatch: $actual") }
++} else { $issues.Add('Install.ExpectedSha256 must be a 64-character vendor-published SHA-256') }
++
++$existing = Get-VM -Name $config.Name -ErrorAction SilentlyContinue
++if ($existing -and -not $config.Safety.AllowReplaceExistingVm) { $issues.Add("VM already exists: $($config.Name)") }
++if ($config.Guest -eq 'ubuntu-server' -and -not (Test-Path -LiteralPath $config.Access.SshPublicKeyPath)) { $issues.Add('SSH public key not found') }
++if ($config.Features.InstallWslDocker -and -not $config.Features.NestedVirtualization) { $issues.Add('InstallWslDocker requires NestedVirtualization') }
++if (($config.Optimization.DisableFirewall -or $config.Optimization.DisableSecurity -or $config.Optimization.DisableUpdates) -and $config.Network.AllowUntrustedNetwork) { $issues.Add('Security/update disabling is forbidden on an untrusted network') }
++
++$result = [pscustomobject]@{
++    Valid = $issues.Count -eq 0
++    Issues = @($issues)
++    Name = $config.Name
++    Guest = $config.Guest
++    Source = $source
++    SourceSha256 = if (Test-Path $source) { Get-FileSha256 $source } else { $null }
++    Switch = $config.Network.SwitchName
++    ConfigFingerprint = Get-ConfigFingerprint $config
++}
++$result
++if (-not $result.Valid) { exit 1 }
+diff --git a/.claude/skills/hyperv-vm/SKILL.md b/.claude/skills/hyperv-vm/SKILL.md
+new file mode 100644
+index 00000000..58f7cba7
+--- /dev/null
++++ b/.claude/skills/hyperv-vm/SKILL.md
+@@ -0,0 +1,160 @@
++---
++name: hyperv-vm
++description: >-
++  Provision, connect to, measure, optimize, verify, and roll back reusable Hyper-V virtual
++  machines. Supports Windows LTSC guests with PowerShell Direct/RDP and Ubuntu Server guests
++  with SSH; can install WSL2 plus Docker CE without Docker Desktop, sparse VHD, BuildKit cache
++  GC, equal-limit memory profiling, and opt-in security/update policies. Triggers: "create VM",
++  "Hyper-V VM", "Windows LTSC VM", "Ubuntu VM", "виртуальная машина", "виртуалка",
++  "настрой VM", "оптимизируй VM", "подключись к VM".
++allowed-tools: Read, Write, Edit, Glob, Grep, Bash, AskUserQuestion, WebSearch, WebFetch
++argument-hint: "<plan|apply|connect|measure|optimize|verify|rollback> [-ConfigPath <path>]"
++---
++
++# hyperv-vm
++
++Use the scripts in this skill. Never paste credentials into generated files, command history,
++Git, unattended XML, cloud-init, logs, reports, or issue bodies.
++
++## Safety and scope
++
++1. Confirm the user controls the host and guest. Do not expose management ports beyond the
++   selected Hyper-V switch.
++2. Run `Test-HyperVVmPrerequisites.ps1` first. Stop on a name collision, missing ISO, insufficient
++   free storage, unavailable switch, unsupported host feature, or failed checksum.
++3. Default to `Plan`/`WhatIf`. `Apply` is permitted only after showing the resolved configuration.
++4. ISO/image acquisition must use an official vendor URL supplied in config, or a local ISO with
++   `expectedSha256`. Never obtain unofficial Windows images or bypass licensing/activation.
++5. Existing VM replacement, VHD deletion, checkpoint deletion, security disabling, and update
++   disabling require separate explicit approval. These flags default to false.
++6. Reboots are never a first-line remediation. Reboot only when setup/feature activation requires
++   it or when the user explicitly asks for end-to-end provisioning.
++
++## Configuration
++
++Copy `references/config.example.psd1` outside the repository and edit it. Required secrets are
++resolved at runtime in this order:
++
++1. PowerShell SecretManagement (`SecretVault` + `SecretName`);
++2. environment variable named by `AdminPasswordEnv` or `SshPrivateKeyPassphraseEnv`;
++3. interactive `Read-Host -AsSecureString` when a terminal is available.
++
++Never accept plaintext passwords in the config. Windows unattended installation uses a generated
++one-time bootstrap secret; `Finalize-WindowsGuest.ps1` rotates it to the runtime secret before
++verification and deletes autologon values. Linux uses an SSH public key by default; password SSH
++is opt-in.
++
++## Workflow
++
++### 1. Plan and validate
++
++```powershell
++$skill = '<plugin-root>\.claude\skills\hyperv-vm'
++& "$skill\scripts\Test-HyperVVmPrerequisites.ps1" -ConfigPath .\vm.psd1
++& "$skill\scripts\Invoke-HyperVVm.ps1" -Action Plan -ConfigPath .\vm.psd1
++```
++
++Show: guest type, VM name, generation, CPU, static/dynamic RAM, VHD size/type, switch, install
++source + SHA-256, management transport, exposed ports, optional profiles, destructive actions,
++and expected reboots.
++
++### 2. Provision
++
++```powershell
++& "$skill\scripts\Invoke-HyperVVm.ps1" -Action Apply -ConfigPath .\vm.psd1
++```
++
++Profiles:
++
++- `windows-ltsc`: Generation 2, UEFI/Secure Boot, optional vTPM, unattended install, PowerShell
++  Direct verification, optional RDP. If `InstallWslDocker` is true, enable nested virtualization,
++  WSL2, Ubuntu, systemd, Docker CE, BuildKit GC, sparse VHD, and a prune timer.
++- `ubuntu-server`: Generation 2, Microsoft UEFI CA Secure Boot, cloud-init NoCloud ISO, SSH key
++  login, optional Docker CE. Verify with SSH using strict host-key checking and a dedicated
++  `known_hosts` file.
++
++### 3. Connect
++
++```powershell
++& "$skill\scripts\Connect-HyperVVm.ps1" -ConfigPath .\vm.psd1
++```
++
++- Windows: prefer PowerShell Direct (`New-PSSession -VMName`) because it requires no guest network
++  or inbound firewall rule. Use RDP only when enabled in config.
++- Ubuntu: use SSH key auth. Discover the guest IP from `Get-VMNetworkAdapter` and fail if ambiguous.
++  Print the exact SSH command but never print the private-key passphrase.
++
++### 4. Measure before optimization
++
++```powershell
++& "$skill\scripts\Measure-HyperVVm.ps1" -ConfigPath .\vm.psd1 -Phase before
++```
++
++Keep VM limits, workload, uptime stabilization delay, Docker state, and container set identical.
++Measure host free RAM, Hyper-V assigned/demand, guest used/available RAM, process/service counts,
++WSL memory, Docker daemon RSS, container count, and configuration fingerprint. A report is invalid
++when limits or fingerprint differ.
++
++### 5. Optimize
++
++```powershell
++& "$skill\scripts\Optimize-HyperVVm.ps1" -ConfigPath .\vm.psd1 -Profile Conservative
++```
++
++`Conservative` is default and reversible:
++
++- Windows: disable only config-selected services irrelevant to the declared role; remove stale
++  autologon; consolidate service hosts only when measured; preserve networking, PowerShell Direct,
++  Hyper-V integration, WSL, Docker, and user-selected access.
++- WSL: `autoMemoryReclaim`, sparse VHD, systemd Docker, BuildKit GC and timer. Do not call a lower
++  memory cap an operating-system optimization.
++- Ubuntu: disable only config-selected unused services/packages and preserve SSH/network/cloud-init
++  until provisioning finishes.
++
++`DisableSecurity`, `DisableFirewall`, and `DisableUpdates` are independent, high-risk opt-ins.
++Warn that they reduce defense, snapshot state first, write rollback metadata, and verify the VM is
++not reachable from untrusted networks. Keep BFE/network dependencies intact when firewall profiles
++are disabled.
++
++### 6. Measure after and verify
++
++```powershell
++& "$skill\scripts\Measure-HyperVVm.ps1" -ConfigPath .\vm.psd1 -Phase after
++& "$skill\scripts\Compare-HyperVVmMeasurements.ps1" -Before .\reports\before.json -After .\reports\after.json
++& "$skill\scripts\Test-HyperVVm.ps1" -ConfigPath .\vm.psd1
++```
++
++Required checks:
++
++- VM running, heartbeat healthy, requested CPU/RAM/VHD/network/nested virtualization;
++- Windows login via PowerShell Direct or Linux login via SSH;
++- WSL distro version 2 when selected;
++- Docker service active and `docker run --rm hello-world` succeeds;
++- sparse VHD and cache policy/timer match config;
++- security/update state matches explicit config;
++- no secret appears in artifacts;
++- before/after limits and workload fingerprints match.
++
++### 7. Roll back
++
++```powershell
++& "$skill\scripts\Invoke-HyperVVm.ps1" -Action Rollback -ConfigPath .\vm.psd1
++```
++
++Rollback uses the state bundle under the configured `StateDirectory`. It restores service startup
++modes, policies, firewall profiles, update settings, service-host threshold, WSL config, and VM
++memory configuration. It does not delete a VM or VHD unless `AllowDelete=true` and the user confirms
++that exact path/name.
++
++## Output
++
++Return:
++
++1. state/report paths;
++2. VM connection method (no secret values);
++3. before/after table with unchanged-limit proof;
++4. verification results and any skipped checks;
++5. rollback command;
++6. risks introduced by opt-in security/update settings.
++
++See `references/design.md` and `references/troubleshooting.md` for contracts and known failure modes.
+diff --git a/.claude/skills/hyperv-vm/references/config.example.psd1 b/.claude/skills/hyperv-vm/references/config.example.psd1
+new file mode 100644
+index 00000000..efe6ecad
+--- /dev/null
++++ b/.claude/skills/hyperv-vm/references/config.example.psd1
+@@ -0,0 +1,67 @@
++@{
++    SchemaVersion = 1
++    Name = 'dev-vm'
++    Guest = 'ubuntu-server' # windows-ltsc | ubuntu-server
++    Generation = 2
++    ProcessorCount = 2
++    Memory = @{
++        Dynamic = $false
++        StartupMB = 4096
++        MinimumMB = 2048
++        MaximumMB = 4096
++        BufferPercent = 10
++    }
++    Disk = @{
++        SizeGB = 80
++        Dynamic = $true
++        RootDirectory = 'D:\Hyper-V'
++    }
++    Network = @{
++        SwitchName = 'Default Switch'
++        AllowUntrustedNetwork = $false
++    }
++    Install = @{
++        Source = 'C:\ISO\official-image.iso'
++        ExpectedSha256 = 'REPLACE_WITH_VENDOR_PUBLISHED_SHA256'
++        Locale = 'en-US'
++        TimeZone = 'UTC'
++    }
++    Access = @{
++        AdminUser = 'vmadmin'
++        AdminPasswordEnv = 'HYPERV_VM_ADMIN_PASSWORD'
++        SecretVault = $null
++        SecretName = $null
++        EnableRdp = $false
++        SshPublicKeyPath = '~\.ssh\id_ed25519.pub'
++        SshPrivateKeyPath = '~\.ssh\id_ed25519'
++        SshPrivateKeyPassphraseEnv = 'HYPERV_VM_SSH_PASSPHRASE'
++        EnablePasswordSsh = $false
++    }
++    Features = @{
++        NestedVirtualization = $true
++        InstallWslDocker = $false
++        InstallDocker = $true
++        WslDistribution = 'Ubuntu-24.04'
++        WslMemoryMB = 3072
++        WslSwapMB = 1024
++        SparseVhd = $true
++        AutoMemoryReclaim = 'dropCache'
++        BuildCacheLimitGB = 25
++    }
++    Optimization = @{
++        Enabled = $true
++        Profile = 'Conservative'
++        DisableServices = @()
++        DisableSecurity = $false
++        DisableFirewall = $false
++        DisableUpdates = $false
++        ConsolidateServiceHosts = $true
++    }
++    Safety = @{
++        AllowReplaceExistingVm = $false
++        AllowDelete = $false
++        RequireOfficialSource = $true
++    }
++    StateDirectory = '.\hyperv-vm-state'
++    ReportDirectory = '.\hyperv-vm-reports'
++}
+diff --git a/.claude/skills/hyperv-vm/references/design.md b/.claude/skills/hyperv-vm/references/design.md
+new file mode 100644
+index 00000000..57d116b6
+--- /dev/null
++++ b/.claude/skills/hyperv-vm/references/design.md
+@@ -0,0 +1,63 @@
++# Hyper-V VM skill design
++
++## Goals
++
++- Reproduce Windows LTSC and Ubuntu Server Hyper-V guests without machine-specific paths.
++- Keep secrets outside repository artifacts and generated media.
++- Support reliable login: PowerShell Direct/RDP for Windows; SSH keys for Linux.
++- Install Docker CE without Docker Desktop, including WSL2 Docker on Windows guests.
++- Make optimization measurable, role-based, reversible, and independent from resource caps.
++
++## State machine
++
++`absent -> planned -> media-ready -> created -> os-installed -> access-ready -> features-ready -> optimized -> verified`
++
++Each transition writes a JSON state record atomically. Re-running resumes at the first incomplete
++transition after validating existing artifacts. A mismatch in VM ID, VHD path, ISO hash, or config
++fingerprint stops execution instead of replacing resources.
++
++## Secret contract
++
++Configuration contains only secret references. Scripts resolve a `SecureString` from
++SecretManagement, an environment variable, or an interactive prompt. Secrets must not be passed in
++PowerShell command-line arguments. Generated unattended/cloud-init media must use either SSH public
++keys or a one-time random bootstrap secret. The bootstrap secret is removed after the final account
++credential is set.
++
++## Windows profile
++
++- Generation 2; Microsoft Windows Secure Boot; optional vTPM.
++- Installation source must be local and hash-verified, or downloaded from a configured official URL.
++- PowerShell Direct is the primary transport and verification channel.
++- WSL2 requires nested virtualization and a Windows build supported by the selected WSL release.
++- Docker runs under Ubuntu systemd; no Docker Desktop dependency.
++
++## Ubuntu profile
++
++- Generation 2; Microsoft UEFI Certificate Authority Secure Boot.
++- Ubuntu Server ISO plus generated NoCloud seed ISO.
++- SSH public-key authentication, `PasswordAuthentication no` by default.
++- Docker CE from Docker's signed apt repository; the user is added to `docker` only when explicitly
++  configured because the group grants root-equivalent access.
++
++## Measurement validity
++
++A before/after comparison is valid only when these fields match:
++
++- VM ID and generation;
++- CPU count;
++- static/dynamic memory settings and all byte limits;
++- WSL memory/swap settings;
++- workload ID and running-container manifest;
++- stabilization delay;
++- guest build/kernel and Docker version.
++
++Changing a cap is reported as capacity tuning, never as guest optimization.
++
++## Optimization and rollback
++
++Every optimization records prior service modes, policy/registry values, firewall profiles, update
++services/tasks, service-host threshold, WSL config, and VM memory settings. Rollback restores only
++values changed by this skill. Missing/foreign values are left untouched and reported.
++
++Security/update changes are separate profile flags and are never implied by `Conservative`.
+diff --git a/.claude/skills/hyperv-vm/references/troubleshooting.md b/.claude/skills/hyperv-vm/references/troubleshooting.md
+new file mode 100644
+index 00000000..f49f186b
+--- /dev/null
++++ b/.claude/skills/hyperv-vm/references/troubleshooting.md
+@@ -0,0 +1,55 @@
++# Troubleshooting
++
++## Prerequisite failures
++
++- Hyper-V cmdlets missing: enable Hyper-V on a supported Windows edition and complete the required
++  feature activation before retrying.
++- No virtual switch: create/select one explicitly; do not silently attach to an arbitrary switch.
++- VM name collision: inspect the existing VM and state bundle. Replace only with explicit approval.
++- ISO checksum mismatch: delete the partial file and obtain it again from the official source.
++
++## Windows guest
++
++- PowerShell Direct says credential invalid: wait for OOBE/account creation, verify the configured
++  user, and inspect Panther logs offline. Do not repeatedly reset credentials blindly.
++- WSL reports `WSL_E_OS_NOT_SUPPORTED`: compare the Windows build against the chosen WSL release;
++  install an official servicing update, reboot only when the package requires it, then retry.
++- Nested WSL fails: confirm `ExposeVirtualizationExtensions`, guest VirtualMachinePlatform and WSL
++  features, and sufficient host virtualization support.
++- Unattend fails: inspect `Windows\Panther\setuperr.log` and `UnattendGC`; validate computer-name,
++  pass, component architecture, image index, partition types, and media drive discovery.
++
++## Ubuntu guest
++
++- No IP address: inspect switch/DHCP and `Get-VMNetworkAdapter`; do not guess an address.
++- SSH host key changed: confirm the VM identity and state bundle before removing the old key.
++- cloud-init incomplete: inspect `cloud-init status --long` and `/var/log/cloud-init-output.log`.
++- Docker access denied: use `sudo` or deliberately add the user to `docker`; document that this is
++  root-equivalent access.
++
++## Docker and WSL
++
++- systemd unavailable: verify `/etc/wsl.conf`, run `wsl --shutdown`, then inspect PID 1.
++- BuildKit GC not enforced: check `/etc/docker/daemon.json`, daemon restart, timer state, and builder
++  driver. `defaultKeepStorage` applies to the Docker driver; custom buildx builders need their own
++  `buildkitd.toml`.
++- sparse conversion fails: terminate the distro, verify current WSL syntax/version, and preserve a
++  VHD backup before `--allow-unsafe`.
++
++## Measurement anomalies
++
++- Working-set totals exceed guest used memory: shared pages are double-counted; use guest used RAM
++  and Hyper-V demand as primary physical metrics.
++- Large before/after drop after a reboot: repeat both sides from equivalent clean boots and identical
++  stabilization delays.
++- Shell processes disappear: check whether a disconnected desktop session was logged off; report
++  this separately from service-host consolidation.
++
++## Security profile
++
++- Firewall profiles off while `mpssvc` remains running is expected; BFE/network dependencies may
++  require the service.
++- Defender tamper protection can reject policy/service changes. Report the refusal; do not bypass
++  endpoint management.
++- Protected Windows Update services may restore themselves. Verify policies, service states, and
++  scheduled tasks after reboot; provide rollback metadata.
+diff --git a/.claude/skills/hyperv-vm/scripts/Common.ps1 b/.claude/skills/hyperv-vm/scripts/Common.ps1
+new file mode 100644
+index 00000000..49a46e6f
+--- /dev/null
++++ b/.claude/skills/hyperv-vm/scripts/Common.ps1
+@@ -0,0 +1,60 @@
++Set-StrictMode -Version Latest
++$ErrorActionPreference = 'Stop'
++
++function Import-HyperVVmConfig {
++    [CmdletBinding()]
++    param([Parameter(Mandatory)][string]$ConfigPath)
++
++    $resolved = (Resolve-Path -LiteralPath $ConfigPath).Path
++    $config = Import-PowerShellDataFile -LiteralPath $resolved
++    if ($config.SchemaVersion -ne 1) { throw "Unsupported SchemaVersion: $($config.SchemaVersion)" }
++    if ($config.Guest -notin 'windows-ltsc','ubuntu-server') { throw "Unsupported Guest: $($config.Guest)" }
++    if ($config.Generation -ne 2) { throw 'Only Hyper-V Generation 2 is supported' }
++    if (-not $config.Name -or $config.Name -notmatch '^[A-Za-z0-9._-]{1,64}$') { throw 'Invalid VM name' }
++    if ([int]$config.ProcessorCount -lt 1) { throw 'ProcessorCount must be positive' }
++    if ([int]$config.Memory.StartupMB -lt 1024) { throw 'Startup memory must be at least 1024 MB' }
++    if ([int]$config.Disk.SizeGB -lt 20) { throw 'Disk size must be at least 20 GB' }
++    if ($config.Access.ContainsKey('AdminPassword')) { throw 'Plaintext AdminPassword is forbidden' }
++    if ($config.Access.ContainsKey('SshPrivateKeyPassphrase')) { throw 'Plaintext SSH passphrases are forbidden' }
++
++    [pscustomobject]@{ Path = $resolved; Directory = Split-Path $resolved; Value = $config }
++}
++
++function Get-FileSha256 {
++    param([Parameter(Mandatory)][string]$Path)
++    (Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash.ToUpperInvariant()
++}
++
++function Get-ConfigFingerprint {
++    param([Parameter(Mandatory)][hashtable]$Config)
++    $json = $Config | ConvertTo-Json -Depth 20 -Compress
++    $sha = [Security.Cryptography.SHA256]::Create()
++    try { ([BitConverter]::ToString($sha.ComputeHash([Text.Encoding]::UTF8.GetBytes($json)))).Replace('-','') }
++    finally { $sha.Dispose() }
++}
++
++function Resolve-ConfigPath {
++    param([string]$Base, [string]$Path)
++    if ($Path.StartsWith('~')) {
++        $Path = Join-Path ([Environment]::GetFolderPath('UserProfile')) $Path.Substring(1).TrimStart('\','/')
++    }
++    if ([IO.Path]::IsPathRooted($Path)) { return [IO.Path]::GetFullPath($Path) }
++    [IO.Path]::GetFullPath((Join-Path $Base $Path))
++}
++
++function Write-AtomicJson {
++    param([Parameter(Mandatory)]$InputObject, [Parameter(Mandatory)][string]$Path)
++    $parent = Split-Path -Parent $Path
++    New-Item -ItemType Directory -Force -Path $parent | Out-Null
++    $temp = "$Path.$PID.tmp"
++    $InputObject | ConvertTo-Json -Depth 20 | Set-Content -LiteralPath $temp -Encoding UTF8
++    Move-Item -LiteralPath $temp -Destination $Path -Force
++}
++
++function Get-StatePaths {
++    param([Parameter(Mandatory)]$Imported)
++    $config = $Imported.Value
++    $state = Resolve-ConfigPath $Imported.Directory $config.StateDirectory
++    $reports = Resolve-ConfigPath $Imported.Directory $config.ReportDirectory
++    [pscustomobject]@{ State = $state; Reports = $reports; StateFile = Join-Path $state 'state.json' }
++}
+diff --git a/.claude/skills/hyperv-vm/scripts/Compare-HyperVVmMeasurements.ps1 b/.claude/skills/hyperv-vm/scripts/Compare-HyperVVmMeasurements.ps1
+new file mode 100644
+index 00000000..2e52f9aa
+--- /dev/null
++++ b/.claude/skills/hyperv-vm/scripts/Compare-HyperVVmMeasurements.ps1
+@@ -0,0 +1,27 @@
++[CmdletBinding()]
++param(
++    [Parameter(Mandatory)][string]$Before,
++    [Parameter(Mandatory)][string]$After
++)
++
++$beforeData = Get-Content -LiteralPath $Before -Raw | ConvertFrom-Json
++$afterData = Get-Content -LiteralPath $After -Raw | ConvertFrom-Json
++$invalid = [Collections.Generic.List[string]]::new()
++foreach ($field in 'VMId','LimitsFingerprint','StabilizationSeconds','Workload') {
++    if ($beforeData.$field -ne $afterData.$field) { $invalid.Add("$field differs") }
++}
++if ($invalid.Count) {
++    [pscustomobject]@{ Valid = $false; Reasons = @($invalid); Before = $Before; After = $After }
++    exit 1
++}
++
++$rows = foreach ($metric in 'VMAssignedMB','VMDemandMB') {
++    $old = [double]$beforeData.$metric
++    $new = [double]$afterData.$metric
++    [pscustomobject]@{ Metric=$metric; Before=$old; After=$new; Delta=[math]::Round($new-$old,1); Percent=if($old){[math]::Round((($new-$old)/$old)*100,1)}else{$null} }
++}
++if ($beforeData.Guest.PSObject.Properties.Name -contains 'UsedMB') {
++    $old = [double]$beforeData.Guest.UsedMB; $new = [double]$afterData.Guest.UsedMB
++    $rows += [pscustomobject]@{ Metric='GuestUsedMB'; Before=$old; After=$new; Delta=[math]::Round($new-$old,1); Percent=if($old){[math]::Round((($new-$old)/$old)*100,1)}else{$null} }
++}
++[pscustomobject]@{ Valid=$true; LimitsUnchanged=$true; Rows=@($rows) }
+diff --git a/.claude/skills/hyperv-vm/scripts/Connect-HyperVVm.ps1 b/.claude/skills/hyperv-vm/scripts/Connect-HyperVVm.ps1
+new file mode 100644
+index 00000000..a0820c77
+--- /dev/null
++++ b/.claude/skills/hyperv-vm/scripts/Connect-HyperVVm.ps1
+@@ -0,0 +1,30 @@
++[CmdletBinding()]
++param([Parameter(Mandatory)][string]$ConfigPath)
++
++. "$PSScriptRoot\Common.ps1"
++$imported = Import-HyperVVmConfig $ConfigPath
++$config = $imported.Value
++$vm = Get-VM -Name $config.Name -ErrorAction Stop
++if ($vm.State -ne 'Running') { throw "VM is not running: $($vm.State)" }
++
++if ($config.Guest -eq 'windows-ltsc') {
++    [pscustomobject]@{
++        Transport = 'PowerShellDirect'
++        Command = "New-PSSession -VMName '$($config.Name)' -Credential (Get-Credential '$($config.Access.AdminUser)')"
++        RdpEnabled = [bool]$config.Access.EnableRdp
++        RdpCommand = if ($config.Access.EnableRdp) { "vmconnect.exe localhost '$($config.Name)'" } else { $null }
++    }
++    exit
++}
++
++$addresses = @(Get-VMNetworkAdapter -VMName $config.Name).IPAddresses | Where-Object { $_ -match '^\d+\.\d+\.\d+\.\d+$' -and $_ -notmatch '^169\.254\.' }
++if ($addresses.Count -ne 1) { throw "Expected one IPv4 address, found $($addresses.Count): $($addresses -join ', ')" }
++$key = Resolve-ConfigPath $imported.Directory $config.Access.SshPrivateKeyPath
++$knownHosts = Join-Path (Get-StatePaths $imported).State 'known_hosts'
++[pscustomobject]@{
++    Transport = 'SSH'
++    Address = $addresses[0]
++    User = $config.Access.AdminUser
++    KnownHosts = $knownHosts
++    Command = "ssh -i `"$key`" -o StrictHostKeyChecking=yes -o UserKnownHostsFile=`"$knownHosts`" $($config.Access.AdminUser)@$($addresses[0])"
++}
+diff --git a/.claude/skills/hyperv-vm/scripts/Finalize-WindowsGuest.ps1 b/.claude/skills/hyperv-vm/scripts/Finalize-WindowsGuest.ps1
+new file mode 100644
+index 00000000..f826593b
+--- /dev/null
++++ b/.claude/skills/hyperv-vm/scripts/Finalize-WindowsGuest.ps1
+@@ -0,0 +1,35 @@
++[CmdletBinding()]
++param(
++    [Parameter(Mandatory)][string]$ConfigPath,
++    [string]$SecretVault,
++    [string]$SecretName
++)
++
++. "$PSScriptRoot\Common.ps1"
++$imported = Import-HyperVVmConfig $ConfigPath
++$config = $imported.Value
++if ($config.Guest -ne 'windows-ltsc') { throw 'This script is only for windows-ltsc guests' }
++
++$securePassword = $null
++if ($SecretVault -and $SecretName -and (Get-Command Get-Secret -ErrorAction SilentlyContinue)) {
++    $securePassword = Get-Secret -Vault $SecretVault -Name $SecretName
++} elseif ($config.Access.AdminPasswordEnv -and [Environment]::GetEnvironmentVariable($config.Access.AdminPasswordEnv)) {
++    $securePassword = ConvertTo-SecureString ([Environment]::GetEnvironmentVariable($config.Access.AdminPasswordEnv)) -AsPlainText -Force
++} else { $securePassword = Read-Host "Password for $($config.Access.AdminUser)" -AsSecureString }
++$credential = [pscredential]::new($config.Access.AdminUser,$securePassword)
++
++Invoke-Command -VMName $config.Name -Credential $credential -ArgumentList $config -ScriptBlock {
++    param($config)
++    Remove-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon' DefaultPassword -ErrorAction SilentlyContinue
++    New-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon' AutoAdminLogon '0' -PropertyType String -Force | Out-Null
++    Remove-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon' AutoLogonCount -ErrorAction SilentlyContinue
++    if ($config.Access.EnableRdp) {
++        Set-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\Terminal Server' fDenyTSConnections 0
++        Enable-NetFirewallRule -DisplayGroup 'Remote Desktop' -ErrorAction SilentlyContinue
++    }
++    if ($config.Features.InstallWslDocker) {
++        $wslConfig = "[wsl2]`nmemory=$($config.Features.WslMemoryMB)MB`nswap=$($config.Features.WslSwapMB)MB`n`n[experimental]`nsparseVhd=$([string]$config.Features.SparseVhd).ToLowerInvariant()`nautoMemoryReclaim=$($config.Features.AutoMemoryReclaim)`n"
++        Set-Content "$env:USERPROFILE\.wslconfig" $wslConfig -Encoding ASCII
++    }
++    [pscustomobject]@{ User=$env:USERNAME; OS=(Get-CimInstance Win32_OperatingSystem).Caption; Finalized=$true }
++}
+diff --git a/.claude/skills/hyperv-vm/scripts/Invoke-HyperVVm.ps1 b/.claude/skills/hyperv-vm/scripts/Invoke-HyperVVm.ps1
+new file mode 100644
+index 00000000..07626340
+--- /dev/null
++++ b/.claude/skills/hyperv-vm/scripts/Invoke-HyperVVm.ps1
+@@ -0,0 +1,83 @@
++[CmdletBinding(SupportsShouldProcess)]
++param(
++    [Parameter(Mandatory)][ValidateSet('Plan','Apply','Rollback')][string]$Action,
++    [Parameter(Mandatory)][string]$ConfigPath
++)
++
++. "$PSScriptRoot\Common.ps1"
++$imported = Import-HyperVVmConfig $ConfigPath
++$config = $imported.Value
++$paths = Get-StatePaths $imported
++$source = Resolve-ConfigPath $imported.Directory $config.Install.Source
++$vhdDirectory = Join-Path $config.Disk.RootDirectory $config.Name
++$vhdPath = Join-Path $vhdDirectory "$($config.Name).vhdx"
++$fingerprint = Get-ConfigFingerprint $config
++
++$plan = [pscustomobject]@{
++    Action = $Action
++    Name = $config.Name
++    Guest = $config.Guest
++    Generation = 2
++    CPU = $config.ProcessorCount
++    Memory = $config.Memory
++    VhdPath = $vhdPath
++    VhdSizeGB = $config.Disk.SizeGB
++    Switch = $config.Network.SwitchName
++    InstallSource = $source
++    ExpectedSha256 = $config.Install.ExpectedSha256
++    NestedVirtualization = $config.Features.NestedVirtualization
++    Docker = $config.Features.InstallDocker -or $config.Features.InstallWslDocker
++    Access = if ($config.Guest -eq 'windows-ltsc') { 'PowerShell Direct' } else { 'SSH key' }
++    HighRisk = [pscustomobject]@{
++        DisableSecurity = $config.Optimization.DisableSecurity
++        DisableFirewall = $config.Optimization.DisableFirewall
++        DisableUpdates = $config.Optimization.DisableUpdates
++        ReplaceExistingVm = $config.Safety.AllowReplaceExistingVm
++        AllowDelete = $config.Safety.AllowDelete
++    }
++    ConfigFingerprint = $fingerprint
++}
++if ($Action -eq 'Plan') { $plan; exit 0 }
++
++if ($Action -eq 'Rollback') {
++    $rollback = Join-Path $paths.State 'rollback.ps1'
++    if (-not (Test-Path $rollback)) { throw "Rollback script not found: $rollback" }
++    if ($PSCmdlet.ShouldProcess($config.Name, 'restore recorded VM and guest settings')) { & $rollback -ConfigPath $imported.Path }
++    exit
++}
++
++& "$PSScriptRoot\Test-HyperVVmPrerequisites.ps1" -ConfigPath $imported.Path | Out-Host
++if (-not $PSCmdlet.ShouldProcess($config.Name, "create $($config.Guest) Hyper-V VM")) { exit }
++
++if (Get-VM -Name $config.Name -ErrorAction SilentlyContinue) {
++    throw 'Replacement is intentionally not automated. Export/remove the existing VM after explicit review, then rerun.'
++}
++New-Item -ItemType Directory -Force -Path $vhdDirectory,$paths.State,$paths.Reports | Out-Null
++
++$memoryBytes = [int64]$config.Memory.StartupMB * 1MB
++New-VM -Name $config.Name -Generation 2 -MemoryStartupBytes $memoryBytes -NewVHDPath $vhdPath -NewVHDSizeBytes ([int64]$config.Disk.SizeGB * 1GB) -SwitchName $config.Network.SwitchName | Out-Null
++Set-VM -Name $config.Name -ProcessorCount $config.ProcessorCount -CheckpointType Production
++if ($config.Memory.Dynamic) {
++    Set-VMMemory -VMName $config.Name -DynamicMemoryEnabled $true -StartupBytes $memoryBytes -MinimumBytes ([int64]$config.Memory.MinimumMB * 1MB) -MaximumBytes ([int64]$config.Memory.MaximumMB * 1MB) -Buffer $config.Memory.BufferPercent
++} else { Set-VMMemory -VMName $config.Name -DynamicMemoryEnabled $false -StartupBytes $memoryBytes }
++Set-VMProcessor -VMName $config.Name -ExposeVirtualizationExtensions ([bool]$config.Features.NestedVirtualization)
++Set-VMNetworkAdapter -VMName $config.Name -MacAddressSpoofing $(if ($config.Features.NestedVirtualization) { 'On' } else { 'Off' })
++$template = if ($config.Guest -eq 'windows-ltsc') { 'MicrosoftWindows' } else { 'MicrosoftUEFICertificateAuthority' }
++Set-VMFirmware -VMName $config.Name -EnableSecureBoot On -SecureBootTemplate $template
++
++$dvd = Add-VMDvdDrive -VMName $config.Name -Path $source -Passthru
++Set-VMFirmware -VMName $config.Name -FirstBootDevice $dvd
++$state = [pscustomobject]@{
++    SchemaVersion = 1
++    Stage = 'created'
++    VMName = $config.Name
++    VMId = (Get-VM $config.Name).VMId.Guid
++    VhdPath = $vhdPath
++    InstallSource = $source
++    InstallSha256 = Get-FileSha256 $source
++    ConfigFingerprint = $fingerprint
++    CreatedAt = Get-Date -Format o
++    Next = if ($config.Guest -eq 'windows-ltsc') { 'Generate unattended media and run Finalize-WindowsGuest.ps1 after setup' } else { 'Generate NoCloud seed media and verify SSH' }
++}
++Write-AtomicJson $state $paths.StateFile
++$state
+diff --git a/.claude/skills/hyperv-vm/scripts/Measure-HyperVVm.ps1 b/.claude/skills/hyperv-vm/scripts/Measure-HyperVVm.ps1
+new file mode 100644
+index 00000000..7476b828
+--- /dev/null
++++ b/.claude/skills/hyperv-vm/scripts/Measure-HyperVVm.ps1
+@@ -0,0 +1,66 @@
++[CmdletBinding()]
++param(
++    [Parameter(Mandatory)][string]$ConfigPath,
++    [Parameter(Mandatory)][ValidateSet('before','after')][string]$Phase,
++    [int]$StabilizationSeconds = 120
++)
++
++. "$PSScriptRoot\Common.ps1"
++$imported = Import-HyperVVmConfig $ConfigPath
++$config = $imported.Value
++$paths = Get-StatePaths $imported
++New-Item -ItemType Directory -Force -Path $paths.Reports | Out-Null
++Start-Sleep -Seconds $StabilizationSeconds
++$vm = Get-VM $config.Name -ErrorAction Stop
++$hostOs = Get-CimInstance Win32_OperatingSystem
++$memoryFingerprint = [ordered]@{
++    ProcessorCount = $vm.ProcessorCount
++    DynamicMemory = $vm.DynamicMemoryEnabled
++    StartupMB = $vm.MemoryStartup / 1MB
++    MinimumMB = $vm.MemoryMinimum / 1MB
++    MaximumMB = $vm.MemoryMaximum / 1MB
++    WslMemoryMB = $config.Features.WslMemoryMB
++    WslSwapMB = $config.Features.WslSwapMB
++}
++
++if ($config.Guest -eq 'windows-ltsc') {
++    $credential = Get-Credential -UserName $config.Access.AdminUser -Message "Credential for PowerShell Direct to $($config.Name)"
++    $guest = Invoke-Command -VMName $config.Name -Credential $credential -ScriptBlock {
++        $os = Get-CimInstance Win32_OperatingSystem
++        $processes = @(Get-Process)
++        $svchost = @($processes | Where-Object Name -eq 'svchost')
++        [pscustomobject]@{
++            OS = $os.Caption
++            Version = $os.Version
++            UsedMB = [math]::Round(($os.TotalVisibleMemorySize - $os.FreePhysicalMemory) / 1KB, 1)
++            AvailableMB = [math]::Round($os.FreePhysicalMemory / 1KB, 1)
++            ProcessCount = $processes.Count
++            SvchostCount = $svchost.Count
++            SvchostWorkingSetMB = [math]::Round(($svchost | Measure-Object WorkingSet64 -Sum).Sum / 1MB, 1)
++            DockerProcesses = @($processes | Where-Object Name -in 'wslservice','vmmemWSL' | Select-Object Name,@{n='WorkingSetMB';e={[math]::Round($_.WorkingSet64/1MB,1)}})
++        }
++    }
++} else {
++    $connection = & "$PSScriptRoot\Connect-HyperVVm.ps1" -ConfigPath $imported.Path
++    $raw = & ssh -i (Resolve-ConfigPath $imported.Directory $config.Access.SshPrivateKeyPath) -o StrictHostKeyChecking=yes -o "UserKnownHostsFile=$($connection.KnownHosts)" "$($connection.User)@$($connection.Address)" "awk '/MemTotal|MemAvailable/ {print `$1`$2}' /proc/meminfo; ps -e --no-headers | wc -l; docker version --format '{{.Server.Version}}' 2>/dev/null || true"
++    $guest = [pscustomobject]@{ Raw = @($raw) }
++}
++
++$dockerManifest = if ($config.Guest -eq 'windows-ltsc') { 'verified separately through WSL' } else { 'queried over SSH' }
++$result = [pscustomobject]@{
++    SchemaVersion = 1
++    Phase = $Phase
++    Timestamp = Get-Date -Format o
++    VMName = $config.Name
++    VMId = $vm.VMId.Guid
++    ConfigFingerprint = Get-ConfigFingerprint $config
++    LimitsFingerprint = Get-ConfigFingerprint $memoryFingerprint
++    StabilizationSeconds = $StabilizationSeconds
++    HostFreeMB = [math]::Round($hostOs.FreePhysicalMemory / 1KB, 1)
++    VMAssignedMB = [math]::Round($vm.MemoryAssigned / 1MB, 1)
++    VMDemandMB = [math]::Round($vm.MemoryDemand / 1MB, 1)
++    Guest = $guest
++    Workload = $dockerManifest
++}
++Write-AtomicJson $result (Join-Path $paths.Reports "$Phase.json")
++$result
+diff --git a/.claude/skills/hyperv-vm/scripts/Optimize-HyperVVm.ps1 b/.claude/skills/hyperv-vm/scripts/Optimize-HyperVVm.ps1
+new file mode 100644
+index 00000000..3605a318
+--- /dev/null
++++ b/.claude/skills/hyperv-vm/scripts/Optimize-HyperVVm.ps1
+@@ -0,0 +1,60 @@
++[CmdletBinding(SupportsShouldProcess)]
++param(
++    [Parameter(Mandatory)][string]$ConfigPath,
++    [ValidateSet('Conservative')][string]$Profile = 'Conservative'
++)
++
++. "$PSScriptRoot\Common.ps1"
++$imported = Import-HyperVVmConfig $ConfigPath
++$config = $imported.Value
++$paths = Get-StatePaths $imported
++if (-not $config.Optimization.Enabled) { throw 'Optimization.Enabled is false' }
++if (($config.Optimization.DisableSecurity -or $config.Optimization.DisableFirewall -or $config.Optimization.DisableUpdates) -and $config.Network.AllowUntrustedNetwork) { throw 'High-risk optimization is forbidden on an untrusted network' }
++if (-not $PSCmdlet.ShouldProcess($config.Name, "apply $Profile guest optimization")) { exit }
++
++if ($config.Guest -eq 'ubuntu-server') {
++    [pscustomobject]@{ Guest='ubuntu-server'; Status='planned'; Message='Apply only config-listed service disables over SSH; automatic package removal is intentionally unsupported.' }
++    exit
++}
++
++$credential = Get-Credential -UserName $config.Access.AdminUser -Message "Credential for PowerShell Direct to $($config.Name)"
++$optimization = $config.Optimization
++$snapshot = Invoke-Command -VMName $config.Name -Credential $credential -ArgumentList $optimization -ScriptBlock {
++    param($optimization)
++    $services = foreach ($name in @($optimization.DisableServices)) {
++        $service = Get-CimInstance Win32_Service -Filter "Name='$name'" -ErrorAction SilentlyContinue
++        if ($service) { [pscustomobject]@{ Name=$name; State=$service.State; StartMode=$service.StartMode } }
++    }
++    $before = [pscustomobject]@{
++        Timestamp = Get-Date -Format o
++        Services = @($services)
++        SvcHostSplitThresholdInKB = (Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control').SvcHostSplitThresholdInKB
++        Firewall = @(Get-NetFirewallProfile | Select-Object Name,Enabled)
++        UpdatePolicy = Get-ItemProperty 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU' -ErrorAction SilentlyContinue | Select-Object NoAutoUpdate,AUOptions
++    }
++    foreach ($name in @($optimization.DisableServices)) {
++        Stop-Service $name -Force -ErrorAction SilentlyContinue
++        Set-Service $name -StartupType Disabled -ErrorAction SilentlyContinue
++    }
++    if ($optimization.ConsolidateServiceHosts) {
++        $memoryKB = [long]((Get-CimInstance Win32_PhysicalMemory | Measure-Object Capacity -Sum).Sum / 1KB)
++        Set-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control' SvcHostSplitThresholdInKB $memoryKB -Type DWord
++    }
++    New-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon' AutoAdminLogon '0' -PropertyType String -Force | Out-Null
++    Remove-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon' AutoLogonCount -ErrorAction SilentlyContinue
++    if ($optimization.DisableFirewall) { Set-NetFirewallProfile -Profile Domain,Private,Public -Enabled False }
++    if ($optimization.DisableUpdates) {
++        New-Item 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU' -Force | Out-Null
++        New-ItemProperty 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU' NoAutoUpdate 1 -PropertyType DWord -Force | Out-Null
++        foreach($name in 'wuauserv','BITS'){Stop-Service $name -Force -ErrorAction SilentlyContinue;Set-Service $name -StartupType Disabled}
++    }
++    if ($optimization.DisableSecurity) {
++        New-Item 'HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender' -Force | Out-Null
++        New-ItemProperty 'HKLM:\SOFTWARE\Policies\Microsoft\Windows Defender' DisableAntiVirus 1 -PropertyType DWord -Force | Out-Null
++        Set-MpPreference -DisableRealtimeMonitoring $true -ErrorAction SilentlyContinue
++    }
++    $before
++}
++$stateFile = Join-Path $paths.State 'optimization-before.json'
++Write-AtomicJson $snapshot $stateFile
++[pscustomobject]@{ Guest='windows-ltsc'; Profile=$Profile; RebootRequired=$true; StatePath=$stateFile }
+diff --git a/.claude/skills/hyperv-vm/scripts/Test-HyperVVm.ps1 b/.claude/skills/hyperv-vm/scripts/Test-HyperVVm.ps1
+new file mode 100644
+index 00000000..82213d99
+--- /dev/null
++++ b/.claude/skills/hyperv-vm/scripts/Test-HyperVVm.ps1
+@@ -0,0 +1,47 @@
++[CmdletBinding()]
++param([Parameter(Mandatory)][string]$ConfigPath)
++
++. "$PSScriptRoot\Common.ps1"
++$imported = Import-HyperVVmConfig $ConfigPath
++$config = $imported.Value
++$vm = Get-VM $config.Name -ErrorAction Stop
++$checks = [Collections.Generic.List[object]]::new()
++function Add-Check([string]$Name,[bool]$Passed,[string]$Detail) { $checks.Add([pscustomobject]@{Name=$Name;Passed=$Passed;Detail=$Detail}) }
++
++Add-Check 'VM running' ($vm.State -eq 'Running') $vm.State.ToString()
++Add-Check 'CPU count' ($vm.ProcessorCount -eq $config.ProcessorCount) "$($vm.ProcessorCount)"
++Add-Check 'Startup memory' (($vm.MemoryStartup/1MB) -eq $config.Memory.StartupMB) "$($vm.MemoryStartup/1MB) MB"
++Add-Check 'Nested virtualization' ((Get-VMProcessor $vm).ExposeVirtualizationExtensions -eq [bool]$config.Features.NestedVirtualization) "$((Get-VMProcessor $vm).ExposeVirtualizationExtensions)"
++Add-Check 'Heartbeat' ((Get-VMIntegrationService -VMName $config.Name -Name Heartbeat).PrimaryStatusDescription -eq 'OK') ((Get-VMIntegrationService -VMName $config.Name -Name Heartbeat).PrimaryStatusDescription)
++
++if ($config.Guest -eq 'windows-ltsc') {
++    $credential = Get-Credential -UserName $config.Access.AdminUser -Message "Credential for PowerShell Direct to $($config.Name)"
++    $guest = Invoke-Command -VMName $config.Name -Credential $credential -ArgumentList $config -ScriptBlock {
++        param($config)
++        $result = [ordered]@{ Login=$true; OS=(Get-CimInstance Win32_OperatingSystem).Caption }
++        if ($config.Features.InstallWslDocker) {
++            $wsl = "$env:ProgramFiles\WSL\wsl.exe"
++            $result.Wsl = (& $wsl -l -v 2>$null | Out-String)
++            $result.Docker = (& $wsl -d $config.Features.WslDistribution -u root -- bash -lc "systemctl is-active docker; docker run --rm hello-world >/dev/null; echo OK" 2>$null | Out-String)
++            $result.WslConfig = Get-Content "$env:USERPROFILE\.wslconfig" -Raw -ErrorAction SilentlyContinue
++        }
++        [pscustomobject]$result
++    }
++    Add-Check 'PowerShell Direct login' $guest.Login $guest.OS
++    if ($config.Features.InstallWslDocker) {
++        Add-Check 'WSL2 distro' ($guest.Wsl -match [regex]::Escape($config.Features.WslDistribution) -and $guest.Wsl -match '\s2\s') $guest.Wsl.Trim()
++        Add-Check 'Docker hello-world' ($guest.Docker -match 'active' -and $guest.Docker -match 'OK') $guest.Docker.Trim()
++        Add-Check 'Sparse config' ((-not $config.Features.SparseVhd) -or $guest.WslConfig -match 'sparseVhd=true') 'wslconfig'
++        Add-Check 'Build cache limit' ($guest.Docker -match 'OK') "$($config.Features.BuildCacheLimitGB) GB configured by provisioning"
++    }
++} else {
++    $connection = & "$PSScriptRoot\Connect-HyperVVm.ps1" -ConfigPath $imported.Path
++    $key = Resolve-ConfigPath $imported.Directory $config.Access.SshPrivateKeyPath
++    $output = & ssh -i $key -o BatchMode=yes -o StrictHostKeyChecking=yes -o "UserKnownHostsFile=$($connection.KnownHosts)" "$($connection.User)@$($connection.Address)" 'printf LOGIN_OK; systemctl is-active docker 2>/dev/null || true; docker run --rm hello-world >/dev/null 2>&1 && printf DOCKER_OK || true'
++    Add-Check 'SSH key login' ($output -match 'LOGIN_OK') ($output -join ' ')
++    if ($config.Features.InstallDocker) { Add-Check 'Docker hello-world' ($output -match 'active' -and $output -match 'DOCKER_OK') ($output -join ' ') }
++}
++
++$result = [pscustomobject]@{ Passed = @($checks | Where-Object {-not $_.Passed}).Count -eq 0; Checks = @($checks) }
++$result
++if (-not $result.Passed) { exit 1 }
+diff --git a/.claude/skills/hyperv-vm/scripts/Test-HyperVVmPrerequisites.ps1 b/.claude/skills/hyperv-vm/scripts/Test-HyperVVmPrerequisites.ps1
+new file mode 100644
+index 00000000..beae73b5
+--- /dev/null
++++ b/.claude/skills/hyperv-vm/scripts/Test-HyperVVmPrerequisites.ps1
+@@ -0,0 +1,38 @@
++[CmdletBinding()]
++param([Parameter(Mandatory)][string]$ConfigPath)
++
++. "$PSScriptRoot\Common.ps1"
++$imported = Import-HyperVVmConfig $ConfigPath
++$config = $imported.Value
++$issues = [Collections.Generic.List[string]]::new()
++
++$principal = [Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()
++if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) { $issues.Add('PowerShell is not elevated') }
++if (-not (Get-Command Get-VM -ErrorAction SilentlyContinue)) { $issues.Add('Hyper-V PowerShell module is unavailable') }
++if (-not (Get-VMSwitch -Name $config.Network.SwitchName -ErrorAction SilentlyContinue)) { $issues.Add("VMSwitch not found: $($config.Network.SwitchName)") }
++
++$source = Resolve-ConfigPath $imported.Directory $config.Install.Source
++if (-not (Test-Path -LiteralPath $source -PathType Leaf)) { $issues.Add("Install source not found: $source") }
++elseif ($config.Install.ExpectedSha256 -match '^[A-Fa-f0-9]{64}$') {
++    $actual = Get-FileSha256 $source
++    if ($actual -ne $config.Install.ExpectedSha256.ToUpperInvariant()) { $issues.Add("Install source SHA-256 mismatch: $actual") }
++} else { $issues.Add('Install.ExpectedSha256 must be a 64-character vendor-published SHA-256') }
++
++$existing = Get-VM -Name $config.Name -ErrorAction SilentlyContinue
++if ($existing -and -not $config.Safety.AllowReplaceExistingVm) { $issues.Add("VM already exists: $($config.Name)") }
++if ($config.Guest -eq 'ubuntu-server' -and -not (Test-Path -LiteralPath $config.Access.SshPublicKeyPath)) { $issues.Add('SSH public key not found') }
++if ($config.Features.InstallWslDocker -and -not $config.Features.NestedVirtualization) { $issues.Add('InstallWslDocker requires NestedVirtualization') }
++if (($config.Optimization.DisableFirewall -or $config.Optimization.DisableSecurity -or $config.Optimization.DisableUpdates) -and $config.Network.AllowUntrustedNetwork) { $issues.Add('Security/update disabling is forbidden on an untrusted network') }
++
++$result = [pscustomobject]@{
++    Valid = $issues.Count -eq 0
++    Issues = @($issues)
++    Name = $config.Name
++    Guest = $config.Guest
++    Source = $source
++    SourceSha256 = if (Test-Path $source) { Get-FileSha256 $source } else { $null }
++    Switch = $config.Network.SwitchName
++    ConfigFingerprint = Get-ConfigFingerprint $config
++}
++$result
++if (-not $result.Valid) { exit 1 }

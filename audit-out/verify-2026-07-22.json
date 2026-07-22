@@ -1,0 +1,234 @@
+{
+ "census": {
+  "specs": 68,
+  "nodes": 5640,
+  "edges": 7334,
+  "byType": {
+   "AC": 789,
+   "Decision": 178,
+   "FR": 717,
+   "Story": 195,
+   "NFR": 58,
+   "Task": 556,
+   "Scenario": 2541,
+   "File": 606
+  }
+ },
+ "censusDrift": [
+  "specs 60→68",
+  "edges 3550→7334"
+ ],
+ "totalFindings": 2483,
+ "bySev": {
+  "warning": 1606,
+  "info": 877
+ },
+ "byCode": {
+  "UNCOVERED_FR": 22,
+  "FR_NO_DESIGN": 626,
+  "FR_NO_STORY": 634,
+  "TOOTHLESS_DECISION": 81,
+  "TOOTHLESS_STORY": 101,
+  "TASK_STARTED_WITHOUT_CHAIN": 1,
+  "ORPHAN_TASK": 2,
+  "TASK_NO_REQUIREMENT": 28,
+  "TASK_STATUS_UNVERIFIED": 70,
+  "TASK_UNTESTED": 34,
+  "TASK_NO_OWN_SCENARIO": 35,
+  "UNTAGGED_SCENARIO": 847,
+  "TAG_BULK_SUSPECT": 2
+ },
+ "codeDrift": [
+  "TASK_NO_OWN_SCENARIO 108→35",
+  "TASK_STATUS_UNVERIFIED 274→70"
+ ],
+ "sessionPilotUntested": {
+  "total": 34,
+  "bySpec": {
+   "session-pilot": 34
+  }
+ },
+ "uncoveredFR": {
+  "total": 22,
+  "bySpec": {
+   "suggest-rules-insights": [
+    "FR-5",
+    "FR-6"
+   ],
+   "stale-build-guard": [
+    "FR-2",
+    "FR-6"
+   ],
+   "spec-workflow-vmodel": [
+    "FR-006",
+    "FR-007",
+    "FR-021"
+   ],
+   "spec-generator-v3": [
+    "FR-5",
+    "FR-6",
+    "FR-7",
+    "FR-8",
+    "FR-15",
+    "FR-16"
+   ],
+   "prompt-suggest": [
+    "FR-4",
+    "FR-6"
+   ],
+   "install-diagnostics": [
+    "FR-12"
+   ],
+   "fix-bg-output-loss": [
+    "FR-6",
+    "FR-9"
+   ],
+   "cursor-dead-code-cleanup": [
+    "FR-5"
+   ],
+   "bg-task-guard": [
+    "FR-6",
+    "FR-16"
+   ],
+   "answer-simple": [
+    "FR-12"
+   ]
+  }
+ },
+ "fr6264": {
+  "sgFrMax": 64,
+  "sgFrCount": 64,
+  "sgFrIds": [
+   "spec-generator-v4:FR-1",
+   "spec-generator-v4:FR-10",
+   "spec-generator-v4:FR-11",
+   "spec-generator-v4:FR-12",
+   "spec-generator-v4:FR-13",
+   "spec-generator-v4:FR-14",
+   "spec-generator-v4:FR-15",
+   "spec-generator-v4:FR-16",
+   "spec-generator-v4:FR-17",
+   "spec-generator-v4:FR-18",
+   "spec-generator-v4:FR-19",
+   "spec-generator-v4:FR-2",
+   "spec-generator-v4:FR-20",
+   "spec-generator-v4:FR-21",
+   "spec-generator-v4:FR-22",
+   "spec-generator-v4:FR-23",
+   "spec-generator-v4:FR-24",
+   "spec-generator-v4:FR-25",
+   "spec-generator-v4:FR-26",
+   "spec-generator-v4:FR-27",
+   "spec-generator-v4:FR-28",
+   "spec-generator-v4:FR-29",
+   "spec-generator-v4:FR-3",
+   "spec-generator-v4:FR-30",
+   "spec-generator-v4:FR-31",
+   "spec-generator-v4:FR-32",
+   "spec-generator-v4:FR-33",
+   "spec-generator-v4:FR-34",
+   "spec-generator-v4:FR-35",
+   "spec-generator-v4:FR-36",
+   "spec-generator-v4:FR-37",
+   "spec-generator-v4:FR-38",
+   "spec-generator-v4:FR-39",
+   "spec-generator-v4:FR-4",
+   "spec-generator-v4:FR-40",
+   "spec-generator-v4:FR-41",
+   "spec-generator-v4:FR-42",
+   "spec-generator-v4:FR-43",
+   "spec-generator-v4:FR-44",
+   "spec-generator-v4:FR-45",
+   "spec-generator-v4:FR-46",
+   "spec-generator-v4:FR-47",
+   "spec-generator-v4:FR-48",
+   "spec-generator-v4:FR-49",
+   "spec-generator-v4:FR-5",
+   "spec-generator-v4:FR-50",
+   "spec-generator-v4:FR-51",
+   "spec-generator-v4:FR-52",
+   "spec-generator-v4:FR-53",
+   "spec-generator-v4:FR-54",
+   "spec-generator-v4:FR-55",
+   "spec-generator-v4:FR-56",
+   "spec-generator-v4:FR-57",
+   "spec-generator-v4:FR-58",
+   "spec-generator-v4:FR-59",
+   "spec-generator-v4:FR-6",
+   "spec-generator-v4:FR-60",
+   "spec-generator-v4:FR-61",
+   "spec-generator-v4:FR-62",
+   "spec-generator-v4:FR-63",
+   "spec-generator-v4:FR-64",
+   "spec-generator-v4:FR-7",
+   "spec-generator-v4:FR-8",
+   "spec-generator-v4:FR-9"
+  ],
+  "detail": {
+   "FR-62": {
+    "exists": true,
+    "title": "",
+    "outEdges": [
+     "covers→spec-generator-v4:AC-62.1",
+     "covers→spec-generator-v4:AC-62.2",
+     "covers→spec-generator-v4:AC-62.3",
+     "covers→spec-generator-v4:Decision-fr-62-establishes-project-root-without-trusting-stdin-or-collapsed-cwd",
+     "covers→spec-generator-v4:Story-39-trust-the-readiness-gate-from-a-windows-host-through-wsl-priority-p1",
+     "tested-by→spec-generator-v4:SCEN-specgen004-553-inherited-closed-and-noninteractive-stdin-root-handoff-is-deterministic",
+     "tested-by→spec-generator-v4:SCEN-specgen004-554-wsl-only-root-precheck-accepts-only-caller-or-project-wsl-roots"
+    ],
+    "outEdgeCount": 7,
+    "inEdges": [],
+    "inEdgeCount": 0,
+    "findings": []
+   },
+   "FR-63": {
+    "exists": true,
+    "title": "",
+    "outEdges": [
+     "covers→spec-generator-v4:AC-63.1",
+     "covers→spec-generator-v4:AC-63.2",
+     "covers→spec-generator-v4:AC-63.3",
+     "covers→spec-generator-v4:Decision-fr-63-exposes-one-graph-and-evidence-readiness-model-through-mcp-and-verdict",
+     "covers→spec-generator-v4:Story-40-ship-a-dependency-safe-installed-readiness-command-priority-p1",
+     "covers→spec-generator-v4:Story-42-receive-one-evidence-backed-readiness-answer-from-status-verdict-and-mcp-priority-p1",
+     "tested-by→spec-generator-v4:SCEN-specgen004-555-precheck-mcp-and-verdict-derive-one-fr-ac-scenario-inventory",
+     "tested-by→spec-generator-v4:SCEN-specgen004-556-full-run-evidence-preserves-source-time-recency-and-outcome-taxonomy",
+     "tested-by→spec-generator-v4:SCEN-specgen004-557-ac-readiness-exposes-empty-test-paths-and-never-run-fr-taxonomy-requires-every-mandatory-lane"
+    ],
+    "outEdgeCount": 9,
+    "inEdges": [],
+    "inEdgeCount": 0,
+    "findings": []
+   },
+   "FR-64": {
+    "exists": true,
+    "title": "",
+    "outEdges": [
+     "covers→spec-generator-v4:AC-64.1",
+     "covers→spec-generator-v4:AC-64.2",
+     "covers→spec-generator-v4:AC-64.3",
+     "covers→spec-generator-v4:AC-64.4",
+     "covers→spec-generator-v4:Decision-fr-64-gates-publication-on-a-complete-releasable-inventory",
+     "covers→spec-generator-v4:Story-41-keep-graph-identifiers-parseable-and-traceable-priority-p1",
+     "covers→spec-generator-v4:Story-43-release-ownership-proves-monitors-and-can-roll-back-readiness-delivery-priority-p1",
+     "tested-by→spec-generator-v4:SCEN-specgen004-558-graph-conformance-classifies-source-spec-test-generated-temp-smoke-and-silent-evidence",
+     "tested-by→spec-generator-v4:SCEN-specgen004-559-docker-only-verification-records-current-pre-and-post-release-inventory",
+     "tested-by→spec-generator-v4:SCEN-specgen004-560-dependency-absent-launcher-status-and-mcp-remain-provenance-safe",
+     "tested-by→spec-generator-v4:SCEN-specgen004-561-release-evidence-controls-one-candidate-through-integration-first-verification"
+    ],
+    "outEdgeCount": 11,
+    "inEdges": [],
+    "inEdgeCount": 0,
+    "findings": []
+   }
+  }
+ },
+ "specGeneratorV4Findings": {
+  "FR_NO_DESIGN": 10,
+  "FR_NO_STORY": 25,
+  "TASK_STARTED_WITHOUT_CHAIN": 1,
+  "TASK_STATUS_UNVERIFIED": 53
+ },
+ "errorFindings": []
+}
