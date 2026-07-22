@@ -35,6 +35,8 @@ Tasks in Phase -1 (Infrastructure) are exempt from Done When by form-guard desig
 - `{slug}.feature` — for linking to `@featureN` scenarios.
 - `FR.md` — for task `_Requirements:_` back-references.
 
+Before enriching forms, run `node tools/specs-generator/acceptance-task-coverage.mjs --spec ".specs/{slug}" --format json`. Its AC-keyed lanes are required task inputs, not review suggestions: every high-risk claim must have explicit `_Acceptance: AC-N.N_` ownership. Unknown implementation becomes `Status: BLOCKED` investigation, and remains a hard error until concrete implementation/test/evidence tasks replace it.
+
 ## Execution
 
 > **MCP-rails (FR-39/40):** parsing TASKS.md via `spec-form-parsers.ts` and
@@ -73,6 +75,7 @@ For each task missing Done When (and not waived, not Phase -1), synthesize 1–3
    - "create X.ts" → `[ ] X.ts exists and exports expected API`
    - "test X" → `[ ] X test passes`
    - "update X" → `[ ] X reflects new structure (grep-verifiable)`
+4. Acceptance coverage lanes returned by the shared analyzer → separate binary implementation, regression, and semantic evidence checkboxes. Do not collapse a public/paid contract into "route exists" or a single `401` check; preserve required `401`, `402`, funded success, settlement/idempotency, artifact readback, contract shape, and status/content-type/body lanes.
 
 If the title gives no useful signal, ask the user via AskUserQuestion before falling back to a generic `[ ] Outcome verifiable`.
 
@@ -93,6 +96,7 @@ Target bullet shape:
 ```markdown
 - [ ] {Task title} -- @featureN — Status: TODO | Est: 30m
   _Requirements: [FR-N](FR.md#fr-n-name)_
+  _Acceptance: AC-N.N_
   **Done When:**
   - [ ] {Binary observable 1}
   - [ ] {Binary observable 2}

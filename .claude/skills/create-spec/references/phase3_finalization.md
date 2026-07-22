@@ -11,6 +11,14 @@
 
 ## Алгоритм
 
+0a. **Сначала построить acceptance-to-delivery coverage plan** для high-risk AC (FR-65):
+
+   ```bash
+   node tools/specs-generator/acceptance-task-coverage.mjs --spec ".specs/{feature}" --format json
+   ```
+
+   Для каждого найденного AC задача обязана ссылаться на сам `AC-N.N` (одной `_Requirements: FR-N_` недостаточно) и владеть всеми возвращёнными lanes: implementation/source mapping, contract regression, compatibility/UX/redaction decisions, auth/paid outcomes и semantic live status/content-type/body evidence. Если implementation surface пока неизвестен — создать AC-linked `Status: BLOCKED` investigation task; Finalization остаётся красной, пока investigation не превращена в конкретные implementation/test/evidence tasks. Повторить analyzer после заполнения TASKS.md; `ok: false` блокирует STOP #3.
+
 1. **Заполнить TASKS.md по TDD-порядку**, затем на шаге 1b **вызвать `Skill("task-board-forms")`** — skill добавляет `**Done When:**` блок + `Status:` + `Est:` per task и регенерирует `## Task Summary Table` в начале файла через `spec-status.ts -Format task-table`. Hook `task-form-guard` блокирует TASKS.md без Done When/Status/Est (Phase -1 relaxed).
 
    **Step 1c: Optional strong-tests recommendation for test items** (compositional hint).

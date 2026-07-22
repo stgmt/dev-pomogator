@@ -401,3 +401,17 @@ This block enumerates the spec-doc edits applied as part of the v3→v4 transiti
 | Phase 33 (FR-60 high-level MCP authoring API) | 10 (2 create + 8 edit) |
 | Phase 34 (FR-61 unified readiness UX) | 17 (1 create + 16 edit) |
 | **Total** | **175 rows (~95 create + 80 edit; Phase 31/32/32b/33/34 plus T6-45 BDD evidence traced through 2026-07-09)** |
+
+## Phase 38 — Acceptance-to-delivery coverage (FR-65)
+
+| Path | Action | Requirement and verification |
+|---|---|---|
+| `tools/specs-generator/acceptance-task-coverage.mjs` | create | Text-driven AC classifier, task-plan lanes, CLI, and reusable audit analysis. [FR-65](FR.md#fr-65) |
+| `tools/specs-generator/specs-generator-core.mjs` | edit | Emit blocking audit findings for missing/unresolved acceptance delivery lanes. [AC-65.3](ACCEPTANCE_CRITERIA.md#ac-653) |
+| `tests/fixtures/specgen004-acceptance-coverage/paid-spa-corpus.json` | create | Synthetic #140 root/prefix, HTML/JSON auth/billing, registry/settlement/readback corpus. [AC-65.4](ACCEPTANCE_CRITERIA.md#ac-654) |
+| `tests/step_definitions/feature65_acceptance_task_coverage.ts` | create | Real analyzer plus audit integration BDD binding for SPECGEN004_565. [FR-65](FR.md#fr-65) |
+| `.claude/skills/create-spec/references/phase3_finalization.md` | edit | Require analyzer plan before task authoring and Finalization STOP. [FR-65d](FR.md#fr-65) |
+| `.claude/skills/task-board-forms/SKILL.md` | edit | Generate AC-linked implementation/test/deploy tasks or blocking investigation from shared lanes. [FR-65c](FR.md#fr-65) |
+| `.claude/skills/spec-review/SKILL.md` | edit | Treat deterministic acceptance-delivery findings as P0. [FR-65d](FR.md#fr-65) |
+| `.claude/skills/spec-review/references/categories.md` | edit | Document acceptance-delivery category and remediation. [FR-65d](FR.md#fr-65) |
+| `.specs/spec-generator-v4/{FR.md,ACCEPTANCE_CRITERIA.md,USER_STORIES.md,USE_CASES.md,DESIGN.md,REQUIREMENTS.md,TASKS.md,FILE_CHANGES.md,spec-generator-v4.feature}` | edit | Trace FR-65 through story/use-case/design/AC/task/file/scenario web. |

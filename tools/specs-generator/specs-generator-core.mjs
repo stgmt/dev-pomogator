@@ -2024,6 +2024,25 @@ async function commandAuditSpec(argv) {
 
   log('INFO', 'Running TASKS_FR_REFS check...');
   const tasksContent = getFileContent('TASKS.md');
+  if (acContent && tasksContent) {
+    try {
+      const { analyzeAcceptanceTaskCoverage } = await import('./acceptance-task-coverage.mjs');
+      const coverage = analyzeAcceptanceTaskCoverage({ acceptanceContent: acContent, tasksContent });
+      for (const gap of coverage.findings) {
+        findings.push({
+          check: 'ACCEPTANCE_DELIVERY_COVERAGE',
+          category: 'LOGIC_GAPS',
+          severity: 'ERROR',
+          message: `${gap.acId} ${gap.code}: missing ${gap.missingLanes.join(', ') || 'resolved delivery ownership'}`,
+          details: gap.blockingInvestigation
+            ? 'Keep Finalization blocked until the investigation resolves into AC-linked implementation, regression, and semantic evidence tasks.'
+            : 'Add AC-linked tasks for every named delivery lane; an FR-only reference is insufficient.',
+        });
+      }
+    } catch (error) {
+      log('WARN', `ACCEPTANCE_DELIVERY_COVERAGE unavailable: ${error instanceof Error ? error.message : error}`);
+    }
+  }
   if (tasksContent && frContent) {
     const frIds = [...frContent.matchAll(/^## FR-(\d+):/gm)].map((match) => `FR-${match[1]}`);
     const taskRefs = [...new Set((tasksContent.match(/FR-\d+/g) || []))];

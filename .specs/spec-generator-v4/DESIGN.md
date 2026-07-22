@@ -1349,3 +1349,18 @@ The gate runs a clean-candidate Docker full suite before and after packaging, in
 - Release on graph-green alone (rejected) — graph completeness does not prove packaging, runtime, or source conservation.
 - Treat filtered tests as release proof (rejected) — a selected subset cannot establish full-suite readiness.
 - Run a suite from a dirty candidate (rejected) — temporary or unrelated files can create false evidence.
+
+### Decision: One deterministic acceptance-delivery classifier feeds generation and review
+
+**Требование:** [FR-65](FR.md#fr-65)
+
+**Rationale:** A pure text-driven analyzer parses AC sections, classifies generic public-contract/version/input/redaction/paid/deploy triggers, and emits required delivery lanes keyed by AC id. TASKS mapping is explicit at AC granularity. `audit-spec` converts missing lanes or unresolved blocking investigations into ERROR findings consumed by `spec-verdict`; `task-board-forms` and `create-spec` use the same lane vocabulary when authoring tasks, while `spec-review` treats the deterministic finding as P0 instead of re-inventing semantic matching.
+
+The analyzer remains project-agnostic: it never hardcodes marketplace field names. The #140 paid-SPA fixture supplies real failure categories (root vs prefixed API, HTML infrastructure 404 vs JSON 401/402, registry and slug/settlement mapping, semantic readback) as a regression corpus, not production-specific logic.
+
+**Trade-off:** Text heuristics are intentionally narrow and require explicit AC references in tasks. This can surface a blocking investigation for ambiguous prose, which is safer than silently declaring delivery coverage.
+
+**Alternatives considered:**
+- Prompt-only checklist (rejected: reviewer drift).
+- Project-specific field dictionary (rejected: non-generic).
+- FR-only task mapping (rejected: one broad task can hide several acceptance claims).

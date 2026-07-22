@@ -603,11 +603,41 @@ Compare:
 
 ---
 
+## Category 16: Acceptance-to-delivery coverage (P0)
+
+### Trigger
+
+Run at Finalization and post-implementation when acceptance text describes a public/deployed API contract, version or UI input shape, redaction boundary, authenticated/paid admission, settlement, or result/artifact delivery.
+
+### Method
+
+```bash
+node tools/specs-generator/acceptance-task-coverage.mjs \
+  --spec ".specs/{slug}" --format json
+```
+
+The analyzer is the shared deterministic vocabulary also used by `audit-spec`. Review each `ACCEPTANCE_DELIVERY_COVERAGE` error at AC granularity. An FR-only task reference is insufficient. Required lanes may include source-of-truth/DTO mapping, contract regression, producer/consumer compatibility or architecture decision, renderable input schema or no-schema UX decision, allowlist/redaction, root/prefix routing, semantic status/content-type/body, `401`, `402`, funded success, settlement/idempotency, controlled-spend guardrails, and result/artifact readback.
+
+### Severity rule
+
+- P0: high-risk AC has no explicit AC-linked task.
+- P0: any required lane is missing.
+- P0: the only mapped task is `Status: BLOCKED` investigation; it remains red until resolved into concrete implementation/test/evidence work.
+- PASS only when analyzer returns `ok: true`; endpoint existence or “not nginx 404” is never semantic deploy proof.
+
+### Finding format
+
+```markdown
+| 16 | ACCEPTANCE_DELIVERY_COVERAGE | AC-4.2 → TASKS.md | Missing funded_success, settlement_idempotency, artifact_readback | Add AC-4.2-linked implementation, regression, and controlled live-evidence tasks |
+```
+
+---
+
 ## Severity quick-reference
 
 | Severity | Categories | Behavior |
 |----------|-----------|----------|
-| **P0** | 1, 2, 6, 9, 12 | BLOCKER — must fix перед ConfirmStop |
+| **P0** | 1, 2, 6, 9, 12, 16 | BLOCKER — must fix перед ConfirmStop |
 | **P1** | 3, 4, 5, 7, 8, 11 | fix BEFORE Stop, override через `[skip-spec-review-p1: <reason>]` |
 | **P2** | 10, 13 + некоторые из 1, 4, 7, 8 | recommendation, log only |
 | **P3** | 13 (config keys) + edge cases | informational, log only |

@@ -3569,3 +3569,10 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Given the spec guard environment precedence and canonical command-hook launchers
     When enforcement signals and a launcher without CLAUDE_PLUGIN_ROOT are exercised
     Then the first parseable signal wins, unset signals default to enforce, explicit false disables, and every launcher resolves absolutely
+
+  @feature65 @FR-65
+  Scenario: SPECGEN004_565 paid deployed API acceptance maps to implementation test and semantic evidence
+    Given a synthetic paid SPA corpus with shallow, blocked-investigation, and complete acceptance task plans
+    When the real acceptance delivery analyzer and audit inspect every plan
+    Then shallow coverage names every missing public contract paid flow and semantic deploy lane
+    And a blocking investigation remains red while the complete AC-linked plan passes
