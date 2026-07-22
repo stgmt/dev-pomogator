@@ -1,5 +1,5 @@
 /**
- * spec-access-guard — FR-39c/f PreToolUse hook (P17-3, SHADOW by default).
+ * spec-access-guard — FR-39c/f PreToolUse hook (P17-3, ENFORCE by default).
  *
  * MCP-rails: the AGENT must read/write specs through the MCP door (read_spec_doc
  * / list_spec_docs / propose_spec_change / apply_spec_change), not by raw
@@ -7,12 +7,13 @@
  * enforcement point for the interactive main session (the phase agents enforce
  * it differently — via their allowed-tools, FR-41).
  *
- * Two tiers (FR-39c — SHADOW first, enforce LAST):
- *   - SHADOW (default): a match is LOGGED to spec-access.jsonl, NOT blocked.
- *   - ENFORCE (`SPEC_ACCESS_ENFORCE=true`): a match is DENIED with a pointer
+ * Two tiers (FR-39c — secure default with explicit opt-out):
+ *   - ENFORCE (default, or explicit `true|1`): a match is DENIED with a pointer
  *     to the MCP tools. Escape (both logged to spec-access-escapes.jsonl):
  *     `[skip-spec-access: <reason ≥8>]` in the Bash command TEXT (the per-call
  *     channel the agent controls — P21-2), OR session env `SPEC_ACCESS_SKIP=1`.
+ *   - SHADOW (explicit `false|0`): a match is LOGGED to spec-access.jsonl,
+ *     NOT blocked.
  *
  * The Bash matcher is an ALGORITHM, not a substring (FR-39f): a command whose
  * executable is an ENGINE CLI (spec-verdict / validate-spec / audit-spec /
@@ -426,19 +427,29 @@ function logEscape(repoRoot: string, reason: string): void {
 }
 
 /**
- * Is enforce ON? Set manually (SPEC_ACCESS_ENFORCE — dogfood/CI) OR via the plugin's
- * `userConfig.spec_access_enforce` toggle, which Claude Code auto-exports to plugin
- * subprocesses as `CLAUDE_PLUGIN_OPTION_<key>` (casing matched both ways) — so INSTALLED
- * users get enforce from the enable-time toggle, no settings.json hand-editing. Env
- * inherits through the bootstrap→tsx-runner→guard chain. Exported pure for the BDD bind.
+ * Is enforce ON? The door is secure by default. An explicit, parseable signal can
+ * override that default; the first supported source with a true/false value wins.
+ * Unparseable values fall through so a malformed higher-priority variable cannot
+ * mask a valid plugin option. Exported pure for the BDD bind.
  */
 export function enforceEnabled(env: NodeJS.ProcessEnv = process.env): boolean {
-  const onish = (v: string | undefined): boolean => v === 'true' || v === '1';
-  return (
-    onish(env.SPEC_ACCESS_ENFORCE) ||
-    onish(env.CLAUDE_PLUGIN_OPTION_spec_access_enforce) ||
-    onish(env.CLAUDE_PLUGIN_OPTION_SPEC_ACCESS_ENFORCE)
-  );
+  const parse = (value: string | undefined): boolean | undefined => {
+    if (value === undefined) return undefined;
+    const normalized = value.trim().toLowerCase();
+    if (normalized === 'true' || normalized === '1') return true;
+    if (normalized === 'false' || normalized === '0') return false;
+    return undefined;
+  };
+
+  for (const value of [
+    env.SPEC_ACCESS_ENFORCE,
+    env.CLAUDE_PLUGIN_OPTION_spec_access_enforce,
+    env.CLAUDE_PLUGIN_OPTION_SPEC_ACCESS_ENFORCE,
+  ]) {
+    const decision = parse(value);
+    if (decision !== undefined) return decision;
+  }
+  return true;
 }
 
 async function main(): Promise<void> {

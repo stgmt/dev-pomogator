@@ -1225,10 +1225,10 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Then it ignores the placeholder and uses the cwd
 
   @FR-39
-  Scenario: SPECGEN004_136 enforce turns on from the plugin userConfig export, not only the manual env
+  Scenario: SPECGEN004_136 enforce turns on from the plugin userConfig export and respects explicit disable
     Given the plugin userConfig enforce toggle exported to the guard environment
     When the guard computes whether enforce is on
-    Then enforce is on, and it is off when no enforce signal is present
+    Then enforce is on from userConfig and an explicit false turns it off
 
   @FR-39
   Scenario: SPECGEN004_138 the read door reaches a subdirectory doc but refuses traversal
@@ -3563,3 +3563,9 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     When each session touches a different dirty spec and one file has both staged and unstaged changes
     Then each anchor Stop-gate classifies only its own touched spec without mutating the Git index
     And a session without reliable baseline evidence reports provenance unknown and fails open
+
+  @feature39 @FR-39
+  Scenario: SPECGEN004_564 spec access enforcement defaults on and hook launchers resolve without plugin root
+    Given the spec guard environment precedence and canonical command-hook launchers
+    When enforcement signals and a launcher without CLAUDE_PLUGIN_ROOT are exercised
+    Then the first parseable signal wins, unset signals default to enforce, explicit false disables, and every launcher resolves absolutely
