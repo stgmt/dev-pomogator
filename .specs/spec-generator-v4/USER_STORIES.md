@@ -1006,3 +1006,25 @@ As a spec author and reviewer, I want every external, deployed, authenticated, o
 Given public contract and paid-flow acceptance has only route-exists and unauthenticated tasks
 When generator finalization or review evaluates acceptance delivery coverage
 Then the phase is blocked with the missing implementation, test, billing, and semantic deploy lanes
+
+---
+
+### User Story 45: Preserve every spec document when a transaction write fails (Priority: P1)
+
+**Требование:** [FR-60](FR.md#fr-60)
+
+As a spec author, I want a multi-document mutation to restore every earlier write when a later document cannot be persisted, so that an I/O fault cannot leave the graph half-authored or destroy a non-empty document through a batch-only bypass.
+
+**Why:** Per-file atomic rename prevents torn files but does not make a sequence of document writes all-or-nothing; without compensation, a second-write failure leaves a valid-looking partial graph.
+
+**Independent Test:** `SPECGEN004_523` writes the first document through the real atomic writer, injects a deterministic failure on the second write, and asserts every document is byte-identical to its pre-transaction snapshot; it also refuses an empty whole-document replacement.
+
+**Acceptance Scenarios:**
+
+Given a validated transaction spans two non-empty spec documents
+When the second atomic document write fails after the first succeeds
+Then the first document is restored byte-for-byte and the result reports `WRITE_FAILED`
+
+Given a batch edit replaces a non-empty spec document with empty content
+When the transaction validator evaluates the fully staged graph
+Then it refuses the destructive replacement before any document is written

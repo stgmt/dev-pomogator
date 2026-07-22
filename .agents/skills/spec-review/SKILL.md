@@ -1,7 +1,7 @@
 ---
 name: spec-review
 description: |
-  Семантическое pre-stop ревью спеки/кода через 15 категорий (10 spec-time + 3 post-implementation + 2 cross-cutting): external claims, antipatterns, assumption-vs-requirement, memory-constraint compliance, reality-drift и др. Используй ПЕРЕД каждым ConfirmStop в specs-management workflow И после каждой implementation phase. Триггеры — "сам ревью", "проверь спеку", "ревью перед стопом", "review phase N", "spec-review", "pre-stop check". Skip when — spec не существует, активной фазы нет в .progress.json, или пользователь явно отказался.
+  Семантическое pre-stop ревью спеки/кода через 16 категорий: external claims, acceptance-to-delivery coverage, antipatterns, assumption-vs-requirement, memory-constraint compliance, reality-drift и др. Используй ПЕРЕД каждым ConfirmStop в specs-management workflow И после каждой implementation phase. Триггеры — "сам ревью", "проверь спеку", "ревью перед стопом", "review phase N", "spec-review", "pre-stop check". Skip when — spec не существует, активной фазы нет в .progress.json, или пользователь явно отказался.
 license: Apache 2.0
 allowed-tools:
   - "mcp__dev-pomogator-specs__read_spec_doc"
@@ -14,6 +14,7 @@ allowed-tools:
   - "Grep"
   - "Glob"
   - "Bash(bash:*)"
+  - "Bash(node:*)"
   - "Bash(grep:*)"
   - "WebFetch"
   - "Edit"
@@ -25,7 +26,7 @@ allowed-tools:
 
 Дополняет (не заменяет) `audit-spec.ts` структурный аудит: ловит семантические ошибки, которые валидатор пропускает. Запускается перед каждым `ConfirmStop` в `create-spec` workflow и после каждой implementation phase.
 
-**15 категорий** = 10 spec-time + 3 post-implementation + 2 cross-cutting (категория 14 — memory-constraints; категория 15 — reality-drift). Каждая категория имеет фиксированный severity (P0..P3), grep patterns и remediation. Детали — в `references/categories.md`.
+**16 категорий**: существующие 15 проверок + категория 16 — deterministic acceptance-to-delivery coverage. Каждая категория имеет фиксированный severity (P0..P3), grep patterns и remediation. Детали — в `references/categories.md`.
 
 ## Когда запускается
 
@@ -33,8 +34,8 @@ allowed-tools:
 |---------|-------|----------|
 | Перед `spec-status.ts -ConfirmStop Discovery` | end of Phase 1 | категории 1, 2, 4, 5, 6, 10, **14**, **15** |
 | Перед `spec-status.ts -ConfirmStop Requirements` | end of Phase 2 | + 3, 7, 8, 9, 12, 13 (категории **14**, **15** runs every phase) |
-| Перед `spec-status.ts -ConfirmStop Finalization` | end of Phase 3 | все 10 spec-time + **14** + **15** |
-| После implementation phase (commit candidate) | post-impl | + 11, 12, 13 (spec ↔ code drift) + **14** + **15** на committed code |
+| Перед `spec-status.ts -ConfirmStop Finalization` | end of Phase 3 | все spec-time + **14**, **15**, **16** |
+| После implementation phase (commit candidate) | post-impl | + 11, 12, 13 (spec ↔ code drift) + **14**, **15**, **16** на committed code |
 | Manual: "проверь спеку" / "spec-review" | any | определить currentPhase из `.progress.json` + **14**, **15** always |
 
 Skip когда:
@@ -43,7 +44,7 @@ Skip когда:
 - `.progress.json.currentPhase` отсутствует или `null` → exit
 - Пользователь явно сказал "не надо ревью" в текущей сессии
 
-## 15 категорий (severity matrix)
+## 16 категорий (severity matrix)
 
 | # | Category | Severity | Method | Phase scope |
 |---|----------|----------|--------|-------------|
@@ -62,6 +63,7 @@ Skip когда:
 | 13 | JWT claim / config key consistency | P2 | `FindFirst("UserId")` vs `ClaimTypes.NameIdentifier` | post-impl |
 | 14 | Memory-constraint compliance (dynamic) | P0/P1 | scan `~/.Codex/projects/{encoded-cwd}/memory/feedback_*.md` → extract forbidden-literal patterns → grep spec body | any |
 | 15 | Reality drift (spec ↔ repo state) | P0/P1/P2 | invoke `Skill("spec-reality-check")` → aggregate findings, map ERROR→P0 / WARNING→P1 / INFO→P2 | any phase + post-impl |
+| 16 | Acceptance delivery coverage | P0 | run shared `acceptance-task-coverage.mjs`; consume `ACCEPTANCE_DELIVERY_COVERAGE` audit errors | Finalization + post-impl |
 
 Подробные patterns + grep recipes — в [`references/categories.md`](references/categories.md). Antipattern triggers (категория #3) — в [`references/antipattern-triggers.md`](references/antipattern-triggers.md). Lessons learned (15 case studies) — в [`references/lessons-learned.md`](references/lessons-learned.md). Memory-constraint extraction protocol — в [`references/category-14-memory-constraints.md`](references/category-14-memory-constraints.md). Reality-drift category-15 protocol — в [`references/category-15-reality-drift.md`](references/category-15-reality-drift.md).
 

@@ -31,7 +31,7 @@ const CLAIM_CLASSIFIERS = Object.freeze([
   { kind: 'redaction', trigger: /\b(redaction|allowlist|internal (runtime|detail)|public\/internal)\b/i, lanes: ['redaction'] },
   {
     kind: 'paid_auth',
-    trigger: /\b(paid|billing|balance|reservation|settlement|funded|insufficient[ -]balance|402)\b/i,
+    trigger: /\b(paid|billing|balance|reservation|settlement|funded|insufficient[ -]balance|401|402|authenticated|authentication|unauthenticated|(?:result|artifact)[ -]delivery)\b|\bauth\b[\s\S]{0,40}\b(admission|flow|boundary|api)\b|\b(admission|flow|boundary|api)\b[\s\S]{0,40}\bauth\b/i,
     lanes: ['unauthenticated', 'insufficient_balance', 'funded_success', 'settlement_idempotency', 'artifact_readback'],
   },
   {
@@ -42,8 +42,11 @@ const CLAIM_CLASSIFIERS = Object.freeze([
 ]);
 
 export function parseAcceptanceSections(content) {
-  const matches = [...content.matchAll(/^##\s+(AC-\d+(?:\.\d+)?)\b[^\n]*\n([\s\S]*?)(?=^##\s+AC-|(?![\s\S]))/gim)];
-  return matches.map((match) => ({ acId: match[1].toUpperCase(), text: match[2].trim() }));
+  const starts = [...content.matchAll(/^#{1,6}\s+(AC-\d+(?:\.\d+)?)\b[^\n]*(?:\r?\n|$)/gim)];
+  return starts.map((start, index) => ({
+    acId: start[1].toUpperCase(),
+    text: content.slice((start.index ?? 0) + start[0].length, starts[index + 1]?.index ?? content.length).trim(),
+  }));
 }
 
 function parseTaskBlocks(content) {
@@ -51,6 +54,13 @@ function parseTaskBlocks(content) {
   return starts.map((start, index) => ({
     text: content.slice(start.index, starts[index + 1]?.index ?? content.length).trim(),
   }));
+}
+
+function taskAcceptanceIds(text) {
+  return new Set(
+    [...text.matchAll(/(?:^|[^A-Z0-9.-])(AC-\d+(?:\.\d+)?)(?![\d.])/gim)]
+      .map((match) => match[1].toUpperCase()),
+  );
 }
 
 function classifyClaim(text) {
@@ -74,7 +84,7 @@ export function analyzeAcceptanceTaskCoverage({ acceptanceContent, tasksContent 
   for (const section of parseAcceptanceSections(acceptanceContent)) {
     const classification = classifyClaim(section.text);
     if (classification.requiredLanes.length === 0) continue;
-    const mappedTasks = tasks.filter((task) => task.text.toUpperCase().includes(section.acId));
+    const mappedTasks = tasks.filter((task) => taskAcceptanceIds(task.text).has(section.acId));
     const combined = mappedTasks.map((task) => task.text).join('\n');
     const blockedInvestigation = mappedTasks.length > 0
       && mappedTasks.every((task) => /\bStatus:\s*BLOCKED\b/i.test(task.text) && /\b(investigat|research|unknown|analysis)\w*/i.test(task.text));

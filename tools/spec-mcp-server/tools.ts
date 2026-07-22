@@ -2140,9 +2140,14 @@ export function buildToolRegistry(
             return asJsonResult({
               ok: false, error: r.error ?? 'VALIDATION_FAILED', proposal_id: r.proposal_id,
               findings: r.findings, edits: r.edits.map(publicEditPreview),
+              write_error: r.write_error, rollback_failures: r.rollback_failures,
               hint: r.error === 'PROPOSAL_NOT_FOUND'
                 ? 'No such proposal_id — propose_patch first (proposals live for the server process and are consumed on apply).'
-                : 'The proposal is no longer valid against the fresh docs; nothing was written. Re-propose and retry.',
+                : r.error === 'WRITE_FAILED'
+                  ? 'A document write failed; every earlier write was restored. Inspect write_error and retry.'
+                  : r.error === 'ROLLBACK_FAILED'
+                    ? 'CRITICAL: a document write failed and rollback was incomplete. Inspect rollback_failures before any retry.'
+                    : 'The proposal is no longer valid against the fresh docs; nothing was written. Re-propose and retry.',
             });
           }
           registryOpts.refreshGraph?.();
@@ -2170,7 +2175,8 @@ export function buildToolRegistry(
       'mutation across FR.md / ACCEPTANCE_CRITERIA.md / TASKS.md / the .feature / FILE_CHANGES.md (any set of docs). ' +
       'Every edit (a section insert {section}, an anchor-targeted replace {replace}, or a whole-doc {content}) runs ' +
       'the SAME form/anchor/conformance validation-before-write as apply_spec_change; if ANY edit fails, NOTHING is ' +
-      'written and every doc stays byte-identical. A clean set is written doc-by-doc atomically and logged as ONE ' +
+      'written and every doc stays byte-identical. A clean set is written doc-by-doc atomically; a later I/O failure ' +
+      'restores earlier docs (or reports ROLLBACK_FAILED honestly), and the transaction is logged as ONE ' +
       'audit event; returns the resulting sha per doc + the affected graph nodes. (propose_patch is the free dry-run.)',
     inputShape: PATCH_SHAPE,
     handler: async (args) => {
@@ -2183,7 +2189,12 @@ export function buildToolRegistry(
             return asJsonResult({
               ok: false, error: r.error ?? 'VALIDATION_FAILED',
               findings: r.findings, edits: r.edits.map(publicEditPreview),
-              hint: 'At least one edit failed validation — NOTHING was written; every document is unchanged. Fix the flagged edits (see per-edit findings) and retry.',
+              write_error: r.write_error, rollback_failures: r.rollback_failures,
+              hint: r.error === 'WRITE_FAILED'
+                ? 'A document write failed; every earlier write was restored. Inspect write_error and retry.'
+                : r.error === 'ROLLBACK_FAILED'
+                  ? 'CRITICAL: a document write failed and rollback was incomplete. Inspect rollback_failures before any retry.'
+                  : 'At least one edit failed validation — NOTHING was written; every document is unchanged. Fix the flagged edits (see per-edit findings) and retry.',
             });
           }
           registryOpts.refreshGraph?.();

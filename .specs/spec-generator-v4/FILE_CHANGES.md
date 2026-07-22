@@ -406,12 +406,47 @@ This block enumerates the spec-doc edits applied as part of the v3→v4 transiti
 
 | Path | Action | Requirement and verification |
 |---|---|---|
+<!-- shipped 2026-07-22; retained as implementation history, excluded from active create-plan drift checks
 | `tools/specs-generator/acceptance-task-coverage.mjs` | create | Text-driven AC classifier, task-plan lanes, CLI, and reusable audit analysis. [FR-65](FR.md#fr-65) |
+-->
 | `tools/specs-generator/specs-generator-core.mjs` | edit | Emit blocking audit findings for missing/unresolved acceptance delivery lanes. [AC-65.3](ACCEPTANCE_CRITERIA.md#ac-653) |
+<!-- shipped 2026-07-22; retained as implementation history, excluded from active create-plan drift checks
 | `tests/fixtures/specgen004-acceptance-coverage/paid-spa-corpus.json` | create | Synthetic #140 root/prefix, HTML/JSON auth/billing, registry/settlement/readback corpus. [AC-65.4](ACCEPTANCE_CRITERIA.md#ac-654) |
+-->
+<!-- shipped 2026-07-22; retained as implementation history, excluded from active create-plan drift checks
 | `tests/step_definitions/feature65_acceptance_task_coverage.ts` | create | Real analyzer plus audit integration BDD binding for SPECGEN004_565. [FR-65](FR.md#fr-65) |
+-->
 | `.claude/skills/create-spec/references/phase3_finalization.md` | edit | Require analyzer plan before task authoring and Finalization STOP. [FR-65d](FR.md#fr-65) |
 | `.claude/skills/task-board-forms/SKILL.md` | edit | Generate AC-linked implementation/test/deploy tasks or blocking investigation from shared lanes. [FR-65c](FR.md#fr-65) |
 | `.claude/skills/spec-review/SKILL.md` | edit | Treat deterministic acceptance-delivery findings as P0. [FR-65d](FR.md#fr-65) |
 | `.claude/skills/spec-review/references/categories.md` | edit | Document acceptance-delivery category and remediation. [FR-65d](FR.md#fr-65) |
-| `.specs/spec-generator-v4/{FR.md,ACCEPTANCE_CRITERIA.md,USER_STORIES.md,USE_CASES.md,DESIGN.md,REQUIREMENTS.md,TASKS.md,FILE_CHANGES.md,spec-generator-v4.feature}` | edit | Trace FR-65 through story/use-case/design/AC/task/file/scenario web. |
+| `.specs/spec-generator-v4/FR.md` | edit | Trace FR-65 requirement. |
+| `.specs/spec-generator-v4/ACCEPTANCE_CRITERIA.md` | edit | Trace FR-65 acceptance. |
+| `.specs/spec-generator-v4/USER_STORIES.md` | edit | Trace FR-65 story. |
+| `.specs/spec-generator-v4/USE_CASES.md` | edit | Trace FR-65 use case. |
+| `.specs/spec-generator-v4/DESIGN.md` | edit | Trace FR-65 design. |
+| `.specs/spec-generator-v4/REQUIREMENTS.md` | edit | Trace FR-65 checklist. |
+| `.specs/spec-generator-v4/TASKS.md` | edit | Trace FR-65 delivery tasks. |
+| `.specs/spec-generator-v4/FILE_CHANGES.md` | edit | Trace FR-65 implementation surfaces. |
+| `.specs/spec-generator-v4/spec-generator-v4.feature` | edit | Trace FR-65 executable scenario. |
+
+## Phase 39 — Review hardening (FR-60, FR-65)
+
+| Path | Action | Requirement and verification |
+|---|---|---|
+| `tools/spec-mcp-server/mutations.ts` | edit | Restore batch destructive-guard parity. [AC-60.3](ACCEPTANCE_CRITERIA.md#ac-603) |
+| `tools/spec-mcp-server/section-ops.ts` | edit | Compensate earlier writes after a later I/O failure. [AC-60.3](ACCEPTANCE_CRITERIA.md#ac-603) |
+| `tools/spec-mcp-server/tools.ts` | edit | Return honest write and rollback diagnostics. [AC-60.3](ACCEPTANCE_CRITERIA.md#ac-603) |
+| `tools/spec-mcp-server/server.bundle.mjs` | edit | Ship the transaction hardening in the distributed MCP artifact. [AC-60.3](ACCEPTANCE_CRITERIA.md#ac-603) |
+| `tools/specs-generator/acceptance-task-coverage.mjs` | edit | Exact AC ownership, H1-H6 parsing, and complete contextual auth/result vocabulary. [FR-65](FR.md#fr-65) |
+| `tools/specs-generator/specs-generator-core.mjs` | edit | Empty-TASKS and analyzer-unavailable fail-closed audit behavior. [FR-65d](FR.md#fr-65) |
+| `tests/step_definitions/feature60_proposal_transaction.ts` | edit | Strengthen `SPECGEN004_523` with destructive replacement and I/O rollback assertions. |
+| `tests/step_definitions/feature65_acceptance_task_coverage.ts` | edit | Strengthen `SPECGEN004_565` with identifier-boundary, vocabulary, empty-plan, and analyzer-outage assertions. |
+| `.agents/skills/create-spec/references/phase3_finalization.md` | edit | Gate active Codex Finalization on acceptance-delivery coverage. [FR-65d](FR.md#fr-65) |
+| `.agents/skills/task-board-forms/SKILL.md` | edit | Generate AC-linked lane ownership in active Codex task plans. [FR-65d](FR.md#fr-65) |
+| `.agents/skills/spec-review/SKILL.md` | edit | Register acceptance-delivery category 16 in active Codex review. [FR-65d](FR.md#fr-65) |
+| `.agents/skills/spec-review/references/categories.md` | edit | Document category 16 triggers, severity, and remediation. [FR-65d](FR.md#fr-65) |
+| `.specs/spec-generator-v4/USER_STORIES.md` | edit | Add the missing FR-60 author story for atomic write-failure recovery. [FR-60](FR.md#fr-60) |
+| `.specs/spec-generator-v4/TASKS.md` | edit | Trace Phase 39 review-hardening tasks. |
+| `.specs/spec-generator-v4/FILE_CHANGES.md` | edit | Trace concrete Phase 39 files and retain shipped create rows as inactive history. |
+| `.specs/spec-generator-v4/spec-generator-v4.feature` | edit | Make fail-closed edge behavior explicit in `SPECGEN004_565`. |

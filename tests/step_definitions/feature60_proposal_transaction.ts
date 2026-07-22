@@ -28,6 +28,8 @@ import { V4World } from '../hooks/before-after.ts';
 import { buildGraph } from '../../tools/spec-graph/builder.ts';
 import { buildToolRegistry } from '../../tools/spec-mcp-server/tools.ts';
 import { specAccessLogPath } from '../../tools/spec-mcp-server/spec-access-log.ts';
+import { applySpecTransactionCore } from '../../tools/spec-mcp-server/section-ops.ts';
+import { writeDocAtomic } from '../../tools/spec-mcp-server/mutations.ts';
 import '../hooks/before-after.ts';
 
 const SLUG = 'fr60-txn';
@@ -106,6 +108,9 @@ interface F60TWorld extends V4World {
   proposePayload?: TxnReply;
   txnPayload?: TxnReply;
   rollbackPayload?: TxnReply;
+  destructivePayload?: TxnReply;
+  ioFailurePayload?: TxnReply;
+  ioRollbackBytes?: Record<string, string>;
 }
 
 /** Build a CRLF document — the "known EOL style" the transaction must preserve. */
@@ -166,6 +171,29 @@ When(/^the agent calls propose_patch and then apply_spec_transaction$/, async fu
   // (3) a patch whose FR.md edit breaks an anchor — the atomicity probe (must write NOTHING).
   this.rollbackPayload = await callTool(this, 'apply_spec_transaction', { edits: BAD_EDITS, reason: 'SPECGEN004_523 rollback probe' });
   this.rollbackBytes = readDocs(this);
+
+  // (4) Full-document replacement with empty content must retain the single-document
+  // destructive-write guard even though the batch validator stages the whole graph.
+  this.destructivePayload = await callTool(this, 'apply_spec_transaction', {
+    edits: [{ spec: SLUG, doc: 'FR.md', content: '' }],
+    reason: 'SPECGEN004_523 destructive replace parity probe',
+  });
+
+  // (5) A real first write followed by a deterministic second-write I/O failure must
+  // restore the first document. The injected writer delegates every non-failing call
+  // to the production atomic writer, including rollback; only call #2 throws.
+  let writeCall = 0;
+  this.ioFailurePayload = applySpecTransactionCore(this.tempDir, [
+    { spec: SLUG, doc: 'FR.md', section: { kind: 'append_to_section', heading: 'FR-1: Demo requirement', text: '- IO FAILURE MUST ROLLBACK FR' } },
+    { spec: SLUG, doc: 'ACCEPTANCE_CRITERIA.md', section: { kind: 'append_to_section', heading: 'AC-1.1: Demo acceptance', text: '- IO FAILURE MUST ROLLBACK AC' } },
+  ], {
+    writeDocument: (repoRoot, spec, doc, content) => {
+      writeCall += 1;
+      if (writeCall === 2) throw new Error('synthetic second-write I/O failure');
+      return writeDocAtomic(repoRoot, spec, doc, content);
+    },
+  });
+  this.ioRollbackBytes = readDocs(this);
 });
 
 Then(/^the preview includes anchors found, a diff, affected graph nodes, conformance findings, resulting shas, and a proposal_id$/, function (this: F60TWorld) {
@@ -222,6 +250,20 @@ Then(/^applying the proposal writes all documents atomically or leaves every doc
   for (const content of Object.values(this.rollbackBytes!)) {
     assert.ok(!content.includes('BAD TXN'), 'no edit from the refused transaction leaked to disk');
   }
+
+  const destructive = this.destructivePayload!;
+  assert.equal(destructive.ok, false, 'an empty whole-document replacement must be refused in a batch');
+  assert.equal(destructive.error, 'VALIDATION_FAILED');
+  assert.ok(JSON.stringify(destructive.findings).includes('refusing to replace a non-empty document with empty content'));
+  assert.deepEqual(readDocs(this), this.successBytes, 'the destructive replacement leaves every document unchanged');
+
+  const ioFailure = this.ioFailurePayload!;
+  assert.equal(ioFailure.ok, false, 'a second-write I/O failure must fail the transaction');
+  assert.equal(ioFailure.error, 'WRITE_FAILED');
+  assert.deepEqual(this.ioRollbackBytes, this.successBytes, 'a later I/O failure rolls back every earlier document byte-for-byte');
+  for (const content of Object.values(this.ioRollbackBytes!)) {
+    assert.ok(!content.includes('IO FAILURE MUST ROLLBACK'), 'no partially written transaction content survives rollback');
+  }
 });
 
 Then(/^the audit log records the transaction as one conceptual spec mutation$/, function (this: F60TWorld) {
@@ -233,7 +275,7 @@ Then(/^the audit log records the transaction as one conceptual spec mutation$/, 
   const txnOk = events.filter((e) => e.tool === 'apply_spec_transaction' && e.decision === 'ok');
   const txnAll = events.filter((e) => e.tool === 'apply_spec_transaction');
   assert.equal(txnOk.length, 1, `exactly ONE audit event for the successful 5-doc transaction, got ${txnOk.length}`);
-  assert.equal(txnAll.length, 2, 'the refused transaction is its own single denied event (2 total: 1 ok + 1 denied)');
+  assert.equal(txnAll.length, 3, 'each call is one event (3 total: 1 ok + 2 denied)');
   assert.ok(events.some((e) => e.tool === 'propose_patch'), 'the dry-run propose is audited too');
 });
 

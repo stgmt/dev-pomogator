@@ -500,6 +500,12 @@ export function validateSpecPatch(repoRoot: string, inputs: SpecPatchValidationI
 
   for (const input of inputs) {
     const key = keyOf(input.slug, input.doc);
+    // Keep destructive full-replace parity with validateSpecChange. Batch callers
+    // intentionally defer the single-doc validator while staging the whole graph,
+    // so this guard must live in the shared batch validation path too.
+    if (input.next.trim() === '' && input.current.trim() !== '') {
+      add(key, { layer: 'change', message: 'refusing to replace a non-empty document with empty content' });
+    }
     for (const finding of formDeltaFindings(input.doc, input.current, input.next)) add(key, finding);
     if (input.doc.toLowerCase().endsWith('.feature')) {
       for (const finding of featureStrengthFindings(input.current, input.next)) {

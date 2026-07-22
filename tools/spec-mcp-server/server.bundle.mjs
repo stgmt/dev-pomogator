@@ -49406,6 +49406,9 @@ function validateSpecPatch(repoRoot, inputs) {
   };
   for (const input of inputs) {
     const key = keyOf(input.slug, input.doc);
+    if (input.next.trim() === "" && input.current.trim() !== "") {
+      add(key, { layer: "change", message: "refusing to replace a non-empty document with empty content" });
+    }
     for (const finding of formDeltaFindings(input.doc, input.current, input.next)) add(key, finding);
     if (input.doc.toLowerCase().endsWith(".feature")) {
       for (const finding of featureStrengthFindings(input.current, input.next)) {
@@ -50190,15 +50193,54 @@ function preparePatch(repoRoot, edits) {
   const findings = prepared.flatMap((preview) => preview.findings);
   return { ok: prepared.length === edits.length && prepared.every((preview) => preview.ok), edits: prepared, findings };
 }
-function applySpecTransactionCore(repoRoot, edits) {
+function applySpecTransactionCore(repoRoot, edits, options = {}) {
   const preview = preparePatch(repoRoot, edits);
   if (!preview.ok) {
     return { ok: false, edits: preview.edits, findings: preview.findings, error: "VALIDATION_FAILED" };
   }
+  const writeDocument = options.writeDocument ?? writeDocAtomic;
   const shas = {};
-  for (const p of preview.edits) {
-    writeDocAtomic(repoRoot, p.spec, p.doc, p.next);
-    shas[`${p.spec}/${p.doc}`] = p.sha;
+  const originals = /* @__PURE__ */ new Map();
+  const written = [];
+  try {
+    for (const p of preview.edits) {
+      const target = `${p.spec}/${p.doc}`;
+      const before = readDoc(repoRoot, p.spec, p.doc);
+      if (!before.ok) throw new Error(`cannot snapshot ${target}: ${before.error}`);
+      originals.set(target, before.current);
+    }
+    for (const p of preview.edits) {
+      writeDocument(repoRoot, p.spec, p.doc, p.next);
+      written.push(p);
+      shas[`${p.spec}/${p.doc}`] = p.sha;
+    }
+  } catch (error51) {
+    const writeError = error51 instanceof Error ? error51.message : String(error51);
+    const rollbackFailures = [];
+    for (const p of [...written].reverse()) {
+      const target = `${p.spec}/${p.doc}`;
+      try {
+        writeDocument(repoRoot, p.spec, p.doc, originals.get(target));
+      } catch (rollbackError) {
+        rollbackFailures.push({
+          target,
+          message: rollbackError instanceof Error ? rollbackError.message : String(rollbackError)
+        });
+      }
+    }
+    const rollbackFailed = rollbackFailures.length > 0;
+    return {
+      ok: false,
+      edits: preview.edits,
+      findings: [{
+        layer: "change",
+        message: rollbackFailed ? `transaction write failed and rollback was incomplete: ${writeError}` : `transaction write failed; all earlier writes were rolled back: ${writeError}`
+      }],
+      written: false,
+      error: rollbackFailed ? "ROLLBACK_FAILED" : "WRITE_FAILED",
+      write_error: writeError,
+      rollback_failures: rollbackFailures
+    };
   }
   return { ok: true, edits: preview.edits, findings: [], written: true, shas };
 }
@@ -53527,7 +53569,9 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
               proposal_id: r.proposal_id,
               findings: r.findings,
               edits: r.edits.map(publicEditPreview),
-              hint: r.error === "PROPOSAL_NOT_FOUND" ? "No such proposal_id \u2014 propose_patch first (proposals live for the server process and are consumed on apply)." : "The proposal is no longer valid against the fresh docs; nothing was written. Re-propose and retry."
+              write_error: r.write_error,
+              rollback_failures: r.rollback_failures,
+              hint: r.error === "PROPOSAL_NOT_FOUND" ? "No such proposal_id \u2014 propose_patch first (proposals live for the server process and are consumed on apply)." : r.error === "WRITE_FAILED" ? "A document write failed; every earlier write was restored. Inspect write_error and retry." : r.error === "ROLLBACK_FAILED" ? "CRITICAL: a document write failed and rollback was incomplete. Inspect rollback_failures before any retry." : "The proposal is no longer valid against the fresh docs; nothing was written. Re-propose and retry."
             });
           }
           registryOpts.refreshGraph?.();
@@ -53553,7 +53597,7 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
   });
   tools.push({
     name: "apply_spec_transaction",
-    description: "FR-60 (P33-3): validate + atomically write a MULTI-DOCUMENT spec change ALL-OR-NOTHING \u2014 one conceptual mutation across FR.md / ACCEPTANCE_CRITERIA.md / TASKS.md / the .feature / FILE_CHANGES.md (any set of docs). Every edit (a section insert {section}, an anchor-targeted replace {replace}, or a whole-doc {content}) runs the SAME form/anchor/conformance validation-before-write as apply_spec_change; if ANY edit fails, NOTHING is written and every doc stays byte-identical. A clean set is written doc-by-doc atomically and logged as ONE audit event; returns the resulting sha per doc + the affected graph nodes. (propose_patch is the free dry-run.)",
+    description: "FR-60 (P33-3): validate + atomically write a MULTI-DOCUMENT spec change ALL-OR-NOTHING \u2014 one conceptual mutation across FR.md / ACCEPTANCE_CRITERIA.md / TASKS.md / the .feature / FILE_CHANGES.md (any set of docs). Every edit (a section insert {section}, an anchor-targeted replace {replace}, or a whole-doc {content}) runs the SAME form/anchor/conformance validation-before-write as apply_spec_change; if ANY edit fails, NOTHING is written and every doc stays byte-identical. A clean set is written doc-by-doc atomically; a later I/O failure restores earlier docs (or reports ROLLBACK_FAILED honestly), and the transaction is logged as ONE audit event; returns the resulting sha per doc + the affected graph nodes. (propose_patch is the free dry-run.)",
     inputShape: PATCH_SHAPE,
     handler: async (args) => {
       const edits = toPatchEdits(args.edits);
@@ -53567,7 +53611,9 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
               error: r.error ?? "VALIDATION_FAILED",
               findings: r.findings,
               edits: r.edits.map(publicEditPreview),
-              hint: "At least one edit failed validation \u2014 NOTHING was written; every document is unchanged. Fix the flagged edits (see per-edit findings) and retry."
+              write_error: r.write_error,
+              rollback_failures: r.rollback_failures,
+              hint: r.error === "WRITE_FAILED" ? "A document write failed; every earlier write was restored. Inspect write_error and retry." : r.error === "ROLLBACK_FAILED" ? "CRITICAL: a document write failed and rollback was incomplete. Inspect rollback_failures before any retry." : "At least one edit failed validation \u2014 NOTHING was written; every document is unchanged. Fix the flagged edits (see per-edit findings) and retry."
             });
           }
           registryOpts.refreshGraph?.();
