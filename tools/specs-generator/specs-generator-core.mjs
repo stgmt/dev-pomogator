@@ -253,7 +253,9 @@ function createCommandContext(options) {
   // root (fixture dirs in tests, other repos' .specs/ — FR-37/P14-5 verdict
   // runs). Default behaviour (this repo's root from the script location) is
   // unchanged when the env var is unset.
-  const repoRoot = process.env.SPECS_GENERATOR_ROOT
+  const repoRoot = options.repoRoot
+    ? path.resolve(options.repoRoot)
+    : process.env.SPECS_GENERATOR_ROOT
     ? path.resolve(process.env.SPECS_GENERATOR_ROOT)
     : findRepoRoot(SCRIPT_DIR);
   const logsDir = path.join(SCRIPT_DIR, 'logs');
@@ -1373,10 +1375,36 @@ async function commandSpecStatus(argv) {
   ]);
   assertFormat(options.format);
 
-  const context = createCommandContext(options);
-  if (!context.repoRoot) {
-    throw new CliError(`Repository root not found from ${SCRIPT_DIR}`, 1);
+  let rootResolution;
+  try {
+    const { resolveTargetProjectRoot } = await import('../spec-graph/root-resolution.mjs');
+    rootResolution = resolveTargetProjectRoot({
+      envRoot: process.env.SPECS_GENERATOR_ROOT,
+      cwd: process.cwd(),
+      scriptDir: SCRIPT_DIR,
+    });
+  } catch {
+    // core.mjs is also copied standalone by legacy consumers. Keep that path
+    // functional while preferring the shared validated resolver in the plugin.
+    const root = process.env.SPECS_GENERATOR_ROOT
+      ? path.resolve(process.env.SPECS_GENERATOR_ROOT)
+      : findRepoRoot(process.cwd()) ?? findRepoRoot(SCRIPT_DIR);
+    rootResolution = root
+      ? { status: 'READY', root, rejected: [], corrective_action: '' }
+      : {
+          status: 'NOT_READY',
+          root: null,
+          rejected: [],
+          corrective_action: 'Set SPECS_GENERATOR_ROOT or run from the target project.',
+        };
   }
+  if (rootResolution.status === 'NOT_READY' || !rootResolution.root) {
+    const rejected = rootResolution.rejected
+      .map((entry) => `${entry.source}=${entry.observed || '<empty>'} (${entry.reason})`)
+      .join(', ');
+    throw new CliError(`Repository root not ready: ${rootResolution.corrective_action} Rejected: ${rejected}`, 1);
+  }
+  const context = createCommandContext({ ...options, repoRoot: rootResolution.root });
 
   const targetDir = resolvePath(context.repoRoot, options.inputPath);
   assertSpecSubdir(targetDir, context.repoRoot);
