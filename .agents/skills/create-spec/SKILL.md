@@ -2,7 +2,7 @@
 name: create-spec
 description: |
   Creates and manages feature specifications under .specs/{slug}/ via 13-file scaffold + 4-phase STOP-confirmed workflow (Discovery → Context → Requirements+Design → Finalization) + Phase 3+ Audit. EN triggers: "create / make / draft / write / sketch / outline specs", "spec out X", "scaffold a spec", "update / show / status specs". RU triggers: "создай / сделай / набросай / напиши / опиши спеки", "новые спеки для X", "спеки по фиче", "обнови / покажи / статус спеков". Matches terse phrasings like "ок спеки по фиче сделай". Invokes Skill("research-workflow") during Phase 1 step 5 for technical research. Do NOT use for plan-pomogator development plans, read-only spec viewing, or non-spec workflows.
-allowed-tools: mcp__dev-pomogator-specs__read_spec_doc, mcp__dev-pomogator-specs__list_spec_docs, mcp__dev-pomogator-specs__read_attachment, mcp__dev-pomogator-specs__apply_spec_change, mcp__dev-pomogator-specs__propose_spec_change, mcp__dev-pomogator-specs__create_spec, mcp__dev-pomogator-specs__delete_spec_doc, mcp__dev-pomogator-specs__rename_spec_doc, Read, Write, Edit, Glob, Grep, Bash, AskUserQuestion, Skill, Agent, WebFetch, WebSearch
+allowed-tools: mcp__dev-pomogator-specs__read_spec_doc, mcp__dev-pomogator-specs__list_spec_docs, mcp__dev-pomogator-specs__read_attachment, mcp__dev-pomogator-specs__apply_spec_change, mcp__dev-pomogator-specs__propose_spec_change, mcp__dev-pomogator-specs__create_spec, mcp__dev-pomogator-specs__delete_spec_doc, mcp__dev-pomogator-specs__rename_spec_doc, mcp__dev-pomogator-specs__propose_patch, mcp__dev-pomogator-specs__apply_proposed_patch, mcp__dev-pomogator-specs__apply_spec_transaction, Read, Write, Edit, Glob, Grep, Bash, AskUserQuestion, Skill, Agent, WebFetch, WebSearch
 argument-hint: "<feature-slug>"
 ---
 
@@ -39,8 +39,13 @@ create-spec — это ДВЕРЬ (юзер входит сюда как сей�
 | Переименовать/переместить doc (anchors-aware) | `rename_spec_doc` | `{ spec, doc, to_doc, reason, rewrite_inbound? }` |
 | Проверить без записи (dry-run, те же гейты) | `propose_spec_change` | `{ spec, doc, content\|old/new, reason }` |
 | Прочитать цельный документ / перечень | `read_spec_doc` / `list_spec_docs` | `{ spec[, doc] }` |
+| Dry-run взаимозависимого multi-doc патча | `propose_patch` | `{ edits[], reason }` |
+| Применить проверенный proposal | `apply_proposed_patch` | `{ proposal_id, reason }` |
+| One-shot all-or-nothing multi-doc запись | `apply_spec_transaction` | `{ edits[], reason }` |
 
 Сервер валидирует form-контракты + якоря (delta-only) + conformance ДО касания диска и отказывает с findings list — НЕ переписывай эту логику в скилле. `.progress.json` НЕ мутабелен через MCP: writer contract = `scaffold-spec.ts` bootstrap only + `spec-status.ts` state-transition/repair only.
+
+Для fresh spec bootstrap после `create_spec`, а также для взаимозависимых правок FR + USER_STORIES (Story) + DESIGN + ACCEPTANCE_CRITERIA (AC), не делай последовательность одиночных `apply_spec_change`: временное состояние закономерно образует цикл ссылок. Собери все документы в один `propose_patch`, исправь findings из общего preview и примени `apply_proposed_patch`; если отдельный proposal не нужен, используй `apply_spec_transaction`. Валидация выполняется после staging всего набора, а запись остаётся all-or-nothing.
 
 ## Phase navigation
 

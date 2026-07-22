@@ -80,6 +80,11 @@ interface F40World extends F39World {
   appliedOk?: { ok: boolean; bytes?: number };
   deltaAccepted?: { ok: boolean; error?: string; findings?: Array<{ layer: string; message: string }> };
   deltaRejected?: { ok: boolean; error?: string; findings?: Array<{ layer: string; message: string }> };
+  formShiftAccepted?: { ok: boolean; error?: string; hint?: string; findings?: Array<{ layer: string; message: string }> };
+  formProseAccepted?: { ok: boolean; error?: string; hint?: string; findings?: Array<{ layer: string; message: string }> };
+  formNewDebtRejected?: { ok: boolean; error?: string; hint?: string; findings?: Array<{ layer: string; message: string }> };
+  storyContractRejected?: { ok: boolean; error?: string; findings?: Array<{ layer: string; message: string }> };
+  designContractRejected?: { ok: boolean; error?: string; findings?: Array<{ layer: string; message: string }> };
   freshBody?: string;
   newbornVerdict?: { verdict: string; gapList: string[] };
 }
@@ -192,6 +197,123 @@ Then('pre-existing debt is ignored but the newly introduced conformance debt is 
   assert.ok(messages.some((message) => message.startsWith('FR_NO_DESIGN:')), messages.join(' | '));
   assert.ok(messages.some((message) => message.startsWith('FR_NO_STORY:')), messages.join(' | '));
 });
+
+// _560 — form findings obey the same monotonic/delta contract as anchors and conformance.
+
+const LEGACY_TASKS = [
+  '# Tasks',
+  '',
+  '## Phase 1: Legacy',
+  '',
+  '- [ ] Legacy one — id: legacy-one — Status: TODO | Est: 30m',
+  '  Old body one.',
+  '',
+  '- [ ] Legacy two — id: legacy-two — Status: READY | Est: 15m',
+  '  Old body two.',
+  '',
+].join('\n');
+
+Given(/^a legacy TASKS document with repeated pre-existing form debt$/, function (this: F40World) {
+  const dir = path.join(this.tempDir, '.specs', 'form-delta-demo');
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, 'TASKS.md'), LEGACY_TASKS);
+});
+
+When(
+  /^the agent shifts legacy lines, edits valid prose, and then adds one malformed task through apply_spec_change$/,
+  async function (this: F40World) {
+    const shifted = `Migration note.\n\n${LEGACY_TASKS}`;
+    this.formShiftAccepted = await inCorpus(this, () =>
+      callTool(this, 'apply_spec_change', {
+        spec: 'form-delta-demo',
+        doc: 'TASKS.md',
+        content: shifted,
+        reason: 'SPECGEN004_560 line-shift probe',
+      }),
+    );
+    this.formProseAccepted = await inCorpus(this, () =>
+      callTool(this, 'apply_spec_change', {
+        spec: 'form-delta-demo',
+        doc: 'TASKS.md',
+        old_string: 'Migration note.',
+        new_string: 'Migration note updated without touching legacy tasks.',
+        reason: 'SPECGEN004_560 unrelated prose probe',
+      }),
+    );
+    this.formNewDebtRejected = await inCorpus(this, () =>
+      callTool(this, 'apply_spec_change', {
+        spec: 'form-delta-demo',
+        doc: 'TASKS.md',
+        old_string: '  Old body two.\n',
+        new_string: '  Old body two.\n\n- [ ] New malformed task — id: new-bad — Status: TODO | Est: 5m\n',
+        reason: 'SPECGEN004_560 net-new debt probe',
+      }),
+    );
+    this.storyContractRejected = await inCorpus(this, () =>
+      callTool(this, 'apply_spec_change', {
+        spec: 'form-delta-demo',
+        doc: 'USER_STORIES.md',
+        content: '# User Stories\n\n### User Story: Missing numeric id\n\n**Why.** Wrong punctuation too.\n',
+        reason: 'SPECGEN004_560 user-story contract probe',
+      }),
+    );
+    this.designContractRejected = await inCorpus(this, () =>
+      callTool(this, 'apply_spec_change', {
+        spec: 'form-delta-demo',
+        doc: 'DESIGN.md',
+        content: '# Design\n\n### Decision Missing colon\n\n**Rationale.** Wrong punctuation.\n',
+        reason: 'SPECGEN004_560 design contract probe',
+      }),
+    );
+  },
+);
+
+Then(/^USER_STORIES and DESIGN refusals expose their exact heading field and list contracts$/, function (this: F40World) {
+  const story = (this.storyContractRejected?.findings ?? []).filter((f) => f.layer === 'form').map((f) => f.message).join(' | ');
+  assert.equal(this.storyContractRejected?.ok, false, 'a User Story heading without its numeric id must be refused');
+  assert.match(story, /### User Story <N>/);
+  assert.match(story, /Priority: P1\|P2\|P3/);
+  assert.match(story, /\*\*Why:\*\*/);
+  assert.match(story, /\*\*Independent Test:\*\*/);
+  assert.match(story, /\*\*Acceptance Scenarios:\*\*/);
+  assert.match(story, /Skill\("discovery-forms"\)/);
+
+  const design = (this.designContractRejected?.findings ?? []).filter((f) => f.layer === 'form').map((f) => f.message).join(' | ');
+  assert.equal(this.designContractRejected?.ok, false, 'a Decision heading without its required colon must be refused');
+  assert.match(design, /### Decision: <title>/);
+  assert.match(design, /\*\*Rationale:\*\*/);
+  assert.match(design, /\*\*Trade-off:\*\*/);
+  assert.match(design, /\*\*Alternatives considered:\*\*/);
+  assert.match(design, /at least two `- \.\.\.` bullets/);
+  assert.match(design, /table does not count/);
+});
+
+Then(/^unchanged legacy form debt does not block either clean edit$/, function (this: F40World) {
+  assert.equal(this.formShiftAccepted?.ok, true, JSON.stringify(this.formShiftAccepted));
+  assert.deepEqual(this.formShiftAccepted?.findings ?? [], [], 'line movement must not relabel old form debt as new');
+  assert.equal(this.formProseAccepted?.ok, true, JSON.stringify(this.formProseAccepted));
+  assert.deepEqual(this.formProseAccepted?.findings ?? [], [], 'unrelated prose must not inherit legacy form findings');
+});
+
+Then(
+  /^the net-new malformed task is refused with the complete TASKS form contract and transaction recovery hint$/,
+  function (this: F40World) {
+    const result = this.formNewDebtRejected!;
+    assert.equal(result.ok, false, 'one additional malformed task must still be refused');
+    assert.equal(result.error, 'VALIDATION_FAILED');
+    const formMessages = (result.findings ?? []).filter((f) => f.layer === 'form').map((f) => f.message);
+    assert.equal(formMessages.length, 1, `only the net-new form debt should be reported: ${formMessages.join(' | ')}`);
+    const contract = formMessages[0];
+    assert.match(contract, /\*\*Done When:\*\*/);
+    assert.match(contract, /at least one `- \[[ x]\]`/i);
+    assert.match(contract, /TODO\|READY\|IN_PROGRESS\|DONE\|BLOCKED/);
+    assert.match(contract, /Est: <N>m/);
+    assert.match(contract, /_waived: <reason>_/);
+    assert.match(result.hint ?? '', /propose_patch/);
+    assert.match(result.hint ?? '', /apply_proposed_patch/);
+    assert.match(result.hint ?? '', /apply_spec_transaction/);
+  },
+);
 
 // _115 — a successful write refreshes the graph for the next read
 

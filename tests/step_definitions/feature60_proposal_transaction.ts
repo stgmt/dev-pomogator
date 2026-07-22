@@ -218,3 +218,22 @@ Then(/^the audit log records the transaction as one conceptual spec mutation$/, 
   assert.equal(txnAll.length, 2, 'the refused transaction is its own single denied event (2 total: 1 ok + 1 denied)');
   assert.ok(events.some((e) => e.tool === 'propose_patch'), 'the dry-run propose is audited too');
 });
+
+Then(
+  /^the active create-spec workflow exposes and routes cross-document bootstrap through all transaction tools$/,
+  function (this: F60TWorld) {
+    const registryNames = new Set(buildToolRegistry(() => buildGraph({ repoRoot: this.tempDir, skipNdjson: true })).map((tool) => tool.name));
+    const required = ['propose_patch', 'apply_proposed_patch', 'apply_spec_transaction'];
+    for (const name of required) assert.ok(registryNames.has(name), `${name} must be exposed by the real MCP registry`);
+
+    const skill = fs.readFileSync(path.resolve('.agents/skills/create-spec/SKILL.md'), 'utf-8');
+    const frontmatter = skill.match(/^---\r?\n([\s\S]*?)\r?\n---/)?.[1] ?? '';
+    for (const name of required) {
+      assert.match(frontmatter, new RegExp(`mcp__dev-pomogator-specs__${name}\\b`), `${name} must be callable by the active create-spec skill`);
+      assert.match(skill, new RegExp(`\\|[^\\n]*${name}[^\\n]*\\|`), `${name} must be documented in the active create-spec routing table`);
+    }
+    assert.match(skill, /fresh (?:spec )?bootstrap|fresh scaffold/i, 'fresh bootstrap must route to a multi-document transaction');
+    assert.match(skill, /FR[^\n]*(?:Story|USER_STORIES)[^\n]*(?:Design|DESIGN)[^\n]*(?:AC|ACCEPTANCE_CRITERIA)/i, 'mutually-dependent FR/story/design/AC edits must be named');
+    assert.match(skill, /apply_spec_transaction/i);
+  },
+);

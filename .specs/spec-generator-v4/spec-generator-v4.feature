@@ -1009,6 +1009,14 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Then pre-existing debt is ignored but the newly introduced conformance debt is refused
 
   @FR-40
+  Scenario: SPECGEN004_560 form validation is monotonic and explains the complete recovery contract
+    Given a legacy TASKS document with repeated pre-existing form debt
+    When the agent shifts legacy lines, edits valid prose, and then adds one malformed task through apply_spec_change
+    Then unchanged legacy form debt does not block either clean edit
+    But the net-new malformed task is refused with the complete TASKS form contract and transaction recovery hint
+    And USER_STORIES and DESIGN refusals expose their exact heading field and list contracts
+
+  @FR-40
   Scenario: SPECGEN004_115 a successful MCP write refreshes the graph for the next read
     Given an accepted spec change written through MCP
     When the agent reads the affected node afterwards
@@ -3425,6 +3433,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Then the preview includes anchors found, a diff, affected graph nodes, conformance findings, resulting shas, and a proposal_id
     And applying the proposal writes all documents atomically or leaves every document unchanged
     And the audit log records the transaction as one conceptual spec mutation
+    And the active create-spec workflow exposes and routes cross-document bootstrap through all transaction tools
 
   @feature60
   Scenario: SPECGEN004_524 anchor-targeted CAS mismatch auto-rebases only non-conflicting changes
