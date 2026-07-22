@@ -379,7 +379,7 @@ function validateImpactAnalysis(lines: string[], indices: Map<string, number>, e
   if (!hasDestructiveAction) return;
 
   // File Changes has destructive actions — check for Impact Analysis
-  const impactIndex = findHeadingIndex(lines, /^##\s+Impact Analysis\b/);
+  const impactIndex = findHeadingIndex(lines, /^##\s+(?:💥\s+)?Impact Analysis\b/);
   if (impactIndex === -1) {
     addError(errors, parsed.sectionStart, 'File Changes содержит delete/rename/move/replace, но отсутствует секция Impact Analysis', 'Добавь: ## Impact Analysis с таблицей | Keyword | Files Found | Action in Plan |');
     return;
