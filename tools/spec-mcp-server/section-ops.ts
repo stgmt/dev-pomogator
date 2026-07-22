@@ -728,10 +728,10 @@ export function applyReplaceChange(
 //     the fresh docs);
 //   * `applySpecTransactionCore` validates EVERY edit and writes ALL-OR-NOTHING.
 // Reuses validateSpecChange + writeDocAtomic + docSha/casCheck from mutations.ts — NO second
-// validator, NO second version-control layer. The all-or-nothing guarantee is validation-
-// before-write: `preparePatch` is pure read + validate (it writes NOTHING), so a single failed
-// edit leaves EVERY document byte-identical; only when ALL edits are clean does each doc get
-// written atomically (temp + rename). The caller (tools.ts) wraps the write in the short
+// validator, NO second version-control layer. `preparePatch` rejects validation failures before
+// any write; after validation, every original is snapshotted and a later I/O failure compensates
+// already-written documents in reverse order. An incomplete rollback is surfaced explicitly as
+// ROLLBACK_FAILED rather than falsely claiming atomicity. The caller wraps the write in the short
 // write-lock + ONE audit event, so the whole transaction reads as one conceptual mutation.
 //
 // @see .specs/spec-generator-v4/spec-generator-v4.feature SPECGEN004_523
@@ -969,24 +969,75 @@ export interface TransactionResult {
   written?: boolean;
   /** `<spec>/<doc>` → resulting whole-doc sha, for every written doc. */
   shas?: Record<string, string>;
-  error?: 'VALIDATION_FAILED' | 'PROPOSAL_NOT_FOUND';
+  error?: 'VALIDATION_FAILED' | 'PROPOSAL_NOT_FOUND' | 'WRITE_FAILED' | 'ROLLBACK_FAILED';
+  /** Original write exception, present for WRITE_FAILED / ROLLBACK_FAILED. */
+  write_error?: string;
+  /** Restore failures mean the all-or-nothing invariant could not be recovered. */
+  rollback_failures?: Array<{ target: string; message: string }>;
+}
+
+export interface TransactionOptions {
+  /** Test seam and alternate storage adapter; production defaults to writeDocAtomic. */
+  writeDocument?: typeof writeDocAtomic;
 }
 
 /**
  * Validate EVERY edit and write ALL-OR-NOTHING. `preparePatch` writes nothing (pure read +
- * validate), so a single failed edit leaves EVERY document byte-identical; only when all edits
- * are clean is each doc written atomically (temp + rename). The caller (tools.ts) wraps this in
+ * validate), so a single failed edit leaves EVERY document byte-identical. Once validation is
+ * clean, originals are snapshotted; a later I/O failure restores earlier writes in reverse order
+ * and reports whether compensation succeeded. The caller (tools.ts) wraps this in
  * the short write-lock + ONE audit event so the whole set reads as one conceptual spec mutation.
  */
-export function applySpecTransactionCore(repoRoot: string, edits: PatchEdit[]): TransactionResult {
+export function applySpecTransactionCore(repoRoot: string, edits: PatchEdit[], options: TransactionOptions = {}): TransactionResult {
   const preview = preparePatch(repoRoot, edits);
   if (!preview.ok) {
     return { ok: false, edits: preview.edits, findings: preview.findings, error: 'VALIDATION_FAILED' };
   }
+  const writeDocument = options.writeDocument ?? writeDocAtomic;
   const shas: Record<string, string> = {};
-  for (const p of preview.edits) {
-    writeDocAtomic(repoRoot, p.spec, p.doc, p.next as string);
-    shas[`${p.spec}/${p.doc}`] = p.sha as string;
+  const originals = new Map<string, string>();
+  const written: PatchEditPreview[] = [];
+  try {
+    for (const p of preview.edits) {
+      const target = `${p.spec}/${p.doc}`;
+      const before = readDoc(repoRoot, p.spec, p.doc);
+      if (!before.ok) throw new Error(`cannot snapshot ${target}: ${before.error}`);
+      originals.set(target, before.current);
+    }
+    for (const p of preview.edits) {
+      writeDocument(repoRoot, p.spec, p.doc, p.next as string);
+      written.push(p);
+      shas[`${p.spec}/${p.doc}`] = p.sha as string;
+    }
+  } catch (error) {
+    const writeError = error instanceof Error ? error.message : String(error);
+    const rollbackFailures: Array<{ target: string; message: string }> = [];
+    for (const p of [...written].reverse()) {
+      const target = `${p.spec}/${p.doc}`;
+      try {
+        writeDocument(repoRoot, p.spec, p.doc, originals.get(target) as string);
+      } catch (rollbackError) {
+        rollbackFailures.push({
+          target,
+          message: rollbackError instanceof Error ? rollbackError.message : String(rollbackError),
+        });
+      }
+    }
+    const rollbackFailed = rollbackFailures.length > 0;
+    return {
+      ok: false,
+      edits: preview.edits,
+      findings: [{
+        layer: 'change',
+        message: rollbackFailed
+          ? `transaction write failed and rollback was incomplete: ${writeError}`
+          : `transaction write failed; all earlier writes were rolled back: ${writeError}`,
+      }],
+      written: false,
+      error: rollbackFailed ? 'ROLLBACK_FAILED' : 'WRITE_FAILED',
+      write_error: writeError,
+      rollback_failures: rollbackFailures,
+    };
   }
   return { ok: true, edits: preview.edits, findings: [], written: true, shas };
 }

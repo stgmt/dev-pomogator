@@ -2195,3 +2195,20 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   **Done When:**
   - [x] `create-spec` Finalization and `task-board-forms` consume the analyzer plan and emit AC-linked implementation/test/deploy-evidence tasks or a blocking investigation
   - [x] `spec-review` reports deterministic acceptance-delivery findings as P0, and Docker BDD proves root `/api` vs `/go/api`, HTML 404 vs JSON auth/billing, registry/slug/settlement mapping, and semantic readback cannot be reduced to endpoint existence
+
+## Phase 39 — Review hardening for atomic transactions and acceptance delivery gates
+
+- [x] P39-1: Restore true all-or-nothing transaction semantics — id: p39-fr60-transaction-hardening — Status: DONE | Est: 120m
+  _Requirements: [FR-60](FR.md#fr-60)_
+  _Acceptance: AC-60.3_
+  **Done When:**
+  - [x] `SPECGEN004_523` refuses empty full-document replacement through the batch validator
+  - [x] a deterministic second-write I/O failure restores every earlier document byte-for-byte and reports `WRITE_FAILED`
+
+- [x] P39-2: Close acceptance-delivery false-green paths — id: p39-fr65-fail-closed-hardening — Status: DONE | Est: 120m
+  _Requirements: [FR-65](FR.md#fr-65)_
+  _Acceptance: AC-65.1, AC-65.2, AC-65.3, AC-65.4_
+  **Done When:**
+  - [x] `SPECGEN004_565` rejects missing/empty TASKS, AC-id prefixes, H1-H6 claim headings, and auth/dispatch/result/artifact wording gaps
+  - [x] analyzer import/runtime failure emits blocking `ACCEPTANCE_DELIVERY_COVERAGE_UNAVAILABLE`
+  - [x] active `.agents` create-spec/task-board/spec-review workflows consume the same vocabulary

@@ -3576,3 +3576,4 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     When the real acceptance delivery analyzer and audit inspect every plan
     Then shallow coverage names every missing public contract paid flow and semantic deploy lane
     And a blocking investigation remains red while the complete AC-linked plan passes
+    And empty task plans exact AC identifiers alternate claim wording and analyzer outages fail closed

@@ -2024,10 +2024,10 @@ async function commandAuditSpec(argv) {
 
   log('INFO', 'Running TASKS_FR_REFS check...');
   const tasksContent = getFileContent('TASKS.md');
-  if (acContent && tasksContent) {
+  if (acContent) {
     try {
       const { analyzeAcceptanceTaskCoverage } = await import('./acceptance-task-coverage.mjs');
-      const coverage = analyzeAcceptanceTaskCoverage({ acceptanceContent: acContent, tasksContent });
+      const coverage = analyzeAcceptanceTaskCoverage({ acceptanceContent: acContent, tasksContent: tasksContent || '' });
       for (const gap of coverage.findings) {
         findings.push({
           check: 'ACCEPTANCE_DELIVERY_COVERAGE',
@@ -2040,7 +2040,15 @@ async function commandAuditSpec(argv) {
         });
       }
     } catch (error) {
-      log('WARN', `ACCEPTANCE_DELIVERY_COVERAGE unavailable: ${error instanceof Error ? error.message : error}`);
+      const message = error instanceof Error ? error.message : String(error);
+      findings.push({
+        check: 'ACCEPTANCE_DELIVERY_COVERAGE_UNAVAILABLE',
+        category: 'LOGIC_GAPS',
+        severity: 'ERROR',
+        message: `Acceptance delivery hard-gate unavailable: ${message}`,
+        details: 'Restore the shared analyzer before Finalization; a missing or broken hard-gate must fail closed.',
+      });
+      log('ERROR', `ACCEPTANCE_DELIVERY_COVERAGE unavailable: ${message}`);
     }
   }
   if (tasksContent && frContent) {
