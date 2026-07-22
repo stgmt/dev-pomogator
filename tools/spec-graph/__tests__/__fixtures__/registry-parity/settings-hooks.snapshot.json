@@ -15,6 +15,7 @@
     "test_quality_gate_stop"
   ],
   "SessionStart": [
+    "anchor_gate_stop",
     "apply_skill_budget",
     "autostart_hook",
     "doctor",

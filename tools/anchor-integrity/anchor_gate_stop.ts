@@ -1,7 +1,7 @@
 /**
- * Stop-gate (FR-34b) — blocks declaring work "done" while a spec the session EDITED
- * still has broken link anchors. Only git-MODIFIED `.specs/<slug>/...md` are judged, so
- * the pre-existing corpus backlog never blocks an unrelated Stop. Escape hatch:
+ * Stop-gate (FR-34b) — blocks declaring work "done" while a spec this session provably
+ * edited still has broken link anchors. SessionStart fingerprints + exact PostToolUse
+ * touch markers keep pre-existing and parallel-session dirt out of the verdict. Escape hatch:
  * `[skip-anchor-fix: <reason ≥8 chars>]` in the latest commit message, or env
  * `ANCHOR_GATE_SKIP=1` — logged to `.claude/logs/anchor-gate-escapes.jsonl`.
  *
@@ -20,6 +20,11 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
 import { checkSpecDir } from './check.mjs';
+import {
+  captureSessionBaseline,
+  classifySessionSpecChanges,
+  unknownProvenanceNotice,
+} from './provenance.ts';
 
 interface StopInput {
   stop_hook_active?: boolean;
@@ -99,19 +104,33 @@ export function buildBlockReason(slugs: string[], broken: ReturnType<typeof chec
 }
 
 async function main(): Promise<void> {
+  const input = await readStdinJsonSafe<StopInput>();
+  const repoRoot = process.env.CLAUDE_PROJECT_DIR || process.env.DEV_POMOGATOR_REPO_ROOT || process.cwd();
+  if (process.argv.includes('--capture-baseline')) {
+    captureSessionBaseline(repoRoot, input.session_id ?? '');
+    return approve();
+  }
+
   const mode = process.env.ANCHOR_GATE_ENABLED ?? 'true';
   if (mode === 'false') return approve();
-  const input = await readStdinJsonSafe<StopInput>();
   if (input.stop_hook_active === true) return approve(); // inside a continuation — don't re-block
-  const repoRoot = process.env.CLAUDE_PROJECT_DIR || process.env.DEV_POMOGATOR_REPO_ROOT || process.cwd();
 
-  const slugs = modifiedSpecSlugs(repoRoot);
+  const classification = classifySessionSpecChanges(repoRoot, input.session_id);
+  const notice = unknownProvenanceNotice(classification);
+  if (notice) process.stderr.write(`[anchor-gate] ${notice}\n`);
+  const slugs = classification.currentSlugs;
   if (!slugs.length) return approve();
 
+  const currentPaths = new Set(classification.currentPaths);
   const broken: ReturnType<typeof checkSpecDir> = [];
   for (const slug of slugs) {
     try {
-      broken.push(...checkSpecDir(path.join(repoRoot, '.specs', slug), repoRoot));
+      broken.push(...checkSpecDir(path.join(repoRoot, '.specs', slug), repoRoot).filter((finding) => {
+        // A touched link file can introduce a stale anchor; a touched target file can
+        // orphan inbound links elsewhere. Foreign files in the same spec stay out.
+        const targetPath = finding.targetFile || finding.file;
+        return currentPaths.has(finding.file) || currentPaths.has(targetPath);
+      }));
     } catch {
       /* unreadable spec — skip */
     }

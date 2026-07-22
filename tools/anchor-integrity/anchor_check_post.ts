@@ -13,10 +13,12 @@ import path from 'node:path';
 import { readStdinJsonSafe } from '../_shared/stdin.ts';
 import { pathToFileURL } from 'node:url';
 import { checkSpecDir } from './check.mjs';
+import { recordSessionTouch } from './provenance.ts';
 
 interface HookInput {
   tool_input?: { file_path?: string };
   session_id?: string;
+  cwd?: string;
 }
 
 /** Derive {repoRoot, slug, specDir} from an absolute `.specs/<slug>/…md` path, or null. */
@@ -58,7 +60,11 @@ export function buildReminder(absPath: string | null): string | null {
 
 async function main(): Promise<void> {
   const input = await readStdinJsonSafe<HookInput>();
-  const out = buildReminder(input.tool_input?.file_path ?? null);
+  const rawPath = input.tool_input?.file_path ?? null;
+  const repoRoot = process.env.CLAUDE_PROJECT_DIR || input.cwd || process.cwd();
+  const absPath = rawPath ? (path.isAbsolute(rawPath) ? rawPath : path.resolve(repoRoot, rawPath)) : null;
+  if (absPath && input.session_id) recordSessionTouch(repoRoot, input.session_id, absPath);
+  const out = buildReminder(absPath);
   if (out) process.stdout.write(out);
 }
 

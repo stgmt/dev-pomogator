@@ -15,12 +15,17 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { spawnSync } from 'node:child_process';
 import { checkLinks } from '../../tools/anchor-integrity/check.mjs';
 import { marksmanSlug } from '../../tools/anchor-integrity/marksman-slug.mjs';
 import { fixSpecDir } from '../../tools/anchor-integrity/fix.mjs';
 import { dispatchClaudeFallback } from '../../tools/anchor-integrity/claude-fallback.mjs';
 import { buildReminder } from '../../tools/anchor-integrity/anchor_check_post.ts';
 import { escapeReason, escapeHonoured } from '../../tools/anchor-integrity/anchor_gate_stop.ts';
+import {
+  classifySessionSpecChanges,
+  type ProvenanceClassification,
+} from '../../tools/anchor-integrity/provenance.ts';
 
 interface BrokenLike { file: string; line: number; brokenAnchor: string; targetRaw: string; currentSlug: string | null; linkText: string }
 interface AnchorWorld {
@@ -35,8 +40,31 @@ interface AnchorWorld {
   dispatch?: ReturnType<typeof dispatchClaudeFallback>;
   flaggedRun?: ReturnType<typeof dispatchClaudeFallback>;
   spawnCalls?: number;
+  sessionAResult?: ProvenanceClassification;
+  sessionBResult?: ProvenanceClassification;
+  cachedBefore?: string;
+  cachedAfter?: string;
+  unstagedBefore?: string;
+  unstagedAfter?: string;
+  stopAReason?: string;
+  stopBReason?: string;
 }
 const mkTmp = (w: AnchorWorld) => (w.tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'f34-')));
+const runAnchorHook = (repo: string, file: string, input: object, args: string[] = []) => {
+  const pluginRoot = process.cwd();
+  const bootstrap = path.join(pluginRoot, 'tools', '_shared', 'bootstrap.cjs');
+  const target = path.join(pluginRoot, 'tools', 'anchor-integrity', file);
+  return spawnSync(
+    process.execPath,
+    ['-e', `require(${JSON.stringify(bootstrap)})`, '--', target, ...args],
+    {
+      cwd: repo,
+      input: JSON.stringify(input),
+      encoding: 'utf8',
+      env: { ...process.env, CLAUDE_PLUGIN_ROOT: pluginRoot, CLAUDE_PROJECT_DIR: repo, ANCHOR_GATE_ENABLED: 'true' },
+    },
+  );
+};
 
 // ── SPECGEN004_80 — AC-34.1: same-file + cross-file detection ────────────────
 Given('a heading slug changed, orphaning one same-file and one cross-file inbound anchor', function (this: AnchorWorld) {
@@ -151,4 +179,88 @@ Then('it dispatches a background claude process for that link without blocking',
 Then('with the claude binary unavailable the link stays flagged and is never rewritten', function (this: AnchorWorld) {
   assert.deepEqual({ available: this.flaggedRun!.available, dispatched: this.flaggedRun!.dispatched, flagged: this.flaggedRun!.flagged }, { available: false, dispatched: 0, flagged: 1 });
   assert.equal(this.spawnCalls, 1, 'no extra spawn when claude is unavailable');
+});
+
+// ── SPECGEN004_563 — issue #147: shared-worktree provenance ──────────────────
+Given('two sessions share a Git worktree with pre-existing dirty spec debt and independent anchor provenance baselines', function (this: AnchorWorld) {
+  const repo = mkTmp(this);
+  const git = (args: string[]) => spawnSync('git', args, { cwd: repo, encoding: 'utf8' });
+  git(['init', '-q']);
+  git(['config', 'user.email', 'anchor@example.test']);
+  git(['config', 'user.name', 'Anchor Test']);
+  for (const slug of ['preexisting', 'session-a', 'session-b']) {
+    const dir = path.join(repo, '.specs', slug);
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, 'FR.md'), '## FR-1: Original\n[FR-1](#fr-1-original)\n');
+  }
+  git(['add', '--', '.specs/session-a/FR.md', '.specs/session-b/FR.md']);
+  git(['add', '--', '.specs/preexisting/FR.md']);
+  git(['commit', '-qm', 'fixture baseline']);
+  fs.writeFileSync(
+    path.join(repo, '.specs', 'preexisting', 'FR.md'),
+    '## FR-1: Pre-existing Debt\n[FR-1](#fr-1-stale-before-session)\n',
+  );
+  const registry = JSON.parse(fs.readFileSync(path.resolve('tools/hook-service/registry.json'), 'utf8'));
+  assert.ok(
+    Object.values(registry.routes as Record<string, { event: string; target: string; args: string[] }>).some(
+      (route) => route.event === 'SessionStart'
+        && route.target === 'tools/anchor-integrity/anchor_gate_stop.ts'
+        && route.args.includes('--capture-baseline'),
+    ),
+    'generated hook-service registry must route SessionStart to the anchor baseline capture',
+  );
+  for (const session_id of ['session-a', 'session-b']) {
+    const capture = runAnchorHook(repo, 'anchor_gate_stop.ts', { session_id }, ['--capture-baseline']);
+    assert.equal(capture.status, 0, capture.stderr);
+  }
+});
+
+When('each session touches a different dirty spec and one file has both staged and unstaged changes', function (this: AnchorWorld) {
+  const repo = this.tmpDir!;
+  const git = (args: string[]) => spawnSync('git', args, { cwd: repo, encoding: 'utf8' });
+  const a = path.join(repo, '.specs', 'session-a', 'FR.md');
+  const b = path.join(repo, '.specs', 'session-b', 'FR.md');
+  fs.writeFileSync(a, '## FR-1: Renamed A\n[FR-1](#fr-1-stale-a)\n');
+  assert.equal(runAnchorHook(repo, 'anchor_check_post.ts', { session_id: 'session-a', tool_input: { file_path: a } }).status, 0);
+  git(['add', '--', '.specs/session-a/FR.md']);
+  fs.writeFileSync(b, '## FR-1: Renamed B\n[FR-1](#fr-1-stale-b)\n');
+  assert.equal(runAnchorHook(repo, 'anchor_check_post.ts', { session_id: 'session-b', tool_input: { file_path: b } }).status, 0);
+  git(['add', '--', '.specs/session-b/FR.md']);
+  fs.appendFileSync(b, '\nunstaged session B note\n');
+  this.cachedBefore = git(['diff', '--cached', '--binary']).stdout;
+  this.unstagedBefore = git(['diff', '--binary']).stdout;
+  this.sessionAResult = classifySessionSpecChanges(repo, 'session-a');
+  this.sessionBResult = classifySessionSpecChanges(repo, 'session-b');
+  const stopA = runAnchorHook(repo, 'anchor_gate_stop.ts', { session_id: 'session-a' });
+  const stopB = runAnchorHook(repo, 'anchor_gate_stop.ts', { session_id: 'session-b' });
+  assert.equal(stopA.status, 0, stopA.stderr);
+  assert.equal(stopB.status, 0, stopB.stderr);
+  this.stopAReason = JSON.parse(stopA.stdout).reason;
+  this.stopBReason = JSON.parse(stopB.stdout).reason;
+  this.cachedAfter = git(['diff', '--cached', '--binary']).stdout;
+  this.unstagedAfter = git(['diff', '--binary']).stdout;
+});
+
+Then('each anchor Stop-gate classifies only its own touched spec without mutating the Git index', function (this: AnchorWorld) {
+  assert.deepEqual(this.sessionAResult!.currentSlugs, ['session-a']);
+  assert.deepEqual(this.sessionBResult!.currentSlugs, ['session-b']);
+  assert.deepEqual(this.sessionAResult!.unknownSlugs, ['session-b']);
+  assert.deepEqual(this.sessionBResult!.unknownSlugs, ['session-a']);
+  assert.deepEqual(this.sessionAResult!.preexistingSlugs, ['preexisting']);
+  assert.deepEqual(this.sessionBResult!.preexistingSlugs, ['preexisting']);
+  assert.match(this.stopAReason!, /you edited session-a and left 1 broken link anchor/);
+  assert.doesNotMatch(this.stopAReason!, /you edited[^\n]*session-b/);
+  assert.match(this.stopBReason!, /you edited session-b and left 1 broken link anchor/);
+  assert.doesNotMatch(this.stopBReason!, /you edited[^\n]*session-a/);
+  assert.equal(this.cachedAfter, this.cachedBefore);
+  assert.equal(this.unstagedAfter, this.unstagedBefore);
+});
+
+Then('a session without reliable baseline evidence reports provenance unknown and fails open', function (this: AnchorWorld) {
+  const run = runAnchorHook(this.tmpDir!, 'anchor_gate_stop.ts', { session_id: 'missing-baseline' });
+  assert.equal(run.status, 0, run.stderr);
+  assert.equal(run.stdout, '', 'unknown provenance must fail open, not emit a block decision');
+  assert.match(run.stderr, /provenance unknown/);
+  assert.match(run.stderr, /not attributing them to this session and failing open/);
+  fs.rmSync(this.tmpDir!, { recursive: true, force: true });
 });

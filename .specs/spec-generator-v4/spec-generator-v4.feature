@@ -3556,3 +3556,10 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Given the canonical hook-service dispatches the real spec-access guard through the bootstrap runner
     When direct spec access, Git message data, and whole-tree Git mutations run with spec-access enforce on
     Then direct access and whole-tree mutations are structured denies without a runner failure reason while Git message data is allowed
+
+  @feature34 @FR-34
+  Scenario: SPECGEN004_563 parallel sessions attribute only their own staged and unstaged spec changes
+    Given two sessions share a Git worktree with pre-existing dirty spec debt and independent anchor provenance baselines
+    When each session touches a different dirty spec and one file has both staged and unstaged changes
+    Then each anchor Stop-gate classifies only its own touched spec without mutating the Git index
+    And a session without reliable baseline evidence reports provenance unknown and fails open
