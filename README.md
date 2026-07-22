@@ -116,111 +116,89 @@ dev-pomogator | cwd: ~\dev-pomogator
 | `dev-pomogator-uninstall` | Removal utility |
 | ... + others (skills/discovery-forms, requirements-chk-matrix, task-board-forms, variant-matrix-build для create-spec ecosystem) |
 
-## v4: spec-generator — LIVE on PR #32
+## Спецификации с проверяемой готовностью
 
-The `spec-generator-v4` track ships an MCP server + two hooks + a
-mechanical cross-spec consistency analyzer + **8 autonomous resolvers**
-on top of the existing form-guards (v3 soft tier, preserved). Status:
-**mergeable + CI green** on `feat/phase-2a-mcp-server-and-hooks` /
-PR #32. **All 8 phases shipped.** 188 tests passing. 33 commits since
-main, 159 changed files, +20,394/-137 lines.
+`dev-pomogator` помогает провести функцию от потребности пользователя до требования,
+критерия приёмки, BDD-сценария, задачи, теста и проверенного статуса. Цель — не просто
+заполнить Markdown, а сохранить связи и подтверждения на каждом шаге. Если подтверждений
+нет, процесс показывает пробел, а не объявляет работу готовой.
 
-### What's new in PR #32 (latest)
+### Быстрый старт
 
-- **2 new resolvers (Round 4):** `cross-ref-linker` (wraps spec slug
-  mentions as markdown links — closes silent-skip bug where 70 findings
-  routed to never-implemented AUTO_FIX rule) + `wrap-deprecated-ref`
-  (strikethrough markers for removed v1 production files: `~~src/installer/foo.ts~~ (removed in v2)`).
-  Registry: 6 → 8 resolvers.
-- **3 new BacklogCategory:** `ambiguous-link`, `missing-cross-ref`,
-  `deprecated-ref`.
-- **MCP method-name false-positive fix:** detector no longer flags
-  `tools/list` / `resources/list` / `prompts/list` etc. as filesystem
-  paths (~17 false findings removed).
-- **Resolution Patterns codified** in `.claude/skills/cross-spec-reconcile/SKILL.md`
-  + `references/reference_resolution-patterns.md` — 5 patterns
-  (WRAP-deprecated / DELETE-redirect / RECREATE-as-skip / DEFER-spec
-  / MCP-exclusion).
-- **322 spec edits applied** across 3 rounds of real-corpus cleanup
-  (89 v1→v2 renames + 64 dead-ref deletes/wraps + 153 follow-up
-  cleanup + 195 multi-spec triage applications).
-- **Cumulative dogfood reduction:** 38,453 → 1,185 findings (-96.9%),
-  CRITICAL 33,860 → 32 (-99.9%), actionability 37% → ~91%.
+1. Установите плагин по [инструкции выше](#установка) и перезагрузите Claude Code.
+2. Попросите: **«создай спеку для …»**. Явный вызов установленного skill:
+   `/dev-pomogator:create-spec <slug>`.
+3. Пройдите Discovery → Context → Requirements + Design → Finalization и последующий
+   аудит. STOP-точки подтверждают осознанное продолжение, но не заменяют проверку результата.
+4. Чтобы понять, что покрывает требование или сценарий, используйте
+   [`spec-graph-query`](.claude/skills/spec-graph-query/SKILL.md), а не собирайте связи
+   текстовым поиском.
+5. Запустите применимые тесты через `/run-tests`.
+6. Перед заявлением «готово» вызовите `/spec-status <slug>`: он отделяет подтверждённое
+   от заблокированного и заявленного без достаточных доказательств.
+7. Готовность к релизу подтверждайте только результатами проверок, привязанными к
+   конкретной версии кода. Один зелёный тест или заполненная доска задач этого не доказывают.
 
-### Core components
+### Как читать готовность
 
-- **`tools/spec-mcp-server/`** — stdio MCP server registered in
-  `.mcp.json` as `dev-pomogator-specs`. 11 read-only tools over an
-  in-memory SpecGraph (`get_trace` primary, plus `find_by_tags` /
-  `conformance_check` / `search` / `get_node` / `list_phase_tasks` /
-  `get_test_result` / `find_orphans` / `get_spec_status` (view: counts) /
-  `validate_anchor` / `list_specs`). SQLite WAL backend is opt-in
-  behind `.spec-config.json::storage.sqlite_enabled = true`.
+| Состояние | Что оно означает |
+|-----------|------------------|
+| Документы существуют | Форма заполнена; реализация ещё не доказана |
+| Структура проверена | Формат и ссылки корректны; это ещё не вывод о готовности |
+| Есть результат тестов | Проверен конкретный объём кода в конкретное время |
+| Критерии проверены | Для каждого критерия показано подтверждение или явный пробел; наличие пробела означает «не готово» |
+| Готово к релизу | Все обязательные проверки привязаны к конкретной версии кода и её артефактам |
 
-- **`tools/spec-conformance-guard/`** — PreToolUse hard hook. Denies
-  writes to `.specs/<slug>/*.md` and `.feature` files that violate
-  structural invariants (duplicate FR ids / malformed frontmatter /
-  malformed Gherkin / invalid anchor pattern). Version-gated per
-  FR-22 — `.progress.json::version < 4` → allow + log.
+Структурная валидация — полезная предварительная проверка, но не вывод о здоровье спеки.
+Актуальный статус получайте через `/spec-status` и
+[итоговую проверку здоровья](.claude/spec-generator-discipline.md#the-one-health-command),
+а не из статического README.
 
-- **`tools/spec-conformance-push/`** — PostToolUse soft hook with a
-  3-second fixed-window throttle (FR-28). Pushes aggregated conformance
-  findings back into the agent context via `<system-reminder>` blocks.
+### Что обеспечивает процесс
 
-- **`tools/migrate-v3-to-v4/`** — `dev-pomogator-migrate-v3-to-v4` CLI.
-  `--suggest-only` mode prints a diff; apply mode prompts per file
-  with a 30-second default-skip timeout, then atomically rewrites the
-  spec MD and bumps `.progress.json::version` from 3 → 4. Legacy
-  `### Requirement: FR-N` triple-anchor headings survive parsing.
+SpecGraph связывает требование, критерий приёмки, сценарий, задачу и тест в обе стороны.
+Специальные инструменты и автоматические проверки защищают эти связи при изменениях.
+Независимая проверка не позволяет автору оценивать собственную работу слишком оптимистично:
+отсутствие подтверждений остаётся видимым пробелом, а не превращается в ложный зелёный статус.
 
-- **`.claude/skills/cross-spec-reconcile/`** — mechanical (LLM-free)
-  consistency analyzer across all `.specs/<slug>/`. **28 finding codes
-  across 7 categories** (uncovered / contradiction / runtime-identifier-drift
-  / architectural-decision-vs-reality / concept-overlap / spec-only /
-  schema-drift). YAML + **SARIF 2.1.0** output, JSONL audit log for
-  CRITICAL overrides.
+### Дополнительные возможности
 
-- **`.claude/skills/cross-spec-resolve/`** — interactive 7-step walker
-  through the YAML report. 5-field explanation block per finding
-  (code / severity / class — files+lines — plain — WHY — options),
-  Path A/B/C dispatch for `architectural-decision-vs-reality`,
-  foreign-spec extra-confirm banner, step-7 atomic
-  `resolution_status` stamper.
+- **Безопасная дверь для спецификаций:** MCP-сервер позволяет читать, проверять и изменять
+  `.specs/` через структурированные инструменты вместо хрупкого ручного поиска и замены.
+- **Автоматические проверки изменений:** хуки находят повреждённые ссылки, повторяющиеся
+  идентификаторы и неверный Gherkin до того, как ошибка распространится по графу.
+- **Миграция старых спецификаций:** `dev-pomogator-migrate-v3-to-v4` сначала показывает
+  предлагаемые изменения, а затем применяет подтверждённые правки атомарно.
+- **Навигация по Markdown:** Marksman добавляет переходы по ссылкам и заголовкам в редакторах
+  с поддержкой LSP.
+- **Удалённые среды:** MCP-сервер умеет запускаться в Codespaces и восстанавливаться после
+  устаревшего lock-файла.
 
-- **`.claude/skills/architecture-research-workflow/`** — 7-stage
-  greenfield architecture-decision skill picked by a complexity
-  heuristic (`scripts/complexity-heuristic.ts`) when the prompt
-  carries `архитектур*` / `rebuild` / `v\d+` / etc. or ≥3 component
-  nouns. 3-rewind hard limit prevents infinite Stage 5 loops.
+Технические детали и ограничения этих механизмов находятся в
+[карте дисциплины](.claude/spec-generator-discipline.md) и соответствующих skill-документах.
 
-- **`tools/spec-backlog/`** — append-only JSONL backlog ledger at
-  `.dev-pomogator/.specs-backlog/<YYYY-MM-DD>.jsonl` with deterministic
-  `entryId = sha256 first-12-hex`. Classifier routes every finding to
-  AUTO_FIX / BACKLOG / NOISE / human. **8 specialist resolvers** apply
-  fixes per category. CLI commands: `ingest` / `list` / `resolve`.
-  Stop hook auto-ingest at session end (idempotent via marker lock);
-  SessionStart hook prints histogram of open backlog at session start.
-  `/spec-backlog` skill wraps the CLI for agent invocation.
-
-- **`tools/marksman-installer/`** — Marksman LSP postinstall with
-  sha256 verification per FR-27 against a pinned
-  `marksman-hashes.json`. Wiki-link navigation works in any
-  LSP-compatible editor (VS Code, Neovim, Obsidian, Helix).
-
-- **Codespaces autostart** — `.devcontainer/scripts/post-start.sh`
-  starts the MCP server automatically when `$CODESPACES=true`,
-  honouring `.dev-pomogator/.mcp-lock.json` for stale-PID recovery.
-
-### Quick try
+### Работа с несколькими спецификациями
 
 ```
-/spec-backlog              # see open backlog queue
-/cross-spec-reconcile      # run full cross-spec detector
-/cross-spec-resolve        # interactive walker through findings
+/spec-backlog              # посмотреть очередь найденных проблем
+/cross-spec-reconcile      # найти противоречия между спецификациями
+/cross-spec-resolve        # пройти по находкам и применить выбранные исправления
 ```
 
-See `.specs/spec-generator-v4/README.md` and
-`.specs/spec-generator-v4/CHANGELOG.md` for the full per-FR ledger.
+### Куда дальше
+
+| Задача | Документация |
+|--------|--------------|
+| Создать или обновить спеку | [`create-spec`](.claude/skills/create-spec/SKILL.md) |
+| Проверить, что реально подтверждено | [`spec-status`](.claude/skills/spec-status/SKILL.md) |
+| Исследовать связи требований, сценариев и тестов | [`spec-graph-query`](.claude/skills/spec-graph-query/SKILL.md) |
+| Провести весь процесс через существующие инструменты | [`spec-generator-orchestrator`](.claude/skills/spec-generator-orchestrator/SKILL.md) |
+| Понять принципы трассируемости и защиты от ложного «готово» | [Spec-Generator Discipline](.claude/spec-generator-discipline.md) |
+
+История реализации и внутренний реестр требований находятся в
+[spec README](.specs/spec-generator-v4/README.md) и
+[CHANGELOG](.specs/spec-generator-v4/CHANGELOG.md). Это история, а не источник
+текущего статуса: готовность всегда вычисляется из свежих доказательств.
 
 ## Migration v1 → v2
 

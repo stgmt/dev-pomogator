@@ -45,7 +45,9 @@ dev-pomogator distributed как canonical Claude Code marketplace plugin (per A
 - **pomogator-doctor**: canonical skill (.claude/skills/pomogator-doctor/) с self-contained engine в scripts/engine/ (24 files); SessionStart hook в scripts/doctor-hook.ts.
 - **Migration**: `tools/migrate-v1-to-v2/migrate-v1-to-v2.ts` — standalone cleanup script для existing v1 users (--project / --global / both flags).
 
-> **🧭 Discipline index — start here for «как репо держит спеки/тесты честными?»:** [`.claude/spec-generator-discipline.md`](.claude/spec-generator-discipline.md) — единая карта, связывающая каждый принцип (трассируемость через спек-граф · статус из улик / анти-фейк-грин · детерминированные гейты через MCP-дверь · свежий агент на фазу · мутационная стойкость · честный стоп · BDD-миграция) с его FR + правилом + инструментом. Каноническое здоровье спеки = `spec-verdict.ts` (смарт-вердикт, не голый структурный pass).
+> **🧭 Discipline index — start here for «как репо держит спеки/тесты честными?»:** [`.claude/spec-generator-discipline.md`](.claude/spec-generator-discipline.md) — единая карта, связывающая каждый принцип (трассируемость через спек-граф · статус из улик / анти-фейк-грин · детерминированные гейты через MCP-дверь · свежий агент на фазу · мутационная стойкость · честный стоп · BDD-миграция) с его FR + правилом + инструментом.
+>
+> Роли документов: корневой `README.md` — пользовательский старт; discipline map — индекс принципов и проверок; `SKILL.md` — конкретные операции. Различия между проверкой формы, здоровьем спеки и независимой сверкой доказательств описаны в discipline map.
 
 ## Rules
 
