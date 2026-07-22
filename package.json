@@ -1,6 +1,6 @@
 {
   "name": "dev-pomogator",
-  "version": "2.0.4",
+  "version": "2.0.5",
   "description": "Canonical Claude Code and Codex plugin support: skills, commands, hooks, MCP servers, and context-menu launchers",
   "author": "stgmt",
   "license": "MIT",
