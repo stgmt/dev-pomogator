@@ -380,6 +380,7 @@ Then('the authoritative verdict for the newborn spec is GREEN', function (this: 
 
 import { spawnSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
+import { execute as executeHookRoute } from '../../tools/hook-service/server.mjs';
 
 const GUARD = path.resolve(import.meta.dirname ?? __dirname, '..', '..', 'tools', 'specs-validator', 'spec-access-guard.ts');
 
@@ -783,6 +784,63 @@ When('git plumbing and git content commands run over the specs tree', function (
 Then('VCS plumbing commands are allowed and content-reading git commands stay violations', function (this: GitCarveWorld) {
   assert.deepEqual(this.blockedAllow, [], `VCS-plumbing wrongly blocked: ${JSON.stringify(this.blockedAllow)}`);
   assert.deepEqual(this.leakedDeny, [], `content-leak/worktree-write/reader wrongly allowed: ${JSON.stringify(this.leakedDeny)}`);
+});
+
+// ── SPECGEN004_562 — issue #137: structured runner deny + implicit whole-tree Git ──
+interface InstalledGuardWorld extends F39World {
+  installedGuardResults?: Record<string, Record<string, unknown>>;
+}
+
+Given('the canonical hook-service dispatches the real spec-access guard through the bootstrap runner', function (this: InstalledGuardWorld) {
+  assert.ok(fs.existsSync(path.join(process.cwd(), 'tools', '_shared', 'bootstrap.cjs')));
+  assert.ok(fs.existsSync(path.join(process.cwd(), 'tools', 'specs-validator', 'spec-access-guard.ts')));
+  this.installedGuardResults = {};
+});
+
+When('direct spec access, Git message data, and whole-tree Git mutations run with spec-access enforce on', async function (this: InstalledGuardWorld) {
+  const root = process.cwd();
+  const entry = {
+    target: 'tools/specs-validator/spec-access-guard.ts',
+    args: [],
+    event: 'PreToolUse',
+    timeout: 30,
+    matcher: 'Read|Grep|Glob|Edit|Write|Bash',
+  };
+  const cases: Array<[string, object]> = [
+    ['direct', { tool_name: 'Read', tool_input: { file_path: '.specs/demo/FR.md' }, cwd: this.tempDir }],
+    ['message', { tool_name: 'Bash', tool_input: { command: 'git commit -m "docs: mention .specs/demo only"' }, cwd: this.tempDir }],
+    ['scopedAdd', { tool_name: 'Bash', tool_input: { command: 'git add -A src/' }, cwd: this.tempDir }],
+    ['addA', { tool_name: 'Bash', tool_input: { command: 'git add -A' }, cwd: this.tempDir }],
+    ['addAll', { tool_name: 'Bash', tool_input: { command: 'git add --all' }, cwd: this.tempDir }],
+    ['commitAm', { tool_name: 'Bash', tool_input: { command: 'git commit -am "whole tree"' }, cwd: this.tempDir }],
+    ['commitA', { tool_name: 'Bash', tool_input: { command: 'git commit -a -m "whole tree"' }, cwd: this.tempDir }],
+  ];
+  const previousEnforce = process.env.SPEC_ACCESS_ENFORCE;
+  const previousProject = process.env.CLAUDE_PROJECT_DIR;
+  try {
+    process.env.SPEC_ACCESS_ENFORCE = 'true';
+    process.env.CLAUDE_PROJECT_DIR = this.tempDir;
+    for (const [name, payload] of cases) {
+      this.installedGuardResults![name] = await executeHookRoute(entry, payload, root, 'PreToolUse') as Record<string, unknown>;
+    }
+  } finally {
+    if (previousEnforce === undefined) delete process.env.SPEC_ACCESS_ENFORCE;
+    else process.env.SPEC_ACCESS_ENFORCE = previousEnforce;
+    if (previousProject === undefined) delete process.env.CLAUDE_PROJECT_DIR;
+    else process.env.CLAUDE_PROJECT_DIR = previousProject;
+  }
+});
+
+Then('direct access and whole-tree mutations are structured denies without a runner failure reason while Git message data is allowed', function (this: InstalledGuardWorld) {
+  const result = this.installedGuardResults!;
+  for (const name of ['direct', 'addA', 'addAll', 'commitAm', 'commitA']) {
+    const hook = result[name].hookSpecificOutput as { permissionDecision?: string; permissionDecisionReason?: string } | undefined;
+    assert.equal(hook?.permissionDecision, 'deny', `${name} must be denied: ${JSON.stringify(result[name])}`);
+    assert.match(hook?.permissionDecisionReason ?? '', /spec-access-guard/);
+    assert.doesNotMatch(hook?.permissionDecisionReason ?? '', /tsx-runner.*FAIL|native:fail\(2\)/);
+  }
+  assert.deepEqual(result.message, {}, `commit message data must remain allowed: ${JSON.stringify(result.message)}`);
+  assert.deepEqual(result.scopedAdd, {}, `an explicitly non-spec pathspec must remain allowed: ${JSON.stringify(result.scopedAdd)}`);
 });
 
 // ── SPECGEN004_149 — P21-1 multi-session door: EVERY session writes (E-A redesign, owner 2026-06-20) ──

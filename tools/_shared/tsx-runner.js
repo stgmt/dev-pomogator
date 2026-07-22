@@ -485,6 +485,16 @@ function logResult(success) {
   }
 }
 
+/** A child exit 2 is a deliberate hook block/CLI usage result, not a loader crash. */
+function logControlledExit(code) {
+  const scriptName = path.basename(scriptPath);
+  const elapsed = Date.now() - startTime;
+  const trace = strategyLog.join(',');
+  const logLine = `[${new Date().toISOString()}] [tsx-runner] EXIT script=${scriptName} code=${code} strategies=${trace} elapsed=${elapsed}ms`;
+  appendLog(logLine);
+  if (VERBOSE) process.stderr.write(logLine + '\n');
+}
+
 /**
  * Strategy 0: Node 22.6+ native TypeScript execution.
  * Uses --experimental-strip-types (strips TS annotations, runs natively).
@@ -607,6 +617,14 @@ for (let i = 0; i < STRATEGIES.length; i++) {
         logResult(false);
         process.exit(retryError.status || 1);
       }
+    }
+
+    // Exit 2 is the documented blocking status for hooks. Propagate it exactly,
+    // but do not mislabel the successfully executed child as a tsx-runner crash.
+    if (err.status === 2 && !isResolverError(err)) {
+      strategyLog.push(`${s.name}:exit(2)`);
+      logControlledExit(2);
+      process.exit(2);
     }
 
     // Resolver error AND next strategy uses a different loader family → fall through.

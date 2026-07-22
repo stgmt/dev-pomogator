@@ -60,6 +60,8 @@ interface GuardWorld {
   anchorSpecDir?: string;
   anchorDoorStdout?: string;
   anchorDoorStatus?: number | null;
+  anchorDoorRepeatStdout?: string;
+  anchorDoorRepeatStatus?: number | null;
   anchorReminder?: string | null;
   anchorGateReason?: string;
   v1LayoutRepo?: string;
@@ -218,30 +220,35 @@ When(/^anchor-fix runs in door mode$/, function (this: GuardWorld) {
   assert.ok(this.anchorRepo, 'anchor repo fixture must be initialized');
   assert.ok(this.anchorSpecDir, 'anchor spec fixture must be initialized');
   const repoRoot = process.cwd();
+  const fixer = path.join(repoRoot, 'tools', 'anchor-integrity', 'fix.mjs');
+  const args = [
+    fixer,
+    '--spec',
+    path.join(this.anchorRepo, '.specs', 'auth'),
+    '--apply',
+    '--door',
+  ];
+  const options = {
+    cwd: repoRoot,
+    env: {
+      ...process.env,
+      DEV_POMOGATOR_REPO_ROOT: this.anchorRepo,
+      CLAUDE_PLUGIN_ROOT: repoRoot,
+      SPEC_ACCESS_ENFORCE: 'true',
+      NODE_PATH: path.join(repoRoot, 'node_modules'),
+    },
+    encoding: 'utf-8' as BufferEncoding,
+  };
   const r = spawnSync(
     process.execPath,
-    [
-      '--import',
-      'tsx',
-      path.join(repoRoot, 'tools', 'anchor-integrity', 'fix.mjs'),
-      '--spec',
-      path.join(this.anchorRepo, '.specs', 'auth'),
-      '--apply',
-      '--door',
-    ],
-    {
-      cwd: repoRoot,
-      env: {
-        ...process.env,
-        DEV_POMOGATOR_REPO_ROOT: this.anchorRepo,
-        SPEC_ACCESS_ENFORCE: 'true',
-        NODE_PATH: path.join(repoRoot, 'node_modules'),
-      },
-      encoding: 'utf-8',
-    },
+    args,
+    options,
   );
   this.anchorDoorStatus = r.status;
   this.anchorDoorStdout = `${r.stdout ?? ''}\n${r.stderr ?? ''}`;
+  const repeat = spawnSync(process.execPath, args, options);
+  this.anchorDoorRepeatStatus = repeat.status;
+  this.anchorDoorRepeatStdout = `${repeat.stdout ?? ''}\n${repeat.stderr ?? ''}`;
   this.anchorReminder = buildReminder(path.join(this.anchorSpecDir, 'FR.md'));
   this.anchorGateReason = buildBlockReason(['auth'], [{
     file: '.specs/auth/FR.md',
@@ -259,6 +266,10 @@ Then(/^the anchor is fixed through the spec door and enforce hints never prescri
   assert.equal(this.anchorDoorStatus, 0, `real anchor-fix CLI must pass; output:\n${this.anchorDoorStdout}`);
   assert.match(this.anchorDoorStdout ?? '', /APPLIED via door: 1 deterministic fixes/);
   assert.match(this.anchorDoorStdout ?? '', /written=1 via-door/);
+  assert.doesNotMatch(this.anchorDoorStdout ?? '', /tsx-runner.*FAIL|native:fail\(2\)/);
+  assert.equal(this.anchorDoorRepeatStatus, 0, `repeat fixer scan must pass; output:\n${this.anchorDoorRepeatStdout}`);
+  assert.match(this.anchorDoorRepeatStdout ?? '', /fixable=0/);
+  assert.match(this.anchorDoorRepeatStdout ?? '', /written=0/);
   assert.deepEqual(checkSpecDir(this.anchorSpecDir!, this.anchorRepo!), []);
   const content = fs.readFileSync(path.join(this.anchorSpecDir!, 'FR.md'), 'utf-8');
   assert.match(content, /\[FR-7\]\(#fr-7-login-flow\)/);
