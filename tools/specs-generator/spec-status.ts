@@ -8,7 +8,7 @@ const corePath = path.join(__dirname, 'specs-generator-core.mjs');
 
 try {
   execFileSync('node', [corePath, 'spec-status', ...process.argv.slice(2)], {
-    stdio: 'inherit',
+    stdio: ['ignore', 'inherit', 'inherit'],
     cwd: process.cwd(),
   });
 } catch (err: any) {

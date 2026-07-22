@@ -53959,7 +53959,7 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
   return tools;
 }
 
-// tools/spec-graph/root-resolution.ts
+// tools/spec-graph/root-resolution.mjs
 import fs28 from "node:fs";
 import path24 from "node:path";
 function unsafeReason(value) {
@@ -54019,6 +54019,11 @@ function resolveTargetProjectRoot(input) {
   };
 }
 
+// tools/spec-graph/root-resolution.ts
+function resolveTargetProjectRoot2(input) {
+  return resolveTargetProjectRoot(input);
+}
+
 // tools/spec-mcp-server/server.ts
 var PRODUCT_NAME = "dev-pomogator-specs";
 var PRODUCT_VERSION = "0.1.0";
@@ -54051,7 +54056,7 @@ async function boot(opts) {
   return { server, lifecycle };
 }
 function resolveMcpRoot(env, cwd, scriptDir) {
-  return resolveTargetProjectRoot({ envRoot: env ?? process.env.SPECS_GENERATOR_ROOT, cwd, scriptDir });
+  return resolveTargetProjectRoot2({ envRoot: env ?? process.env.SPECS_GENERATOR_ROOT, cwd, scriptDir });
 }
 function resolveRepoRoot(env, cwd) {
   const result = resolveMcpRoot(env, cwd, path25.dirname(fileURLToPath5(import.meta.url)));
