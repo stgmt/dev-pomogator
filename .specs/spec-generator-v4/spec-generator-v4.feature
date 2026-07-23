@@ -3624,3 +3624,16 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Given a multi-document spec transaction with a full TASKS form and a targeted FR edit
     When the transaction is evaluated by spec-authoring-steer
     Then the full TASKS edit is routed to task-board-forms while targeted edits remain allowed
+
+  @FR-10
+  Scenario: SPECGEN004_545 SQLite schema mismatch quarantines the stale cache before warm-start
+    Given an opt-in SQLite graph cache stamped with an obsolete schema version
+    When the MCP lifecycle opens the SQLite cache with recovery
+    Then the stale cache is quarantined with reason schema_mismatch
+    And a fresh cache uses the current schema and contains no stale nodes
+
+  @FR-10
+  Scenario: SPECGEN004_546 SQLite lifecycle warm-start restores the persisted graph
+    Given an opt-in SQLite lifecycle builds and persists a spec graph
+    When a second MCP lifecycle starts over the unchanged repository
+    Then the second lifecycle reports a warm cache and serves the persisted nodes
