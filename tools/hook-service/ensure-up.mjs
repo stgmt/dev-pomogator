@@ -76,7 +76,7 @@ export async function ensureUp(pluginRoot = process.env.CLAUDE_PLUGIN_ROOT || pr
     const prior = JSON.parse(await readFile(stateFile(), 'utf8').catch(() => '{}'));
     let restarted = false;
     if (prior.pid && ownProcess(prior.pid)) {
-      if (!observed.owned && !ownedIdentity(prior, expected)) {
+      if (!ownedIdentity(prior, expected)) {
         return { ready: false, reason: 'service process ownership is unverified; refusing to kill it', port: PORT };
       }
       await stopOwned(prior.pid);

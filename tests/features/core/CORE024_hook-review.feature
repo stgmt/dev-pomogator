@@ -61,7 +61,13 @@ Feature: CORE024 Windows shell-free hook authoring gate
     Then the same service process dispatches the repaired hook successfully
 
   # @feature25
-  Scenario: CORE024_10 A stale owned hook daemon is recycled automatically
+  Scenario: CORE024_10 A completed block survives a late hook process failure
+    Given an isolated HTTP hook service with a hook that emits a block and exits abnormally
+    When I dispatch the failing hook
+    Then the completed block is returned instead of an HTTP 503
+
+  # @feature25
+  Scenario: CORE024_11 A stale owned hook daemon is recycled automatically
     Given an isolated stale owned hook daemon identity
     When hook-service startup checks the stale daemon
     Then it stops the owned daemon and starts the current runtime

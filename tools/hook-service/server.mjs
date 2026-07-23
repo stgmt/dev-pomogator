@@ -40,7 +40,11 @@ const classifyError = error => {
 const sanitizeDetail = (error, secrets = []) => {
   let detail = error instanceof Error ? error.message : String(error);
   for (const secret of secrets.filter(Boolean)) detail = detail.split(String(secret)).join('[REDACTED]');
-  detail = detail.replace(/\b(?:sk|or)-[A-Za-z0-9_-]{12,}\b/g, '[REDACTED]');
+  detail = detail
+    .replace(/\b(?:sk|or|ghp|gho|ghu|ghs|ghr|xox[baprs])-[A-Za-z0-9_-]{12,}\b/gi, '[REDACTED]')
+    .replace(/\bgithub_pat_[A-Za-z0-9_]{12,}\b/gi, '[REDACTED]')
+    .replace(/\bAKIA[A-Z0-9]{16}\b/g, '[REDACTED]')
+    .replace(/-----BEGIN [A-Z ]*PRIVATE KEY-----[\s\S]*?-----END [A-Z ]*PRIVATE KEY-----/g, '[REDACTED]');
   return detail.slice(0, MAX_DETAIL_CHARS) || 'hook runtime unavailable';
 };
 
@@ -110,6 +114,14 @@ export const adaptOutput = (event, stdout, stderr, exitCode) => {
     return { decision: 'block', reason };
   }
   if (exitCode !== 0) {
+    if (output) {
+      try {
+        const parsed = JSON.parse(output);
+        if (parsed && !Array.isArray(parsed) && (parsed.decision || parsed.hookSpecificOutput)) return parsed;
+      } catch {
+        // A malformed payload must not mask the abnormal exit below.
+      }
+    }
     const error = new Error(stderr.trim() || `hook exited ${exitCode}`);
     error.code = 'HOOK_EXIT';
     error.exitCode = exitCode;

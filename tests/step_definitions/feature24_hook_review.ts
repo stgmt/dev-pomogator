@@ -226,6 +226,17 @@ Then(/^the same service process dispatches the repaired hook successfully$/, asy
   await new Promise<void>((resolve) => this.hookServer!.close(() => resolve()));
 });
 
+Given(/^an isolated HTTP hook service with a hook that emits a block and exits abnormally$/, async function (this: HookReviewWorld) {
+  await startHookFixture(this, `process.stdout.write(JSON.stringify({decision:"block",reason:"unfinished work"})); process.exit(7);`);
+});
+
+Then(/^the completed block is returned instead of an HTTP 503$/, async function (this: HookReviewWorld) {
+  assert.equal(this.hookResponse!.status, 200, 'a valid block decision must survive a later non-zero exit');
+  assert.deepEqual(this.hookResponseBody, { decision: 'block', reason: 'unfinished work' });
+  assert.equal(fs.existsSync(diagnosticsFile(path.join(this.hookRoot!, 'state'))), false, 'a delivered block must not be recorded as a runtime failure');
+  await new Promise<void>((resolve) => this.hookServer!.close(() => resolve()));
+});
+
 Given(/^an isolated stale owned hook daemon identity$/, function (this: HookReviewWorld) {
   this.expectedIdentity = {
     rootFingerprint: 'current-root',
