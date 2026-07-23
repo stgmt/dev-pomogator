@@ -35,6 +35,9 @@ import {
   type Environment,
 } from './lock-manager.ts';
 import type { SpecGraph } from '../spec-graph/types.ts';
+import { openDatabaseWithRecovery, type SqliteHandle } from './sqlite/wrapper.ts';
+import { loadGraph, persistGraph } from './sqlite/persist.ts';
+import { createHash } from 'node:crypto';
 
 /** Resolved watch backend after the optional touch-test probe. */
 export type WatchMode = 'native' | 'polling';
@@ -149,8 +152,9 @@ export interface LifecycleOptions {
 }
 
 export interface LifecycleHandle {
-  /** The cold-built, in-place-mutated SpecGraph. Stable reference. */
+  /** The cold-built or SQLite-restored, in-place-mutated SpecGraph. Stable reference. */
   graph: SpecGraph;
+  cache?: { handle: SqliteHandle; warm: boolean; recovered: boolean };
   /** The chokidar watcher — closed in {@link shutdown}. */
   watcher: FSWatcher;
   /** The lock owned by this process — released in {@link shutdown}. */
@@ -197,8 +201,44 @@ export async function startLifecycle(opts: LifecycleOptions): Promise<LifecycleH
     lock = acquireLock({ repoRoot: opts.repoRoot, env });
   }
 
-  // 2) Cold-build graph.
-  const graph = buildGraph({
+  // 2) Optional SQLite warm-start. Source remains authoritative: the watcher
+  // patches the restored graph and every patch is persisted atomically.
+  const sqliteEnabled = (() => {
+    try {
+      const config = JSON.parse(fs.readFileSync(path.join(opts.repoRoot, '.spec-config.json'), 'utf8')) as { storage?: { sqlite_enabled?: boolean } };
+      return config.storage?.sqlite_enabled === true;
+    } catch { return false; }
+  })();
+  const sourceFingerprint = (() => {
+    const hash = createHash('sha256');
+    const roots = [
+      ...(opts.mdRoots ?? ['.specs']),
+      ...(opts.featureRoots ?? ['.specs', 'tests/features']),
+      opts.ndjsonPath ?? '.dev-pomogator/.last-test-run.ndjson',
+      opts.scenarioOverlayPath ?? '.dev-pomogator/.scenario-results.ndjson',
+    ];
+    const files: string[] = [];
+    const visit = (target: string): void => {
+      if (!fs.existsSync(target)) return;
+      const stat = fs.statSync(target);
+      if (stat.isFile()) { files.push(target); return; }
+      for (const entry of fs.readdirSync(target, { withFileTypes: true })) {
+        if (entry.name === '.git' || entry.name === 'archive') continue;
+        visit(path.join(target, entry.name));
+      }
+    };
+    for (const root of roots) visit(path.resolve(opts.repoRoot, root));
+    for (const file of [...new Set(files)].sort()) {
+      const stat = fs.statSync(file);
+      hash.update(path.relative(opts.repoRoot, file).replace(/\\/g, '/'));
+      hash.update(String(stat.size));
+      hash.update(String(stat.mtimeMs));
+    }
+    return hash.digest('hex');
+  })();
+  const recovery = sqliteEnabled ? await openDatabaseWithRecovery({ repoRoot: opts.repoRoot }) : null;
+  const restored = recovery ? loadGraph(recovery.handle, sourceFingerprint) : null;
+  const graph = restored ?? buildGraph({
     repoRoot: opts.repoRoot,
     mdRoots: opts.mdRoots,
     featureRoots: opts.featureRoots,
@@ -206,6 +246,7 @@ export async function startLifecycle(opts: LifecycleOptions): Promise<LifecycleH
     scenarioOverlayPath: opts.scenarioOverlayPath,
     skipNdjson: opts.skipNdjson,
   });
+  if (recovery && !restored) persistGraph(recovery.handle, graph, sourceFingerprint);
 
   // P21-6: refresh the honest task-census cache from the LIVE graph. The
   // PostToolUse spec-conformance-push producer only fires on raw Write|Edit —
@@ -282,6 +323,7 @@ export async function startLifecycle(opts: LifecycleOptions): Promise<LifecycleH
     // census cache, then the caller's own onPatch runs.
     onPatch: (e) => {
       refreshCensus();
+      if (recovery) persistGraph(recovery.handle, graph, sourceFingerprint);
       opts.onPatch?.(e);
     },
     onError:
@@ -299,8 +341,20 @@ export async function startLifecycle(opts: LifecycleOptions): Promise<LifecycleH
     } catch {
       // Best-effort — chokidar throws when closed twice.
     }
+    recovery?.handle.backend.close();
     lock.release();
   };
 
-  return { graph, watcher, lock, watchMode, pollIntervalMs, readOnly, lockHolder, refreshGraph: refreshResultsAndCensus, shutdown };
+  return {
+    graph,
+    ...(recovery ? { cache: { handle: recovery.handle, warm: restored !== null, recovered: recovery.recovered } } : {}),
+    watcher,
+    lock,
+    watchMode,
+    pollIntervalMs,
+    readOnly,
+    lockHolder,
+    refreshGraph: refreshResultsAndCensus,
+    shutdown,
+  };
 }

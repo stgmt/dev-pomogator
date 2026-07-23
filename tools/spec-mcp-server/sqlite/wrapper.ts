@@ -32,7 +32,7 @@ export interface SqliteBackend {
   close(): void;
 }
 
-const SCHEMA_VERSION = 1;
+const SCHEMA_VERSION = 2;
 const SCHEMA_SQL = `
 PRAGMA journal_mode=WAL;
 CREATE TABLE IF NOT EXISTS meta (
@@ -50,10 +50,12 @@ CREATE TABLE IF NOT EXISTS edges (
   src TEXT NOT NULL,
   dst TEXT NOT NULL,
   type TEXT NOT NULL,
+  json TEXT,
   PRIMARY KEY (src, dst, type)
 );
 CREATE TABLE IF NOT EXISTS definitions (
   alias TEXT PRIMARY KEY,
+  canonical_id TEXT NOT NULL,
   file TEXT NOT NULL,
   line INTEGER NOT NULL
 );
@@ -140,11 +142,15 @@ export async function openDatabase(opts: OpenOptions): Promise<SqliteHandle> {
   // open handle).
   try {
     concrete.exec(SCHEMA_SQL);
-    // Stamp the schema version on first open.
-    const setMeta = (concrete.prepare(
-      'INSERT INTO meta(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value',
-    ) as { run: (...args: unknown[]) => unknown });
-    setMeta.run('schema_version', String(SCHEMA_VERSION));
+    const readMeta = concrete.prepare('SELECT value FROM meta WHERE key=?') as { get: (...args: unknown[]) => { value: string } | undefined };
+    const recorded = readMeta.get('schema_version');
+    if (recorded && Number.parseInt(recorded.value, 10) !== SCHEMA_VERSION) {
+      throw new Error(`SQLITE_SCHEMA_MISMATCH: expected ${SCHEMA_VERSION}, found ${recorded.value}`);
+    }
+    if (!recorded) {
+      const setMeta = concrete.prepare('INSERT INTO meta(key,value) VALUES(?,?)') as { run: (...args: unknown[]) => unknown };
+      setMeta.run('schema_version', String(SCHEMA_VERSION));
+    }
   } catch (e) {
     try {
       concrete.close();
@@ -210,10 +216,11 @@ function logSqliteWarning(repoRoot: string, message: string, now: Date): void {
 
 export interface RecoveryResult {
   handle: SqliteHandle;
-  /** True when a corrupt DB was detected, quarantined, and reopened fresh. */
+  /** True when a corrupt or schema-incompatible DB was quarantined and reopened fresh. */
   recovered: boolean;
-  /** Path the corrupt file was moved to, when `recovered`. */
+  /** Path the corrupt or incompatible file was moved to, when `recovered`. */
   quarantinedTo?: string;
+  reason?: 'corrupt' | 'schema_mismatch';
 }
 
 /**
@@ -234,12 +241,14 @@ export async function openDatabaseWithRecovery(
 
   let handle: SqliteHandle | null = null;
   let corrupt = false;
+  let reason: RecoveryResult['reason'] = 'corrupt';
   try {
     handle = await openDatabase(opts);
     // Stub backend (no native binding) can't be corrupt — pass it through.
     if (handle.backend.available && integrityCheck(handle) !== 'ok') corrupt = true;
-  } catch {
-    corrupt = true; // open/exec threw → not-a-database (openDatabase already closed it)
+  } catch (error) {
+    corrupt = true; // open/exec threw → not-a-database or schema mismatch
+    if (error instanceof Error && error.message.startsWith('SQLITE_SCHEMA_MISMATCH:')) reason = 'schema_mismatch';
   }
 
   if (!corrupt) {
@@ -254,12 +263,12 @@ export async function openDatabaseWithRecovery(
   const quarantinedTo = quarantineCorrupt(dbPath, now) ?? undefined;
   logSqliteWarning(
     opts.repoRoot,
-    `corrupt SQLite index detected at startup — quarantined to ${quarantinedTo ?? '(missing)'}; ` +
-      `falling back to in-memory rebuild from source`,
+    `${reason === 'schema_mismatch' ? 'schema-incompatible' : 'corrupt'} SQLite index detected at startup — ` +
+      `quarantined to ${quarantinedTo ?? '(missing)'}; falling back to rebuild from source`,
     now,
   );
   const fresh = await openDatabase(opts); // corrupt file is aside → fresh empty DB
-  return { handle: fresh, recovered: true, quarantinedTo };
+  return { handle: fresh, recovered: true, quarantinedTo, reason };
 }
 
 export { SCHEMA_VERSION };
