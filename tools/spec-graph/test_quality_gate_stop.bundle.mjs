@@ -15249,6 +15249,17 @@ function checkConformance(graph, opts = {}) {
       if (!entry) continue;
       if (entry.scenarios.length === 0) {
         findings.push({
+          code: "UNVERIFIED_COMPLETION",
+          severity: "error",
+          location: { file: task.file, line: task.line },
+          message: `Task ${task.id} is marked DONE but has ZERO linked scenarios \u2014 no test backs the claim.`,
+          nodeId: task.id,
+          relatedId: "NO_SCENARIO",
+          suggestions: [
+            { action: "write_test_or_downgrade", reason: "Add a linked BDD scenario or set Status back to IN_PROGRESS.", confidence: "high" }
+          ]
+        });
+        findings.push({
           code: "TASK_UNTESTED",
           severity: "warning",
           location: { file: task.file, line: task.line },
@@ -15401,7 +15412,7 @@ function readVerdicts(repoRoot) {
     return {};
   }
 }
-var BLOCKING_CODES = /* @__PURE__ */ new Set(["TASK_TEST_QUALITY", "TASK_UNTESTED"]);
+var BLOCKING_CODES = /* @__PURE__ */ new Set(["UNVERIFIED_COMPLETION", "TASK_TEST_QUALITY", "TASK_UNTESTED"]);
 function escapeReason(text) {
   const m = text.match(/\[skip-test-quality:\s*([^\]]+)\]/i);
   return m ? m[1].trim() : null;

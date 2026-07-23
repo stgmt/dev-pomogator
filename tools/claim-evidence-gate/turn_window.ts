@@ -316,7 +316,7 @@ export const AWAITS_RESULT_RE =
 const HOOK_INJECTION_RE =
   /^\s*(📋|👉|…ещё|\[specs-validator\]|⚠️|PHASE GATE WARNING|Stop hook feedback|Stop hook blocking error|UserPromptSubmit hook|<\/?task-notification|<(?:task-id|tool-use-id|output-file|status|summary)|<\/?command-(?:name|message|args)|<\/?local-command-(?:stdout|caveat)|\[SYSTEM NOTIFICATION|This is an automated|Do NOT interpret|[A-Za-z][\w.-]*:\s*\d+\s*(?:open|⏸))/u;
 const ACTIONABLE_STOP_FEEDBACK_RE =
-  /(?:Stop hook feedback|Stop hook blocking error)[\s\S]{0,1200}(?:TASK_UNTESTED|done without a strong test|Strengthen the test|blocking error|blocked|не закрыто|Нужно:|run\s+\S|fix\s+\S|почини|исправь|доделай)/i;
+  /(?:Stop hook feedback|Stop hook blocking error)[\s\S]{0,1200}(?:UNVERIFIED_COMPLETION|TASK_UNTESTED|done without a strong test|Strengthen the test|blocking error|blocked|не закрыто|Нужно:|run\s+\S|fix\s+\S|почини|исправь|доделай)/i;
 // Harness interruption sentinels are user-role transcript rows, but they are not the user's task.
 // If they become the "last prompt", gate-dev work looks unrelated and the judge overfires.
 const INTERRUPTED_PROMPT_RE = /^\s*\[Request interrupted by user(?: for tool use)?\]\s*$/i;

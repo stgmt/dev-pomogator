@@ -36,7 +36,8 @@
 import { z } from 'zod';
 import { checkConformance, type Finding } from '../spec-graph/conformance.ts';
 import { gapsFromFindings, summariseGaps } from '../spec-graph/traceability.ts';
-import { buildReadinessInventory, evaluateReadiness } from '../spec-graph/readiness-inventory.ts';
+import { buildReadinessInventory } from '../spec-graph/readiness-inventory.ts';
+import { computeSpecVerdict } from '../spec-graph/verdict.ts';
 import fs from 'node:fs';
 import path from 'node:path';
 import { logSpecAccess } from './spec-access-log.ts';
@@ -1444,34 +1445,36 @@ export function buildToolRegistry(
       ) lifecycle = 'PARTIAL';
       else lifecycle = 'GREEN';
 
-      // FR-38c: the FR-37b gap counts for this cell + an agent hint.
-      const gaps = summariseGaps(gapsFromFindings(checkConformance(graph), { spec: slug }));
+      // FR-38c: the FR-37b gap counts for this cell + the shared canonical verdict.
+      const specFindings = checkConformance(graph).filter((finding) => inSpec(finding.location.file));
+      const gaps = summariseGaps(gapsFromFindings(specFindings, { spec: slug }));
       const inventory = buildReadinessInventory(graph, { spec: slug });
-      const readiness = evaluateReadiness({
+      const canonicalVerdict = computeSpecVerdict({
         inventory,
         lanes: {
+          STRUCTURE: {
+            status: specFindings.some((finding) => finding.severity === 'error') ? 'RED' : 'GREEN',
+            debt: specFindings.filter((finding) => finding.severity === 'error').map((finding) => `${finding.code}:${finding.nodeId ?? finding.location.file}`),
+          },
           TRACEABILITY: {
             status: Object.values(gaps).some((count) => count > 0) ? 'RED' : 'GREEN',
-            blocking: Object.values(gaps).some((count) => count > 0),
             debt: Object.entries(gaps).filter(([, count]) => count > 0).map(([code, count]) => `${code}:${count}`),
           },
           TASK_TRUTH: {
             status: taskTruthDebt.length > 0 ? 'RED' : 'GREEN',
-            blocking: taskTruthDebt.length > 0,
             debt: taskTruthDebt,
           },
           BDD_SYNC: {
             status: bddSync.debt.length > 0 ? 'RED' : 'GREEN',
-            blocking: bddSync.debt.length > 0,
             debt: bddSync.debt,
           },
           FILTERED_PROOF: {
             status: filteredProof.latest ? 'GREEN' : 'NONE',
-            blocking: false,
             debt: [],
           },
         },
-      });
+      }, specFindings);
+      const readiness = canonicalVerdict.readiness;
       const readinessLanes = readiness.lanes;
       const hints: Record<typeof lifecycle, string> = {
         SPEC_ONLY: 'Docs only — no scenarios written yet. Next: author the .feature (FR-38a).',
@@ -1507,6 +1510,8 @@ export function buildToolRegistry(
         // Stop-gate open-work count — its open tasks are parked by intent, not counted as work due now.
         spec_status: readSpecStatus(repoRoot, slug),
         lifecycle,
+        verdict: canonicalVerdict.verdict,
+        blocking: canonicalVerdict.blocking,
         counts,
         // FR-63 (foundation): the SAME graph-derived deduplicated inventory
         // precheck + spec-verdict report (AC-63.1 — one graph, one inventory),

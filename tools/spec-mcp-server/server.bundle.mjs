@@ -48465,6 +48465,17 @@ function checkConformance(graph, opts = {}) {
       if (!entry) continue;
       if (entry.scenarios.length === 0) {
         findings.push({
+          code: "UNVERIFIED_COMPLETION",
+          severity: "error",
+          location: { file: task.file, line: task.line },
+          message: `Task ${task.id} is marked DONE but has ZERO linked scenarios \u2014 no test backs the claim.`,
+          nodeId: task.id,
+          relatedId: "NO_SCENARIO",
+          suggestions: [
+            { action: "write_test_or_downgrade", reason: "Add a linked BDD scenario or set Status back to IN_PROGRESS.", confidence: "high" }
+          ]
+        });
+        findings.push({
           code: "TASK_UNTESTED",
           severity: "warning",
           location: { file: task.file, line: task.line },
@@ -48916,6 +48927,47 @@ function evaluateReadiness(candidate) {
     lanes,
     next_action: nextAction
   };
+}
+
+// tools/spec-graph/verdict.ts
+var COMPLETION_FINDING_CODES = /* @__PURE__ */ new Set([
+  "UNVERIFIED_COMPLETION",
+  "TASK_STATUS_UNVERIFIED",
+  "TASK_UNTESTED",
+  "TASK_TEST_QUALITY"
+]);
+function unverifiedCompletions(findings) {
+  const byNode = /* @__PURE__ */ new Map();
+  const reasonFor = (finding) => {
+    if (finding.relatedId === "NO_SCENARIO" || finding.code === "TASK_UNTESTED") return "NO_SCENARIO";
+    if (finding.relatedId === "FILTERED_ONLY") return "FILTERED_ONLY";
+    if (finding.relatedId === "EVIDENCE_STALE") return "EVIDENCE_STALE";
+    if (finding.relatedId === "BODY_WEAK" || finding.code === "TASK_TEST_QUALITY") return "BODY_WEAK";
+    return "NON_PASSING_EVIDENCE";
+  };
+  for (const finding of findings) {
+    if (!COMPLETION_FINDING_CODES.has(finding.code)) continue;
+    const node = finding.nodeId ?? `${finding.location.file}:${finding.location.line}`;
+    const entry = byNode.get(node) ?? { reasons: [], sourceCodes: /* @__PURE__ */ new Set() };
+    entry.reasons.push(reasonFor(finding));
+    entry.sourceCodes.add(finding.code);
+    byNode.set(node, entry);
+  }
+  return [...byNode.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([node, entry]) => ({
+    code: "UNVERIFIED_COMPLETION",
+    severity: "error",
+    node,
+    reasons: [...new Set(entry.reasons)],
+    source_codes: [...entry.sourceCodes].sort()
+  }));
+}
+function computeSpecVerdict(candidate, findings = []) {
+  const readiness = evaluateReadiness(candidate);
+  const completionDebt = unverifiedCompletions(findings);
+  const errors = findings.filter((finding) => finding.severity === "error" && finding.code !== "UNVERIFIED_COMPLETION");
+  const blocking = [...errors, ...completionDebt];
+  const verdict = errors.length > 0 ? "RED" : readiness.overall === "READY" && completionDebt.length === 0 ? "GREEN" : "NOT_READY";
+  return { schema: "spec-verdict@1", verdict, readiness, blocking };
 }
 
 // tools/spec-mcp-server/tools.ts
@@ -51793,7 +51845,6 @@ ${fr.body ?? ""}`,
     ...confErrors.map((f) => `[CONFORMANCE:${f.code}] ${f.location.file}:${f.location.line} \u2014 ${f.message}`),
     ...drifts.map((d) => `[SEMANTIC_DRIFT:${d.severity}] ${d.frId} \u2194 ${d.scenarioId} \u2014 ${d.explanation}`)
   ];
-  const verdict = gapList.length > 0 ? "RED" : "GREEN";
   const notes = [];
   if (semanticNote) notes.push(semanticNote);
   const notRun = canonicalBuckets.not_run ?? 0;
@@ -51871,26 +51922,28 @@ ${fr.body ?? ""}`,
       debt: []
     }
   };
-  const blockingReadinessLanes = Object.entries(lanes).filter(([, lane]) => lane.blocking);
+  const canonical = computeSpecVerdict({
+    inventory,
+    lanes: Object.fromEntries(Object.entries(lanes).map(([name, lane]) => [name, {
+      status: lane.status,
+      debt: lane.debt
+    }]))
+  }, specFindings);
+  const canonicalLanes = Object.fromEntries(Object.entries(canonical.readiness.lanes).map(([name, lane]) => [name, {
+    status: lane.status,
+    blocking: lane.blocking,
+    summary: lanes[name]?.summary ?? (lane.debt.join(", ") || `${name} ${lane.status}`),
+    debt: lane.debt
+  }]));
   const readiness = {
-    lanes,
-    overall: blockingReadinessLanes.length > 0 ? "NOT_READY" : "READY",
-    nextAction: (() => {
-      if (lanes.STRUCTURE.blocking) return "Fix structural/audit/conformance errors, then rerun spec-verdict.";
-      if (lanes.TRACEABILITY.blocking) return "Add the missing FR/AC/task/scenario traceability links, then rerun spec-verdict.";
-      if (executionHardFailures.length > 0) return "Inspect the failing/undefined/ambiguous scenarios with get_test_result, fix them, then rerun the full Docker BDD suite.";
-      if (notRun > 0 && filteredProof.latest) return `Run the full Docker BDD suite so canonical coverage replaces filtered proof ${filteredProof.latest.runId}, or attach ${filteredProof.latest.artifact ?? "the filtered artifact"} as review evidence.`;
-      if (effectiveExecution.blocking) return effectiveExecution.summary;
-      if (lanes.BDD_SYNC.blocking) return "Fix source/executable BDD sync drift or mark intentional EXEC_ONLY/OUT_OF_SCOPE/PENDING scenarios, then rerun spec-verdict.";
-      if (notRun > 0) return "Run the full Docker BDD suite so canonical coverage contains every scenario result.";
-      if (lanes.TASK_TRUTH.blocking) return "Reopen/downgrade DONE-but-unverified tasks or provide canonical passed scenario evidence.";
-      if (lanes.SEMANTIC.blocking) return "Run semantic checking with a working claude binary, or explicitly rerun with --no-semantic if semantic review is out of scope.";
-      return "No readiness blockers detected by spec-verdict.";
-    })()
+    lanes: canonicalLanes,
+    overall: canonical.readiness.overall,
+    nextAction: canonical.readiness.next_action
   };
   return {
     specPath,
-    verdict,
+    verdict: canonical.verdict,
+    blocking: canonical.blocking,
     prefilter: {
       structuralErrors,
       warnings,
@@ -51994,11 +52047,11 @@ function renderVerdict(r) {
   for (const n of r.notes) lines.push(`  - ${n}`);
   const everyLaneGreen = Object.values(r.readiness.lanes).every((lane) => lane.status === "GREEN");
   if (r.verdict === "RED") {
-    lines.push(`VERDICT: RED \u2014 ${r.gapList.length} blocking graph item(s) in the gap list above`);
-  } else if (r.readiness.overall === "READY" && everyLaneGreen) {
+    lines.push(`VERDICT: RED \u2014 ${r.blocking.length} blocking finding(s)`);
+  } else if (r.verdict === "GREEN" && everyLaneGreen) {
     lines.push("VERDICT: GREEN");
   } else {
-    lines.push("VERDICT: GRAPH_GREEN (structure/traceability gates passed; readiness debt remains)");
+    lines.push(`VERDICT: NOT_READY \u2014 ${r.blocking.length} blocking finding(s)`);
   }
   lines.push(`OVERALL: ${r.readiness.overall}`);
   lines.push(`NEXT: ${r.readiness.nextAction}`);
@@ -52024,7 +52077,7 @@ function parseArgs(argv) {
   return { specPath, json: json2, semantic, maxPairs };
 }
 function verdictExitCode(result) {
-  return result.verdict === "RED" || result.readiness.overall === "NOT_READY" ? 1 : 0;
+  return result.verdict === "GREEN" ? 0 : 1;
 }
 var isDirectRun2 = process.argv[1]?.endsWith("spec-verdict.ts") || process.argv[1]?.endsWith("spec-verdict.js");
 if (isDirectRun2) {
@@ -52981,33 +53034,35 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
       else if (summary.failed > 0 || summary.ambiguous > 0) lifecycle = "RED";
       else if (summary.pending + summary.undefined + summary.skipped + summary.stale > 0 || canonicalStatusCoverage.totals.not_run > 0) lifecycle = "PARTIAL";
       else lifecycle = "GREEN";
-      const gaps = summariseGaps(gapsFromFindings(checkConformance(graph), { spec: slug }));
+      const specFindings = checkConformance(graph).filter((finding) => inSpec(finding.location.file));
+      const gaps = summariseGaps(gapsFromFindings(specFindings, { spec: slug }));
       const inventory = buildReadinessInventory(graph, { spec: slug });
-      const readiness = evaluateReadiness({
+      const canonicalVerdict = computeSpecVerdict({
         inventory,
         lanes: {
+          STRUCTURE: {
+            status: specFindings.some((finding) => finding.severity === "error") ? "RED" : "GREEN",
+            debt: specFindings.filter((finding) => finding.severity === "error").map((finding) => `${finding.code}:${finding.nodeId ?? finding.location.file}`)
+          },
           TRACEABILITY: {
             status: Object.values(gaps).some((count) => count > 0) ? "RED" : "GREEN",
-            blocking: Object.values(gaps).some((count) => count > 0),
             debt: Object.entries(gaps).filter(([, count]) => count > 0).map(([code, count]) => `${code}:${count}`)
           },
           TASK_TRUTH: {
             status: taskTruthDebt.length > 0 ? "RED" : "GREEN",
-            blocking: taskTruthDebt.length > 0,
             debt: taskTruthDebt
           },
           BDD_SYNC: {
             status: bddSync.debt.length > 0 ? "RED" : "GREEN",
-            blocking: bddSync.debt.length > 0,
             debt: bddSync.debt
           },
           FILTERED_PROOF: {
             status: filteredProof.latest ? "GREEN" : "NONE",
-            blocking: false,
             debt: []
           }
         }
-      });
+      }, specFindings);
+      const readiness = canonicalVerdict.readiness;
       const readinessLanes = readiness.lanes;
       const hints = {
         SPEC_ONLY: "Docs only \u2014 no scenarios written yet. Next: author the .feature (FR-38a).",
@@ -53032,6 +53087,8 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
         // Stop-gate open-work count — its open tasks are parked by intent, not counted as work due now.
         spec_status: readSpecStatus(repoRoot, slug),
         lifecycle,
+        verdict: canonicalVerdict.verdict,
+        blocking: canonicalVerdict.blocking,
         counts,
         // FR-63 (foundation): the SAME graph-derived deduplicated inventory
         // precheck + spec-verdict report (AC-63.1 — one graph, one inventory),

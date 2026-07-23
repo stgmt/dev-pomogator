@@ -40,6 +40,7 @@ export type FindingCode =
   | 'DUPLICATE_DEFINITION'
   | 'TASK_STATUS_UNVERIFIED'
   | 'TASK_UNTESTED'
+  | 'UNVERIFIED_COMPLETION'
   | 'TASK_NO_OWN_SCENARIO'
   | 'TASK_TEST_QUALITY'
   | 'TASK_NO_REQUIREMENT'
@@ -385,6 +386,17 @@ export function checkConformance(
       // traceability findings. Emit the dedicated FR-35c finding before the
       // generic status branch, so the Stop gate receives its blocking signal.
       if (entry.scenarios.length === 0) {
+        findings.push({
+          code: 'UNVERIFIED_COMPLETION',
+          severity: 'error',
+          location: { file: task.file, line: task.line },
+          message: `Task ${task.id} is marked DONE but has ZERO linked scenarios — no test backs the claim.`,
+          nodeId: task.id,
+          relatedId: 'NO_SCENARIO',
+          suggestions: [
+            { action: 'write_test_or_downgrade', reason: 'Add a linked BDD scenario or set Status back to IN_PROGRESS.', confidence: 'high' },
+          ],
+        });
         findings.push({
           code: 'TASK_UNTESTED',
           severity: 'warning',
