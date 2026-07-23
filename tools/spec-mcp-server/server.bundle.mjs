@@ -44962,6 +44962,7 @@ import path10 from "node:path";
 
 // tools/spec-graph/builder.ts
 import fs9 from "node:fs";
+import { execFileSync } from "node:child_process";
 import path5 from "node:path";
 import { createHash } from "node:crypto";
 
@@ -46501,6 +46502,8 @@ function parseScenarioOverlay(source) {
       line: typeof raw.line === "number" ? raw.line : void 0,
       runId: typeof raw.run_id === "string" ? raw.run_id : void 0,
       source: typeof raw.source === "string" ? raw.source : void 0,
+      gitSha: typeof raw.git_sha === "string" ? raw.git_sha : void 0,
+      failingStep: raw.failing_step && typeof raw.failing_step === "object" ? raw.failing_step : void 0,
       traceId: typeof raw.trace_id === "string" ? raw.trace_id : void 0,
       traceFile: normalizeUri(raw.trace_file),
       testCaseStartedId: typeof raw.test_case_started_id === "string" ? raw.test_case_started_id : void 0
@@ -46590,7 +46593,8 @@ function applyTraceRef(scenario, row) {
     traceFile: row.traceFile,
     testCaseStartedId: startedId(row),
     runId: row.runId,
-    source: row.source
+    source: row.source,
+    gitSha: row.gitSha
   };
 }
 function freshnessThresholdMs(repoRoot, scenario, row) {
@@ -46631,14 +46635,16 @@ function applyScenarioOverlayResults(scenarios, patch, opts) {
       scenario.lastRunAt = row.time;
       applyTraceRef(scenario, row);
       scenario.durationMs = void 0;
-      scenario.failingStep = null;
+      scenario.failingStep = row.failingStep ?? null;
       applied++;
     } else if (overlayEffective && row.traceId) {
       applyTraceRef(scenario, row);
     }
     if (overlayEffective && row.result === "PASSED") {
       const threshold = freshnessThresholdMs(opts.repoRoot, scenario, row);
-      scenario.resultStale = threshold !== void 0 && row.timeMs < threshold;
+      const sourceStale = threshold !== void 0 && row.timeMs < threshold;
+      const commitStale = Boolean(opts.currentGitSha) && row.gitSha !== opts.currentGitSha;
+      scenario.resultStale = sourceStale || commitStale || !row.gitSha;
     } else if (overlayEffective) {
       scenario.resultStale = false;
     }
@@ -47239,6 +47245,12 @@ function walkDir(absDir, suffixes) {
 }
 function buildGraph(opts) {
   const { repoRoot } = opts;
+  let currentGitSha;
+  try {
+    currentGitSha = execFileSync("git", ["rev-parse", "HEAD"], { cwd: repoRoot, encoding: "utf8", timeout: 5e3 }).trim() || void 0;
+  } catch {
+    currentGitSha = process.env.DEV_POMOGATOR_GIT_SHA || void 0;
+  }
   const mdRoots = (opts.mdRoots ?? [".specs"]).map((r) => path5.resolve(repoRoot, r));
   const featureRoots = (opts.featureRoots ?? [".specs", "tests/features"]).map(
     (r) => path5.resolve(repoRoot, r)
@@ -47432,7 +47444,7 @@ function buildGraph(opts) {
       if (n.type === "Scenario") scenarioIter.push(n);
     }
     const applied = applyTestResults(scenarioIter, patch);
-    const overlayApplied = applyScenarioOverlayResults(scenarioIter, overlay, { repoRoot });
+    const overlayApplied = applyScenarioOverlayResults(scenarioIter, overlay, { repoRoot, currentGitSha });
     if (applied > 0 || overlayApplied > 0) {
       for (const s of scenarioIter) {
         if (s.lastResult) {
@@ -51275,7 +51287,7 @@ function readVerdicts(repoRoot) {
 }
 
 // tools/specs-generator/spec-verdict.ts
-import { execFileSync, spawnSync as spawnSync2 } from "child_process";
+import { execFileSync as execFileSync2, spawnSync as spawnSync2 } from "child_process";
 import fs26 from "fs";
 import path22 from "path";
 import { fileURLToPath as fileURLToPath3 } from "url";
@@ -51618,7 +51630,7 @@ function runCoreJson(command, specPath, opts) {
   const args = [corePath, command, "-Path", absSpecPath];
   let stdout;
   try {
-    stdout = execFileSync("node", args, {
+    stdout = execFileSync2("node", args, {
       cwd: opts.cwd ?? process.cwd(),
       encoding: "utf-8",
       maxBuffer: 64 * 1024 * 1024,
@@ -52156,6 +52168,7 @@ function scenarioTracePayload(repoRoot, s) {
     stale: s.resultStale === true,
     run_id: target.runId ?? null,
     source: target.source ?? null,
+    git_sha: target.gitSha ?? null,
     trace_id: target.traceId ?? null,
     trace_file: target.traceFile ?? null,
     test_case_started_id: target.testCaseStartedId ?? null,
@@ -52811,7 +52824,7 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
           arr.push(e.to);
           frToScenarios.set(e.from, arr);
         }
-        const frIds = [...frToScenarios.entries()].filter(([, ids]) => ids.length > 0 && !ids.some((id) => scenarioBucket.get(id) === "passed")).map(([fr]) => fr).sort();
+        const frIds = [...frToScenarios.entries()].filter(([, ids]) => ids.length > 0 && !ids.every((id) => scenarioBucket.get(id) === "passed")).map(([fr]) => fr).sort();
         return {
           SCENARIO_NOT_RUN: buckets.not_run.length,
           scenario_ids: buckets.not_run,

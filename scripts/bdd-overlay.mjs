@@ -184,6 +184,8 @@ export function parseScenarioResults(source, opts = {}) {
       time: acc.finishedAt ?? acc.startedAt ?? new Date().toISOString(),
       run_id: runId,
       source: sourceName,
+      git_sha: opts.gitSha ? String(opts.gitSha) : null,
+      failing_step: acc.failingStep ?? null,
       trace_id: traceId,
       trace_file: traceFile,
       test_case_started_id: testCaseStartedId || undefined,
@@ -198,6 +200,8 @@ export function parseScenarioResults(source, opts = {}) {
 
 export function appendJsonLinesAtomic(filePath, rows) {
   if (!rows.length) return 0;
+  const lockPath = `${filePath}.compact.lock`;
+  if (fs.existsSync(lockPath)) throw new Error(`Overlay compaction in progress: ${lockPath}`);
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
   const fd = fs.openSync(filePath, 'a');
   try {
@@ -217,6 +221,38 @@ export function writeScenarioOverlayFromNdjson(ndjsonPath, opts = {}) {
   return appendJsonLinesAtomic(opts.overlayPath ?? DEFAULT_OVERLAY, rows);
 }
 
+export function compactScenarioOverlay(filePath = DEFAULT_OVERLAY) {
+  if (!fs.existsSync(filePath)) return { before: 0, after: 0 };
+  const lockPath = `${filePath}.compact.lock`;
+  let lock;
+  try {
+    lock = fs.openSync(lockPath, 'wx');
+  } catch (error) {
+    if (error?.code === 'EEXIST') throw new Error(`Overlay compaction already running: ${lockPath}`);
+    throw error;
+  }
+  try {
+    const latest = new Map();
+    let before = 0;
+    for (const line of fs.readFileSync(filePath, 'utf8').split(/\r?\n/)) {
+      if (!line.trim()) continue;
+      const row = JSON.parse(line);
+      if (!row.scenario_id || !row.time) continue;
+      before++;
+      const previous = latest.get(row.scenario_id);
+      if (!previous || Date.parse(row.time) >= Date.parse(previous.time)) latest.set(row.scenario_id, row);
+    }
+    const tmp = `${filePath}.${process.pid}.tmp`;
+    fs.mkdirSync(path.dirname(filePath), { recursive: true });
+    fs.writeFileSync(tmp, [...latest.values()].map((row) => JSON.stringify(row)).join('\n') + (latest.size ? '\n' : ''));
+    fs.renameSync(tmp, filePath);
+    return { before, after: latest.size };
+  } finally {
+    fs.closeSync(lock);
+    fs.unlinkSync(lockPath);
+  }
+}
+
 function parseCli(argv) {
   const opts = {};
   const positional = [];
@@ -226,6 +262,8 @@ function parseCli(argv) {
     else if (arg === '--run-id') opts.runId = argv[++i];
     else if (arg === '--source') opts.source = argv[++i];
     else if (arg === '--trace-file') opts.traceFile = argv[++i];
+    else if (arg === '--git-sha') opts.gitSha = argv[++i];
+    else if (arg === '--compact') opts.compact = true;
     else positional.push(arg);
   }
   return { ndjsonPath: positional[0], opts };
@@ -233,11 +271,16 @@ function parseCli(argv) {
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {
   const { ndjsonPath, opts } = parseCli(process.argv.slice(2));
-  if (!ndjsonPath) {
-    process.stderr.write('Usage: node scripts/bdd-overlay.mjs <cucumber.ndjson> [--overlay path] [--run-id id] [--source name] [--trace-file path]\n');
+  if (!ndjsonPath && !opts.compact) {
+    process.stderr.write('Usage: node scripts/bdd-overlay.mjs <cucumber.ndjson> [--overlay path] [--run-id id] [--source name] [--trace-file path] [--git-sha sha] | --compact [--overlay path]\n');
     process.exit(2);
   }
   try {
+    if (opts.compact) {
+      const result = compactScenarioOverlay(opts.overlayPath ?? DEFAULT_OVERLAY);
+      process.stdout.write(`[bdd-overlay] compacted ${result.before} row(s) to ${result.after}\n`);
+      process.exit(0);
+    }
     const count = writeScenarioOverlayFromNdjson(ndjsonPath, opts);
     process.stdout.write(`[bdd-overlay] appended ${count} scenario result(s)\n`);
   } catch (err) {

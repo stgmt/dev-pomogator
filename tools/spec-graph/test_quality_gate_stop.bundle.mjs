@@ -13609,6 +13609,11 @@ function parseGherkin(source, relativePath) {
     const node = {
       id: scenarioId,
       type: "Scenario",
+      // The raw Gherkin scenario name, kept verbatim (not slugified into the id)
+      // so a test result can be reconciled BY NAME when the executed feature and
+      // the spec's canonical feature live at different paths/lines — the case
+      // where the `${uri}:${line}` join alone silently drops every result.
+      title: scenario.name,
       file: relativePath,
       line,
       tags,
@@ -13793,6 +13798,7 @@ function parseNdjson(source) {
       continue;
     }
   }
+  const byName = /* @__PURE__ */ new Map();
   for (const [tcId, acc] of testCaseResult) {
     const pickleId = testCaseToPickle.get(tcId);
     if (!pickleId) continue;
@@ -13809,11 +13815,19 @@ function parseNdjson(source) {
     if (!prev || statusSeverity(fields.lastResult) > statusSeverity(prev.lastResult)) {
       byLocation.set(key, fields);
     }
+    if (info.name) {
+      if (!byName.has(info.name)) {
+        byName.set(info.name, fields);
+      } else {
+        const seen = byName.get(info.name);
+        if (seen && seen.lastResult !== fields.lastResult) byName.set(info.name, null);
+      }
+    }
   }
-  return { byLocation };
+  return { byLocation, byName };
 }
 function parseNdjsonFile(absPath) {
-  if (!fs4.existsSync(absPath)) return { byLocation: /* @__PURE__ */ new Map() };
+  if (!fs4.existsSync(absPath)) return { byLocation: /* @__PURE__ */ new Map(), byName: /* @__PURE__ */ new Map() };
   return parseNdjson(fs4.readFileSync(absPath, "utf-8"));
 }
 function applyTestResults(scenarios, patch) {
@@ -13827,6 +13841,10 @@ function applyTestResults(scenarios, patch) {
       const suffix = `/${s.file}:${s.line}`;
       const hit = keys.find((k) => k.endsWith(suffix));
       if (hit) fields = patch.byLocation.get(hit);
+    }
+    if (!fields && s.title) {
+      const named = patch.byName.get(s.title);
+      if (named) fields = named;
     }
     if (!fields) continue;
     s.lastResult = fields.lastResult;
@@ -13897,6 +13915,8 @@ function parseScenarioOverlay(source) {
       line: typeof raw.line === "number" ? raw.line : void 0,
       runId: typeof raw.run_id === "string" ? raw.run_id : void 0,
       source: typeof raw.source === "string" ? raw.source : void 0,
+      gitSha: typeof raw.git_sha === "string" ? raw.git_sha : void 0,
+      failingStep: raw.failing_step && typeof raw.failing_step === "object" ? raw.failing_step : void 0,
       traceId: typeof raw.trace_id === "string" ? raw.trace_id : void 0,
       traceFile: normalizeUri(raw.trace_file),
       testCaseStartedId: typeof raw.test_case_started_id === "string" ? raw.test_case_started_id : void 0
@@ -13985,7 +14005,8 @@ function applyTraceRef(scenario, row) {
     traceFile: row.traceFile,
     testCaseStartedId: startedId(row),
     runId: row.runId,
-    source: row.source
+    source: row.source,
+    gitSha: row.gitSha
   };
 }
 function freshnessThresholdMs(repoRoot, scenario, row) {
@@ -14026,14 +14047,16 @@ function applyScenarioOverlayResults(scenarios, patch, opts) {
       scenario.lastRunAt = row.time;
       applyTraceRef(scenario, row);
       scenario.durationMs = void 0;
-      scenario.failingStep = null;
+      scenario.failingStep = row.failingStep ?? null;
       applied++;
     } else if (overlayEffective && row.traceId) {
       applyTraceRef(scenario, row);
     }
     if (overlayEffective && row.result === "PASSED") {
       const threshold = freshnessThresholdMs(opts.repoRoot, scenario, row);
-      scenario.resultStale = threshold !== void 0 && row.timeMs < threshold;
+      const sourceStale = threshold !== void 0 && row.timeMs < threshold;
+      const commitStale = Boolean(opts.currentGitSha) && row.gitSha !== opts.currentGitSha;
+      scenario.resultStale = sourceStale || commitStale || !row.gitSha;
     } else if (overlayEffective) {
       scenario.resultStale = false;
     }
@@ -14646,6 +14669,7 @@ __export(builder_exports, {
   rebuildBacklinks: () => rebuildBacklinks
 });
 import fs10 from "node:fs";
+import { execFileSync } from "node:child_process";
 import path6 from "node:path";
 import { createHash } from "node:crypto";
 function walkDir(absDir, suffixes) {
@@ -14684,6 +14708,12 @@ function walkDir(absDir, suffixes) {
 }
 function buildGraph(opts) {
   const { repoRoot } = opts;
+  let currentGitSha;
+  try {
+    currentGitSha = execFileSync("git", ["rev-parse", "HEAD"], { cwd: repoRoot, encoding: "utf8", timeout: 5e3 }).trim() || void 0;
+  } catch {
+    currentGitSha = process.env.DEV_POMOGATOR_GIT_SHA || void 0;
+  }
   const mdRoots = (opts.mdRoots ?? [".specs"]).map((r) => path6.resolve(repoRoot, r));
   const featureRoots = (opts.featureRoots ?? [".specs", "tests/features"]).map(
     (r) => path6.resolve(repoRoot, r)
@@ -14877,7 +14907,7 @@ function buildGraph(opts) {
       if (n.type === "Scenario") scenarioIter.push(n);
     }
     const applied = applyTestResults(scenarioIter, patch);
-    const overlayApplied = applyScenarioOverlayResults(scenarioIter, overlay, { repoRoot });
+    const overlayApplied = applyScenarioOverlayResults(scenarioIter, overlay, { repoRoot, currentGitSha });
     if (applied > 0 || overlayApplied > 0) {
       for (const s of scenarioIter) {
         if (s.lastResult) {
@@ -15217,7 +15247,19 @@ function checkConformance(graph, opts = {}) {
       if (task.status !== "done") continue;
       const entry = cov.tasks[task.id];
       if (!entry) continue;
-      if (entry.verified_status === "IN_PROGRESS") {
+      if (entry.scenarios.length === 0) {
+        findings.push({
+          code: "TASK_UNTESTED",
+          severity: "warning",
+          location: { file: task.file, line: task.line },
+          message: `Task ${task.id} is marked DONE but has ZERO linked scenarios \u2014 no test backs the claim (Done-When references no SPECGEN id / @feature tag, and refs map to no scenario).`,
+          nodeId: task.id,
+          suggestions: [
+            { action: "write_test", reason: "Add a BDD scenario and reference its SPECGEN id (or @feature tag) in Done-When, so the DONE claim is backed by a real test.", confidence: "high" },
+            { action: "downgrade", reason: "Or set Status back to IN_PROGRESS until a test exists \u2014 a DONE task with no test is unverifiable.", confidence: "high" }
+          ]
+        });
+      } else if (entry.verified_status === "IN_PROGRESS") {
         const allGreen = entry.scenarios.length > 0 && entry.scenarios.every((id) => bucketById.get(id) === "passed");
         if (allGreen && (entry.test_quality === "WEAK" || entry.test_quality === "FAKE-POSITIVE-RISK")) {
           findings.push({
@@ -15244,18 +15286,6 @@ function checkConformance(graph, opts = {}) {
             ]
           });
         }
-      } else if (entry.verified_status === "unverified") {
-        findings.push({
-          code: "TASK_UNTESTED",
-          severity: "warning",
-          location: { file: task.file, line: task.line },
-          message: `Task ${task.id} is marked DONE but has ZERO linked scenarios \u2014 no test backs the claim (Done-When references no SPECGEN id / @feature tag, and refs map to no scenario).`,
-          nodeId: task.id,
-          suggestions: [
-            { action: "write_test", reason: "Add a BDD scenario and reference its SPECGEN id (or @feature tag) in Done-When, so the DONE claim is backed by a real test.", confidence: "high" },
-            { action: "downgrade", reason: "Or set Status back to IN_PROGRESS until a test exists \u2014 a DONE task with no test is unverifiable.", confidence: "high" }
-          ]
-        });
       }
     }
   }

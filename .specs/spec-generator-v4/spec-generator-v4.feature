@@ -3586,3 +3586,29 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     And both surfaces report EXECUTION RED and OVERALL NOT_READY
     And canonical coverage remains visible without overriding effective readiness
     And dotted acceptance criterion ids remain exact in the spec-status parser
+
+  @feature56 @FR-56
+  Scenario: SPECGEN004_575 overlay evidence is commit-bound and backward-compatible
+    Given legacy and commit-bound scenario overlay rows for the same scenarios
+    When the real overlay reader evaluates them against the current commit
+    Then the matching commit pass is fresh and the legacy or mismatched pass is stale
+    And the trace response exposes commit provenance and the persisted failing step
+
+  @feature56 @FR-56
+  Scenario: SPECGEN004_576 overlay compaction preserves each latest scenario result
+    Given an overlay file with repeated rows for multiple scenarios
+    When the real overlay compactor rewrites the file
+    Then one latest row per scenario remains and distinct-scenario cardinality is conserved
+    And the canonical full-run artifact remains byte-identical
+
+  @feature32
+  Scenario: SPECGEN004_544 get_spec_status keeps a mixed-result FR execution-unverified
+    Given a requirement whose linked scenarios are passed, failed and not run
+    When the MCP client invokes get_spec_status view coverage for the mixed requirement
+    Then FR_NOT_EXECUTION_VERIFIED includes the requirement until every linked scenario has passed
+
+  @feature16
+  Scenario: SPECGEN004_538 form-authoring steer inspects full-document edits inside MCP transactions
+    Given a multi-document spec transaction with a full TASKS form and a targeted FR edit
+    When the transaction is evaluated by spec-authoring-steer
+    Then the full TASKS edit is routed to task-board-forms while targeted edits remain allowed

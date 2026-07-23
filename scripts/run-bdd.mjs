@@ -148,12 +148,16 @@ try {
     const overlayRows = writeScenarioOverlayFromNdjson(wrote, {
       runId: String(epoch),
       source: `run-bdd:${kind}`,
+      gitSha: process.env.DEV_POMOGATOR_GIT_SHA ?? null,
       traceFile,
     });
     const entry = {
       ts: new Date(epoch).toISOString(),
       epoch,
       kind,
+      run_id: String(epoch),
+      source: `run-bdd:${kind}`,
+      git_sha: process.env.DEV_POMOGATOR_GIT_SHA ?? null,
       scenarios,
       durationMs,
       exit: r.status ?? null,

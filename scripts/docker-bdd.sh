@@ -30,6 +30,7 @@ LOG_FILE="${LOG_DIR}/bdd-run-${RUN_STAMP}.log"
 OUT_REL=".dev-pomogator/.docker-status/bdd-run-${RUN_STAMP}.ndjson"
 LATEST_REL=".dev-pomogator/.docker-status/bdd-last-run.ndjson"
 CANONICAL=".dev-pomogator/.last-test-run.ndjson"
+GIT_SHA="$(git rev-parse HEAD 2>/dev/null || true)"
 
 SESSION="${TEST_STATUSLINE_SESSION:-}"
 # If no SESSION in env, read from host session.env (written by SessionStart hook).
@@ -190,6 +191,7 @@ docker compose -f docker-compose.test.yml run --rm -T \
   --entrypoint node \
   -e PYTHONUNBUFFERED=1 \
   -e RUN_BDD_HISTORY_EXTERNAL=1 \
+  -e DEV_POMOGATOR_GIT_SHA="$GIT_SHA" \
   "${SESSION_ARGS[@]}" \
   "${CONFIG_MOUNT_ARGS[@]}" \
   -v "$(pwd)/cucumber.docker.json:/home/testuser/app/cucumber.docker.json:ro" \
@@ -229,14 +231,14 @@ PY
   chunk="run-${epoch}-${kind}.ndjson"
   cp "$source" "$HISTORY_DIR/$chunk" || { echo "[docker-bdd] WARN: history archive skipped (copy failed: $source -> $HISTORY_DIR/$chunk)" >&2; return 0; }
   if command -v node >/dev/null 2>&1; then
-    node scripts/bdd-overlay.mjs "$source" --run-id "$epoch" --source "docker-bdd:$kind" --trace-file "$HISTORY_DIR/$chunk" || echo "[docker-bdd] WARN: scenario overlay skipped" >&2
+    node scripts/bdd-overlay.mjs "$source" --run-id "$epoch" --source "docker-bdd:$kind" --trace-file "$HISTORY_DIR/$chunk" --git-sha "$GIT_SHA" || echo "[docker-bdd] WARN: scenario overlay skipped" >&2
   else
     # WSL hosts on this project may have Docker but no host Node. Reuse the freshly-built
     # test image so sanctioned Docker BDD runs still append the FR-56 overlay on every path.
     COMPOSE_PROJECT_NAME="$PROJECT_NAME" docker compose -f docker-compose.test.yml run --rm -T --no-deps \
       --entrypoint node \
       -v "$(pwd)/.dev-pomogator:/home/testuser/app/.dev-pomogator" \
-      test scripts/bdd-overlay.mjs "$source" --run-id "$epoch" --source "docker-bdd:$kind" --trace-file "$HISTORY_DIR/$chunk" \
+      test scripts/bdd-overlay.mjs "$source" --run-id "$epoch" --source "docker-bdd:$kind" --trace-file "$HISTORY_DIR/$chunk" --git-sha "$GIT_SHA" \
       || echo "[docker-bdd] WARN: scenario overlay skipped" >&2
   fi
 
