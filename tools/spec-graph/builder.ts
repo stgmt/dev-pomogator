@@ -111,7 +111,11 @@ export function buildGraph(opts: BuildOptions): SpecGraph {
   try {
     currentGitSha = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: repoRoot, encoding: 'utf8', timeout: 5000 }).trim() || undefined;
   } catch {
-    currentGitSha = process.env.DEV_POMOGATOR_GIT_SHA || undefined;
+    // The Docker runtime has no .git, but its launcher stamps the checkout SHA
+    // into both the process environment and BDD evidence. Do not apply that SHA
+    // to temporary/external corpora built by tests or MCP callers.
+    const isRuntimeCorpus = path.resolve(repoRoot) === path.resolve(process.cwd());
+    currentGitSha = isRuntimeCorpus ? process.env.DEV_POMOGATOR_GIT_SHA || undefined : undefined;
   }
   const mdRoots = (opts.mdRoots ?? ['.specs']).map((r) => path.resolve(repoRoot, r));
   const featureRoots = (opts.featureRoots ?? ['.specs', 'tests/features']).map((r) =>

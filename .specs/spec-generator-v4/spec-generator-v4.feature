@@ -1026,7 +1026,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
   Scenario: SPECGEN004_116 create_spec births a verdict-green spec through MCP
     Given the create_spec mutation tool
     When the agent creates a new spec through it
-    Then the authoritative verdict for the newborn spec is GREEN
+    Then the authoritative verdict for the newborn spec is NOT_READY
 
   @FR-40
   Scenario: SPECGEN004_139 the mutation door writes a subdir working doc but refuses a traversal write

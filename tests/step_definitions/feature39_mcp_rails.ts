@@ -96,7 +96,7 @@ interface F40World extends F39World {
   storyContractRejected?: { ok: boolean; error?: string; findings?: Array<{ layer: string; message: string }> };
   designContractRejected?: { ok: boolean; error?: string; findings?: Array<{ layer: string; message: string }> };
   freshBody?: string;
-  newbornVerdict?: { verdict: string; gapList: string[] };
+  newbornVerdict?: SpecVerdictResult;
 }
 
 function railsTools(world: F40World) {
@@ -374,15 +374,13 @@ When('the agent creates a new spec through it', async function (this: F40World) 
   assert.equal(r.ok, true, JSON.stringify(r).slice(0, 200));
   this.newbornVerdict = (await inCorpus(this, () =>
     runSpecVerdict('.specs/newborn-mcp', { semantic: false, cwd: this.tempDir } as never),
-  )) as { verdict: string; gapList: string[] };
+  ));
 });
 
-Then('the authoritative verdict for the newborn spec is GREEN', function (this: F40World) {
-  assert.equal(
-    this.newbornVerdict!.verdict,
-    'GREEN',
-    `newborn must be GREEN, gaps: ${this.newbornVerdict!.gapList.slice(0, 3).join(' | ')}`,
-  );
+Then('the authoritative verdict for the newborn spec is NOT_READY', function (this: F40World) {
+  assert.equal(this.newbornVerdict!.verdict, 'NOT_READY');
+  assert.equal(this.newbornVerdict!.readiness.overall, 'NOT_READY');
+  assert.equal(this.newbornVerdict!.readiness.lanes.EXECUTION.status, 'NOT_RUN');
 });
 
 // ── SPECGEN004_111 / _112 — FR-39c spec-access-guard (P17-3) ────────────────

@@ -426,6 +426,13 @@ export async function runSpecVerdict(
   const errorFindings: AuditFinding[] = (audit.findings ?? []).filter(
     (f: AuditFinding) => f.severity === 'ERROR',
   );
+  const auditBlocking = errorFindings.map((finding) => ({
+    code: 'UPSTREAM_UNLINKED' as const,
+    severity: 'error' as const,
+    nodeId: specPath,
+    message: `[${finding.check}] ${finding.message}`,
+    location: { file: specPath, line: 1 },
+  }));
   const byClass: Record<string, AuditFinding[]> = {};
   for (const f of errorFindings) (byClass[f.check] ??= []).push(f);
 
@@ -690,7 +697,7 @@ export async function runSpecVerdict(
       status: lane.status,
       debt: lane.debt,
     }])),
-  }, specFindings);
+  }, [...specFindings, ...auditBlocking]);
   const canonicalLanes = Object.fromEntries(Object.entries(canonical.readiness.lanes).map(([name, lane]) => [name, {
     status: lane.status,
     blocking: lane.blocking,

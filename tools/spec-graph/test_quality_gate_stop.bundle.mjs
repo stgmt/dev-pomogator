@@ -14056,7 +14056,7 @@ function applyScenarioOverlayResults(scenarios, patch, opts) {
       const threshold = freshnessThresholdMs(opts.repoRoot, scenario, row);
       const sourceStale = threshold !== void 0 && row.timeMs < threshold;
       const commitStale = Boolean(opts.currentGitSha) && row.gitSha !== opts.currentGitSha;
-      scenario.resultStale = sourceStale || commitStale || !row.gitSha;
+      scenario.resultStale = sourceStale || commitStale || Boolean(opts.currentGitSha) && !row.gitSha;
     } else if (overlayEffective) {
       scenario.resultStale = false;
     }
@@ -14712,7 +14712,8 @@ function buildGraph(opts) {
   try {
     currentGitSha = execFileSync("git", ["rev-parse", "HEAD"], { cwd: repoRoot, encoding: "utf8", timeout: 5e3 }).trim() || void 0;
   } catch {
-    currentGitSha = process.env.DEV_POMOGATOR_GIT_SHA || void 0;
+    const isRuntimeCorpus = path6.resolve(repoRoot) === path6.resolve(process.cwd());
+    currentGitSha = isRuntimeCorpus ? process.env.DEV_POMOGATOR_GIT_SHA || void 0 : void 0;
   }
   const mdRoots = (opts.mdRoots ?? [".specs"]).map((r) => path6.resolve(repoRoot, r));
   const featureRoots = (opts.featureRoots ?? [".specs", "tests/features"]).map(
