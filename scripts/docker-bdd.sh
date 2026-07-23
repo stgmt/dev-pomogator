@@ -30,7 +30,7 @@ LOG_FILE="${LOG_DIR}/bdd-run-${RUN_STAMP}.log"
 OUT_REL=".dev-pomogator/.docker-status/bdd-run-${RUN_STAMP}.ndjson"
 LATEST_REL=".dev-pomogator/.docker-status/bdd-last-run.ndjson"
 CANONICAL=".dev-pomogator/.last-test-run.ndjson"
-GIT_SHA="$(git rev-parse HEAD 2>/dev/null || true)"
+GIT_SHA="${DEV_POMOGATOR_GIT_SHA:-$(git rev-parse HEAD 2>/dev/null || true)}"
 
 SESSION="${TEST_STATUSLINE_SESSION:-}"
 # If no SESSION in env, read from host session.env (written by SessionStart hook).

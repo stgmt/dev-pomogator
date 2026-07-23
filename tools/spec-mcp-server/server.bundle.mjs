@@ -46644,7 +46644,7 @@ function applyScenarioOverlayResults(scenarios, patch, opts) {
       const threshold = freshnessThresholdMs(opts.repoRoot, scenario, row);
       const sourceStale = threshold !== void 0 && row.timeMs < threshold;
       const commitStale = Boolean(opts.currentGitSha) && row.gitSha !== opts.currentGitSha;
-      scenario.resultStale = sourceStale || commitStale || !row.gitSha;
+      scenario.resultStale = sourceStale || commitStale || Boolean(opts.currentGitSha) && !row.gitSha;
     } else if (overlayEffective) {
       scenario.resultStale = false;
     }
@@ -47249,7 +47249,8 @@ function buildGraph(opts) {
   try {
     currentGitSha = execFileSync("git", ["rev-parse", "HEAD"], { cwd: repoRoot, encoding: "utf8", timeout: 5e3 }).trim() || void 0;
   } catch {
-    currentGitSha = process.env.DEV_POMOGATOR_GIT_SHA || void 0;
+    const isRuntimeCorpus = path5.resolve(repoRoot) === path5.resolve(process.cwd());
+    currentGitSha = isRuntimeCorpus ? process.env.DEV_POMOGATOR_GIT_SHA || void 0 : void 0;
   }
   const mdRoots = (opts.mdRoots ?? [".specs"]).map((r) => path5.resolve(repoRoot, r));
   const featureRoots = (opts.featureRoots ?? [".specs", "tests/features"]).map(
@@ -51718,6 +51719,13 @@ async function runSpecVerdict(specPath, opts = {}) {
   const errorFindings = (audit.findings ?? []).filter(
     (f) => f.severity === "ERROR"
   );
+  const auditBlocking = errorFindings.map((finding) => ({
+    code: "UPSTREAM_UNLINKED",
+    severity: "error",
+    nodeId: specPath,
+    message: `[${finding.check}] ${finding.message}`,
+    location: { file: specPath, line: 1 }
+  }));
   const byClass = {};
   for (const f of errorFindings) (byClass[f.check] ??= []).push(f);
   const cwd = opts.cwd ?? process.cwd();
@@ -51928,7 +51936,7 @@ ${fr.body ?? ""}`,
       status: lane.status,
       debt: lane.debt
     }]))
-  }, specFindings);
+  }, [...specFindings, ...auditBlocking]);
   const canonicalLanes = Object.fromEntries(Object.entries(canonical.readiness.lanes).map(([name, lane]) => [name, {
     status: lane.status,
     blocking: lane.blocking,

@@ -61,6 +61,17 @@ interface F63World extends V4World {
 
 // ── fixture producers (real canonical NDJSON + overlay evidence) ────────────
 
+async function withGitSha<T>(gitSha: string, fn: () => T | Promise<T>): Promise<T> {
+  const previous = process.env.DEV_POMOGATOR_GIT_SHA;
+  process.env.DEV_POMOGATOR_GIT_SHA = gitSha;
+  try {
+    return await fn();
+  } finally {
+    if (previous === undefined) delete process.env.DEV_POMOGATOR_GIT_SHA;
+    else process.env.DEV_POMOGATOR_GIT_SHA = previous;
+  }
+}
+
 function lineOf(text: string, needle: string): number {
   const lines = text.split('\n');
   const idx = lines.findIndex((l) => l.includes(needle));
@@ -150,6 +161,8 @@ interface OverlayRowInput {
   traceFile: string;
   name: string;
   tags: string[];
+  gitSha?: string;
+  failingStep?: { step: string; errorMessage: string; status?: string; durationMs?: number | null } | null;
 }
 
 /** A REAL compact overlay row — the shape `scripts/bdd-overlay.mjs` appends. */
@@ -167,6 +180,8 @@ function overlayRow(o: OverlayRowInput): string {
     line: o.line,
     scenario_name: o.name,
     tags: o.tags,
+    git_sha: o.gitSha ?? 'fixture-sha',
+    failing_step: o.failingStep ?? null,
   });
 }
 
@@ -288,16 +303,18 @@ Given(
 );
 
 When('precheck, MCP status, and spec-verdict evaluate the fixture', async function (this: F63World) {
-  this.precheckResult = await precheckWithInventory(
+  this.precheckResult = await withGitSha('fixture-sha', () => precheckWithInventory(
     [this.slug!, '--specs-root', path.join(this.tempDir, '.specs')],
     this.tempDir,
-  );
-  const graph = buildGraphFromCwd(this.tempDir);
+  ));
+  const graph = await withGitSha('fixture-sha', () => buildGraphFromCwd(this.tempDir));
   const statusTool = buildToolRegistry(() => graph, { repoRoot: this.tempDir }).find((t) => t.name === 'get_spec_status');
   assert.ok(statusTool, 'get_spec_status tool must be registered');
   const status = await statusTool!.handler({ spec: this.slug, view: 'status' });
   this.mcpPayload = JSON.parse((status as any).content[0].text);
-  this.verdictResult = await runSpecVerdict(path.join('.specs', this.slug!), { cwd: this.tempDir, semantic: false });
+  this.verdictResult = await withGitSha('fixture-sha', () =>
+    runSpecVerdict(path.join('.specs', this.slug!), { cwd: this.tempDir, semantic: false }),
+  );
 });
 
 Then(
@@ -476,8 +493,8 @@ Given(
   },
 );
 
-When('the readiness evaluator serializes graph evidence', function (this: F63World) {
-  const graph = buildGraphFromCwd(this.tempDir);
+When('the readiness evaluator serializes graph evidence', async function (this: F63World) {
+  const graph = await withGitSha('fixture-sha', () => buildGraphFromCwd(this.tempDir));
   this.inventory = buildReadinessInventory(graph, { spec: this.slug! });
   // Serialization round-trip — a discarded field shows up as a missing key.
   this.recordsRoundtrip = JSON.parse(JSON.stringify(this.inventory.scenarios));
@@ -628,10 +645,10 @@ function writeTaxonomyFixture(root: string): void {
 
 Given(
   /mapped AC ids include an AC with test_paths=\[\] and a never-run FR and readiness lanes have mixed pass and missing evidence/,
-  function (this: F63World) {
+  async function (this: F63World) {
     writeTaxonomyFixture(this.tempDir);
     this.slug = 'taxonomy-demo';
-    const graph = buildGraphFromCwd(this.tempDir);
+    const graph = await withGitSha('fixture-sha', () => buildGraphFromCwd(this.tempDir));
     this.inventory = buildReadinessInventory(graph, { spec: 'taxonomy-demo' });
     this.passInventory = buildReadinessInventory(graph, { spec: 'pass-demo' });
     this.filteredInventory = buildReadinessInventory(graph, { spec: 'filtered-demo' });
@@ -764,7 +781,7 @@ Given('a spec whose canonical full-run pass became stale after a source change',
 });
 
 When('MCP status and spec-verdict evaluate the same graph snapshot', async function (this: F63World) {
-  const graph = buildGraphFromCwd(this.tempDir);
+  const graph = await withGitSha('fixture-sha', () => buildGraphFromCwd(this.tempDir));
   const statusTool = buildToolRegistry(() => graph, { repoRoot: this.tempDir }).find((tool) => tool.name === 'get_spec_status');
   assert.ok(statusTool, 'get_spec_status must exist');
   const status = await statusTool.handler({ spec: this.slug, view: 'status' });

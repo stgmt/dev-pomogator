@@ -286,7 +286,7 @@ export function applyScenarioOverlayResults(
       const threshold = freshnessThresholdMs(opts.repoRoot, scenario, row);
       const sourceStale = threshold !== undefined && row.timeMs < threshold;
       const commitStale = Boolean(opts.currentGitSha) && row.gitSha !== opts.currentGitSha;
-      scenario.resultStale = sourceStale || commitStale || !row.gitSha;
+      scenario.resultStale = sourceStale || commitStale || (Boolean(opts.currentGitSha) && !row.gitSha);
     } else if (overlayEffective) {
       scenario.resultStale = false;
     }

@@ -139,7 +139,8 @@ Given(
 Then('it fails with a per-item gap list', function (this: F37World) {
   const r = this.verdictResult;
   assert.ok(r, 'verdict did not run');
-  assert.equal(r.verdict, 'RED', 'an untraced atom must make the verdict RED (FR-37b hard gate)');
+  assert.equal(r.verdict, 'NOT_READY', 'an untraced atom must keep the product verdict NOT_READY');
+  assert.equal(r.readiness.lanes.TRACEABILITY.status, 'RED');
   assert.ok(r.traceabilityGate.gapCount >= 1, 'traceability gate must report at least one gap');
   const gap = r.traceabilityGate.gaps.find((g) => g.class === 'UNCOVERED_FR');
   assert.ok(gap, `expected an UNCOVERED_FR gap, got: ${JSON.stringify(r.traceabilityGate.byClass)}`);
@@ -644,7 +645,7 @@ Then('executable-only scenarios require EXEC_ONLY or OUT_OF_SCOPE markers', func
     'SOURCE_ONLY specgen004_544: source scenario has no executable counterpart or pending marker',
   ].sort());
   assert.equal(this.verdictResult!.readiness.lanes.BDD_SYNC.status, 'RED');
-  assert.match(this.verdictResult!.readiness.nextAction, /Fix source\/executable BDD sync drift/);
+  assert.match(this.verdictResult!.readiness.lanes.BDD_SYNC.debt.join('\n'), /EXEC_ONLY/);
 });
 
 Then('source-only scenarios require an explicit pending marker or executable counterpart', function (this: F37World) {
@@ -681,6 +682,7 @@ Given('a filtered Docker BDD run passes selected scenario ids for a spec', funct
     runId: 'filtered-543',
     source: 'docker-bdd:filtered',
     traceFile: traceRel,
+    gitSha: 'fixture-sha',
   });
   assert.equal(written, 1, 'real Cucumber-message overlay producer must emit exactly one scenario row');
   const [row] = fs.readFileSync(path.join(devDir, '.scenario-results.ndjson'), 'utf-8').trim().split(/\r?\n/).map((line) => JSON.parse(line));
@@ -688,6 +690,7 @@ Given('a filtered Docker BDD run passes selected scenario ids for a spec', funct
     scenario_id: 'SPECGEN004_539', result: 'PASSED', time: '2099-01-15T08:00:02.000Z',
     run_id: 'filtered-543', source: 'docker-bdd:filtered',
     trace_id: `${traceRel}#tcs-543`, trace_file: traceRel, test_case_started_id: 'tcs-543',
+    git_sha: 'fixture-sha', failing_step: null,
     uri, line: 3, scenario_name: 'SPECGEN004_539 readiness lane debt', tags: ['@feature1'],
   });
   this.verdictSpecPath = path.join('.specs', 'readiness-demo');
