@@ -39,6 +39,7 @@ Feature: HSCMD001 Honest Spec Status — deterministic scripts
   @feature3
   Scenario: HSCMD001_03c environmental blockers are counted, separate from failures
     Then the docker blocker and collectBlockers conserve: unreachable docker plus dead heartbeat is two, healthy is zero
+    And a reachable WSL Docker daemon suppresses the Windows host-only blocker
 
   @feature4
   Scenario: HSCMD001_04 BDD step bodies are graded weak / strong / fake-positive

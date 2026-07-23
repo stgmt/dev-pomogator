@@ -25,6 +25,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { V4World } from '../hooks/before-after.ts';
 import { runSpecVerdict, type SpecVerdictResult } from '../../tools/specs-generator/spec-verdict.ts';
+import { parseAcIds } from '../../.claude/skills/spec-status/scripts/ac-claims.ts';
 import { buildGraphFromCwd } from '../../tools/spec-graph/builder.ts';
 import { buildToolRegistry } from '../../tools/spec-mcp-server/tools.ts';
 import { precheckWithInventory, type PrecheckWithInventoryResult } from '../../.claude/skills/spec-status/scripts/precheck.ts';
@@ -54,6 +55,8 @@ interface F63World extends V4World {
   depAbsentOutcomes?: { dependency: EvidenceOutcome; sourceTree: EvidenceOutcome };
   depLaneEvaluation?: ReadinessEvaluation;
   passControl?: ReadinessEvaluation;
+  staleMcpPayload?: any;
+  staleVerdict?: SpecVerdictResult;
 }
 
 // ── fixture producers (real canonical NDJSON + overlay evidence) ────────────
@@ -751,3 +754,46 @@ Then(
     assert.equal(filteredEval.lanes.EXECUTION.status, 'RED');
   },
 );
+
+Given('a spec whose canonical full-run pass became stale after a source change', function (this: F63World) {
+  writeInventoryFixture(this.tempDir);
+  this.slug = 'inventory-demo';
+  const feature = path.join(this.tempDir, '.specs', this.slug, `${this.slug}.feature`);
+  const future = new Date('2099-12-31T23:59:59.000Z');
+  fs.utimesSync(feature, future, future);
+});
+
+When('MCP status and spec-verdict evaluate the same graph snapshot', async function (this: F63World) {
+  const graph = buildGraphFromCwd(this.tempDir);
+  const statusTool = buildToolRegistry(() => graph, { repoRoot: this.tempDir }).find((tool) => tool.name === 'get_spec_status');
+  assert.ok(statusTool, 'get_spec_status must exist');
+  const status = await statusTool.handler({ spec: this.slug, view: 'status' });
+  this.staleMcpPayload = JSON.parse(status.content[0].text);
+  this.staleVerdict = await runSpecVerdict(path.join('.specs', this.slug!), { cwd: this.tempDir, semantic: false });
+});
+
+Then('both surfaces report the stale scenario as effective execution debt', function (this: F63World) {
+  const mcpDebt = this.staleMcpPayload.readiness.lanes.EXECUTION.debt as string[];
+  const verdictDebt = this.staleVerdict!.readiness.lanes.EXECUTION.debt;
+  assert.ok(mcpDebt.some((item) => /SCENARIO_STALE|stale/i.test(item)), JSON.stringify(mcpDebt));
+  assert.deepEqual(mcpDebt, verdictDebt, 'MCP and spec-verdict must consume the same effective execution lane');
+});
+
+Then('both surfaces report EXECUTION RED and OVERALL NOT_READY', function (this: F63World) {
+  assert.equal(this.staleMcpPayload.readiness.lanes.EXECUTION.status, 'RED');
+  assert.equal(this.staleVerdict!.readiness.lanes.EXECUTION.status, 'RED');
+  assert.equal(this.staleMcpPayload.readiness.overall, 'NOT_READY');
+  assert.equal(this.staleVerdict!.readiness.overall, 'NOT_READY');
+});
+
+Then('canonical coverage remains visible without overriding effective readiness', function (this: F63World) {
+  assert.ok(this.staleMcpPayload.canonical_coverage.totals.passed > 0);
+  assert.ok(this.staleMcpPayload.coverage.totals.stale > 0);
+  assert.equal(this.staleMcpPayload.readiness.lanes.EXECUTION.blocking, true);
+});
+
+Then('dotted acceptance criterion ids remain exact in the spec-status parser', function () {
+  assert.deepEqual(parseAcIds('## AC-63.10 (FR-63.2): exact dotted ids'), [
+    { id: 'AC-63.10', fr: 'FR-63.2' },
+  ]);
+});

@@ -15,6 +15,7 @@
  */
 import fs from 'node:fs';
 import path from 'node:path';
+import { execFileSync } from 'node:child_process';
 import { detectActiveSpec, isValidSlug } from './autodetect.ts';
 import { classifyAcClaims, parseAcIds, type AcClaim } from './ac-claims.ts';
 import { classifyTestFile, type TestQualityReport } from './test-quality.ts';
@@ -53,6 +54,14 @@ export function filterCredentials(text: string): string {
   return text.replace(CRED_LINE, '[REDACTED]');
 }
 
+const resolveGitSha = (repoRoot: string): string | null => {
+  try {
+    return execFileSync('git', ['rev-parse', 'HEAD'], { cwd: repoRoot, encoding: 'utf-8', timeout: 5000 }).trim() || null;
+  } catch {
+    return null;
+  }
+};
+
 const safeRead = (p: string): string => {
   try {
     return fs.readFileSync(p, 'utf-8');
@@ -65,7 +74,7 @@ const safeRead = (p: string): string => {
 export function resolveTestPaths(specPath: string, repoRoot: string): string[] {
   const fc = safeRead(path.join(specPath, 'FILE_CHANGES.md'));
   const found = new Set<string>();
-  for (const m of fc.matchAll(/`?(tests\/[A-Za-z0-9_./-]+\.(?:test\.[tj]sx?|feature))`?/g)) {
+  for (const m of fc.matchAll(/`?(tests\/(?:features|step_definitions|hooks|e2e)\/[A-Za-z0-9_./-]+\.(?:[cm]?[tj]sx?|feature))`?/g)) {
     const abs = path.join(repoRoot, m[1]);
     if (fs.existsSync(abs)) found.add(abs);
   }
@@ -154,7 +163,7 @@ export function precheck(argv: string[], repoRoot: string = process.cwd()): Prec
   }
 
   const testPaths = resolveTestPaths(specPath, repoRoot);
-  const bundle = buildContextBundle(specSlug, specPath, testPaths);
+  const bundle = buildContextBundle(specSlug, specPath, testPaths, { gitSha: resolveGitSha(repoRoot) });
   const deterministic = runDeterministic(specPath, testPaths, repoRoot);
   return { active: true, reason, bundle, deterministic };
 }

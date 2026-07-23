@@ -16,7 +16,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { V4World } from '../hooks/before-after.ts';
 import { detectActiveSpec } from '../../.claude/skills/spec-status/scripts/autodetect.ts';
-import { classifyAcClaims } from '../../.claude/skills/spec-status/scripts/ac-claims.ts';
+import { classifyAcClaims, parseAcIds } from '../../.claude/skills/spec-status/scripts/ac-claims.ts';
 import { classifyTestStatus } from '../../.claude/skills/spec-status/scripts/yaml-recency.ts';
 import { detectDockerBlocker, collectBlockers } from '../../.claude/skills/spec-status/scripts/env-blockers.ts';
 import { classifyTestFile } from '../../.claude/skills/spec-status/scripts/test-quality.ts';
@@ -101,6 +101,15 @@ Then('the docker blocker and collectBlockers conserve: unreachable docker plus d
   assert.equal(collectBlockers({ dockerCmd: mockDocker, recency: stale }).length, 2);
   const fresh = classifyTestStatus(hread(path.join(FIX, 'yaml-samples', 'status.fresh.yaml')), Date.now() - 30_000, Date.now());
   assert.equal(collectBlockers({ dockerCmd: 'true', recency: fresh }).length, 0);
+
+});
+
+Then('a reachable WSL Docker daemon suppresses the Windows host-only blocker', function () {
+  const mockDocker = path.join(FIX, 'mock-bin', 'docker');
+  const wslBin = path.join(FIX, 'mock-bin', process.platform === 'win32' ? 'wsl.cmd' : 'wsl');
+  fs.writeFileSync(wslBin, process.platform === 'win32' ? '@exit /b 0\r\n' : '#!/bin/sh\nexit 0\n');
+  fs.chmodSync(wslBin, 0o755);
+  assert.equal(detectDockerBlocker(mockDocker, { platform: 'win32', wslCmd: wslBin }), null);
 });
 
 // ── @feature4 test-quality (BDD step grading) ────────────────────────────────
@@ -145,5 +154,6 @@ Then('precheck with a spec slug and specs-root surfaces an active claimed_only b
   assert.equal(r.active, true);
   assert.equal(r.bundle!.spec_slug, 'mock-spec-claimed-only');
   assert.deepEqual(r.bundle!.ac_ids, ['AC-1', 'AC-2', 'AC-3']);
+  assert.ok(r.bundle!.git_sha === null || /^[0-9a-f]{40}$/.test(r.bundle!.git_sha), 'git_sha is exact when the runtime has a git repository');
   assert.ok(r.deterministic!.ac_claims.every((c) => c.candidate === 'claimed_only'));
 });
