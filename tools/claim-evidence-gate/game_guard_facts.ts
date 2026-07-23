@@ -46,3 +46,17 @@ export function selfMarkedBlockedOrBacklog(toolUses: ToolUseLite[]): boolean {
     return isMutatingOrDoor(t.name) && /TASKS\.md/i.test(blob) && /Status:\s*BLOCKED/i.test(blob); // self-set a task BLOCKED
   });
 }
+
+// Owner-directed DEFERRAL (FR-4/5 WP-3, #149): the owner told the agent to park/defer/block the work
+// («припаркуй в бэклог», «отложи X», «пометь BLOCKED», «позже/не сейчас», «вне скоупа»). Such words are
+// agent-independent — taken from the human's typed prompts — so a self-mark that follows them is the
+// owner's decision, not self-exemption. Mirrors gateSelfEdit's `taskIsAboutTheGate` suppression.
+// Care: anchor deferral MOTION/status wording; a bare «разгреби/выполни бэклог» means DO the work and
+// must NOT suppress the tell.
+const OWNER_DEFERRAL_RE =
+  /припарку\w*|отложи\w*|в\s+бэклог|в\s+backlog|пометь[\s\S]{0,30}(?:block|заблок)|заблокиру\w*|вне\s+скоп|оставь[\s\S]{0,20}(?:вне|на\s+потом)|(?:сделаем|вернёмся)\s+позже|не\s+сейчас|пока\s+не/i;
+
+/** TRUE when ANY owner prompt directs a deferral/block/park — ungameable by the agent. */
+export function ownerDirectedDeferral(ownerWords: string[]): boolean {
+  return ownerWords.some((w) => typeof w === 'string' && OWNER_DEFERRAL_RE.test(w));
+}

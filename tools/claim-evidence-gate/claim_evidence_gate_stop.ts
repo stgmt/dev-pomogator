@@ -36,7 +36,7 @@ import { extractTurnWindow, bgInFlightInWindow, agentBgInFlightCount, bgCommandI
 import { firstUnsupported, isSpecCompletionClaim } from './claim_classifier.ts';
 import { readTaskCensusCache, scopeCensusToSlugs, sessionEditedSpecSlugs, lastEditedSpecSlug, agentOpenTodoCount, liveOpenForUncensusedSlugs, selectNextStepRoute, type NextStepRoute, type TaskCensusCache } from '../spec-graph/task-census.ts';
 import { judgeStop, judgeAvailable, buildJudgeNoTokenDemand, isJudgeArmed } from './meridian-judge.ts';
-import { MUTATING_TOOL, isDoorWrite, gateSelfEdit, selfMarkedBlockedOrBacklog } from './game_guard_facts.ts';
+import { MUTATING_TOOL, isDoorWrite, gateSelfEdit, ownerDirectedDeferral, selfMarkedBlockedOrBacklog } from './game_guard_facts.ts';
 
 interface StopHookInput {
   cwd?: string;
@@ -474,7 +474,11 @@ async function main(): Promise<void> {
         userRequest: substantiveUserRequest, // Phase 1/FR-29: last substantive request, not a terse continuation ack
         sessionUserPrompts: sessionPrompts, // FR-28: the full human mandate — mandate-complete overrides nextOpenTask backlog
         gateSelfEditThisTurn: gateSelfEditThisTurn && !taskIsAboutTheGate, // FR-4/5: fighting-the-gate ONLY if the task is NOT про the gate (honest gate-dev not penalised)
-        selfMarkedBlockedOrBacklogThisTurn, // FR-4/5: self-marked own work blocked/backlog this turn (self-exemption)
+        // FR-4/5 WP-3 (#149): self-marked own work blocked/backlog is self-exemption UNLESS the OWNER's
+        // own words directed the deferral/block/park (transcript-derived, ungameable). Mirrors the
+        // gateSelfEdit suppression above — don't make the judge re-derive the owner-carve-out.
+        selfMarkedBlockedOrBacklogThisTurn:
+          selfMarkedBlockedOrBacklogThisTurn && !ownerDirectedDeferral([...sessionPrompts, substantiveUserRequest]),
       };
       let verdict = await judgeStop(jInput);
       if (verdict === null) verdict = await judgeStop(jInput);
