@@ -6,6 +6,7 @@ import test from 'node:test';
 import { isWithinRoot, startServer } from '../tools/hook-service/server.mjs';
 import { renderHttpManifest } from '../tools/hook-service/registry.mjs';
 import { HookMigrationCollisionError, migrateManagedHooks, recoverManagedHooks } from '../tools/hook-service/migrate-managed-hooks.mjs';
+import { acquireStartupLease } from '../tools/hook-service/ensure-up.mjs';
 import { spawnSync } from 'node:child_process';
 
 async function fixture() {
@@ -150,6 +151,47 @@ test('HS_08: --fix recovery rolls back only an interrupted dev-pomogator journal
     assert.equal(fixed.recovered, true);
     assert.equal((await readFile(settingsPath, 'utf8')).includes('tools/hook-service/session-bootstrap.mjs'), true);
   } finally { await rm(root, { recursive: true, force: true }); }
+});
+
+test('HS_10: concurrent startup lease elects one owner and waiters observe readiness', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'hook-service-lease-'));
+  const lockPath = join(root, 'startup.lock');
+  let ready = false;
+  let first;
+  try {
+    const contenders = Array.from({ length: 8 }, async () => {
+      const lease = await acquireStartupLease({ lockPath, isReady: async () => ready, waitMs: 1_000, pollMs: 10 });
+      if (lease.acquired) {
+        first = lease;
+        await new Promise(resolveWait => setTimeout(resolveWait, 80));
+        ready = true;
+        await lease.release();
+      }
+      return lease;
+    });
+    const results = await Promise.all(contenders);
+    assert.equal(results.filter(result => result.acquired).length, 1);
+    assert.equal(results.filter(result => result.ready).length, 7);
+    await assert.rejects(access(lockPath));
+  } finally {
+    await first?.release();
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test('HS_11: startup lease reclaims a lock whose owner process is dead', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'hook-service-dead-lease-'));
+  const lockPath = join(root, 'startup.lock');
+  try {
+    await writeFile(lockPath, JSON.stringify({ schema: 1, ownerId: 'dead-owner', pid: 999_999_999 }));
+    const lease = await acquireStartupLease({ lockPath, isReady: async () => false, waitMs: 500, pollMs: 10 });
+    assert.equal(lease.acquired, true);
+    assert.equal(lease.reclaimed, true);
+    await lease.release();
+    await assert.rejects(access(lockPath));
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
 });
 
 test('HS_09: recovery refuses a journal whose settings were changed after interruption', async () => {
