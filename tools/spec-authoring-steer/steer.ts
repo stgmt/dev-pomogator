@@ -40,13 +40,19 @@ const DOC_SKILL: Record<string, string> = {
   'TASKS.md': 'task-board-forms',
 };
 
+interface SpecEditInput {
+  spec?: string;
+  doc?: string;
+  content?: string;
+  old_string?: string;
+  replace?: unknown;
+  section?: unknown;
+}
+
 interface PreToolUseInput {
   tool_name?: string;
-  tool_input?: {
-    spec?: string;
-    doc?: string;
-    content?: string;
-    old_string?: string;
+  tool_input?: SpecEditInput & {
+    edits?: SpecEditInput[];
     file_path?: string;
     reason?: string;
   };
@@ -64,30 +70,39 @@ function docBasename(s: string | undefined): string | null {
  * Pure — exported for the contract test. Returns the steer or null.
  *
  * Match conditions (ALL):
- *  - tool is the MCP `apply_spec_change` OR a raw Write of a `.specs/**` form doc;
+ *  - tool is the MCP `apply_spec_change`, `apply_spec_transaction`, or a raw Write of a `.specs/**` form doc;
  *  - the target doc basename is one of the automator form docs;
  *  - the write carries a FULL `content` body (whole-doc authoring), not a
- *    targeted old_string/new_string edit, and the body is non-trivial (> 400 chars).
+ *    targeted old_string/new_string/replace/section edit, and the body is non-trivial (> 400 chars).
  */
 export function steerDecision(data: PreToolUseInput): { doc: string; skill: string } | null {
   const t = data.tool_name ?? '';
   const inp = data.tool_input ?? {};
   const isDoorApply = /(^|__)apply_spec_change$/.test(t);
+  const isDoorTransaction = /(^|__)apply_spec_transaction$/.test(t);
   const isRawWrite = t === 'Write';
-  if (!isDoorApply && !isRawWrite) return null;
+  if (!isDoorApply && !isDoorTransaction && !isRawWrite) return null;
 
-  const docName = isDoorApply ? docBasename(inp.doc) : docBasename(inp.file_path);
-  if (!docName || !(docName in DOC_SKILL)) return null;
+  const edits: SpecEditInput[] = isDoorTransaction
+    ? (Array.isArray(inp.edits) ? inp.edits : [])
+    : [inp];
 
-  // Raw Write must actually target a spec tree (the MCP door is spec-scoped already).
-  if (isRawWrite && !(inp.file_path ?? '').replace(/\\/g, '/').includes('.specs/')) return null;
+  for (const edit of edits) {
+    const docName = isRawWrite ? docBasename(inp.file_path) : docBasename(edit.doc);
+    if (!docName || !(docName in DOC_SKILL)) continue;
 
-  // FULL-doc author only: a `content` body present, and no targeted edit anchor.
-  const content = inp.content;
-  if (typeof content !== 'string' || inp.old_string) return null;
-  if (content.length < 400) return null; // tiny stub/placeholder — not worth steering
+    // Raw Write must actually target a spec tree (the MCP door is spec-scoped already).
+    if (isRawWrite && !(inp.file_path ?? '').replace(/\\/g, '/').includes('.specs/')) continue;
 
-  return { doc: docName, skill: DOC_SKILL[docName] };
+    // FULL-doc author only: a `content` body present, and no targeted edit anchor.
+    const content = edit.content;
+    if (typeof content !== 'string' || edit.old_string || edit.replace || edit.section) continue;
+    if (content.length < 400) continue; // tiny stub/placeholder — not worth steering
+
+    return { doc: docName, skill: DOC_SKILL[docName] };
+  }
+
+  return null;
 }
 
 /**

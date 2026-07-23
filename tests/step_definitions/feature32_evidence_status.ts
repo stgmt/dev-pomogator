@@ -203,3 +203,45 @@ Then("the scoped buckets hold only that spec's scenarios and the bare buckets ho
   assert.equal(ids(this.bare!).length, 3, 'bare call must see the whole corpus (both specs)');
   assert.ok(ids(this.bare!).includes('spec-b:SCEN-bbb001-01-other'), 'corpus view includes the other spec');
 });
+
+// ── SPECGEN004_544 — FR execution verification is ALL, never ANY ──
+interface MixedFrWorld extends F32World {
+  mixedPayload?: {
+    execution_gaps: {
+      FR_NOT_EXECUTION_VERIFIED: number;
+      fr_ids: string[];
+    };
+  };
+}
+
+Given('a requirement whose linked scenarios are passed, failed and not run', function (this: MixedFrWorld) {
+  const nodes = new Map<string, any>();
+  nodes.set('spec-a:FR-517', { id: 'spec-a:FR-517', type: 'FR', file: '.specs/spec-a/FR.md', line: 1, title: 'Mixed execution evidence', body: '' });
+  nodes.set('spec-a:SCEN-specgen004-517-passed', { id: 'spec-a:SCEN-specgen004-517-passed', type: 'Scenario', file: '.specs/spec-a/spec-a.feature', line: 1, tags: ['@FR-517'], steps: [], lastResult: 'PASSED', canonicalResult: 'PASSED' });
+  nodes.set('spec-a:SCEN-specgen004-517-failed', { id: 'spec-a:SCEN-specgen004-517-failed', type: 'Scenario', file: '.specs/spec-a/spec-a.feature', line: 2, tags: ['@FR-517'], steps: [], lastResult: 'FAILED', canonicalResult: 'FAILED' });
+  nodes.set('spec-a:SCEN-specgen004-517-not-run', { id: 'spec-a:SCEN-specgen004-517-not-run', type: 'Scenario', file: '.specs/spec-a/spec-a.feature', line: 3, tags: ['@FR-517'], steps: [] });
+  this.graph = {
+    version: 1,
+    builtAt: '',
+    nodes,
+    edges: [
+      { from: 'spec-a:FR-517', to: 'spec-a:SCEN-specgen004-517-passed', type: 'tested-by' },
+      { from: 'spec-a:FR-517', to: 'spec-a:SCEN-specgen004-517-failed', type: 'tested-by' },
+      { from: 'spec-a:FR-517', to: 'spec-a:SCEN-specgen004-517-not-run', type: 'tested-by' },
+    ],
+    definitions: new Map(),
+    backlinks: new Map(),
+  } as SpecGraph;
+});
+
+When('the MCP client invokes get_spec_status view coverage for the mixed requirement', async function (this: MixedFrWorld) {
+  const tool = getTool(this.graph!, 'get_spec_status');
+  const res = (await tool.handler({ spec: 'spec-a', view: 'coverage' } as never)) as { content: Array<{ text: string }> };
+  this.mixedPayload = JSON.parse(res.content[0].text);
+});
+
+Then('FR_NOT_EXECUTION_VERIFIED includes the requirement until every linked scenario has passed', function (this: MixedFrWorld) {
+  const gaps = this.mixedPayload!.execution_gaps;
+  assert.equal(gaps.FR_NOT_EXECUTION_VERIFIED, 1);
+  assert.deepEqual(gaps.fr_ids, ['spec-a:FR-517']);
+});

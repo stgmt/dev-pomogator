@@ -13,11 +13,21 @@ import path from 'node:path';
 import { V4World } from '../hooks/before-after.ts';
 import { buildGraph } from '../../tools/spec-graph/builder.ts';
 import { buildToolRegistry } from '../../tools/spec-mcp-server/tools.ts';
+import { steerDecision } from '../../tools/spec-authoring-steer/steer.ts';
 
 interface F39World extends V4World {
   prevCwd?: string;
   docPayload?: { ok: boolean; content?: string; doc?: string };
   proseMarker?: string;
+  steerTransaction?: {
+    tool_name: string;
+    tool_input: {
+      edits: Array<Record<string, unknown>>;
+      reason: string;
+    };
+  };
+  steerResult?: { doc: string; skill: string } | null;
+  targetedSteerResult?: { doc: string; skill: string } | null;
 }
 
 Given('a spec document whose prose lives outside graph nodes', function (this: F39World) {
@@ -1159,4 +1169,34 @@ Then('each grep maps to its concrete spec-door search call and the non-grep maps
   assert.match(this.suggestions!.bare!, /spec-door\.ts search "jira-mode"/, 'bareword grep pattern -> search "jira-mode"');
   assert.match(this.suggestions!.rg!, /spec-door\.ts search "FR-7"/, 'rg pattern -> search "FR-7"');
   assert.equal(this.suggestions!.nonGrep, null, 'a non-grep .specs read has no grep->search mapping');
+});
+
+// ── SPECGEN004_538 — full-content transaction edits cannot bypass form-skill steering ──
+Given('a multi-document spec transaction with a full TASKS form and a targeted FR edit', function (this: F39World) {
+  this.steerTransaction = {
+    tool_name: 'mcp__dev-pomogator-specs__apply_spec_transaction',
+    tool_input: {
+      edits: [
+        { spec: 'demo', doc: 'FR.md', replace: { heading: 'FR-1', old_string: 'old', new_string: 'new' } },
+        { spec: 'demo', doc: 'TASKS.md', content: '## Phase 1\n\n' + '- [ ] Task — id: task-1 — Status: TODO\n'.repeat(20) },
+      ],
+      reason: 'BDD transaction steer probe',
+    },
+  };
+});
+
+When('the transaction is evaluated by spec-authoring-steer', function (this: F39World) {
+  this.steerResult = steerDecision(this.steerTransaction!);
+  this.targetedSteerResult = steerDecision({
+    tool_name: 'mcp__dev-pomogator-specs__apply_spec_transaction',
+    tool_input: {
+      edits: [{ spec: 'demo', doc: 'TASKS.md', replace: { heading: 'Phase 1', old_string: 'old', new_string: 'new' } }],
+      reason: 'BDD targeted transaction probe',
+    },
+  });
+});
+
+Then('the full TASKS edit is routed to task-board-forms while targeted edits remain allowed', function (this: F39World) {
+  assert.deepEqual(this.steerResult, { doc: 'TASKS.md', skill: 'task-board-forms' });
+  assert.equal(this.targetedSteerResult, null);
 });

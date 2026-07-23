@@ -3612,3 +3612,15 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Given a multi-document spec transaction with a full TASKS form and a targeted FR edit
     When the transaction is evaluated by spec-authoring-steer
     Then the full TASKS edit is routed to task-board-forms while targeted edits remain allowed
+
+  @feature32 @FR-32
+  Scenario: SPECGEN004_544 FR execution verification requires every linked scenario to pass
+    Given a requirement whose linked scenarios are passed, failed and not run
+    When the MCP client invokes get_spec_status view coverage for the mixed requirement
+    Then FR_NOT_EXECUTION_VERIFIED includes the requirement until every linked scenario has passed
+
+  @feature39 @FR-39
+  Scenario: SPECGEN004_538 full-content transaction edits cannot bypass form-skill steering
+    Given a multi-document spec transaction with a full TASKS form and a targeted FR edit
+    When the transaction is evaluated by spec-authoring-steer
+    Then the full TASKS edit is routed to task-board-forms while targeted edits remain allowed
