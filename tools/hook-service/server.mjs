@@ -1,5 +1,5 @@
-import { timingSafeEqual } from 'node:crypto';
-import { mkdir, readFile, rename, writeFile, unlink } from 'node:fs/promises';
+import { createHash, randomUUID, timingSafeEqual } from 'node:crypto';
+import { appendFile, mkdir, readFile, rename, stat, writeFile, unlink } from 'node:fs/promises';
 import { spawn } from 'node:child_process';
 import http from 'node:http';
 import { join, resolve, relative, isAbsolute, win32 } from 'node:path';
@@ -10,7 +10,10 @@ export const HOST = '127.0.0.1', PORT = 42619, VERSION = '1.0.0';
 export const stateDir = () => process.env.DEV_POMOGATOR_STATE_DIR || join(process.env.LOCALAPPDATA || process.env.XDG_STATE_HOME || process.env.HOME || '.', 'dev-pomogator', 'hook-service');
 export const stateFile = () => join(stateDir(), 'service.json');
 export const tokenFile = () => join(stateDir(), 'token');
+export const diagnosticsFile = (root = stateDir()) => join(root, 'failures.jsonl');
 const MAX_BODY_BYTES = 2_000_000;
+const MAX_DIAGNOSTIC_BYTES = 1_000_000;
+const MAX_DETAIL_CHARS = 2_000;
 
 const tokenMatches = (actual, expected) => {
   const candidate = Buffer.from(String(actual || ''));
@@ -22,6 +25,36 @@ const json = (response, status, value) => {
   response.writeHead(status, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' });
   response.end(JSON.stringify(value));
 };
+
+const sha256 = value => createHash('sha256').update(String(value)).digest('hex');
+
+const classifyError = error => {
+  if (error?.code === 'HOOK_TIMEOUT') return 'hook-timeout';
+  if (error?.code === 'HOOK_EXIT') return 'hook-exit';
+  if (error?.code === 'HOOK_SPAWN') return 'hook-spawn';
+  if (error?.message === 'invalid hook route') return 'invalid-route';
+  if (error?.message === 'request body too large') return 'body-too-large';
+  return 'hook-runtime';
+};
+
+const sanitizeDetail = (error, secrets = []) => {
+  let detail = error instanceof Error ? error.message : String(error);
+  for (const secret of secrets.filter(Boolean)) detail = detail.split(String(secret)).join('[REDACTED]');
+  detail = detail
+    .replace(/\b(?:sk|or|ghp|gho|ghu|ghs|ghr|xox[baprs])-[A-Za-z0-9_-]{12,}\b/gi, '[REDACTED]')
+    .replace(/\bgithub_pat_[A-Za-z0-9_]{12,}\b/gi, '[REDACTED]')
+    .replace(/\bAKIA[A-Z0-9]{16}\b/g, '[REDACTED]')
+    .replace(/-----BEGIN [A-Z ]*PRIVATE KEY-----[\s\S]*?-----END [A-Z ]*PRIVATE KEY-----/g, '[REDACTED]');
+  return detail.slice(0, MAX_DETAIL_CHARS) || 'hook runtime unavailable';
+};
+
+async function appendDiagnostic(root, diagnostic) {
+  await mkdir(root, { recursive: true, mode: 0o700 });
+  const target = diagnosticsFile(root);
+  const currentSize = await stat(target).then(value => value.size).catch(() => 0);
+  if (currentSize >= MAX_DIAGNOSTIC_BYTES) await rename(target, `${target}.1`).catch(() => {});
+  await appendFile(target, `${JSON.stringify(diagnostic)}\n`, { encoding: 'utf8', mode: 0o600 });
+}
 
 const local = request => ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(request.socket.remoteAddress || '');
 
@@ -38,6 +71,19 @@ const body = request => new Promise((resolveBody, reject) => {
 
 export async function loadRegistry(root) {
   return JSON.parse(await readFile(join(root, 'tools', 'hook-service', 'registry.json'), 'utf8'));
+}
+
+// The daemon advertises this identity so bootstrap can replace stale owned runtimes safely.
+export async function runtimeIdentity(root) {
+  const [serverSource, registrySource] = await Promise.all([
+    readFile(fileURLToPath(import.meta.url), 'utf8'),
+    readFile(join(root, 'tools', 'hook-service', 'registry.json'), 'utf8'),
+  ]);
+  return {
+    rootFingerprint: fingerprint(resolve(root)),
+    registryDigest: sha256(registrySource),
+    runtimeDigest: sha256(serverSource),
+  };
 }
 
 export function isWithinRoot(root, target) {
@@ -67,7 +113,20 @@ export const adaptOutput = (event, stdout, stderr, exitCode) => {
     if (event === 'PreToolUse') return { hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'deny', permissionDecisionReason: reason } };
     return { decision: 'block', reason };
   }
-  if (exitCode !== 0) throw new Error(stderr.trim() || `hook exited ${exitCode}`);
+  if (exitCode !== 0) {
+    if (output) {
+      try {
+        const parsed = JSON.parse(output);
+        if (parsed && !Array.isArray(parsed) && (parsed.decision || parsed.hookSpecificOutput)) return parsed;
+      } catch {
+        // A malformed payload must not mask the abnormal exit below.
+      }
+    }
+    const error = new Error(stderr.trim() || `hook exited ${exitCode}`);
+    error.code = 'HOOK_EXIT';
+    error.exitCode = exitCode;
+    throw error;
+  }
   if (!output) return {};
   try {
     const parsed = JSON.parse(output);
@@ -93,8 +152,18 @@ export async function execute(entry, input, root, event) {
     let stdout = '', stderr = '';
     child.stdout.on('data', chunk => { stdout += chunk; });
     child.stderr.on('data', chunk => { stderr += chunk; });
-    const timer = setTimeout(() => { child.kill(); reject(new Error('hook timed out')); }, Math.max(1, entry.timeout || 30) * 1000);
-    child.on('error', error => { clearTimeout(timer); reject(error); });
+    const timer = setTimeout(() => {
+      child.kill();
+      const error = new Error('hook timed out');
+      error.code = 'HOOK_TIMEOUT';
+      reject(error);
+    }, Math.max(1, entry.timeout || 30) * 1000);
+    child.on('error', cause => {
+      clearTimeout(timer);
+      const error = new Error(cause.message);
+      error.code = 'HOOK_SPAWN';
+      reject(error);
+    });
     child.on('close', code => {
       clearTimeout(timer);
       try { resolveRun(adaptOutput(event, stdout, stderr, code ?? 1)); } catch (error) { reject(error); }
@@ -103,24 +172,50 @@ export async function execute(entry, input, root, event) {
   });
 }
 
-export async function startServer({ pluginRoot, token, port = PORT } = {}) {
+export async function startServer({ pluginRoot, token, port = PORT, stateRoot = stateDir() } = {}) {
   const registry = await loadRegistry(pluginRoot);
+  const { registryDigest, rootFingerprint, runtimeDigest } = await runtimeIdentity(pluginRoot);
   const server = http.createServer(async (request, response) => {
+    let route = '';
     try {
       if (!local(request)) return json(response, 403, { error: 'loopback only' });
       const url = new URL(request.url || '/', `http://${HOST}:${port}`);
       if (!tokenMatches(request.headers['x-dev-pomogator-token'], token)) return json(response, 401, { error: 'unauthorized' });
-      if (url.pathname === '/health') return json(response, 200, { service: 'dev-pomogator-hook-service', version: VERSION, tokenFingerprint: fingerprint(token) });
+      if (url.pathname === '/health') return json(response, 200, {
+        service: 'dev-pomogator-hook-service',
+        version: VERSION,
+        tokenFingerprint: fingerprint(token),
+        rootFingerprint,
+        registryDigest,
+        runtimeDigest,
+      });
       if (request.method !== 'POST') return json(response, 405, { error: 'POST required' });
       let input;
       try { input = JSON.parse(await body(request)); } catch { return json(response, 400, { error: 'invalid JSON' }); }
       if (url.pathname === '/v1/register') return json(response, 200, { registered: Boolean(input.session_id) });
-      const id = decodeURIComponent(url.pathname.replace('/v1/dispatch/', ''));
-      const entry = registry.routes[id];
-      if (!entry || url.pathname !== `/v1/dispatch/${encodeURIComponent(id)}`) return json(response, 404, { error: 'unknown route' });
-      return json(response, 200, await execute(entry, input, pluginRoot, id.split('/')[0]));
+      route = decodeURIComponent(url.pathname.replace('/v1/dispatch/', ''));
+      const entry = registry.routes[route];
+      if (!entry || url.pathname !== `/v1/dispatch/${encodeURIComponent(route)}`) return json(response, 404, { error: 'unknown route' });
+      return json(response, 200, await execute(entry, input, pluginRoot, route.split('/')[0]));
     } catch (error) {
-      return json(response, 503, { error: 'hook runtime unavailable', detail: error.message });
+      const incidentId = randomUUID();
+      const detail = sanitizeDetail(error, [token]);
+      const diagnostic = {
+        schema: 1,
+        incidentId,
+        timestamp: new Date().toISOString(),
+        route: route || null,
+        code: classifyError(error),
+        detail,
+        exitCode: Number.isInteger(error?.exitCode) ? error.exitCode : null,
+        pid: process.pid,
+        tokenFingerprint: fingerprint(token),
+        rootFingerprint,
+        registryDigest,
+        runtimeDigest,
+      };
+      await appendDiagnostic(stateRoot, diagnostic).catch(() => {});
+      return json(response, 503, { error: 'hook runtime unavailable', incidentId, detail });
     }
   });
   await new Promise((resolveListen, reject) => {
@@ -140,8 +235,15 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   const pluginRoot = process.env.DEV_POMOGATOR_PLUGIN_ROOT || process.cwd();
   const token = (await readFile(tokenFile(), 'utf8')).trim();
   await mkdir(stateDir(), { recursive: true, mode: 0o700 });
+  const identity = await runtimeIdentity(pluginRoot);
   const server = await startServer({ pluginRoot, token });
-  await atomicState(stateFile(), `${JSON.stringify({ pid: process.pid, port: PORT, version: VERSION })}\n`);
+  await atomicState(stateFile(), `${JSON.stringify({
+    pid: process.pid,
+    port: PORT,
+    version: VERSION,
+    startedAt: new Date().toISOString(),
+    ...identity,
+  })}\n`);
   const close = () => server.close(async () => { await unlink(stateFile()).catch(() => {}); process.exit(0); });
   process.on('SIGTERM', close);
   process.on('SIGINT', close);

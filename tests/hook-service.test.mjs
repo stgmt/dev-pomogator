@@ -6,6 +6,7 @@ import test from 'node:test';
 import { isWithinRoot, startServer } from '../tools/hook-service/server.mjs';
 import { renderHttpManifest } from '../tools/hook-service/registry.mjs';
 import { HookMigrationCollisionError, migrateManagedHooks, recoverManagedHooks } from '../tools/hook-service/migrate-managed-hooks.mjs';
+import { acquireStartupLease } from '../tools/hook-service/ensure-up.mjs';
 import { spawnSync } from 'node:child_process';
 
 async function fixture() {
@@ -37,7 +38,13 @@ test('HS_01: health and registration require the token', async () => {
     assert.equal(rejectedHealth.status, 401);
     const health = await fetch(`${base}/health`, { headers: { 'x-dev-pomogator-token': 'secret' } });
     assert.equal(health.status, 200);
-    assert.deepEqual(await health.json(), { service: 'dev-pomogator-hook-service', version: '1.0.0', tokenFingerprint: '2bb80d537b1d' });
+    const body = await health.json();
+    assert.equal(body.service, 'dev-pomogator-hook-service');
+    assert.equal(body.version, '1.0.0');
+    assert.equal(body.tokenFingerprint, '2bb80d537b1d');
+    assert.match(body.rootFingerprint, /^[a-f0-9]{12}$/);
+    assert.match(body.registryDigest, /^[a-f0-9]{64}$/);
+    assert.match(body.runtimeDigest, /^[a-f0-9]{64}$/);
     const unauthorized = await post(`${base}/v1/register`, { session_id: 's1' });
     assert.equal(unauthorized.status, 401);
     assert.deepEqual(await unauthorized.json(), { error: 'unauthorized' });
@@ -78,7 +85,7 @@ test('HS_05: generated manifest keeps one bootstrap and exposes every remaining 
   const manifest = await renderHttpManifest(root);
   const sessionHooks = manifest.hooks.SessionStart.flatMap(group => group.hooks);
   const otherHooks = Object.entries(manifest.hooks).filter(([event]) => event !== 'SessionStart').flatMap(([, groups]) => groups.flatMap(group => group.hooks));
-  assert.equal(sessionHooks.length, 14);
+  assert.equal(sessionHooks.length, 16);
   assert.equal(otherHooks.length, 39);
   assert.equal(otherHooks.every(hook => hook.type === 'http' && hook.url.startsWith('http://127.0.0.1:42619/v1/dispatch/') && hook.headers?.['x-dev-pomogator-token'] === '${DEV_POMOGATOR_HOOK_TOKEN}' && hook.allowedEnvVars?.includes('DEV_POMOGATOR_HOOK_TOKEN')), true);
   const generated = JSON.parse(await readFile(join(root, '.claude-plugin', 'hooks.json'), 'utf8'));
@@ -144,6 +151,47 @@ test('HS_08: --fix recovery rolls back only an interrupted dev-pomogator journal
     assert.equal(fixed.recovered, true);
     assert.equal((await readFile(settingsPath, 'utf8')).includes('tools/hook-service/session-bootstrap.mjs'), true);
   } finally { await rm(root, { recursive: true, force: true }); }
+});
+
+test('HS_10: concurrent startup lease elects one owner and waiters observe readiness', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'hook-service-lease-'));
+  const lockPath = join(root, 'startup.lock');
+  let ready = false;
+  let first;
+  try {
+    const contenders = Array.from({ length: 8 }, async () => {
+      const lease = await acquireStartupLease({ lockPath, isReady: async () => ready, waitMs: 1_000, pollMs: 10 });
+      if (lease.acquired) {
+        first = lease;
+        await new Promise(resolveWait => setTimeout(resolveWait, 80));
+        ready = true;
+        await lease.release();
+      }
+      return lease;
+    });
+    const results = await Promise.all(contenders);
+    assert.equal(results.filter(result => result.acquired).length, 1);
+    assert.equal(results.filter(result => result.ready).length, 7);
+    await assert.rejects(access(lockPath));
+  } finally {
+    await first?.release();
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test('HS_11: startup lease reclaims a lock whose owner process is dead', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'hook-service-dead-lease-'));
+  const lockPath = join(root, 'startup.lock');
+  try {
+    await writeFile(lockPath, JSON.stringify({ schema: 1, ownerId: 'dead-owner', pid: 999_999_999 }));
+    const lease = await acquireStartupLease({ lockPath, isReady: async () => false, waitMs: 500, pollMs: 10 });
+    assert.equal(lease.acquired, true);
+    assert.equal(lease.reclaimed, true);
+    await lease.release();
+    await assert.rejects(access(lockPath));
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
 });
 
 test('HS_09: recovery refuses a journal whose settings were changed after interruption', async () => {
