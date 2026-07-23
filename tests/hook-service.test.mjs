@@ -37,7 +37,13 @@ test('HS_01: health and registration require the token', async () => {
     assert.equal(rejectedHealth.status, 401);
     const health = await fetch(`${base}/health`, { headers: { 'x-dev-pomogator-token': 'secret' } });
     assert.equal(health.status, 200);
-    assert.deepEqual(await health.json(), { service: 'dev-pomogator-hook-service', version: '1.0.0', tokenFingerprint: '2bb80d537b1d' });
+    const body = await health.json();
+    assert.equal(body.service, 'dev-pomogator-hook-service');
+    assert.equal(body.version, '1.0.0');
+    assert.equal(body.tokenFingerprint, '2bb80d537b1d');
+    assert.match(body.rootFingerprint, /^[a-f0-9]{12}$/);
+    assert.match(body.registryDigest, /^[a-f0-9]{64}$/);
+    assert.match(body.runtimeDigest, /^[a-f0-9]{64}$/);
     const unauthorized = await post(`${base}/v1/register`, { session_id: 's1' });
     assert.equal(unauthorized.status, 401);
     assert.deepEqual(await unauthorized.json(), { error: 'unauthorized' });
@@ -78,7 +84,7 @@ test('HS_05: generated manifest keeps one bootstrap and exposes every remaining 
   const manifest = await renderHttpManifest(root);
   const sessionHooks = manifest.hooks.SessionStart.flatMap(group => group.hooks);
   const otherHooks = Object.entries(manifest.hooks).filter(([event]) => event !== 'SessionStart').flatMap(([, groups]) => groups.flatMap(group => group.hooks));
-  assert.equal(sessionHooks.length, 14);
+  assert.equal(sessionHooks.length, 16);
   assert.equal(otherHooks.length, 39);
   assert.equal(otherHooks.every(hook => hook.type === 'http' && hook.url.startsWith('http://127.0.0.1:42619/v1/dispatch/') && hook.headers?.['x-dev-pomogator-token'] === '${DEV_POMOGATOR_HOOK_TOKEN}' && hook.allowedEnvVars?.includes('DEV_POMOGATOR_HOOK_TOKEN')), true);
   const generated = JSON.parse(await readFile(join(root, '.claude-plugin', 'hooks.json'), 'utf8'));

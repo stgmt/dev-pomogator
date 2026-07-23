@@ -47,3 +47,21 @@ Feature: CORE024 Windows shell-free hook authoring gate
     Given an empty isolated hook credential state
     When eight hook-service starters provision the credential concurrently
     Then they share one persisted credential and only one starter creates it
+
+  # @feature25
+  Scenario: CORE024_08 A failed hook leaves a durable sanitized diagnostic
+    Given an isolated HTTP hook service with a hook that leaks its credential and fails
+    When I dispatch the failing hook
+    Then the 503 names the failure and matches one durable diagnostic without the credential
+
+  # @feature25
+  Scenario: CORE024_09 The hook service self-heals after a hook runtime failure
+    Given an isolated HTTP hook service with a repairable hook
+    When the hook fails once and its implementation is repaired
+    Then the same service process dispatches the repaired hook successfully
+
+  # @feature25
+  Scenario: CORE024_10 A stale owned hook daemon is recycled automatically
+    Given an isolated stale owned hook daemon identity
+    When hook-service startup checks the stale daemon
+    Then it stops the owned daemon and starts the current runtime

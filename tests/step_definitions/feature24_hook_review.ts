@@ -4,12 +4,32 @@ import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { reviewHookManifest } from '../../tools/hook-review/check.mjs';
-import { provisionCredential } from '../../tools/hook-service/credential.mjs';
+import { fingerprint, provisionCredential } from '../../tools/hook-service/credential.mjs';
+import { diagnosticsFile, startServer } from '../../tools/hook-service/server.mjs';
+import { ownedIdentity } from '../../tools/hook-service/ensure-up.mjs';
 
 type Finding = { file: string; event?: string; message: string };
 import { V4World } from '../hooks/before-after.ts';
 
-interface HookReviewWorld extends V4World { manifestFile?: string; registryFile?: string; findings?: Finding[]; cliStatus?: number; cliStderr?: string; credentialRoot?: string; credentialPath?: string; credentialResults?: Array<{ token: string; created: boolean }>; }
+interface HookReviewWorld extends V4World {
+  manifestFile?: string;
+  registryFile?: string;
+  findings?: Finding[];
+  cliStatus?: number;
+  cliStderr?: string;
+  credentialRoot?: string;
+  credentialPath?: string;
+  credentialResults?: Array<{ token: string; created: boolean }>;
+  hookRoot?: string;
+  hookToken?: string;
+  hookRoute?: string;
+  hookResponse?: Response;
+  hookResponseBody?: Record<string, unknown>;
+  hookServer?: Awaited<ReturnType<typeof startServer>>;
+  staleIdentity?: Record<string, unknown>;
+  expectedIdentity?: Record<string, string>;
+  staleOwned?: boolean;
+}
 
 function writeJson(file: string, value: object): void {
   fs.mkdirSync(path.dirname(file), { recursive: true });
@@ -124,4 +144,110 @@ Then(/^they share one persisted credential and only one starter creates it$/, fu
   assert.equal(new Set(tokens).size, 1);
   assert.equal(this.credentialResults.filter((result: any) => result.created).length, 1);
   assert.equal(fs.readFileSync(this.credentialPath!, 'utf8'), tokens[0]);
+});
+
+async function startHookFixture(world: HookReviewWorld, source: string): Promise<void> {
+  world.hookRoot = fs.mkdtempSync(path.join(world.tempDir, 'hook-service-runtime-'));
+  world.hookToken = 'credential-that-must-never-be-logged';
+  world.hookRoute = 'Stop/0/0';
+  fs.mkdirSync(path.join(world.hookRoot, 'tools', 'hook-service'), { recursive: true });
+  fs.writeFileSync(path.join(world.hookRoot, 'runtime-hook.mjs'), source);
+  writeJson(path.join(world.hookRoot, 'tools', 'hook-service', 'registry.json'), {
+    version: 1,
+    routes: {
+      [world.hookRoute]: { target: 'runtime-hook.mjs', event: 'Stop', timeout: 2 },
+    },
+  });
+  world.hookServer = await startServer({
+    pluginRoot: world.hookRoot,
+    token: world.hookToken,
+    port: 0,
+    stateRoot: path.join(world.hookRoot, 'state'),
+  });
+}
+
+async function dispatchHook(world: HookReviewWorld): Promise<void> {
+  const address = world.hookServer!.address();
+  assert.ok(address && typeof address === 'object', 'hook service must expose its bound port');
+  world.hookResponse = await fetch(`http://127.0.0.1:${address.port}/v1/dispatch/Stop%2F0%2F0`, {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      'x-dev-pomogator-token': world.hookToken!,
+    },
+    body: JSON.stringify({ session_id: 'core024-runtime' }),
+  });
+  world.hookResponseBody = await world.hookResponse.json() as Record<string, unknown>;
+}
+
+Given(/^an isolated HTTP hook service with a hook that leaks its credential and fails$/, async function (this: HookReviewWorld) {
+  await startHookFixture(this, `process.stderr.write('credential=${this.hookToken ?? 'credential-that-must-never-be-logged'}'); process.exit(7);`);
+});
+
+When(/^I dispatch the failing hook$/, async function (this: HookReviewWorld) {
+  await dispatchHook(this);
+});
+
+Then(/^the 503 names the failure and matches one durable diagnostic without the credential$/, async function (this: HookReviewWorld) {
+  assert.equal(this.hookResponse!.status, 503, 'a non-zero hook exit must become HTTP 503');
+  assert.equal(this.hookResponseBody?.error, 'hook runtime unavailable', 'the response must preserve the stable public error');
+  assert.equal(typeof this.hookResponseBody?.incidentId, 'string', 'the response must expose a diagnostic incident id');
+  assert.equal(String(this.hookResponseBody?.detail).includes(this.hookToken!), false, 'the response must redact the raw credential');
+
+  const records = fs.readFileSync(diagnosticsFile(path.join(this.hookRoot!, 'state')), 'utf8')
+    .trim()
+    .split(/\r?\n/)
+    .map((line) => JSON.parse(line) as Record<string, unknown>);
+  assert.equal(records.length, 1, 'one failed dispatch must append exactly one diagnostic');
+  assert.equal(records[0].incidentId, this.hookResponseBody?.incidentId, 'the response and durable record must correlate');
+  assert.equal(records[0].route, this.hookRoute, 'the record must identify the failing route');
+  assert.equal(records[0].code, 'hook-exit', 'the record must classify a non-zero child exit');
+  assert.equal(records[0].tokenFingerprint, fingerprint(this.hookToken!), 'the record must use only a token fingerprint');
+  assert.equal(JSON.stringify(records[0]).includes(this.hookToken!), false, 'the durable record must not contain the raw credential');
+  await new Promise<void>((resolve) => this.hookServer!.close(() => resolve()));
+});
+
+Given(/^an isolated HTTP hook service with a repairable hook$/, async function (this: HookReviewWorld) {
+  await startHookFixture(this, `process.stderr.write('first failure'); process.exit(9);`);
+});
+
+When(/^the hook fails once and its implementation is repaired$/, async function (this: HookReviewWorld) {
+  await dispatchHook(this);
+  assert.equal(this.hookResponse!.status, 503, 'the first dispatch must prove the runtime failure path');
+  fs.writeFileSync(path.join(this.hookRoot!, 'runtime-hook.mjs'), 'process.stdout.write(JSON.stringify({additionalContext:"repaired"}));');
+});
+
+Then(/^the same service process dispatches the repaired hook successfully$/, async function (this: HookReviewWorld) {
+  const pidBefore = process.pid;
+  await dispatchHook(this);
+  assert.equal(this.hookResponse!.status, 200, 'a prior hook failure must not poison later dispatches');
+  assert.deepEqual(this.hookResponseBody, { additionalContext: 'repaired' }, 'the repaired implementation must execute through the live service');
+  assert.equal(process.pid, pidBefore, 'self-healing must not require the caller process to restart');
+  await new Promise<void>((resolve) => this.hookServer!.close(() => resolve()));
+});
+
+Given(/^an isolated stale owned hook daemon identity$/, function (this: HookReviewWorld) {
+  this.expectedIdentity = {
+    rootFingerprint: 'current-root',
+    registryDigest: 'current-registry',
+    runtimeDigest: 'current-runtime',
+  };
+  this.staleIdentity = {
+    pid: 48123,
+    version: '1.0.0',
+    rootFingerprint: 'current-root',
+    registryDigest: 'old-registry',
+    runtimeDigest: 'old-runtime',
+  };
+});
+
+When(/^hook-service startup checks the stale daemon$/, function (this: HookReviewWorld) {
+  this.staleOwned = ownedIdentity(this.staleIdentity, this.expectedIdentity);
+});
+
+Then(/^it stops the owned daemon and starts the current runtime$/, function (this: HookReviewWorld) {
+  assert.equal(this.staleOwned, true, 'a state record for the same root and service version must be recognized as owned');
+  assert.notEqual(this.staleIdentity?.registryDigest, this.expectedIdentity?.registryDigest, 'the fixture must prove registry staleness');
+  assert.notEqual(this.staleIdentity?.runtimeDigest, this.expectedIdentity?.runtimeDigest, 'the fixture must prove runtime staleness');
+  assert.equal(ownedIdentity({ ...this.staleIdentity, rootFingerprint: 'foreign-root' }, this.expectedIdentity), false, 'a foreign process must never be classified as owned');
 });
