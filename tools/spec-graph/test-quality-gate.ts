@@ -43,7 +43,7 @@ export interface GateDecision {
 }
 
 /** Finding codes that mean "marked DONE but the test does not back it". */
-const BLOCKING_CODES = new Set<string>(['TASK_TEST_QUALITY', 'TASK_UNTESTED']);
+const BLOCKING_CODES = new Set<string>(['UNVERIFIED_COMPLETION', 'TASK_TEST_QUALITY', 'TASK_UNTESTED']);
 
 /** Extract a `[skip-test-quality: reason]` escape from any text, else null. */
 export function escapeReason(text: string): string | null {

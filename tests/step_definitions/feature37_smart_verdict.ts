@@ -406,7 +406,7 @@ When('spec-verdict summarizes that spec', async function (this: F37World) {
 
 Then('the output shows STRUCTURE, TRACEABILITY, EXECUTION, TASK_TRUTH, BDD_SYNC, SEMANTIC, and FILTERED_PROOF lanes', function (this: F37World) {
   const r = this.verdictResult!;
-  assert.equal(r.verdict, 'GREEN', 'fixture must prove the graph gate can pass while readiness blocks');
+  assert.equal(r.verdict, 'NOT_READY', 'the canonical verdict must fold readiness debt into the top-level answer');
   assert.equal(r.traceabilityGate.gapCount, 0, 'fixture must be traceable so EXECUTION/TASK_TRUTH are the blockers');
   assert.equal(r.readiness.lanes.STRUCTURE.status, 'GREEN');
   assert.equal(r.readiness.lanes.TRACEABILITY.status, 'GREEN');
@@ -420,11 +420,14 @@ Then('the output shows STRUCTURE, TRACEABILITY, EXECUTION, TASK_TRUTH, BDD_SYNC,
   }
 });
 
-Then('the final readiness label is OVERALL NOT_READY rather than plain VERDICT GREEN', function (this: F37World) {
+Then('the final readiness label is OVERALL NOT_READY and the canonical verdict is NOT_READY', function (this: F37World) {
   assert.equal(this.verdictResult!.readiness.overall, 'NOT_READY');
-  assert.equal(verdictExitCode(this.verdictResult!), 1, 'GRAPH_GREEN with readiness debt must fail the machine/CLI contract');
+  assert.equal(this.verdictResult!.verdict, 'NOT_READY');
+  const completion = this.verdictResult!.blocking.find((finding) => finding.code === 'UNVERIFIED_COMPLETION');
+  assert.ok(completion, JSON.stringify(this.verdictResult!.blocking));
+  assert.equal(verdictExitCode(this.verdictResult!), 1, 'NOT_READY must fail the machine/CLI contract');
   assert.match(this.verdictText!, /OVERALL:\s*NOT_READY/);
-  assert.match(this.verdictText!, /VERDICT:\s*GRAPH_GREEN/);
+  assert.match(this.verdictText!, /VERDICT:\s*NOT_READY/);
   assert.doesNotMatch(this.verdictText!, /VERDICT:\s*GREEN\b/, this.verdictText);
 });
 

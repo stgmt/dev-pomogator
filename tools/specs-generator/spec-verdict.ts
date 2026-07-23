@@ -28,7 +28,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { buildGraphFromCwd } from '../spec-graph/builder.ts';
-import { checkConformance } from '../spec-graph/conformance.ts';
+import { checkConformance, type Finding } from '../spec-graph/conformance.ts';
 import { computeCoverage, scenarioKey, specOf, type ScenarioLike, type TaskLike } from '../spec-graph/coverage.ts';
 import { readVerdicts } from '../spec-graph/test-quality-gate.ts';
 import {
@@ -39,6 +39,7 @@ import {
 } from '../spec-graph/traceability.ts';
 import { runJudge, type JudgeResult } from '../spec-llm-judge/index.ts';
 import { buildReadinessInventory, deriveExecutionLane, type ReadinessInventory } from '../spec-graph/readiness-inventory.ts';
+import { computeSpecVerdict, type SpecVerdict, type UnverifiedCompletion } from '../spec-graph/verdict.ts';
 import type { FrNode, ScenarioNode, TaskNode } from '../spec-graph/types.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -61,7 +62,7 @@ export type ReadinessLaneName =
   | 'SEMANTIC'
   | 'FILTERED_PROOF';
 
-export type ReadinessLaneStatus = 'GREEN' | 'RED' | 'NOT_RUN' | 'SKIPPED' | 'NOT_EVALUATED' | 'NONE';
+export type ReadinessLaneStatus = 'GREEN' | 'RED' | 'NOT_RUN' | 'SKIPPED' | 'NOT_EVALUATED' | 'DEPENDENCY_ABSENT' | 'NONE';
 
 export type ScenarioLite = Pick<ScenarioNode, 'id' | 'file' | 'line' | 'tags' | 'steps'>;
 
@@ -96,8 +97,10 @@ export interface ReadinessLane {
 
 export interface SpecVerdictResult {
   specPath: string;
-  /** RED while ANY hard graph/traceability gate holds; GREEN is NOT the readiness verdict. */
-  verdict: 'RED' | 'GREEN';
+  /** Canonical graph verdict. GREEN is emitted only when every mandatory readiness lane passes. */
+  verdict: SpecVerdict;
+  /** Stable machine-readable blockers; includes explicit UNVERIFIED_COMPLETION findings. */
+  blocking: Array<Finding | UnverifiedCompletion>;
   /** Structural pre-filter (validate-spec). Pass is NOT a health verdict. */
   prefilter: {
     structuralErrors: number;
@@ -583,8 +586,6 @@ export async function runSpecVerdict(
     ...drifts.map((d) => `[SEMANTIC_DRIFT:${d.severity}] ${d.frId} ↔ ${d.scenarioId} — ${d.explanation}`),
   ];
 
-  const verdict: 'RED' | 'GREEN' = gapList.length > 0 ? 'RED' : 'GREEN';
-
   const notes: string[] = [];
   if (semanticNote) notes.push(semanticNote);
   // PARTIAL last run (FR-32 honesty): scenarios absent from the last NDJSON land
@@ -683,27 +684,29 @@ export async function runSpecVerdict(
       debt: [],
     },
   };
-  const blockingReadinessLanes = Object.entries(lanes).filter(([, lane]) => lane.blocking);
+  const canonical = computeSpecVerdict({
+    inventory,
+    lanes: Object.fromEntries(Object.entries(lanes).map(([name, lane]) => [name, {
+      status: lane.status,
+      debt: lane.debt,
+    }])),
+  }, specFindings);
+  const canonicalLanes = Object.fromEntries(Object.entries(canonical.readiness.lanes).map(([name, lane]) => [name, {
+    status: lane.status,
+    blocking: lane.blocking,
+    summary: lanes[name as ReadinessLaneName]?.summary ?? (lane.debt.join(', ') || `${name} ${lane.status}`),
+    debt: lane.debt,
+  }])) as Record<ReadinessLaneName, ReadinessLane>;
   const readiness = {
-    lanes,
-    overall: (blockingReadinessLanes.length > 0 ? 'NOT_READY' : 'READY') as 'READY' | 'NOT_READY',
-    nextAction: (() => {
-      if (lanes.STRUCTURE.blocking) return 'Fix structural/audit/conformance errors, then rerun spec-verdict.';
-      if (lanes.TRACEABILITY.blocking) return 'Add the missing FR/AC/task/scenario traceability links, then rerun spec-verdict.';
-      if (executionHardFailures.length > 0) return 'Inspect the failing/undefined/ambiguous scenarios with get_test_result, fix them, then rerun the full Docker BDD suite.';
-      if (notRun > 0 && filteredProof.latest) return `Run the full Docker BDD suite so canonical coverage replaces filtered proof ${filteredProof.latest.runId}, or attach ${filteredProof.latest.artifact ?? 'the filtered artifact'} as review evidence.`;
-      if (effectiveExecution.blocking) return effectiveExecution.summary;
-      if (lanes.BDD_SYNC.blocking) return 'Fix source/executable BDD sync drift or mark intentional EXEC_ONLY/OUT_OF_SCOPE/PENDING scenarios, then rerun spec-verdict.';
-      if (notRun > 0) return 'Run the full Docker BDD suite so canonical coverage contains every scenario result.';
-      if (lanes.TASK_TRUTH.blocking) return 'Reopen/downgrade DONE-but-unverified tasks or provide canonical passed scenario evidence.';
-      if (lanes.SEMANTIC.blocking) return 'Run semantic checking with a working claude binary, or explicitly rerun with --no-semantic if semantic review is out of scope.';
-      return 'No readiness blockers detected by spec-verdict.';
-    })(),
+    lanes: canonicalLanes,
+    overall: canonical.readiness.overall,
+    nextAction: canonical.readiness.next_action,
   };
 
   return {
     specPath,
-    verdict,
+    verdict: canonical.verdict,
+    blocking: canonical.blocking,
     prefilter: {
       structuralErrors,
       warnings,
@@ -831,11 +834,11 @@ export function renderVerdict(r: SpecVerdictResult): string {
   for (const n of r.notes) lines.push(`  - ${n}`);
   const everyLaneGreen = Object.values(r.readiness.lanes).every((lane) => lane.status === 'GREEN');
   if (r.verdict === 'RED') {
-    lines.push(`VERDICT: RED — ${r.gapList.length} blocking graph item(s) in the gap list above`);
-  } else if (r.readiness.overall === 'READY' && everyLaneGreen) {
+    lines.push(`VERDICT: RED — ${r.blocking.length} blocking finding(s)`);
+  } else if (r.verdict === 'GREEN' && everyLaneGreen) {
     lines.push('VERDICT: GREEN');
   } else {
-    lines.push('VERDICT: GRAPH_GREEN (structure/traceability gates passed; readiness debt remains)');
+    lines.push(`VERDICT: NOT_READY — ${r.blocking.length} blocking finding(s)`);
   }
   lines.push(`OVERALL: ${r.readiness.overall}`);
   lines.push(`NEXT: ${r.readiness.nextAction}`);
@@ -868,8 +871,8 @@ function parseArgs(argv: string[]): {
   return { specPath, json, semantic, maxPairs };
 }
 
-export function verdictExitCode(result: Pick<SpecVerdictResult, 'verdict' | 'readiness'>): 0 | 1 {
-  return result.verdict === 'RED' || result.readiness.overall === 'NOT_READY' ? 1 : 0;
+export function verdictExitCode(result: Pick<SpecVerdictResult, 'verdict'>): 0 | 1 {
+  return result.verdict === 'GREEN' ? 0 : 1;
 }
 
 const isDirectRun =

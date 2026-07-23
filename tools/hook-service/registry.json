@@ -301,7 +301,7 @@
       "args": [],
       "event": "PreToolUse",
       "timeout": 30,
-      "matcher": "mcp__dev-pomogator-specs__apply_spec_change|Write"
+      "matcher": "mcp__dev-pomogator-specs__apply_spec_change|mcp__dev-pomogator-specs__apply_spec_transaction|Write"
     },
     "UserPromptSubmit/0/0": {
       "target": "tools/carl/runner.ts",

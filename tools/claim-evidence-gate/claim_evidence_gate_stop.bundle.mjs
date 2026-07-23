@@ -237,7 +237,7 @@ function agentBgInFlightCount(rawTranscript) {
 }
 var AWAITS_RESULT_RE = /когда\s+придёт|как\s+придёт|по\s+результату|результат[ауые]?\b[^.]{0,40}(?:обработ|свер|прочит|проверю|коммич|закоммич)|если\s+(?:\d|зел[её]н|green|ок\b|чисто)|при\s+зел[её]н|жд[уё]м?\s+(?:отч[её]т|результат)|отч[её]т\w*[^.]{0,40}прид(?:ут|[её]т)|прид(?:ут|[её]т)\s+автоматически|после\s+(?:отч[её]т|результат)\w*|затем\s+(?:свожу|свед|обработ|оформ|проанализ|сверю)|when\s+it\s+(?:returns|lands|completes|finishes)|on\s+the\s+result|once\s+it\s+(?:returns|lands|completes)|waiting\s+for\s+(?:the\s+)?reports?|once\s+the\s+reports?\s+(?:arrive|land|come)/i;
 var HOOK_INJECTION_RE = /^\s*(📋|👉|…ещё|\[specs-validator\]|⚠️|PHASE GATE WARNING|Stop hook feedback|Stop hook blocking error|UserPromptSubmit hook|<\/?task-notification|<(?:task-id|tool-use-id|output-file|status|summary)|<\/?command-(?:name|message|args)|<\/?local-command-(?:stdout|caveat)|\[SYSTEM NOTIFICATION|This is an automated|Do NOT interpret|[A-Za-z][\w.-]*:\s*\d+\s*(?:open|⏸))/u;
-var ACTIONABLE_STOP_FEEDBACK_RE = /(?:Stop hook feedback|Stop hook blocking error)[\s\S]{0,1200}(?:TASK_UNTESTED|done without a strong test|Strengthen the test|blocking error|blocked|не закрыто|Нужно:|run\s+\S|fix\s+\S|почини|исправь|доделай)/i;
+var ACTIONABLE_STOP_FEEDBACK_RE = /(?:Stop hook feedback|Stop hook blocking error)[\s\S]{0,1200}(?:UNVERIFIED_COMPLETION|TASK_UNTESTED|done without a strong test|Strengthen the test|blocking error|blocked|не закрыто|Нужно:|run\s+\S|fix\s+\S|почини|исправь|доделай)/i;
 var INTERRUPTED_PROMPT_RE = /^\s*\[Request interrupted by user(?: for tool use)?\]\s*$/i;
 function isTypedHumanPrompt(e) {
   if (!isRealUser(e)) return false;

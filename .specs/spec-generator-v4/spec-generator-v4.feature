@@ -3457,7 +3457,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Given a spec is structurally valid and traceable but has unrun scenarios and DONE-but-unverified tasks
     When spec-verdict summarizes that spec
     Then the output shows STRUCTURE, TRACEABILITY, EXECUTION, TASK_TRUTH, BDD_SYNC, SEMANTIC, and FILTERED_PROOF lanes
-    And the final readiness label is OVERALL NOT_READY rather than plain VERDICT GREEN
+    And the final readiness label is OVERALL NOT_READY and the canonical verdict is NOT_READY
 
   @feature61
   Scenario: SPECGEN004_540 MCP status and verdict use aligned gap semantics
