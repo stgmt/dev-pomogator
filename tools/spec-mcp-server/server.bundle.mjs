@@ -48655,7 +48655,7 @@ function classifyEvidence(s) {
   if (s.canonicalResult) {
     return {
       ...base,
-      outcome: explicitOutcome(s.canonicalResult),
+      outcome: stale && s.canonicalResult.toUpperCase() === "PASSED" ? "stale" : explicitOutcome(s.canonicalResult),
       result: s.canonicalResult.toUpperCase(),
       source: source ?? "canonical-full-run",
       timestamp: s.canonicalRunAt ?? s.lastRunAt ?? null,
@@ -48861,6 +48861,50 @@ var ALL_READINESS_LANES = [
   ...MANDATORY_READINESS_LANES,
   ...OPTIONAL_READINESS_LANES
 ];
+function deriveExecutionLane(inventory) {
+  const outcomes = inventory.scenarios.map((s) => s.outcome);
+  const notRecorded = outcomes.filter((o) => o === "not_recorded").length;
+  const neverRunFrs = inventory.frs.filter((fr) => fr.never_run).map((fr) => fr.id);
+  const debt = [];
+  if (notRecorded > 0) debt.push(`SCENARIO_NOT_RUN:${notRecorded}`);
+  if (neverRunFrs.length > 0) debt.push(`FR_NEVER_RUN:${neverRunFrs.join(",")}`);
+  for (const outcome of [...new Set(outcomes)]) {
+    if (outcome === "not_recorded" || outcome === "PASSED") continue;
+    debt.push(`${outcomes.filter((o) => o === outcome).length} ${outcome}`);
+  }
+  const status = debt.length === 0 ? "GREEN" : outcomes.length > 0 && outcomes.every((o) => o === "not_recorded") ? "NOT_RUN" : "RED";
+  return { status, debt };
+}
+var LANE_NEXT_ACTION = {
+  STRUCTURE: () => "Fix structural/audit/conformance errors, then rerun the readiness check.",
+  TRACEABILITY: () => "Add the missing FR/AC/task/scenario traceability links, then rerun the readiness check.",
+  EXECUTION: (c) => {
+    const neverRun = c.inventory.frs.filter((fr) => fr.never_run).map((fr) => fr.id);
+    return neverRun.length > 0 ? `Run the full Docker BDD suite so canonical coverage records the never-run FR(s) ${neverRun.join(", ")} and every scenario result.` : "Run the full Docker BDD suite so canonical coverage contains every scenario result.";
+  },
+  TASK_TRUTH: () => "Reopen/downgrade DONE-but-unverified tasks or provide canonical passed scenario evidence.",
+  BDD_SYNC: () => "Fix source/executable BDD sync drift or mark intentional EXEC_ONLY/OUT_OF_SCOPE/PENDING scenarios."
+};
+function evaluateReadiness(candidate) {
+  const execution = deriveExecutionLane(candidate.inventory);
+  const lanes = {};
+  for (const name of ALL_READINESS_LANES) {
+    const supplied = name === "EXECUTION" ? execution : candidate.lanes?.[name];
+    const status = supplied?.status ?? "NOT_EVALUATED";
+    const debt = supplied?.debt ?? [];
+    const blocking = MANDATORY_READINESS_LANES.includes(name) ? status !== "GREEN" : name === "SEMANTIC" ? status === "RED" || status === "DEPENDENCY_ABSENT" : false;
+    lanes[name] = { status, blocking, debt };
+  }
+  const firstBlocking = MANDATORY_READINESS_LANES.find((name) => lanes[name].blocking);
+  const overall = firstBlocking ? "NOT_READY" : "READY";
+  const nextAction = !firstBlocking ? "No readiness blockers detected by the shared inventory." : lanes[firstBlocking].status === "NOT_EVALUATED" ? `Evaluate the ${firstBlocking} lane \u2014 an unevaluated mandatory lane cannot certify readiness.` : lanes[firstBlocking].status === "DEPENDENCY_ABSENT" ? `The ${firstBlocking} lane could not run for absent dependencies \u2014 dependency absence is not readiness proof (FR-64 scope).` : LANE_NEXT_ACTION[firstBlocking](candidate);
+  return {
+    overall,
+    mandatory_lanes: MANDATORY_READINESS_LANES,
+    lanes,
+    next_action: nextAction
+  };
+}
 
 // tools/spec-mcp-server/tools.ts
 import fs27 from "node:fs";
@@ -51747,11 +51791,9 @@ ${fr.body ?? ""}`,
       `NOT_RUN \u2014 ${notRun} scenario(s) have no result in the last run (not_run, NOT "undefined"/unverified), by feature: ${byFile}. A count on the MAIN feature \u21D2 the last run was FILTERED (re-run the full suite). A feature absent from the test config (e.g. a legacy *.feature not in cucumber \`paths\`) is a PERSISTENT gap a full run won't close \u2014 add it to paths or retire it.`
     );
   }
-  const executionHardFailures = ["failed", "undefined", "ambiguous", "pending", "skipped", "stale"].map((key) => [key, canonicalBuckets[key] ?? 0]).filter(([, count]) => count > 0);
-  const executionDebt = [
-    ...executionHardFailures.map(([key, count]) => `${count} ${key}`),
-    ...notRun > 0 ? [`SCENARIO_NOT_RUN:${notRun}`] : []
-  ];
+  const effectiveExecution = deriveExecutionLane(inventory);
+  const executionHardFailures = ["failed", "undefined", "ambiguous", "pending", "skipped"].map((key) => [key, canonicalBuckets[key] ?? 0]).filter(([, count]) => count > 0);
+  const executionDebt = effectiveExecution.debt;
   const semanticDebt = [
     ...drifts.map((d) => `${d.frId} \u2194 ${d.scenarioId}: ${d.severity}`),
     ...judgeFailures > 0 ? [`${judgeFailures} judge subprocess failure(s)`] : [],
@@ -51787,10 +51829,10 @@ ${fr.body ?? ""}`,
       debt: gaps.map((g) => `${g.class}: ${g.nodeId}`)
     },
     EXECUTION: {
-      status: executionHardFailures.length > 0 ? "RED" : notRun > 0 ? "NOT_RUN" : "GREEN",
-      blocking: executionDebt.length > 0,
-      summary: executionDebt.length > 0 ? executionDebt.join(", ") : "all known scenarios have passing/acceptable results",
-      debt: executionDebt
+      status: effectiveExecution.status,
+      blocking: effectiveExecution.status !== "GREEN",
+      summary: effectiveExecution.debt?.join(", ") || "all effective scenario evidence is current and passing",
+      debt: effectiveExecution.debt ?? []
     },
     TASK_TRUTH: {
       status: taskTruthDebt.length > 0 ? "RED" : "GREEN",
@@ -51825,8 +51867,9 @@ ${fr.body ?? ""}`,
       if (lanes.STRUCTURE.blocking) return "Fix structural/audit/conformance errors, then rerun spec-verdict.";
       if (lanes.TRACEABILITY.blocking) return "Add the missing FR/AC/task/scenario traceability links, then rerun spec-verdict.";
       if (executionHardFailures.length > 0) return "Inspect the failing/undefined/ambiguous scenarios with get_test_result, fix them, then rerun the full Docker BDD suite.";
-      if (lanes.BDD_SYNC.blocking) return "Fix source/executable BDD sync drift or mark intentional EXEC_ONLY/OUT_OF_SCOPE/PENDING scenarios, then rerun spec-verdict.";
       if (notRun > 0 && filteredProof.latest) return `Run the full Docker BDD suite so canonical coverage replaces filtered proof ${filteredProof.latest.runId}, or attach ${filteredProof.latest.artifact ?? "the filtered artifact"} as review evidence.`;
+      if (effectiveExecution.blocking) return effectiveExecution.summary;
+      if (lanes.BDD_SYNC.blocking) return "Fix source/executable BDD sync drift or mark intentional EXEC_ONLY/OUT_OF_SCOPE/PENDING scenarios, then rerun spec-verdict.";
       if (notRun > 0) return "Run the full Docker BDD suite so canonical coverage contains every scenario result.";
       if (lanes.TASK_TRUTH.blocking) return "Reopen/downgrade DONE-but-unverified tasks or provide canonical passed scenario evidence.";
       if (lanes.SEMANTIC.blocking) return "Run semantic checking with a working claude binary, or explicitly rerun with --no-semantic if semantic review is out of scope.";
@@ -52880,13 +52923,14 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
           hint: `No nodes under .specs/${slug}/ \u2014 check list_specs for the loaded slugs.`
         });
       }
-      const summary = { passed: 0, failed: 0, pending: 0, undefined: 0, ambiguous: 0, skipped: 0, touched: 0 };
+      const summary = { passed: 0, failed: 0, pending: 0, undefined: 0, ambiguous: 0, skipped: 0, stale: 0, touched: 0 };
       let lastAt = null;
       for (const s of scens) {
         if (!s.canonicalResult) continue;
         summary.touched++;
         const r = s.canonicalResult.toUpperCase();
-        if (r === "PASSED") summary.passed++;
+        if (s.resultStale && r === "PASSED") summary.stale++;
+        else if (r === "PASSED") summary.passed++;
         else if (r === "FAILED") summary.failed++;
         else if (r === "PENDING") summary.pending++;
         else if (r === "UNDEFINED") summary.undefined++;
@@ -52918,26 +52962,45 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
       const bddSync = compareBddSync(repoRoot, slug, sourceScenarios, executableScenarios);
       const filteredProof = latestFilteredProof(repoRoot, sourceScenarios);
       const taskTruthDebt = Object.entries(canonicalStatusCoverage.tasks).flatMap(([taskId, task]) => (task.truth_issues ?? []).map((issue2) => `${taskId}: ${issue2.message}`));
-      const executionHardCount = canonicalStatusCoverage.totals.failed + canonicalStatusCoverage.totals.undefined + canonicalStatusCoverage.totals.ambiguous + canonicalStatusCoverage.totals.pending + canonicalStatusCoverage.totals.skipped + canonicalStatusCoverage.totals.stale;
       let lifecycle;
       if (counts.scenarios === 0) lifecycle = "SPEC_ONLY";
       else if (!last_run) lifecycle = "TESTS_NOT_RUN";
       else if (summary.failed > 0 || summary.ambiguous > 0) lifecycle = "RED";
-      else if (summary.pending + summary.undefined + summary.skipped > 0 || canonicalStatusCoverage.totals.not_run > 0 || canonicalStatusCoverage.totals.stale > 0) lifecycle = "PARTIAL";
+      else if (summary.pending + summary.undefined + summary.skipped + summary.stale > 0 || canonicalStatusCoverage.totals.not_run > 0) lifecycle = "PARTIAL";
       else lifecycle = "GREEN";
       const gaps = summariseGaps(gapsFromFindings(checkConformance(graph), { spec: slug }));
-      const readinessLanes = {
-        TRACEABILITY: { status: Object.values(gaps).some((count) => count > 0) ? "RED" : "GREEN" },
-        EXECUTION: { status: executionHardCount > 0 ? "RED" : canonicalStatusCoverage.totals.not_run > 0 ? "NOT_RUN" : "GREEN" },
-        TASK_TRUTH: { status: taskTruthDebt.length > 0 ? "RED" : "GREEN", debt: taskTruthDebt },
-        BDD_SYNC: { status: bddSync.debt.length > 0 ? "RED" : "GREEN", debt: bddSync.debt },
-        FILTERED_PROOF: { status: filteredProof.latest ? "GREEN" : "NONE", latest: filteredProof.latest }
-      };
+      const inventory = buildReadinessInventory(graph, { spec: slug });
+      const readiness = evaluateReadiness({
+        inventory,
+        lanes: {
+          TRACEABILITY: {
+            status: Object.values(gaps).some((count) => count > 0) ? "RED" : "GREEN",
+            blocking: Object.values(gaps).some((count) => count > 0),
+            debt: Object.entries(gaps).filter(([, count]) => count > 0).map(([code, count]) => `${code}:${count}`)
+          },
+          TASK_TRUTH: {
+            status: taskTruthDebt.length > 0 ? "RED" : "GREEN",
+            blocking: taskTruthDebt.length > 0,
+            debt: taskTruthDebt
+          },
+          BDD_SYNC: {
+            status: bddSync.debt.length > 0 ? "RED" : "GREEN",
+            blocking: bddSync.debt.length > 0,
+            debt: bddSync.debt
+          },
+          FILTERED_PROOF: {
+            status: filteredProof.latest ? "GREEN" : "NONE",
+            blocking: false,
+            debt: []
+          }
+        }
+      });
+      const readinessLanes = readiness.lanes;
       const hints = {
         SPEC_ONLY: "Docs only \u2014 no scenarios written yet. Next: author the .feature (FR-38a).",
         TESTS_NOT_RUN: `${counts.scenarios} scenario(s) are SCENARIO_NOT_RUN; no canonical execution has been ingested. Next: run the suite so NDJSON lands.`,
         RED: `${summary.failed + summary.ambiguous} failing of ${summary.touched} touched. Next: get_test_result per scenario.`,
-        PARTIAL: statusExecutionGaps.SCENARIO_NOT_RUN > 0 ? `${statusExecutionGaps.SCENARIO_NOT_RUN} scenario(s) are SCENARIO_NOT_RUN after the last ingested run; NOT execution-complete.` : canonicalStatusCoverage.totals.stale > 0 ? `${canonicalStatusCoverage.totals.stale} stale passed scenario(s) need rerun after source changes; NOT execution-complete.` : `${summary.pending + summary.undefined + summary.skipped} scenario(s) undefined/pending/skipped, 0 failed \u2014 written but not implemented; NOT green.`,
+        PARTIAL: statusExecutionGaps.SCENARIO_NOT_RUN > 0 ? `${statusExecutionGaps.SCENARIO_NOT_RUN} scenario(s) are SCENARIO_NOT_RUN after the last ingested run; NOT execution-complete.` : summary.stale > 0 ? `${summary.stale} stale passed scenario(s) need rerun after source changes; NOT execution-complete.` : `${summary.pending + summary.undefined + summary.skipped} scenario(s) undefined/pending/skipped, 0 failed \u2014 written but not implemented; NOT green.`,
         GREEN: `All ${summary.touched} touched scenario(s) passed at ${lastAt}.`
       };
       const progress = readProgressState(path23.join(repoRoot, ".specs", slug));
@@ -52961,7 +53024,7 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
         // precheck + spec-verdict report (AC-63.1 — one graph, one inventory),
         // with per-AC test_paths, FR never-run classification and the evidence
         // provenance/recency taxonomy (AC-63.2).
-        inventory: buildReadinessInventory(graph, { spec: slug }),
+        inventory,
         last_run,
         gaps,
         execution_gaps: statusExecutionGaps,
@@ -52974,9 +53037,8 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
           task_verification: canonicalStatusCoverage.tasks
         },
         readiness: {
-          overall: Object.values(readinessLanes).some((lane) => lane.status === "RED" || lane.status === "NOT_RUN") ? "NOT_READY" : "READY",
-          lanes: readinessLanes,
-          next_action: bddSync.debt.length > 0 ? "Fix source/executable BDD sync drift or mark intentional exceptions." : statusExecutionGaps.SCENARIO_NOT_RUN > 0 && filteredProof.latest ? `Run the full Docker BDD suite so canonical coverage replaces filtered proof ${filteredProof.latest.runId}, or attach ${filteredProof.latest.artifact ?? "the filtered artifact"} as review evidence.` : hints[lifecycle]
+          ...readiness,
+          next_action: bddSync.debt.length > 0 ? "Fix source/executable BDD sync drift or mark intentional exceptions." : readiness.next_action
         },
         filtered_proof: filteredProof.latest,
         phases,

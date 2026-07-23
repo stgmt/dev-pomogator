@@ -22,7 +22,7 @@ export interface AcClaim {
 /** Parse `## AC-N (FR-M): ...` headers. */
 export function parseAcIds(acContent: string): { id: string; fr: string | null }[] {
   const out: { id: string; fr: string | null }[] = [];
-  const re = /^##+\s*(AC-\d+)\s*(?:\((FR-\d+)\))?/gm;
+  const re = /^##+\s*(AC-\d+(?:\.\d+)*)\s*(?:\((FR-\d+(?:\.\d+)*)\))?/gm;
   let m: RegExpExecArray | null;
   while ((m = re.exec(acContent)) !== null) out.push({ id: m[1], fr: m[2] ?? null });
   return out;

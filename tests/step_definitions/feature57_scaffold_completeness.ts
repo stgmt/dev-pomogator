@@ -261,7 +261,7 @@ Then(/^the ConfirmStop error names the placeholder and broken link$/, function (
   assert.match(output, /broken link.*FR\.md#missing-anchor/i);
 });
 
-// ── SPECGEN004_472 — claims-done stub README → ERROR ────────────────────────
+// ── SPECGEN004_568 — claims-done stub README → ERROR ────────────────────────
 
 Given(/^an isolated claims-done spec fixture whose README\.md is an unfilled scaffold$/, function (this: ScaffoldWorld) {
   makeSpecDir.call(this, 'fr57-bdd-stub-readme', { 'README.md': `# ${STUB_SENTINEL}\n\n- {Идея 1}\n` }, true);

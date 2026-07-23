@@ -36,7 +36,7 @@
 import { z } from 'zod';
 import { checkConformance, type Finding } from '../spec-graph/conformance.ts';
 import { gapsFromFindings, summariseGaps } from '../spec-graph/traceability.ts';
-import { buildReadinessInventory } from '../spec-graph/readiness-inventory.ts';
+import { buildReadinessInventory, evaluateReadiness } from '../spec-graph/readiness-inventory.ts';
 import fs from 'node:fs';
 import path from 'node:path';
 import { logSpecAccess } from './spec-access-log.ts';
@@ -1386,13 +1386,14 @@ export function buildToolRegistry(
 
       // FR-38b: the linked last-run summary — ONLY from ingested NDJSON data
       // (lastResult/lastRunAt stamped by the FR-1 pipeline). Never fabricated.
-      const summary = { passed: 0, failed: 0, pending: 0, undefined: 0, ambiguous: 0, skipped: 0, touched: 0 };
+      const summary = { passed: 0, failed: 0, pending: 0, undefined: 0, ambiguous: 0, skipped: 0, stale: 0, touched: 0 };
       let lastAt: string | null = null;
       for (const s of scens) {
         if (!s.canonicalResult) continue;
         summary.touched++;
         const r = s.canonicalResult.toUpperCase();
-        if (r === 'PASSED') summary.passed++;
+        if (s.resultStale && r === 'PASSED') summary.stale++;
+        else if (r === 'PASSED') summary.passed++;
         else if (r === 'FAILED') summary.failed++;
         else if (r === 'PENDING') summary.pending++;
         else if (r === 'UNDEFINED') summary.undefined++;
@@ -1428,7 +1429,6 @@ export function buildToolRegistry(
       const filteredProof = latestFilteredProof(repoRoot, sourceScenarios);
       const taskTruthDebt = Object.entries(canonicalStatusCoverage.tasks)
         .flatMap(([taskId, task]) => (task.truth_issues ?? []).map((issue) => `${taskId}: ${issue.message}`));
-      const executionHardCount = canonicalStatusCoverage.totals.failed + canonicalStatusCoverage.totals.undefined + canonicalStatusCoverage.totals.ambiguous + canonicalStatusCoverage.totals.pending + canonicalStatusCoverage.totals.skipped + canonicalStatusCoverage.totals.stale;
 
       // FR-38a/FR-61: lifecycle is execution-honest. A filtered run with all
       // touched scenarios passed is still PARTIAL while any authored scenario is
@@ -1438,21 +1438,40 @@ export function buildToolRegistry(
       else if (!last_run) lifecycle = 'TESTS_NOT_RUN';
       else if (summary.failed > 0 || summary.ambiguous > 0) lifecycle = 'RED';
       else if (
-        summary.pending + summary.undefined + summary.skipped > 0 ||
-        canonicalStatusCoverage.totals.not_run > 0 ||
-        canonicalStatusCoverage.totals.stale > 0
+        summary.pending + summary.undefined + summary.skipped + summary.stale > 0 ||
+        canonicalStatusCoverage.totals.not_run > 0
       ) lifecycle = 'PARTIAL';
       else lifecycle = 'GREEN';
 
       // FR-38c: the FR-37b gap counts for this cell + an agent hint.
       const gaps = summariseGaps(gapsFromFindings(checkConformance(graph), { spec: slug }));
-      const readinessLanes = {
-        TRACEABILITY: { status: Object.values(gaps).some((count) => count > 0) ? 'RED' : 'GREEN' },
-        EXECUTION: { status: executionHardCount > 0 ? 'RED' : canonicalStatusCoverage.totals.not_run > 0 ? 'NOT_RUN' : 'GREEN' },
-        TASK_TRUTH: { status: taskTruthDebt.length > 0 ? 'RED' : 'GREEN', debt: taskTruthDebt },
-        BDD_SYNC: { status: bddSync.debt.length > 0 ? 'RED' : 'GREEN', debt: bddSync.debt },
-        FILTERED_PROOF: { status: filteredProof.latest ? 'GREEN' : 'NONE', latest: filteredProof.latest },
-      };
+      const inventory = buildReadinessInventory(graph, { spec: slug });
+      const readiness = evaluateReadiness({
+        inventory,
+        lanes: {
+          TRACEABILITY: {
+            status: Object.values(gaps).some((count) => count > 0) ? 'RED' : 'GREEN',
+            blocking: Object.values(gaps).some((count) => count > 0),
+            debt: Object.entries(gaps).filter(([, count]) => count > 0).map(([code, count]) => `${code}:${count}`),
+          },
+          TASK_TRUTH: {
+            status: taskTruthDebt.length > 0 ? 'RED' : 'GREEN',
+            blocking: taskTruthDebt.length > 0,
+            debt: taskTruthDebt,
+          },
+          BDD_SYNC: {
+            status: bddSync.debt.length > 0 ? 'RED' : 'GREEN',
+            blocking: bddSync.debt.length > 0,
+            debt: bddSync.debt,
+          },
+          FILTERED_PROOF: {
+            status: filteredProof.latest ? 'GREEN' : 'NONE',
+            blocking: false,
+            debt: [],
+          },
+        },
+      });
+      const readinessLanes = readiness.lanes;
       const hints: Record<typeof lifecycle, string> = {
         SPEC_ONLY: 'Docs only — no scenarios written yet. Next: author the .feature (FR-38a).',
         TESTS_NOT_RUN: `${counts.scenarios} scenario(s) are SCENARIO_NOT_RUN; no canonical execution has been ingested. Next: run the suite so NDJSON lands.`,
@@ -1460,8 +1479,8 @@ export function buildToolRegistry(
         PARTIAL:
           statusExecutionGaps.SCENARIO_NOT_RUN > 0
             ? `${statusExecutionGaps.SCENARIO_NOT_RUN} scenario(s) are SCENARIO_NOT_RUN after the last ingested run; NOT execution-complete.`
-            : canonicalStatusCoverage.totals.stale > 0
-              ? `${canonicalStatusCoverage.totals.stale} stale passed scenario(s) need rerun after source changes; NOT execution-complete.`
+            : summary.stale > 0
+              ? `${summary.stale} stale passed scenario(s) need rerun after source changes; NOT execution-complete.`
               : `${summary.pending + summary.undefined + summary.skipped} scenario(s) undefined/pending/skipped, 0 failed — written but not implemented; NOT green.`,
         GREEN: `All ${summary.touched} touched scenario(s) passed at ${lastAt}.`,
       };
@@ -1492,7 +1511,7 @@ export function buildToolRegistry(
         // precheck + spec-verdict report (AC-63.1 — one graph, one inventory),
         // with per-AC test_paths, FR never-run classification and the evidence
         // provenance/recency taxonomy (AC-63.2).
-        inventory: buildReadinessInventory(graph, { spec: slug }),
+        inventory,
         last_run,
         gaps,
         execution_gaps: statusExecutionGaps,
@@ -1505,14 +1524,11 @@ export function buildToolRegistry(
           task_verification: canonicalStatusCoverage.tasks,
         },
         readiness: {
-          overall: Object.values(readinessLanes).some((lane) => lane.status === 'RED' || lane.status === 'NOT_RUN') ? 'NOT_READY' : 'READY',
-          lanes: readinessLanes,
+          ...readiness,
           next_action:
             bddSync.debt.length > 0
               ? 'Fix source/executable BDD sync drift or mark intentional exceptions.'
-              : statusExecutionGaps.SCENARIO_NOT_RUN > 0 && filteredProof.latest
-                ? `Run the full Docker BDD suite so canonical coverage replaces filtered proof ${filteredProof.latest.runId}, or attach ${filteredProof.latest.artifact ?? 'the filtered artifact'} as review evidence.`
-                : hints[lifecycle],
+              : readiness.next_action,
         },
         filtered_proof: filteredProof.latest,
         phases,

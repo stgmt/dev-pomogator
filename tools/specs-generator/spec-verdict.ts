@@ -38,7 +38,7 @@ import {
   type TraceabilityGapClass,
 } from '../spec-graph/traceability.ts';
 import { runJudge, type JudgeResult } from '../spec-llm-judge/index.ts';
-import { buildReadinessInventory, type ReadinessInventory } from '../spec-graph/readiness-inventory.ts';
+import { buildReadinessInventory, deriveExecutionLane, type ReadinessInventory } from '../spec-graph/readiness-inventory.ts';
 import type { FrNode, ScenarioNode, TaskNode } from '../spec-graph/types.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -605,13 +605,11 @@ export async function runSpecVerdict(
     );
   }
 
-  const executionHardFailures = ['failed', 'undefined', 'ambiguous', 'pending', 'skipped', 'stale']
+  const effectiveExecution = deriveExecutionLane(inventory);
+  const executionHardFailures = ['failed', 'undefined', 'ambiguous', 'pending', 'skipped']
     .map((key) => [key, canonicalBuckets[key] ?? 0] as const)
     .filter(([, count]) => count > 0);
-  const executionDebt = [
-    ...executionHardFailures.map(([key, count]) => `${count} ${key}`),
-    ...(notRun > 0 ? [`SCENARIO_NOT_RUN:${notRun}`] : []),
-  ];
+  const executionDebt = effectiveExecution.debt;
   const semanticDebt = [
     ...drifts.map((d) => `${d.frId} ↔ ${d.scenarioId}: ${d.severity}`),
     ...(judgeFailures > 0 ? [`${judgeFailures} judge subprocess failure(s)`] : []),
@@ -649,10 +647,10 @@ export async function runSpecVerdict(
       debt: gaps.map((g) => `${g.class}: ${g.nodeId}`),
     },
     EXECUTION: {
-      status: executionHardFailures.length > 0 ? 'RED' : notRun > 0 ? 'NOT_RUN' : 'GREEN',
-      blocking: executionDebt.length > 0,
-      summary: executionDebt.length > 0 ? executionDebt.join(', ') : 'all known scenarios have passing/acceptable results',
-      debt: executionDebt,
+      status: effectiveExecution.status,
+      blocking: effectiveExecution.status !== 'GREEN',
+      summary: effectiveExecution.debt?.join(', ') || 'all effective scenario evidence is current and passing',
+      debt: effectiveExecution.debt ?? [],
     },
     TASK_TRUTH: {
       status: taskTruthDebt.length > 0 ? 'RED' : 'GREEN',
@@ -693,8 +691,9 @@ export async function runSpecVerdict(
       if (lanes.STRUCTURE.blocking) return 'Fix structural/audit/conformance errors, then rerun spec-verdict.';
       if (lanes.TRACEABILITY.blocking) return 'Add the missing FR/AC/task/scenario traceability links, then rerun spec-verdict.';
       if (executionHardFailures.length > 0) return 'Inspect the failing/undefined/ambiguous scenarios with get_test_result, fix them, then rerun the full Docker BDD suite.';
-      if (lanes.BDD_SYNC.blocking) return 'Fix source/executable BDD sync drift or mark intentional EXEC_ONLY/OUT_OF_SCOPE/PENDING scenarios, then rerun spec-verdict.';
       if (notRun > 0 && filteredProof.latest) return `Run the full Docker BDD suite so canonical coverage replaces filtered proof ${filteredProof.latest.runId}, or attach ${filteredProof.latest.artifact ?? 'the filtered artifact'} as review evidence.`;
+      if (effectiveExecution.blocking) return effectiveExecution.summary;
+      if (lanes.BDD_SYNC.blocking) return 'Fix source/executable BDD sync drift or mark intentional EXEC_ONLY/OUT_OF_SCOPE/PENDING scenarios, then rerun spec-verdict.';
       if (notRun > 0) return 'Run the full Docker BDD suite so canonical coverage contains every scenario result.';
       if (lanes.TASK_TRUTH.blocking) return 'Reopen/downgrade DONE-but-unverified tasks or provide canonical passed scenario evidence.';
       if (lanes.SEMANTIC.blocking) return 'Run semantic checking with a working claude binary, or explicitly rerun with --no-semantic if semantic review is out of scope.';

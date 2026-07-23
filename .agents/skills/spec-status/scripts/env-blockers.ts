@@ -16,16 +16,20 @@ export interface Blocker {
 }
 
 /** Probe `docker ps`; a non-zero exit means the daemon is unreachable. */
-export function detectDockerBlocker(dockerCmd: string = 'docker'): Blocker | null {
-  let r;
-  try {
-    r = spawnSync(dockerCmd, ['ps'], { encoding: 'utf-8', timeout: 5000 });
-  } catch {
-    return { kind: 'docker-unreachable', message: 'docker not found on PATH' };
+export function detectDockerBlocker(
+  dockerCmd: string = 'docker',
+  opts: { platform?: NodeJS.Platform; wslCmd?: string } = {},
+): Blocker | null {
+  const probe = (command: string, args: string[]) => spawnSync(command, args, { encoding: 'utf-8', timeout: 5000 });
+  let r = probe(dockerCmd, ['ps']);
+  if ((r.error || (typeof r.status === 'number' && r.status !== 0)) && (opts.platform ?? process.platform) === 'win32') {
+    const wsl = probe(opts.wslCmd ?? 'wsl.exe', ['-e', 'sh', '-lc', 'docker ps']);
+    if (!wsl.error && wsl.status === 0) return null;
+    r = wsl;
   }
   if (r.error || (typeof r.status === 'number' && r.status !== 0)) {
     const raw = `${r.stderr || ''}${r.stdout || ''}`.trim();
-    const firstLine = raw.split('\n')[0] || 'docker ps failed';
+    const firstLine = raw.split('\n')[0] || (r.error ? 'docker not found on PATH' : 'docker ps failed');
     return { kind: 'docker-unreachable', message: firstLine };
   }
   return null;

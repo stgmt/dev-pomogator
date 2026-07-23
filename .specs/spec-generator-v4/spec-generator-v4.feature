@@ -1528,13 +1528,13 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Then a completed visible task id closes that same real id and no array-slot stale todo remains open
 
   @feature49
-  Scenario: SPECGEN004_531 intent extraction ignores interruption sentinels before terse continuations
+  Scenario: SPECGEN004_571 intent extraction ignores interruption sentinels before terse continuations
     Given a Pinator mandate followed by interruption sentinels and a terse continuation prompt
     When the Pinator intent extractor computes the effective user request
     Then interruption sentinels are ignored and the Pinator mandate remains effective
 
   @feature49
-  Scenario: SPECGEN004_532 failed TaskUpdate results do not reopen phantom todos
+  Scenario: SPECGEN004_572 failed TaskUpdate results do not reopen phantom todos
     Given a transcript where TaskUpdate for a missing task returns Task not found
     When the Pinator task replay reconstructs agent todos
     Then the missing-task update leaves no phantom open todo
@@ -2933,7 +2933,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
   # --- hooks-stdin-e2e: real-stdin guard/push + MCP bundle ---
 
   @feature5
-  Scenario: SPECGEN004_480 the conformance guard allows a clean Write over real stdin
+  Scenario: SPECGEN004_569 the conformance guard allows a clean Write over real stdin
     Given a v4 spec workspace where the conformance guard is active
     When the conformance guard receives a Write of clean FR content
     Then the conformance guard exits 0 and returns permissionDecision "allow"
@@ -3232,7 +3232,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Then the scaffold classifier reports exactly one finding naming that placeholder and its line
 
   @feature57
-  Scenario: SPECGEN004_471 the scaffold classifier ignores lowercase single-token braces and code spans
+  Scenario: SPECGEN004_567 the scaffold classifier ignores lowercase single-token braces and code spans
     Given a scaffold-sentinel fixture document with lowercase single-token braces, a fenced code block, an inline code span, and an empty JSON brace
     When the scaffold-sentinel classifier scans the fixture document
     Then the scaffold classifier reports zero findings
@@ -3245,7 +3245,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     And the ConfirmStop error names the placeholder and broken link
 
   @feature57
-  Scenario: SPECGEN004_472 audit emits SCAFFOLD_INCOMPLETE ERROR for a claims-done spec with a stub README
+  Scenario: SPECGEN004_568 audit emits SCAFFOLD_INCOMPLETE ERROR for a claims-done spec with a stub README
     Given an isolated claims-done spec fixture whose README.md is an unfilled scaffold
     When audit-spec runs on that spec fixture
     Then the audit findings contain check "SCAFFOLD_INCOMPLETE" with severity "ERROR"
@@ -3301,7 +3301,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     And the eval aggregate pins the P16-1 negative regression cases
 
   @feature58
-  Scenario: SPECGEN004_507 task-board-forms executable evals pin lowercase task markers
+  Scenario: SPECGEN004_570 task-board-forms executable evals pin lowercase task markers
     Given the task-board-forms executable eval runner
     When that form-skill eval runner executes
     Then the eval aggregate is fully green and every case exercised the real form contracts
@@ -3488,7 +3488,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     And a FILTERED_PROOF lane shows the artifact path, selected ids, pass/fail summary, timestamp, source, and next action
 
   @feature62 @FR-62
-  Scenario: SPECGEN004_553 inherited, closed, and noninteractive stdin root handoff is deterministic
+  Scenario: SPECGEN004_573 inherited, closed, and noninteractive stdin root handoff is deterministic
     Given a real fixture checkout has equivalent Windows and WSL roots and tracked readiness inputs
     And SPECS_GENERATOR_ROOT is supplied as an environment override while stdin is independently inherited, closed, or noninteractive
     When spec-status and MCP resolve the root in order through validated SPECS_GENERATOR_ROOT, caller or project cwd, and findRepoRoot(SCRIPT_DIR)
@@ -3538,7 +3538,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     And additions, removals, duplicates, and untracked paths are explicitly classified; unclassified untracked paths violate cardinality or conservation rather than becoming release-ready
 
   @feature64 @FR-64
-  Scenario: SPECGEN004_560 dependency-absent launcher status and MCP remain provenance-safe
+  Scenario: SPECGEN004_574 dependency-absent launcher status and MCP remain provenance-safe
     Given an installed plugin fixture has repository development dependencies absent
     When the installed launcher, status surface, and MCP execute the fixture
     Then a missing runtime import, bundle, or asset is reported with installed-runtime provenance and does not become a source-tree pass
@@ -3577,3 +3577,12 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Then shallow coverage names every missing public contract paid flow and semantic deploy lane
     And a blocking investigation remains red while the complete AC-linked plan passes
     And empty task plans exact AC identifiers alternate claim wording and analyzer outages fail closed
+
+  @feature61 @feature63
+  Scenario: SPECGEN004_566 MCP status derives EXECUTION and OVERALL from the shared effective inventory
+    Given a spec whose canonical full-run pass became stale after a source change
+    When MCP status and spec-verdict evaluate the same graph snapshot
+    Then both surfaces report the stale scenario as effective execution debt
+    And both surfaces report EXECUTION RED and OVERALL NOT_READY
+    And canonical coverage remains visible without overriding effective readiness
+    And dotted acceptance criterion ids remain exact in the spec-status parser

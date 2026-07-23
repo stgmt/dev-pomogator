@@ -138,11 +138,14 @@ export function classifyEvidence(s: ScenarioEvidenceInput): EvidenceRecord {
     recency: { stale, canonical: false },
   };
 
-  // 1) Canonical full-run evidence is authoritative — nothing overlays it.
+  // 1) Canonical full-run evidence is the result baseline, but freshness remains
+  // effective state: a canonical PASS older than the source is debt, not GREEN.
   if (s.canonicalResult) {
     return {
       ...base,
-      outcome: explicitOutcome(s.canonicalResult),
+      outcome: stale && s.canonicalResult.toUpperCase() === 'PASSED'
+        ? 'stale'
+        : explicitOutcome(s.canonicalResult),
       result: s.canonicalResult.toUpperCase(),
       source: source ?? 'canonical-full-run',
       timestamp: s.canonicalRunAt ?? s.lastRunAt ?? null,
