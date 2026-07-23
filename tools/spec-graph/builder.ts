@@ -23,6 +23,7 @@
  */
 
 import fs from 'node:fs';
+import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
 import type {
@@ -106,6 +107,12 @@ function walkDir(absDir: string, suffixes: string[]): string[] {
 /** Build a fresh SpecGraph from a corpus root. */
 export function buildGraph(opts: BuildOptions): SpecGraph {
   const { repoRoot } = opts;
+  let currentGitSha: string | undefined;
+  try {
+    currentGitSha = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: repoRoot, encoding: 'utf8', timeout: 5000 }).trim() || undefined;
+  } catch {
+    currentGitSha = process.env.DEV_POMOGATOR_GIT_SHA || undefined;
+  }
   const mdRoots = (opts.mdRoots ?? ['.specs']).map((r) => path.resolve(repoRoot, r));
   const featureRoots = (opts.featureRoots ?? ['.specs', 'tests/features']).map((r) =>
     path.resolve(repoRoot, r),
@@ -372,7 +379,7 @@ export function buildGraph(opts: BuildOptions): SpecGraph {
       if (n.type === 'Scenario') scenarioIter.push(n);
     }
     const applied = applyTestResults(scenarioIter, patch);
-    const overlayApplied = applyScenarioOverlayResults(scenarioIter, overlay, { repoRoot });
+    const overlayApplied = applyScenarioOverlayResults(scenarioIter, overlay, { repoRoot, currentGitSha });
     if (applied > 0 || overlayApplied > 0) {
       // Emit a `last-result` edge per patched scenario so downstream tooling
       // can find «what was the last test run for FR-N» without consulting

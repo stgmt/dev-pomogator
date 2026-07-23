@@ -141,6 +141,7 @@ export interface ScenarioTraceRef {
   testCaseStartedId?: string;
   runId?: string;
   source?: string;
+  gitSha?: string;
 }
 
 export interface ScenarioNode extends NodeBase {

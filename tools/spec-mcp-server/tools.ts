@@ -264,6 +264,7 @@ function scenarioTracePayload(repoRoot: string, s: ScenarioNode): Record<string,
     stale: s.resultStale === true,
     run_id: target.runId ?? null,
     source: target.source ?? null,
+    git_sha: target.gitSha ?? null,
     trace_id: target.traceId ?? null,
     trace_file: target.traceFile ?? null,
     test_case_started_id: target.testCaseStartedId ?? null,
@@ -1250,7 +1251,7 @@ export function buildToolRegistry(
           frToScenarios.set(e.from, arr);
         }
         const frIds = [...frToScenarios.entries()]
-          .filter(([, ids]) => ids.length > 0 && !ids.some((id) => scenarioBucket.get(id) === 'passed'))
+          .filter(([, ids]) => ids.length > 0 && !ids.every((id) => scenarioBucket.get(id) === 'passed'))
           .map(([fr]) => fr)
           .sort();
         return {

@@ -161,6 +161,7 @@ describe('buildGraph — cold-start integration', () => {
         time: '2027-01-15T08:00:01.000Z',
         run_id: 'run-529',
         source: 'run-bdd:filtered',
+        git_sha: 'fixture-sha',
         trace_id: '.dev-pomogator/.test-history/run-529.ndjson#tcs-529',
         trace_file: '.dev-pomogator/.test-history/run-529.ndjson',
         test_case_started_id: 'tcs-529',

@@ -39,6 +39,8 @@ export interface ScenarioOverlayResult {
   line?: number;
   runId?: string;
   source?: string;
+  gitSha?: string;
+  failingStep?: ScenarioNode['failingStep'];
   traceId?: string;
   traceFile?: string;
   testCaseStartedId?: string;
@@ -102,6 +104,10 @@ export function parseScenarioOverlay(source: string): ScenarioOverlayPatch {
       line: typeof raw.line === 'number' ? raw.line : undefined,
       runId: typeof raw.run_id === 'string' ? raw.run_id : undefined,
       source: typeof raw.source === 'string' ? raw.source : undefined,
+      gitSha: typeof raw.git_sha === 'string' ? raw.git_sha : undefined,
+      failingStep: raw.failing_step && typeof raw.failing_step === 'object'
+        ? raw.failing_step as ScenarioNode['failingStep']
+        : undefined,
       traceId: typeof raw.trace_id === 'string' ? raw.trace_id : undefined,
       traceFile: normalizeUri(raw.trace_file),
       testCaseStartedId: typeof raw.test_case_started_id === 'string' ? raw.test_case_started_id : undefined,
@@ -213,6 +219,7 @@ function applyTraceRef(scenario: ScenarioNode, row: ScenarioOverlayResult): void
     testCaseStartedId: startedId(row),
     runId: row.runId,
     source: row.source,
+    gitSha: row.gitSha,
   };
 }
 
@@ -245,7 +252,7 @@ function findByLocation(patch: ScenarioOverlayPatch, scenario: ScenarioNode): Sc
 export function applyScenarioOverlayResults(
   scenarios: Iterable<ScenarioNode>,
   patch: ScenarioOverlayPatch,
-  opts: { repoRoot: string },
+  opts: { repoRoot: string; currentGitSha?: string },
 ): number {
   let applied = 0;
   for (const scenario of scenarios) {
@@ -269,7 +276,7 @@ export function applyScenarioOverlayResults(
       applyTraceRef(scenario, row);
       // Overlay rows are compact; failure detail stays a P29-3/P29-4 trace lookup concern.
       scenario.durationMs = undefined;
-      scenario.failingStep = null;
+      scenario.failingStep = row.failingStep ?? null;
       applied++;
     } else if (overlayEffective && row.traceId) {
       applyTraceRef(scenario, row);
@@ -277,7 +284,9 @@ export function applyScenarioOverlayResults(
 
     if (overlayEffective && row.result === 'PASSED') {
       const threshold = freshnessThresholdMs(opts.repoRoot, scenario, row);
-      scenario.resultStale = threshold !== undefined && row.timeMs < threshold;
+      const sourceStale = threshold !== undefined && row.timeMs < threshold;
+      const commitStale = Boolean(opts.currentGitSha) && row.gitSha !== opts.currentGitSha;
+      scenario.resultStale = sourceStale || commitStale || !row.gitSha;
     } else if (overlayEffective) {
       scenario.resultStale = false;
     }
