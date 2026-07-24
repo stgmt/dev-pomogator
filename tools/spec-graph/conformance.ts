@@ -31,6 +31,7 @@ import type { SpecGraph, Edge, ScenarioNode, TaskNode } from './types.ts';
 import { computeCoverage, scenarioKey, specOf, type Bucket, type ScenarioLike, type TaskLike, type TestQualityVerdict } from './coverage.ts';
 import { WORKING_STATUSES, canEnterWorkingStatus } from './task-lifecycle.ts';
 import { localIdOf } from './identity.ts';
+import { evaluateDelivery, forwardedDemands } from './delivery-demands.ts';
 
 export type FindingCode =
   | 'UNCOVERED_FR'
@@ -50,6 +51,9 @@ export type FindingCode =
   | 'FR_NO_RESEARCH'
   | 'FR_NO_DESIGN'
   | 'FR_NO_STORY'
+  | 'FR_METADATA_INVALID'
+  | 'FR_DEMAND_MISSING'
+  | 'FR_DEMAND_CONFLICT'
   | 'TOOTHLESS_DECISION'
   | 'TOOTHLESS_STORY'
   | 'TASK_STARTED_WITHOUT_CHAIN'
@@ -186,6 +190,31 @@ export function checkConformance(
         { action: 'create_ac', reason: 'Add an AC heading `## AC-N (FR-N)` covering this FR.', confidence: 'high' },
         { action: 'tag_scenario', reason: `Add @${bareTag} to an existing Scenario in any \`.feature\` file.`, confidence: 'medium' },
       ],
+    });
+  }
+
+  // 1a2) Typed requirement metadata and delivery truth (FR-66).
+  const inheritedDemands = forwardedDemands(graph);
+  for (const node of graph.nodes.values()) {
+    if (node.type !== 'FR' && node.type !== 'NFR') continue;
+    for (const issue of node.metadataIssues ?? []) findings.push({
+      code: issue.code,
+      severity: 'error',
+      location: { file: node.file, line: node.line },
+      nodeId: node.id,
+      message: `${issue.path}: ${issue.message}`,
+      suggestedFixes: ['Fix the FR-local ```yaml metadata block through the spec door.'],
+    });
+    if (node.type !== 'FR' || !node.metadata || (node.metadataIssues?.length ?? 0) > 0) continue;
+    const delivery = evaluateDelivery(node, graph);
+    for (const issue of inheritedDemands.get(node.id)?.issues ?? []) findings.push({
+      code: 'FR_DEMAND_CONFLICT', severity: 'error', location: { file: node.file, line: node.line }, nodeId: node.id,
+      message: issue.message, suggestedFixes: ['Resolve contradictory forwarded demand obligations.'],
+    });
+    for (const type of delivery.missing) findings.push({
+      code: 'FR_DEMAND_MISSING', severity: 'error', location: { file: node.file, line: node.line }, nodeId: node.id,
+      message: `${node.id} requires ${type}, but its delivery evidence is missing or unjustified.`,
+      suggestedFixes: [`Attach graph-verifiable evidence for ${type}, or record a justified/audited exception.`],
     });
   }
 

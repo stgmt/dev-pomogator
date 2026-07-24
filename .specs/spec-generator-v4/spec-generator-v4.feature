@@ -3671,3 +3671,40 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Given the migration phase has completed
     When the dogfood harness dumps the raw pre-map nodes
     Then the collision probe reports zero normalization collisions
+
+
+  @FR-66 @feature66
+  Scenario: SPECGEN004_583 typed metadata preserves known and unknown fields
+    Given an FR with valid typed requirement metadata and an extension field
+    When the real graph parses and serves the requirement
+    Then typed metadata and the unknown extension round-trip exactly
+
+  @FR-66 @feature66
+  Scenario: SPECGEN004_584 invalid metadata fails consistently across parser and MCP
+    Given an FR with invalid safety and demand metadata
+    When parser and MCP authoring validate the metadata
+    Then both surfaces return the same metadata validation findings
+
+  @FR-66 @feature66
+  Scenario: SPECGEN004_585 missing required delivery blocks smart overall only
+    Given an implemented FR with one required delivery artifact missing
+    When the real FR census evaluates task and delivery truth
+    Then task verdict stays IMPLEMENTED and delivery is INCOMPLETE
+
+  @FR-66 @feature66
+  Scenario: SPECGEN004_586 all required delivery artifacts satisfy non-empty ALL
+    Given an implemented FR with every required artifact present
+    When the real FR census evaluates task and delivery truth
+    Then delivery is DELIVERED and optional missing artifacts do not block
+
+  @FR-66 @feature66
+  Scenario: SPECGEN004_587 forwarded delivery demands resolve precedence and conflicts
+    Given linked requirements with inherited duplicate and contradictory demands
+    When the delivery resolver forwards needs through the graph
+    Then demands deduplicate and contradictions emit FR_DEMAND_CONFLICT
+
+  @FR-66 @feature66
+  Scenario: SPECGEN004_588 metadata migration query and SQLite restore agree
+    Given legacy requirement metadata with an unknown extension
+    When migration MCP query and SQLite warm restore process it
+    Then every surface returns the same typed metadata and delivery state

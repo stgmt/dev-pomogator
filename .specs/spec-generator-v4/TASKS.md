@@ -2221,3 +2221,17 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [x] `SPECGEN004_565` rejects missing/empty TASKS, AC-id prefixes, H1-H6 claim headings, and auth/dispatch/result/artifact wording gaps
   - [x] analyzer import/runtime failure emits blocking `ACCEPTANCE_DELIVERY_COVERAGE_UNAVAILABLE`
   - [x] active `.agents` create-spec/task-board/spec-review workflows consume the same vocabulary
+
+## Phase 40 — Typed requirement metadata and delivery demands (2026-07-24)
+
+Источник: GitHub #171 and #169
+
+
+- [ ] Deliver typed requirement metadata and delivery demands -- @feature66 — id: P40-1 — Status: TODO | Est: 360m
+  _Requirements: [FR-66](FR.md#fr-66)_
+  **Done When:**
+  - [ ] Docker BDD SPECGEN004_583..588 is authored against real parser/graph/census/MCP/SQLite and a pre-implementation RED run is retained.
+  - [ ] Typed metadata, closed demand registry, taskVerdict/delivery split, non-empty ALL and forwarded conflict/dedup behavior satisfy AC-66.1..AC-66.5.
+  - [ ] Validated MCP author/query and metadata schema migration dry-run/apply use the same validator as parser/conformance.
+  - [ ] SQLite cold/warm round-trip preserves schemaVersion, typed fields, _unknown, demands and delivery state.
+  - [ ] SPECGEN004_583..588 each has lastResult===PASSED; lint, MCP build, deps-absent, full Docker suite and CI are green; PR closes #171 and #169 and is merged to main.

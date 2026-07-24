@@ -43,6 +43,7 @@ import { computeCoverage, specOf, type ScenarioLike, type TaskLike } from './cov
 import { findFrsWithoutResearch } from './research-trace.ts';
 import { buildLegIndices } from './legs.ts';
 import type { SpecGraph, FrNode, ScenarioNode, TaskNode } from './types.ts';
+import { evaluateDelivery, type DeliveryEvaluation } from './delivery-demands.ts';
 
 export type FrCensusVerdict =
   | 'IMPLEMENTED'
@@ -69,7 +70,10 @@ export interface FrCensusRow {
   taskStatuses: Array<'todo' | 'in-progress' | 'done' | 'blocked'>;
   /** ≥1 implementing Task verifies (verified_status DONE — its scenarios passed). */
   tested: boolean;
+  /** Existing task/scenario truth; kept separate from delivery completeness. */
   verdict: FrCensusVerdict;
+  taskVerdict: FrCensusVerdict;
+  delivery: DeliveryEvaluation;
   /** ≥1 `covers` edge to a Decision node (FR-47 design leg). */
   hasDesign: boolean;
   /** ≥1 `covers` edge to a Story node (FR-47 story leg). */
@@ -213,6 +217,8 @@ export function computeFrCensus(
       taskStatuses,
       tested: allVerified,
       verdict,
+      taskVerdict: verdict,
+      delivery: evaluateDelivery(fr, graph),
       hasDesign,
       hasStory,
       hasResearch,
@@ -234,6 +240,7 @@ export function computeFrCensus(
   const byVerdict = Object.fromEntries(ALL_VERDICTS.map((v) => [v, 0])) as Record<FrCensusVerdict, number>;
   for (const r of rows) byVerdict[r.verdict]++;
   const falseGreen = rows.filter((r) => r.verdict === 'DONE_UNTESTED').map((r) => r.frId);
+  const incompleteDelivery = rows.filter((r) => r.taskVerdict === 'IMPLEMENTED' && r.delivery.overall === 'INCOMPLETE');
 
   return {
     corpusRoot: '',
@@ -242,8 +249,8 @@ export function computeFrCensus(
     byVerdict,
     webCompleteCount: rows.filter((r) => r.webComplete).length,
     falseGreen,
-    verdict: byVerdict.DONE_UNTESTED > 0 ? 'RED' : 'GREEN',
-    strictVerdict: byVerdict.DONE_UNTESTED > 0 || byVerdict.UNIMPLEMENTED > 0 ? 'RED' : 'GREEN',
+    verdict: byVerdict.DONE_UNTESTED > 0 || incompleteDelivery.length > 0 ? 'RED' : 'GREEN',
+    strictVerdict: byVerdict.DONE_UNTESTED > 0 || byVerdict.UNIMPLEMENTED > 0 || incompleteDelivery.length > 0 ? 'RED' : 'GREEN',
   };
 }
 
@@ -267,7 +274,7 @@ export function renderFrCensus(r: FrCensusReport): string {
     const ev =
       `AC:${tick(row.hasAc)} Scen:${tick(row.hasScenario)} D:${tick(row.hasDesign)} St:${tick(row.hasStory)} R:${tick(row.hasResearch)} tasks:[${row.taskStatuses.join(',') || '—'}]`;
     const web = row.webComplete ? '🕸️100%' : `⚠️missing[${row.missingLegs.join(',')}]`;
-    lines.push(`  ${VERDICT_ICON[row.verdict]} ${row.frId}  ${row.verdict.padEnd(13)} ${ev} ${web}  ${row.title}`);
+    lines.push(`  ${VERDICT_ICON[row.verdict]} ${row.frId}  ${row.verdict.padEnd(13)} delivery:${row.delivery.overall} ${ev} ${web}  ${row.title}`);
   }
   if (r.falseGreen.length) {
     lines.push(`⚠️ FALSE-GREEN — ${r.falseGreen.length} FR(s) marked DONE with no passing scenario (claim no test backs):`);

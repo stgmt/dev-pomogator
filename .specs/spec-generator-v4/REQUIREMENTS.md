@@ -188,3 +188,14 @@
 | CHK-FR65-02 | [FR-65b](FR.md#fr-65) | [AC-65.2](ACCEPTANCE_CRITERIA.md#ac-652), SPECGEN004_565 | Paid/auth lane completeness and controlled smoke |
 | CHK-FR65-03 | [FR-65c](FR.md#fr-65) | [AC-65.3](ACCEPTANCE_CRITERIA.md#ac-653), SPECGEN004_565 | Blocking investigation cannot pass the gate |
 | CHK-FR65-04 | [FR-65d](FR.md#fr-65) | [AC-65.4](ACCEPTANCE_CRITERIA.md#ac-654), SPECGEN004_565 | audit/spec-verdict/reviewer share one finding vocabulary |
+
+## Verification Matrix — FR-66
+
+| CHK-ID | Requirement | Traces To | Verification Method | Status | Notes |
+|---|---|---|---|---|---|
+| CHK-FR66-01 | Typed metadata parses and preserves extensions | FR-66, AC-66.1, @feature66 | BDD scenario | Draft | parser + MCP + SQLite |
+| CHK-FR66-02 | Invalid metadata fails consistently | FR-66, AC-66.2, @feature66 | BDD scenario | Draft | closed enums and demand registry |
+| CHK-FR66-03 | Missing required delivery blocks smart overall | FR-66, AC-66.3, @feature66 | Integration test | Draft | taskVerdict stays separate |
+| CHK-FR66-04 | All required demands use non-empty ALL | FR-66, AC-66.4, @feature66 | Integration test | Draft | optional and justified exceptions |
+| CHK-FR66-05 | Forwarded demands resolve conflicts deterministically | FR-66, AC-66.5, @feature66 | BDD scenario | Draft | precedence + dedup |
+| CHK-FR66-06 | Author/query/migration/warm restore agree | FR-66, AC-66.6, @feature66 | Integration test | Draft | one validator/evaluator |

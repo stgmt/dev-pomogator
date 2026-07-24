@@ -56,6 +56,9 @@ import {
 import { writeSpecStatus, readSpecStatus } from '../spec-graph/spec-status-store.ts';
 import { withWriteLock, type WriteLockBusyError } from './lock-manager.ts';
 import { setEntityStatus } from './set-status.ts';
+import { validateRequirementMetadata, renderRequirementMetadata } from '../spec-graph/metadata-schema.ts';
+import { evaluateDelivery } from '../spec-graph/delivery-demands.ts';
+import { localIdOf } from '../spec-graph/identity.ts';
 import { readProgressState, PHASE_ORDER, STOP_LABELS } from '../specs-validator/phase-constants.ts';
 import type {
   SpecGraph,
@@ -1016,6 +1019,52 @@ export function buildToolRegistry(
       if (candidates) return ambiguousBareId(node_id as string, candidates);
       if (!node) return asJsonResult({ ok: false, error: 'NODE_NOT_FOUND', node_id });
       return asJsonResult({ ok: true, node });
+    },
+  });
+
+  // ─── FR-66 requirement metadata reads/validation ───────────────────────
+  tools.push({
+    name: 'validate_requirement_metadata',
+    description: 'Validate typed FR/NFR metadata with the same schema used by parsing and migration.',
+    inputShape: { metadata: z.record(z.string(), z.unknown()) } as const satisfies z.ZodRawShape,
+    handler: async ({ metadata }) => asJsonResult({ ok: true, ...validateRequirementMetadata(metadata) }),
+  });
+
+  tools.push({
+    name: 'policy_query_requirements',
+    description: 'Query requirement nodes by typed verification method, safety class, missing method, and delivery state.',
+    inputShape: {
+      spec: z.string().optional(),
+      verification_method: z.enum(['test', 'analysis', 'review', 'inspection', 'demonstration']).optional(),
+      safety_class: z.enum(['critical', 'major', 'minor']).optional(),
+      verification_method_missing: z.boolean().optional(),
+      delivery: z.enum(['NOT_DECLARED', 'DELIVERED', 'INCOMPLETE']).optional(),
+    } as const satisfies z.ZodRawShape,
+    handler: async ({ spec, verification_method, safety_class, verification_method_missing, delivery }) => {
+      const graph = getGraph();
+      const results = [...graph.nodes.values()].filter((node): node is FrNode => node.type === 'FR')
+        .filter((node) => !spec || node.spec === spec)
+        .map((node) => ({ node, delivery: evaluateDelivery(node, graph) }))
+        .filter(({ node, delivery: state }) => !verification_method || node.metadata?.verificationMethod === verification_method)
+        .filter(({ node }) => !safety_class || node.metadata?.safetyClass === safety_class)
+        .filter(({ node }) => !verification_method_missing || !node.metadata?.verificationMethod)
+        .filter(({ delivery: state }) => !delivery || state.overall === delivery)
+        .map(({ node, delivery: state }) => ({ id: node.id, file: node.file, line: node.line, metadata: node.metadata ?? null, delivery: state }));
+      return asJsonResult({ ok: true, results, count: results.length });
+    },
+  });
+
+  tools.push({
+    name: 'set_requirement_metadata',
+    description: 'Validate and render a canonical FR-local metadata block for use in an MCP spec transaction; never writes invalid metadata.',
+    inputShape: { node_id: z.string(), metadata: z.record(z.string(), z.unknown()) } as const satisfies z.ZodRawShape,
+    handler: async ({ node_id, metadata }) => {
+      const resolved = resolveNodeRef(getGraph(), node_id as string);
+      if (resolved.candidates) return ambiguousBareId(node_id as string, resolved.candidates);
+      if (!resolved.node || (resolved.node.type !== 'FR' && resolved.node.type !== 'NFR')) return asJsonResult({ ok: false, error: 'REQUIREMENT_NOT_FOUND', node_id });
+      const checked = validateRequirementMetadata(metadata);
+      if (!checked.metadata) return asJsonResult({ ok: false, error: 'FR_METADATA_INVALID', findings: checked.issues });
+      return asJsonResult({ ok: true, node_id: resolved.node.id, local_id: localIdOf(resolved.node.id), metadata: checked.metadata, yaml: renderRequirementMetadata(checked.metadata), hint: 'Apply this rendered block through apply_spec_change/apply_spec_transaction with CAS.' });
     },
   });
 

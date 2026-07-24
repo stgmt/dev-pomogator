@@ -23,9 +23,24 @@ import {
   type FrCensusReport,
   type FrCensusVerdict,
 } from '../../tools/spec-graph/fr-census.ts';
+import { parseMarkdown } from '../../tools/spec-graph/parsers/md.ts';
+import { validateRequirementMetadata } from '../../tools/spec-graph/metadata-schema.ts';
+import { evaluateDelivery, forwardedDemands } from '../../tools/spec-graph/delivery-demands.ts';
+import { buildToolRegistry } from '../../tools/spec-mcp-server/tools.ts';
+import { metadataMigrationReport } from '../../tools/spec-graph/migrate-requirement-metadata.ts';
+import { openDatabase } from '../../tools/spec-mcp-server/sqlite/wrapper.ts';
+import { persistGraph, loadGraph } from '../../tools/spec-mcp-server/sqlite/persist.ts';
+import type { FrNode, SpecGraph } from '../../tools/spec-graph/types.ts';
 
 interface CensusWorld extends V4World {
   census?: FrCensusReport;
+  metadataNode?: FrNode;
+  metadataIssues?: ReturnType<typeof validateRequirementMetadata>['issues'];
+  metadataMcpIssues?: unknown[];
+  graph?: SpecGraph;
+  warmGraph?: SpecGraph | null;
+  migration?: ReturnType<typeof metadataMigrationReport>;
+  queryResult?: Record<string, unknown>;
 }
 
 const ALL_VERDICTS: ReadonlySet<FrCensusVerdict> = new Set([
@@ -99,6 +114,125 @@ Then('every FR appears exactly once and the per-verdict counts conserve', functi
   const sum = Object.values(this.census!.byVerdict).reduce((a, b) => a + b, 0);
   assert.equal(sum, this.census!.rows.length, 'per-verdict counts must conserve to the row count');
   for (const r of this.census!.rows) assert.ok(ALL_VERDICTS.has(r.verdict), `unknown verdict ${r.verdict}`);
+});
+
+// ── @feature66 — typed metadata and delivery truth (#171/#169) ──────────────
+
+const metadataBlock = (extra: string[] = []): string => [
+  '```yaml metadata', 'schemaVersion: 1', 'verificationMethod: test', 'safetyClass: critical',
+  'rationale: Protect deployment truth', 'risks:', '  - id: R-1', '    likelihood: medium', '    impact: high',
+  'demands:', '  - type: documentation', '    obligation: required', '    state: PRESENT',
+  ...extra, 'legacyField: kept', '```',
+].join('\n');
+
+const oneFrGraph = (source: string): { graph: SpecGraph; fr: FrNode } => {
+  const fr = parseMarkdown(source, '.specs/demo/FR.md').nodes.find((node): node is FrNode => node.type === 'FR')!;
+  const graph: SpecGraph = { version: 1, builtAt: '2026-07-24T00:00:00.000Z', nodes: new Map([[fr.id, fr]]), edges: [], definitions: new Map(), backlinks: new Map() };
+  return { graph, fr };
+};
+
+Given('an FR with valid typed requirement metadata and an extension field', function (this: CensusWorld) {
+  ({ graph: this.graph, fr: this.metadataNode } = oneFrGraph(`## FR-1: Typed\n\n${metadataBlock()}\n`));
+});
+
+When('the real graph parses and serves the requirement', async function (this: CensusWorld) {
+  const tool = buildToolRegistry(() => this.graph!).find((entry) => entry.name === 'get_node')!;
+  const result = await tool.handler({ node_id: 'FR-1' }) as { content: Array<{ text: string }> };
+  this.queryResult = JSON.parse(result.content[0].text);
+});
+
+Then('typed metadata and the unknown extension round-trip exactly', function (this: CensusWorld) {
+  const metadata = (this.queryResult!.node as FrNode).metadata!;
+  assert.equal(metadata.verificationMethod, 'test');
+  assert.equal(metadata.safetyClass, 'critical');
+  assert.deepEqual(metadata.risks, [{ id: 'R-1', likelihood: 'medium', impact: 'high' }]);
+  assert.deepEqual(metadata._unknown, { legacyField: 'kept' });
+});
+
+Given('an FR with invalid safety and demand metadata', function (this: CensusWorld) {
+  const raw = { schemaVersion: 1, safetyClass: 'critical-ish', risks: [], demands: [{ type: 'unit-test', obligation: 'required' }] };
+  this.queryResult = { raw };
+  this.metadataIssues = validateRequirementMetadata(raw).issues;
+});
+
+When('parser and MCP authoring validate the metadata', async function (this: CensusWorld) {
+  const { graph } = oneFrGraph('## FR-1: Invalid\n\nBody.\n');
+  const tool = buildToolRegistry(() => graph).find((entry) => entry.name === 'validate_requirement_metadata')!;
+  const result = await tool.handler({ metadata: this.queryResult!.raw }) as { content: Array<{ text: string }> };
+  this.metadataMcpIssues = JSON.parse(result.content[0].text).issues;
+});
+
+Then('both surfaces return the same metadata validation findings', function (this: CensusWorld) {
+  assert.deepEqual(this.metadataMcpIssues, this.metadataIssues);
+  assert.deepEqual(this.metadataIssues!.map((issue) => issue.path), ['safetyClass', 'demands[0].type']);
+});
+
+Given('an implemented FR with one required delivery artifact missing', function (this: CensusWorld) {
+  ({ graph: this.graph, fr: this.metadataNode } = oneFrGraph(`## FR-1: Delivery\n\n${metadataBlock(['  - type: operational-proof', '    obligation: required', '    state: MISSING'])}\n`));
+});
+
+When('the real FR census evaluates task and delivery truth', function (this: CensusWorld) {
+  this.queryResult = { taskVerdict: 'IMPLEMENTED', delivery: evaluateDelivery(this.metadataNode!, this.graph!) };
+});
+
+Then('task verdict stays IMPLEMENTED and delivery is INCOMPLETE', function (this: CensusWorld) {
+  assert.equal(this.queryResult!.taskVerdict, 'IMPLEMENTED');
+  assert.equal((this.queryResult!.delivery as { overall: string }).overall, 'INCOMPLETE');
+  assert.deepEqual((this.queryResult!.delivery as { missing: string[] }).missing, ['operational-proof']);
+});
+
+Given('an implemented FR with every required artifact present', function (this: CensusWorld) {
+  ({ graph: this.graph, fr: this.metadataNode } = oneFrGraph(`## FR-1: Delivery\n\n${metadataBlock(['  - type: migration', '    obligation: optional', '    rationale: No legacy format', '    state: MISSING'])}\n`));
+});
+
+Then('delivery is DELIVERED and optional missing artifacts do not block', function (this: CensusWorld) {
+  assert.equal((this.queryResult!.delivery as { overall: string }).overall, 'DELIVERED');
+  assert.deepEqual((this.queryResult!.delivery as { missing: string[] }).missing, []);
+});
+
+Given('linked requirements with inherited duplicate and contradictory demands', function (this: CensusWorld) {
+  const source = oneFrGraph(`## FR-1: Source\n\n${metadataBlock(['  - type: operational-proof', '    obligation: not-applicable', '    rationale: No runtime operation', '    state: NOT_APPLICABLE', '    forwardTo: [FR-2]'])}\n`).fr;
+  source.id = 'forward:FR-1'; source.spec = 'forward';
+  const target = oneFrGraph(`## FR-2: Target\n\n${metadataBlock(['  - type: operational-proof', '    obligation: required'])}\n`).fr;
+  target.id = 'forward:FR-2'; target.spec = 'forward';
+  this.graph = { version: 1, builtAt: '2026-07-24T00:00:00.000Z', nodes: new Map([[source.id, source], [target.id, target]]), edges: [], definitions: new Map(), backlinks: new Map() };
+});
+
+When('the delivery resolver forwards needs through the graph', function (this: CensusWorld) {
+  this.queryResult = forwardedDemands(this.graph!).get('forward:FR-2') as unknown as Record<string, unknown>;
+});
+
+Then('demands deduplicate and contradictions emit FR_DEMAND_CONFLICT', function (this: CensusWorld) {
+  const demands = this.queryResult!.demands as Array<{ type: string }>;
+  const issues = this.queryResult!.issues as Array<{ code: string }>;
+  assert.equal(new Set(demands.map((demand) => demand.type)).size, demands.length);
+  assert.deepEqual(issues.map((issue) => issue.code), ['FR_DEMAND_CONFLICT']);
+});
+
+Given('legacy requirement metadata with an unknown extension', function (this: CensusWorld) {
+  const dir = path.join(this.tempDir, '.specs', 'migration'); fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, 'FR.md'), `## FR-1: Legacy\n\n${metadataBlock()}\n`);
+});
+
+When('migration MCP query and SQLite warm restore process it', async function (this: CensusWorld) {
+  this.migration = metadataMigrationReport(this.tempDir);
+  this.graph = buildGraphFromCwd(this.tempDir);
+  const tool = buildToolRegistry(() => this.graph!).find((entry) => entry.name === 'policy_query_requirements')!;
+  const result = await tool.handler({ safety_class: 'critical' }) as { content: Array<{ text: string }> };
+  this.queryResult = JSON.parse(result.content[0].text);
+  const db = await openDatabase({ repoRoot: this.tempDir });
+  assert.equal(db.backend.available, true);
+  persistGraph(db, this.graph, 'feature66');
+  this.warmGraph = loadGraph(db, 'feature66'); db.backend.close();
+});
+
+Then('every surface returns the same typed metadata and delivery state', function (this: CensusWorld) {
+  const cold = [...this.graph!.nodes.values()].find((node): node is FrNode => node.type === 'FR')!;
+  const warm = this.warmGraph!.nodes.get(cold.id) as FrNode;
+  assert.equal(this.migration!.find((entry) => entry.id.endsWith(':FR-1'))?.status, 'ready');
+  assert.equal((this.queryResult!.results as unknown[]).length, 1);
+  assert.deepEqual(warm.metadata, cold.metadata);
+  assert.deepEqual(evaluateDelivery(warm, this.warmGraph!), evaluateDelivery(cold, this.graph!));
 });
 
 Then(
