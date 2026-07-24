@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { V4World } from '../hooks/before-after.ts';
-import { compactScenarioOverlay } from '../../scripts/bdd-overlay.mjs';
+import { compactScenarioOverlay, writeScenarioOverlayFromNdjson } from '../../scripts/bdd-overlay.mjs';
 import { applyScenarioOverlayResults, parseScenarioOverlayFile } from '../../tools/spec-graph/parsers/scenario-overlay.ts';
 import type { ScenarioNode } from '../../tools/spec-graph/types.ts';
 
@@ -13,6 +13,42 @@ interface F56World extends V4World {
   canonicalPath?: string;
   canonicalBefore?: string;
   compaction?: { before: number; after: number };
+  writerArchive?: string;
+}
+
+// Build a minimal-but-valid cucumber-messages NDJSON so the writer path runs the
+// real parser (parseScenarioResults) instead of hand-shaped overlay rows. Each name
+// must embed a SLUG_ID (e.g. SPECGEN004_800) — that is what the parser extracts as
+// scenario_id. Re-emitting the same names on every run yields duplicate append rows,
+// which is exactly what the runtime compaction must collapse.
+function cucumberMessagesNdjson(names: string[]): string {
+  const feature = {
+    gherkinDocument: {
+      uri: 'features/fr56-writer.feature',
+      feature: {
+        location: { line: 1, column: 1 },
+        keyword: 'Feature',
+        name: 'FR56 writer',
+        children: names.map((name, i) => ({
+          scenario: { id: `scn-${i}`, location: { line: 2 + i, column: 3 }, keyword: 'Scenario', name, steps: [] },
+        })),
+      },
+    },
+  };
+  const lines: unknown[] = [feature];
+  names.forEach((name, i) => {
+    const pickleId = `pk-${i}`;
+    const pickleStepId = `ps-${i}`;
+    const testCaseId = `tc-${i}`;
+    const testStepId = `ts-${i}`;
+    const testCaseStartedId = `tcs-${i}`;
+    lines.push({ pickle: { id: pickleId, uri: 'features/fr56-writer.feature', name, tags: [], astNodeIds: [`scn-${i}`], steps: [{ id: pickleStepId, text: 'a passing step', astNodeIds: [] }] } });
+    lines.push({ testCase: { id: testCaseId, pickleId, testSteps: [{ id: testStepId, pickleStepId }] } });
+    lines.push({ testCaseStarted: { id: testCaseStartedId, testCaseId, timestamp: { seconds: 100, nanos: 0 } } });
+    lines.push({ testStepFinished: { testCaseStartedId, testStepId, testStepResult: { status: 'PASSED' } } });
+    lines.push({ testCaseFinished: { testCaseStartedId, timestamp: { seconds: 101, nanos: 0 } } });
+  });
+  return lines.map((line) => JSON.stringify(line)).join('\n') + '\n';
 }
 
 function scenario(id: string, file: string): ScenarioNode {
@@ -71,4 +107,34 @@ Then('one latest row per scenario remains and distinct-scenario cardinality is c
 
 Then('the canonical full-run artifact remains byte-identical', function (this: F56World) {
   assert.equal(fs.readFileSync(this.canonicalPath!, 'utf8'), this.canonicalBefore);
+});
+
+Given('a cucumber-messages archive that reports the same scenarios on every run', function (this: F56World) {
+  this.overlayPath = path.join(this.tempDir, 'writer-overlay.ndjson');
+  this.writerArchive = path.join(this.tempDir, 'messages.ndjson');
+  fs.writeFileSync(this.writerArchive, cucumberMessagesNdjson(['SPECGEN004_800 alpha bounded', 'SPECGEN004_801 beta bounded']));
+});
+
+When('the real overlay writer archives three runs with compaction enabled', function (this: F56World) {
+  for (let run = 0; run < 3; run += 1) {
+    const appended = writeScenarioOverlayFromNdjson(this.writerArchive!, {
+      overlayPath: this.overlayPath,
+      runId: `run-${run}`,
+      source: 'run-bdd:full',
+      compact: true,
+    });
+    // Each run must genuinely archive both scenarios — otherwise a bounded file would
+    // be a false-green from the writer silently no-op'ing rather than compacting.
+    assert.equal(appended, 2, `run ${run} archived ${appended} row(s)`);
+  }
+});
+
+Then('the overlay holds exactly one row per scenario regardless of run count', function (this: F56World) {
+  const rows = fs.readFileSync(this.overlayPath!, 'utf8').trim().split(/\r?\n/).filter(Boolean).map((line) => JSON.parse(line));
+  // 3 runs × 2 scenarios = 6 appends; runtime compaction must collapse to 2 rows.
+  assert.equal(rows.length, 2);
+  assert.deepEqual(
+    new Set(rows.map((row) => row.scenario_id)),
+    new Set(['SPECGEN004_800', 'SPECGEN004_801']),
+  );
 });

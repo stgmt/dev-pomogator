@@ -217,8 +217,21 @@ export function appendJsonLinesAtomic(filePath, rows) {
 
 export function writeScenarioOverlayFromNdjson(ndjsonPath, opts = {}) {
   if (!ndjsonPath || !fs.existsSync(ndjsonPath) || fs.statSync(ndjsonPath).size === 0) return 0;
+  const overlayPath = opts.overlayPath ?? DEFAULT_OVERLAY;
   const rows = parseScenarioResults(fs.readFileSync(ndjsonPath, 'utf8'), opts);
-  return appendJsonLinesAtomic(opts.overlayPath ?? DEFAULT_OVERLAY, rows);
+  const appended = appendJsonLinesAtomic(overlayPath, rows);
+  // FR-56 / P29-1: keep the append-only trail bounded in real runs. Compaction
+  // collapses to the newest row per scenario_id, so the reader's freshest-wins
+  // result is preserved while the file stops growing without limit. Best-effort:
+  // a concurrent run may hold the compaction lock — never fail the archive for it.
+  if (opts.compact && appended > 0) {
+    try {
+      compactScenarioOverlay(overlayPath);
+    } catch {
+      /* another run is compacting — its pass covers these rows too */
+    }
+  }
+  return appended;
 }
 
 export function compactScenarioOverlay(filePath = DEFAULT_OVERLAY) {
@@ -276,7 +289,9 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.a
     process.exit(2);
   }
   try {
-    if (opts.compact) {
+    // `--compact` with no ndjson = standalone compaction pass. `<ndjson> --compact`
+    // falls through to the writer, which appends and then compacts (opts.compact).
+    if (opts.compact && !ndjsonPath) {
       const result = compactScenarioOverlay(opts.overlayPath ?? DEFAULT_OVERLAY);
       process.stdout.write(`[bdd-overlay] compacted ${result.before} row(s) to ${result.after}\n`);
       process.exit(0);

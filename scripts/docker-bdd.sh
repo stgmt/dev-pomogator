@@ -231,14 +231,14 @@ PY
   chunk="run-${epoch}-${kind}.ndjson"
   cp "$source" "$HISTORY_DIR/$chunk" || { echo "[docker-bdd] WARN: history archive skipped (copy failed: $source -> $HISTORY_DIR/$chunk)" >&2; return 0; }
   if command -v node >/dev/null 2>&1; then
-    node scripts/bdd-overlay.mjs "$source" --run-id "$epoch" --source "docker-bdd:$kind" --trace-file "$HISTORY_DIR/$chunk" --git-sha "$GIT_SHA" || echo "[docker-bdd] WARN: scenario overlay skipped" >&2
+    node scripts/bdd-overlay.mjs "$source" --run-id "$epoch" --source "docker-bdd:$kind" --trace-file "$HISTORY_DIR/$chunk" --git-sha "$GIT_SHA" --compact || echo "[docker-bdd] WARN: scenario overlay skipped" >&2
   else
     # WSL hosts on this project may have Docker but no host Node. Reuse the freshly-built
     # test image so sanctioned Docker BDD runs still append the FR-56 overlay on every path.
     COMPOSE_PROJECT_NAME="$PROJECT_NAME" docker compose -f docker-compose.test.yml run --rm -T --no-deps \
       --entrypoint node \
       -v "$(pwd)/.dev-pomogator:/home/testuser/app/.dev-pomogator" \
-      test scripts/bdd-overlay.mjs "$source" --run-id "$epoch" --source "docker-bdd:$kind" --trace-file "$HISTORY_DIR/$chunk" --git-sha "$GIT_SHA" \
+      test scripts/bdd-overlay.mjs "$source" --run-id "$epoch" --source "docker-bdd:$kind" --trace-file "$HISTORY_DIR/$chunk" --git-sha "$GIT_SHA" --compact \
       || echo "[docker-bdd] WARN: scenario overlay skipped" >&2
   fi
 
