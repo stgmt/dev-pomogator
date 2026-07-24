@@ -17,7 +17,7 @@ import assert from 'node:assert/strict';
 import { classify, firstUnsupported, stripCode } from '../../tools/claim-evidence-gate/claim_classifier.ts';
 import { extractTurnWindow, bgInFlightInWindow, lastUserPrompt, agentBgInFlightCount, agentBgInFlight, sessionUserPrompts, latestActionableStopFeedback, AWAITS_RESULT_RE } from '../../tools/claim-evidence-gate/turn_window.ts';
 import { agentOpenTodoCount, liveOpenForUncensusedSlugs, lastEditedSpecSlug } from '../../tools/spec-graph/task-census.ts';
-import { gateSelfEdit, ownerDirectedDeferral, selfMarkedBlockedOrBacklog } from '../../tools/claim-evidence-gate/game_guard_facts.ts';
+import { gateSelfEdit, ownerDirectedDeferral, ownerRequestedAnalysisReportOnly, selfMarkedBlockedOrBacklog } from '../../tools/claim-evidence-gate/game_guard_facts.ts';
 import { buildJudgeNoTokenDemand, resolveEndpoint, isJudgeArmed } from '../../tools/claim-evidence-gate/meridian-judge.ts';
 
 const REPO = process.env.APP_DIR || process.cwd();
@@ -84,6 +84,7 @@ interface CegWorld extends V4World {
   cegEachTurnResults?: boolean[];
   // Batch 4 (_43..55)
   cegGameGuardResults?: boolean[];
+  cegAnalysisMandateResults?: boolean[];
   cegMandateRaw?: string;
   cegMandateResult?: string[];
   cegDoneRedSetup?: () => Block[];
@@ -432,6 +433,29 @@ When<CegWorld>('the gate evaluates the stop', function () {
 });
 Then<CegWorld>(/^it approves \(no work-kick\), but it blocks an unbacked works-done claim, and an implement request still enforces work$/, function () {
   assert.deepEqual(this.cegAnalysisTriple, [false, true, true], `analysis-only triple wrong: ${JSON.stringify(this.cegAnalysisTriple)}`);
+});
+
+Given<CegWorld>('owner requests that distinguish report-only work from report plus implementation', function () {
+  this.cegAnalysisMandateResults = [
+    ownerRequestedAnalysisReportOnly('Исследуй проблему и подготовь отчёт с выводами'),
+    ownerRequestedAnalysisReportOnly('Проведи аудит архитектуры, дай рекомендации; пока ничего не чини'),
+    ownerRequestedAnalysisReportOnly('Проанализируй логи и напиши заключение'),
+    ownerRequestedAnalysisReportOnly('Проанализируй проблему, затем исправь код и запушь'),
+    ownerRequestedAnalysisReportOnly('Сделай отчёт и продолжай реализацию следующего этапа'),
+    ownerRequestedAnalysisReportOnly('Почини найденные проблемы'),
+    ownerRequestedAnalysisReportOnly(['Проанализируй зацикливание и дай отчёт', 'А что с токеном?']),
+    ownerRequestedAnalysisReportOnly(['Почини парсер', 'Ладно, пока просто отчёт']),
+    ownerRequestedAnalysisReportOnly('Проанализируй, как починить X, и дай отчёт'),
+    ownerRequestedAnalysisReportOnly('Review the fix and report findings'),
+  ];
+});
+
+When<CegWorld>('the deterministic analysis-report mandate fact is computed', function () {
+  assert.ok(this.cegAnalysisMandateResults, 'analysis mandate fixtures were not initialized');
+});
+
+Then<CegWorld>('only report-only requests close the mandate without implied implementation', function () {
+  assert.deepEqual(this.cegAnalysisMandateResults, [true, true, true, false, false, false, true, false, true, true]);
 });
 
 Given<CegWorld>('the latest user-role messages include a spec-tasks banner and validator output appended by hooks', function () {

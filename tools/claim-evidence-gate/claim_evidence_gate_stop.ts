@@ -36,7 +36,7 @@ import { extractTurnWindow, bgInFlightInWindow, agentBgInFlightCount, bgCommandI
 import { firstUnsupported, isSpecCompletionClaim } from './claim_classifier.ts';
 import { readTaskCensusCache, scopeCensusToSlugs, sessionEditedSpecSlugs, lastEditedSpecSlug, agentOpenTodoCount, liveOpenForUncensusedSlugs, selectNextStepRoute, type NextStepRoute, type TaskCensusCache } from '../spec-graph/task-census.ts';
 import { judgeStop, judgeAvailable, buildJudgeNoTokenDemand, isJudgeArmed } from './meridian-judge.ts';
-import { MUTATING_TOOL, isDoorWrite, gateSelfEdit, ownerDirectedDeferral, selfMarkedBlockedOrBacklog } from './game_guard_facts.ts';
+import { MUTATING_TOOL, isDoorWrite, gateSelfEdit, ownerDirectedDeferral, ownerRequestedAnalysisReportOnly, selfMarkedBlockedOrBacklog } from './game_guard_facts.ts';
 
 interface StopHookInput {
   cwd?: string;
@@ -341,11 +341,9 @@ async function main(): Promise<void> {
   // suppression OFF → the agent's own honest gate-dev stop is misread as "edit-gate-to-dodge". `судь[яеиёю]`
   // matches судья/судье/судьи/судью but NOT судьба (fate), so it does not over-suppress on unrelated prose.
   const taskIsAboutTheGate = /пинатор|pinator|claim.?evidence.?gate|claim.?gate|сторож|судь[яеиёю]|meridian|\bjudge\b/i.test(substantiveUserRequest);
-  const ANALYSIS_RE = /\bанализ|разбер|разбор|оцен[иь]|отч[её]т|\breport\b|analyz|ревью|\breview\b|\bплан\b|\bplan\b|посмотри что|что думаешь|что не так/i;
-  // STRONG implement verbs only — NOT ambiguous "сделай/делай" (e.g. "сделай анализ", "план работ дай"
-  // are analysis). A bare "делай вариант X" has no analysis word → already falls through to enforce-work.
-  const IMPLEMENT_RE = /почини|\bfix\b|реализу|implement|\bbuild\b|мигрир|migrate|допиши|добавь|перепиши|внеси|закоммить|\bcommit\b/i;
-  const analysisOnly = ANALYSIS_RE.test(substantiveUserRequest) && !IMPLEMENT_RE.test(substantiveUserRequest);
+  // Owner-authored CLOSED mandate: analysis/research/audit/review + report ends when delivered. Do not infer
+  // implementation from the touched spec's backlog. Strong fix/implement/continue verbs keep work open.
+  const analysisOnly = ownerRequestedAnalysisReportOnly(sessionPrompts);
 
   // α (2026-06-20): a turn spent INSPECTING / arguing with the GATE ITSELF — reading its own source,
   // the transcript or the fires-log — with NO real mutating edit is NOT progress. EDITING the gate
@@ -472,6 +470,7 @@ async function main(): Promise<void> {
         nextOpenTask, // FR-49a: current-spec only; never global/scoped specs[0] fallback
         multiSpecSession: editedSlugs.size > 1,
         userRequest: substantiveUserRequest, // Phase 1/FR-29: last substantive request, not a terse continuation ack
+        analysisReportOnlyMandate: analysisOnly, // owner-authored closed mandate; delivering the report ends it
         sessionUserPrompts: sessionPrompts, // FR-28: the full human mandate — mandate-complete overrides nextOpenTask backlog
         gateSelfEditThisTurn: gateSelfEditThisTurn && !taskIsAboutTheGate, // FR-4/5: fighting-the-gate ONLY if the task is NOT про the gate (honest gate-dev not penalised)
         // FR-4/5 WP-3 (#149): self-marked own work blocked/backlog is self-exemption UNLESS the OWNER's

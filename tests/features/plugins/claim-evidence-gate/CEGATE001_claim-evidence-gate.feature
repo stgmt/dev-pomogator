@@ -183,6 +183,12 @@ Feature: CEGATE001 Claim-Evidence Gate
     Then it approves (no work-kick), but it blocks an unbacked works-done claim, and an implement request still enforces work
 
   # @feature11
+  Scenario: CEGATE001_63 Analysis and report is a closed mandate with no implied implementation
+    Given owner requests that distinguish report-only work from report plus implementation
+    When the deterministic analysis-report mandate fact is computed
+    Then only report-only requests close the mandate without implied implementation
+
+  # @feature11
   Scenario: CEGATE001_37 The last user prompt is read with hook-injected lines stripped
     Given the latest user-role messages include a spec-tasks banner and validator output appended by hooks
     When the gate extracts the user's intent prompt
