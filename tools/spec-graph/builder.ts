@@ -28,7 +28,9 @@ import path from 'node:path';
 import { createHash } from 'node:crypto';
 import type {
   Edge,
+  EdgeMetadata,
   Node,
+  NodeType,
   SpecGraph,
   BacklinkEntry,
   NodeLocation,
@@ -45,6 +47,7 @@ import { parseTasksFile } from './parsers/tasks.ts';
 import { parseFileChangesFile, type FileChangeRow } from './parsers/file-changes.ts';
 import { parseDesignFile, type DesignFileRef } from './parsers/design.ts';
 import { specOf } from './coverage.ts';
+import { refreshEndpointViolations } from './edge-schema.ts';
 
 // FR-36a (P13-2): node/edge qualification lives in the PARSERS now — each
 // slice arrives already composite-keyed (`coverage.ts::qualifySlice`). The
@@ -417,6 +420,9 @@ export function buildGraph(opts: BuildOptions): SpecGraph {
           edges.push({ from: s.id, to: `TRACE-${s.trace.traceId}`, type: 'runtime-trace' });
         }
       }
+      // `verifies` (#181): the evidence-bearing reverse of `tested-by`. Shared with
+      // the incremental `refreshResultEdges` path so both stay consistent.
+      edges.push(...verifiesEdgesFor(scenarioIter, testedBySourceMap(edges), (id) => nodes.get(id)?.type));
     }
   }
 
@@ -425,7 +431,7 @@ export function buildGraph(opts: BuildOptions): SpecGraph {
     pushBacklink(e.from, { file: '', line: 0, type: e.type });
   }
 
-  return {
+  const graph: SpecGraph = {
     version: 1,
     builtAt: new Date().toISOString(),
     nodes,
@@ -441,7 +447,10 @@ export function buildGraph(opts: BuildOptions): SpecGraph {
       collisions: rawCollisionList,
       normalizationCollisions: normalizationCollisionList,
     },
+    endpointViolations: [],
   };
+  refreshEndpointViolations(graph);
+  return graph;
 }
 
 /**
@@ -463,6 +472,52 @@ export function rebuildBacklinks(graph: SpecGraph): void {
     }
     list.push({ file: '', line: 0, type: e.type });
   }
+}
+
+/**
+ * Index `tested-by` edges (FR/NFR/AC → Scenario) by their Scenario target, so a
+ * Scenario id resolves to the requirement ids that test it. Shared by the full
+ * and incremental `verifies` emitters (#181).
+ */
+export function testedBySourceMap(edges: readonly Edge[]): Map<string, string[]> {
+  const byScenario = new Map<string, string[]>();
+  for (const e of edges) {
+    if (e.type !== 'tested-by') continue;
+    const list = byScenario.get(e.to) ?? [];
+    list.push(e.from);
+    byScenario.set(e.to, list);
+  }
+  return byScenario;
+}
+
+/**
+ * Derive the `verifies` edges (#181) for a set of scenarios: a scenario that
+ * actually PASSED verifies each FR/NFR it is tagged to, carrying producer/version
+ * provenance from the run that produced the result. AC sources of `tested-by`
+ * are dropped — only FR/NFR are legal `verifies` targets per EDGE_SCHEMA. Deduped
+ * per (scenario, requirement) so repeated calls never double-emit.
+ */
+export function verifiesEdgesFor(
+  scenarios: Iterable<ScenarioNode>,
+  testedBySources: Map<string, string[]>,
+  nodeType: (id: string) => NodeType | undefined,
+): Edge[] {
+  const out: Edge[] = [];
+  const seen = new Set<string>();
+  for (const s of scenarios) {
+    if (s.lastResult !== 'PASSED') continue;
+    const metadata: EdgeMetadata | undefined =
+      s.trace?.source || s.trace?.gitSha ? { producer: s.trace?.source, version: s.trace?.gitSha } : undefined;
+    for (const reqId of testedBySources.get(s.id) ?? []) {
+      const reqType = nodeType(reqId);
+      if (reqType !== 'FR' && reqType !== 'NFR') continue;
+      const key = `${s.id} ${reqId}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push({ from: s.id, to: reqId, type: 'verifies', ...(metadata ? { metadata } : {}) });
+    }
+  }
+  return out;
 }
 
 /**

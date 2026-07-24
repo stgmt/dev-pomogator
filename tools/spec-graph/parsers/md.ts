@@ -397,7 +397,9 @@ export function parseMarkdown(mdSource: string, relativePath: string): ParserOut
 
     // Decision: `### Decision: <title>` (DESIGN.md design decisions). Parent FR from
     // the explicit `**Требование:**` line → real FR→Decision `covers` edge (the design
-    // leg of the trace web). No requirement line → node with empty parentFr, no edge.
+    // leg of the trace web) PLUS the reverse `entitles` edge (Decision→FR, #181): the
+    // decision entitles/justifies the requirement it was made for. No requirement line →
+    // node with empty parentFr, no edge.
     m = text.match(DECISION_HEADING_RE);
     if (m) {
       const title = m[1].trim();
@@ -406,7 +408,10 @@ export function parseMarkdown(mdSource: string, relativePath: string): ParserOut
       const parentFr = decisionRequirementAfter(lines, i);
       const node: DecisionNode = { id: decId, type: 'Decision', title, parentFr, file: relativePath, line, body: text };
       nodes.push(node);
-      if (parentFr) edges.push({ from: parentFr, to: decId, type: 'covers' });
+      if (parentFr) {
+        edges.push({ from: parentFr, to: decId, type: 'covers' });
+        edges.push({ from: decId, to: parentFr, type: 'entitles' });
+      }
       anchors.push(
         { alias: decId, canonicalId: decId, location },
         { alias: slug, canonicalId: decId, location },

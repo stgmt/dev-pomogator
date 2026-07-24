@@ -86,6 +86,7 @@ import {
   type TaskLike,
 } from '../spec-graph/coverage.ts';
 import { readVerdicts } from '../spec-graph/test-quality-gate.ts';
+import { oldTestReadinessDebt } from '../bdd-migrator/repository-census.ts';
 import { marksmanSlug } from '../anchor-integrity/marksman-slug.mjs';
 import { compareBddSync, latestFilteredProof, type ScenarioLite } from '../specs-generator/spec-verdict.ts';
 
@@ -835,9 +836,15 @@ export function buildToolRegistry(
             scenarios.push(to as ScenarioNode);
           } else related.push({ id: to.id, type: to.type, relation: edge.type });
         }
-        if (edge.to === node.id && edge.type === 'covers') {
+        if (edge.to === node.id) {
           const from = graph.nodes.get(edge.from);
-          if (from?.type === 'FR') related.push({ id: from.id, type: from.type, relation: 'covered-by' });
+          if (!from) continue;
+          if (edge.type === 'covers' && from.type === 'FR') related.push({ id: from.id, type: from.type, relation: 'covered-by' });
+          // #181: incoming semantic edges — scenarios that VERIFY this requirement
+          // (evidence direction) and decisions that ENTITLE it (justification). Keep the
+          // raw edge type as the relation (as the outgoing branch does), so trace output
+          // surfaces `verifies`/`entitles` verbatim; direction is read from node types.
+          else if (edge.type === 'verifies' || edge.type === 'entitles') related.push({ id: from.id, type: from.type, relation: edge.type });
         }
       }
       // FR-36c (P13-2): the FR→Scenario `tested-by` edges ARE built now — the
@@ -1478,6 +1485,8 @@ export function buildToolRegistry(
         if (outsideSpec && file.toLowerCase().includes(slugTail)) executableScenarios.push(scenario);
       }
       const bddSync = compareBddSync(repoRoot, slug, sourceScenarios, executableScenarios);
+      const oldTestCensus = oldTestReadinessDebt(repoRoot, slug);
+      const bddSyncDebt = [...bddSync.debt, ...oldTestCensus.debt];
       const filteredProof = latestFilteredProof(repoRoot, sourceScenarios);
       const taskTruthDebt = Object.entries(canonicalStatusCoverage.tasks)
         .flatMap(([taskId, task]) => (task.truth_issues ?? []).map((issue) => `${taskId}: ${issue.message}`));

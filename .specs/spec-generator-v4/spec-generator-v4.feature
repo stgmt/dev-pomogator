@@ -3708,3 +3708,55 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Given legacy requirement metadata with an unknown extension
     When migration MCP query and SQLite warm restore process it
     Then every surface returns the same typed metadata and delivery state
+
+
+  @feature67 @FR-67 @AC-67.1
+  Scenario: SPECGEN004_589 edge vocabulary has exhaustive endpoint rules
+    Given a graph fixture with every supported edge type
+    When I inspect the typed edge endpoint schema
+    Then verifies and entitles are distinct edge types with endpoint rules
+    And every edge type has exactly one endpoint rule
+
+  @feature67 @FR-67 @AC-67.2
+  Scenario: SPECGEN004_590 valid semantic edge directions pass validation
+    Given a graph fixture with valid covers tested-by verifies and entitles edges
+    When I validate all graph edge endpoints
+    Then no endpoint violations are reported
+    And all valid semantic edges remain traversable
+
+  @feature67 @FR-67 @AC-67.3
+  Scenario: SPECGEN004_591 invalid edge endpoints fail with actionable detail
+    Given a graph fixture with an AC to FR covers edge
+    When I validate all graph edge endpoints
+    Then an ENDPOINT_VIOLATION error identifies actual and allowed endpoint types
+    And the invalid edge is retained for diagnosis
+
+  @feature67 @FR-67 @AC-67.4
+  Scenario: SPECGEN004_592 MCP staged transaction refuses invalid endpoints atomically
+    Given a staged MCP spec graph and a candidate graph with an injected invalid typed edge
+    When I run the MCP transaction endpoint gate on before and after graphs
+    Then the gate reports a new ENDPOINT_VIOLATION and refuses the write
+    And every transaction document remains byte-identical
+
+  @feature67 @FR-67 @AC-67.5
+  Scenario: SPECGEN004_593 SQLite restore preserves typed edges and verdict
+    Given a graph with verifies entitles and endpoint metadata
+    When I persist and restore the graph through SQLite
+    Then the restored typed edges and metadata equal the cold graph
+    And cold and warm endpoint verdicts are identical
+
+  @feature67 @FR-67 @AC-67.6
+  Scenario: SPECGEN004_594 existing edge producers remain compatible
+    Given markdown gherkin implementation result and trace edge fixtures
+    When I build and validate the composite graph
+    Then existing covers tested-by implementation result and trace edges are valid
+    And MCP trace traversal still returns existing and new semantic edges
+
+
+  @feature67 @FR-67 @AC-67.7
+  Scenario: SPECGEN004_595 real producers auto-emit verifies and entitles edges
+    Given a spec fixture with a decision requirement line and a passing tagged scenario
+    When I build the graph and derive verifies from the passing result
+    Then the markdown producer emits an entitles edge from the decision to its requirement
+    And the builder emits a verifies edge from the passing scenario carrying producer and version
+

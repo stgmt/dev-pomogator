@@ -40,6 +40,7 @@ import {
 import { runJudge, type JudgeResult } from '../spec-llm-judge/index.ts';
 import { buildReadinessInventory, deriveExecutionLane, type ReadinessInventory } from '../spec-graph/readiness-inventory.ts';
 import { computeSpecVerdict, type SpecVerdict, type UnverifiedCompletion } from '../spec-graph/verdict.ts';
+import { oldTestReadinessDebt, type OldTestCensusReport } from '../bdd-migrator/repository-census.ts';
 import type { FrNode, ScenarioNode, TaskNode } from '../spec-graph/types.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -149,6 +150,7 @@ export interface SpecVerdictResult {
   evidence: {
     bddSync: BddSyncReport;
     filteredProof: FilteredProofReport;
+    oldTestCensus: OldTestCensusReport | null;
   };
   /**
    * FR-63 (foundation): the ONE graph-derived, deduplicated FR/AC/scenario
@@ -624,6 +626,8 @@ export async function runSpecVerdict(
     ...(semanticWanted && semanticNote ? [semanticNote] : []),
   ];
   const bddSync = compareBddSync(cwd, slug, sourceScenarios, executableScenarios);
+  const oldTestCensus = oldTestReadinessDebt(cwd, slug);
+  const bddSyncDebt = [...bddSync.debt, ...oldTestCensus.debt];
   const filteredProof = latestFilteredProof(cwd, sourceScenarios);
   const taskTruthDebt = [...new Set([...unverifiedDoneTasks, ...uncheckedDoneWhenTasks])].map((id) => {
     const issues = truthIssuesByTask.get(id) ?? [];
@@ -669,10 +673,10 @@ export async function runSpecVerdict(
       debt: taskTruthDebt,
     },
     BDD_SYNC: {
-      status: bddSync.debt.length > 0 ? 'RED' : 'GREEN',
-      blocking: bddSync.debt.length > 0,
-      summary: bddSync.debt.length > 0 ? `${bddSync.debt.length} source/executable BDD sync drift(s)` : 'no source/executable BDD sync debt reported by the current verdict inputs',
-      debt: bddSync.debt,
+      status: bddSyncDebt.length > 0 ? 'RED' : 'GREEN',
+      blocking: bddSyncDebt.length > 0,
+      summary: bddSyncDebt.length > 0 ? `${bddSyncDebt.length} BDD sync or repository migration debt item(s)` : 'no source/executable BDD sync or repository migration debt reported by the current verdict inputs',
+      debt: bddSyncDebt,
     },
     SEMANTIC: {
       status: !semanticWanted ? 'SKIPPED' : semanticDebt.length > 0 ? 'SKIPPED' : 'GREEN',
@@ -728,7 +732,7 @@ export async function runSpecVerdict(
     },
     coverage: { buckets, canonicalBuckets, unverifiedDoneTasks },
     inventory,
-    evidence: { bddSync, filteredProof },
+    evidence: { bddSync, filteredProof, oldTestCensus: oldTestCensus.report },
     semantic: {
       ran: semanticWanted && binaryPresent,
       binaryPresent,

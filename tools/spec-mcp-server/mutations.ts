@@ -353,7 +353,15 @@ function buildMutationGraph(repoRoot: string, evidenceRoot: string, slug: string
   });
 }
 
-function deltaByKey<T>(before: T[], after: T[], keyOf: (value: T) => string): T[] {
+/**
+ * Exported for FR-67 (SPECGEN004_592): the BDD scenario drives this SAME delta
+ * gate the MCP transaction handlers use internally, with a hand-injected
+ * invalid candidate edge — see feature67_edge_contracts.ts. Markdown parsers
+ * are endpoint-safe (no parser path can stage an invalid edge), so testing the
+ * public propose_patch/apply_spec_transaction surface with a markdown fixture
+ * cannot exercise this gate honestly; testing the gate function directly does.
+ */
+export function deltaByKey<T>(before: T[], after: T[], keyOf: (value: T) => string): T[] {
   const remaining = new Map<string, number>();
   for (const value of before) {
     const key = keyOf(value);
@@ -368,7 +376,7 @@ function deltaByKey<T>(before: T[], after: T[], keyOf: (value: T) => string): T[
   });
 }
 
-function conformanceKey(f: Finding): string {
+export function conformanceKey(f: Finding): string {
   return `${f.code}|${f.nodeId ?? ''}|${f.relatedId ?? ''}|${f.location.file}`;
 }
 

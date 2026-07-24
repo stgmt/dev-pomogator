@@ -199,3 +199,16 @@
 | CHK-FR66-04 | All required demands use non-empty ALL | FR-66, AC-66.4, @feature66 | Integration test | Draft | optional and justified exceptions |
 | CHK-FR66-05 | Forwarded demands resolve conflicts deterministically | FR-66, AC-66.5, @feature66 | BDD scenario | Draft | precedence + dedup |
 | CHK-FR66-06 | Author/query/migration/warm restore agree | FR-66, AC-66.6, @feature66 | Integration test | Draft | one validator/evaluator |
+
+
+## FR-67 — Typed edge endpoint contract
+
+| CHK ID | Requirement | Verification | Status |
+|---|---|---|---|
+| CHK-FR67-01 | FR-67, AC-67.1 | BDD `SPECGEN004_589` checks exhaustive `EdgeType`/`EDGE_SCHEMA` | Draft |
+| CHK-FR67-02 | FR-67, AC-67.2 | BDD `SPECGEN004_590` checks valid semantic directions | Draft |
+| CHK-FR67-03 | FR-67, AC-67.3 | BDD `SPECGEN004_591` checks actionable `ENDPOINT_VIOLATION` | Draft |
+| CHK-FR67-04 | FR-67, AC-67.4 | BDD `SPECGEN004_592` checks MCP refusal and atomicity | Draft |
+| CHK-FR67-05 | FR-67, AC-67.5 | BDD `SPECGEN004_593` checks SQLite cold/warm parity | Draft |
+| CHK-FR67-06 | FR-67, AC-67.6 | BDD `SPECGEN004_594` checks producer compatibility and traversal | Draft |
+

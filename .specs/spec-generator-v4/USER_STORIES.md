@@ -1048,3 +1048,13 @@ Then task verdict remains implemented and delivery is incomplete
 Given all required delivery artifacts are present or validly excepted
 When the same evaluator runs
 Then delivery is delivered by non-empty ALL
+
+
+## User Story 46: Typed edge truth (Priority: P1)
+
+**Требование:** [FR-67](FR.md#fr-67)
+
+As a spec author and MCP consumer, I want coverage, evidence, and authorization edges to have distinct typed meanings and one endpoint contract, so an invalid graph is rejected before any staged write while cold and warm graph paths return the same actionable truth.
+
+**Independent Test:** Run `SPECGEN004_589`–`SPECGEN004_594` in Docker and verify exhaustive edge rules, valid traversal, `ENDPOINT_VIOLATION`, atomic MCP refusal, SQLite parity, and backward-compatible producers.
+

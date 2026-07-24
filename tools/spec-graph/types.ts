@@ -36,6 +36,8 @@ export type EdgeType =
   | 'refs'
   | 'covers'
   | 'tested-by'
+  | 'verifies'
+  | 'entitles'
   | 'tagged-by'
   | 'implements'
   | 'last-result'
@@ -267,6 +269,10 @@ export interface EdgeMetadata {
   source_section?: 'FILE_CHANGES' | 'DESIGN';
   /** FILE_CHANGES action verb when sourced from a FILE_CHANGES row. */
   action?: 'create' | 'edit' | 'delete' | 'rename' | 'move' | 'replace';
+  /** Evidence producer for verifies/runtime edges. */
+  producer?: string;
+  /** Producer or edge-contract version. */
+  version?: string;
 }
 
 export interface Edge {
@@ -286,6 +292,15 @@ export interface BacklinkEntry {
   file: string;
   line: number;
   type: EdgeType;
+}
+
+export interface EndpointViolation {
+  code: 'ENDPOINT_VIOLATION';
+  edge: Edge;
+  actualSource: NodeType;
+  actualTarget: NodeType;
+  allowedSources: readonly NodeType[];
+  allowedTargets: readonly NodeType[];
 }
 
 export interface IdentityCollision {
@@ -324,6 +339,8 @@ export interface SpecGraph {
     collisions: Array<{ id: string; firstFile: string; secondFile: string }>;
     normalizationCollisions?: IdentityCollision[];
   };
+  /** Graph-wide endpoint diagnostics, refreshed after full/incremental build and restore. */
+  endpointViolations?: EndpointViolation[];
 }
 
 /**
