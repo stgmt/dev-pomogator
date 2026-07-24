@@ -341,22 +341,37 @@ function fileContains(repoRoot: string, relPath: string, fragments: string[]): b
   return fragments.every((fragment) => content.includes(fragment));
 }
 
+const CARL_RUNNER_TARGET = /tools[\\/]carl[\\/]runner\.ts/u;
+
+/**
+ * Регистрация CARL живёт в двух формах: прямая команда в манифесте (legacy) и —
+ * после переезда на HTTP-диспетч — маршрут в реестре hook-service, куда
+ * `.claude-plugin/hooks.json` ссылается URL-ом. Проверяем обе, иначе отчёт
+ * объявляет CARL незарегистрированным при живой и рабочей регистрации.
+ */
 function hasClaudeCarlHookRegistration(repoRoot: string): boolean {
   const hooks = readJsonObject(path.join(repoRoot, '.claude-plugin', 'hooks.json'));
-  if (!hooks) return false;
-  const stack: unknown[] = [hooks];
-  while (stack.length > 0) {
-    const item = stack.pop();
-    if (Array.isArray(item)) {
-      stack.push(...item);
-      continue;
+  if (hooks) {
+    const stack: unknown[] = [hooks];
+    while (stack.length > 0) {
+      const item = stack.pop();
+      if (Array.isArray(item)) {
+        stack.push(...item);
+        continue;
+      }
+      if (!item || typeof item !== 'object') continue;
+      const record = item as Record<string, unknown>;
+      if (CARL_RUNNER_TARGET.test(stringifyUnknown(record.command))) return true;
+      stack.push(...Object.values(record));
     }
-    if (!item || typeof item !== 'object') continue;
-    const record = item as Record<string, unknown>;
-    if (/tools[\\/]carl[\\/]runner\.ts/u.test(stringifyUnknown(record.command))) return true;
-    stack.push(...Object.values(record));
   }
-  return false;
+
+  const registry = readJsonObject(path.join(repoRoot, 'tools', 'hook-service', 'registry.json')) as
+    | { routes?: Record<string, { target?: unknown }> }
+    | undefined;
+  return Object.values(registry?.routes ?? {}).some((route) =>
+    CARL_RUNNER_TARGET.test(stringifyUnknown(route?.target)),
+  );
 }
 
 function marker(ok: boolean): 'VERIFIED' | 'UNVERIFIED' {
@@ -481,6 +496,9 @@ function main(): void {
 }
 
 const invokedPath = process.argv[1] ? pathToFileURL(path.resolve(process.argv[1])).href : '';
-if (import.meta.url === invokedPath) {
+// Не запускать CLI, когда модуль инлайнен в бандл: там import.meta.url
+// схлопывается в URL бандла и guard сработал бы при любом его запуске.
+// Имя файла НЕ проверяем — мутационные копии запускаются под другими именами.
+if (import.meta.url === invokedPath && !import.meta.url.endsWith('.bundle.mjs')) {
   main();
 }

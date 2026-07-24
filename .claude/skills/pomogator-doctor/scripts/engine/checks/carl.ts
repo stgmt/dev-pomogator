@@ -92,7 +92,13 @@ export async function checkCarlProject(options: CarlCheckOptions): Promise<Check
     });
   }
 
-  if (!options.repair) {
+  // Первичный разворот CARL идёт автоматически (в том числе из тихого SessionStart-хука):
+  // без него регистрация хука доезжает до юзера, а сам проектный CARL — нет.
+  // Починка УЖЕ существующих артефактов по-прежнему требует явного repair, чтобы
+  // тихий прогон никогда не переписывал то, что юзер правил руками.
+  const isFirstInstall = before === null;
+
+  if (!options.repair && !isFirstInstall) {
     return buildResult(META, 'critical', `CARL managed artifacts need repair: ${beforeIssues.join('; ')}`, {
       hint: 'Run /pomogator-doctor with CARL repair enabled or reinstall dev-pomogator',
       reinstallHint: 'Run `/plugin install dev-pomogator@stgmt --force`, then run /pomogator-doctor again',
@@ -113,8 +119,15 @@ export async function checkCarlProject(options: CarlCheckOptions): Promise<Check
   const afterIssues = collectIssues(after, options.projectRoot, options.pluginRoot);
 
   if (repair.ok && afterIssues.length === 0) {
-    return buildResult(META, 'ok', `CARL repaired stale managed artifacts: ${beforeIssues.join('; ')}`, {
-      details: { manifest: manifestPath(options.projectRoot), repaired: true, beforeIssues },
+    const summary = isFirstInstall
+      ? 'CARL managed artifacts bootstrapped for this project'
+      : `CARL repaired stale managed artifacts: ${beforeIssues.join('; ')}`;
+    return buildResult(META, 'ok', summary, {
+      details: {
+        manifest: manifestPath(options.projectRoot),
+        [isFirstInstall ? 'bootstrapped' : 'repaired']: true,
+        beforeIssues,
+      },
     });
   }
 

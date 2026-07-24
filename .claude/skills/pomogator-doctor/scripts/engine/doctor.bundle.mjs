@@ -242,7 +242,7 @@ var init_context_diet = __esm({
     STUB_BEGIN = "<!-- dev-pomogator-carl-context-diet:managed-stub v1";
     STUB_END = "<!-- /dev-pomogator-carl-context-diet -->";
     invokedPath = process.argv[1] ? pathToFileURL(path4.resolve(process.argv[1])).href : "";
-    if (import.meta.url === invokedPath) {
+    if (import.meta.url === invokedPath && !import.meta.url.endsWith(".bundle.mjs")) {
       main();
     }
   }
@@ -534,7 +534,7 @@ var init_adapt_rules = __esm({
     DEFAULT_RU_ALIASES = ["\u0447\u0435 \u0437\u0430 \u043E\u0448\u0438\u0431\u043A\u0430", "\u0438\u0441\u0441\u043B\u0435\u0434\u0443\u0439", "\u0434\u043E \u043A\u043E\u043D\u0446\u0430", "\u0441\u043F\u0435\u043A\u0438", "\u043F\u0440\u0430\u0432\u0438\u043B\u0430", "\u0441\u043A\u0438\u043B\u044B"];
     APPROVED_INDEXES = [".specs/.onboarding.json"];
     invokedPath2 = process.argv[1] ? pathToFileURL2(path5.resolve(process.argv[1])).href : "";
-    if (import.meta.url === invokedPath2) {
+    if (import.meta.url === invokedPath2 && !import.meta.url.endsWith(".bundle.mjs")) {
       main2();
     }
   }
@@ -755,20 +755,24 @@ function fileContains(repoRoot, relPath, fragments) {
 }
 function hasClaudeCarlHookRegistration(repoRoot) {
   const hooks = readJsonObject(path6.join(repoRoot, ".claude-plugin", "hooks.json"));
-  if (!hooks) return false;
-  const stack = [hooks];
-  while (stack.length > 0) {
-    const item = stack.pop();
-    if (Array.isArray(item)) {
-      stack.push(...item);
-      continue;
+  if (hooks) {
+    const stack = [hooks];
+    while (stack.length > 0) {
+      const item = stack.pop();
+      if (Array.isArray(item)) {
+        stack.push(...item);
+        continue;
+      }
+      if (!item || typeof item !== "object") continue;
+      const record = item;
+      if (CARL_RUNNER_TARGET.test(stringifyUnknown(record.command))) return true;
+      stack.push(...Object.values(record));
     }
-    if (!item || typeof item !== "object") continue;
-    const record = item;
-    if (/tools[\\/]carl[\\/]runner\.ts/u.test(stringifyUnknown(record.command))) return true;
-    stack.push(...Object.values(record));
   }
-  return false;
+  const registry = readJsonObject(path6.join(repoRoot, "tools", "hook-service", "registry.json"));
+  return Object.values(registry?.routes ?? {}).some(
+    (route) => CARL_RUNNER_TARGET.test(stringifyUnknown(route?.target))
+  );
 }
 function marker(ok) {
   return ok ? "VERIFIED" : "UNVERIFIED";
@@ -886,7 +890,7 @@ function main3() {
     return;
   }
 }
-var MODULE_DIR, REPO_ROOT, MANIFEST_REL, REQUIRED_RUNTIME_FRAGMENT, CODEX_LAUNCHER_REL, GLOBAL_CODEX_LAUNCHER, CODEX_PLUGIN_MANIFEST_REL, CODEX_PLUGIN_HOOKS_REL, CODEX_PROJECT_HOOKS_REL, CODEX_CARL_COMMAND_RE, REQUIRED_WARNING, invokedPath3;
+var MODULE_DIR, REPO_ROOT, MANIFEST_REL, REQUIRED_RUNTIME_FRAGMENT, CODEX_LAUNCHER_REL, GLOBAL_CODEX_LAUNCHER, CODEX_PLUGIN_MANIFEST_REL, CODEX_PLUGIN_HOOKS_REL, CODEX_PROJECT_HOOKS_REL, CODEX_CARL_COMMAND_RE, REQUIRED_WARNING, CARL_RUNNER_TARGET, invokedPath3;
 var init_manifest = __esm({
   "tools/carl/manifest.ts"() {
     "use strict";
@@ -901,8 +905,9 @@ var init_manifest = __esm({
     CODEX_PROJECT_HOOKS_REL = path6.join(".codex", "hooks.json");
     CODEX_CARL_COMMAND_RE = /carl[\\/](?:runner|codex|hook)|tools[\\/]carl/iu;
     REQUIRED_WARNING = "CARL did not run; tell the user CARL guidance/recall was unavailable.";
+    CARL_RUNNER_TARGET = /tools[\\/]carl[\\/]runner\.ts/u;
     invokedPath3 = process.argv[1] ? pathToFileURL3(path6.resolve(process.argv[1])).href : "";
-    if (import.meta.url === invokedPath3) {
+    if (import.meta.url === invokedPath3 && !import.meta.url.endsWith(".bundle.mjs")) {
       main3();
     }
   }
@@ -1105,7 +1110,7 @@ var init_install = __esm({
     MANAGED_SETTINGS_KEY = "devPomogatorCarl";
     MANAGED_HOOK_COMMAND = "node --import tsx tools/carl/runner.ts";
     invokedPath4 = process.argv[1] ? pathToFileURL4(path7.resolve(process.argv[1])).href : "";
-    if (import.meta.url === invokedPath4) {
+    if (import.meta.url === invokedPath4 && !import.meta.url.endsWith(".bundle.mjs")) {
       main4();
     }
   }
@@ -3951,7 +3956,8 @@ async function checkCarlProject(options) {
       details: { manifest: manifestPath2(options.projectRoot), requiredWarning: REQUIRED_WARNING2 }
     });
   }
-  if (!options.repair) {
+  const isFirstInstall = before === null;
+  if (!options.repair && !isFirstInstall) {
     return buildResult(META5, "critical", `CARL managed artifacts need repair: ${beforeIssues.join("; ")}`, {
       hint: "Run /pomogator-doctor with CARL repair enabled or reinstall dev-pomogator",
       reinstallHint: "Run `/plugin install dev-pomogator@stgmt --force`, then run /pomogator-doctor again",
@@ -3969,8 +3975,13 @@ async function checkCarlProject(options) {
   const after = loadManifest(options.projectRoot);
   const afterIssues = collectIssues(after, options.projectRoot, options.pluginRoot);
   if (repair.ok && afterIssues.length === 0) {
-    return buildResult(META5, "ok", `CARL repaired stale managed artifacts: ${beforeIssues.join("; ")}`, {
-      details: { manifest: manifestPath2(options.projectRoot), repaired: true, beforeIssues }
+    const summary = isFirstInstall ? "CARL managed artifacts bootstrapped for this project" : `CARL repaired stale managed artifacts: ${beforeIssues.join("; ")}`;
+    return buildResult(META5, "ok", summary, {
+      details: {
+        manifest: manifestPath2(options.projectRoot),
+        [isFirstInstall ? "bootstrapped" : "repaired"]: true,
+        beforeIssues
+      }
     });
   }
   return buildResult(META5, "critical", `CARL managed artifacts need repair: ${afterIssues.join("; ") || beforeIssues.join("; ")}`, {
@@ -4504,7 +4515,7 @@ async function main6() {
   });
   writeOutput(result2.output);
 }
-if (process.argv[1] && import.meta.url === pathToFileURL6(process.argv[1]).href) {
+if (process.argv[1] && import.meta.url === pathToFileURL6(process.argv[1]).href && !import.meta.url.endsWith(".bundle.mjs")) {
   main6().catch(() => writeOutput({ continue: true, suppressOutput: true })).finally(() => process.exit(0));
 }
 
@@ -7550,15 +7561,16 @@ ${usage6()}
       if (typeof payload.cwd === "string" && payload.cwd.trim()) projectRoot = payload.cwd;
     } catch {
     }
-    const output = await Promise.race([
-      runQuiet({ projectRoot, homeDir: process.env.HOME || process.env.USERPROFILE, fix: false }),
-      new Promise((resolve5) => setTimeout(
-        () => resolve5({ continue: true, suppressOutput: true }),
-        1e4
-      ))
-    ]);
+    const quiet = runQuiet({ projectRoot, homeDir: process.env.HOME || process.env.USERPROFILE, fix: false });
+    let bannerTimer;
+    const bannerCap = new Promise((resolve5) => {
+      bannerTimer = setTimeout(() => resolve5({ continue: true, suppressOutput: true }), 1e4);
+    });
+    const output = await Promise.race([quiet, bannerCap]);
+    if (bannerTimer) clearTimeout(bannerTimer);
     process.stdout.write(`${JSON.stringify(output)}
 `);
+    await quiet.catch(() => void 0);
     return;
   }
   const report = await runDoctor({

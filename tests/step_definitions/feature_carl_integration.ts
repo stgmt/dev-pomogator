@@ -136,8 +136,11 @@ function assertRunSucceeded(run: CommandResult | undefined, purpose: string): as
   );
 }
 
-function findPluginHookCommand(eventName: 'SessionStart' | 'UserPromptSubmit', commandPattern: RegExp): string | undefined {
-  const hooksPath = appPath('.claude-plugin', 'hooks.json');
+function findCommandInManifest(
+  hooksPath: string,
+  eventName: 'SessionStart' | 'UserPromptSubmit',
+  commandPattern: RegExp,
+): string | undefined {
   if (!fs.existsSync(hooksPath)) return undefined;
   const hooks = JSON.parse(fs.readFileSync(hooksPath, 'utf-8')) as { hooks?: Record<string, unknown> };
   const stack: unknown[] = [hooks.hooks?.[eventName]];
@@ -156,12 +159,38 @@ function findPluginHookCommand(eventName: 'SessionStart' | 'UserPromptSubmit', c
   return undefined;
 }
 
+/**
+ * После переезда на HTTP-диспетч `.claude-plugin/hooks.json` несёт URL-ы
+ * (`/v1/dispatch/<Event>%2F<idx>%2F0`), а реальная цель живёт в реестре
+ * hook-service. Ищем регистрацию сначала как прямую команду (legacy-форма всё
+ * ещё валидна), затем через реестр — но возвращаем ИСПОЛНЯЕМУЮ команду из
+ * legacy-манифеста, чтобы шаг гонял настоящий скрипт хука, а не транспорт.
+ */
+function findPluginHookCommand(eventName: 'SessionStart' | 'UserPromptSubmit', commandPattern: RegExp): string | undefined {
+  const direct = findCommandInManifest(appPath('.claude-plugin', 'hooks.json'), eventName, commandPattern);
+  if (direct) return direct;
+
+  const registryPath = appPath('tools', 'hook-service', 'registry.json');
+  if (!fs.existsSync(registryPath)) return undefined;
+  const registry = JSON.parse(fs.readFileSync(registryPath, 'utf-8')) as {
+    routes?: Record<string, { event?: string; target?: string }>;
+  };
+  const routed = Object.entries(registry.routes ?? {}).some(
+    ([key, route]) =>
+      (route.event ?? key.split('/')[0]) === eventName && commandPattern.test(route.target ?? ''),
+  );
+  if (!routed) return undefined;
+
+  return findCommandInManifest(appPath('.claude-plugin', 'hooks.legacy.json'), eventName, commandPattern);
+}
+
 function findCarlHookCommand(): string | undefined {
   return findPluginHookCommand('UserPromptSubmit', /tools\/carl\/runner\.ts|tools\\carl\\runner\.ts/u);
 }
 
 function findSessionStartDoctorCommand(): string | undefined {
-  return findPluginHookCommand('SessionStart', /pomogator-doctor.*doctor-hook\.ts/u);
+  // Движок доктора собран в bundle; legacy-манифест всё ещё зовёт doctor-hook.ts.
+  return findPluginHookCommand('SessionStart', /pomogator-doctor.*(doctor-hook\.ts|doctor\.bundle\.mjs)/u);
 }
 
 function runRegisteredCarlHook(world: CarlWorld, env: NodeJS.ProcessEnv = {}): CommandResult {

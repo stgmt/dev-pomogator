@@ -338,7 +338,15 @@ async function main(): Promise<void> {
   writeOutput(result.output);
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+// Basename-сверка обязательна: модуль инлайнится в doctor.bundle.mjs, где
+// import.meta.url схлопывается в URL самого бандла. Без неё guard срабатывает при
+// ЛЮБОМ запуске бандла, а `process.exit(0)` ниже убивает чужую асинхронную работу
+// (доктор переставал разворачивать проектный CARL и молча отдавал suppressOutput).
+if (
+  process.argv[1] &&
+  import.meta.url === pathToFileURL(process.argv[1]).href &&
+  !import.meta.url.endsWith('.bundle.mjs')
+) {
   main()
     .catch(() => writeOutput({ continue: true, suppressOutput: true }))
     .finally(() => process.exit(0));
