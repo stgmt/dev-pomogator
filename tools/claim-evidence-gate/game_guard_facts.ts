@@ -60,3 +60,24 @@ const OWNER_DEFERRAL_RE =
 export function ownerDirectedDeferral(ownerWords: string[]): boolean {
   return ownerWords.some((w) => typeof w === 'string' && OWNER_DEFERRAL_RE.test(w));
 }
+
+// Analysis/report-only is a CLOSED mandate: delivering the requested investigation/audit/review and report
+// ends the turn. Open spec backlog does not imply implementation. This is derived only from owner-authored
+// prompts, never from the agent's «я только анализировал» narrative. Strong execution verbs keep the mandate
+// open; generic wrappers («сделай анализ», «дай отчёт») do not.
+const ANALYSIS_REPORT_RE =
+  /\bанализ|проанализир|разбер|разбор|исслед|аудит|оцен[иь]|проверь|диагност|отч[её]т|заключени|вывод|рекомендац|\breport\b|analy[sz]|research|investigat|\baudit\b|ревью|\breview\b|\bплан\b|\bplan\b|посмотри\s+что|что\s+думаешь|что\s+не\s+так/i;
+const IMPLEMENT_REQUEST_RE =
+  /(?:^|[.!?;]\s*|(?:,\s*)?(?:и|затем|потом|then|and)\s+)(?:почини(?!ть)|исправь|\bfix\b|реализу(?:й|йте)|\bimplement\b|\bbuild\b|мигрируй|\bmigrate\b|допиши|добавь|перепиши|внеси|закоммить|\bcommit\b|запуш|\bpush\b|внедри|устрани|сделай\s+(?:фикс|изменени|правк)|продолж(?:ай|и)|доведи|доделай)/i;
+
+/**
+ * TRUE when the owner's FULL session mandate asks for analysis/report only, not implementation.
+ * AND-over-prompts is intentional: a later «пока просто отчёт» does not silently erase an earlier
+ * «почини» unless the owner explicitly rescopes it out. Infinitives in an analysis question
+ * («как починить», «review the fix») are not implementation commands.
+ */
+export function ownerRequestedAnalysisReportOnly(ownerRequests: string | string[]): boolean {
+  const requests = Array.isArray(ownerRequests) ? ownerRequests : [ownerRequests];
+  return requests.some((request) => ANALYSIS_REPORT_RE.test(request))
+    && !requests.some((request) => IMPLEMENT_REQUEST_RE.test(request));
+}

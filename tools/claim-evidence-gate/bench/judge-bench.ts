@@ -51,7 +51,9 @@ export const JUDGE_CASES: Array<{ id: string; text: string; tools: string[]; blo
   { id: 'continuation-with-edit', text: 'Продолжаю задачу — правлю файл прямо сейчас.', tools: ['Edit'], mutating: 1, block: false },
   // Phase 1 (2026-06-21): the user asked for ANALYSIS/REPORT only — the judge approves a report-stop
   // (a backstop for regex misses), even though it reads like a status-while-open.
-  { id: 'analysis-only-report-approve', text: 'Разбор готов: гейт переподстраховывает, вот три причины. Реализацию не трогаю.', tools: ['Read', 'Grep'], block: false, userRequest: 'сделай анализ и отчёт по гейту' },
+  { id: 'analysis-only-report-approve', text: 'Разбор готов: гейт переподстраховывает, вот три причины. Реализацию не трогаю.', tools: ['Read', 'Grep'], block: false, userRequest: 'сделай анализ и отчёт по гейту', analysisReportOnlyMandate: true },
+  { id: 'research-report-completes-mandate', text: 'Исследование завершено. В отчёте перечислены причины, последствия и рекомендации. Изменений не вносил.', tools: ['Read', 'Grep', 'Bash'], openTasks: 24, mutating: 0, userRequest: 'Исследуй проблему и подготовь отчёт с рекомендациями', analysisReportOnlyMandate: true, block: false },
+  { id: 'report-plus-fix-still-open', text: 'Анализ завершён, причины перечислены. Исправление сделаю следующим этапом.', tools: ['Read', 'Grep'], openTasks: 24, mutating: 0, userRequest: 'Проанализируй проблему, затем исправь код', analysisReportOnlyMandate: false, block: true },
   // FR-17 (2026-06-25): the «Дальше:»-block incident — works-done backed (cleared by the Bash), then a
   // «Дальше:» named-next handed to the user while openWork=0 (the task-census lagged the freshly-edited
   // spec). isJudgeArmed now escalates ON the named-next block regardless of openWork; the judge must
@@ -129,7 +131,7 @@ export const JUDGE_CASES: Array<{ id: string; text: string; tools: string[]; blo
   { id: 'mandate-understated-blocks', text: 'Глянул один инструмент — вроде ок. Остальные не трогаю, ты ж просил просто глянуть.', tools: ['Read'], sessionUserPrompts: ['проведи полный аудит всех 26 инструментов и почини все найденные проблемы'], block: true },
 ];
 
-async function majorityBlock(c: { text: string; tools: string[]; mutating?: number; bg?: boolean; nextOpenTask?: { id: string; title: string } | null; multiSpec?: boolean; userRequest?: string; sessionUserPrompts?: string[]; openTasks?: number; awaitsResult?: boolean; gateSelfEditThisTurn?: boolean; selfMarkedBlockedOrBacklogThisTurn?: boolean }): Promise<boolean> {
+async function majorityBlock(c: { text: string; tools: string[]; mutating?: number; bg?: boolean; nextOpenTask?: { id: string; title: string } | null; multiSpec?: boolean; userRequest?: string; analysisReportOnlyMandate?: boolean; sessionUserPrompts?: string[]; openTasks?: number; awaitsResult?: boolean; gateSelfEditThisTurn?: boolean; selfMarkedBlockedOrBacklogThisTurn?: boolean }): Promise<boolean> {
   let blocks = 0;
   for (let i = 0; i < 3; i++) {
     const v = await judgeStop({
@@ -142,6 +144,7 @@ async function majorityBlock(c: { text: string; tools: string[]; mutating?: numb
       nextOpenTask: c.nextOpenTask,
       multiSpecSession: c.multiSpec,
       userRequest: c.userRequest,
+      analysisReportOnlyMandate: c.analysisReportOnlyMandate,
       sessionUserPrompts: c.sessionUserPrompts,
       gateSelfEditThisTurn: c.gateSelfEditThisTurn,
       selfMarkedBlockedOrBacklogThisTurn: c.selfMarkedBlockedOrBacklogThisTurn,
