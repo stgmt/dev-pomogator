@@ -17,7 +17,7 @@ import assert from 'node:assert/strict';
 import { classify, firstUnsupported, stripCode } from '../../tools/claim-evidence-gate/claim_classifier.ts';
 import { extractTurnWindow, bgInFlightInWindow, lastUserPrompt, agentBgInFlightCount, agentBgInFlight, sessionUserPrompts, latestActionableStopFeedback, AWAITS_RESULT_RE } from '../../tools/claim-evidence-gate/turn_window.ts';
 import { agentOpenTodoCount, liveOpenForUncensusedSlugs, lastEditedSpecSlug } from '../../tools/spec-graph/task-census.ts';
-import { gateSelfEdit, selfMarkedBlockedOrBacklog } from '../../tools/claim-evidence-gate/game_guard_facts.ts';
+import { gateSelfEdit, ownerDirectedDeferral, selfMarkedBlockedOrBacklog } from '../../tools/claim-evidence-gate/game_guard_facts.ts';
 import { buildJudgeNoTokenDemand, resolveEndpoint, isJudgeArmed } from '../../tools/claim-evidence-gate/meridian-judge.ts';
 
 const REPO = process.env.APP_DIR || process.cwd();
@@ -537,10 +537,14 @@ When<CegWorld>('the game-guard facts are computed from those real inputs', funct
     selfMarkedBlockedOrBacklog([{ name: 'Edit', input: { file_path: '.specs/foo/TASKS.md', old_string: 'Status: TODO', new_string: 'Status: BLOCKED' } }]),
     selfMarkedBlockedOrBacklog([{ name: 'mcp__dev-pomogator-specs__set_spec_status', input: { spec: 'foo', status: 'active' } }]),
     selfMarkedBlockedOrBacklog([{ name: 'Edit', input: { file_path: 'src/foo.ts', old_string: 'a', new_string: 'b' } }]),
+    ownerDirectedDeferral(['Phase 2 пока не делаем — припаркуй в бэклог, вернёмся позже']),
+    ownerDirectedDeferral(['Пометь интеграцию BLOCKED до решения владельца']),
+    ownerDirectedDeferral(['Разгреби бэклог и выполни все задачи сейчас']),
+    ownerDirectedDeferral(['Продолжай работу, ничего не откладывай']),
   ];
 });
 Then<CegWorld>('gateSelfEdit and selfMarkedBlockedOrBacklog report true only for genuine gate-own mutations and false for reads or unrelated edits', function () {
-  assert.deepEqual(this.cegGameGuardResults, [true, true, true, false, false, true, true, true, false, false], `game-guard results wrong: ${JSON.stringify(this.cegGameGuardResults)}`);
+  assert.deepEqual(this.cegGameGuardResults, [true, true, true, false, false, true, true, true, false, false, true, true, false, false], `game-guard results wrong: ${JSON.stringify(this.cegGameGuardResults)}`);
 });
 
 Given<CegWorld>('a transcript mixing two genuine user prompts with a census banner, skill content, a compact summary, a system task-notification and a slash-command message', function () {

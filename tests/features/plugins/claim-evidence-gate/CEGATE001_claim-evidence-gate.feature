@@ -334,3 +334,9 @@ Feature: CEGATE001 Claim-Evidence Gate
     Given the verbatim stop text of the 2026-07-18 incident that awaits four collector reports
     When the awaits-result hint is tested against that text
     Then the hint matches, so the judge sees the next step as consuming the pending reports
+
+  # @feature4
+  Scenario: CEGATE001_62 Owner-directed deferral suppresses the self-marked blocked tell
+    Given a set of real Edit, Write, door apply_spec_change, set_spec_status and Read tool_use records
+    When the game-guard facts are computed from those real inputs
+    Then gateSelfEdit and selfMarkedBlockedOrBacklog report true only for genuine gate-own mutations and false for reads or unrelated edits
