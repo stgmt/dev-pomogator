@@ -1058,3 +1058,48 @@ WHEN demands are forwarded through requirement links THEN required SHALL dominat
 
 WHEN metadata is authored, queried, migrated or SQLite-restored THEN MCP author/query, migration report, cold graph and warm graph SHALL preserve the same schema version, typed fields, `_unknown`, demands and delivery state.
 
+
+
+## AC-67.1
+
+**Требование:** [FR-67](FR.md#fr-67)
+
+WHEN runtime loads the graph contract THEN it SHALL expose an exhaustive endpoint rule for every `EdgeType`, including distinct `verifies` and `entitles` members.
+
+## AC-67.2
+
+**Требование:** [FR-67](FR.md#fr-67)
+
+WHEN `covers`, `tested-by`, `verifies`, and `entitles` join allowed source and target node types THEN endpoint validation SHALL report no violation and SHALL preserve those edges for traversal.
+
+## AC-67.3
+
+**Требование:** [FR-67](FR.md#fr-67)
+
+WHEN a known source and target node type form a forbidden edge pair THEN conformance SHALL emit error `ENDPOINT_VIOLATION` with actual and allowed endpoint types and SHALL NOT silently discard the edge.
+
+## AC-67.4
+
+**Требование:** [FR-67](FR.md#fr-67)
+
+WHEN the MCP transaction endpoint gate evaluates a staged candidate graph that introduces `ENDPOINT_VIOLATION` THEN the gate SHALL report the new violation and refuse the write before commit, and every target document SHALL remain byte-identical.
+
+## AC-67.5
+
+**Требование:** [FR-67](FR.md#fr-67)
+
+WHEN a graph containing `verifies`, `entitles`, and edge metadata is persisted and restored through SQLite THEN the warm graph SHALL equal the cold graph for typed edges, metadata, and endpoint verdict.
+
+## AC-67.6
+
+**Требование:** [FR-67](FR.md#fr-67)
+
+WHEN existing markdown, Gherkin, implementation, result, and trace producers build a graph THEN their current `covers`, `tested-by`, `implements`, `last-result`, and `runtime-trace` edges SHALL remain valid and MCP traversal SHALL return existing and new semantic edges.
+
+
+## AC-67.7
+
+**Требование:** [FR-67](FR.md#fr-67)
+
+WHEN the markdown producer builds a graph from a DESIGN decision carrying a `**Требование:**` line AND a Gherkin scenario tagged to that requirement records a PASSED result THEN an `entitles` edge SHALL be emitted from the Decision to its FR/NFR AND a `verifies` edge SHALL be emitted from the passing Scenario to the FR/NFR carrying producer and version provenance from the run.
+

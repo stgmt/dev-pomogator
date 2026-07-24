@@ -2235,3 +2235,38 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [ ] Validated MCP author/query and metadata schema migration dry-run/apply use the same validator as parser/conformance.
   - [ ] SQLite cold/warm round-trip preserves schemaVersion, typed fields, _unknown, demands and delivery state.
   - [ ] SPECGEN004_583..588 each has lastResult===PASSED; lint, MCP build, deps-absent, full Docker suite and CI are green; PR closes #171 and #169 and is merged to main.
+
+
+## Phase 41 — Typed edge endpoint contract (2026-07-24)
+
+- [ ] Capture typed edge endpoint Docker RED — id: P41-1 — Status: IN_PROGRESS | Est: 45m
+  _Requirements: [FR-67](FR.md#fr-67)_
+  _Acceptance: AC-67.1, AC-67.2, AC-67.3, AC-67.4, AC-67.5, AC-67.6_
+  **Done When:**
+  - [ ] `SPECGEN004_589`–`SPECGEN004_594` have real step definitions without undefined steps.
+  - [ ] focused Docker BDD fails on the missing edge schema/endpoint behavior.
+  - [ ] RED evidence is retained in `audit-out/issue-181-182-bdd-red.log`.
+
+- [ ] Implement exhaustive edge endpoint validation — id: P41-2 — Status: TODO | Est: 90m
+  _Requirements: [FR-67](FR.md#fr-67)_
+  _Acceptance: AC-67.1, AC-67.2, AC-67.3_
+  **Done When:**
+  - [ ] `EdgeType` includes `verifies` and `entitles`, and every type has one endpoint rule.
+  - [ ] full and incremental graph paths produce stable endpoint diagnostics without silent drop.
+  - [ ] conformance and corpus-health report error `ENDPOINT_VIOLATION`.
+
+- [ ] Enforce MCP and SQLite endpoint parity — id: P41-3 — Status: TODO | Est: 90m
+  _Requirements: [FR-67](FR.md#fr-67)_
+  _Acceptance: AC-67.3, AC-67.4, AC-67.5_
+  **Done When:**
+  - [ ] proposal/apply/transaction fail before write on a new endpoint violation.
+  - [ ] SQLite cold/warm round-trip preserves typed edges, metadata, and verdict.
+  - [ ] the distributed MCP bundle passes dependency-absent launch.
+
+- [ ] Deliver one green PR for issues 181 and 182 — id: P41-4 — Status: TODO | Est: 90m
+  _Requirements: [FR-67](FR.md#fr-67)_
+  _Acceptance: AC-67.1, AC-67.2, AC-67.3, AC-67.4, AC-67.5, AC-67.6_
+  **Done When:**
+  - [ ] focused/full Docker suites, lint, build, and smart spec verdict are green.
+  - [ ] `SPECGEN004_589`–`SPECGEN004_594` each have canonical `lastResult===PASSED`.
+  - [ ] one merged PR closes GitHub #181 and #182 with green CI.

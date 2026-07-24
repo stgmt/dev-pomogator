@@ -488,3 +488,22 @@ This block enumerates the spec-doc edits applied as part of the v3→v4 transiti
 - TASKS.md: add Phase 40 — Typed requirement metadata and delivery demands
 
 - TASKS.md: add backlog task `P40-1` (FR-66)
+
+
+## FR-67 — Typed edge endpoint contract (#181/#182)
+
+| Action | Path | Reason | FRs |
+|---|---|---|---|
+| CREATE | `tools/spec-graph/edge-schema.ts` | Exhaustive endpoint rules and diagnostics | FR-67 |
+| MODIFY | `tools/spec-graph/types.ts` | Add verifies, entitles, and endpoint diagnostics | FR-67 |
+| MODIFY | `tools/spec-graph/builder.ts` | Validate full-build and generated edges | FR-67 |
+| MODIFY | `tools/spec-graph/incremental.ts` | Validate incremental generated edges | FR-67 |
+| MODIFY | `tools/spec-graph/conformance.ts` | Emit ENDPOINT_VIOLATION errors | FR-67 |
+| MODIFY | `tools/spec-graph/corpus-health.ts` | Report endpoint violations | FR-67 |
+| MODIFY | `tools/spec-mcp-server/tools.ts` | Traverse new semantic edge types | FR-67 |
+| MODIFY | `tools/spec-mcp-server/sqlite/persist.ts` | Preserve and validate warm graphs | FR-67 |
+| MODIFY | `tools/spec-mcp-server/server.bundle.mjs` | Ship the contract in distributed MCP | FR-67 |
+| CREATE | `tests/step_definitions/feature67_edge_contracts.ts` | Real-code schema, MCP, and SQLite BDD | FR-67 |
+
+
+- ACCEPTANCE_CRITERIA.md: add AC-67.7 (FR-67)

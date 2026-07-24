@@ -1176,3 +1176,12 @@ The spec generator SHALL classify externally observable acceptance claims and SH
 
 **Связанные AC:** [AC-66.1](ACCEPTANCE_CRITERIA.md#ac-661), [AC-66.2](ACCEPTANCE_CRITERIA.md#ac-662), [AC-66.3](ACCEPTANCE_CRITERIA.md#ac-663), [AC-66.4](ACCEPTANCE_CRITERIA.md#ac-664), [AC-66.5](ACCEPTANCE_CRITERIA.md#ac-665), [AC-66.6](ACCEPTANCE_CRITERIA.md#ac-666)
 **User Story:** [User Story 45](USER_STORIES.md#user-story-45-typed-delivery-truth-priority-p1)
+
+
+## FR-67
+
+**Typed edge semantics and endpoint contract:** The graph SHALL expose `verifies` and `entitles` as distinct `EdgeType` members while preserving `covers` and `tested-by`; SHALL define every edge kind in one exhaustive source/target schema; SHALL surface each forbidden known-node pair as error `ENDPOINT_VIOLATION`; and SHALL apply the same fail-closed contract to full/incremental graph builds, fully staged MCP mutations, and SQLite cold/warm restore without silently dropping invalid edges.
+
+**Связанные AC:** [AC-67.1](ACCEPTANCE_CRITERIA.md#ac-671), [AC-67.2](ACCEPTANCE_CRITERIA.md#ac-672), [AC-67.3](ACCEPTANCE_CRITERIA.md#ac-673), [AC-67.4](ACCEPTANCE_CRITERIA.md#ac-674), [AC-67.5](ACCEPTANCE_CRITERIA.md#ac-675), [AC-67.6](ACCEPTANCE_CRITERIA.md#ac-676), [AC-67.7](ACCEPTANCE_CRITERIA.md#ac-677)
+**User Story:** [User Story 46](USER_STORIES.md#user-story-46-typed-edge-truth-priority-p1)
+

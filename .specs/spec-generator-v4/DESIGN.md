@@ -1402,3 +1402,18 @@ The analyzer remains project-agnostic: it never hardcodes marketplace field name
 - Prompt-only checklist (rejected: reviewer drift).
 - Project-specific field dictionary (rejected: non-generic).
 - FR-only task mapping (rejected: one broad task can hide several acceptance claims).
+
+
+### Decision: One exhaustive endpoint schema validates every edge path
+
+**Требование:** [FR-67](FR.md#fr-67)
+
+**Rationale:** `tools/spec-graph/edge-schema.ts` owns `EndpointRule`, exhaustive `EDGE_SCHEMA`, stable `EndpointViolation`, and graph-wide validation. Parser slices remain declarative and are validated after full ingest and composite-id resolution so sibling-file targets do not create false errors. Builder and incremental generated edges use the same helper. Invalid edges remain visible for diagnosis; conformance emits error `ENDPOINT_VIOLATION`, allowing the existing fully staged MCP before/after gate to reject only newly introduced violations before writing. SQLite restore runs the same validation so a warm cache cannot bypass the contract. Synthetic result and trace targets are represented explicitly without adding another persisted `NodeType`.
+
+**Trade-off:** A graph-wide O(E) pass runs at build and restore time, but it is deterministic, independent of parser order, and reports the full violation set instead of silently dropping data.
+
+**Alternatives considered:**
+- Validate independently inside each parser (rejected: sibling-file ordering and rule drift).
+- Drop invalid edges (rejected: false-green graph and no repair evidence).
+- Validate only MCP mutations (rejected: builder, incremental, and SQLite paths would bypass the contract).
+

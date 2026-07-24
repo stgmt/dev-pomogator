@@ -43,8 +43,9 @@ import { parseGherkinFile } from './parsers/gherkin.ts';
 import { parseNdjsonFile, applyTestResults } from './parsers/ndjson.ts';
 import { parseScenarioOverlayFile, applyScenarioOverlayResults } from './parsers/scenario-overlay.ts';
 import { parseTasksFile } from './parsers/tasks.ts';
-import { rebuildBacklinks } from './builder.ts';
+import { rebuildBacklinks, testedBySourceMap, verifiesEdgesFor } from './builder.ts';
 import type { Edge, SpecGraph, ScenarioNode, ParserOutput } from './types.ts';
+import { refreshEndpointViolations } from './edge-schema.ts';
 
 export interface WatchOptions {
   /** Absolute repo root — every emitted path is resolved against it. */
@@ -163,8 +164,12 @@ function toPosixRelative(repoRoot: string, absPath: string): string {
 
 function refreshResultEdges(graph: SpecGraph, scenarios: ScenarioNode[]): void {
   const scenarioIds = new Set(scenarios.map((s) => s.id));
+  // `verifies` is a result-derived edge too (#181) — drop the stale ones for the
+  // refreshed scenarios so a now-failing scenario loses its verification evidence.
   graph.edges = graph.edges.filter(
-    (e) => (e.type !== 'last-result' && e.type !== 'runtime-trace') || !scenarioIds.has(e.from),
+    (e) =>
+      (e.type !== 'last-result' && e.type !== 'runtime-trace' && e.type !== 'verifies') ||
+      !scenarioIds.has(e.from),
   );
   const emitted = new Set<string>();
   const additions: Edge[] = [];
@@ -184,6 +189,8 @@ function refreshResultEdges(graph: SpecGraph, scenarios: ScenarioNode[]): void {
       }
     }
   }
+  // Re-derive verifies from the surviving `tested-by` edges (shared with buildGraph).
+  additions.push(...verifiesEdgesFor(scenarios, testedBySourceMap(graph.edges), (id) => graph.nodes.get(id)?.type));
   graph.edges.push(...additions);
 }
 
@@ -222,6 +229,7 @@ export function refreshResultFiles(graph: SpecGraph, repoRoot: string, opts: Res
   applyTestResults(scenarios, parseNdjsonFile(path.resolve(repoRoot, opts.ndjsonPath ?? '.dev-pomogator/.last-test-run.ndjson')));
   applyScenarioOverlayResults(scenarios, parseScenarioOverlayFile(path.resolve(repoRoot, opts.scenarioOverlayPath ?? '.dev-pomogator/.scenario-results.ndjson')), { repoRoot });
   refreshResultEdges(graph, scenarios);
+  refreshEndpointViolations(graph);
   rebuildBacklinks(graph);
 }
 
@@ -261,6 +269,7 @@ export function applyChange(
       delta.nodesDelta += taskDelta.nodesDelta;
       delta.edgesDelta += taskDelta.edgesDelta;
     }
+    refreshEndpointViolations(graph);
     rebuildBacklinks(graph);
     return delta;
   }
@@ -294,6 +303,7 @@ export function applyUnlink(
 ): { nodesDelta: number; edgesDelta: number } {
   const before = { n: graph.nodes.size, e: graph.edges.length };
   dropFileSlice(graph, relativePath);
+  refreshEndpointViolations(graph);
   rebuildBacklinks(graph);
   return {
     nodesDelta: graph.nodes.size - before.n,

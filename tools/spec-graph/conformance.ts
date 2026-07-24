@@ -32,15 +32,18 @@ import { computeCoverage, scenarioKey, specOf, type Bucket, type ScenarioLike, t
 import { WORKING_STATUSES, canEnterWorkingStatus } from './task-lifecycle.ts';
 import { localIdOf } from './identity.ts';
 import { evaluateDelivery, forwardedDemands } from './delivery-demands.ts';
+import { refreshEndpointViolations } from './edge-schema.ts';
 
 export type FindingCode =
   | 'UNCOVERED_FR'
+  | 'UNVERIFIED_FR'
   | 'ORPHAN_TASK'
   | 'SCENARIO_TAG_ORPHAN'
   | 'UNTAGGED_SCENARIO'
   | 'TAG_BULK_SUSPECT'
   | 'DUPLICATE_DEFINITION'
   | 'ID_NORMALIZATION_COLLISION'
+  | 'ENDPOINT_VIOLATION'
   | 'TASK_STATUS_UNVERIFIED'
   | 'TASK_UNTESTED'
   | 'UNVERIFIED_COMPLETION'
@@ -159,6 +162,8 @@ export function checkConformance(
   const decisionCovers = new Set<string>(); // FR ids with a `covers` edge to a Decision node (FR-47b)
   const storyCovers = new Set<string>(); // FR ids with a `covers` edge to a Story node (FR-47)
   const scenarioTests = new Set<string>(); // FR / AC / NFR ids referenced by a `tested-by` edge
+  const scenarioVerifies = new Set<string>(); // FR / NFR ids with an inbound passing `verifies` edge (#181)
+  let resultsLoaded = false; // a `last-result` edge means a run was applied → verifies-absence is meaningful
   for (const e of graph.edges) {
     if (e.type === 'covers') {
       // `covers` carries FR→AC AND FR→Decision AND FR→Story — split by target type so a
@@ -170,6 +175,8 @@ export function checkConformance(
       else acCovers.add(e.from);
     }
     if (e.type === 'tested-by') scenarioTests.add(e.from);
+    if (e.type === 'verifies') scenarioVerifies.add(e.to); // verifies is Scenario/AC → FR/NFR
+    if (e.type === 'last-result') resultsLoaded = true;
   }
 
   // 1) UNCOVERED_FR — FR with no AC + no tested-by Scenario.
@@ -191,6 +198,26 @@ export function checkConformance(
         { action: 'tag_scenario', reason: `Add @${bareTag} to an existing Scenario in any \`.feature\` file.`, confidence: 'medium' },
       ],
     });
+  }
+
+  // 1a1) UNVERIFIED_FR (#181) — FR/NFR is tagged by a Scenario (`tested-by`) but no
+  // run has produced a passing `verifies` edge. Only meaningful once a result run
+  // was applied (`resultsLoaded`); a graph built without results can't tell
+  // «not run» from «not loaded», so we stay silent there to avoid flooding.
+  if (resultsLoaded) {
+    for (const node of graph.nodes.values()) {
+      if (node.type !== 'FR' && node.type !== 'NFR') continue;
+      if (!scenarioTests.has(node.id)) continue; // untested → UNCOVERED_FR territory
+      if (scenarioVerifies.has(node.id)) continue; // has passing evidence
+      const bareTag = localIdOf(node);
+      findings.push({
+        code: 'UNVERIFIED_FR',
+        severity: 'warning',
+        location: { file: node.file, line: node.line },
+        message: `FR ${node.id} is tagged by a Scenario but no run produced a passing verifies edge (@${bareTag} tests exist but none is green).`,
+        nodeId: node.id,
+      });
+    }
   }
 
   // 1a2) Typed requirement metadata and delivery truth (FR-66).
@@ -604,7 +631,22 @@ export function checkConformance(
     });
   }
 
-  // 5) DUPLICATE_DEFINITION — NOT emitted here, by design (P19-5 LOW resolution,
+  // 5) ENDPOINT_VIOLATION — every known-node edge must satisfy the exhaustive
+  // source/target contract. Refresh here so hand-built and SQLite-restored
+  // graphs cannot bypass the builder/incremental checks.
+  for (const violation of refreshEndpointViolations(graph)) {
+    const source = graph.nodes.get(violation.edge.from)!;
+    findings.push({
+      code: 'ENDPOINT_VIOLATION',
+      severity: 'error',
+      location: { file: source.file, line: source.line },
+      nodeId: violation.edge.from,
+      relatedId: violation.edge.to,
+      message: `${violation.edge.from} --${violation.edge.type}--> ${violation.edge.to} has endpoints ${violation.actualSource} -> ${violation.actualTarget}; allowed ${violation.allowedSources.join('|')} -> ${violation.allowedTargets.join('|')}.`,
+    });
+  }
+
+  // 6) DUPLICATE_DEFINITION — NOT emitted here, by design (P19-5 LOW resolution,
   // 2026-06-10). A duplicate is invisible to a graph walk: the builder's
   // «if (!nodes.has(id))» dedup keeps the FIRST definition, so by the time this
   // checker runs the second one no longer exists. The code stays in FindingCode —

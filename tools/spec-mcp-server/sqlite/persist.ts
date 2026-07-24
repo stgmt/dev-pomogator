@@ -1,4 +1,5 @@
 import type { Node, SpecGraph } from '../../spec-graph/types.ts';
+import { refreshEndpointViolations } from '../../spec-graph/edge-schema.ts';
 import type { SqliteHandle } from './wrapper.ts';
 
 interface NodeRow {
@@ -90,7 +91,7 @@ export function loadGraph(handle: SqliteHandle, sourceFingerprint: string): Spec
     backlinks.set(edge.to, list);
   }
   const rawCollisions = values.get('raw_collisions');
-  return {
+  const graph: SpecGraph = {
     version: 1,
     builtAt: values.get('built_at')!,
     nodes,
@@ -100,5 +101,8 @@ export function loadGraph(handle: SqliteHandle, sourceFingerprint: string): Spec
     ...(rawCollisions && rawCollisions !== 'null'
       ? { rawCollisions: JSON.parse(rawCollisions) as SpecGraph['rawCollisions'] }
       : {}),
+    endpointViolations: [],
   };
+  refreshEndpointViolations(graph);
+  return graph;
 }

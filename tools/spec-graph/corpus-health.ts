@@ -34,6 +34,7 @@ import { findOrphanProjectTests } from './project-test-trace.ts';
 import { findFrsWithoutResearch } from './research-trace.ts';
 import { findUnlinkedUpstream } from './upstream-trace.ts';
 import type { SpecGraph, FileNode } from './types.ts';
+import { validateGraphEdgeEndpoints } from './edge-schema.ts';
 
 export interface CorpusHealthReport {
   corpusRoot: string;
