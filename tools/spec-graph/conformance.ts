@@ -30,6 +30,7 @@
 import type { SpecGraph, Edge, ScenarioNode, TaskNode } from './types.ts';
 import { computeCoverage, scenarioKey, specOf, type Bucket, type ScenarioLike, type TaskLike, type TestQualityVerdict } from './coverage.ts';
 import { WORKING_STATUSES, canEnterWorkingStatus } from './task-lifecycle.ts';
+import { localIdOf } from './identity.ts';
 
 export type FindingCode =
   | 'UNCOVERED_FR'
@@ -38,6 +39,7 @@ export type FindingCode =
   | 'UNTAGGED_SCENARIO'
   | 'TAG_BULK_SUSPECT'
   | 'DUPLICATE_DEFINITION'
+  | 'ID_NORMALIZATION_COLLISION'
   | 'TASK_STATUS_UNVERIFIED'
   | 'TASK_UNTESTED'
   | 'UNVERIFIED_COMPLETION'
@@ -74,15 +76,6 @@ export interface Finding {
 }
 
 const SPEC_TAG_RE = /^@((?:FR|NFR|AC)[A-Za-z0-9._-]+)$/;
-
-/**
- * FR-36a: the bare local id of a node (`spec-generator-v4:FR-2` → `FR-2`).
- * Hand-built test graphs and files outside `.specs/` carry bare ids — for
- * those the id IS the local id.
- */
-function localIdOf(node: { id: string; spec?: string }): string {
-  return node.spec ? node.id.slice(node.spec.length + 1) : node.id;
-}
 
 /**
  * FR-36a: resolve a BARE tag reference (`@FR-2`) against composite-keyed
@@ -566,6 +559,20 @@ export function checkConformance(
         ],
       });
     }
+  }
+
+  // 4b) ID_NORMALIZATION_COLLISION — unlike exact duplicates, both nodes remain
+  // present in the map, so the pre-map evidence can be surfaced here as a
+  // blocking finding instead of silently accepting filesystem-unsafe identity.
+  for (const collision of graph.rawCollisions?.normalizationCollisions ?? []) {
+    findings.push({
+      code: 'ID_NORMALIZATION_COLLISION',
+      severity: 'error',
+      location: { file: collision.secondFile, line: 1 },
+      nodeId: collision.secondId,
+      relatedId: collision.firstId,
+      message: `${collision.kind} identity collision: ${collision.firstId} (${collision.firstFile}) conflicts with ${collision.secondId} (${collision.secondFile}) after normalization key ${collision.normalizedKey}.`,
+    });
   }
 
   // 5) DUPLICATE_DEFINITION — NOT emitted here, by design (P19-5 LOW resolution,

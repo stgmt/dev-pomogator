@@ -993,3 +993,31 @@ WHEN no implementation surface can be inferred for an externally observable acce
 
 WHEN `audit-spec`, `spec-verdict`, or the Phase-3 reviewer inspects a high-risk spec THEN a missing AC-to-implementation/test/deploy-evidence mapping SHALL produce blocking `ACCEPTANCE_DELIVERY_COVERAGE`; AND the synthetic paid-SPA corpus SHALL distinguish root `/api` from prefixed `/go/api`, HTML infrastructure `404` from JSON auth/billing boundaries, and require registry publication, slug/settlement mapping, funded execution, and semantic status/content-type/body readback rather than accepting endpoint existence.
 
+
+## AC-36.7
+
+**Требование:** [FR-36](FR.md#fr-36)
+
+WHEN an identity with namespace `team/a` and localId `FR-3` is formatted and parsed THEN the system SHALL return the exact canonical ID `team/a:FR-3` and the same namespace/localId without rewriting spelling.
+
+
+## AC-36.8
+
+**Требование:** [FR-36](FR.md#fr-36)
+
+WHEN `team-a:FR-3` and `team-b:FR-3` both exist THEN qualified lookups SHALL return the requested node and bare `FR-3` SHALL return `AMBIGUOUS_BARE_ID`, `local_id: FR-3`, and both sorted canonical candidates without guessing.
+
+
+## AC-36.9
+
+**Требование:** [FR-36](FR.md#fr-36)
+
+WHEN two local IDs in one namespace differ only by case or Unicode NFKC form THEN the graph/corpus verdict SHALL expose a blocking normalization collision with both original IDs and files; WHEN they belong to different namespaces THEN they SHALL NOT collide.
+
+
+## AC-36.10
+
+**Требование:** [FR-36](FR.md#fr-36)
+
+WHEN issue #172 is verified THEN Docker BDD SHALL drive the real identity, builder, collision probe, and MCP registry; existing FR-36 scenarios SHALL remain green, each new scenario SHALL have `lastResult===PASSED`, and no new non-BDD test file SHALL be introduced.
+

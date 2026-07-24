@@ -122,6 +122,7 @@ function ambiguousBareId(nodeId: string, candidates: string[]): ToolResult {
     ok: false,
     error: 'AMBIGUOUS_BARE_ID',
     node_id: nodeId,
+    local_id: nodeId,
     candidates,
     hint: `Bare id "${nodeId}" is defined by ${candidates.length} specs — qualify as <slug>:${nodeId} or pass {spec: "<slug>"}.`,
   });

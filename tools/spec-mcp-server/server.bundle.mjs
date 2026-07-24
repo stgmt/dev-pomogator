@@ -44966,6 +44966,51 @@ import { execFileSync } from "node:child_process";
 import path5 from "node:path";
 import { createHash } from "node:crypto";
 
+// tools/spec-graph/identity.ts
+function assertPart(value, name) {
+  if (!value) throw new Error(`INVALID_IDENTITY: ${name} must be non-empty`);
+  if (name === "localId" && value.includes(":")) {
+    throw new Error('INVALID_IDENTITY: localId must not contain ":"');
+  }
+}
+function formatIdentity(identity) {
+  assertPart(identity.localId, "localId");
+  if (identity.namespace === void 0) return identity.localId;
+  assertPart(identity.namespace, "namespace");
+  return `${identity.namespace}:${identity.localId}`;
+}
+function parseIdentity(canonicalId) {
+  if (!canonicalId) throw new Error("INVALID_IDENTITY: id must be non-empty");
+  const separator = canonicalId.lastIndexOf(":");
+  if (separator < 0) return { localId: canonicalId };
+  const namespace = canonicalId.slice(0, separator);
+  const localId = canonicalId.slice(separator + 1);
+  assertPart(namespace, "namespace");
+  assertPart(localId, "localId");
+  return { namespace, localId };
+}
+function localIdOf(identity) {
+  return parseIdentity(typeof identity === "string" ? identity : identity.id).localId;
+}
+function caseFold(value) {
+  return value.toLowerCase();
+}
+function unicodeFold(value) {
+  return value.normalize("NFKC").toLowerCase();
+}
+function identityCollisionKey(identity) {
+  return `${unicodeFold(identity.namespace ?? "")}:${unicodeFold(identity.localId)}`;
+}
+function classifyIdentityCollision(firstId, secondId) {
+  const first = parseIdentity(firstId);
+  const second = parseIdentity(secondId);
+  if (unicodeFold(first.namespace ?? "") !== unicodeFold(second.namespace ?? "")) return null;
+  if (first.localId === second.localId && first.namespace === second.namespace) return "EXACT";
+  if (caseFold(first.localId) === caseFold(second.localId)) return "CASE_NORMALIZED";
+  if (unicodeFold(first.localId) === unicodeFold(second.localId)) return "UNICODE_NORMALIZED";
+  return null;
+}
+
 // tools/spec-graph/parsers/md.ts
 import fs from "node:fs";
 import path from "node:path";
@@ -44992,7 +45037,7 @@ function qualifySlice(slice, slug) {
   if (!slug) return;
   for (const node of slice.nodes) {
     node.spec = slug;
-    node.id = `${slug}:${node.id}`;
+    node.id = formatIdentity({ namespace: slug, localId: node.id });
     if (node.type === "Task" && Array.isArray(node.refs)) {
       node.refs = node.refs.map((r) => `${slug}:${r}`);
     } else if (node.type === "AC" && typeof node.parentFr === "string" && node.parentFr) {
@@ -47278,14 +47323,31 @@ function buildGraph(opts) {
   };
   let totalRawNodes = 0;
   const rawCollisionList = [];
+  const normalizationCollisionList = [];
+  const identitiesByKey = /* @__PURE__ */ new Map();
   const mergeNode = (node) => {
     totalRawNodes++;
     const existing = nodes.get(node.id);
     if (existing) {
       rawCollisionList.push({ id: node.id, firstFile: existing.file, secondFile: node.file });
-    } else {
-      nodes.set(node.id, node);
+      return;
     }
+    const normalizedKey = identityCollisionKey({ namespace: node.spec, localId: localIdOf(node.id) });
+    const normalizedExisting = identitiesByKey.get(normalizedKey);
+    const kind = normalizedExisting ? classifyIdentityCollision(normalizedExisting.id, node.id) : null;
+    if (normalizedExisting && kind && kind !== "EXACT") {
+      normalizationCollisionList.push({
+        kind,
+        normalizedKey,
+        firstId: normalizedExisting.id,
+        secondId: node.id,
+        firstFile: normalizedExisting.file,
+        secondFile: node.file
+      });
+    } else if (!normalizedExisting) {
+      identitiesByKey.set(normalizedKey, node);
+    }
+    nodes.set(node.id, node);
   };
   const ingestSlice = (slice) => {
     for (const node of slice.nodes) mergeNode(node);
@@ -47424,7 +47486,7 @@ function buildGraph(opts) {
     const byLocalId = /* @__PURE__ */ new Map();
     for (const n of nodes.values()) {
       if (!n.spec) continue;
-      const localId = n.id.slice(n.spec.length + 1);
+      const localId = localIdOf(n.id);
       byLocalId.set(localId, byLocalId.has(localId) ? null : n.id);
     }
     const resolveBare = (id) => {
@@ -47473,7 +47535,8 @@ function buildGraph(opts) {
     rawCollisions: {
       totalRawNodes,
       uniqueIds: totalRawNodes - rawCollisionList.length,
-      collisions: rawCollisionList
+      collisions: rawCollisionList,
+      normalizationCollisions: normalizationCollisionList
     }
   };
 }
@@ -48231,6 +48294,7 @@ function persistGraph(handle, graph, sourceFingerprint) {
       insertDefinition.run(alias, canonicalId, location.file, location.line);
     }
     setMeta(handle, "graph_version", String(graph.version));
+    setMeta(handle, "raw_collisions", JSON.stringify(graph.rawCollisions ?? null));
     setMeta(handle, "built_at", graph.builtAt);
     setMeta(handle, "source_fingerprint", sourceFingerprint);
     handle.backend.exec("COMMIT");
@@ -48270,7 +48334,16 @@ function loadGraph(handle, sourceFingerprint) {
     list.push({ file: source.file, line: source.line, type: edge.type });
     backlinks.set(edge.to, list);
   }
-  return { version: 1, builtAt: values.get("built_at"), nodes, edges, definitions, backlinks };
+  const rawCollisions = values.get("raw_collisions");
+  return {
+    version: 1,
+    builtAt: values.get("built_at"),
+    nodes,
+    edges,
+    definitions,
+    backlinks,
+    ...rawCollisions && rawCollisions !== "null" ? { rawCollisions: JSON.parse(rawCollisions) } : {}
+  };
 }
 
 // tools/spec-mcp-server/lifecycle.ts
@@ -48548,9 +48621,6 @@ function canEnterWorkingStatus(graph, task, frsWithoutResearch) {
 
 // tools/spec-graph/conformance.ts
 var SPEC_TAG_RE2 = /^@((?:FR|NFR|AC)[A-Za-z0-9._-]+)$/;
-function localIdOf(node) {
-  return node.spec ? node.id.slice(node.spec.length + 1) : node.id;
-}
 function tagResolves(graph, scenSpec, ref, specLocalIds) {
   if (scenSpec && graph.nodes.has(`${scenSpec}:${ref}`)) return true;
   if (graph.nodes.has(ref)) return true;
@@ -48900,6 +48970,16 @@ function checkConformance(graph, opts = {}) {
       });
     }
   }
+  for (const collision of graph.rawCollisions?.normalizationCollisions ?? []) {
+    findings.push({
+      code: "ID_NORMALIZATION_COLLISION",
+      severity: "error",
+      location: { file: collision.secondFile, line: 1 },
+      nodeId: collision.secondId,
+      relatedId: collision.firstId,
+      message: `${collision.kind} identity collision: ${collision.firstId} (${collision.firstFile}) conflicts with ${collision.secondId} (${collision.secondFile}) after normalization key ${collision.normalizedKey}.`
+    });
+  }
   return findings;
 }
 
@@ -49069,7 +49149,7 @@ function buildReadinessInventory(graph, opts) {
   const duplicates = [];
   for (const collision of graph.rawCollisions?.collisions ?? []) {
     if (!collision.id.startsWith(`${slug}:`)) continue;
-    const local = collision.id.slice(slug.length + 1);
+    const local = localIdOf(collision.id);
     const kind = local.startsWith("FR-") ? "FR" : local.startsWith("AC-") ? "AC" : null;
     if (!kind) continue;
     duplicates.push({
@@ -49089,12 +49169,11 @@ function buildReadinessInventory(graph, opts) {
     }
   }
   duplicates.sort((a, b) => a.kind.localeCompare(b.kind) || a.key.localeCompare(b.key));
-  const localId = (composite) => composite.slice(slug.length + 1);
   const acIdsByFr = /* @__PURE__ */ new Map();
   for (const ac of acNodes) {
     if (!ac.parentFr) continue;
     const arr = acIdsByFr.get(ac.parentFr) ?? [];
-    arr.push(localId(ac.id));
+    arr.push(localIdOf(ac.id));
     acIdsByFr.set(ac.parentFr, arr);
   }
   const frs = frNodes.map((fr) => {
@@ -49102,7 +49181,7 @@ function buildReadinessInventory(graph, opts) {
     const outcomes = keys.map((k) => bundles.get(k).record.outcome);
     const classification = classifyFr(outcomes, keys.length);
     return {
-      id: localId(fr.id),
+      id: localIdOf(fr.id),
       composite_id: fr.id,
       never_run: classification === "never_run",
       classification,
@@ -49116,9 +49195,9 @@ function buildReadinessInventory(graph, opts) {
     const testPaths = /* @__PURE__ */ new Set();
     for (const k of keys) for (const n of bundles.get(k).nodes) testPaths.add(n.file.replace(/\\/g, "/"));
     return {
-      id: localId(ac.id),
+      id: localIdOf(ac.id),
       composite_id: ac.id,
-      parent_fr: ac.parentFr ? localId(ac.parentFr) : "",
+      parent_fr: ac.parentFr ? localIdOf(ac.parentFr) : "",
       test_paths: [...testPaths].sort(),
       scenario_keys: keys,
       scenario_ids: keys.flatMap((k) => bundles.get(k).nodes.map((n) => n.id)).sort()
@@ -52401,6 +52480,7 @@ function ambiguousBareId(nodeId, candidates) {
     ok: false,
     error: "AMBIGUOUS_BARE_ID",
     node_id: nodeId,
+    local_id: nodeId,
     candidates,
     hint: `Bare id "${nodeId}" is defined by ${candidates.length} specs \u2014 qualify as <slug>:${nodeId} or pass {spec: "<slug>"}.`
   });

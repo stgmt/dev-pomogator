@@ -47,6 +47,7 @@ export function persistGraph(handle: SqliteHandle, graph: SpecGraph, sourceFinge
       insertDefinition.run(alias, canonicalId, location.file, location.line);
     }
     setMeta(handle, 'graph_version', String(graph.version));
+    setMeta(handle, 'raw_collisions', JSON.stringify(graph.rawCollisions ?? null));
     setMeta(handle, 'built_at', graph.builtAt);
     setMeta(handle, 'source_fingerprint', sourceFingerprint);
     handle.backend.exec('COMMIT');
@@ -88,5 +89,16 @@ export function loadGraph(handle: SqliteHandle, sourceFingerprint: string): Spec
     list.push({ file: source.file, line: source.line, type: edge.type });
     backlinks.set(edge.to, list);
   }
-  return { version: 1, builtAt: values.get('built_at')!, nodes, edges, definitions, backlinks };
+  const rawCollisions = values.get('raw_collisions');
+  return {
+    version: 1,
+    builtAt: values.get('built_at')!,
+    nodes,
+    edges,
+    definitions,
+    backlinks,
+    ...(rawCollisions && rawCollisions !== 'null'
+      ? { rawCollisions: JSON.parse(rawCollisions) as SpecGraph['rawCollisions'] }
+      : {}),
+  };
 }

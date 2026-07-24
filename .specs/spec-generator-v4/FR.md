@@ -620,12 +620,18 @@ The graph keys nodes by the BARE local id (`FR-2`, `AC-2.1`). MEASURED this sess
 **FR-36e (phased migration, each phase suite-green, dogfood-verified):** The migration SHALL proceed in phases that each leave the full clean-HEAD Docker suite green (clean-vs-clean): (1) composite key in the builder only; (2) edge endpoints + `@featureN` tested-by edges; (3) tools accept `slug:id`/candidate fallback; (4) update tests pinning a bare id to the qualified form. The `runtime-dogfood`/`spec-mcp-dogfood` harness SHALL verify each phase: FR-node count jumps 47→≈470, `get_trace` non-empty via edges, and a raw pre-map node dump shows 0 id collisions.
 
 **Зависит от:** FR-4 (MCP server + 13 tools), FR-32 (honesty gate / `computeCoverage` — the file-scoped workaround this replaces). Reuses the existing parsers/builder/tool registry — no new infra; this is a refactor of node identity threaded through 21 TS files in `spec-graph` + `spec-mcp-server`. Evidence: `audit-reports/spec-mcp-dogfood-dataset.md` (runtime measurement) + `audit-reports/unified-spec-graph-design.md` (design + id-scheme deep-dive: domain-prefix beats global N+1 on both creation and work sides).
-**Связанные AC:** [AC-36.1](ACCEPTANCE_CRITERIA.md#ac-361), [AC-36.2](ACCEPTANCE_CRITERIA.md#ac-362), [AC-36.3](ACCEPTANCE_CRITERIA.md#ac-363), [AC-36.4](ACCEPTANCE_CRITERIA.md#ac-364), [AC-36.5](ACCEPTANCE_CRITERIA.md#ac-365), [AC-36.6](ACCEPTANCE_CRITERIA.md#ac-366)
+**Связанные AC:** [AC-36.1](ACCEPTANCE_CRITERIA.md#ac-361), [AC-36.2](ACCEPTANCE_CRITERIA.md#ac-362), [AC-36.3](ACCEPTANCE_CRITERIA.md#ac-363), [AC-36.4](ACCEPTANCE_CRITERIA.md#ac-364), [AC-36.5](ACCEPTANCE_CRITERIA.md#ac-365), [AC-36.6](ACCEPTANCE_CRITERIA.md#ac-366), [AC-36.7](ACCEPTANCE_CRITERIA.md#ac-367), [AC-36.8](ACCEPTANCE_CRITERIA.md#ac-368), [AC-36.9](ACCEPTANCE_CRITERIA.md#ac-369), [AC-36.10](ACCEPTANCE_CRITERIA.md#ac-3610)
 **Use Case:** [UC-2](USE_CASES.md#uc-2)
 **User Story:** US-21
 
 ---
 
+
+**FR-36f — first-class identity (GitHub #172):** каждый spec-owned узел SHALL иметь exact canonical identity `<namespace>:<localId>`, собираемую и разбираемую одним pure contract без ad-hoc slicing. Namespace MAY быть иерархическим path-like slug; localId SHALL NOT содержать `:`. Exact spelling canonical identity SHALL сохраняться при parse/format round-trip.
+
+**FR-36g — normalization safety:** case-fold и Unicode NFKC SHALL использоваться только для обнаружения конфликтов. Два exact/case/NFKC-equivalent localId в одном canonical namespace SHALL давать blocking identity-collision с обоими исходными ID/файлами; одинаковый localId в разных namespaces SHALL оставаться допустимым.
+
+**FR-36h — lookup compatibility:** qualified lookup и `{spec,node_id}` SHALL возвращать exact canonical node; bare lookup с несколькими кандидатами SHALL оставаться fail-loud `AMBIGUOUS_BARE_ID`, дополненным `local_id` и sorted canonical candidates. Alias/import SHALL NOT переписывать canonical node/edge/backlink identity; полноценный import transport остаётся в #164.
 ## FR-37
 
 **Smart verdict is authoritative + the corpus traces as ONE organism (cell→atom) — structural-pass is never "clean"**

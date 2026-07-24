@@ -3637,3 +3637,37 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Given an opt-in SQLite lifecycle builds and persists a spec graph
     When a second MCP lifecycle starts over the unchanged repository
     Then the second lifecycle reports a warm cache and serves the persisted nodes
+
+
+  @FR-36 @feature36
+  Scenario: SPECGEN004_577 canonical namespace and localId round-trip preserves exact identity
+    Given a hierarchical namespace identity with an exact local ID
+    When the canonical identity is formatted and parsed
+    Then the exact namespace local ID and canonical ID are preserved
+
+  @FR-36 @feature36
+  Scenario: SPECGEN004_578 ambiguous local ID returns every canonical namespace candidate
+    Given two namespaces that each define local ID FR-3
+    When get_node receives the bare local ID FR-3
+    Then the ambiguity response includes local ID and sorted canonical candidates
+
+  @FR-36 @feature36
+  Scenario: SPECGEN004_579 case-only identity variants collide inside one namespace
+    Given two canonical IDs in one namespace that differ only by case
+    Then the identity contract reports a CASE_NORMALIZED collision
+
+  @FR-36 @feature36
+  Scenario: SPECGEN004_580 Unicode NFKC identity variants collide inside one namespace
+    Given two canonical IDs in one namespace that are Unicode NFKC equivalents
+    Then the identity contract reports a UNICODE_NORMALIZED collision
+
+  @FR-36 @feature36
+  Scenario: SPECGEN004_581 case-equivalent local IDs remain legal across namespaces
+    Given case-equivalent local IDs in different canonical namespaces
+    Then the identity contract reports no cross-namespace collision
+
+  @FR-36 @feature36
+  Scenario: SPECGEN004_582 the real corpus has no normalization identity collisions
+    Given the migration phase has completed
+    When the dogfood harness dumps the raw pre-map nodes
+    Then the collision probe reports zero normalization collisions

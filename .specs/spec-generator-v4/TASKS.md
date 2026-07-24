@@ -1137,6 +1137,15 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [x] `spec-graph-query` + `spec-mcp-dogfood` skills updated — таблица трёх форм node_id (composite / {spec} / bare→AMBIGUOUS_BARE_ID+candidates) + «Resolved by FR-36» блок с указателем на архив; `runtime-dogfood` generic (node_id не упоминает — нечего править). Dogfood-сэмплер предпочитает FR с tested-by ребром (first-FR мог честно иметь 0 тегов → ложный «dead get_trace»)
   - [x] FINAL: dogfood before/after diff archived — `audit-reports/fr36-dogfood-before-after.md` (47→574 FR, 0→164 рёбер в Scenario, 13/13 LIVE тулзов, вся регрессионная дисциплина); SPECGEN004_95 step defs гоняют РЕАЛЬНЫЙ collision-probe spawnSync-ом на живом корпусе — 1 passed. **«Full clean-HEAD Docker suite 0 failures» — заблокировано 12 предсуществующими падениями** (clean-vs-clean доказано на 4 коммитах: 4bf8d5c/e2b5145/37cf617/d706363 — набор идентичен, Phase-13 не добавила ни одного; финальный прогон `d706363`: те же 12 + POMOGATORDOCTOR001_06 — известный timing-флак, падавший ещё на baseline и зелёный в двух промежуточных прогонах) — это долг `final-verification` (вне graph-территории), НЕ Phase-13; honesty-gate consistent
 
+- [ ] Deliver first-class namespace/localId identity -- @feature36 — id: P13-5 — Status: TODO | Est: 240m
+  _depends: p13-test-churn_
+  _Requirements: [FR-36](FR.md#fr-36)_
+  **Done When:**
+  - [ ] Spec FR-36 and AC-36.7..AC-36.10 trace to executable SPECGEN004_577..SPECGEN004_582 scenarios.
+  - [ ] New Docker BDD scenarios fail before production identity implementation and the RED evidence is retained.
+  - [ ] Identity helpers replace ad-hoc qualification/local-id slicing; case and NFKC collisions fail loud while cross-namespace reuse remains legal.
+  - [ ] The same Docker BDD scenarios and existing FR-36 regressions have lastResult===PASSED.
+  - [ ] MCP bundle, deps-absent smoke, full Docker suite, smart verdict, PR CI and merge to main are green.
 ## Phase 14 — Smart verdict authoritative + cell→atom traceability gate (FR-37)
 
 > Triggered by a real false-green this session: structural `validate-spec: 0 errors` was reported as

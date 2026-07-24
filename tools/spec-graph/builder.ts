@@ -34,7 +34,9 @@ import type {
   NodeLocation,
   ScenarioNode,
   FileNode,
+  IdentityCollision,
 } from './types.ts';
+import { classifyIdentityCollision, identityCollisionKey, localIdOf } from './identity.ts';
 import { parseMarkdownFile } from './parsers/md.ts';
 import { parseGherkinFile } from './parsers/gherkin.ts';
 import { parseNdjsonFile, applyTestResults } from './parsers/ndjson.ts';
@@ -150,15 +152,34 @@ export function buildGraph(opts: BuildOptions): SpecGraph {
   // instead of re-parsing the whole corpus a second time.
   let totalRawNodes = 0;
   const rawCollisionList: Array<{ id: string; firstFile: string; secondFile: string }> = [];
+  const normalizationCollisionList: IdentityCollision[] = [];
+  const identitiesByKey = new Map<string, Node>();
 
   const mergeNode = (node: Node): void => {
     totalRawNodes++;
     const existing = nodes.get(node.id);
     if (existing) {
       rawCollisionList.push({ id: node.id, firstFile: existing.file, secondFile: node.file });
-    } else {
-      nodes.set(node.id, node);
+      return;
     }
+    const normalizedKey = identityCollisionKey({ namespace: node.spec, localId: localIdOf(node.id) });
+    const normalizedExisting = identitiesByKey.get(normalizedKey);
+    const kind = normalizedExisting
+      ? classifyIdentityCollision(normalizedExisting.id, node.id)
+      : null;
+    if (normalizedExisting && kind && kind !== 'EXACT') {
+      normalizationCollisionList.push({
+        kind,
+        normalizedKey,
+        firstId: normalizedExisting.id,
+        secondId: node.id,
+        firstFile: normalizedExisting.file,
+        secondFile: node.file,
+      });
+    } else if (!normalizedExisting) {
+      identitiesByKey.set(normalizedKey, node);
+    }
+    nodes.set(node.id, node);
   };
 
   /** Merge one parsed slice into the accumulators (first-writer wins per id/alias). */
@@ -360,7 +381,7 @@ export function buildGraph(opts: BuildOptions): SpecGraph {
     const byLocalId = new Map<string, string | null>(); // localId → composite (null = ambiguous)
     for (const n of nodes.values()) {
       if (!n.spec) continue;
-      const localId = n.id.slice(n.spec.length + 1);
+      const localId = localIdOf(n.id);
       byLocalId.set(localId, byLocalId.has(localId) ? null : n.id);
     }
     const resolveBare = (id: string): string => {
@@ -418,6 +439,7 @@ export function buildGraph(opts: BuildOptions): SpecGraph {
       totalRawNodes,
       uniqueIds: totalRawNodes - rawCollisionList.length,
       collisions: rawCollisionList,
+      normalizationCollisions: normalizationCollisionList,
     },
   };
 }
