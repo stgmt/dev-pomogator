@@ -29,6 +29,7 @@
  * @see ./coverage.ts (scenarioKey / specOf reuse — one mapping source)
  */
 
+import { localIdOf } from './identity.ts';
 import { scenarioKey } from './coverage.ts';
 import type { AcNode, FrNode, ScenarioNode, SpecGraph } from './types.ts';
 
@@ -359,7 +360,7 @@ export function buildReadinessInventory(graph: SpecGraph, opts: { spec: string }
   const duplicates: InventoryDuplicate[] = [];
   for (const collision of graph.rawCollisions?.collisions ?? []) {
     if (!collision.id.startsWith(`${slug}:`)) continue;
-    const local = collision.id.slice(slug.length + 1);
+    const local = localIdOf(collision.id);
     const kind: InventoryDuplicate['kind'] | null = local.startsWith('FR-')
       ? 'FR'
       : local.startsWith('AC-')
@@ -385,12 +386,11 @@ export function buildReadinessInventory(graph: SpecGraph, opts: { spec: string }
   duplicates.sort((a, b) => a.kind.localeCompare(b.kind) || a.key.localeCompare(b.key));
 
   // ── FR entries ──
-  const localId = (composite: string): string => composite.slice(slug.length + 1);
   const acIdsByFr = new Map<string, string[]>();
   for (const ac of acNodes) {
     if (!ac.parentFr) continue;
     const arr = acIdsByFr.get(ac.parentFr) ?? [];
-    arr.push(localId(ac.id));
+    arr.push(localIdOf(ac.id));
     acIdsByFr.set(ac.parentFr, arr);
   }
   const frs: FrInventoryEntry[] = frNodes.map((fr) => {
@@ -398,7 +398,7 @@ export function buildReadinessInventory(graph: SpecGraph, opts: { spec: string }
     const outcomes = keys.map((k) => bundles.get(k)!.record.outcome);
     const classification = classifyFr(outcomes, keys.length);
     return {
-      id: localId(fr.id),
+      id: localIdOf(fr.id),
       composite_id: fr.id,
       never_run: classification === 'never_run',
       classification,
@@ -416,9 +416,9 @@ export function buildReadinessInventory(graph: SpecGraph, opts: { spec: string }
     const testPaths = new Set<string>();
     for (const k of keys) for (const n of bundles.get(k)!.nodes) testPaths.add(n.file.replace(/\\/g, '/'));
     return {
-      id: localId(ac.id),
+      id: localIdOf(ac.id),
       composite_id: ac.id,
-      parent_fr: ac.parentFr ? localId(ac.parentFr) : '',
+      parent_fr: ac.parentFr ? localIdOf(ac.parentFr) : '',
       test_paths: [...testPaths].sort(),
       scenario_keys: keys,
       scenario_ids: keys.flatMap((k) => bundles.get(k)!.nodes.map((n) => n.id)).sort(),

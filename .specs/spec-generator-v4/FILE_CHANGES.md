@@ -450,3 +450,25 @@ This block enumerates the spec-doc edits applied as part of the v3→v4 transiti
 | `.specs/spec-generator-v4/TASKS.md` | edit | Trace Phase 39 review-hardening tasks. |
 | `.specs/spec-generator-v4/FILE_CHANGES.md` | edit | Trace concrete Phase 39 files and retain shipped create rows as inactive history. |
 | `.specs/spec-generator-v4/spec-generator-v4.feature` | edit | Make fail-closed edge behavior explicit in `SPECGEN004_565`. |
+
+- FR.md: amend FR-36
+
+- ACCEPTANCE_CRITERIA.md: add AC-36.7 (FR-36)
+
+- ACCEPTANCE_CRITERIA.md: add AC-36.8 (FR-36)
+
+- ACCEPTANCE_CRITERIA.md: add AC-36.9 (FR-36)
+
+- ACCEPTANCE_CRITERIA.md: add AC-36.10 (FR-36)
+
+## Phase 13 follow-up — first-class identity (#172)
+
+| Path | Change | Requirement |
+|---|---|---|
+| `tools/spec-graph/identity.ts` | Create the canonical namespace/localId parse, format, local-id and normalization-collision helpers. | [FR-36](FR.md#fr-36), [AC-36.7](ACCEPTANCE_CRITERIA.md#ac-367), [AC-36.9](ACCEPTANCE_CRITERIA.md#ac-369) |
+| `tools/spec-graph/types.ts`, `coverage.ts`, `builder.ts`, `conformance.ts`, `collision-probe.ts`, `corpus-health.ts`, `readiness-inventory.ts` | Replace ad-hoc identity string handling and expose blocking exact/case/NFKC collision evidence without merging cross-namespace IDs. | [FR-36](FR.md#fr-36), [AC-36.8](ACCEPTANCE_CRITERIA.md#ac-368), [AC-36.9](ACCEPTANCE_CRITERIA.md#ac-369) |
+| `tools/spec-mcp-server/tools.ts`, `tools/spec-mcp-server/server.bundle.mjs` | Preserve qualified and `{spec,node_id}` lookup; keep `AMBIGUOUS_BARE_ID` wire compatibility and add `local_id` plus sorted candidates. | [FR-36](FR.md#fr-36), [AC-36.8](ACCEPTANCE_CRITERIA.md#ac-368) |
+| `tests/step_definitions/feature36_composite_graph.ts`, `.specs/spec-generator-v4/spec-generator-v4.feature` | BDD-first RED/GREEN scenarios over the real identity, graph, collision probe and MCP registry; no new non-BDD test file. | [AC-36.10](ACCEPTANCE_CRITERIA.md#ac-3610) |
+
+
+- TASKS.md: add backlog task `P13-5` (FR-36)

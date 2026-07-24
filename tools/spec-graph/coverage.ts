@@ -15,6 +15,8 @@
  * @see ./parsers/ndjson.ts (produces ScenarioNode.lastResult via the builder)
  */
 
+import { formatIdentity } from './identity.ts';
+
 // `not_run` (scenario absent from the last NDJSON) is DISTINCT from `undefined`
 // (scenario ran but its steps are undefined/unimplemented). Conflating them made a
 // filtered `cucumber --tags X` run silently inflate `undefined` and read as "the
@@ -104,7 +106,7 @@ export function qualifySlice(
   if (!slug) return;
   for (const node of slice.nodes) {
     node.spec = slug;
-    node.id = `${slug}:${node.id}`;
+    node.id = formatIdentity({ namespace: slug, localId: node.id });
     if (node.type === 'Task' && Array.isArray(node.refs)) {
       node.refs = (node.refs as string[]).map((r) => `${slug}:${r}`);
     } else if (node.type === 'AC' && typeof node.parentFr === 'string' && node.parentFr) {

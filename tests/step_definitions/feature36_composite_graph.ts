@@ -329,3 +329,92 @@ Then('the FR-node count is about 470 not 47', function (this: F36ProbeWorld) {
   );
   assert.notEqual(frCount, 47, 'the collision-dropped count must be history');
 });
+
+// ── SPECGEN004_577..582 — #172 first-class namespace/localId identity ──────
+
+type IdentityCollisionKind = 'EXACT' | 'CASE_NORMALIZED' | 'UNICODE_NORMALIZED' | null;
+
+interface IdentityContractModule {
+  formatIdentity(identity: { namespace?: string; localId: string }): string;
+  parseIdentity(canonicalId: string): { namespace?: string; localId: string };
+  classifyIdentityCollision(first: string, second: string): IdentityCollisionKind;
+}
+
+interface F36IdentityWorld extends F36ResolveWorld, F36ProbeWorld {
+  identityModule?: IdentityContractModule;
+  canonicalIdentity?: string;
+  parsedIdentity?: { namespace?: string; localId: string };
+  collisionKind?: IdentityCollisionKind;
+}
+
+async function loadIdentityContract(): Promise<IdentityContractModule> {
+  return await import('../../tools/spec-graph/identity.ts') as IdentityContractModule;
+}
+
+Given('a hierarchical namespace identity with an exact local ID', async function (this: F36IdentityWorld) {
+  this.identityModule = await loadIdentityContract();
+});
+
+When('the canonical identity is formatted and parsed', function (this: F36IdentityWorld) {
+  this.canonicalIdentity = this.identityModule!.formatIdentity({ namespace: 'team/a', localId: 'FR-3' });
+  this.parsedIdentity = this.identityModule!.parseIdentity(this.canonicalIdentity);
+});
+
+Then('the exact namespace local ID and canonical ID are preserved', function (this: F36IdentityWorld) {
+  assert.equal(this.canonicalIdentity, 'team/a:FR-3');
+  assert.deepEqual(this.parsedIdentity, { namespace: 'team/a', localId: 'FR-3' });
+});
+
+Given('two namespaces that each define local ID FR-3', function (this: F36IdentityWorld) {
+  for (const namespace of ['team-a', 'team-b']) {
+    const dir = path.join(this.tempDir, '.specs', namespace);
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, 'FR.md'), `## FR-3: ${namespace} requirement\n\nBody.\n`);
+  }
+  this.graph = buildGraph({ repoRoot: this.tempDir, skipNdjson: true });
+});
+
+When('get_node receives the bare local ID FR-3', async function (this: F36IdentityWorld) {
+  const tools = buildToolRegistry(() => this.graph!);
+  const getNode = tools.find((tool) => tool.name === 'get_node')!;
+  const result = await getNode.handler({ node_id: 'FR-3' }) as { content: Array<{ text: string }> };
+  this.toolResult = JSON.parse(result.content[0].text);
+});
+
+Then('the ambiguity response includes local ID and sorted canonical candidates', function (this: F36IdentityWorld) {
+  assert.equal(this.toolResult!.error, 'AMBIGUOUS_BARE_ID');
+  assert.equal((this.toolResult as { local_id?: string }).local_id, 'FR-3');
+  assert.deepEqual(this.toolResult!.candidates, ['team-a:FR-3', 'team-b:FR-3']);
+});
+
+Given('two canonical IDs in one namespace that differ only by case', async function (this: F36IdentityWorld) {
+  this.identityModule = await loadIdentityContract();
+  this.collisionKind = this.identityModule.classifyIdentityCollision('team-a:FR-3', 'team-a:fr-3');
+});
+
+Then('the identity contract reports a CASE_NORMALIZED collision', function (this: F36IdentityWorld) {
+  assert.equal(this.collisionKind, 'CASE_NORMALIZED');
+});
+
+Given('two canonical IDs in one namespace that are Unicode NFKC equivalents', async function (this: F36IdentityWorld) {
+  this.identityModule = await loadIdentityContract();
+  this.collisionKind = this.identityModule.classifyIdentityCollision('team-a:FR-3', 'team-a:ＦＲ-３');
+});
+
+Then('the identity contract reports a UNICODE_NORMALIZED collision', function (this: F36IdentityWorld) {
+  assert.equal(this.collisionKind, 'UNICODE_NORMALIZED');
+});
+
+Given('case-equivalent local IDs in different canonical namespaces', async function (this: F36IdentityWorld) {
+  this.identityModule = await loadIdentityContract();
+  this.collisionKind = this.identityModule.classifyIdentityCollision('team-a:FR-3', 'team-b:fr-3');
+});
+
+Then('the identity contract reports no cross-namespace collision', function (this: F36IdentityWorld) {
+  assert.equal(this.collisionKind, null);
+});
+
+Then('the collision probe reports zero normalization collisions', function (this: F36IdentityWorld) {
+  assert.equal(this.probeStatus, 0, `probe failed: ${this.probeStdout?.slice(-500)}`);
+  assert.match(this.probeStdout!, /normalization collisions: 0/);
+});

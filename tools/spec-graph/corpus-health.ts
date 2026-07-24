@@ -87,6 +87,7 @@ export function corpusHealth(corpusRoot: string): CorpusHealthReport {
     totalRawNodes: graph.nodes.size,
     uniqueIds: graph.nodes.size,
     collisions: [],
+    normalizationCollisions: [],
   };
 
   // 2) dangling edges — an endpoint that resolves to NO node.
@@ -140,7 +141,7 @@ export function corpusHealth(corpusRoot: string): CorpusHealthReport {
   const upstreamByKind: Record<string, number> = {};
   for (const u of upstream) upstreamByKind[u.kind] = (upstreamByKind[u.kind] ?? 0) + 1;
 
-  const hardRed = collisions.collisions.length > 0 || stale > 0;
+  const hardRed = collisions.collisions.length > 0 || (collisions.normalizationCollisions?.length ?? 0) > 0 || stale > 0;
   const anyDebt = hardRed || dangling > 0 || gaps.length > 0 || orphanTests.length > 0 || frsNoResearch.length > 0 || upstream.length > 0;
 
   return {
@@ -184,6 +185,10 @@ export function renderCorpusHealth(r: CorpusHealthReport): string {
   );
   for (const c of r.collisions.collisions.slice(0, 10)) {
     lines.push(`   COLLISION ${c.id}: ${c.firstFile} <-> ${c.secondFile}`);
+  }
+  lines.push(`   normalization collisions: ${r.collisions.normalizationCollisions?.length ?? 0}`);
+  for (const c of (r.collisions.normalizationCollisions ?? []).slice(0, 10)) {
+    lines.push(`   NORM-COLLISION ${c.kind} ${c.firstId} <-> ${c.secondId}: ${c.firstFile} <-> ${c.secondFile}`);
   }
   lines.push(`2) dangling edges: ${r.danglingEdges.count}`);
   for (const d of r.danglingEdges.samples.slice(0, 5)) {

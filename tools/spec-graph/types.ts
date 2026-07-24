@@ -282,6 +282,15 @@ export interface BacklinkEntry {
   type: EdgeType;
 }
 
+export interface IdentityCollision {
+  kind: 'CASE_NORMALIZED' | 'UNICODE_NORMALIZED';
+  normalizedKey: string;
+  firstId: string;
+  secondId: string;
+  firstFile: string;
+  secondFile: string;
+}
+
 export interface SpecGraph {
   /** Schema version (`1` for Phase 1..4; bumps gate by `meta.schema_version` in SQLite). */
   version: 1;
@@ -307,6 +316,7 @@ export interface SpecGraph {
     totalRawNodes: number;
     uniqueIds: number;
     collisions: Array<{ id: string; firstFile: string; secondFile: string }>;
+    normalizationCollisions?: IdentityCollision[];
   };
 }
 
