@@ -3601,6 +3601,12 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Then one latest row per scenario remains and distinct-scenario cardinality is conserved
     And the canonical full-run artifact remains byte-identical
 
+  @feature56 @FR-56
+  Scenario: SPECGEN004_577 the overlay writer compacts each archived run so the trail stays bounded
+    Given a cucumber-messages archive that reports the same scenarios on every run
+    When the real overlay writer archives three runs with compaction enabled
+    Then the overlay holds exactly one row per scenario regardless of run count
+
   @feature32
   Scenario: SPECGEN004_544 get_spec_status keeps a mixed-result FR execution-unverified
     Given a requirement whose linked scenarios are passed, failed and not run

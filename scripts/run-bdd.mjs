@@ -150,6 +150,9 @@ try {
       source: `run-bdd:${kind}`,
       gitSha: process.env.DEV_POMOGATOR_GIT_SHA ?? null,
       traceFile,
+      // FR-56 / P29-1: collapse the append-only overlay to newest-per-scenario after
+      // each archived run so the freshness trail stays bounded in real Docker runs.
+      compact: true,
     });
     const entry = {
       ts: new Date(epoch).toISOString(),
