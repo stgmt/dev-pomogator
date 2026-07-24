@@ -1,0 +1,6 @@
+[spec-graph] FILE_CHANGES.md contains glob path(s); implements edges skipped (first: .specs/pomogator-doctor/*.md)
+{
+  "ok": true,
+  "results": [],
+  "count": 0
+}

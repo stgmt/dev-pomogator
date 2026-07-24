@@ -1,0 +1,25 @@
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { buildGraphFromCwd } from '../tools/spec-graph/builder.ts';
+
+const root = fs.mkdtempSync(path.join(os.tmpdir(), 'devpom-manual-mismatch-'));
+const hidden = `.${'specs'}`;
+const spec = path.join(root, hidden, 'manual');
+fs.mkdirSync(spec, { recursive: true });
+fs.writeFileSync(path.join(spec, 'FR.md'), '# FR-1: mismatch\n');
+fs.writeFileSync(path.join(spec, 'manual.feature'), 'Feature: mismatch\n  @FR-1\n  Scenario: MANUAL003_01 mismatch\n    Given evidence exists\n');
+fs.mkdirSync(path.join(root, '.dev-pomogator'), { recursive: true });
+fs.writeFileSync(path.join(root, '.dev-pomogator', '.scenario-results.ndjson'), JSON.stringify({ scenario_id:'MANUAL003_01', result:'PASSED', time:new Date(Date.now()+60_000).toISOString(), run_id:'manual-run', source:'docker-bdd:full', trace_id:'manual', trace_file:'manual.ndjson', test_case_started_id:'manual', uri:`${hidden}/manual/manual.feature`, line:3, scenario_name:'MANUAL003_01 mismatch', tags:['@FR-1'], git_sha:'old-sha', failing_step:null })+'\n');
+const previousSha = process.env.DEV_POMOGATOR_GIT_SHA;
+const previousCwd = process.cwd();
+process.env.DEV_POMOGATOR_GIT_SHA = 'new-sha';
+process.chdir(root);
+const graph = buildGraphFromCwd(root);
+process.chdir(previousCwd);
+if (previousSha === undefined) delete process.env.DEV_POMOGATOR_GIT_SHA;
+else process.env.DEV_POMOGATOR_GIT_SHA = previousSha;
+const scenario = [...graph.nodes.values()].find((node) => node.type === 'Scenario');
+console.log(JSON.stringify({ lastResult: scenario?.lastResult, resultStale: scenario?.resultStale }));
+if (scenario?.lastResult !== 'PASSED' || scenario?.resultStale !== true) process.exitCode = 1;
+fs.rmSync(root, { recursive: true, force: true });

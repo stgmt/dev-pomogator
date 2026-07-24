@@ -1,0 +1,550 @@
+diff --git a/tests/step_definitions/feature36_composite_graph.ts b/tests/step_definitions/feature36_composite_graph.ts
+index 6cbc5954..da94c341 100644
+--- a/tests/step_definitions/feature36_composite_graph.ts
++++ b/tests/step_definitions/feature36_composite_graph.ts
+@@ -329,3 +329,92 @@ Then('the FR-node count is about 470 not 47', function (this: F36ProbeWorld) {
+   );
+   assert.notEqual(frCount, 47, 'the collision-dropped count must be history');
+ });
++
++// ── SPECGEN004_577..582 — #172 first-class namespace/localId identity ──────
++
++type IdentityCollisionKind = 'EXACT' | 'CASE_NORMALIZED' | 'UNICODE_NORMALIZED' | null;
++
++interface IdentityContractModule {
++  formatIdentity(identity: { namespace?: string; localId: string }): string;
++  parseIdentity(canonicalId: string): { namespace?: string; localId: string };
++  classifyIdentityCollision(first: string, second: string): IdentityCollisionKind;
++}
++
++interface F36IdentityWorld extends F36ResolveWorld, F36ProbeWorld {
++  identityModule?: IdentityContractModule;
++  canonicalIdentity?: string;
++  parsedIdentity?: { namespace?: string; localId: string };
++  collisionKind?: IdentityCollisionKind;
++}
++
++async function loadIdentityContract(): Promise<IdentityContractModule> {
++  return await import('../../tools/spec-graph/identity.ts') as IdentityContractModule;
++}
++
++Given('a hierarchical namespace identity with an exact local ID', async function (this: F36IdentityWorld) {
++  this.identityModule = await loadIdentityContract();
++});
++
++When('the canonical identity is formatted and parsed', function (this: F36IdentityWorld) {
++  this.canonicalIdentity = this.identityModule!.formatIdentity({ namespace: 'team/a', localId: 'FR-3' });
++  this.parsedIdentity = this.identityModule!.parseIdentity(this.canonicalIdentity);
++});
++
++Then('the exact namespace local ID and canonical ID are preserved', function (this: F36IdentityWorld) {
++  assert.equal(this.canonicalIdentity, 'team/a:FR-3');
++  assert.deepEqual(this.parsedIdentity, { namespace: 'team/a', localId: 'FR-3' });
++});
++
++Given('two namespaces that each define local ID FR-3', function (this: F36IdentityWorld) {
++  for (const namespace of ['team-a', 'team-b']) {
++    const dir = path.join(this.tempDir, '.specs', namespace);
++    fs.mkdirSync(dir, { recursive: true });
++    fs.writeFileSync(path.join(dir, 'FR.md'), `## FR-3: ${namespace} requirement\n\nBody.\n`);
++  }
++  this.graph = buildGraph({ repoRoot: this.tempDir, skipNdjson: true });
++});
++
++When('get_node receives the bare local ID FR-3', async function (this: F36IdentityWorld) {
++  const tools = buildToolRegistry(() => this.graph!);
++  const getNode = tools.find((tool) => tool.name === 'get_node')!;
++  const result = await getNode.handler({ node_id: 'FR-3' }) as { content: Array<{ text: string }> };
++  this.toolResult = JSON.parse(result.content[0].text);
++});
++
++Then('the ambiguity response includes local ID and sorted canonical candidates', function (this: F36IdentityWorld) {
++  assert.equal(this.toolResult!.error, 'AMBIGUOUS_BARE_ID');
++  assert.equal((this.toolResult as { local_id?: string }).local_id, 'FR-3');
++  assert.deepEqual(this.toolResult!.candidates, ['team-a:FR-3', 'team-b:FR-3']);
++});
++
++Given('two canonical IDs in one namespace that differ only by case', async function (this: F36IdentityWorld) {
++  this.identityModule = await loadIdentityContract();
++  this.collisionKind = this.identityModule.classifyIdentityCollision('team-a:FR-3', 'team-a:fr-3');
++});
++
++Then('the identity contract reports a CASE_NORMALIZED collision', function (this: F36IdentityWorld) {
++  assert.equal(this.collisionKind, 'CASE_NORMALIZED');
++});
++
++Given('two canonical IDs in one namespace that are Unicode NFKC equivalents', async function (this: F36IdentityWorld) {
++  this.identityModule = await loadIdentityContract();
++  this.collisionKind = this.identityModule.classifyIdentityCollision('team-a:FR-3', 'team-a:ＦＲ-３');
++});
++
++Then('the identity contract reports a UNICODE_NORMALIZED collision', function (this: F36IdentityWorld) {
++  assert.equal(this.collisionKind, 'UNICODE_NORMALIZED');
++});
++
++Given('case-equivalent local IDs in different canonical namespaces', async function (this: F36IdentityWorld) {
++  this.identityModule = await loadIdentityContract();
++  this.collisionKind = this.identityModule.classifyIdentityCollision('team-a:FR-3', 'team-b:fr-3');
++});
++
++Then('the identity contract reports no cross-namespace collision', function (this: F36IdentityWorld) {
++  assert.equal(this.collisionKind, null);
++});
++
++Then('the collision probe reports zero normalization collisions', function (this: F36IdentityWorld) {
++  assert.equal(this.probeStatus, 0, `probe failed: ${this.probeStdout?.slice(-500)}`);
++  assert.match(this.probeStdout!, /normalization collisions: 0/);
++});
+diff --git a/tools/spec-graph/builder.ts b/tools/spec-graph/builder.ts
+index 0f0a9efe..81fef2c2 100644
+--- a/tools/spec-graph/builder.ts
++++ b/tools/spec-graph/builder.ts
+@@ -34,7 +34,9 @@ import type {
+   NodeLocation,
+   ScenarioNode,
+   FileNode,
++  IdentityCollision,
+ } from './types.ts';
++import { classifyIdentityCollision, identityCollisionKey, localIdOf } from './identity.ts';
+ import { parseMarkdownFile } from './parsers/md.ts';
+ import { parseGherkinFile } from './parsers/gherkin.ts';
+ import { parseNdjsonFile, applyTestResults } from './parsers/ndjson.ts';
+@@ -150,15 +152,34 @@ export function buildGraph(opts: BuildOptions): SpecGraph {
+   // instead of re-parsing the whole corpus a second time.
+   let totalRawNodes = 0;
+   const rawCollisionList: Array<{ id: string; firstFile: string; secondFile: string }> = [];
++  const normalizationCollisionList: IdentityCollision[] = [];
++  const identitiesByKey = new Map<string, Node>();
+ 
+   const mergeNode = (node: Node): void => {
+     totalRawNodes++;
+     const existing = nodes.get(node.id);
+     if (existing) {
+       rawCollisionList.push({ id: node.id, firstFile: existing.file, secondFile: node.file });
+-    } else {
+-      nodes.set(node.id, node);
++      return;
+     }
++    const normalizedKey = identityCollisionKey({ namespace: node.spec, localId: localIdOf(node.id) });
++    const normalizedExisting = identitiesByKey.get(normalizedKey);
++    const kind = normalizedExisting
++      ? classifyIdentityCollision(normalizedExisting.id, node.id)
++      : null;
++    if (normalizedExisting && kind && kind !== 'EXACT') {
++      normalizationCollisionList.push({
++        kind,
++        normalizedKey,
++        firstId: normalizedExisting.id,
++        secondId: node.id,
++        firstFile: normalizedExisting.file,
++        secondFile: node.file,
++      });
++    } else if (!normalizedExisting) {
++      identitiesByKey.set(normalizedKey, node);
++    }
++    nodes.set(node.id, node);
+   };
+ 
+   /** Merge one parsed slice into the accumulators (first-writer wins per id/alias). */
+@@ -360,7 +381,7 @@ export function buildGraph(opts: BuildOptions): SpecGraph {
+     const byLocalId = new Map<string, string | null>(); // localId → composite (null = ambiguous)
+     for (const n of nodes.values()) {
+       if (!n.spec) continue;
+-      const localId = n.id.slice(n.spec.length + 1);
++      const localId = localIdOf(n.id);
+       byLocalId.set(localId, byLocalId.has(localId) ? null : n.id);
+     }
+     const resolveBare = (id: string): string => {
+@@ -418,6 +439,7 @@ export function buildGraph(opts: BuildOptions): SpecGraph {
+       totalRawNodes,
+       uniqueIds: totalRawNodes - rawCollisionList.length,
+       collisions: rawCollisionList,
++      normalizationCollisions: normalizationCollisionList,
+     },
+   };
+ }
+diff --git a/tools/spec-graph/collision-probe.ts b/tools/spec-graph/collision-probe.ts
+index f1ff3995..9a739d15 100644
+--- a/tools/spec-graph/collision-probe.ts
++++ b/tools/spec-graph/collision-probe.ts
+@@ -11,6 +11,8 @@ import path from 'node:path';
+ import { parseMarkdownFile } from './parsers/md.ts';
+ import { parseGherkinFile } from './parsers/gherkin.ts';
+ import { parseTasksFile } from './parsers/tasks.ts';
++import { classifyIdentityCollision, identityCollisionKey, localIdOf } from './identity.ts';
++import type { IdentityCollision } from './types.ts';
+ 
+ function walk(dir: string, sufs: string[]): string[] {
+   if (!fs.existsSync(dir)) return [];
+@@ -38,19 +40,40 @@ export interface CollisionScan {
+   totalRawNodes: number;
+   uniqueIds: number;
+   collisions: Array<{ id: string; firstFile: string; secondFile: string }>;
++  normalizationCollisions: IdentityCollision[];
+ }
+ 
+ /** Parse every slice under `<root>/.specs` (+ `<root>/tests/features`) raw — pre-map. */
+ export function rawCollisionScan(root: string): CollisionScan {
+   const seen = new Map<string, string>();
++  const normalizedSeen = new Map<string, { id: string; file: string }>();
+   let total = 0;
+   const collisions: CollisionScan['collisions'] = [];
+-  const collide = (slice: { nodes: Array<{ id: string; file: string }> }): void => {
++  const normalizationCollisions: IdentityCollision[] = [];
++  const collide = (slice: { nodes: Array<{ id: string; spec?: string; file: string }> }): void => {
+     for (const n of slice.nodes) {
+       total++;
+       const first = seen.get(n.id);
+-      if (first !== undefined) collisions.push({ id: n.id, firstFile: first, secondFile: n.file });
+-      else seen.set(n.id, n.file);
++      if (first !== undefined) {
++        collisions.push({ id: n.id, firstFile: first, secondFile: n.file });
++      } else {
++        seen.set(n.id, n.file);
++      }
++      const normalizedKey = identityCollisionKey({ namespace: n.spec, localId: localIdOf(n.id) });
++      const normalizedFirst = normalizedSeen.get(normalizedKey);
++      const kind = normalizedFirst ? classifyIdentityCollision(normalizedFirst.id, n.id) : null;
++      if (normalizedFirst && kind && kind !== 'EXACT') {
++        normalizationCollisions.push({
++          kind,
++          normalizedKey,
++          firstId: normalizedFirst.id,
++          secondId: n.id,
++          firstFile: normalizedFirst.file,
++          secondFile: n.file,
++        });
++      } else if (!normalizedFirst) {
++        normalizedSeen.set(normalizedKey, { id: n.id, file: n.file });
++      }
+     }
+   };
+   for (const a of walk(path.join(root, '.specs'), ['.md'])) {
+@@ -71,7 +94,7 @@ export function rawCollisionScan(root: string): CollisionScan {
+       /* fail-soft */
+     }
+   }
+-  return { totalRawNodes: total, uniqueIds: seen.size, collisions };
++  return { totalRawNodes: total, uniqueIds: seen.size, collisions, normalizationCollisions };
+ }
+ 
+ const isDirectRun =
+@@ -81,8 +104,11 @@ if (isDirectRun) {
+   for (const c of scan.collisions.slice(0, 10)) {
+     console.log('COLLISION:', c.id, c.firstFile, '<->', c.secondFile);
+   }
++  for (const c of scan.normalizationCollisions.slice(0, 10)) {
++    console.log('NORM-COLLISION:', c.kind, c.firstId, c.firstFile, '<->', c.secondId, c.secondFile);
++  }
+   console.log(
+-    `raw pre-map nodes: ${scan.totalRawNodes} | unique: ${scan.uniqueIds} | collisions: ${scan.collisions.length}`,
++    `raw pre-map nodes: ${scan.totalRawNodes} | unique: ${scan.uniqueIds} | collisions: ${scan.collisions.length} | normalization collisions: ${scan.normalizationCollisions.length}`,
+   );
+-  process.exit(scan.collisions.length === 0 ? 0 : 1);
++  process.exit(scan.collisions.length === 0 && scan.normalizationCollisions.length === 0 ? 0 : 1);
+ }
+diff --git a/tools/spec-graph/conformance.ts b/tools/spec-graph/conformance.ts
+index 2a945a3b..4bf9cc83 100644
+--- a/tools/spec-graph/conformance.ts
++++ b/tools/spec-graph/conformance.ts
+@@ -30,6 +30,7 @@
+ import type { SpecGraph, Edge, ScenarioNode, TaskNode } from './types.ts';
+ import { computeCoverage, scenarioKey, specOf, type Bucket, type ScenarioLike, type TaskLike, type TestQualityVerdict } from './coverage.ts';
+ import { WORKING_STATUSES, canEnterWorkingStatus } from './task-lifecycle.ts';
++import { localIdOf } from './identity.ts';
+ 
+ export type FindingCode =
+   | 'UNCOVERED_FR'
+@@ -38,6 +39,7 @@ export type FindingCode =
+   | 'UNTAGGED_SCENARIO'
+   | 'TAG_BULK_SUSPECT'
+   | 'DUPLICATE_DEFINITION'
++  | 'ID_NORMALIZATION_COLLISION'
+   | 'TASK_STATUS_UNVERIFIED'
+   | 'TASK_UNTESTED'
+   | 'UNVERIFIED_COMPLETION'
+@@ -75,15 +77,6 @@ export interface Finding {
+ 
+ const SPEC_TAG_RE = /^@((?:FR|NFR|AC)[A-Za-z0-9._-]+)$/;
+ 
+-/**
+- * FR-36a: the bare local id of a node (`spec-generator-v4:FR-2` → `FR-2`).
+- * Hand-built test graphs and files outside `.specs/` carry bare ids — for
+- * those the id IS the local id.
+- */
+-function localIdOf(node: { id: string; spec?: string }): string {
+-  return node.spec ? node.id.slice(node.spec.length + 1) : node.id;
+-}
+-
+ /**
+  * FR-36a: resolve a BARE tag reference (`@FR-2`) against composite-keyed
+  * nodes. Tags stay bare in `.feature` files (same-spec convention):
+@@ -568,6 +561,20 @@ export function checkConformance(
+     }
+   }
+ 
++  // 4b) ID_NORMALIZATION_COLLISION — unlike exact duplicates, both nodes remain
++  // present in the map, so the pre-map evidence can be surfaced here as a
++  // blocking finding instead of silently accepting filesystem-unsafe identity.
++  for (const collision of graph.rawCollisions?.normalizationCollisions ?? []) {
++    findings.push({
++      code: 'ID_NORMALIZATION_COLLISION',
++      severity: 'error',
++      location: { file: collision.secondFile, line: 1 },
++      nodeId: collision.secondId,
++      relatedId: collision.firstId,
++      message: `${collision.kind} identity collision: ${collision.firstId} (${collision.firstFile}) conflicts with ${collision.secondId} (${collision.secondFile}) after normalization key ${collision.normalizedKey}.`,
++    });
++  }
++
+   // 5) DUPLICATE_DEFINITION — NOT emitted here, by design (P19-5 LOW resolution,
+   // 2026-06-10). A duplicate is invisible to a graph walk: the builder's
+   // «if (!nodes.has(id))» dedup keeps the FIRST definition, so by the time this
+diff --git a/tools/spec-graph/corpus-health.ts b/tools/spec-graph/corpus-health.ts
+index 21381282..97742a6c 100644
+--- a/tools/spec-graph/corpus-health.ts
++++ b/tools/spec-graph/corpus-health.ts
+@@ -87,6 +87,7 @@ export function corpusHealth(corpusRoot: string): CorpusHealthReport {
+     totalRawNodes: graph.nodes.size,
+     uniqueIds: graph.nodes.size,
+     collisions: [],
++    normalizationCollisions: [],
+   };
+ 
+   // 2) dangling edges — an endpoint that resolves to NO node.
+@@ -140,7 +141,7 @@ export function corpusHealth(corpusRoot: string): CorpusHealthReport {
+   const upstreamByKind: Record<string, number> = {};
+   for (const u of upstream) upstreamByKind[u.kind] = (upstreamByKind[u.kind] ?? 0) + 1;
+ 
+-  const hardRed = collisions.collisions.length > 0 || stale > 0;
++  const hardRed = collisions.collisions.length > 0 || (collisions.normalizationCollisions?.length ?? 0) > 0 || stale > 0;
+   const anyDebt = hardRed || dangling > 0 || gaps.length > 0 || orphanTests.length > 0 || frsNoResearch.length > 0 || upstream.length > 0;
+ 
+   return {
+@@ -185,6 +186,10 @@ export function renderCorpusHealth(r: CorpusHealthReport): string {
+   for (const c of r.collisions.collisions.slice(0, 10)) {
+     lines.push(`   COLLISION ${c.id}: ${c.firstFile} <-> ${c.secondFile}`);
+   }
++  lines.push(`   normalization collisions: ${r.collisions.normalizationCollisions?.length ?? 0}`);
++  for (const c of (r.collisions.normalizationCollisions ?? []).slice(0, 10)) {
++    lines.push(`   NORM-COLLISION ${c.kind} ${c.firstId} <-> ${c.secondId}: ${c.firstFile} <-> ${c.secondFile}`);
++  }
+   lines.push(`2) dangling edges: ${r.danglingEdges.count}`);
+   for (const d of r.danglingEdges.samples.slice(0, 5)) {
+     lines.push(`   [${d.type}] ${d.from} → ${d.to} (missing: ${d.missing})`);
+diff --git a/tools/spec-graph/coverage.ts b/tools/spec-graph/coverage.ts
+index c5a8da68..269c0630 100644
+--- a/tools/spec-graph/coverage.ts
++++ b/tools/spec-graph/coverage.ts
+@@ -15,6 +15,8 @@
+  * @see ./parsers/ndjson.ts (produces ScenarioNode.lastResult via the builder)
+  */
+ 
++import { formatIdentity } from './identity.ts';
++
+ // `not_run` (scenario absent from the last NDJSON) is DISTINCT from `undefined`
+ // (scenario ran but its steps are undefined/unimplemented). Conflating them made a
+ // filtered `cucumber --tags X` run silently inflate `undefined` and read as "the
+@@ -104,7 +106,7 @@ export function qualifySlice(
+   if (!slug) return;
+   for (const node of slice.nodes) {
+     node.spec = slug;
+-    node.id = `${slug}:${node.id}`;
++    node.id = formatIdentity({ namespace: slug, localId: node.id });
+     if (node.type === 'Task' && Array.isArray(node.refs)) {
+       node.refs = (node.refs as string[]).map((r) => `${slug}:${r}`);
+     } else if (node.type === 'AC' && typeof node.parentFr === 'string' && node.parentFr) {
+diff --git a/tools/spec-graph/identity.ts b/tools/spec-graph/identity.ts
+new file mode 100644
+index 00000000..fbdf4ecc
+--- /dev/null
++++ b/tools/spec-graph/identity.ts
+@@ -0,0 +1,62 @@
++/** Canonical namespace/localId identity helpers (FR-36f..h, GitHub #172). */
++
++export interface Identity {
++  namespace?: string;
++  localId: string;
++}
++
++export type IdentityCollisionKind = 'EXACT' | 'CASE_NORMALIZED' | 'UNICODE_NORMALIZED';
++
++function assertPart(value: string, name: 'namespace' | 'localId'): void {
++  if (!value) throw new Error(`INVALID_IDENTITY: ${name} must be non-empty`);
++  if (name === 'localId' && value.includes(':')) {
++    throw new Error('INVALID_IDENTITY: localId must not contain ":"');
++  }
++}
++
++/** Format without normalizing: exact spelling is the canonical persisted identity. */
++export function formatIdentity(identity: Identity): string {
++  assertPart(identity.localId, 'localId');
++  if (identity.namespace === undefined) return identity.localId;
++  assertPart(identity.namespace, 'namespace');
++  return `${identity.namespace}:${identity.localId}`;
++}
++
++/** Split on the final colon so path-like or colon-delimited namespaces stay opaque. */
++export function parseIdentity(canonicalId: string): Identity {
++  if (!canonicalId) throw new Error('INVALID_IDENTITY: id must be non-empty');
++  const separator = canonicalId.lastIndexOf(':');
++  if (separator < 0) return { localId: canonicalId };
++  const namespace = canonicalId.slice(0, separator);
++  const localId = canonicalId.slice(separator + 1);
++  assertPart(namespace, 'namespace');
++  assertPart(localId, 'localId');
++  return { namespace, localId };
++}
++
++export function localIdOf(identity: string | { id: string }): string {
++  return parseIdentity(typeof identity === 'string' ? identity : identity.id).localId;
++}
++
++function caseFold(value: string): string {
++  return value.toLowerCase();
++}
++
++function unicodeFold(value: string): string {
++  return value.normalize('NFKC').toLowerCase();
++}
++
++export function identityCollisionKey(identity: Identity): string {
++  return `${unicodeFold(identity.namespace ?? '')}:${unicodeFold(identity.localId)}`;
++}
++
++/** Classify only within one normalized namespace; cross-namespace reuse is legal. */
++export function classifyIdentityCollision(firstId: string, secondId: string): IdentityCollisionKind | null {
++  const first = parseIdentity(firstId);
++  const second = parseIdentity(secondId);
++  if (unicodeFold(first.namespace ?? '') !== unicodeFold(second.namespace ?? '')) return null;
++  if (first.localId === second.localId && first.namespace === second.namespace) return 'EXACT';
++  if (caseFold(first.localId) === caseFold(second.localId)) return 'CASE_NORMALIZED';
++  if (unicodeFold(first.localId) === unicodeFold(second.localId)) return 'UNICODE_NORMALIZED';
++  return null;
++}
+diff --git a/tools/spec-graph/readiness-inventory.ts b/tools/spec-graph/readiness-inventory.ts
+index c61dcc2b..bd3bb98e 100644
+--- a/tools/spec-graph/readiness-inventory.ts
++++ b/tools/spec-graph/readiness-inventory.ts
+@@ -29,6 +29,7 @@
+  * @see ./coverage.ts (scenarioKey / specOf reuse — one mapping source)
+  */
+ 
++import { localIdOf } from './identity.ts';
+ import { scenarioKey } from './coverage.ts';
+ import type { AcNode, FrNode, ScenarioNode, SpecGraph } from './types.ts';
+ 
+@@ -359,7 +360,7 @@ export function buildReadinessInventory(graph: SpecGraph, opts: { spec: string }
+   const duplicates: InventoryDuplicate[] = [];
+   for (const collision of graph.rawCollisions?.collisions ?? []) {
+     if (!collision.id.startsWith(`${slug}:`)) continue;
+-    const local = collision.id.slice(slug.length + 1);
++    const local = localIdOf(collision.id);
+     const kind: InventoryDuplicate['kind'] | null = local.startsWith('FR-')
+       ? 'FR'
+       : local.startsWith('AC-')
+@@ -385,12 +386,11 @@ export function buildReadinessInventory(graph: SpecGraph, opts: { spec: string }
+   duplicates.sort((a, b) => a.kind.localeCompare(b.kind) || a.key.localeCompare(b.key));
+ 
+   // ── FR entries ──
+-  const localId = (composite: string): string => composite.slice(slug.length + 1);
+   const acIdsByFr = new Map<string, string[]>();
+   for (const ac of acNodes) {
+     if (!ac.parentFr) continue;
+     const arr = acIdsByFr.get(ac.parentFr) ?? [];
+-    arr.push(localId(ac.id));
++    arr.push(localIdOf(ac.id));
+     acIdsByFr.set(ac.parentFr, arr);
+   }
+   const frs: FrInventoryEntry[] = frNodes.map((fr) => {
+@@ -398,7 +398,7 @@ export function buildReadinessInventory(graph: SpecGraph, opts: { spec: string }
+     const outcomes = keys.map((k) => bundles.get(k)!.record.outcome);
+     const classification = classifyFr(outcomes, keys.length);
+     return {
+-      id: localId(fr.id),
++      id: localIdOf(fr.id),
+       composite_id: fr.id,
+       never_run: classification === 'never_run',
+       classification,
+@@ -416,9 +416,9 @@ export function buildReadinessInventory(graph: SpecGraph, opts: { spec: string }
+     const testPaths = new Set<string>();
+     for (const k of keys) for (const n of bundles.get(k)!.nodes) testPaths.add(n.file.replace(/\\/g, '/'));
+     return {
+-      id: localId(ac.id),
++      id: localIdOf(ac.id),
+       composite_id: ac.id,
+-      parent_fr: ac.parentFr ? localId(ac.parentFr) : '',
++      parent_fr: ac.parentFr ? localIdOf(ac.parentFr) : '',
+       test_paths: [...testPaths].sort(),
+       scenario_keys: keys,
+       scenario_ids: keys.flatMap((k) => bundles.get(k)!.nodes.map((n) => n.id)).sort(),
+diff --git a/tools/spec-graph/types.ts b/tools/spec-graph/types.ts
+index cb3138ca..154fadf3 100644
+--- a/tools/spec-graph/types.ts
++++ b/tools/spec-graph/types.ts
+@@ -282,6 +282,15 @@ export interface BacklinkEntry {
+   type: EdgeType;
+ }
+ 
++export interface IdentityCollision {
++  kind: 'CASE_NORMALIZED' | 'UNICODE_NORMALIZED';
++  normalizedKey: string;
++  firstId: string;
++  secondId: string;
++  firstFile: string;
++  secondFile: string;
++}
++
+ export interface SpecGraph {
+   /** Schema version (`1` for Phase 1..4; bumps gate by `meta.schema_version` in SQLite). */
+   version: 1;
+@@ -307,6 +316,7 @@ export interface SpecGraph {
+     totalRawNodes: number;
+     uniqueIds: number;
+     collisions: Array<{ id: string; firstFile: string; secondFile: string }>;
++    normalizationCollisions?: IdentityCollision[];
+   };
+ }
+ 
+diff --git a/tools/spec-mcp-server/sqlite/persist.ts b/tools/spec-mcp-server/sqlite/persist.ts
+index 6960d273..cc780a05 100644
+--- a/tools/spec-mcp-server/sqlite/persist.ts
++++ b/tools/spec-mcp-server/sqlite/persist.ts
+@@ -47,6 +47,7 @@ export function persistGraph(handle: SqliteHandle, graph: SpecGraph, sourceFinge
+       insertDefinition.run(alias, canonicalId, location.file, location.line);
+     }
+     setMeta(handle, 'graph_version', String(graph.version));
++    setMeta(handle, 'raw_collisions', JSON.stringify(graph.rawCollisions ?? null));
+     setMeta(handle, 'built_at', graph.builtAt);
+     setMeta(handle, 'source_fingerprint', sourceFingerprint);
+     handle.backend.exec('COMMIT');
+@@ -88,5 +89,16 @@ export function loadGraph(handle: SqliteHandle, sourceFingerprint: string): Spec
+     list.push({ file: source.file, line: source.line, type: edge.type });
+     backlinks.set(edge.to, list);
+   }
+-  return { version: 1, builtAt: values.get('built_at')!, nodes, edges, definitions, backlinks };
++  const rawCollisions = values.get('raw_collisions');
++  return {
++    version: 1,
++    builtAt: values.get('built_at')!,
++    nodes,
++    edges,
++    definitions,
++    backlinks,
++    ...(rawCollisions && rawCollisions !== 'null'
++      ? { rawCollisions: JSON.parse(rawCollisions) as SpecGraph['rawCollisions'] }
++      : {}),
++  };
+ }
+diff --git a/tools/spec-mcp-server/tools.ts b/tools/spec-mcp-server/tools.ts
+index 9d518439..d9a27bb5 100644
+--- a/tools/spec-mcp-server/tools.ts
++++ b/tools/spec-mcp-server/tools.ts
+@@ -122,6 +122,7 @@ function ambiguousBareId(nodeId: string, candidates: string[]): ToolResult {
+     ok: false,
+     error: 'AMBIGUOUS_BARE_ID',
+     node_id: nodeId,
++    local_id: nodeId,
+     candidates,
+     hint: `Bare id "${nodeId}" is defined by ${candidates.length} specs — qualify as <slug>:${nodeId} or pass {spec: "<slug>"}.`,
+   });

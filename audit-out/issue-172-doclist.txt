@@ -1,0 +1,33 @@
+{
+  "ok": true,
+  "spec": "spec-generator-v4",
+  "docs": [
+    ".progress.json",
+    "ACCEPTANCE_CRITERIA.md",
+    "BACKLOG_DESIGN.md",
+    "CHANGELOG.md",
+    "DECISION_RECOMMENDATION.md",
+    "DESIGN.md",
+    "FILE_CHANGES.md",
+    "FIXTURES.md",
+    "FR.md",
+    "MANUAL_AGENT_E2E_WALKTHROUGH.md",
+    "MISSING_FILE_PATCHES_REVIEW.md",
+    "MISSING_FILE_REPORT.md",
+    "NFR.md",
+    "OWNERSHIP_RECOMMENDATION.md",
+    "README.md",
+    "REQUIREMENTS.md",
+    "RESEARCH.md",
+    "RESUME.md",
+    "REVIEW_NOTES.md",
+    "TASKS.md",
+    "USER_STORIES.md",
+    "USE_CASES.md",
+    "spec-generator-v4.feature",
+    "spec-generator-v4_SCHEMA.md",
+    "validation-report.md"
+  ],
+  "count": 25,
+  "attachments": []
+}

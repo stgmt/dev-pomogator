@@ -1,0 +1,367 @@
+[spec-graph] FILE_CHANGES.md contains glob path(s); implements edges skipped (first: .specs/pomogator-doctor/*.md)
+{
+  "ok": true,
+  "node": {
+    "id": "spec-generator-v4:FR-36",
+    "type": "FR",
+    "file": ".specs/spec-generator-v4/FR.md",
+    "line": 606,
+    "verified_status": "IN_PROGRESS"
+  },
+  "acceptance_criteria": [
+    {
+      "id": "spec-generator-v4:AC-36.1",
+      "file": ".specs/spec-generator-v4/ACCEPTANCE_CRITERIA.md",
+      "line": 503
+    },
+    {
+      "id": "spec-generator-v4:AC-36.2",
+      "file": ".specs/spec-generator-v4/ACCEPTANCE_CRITERIA.md",
+      "line": 509
+    },
+    {
+      "id": "spec-generator-v4:AC-36.3",
+      "file": ".specs/spec-generator-v4/ACCEPTANCE_CRITERIA.md",
+      "line": 515
+    },
+    {
+      "id": "spec-generator-v4:AC-36.4",
+      "file": ".specs/spec-generator-v4/ACCEPTANCE_CRITERIA.md",
+      "line": 521
+    },
+    {
+      "id": "spec-generator-v4:AC-36.5",
+      "file": ".specs/spec-generator-v4/ACCEPTANCE_CRITERIA.md",
+      "line": 527
+    },
+    {
+      "id": "spec-generator-v4:AC-36.6",
+      "file": ".specs/spec-generator-v4/ACCEPTANCE_CRITERIA.md",
+      "line": 533
+    }
+  ],
+  "design_decisions": [
+    {
+      "id": "spec-generator-v4:Decision-node-identity-composite-sluglocalid-anchors-stay-bare-fr-36",
+      "file": ".specs/spec-generator-v4/DESIGN.md",
+      "line": 542,
+      "parentFr": "FR-36"
+    }
+  ],
+  "user_stories": [
+    {
+      "id": "spec-generator-v4:Story-21-unified-spec-graph-via-spec-qualified-node-ids-priority-p1",
+      "file": ".specs/spec-generator-v4/USER_STORIES.md",
+      "line": 518,
+      "parentFr": "FR-36"
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "spec-generator-v4:SCEN-specgen004-90-two-specs-defining-the-same-bare-id-produce-two-distinct-nodes",
+      "file": ".specs/spec-generator-v4/spec-generator-v4.feature",
+      "line": 827,
+      "tags": [
+        "@feature36"
+      ],
+      "lastResult": "UNKNOWN",
+      "failingStep": null,
+      "code_impl": [],
+      "runtime_trace": {
+        "scenario_id": "spec-generator-v4:SCEN-specgen004-90-two-specs-defining-the-same-bare-id-produce-two-distinct-nodes",
+        "lastResult": "UNKNOWN",
+        "lastRunAt": null,
+        "stale": false,
+        "run_id": null,
+        "source": null,
+        "git_sha": null,
+        "trace_id": null,
+        "trace_file": null,
+        "test_case_started_id": null,
+        "trace_status": "not_recorded",
+        "failingStep": null
+      }
+    },
+    {
+      "id": "spec-generator-v4:SCEN-specgen004-91-an-intra-file-anchor-stays-bare-and-file-local",
+      "file": ".specs/spec-generator-v4/spec-generator-v4.feature",
+      "line": 834,
+      "tags": [
+        "@feature36"
+      ],
+      "lastResult": "UNKNOWN",
+      "failingStep": null,
+      "code_impl": [],
+      "runtime_trace": {
+        "scenario_id": "spec-generator-v4:SCEN-specgen004-91-an-intra-file-anchor-stays-bare-and-file-local",
+        "lastResult": "UNKNOWN",
+        "lastRunAt": null,
+        "stale": false,
+        "run_id": null,
+        "source": null,
+        "git_sha": null,
+        "trace_id": null,
+        "trace_file": null,
+        "test_case_started_id": null,
+        "trace_status": "not_recorded",
+        "failingStep": null
+      }
+    },
+    {
+      "id": "spec-generator-v4:SCEN-specgen004-92-get-trace-returns-scenarios-via-real-edges",
+      "file": ".specs/spec-generator-v4/spec-generator-v4.feature",
+      "line": 841,
+      "tags": [
+        "@feature36"
+      ],
+      "lastResult": "UNKNOWN",
+      "failingStep": null,
+      "code_impl": [],
+      "runtime_trace": {
+        "scenario_id": "spec-generator-v4:SCEN-specgen004-92-get-trace-returns-scenarios-via-real-edges",
+        "lastResult": "UNKNOWN",
+        "lastRunAt": null,
+        "stale": false,
+        "run_id": null,
+        "source": null,
+        "git_sha": null,
+        "trace_id": null,
+        "trace_file": null,
+        "test_case_started_id": null,
+        "trace_status": "not_recorded",
+        "failingStep": null
+      }
+    },
+    {
+      "id": "spec-generator-v4:SCEN-specgen004-93-a-colliding-bare-id-returns-the-candidate-list",
+      "file": ".specs/spec-generator-v4/spec-generator-v4.feature",
+      "line": 849,
+      "tags": [
+        "@feature36"
+      ],
+      "lastResult": "UNKNOWN",
+      "failingStep": null,
+      "code_impl": [],
+      "runtime_trace": {
+        "scenario_id": "spec-generator-v4:SCEN-specgen004-93-a-colliding-bare-id-returns-the-candidate-list",
+        "lastResult": "UNKNOWN",
+        "lastRunAt": null,
+        "stale": false,
+        "run_id": null,
+        "source": null,
+        "git_sha": null,
+        "trace_id": null,
+        "trace_file": null,
+        "test_case_started_id": null,
+        "trace_status": "not_recorded",
+        "failingStep": null
+      }
+    },
+    {
+      "id": "spec-generator-v4:SCEN-specgen004-94-a-qualified-id-resolves-the-exact-node",
+      "file": ".specs/spec-generator-v4/spec-generator-v4.feature",
+      "line": 856,
+      "tags": [
+        "@feature36"
+      ],
+      "lastResult": "UNKNOWN",
+      "failingStep": null,
+      "code_impl": [],
+      "runtime_trace": {
+        "scenario_id": "spec-generator-v4:SCEN-specgen004-94-a-qualified-id-resolves-the-exact-node",
+        "lastResult": "UNKNOWN",
+        "lastRunAt": null,
+        "stale": false,
+        "run_id": null,
+        "source": null,
+        "git_sha": null,
+        "trace_id": null,
+        "trace_file": null,
+        "test_case_started_id": null,
+        "trace_status": "not_recorded",
+        "failingStep": null
+      }
+    },
+    {
+      "id": "spec-generator-v4:SCEN-specgen004-95-the-dogfood-harness-shows-zero-collisions-after-migration",
+      "file": ".specs/spec-generator-v4/spec-generator-v4.feature",
+      "line": 862,
+      "tags": [
+        "@feature36"
+      ],
+      "lastResult": "UNKNOWN",
+      "failingStep": null,
+      "code_impl": [],
+      "runtime_trace": {
+        "scenario_id": "spec-generator-v4:SCEN-specgen004-95-the-dogfood-harness-shows-zero-collisions-after-migration",
+        "lastResult": "UNKNOWN",
+        "lastRunAt": null,
+        "stale": false,
+        "run_id": null,
+        "source": null,
+        "git_sha": null,
+        "trace_id": null,
+        "trace_file": null,
+        "test_case_started_id": null,
+        "trace_status": "not_recorded",
+        "failingStep": null
+      }
+    },
+    {
+      "id": "spec-generator-v4:SCEN-specgen004-110-parser-slices-merge-through-one-ingest-path-with-first-writer-wins-identity",
+      "file": ".specs/spec-generator-v4/spec-generator-v4.feature",
+      "line": 971,
+      "tags": [
+        "@feature36"
+      ],
+      "lastResult": "UNKNOWN",
+      "failingStep": null,
+      "code_impl": [],
+      "runtime_trace": {
+        "scenario_id": "spec-generator-v4:SCEN-specgen004-110-parser-slices-merge-through-one-ingest-path-with-first-writer-wins-identity",
+        "lastResult": "UNKNOWN",
+        "lastRunAt": null,
+        "stale": false,
+        "run_id": null,
+        "source": null,
+        "git_sha": null,
+        "trace_id": null,
+        "trace_file": null,
+        "test_case_started_id": null,
+        "trace_status": "not_recorded",
+        "failingStep": null
+      }
+    },
+    {
+      "id": "spec-generator-v4:SCEN-specgen004-362-corpushealth-catches-a-planted-duplicate-bare-id-as-a-collision",
+      "file": ".specs/spec-generator-v4/spec-generator-v4.feature",
+      "line": 2589,
+      "tags": [
+        "@feature36"
+      ],
+      "lastResult": "UNKNOWN",
+      "failingStep": null,
+      "code_impl": [],
+      "runtime_trace": {
+        "scenario_id": "spec-generator-v4:SCEN-specgen004-362-corpushealth-catches-a-planted-duplicate-bare-id-as-a-collision",
+        "lastResult": "UNKNOWN",
+        "lastRunAt": null,
+        "stale": false,
+        "run_id": null,
+        "source": null,
+        "git_sha": null,
+        "trace_id": null,
+        "trace_file": null,
+        "test_case_started_id": null,
+        "trace_status": "not_recorded",
+        "failingStep": null
+      }
+    },
+    {
+      "id": "spec-generator-v4:SCEN-specgen004-363-corpushealth-does-not-collide-two-specs-sharing-a-bare-local-id-composite-keys-fr-36a",
+      "file": ".specs/spec-generator-v4/spec-generator-v4.feature",
+      "line": 2596,
+      "tags": [
+        "@feature36"
+      ],
+      "lastResult": "UNKNOWN",
+      "failingStep": null,
+      "code_impl": [],
+      "runtime_trace": {
+        "scenario_id": "spec-generator-v4:SCEN-specgen004-363-corpushealth-does-not-collide-two-specs-sharing-a-bare-local-id-composite-keys-fr-36a",
+        "lastResult": "UNKNOWN",
+        "lastRunAt": null,
+        "stale": false,
+        "run_id": null,
+        "source": null,
+        "git_sha": null,
+        "trace_id": null,
+        "trace_file": null,
+        "test_case_started_id": null,
+        "trace_status": "not_recorded",
+        "failingStep": null
+      }
+    }
+  ],
+  "tasks": [
+    {
+      "id": "spec-generator-v4:p13-composite-key",
+      "status": "done",
+      "file": ".specs/spec-generator-v4/TASKS.md",
+      "line": 1110,
+      "own_scenario": {
+        "id": "spec-generator-v4:SCEN-specgen004-90-two-specs-defining-the-same-bare-id-produce-two-distinct-nodes",
+        "lastResult": "UNKNOWN"
+      }
+    },
+    {
+      "id": "spec-generator-v4:p13-edges-featureN",
+      "status": "done",
+      "file": ".specs/spec-generator-v4/TASKS.md",
+      "line": 1119,
+      "own_scenario": {
+        "id": "spec-generator-v4:SCEN-specgen004-92-get-trace-returns-scenarios-via-real-edges",
+        "lastResult": "UNKNOWN"
+      }
+    },
+    {
+      "id": "spec-generator-v4:p13-tool-api",
+      "status": "done",
+      "file": ".specs/spec-generator-v4/TASKS.md",
+      "line": 1126,
+      "own_scenario": {
+        "id": "spec-generator-v4:SCEN-specgen004-94-a-qualified-id-resolves-the-exact-node",
+        "lastResult": "UNKNOWN"
+      }
+    },
+    {
+      "id": "spec-generator-v4:p13-test-churn",
+      "status": "done",
+      "file": ".specs/spec-generator-v4/TASKS.md",
+      "line": 1133,
+      "own_scenario": {
+        "id": "spec-generator-v4:SCEN-specgen004-95-the-dogfood-harness-shows-zero-collisions-after-migration",
+        "lastResult": "UNKNOWN"
+      }
+    },
+    {
+      "id": "spec-generator-v4:p14-corpus-health-skill",
+      "status": "done",
+      "file": ".specs/spec-generator-v4/TASKS.md",
+      "line": 1176,
+      "own_scenario": null
+    },
+    {
+      "id": "spec-generator-v4:final-verification",
+      "status": "done",
+      "file": ".specs/spec-generator-v4/TASKS.md",
+      "line": 1195,
+      "own_scenario": null
+    }
+  ],
+  "code_impl": [],
+  "warnings": [],
+  "related_nodes": [],
+  "explanation_for_agent": "spec-generator-v4:FR-36 \"Unified spec-graph via spec-qualified node ids — specs are ONE graph, not 47 colliding ones\" — 6 AC, 9 scenarios (0 PASS, 0 FAIL), 6 tasks."
+}
+[spec-graph] FILE_CHANGES.md contains glob path(s); implements edges skipped (first: .specs/pomogator-doctor/*.md)
+{
+  "ok": false,
+  "error": "NODE_NOT_FOUND",
+  "node_id": "spec-generator-v4:FR-36a",
+  "hint": "No node with id spec-generator-v4:FR-36a. Try /tools/list_specs to enumerate."
+}
+[spec-graph] FILE_CHANGES.md contains glob path(s); implements edges skipped (first: .specs/pomogator-doctor/*.md)
+{
+  "ok": false,
+  "error": "NODE_NOT_FOUND",
+  "node_id": "spec-generator-v4:FR-36b",
+  "hint": "No node with id spec-generator-v4:FR-36b. Try /tools/list_specs to enumerate."
+}
+[spec-graph] FILE_CHANGES.md contains glob path(s); implements edges skipped (first: .specs/pomogator-doctor/*.md)
+{
+  "ok": false,
+  "error": "NODE_NOT_FOUND",
+  "node_id": "spec-generator-v4:FR-36d",
+  "hint": "No node with id spec-generator-v4:FR-36d. Try /tools/list_specs to enumerate."
+}

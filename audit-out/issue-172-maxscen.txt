@@ -1,0 +1,457 @@
+[spec-graph] FILE_CHANGES.md contains glob path(s); implements edges skipped (first: .specs/pomogator-doctor/*.md)
+{
+  "ok": true,
+  "results": [
+    {
+      "id": "spec-generator-v4:fix-ambiguous-stepdefs",
+      "type": "Task",
+      "file": ".specs/spec-generator-v4/TASKS.md",
+      "line": 862,
+      "title": "T-Cov.1 Fix ambiguous step-def collisions (SPECGEN004_05/_06/_44/_47)",
+      "tested_by": [],
+      "covered": false
+    },
+    {
+      "id": "spec-generator-v4:wire-orphan-stepdefs",
+      "type": "Task",
+      "file": ".specs/spec-generator-v4/TASKS.md",
+      "line": 886,
+      "title": "T-Cov.4 Wire step-defs for orphan-policy scenarios (SPECGEN004_29/_30)",
+      "tested_by": [],
+      "covered": false
+    },
+    {
+      "id": "spec-generator-v4:p28-readonly-door-bdd-vs-ea",
+      "type": "Task",
+      "file": ".specs/spec-generator-v4/TASKS.md",
+      "line": 1817,
+      "title": "P28-6: стейл-сценарий vs E-A переделка двери — обновить SPECGEN004_149 + FR под short-write-lock семантику (F1/FR-52f)",
+      "tested_by": [],
+      "covered": false
+    },
+    {
+      "id": "spec-generator-v4:SCEN-specgen004-01-phase-0-cucumber-js-generates-canonical-ndjson-output",
+      "type": "Scenario",
+      "file": ".specs/spec-generator-v4/spec-generator-v4.feature",
+      "line": 12,
+      "title": "SPECGEN004_01 Phase 0 — cucumber-js generates canonical NDJSON output",
+      "tested_by": [],
+      "covered": false
+    },
+    {
+      "id": "spec-generator-v4:SCEN-specgen004-02-phase-0-per-spec-ndjson-split-after-test-run",
+      "type": "Scenario",
+      "file": ".specs/spec-generator-v4/spec-generator-v4.feature",
+      "line": 22,
+      "title": "SPECGEN004_02 Phase 0 — per-spec NDJSON split after test run",
+      "tested_by": [],
+      "covered": false
+    },
+    {
+      "id": "spec-generator-v4:SCEN-specgen004-03-specgraph-cold-start-under-2-seconds-for-30-specs",
+      "type": "Scenario",
+      "file": ".specs/spec-generator-v4/spec-generator-v4.feature",
+      "line": 31,
+      "title": "SPECGEN004_03 SpecGraph cold start under 2 seconds for 30 specs",
+      "tested_by": [],
+      "covered": false
+    },
+    {
+      "id": "spec-generator-v4:SCEN-specgen004-04-incremental-reindex-under-100ms-on-single-file-change",
+      "type": "Scenario",
+      "file": ".specs/spec-generator-v4/spec-generator-v4.feature",
+      "line": 38,
+      "title": "SPECGEN004_04 Incremental reindex under 100ms on single-file change",
+      "tested_by": [],
+      "covered": false
+    },
+    {
+      "id": "spec-generator-v4:SCEN-specgen004-05-custom-md-parser-registers-dual-anchor-for-new-heading",
+      "type": "Scenario",
+      "file": ".specs/spec-generator-v4/spec-generator-v4.feature",
+      "line": 46,
+      "title": "SPECGEN004_05 Custom MD parser registers dual-anchor for new heading",
+      "tested_by": [],
+      "covered": false
+    },
+    {
+      "id": "spec-generator-v4:SCEN-specgen004-06-custom-md-parser-registers-triple-anchor-for-legacy-v3-heading",
+      "type": "Scenario",
+      "file": ".specs/spec-generator-v4/spec-generator-v4.feature",
+      "line": 55,
+      "title": "SPECGEN004_06 Custom MD parser registers triple-anchor for legacy v3 heading",
+      "tested_by": [],
+      "covered": false
+    },
+    {
+      "id": "spec-generator-v4:SCEN-specgen004-07-get-trace-returns-structured-tree-with-natural-language-explanation",
+      "type": "Scenario",
+      "file": ".specs/spec-generator-v4/spec-generator-v4.feature",
+      "line": 62,
+      "title": "SPECGEN004_07 get_trace returns structured tree with natural-language explanation",
+      "tested_by": [],
+      "covered": false
+    },
+    {
+      "id": "spec-generator-v4:SCEN-specgen004-08-get-trace-includes-failing-scenario-error-in-explanation",
+      "type": "Scenario",
+      "file": ".specs/spec-generator-v4/spec-generator-v4.feature",
+      "line": 71,
+      "title": "SPECGEN004_08 get_trace includes failing scenario error in explanation",
+      "tested_by": [],
+      "covered": false
+    },
+    {
+      "id": "spec-generator-v4:SCEN-specgen004-09-pretooluse-hook-denies-write-with-duplicate-fr-n",
+      "type": "Scenario",
+      "file": ".specs/spec-generator-v4/spec-generator-v4.feature",
+      "line": 77,
+      "title": "SPECGEN004_09 PreToolUse hook denies Write with duplicate FR-N",
+      "tested_by": [],
+      "covered": false
+    },
+    {
+      "id": "spec-generator-v4:SCEN-specgen004-10-pretooluse-hook-denies-write-with-malformed-yaml-frontmatter",
+      "type": "Scenario",
+      "file": ".specs/spec-generator-v4/spec-generator-v4.feature",
+      "line": 86,
+      "title": "SPECGEN004_10 PreToolUse hook denies Write with malformed YAML frontmatter",
+      "tested_by": [],
+      "covered": false
+    },
+    {
+      "id": "spec-generator-v4:SCEN-specgen004-11-pretooluse-hook-denies-write-with-malformed-gherkin",
+      "type": "Scenario",
+      "file": ".specs/spec-generator-v4/spec-generator-v4.feature",
+      "line": 94,
+      "title": "SPECGEN004_11 PreToolUse hook denies Write with malformed Gherkin",
+      "tested_by": [],
+      "covered": false
+    },
+    {
+      "id": "spec-generator-v4:SCEN-specgen004-12-posttooluse-hook-pushes-conformance-findings-within-3s-window",
+      "type": "Scenario",
+      "file": ".specs/spec-generator-v4/spec-generator-v4.feature",
+      "line": 102,
+      "title": "SPECGEN004_12 PostToolUse hook pushes conformance findings within 3s window",
+      "tested_by": [],
+      "covered": false
+    },
+    {
+      "id": "spec-generator-v4:SCEN-specgen004-13-posttooluse-hook-aggregates-and-deduplicates-findings-in-bulk-edit",
+      "type": "Scenario",
+      "file": ".specs/spec-generator-v4/spec-generator-v4.feature",
+      "line": 109,
+      "title": "SPECGEN004_13 PostToolUse hook aggregates and deduplicates findings in bulk edit",
+      "tested_by": [],
+      "covered": false
+    },
+    {
+      "id": "spec-generator-v4:SCEN-specgen004-14-posttooluse-push-silenced-when-frontmatter-flag-set",
+      "type": "Scenario",
+      "file": ".specs/spec-generator-v4/spec-generator-v4.feature",
+      "line": 118,
+      "title": "SPECGEN004_14 PostToolUse push silenced when frontmatter flag set",
+      "tested_by": [],
+      "covered": false
+    },
+    {
+      "id": "spec-generator-v4:SCEN-specgen004-15-marksman-native-lsp-registration-is-declared-by-the-canonical-plugin",
+      "type": "Scenario",
+      "file": ".specs/spec-generator-v4/spec-generator-v4.feature",
+      "line": 126,
+      "title": "SPECGEN004_15 Marksman native LSP registration is declared by the canonical plugin",
+      "tested_by": [],
+      "covered": false
+    },
+    {
+      "id": "spec-generator-v4:SCEN-specgen004-16-missing-marksman-disables-only-native-markdown-lsp-not-spec-domain-mcp-tools",
+      "type": "Scenario",
+      "file": ".specs/spec-generator-v4/spec-generator-v4.feature",
+      "line": 134,
+      "title": "SPECGEN004_16 Missing Marksman disables only native markdown LSP, not spec-domain MCP tools",
+      "tested_by": [],
+      "covered": false
+    },
+    {
+      "id": "spec-generator-v4:SCEN-specgen004-17-llm-semantic-drift-check-detects-fr-scenario-mismatch-opt-in-phase-3",
+      "type": "Scenario",
+      "file": ".specs/spec-generator-v4/spec-generator-v4.feature",
+      "line": 142,
+      "title": "SPECGEN004_17 LLM semantic drift check detects FR↔Scenario mismatch (opt-in Phase 3)",
+      "tested_by": [],
+      "covered": false
+    },
+    {
+      "id": "spec-generator-v4:SCEN-specgen004-18-llm-semantic-check-is-disabled-by-default",
+      "type": "Scenario",
+      "file": ".specs/spec-generator-v4/spec-generator-v4.feature",
+      "line": 152,
+      "title": "SPECGEN004_18 LLM semantic check is disabled by default",
+      "tested_by": [],
+      "covered": false
+    },
+    {
+      "id": "spec-generator-v4:SCEN-specgen004-19-multi-language-reqnroll-c-ndjson-ingested-correctly",
+      "type": "Scenario",
+      "file": ".specs/spec-generator-v4/spec-generator-v4.feature",
+      "line": 160,
+      "title": "SPECGEN004_19 Multi-language — Reqnroll C# NDJSON ingested correctly",
+      "tested_by": [],
+      "covered": false
+    },
+    {
+      "id": "spec-generator-v4:SCEN-specgen004-20-multi-language-behave-python-ndjson-ingested-correctly",
+      "type": "Scenario",
+      "file": ".specs/spec-generator-v4/spec-generator-v4.feature",
+      "line": 168,
+      "title": "SPECGEN004_20 Multi-language — behave Python NDJSON ingested correctly",
+      "tested_by": [],
+      "covered": false
+    },
+    {
+      "id": "spec-generator-v4:SCEN-specgen004-21-sqlite-cross-session-session-b-reuses-session-a-s-mcp-server-phase-4",
+      "type": "Scenario",
+      "file": ".specs/spec-generator-v4/spec-generator-v4.feature",
+      "line": 175,
+      "title": "SPECGEN004_21 SQLite cross-session: session B reuses session A's MCP server (Phase 4)",
+      "tested_by": [],
+      "covered": false
+    },
+    {
+      "id": "spec-generator-v4:SCEN-specgen004-22-sqlite-cross-session-edits-from-session-a-visible-in-session-b-immediately",
+      "type": "Scenario",
+      "file": ".specs/spec-generator-v4/spec-generator-v4.feature",
+      "line": 184,
+      "title": "SPECGEN004_22 SQLite cross-session: edits from session A visible in session B immediately",
+      "tested_by": [],
+      "covered": false
+    },
+    {
+      "id": "spec-generator-v4:SCEN-specgen004-23-sqlite-corruption-auto-fallback-to-in-memory-rebuild",
+      "type": "Scenario",
+      "file": ".specs/spec-generator-v4/spec-generator-v4.feature",
+      "line": 192,
+      "title": "SPECGEN004_23 SQLite corruption: auto-fallback to in-memory rebuild",
+      "tested_by": [],
+      "covered": false
+    },
+    {
+      "id": "spec-generator-v4:SCEN-specgen004-24-migration-helper-suggest-only-mode-prints-diff-without-modifying",
+      "type": "Scenario",
+      "file": ".specs/spec-generator-v4/spec-generator-v4.feature",
+      "line": 201,
+      "title": "SPECGEN004_24 Migration helper — suggest-only mode prints diff without modifying",
+      "tested_by": [],
+      "covered": false
+    },
+    {
+      "id": "spec-generator-v4:SCEN-specgen004-25-migration-helper-interactive-mode-with-30s-default-skip-timeout",
+      "type": "Scenario",
+      "file": ".specs/spec-generator-v4/spec-generator-v4.feature",
+      "line": 209,
+      "title": "SPECGEN004_25 Migration helper — interactive mode with 30s default-skip timeout",
+      "tested_by": [],
+      "covered": false
+    },
+    {
+      "id": "spec-generator-v4:SCEN-specgen004-176-migration-helper-predict-fr-n-tags-for-untagged-scenarios",
+      "type": "Scenario",
+      "file": ".specs/spec-generator-v4/spec-generator-v4.feature",
+      "line": 219,
+      "title": "SPECGEN004_176 Migration helper — predict @FR-N tags for untagged scenarios",
+      "tested_by": [],
+      "covered": false
+    },
+    {
+      "id": "spec-generator-v4:SCEN-specgen004-26-architecture-research-workflow-skill-produces-7-stage-outputs-phase-6",
+      "type": "Scenario",
+      "file": ".specs/spec-generator-v4/spec-generator-v4.feature",
+      "line": 228,
+      "title": "SPECGEN004_26 architecture-research-workflow skill produces 7 stage outputs (Phase 6)",
+      "tested_by": [],
+      "covered": false
+    },
+    {
+      "id": "spec-generator-v4:SCEN-specgen004-27-architecture-research-workflow-skill-suggests-rewind-on-new-constraint",
+      "type": "Scenario",
+      "file": ".specs/spec-generator-v4/spec-generator-v4.feature",
+      "line": 236,
+      "title": "SPECGEN004_27 architecture-research-workflow skill suggests rewind on new constraint",
+      "tested_by": [],
+      "covered": false
+    },
+    {
+      "id": "spec-generator-v4:SCEN-specgen004-28-create-spec-uses-regular-research-workflow-for-small-feature-complexity-heuristic",
+      "type": "Scenario",
+      "file": ".specs/spec-generator-v4/spec-generator-v4.feature",
+      "line": 244,
+      "title": "SPECGEN004_28 create-spec uses regular research-workflow for small feature (complexity heuristic)",
+      "tested_by": [],
+      "covered": false
+    },
+    {
+      "id": "spec-generator-v4:SCEN-specgen004-531-shared-research-base-is-the-single-discipline-source-for-both-research-skills",
+      "type": "Scenario",
+      "file": ".specs/spec-generator-v4/spec-generator-v4.feature",
+      "line": 252,
+      "title": "SPECGEN004_531 shared research base is the single discipline source for both research skills",
+      "tested_by": [],
+      "covered": false
+    },
+    {
+      "id": "spec-generator-v4:SCEN-specgen004-532-create-spec-routes-architecture-research-and-honors-research-done-recursion-guard",
+      "type": "Scenario",
+      "file": ".specs/spec-generator-v4/spec-generator-v4.feature",
+      "line": 260,
+      "title": "SPECGEN004_532 create-spec routes architecture research and honors research-done recursion guard",
+      "tested_by": [],
+      "covered": false
+    },
+    {
+      "id": "spec-generator-v4:SCEN-specgen004-29-orphan-scenario-tag-returns-warn-severity-finding-by-default",
+      "type": "Scenario",
+      "file": ".specs/spec-generator-v4/spec-generator-v4.feature",
+      "line": 268,
+      "title": "SPECGEN004_29 Orphan scenario tag returns warn-severity finding by default",
+      "tested_by": [],
+      "covered": false
+    },
+    {
+      "id": "spec-generator-v4:SCEN-specgen004-30-orphan-policy-escalation-to-block-via-config",
+      "type": "Scenario",
+      "file": ".specs/spec-generator-v4/spec-generator-v4.feature",
+      "line": 277,
+      "title": "SPECGEN004_30 Orphan policy escalation to block via config",
+      "tested_by": [],
+      "covered": false
+    },
+    {
+      "id": "spec-generator-v4:SCEN-specgen004-31-devcontainer-mcp-returns-relative-paths-in-tool-responses",
+      "type": "Scenario",
+      "file": ".specs/spec-generator-v4/spec-generator-v4.feature",
+      "line": 286,
+      "title": "SPECGEN004_31 Devcontainer — MCP returns relative paths in tool responses",
+      "tested_by": [],
+      "covered": false
+    },
+    {
+      "id": "spec-generator-v4:SCEN-specgen004-32-devcontainer-chokidar-auto-polling-fallback-when-events-unreliable",
+      "type": "Scenario",
+      "file": ".specs/spec-generator-v4/spec-generator-v4.feature",
+      "line": 293,
+      "title": "SPECGEN004_32 Devcontainer — chokidar auto-polling fallback when events unreliable",
+      "tested_by": [],
+      "covered": false
+    },
+    {
+      "id": "spec-generator-v4:SCEN-specgen004-33-multi-env-second-mcp-start-in-different-env-is-denied",
+      "type": "Scenario",
+      "file": ".specs/spec-generator-v4/spec-generator-v4.feature",
+      "line": 302,
+      "title": "SPECGEN004_33 Multi-env — second MCP start in different env is denied",
+      "tested_by": [],
+      "covered": false
+    },
+    {
+      "id": "spec-generator-v4:SCEN-specgen004-34-side-channel-log-appends-jsonl-entry-on-each-finding-phase-4",
+      "type": "Scenario",
+      "file": ".specs/spec-generator-v4/spec-generator-v4.feature",
+      "line": 310,
+      "title": "SPECGEN004_34 Side-channel log appends JSONL entry on each finding (Phase 4)",
+      "tested_by": [],
+      "covered": false
+    },
+    {
+      "id": "spec-generator-v4:SCEN-specgen004-35-side-channel-log-rotates-when-size-exceeds-10mb",
+      "type": "Scenario",
+      "file": ".specs/spec-generator-v4/spec-generator-v4.feature",
+      "line": 318,
+      "title": "SPECGEN004_35 Side-channel log rotates when size exceeds 10MB",
+      "tested_by": [],
+      "covered": false
+    },
+    {
+      "id": "spec-generator-v4:SCEN-specgen004-36-codespaces-mcp-server-auto-starts-via-poststartcommand",
+      "type": "Scenario",
+      "file": ".specs/spec-generator-v4/spec-generator-v4.feature",
+      "line": 326,
+      "title": "SPECGEN004_36 Codespaces — MCP server auto-starts via postStartCommand",
+      "tested_by": [],
+      "covered": false
+    },
+    {
+      "id": "spec-generator-v4:SCEN-specgen004-37-codespaces-mcp-server-resumes-after-hibernation-within-2s",
+      "type": "Scenario",
+      "file": ".specs/spec-generator-v4/spec-generator-v4.feature",
+      "line": 334,
+      "title": "SPECGEN004_37 Codespaces — MCP server resumes after hibernation within 2s",
+      "tested_by": [],
+      "covered": false
+    },
+    {
+      "id": "spec-generator-v4:SCEN-specgen004-38-cross-spec-reconcile-light-mode-detects-missing-file",
+      "type": "Scenario",
+      "file": ".specs/spec-generator-v4/spec-generator-v4.feature",
+      "line": 342,
+      "title": "SPECGEN004_38 Cross-spec reconcile light mode detects missing file",
+      "tested_by": [],
+      "covered": false
+    },
+    {
+      "id": "spec-generator-v4:SCEN-specgen004-39-cross-spec-reconcile-full-mode-detects-runtime-identifier-drift",
+      "type": "Scenario",
+      "file": ".specs/spec-generator-v4/spec-generator-v4.feature",
+      "line": 351,
+      "title": "SPECGEN004_39 Cross-spec reconcile full mode detects runtime identifier drift",
+      "tested_by": [],
+      "covered": false
+    },
+    {
+      "id": "spec-generator-v4:SCEN-specgen004-40-critical-hard-conflict-subset-blocks-stop-via-caps-prompt",
+      "type": "Scenario",
+      "file": ".specs/spec-generator-v4/spec-generator-v4.feature",
+      "line": 359,
+      "title": "SPECGEN004_40 CRITICAL hard-conflict subset blocks STOP via CAPS prompt",
+      "tested_by": [],
+      "covered": false
+    },
+    {
+      "id": "spec-generator-v4:SCEN-specgen004-41-acknowledge-override-writes-jsonl-audit-entry",
+      "type": "Scenario",
+      "file": ".specs/spec-generator-v4/spec-generator-v4.feature",
+      "line": 367,
+      "title": "SPECGEN004_41 Acknowledge & override writes JSONL audit entry",
+      "tested_by": [],
+      "covered": false
+    },
+    {
+      "id": "spec-generator-v4:SCEN-specgen004-42-dry-run-mode-skips-file-writes",
+      "type": "Scenario",
+      "file": ".specs/spec-generator-v4/spec-generator-v4.feature",
+      "line": 374,
+      "title": "SPECGEN004_42 Dry-run mode skips file writes",
+      "tested_by": [],
+      "covered": false
+    },
+    {
+      "id": "spec-generator-v4:SCEN-specgen004-43-sarif-secondary-output-written-when-sarif-flag-passed",
+      "type": "Scenario",
+      "file": ".specs/spec-generator-v4/spec-generator-v4.feature",
+      "line": 381,
+      "title": "SPECGEN004_43 SARIF secondary output written when --sarif flag passed",
+      "tested_by": [],
+      "covered": false
+    },
+    {
+      "id": "spec-generator-v4:SCEN-specgen004-394-consistency-report-carries-a-summary-roll-up-block",
+      "type": "Scenario",
+      "file": ".specs/spec-generator-v4/spec-generator-v4.feature",
+      "line": 388,
+      "title": "SPECGEN004_394 consistency-report carries a summary roll-up block",
+      "tested_by": [],
+      "covered": false
+    }
+  ],
+  "count": 50
+}

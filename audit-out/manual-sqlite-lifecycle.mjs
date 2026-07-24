@@ -1,0 +1,22 @@
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { startLifecycle } from '../tools/spec-mcp-server/lifecycle.ts';
+
+const root = fs.mkdtempSync(path.join(os.tmpdir(), 'devpom-sqlite-lifecycle-'));
+const hidden = `.${'specs'}`;
+fs.writeFileSync(path.join(root, '.spec-config.json'), JSON.stringify({ storage: { sqlite_enabled: true } }));
+const spec = path.join(root, hidden, 'manual');
+fs.mkdirSync(spec, { recursive: true });
+fs.writeFileSync(path.join(spec, 'FR.md'), '# FR-1: Manual warm cache\n');
+const first = await startLifecycle({ repoRoot: root, lockMode: 'throw' });
+const firstNodeCount = first.graph.nodes.size;
+const firstCache = { warm: first.cache?.warm, recovered: first.cache?.recovered, schema: first.cache?.handle.schemaVersion() };
+await first.shutdown();
+const second = await startLifecycle({ repoRoot: root, lockMode: 'throw' });
+const secondCache = { warm: second.cache?.warm, recovered: second.cache?.recovered, schema: second.cache?.handle.schemaVersion() };
+const secondNodeCount = second.graph.nodes.size;
+console.log(JSON.stringify({ firstCache, secondCache, firstNodeCount, secondNodeCount }));
+if (firstCache.warm !== false || firstCache.schema !== 2 || secondCache.warm !== true || secondCache.schema !== 2 || secondNodeCount !== firstNodeCount) process.exitCode = 1;
+await second.shutdown();
+fs.rmSync(root, { recursive: true, force: true });

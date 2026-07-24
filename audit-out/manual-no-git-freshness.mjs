@@ -1,0 +1,21 @@
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { buildGraphFromCwd } from '../tools/spec-graph/builder.ts';
+
+const root = fs.mkdtempSync(path.join(os.tmpdir(), 'devpom-manual-no-git-'));
+const hidden = `.${'specs'}`;
+const spec = path.join(root, hidden, 'manual');
+fs.mkdirSync(spec, { recursive: true });
+fs.writeFileSync(path.join(spec, 'FR.md'), '# FR-1: Manual no-git freshness\n');
+fs.writeFileSync(path.join(spec, 'manual.feature'), 'Feature: manual\n  @FR-1\n  Scenario: MANUAL001_01 no git evidence\n    Given evidence exists\n');
+fs.mkdirSync(path.join(root, '.dev-pomogator'), { recursive: true });
+fs.writeFileSync(path.join(root, '.dev-pomogator', '.scenario-results.ndjson'), JSON.stringify({ scenario_id:'MANUAL001_01', result:'PASSED', time:new Date(Date.now()+60_000).toISOString(), run_id:'manual-run', source:'docker-bdd:full', trace_id:'manual', trace_file:'manual.ndjson', test_case_started_id:'manual', uri:`${hidden}/manual/manual.feature`, line:3, scenario_name:'MANUAL001_01 no git evidence', tags:['@FR-1'], git_sha:null, failing_step:null })+'\n');
+const previousSha = process.env.DEV_POMOGATOR_GIT_SHA;
+delete process.env.DEV_POMOGATOR_GIT_SHA;
+const graph = buildGraphFromCwd(root);
+if (previousSha !== undefined) process.env.DEV_POMOGATOR_GIT_SHA = previousSha;
+const scenario = [...graph.nodes.values()].find((node) => node.type === 'Scenario');
+console.log(JSON.stringify({ rootHasGit: fs.existsSync(path.join(root,'.git')), currentGitSha: graph.currentGitSha, lastResult: scenario?.lastResult, resultStale: scenario?.resultStale }));
+if (graph.currentGitSha !== undefined || scenario?.lastResult !== 'PASSED' || scenario?.resultStale !== false) process.exitCode = 1;
+fs.rmSync(root, { recursive: true, force: true });

@@ -1,0 +1,223 @@
+diff --git a/tests/step_definitions/feature36_composite_graph.ts b/tests/step_definitions/feature36_composite_graph.ts
+@@ -329,3 +329,92 @@ Then('the FR-node count is about 470 not 47', function (this: F36ProbeWorld) {
++
++// ── SPECGEN004_577..582 — #172 first-class namespace/localId identity ──────
++
++type IdentityCollisionKind = 'EXACT' | 'CASE_NORMALIZED' | 'UNICODE_NORMALIZED' | null;
++
++interface IdentityContractModule {
++  formatIdentity(identity: { namespace?: string; localId: string }): string;
++  parseIdentity(canonicalId: string): { namespace?: string; localId: string };
++  classifyIdentityCollision(first: string, second: string): IdentityCollisionKind;
++}
++
++interface F36IdentityWorld extends F36ResolveWorld, F36ProbeWorld {
++  identityModule?: IdentityContractModule;
++  canonicalIdentity?: string;
++  parsedIdentity?: { namespace?: string; localId: string };
++  collisionKind?: IdentityCollisionKind;
++}
++
++async function loadIdentityContract(): Promise<IdentityContractModule> {
++  return await import('../../tools/spec-graph/identity.ts') as IdentityContractModule;
++}
++
++Given('a hierarchical namespace identity with an exact local ID', async function (this: F36IdentityWorld) {
++  this.identityModule = await loadIdentityContract();
++});
++
++When('the canonical identity is formatted and parsed', function (this: F36IdentityWorld) {
++  this.canonicalIdentity = this.identityModule!.formatIdentity({ namespace: 'team/a', localId: 'FR-3' });
++  this.parsedIdentity = this.identityModule!.parseIdentity(this.canonicalIdentity);
++});
++
++Then('the exact namespace local ID and canonical ID are preserved', function (this: F36IdentityWorld) {
++  assert.equal(this.canonicalIdentity, 'team/a:FR-3');
++  assert.deepEqual(this.parsedIdentity, { namespace: 'team/a', localId: 'FR-3' });
++});
++
++Given('two namespaces that each define local ID FR-3', function (this: F36IdentityWorld) {
++  for (const namespace of ['team-a', 'team-b']) {
++    const dir = path.join(this.tempDir, '.specs', namespace);
++    fs.mkdirSync(dir, { recursive: true });
++    fs.writeFileSync(path.join(dir, 'FR.md'), `## FR-3: ${namespace} requirement\n\nBody.\n`);
++  }
++  this.graph = buildGraph({ repoRoot: this.tempDir, skipNdjson: true });
++});
++
++When('get_node receives the bare local ID FR-3', async function (this: F36IdentityWorld) {
++  const tools = buildToolRegistry(() => this.graph!);
++  const getNode = tools.find((tool) => tool.name === 'get_node')!;
++  const result = await getNode.handler({ node_id: 'FR-3' }) as { content: Array<{ text: string }> };
++  this.toolResult = JSON.parse(result.content[0].text);
++});
++
++Then('the ambiguity response includes local ID and sorted canonical candidates', function (this: F36IdentityWorld) {
++  assert.equal(this.toolResult!.error, 'AMBIGUOUS_BARE_ID');
++  assert.equal((this.toolResult as { local_id?: string }).local_id, 'FR-3');
++  assert.deepEqual(this.toolResult!.candidates, ['team-a:FR-3', 'team-b:FR-3']);
++});
++
++Given('two canonical IDs in one namespace that differ only by case', async function (this: F36IdentityWorld) {
++  this.identityModule = await loadIdentityContract();
++  this.collisionKind = this.identityModule.classifyIdentityCollision('team-a:FR-3', 'team-a:fr-3');
++});
++
++Then('the identity contract reports a CASE_NORMALIZED collision', function (this: F36IdentityWorld) {
++  assert.equal(this.collisionKind, 'CASE_NORMALIZED');
++});
++
++Given('two canonical IDs in one namespace that are Unicode NFKC equivalents', async function (this: F36IdentityWorld) {
++  this.identityModule = await loadIdentityContract();
++  this.collisionKind = this.identityModule.classifyIdentityCollision('team-a:FR-3', 'team-a:ＦＲ-３');
++});
++
++Then('the identity contract reports a UNICODE_NORMALIZED collision', function (this: F36IdentityWorld) {
++  assert.equal(this.collisionKind, 'UNICODE_NORMALIZED');
++});
++
++Given('case-equivalent local IDs in different canonical namespaces', async function (this: F36IdentityWorld) {
++  this.identityModule = await loadIdentityContract();
++  this.collisionKind = this.identityModule.classifyIdentityCollision('team-a:FR-3', 'team-b:fr-3');
++});
++
++Then('the identity contract reports no cross-namespace collision', function (this: F36IdentityWorld) {
++  assert.equal(this.collisionKind, null);
++});
++
++Then('the collision probe reports zero normalization collisions', function (this: F36IdentityWorld) {
++  assert.equal(this.probeStatus, 0, `probe failed: ${this.probeStdout?.slice(-500)}`);
++  assert.match(this.probeStdout!, /normalization collisions: 0/);
++});
+diff --git a/tools/spec-graph/builder.ts b/tools/spec-graph/builder.ts
+@@ -34,7 +34,9 @@ import type {
++  IdentityCollision,
++import { classifyIdentityCollision, identityCollisionKey, localIdOf } from './identity.ts';
+@@ -150,15 +152,34 @@ export function buildGraph(opts: BuildOptions): SpecGraph {
++  const normalizationCollisionList: IdentityCollision[] = [];
++  const identitiesByKey = new Map<string, Node>();
++      return;
++    const normalizedKey = identityCollisionKey({ namespace: node.spec, localId: localIdOf(node.id) });
++    const normalizedExisting = identitiesByKey.get(normalizedKey);
++    const kind = normalizedExisting
++      ? classifyIdentityCollision(normalizedExisting.id, node.id)
++      : null;
++    if (normalizedExisting && kind && kind !== 'EXACT') {
++      normalizationCollisionList.push({
++        kind,
++        normalizedKey,
++        firstId: normalizedExisting.id,
++        secondId: node.id,
++        firstFile: normalizedExisting.file,
++        secondFile: node.file,
++      });
++    } else if (!normalizedExisting) {
++      identitiesByKey.set(normalizedKey, node);
++    }
++    nodes.set(node.id, node);
+@@ -360,7 +381,7 @@ export function buildGraph(opts: BuildOptions): SpecGraph {
++      const localId = localIdOf(n.id);
+@@ -418,6 +439,7 @@ export function buildGraph(opts: BuildOptions): SpecGraph {
++      normalizationCollisions: normalizationCollisionList,
+diff --git a/tools/spec-graph/collision-probe.ts b/tools/spec-graph/collision-probe.ts
+@@ -11,6 +11,8 @@ import path from 'node:path';
++import { classifyIdentityCollision, identityCollisionKey, localIdOf } from './identity.ts';
++import type { IdentityCollision } from './types.ts';
+@@ -38,19 +40,40 @@ export interface CollisionScan {
++  normalizationCollisions: IdentityCollision[];
++  const normalizedSeen = new Map<string, { id: string; file: string }>();
++  const normalizationCollisions: IdentityCollision[] = [];
++  const collide = (slice: { nodes: Array<{ id: string; spec?: string; file: string }> }): void => {
++      if (first !== undefined) {
++        collisions.push({ id: n.id, firstFile: first, secondFile: n.file });
++      } else {
++        seen.set(n.id, n.file);
++      }
++      const normalizedKey = identityCollisionKey({ namespace: n.spec, localId: localIdOf(n.id) });
++      const normalizedFirst = normalizedSeen.get(normalizedKey);
++      const kind = normalizedFirst ? classifyIdentityCollision(normalizedFirst.id, n.id) : null;
++      if (normalizedFirst && kind && kind !== 'EXACT') {
++        normalizationCollisions.push({
++          kind,
++          normalizedKey,
++          firstId: normalizedFirst.id,
++          secondId: n.id,
++          firstFile: normalizedFirst.file,
++          secondFile: n.file,
++        });
++      } else if (!normalizedFirst) {
++        normalizedSeen.set(normalizedKey, { id: n.id, file: n.file });
++      }
+@@ -71,7 +94,7 @@ export function rawCollisionScan(root: string): CollisionScan {
++  return { totalRawNodes: total, uniqueIds: seen.size, collisions, normalizationCollisions };
+@@ -81,8 +104,11 @@ if (isDirectRun) {
++  for (const c of scan.normalizationCollisions.slice(0, 10)) {
++    console.log('NORM-COLLISION:', c.kind, c.firstId, c.firstFile, '<->', c.secondId, c.secondFile);
++  }
++    `raw pre-map nodes: ${scan.totalRawNodes} | unique: ${scan.uniqueIds} | collisions: ${scan.collisions.length} | normalization collisions: ${scan.normalizationCollisions.length}`,
++  process.exit(scan.collisions.length === 0 && scan.normalizationCollisions.length === 0 ? 0 : 1);
+diff --git a/tools/spec-graph/conformance.ts b/tools/spec-graph/conformance.ts
+@@ -30,6 +30,7 @@
++import { localIdOf } from './identity.ts';
+@@ -38,6 +39,7 @@ export type FindingCode =
++  | 'ID_NORMALIZATION_COLLISION'
+@@ -75,15 +77,6 @@ export interface Finding {
+@@ -568,6 +561,20 @@ export function checkConformance(
++  // 4b) ID_NORMALIZATION_COLLISION — unlike exact duplicates, both nodes remain
++  // present in the map, so the pre-map evidence can be surfaced here as a
++  // blocking finding instead of silently accepting filesystem-unsafe identity.
++  for (const collision of graph.rawCollisions?.normalizationCollisions ?? []) {
++    findings.push({
++      code: 'ID_NORMALIZATION_COLLISION',
++      severity: 'error',
++      location: { file: collision.secondFile, line: 1 },
++      nodeId: collision.secondId,
++      relatedId: collision.firstId,
++      message: `${collision.kind} identity collision: ${collision.firstId} (${collision.firstFile}) conflicts with ${collision.secondId} (${collision.secondFile}) after normalization key ${collision.normalizedKey}.`,
++    });
++  }
++
+diff --git a/tools/spec-graph/corpus-health.ts b/tools/spec-graph/corpus-health.ts
+@@ -87,6 +87,7 @@ export function corpusHealth(corpusRoot: string): CorpusHealthReport {
++    normalizationCollisions: [],
+@@ -140,7 +141,7 @@ export function corpusHealth(corpusRoot: string): CorpusHealthReport {
++  const hardRed = collisions.collisions.length > 0 || (collisions.normalizationCollisions?.length ?? 0) > 0 || stale > 0;
+@@ -185,6 +186,10 @@ export function renderCorpusHealth(r: CorpusHealthReport): string {
++  lines.push(`   normalization collisions: ${r.collisions.normalizationCollisions?.length ?? 0}`);
++  for (const c of (r.collisions.normalizationCollisions ?? []).slice(0, 10)) {
++    lines.push(`   NORM-COLLISION ${c.kind} ${c.firstId} <-> ${c.secondId}: ${c.firstFile} <-> ${c.secondFile}`);
++  }
+diff --git a/tools/spec-graph/coverage.ts b/tools/spec-graph/coverage.ts
+@@ -15,6 +15,8 @@
++import { formatIdentity } from './identity.ts';
++
+@@ -104,7 +106,7 @@ export function qualifySlice(
++    node.id = formatIdentity({ namespace: slug, localId: node.id });
+diff --git a/tools/spec-graph/readiness-inventory.ts b/tools/spec-graph/readiness-inventory.ts
+@@ -29,6 +29,7 @@
++import { localIdOf } from './identity.ts';
+@@ -359,7 +360,7 @@ export function buildReadinessInventory(graph: SpecGraph, opts: { spec: string }
++    const local = localIdOf(collision.id);
+@@ -385,12 +386,11 @@ export function buildReadinessInventory(graph: SpecGraph, opts: { spec: string }
++    arr.push(localIdOf(ac.id));
+@@ -398,7 +398,7 @@ export function buildReadinessInventory(graph: SpecGraph, opts: { spec: string }
++      id: localIdOf(fr.id),
+@@ -416,9 +416,9 @@ export function buildReadinessInventory(graph: SpecGraph, opts: { spec: string }
++      id: localIdOf(ac.id),
++      parent_fr: ac.parentFr ? localIdOf(ac.parentFr) : '',
+diff --git a/tools/spec-graph/types.ts b/tools/spec-graph/types.ts
+@@ -282,6 +282,15 @@ export interface BacklinkEntry {
++export interface IdentityCollision {
++  kind: 'CASE_NORMALIZED' | 'UNICODE_NORMALIZED';
++  normalizedKey: string;
++  firstId: string;
++  secondId: string;
++  firstFile: string;
++  secondFile: string;
++}
++
+@@ -307,6 +316,7 @@ export interface SpecGraph {
++    normalizationCollisions?: IdentityCollision[];
+diff --git a/tools/spec-mcp-server/tools.ts b/tools/spec-mcp-server/tools.ts
+@@ -122,6 +122,7 @@ function ambiguousBareId(nodeId: string, candidates: string[]): ToolResult {
++    local_id: nodeId,

@@ -1,0 +1,2 @@
+[spec-graph] FILE_CHANGES.md contains glob path(s); implements edges skipped (first: .specs/pomogator-doctor/*.md)
+[dev-pomogator-specs] presence-reader door: presence lock owned by pid 45388 (env host); E-A — writes still proceed, serialized per-mutation by the short write-lock + CAS
