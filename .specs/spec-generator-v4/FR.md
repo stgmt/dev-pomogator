@@ -1169,3 +1169,10 @@ The spec generator SHALL classify externally observable acceptance claims and SH
 **Связанные AC:** [AC-65.1](ACCEPTANCE_CRITERIA.md#ac-651), [AC-65.2](ACCEPTANCE_CRITERIA.md#ac-652), [AC-65.3](ACCEPTANCE_CRITERIA.md#ac-653), [AC-65.4](ACCEPTANCE_CRITERIA.md#ac-654)
 **Use Case:** [UC-30](USE_CASES.md#uc-30)
 **User Story:** US-44
+
+## FR-66
+
+**Typed requirement metadata and delivery demands:** FR/NFR SHALL support an explicit local metadata block with `schemaVersion`, typed verification method, safety class, rationale, risks and forward-compatible `_unknown` fields. Delivery demands SHALL use the closed registry `implementation|integration-test|documentation|migration|operational-proof`, obligations `required|optional|not-applicable`, and evidence states `PRESENT|MISSING|NOT_APPLICABLE|WAIVED`; justified exceptions SHALL carry rationale and WAIVED SHALL carry actor/audit evidence. Declared required demands SHALL roll up by non-empty ALL. Existing task/test `FrCensusVerdict` SHALL remain separate from `delivery.overall=NOT_DECLARED|DELIVERED|INCOMPLETE`; smart overall SHALL fail closed on incomplete required delivery. Forwarded needs SHALL use deterministic precedence/dedup/conflict findings. Parser, MCP author/query, migration dry-run/apply, conformance, verdict and SQLite SHALL share one validator/evaluator. Until result adapters arrive, integration-test PRESENT SHALL require current non-stale `PASSED` canonical BDD evidence.
+
+**Связанные AC:** [AC-66.1](ACCEPTANCE_CRITERIA.md#ac-661), [AC-66.2](ACCEPTANCE_CRITERIA.md#ac-662), [AC-66.3](ACCEPTANCE_CRITERIA.md#ac-663), [AC-66.4](ACCEPTANCE_CRITERIA.md#ac-664), [AC-66.5](ACCEPTANCE_CRITERIA.md#ac-665), [AC-66.6](ACCEPTANCE_CRITERIA.md#ac-666)
+**User Story:** [User Story 45](USER_STORIES.md#user-story-45-typed-delivery-truth-priority-p1)

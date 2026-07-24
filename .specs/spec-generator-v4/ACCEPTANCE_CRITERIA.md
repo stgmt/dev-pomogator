@@ -1021,3 +1021,40 @@ WHEN two local IDs in one namespace differ only by case or Unicode NFKC form THE
 
 WHEN issue #172 is verified THEN Docker BDD SHALL drive the real identity, builder, collision probe, and MCP registry; existing FR-36 scenarios SHALL remain green, each new scenario SHALL have `lastResult===PASSED`, and no new non-BDD test file SHALL be introduced.
 
+
+## AC-66.1
+
+**Требование:** [FR-66](FR.md#fr-66)
+
+WHEN an FR-local metadata block is parsed THEN typed fields SHALL be exposed exactly and unknown metadata fields SHALL round-trip only through `_unknown`.
+
+## AC-66.2
+
+**Требование:** [FR-66](FR.md#fr-66)
+
+WHEN metadata uses an invalid enum, risk shape, unknown demand type, unjustified NOT_APPLICABLE or unaudited WAIVED THEN parser/MCP/conformance SHALL return the same actionable validation error.
+
+## AC-66.3
+
+**Требование:** [FR-66](FR.md#fr-66)
+
+WHEN tasks and scenarios make `taskVerdict=IMPLEMENTED` but one required demand is MISSING THEN delivery SHALL be INCOMPLETE, smart overall SHALL be RED, and taskVerdict SHALL remain IMPLEMENTED.
+
+## AC-66.4
+
+**Требование:** [FR-66](FR.md#fr-66)
+
+WHEN every required demand is PRESENT or validly excepted THEN delivery SHALL be DELIVERED using non-empty ALL; optional MISSING SHALL NOT block.
+
+## AC-66.5
+
+**Требование:** [FR-66](FR.md#fr-66)
+
+WHEN demands are forwarded through requirement links THEN required SHALL dominate optional, duplicate paths SHALL deduplicate, and contradictory required/not-applicable declarations SHALL emit FR_DEMAND_CONFLICT.
+
+## AC-66.6
+
+**Требование:** [FR-66](FR.md#fr-66)
+
+WHEN metadata is authored, queried, migrated or SQLite-restored THEN MCP author/query, migration report, cold graph and warm graph SHALL preserve the same schema version, typed fields, `_unknown`, demands and delivery state.
+

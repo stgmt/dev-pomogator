@@ -1028,3 +1028,23 @@ Then the first document is restored byte-for-byte and the result reports `WRITE_
 Given a batch edit replaces a non-empty spec document with empty content
 When the transaction validator evaluates the fully staged graph
 Then it refuses the destructive replacement before any document is written
+
+### User Story 45: Typed delivery truth (Priority: P1)
+
+As a requirement owner, I want typed verification, safety, risk and delivery metadata, so that a green task/test status cannot hide a missing required artifact.
+
+**Требование:** [FR-66](FR.md#fr-66)
+
+**Why:** Free-form claims cannot deterministically prove that implementation, integration tests, documentation, migration and operational proof were all delivered.
+
+**Independent Test:** Docker BDD `@feature66` builds the real graph, keeps task verdict separate from delivery overall, and proves missing required artifacts make smart overall red.
+
+**Acceptance Scenarios:**
+
+Given tasks are done and canonical scenarios pass but documentation is required and missing
+When the requirement census and smart verdict evaluate the graph
+Then task verdict remains implemented and delivery is incomplete
+
+Given all required delivery artifacts are present or validly excepted
+When the same evaluator runs
+Then delivery is delivered by non-empty ALL

@@ -472,3 +472,19 @@ This block enumerates the spec-doc edits applied as part of the v3→v4 transiti
 
 
 - TASKS.md: add backlog task `P13-5` (FR-36)
+
+## Phase 40 — typed requirement metadata and delivery demands (#171, #169)
+
+| Path | Change | Requirement |
+|---|---|---|
+| `tools/spec-graph/metadata-schema.ts` | Typed schema, validator, parser and renderer. | [FR-66](FR.md#fr-66), [AC-66.1](ACCEPTANCE_CRITERIA.md#ac-661), [AC-66.2](ACCEPTANCE_CRITERIA.md#ac-662) |
+| `tools/spec-graph/delivery-demands.ts` | Closed registry, evidence resolution, forwarding and non-empty ALL. | [AC-66.3](ACCEPTANCE_CRITERIA.md#ac-663), [AC-66.4](ACCEPTANCE_CRITERIA.md#ac-664), [AC-66.5](ACCEPTANCE_CRITERIA.md#ac-665) |
+| `tools/spec-graph/migrate-requirement-metadata.ts` | Schema-version dry-run/apply report. | [AC-66.6](ACCEPTANCE_CRITERIA.md#ac-666) |
+| `tools/spec-graph/types.ts`, `parsers/md.ts`, `fr-census.ts`, `conformance.ts` | Attach declarations and additive delivery truth to the existing graph. | [FR-66](FR.md#fr-66) |
+| `tools/spec-mcp-server/tools.ts`, `server.bundle.mjs` | Validated authoring, policy query and distributed runtime. | [AC-66.6](ACCEPTANCE_CRITERIA.md#ac-666) |
+| `tests/step_definitions/feature37_fr_census.ts`, `.specs/spec-generator-v4/spec-generator-v4.feature` | Real-code Docker BDD RED/GREEN. | [FR-66](FR.md#fr-66) |
+
+
+- TASKS.md: add Phase 40 — Typed requirement metadata and delivery demands
+
+- TASKS.md: add backlog task `P40-1` (FR-66)

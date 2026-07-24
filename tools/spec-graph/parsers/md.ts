@@ -45,6 +45,7 @@ import type {
   Edge,
 } from '../types.ts';
 import { specOf, qualifySlice } from '../coverage.ts';
+import { parseRequirementMetadataYaml } from '../metadata-schema.ts';
 
 // Module-level pre-compiled regexes (hot path — recompilation per call would
 // allocate ~775×4 regex instances per cold-start). See
@@ -188,6 +189,29 @@ function decisionRequirementAfter(lines: string[], i: number): string {
  * @param relativePath repository-relative POSIX path to record on each node
  * @returns parser slice ready for the builder to merge
  */
+function sectionEnd(lines: string[], headingIndex: number, level: number): number {
+  for (let i = headingIndex + 1; i < lines.length; i++) {
+    const match = lines[i].match(HEADING_LINE_RE);
+    if (match && match[1].length <= level) return i;
+  }
+  return lines.length;
+}
+
+function requirementFields(lines: string[], headingIndex: number, level: number): Pick<FrNode, 'body' | 'metadata' | 'metadataIssues'> {
+  const end = sectionEnd(lines, headingIndex, level);
+  const bodyLines = lines.slice(headingIndex + 1, end);
+  const marker = bodyLines.findIndex((line) => /^```yaml\s+metadata\s*$/.test(line.trim()));
+  if (marker < 0) return { body: bodyLines.join('\n').trim() };
+  const close = bodyLines.findIndex((line, index) => index > marker && line.trim() === '```');
+  if (close < 0) return { body: bodyLines.join('\n').trim(), metadataIssues: [{ code: 'FR_METADATA_INVALID', path: '$', message: 'metadata block has no closing fence' }] };
+  const parsed = parseRequirementMetadataYaml(bodyLines.slice(marker + 1, close).join('\n'));
+  return {
+    body: [...bodyLines.slice(0, marker), ...bodyLines.slice(close + 1)].join('\n').trim(),
+    ...(parsed.metadata ? { metadata: parsed.metadata } : {}),
+    ...(parsed.issues.length > 0 ? { metadataIssues: parsed.issues } : {}),
+  };
+}
+
 export function parseMarkdown(mdSource: string, relativePath: string): ParserOutput {
   const nodes: SpecNode[] = [];
   const edges: Edge[] = [];
@@ -235,7 +259,7 @@ export function parseMarkdown(mdSource: string, relativePath: string): ParserOut
         file: relativePath,
         line,
         anchors: [compact, modernSlug, legacySlug],
-        body: text,
+        ...requirementFields(lines, i, hm[1].length),
       };
       nodes.push(node);
       anchors.push(
@@ -260,7 +284,7 @@ export function parseMarkdown(mdSource: string, relativePath: string): ParserOut
         file: relativePath,
         line,
         anchors: [compact, slug],
-        body: text,
+        ...requirementFields(lines, i, hm[1].length),
       };
       nodes.push(node);
       anchors.push(
@@ -286,7 +310,7 @@ export function parseMarkdown(mdSource: string, relativePath: string): ParserOut
         file: relativePath,
         line,
         anchors: [compact, slug],
-        body: text,
+        ...requirementFields(lines, i, hm[1].length),
       };
       nodes.push(node);
       anchors.push(
@@ -327,7 +351,7 @@ export function parseMarkdown(mdSource: string, relativePath: string): ParserOut
       const compact = `FR-${num}`;
       const slug = `fr-${num}`; // matches Marksman's slug for `## FR-N`
       const title = relocatedTitleAfter(lines, i);
-      const node: FrNode = { id: compact, type: 'FR', title, file: relativePath, line, anchors: [compact, slug], body: text };
+      const node: FrNode = { id: compact, type: 'FR', title, file: relativePath, line, anchors: [compact, slug], ...requirementFields(lines, i, hm[1].length) };
       nodes.push(node);
       anchors.push(
         { alias: compact, canonicalId: compact, location },
@@ -344,7 +368,7 @@ export function parseMarkdown(mdSource: string, relativePath: string): ParserOut
       const compact = category ? `NFR-${category}-${num}` : `NFR-${num}`;
       const slug = `nfr-${category ? `${category.toLowerCase()}-` : ''}${num}`;
       const title = relocatedTitleAfter(lines, i);
-      const node: NfrNode = { id: compact, type: 'NFR', title, category, file: relativePath, line, anchors: [compact, slug], body: text };
+      const node: NfrNode = { id: compact, type: 'NFR', title, category, file: relativePath, line, anchors: [compact, slug], ...requirementFields(lines, i, hm[1].length) };
       nodes.push(node);
       anchors.push(
         { alias: compact, canonicalId: compact, location },

@@ -17,6 +17,8 @@
  * @see .specs/spec-generator-v4/spec-generator-v4_SCHEMA.md Entity 1
  */
 
+import type { MetadataIssue, RequirementMetadata } from './metadata-schema.ts';
+
 export type NodeType =
   | 'FR'
   | 'NFR'
@@ -66,8 +68,10 @@ export interface FrNode extends NodeBase {
   type: 'FR';
   /** Heading title after `### FR-N:`, e.g. `Login`. */
   title: string;
-  /** Optional YAML frontmatter merged from the parent file. */
-  frontmatter?: Record<string, unknown>;
+  /** Typed FR-local metadata declaration (FR-66). */
+  metadata?: RequirementMetadata;
+  /** Validation issues retained so conformance can fail loud. */
+  metadataIssues?: MetadataIssue[];
   /**
    * All anchor aliases that resolve to this heading. FR-3 mandates at least
    * the compact ID (`FR-001`) and the slug (`fr-001-login`); legacy v3
@@ -84,6 +88,8 @@ export interface NfrNode extends NodeBase {
   title: string;
   /** Optional category, e.g. `Performance` / `Security` / `Reliability`. */
   category?: string;
+  metadata?: RequirementMetadata;
+  metadataIssues?: MetadataIssue[];
   body: string;
   anchors: string[];
 }

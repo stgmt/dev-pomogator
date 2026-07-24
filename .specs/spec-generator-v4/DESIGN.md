@@ -293,6 +293,44 @@
 - Promote validate's `PLACEHOLDER` WARNING to ERROR in place (rejected) — validate-spec is pre-filter by design, not the health verdict, and it lacks phase-gating so it would RED every fresh scaffold (re-breaking the templates-fix invariant).
 - New TDD-ordering enforcement (rejected / out of scope) — «Red test written before the code» is not statically provable; only the FR→task→scenario chain existence is enforced (already held by the FR-37b invariants), which FR-57 dogfoods rather than duplicates.
 
+
+
+### Decision: Separate task completion from delivery completion
+
+**Требование:** [FR-66](FR.md#fr-66)
+
+**Rationale:** Existing `FrCensusVerdict` truthfully answers whether tasks are done and scenarios pass. A neighboring delivery dimension adds required artifacts without changing the meaning of an established public enum.
+
+**Trade-off:** Consumers must inspect `taskVerdict`, `delivery.overall`, and smart overall rather than one overloaded status.
+
+**Alternatives considered:**
+- Downgrade IMPLEMENTED to DONE_UNTESTED when documentation is missing — rejected because documentation debt is not test debt.
+- Add new values to FrCensusVerdict — rejected because it mixes independent dimensions and breaks exhaustive consumers.
+
+### Decision: Closed demand registry with open metadata extensions
+
+**Требование:** [FR-66](FR.md#fr-66)
+
+**Rationale:** Unknown descriptive metadata can round-trip safely, but unknown demand types cannot participate in completion policy without defined evidence semantics.
+
+**Trade-off:** New demand kinds require an explicit registry/version change instead of silently appearing through extensions.
+
+**Alternatives considered:**
+- Preserve unknown demand kinds in `_unknown` — rejected because they could be silently ignored by the ALL gate.
+- Allow arbitrary string demands — rejected because parser, query and verdict would disagree on evidence resolution.
+
+### Decision: One validator for parse, authoring and migration
+
+**Требование:** [FR-66](FR.md#fr-66)
+
+**Rationale:** Markdown parsing, MCP mutation and schema migration must accept and reject identical shapes to prevent write-time success followed by read-time RED.
+
+**Trade-off:** The metadata module owns rendering and migration concerns in addition to validation.
+
+**Alternatives considered:**
+- Validate only after rebuilding the graph — rejected because invalid source would already be written.
+- Duplicate schemas in MCP and parser layers — rejected because enum and rationale rules would drift.
+
 ## BDD Test Infrastructure (ОБЯЗАТЕЛЬНО)
 
 **Classification:** TEST_DATA_ACTIVE
