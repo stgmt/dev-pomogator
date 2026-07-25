@@ -315,6 +315,9 @@ function main(): void {
 }
 
 const invokedPath = process.argv[1] ? pathToFileURL(path.resolve(process.argv[1])).href : '';
-if (import.meta.url === invokedPath) {
+// Не запускать CLI, когда модуль инлайнен в бандл: там import.meta.url
+// схлопывается в URL бандла и guard сработал бы при любом его запуске.
+// Имя файла НЕ проверяем — мутационные копии запускаются под другими именами.
+if (import.meta.url === invokedPath && !import.meta.url.endsWith('.bundle.mjs')) {
   main();
 }

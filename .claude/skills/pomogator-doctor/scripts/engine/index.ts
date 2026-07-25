@@ -126,14 +126,20 @@ async function main(args = process.argv.slice(2)): Promise<void> {
     } catch {
       // Hook input is best-effort.
     }
-    const output = await Promise.race([
-      runQuiet({ projectRoot, homeDir: process.env.HOME || process.env.USERPROFILE, fix: false }),
-      new Promise<HookOutput>((resolve) => setTimeout(
-        () => resolve({ continue: true, suppressOutput: true }),
-        10_000,
-      )),
-    ]);
+    // Гонка ограничивает ТОЛЬКО баннер: сессия не ждёт дольше 10 с ради плашки.
+    // Но проигранная гонка не должна обрывать уже идущую работу — первичный разворот
+    // проектного CARL пишет файлы, и ранний выход процесса оставлял его недоделанным
+    // (хук молча отдавал suppressOutput, а .carl/ не появлялся). Поэтому после вывода
+    // дожидаемся завершения проверок; внешний потолок держит timeout самого хука.
+    const quiet = runQuiet({ projectRoot, homeDir: process.env.HOME || process.env.USERPROFILE, fix: false });
+    let bannerTimer: ReturnType<typeof setTimeout> | undefined;
+    const bannerCap = new Promise<HookOutput>((resolve) => {
+      bannerTimer = setTimeout(() => resolve({ continue: true, suppressOutput: true }), 10_000);
+    });
+    const output = await Promise.race([quiet, bannerCap]);
+    if (bannerTimer) clearTimeout(bannerTimer);
     process.stdout.write(`${JSON.stringify(output)}\n`);
+    await quiet.catch(() => undefined);
     return;
   }
 
