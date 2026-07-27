@@ -58,10 +58,11 @@ and marks the affected YAML report `partial: true` with `partial_reasons[]`.
 
 ## Transport (NOT `claude -p`)
 
-Production spawn = the local **Meridian** subscription proxy: `POST {MERIDIAN_URL}/v1/messages`,
-model `claude-haiku-4-5-20251001`, **thinking OFF**, `max_tokens: 256`, 120s timeout. Measured ~3s
-vs `claude -p` ~13s cold-start (see skill `meridian-model-call`). **Fail-open:** Meridian down /
-non-200 / timeout → the spawn throws → `runJudge` returns `SUBPROCESS_FAILED` → the pair emits a
+Production uses AiPomogator's OpenAI-compatible API. It first verifies the DeepSeek route through
+`GET {AUTO_COMMIT_LLM_URL}/models`, then sends `POST {AUTO_COMMIT_LLM_URL}/chat/completions` with the
+returned ID (normally `openrouter/deepseek/deepseek-v4-flash`), `max_tokens: 256`, temperature 0, and a
+120s timeout. **Fail-open:** catalog/provider unavailable, non-200, or timeout → the spawn throws →
+`runJudge` returns `SUBPROCESS_FAILED` → the pair emits a
 WARNING `cross-spec/semantic-check-failed` and the per-spec report is marked `partial: true`; no
 slow-path fallback is attempted. The spawn is injectable (`opts.spawn`) so tests cover every branch
 without a real external call.

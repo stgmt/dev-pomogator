@@ -1,0 +1,29 @@
+{
+  "provenance": {
+    "source": "audit-out/prompt-suggest-model-analysis.md",
+    "captured_at": "2026-07-27",
+    "note": "Historical comparison only; live prices must be checked before publishing savings."
+  },
+  "sample": {
+    "input_tokens": 842,
+    "output_tokens": 11
+  },
+  "baseline": {
+    "model": "anthropic/claude-3-haiku",
+    "cost_usd": 0.00022425
+  },
+  "candidate": {
+    "model": "deepseek/deepseek-v4-flash",
+    "cost_usd": 0.00007776
+  },
+  "rubric": [
+    "relevance",
+    "hallucination",
+    "russian_language_quality",
+    "format_and_length",
+    "empty_or_malformed_rate",
+    "latency",
+    "cost"
+  ],
+  "rollout_without_product_results": "no-go"
+}

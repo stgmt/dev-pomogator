@@ -13,6 +13,11 @@
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as os from 'node:os';
+import {
+  AIPOMOGATOR_DEEPSEEK_MODEL,
+  OPENROUTER_DEEPSEEK_MODEL,
+  selectAipomogatorDeepSeek,
+} from '../_shared/deepseek-model.ts';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -46,7 +51,8 @@ export interface LLMMessage {
 const STATE_DIR = path.join(os.homedir(), '.claude');
 const STATE_FILE = path.join(STATE_DIR, 'prompt-suggestion.json');
 const DEFAULT_TTL = 600_000; // 10 min
-const DEFAULT_MODEL = 'anthropic/claude-3-haiku';
+export { AIPOMOGATOR_DEEPSEEK_MODEL, OPENROUTER_DEEPSEEK_MODEL };
+const DEFAULT_MODEL = OPENROUTER_DEEPSEEK_MODEL;
 
 // ---------------------------------------------------------------------------
 // Logging (stderr only — stdout reserved for hook output)
@@ -111,7 +117,7 @@ export function loadConfig(): PromptSuggestConfig {
   } else if (autoCommitKey) {
     baseUrl = 'https://aipomogator.ru/go/v1';
     apiKey = autoCommitKey;
-    model = process.env.PROMPT_SUGGEST_MODEL || 'openrouter/anthropic/claude-3-haiku';
+    model = process.env.PROMPT_SUGGEST_MODEL || AIPOMOGATOR_DEEPSEEK_MODEL;
   }
 
   return { enabled, ttl, llm: { baseUrl, apiKey, model } };
@@ -195,6 +201,22 @@ export async function callSuggestionLLM(
   config: PromptSuggestConfig,
   messages: LLMMessage[]
 ): Promise<string> {
+  let model = config.llm.model;
+  if (config.llm.baseUrl.includes('aipomogator.ru')) {
+    try {
+      const selection = await selectAipomogatorDeepSeek({
+        baseUrl: config.llm.baseUrl,
+        apiKey: config.llm.apiKey,
+        override: process.env.PROMPT_SUGGEST_MODEL,
+      });
+      model = selection.model;
+      log('DEBUG', `model selected via ${selection.source}: ${model}`);
+    } catch (error) {
+      const code = error instanceof Error && 'code' in error ? String(error.code) : 'catalog_unavailable';
+      log('ERROR', `DeepSeek catalog selection failed: ${code}`);
+      return '';
+    }
+  }
   const url = `${config.llm.baseUrl}/chat/completions`;
 
   // Manual AbortController + clearTimeout (NOT AbortSignal.timeout): the latter leaves a 30s timer
@@ -212,7 +234,7 @@ export async function callSuggestionLLM(
         Connection: 'close',
       },
       body: JSON.stringify({
-        model: config.llm.model,
+        model,
         messages,
         max_tokens: 50,
         temperature: 0.3,

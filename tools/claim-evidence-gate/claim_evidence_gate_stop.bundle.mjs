@@ -720,7 +720,71 @@ function readTaskCensusCache(repoRoot) {
 // tools/claim-evidence-gate/meridian-judge.ts
 import * as fs3 from "node:fs";
 import * as path3 from "node:path";
-var MODEL_OVERRIDE = process.env.CLAIM_GATE_JUDGE_MODEL;
+
+// tools/_shared/deepseek-model.ts
+var OPENROUTER_DEEPSEEK_MODEL = "deepseek/deepseek-v4-flash";
+var AIPOMOGATOR_DEEPSEEK_MODEL = "openrouter/deepseek/deepseek-v4-flash";
+var DeepSeekCatalogError = class extends Error {
+  constructor(code, message) {
+    super(message);
+    this.code = code;
+    this.name = "DeepSeekCatalogError";
+  }
+  code;
+};
+var catalogCache = /* @__PURE__ */ new Map();
+function compatibleDeepSeekId(id) {
+  return id === OPENROUTER_DEEPSEEK_MODEL || id === AIPOMOGATOR_DEEPSEEK_MODEL || id.endsWith(`/${OPENROUTER_DEEPSEEK_MODEL}`);
+}
+async function selectAipomogatorDeepSeek(options) {
+  if (options.override) return { model: options.override, source: "environment_override" };
+  const baseUrl = options.baseUrl.replace(/\/+$/, "");
+  const cached = catalogCache.get(baseUrl);
+  if (cached) return { model: cached, source: "verified_catalog" };
+  const fetchImpl = options.fetchImpl ?? globalThis.fetch;
+  if (typeof fetchImpl !== "function") {
+    throw new DeepSeekCatalogError("catalog_unavailable", "global fetch is unavailable");
+  }
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), options.timeoutMs ?? 5e3);
+  let response;
+  try {
+    response = await fetchImpl(`${baseUrl}/models`, {
+      method: "GET",
+      signal: controller.signal,
+      headers: { authorization: `Bearer ${options.apiKey}` }
+    });
+  } catch (error) {
+    const reason = error instanceof Error && error.name === "AbortError" ? "catalog request timed out" : "catalog request failed";
+    throw new DeepSeekCatalogError("catalog_unavailable", reason);
+  } finally {
+    clearTimeout(timer);
+  }
+  if (!response.ok) {
+    throw new DeepSeekCatalogError("catalog_unavailable", `catalog HTTP ${response.status}`);
+  }
+  let payload;
+  try {
+    payload = await response.json();
+  } catch {
+    throw new DeepSeekCatalogError("catalog_malformed", "catalog is not JSON");
+  }
+  if (!payload || !Array.isArray(payload.data)) {
+    throw new DeepSeekCatalogError("catalog_malformed", "catalog data is not an array");
+  }
+  const ids = payload.data.map((entry) => entry?.id).filter((id) => typeof id === "string" && id.length > 0);
+  if (ids.length === 0) {
+    throw new DeepSeekCatalogError("catalog_empty", "catalog has no model IDs");
+  }
+  const selected = ids.find((id) => id === AIPOMOGATOR_DEEPSEEK_MODEL) ?? ids.find(compatibleDeepSeekId);
+  if (!selected) {
+    throw new DeepSeekCatalogError("compatible_route_absent", "DeepSeek V4 Flash is absent from the catalog");
+  }
+  catalogCache.set(baseUrl, selected);
+  return { model: selected, source: "verified_catalog" };
+}
+
+// tools/claim-evidence-gate/meridian-judge.ts
 var TIMEOUT_MS = 6e3;
 function logUnavailable(reason) {
   try {
@@ -759,24 +823,26 @@ function resolveEndpoint(injectedEnv) {
     ensureDotenvLoaded();
     env = process.env;
   }
+  const modelOverride = env.CLAIM_GATE_JUDGE_MODEL;
   const judgeKey = env.CLAIM_GATE_JUDGE_KEY;
   if (judgeKey) {
+    const url = env.CLAIM_GATE_JUDGE_URL ?? "https://openrouter.ai/api/v1";
     return {
-      url: env.CLAIM_GATE_JUDGE_URL ?? "https://openrouter.ai/api/v1",
+      url,
       key: judgeKey,
-      model: MODEL_OVERRIDE ?? "anthropic/claude-haiku-4.5"
+      model: modelOverride ?? (url.includes("aipomogator.ru") ? AIPOMOGATOR_DEEPSEEK_MODEL : OPENROUTER_DEEPSEEK_MODEL)
     };
   }
   const orKey = env.OPENROUTER_API_KEY || env.CLAUDE_MEM_OPENROUTER_API_KEY;
   if (orKey) {
-    return { url: "https://openrouter.ai/api/v1", key: orKey, model: MODEL_OVERRIDE ?? "anthropic/claude-haiku-4.5" };
+    return { url: "https://openrouter.ai/api/v1", key: orKey, model: modelOverride ?? OPENROUTER_DEEPSEEK_MODEL };
   }
   const acKey = env.AUTO_COMMIT_API_KEY;
   if (acKey) {
     return {
       url: env.AUTO_COMMIT_LLM_URL ?? "https://aipomogator.ru/go/v1",
       key: acKey,
-      model: MODEL_OVERRIDE ?? "openrouter/anthropic/claude-haiku-4.5"
+      model: modelOverride ?? AIPOMOGATOR_DEEPSEEK_MODEL
     };
   }
   return null;
@@ -845,26 +911,43 @@ ${i.finalMessage}`,
   ].join("\n");
 }
 async function judgeStop(input, opts = {}) {
-  if (typeof fetch !== "function") {
-    logUnavailable("\u0432 \u044D\u0442\u043E\u043C \u0440\u0430\u043D\u0442\u0430\u0439\u043C\u0435 \u043D\u0435\u0442 global fetch (\u0441\u0442\u0430\u0440\u044B\u0439 Node)");
+  const fetchImpl = opts.fetchImpl ?? globalThis.fetch;
+  if (typeof fetchImpl !== "function") {
+    logUnavailable("global fetch is unavailable");
     return null;
   }
-  const ep = resolveEndpoint();
+  const ep = resolveEndpoint(opts.env);
   if (!ep) {
     logUnavailable("\u043D\u0435\u0442 \u0442\u043E\u043A\u0435\u043D\u0430 \u2014 \u0437\u0430\u0434\u0430\u0439 OPENROUTER_API_KEY \u0438\u043B\u0438 AUTO_COMMIT_API_KEY (env \u0438\u043B\u0438 .env/.env.test)");
     return null;
   }
   const base = (opts.url ?? ep.url).replace(/\/+$/, "");
+  let model = ep.model;
+  if (base.includes("aipomogator.ru")) {
+    try {
+      const selection = await selectAipomogatorDeepSeek({
+        baseUrl: base,
+        apiKey: ep.key,
+        override: opts.env?.CLAIM_GATE_JUDGE_MODEL ?? process.env.CLAIM_GATE_JUDGE_MODEL,
+        fetchImpl
+      });
+      model = selection.model;
+    } catch (error) {
+      const code = error instanceof Error && "code" in error ? String(error.code) : "catalog_unavailable";
+      logUnavailable(`DeepSeek catalog selection failed: ${code} (${base})`);
+      return null;
+    }
+  }
   const url = `${base}/chat/completions`;
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), opts.timeoutMs ?? TIMEOUT_MS);
   try {
-    const r = await fetch(url, {
+    const r = await fetchImpl(url, {
       method: "POST",
       signal: ctrl.signal,
       headers: { "content-type": "application/json", authorization: `Bearer ${ep.key}` },
       body: JSON.stringify({
-        model: ep.model,
+        model,
         max_tokens: 120,
         temperature: 0,
         messages: [{ role: "user", content: buildJudgePrompt(input) }]

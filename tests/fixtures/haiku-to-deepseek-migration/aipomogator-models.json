@@ -1,0 +1,19 @@
+{
+  "provenance": {
+    "producer": "GET https://aipomogator.ru/go/v1/models",
+    "captured_at": "2026-07-27",
+    "redaction": "No credentials or user content are present; unrelated model rows were omitted."
+  },
+  "data": [
+    {
+      "id": "openrouter/deepseek/deepseek-v4-flash",
+      "object": "model",
+      "owned_by": "openrouter"
+    },
+    {
+      "id": "openrouter/anthropic/claude-3-haiku",
+      "object": "model",
+      "owned_by": "openrouter"
+    }
+  ]
+}

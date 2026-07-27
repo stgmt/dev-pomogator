@@ -10,10 +10,75 @@ import { fileURLToPath } from "node:url";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as os from "node:os";
+
+// tools/_shared/deepseek-model.ts
+var OPENROUTER_DEEPSEEK_MODEL = "deepseek/deepseek-v4-flash";
+var AIPOMOGATOR_DEEPSEEK_MODEL = "openrouter/deepseek/deepseek-v4-flash";
+var DeepSeekCatalogError = class extends Error {
+  constructor(code, message) {
+    super(message);
+    this.code = code;
+    this.name = "DeepSeekCatalogError";
+  }
+  code;
+};
+var catalogCache = /* @__PURE__ */ new Map();
+function compatibleDeepSeekId(id) {
+  return id === OPENROUTER_DEEPSEEK_MODEL || id === AIPOMOGATOR_DEEPSEEK_MODEL || id.endsWith(`/${OPENROUTER_DEEPSEEK_MODEL}`);
+}
+async function selectAipomogatorDeepSeek(options) {
+  if (options.override) return { model: options.override, source: "environment_override" };
+  const baseUrl = options.baseUrl.replace(/\/+$/, "");
+  const cached = catalogCache.get(baseUrl);
+  if (cached) return { model: cached, source: "verified_catalog" };
+  const fetchImpl = options.fetchImpl ?? globalThis.fetch;
+  if (typeof fetchImpl !== "function") {
+    throw new DeepSeekCatalogError("catalog_unavailable", "global fetch is unavailable");
+  }
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), options.timeoutMs ?? 5e3);
+  let response;
+  try {
+    response = await fetchImpl(`${baseUrl}/models`, {
+      method: "GET",
+      signal: controller.signal,
+      headers: { authorization: `Bearer ${options.apiKey}` }
+    });
+  } catch (error) {
+    const reason = error instanceof Error && error.name === "AbortError" ? "catalog request timed out" : "catalog request failed";
+    throw new DeepSeekCatalogError("catalog_unavailable", reason);
+  } finally {
+    clearTimeout(timer);
+  }
+  if (!response.ok) {
+    throw new DeepSeekCatalogError("catalog_unavailable", `catalog HTTP ${response.status}`);
+  }
+  let payload;
+  try {
+    payload = await response.json();
+  } catch {
+    throw new DeepSeekCatalogError("catalog_malformed", "catalog is not JSON");
+  }
+  if (!payload || !Array.isArray(payload.data)) {
+    throw new DeepSeekCatalogError("catalog_malformed", "catalog data is not an array");
+  }
+  const ids = payload.data.map((entry) => entry?.id).filter((id) => typeof id === "string" && id.length > 0);
+  if (ids.length === 0) {
+    throw new DeepSeekCatalogError("catalog_empty", "catalog has no model IDs");
+  }
+  const selected = ids.find((id) => id === AIPOMOGATOR_DEEPSEEK_MODEL) ?? ids.find(compatibleDeepSeekId);
+  if (!selected) {
+    throw new DeepSeekCatalogError("compatible_route_absent", "DeepSeek V4 Flash is absent from the catalog");
+  }
+  catalogCache.set(baseUrl, selected);
+  return { model: selected, source: "verified_catalog" };
+}
+
+// tools/prompt-suggest/prompt_suggest_core.ts
 var STATE_DIR = path.join(os.homedir(), ".claude");
 var STATE_FILE = path.join(STATE_DIR, "prompt-suggestion.json");
 var DEFAULT_TTL = 6e5;
-var DEFAULT_MODEL = "anthropic/claude-3-haiku";
+var DEFAULT_MODEL = OPENROUTER_DEEPSEEK_MODEL;
 function log(level, message) {
   const ts = (/* @__PURE__ */ new Date()).toISOString();
   process.stderr.write(`[${ts}] [PROMPT-SUGGEST] [${level}] ${message}
@@ -57,7 +122,7 @@ function loadConfig() {
   } else if (autoCommitKey) {
     baseUrl = "https://aipomogator.ru/go/v1";
     apiKey = autoCommitKey;
-    model = process.env.PROMPT_SUGGEST_MODEL || "openrouter/anthropic/claude-3-haiku";
+    model = process.env.PROMPT_SUGGEST_MODEL || AIPOMOGATOR_DEEPSEEK_MODEL;
   }
   return { enabled, ttl, llm: { baseUrl, apiKey, model } };
 }
@@ -96,6 +161,22 @@ function extractFirstUserMessage(transcriptPath) {
   }
 }
 async function callSuggestionLLM(config, messages) {
+  let model = config.llm.model;
+  if (config.llm.baseUrl.includes("aipomogator.ru")) {
+    try {
+      const selection = await selectAipomogatorDeepSeek({
+        baseUrl: config.llm.baseUrl,
+        apiKey: config.llm.apiKey,
+        override: process.env.PROMPT_SUGGEST_MODEL
+      });
+      model = selection.model;
+      log("DEBUG", `model selected via ${selection.source}: ${model}`);
+    } catch (error) {
+      const code = error instanceof Error && "code" in error ? String(error.code) : "catalog_unavailable";
+      log("ERROR", `DeepSeek catalog selection failed: ${code}`);
+      return "";
+    }
+  }
   const url = `${config.llm.baseUrl}/chat/completions`;
   const ac = new AbortController();
   const timer = setTimeout(() => ac.abort(), 3e4);
@@ -108,7 +189,7 @@ async function callSuggestionLLM(config, messages) {
         Connection: "close"
       },
       body: JSON.stringify({
-        model: config.llm.model,
+        model,
         messages,
         max_tokens: 50,
         temperature: 0.3

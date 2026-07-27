@@ -18,7 +18,7 @@ import { classify, firstUnsupported, stripCode } from '../../tools/claim-evidenc
 import { extractTurnWindow, bgInFlightInWindow, lastUserPrompt, agentBgInFlightCount, agentBgInFlight, sessionUserPrompts, latestActionableStopFeedback, AWAITS_RESULT_RE } from '../../tools/claim-evidence-gate/turn_window.ts';
 import { agentOpenTodoCount, liveOpenForUncensusedSlugs, lastEditedSpecSlug } from '../../tools/spec-graph/task-census.ts';
 import { gateSelfEdit, ownerDirectedDeferral, ownerRequestedAnalysisReportOnly, selfMarkedBlockedOrBacklog } from '../../tools/claim-evidence-gate/game_guard_facts.ts';
-import { buildJudgeNoTokenDemand, resolveEndpoint, isJudgeArmed } from '../../tools/claim-evidence-gate/meridian-judge.ts';
+import { buildJudgeNoTokenDemand, resolveEndpoint, isJudgeArmed, judgeStop } from '../../tools/claim-evidence-gate/meridian-judge.ts';
 
 const REPO = process.env.APP_DIR || process.cwd();
 const HOOK = path.resolve(REPO, 'tools', 'claim-evidence-gate', 'claim_evidence_gate_stop.ts');
@@ -90,6 +90,9 @@ interface CegWorld extends V4World {
   cegDoneRedSetup?: () => Block[];
   cegDemandText?: string;
   cegResolveResults?: boolean[];
+  cegDeepSeekEndpoints?: Array<ReturnType<typeof resolveEndpoint>>;
+  cegDeepSeekJudgeRequest?: { url: string; model: string; authorization: string };
+  cegDeepSeekJudgeResult?: Awaited<ReturnType<typeof judgeStop>>;
   cegArmResults?: boolean[];
   cegFr19Root?: string;
   cegFr19Slug?: string;
@@ -660,6 +663,88 @@ When<CegWorld>('the gate resolves the judge endpoint for each', function () {
 });
 Then<CegWorld>('every single-token snapshot resolves an endpoint while the tokenless snapshot resolves null', function () {
   assert.deepEqual(this.cegResolveResults, [true, true, true, true], `resolveEndpoint results wrong: ${JSON.stringify(this.cegResolveResults)}`);
+});
+
+Given<CegWorld>(/^direct OpenRouter, routed AiPomogator, and explicit override judge configurations$/, function () {
+  this.cegDeepSeekEndpoints = [
+    resolveEndpoint({ OPENROUTER_API_KEY: 'redacted' }),
+    resolveEndpoint({ AUTO_COMMIT_API_KEY: 'redacted' }),
+    resolveEndpoint({ CLAIM_GATE_JUDGE_KEY: 'redacted', CLAIM_GATE_JUDGE_URL: 'https://aipomogator.ru/go/v1' }),
+    resolveEndpoint({ OPENROUTER_API_KEY: 'redacted', CLAIM_GATE_JUDGE_MODEL: 'test/provider-model' }),
+  ];
+});
+
+When<CegWorld>(/^the supported judge endpoint resolver selects models$/, function () {
+  assert.ok(this.cegDeepSeekEndpoints);
+});
+
+Then<CegWorld>(/^direct routing uses "([^"]+)"$/, function (model: string) {
+  assert.equal(this.cegDeepSeekEndpoints?.[0]?.model, model);
+});
+
+Then<CegWorld>(/^AiPomogator routing uses the returned catalog ID "([^"]+)"$/, function (model: string) {
+  assert.equal(this.cegDeepSeekEndpoints?.[1]?.model, model);
+  assert.equal(this.cegDeepSeekEndpoints?.[2]?.model, model);
+});
+
+Then<CegWorld>(/^the explicit override remains "([^"]+)"$/, function (model: string) {
+  assert.equal(this.cegDeepSeekEndpoints?.[3]?.model, model);
+});
+
+Then<CegWorld>(/^no resolved default contains an active Haiku identifier$/, function () {
+  for (const endpoint of this.cegDeepSeekEndpoints ?? []) {
+    assert.ok(endpoint);
+    if (endpoint?.model === 'test/provider-model') continue;
+    assert.doesNotMatch(endpoint!.model, /haiku/i);
+  }
+});
+
+Given<CegWorld>(/^a local OpenAI-compatible judge endpoint$/, async function () {
+  const fetchImpl: typeof fetch = async (input, init) => {
+    const url = String(input);
+    if (url.endsWith('/models')) {
+      return new Response(JSON.stringify({ data: [{ id: 'openrouter/deepseek/deepseek-v4-flash' }] }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      });
+    }
+    const body = JSON.parse(String(init?.body)) as { model: string };
+    this.cegDeepSeekJudgeRequest = {
+      url: new URL(url).pathname,
+      model: body.model,
+      authorization: String((init?.headers as Record<string, string>)?.authorization ?? ''),
+    };
+    return new Response(JSON.stringify({ choices: [{ message: { content: '{"block":false,"reason":"verified"}' } }] }), {
+      status: 200,
+      headers: { 'content-type': 'application/json' },
+    });
+  };
+  this.cegDeepSeekJudgeResult = await judgeStop({
+    finalMessage: 'Implementation complete and verified.',
+    tools: ['Edit', 'Bash'],
+    openTasks: 0,
+    userRequest: 'Implement the change.',
+    sessionUserPrompts: ['Implement the change.'],
+  }, {
+    url: 'https://aipomogator.ru/go/v1',
+    env: { AUTO_COMMIT_API_KEY: 'redacted' },
+    fetchImpl,
+    timeoutMs: 2_000,
+  });
+});
+
+When<CegWorld>(/^the real judge client sends one decision request$/, function () {
+  assert.ok(this.cegDeepSeekJudgeRequest);
+});
+
+Then<CegWorld>(/^the request uses the AiPomogator DeepSeek model and bearer authentication$/, function () {
+  assert.equal(this.cegDeepSeekJudgeRequest?.url, '/go/v1/chat/completions');
+  assert.equal(this.cegDeepSeekJudgeRequest?.model, 'openrouter/deepseek/deepseek-v4-flash');
+  assert.equal(this.cegDeepSeekJudgeRequest?.authorization, 'Bearer redacted');
+});
+
+Then<CegWorld>(/^the judge response is accepted as DONE$/, function () {
+  assert.deepEqual(this.cegDeepSeekJudgeResult, { block: false, reason: 'verified' });
 });
 
 const ARM_BASE = { gray: true, hasNextBlock: false, analysisOnly: false, judgeEnabled: true, openWork: 0 };

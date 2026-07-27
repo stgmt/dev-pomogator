@@ -1,0 +1,28 @@
+{
+  "version": 4,
+  "featureSlug": "haiku-to-deepseek-migration",
+  "createdAt": "2026-07-27T15:13:22.288Z",
+  "currentPhase": "Discovery",
+  "phases": {
+    "Discovery": {
+      "completedAt": null,
+      "stopConfirmed": false,
+      "stopConfirmedAt": null
+    },
+    "Context": {
+      "completedAt": null,
+      "stopConfirmed": false,
+      "stopConfirmedAt": null
+    },
+    "Requirements": {
+      "completedAt": null,
+      "stopConfirmed": false,
+      "stopConfirmedAt": null
+    },
+    "Finalization": {
+      "completedAt": null,
+      "stopConfirmed": false,
+      "stopConfirmedAt": null
+    }
+  }
+}

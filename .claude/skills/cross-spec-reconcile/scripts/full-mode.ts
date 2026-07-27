@@ -19,56 +19,61 @@
 //   4. Subprocess runs, parses JSON, returns DRIFT or NO_DRIFT.
 //
 // `runFullMode` is pure orchestration — the LLM spawn is injected so unit tests
-// cover every branch without a real call. PRODUCTION default = `meridianSpawn`
-// (the local Meridian subscription proxy, thinking-off) — NOT `claude -p`
-// (~13s cold-start; see skill `meridian-model-call`). Fail-open: if Meridian is
-// down, the spawn throws → `runJudge` returns SUBPROCESS_FAILED → full mode keeps
+// cover every branch without a real call. PRODUCTION default = `deepseekSpawn`
+// through the project's AiPomogator OpenAI-compatible route. Fail-open: if the
+// provider is unavailable, the spawn throws → `runJudge` returns SUBPROCESS_FAILED → full mode keeps
 // the mechanical findings, emits a WARNING semantic finding, and marks the report
 // partial instead of silently pretending the semantic pass completed.
 
 import fs from 'node:fs';
 import path from 'node:path';
 import { runJudge, type JudgeResult } from '../../../../tools/spec-llm-judge/index.ts';
+import { selectAipomogatorDeepSeek } from '../../../../tools/_shared/deepseek-model.ts';
 import { extractConceptNouns, type Finding, type ReconcileResult, reconcileLight } from './reconcile.ts';
 
-const MERIDIAN_MODEL = 'claude-haiku-4-5-20251001';
-const MERIDIAN_TIMEOUT_MS = 120_000;
-const meridianUrl = () => (process.env.MERIDIAN_URL || 'http://127.0.0.1:3456').replace(/\/+$/, '');
+const DEEPSEEK_TIMEOUT_MS = 120_000;
+const deepseekBaseUrl = () => (process.env.AUTO_COMMIT_LLM_URL || 'https://aipomogator.ru/go/v1').replace(/\/+$/, '');
 
 /**
- * Fast LLM transport for the semantic-drift judge via the local Meridian proxy
- * (`/v1/messages`, thinking OFF). Returns the model's text (the JSON verdict
- * `buildPrompt` asks for; markdown fences stripped). THROWS on any failure so the
- * caller fails open to SUBPROCESS_FAILED — we never reinvent the slow `claude -p` path.
+ * DeepSeek transport for the semantic-drift judge through AiPomogator's
+ * OpenAI-compatible endpoint. Returns the JSON verdict text with optional markdown
+ * fences stripped. THROWS on any failure so the caller fails open to SUBPROCESS_FAILED.
  */
-async function meridianSpawn(prompt: string): Promise<string> {
+async function deepseekSpawn(prompt: string): Promise<string> {
   if (typeof fetch !== 'function') throw new Error('no global fetch (node <18)');
+  const apiKey = process.env.AUTO_COMMIT_API_KEY;
+  if (!apiKey) throw new Error('AUTO_COMMIT_API_KEY is not configured');
+  const baseUrl = deepseekBaseUrl();
+  const selection = await selectAipomogatorDeepSeek({
+    baseUrl,
+    apiKey,
+    override: process.env.CROSS_SPEC_RECONCILE_MODEL,
+  });
   const ctrl = new AbortController();
   let timedOut = false;
   const timer = setTimeout(() => {
     timedOut = true;
     ctrl.abort();
-  }, MERIDIAN_TIMEOUT_MS);
+  }, DEEPSEEK_TIMEOUT_MS);
   try {
-    const r = await fetch(`${meridianUrl()}/v1/messages`, {
+    const r = await fetch(`${baseUrl}/chat/completions`, {
       method: 'POST',
       signal: ctrl.signal,
-      headers: { 'content-type': 'application/json', 'anthropic-version': '2023-06-01', 'x-api-key': 'sk-dummy' },
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${apiKey}` },
       body: JSON.stringify({
-        model: MERIDIAN_MODEL,
+        model: selection.model,
         max_tokens: 256,
-        thinking: { type: 'disabled' },
+        temperature: 0,
         messages: [{ role: 'user', content: prompt }],
       }),
     });
-    if (!r.ok) throw new Error(`meridian /v1/messages ${r.status}`);
-    const j = (await r.json()) as { content?: Array<{ type: string; text?: string }> };
-    const text = (j.content ?? []).filter((b) => b.type === 'text').map((b) => b.text ?? '').join('').trim();
-    if (!text) throw new Error('empty meridian response');
-    // Strip a ```json fence if Haiku wrapped the JSON; parseSubprocessOutput needs bare JSON.
+    if (!r.ok) throw new Error(`DeepSeek chat completion ${r.status}`);
+    const j = (await r.json()) as { choices?: Array<{ message?: { content?: string } }> };
+    const text = j.choices?.[0]?.message?.content?.trim() ?? '';
+    if (!text) throw new Error('empty DeepSeek response');
     return text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
   } catch (e) {
-    if (timedOut) throw new Error(`semantic dispatcher timeout after ${MERIDIAN_TIMEOUT_MS}ms`);
+    if (timedOut) throw new Error(`semantic dispatcher timeout after ${DEEPSEEK_TIMEOUT_MS}ms`);
     throw e;
   } finally {
     clearTimeout(timer);
@@ -250,7 +255,7 @@ export async function runFullMode(opts: FullModeOptions): Promise<FullModeResult
       scenarioId: `${b.slug}/${b.frId}`,
       scenarioText: b.body,
       spec_llm_judge_deny: denyA || denyB,
-      spawn: opts.spawn ?? meridianSpawn, // production default = Meridian (not claude -p)
+      spawn: opts.spawn ?? deepseekSpawn, // production default = DeepSeek through AiPomogator
     });
     if (!judgeRes.from_cache) calls++;
     if (judgeRes.result === 'SKIPPED_DENY_LIST') {

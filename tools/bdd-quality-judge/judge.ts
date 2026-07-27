@@ -1,13 +1,13 @@
 /**
- * W5 — BDD-quality Haiku judge (plan iridescent-giggling-lemur).
+ * W5 — BDD-quality DeepSeek judge (plan iridescent-giggling-lemur).
  *
  * When an agent edits a `.feature` scenario or a BDD step-def, a PostToolUse hook (see hook.ts)
- * asks a one-shot Haiku to judge it against the strong-tests §6.5 rubric and emits an ADVISORY
+ * asks a one-shot DeepSeek to judge it against the strong-tests §6.5 rubric and emits an ADVISORY
  * warning ("this scenario is weak because …"). NOT blocking — a nudge so weak/coarse scenarios get
  * caught at author-time instead of only by a mutation run.
  *
  * Transport is REUSED verbatim from the claim-evidence-gate judge — `resolveEndpoint()` (token from
- * CLAUDE_MEM_OPENROUTER_API_KEY / OPENROUTER_API_KEY / .env*, model claude-haiku-4.5). builtins-only
+ * CLAUDE_MEM_OPENROUTER_API_KEY / OPENROUTER_API_KEY / .env*, model DeepSeek V4 Flash). builtins-only
  * (fetch/fs), fail-open: any failure → null (the hook then stays silent). Never throws.
  *
  * The judge gets the CONTEXT it needs to judge (user 2026-06-20: «чтоб передавался норм контекст»):
@@ -15,6 +15,7 @@
  * tight branch-covering test from a coarse happy-path that always passes.
  */
 import { resolveEndpoint } from '../claim-evidence-gate/meridian-judge.ts';
+import { selectAipomogatorDeepSeek } from '../_shared/deepseek-model.ts';
 
 const TIMEOUT_MS = 6000;
 
@@ -82,7 +83,7 @@ function logUnavailable(reason: string): void {
 }
 
 /**
- * Ask the Haiku judge. ONE real call (reusing the project's OpenRouter integration), fail-open:
+ * Ask the DeepSeek judge. ONE real call (reusing the project's OpenRouter integration), fail-open:
  * returns NULL (and logs WHY) when there is no token / the endpoint fails / the reply is unparseable.
  * Never throws — a plugin hook must not crash because помогатор is unreachable.
  */
@@ -96,7 +97,21 @@ export async function judgeBddQuality(input: BddJudgeInput, opts: { timeoutMs?: 
     logUnavailable('нет токена (OPENROUTER_API_KEY / CLAUDE_MEM_OPENROUTER_API_KEY / .env*)');
     return null;
   }
-  const url = `${ep.url.replace(/\/+$/, '')}/chat/completions`;
+  const baseUrl = ep.url.replace(/\/+$/, '');
+  let model = ep.model;
+  if (baseUrl.includes('aipomogator.ru')) {
+    try {
+      model = (await selectAipomogatorDeepSeek({
+        baseUrl,
+        apiKey: ep.key,
+        override: process.env.CLAIM_GATE_JUDGE_MODEL,
+      })).model;
+    } catch {
+      logUnavailable('DeepSeek отсутствует в каталоге AiPomogator');
+      return null;
+    }
+  }
+  const url = `${baseUrl}/chat/completions`;
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), opts.timeoutMs ?? TIMEOUT_MS);
   try {
@@ -105,7 +120,7 @@ export async function judgeBddQuality(input: BddJudgeInput, opts: { timeoutMs?: 
       signal: ctrl.signal,
       headers: { 'content-type': 'application/json', authorization: `Bearer ${ep.key}` },
       body: JSON.stringify({
-        model: ep.model,
+        model,
         max_tokens: 120,
         temperature: 0,
         messages: [{ role: 'user', content: buildBddJudgePrompt(input) }],
@@ -117,7 +132,7 @@ export async function judgeBddQuality(input: BddJudgeInput, opts: { timeoutMs?: 
     }
     const j = (await r.json()) as { choices?: Array<{ message?: { content?: string } }> };
     const text = j?.choices?.[0]?.message?.content ?? '';
-    // Robust: Haiku may wrap the verdict in a ```json fence or add prose, and the reason can contain
+    // Robust: DeepSeek may wrap the verdict in a ```json fence or add prose, and the reason can contain
     // braces/punctuation. Extract the fields directly rather than JSON.parse a strict brace-match.
     const wm = text.match(/"weak"\s*:\s*(true|false)/i);
     if (!wm) {

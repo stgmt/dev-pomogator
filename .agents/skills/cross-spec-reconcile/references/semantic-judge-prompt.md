@@ -38,7 +38,9 @@ The model MUST return one bare JSON object (markdown fences are stripped before 
 | `DRIFT` | `explanation` (1–2 sentences), `severity` (`warning`\|`error`) | divergence → emit `cross-spec/semantic-drift` |
 
 Severity maps to the report: `error` → `CRITICAL`, `warning` → `WARNING`. The `explanation`
-becomes the finding's `suggested_fix`. Anything unparseable → treated as no verdict (pair skipped).
+becomes the finding's `suggested_fix`. Unparseable output or transport failure returns
+`SUBPROCESS_FAILED`: full mode keeps the mechanical report, emits `cross-spec/semantic-check-failed`,
+and marks the affected YAML report `partial: true` with `partial_reasons[]`.
 
 ## Decision tree (per pair, mirrors `runJudge`)
 
@@ -51,13 +53,16 @@ becomes the finding's `suggested_fix`. Anything unparseable → treated as no ve
 
 - Skip a pair already flagged mechanically as `cross-spec/contradictory-fr` (no double-count — mechanical already won).
 - Skip a pair where either FR body is `< 60` chars after normalization (not enough to judge).
+- Skip a pair with `< 3` shared concept nouns (PascalCase terms plus non-generic prose words) before any judge spawn.
 - Hard cap `maxCalls` (default **50**) subprocess calls per run (runaway guard); cache hits don't count.
 
 ## Transport (NOT `claude -p`)
 
-Production spawn = the local **Meridian** subscription proxy: `POST {MERIDIAN_URL}/v1/messages`,
-model `claude-haiku-4-5-20251001`, **thinking OFF**, `max_tokens: 256`, 20s timeout. Measured ~3s
-vs `claude -p` ~13s cold-start (see skill `meridian-model-call`). **Fail-open:** Meridian down /
-non-200 / timeout → the spawn throws → `runJudge` returns `SUBPROCESS_FAILED` → the pair is
-skipped (no semantic finding). It never falls back to the slow path. The spawn is injectable
-(`opts.spawn`) so unit tests cover every branch without a real call.
+Production uses AiPomogator's OpenAI-compatible API. It first verifies the DeepSeek route through
+`GET {AUTO_COMMIT_LLM_URL}/models`, then sends `POST {AUTO_COMMIT_LLM_URL}/chat/completions` with the
+returned ID (normally `openrouter/deepseek/deepseek-v4-flash`), `max_tokens: 256`, temperature 0, and a
+120s timeout. **Fail-open:** catalog/provider unavailable, non-200, or timeout → the spawn throws →
+`runJudge` returns `SUBPROCESS_FAILED` → the pair emits a
+WARNING `cross-spec/semantic-check-failed` and the per-spec report is marked `partial: true`; no
+slow-path fallback is attempted. The spawn is injectable (`opts.spawn`) so tests cover every branch
+without a real external call.

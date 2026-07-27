@@ -1,56 +1,51 @@
 ---
 name: meridian-model-call
 description: |
-  HOW and WHY to make a FAST model call (Haiku/Sonnet) from our own hooks, gates,
-  judges, and engine scripts — via the local Meridian subscription proxy on
-  http://127.0.0.1:3456, NOT via `Codex -p`. Meridian gives an Anthropic-compatible
-  /v1/messages API backed by the user's SUBSCRIPTION (no ANTHROPIC_API_KEY needed).
-  Measured: a direct Meridian call with thinking OFF ≈ 2.4s; `Codex -p` ≈ 13s (it
-  cold-starts MCP/hooks/plugin every call). USE THIS before writing any "spawn Codex
+  HOW and WHY to make a FAST model call from our own hooks, gates, judges, and
+  engine scripts. DeepSeek calls use the OpenAI-compatible AiPomogator route;
+  Claude-subscription calls may use the local Meridian proxy on http://127.0.0.1:3456.
+  Do not send OpenRouter model IDs to Meridian's Anthropic-compatible /v1/messages API.
+  Measured: a direct Meridian call with thinking OFF ≈ 2.4s; `claude -p` ≈ 13s (it
+  cold-starts MCP/hooks/plugin every call). USE THIS before writing any "spawn claude
   to judge X" code — do not reinvent the slow wheel. Triggers: "вызвать модель из хука",
   "быстрый вызов хайку", "судья на хайку", "model call from a hook/gate/judge",
   "call haiku fast", "LLM judge in a hook", "meridian api call", "как звать модель в плагине".
 allowed-tools: Read, Bash, Edit, Write, Skill
 ---
 
-# meridian-model-call — call a model fast from our hooks/gates/judges (via Meridian, not `Codex -p`)
+# meridian-model-call — call a model fast from our hooks/gates/judges (via Meridian, not `claude -p`)
 
 ## Why this exists (read before writing any model-call code)
 
-Anything in this repo that needs a model DECISION inside a hook/gate/judge/engine script
-(the FR-49b stop-gate judge, FR-8 semantic drift, anchor-fix fallback, future LLM gates)
-MUST call **Meridian** — the local subscription proxy — directly over HTTP. Do **NOT**
-shell out to `Codex -p`. Measured on this machine (`.dev-pomogator/.tmp/latency-probe`):
+Anything in this repo that needs a model decision inside a hook/gate/judge/engine script
+must use the matching provider protocol directly. DeepSeek uses AiPomogator/OpenRouter's
+OpenAI-compatible API; Claude subscription calls use Meridian's Anthropic-compatible API.
+Do **NOT** shell out to `claude -p`. Measured on this machine (`.dev-pomogator/.tmp/latency-probe`):
 
 | Transport | Latency / call | Why |
 |---|---|---|
-| `Codex -p --model haiku` | **~13 000 ms** | cold-starts the whole Codex CLI (MCP servers, hooks, plugin tree, AGENTS.md) EVERY call |
-| `Codex -p --bare` (via proxy) | ~5 000 ms | `--bare` skips MCP/hooks/plugin, but the CLI wrapper still costs ~5s |
+| `claude -p --model haiku` | **~13 000 ms** | cold-starts the whole Claude Code CLI (MCP servers, hooks, plugin tree, CLAUDE.md) EVERY call |
+| `claude -p --bare` (via proxy) | ~5 000 ms | `--bare` skips MCP/hooks/plugin, but the CLI wrapper still costs ~5s |
 | Meridian `/v1/messages`, thinking ON | ~7 000 ms | the model reasons before the verdict |
 | **Meridian `/v1/messages`, thinking OFF** | **~2 400 ms** | direct HTTP, no CLI, no reasoning — **use this** |
 
-`Codex -p` for a binary judgment is the slow/dumb wheel. ~5× slower for the SAME model.
-Meridian is already the project's blessed path (see `proxy-up`, `use-Codex-subscription`).
+`claude -p` for a binary judgment is the slow/dumb wheel. Direct HTTP avoids CLI startup.
+Choose AiPomogator/OpenRouter for DeepSeek and Meridian only for Claude-subscription models.
 
-## The recipe (fast model call, no API key)
+## The recipe for DeepSeek
 
-```bash
-curl -s -m 20 http://127.0.0.1:3456/v1/messages \
-  -H "content-type: application/json" \
-  -H "anthropic-version: 2023-06-01" \
-  -H "x-api-key: sk-dummy" \           # proxy injects the subscription auth; any value works
-  -d '{
-    "model": "Codex-haiku-4-5-20251001",
-    "max_tokens": 64,
-    "thinking": {"type": "disabled"},
-    "messages": [{"role": "user", "content": "<your prompt — ask for ONE JSON line>"}]
-  }'
-```
+1. Query `GET {AUTO_COMMIT_LLM_URL}/models` with `AUTO_COMMIT_API_KEY`.
+2. Select only a returned compatible route; the expected AiPomogator route is
+   `openrouter/deepseek/deepseek-v4-flash`. Never invent it by prefixing the direct ID.
+3. Call `POST {AUTO_COMMIT_LLM_URL}/chat/completions` with that verified route.
+4. On catalog/provider failure, emit a secret-free diagnostic and fail open without Haiku fallback.
 
-- Response = standard Anthropic Messages shape: `content[0].text` holds the reply.
-- **`thinking: {type: disabled}` is the speed knob** — leaving it on adds ~3-5s of reasoning you don't need for a classifier/judge.
-- In Node, prefer `fetch(...)` (Node ≥18) over spawning curl.
-- Model: `Codex-haiku-4-5-20251001` for cheap/fast judging; bump to Sonnet only when the judgment is genuinely hard.
+Use `tools/_shared/deepseek-model.ts::selectAipomogatorDeepSeek` rather than reimplementing
+catalog parsing, selection, cache, or failure codes. Direct OpenRouter calls use
+`deepseek/deepseek-v4-flash`.
+
+For a Claude-subscription call, Meridian remains available through its Anthropic-compatible
+`/v1/messages` endpoint, but its model ID must be one accepted by Meridian — never an OpenRouter ID.
 
 ## FAIL-OPEN — never hard-depend on Meridian
 
@@ -68,12 +63,12 @@ The caller MUST degrade, never block on the proxy:
 |---|---|
 | Make a model call from OUR hook/judge/engine | **this** (the recipe above) |
 | Proxy down / 503 / start-restart-reauth Meridian | `proxy-up` |
-| Wire an EXTERNAL project's `.env` to the subscription | `use-Codex-subscription` |
-| Install/autostart Meridian for plugin users | infra ships in the plugin at `<plugin-root>/tools/Codex-subscription-proxy/`; a SessionStart hook (`ensure-up.cjs`) auto-starts it (fail-open, `MERIDIAN_AUTOSTART=false` to opt out); container reuses the host Codex login (no separate `Codex login`); `proxy-up` for manual ops |
+| Wire an EXTERNAL project's `.env` to the subscription | `use-claude-subscription` |
+| Install/autostart Meridian for plugin users | infra ships in the plugin at `<plugin-root>/tools/claude-subscription-proxy/`; a SessionStart hook (`ensure-up.cjs`) auto-starts it (fail-open, `MERIDIAN_AUTOSTART=false` to opt out); container reuses the host Claude login (no separate `claude login`); `proxy-up` for manual ops |
 
 ## Anti-patterns
 
-- ❌ `spawnSync('Codex', ['-p', ...])` for a judgment — ~13s cold-start; use Meridian (~2.4s).
+- ❌ `spawnSync('claude', ['-p', ...])` for a judgment — ~13s cold-start; use Meridian (~2.4s).
 - ❌ Leaving `thinking` on for a binary classifier/judge — wastes ~3-5s.
 - ❌ Hard-failing when the proxy is down — always fail-open to the dep-free path.
 - ❌ Putting an `ANTHROPIC_API_KEY` in code/hooks — Meridian uses the subscription; no key.
@@ -81,7 +76,7 @@ The caller MUST degrade, never block on the proxy:
 
 ## History
 
-Created 2026-06-14 after the FR-49 stop-gate-judge prototype measured `Codex -p` at ~13s
+Created 2026-06-14 after the FR-49 stop-gate-judge prototype measured `claude -p` at ~13s
 (unusable per-stop) vs Meridian-direct-thinking-off at ~2.4s. The owner: «встрой Meridian в
 плагин… и скил сделай как и нахуя юзать, чтоб не придумывать велосипеды медленные». This
-skill is the canonical answer so no future agent reinvents the `Codex -p` slow path.
+skill is the canonical answer so no future agent reinvents the `claude -p` slow path.

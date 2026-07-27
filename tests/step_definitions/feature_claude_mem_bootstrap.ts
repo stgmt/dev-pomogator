@@ -211,8 +211,8 @@ Then<CmemWorld>(/^the recorded installer invocation targets "claude-mem install"
   assert.ok(argv.includes('install'), 'argv must run install');
   for (const pair of [
     ['--ide', 'claude-code'],
-    ['--provider', 'claude'],
-    ['--model', 'claude-haiku-4-5-20251001'],
+    ['--provider', 'openrouter'],
+    ['--model', 'deepseek/deepseek-v4-flash'],
     ['--runtime', 'worker'],
   ]) {
     const i = argv.indexOf(pair[0]);

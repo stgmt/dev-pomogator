@@ -1,10 +1,10 @@
 ---
 name: meridian-model-call
 description: |
-  HOW and WHY to make a FAST model call (Haiku/Sonnet) from our own hooks, gates,
-  judges, and engine scripts — via the local Meridian subscription proxy on
-  http://127.0.0.1:3456, NOT via `claude -p`. Meridian gives an Anthropic-compatible
-  /v1/messages API backed by the user's SUBSCRIPTION (no ANTHROPIC_API_KEY needed).
+  HOW and WHY to make a FAST model call from our own hooks, gates, judges, and
+  engine scripts. DeepSeek calls use the OpenAI-compatible AiPomogator route;
+  Claude-subscription calls may use the local Meridian proxy on http://127.0.0.1:3456.
+  Do not send OpenRouter model IDs to Meridian's Anthropic-compatible /v1/messages API.
   Measured: a direct Meridian call with thinking OFF ≈ 2.4s; `claude -p` ≈ 13s (it
   cold-starts MCP/hooks/plugin every call). USE THIS before writing any "spawn claude
   to judge X" code — do not reinvent the slow wheel. Triggers: "вызвать модель из хука",
@@ -17,10 +17,10 @@ allowed-tools: Read, Bash, Edit, Write, Skill
 
 ## Why this exists (read before writing any model-call code)
 
-Anything in this repo that needs a model DECISION inside a hook/gate/judge/engine script
-(the FR-49b stop-gate judge, FR-8 semantic drift, anchor-fix fallback, future LLM gates)
-MUST call **Meridian** — the local subscription proxy — directly over HTTP. Do **NOT**
-shell out to `claude -p`. Measured on this machine (`.dev-pomogator/.tmp/latency-probe`):
+Anything in this repo that needs a model decision inside a hook/gate/judge/engine script
+must use the matching provider protocol directly. DeepSeek uses AiPomogator/OpenRouter's
+OpenAI-compatible API; Claude subscription calls use Meridian's Anthropic-compatible API.
+Do **NOT** shell out to `claude -p`. Measured on this machine (`.dev-pomogator/.tmp/latency-probe`):
 
 | Transport | Latency / call | Why |
 |---|---|---|
@@ -29,28 +29,23 @@ shell out to `claude -p`. Measured on this machine (`.dev-pomogator/.tmp/latency
 | Meridian `/v1/messages`, thinking ON | ~7 000 ms | the model reasons before the verdict |
 | **Meridian `/v1/messages`, thinking OFF** | **~2 400 ms** | direct HTTP, no CLI, no reasoning — **use this** |
 
-`claude -p` for a binary judgment is the slow/dumb wheel. ~5× slower for the SAME model.
-Meridian is already the project's blessed path (see `proxy-up`, `use-claude-subscription`).
+`claude -p` for a binary judgment is the slow/dumb wheel. Direct HTTP avoids CLI startup.
+Choose AiPomogator/OpenRouter for DeepSeek and Meridian only for Claude-subscription models.
 
-## The recipe (fast model call, no API key)
+## The recipe for DeepSeek
 
-```bash
-curl -s -m 20 http://127.0.0.1:3456/v1/messages \
-  -H "content-type: application/json" \
-  -H "anthropic-version: 2023-06-01" \
-  -H "x-api-key: sk-dummy" \           # proxy injects the subscription auth; any value works
-  -d '{
-    "model": "claude-haiku-4-5-20251001",
-    "max_tokens": 64,
-    "thinking": {"type": "disabled"},
-    "messages": [{"role": "user", "content": "<your prompt — ask for ONE JSON line>"}]
-  }'
-```
+1. Query `GET {AUTO_COMMIT_LLM_URL}/models` with `AUTO_COMMIT_API_KEY`.
+2. Select only a returned compatible route; the expected AiPomogator route is
+   `openrouter/deepseek/deepseek-v4-flash`. Never invent it by prefixing the direct ID.
+3. Call `POST {AUTO_COMMIT_LLM_URL}/chat/completions` with that verified route.
+4. On catalog/provider failure, emit a secret-free diagnostic and fail open without Haiku fallback.
 
-- Response = standard Anthropic Messages shape: `content[0].text` holds the reply.
-- **`thinking: {type: disabled}` is the speed knob** — leaving it on adds ~3-5s of reasoning you don't need for a classifier/judge.
-- In Node, prefer `fetch(...)` (Node ≥18) over spawning curl.
-- Model: `claude-haiku-4-5-20251001` for cheap/fast judging; bump to Sonnet only when the judgment is genuinely hard.
+Use `tools/_shared/deepseek-model.ts::selectAipomogatorDeepSeek` rather than reimplementing
+catalog parsing, selection, cache, or failure codes. Direct OpenRouter calls use
+`deepseek/deepseek-v4-flash`.
+
+For a Claude-subscription call, Meridian remains available through its Anthropic-compatible
+`/v1/messages` endpoint, but its model ID must be one accepted by Meridian — never an OpenRouter ID.
 
 ## FAIL-OPEN — never hard-depend on Meridian
 

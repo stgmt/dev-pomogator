@@ -19,49 +19,62 @@
 //   4. Subprocess runs, parses JSON, returns DRIFT or NO_DRIFT.
 //
 // `runFullMode` is pure orchestration — the LLM spawn is injected so unit tests
-// cover every branch without a real call. PRODUCTION default = `meridianSpawn`
-// (the local Meridian subscription proxy, ~3s thinking-off) — NOT `claude -p`
-// (~13s cold-start; see skill `meridian-model-call`). Fail-open: if Meridian is
-// down, the spawn throws → `runJudge` returns SUBPROCESS_FAILED → the pair is
-// skipped (no semantic finding), never falling back to the slow path.
+// cover every branch without a real call. PRODUCTION default = `deepseekSpawn`
+// through the project's AiPomogator OpenAI-compatible route. Fail-open: if the
+// provider is unavailable, the spawn throws → `runJudge` returns SUBPROCESS_FAILED → full mode keeps
+// the mechanical findings, emits a WARNING semantic finding, and marks the report
+// partial instead of silently pretending the semantic pass completed.
 
 import fs from 'node:fs';
 import path from 'node:path';
 import { runJudge, type JudgeResult } from '../../../../tools/spec-llm-judge/index.ts';
-import { type Finding, type ReconcileResult, reconcileLight } from './reconcile.ts';
+import { selectAipomogatorDeepSeek } from '../../../../tools/_shared/deepseek-model.ts';
+import { extractConceptNouns, type Finding, type ReconcileResult, reconcileLight } from './reconcile.ts';
 
-const MERIDIAN_MODEL = 'claude-haiku-4-5-20251001';
-const MERIDIAN_TIMEOUT_MS = 20_000;
-const meridianUrl = () => (process.env.MERIDIAN_URL || 'http://127.0.0.1:3456').replace(/\/+$/, '');
+const DEEPSEEK_TIMEOUT_MS = 120_000;
+const deepseekBaseUrl = () => (process.env.AUTO_COMMIT_LLM_URL || 'https://aipomogator.ru/go/v1').replace(/\/+$/, '');
 
 /**
- * Fast LLM transport for the semantic-drift judge via the local Meridian proxy
- * (`/v1/messages`, thinking OFF). Returns the model's text (the JSON verdict
- * `buildPrompt` asks for; markdown fences stripped). THROWS on any failure so the
- * caller fails open to SUBPROCESS_FAILED — we never reinvent the slow `claude -p` path.
+ * DeepSeek transport for the semantic-drift judge through AiPomogator's
+ * OpenAI-compatible endpoint. Returns the JSON verdict text with optional markdown
+ * fences stripped. THROWS on any failure so the caller fails open to SUBPROCESS_FAILED.
  */
-async function meridianSpawn(prompt: string): Promise<string> {
+async function deepseekSpawn(prompt: string): Promise<string> {
   if (typeof fetch !== 'function') throw new Error('no global fetch (node <18)');
+  const apiKey = process.env.AUTO_COMMIT_API_KEY;
+  if (!apiKey) throw new Error('AUTO_COMMIT_API_KEY is not configured');
+  const baseUrl = deepseekBaseUrl();
+  const selection = await selectAipomogatorDeepSeek({
+    baseUrl,
+    apiKey,
+    override: process.env.CROSS_SPEC_RECONCILE_MODEL,
+  });
   const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), MERIDIAN_TIMEOUT_MS);
+  let timedOut = false;
+  const timer = setTimeout(() => {
+    timedOut = true;
+    ctrl.abort();
+  }, DEEPSEEK_TIMEOUT_MS);
   try {
-    const r = await fetch(`${meridianUrl()}/v1/messages`, {
+    const r = await fetch(`${baseUrl}/chat/completions`, {
       method: 'POST',
       signal: ctrl.signal,
-      headers: { 'content-type': 'application/json', 'anthropic-version': '2023-06-01', 'x-api-key': 'sk-dummy' },
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${apiKey}` },
       body: JSON.stringify({
-        model: MERIDIAN_MODEL,
+        model: selection.model,
         max_tokens: 256,
-        thinking: { type: 'disabled' },
+        temperature: 0,
         messages: [{ role: 'user', content: prompt }],
       }),
     });
-    if (!r.ok) throw new Error(`meridian /v1/messages ${r.status}`);
-    const j = (await r.json()) as { content?: Array<{ type: string; text?: string }> };
-    const text = (j.content ?? []).filter((b) => b.type === 'text').map((b) => b.text ?? '').join('').trim();
-    if (!text) throw new Error('empty meridian response');
-    // Strip a ```json fence if Haiku wrapped the JSON; parseSubprocessOutput needs bare JSON.
+    if (!r.ok) throw new Error(`DeepSeek chat completion ${r.status}`);
+    const j = (await r.json()) as { choices?: Array<{ message?: { content?: string } }> };
+    const text = j.choices?.[0]?.message?.content?.trim() ?? '';
+    if (!text) throw new Error('empty DeepSeek response');
     return text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim();
+  } catch (e) {
+    if (timedOut) throw new Error(`semantic dispatcher timeout after ${DEEPSEEK_TIMEOUT_MS}ms`);
+    throw e;
   } finally {
     clearTimeout(timer);
   }
@@ -85,16 +98,32 @@ export interface FullModeOptions {
 }
 
 export interface FullModeResult extends ReconcileResult {
+  mode: 'full';
   /** Number of subprocess calls actually fired (cache hits don't count). */
   subprocess_calls: number;
   /** Number of pairs the judge said had drift. */
   drift_detected: number;
   /** Number of pairs skipped by FR-26 deny-list. */
   deny_list_skips: number;
+  /** Number of semantic judge failures that degraded full mode to mechanical-only for the affected pair. */
+  semantic_failures: number;
 }
 
 const MIN_TEXT_LEN = 60;
 const DEFAULT_MAX_CALLS = 50;
+const SEMANTIC_PREFILTER_MIN_SHARED = 3;
+const SEMANTIC_CONCEPT_WORD_RE = /\b[A-Za-z][A-Za-z0-9-]{2,}\b/g;
+const SEMANTIC_CONCEPT_STOPLIST = new Set([
+  'a', 'an', 'and', 'are', 'as', 'at', 'be', 'by', 'for', 'from', 'has', 'have', 'in', 'into', 'is', 'it', 'its',
+  'of', 'on', 'or', 'that', 'the', 'their', 'then', 'this', 'to', 'via', 'when', 'with', 'without',
+  'add', 'adds', 'after', 'against', 'all', 'also', 'before', 'body', 'both', 'can', 'check', 'checks',
+  'code', 'correctly', 'default', 'detect', 'does', 'done', 'each', 'emit', 'emits', 'every', 'exists',
+  'fail', 'fails', 'file', 'files', 'flag', 'flow', 'from', 'given', 'green', 'handles', 'long', 'matching',
+  'mode', 'must', 'only', 'pair', 'pairs', 'pass', 'passed', 'prose', 'read', 'reads', 'report', 'reports',
+  'result', 'returns', 'same', 'scenario', 'shall', 'short', 'shows', 'skip', 'skips', 'spec', 'specs',
+  'successfully', 'system', 'task', 'test', 'tests', 'text', 'then', 'true', 'user', 'users', 'when', 'write',
+  'writes',
+]);
 // JS regex has no `\Z` — emulate end-of-input with `(?=\n#{2,3}\s|$)` and
 // the `s` flag so `.` is unused; use `[\s\S]*?` non-greedy + lookahead.
 const FR_BLOCK_RE = /^#{2,3}\s+(?:Requirement:\s+)?(FR-\d+)(?:[:\s][^\n]*)?\n([\s\S]*?)(?=\n#{2,3}\s|$)/gm;
@@ -128,6 +157,31 @@ function collectFrBlocks(repoRoot: string, slugs: string[]): FrBlock[] {
     }
   }
   return out;
+}
+
+function semanticConcepts(body: string): Set<string> {
+  const concepts = extractConceptNouns(body);
+  let m: RegExpExecArray | null;
+  SEMANTIC_CONCEPT_WORD_RE.lastIndex = 0;
+  while ((m = SEMANTIC_CONCEPT_WORD_RE.exec(body)) !== null) {
+    const word = m[0].toLowerCase();
+    if (word.length < 3 || SEMANTIC_CONCEPT_STOPLIST.has(word)) continue;
+    if (/^fr-?\d+$/i.test(word) || /^ac-?\d+$/i.test(word)) continue;
+    concepts.add(word);
+  }
+  return concepts;
+}
+
+function hasSemanticOverlap(a: FrBlock, b: FrBlock): boolean {
+  const conceptsA = semanticConcepts(a.body);
+  const conceptsB = semanticConcepts(b.body);
+  let shared = 0;
+  for (const concept of conceptsA) {
+    if (!conceptsB.has(concept)) continue;
+    shared++;
+    if (shared >= SEMANTIC_PREFILTER_MIN_SHARED) return true;
+  }
+  return false;
 }
 
 /** Run full-mode reconcile (mechanical + LLM-judge). Async because of subprocess calls. */
@@ -168,6 +222,7 @@ export async function runFullMode(opts: FullModeOptions): Promise<FullModeResult
       const key = `.specs/${a.slug}::.specs/${b.slug}`;
       const keyRev = `.specs/${b.slug}::.specs/${a.slug}`;
       if (alreadyFlagged.has(key) || alreadyFlagged.has(keyRev)) continue;
+      if (!hasSemanticOverlap(a, b)) continue;
       pairs.push([a, b]);
     }
   }
@@ -176,7 +231,11 @@ export async function runFullMode(opts: FullModeOptions): Promise<FullModeResult
   let drift = 0;
   let denyListSkips = 0;
   const semanticBySlug = new Map<string, Finding[]>();
-  for (const slug of slugs) semanticBySlug.set(slug, []);
+  const partialReasonsBySlug = new Map<string, string[]>();
+  for (const slug of slugs) {
+    semanticBySlug.set(slug, []);
+    partialReasonsBySlug.set(slug, []);
+  }
 
   for (const [a, b] of pairs) {
     if (calls >= maxCalls) break;
@@ -196,18 +255,36 @@ export async function runFullMode(opts: FullModeOptions): Promise<FullModeResult
       scenarioId: `${b.slug}/${b.frId}`,
       scenarioText: b.body,
       spec_llm_judge_deny: denyA || denyB,
-      spawn: opts.spawn ?? meridianSpawn, // production default = Meridian (not claude -p)
+      spawn: opts.spawn ?? deepseekSpawn, // production default = DeepSeek through AiPomogator
     });
     if (!judgeRes.from_cache) calls++;
     if (judgeRes.result === 'SKIPPED_DENY_LIST') {
       denyListSkips++;
       continue;
     }
+    if (judgeRes.result === 'SUBPROCESS_FAILED') {
+      const reason =
+        `Semantic judge failed for ${a.slug}/${a.frId} ↔ ${b.slug}/${b.frId}; ` +
+        `full mode continued with mechanical findings only for this pair. ${judgeRes.error ?? 'No error detail.'}`;
+      const finding: Finding = {
+        code: 'cross-spec/semantic-check-failed',
+        class: 'semantic',
+        severity: 'WARNING',
+        spec_a: `.specs/${a.slug} (${a.frId})`,
+        spec_b: `.specs/${b.slug} (${b.frId})`,
+        suggested_fix: reason,
+      };
+      semanticBySlug.get(a.slug)!.push(finding);
+      semanticBySlug.get(b.slug)!.push(finding);
+      partialReasonsBySlug.get(a.slug)!.push(reason);
+      partialReasonsBySlug.get(b.slug)!.push(reason);
+      continue;
+    }
     if (judgeRes.result === 'DRIFT') {
       drift++;
       const finding: Finding = {
         code: 'cross-spec/semantic-drift',
-        class: 'contradiction',
+        class: 'semantic',
         severity: judgeRes.severity === 'error' ? 'CRITICAL' : 'WARNING',
         spec_a: `.specs/${a.slug} (${a.frId})`,
         spec_b: `.specs/${b.slug} (${b.frId})`,
@@ -220,12 +297,18 @@ export async function runFullMode(opts: FullModeOptions): Promise<FullModeResult
     }
   }
 
-  return mechanical.map((r) => ({
-    ...r,
-    mode: 'light',
-    findings: [...r.findings, ...(semanticBySlug.get(r.specSlug) ?? [])],
-    subprocess_calls: calls,
-    drift_detected: drift,
-    deny_list_skips: denyListSkips,
-  }));
+  return mechanical.map((r) => {
+    const partialReasons = partialReasonsBySlug.get(r.specSlug) ?? [];
+    return {
+      ...r,
+      mode: 'full',
+      findings: [...r.findings, ...(semanticBySlug.get(r.specSlug) ?? [])],
+      partial: partialReasons.length > 0 ? true : undefined,
+      partialReasons: partialReasons.length > 0 ? partialReasons : undefined,
+      subprocess_calls: calls,
+      drift_detected: drift,
+      deny_list_skips: denyListSkips,
+      semantic_failures: partialReasons.length,
+    };
+  });
 }

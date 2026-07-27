@@ -1,0 +1,13 @@
+{
+  "provenance": {
+    "derived_from": "aipomogator-models.json",
+    "derivation": "Removed the DeepSeek row to exercise the absent-compatible-route condition."
+  },
+  "data": [
+    {
+      "id": "openrouter/anthropic/claude-3-haiku",
+      "object": "model",
+      "owned_by": "openrouter"
+    }
+  ]
+}

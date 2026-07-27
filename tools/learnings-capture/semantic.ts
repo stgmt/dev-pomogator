@@ -5,6 +5,11 @@
 import { promises as nodeFs } from 'node:fs';
 import type { Signal } from './types.ts';
 import { TRIGGER_TYPES, MAX_SIGNAL_LENGTH, MAX_CONTEXT_LENGTH } from './types.ts';
+import {
+  AIPOMOGATOR_DEEPSEEK_MODEL,
+  OPENROUTER_DEEPSEEK_MODEL,
+  selectAipomogatorDeepSeek,
+} from '../_shared/deepseek-model.ts';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -42,6 +47,7 @@ interface SemanticResult {
 const MAX_TRANSCRIPT_MESSAGES = 20;
 const LLM_TIMEOUT_MS = 30_000;
 const VALID_TRIGGERS = new Set(TRIGGER_TYPES);
+export const LEARNINGS_DEFAULT_MODEL = AIPOMOGATOR_DEEPSEEK_MODEL;
 
 const SYSTEM_PROMPT = `You are analyzing a conversation transcript between a developer and an AI assistant.
 Identify learning signals — patterns worth remembering for future sessions.
@@ -68,13 +74,26 @@ If no signals found, return: {"signals":[],"selfEval":{"nonTrivialInvestigation"
 // LLM Call (reuses auto-commit pattern)
 // ---------------------------------------------------------------------------
 
-async function callLLM(messages: LLMMessage[]): Promise<string | null> {
+export async function callLearningsLLM(messages: LLMMessage[]): Promise<string | null> {
   const baseUrl = process.env.AUTO_COMMIT_LLM_URL;
   const apiKey = process.env.AUTO_COMMIT_API_KEY;
-  const model = process.env.LEARNINGS_LLM_MODEL || 'claude-haiku-4-5-20251001';
 
   if (!baseUrl || !apiKey) {
     return null;
+  }
+
+  const modelOverride = process.env.LEARNINGS_LLM_MODEL;
+  let model = modelOverride || (baseUrl.includes('aipomogator.ru') ? LEARNINGS_DEFAULT_MODEL : OPENROUTER_DEEPSEEK_MODEL);
+  if (baseUrl.includes('aipomogator.ru')) {
+    try {
+      model = (await selectAipomogatorDeepSeek({
+        baseUrl,
+        apiKey,
+        override: modelOverride,
+      })).model;
+    } catch {
+      return null;
+    }
   }
 
   const url = `${baseUrl}/chat/completions`;
@@ -191,7 +210,7 @@ export async function detectSignalsSemantic(
     { role: 'user', content: `Transcript:\n${text}` },
   ];
 
-  const response = await callLLM(messages);
+  const response = await callLearningsLLM(messages);
   if (!response) return { signals: [], transcriptText: text }; // LLM unavailable → caller handles fallback
 
   const result = parseLLMResponse(response);

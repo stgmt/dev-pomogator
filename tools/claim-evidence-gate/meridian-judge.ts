@@ -28,8 +28,13 @@
 
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import {
+  AIPOMOGATOR_DEEPSEEK_MODEL,
+  OPENROUTER_DEEPSEEK_MODEL,
+  selectAipomogatorDeepSeek,
+} from '../_shared/deepseek-model.ts';
 
-const MODEL_OVERRIDE = process.env.CLAIM_GATE_JUDGE_MODEL;
+export { AIPOMOGATOR_DEEPSEEK_MODEL, OPENROUTER_DEEPSEEK_MODEL };
 const TIMEOUT_MS = 6000; // user-set: 6s, then log + fail-open(null) → caller fail-closes
 
 export interface JudgeInput {
@@ -141,25 +146,27 @@ export function resolveEndpoint(injectedEnv?: Record<string, string | undefined>
     ensureDotenvLoaded();
     env = process.env;
   }
+  const modelOverride = env.CLAIM_GATE_JUDGE_MODEL;
   const judgeKey = env.CLAIM_GATE_JUDGE_KEY;
   if (judgeKey) {
+    const url = env.CLAIM_GATE_JUDGE_URL ?? 'https://openrouter.ai/api/v1';
     return {
-      url: env.CLAIM_GATE_JUDGE_URL ?? 'https://openrouter.ai/api/v1',
+      url,
       key: judgeKey,
-      model: MODEL_OVERRIDE ?? 'anthropic/claude-haiku-4.5',
+      model: modelOverride ?? (url.includes('aipomogator.ru') ? AIPOMOGATOR_DEEPSEEK_MODEL : OPENROUTER_DEEPSEEK_MODEL),
     };
   }
   // OpenRouter key under any known name (the project's real one is CLAUDE_MEM_OPENROUTER_API_KEY).
   const orKey = env.OPENROUTER_API_KEY || env.CLAUDE_MEM_OPENROUTER_API_KEY;
   if (orKey) {
-    return { url: 'https://openrouter.ai/api/v1', key: orKey, model: MODEL_OVERRIDE ?? 'anthropic/claude-haiku-4.5' };
+    return { url: 'https://openrouter.ai/api/v1', key: orKey, model: modelOverride ?? OPENROUTER_DEEPSEEK_MODEL };
   }
   const acKey = env.AUTO_COMMIT_API_KEY;
   if (acKey) {
     return {
       url: env.AUTO_COMMIT_LLM_URL ?? 'https://aipomogator.ru/go/v1',
       key: acKey,
-      model: MODEL_OVERRIDE ?? 'openrouter/anthropic/claude-haiku-4.5',
+      model: modelOverride ?? AIPOMOGATOR_DEEPSEEK_MODEL,
     };
   }
   return null;
@@ -265,39 +272,59 @@ export function buildJudgePrompt(i: JudgeInput): string {
   ].join('\n');
 }
 
-interface JudgeOpts {
+export interface JudgeOpts {
   /** Override the resolved endpoint base URL (tests / config). */
   url?: string;
+  /** Inject a controlled environment for integration tests. */
+  env?: Record<string, string | undefined>;
   timeoutMs?: number;
+  fetchImpl?: typeof fetch;
 }
 
 /**
- * Ask the помогатор Haiku judge over the project's existing OpenAI-compatible integration. ONE real
+ * Ask the помогатор DeepSeek judge over the project's existing OpenAI-compatible integration. ONE real
  * call — no mock transport, no secondary endpoint. Returns the {block,reason} verdict, or NULL to
  * FAIL-OPEN (and logs WHY) when there is no token / the endpoint fails / the reply is unparseable.
  * Never throws — a plugin Stop hook must not crash because помогатор is unreachable.
  */
 export async function judgeStop(input: JudgeInput, opts: JudgeOpts = {}): Promise<JudgeVerdict | null> {
-  if (typeof fetch !== 'function') {
-    logUnavailable('в этом рантайме нет global fetch (старый Node)');
+  const fetchImpl = opts.fetchImpl ?? globalThis.fetch;
+  if (typeof fetchImpl !== 'function') {
+    logUnavailable('global fetch is unavailable');
     return null;
   }
-  const ep = resolveEndpoint();
+  const ep = resolveEndpoint(opts.env);
   if (!ep) {
     logUnavailable('нет токена — задай OPENROUTER_API_KEY или AUTO_COMMIT_API_KEY (env или .env/.env.test)');
     return null;
   }
   const base = (opts.url ?? ep.url).replace(/\/+$/, '');
+  let model = ep.model;
+  if (base.includes('aipomogator.ru')) {
+    try {
+      const selection = await selectAipomogatorDeepSeek({
+        baseUrl: base,
+        apiKey: ep.key,
+        override: opts.env?.CLAIM_GATE_JUDGE_MODEL ?? process.env.CLAIM_GATE_JUDGE_MODEL,
+        fetchImpl,
+      });
+      model = selection.model;
+    } catch (error) {
+      const code = error instanceof Error && 'code' in error ? String(error.code) : 'catalog_unavailable';
+      logUnavailable(`DeepSeek catalog selection failed: ${code} (${base})`);
+      return null;
+    }
+  }
   const url = `${base}/chat/completions`;
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), opts.timeoutMs ?? TIMEOUT_MS);
   try {
-    const r = await fetch(url, {
+    const r = await fetchImpl(url, {
       method: 'POST',
       signal: ctrl.signal,
       headers: { 'content-type': 'application/json', authorization: `Bearer ${ep.key}` },
       body: JSON.stringify({
-        model: ep.model,
+        model,
         max_tokens: 120,
         temperature: 0,
         messages: [{ role: 'user', content: buildJudgePrompt(input) }],

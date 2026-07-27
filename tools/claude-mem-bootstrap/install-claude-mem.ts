@@ -30,6 +30,7 @@ import { log as logShared } from '../_shared/hook-utils.ts';
 const LOG_PREFIX = 'claude-mem-bootstrap';
 const VERBOSE = process.env.DEV_POMOGATOR_HOOK_VERBOSE === '1';
 const BACKOFF_MS = 6 * 60 * 60 * 1000; // 6h between attempts — a failing/offline install isn't retried every session
+export const CLAUDE_MEM_DEEPSEEK_MODEL = 'deepseek/deepseek-v4-flash';
 
 /** The confirmed non-interactive installer arguments (dev-pomogator defaults). */
 export const INSTALL_ARGS = [
@@ -39,9 +40,9 @@ export const INSTALL_ARGS = [
   '--ide',
   'claude-code',
   '--provider',
-  'claude',
+  'openrouter',
   '--model',
-  'claude-haiku-4-5-20251001',
+  CLAUDE_MEM_DEEPSEEK_MODEL,
   '--runtime',
   'worker',
 ] as const;

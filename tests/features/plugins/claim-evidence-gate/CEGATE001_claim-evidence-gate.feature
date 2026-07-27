@@ -269,6 +269,22 @@ Feature: CEGATE001 Claim-Evidence Gate
     When the gate resolves the judge endpoint for each
     Then every single-token snapshot resolves an endpoint while the tokenless snapshot resolves null
 
+  # @feature15 @HDS001 @FR-1 @FR-2 @FR-3
+  Scenario: CEGATE001_64 Judge endpoints select exact DeepSeek models without a Haiku fallback
+    Given direct OpenRouter, routed AiPomogator, and explicit override judge configurations
+    When the supported judge endpoint resolver selects models
+    Then direct routing uses "deepseek/deepseek-v4-flash"
+    And AiPomogator routing uses the returned catalog ID "openrouter/deepseek/deepseek-v4-flash"
+    And the explicit override remains "test/provider-model"
+    And no resolved default contains an active Haiku identifier
+
+  # @feature15 @HDS002 @FR-3
+  Scenario: CEGATE001_65 Real judge client sends DeepSeek through the OpenAI-compatible route
+    Given a local OpenAI-compatible judge endpoint
+    When the real judge client sends one decision request
+    Then the request uses the AiPomogator DeepSeek model and bearer authentication
+    And the judge response is accepted as DONE
+
   # @feature17
   Scenario: CEGATE001_50 A Дальше block arms the judge even when openWork is zero, including on analysis-only
     Given an arming input with a Дальше block present and openWork at zero, plain and with analysis-only set
