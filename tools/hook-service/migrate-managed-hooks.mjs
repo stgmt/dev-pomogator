@@ -10,7 +10,7 @@ import { mkdir, open, readFile, rename, rm } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { renderHttpManifest } from './registry.mjs';
 
-const marker = /(?:tools\/(?:hook-service\/session-bootstrap|_shared\/bootstrap|_shared\/hook-runtime)|hook-runtime\.sh)/i;
+const marker = /(?:tools\/(?:hook-service\/(?:session-bootstrap|client)|_shared\/bootstrap|_shared\/hook-runtime)|hook-runtime\.sh)/i;
 const journalVersion = 2;
 
 const hash = content => createHash('sha256').update(content).digest('hex');

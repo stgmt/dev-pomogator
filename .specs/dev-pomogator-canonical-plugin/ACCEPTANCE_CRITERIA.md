@@ -120,4 +120,11 @@ WHEN the persisted credential differs from the parent-process credential
 THEN bootstrap and doctor SHALL report one restart-required fingerprint mismatch without printing the token
 AND SHALL remain fail-open.
 
-**BDD:** `CORE024_01`, `CORE024_02`, `CORE024_06`, `CORE024_07` in `tests/features/core/CORE024_hook-review.feature`; `tests/step_definitions/feature24_hook_review.ts`.
+WHEN a managed non-SessionStart hook runs after its owned hook-service daemon has died or become stale during the same Claude Code session
+THEN the builtins-only client SHALL coalesce startup through `ensureUp`, start or recycle only the verified-owned daemon, and dispatch the original request successfully without user action
+AND a connection-class first failure SHALL retry the exact request at most once after recovery
+AND a live 401, 403, 404, or 503 response SHALL be returned without restart or retry
+AND a foreign process or listener SHALL never be terminated or treated as owned
+AND a second transport failure SHALL fail open and persist a sanitized client diagnostic without the credential.
+
+**BDD:** `CORE024_01`, `CORE024_02`, `CORE024_06`, `CORE024_07`, `CORE024_12` in `tests/features/core/CORE024_hook-review.feature`; `tests/step_definitions/feature24_hook_review.ts`.

@@ -6,7 +6,7 @@ import path from 'node:path';
 
 // Claude plugin manifests share the HTTP hook schema. Codex/settings registries have
 // distinct command schemas and are intentionally reviewed by their own validators.
-const REVIEWED_STAGE_PATH = /^(?:\.claude(?:-plugin)?\/hooks\.json|\.claude\/settings\.json|tools\/hook-service\/(?:registry\.json|session-bootstrap\.mjs|migrate-managed-hooks\.mjs|generate-(?:manifest|registry)\.mjs|registry\.mjs)|tools\/hook-review\/|plugin-dev\/skills\/(?:hook-development|plugin-structure|plugin-settings)\/|\.claude\/skills\/create-spec\/)/;
+const REVIEWED_STAGE_PATH = /^(?:\.claude(?:-plugin)?\/hooks\.json|\.claude\/settings\.json|tools\/hook-service\/(?:client\.mjs|registry\.json|session-bootstrap\.mjs|migrate-managed-hooks\.mjs|generate-(?:manifest|registry)\.mjs|registry\.mjs)|tools\/hook-review\/|plugin-dev\/skills\/(?:hook-development|plugin-structure|plugin-settings)\/|\.claude\/skills\/create-spec\/)/;
 const SHELL = /(?:^|\s)(?:bash|sh)(?:\s|$)|\.(?:sh)(?:\s|$)/i;
 const INLINE_NODE = /(?:^|\s)node(?:\.exe)?\s+-e(?:\s|$)/i;
 const SERVICE_URL = /^http:\/\/127\.0\.0\.1:42619\/v1\/dispatch\/([^/?#]+)$/;
@@ -42,19 +42,23 @@ export function reviewHookManifest(manifestFile, registryFile, root = process.cw
           }
           continue;
         }
-        if (SHELL.test(command) || INLINE_NODE.test(command) || command) {
-          findings.push(finding(manifestFile, event, 'managed hot-path hooks must be URL entries, not command/client/shell/inline-node launchers'));
+        if (SHELL.test(command) || INLINE_NODE.test(command)) {
+          findings.push(finding(manifestFile, event, 'managed hot-path hooks must not use a shell or inline Node launcher'));
           continue;
         }
+        const supervisedClient = hook.type === 'command'
+          && /tools\/hook-service\/client\.mjs(?:["'\s]|$)/.test(command)
+          && command.includes(`"${id}"`);
         const url = typeof hook.url === 'string' ? hook.url : '';
-        if (hook.type !== 'http' || !SERVICE_URL.test(url) || url !== expectedUrl(id)) {
-          findings.push(finding(manifestFile, event, 'managed hot-path hooks must use the approved hook-service HTTP URL for their route'));
+        const legacyHttp = hook.type === 'http' && SERVICE_URL.test(url) && url === expectedUrl(id);
+        if (!supervisedClient && !legacyHttp) {
+          findings.push(finding(manifestFile, event, 'managed hot-path hooks must use the approved supervised hook-service client for their route'));
           continue;
         }
         manifestRouteIds.add(id);
-        if (hook.headers?.['x-dev-pomogator-token'] !== '${DEV_POMOGATOR_HOOK_TOKEN}' ||
+        if (legacyHttp && (hook.headers?.['x-dev-pomogator-token'] !== '${DEV_POMOGATOR_HOOK_TOKEN}' ||
             !Array.isArray(hook.allowedEnvVars) || hook.allowedEnvVars.length !== 1 ||
-            hook.allowedEnvVars[0] !== 'DEV_POMOGATOR_HOOK_TOKEN') {
+            hook.allowedEnvVars[0] !== 'DEV_POMOGATOR_HOOK_TOKEN')) {
           findings.push(finding(manifestFile, event, 'managed HTTP hooks must use only the DEV_POMOGATOR_HOOK_TOKEN environment bearer'));
         }
         const registered = registry.routes?.[id];
@@ -71,7 +75,7 @@ export function reviewHookManifest(manifestFile, registryFile, root = process.cw
   for (const id of Object.keys(registry.routes ?? {})) {
     const event = id.split('/', 1)[0];
     if (event !== 'SessionStart' && !manifestRouteIds.has(id)) {
-      findings.push(finding(registryFile, event, `registry route has no managed manifest HTTP hook (orphaned route: ${id})`));
+      findings.push(finding(registryFile, event, `registry route has no managed manifest client hook (orphaned route: ${id})`));
     }
   }
   if (settingsFile && fs.existsSync(settingsFile)) {

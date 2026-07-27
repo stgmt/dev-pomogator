@@ -71,3 +71,13 @@ Feature: CORE024 Windows shell-free hook authoring gate
     Given an isolated stale owned hook daemon identity
     When hook-service startup checks the stale daemon
     Then it stops the owned daemon and starts the current runtime
+
+  # @feature13 @feature17 @feature19 @feature24
+  Scenario: CORE024_12 A managed hook transparently recovers after its owned daemon dies mid-session
+    Given a managed hook client has dispatched through an owned authenticated hook-service daemon
+    And that owned daemon dies during the same Claude Code session
+    When the next managed hook dispatches the original request
+    Then the client restarts the owned service through the single-flight lifecycle and retries once
+    And the original registered hook response is returned without user action
+    And live HTTP errors are not retried and a foreign listener is never terminated
+    And a repeated transport failure remains fail-open with a sanitized durable diagnostic

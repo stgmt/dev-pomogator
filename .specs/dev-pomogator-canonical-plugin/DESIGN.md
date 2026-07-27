@@ -284,3 +284,19 @@ The shell-free policy has two declarative inputs: `.claude-plugin/hooks.json` is
 The gate rejects hot-path `bash`, `sh`, `.sh`, and inline `node -e`, unapproved HTTP routes, and route/event/matcher drift. The documented `SessionStart` plugin-root service bootstrap is the sole command exception. `CORE024_01` covers the negative policy surface; `CORE024_02` proves the approved HTTP plus bootstrap path.
 
 **Trade-off:** local registry metadata adds a review-time source of truth, but makes Windows shell regressions and manifest/registry drift testable without a live service or credential.
+
+### Decision: Supervised command client for recoverable HTTP dispatch
+
+**Требование:** [FR-13](FR.md#fr-13-plugin-hooks-use-one-authenticated-loopback-service)
+
+**Rationale:** Claude Code documents HTTP connection failures as fail-open and provides no retry or fallback field. A bare `http://127.0.0.1:42619` registration therefore loses every hook while the daemon is absent. Generated non-SessionStart registrations use one builtins-only `client.mjs` command. The client reads the exact hook JSON from stdin, invokes existing `ensureUp` before dispatch, authenticates with the persisted service credential, and writes the service response unchanged. On a connection-class exception only, it invokes `ensureUp` again and repeats the same request once. The existing exclusive startup lease coalesces concurrent recovery.
+
+The client treats any received HTTP response as a live-service result and does not restart for 401, 403, 404, or 503. `ensureUp` retains sole process-ownership authority, so the client cannot terminate a foreign listener. After the bounded retry is exhausted, the client appends a redacted transport diagnostic and exits zero with no hook decision, preserving fail-open behavior without exposing `ECONNREFUSED` as work for the user.
+
+**Trade-off:** steady-state hooks start one Node process instead of Claude Code issuing HTTP directly, but avoid shell parsing and recover from daemon loss in the same session. The fixed port remains an explicit local contract; a foreign listener is reported but never killed.
+
+**Alternatives considered:**
+- Native HTTP retry was rejected because the documented hook schema has no retry or fallback field.
+- SessionStart-only recovery was rejected because it leaves the active session broken until restart.
+- Killing the process bound to the fixed port was rejected because ownership cannot be inferred safely from a port.
+- Installing an OS-level supervisor was rejected because it adds cross-platform installation and lifecycle complexity.

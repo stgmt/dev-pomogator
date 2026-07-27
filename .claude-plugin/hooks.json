@@ -16,14 +16,8 @@
         "matcher": "",
         "hooks": [
           {
-            "type": "http",
-            "url": "http://127.0.0.1:42619/v1/dispatch/Stop%2F0%2F0",
-            "headers": {
-              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
-            },
-            "allowedEnvVars": [
-              "DEV_POMOGATOR_HOOK_TOKEN"
-            ],
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT:-${CLAUDE_PROJECT_DIR:-.}}/tools/hook-service/client.mjs\" \"Stop/0/0\"",
             "timeout": 60
           }
         ]
@@ -32,14 +26,8 @@
         "matcher": "",
         "hooks": [
           {
-            "type": "http",
-            "url": "http://127.0.0.1:42619/v1/dispatch/Stop%2F1%2F0",
-            "headers": {
-              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
-            },
-            "allowedEnvVars": [
-              "DEV_POMOGATOR_HOOK_TOKEN"
-            ],
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT:-${CLAUDE_PROJECT_DIR:-.}}/tools/hook-service/client.mjs\" \"Stop/1/0\"",
             "timeout": 60
           }
         ]
@@ -48,14 +36,8 @@
         "matcher": "",
         "hooks": [
           {
-            "type": "http",
-            "url": "http://127.0.0.1:42619/v1/dispatch/Stop%2F2%2F0",
-            "headers": {
-              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
-            },
-            "allowedEnvVars": [
-              "DEV_POMOGATOR_HOOK_TOKEN"
-            ],
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT:-${CLAUDE_PROJECT_DIR:-.}}/tools/hook-service/client.mjs\" \"Stop/2/0\"",
             "timeout": 60
           }
         ]
@@ -64,14 +46,8 @@
         "matcher": "",
         "hooks": [
           {
-            "type": "http",
-            "url": "http://127.0.0.1:42619/v1/dispatch/Stop%2F3%2F0",
-            "headers": {
-              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
-            },
-            "allowedEnvVars": [
-              "DEV_POMOGATOR_HOOK_TOKEN"
-            ],
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT:-${CLAUDE_PROJECT_DIR:-.}}/tools/hook-service/client.mjs\" \"Stop/3/0\"",
             "timeout": 60
           }
         ]
@@ -80,14 +56,8 @@
         "matcher": "",
         "hooks": [
           {
-            "type": "http",
-            "url": "http://127.0.0.1:42619/v1/dispatch/Stop%2F4%2F0",
-            "headers": {
-              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
-            },
-            "allowedEnvVars": [
-              "DEV_POMOGATOR_HOOK_TOKEN"
-            ],
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT:-${CLAUDE_PROJECT_DIR:-.}}/tools/hook-service/client.mjs\" \"Stop/4/0\"",
             "timeout": 60
           }
         ]
@@ -96,14 +66,8 @@
         "matcher": "",
         "hooks": [
           {
-            "type": "http",
-            "url": "http://127.0.0.1:42619/v1/dispatch/Stop%2F5%2F0",
-            "headers": {
-              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
-            },
-            "allowedEnvVars": [
-              "DEV_POMOGATOR_HOOK_TOKEN"
-            ],
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT:-${CLAUDE_PROJECT_DIR:-.}}/tools/hook-service/client.mjs\" \"Stop/5/0\"",
             "timeout": 60
           }
         ]
@@ -112,14 +76,8 @@
         "matcher": "",
         "hooks": [
           {
-            "type": "http",
-            "url": "http://127.0.0.1:42619/v1/dispatch/Stop%2F6%2F0",
-            "headers": {
-              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
-            },
-            "allowedEnvVars": [
-              "DEV_POMOGATOR_HOOK_TOKEN"
-            ],
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT:-${CLAUDE_PROJECT_DIR:-.}}/tools/hook-service/client.mjs\" \"Stop/6/0\"",
             "timeout": 15
           }
         ]
@@ -128,14 +86,8 @@
         "matcher": "",
         "hooks": [
           {
-            "type": "http",
-            "url": "http://127.0.0.1:42619/v1/dispatch/Stop%2F7%2F0",
-            "headers": {
-              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
-            },
-            "allowedEnvVars": [
-              "DEV_POMOGATOR_HOOK_TOKEN"
-            ],
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT:-${CLAUDE_PROJECT_DIR:-.}}/tools/hook-service/client.mjs\" \"Stop/7/0\"",
             "timeout": 60
           }
         ]
@@ -144,14 +96,8 @@
         "matcher": "",
         "hooks": [
           {
-            "type": "http",
-            "url": "http://127.0.0.1:42619/v1/dispatch/Stop%2F8%2F0",
-            "headers": {
-              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
-            },
-            "allowedEnvVars": [
-              "DEV_POMOGATOR_HOOK_TOKEN"
-            ],
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT:-${CLAUDE_PROJECT_DIR:-.}}/tools/hook-service/client.mjs\" \"Stop/8/0\"",
             "timeout": 60
           }
         ]
@@ -160,14 +106,8 @@
         "matcher": "",
         "hooks": [
           {
-            "type": "http",
-            "url": "http://127.0.0.1:42619/v1/dispatch/Stop%2F9%2F0",
-            "headers": {
-              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
-            },
-            "allowedEnvVars": [
-              "DEV_POMOGATOR_HOOK_TOKEN"
-            ],
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT:-${CLAUDE_PROJECT_DIR:-.}}/tools/hook-service/client.mjs\" \"Stop/9/0\"",
             "timeout": 60
           }
         ]
@@ -176,14 +116,8 @@
         "matcher": "",
         "hooks": [
           {
-            "type": "http",
-            "url": "http://127.0.0.1:42619/v1/dispatch/Stop%2F10%2F0",
-            "headers": {
-              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
-            },
-            "allowedEnvVars": [
-              "DEV_POMOGATOR_HOOK_TOKEN"
-            ],
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT:-${CLAUDE_PROJECT_DIR:-.}}/tools/hook-service/client.mjs\" \"Stop/10/0\"",
             "timeout": 30
           }
         ]
@@ -192,14 +126,8 @@
         "matcher": "",
         "hooks": [
           {
-            "type": "http",
-            "url": "http://127.0.0.1:42619/v1/dispatch/Stop%2F11%2F0",
-            "headers": {
-              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
-            },
-            "allowedEnvVars": [
-              "DEV_POMOGATOR_HOOK_TOKEN"
-            ],
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT:-${CLAUDE_PROJECT_DIR:-.}}/tools/hook-service/client.mjs\" \"Stop/11/0\"",
             "timeout": 30
           }
         ]
@@ -208,14 +136,8 @@
         "matcher": "",
         "hooks": [
           {
-            "type": "http",
-            "url": "http://127.0.0.1:42619/v1/dispatch/Stop%2F12%2F0",
-            "headers": {
-              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
-            },
-            "allowedEnvVars": [
-              "DEV_POMOGATOR_HOOK_TOKEN"
-            ],
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT:-${CLAUDE_PROJECT_DIR:-.}}/tools/hook-service/client.mjs\" \"Stop/12/0\"",
             "timeout": 60
           }
         ]
@@ -226,14 +148,8 @@
         "matcher": "",
         "hooks": [
           {
-            "type": "http",
-            "url": "http://127.0.0.1:42619/v1/dispatch/PreToolUse%2F0%2F0",
-            "headers": {
-              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
-            },
-            "allowedEnvVars": [
-              "DEV_POMOGATOR_HOOK_TOKEN"
-            ],
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT:-${CLAUDE_PROJECT_DIR:-.}}/tools/hook-service/client.mjs\" \"PreToolUse/0/0\"",
             "timeout": 15
           }
         ]
@@ -242,14 +158,8 @@
         "matcher": "ExitPlanMode",
         "hooks": [
           {
-            "type": "http",
-            "url": "http://127.0.0.1:42619/v1/dispatch/PreToolUse%2F1%2F0",
-            "headers": {
-              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
-            },
-            "allowedEnvVars": [
-              "DEV_POMOGATOR_HOOK_TOKEN"
-            ],
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT:-${CLAUDE_PROJECT_DIR:-.}}/tools/hook-service/client.mjs\" \"PreToolUse/1/0\"",
             "timeout": 60
           }
         ]
@@ -258,69 +168,33 @@
         "matcher": "Write|Edit",
         "hooks": [
           {
-            "type": "http",
-            "url": "http://127.0.0.1:42619/v1/dispatch/PreToolUse%2F2%2F0",
-            "headers": {
-              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
-            },
-            "allowedEnvVars": [
-              "DEV_POMOGATOR_HOOK_TOKEN"
-            ],
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT:-${CLAUDE_PROJECT_DIR:-.}}/tools/hook-service/client.mjs\" \"PreToolUse/2/0\"",
             "timeout": 60
           },
           {
-            "type": "http",
-            "url": "http://127.0.0.1:42619/v1/dispatch/PreToolUse%2F2%2F1",
-            "headers": {
-              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
-            },
-            "allowedEnvVars": [
-              "DEV_POMOGATOR_HOOK_TOKEN"
-            ],
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT:-${CLAUDE_PROJECT_DIR:-.}}/tools/hook-service/client.mjs\" \"PreToolUse/2/1\"",
             "timeout": 60
           },
           {
-            "type": "http",
-            "url": "http://127.0.0.1:42619/v1/dispatch/PreToolUse%2F2%2F2",
-            "headers": {
-              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
-            },
-            "allowedEnvVars": [
-              "DEV_POMOGATOR_HOOK_TOKEN"
-            ],
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT:-${CLAUDE_PROJECT_DIR:-.}}/tools/hook-service/client.mjs\" \"PreToolUse/2/2\"",
             "timeout": 60
           },
           {
-            "type": "http",
-            "url": "http://127.0.0.1:42619/v1/dispatch/PreToolUse%2F2%2F3",
-            "headers": {
-              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
-            },
-            "allowedEnvVars": [
-              "DEV_POMOGATOR_HOOK_TOKEN"
-            ],
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT:-${CLAUDE_PROJECT_DIR:-.}}/tools/hook-service/client.mjs\" \"PreToolUse/2/3\"",
             "timeout": 30
           },
           {
-            "type": "http",
-            "url": "http://127.0.0.1:42619/v1/dispatch/PreToolUse%2F2%2F4",
-            "headers": {
-              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
-            },
-            "allowedEnvVars": [
-              "DEV_POMOGATOR_HOOK_TOKEN"
-            ],
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT:-${CLAUDE_PROJECT_DIR:-.}}/tools/hook-service/client.mjs\" \"PreToolUse/2/4\"",
             "timeout": 30
           },
           {
-            "type": "http",
-            "url": "http://127.0.0.1:42619/v1/dispatch/PreToolUse%2F2%2F5",
-            "headers": {
-              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
-            },
-            "allowedEnvVars": [
-              "DEV_POMOGATOR_HOOK_TOKEN"
-            ],
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT:-${CLAUDE_PROJECT_DIR:-.}}/tools/hook-service/client.mjs\" \"PreToolUse/2/5\"",
             "timeout": 30
           }
         ]
@@ -329,14 +203,8 @@
         "matcher": "Bash",
         "hooks": [
           {
-            "type": "http",
-            "url": "http://127.0.0.1:42619/v1/dispatch/PreToolUse%2F3%2F0",
-            "headers": {
-              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
-            },
-            "allowedEnvVars": [
-              "DEV_POMOGATOR_HOOK_TOKEN"
-            ],
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT:-${CLAUDE_PROJECT_DIR:-.}}/tools/hook-service/client.mjs\" \"PreToolUse/3/0\"",
             "timeout": 30
           }
         ]
@@ -345,14 +213,8 @@
         "matcher": "Bash",
         "hooks": [
           {
-            "type": "http",
-            "url": "http://127.0.0.1:42619/v1/dispatch/PreToolUse%2F4%2F0",
-            "headers": {
-              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
-            },
-            "allowedEnvVars": [
-              "DEV_POMOGATOR_HOOK_TOKEN"
-            ],
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT:-${CLAUDE_PROJECT_DIR:-.}}/tools/hook-service/client.mjs\" \"PreToolUse/4/0\"",
             "timeout": 30
           }
         ]
@@ -361,14 +223,8 @@
         "matcher": "Read|Grep|Glob|Edit|Write|Bash",
         "hooks": [
           {
-            "type": "http",
-            "url": "http://127.0.0.1:42619/v1/dispatch/PreToolUse%2F5%2F0",
-            "headers": {
-              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
-            },
-            "allowedEnvVars": [
-              "DEV_POMOGATOR_HOOK_TOKEN"
-            ],
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT:-${CLAUDE_PROJECT_DIR:-.}}/tools/hook-service/client.mjs\" \"PreToolUse/5/0\"",
             "timeout": 30
           }
         ]
@@ -377,14 +233,8 @@
         "matcher": "mcp__dev-pomogator-specs__apply_spec_change|mcp__dev-pomogator-specs__apply_spec_transaction|Write",
         "hooks": [
           {
-            "type": "http",
-            "url": "http://127.0.0.1:42619/v1/dispatch/PreToolUse%2F6%2F0",
-            "headers": {
-              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
-            },
-            "allowedEnvVars": [
-              "DEV_POMOGATOR_HOOK_TOKEN"
-            ],
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT:-${CLAUDE_PROJECT_DIR:-.}}/tools/hook-service/client.mjs\" \"PreToolUse/6/0\"",
             "timeout": 30
           }
         ]
@@ -395,14 +245,8 @@
         "matcher": "",
         "hooks": [
           {
-            "type": "http",
-            "url": "http://127.0.0.1:42619/v1/dispatch/UserPromptSubmit%2F0%2F0",
-            "headers": {
-              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
-            },
-            "allowedEnvVars": [
-              "DEV_POMOGATOR_HOOK_TOKEN"
-            ],
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT:-${CLAUDE_PROJECT_DIR:-.}}/tools/hook-service/client.mjs\" \"UserPromptSubmit/0/0\"",
             "timeout": 10
           }
         ]
@@ -411,14 +255,8 @@
         "matcher": "",
         "hooks": [
           {
-            "type": "http",
-            "url": "http://127.0.0.1:42619/v1/dispatch/UserPromptSubmit%2F1%2F0",
-            "headers": {
-              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
-            },
-            "allowedEnvVars": [
-              "DEV_POMOGATOR_HOOK_TOKEN"
-            ],
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT:-${CLAUDE_PROJECT_DIR:-.}}/tools/hook-service/client.mjs\" \"UserPromptSubmit/1/0\"",
             "timeout": 60
           }
         ]
@@ -427,14 +265,8 @@
         "matcher": "",
         "hooks": [
           {
-            "type": "http",
-            "url": "http://127.0.0.1:42619/v1/dispatch/UserPromptSubmit%2F2%2F0",
-            "headers": {
-              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
-            },
-            "allowedEnvVars": [
-              "DEV_POMOGATOR_HOOK_TOKEN"
-            ],
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT:-${CLAUDE_PROJECT_DIR:-.}}/tools/hook-service/client.mjs\" \"UserPromptSubmit/2/0\"",
             "timeout": 60
           }
         ]
@@ -443,14 +275,8 @@
         "matcher": "",
         "hooks": [
           {
-            "type": "http",
-            "url": "http://127.0.0.1:42619/v1/dispatch/UserPromptSubmit%2F3%2F0",
-            "headers": {
-              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
-            },
-            "allowedEnvVars": [
-              "DEV_POMOGATOR_HOOK_TOKEN"
-            ],
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT:-${CLAUDE_PROJECT_DIR:-.}}/tools/hook-service/client.mjs\" \"UserPromptSubmit/3/0\"",
             "timeout": 60
           }
         ]
@@ -459,14 +285,8 @@
         "matcher": "",
         "hooks": [
           {
-            "type": "http",
-            "url": "http://127.0.0.1:42619/v1/dispatch/UserPromptSubmit%2F4%2F0",
-            "headers": {
-              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
-            },
-            "allowedEnvVars": [
-              "DEV_POMOGATOR_HOOK_TOKEN"
-            ],
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT:-${CLAUDE_PROJECT_DIR:-.}}/tools/hook-service/client.mjs\" \"UserPromptSubmit/4/0\"",
             "timeout": 60
           }
         ]
@@ -475,14 +295,8 @@
         "matcher": "",
         "hooks": [
           {
-            "type": "http",
-            "url": "http://127.0.0.1:42619/v1/dispatch/UserPromptSubmit%2F5%2F0",
-            "headers": {
-              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
-            },
-            "allowedEnvVars": [
-              "DEV_POMOGATOR_HOOK_TOKEN"
-            ],
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT:-${CLAUDE_PROJECT_DIR:-.}}/tools/hook-service/client.mjs\" \"UserPromptSubmit/5/0\"",
             "timeout": 15
           }
         ]
@@ -493,47 +307,23 @@
         "matcher": "Write|Edit",
         "hooks": [
           {
-            "type": "http",
-            "url": "http://127.0.0.1:42619/v1/dispatch/PostToolUse%2F0%2F0",
-            "headers": {
-              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
-            },
-            "allowedEnvVars": [
-              "DEV_POMOGATOR_HOOK_TOKEN"
-            ],
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT:-${CLAUDE_PROJECT_DIR:-.}}/tools/hook-service/client.mjs\" \"PostToolUse/0/0\"",
             "timeout": 60
           },
           {
-            "type": "http",
-            "url": "http://127.0.0.1:42619/v1/dispatch/PostToolUse%2F0%2F1",
-            "headers": {
-              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
-            },
-            "allowedEnvVars": [
-              "DEV_POMOGATOR_HOOK_TOKEN"
-            ],
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT:-${CLAUDE_PROJECT_DIR:-.}}/tools/hook-service/client.mjs\" \"PostToolUse/0/1\"",
             "timeout": 30
           },
           {
-            "type": "http",
-            "url": "http://127.0.0.1:42619/v1/dispatch/PostToolUse%2F0%2F2",
-            "headers": {
-              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
-            },
-            "allowedEnvVars": [
-              "DEV_POMOGATOR_HOOK_TOKEN"
-            ],
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT:-${CLAUDE_PROJECT_DIR:-.}}/tools/hook-service/client.mjs\" \"PostToolUse/0/2\"",
             "timeout": 30
           },
           {
-            "type": "http",
-            "url": "http://127.0.0.1:42619/v1/dispatch/PostToolUse%2F0%2F3",
-            "headers": {
-              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
-            },
-            "allowedEnvVars": [
-              "DEV_POMOGATOR_HOOK_TOKEN"
-            ],
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT:-${CLAUDE_PROJECT_DIR:-.}}/tools/hook-service/client.mjs\" \"PostToolUse/0/3\"",
             "timeout": 15
           }
         ]
@@ -542,14 +332,8 @@
         "matcher": "Agent|TaskOutput",
         "hooks": [
           {
-            "type": "http",
-            "url": "http://127.0.0.1:42619/v1/dispatch/PostToolUse%2F1%2F0",
-            "headers": {
-              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
-            },
-            "allowedEnvVars": [
-              "DEV_POMOGATOR_HOOK_TOKEN"
-            ],
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT:-${CLAUDE_PROJECT_DIR:-.}}/tools/hook-service/client.mjs\" \"PostToolUse/1/0\"",
             "timeout": 15
           }
         ]
@@ -558,25 +342,13 @@
         "matcher": "Bash",
         "hooks": [
           {
-            "type": "http",
-            "url": "http://127.0.0.1:42619/v1/dispatch/PostToolUse%2F2%2F0",
-            "headers": {
-              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
-            },
-            "allowedEnvVars": [
-              "DEV_POMOGATOR_HOOK_TOKEN"
-            ],
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT:-${CLAUDE_PROJECT_DIR:-.}}/tools/hook-service/client.mjs\" \"PostToolUse/2/0\"",
             "timeout": 60
           },
           {
-            "type": "http",
-            "url": "http://127.0.0.1:42619/v1/dispatch/PostToolUse%2F2%2F1",
-            "headers": {
-              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
-            },
-            "allowedEnvVars": [
-              "DEV_POMOGATOR_HOOK_TOKEN"
-            ],
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT:-${CLAUDE_PROJECT_DIR:-.}}/tools/hook-service/client.mjs\" \"PostToolUse/2/1\"",
             "timeout": 30
           }
         ]
@@ -585,14 +357,8 @@
         "matcher": "Skill",
         "hooks": [
           {
-            "type": "http",
-            "url": "http://127.0.0.1:42619/v1/dispatch/PostToolUse%2F3%2F0",
-            "headers": {
-              "x-dev-pomogator-token": "${DEV_POMOGATOR_HOOK_TOKEN}"
-            },
-            "allowedEnvVars": [
-              "DEV_POMOGATOR_HOOK_TOKEN"
-            ],
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT:-${CLAUDE_PROJECT_DIR:-.}}/tools/hook-service/client.mjs\" \"PostToolUse/3/0\"",
             "timeout": 10
           }
         ]

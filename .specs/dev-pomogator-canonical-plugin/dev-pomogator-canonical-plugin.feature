@@ -353,3 +353,13 @@ Feature: CANON001 Canonical Claude Code Marketplace Plugin
     And a managed hook manifest containing an approved HTTP hook and documented SessionStart bootstrap
     When I run the hook review gate
     Then the hook review gate exits successfully
+
+  @feature13 @feature17 @feature19 @feature24
+  Scenario: CORE024_12 A managed hook transparently recovers after its owned daemon dies mid-session
+    Given a managed hook client has dispatched through an owned authenticated hook-service daemon
+    And that owned daemon dies during the same Claude Code session
+    When the next managed hook dispatches the original request
+    Then the client restarts the owned service through the single-flight lifecycle and retries once
+    And the original registered hook response is returned without user action
+    And live HTTP errors are not retried and a foreign listener is never terminated
+    And a repeated transport failure remains fail-open with a sanitized durable diagnostic

@@ -8,6 +8,7 @@ import { renderHttpManifest } from '../tools/hook-service/registry.mjs';
 import { HookMigrationCollisionError, migrateManagedHooks, recoverManagedHooks } from '../tools/hook-service/migrate-managed-hooks.mjs';
 import { acquireStartupLease } from '../tools/hook-service/ensure-up.mjs';
 import { spawnSync } from 'node:child_process';
+import { runManagedHook } from '../tools/hook-service/client.mjs';
 
 async function fixture() {
   const root = await mkdtemp(join(tmpdir(), 'hook-service-'));
@@ -80,18 +81,18 @@ test('HS_04: target validation rejects traversal and Windows sibling-prefix esca
   assert.equal(isWithinRoot(String.raw`C:\repo\plugin`, String.raw`C:\repo\plugin-evil\hook.mjs`), false);
 });
 
-test('HS_05: generated manifest keeps one bootstrap and exposes every remaining route over HTTP', async () => {
+test('HS_05: generated manifest keeps one bootstrap and supervises every remaining route', async () => {
   const root = resolve(import.meta.dirname, '..');
   const manifest = await renderHttpManifest(root);
   const sessionHooks = manifest.hooks.SessionStart.flatMap(group => group.hooks);
   const otherHooks = Object.entries(manifest.hooks).filter(([event]) => event !== 'SessionStart').flatMap(([, groups]) => groups.flatMap(group => group.hooks));
   assert.equal(sessionHooks.length, 16);
   assert.equal(otherHooks.length, 39);
-  assert.equal(otherHooks.every(hook => hook.type === 'http' && hook.url.startsWith('http://127.0.0.1:42619/v1/dispatch/') && hook.headers?.['x-dev-pomogator-token'] === '${DEV_POMOGATOR_HOOK_TOKEN}' && hook.allowedEnvVars?.includes('DEV_POMOGATOR_HOOK_TOKEN')), true);
+  assert.equal(otherHooks.every(hook => hook.type === 'command' && hook.command.includes('/tools/hook-service/client.mjs') && !hook.command.includes('127.0.0.1:42619')), true);
   const generated = JSON.parse(await readFile(join(root, '.claude-plugin', 'hooks.json'), 'utf8'));
   assert.equal(generated.hooks.SessionStart.flatMap(group => group.hooks).length, 1);
   assert.equal(generated.hooks.SessionStart[0].hooks[0].command.includes('session-bootstrap.mjs'), true);
-  await assert.rejects(access(join(root, 'tools', 'hook-service', 'client.mjs')));
+  await access(join(root, 'tools', 'hook-service', 'client.mjs'));
 });
 
 

@@ -165,3 +165,14 @@ The core migration was performed **by hand**: the three `.claude-plugin/*.json` 
   - [ ] `CORE024_01` rejects shell, inline Node, unapproved transport, and registry drift with actionable findings.
   - [ ] `CORE024_02` accepts the approved HTTP registration and narrow SessionStart bootstrap exception.
   - [ ] Targeted BDD and specification conformance are recorded; the review tests do not require a live service.
+
+- [ ] Self-heal managed hooks after mid-session daemon loss — id: t16 — Status: TODO | Est: 120m
+  _Requirements: FR-13; AC-10; CORE024_12._
+  _Files: `tools/hook-service/client.mjs`, `tools/hook-service/ensure-up.mjs`, `tools/hook-service/registry.mjs`, `tools/hook-service/generate-manifest.mjs`, `.claude-plugin/hooks.json`, `.claude/settings.json`, `tests/features/core/CORE024_hook-review.feature`, `tests/step_definitions/feature24_hook_review.ts`, `tests/hook-service.test.mjs`._
+  _Depends: t15._
+  **Done When:**
+  - [ ] `CORE024_12` kills an owned daemon after a successful dispatch and the next client invocation recovers through `ensureUp` without user action.
+  - [ ] Concurrent callers coalesce recovery through one startup lease and the original request is retried at most once.
+  - [ ] Live 401, 403, 404, and 503 responses are returned without restart or retry.
+  - [ ] A foreign listener is never terminated or treated as owned.
+  - [ ] Repeated transport failure exits fail-open and appends a sanitized durable diagnostic without credential material.

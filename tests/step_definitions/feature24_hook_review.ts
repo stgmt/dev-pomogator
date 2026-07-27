@@ -2,11 +2,13 @@ import { Given, When, Then } from '@cucumber/cucumber';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { reviewHookManifest } from '../../tools/hook-review/check.mjs';
 import { fingerprint, provisionCredential } from '../../tools/hook-service/credential.mjs';
 import { diagnosticsFile, startServer } from '../../tools/hook-service/server.mjs';
 import { ownedIdentity } from '../../tools/hook-service/ensure-up.mjs';
+import { runManagedHook } from '../../tools/hook-service/client.mjs';
 
 type Finding = { file: string; event?: string; message: string };
 import { V4World } from '../hooks/before-after.ts';
@@ -29,6 +31,14 @@ interface HookReviewWorld extends V4World {
   staleIdentity?: Record<string, unknown>;
   expectedIdentity?: Record<string, string>;
   staleOwned?: boolean;
+  recoveryEnsureCalls?: number;
+  recoveryFetchCalls?: number;
+  recoveryKilledOwned?: boolean;
+  recoveryForeignTerminated?: boolean;
+  recoveryResult?: Awaited<ReturnType<typeof runManagedHook>>;
+  liveErrorResult?: Awaited<ReturnType<typeof runManagedHook>>;
+  repeatedFailureResult?: Awaited<ReturnType<typeof runManagedHook>>;
+  recoveryDiagnosticRoot?: string;
 }
 
 function writeJson(file: string, value: object): void {
@@ -261,4 +271,88 @@ Then(/^it stops the owned daemon and starts the current runtime$/, function (thi
   assert.notEqual(this.staleIdentity?.registryDigest, this.expectedIdentity?.registryDigest, 'the fixture must prove registry staleness');
   assert.notEqual(this.staleIdentity?.runtimeDigest, this.expectedIdentity?.runtimeDigest, 'the fixture must prove runtime staleness');
   assert.equal(ownedIdentity({ ...this.staleIdentity, rootFingerprint: 'foreign-root' }, this.expectedIdentity), false, 'a foreign process must never be classified as owned');
+});
+
+Given(/^a managed hook client has dispatched through an owned authenticated hook-service daemon$/, function (this: HookReviewWorld) {
+  this.hookRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'hook-client-recovery-'));
+  this.recoveryDiagnosticRoot = path.join(this.hookRoot, 'state');
+  this.recoveryEnsureCalls = 0;
+  this.recoveryFetchCalls = 0;
+  this.recoveryKilledOwned = false;
+  this.recoveryForeignTerminated = false;
+});
+
+Given(/^that owned daemon dies during the same Claude Code session$/, function (this: HookReviewWorld) {
+  assert.equal(this.recoveryEnsureCalls, 0, 'the recovery client must start in the same caller process before lifecycle supervision runs');
+});
+
+When(/^the next managed hook dispatches the original request$/, async function (this: HookReviewWorld) {
+  const input = JSON.stringify({ hook_event_name: 'PreToolUse', session_id: 'same-session', tool_name: 'TaskUpdate' });
+  const ensureUpImpl = async () => {
+    this.recoveryEnsureCalls = (this.recoveryEnsureCalls ?? 0) + 1;
+    return { ready: true, token: 'recovery-secret', port: 42619, restarted: this.recoveryEnsureCalls > 1 };
+  };
+  const fetchImpl = async (_url: string | URL | Request, init?: RequestInit) => {
+    this.recoveryFetchCalls = (this.recoveryFetchCalls ?? 0) + 1;
+    assert.equal(init?.body, input, 'recovery must resend the exact original request body');
+    if (this.recoveryFetchCalls === 1) throw Object.assign(new Error('connect ECONNREFUSED 127.0.0.1:42619'), { code: 'ECONNREFUSED' });
+    return new Response(JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'allow' } }), { status: 200 });
+  };
+  this.recoveryResult = await runManagedHook({
+    route: 'PreToolUse/0/0',
+    input,
+    pluginRoot: process.cwd(),
+    ensureUpImpl,
+    fetchImpl,
+    diagnosticRoot: this.recoveryDiagnosticRoot,
+  });
+
+  let liveFetchCalls = 0;
+  this.liveErrorResult = await runManagedHook({
+    route: 'PreToolUse/0/0',
+    input,
+    pluginRoot: process.cwd(),
+    ensureUpImpl: async () => ({ ready: true, token: 'recovery-secret', port: 42619, restarted: false }),
+    fetchImpl: async () => {
+      liveFetchCalls += 1;
+      return new Response(JSON.stringify({ error: 'hook-runtime', incidentId: 'live-service' }), { status: 503 });
+    },
+    diagnosticRoot: this.recoveryDiagnosticRoot,
+  });
+  assert.equal(liveFetchCalls, 1, 'a live HTTP response must not be retried');
+
+  this.repeatedFailureResult = await runManagedHook({
+    route: 'PreToolUse/0/0',
+    input,
+    pluginRoot: process.cwd(),
+    ensureUpImpl: async () => ({ ready: true, token: 'never-log-this-token', port: 42619, restarted: true }),
+    fetchImpl: async () => { throw Object.assign(new Error('connect ECONNREFUSED never-log-this-token'), { code: 'ECONNREFUSED' }); },
+    diagnosticRoot: this.recoveryDiagnosticRoot,
+  });
+});
+
+Then(/^the client restarts the owned service through the single-flight lifecycle and retries once$/, function (this: HookReviewWorld) {
+  assert.equal(this.recoveryEnsureCalls, 2, 'initial supervision plus one recovery call is required');
+  assert.equal(this.recoveryFetchCalls, 2, 'connection refusal must trigger exactly one request retry');
+  assert.equal(this.recoveryResult?.delivered, true);
+});
+
+Then(/^the original registered hook response is returned without user action$/, function (this: HookReviewWorld) {
+  assert.equal(this.recoveryResult?.status, 200);
+  assert.deepEqual(JSON.parse(this.recoveryResult?.body ?? '{}'), { hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'allow' } });
+});
+
+Then(/^live HTTP errors are not retried and a foreign listener is never terminated$/, function (this: HookReviewWorld) {
+  assert.equal(this.liveErrorResult?.delivered, true, 'a live 503 is a delivered service response, not a transport failure');
+  assert.equal(this.liveErrorResult?.status, 503);
+  assert.equal(this.recoveryForeignTerminated, false, 'the client has no process-kill authority');
+  assert.equal(this.recoveryKilledOwned, false, 'only ensureUp may recycle a verified-owned process');
+});
+
+Then(/^a repeated transport failure remains fail-open with a sanitized durable diagnostic$/, function (this: HookReviewWorld) {
+  assert.equal(this.repeatedFailureResult?.failOpen, true);
+  const diagnostic = fs.readFileSync(diagnosticsFile(this.recoveryDiagnosticRoot!), 'utf8');
+  assert.match(diagnostic, /"code":"hook-transport"/u);
+  assert.match(diagnostic, /"route":"PreToolUse\/0\/0"/u);
+  assert.doesNotMatch(diagnostic, /never-log-this-token/u, 'the persisted diagnostic must not contain credential material');
 });
