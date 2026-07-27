@@ -1,223 +1,262 @@
 # User Stories
 
-> Phase 1 Discovery stories for CARL integration. Each story uses the v3 form required by `user-story-form-guard`: priority in the heading, **Why:**, **Independent Test:**, and inline Given/When/Then acceptance scenarios.
+> Discovery stories use the v3 form: priority, requirement link, actor/goal/value, why, independently executable test, and Given/When/Then acceptance scenarios. CARL readiness is evidence-gated: project deployment, runtime consumption, and producer provenance are separate claims.
 
-### User Story 1: Default CARL install for Claude Code users (Priority: P1)
+---
+
+### User Story 1: Supported Claude Code projects receive managed CARL state (Priority: P1)
 
 **Требование:** [FR-1](FR.md#fr-1-claude-code-managed-carl-install)
+
+As a dev-pomogator user working in a supported Claude Code project, I want the canonical plugin's SessionStart flow to create or refresh project-local `.carl/carl.json` and managed CARL settings, so that CARL guidance is available for this project without manual dotfile setup.
+
+**Why:** The repository had a registered CARL consumer but did not deploy project CARL state. Merged PR #202 identifies the causal gap, but its current merged-state evidence is not yet independently aligned with every current runtime artifact. Earlier PR #94 reports automatic Russian adaptation and SessionStart bootstrap; the current install path can swallow adaptation exceptions, so deployment success must not imply adaptation success. Evidence: [src:https://github.com/stgmt/dev-pomogator/pull/202], [src:https://github.com/stgmt/dev-pomogator/pull/94], [ref:tools/carl/install.ts:133-213].
+
+**Independent Test:** In an isolated project fixture, invoke the same SessionStart/bootstrap path used by the plugin, then invoke UserPromptSubmit with that project's `cwd`; assert `.carl/carl.json` exists, `managedBy=dev-pomogator`, managed version/schema metadata is present, and adaptation failure is visible rather than silently returned as a successful install.
+
+**Acceptance Scenarios:**
+
+Given a supported Claude Code project has no `.carl/carl.json`
+When the canonical SessionStart/bootstrap flow runs
+Then project-local CARL state is created with dev-pomogator ownership and managed version/schema metadata
+
+Given project rule/skill adaptation throws during install
+When the installer returns its result
+Then the result is degraded or explicitly adaptation-failed and does not claim complete CARL readiness
+
+Given a project already has a managed CARL manifest
+When the bootstrap/install flow runs again without repair
+Then managed state is refreshed without silently replacing user-owned configuration
+
+Given a Russian prompt reaches a project whose language metadata is missing or stale
+When the CARL runner evaluates the prompt
+Then it reports degraded language coverage rather than claiming healthy empty Russian recall
+
+---
+
+### User Story 2: CARL absence is visible instead of falsely green (Priority: P1)
+
 **Требование:** [FR-2](FR.md#fr-2-no-fake-green-when-carl-is-absent)
 
-As a dev-pomogator user, I want CARL rules and recall hooks to be installed automatically for Claude Code when my environment supports them, so that the agent benefits from CARL guidance without a separate manual setup step.
+As an AI agent and maintainer, I want missing project state, missing runtime, and unverified runtime consumption to be reported as degraded, so that files on disk cannot masquerade as a healthy integration.
 
-**Why:** The integration is valuable only if normal plugin users receive a working CARL path by default rather than discovering a separate hidden installer later.
+**Why:** The original CARL path reported `project-missing` and failed open when `CARL_PROJECT_DIR` pointed at a different project root. Issues #128, #130, #203, #205, and #206 show that root selection and project-state discovery are the central failure surface. The current open-issue inventory is 60, making stale-state and evidence-drift a repository-wide operational context rather than a single defect. Evidence: [src:https://github.com/stgmt/dev-pomogator/issues/128], [src:https://github.com/stgmt/dev-pomogator/issues/130], [src:https://github.com/stgmt/dev-pomogator/issues/203], [src:https://github.com/stgmt/dev-pomogator/issues/205], [src:https://github.com/stgmt/dev-pomogator/issues/206].
 
-**Independent Test:** `@feature1` fresh-install smoke: install dev-pomogator in a clean supported Claude Code project and verify the managed CARL hook/rules artifacts are present and callable without user-authored config changes.
-
-**Acceptance Scenarios:**
-
-Given a supported Claude Code environment with dev-pomogator installed and no existing managed CARL artifacts
-When the CARL integration installer runs as part of the supported setup flow
-Then the managed CARL hook/rules artifacts are created idempotently and marked as managed by dev-pomogator
-
-Given an unsupported Claude Code environment
-When the CARL integration installer evaluates support
-Then it does not break plugin activation and records an actionable unsupported-environment warning for doctor/reporting
-
----
-
-### User Story 2: Doctor repair for missing or broken CARL integration (Priority: P1)
-
-**Требование:** [FR-5](FR.md#fr-5-doctor-health-and-repair)
-**Требование:** [FR-6](FR.md#fr-6-managed-markers-preserve-user-configuration)
-
-As a dev-pomogator user, I want `pomogator-doctor` to detect missing, stale, or broken CARL integration and repair it when invoked, so that CARL drift can be fixed without hand-editing hook files.
-
-**Why:** Existing dev-pomogator maintenance flows already use doctor-style checks for managed structure, hooks, versions, and gitignore drift; CARL should be recoverable through the same user-facing repair path.
-
-**Independent Test:** `@feature5` doctor repair smoke: deliberately remove or corrupt one managed CARL artifact, run pomogator-doctor repair, and verify the artifact is restored while user-owned config is preserved.
+**Independent Test:** Run health/reporting against fixtures for absent manifest, wrong `CARL_PROJECT_DIR`, missing runtime command, and a present-but-unexecuted manifest; assert no case returns `healthy`, `ready`, or equivalent green status and every diagnostic names the failing condition.
 
 **Acceptance Scenarios:**
 
-Given a project with dev-pomogator installed and a missing managed CARL hook
-When `pomogator-doctor` runs its CARL check with repair enabled
-Then it reports the missing artifact and reinstalls the managed hook without overwriting unrelated user configuration
+Given the runner receives `cwd=E:/repos/lm-saas` but an override points to another nonexistent project
+When CARL project-root resolution runs
+Then it reports `project-missing` for the selected root and does not claim the caller project is healthy
 
-Given a project with a stale managed CARL version marker
-When `pomogator-doctor` runs its CARL check
-Then it reports version drift and repairs the managed artifact to the plugin version expected by the installed dev-pomogator package
+Given `.carl/carl.json` exists but no runnable runtime consumer is available
+When CARL health is evaluated
+Then the result is degraded and names the missing or unverified runtime consumer
 
----
-
-### User Story 3: Agent-visible warning when a CARL hook cannot run (Priority: P1)
-
-**Требование:** [FR-4](FR.md#fr-4-fail-open-warning-injection)
-
-As a user relying on CARL-backed recall and rules, I want a broken CARL hook to inject a clear warning into the chat or agent context, so that the AI agent is reminded to tell me CARL guidance was unavailable.
-
-**Why:** Silent hook failure is worse than a visible degraded mode because the user and the agent may otherwise trust decisions that were made without expected recall/rule context.
-
-**Independent Test:** `@feature4` hook failure smoke: force the CARL hook runner to fail in a controlled way and verify the next agent-visible context includes a warning instructing the agent to notify the user.
-
-**Acceptance Scenarios:**
-
-Given the managed CARL hook is configured but its runtime dependency is unavailable
-When the hook executes during an agent session
-Then the hook fails open, injects a warning into agent-visible context, and explicitly tells the agent to inform the user that CARL did not run
-
-Given the managed CARL hook succeeds
-When the hook executes during an agent session
-Then no false failure warning is injected and normal CARL context is supplied where supported
+Given files and registration are present but the runtime consumer has not been exercised for the project
+When the review report is generated
+Then the fake-green gate remains blocking
 
 ---
 
-### User Story 4: Codex integration after the Codex context-menu launcher path (Priority: P2)
-
-**Требование:** [FR-7](FR.md#fr-7-codex-path-gated-by-launcher-and-dispatcher-prerequisites)
-
-As a user who launches Codex through dev-pomogator, I want CARL integration to work on the Codex plugin path after the context-menu launcher work lands, so that Claude Code and Codex receive equivalent managed recall/rule support where their hook systems allow it.
-
-**Why:** The user explicitly sequenced Codex plugin work after the context-menu launcher, and existing specs already establish Codex as a first-class platform with version-aware hook dispatch rather than a Claude-only afterthought.
-
-**Independent Test:** `@feature7` Codex path smoke: after the Codex launcher/hook dispatcher is available, install the CARL integration for Codex and verify the Codex hook dispatcher invokes the managed CARL hook or reports a capability-based unsupported warning.
-
-**Acceptance Scenarios:**
-
-Given the Codex context-menu launcher and Codex hook dispatcher are available
-When CARL integration is installed for the Codex plugin path
-Then the Codex managed artifacts are registered through the deterministic dispatcher rather than by ad-hoc overwrites
-
-Given the Codex version does not support the required hook capability
-When CARL integration evaluates the Codex path
-Then it marks the Codex CARL path as unsupported for that version and leaves Claude Code CARL behavior unaffected
-
----
-
-### User Story 5: Reviewable analysis, report, and rollout plan (Priority: P2)
-
-**Требование:** [FR-8](FR.md#fr-8-review-audit-and-reporting)
-
-As a maintainer, I want the CARL integration spec to include an analysis/report/plan and later review path, so that the feature is not shipped as a hidden hook drop-in without evidence, sequencing, or failure-mode review.
-
-**Why:** CARL touches plugin distribution, hooks, doctor repair, and two agent platforms, so the plan must make evidence, assumptions, and unresolved external details visible before implementation.
-
-**Independent Test:** `@feature8` spec review smoke: run the spec review/audit workflow and verify CARL assumptions, unsupported details, doctor checks, and Claude/Codex paths are represented in Discovery, Requirements, Design, Tasks, and Audit output.
-
-**Acceptance Scenarios:**
-
-Given the CARL integration spec reaches later phases
-When requirements, design, and tasks are authored
-Then each CARL claim is either linked to repo/spec evidence, marked as an assumption, or marked as unverified external detail requiring research before implementation
-
-Given implementation is ready for review
-When the final review/audit runs
-Then it checks the managed hook distribution, doctor repair path, warning injection behavior, and Codex sequencing instead of reviewing only the happy-path installer
-
----
-
-### User Story 6: Runtime proof before CARL is trusted (Priority: P1)
+### User Story 3: The registered hook path proves runtime consumption (Priority: P1)
 
 **Требование:** [FR-3](FR.md#fr-3-runtime-consumer-and-end-to-end-proof)
 
-As a maintainer, I want real CARL hook output and benchmark artifacts captured before implementation claims readiness, so that file presence cannot be mistaken for a working agent-visible integration.
+As a Claude Code user, I want the distributed plugin hook chain to invoke the CARL runner through its actual dispatch path, so that a passing file-existence check cannot hide a dead integration.
 
-**Why:** CARL only helps if the registered hook path actually invokes the runtime and produces the expected context; captured producer output is the evidence that prevents a fake-green install.
+**Why:** PR #202 documents the actual chain `.claude-plugin/hooks.json` → SessionStart bootstrap → hook-service registry → `tools/carl/runner.ts`, and explains why grepping only `hooks.json` became stale after the HTTP dispatcher migration. PR #94's smoke claim and the current merged state remain separate evidence that must be replayed against the installed package. Evidence: [src:https://github.com/stgmt/dev-pomogator/pull/202], [src:https://github.com/stgmt/dev-pomogator/pull/94].
 
-**Independent Test:** `@feature3` runtime proof smoke: execute the same hook command registered for plugin users and verify the captured output or provenance ledger proves the managed runner was invoked.
-
-**Acceptance Scenarios:**
-
-Given CARL files exist in a project but no hook command has been exercised
-When the runtime proof is reviewed
-Then the integration remains untrusted and cannot be reported as ready
-
-Given a real CARL hook command has been captured with provenance and output shape
-When the runtime proof is reviewed
-Then the report distinguishes runtime-consumer proof from producer-shape proof
-
----
-
-### User Story 7: Evidence report for Russian CARL readiness (Priority: P2)
-
-**Требование:** [FR-8](FR.md#fr-8-review-audit-and-reporting)
-
-As a maintainer, I want the CARL report to show Russian prompt results and remaining gaps, so that Russian support is accepted from evidence instead of from the mere existence of Cyrillic aliases.
-
-**Why:** Russian CARL can fail by missing aliases, loading noisy domains, or adding too much context; the report must name those gaps and the optimization needed for each one.
-
-**Independent Test:** `@feature8` Russian report smoke: run the Russian prompt matrix and verify expected domains, actual domains, false positives, false negatives, and optimization recommendations are recorded.
+**Independent Test:** In an installed-plugin fixture with development dependencies unavailable, execute the registered SessionStart and UserPromptSubmit path; assert the route reaches `tools/carl/runner.ts`, the project manifest records runtime-consumer proof, and the test fails when only CARL files exist. Dependency-absent proof is currently unverified and cannot be inferred from source inspection.
 
 **Acceptance Scenarios:**
 
-Given Russian prompt cases are evaluated against fixture-backed or real CARL output
-When the CARL report is generated
-Then each prompt records expected domains, actual domains, and a readiness boundary
+Given `.claude-plugin/hooks.json` registers the SessionStart bootstrap and the hook-service registry routes UserPromptSubmit to `tools/carl/runner.ts`
+When a normal plugin-user hook event executes
+Then the registered chain invokes the managed runner and records runtime-consumer proof
 
-Given a Russian prompt loads the wrong domains or misses an expected domain
-When the CARL report is generated
-Then it lists the gap and proposes a concrete alias, normalization, ranking, splitting, or context-budget optimization
+Given the runner file exists but the registered launcher or dispatcher does not call it
+When the runtime-consumer scenario runs
+Then the scenario fails instead of accepting file presence as integration proof
+
+Given plugin-user dependencies are absent from the project
+When the distributed hook path executes
+Then it either exercises the packaged runtime path or reports the missing runtime explicitly; a silent skip is a failure
 
 ---
 
-### User Story 8: Benchmark baseline from real CARL output (Priority: P2)
+### User Story 4: Hook failures fail open with an agent-visible disclosure (Priority: P1)
 
-**Требование:** [FR-9](FR.md#fr-9-recall-benchmark-threshold-and-regression-gate)
+**Требование:** [FR-4](FR.md#fr-4-fail-open-warning-injection)
 
-As a maintainer, I want recall benchmark thresholds to come from captured CARL output, so that future regression gates compare against real behavior instead of invented numbers.
+As a Claude Code user, I want CARL failures to leave the main session running while disclosing the failure to the AI agent, so that degraded guidance is visible and unrelated work is not blocked.
 
-**Why:** A benchmark gate with guessed thresholds would hide real regressions or block valid behavior; the first baseline must cite the real artifact and its ground truth.
+**Why:** The runner contract uses `hookSpecificOutput.additionalContext`, exits successfully on controlled failure, and includes the required instruction to tell the user CARL guidance/recall was unavailable. Evidence: [ref:tools/carl/runner.ts:16], [ref:tools/carl/runner.ts:82-87], [src:https://github.com/stgmt/dev-pomogator/issues/203].
 
-**Independent Test:** `@feature9` benchmark baseline smoke: load the captured benchmark TSV or execute the verified CARL runtime and confirm latency/context metrics are recorded with provenance.
+**Independent Test:** Execute the real runner with each controlled failure mode (missing dependency, timeout, malformed output, unsupported runtime, and exception); assert exit code zero, a diagnostic code, no false success claim, and an agent-visible warning containing the unavailable-guidance disclosure.
 
 **Acceptance Scenarios:**
 
-Given no real CARL artifact has been accepted
-When the benchmark gate is evaluated
-Then numeric thresholds remain draft or blocked
+Given the managed hook encounters a missing dependency, timeout, malformed output, unsupported runtime, or exception
+When UserPromptSubmit runs
+Then the hook exits fail-open and emits `hookSpecificOutput.additionalContext`
 
-Given a real CARL benchmark artifact has been captured with source hashes and ground truth
-When the benchmark gate is evaluated
-Then supported metrics are recorded as the baseline for later comparison
+Given the hook fails open
+When the AI agent continues the session
+Then the warning says CARL did not run and tells the agent to tell the user CARL guidance/recall was unavailable
+
+Given the hook succeeds
+When the runner emits normal CARL context
+Then it does not inject a false failure warning
 
 ---
 
-### User Story 9: No fake healthy CARL status when runtime is absent (Priority: P1)
+### User Story 5: Doctor classifies and repairs CARL safely (Priority: P1)
 
-**Требование:** [FR-2](FR.md#fr-2-no-fake-green-when-carl-is-absent)
+**Требование:** [FR-5](FR.md#fr-5-doctor-health-and-repair)
 
-As a maintainer, I want CARL install and doctor surfaces to refuse a healthy verdict when the runtime or project data is absent, so that users do not trust guidance that was never loaded.
+As a dev-pomogator maintainer or user, I want `pomogator-doctor` to classify CARL health and repair safe drift, so that recovery is available through the normal diagnostic flow.
 
-**Why:** A CARL integration that reports healthy from file presence alone would repeat the dead-integration failure mode and hide missing runtime evidence.
+**Why:** CARL health spans project state, runtime, language metadata, platform prerequisites, and ownership conflicts. The current manifest and doctor integration model explicit degraded states instead of collapsing all failures into installed/healthy. Evidence: [src:https://github.com/stgmt/dev-pomogator/blob/main/tools/carl/manifest.ts], [src:https://github.com/stgmt/dev-pomogator/blob/main/.claude/skills/pomogator-doctor/scripts/engine/checks/carl.ts], [src:https://github.com/stgmt/dev-pomogator/pull/202].
 
-**Independent Test:** `@feature2` absence smoke: run the CARL health surface in a temp project with no runtime and verify it reports degraded or missing instead of healthy.
+**Independent Test:** For stale, missing, broken-runtime, unsupported, and user-conflict fixtures, run the doctor check with and without repair; assert the state is classified, safe managed drift is repaired only when requested, and runtime failures are not disguised as configuration repair.
 
 **Acceptance Scenarios:**
 
-Given managed CARL metadata exists but the runtime command is missing
-When CARL health is evaluated
-Then the result is degraded and the integration is not reported healthy
+Given a project has stale managed CARL version metadata
+When `pomogator-doctor` runs without repair
+Then it reports the stale state and does not mutate the project
 
-Given project `.carl/carl.json` is missing required language or runtime state
-When CARL health is evaluated
-Then the report names the missing state instead of returning empty healthy recall
+Given managed CARL artifacts are missing or stale and repair is enabled
+When `pomogator-doctor` runs
+Then it refreshes only repairable managed state and reports before/after status
+
+Given runtime dependencies or platform capabilities are unavailable
+When doctor evaluates CARL
+Then it reports `broken-runtime` or `unsupported` with an actionable diagnostic
 
 ---
 
-### User Story 10: Preserve user-owned CARL configuration during repair (Priority: P1)
+### User Story 6: Managed repair preserves user-owned configuration (Priority: P1)
 
 **Требование:** [FR-6](FR.md#fr-6-managed-markers-preserve-user-configuration)
 
-As a dev-pomogator user with my own CARL settings, I want managed repair to touch only dev-pomogator-owned blocks, so that automatic fixes cannot erase my custom rules or hooks.
+As a project owner, I want CARL installation and repair to write only within explicit dev-pomogator ownership boundaries, so that my hooks, aliases, and settings are not overwritten.
 
-**Why:** CARL repair must be safe to run through doctor; if it overwrites user-owned entries, users will avoid the repair path and managed recovery becomes unsafe.
+**Why:** The installer reserves a deterministic managed settings key and refuses a conflicting owner rather than silently replacing it. This ownership boundary is necessary because doctor repair is expected to be repeatable in projects with hand-authored configuration. Evidence: [ref:tools/carl/install.ts:73-104], [src:https://github.com/stgmt/dev-pomogator/blob/main/tools/carl/install.ts].
 
-**Independent Test:** `@feature6` preservation smoke: create managed and user-owned CARL config in one temp project, run repair, and verify user-owned entries survive unchanged.
+**Independent Test:** Create a project fixture containing user-owned settings outside the managed key and a conflicting value at the managed key; run install and repair; compare a byte snapshot of user-owned content and assert conflict refusal for the reserved key.
 
 **Acceptance Scenarios:**
 
-Given a CARL config contains a dev-pomogator managed block and a user-owned block
-When doctor repair refreshes CARL artifacts
-Then only the managed block changes and the user-owned block remains byte-equivalent
+Given user-authored CARL settings exist outside the dev-pomogator managed region
+When install or doctor repair runs
+Then those settings remain byte-equivalent
 
-Given a user-owned key conflicts with a reserved managed key
-When repair evaluates CARL config
-Then it reports `user-conflict` and stops automatic overwrite
+Given the reserved managed key is owned by another tool or user
+When repair runs
+Then the integration reports `user-conflict` and does not overwrite the entry
+
+Given a managed region is rewritten
+When the resulting configuration is inspected
+Then ownership is recoverable from the managed marker, manifest entry, or deterministic managed key
+
+---
+
+### User Story 7: Codex CARL stays gated behind platform prerequisites (Priority: P2)
+
+**Требование:** [FR-7](FR.md#fr-7-codex-path-gated-by-launcher-and-dispatcher-prerequisites)
+
+As a user of both Claude Code and Codex, I want Codex CARL to be enabled only after launcher, deterministic dispatcher, and version-capability prerequisites are present, so that a premature Codex path cannot break healthy Claude Code CARL.
+
+**Why:** The CARL manifest evaluates Codex prerequisites separately and reports `codex-deferred-prerequisite` when the launcher, plugin manifest, or deterministic dispatcher is missing. This preserves the context-menu/Codex sequencing boundary. Evidence: [ref:tools/carl/manifest.ts:257-301], [src:https://github.com/stgmt/dev-pomogator/issues/173].
+
+**Independent Test:** Evaluate a fixture with missing Codex prerequisites and a fixture with all prerequisites plus a version-aware dispatcher; assert Codex is deferred/unsupported in the first case, independently ready only in the second, and Claude Code status is unchanged in both.
+
+**Acceptance Scenarios:**
+
+Given the Codex launcher or deterministic project-local dispatcher is unavailable
+When the CARL platform evaluator runs
+Then Codex is reported deferred or unsupported and Claude Code health is evaluated independently
+
+Given the installed Codex version lacks the required hook capability
+When Codex CARL health is evaluated
+Then it reports a version-aware unsupported state and does not claim Codex readiness
+
+Given launcher, plugin-manifest, dispatcher, and version prerequisites are present
+When Codex CARL is evaluated
+Then it uses the deterministic Codex dispatcher rather than copied Claude Code hook files
+
+---
+
+### User Story 8: Review separates implementation, runtime, and provenance evidence (Priority: P2)
+
+**Требование:** [FR-8](FR.md#fr-8-review-audit-and-reporting)
+
+As a maintainer, I want CARL review reports to distinguish verified local implementation, unverified external behavior, fixture-backed sibling output, and runtime-consumer proof, so that a report cannot turn partial evidence into readiness.
+
+**Why:** The current review report has a fake-green gate and evidence markers, while the audit records that external CARL source/runtime ownership and agent-visible behavior remain unresolved. The sibling fixture is useful evidence but is not automatically dev-pomogator-owned. Graph/spec evidence currently says 9 FR, 9 AC, and 12 scenarios/tasks while the executable feature has 15 named CARL scenarios, so the inventory itself is drifted and must be reconciled before a green claim. Evidence: [ref:.specs/carl-integration/AUDIT_REPORT.md:1-85], [ref:.specs/carl-integration/carl-integration.feature:1-119], [ref:tests/features/carl-integration.feature:1-148].
+
+**Independent Test:** Generate a review report for local source only, sibling fixture-backed output, and a project with verified runtime-consumer execution; assert each section is marked `[VERIFIED]`, `[UNVERIFIED]`, or `[ASSUMED]` according to evidence, the graph/executable scenario census is explicit, and the fake-green gate blocks done until project execution exists.
+
+**Acceptance Scenarios:**
+
+Given local CARL files and hook registration exist but the project consumer has not executed
+When the review report is generated
+Then it marks runtime evidence unverified and blocks a done verdict
+
+Given the graph/spec census reports 9 FR, 9 AC, and 12 scenarios/tasks while the executable feature has 15 named CARL scenarios
+When review coverage is computed
+Then the report flags graph drift and does not silently treat the counts as equivalent
+
+Given a captured sibling producer output is used
+When the report is generated
+Then it marks the result fixture-backed and does not claim dev-pomogator runtime readiness
+
+Given external CARL behavior is not backed by source, documentation, or captured output
+When the claim is reported
+Then it remains explicitly unverified or assumed with a named research gap
+
+---
+
+### User Story 9: Recall benchmarks use real provenance and refuse invented thresholds (Priority: P2)
+
+**Требование:** [FR-9](FR.md#fr-9-recall-benchmark-threshold-and-regression-gate)
+
+As a maintainer optimizing CARL recall, I want benchmark baselines and regression gates to use real producer evidence, so that latency, context, and recall claims are reproducible rather than invented.
+
+**Why:** The captured sibling benchmark contains real rows, including `old_bulk_autoload_chars=683575` and five iterations, but the source/vendor relationship to dev-pomogator remains unverified. The current benchmark contract therefore keeps the threshold draft until provenance is complete. Evidence: [src:https://github.com/stgmt/dev-pomogator/blob/main/tests/fixtures/carl/bench.stdout.tsv], [src:https://github.com/stgmt/dev-pomogator/blob/main/tools/carl/bench.ts], [src:https://github.com/stgmt/dev-pomogator/blob/main/tests/fixtures/carl/manifest.json].
+
+**Independent Test:** Run the benchmark gate with no artifact, a sibling fixture lacking dev-pomogator ownership, and a provenance-complete real artifact; assert the first two remain draft/blocked and only the last records supported metrics and enables a regression comparison.
+
+**Acceptance Scenarios:**
+
+Given no real CARL artifact has been captured
+When the benchmark gate runs
+Then the threshold remains draft or blocked and no numeric pass threshold is invented
+
+Given a fixture contains producer output but lacks complete provenance
+When the benchmark runs
+Then it records fixture-backed evidence without enabling a final regression gate
+
+Given a real artifact includes provenance, source hashes, and producer ground truth
+When the benchmark runs
+Then it records only supported baseline metrics and future checks compare against that baseline
+
+---
+
+### Discovery boundary
+
+The stories intentionally keep these evidence lanes separate:
+
+- plugin registration and dispatch route;
+- project-local deployment and root selection;
+- runtime consumer execution;
+- fail-open warning injection;
+- doctor repair and ownership preservation;
+- Codex prerequisite gating;
+- producer shape, Russian evaluation, and benchmark provenance;
+- graph/spec versus executable scenario census.
+
+The evidence supports local implementation and the merged-fix claim, but does not by itself prove a clean plugin-user dependency-absent run, a dev-pomogator-owned external CARL producer, final root precedence, or a reconciled graph/executable census. Those remain implementation and audit gates, not Discovery assumptions.

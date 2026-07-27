@@ -10,6 +10,13 @@ CARL integration packages CARL rules/recall support as a managed dev-pomogator i
 4. **Diagnose and repair** — `pomogator-doctor` classifies CARL as `healthy`, `missing`, `stale`, `broken-runtime`, `unsupported`, `user-conflict`, or `repairable`, and refreshes only managed artifacts when repair is safe.
 5. **Review and benchmark** — report verified/unverified CARL claims and accept recall benchmark thresholds only after a real CARL artifact or approved external requirement provides evidence.
 
+
+
+## Finalization status
+
+The finalization verdict is **PARTIAL / NOT_READY**. CARL001_13–15 are canonical reconciliation scenarios added to the spec feature inventory and traced to FR-1, AC-1, and CHK-FR1-01. They are intentionally retained as BDD scenarios, but their canonical evidence is stale or unverified; they must not be treated as green. The related implementation and verification tasks remain partial (`IN_PROGRESS`) until Docker BDD evidence is refreshed through the shared `cucumber.json` path and the adaptation/SessionStart ordering mutation checks are independently demonstrated.
+
+Coverage is 9 FR, 9 AC, 15 BDD scenarios, and 12 tasks. The current evidence includes explicit degraded/fake-green protections, but does not justify a completion claim. The benchmark and Russian evaluation remain bounded by their documented real-artifact and runtime-readiness gaps.
 ## Scope
 
 In scope:
@@ -32,7 +39,7 @@ In scope:
 ## Current status
 
 - Spec status: active.
-- Structural coverage: 9 FR, 9 AC, 10 scenarios, and 10 implementation tasks; spec graph traceability currently has 0 `UNCOVERED_FR`, 0 `TASK_UNTESTED`, and 0 `UNTAGGED_SCENARIO` gaps.
+- Structural coverage: 9 FR, 9 AC, 15 scenarios, and 12 implementation tasks; spec graph traceability currently has 0 `UNCOVERED_FR`, 0 `TASK_UNTESTED`, and 0 `UNTAGGED_SCENARIO` gaps.
 - Test evidence: scenarios are authored but not run yet; current lifecycle remains `TESTS_NOT_RUN` until Docker BDD ingests CARL results.
 - Captured fixture evidence: sibling CARL producer output and benchmark provenance are recorded under `tests/fixtures/carl/`; this verifies output shape and benchmark behavior for the captured sibling implementation, not that dev-pomogator already packages or wires CARL.
 - Key unresolved evidence: final dev-pomogator CARL source/vendor path, runtime packaging, hook command contract, recall backend durability, project language metadata schema, Russian coverage generation, and stable numeric pass thresholds remain `[NEEDS_CONFIRMATION]` or `[UNVERIFIED]`.

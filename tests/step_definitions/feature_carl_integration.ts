@@ -50,6 +50,10 @@ interface CarlWorld extends V4World {
   carlReviewReport?: CarlReviewReport;
   carlRussianEvalReport?: Record<string, unknown>;
   carlMutationReport?: Record<string, unknown>;
+  carlUserOwnedHookBefore?: string;
+  carlUserOwnedSettingsBefore?: { hooks: unknown; userOwnedSetting: unknown };
+  carlSettingsBytesBefore?: Buffer;
+  carlRuntimeProofBefore?: unknown;
 }
 
 function appPath(...segments: string[]): string {
@@ -518,6 +522,9 @@ Given(/^the managed CARL hook is registered through the plugin hook launcher$/, 
     'claude-code',
   ]);
   assertRunSucceeded(installRun, 'CARL installer precondition for hook launcher');
+  const manifest = readCarlManifest(this) as { runtime?: { lastInvocation?: unknown } };
+  this.carlRuntimeProofBefore = manifest.runtime?.lastInvocation;
+  assert.equal(this.carlRuntimeProofBefore, undefined, 'installer must not fabricate runner invocation proof');
 });
 
 When(/^the hook launcher executes the CARL hook event$/, function (this: CarlWorld) {
@@ -532,13 +539,28 @@ Then(/^the managed CARL runner is invoked through the registered command path$/,
 });
 
 Then(/^the runner records runtime consumer proof in the project manifest$/, function (this: CarlWorld) {
-  const manifest = readCarlManifest(this) as { runtime?: { status?: string } };
+  const manifest = readCarlManifest(this) as {
+    runtime?: {
+      status?: string;
+      lastInvocation?: { proof?: string; hookEvent?: string; sessionId?: string };
+    };
+  };
+  assert.deepEqual(
+    manifest.runtime?.lastInvocation,
+    {
+      proof: 'registered-runner-executed',
+      hookEvent: 'UserPromptSubmit',
+      sessionId: 'carl-bdd-session',
+    },
+    'the real registered runner must persist invocation-specific runtime proof',
+  );
   assert.equal(manifest.runtime?.status, 'verified', 'runner must mark the project runtime consumer verified after real hook execution');
 });
 
 Then(/^the scenario fails if only CARL files exist without a runtime consumer$/, function (this: CarlWorld) {
-  const output = `${this.carlHookResult?.stdout ?? ''}\n${this.carlHookResult?.stderr ?? ''}`;
-  assert.doesNotMatch(output, /files exist only|installed-only/i, 'runtime proof must not accept installed files alone');
+  assert.equal(this.carlRuntimeProofBefore, undefined, 'installed CARL files alone must not satisfy runtime-consumer proof');
+  const manifestAfterHook = readCarlManifest(this) as { runtime?: { lastInvocation?: unknown } };
+  assert.notEqual(manifestAfterHook.runtime?.lastInvocation, this.carlRuntimeProofBefore, 'runtime proof must be created only by real registered runner execution');
 });
 
 Given(/^the managed CARL hook is configured with a (.+) failure$/, function (this: CarlWorld, failureMode: string) {
@@ -608,24 +630,22 @@ Then(/^user-owned configuration remains unchanged$/, function (this: CarlWorld) 
 Given(/^a project has a user-authored CARL hook entry outside the dev-pomogator managed region$/, function (this: CarlWorld) {
   ensureProject(this);
   const settingsPath = projectPath(this, '.claude', 'settings.json');
-  fs.writeFileSync(
-    settingsPath,
-    JSON.stringify(
-      {
-        hooks: {
-          UserPromptSubmit: [
-            {
-              hooks: [{ type: 'command', command: 'python user-carl-hook.py' }],
-            },
-          ],
-        },
-        userOwnedSetting: 'preserve-me',
-      },
-      null,
-      2,
-    ),
-    'utf-8',
-  );
+  const userOwnedHook = {
+    hooks: [{ type: 'command', command: 'python user-carl-hook.py', timeout: 17 }],
+  };
+  const settings = {
+    hooks: {
+      UserPromptSubmit: [userOwnedHook],
+    },
+    userOwnedSetting: 'preserve-me',
+  };
+  this.carlUserOwnedHookBefore = JSON.stringify(userOwnedHook);
+  this.carlUserOwnedSettingsBefore = {
+    hooks: structuredClone(settings.hooks),
+    userOwnedSetting: settings.userOwnedSetting,
+  };
+  this.carlSettingsBytesBefore = Buffer.from(`${JSON.stringify(settings, null, 2)}\n`, 'utf-8');
+  fs.writeFileSync(settingsPath, this.carlSettingsBytesBefore);
   writeManagedCarlManifest(this);
 });
 
@@ -635,13 +655,39 @@ When(/^CARL repair runs$/, function (this: CarlWorld) {
 
 Then(/^the user-authored CARL hook entry is preserved$/, function (this: CarlWorld) {
   assertRunSucceeded(this.carlLastRun, 'CARL repair');
-  const settings = stringify(readJson(projectPath(this, '.claude', 'settings.json')));
-  assert.match(settings, /user-carl-hook\.py/, 'user-authored CARL hook must be preserved');
+  const settings = readJson(projectPath(this, '.claude', 'settings.json')) as {
+    hooks?: { UserPromptSubmit?: unknown[] };
+    userOwnedSetting?: unknown;
+  };
+  assert.equal(settings.userOwnedSetting, this.carlUserOwnedSettingsBefore?.userOwnedSetting, 'repair must preserve the exact user-owned setting value');
+  assert.deepEqual(settings.hooks, this.carlUserOwnedSettingsBefore?.hooks, 'repair must preserve the complete user-owned hooks object');
+  assert.equal(
+    JSON.stringify(settings.hooks?.UserPromptSubmit?.[0]),
+    this.carlUserOwnedHookBefore,
+    'repair must preserve the exact serialized user-authored hook entry',
+  );
+  assert.ok(this.carlSettingsBytesBefore, 'pre-repair settings bytes must be captured');
+  const userOwnedBytes = this.carlSettingsBytesBefore.subarray(0, this.carlSettingsBytesBefore.lastIndexOf(0x7d));
+  const settingsAfter = fs.readFileSync(projectPath(this, '.claude', 'settings.json'));
+  assert.deepEqual(
+    settingsAfter.subarray(0, userOwnedBytes.length - 1),
+    userOwnedBytes.subarray(0, userOwnedBytes.length - 1),
+    'repair must preserve every existing user-owned settings byte before the required root delimiter',
+  );
+  assert.equal(settingsAfter[userOwnedBytes.length - 1], 0x2c, 'repair may replace only the root newline before the closing brace with a managed-property comma');
 });
 
 Then(/^managed CARL entries are written only inside managed markers or deterministic managed keys$/, function (this: CarlWorld) {
-  const settings = stringify(readJson(projectPath(this, '.claude', 'settings.json')));
-  assert.match(settings, /dev-pomogator|managed|carl/, 'managed CARL entries must be explicit and deterministic');
+  const settings = readJson(projectPath(this, '.claude', 'settings.json')) as Record<string, unknown>;
+  assert.deepEqual(Object.keys(settings).sort(), ['devPomogatorCarl', 'hooks', 'userOwnedSetting'], 'repair may add only the deterministic devPomogatorCarl key');
+  assert.deepEqual(settings.hooks, this.carlUserOwnedSettingsBefore?.hooks, 'managed CARL installation must not mutate the user-owned hooks region');
+  assert.deepEqual(settings.devPomogatorCarl, {
+    managedBy: 'dev-pomogator',
+    component: 'carl',
+    managed: true,
+    hookEvent: 'UserPromptSubmit',
+    command: 'node --import tsx tools/carl/runner.ts',
+  }, 'the managed CARL entry must use the deterministic managed key and exact production contract');
 });
 
 // ── CARL001_07 ───────────────────────────────────────────────────────────────

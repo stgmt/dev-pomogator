@@ -6,17 +6,17 @@
 | ID | Title | Status | Depends | Phase | Est. |
 |----|-------|--------|---------|-------|------|
 | capture-real-carl-artifact | Capture real CARL runtime and benchmark artifact | DONE | — | Phase 0 | 60m |
-| author-carl-bdd-red | Author CARL BDD red scenarios and step definitions | DONE | capture-real-carl-artifact | Phase 0 | 75m |
-| implement-carl-adaptation-script | Implement CARL rule and skill adaptation script | DONE | author-carl-bdd-red | Phase 1 | 75m |
-| implement-managed-carl-install | Implement managed CARL manifest and installer | DONE | implement-carl-adaptation-script | Phase 1 | 90m |
-| wire-runtime-consumer | Wire Claude Code CARL runtime consumer through plugin hook | DONE | implement-managed-carl-install | Phase 1 | 90m |
-| implement-fail-open-warning | Implement fail-open warning injection | DONE | wire-runtime-consumer | Phase 2 | 60m |
-| implement-doctor-carl-repair | Add doctor CARL health and repair | DONE | implement-managed-carl-install, implement-fail-open-warning | Phase 3 | 90m |
-| gate-codex-carl-dispatcher | Gate Codex CARL through launcher and dispatcher prerequisites | DONE | wire-runtime-consumer | Phase 4 | 75m |
-| implement-recall-benchmark | Implement real-artifact recall benchmark and baseline gate | DONE | capture-real-carl-artifact, wire-runtime-consumer | Phase 5 | 75m |
-| evaluate-russian-carl-report | Evaluate Russian CARL prompts and propose optimizations | TODO | implement-carl-adaptation-script, implement-recall-benchmark | Phase 5 | 75m |
-| implement-review-report | Add CARL review and evidence reporting | TODO | implement-doctor-carl-repair, implement-recall-benchmark, evaluate-russian-carl-report | Phase 5 | 60m |
-| final-refactor-verification | Refactor and verify CARL integration end-to-end | TODO | implementation tasks | Final | 60m |
+| author-carl-bdd-red | Author CARL BDD red scenarios and step definitions | IN_PROGRESS | capture-real-carl-artifact | Phase 0 | 75m |
+| implement-carl-adaptation-script | Implement CARL rule and skill adaptation script | IN_PROGRESS | author-carl-bdd-red | Phase 1 | 75m |
+| implement-managed-carl-install | Implement managed CARL manifest and installer | IN_PROGRESS | implement-carl-adaptation-script | Phase 1 | 90m |
+| wire-runtime-consumer | Wire Claude Code CARL runtime consumer through plugin hook | IN_PROGRESS | implement-managed-carl-install | Phase 1 | 90m |
+| implement-fail-open-warning | Implement fail-open warning injection | IN_PROGRESS | wire-runtime-consumer | Phase 2 | 60m |
+| implement-doctor-carl-repair | Add doctor CARL health and repair | IN_PROGRESS | implement-managed-carl-install, implement-fail-open-warning | Phase 3 | 90m |
+| gate-codex-carl-dispatcher | Gate Codex CARL through launcher and dispatcher prerequisites | IN_PROGRESS | wire-runtime-consumer | Phase 4 | 75m |
+| implement-recall-benchmark | Implement real-artifact recall benchmark and baseline gate | IN_PROGRESS | capture-real-carl-artifact, wire-runtime-consumer | Phase 5 | 75m |
+| evaluate-russian-carl-report | Evaluate Russian CARL prompts and propose optimizations | IN_PROGRESS | implement-carl-adaptation-script, implement-recall-benchmark | Phase 5 | 75m |
+| implement-review-report | Add CARL review and evidence reporting | IN_PROGRESS | implement-doctor-carl-repair, implement-recall-benchmark, evaluate-russian-carl-report | Phase 5 | 60m |
+| final-refactor-verification | Refactor and verify CARL integration end-to-end | IN_PROGRESS | implementation tasks | Final | 60m |
 <!-- end auto-generated -->
 
 > Regenerate via `Skill("task-board-forms")` or `npx tsx tools/specs-generator/spec-status.ts -Path .specs/carl-integration -Format task-table` and splice between markers.
@@ -45,7 +45,7 @@ CARL implementation follows Red → Green → Refactor. Phase 0 creates executab
   - Runtime-consumer proof: `.dev-pomogator/.tmp/carl-runtime-evidence-1783567719470.json` captured plugin hook registration for `tools/carl/runner.ts`, install exit `0`, hook exit `0`, and manifest runtime transition `unverified` → `verified`; the review report records `fakeGreenGate.runtimeConsumerExecuted=true` and `hookRegistered=true`.
   - Benchmark gate proof: the same evidence records no-fixture benchmark mode as `status=blocked`, `thresholdState=draft-no-real-artifact`, `regressionGate.enabled=false`, and fixture-backed mode as `status=baseline-recorded` with five metrics and seven source hashes.
 
-- [x] Author CARL BDD red scenarios and step definitions — id: author-carl-bdd-red — Status: DONE | Est: 75m
+- [ ] Author CARL BDD red scenarios and step definitions — id: author-carl-bdd-red — Status: IN_PROGRESS | Est: 75m
   _Requirements: [FR-1](FR.md#fr-1-claude-code-managed-carl-install), [FR-2](FR.md#fr-2-no-fake-green-when-carl-is-absent), [FR-3](FR.md#fr-3-runtime-consumer-and-end-to-end-proof), [FR-4](FR.md#fr-4-fail-open-warning-injection), [FR-5](FR.md#fr-5-doctor-health-and-repair), [FR-6](FR.md#fr-6-managed-markers-preserve-user-configuration), [FR-7](FR.md#fr-7-codex-path-gated-by-launcher-and-dispatcher-prerequisites), [FR-8](FR.md#fr-8-review-audit-and-reporting), [FR-9](FR.md#fr-9-recall-benchmark-threshold-and-regression-gate)_
   _Files: `tests/features/carl-integration.feature` (create), `tests/step_definitions/feature_carl_integration.ts` (create), `cucumber.json` (edit)_
   _Depends: capture-real-carl-artifact_
@@ -58,10 +58,11 @@ CARL implementation follows Red → Green → Refactor. Phase 0 creates executab
   - [ ] Docker BDD red run shows the CARL001 scenarios fail or pend because implementation is missing, not because of undefined step text.
   - [ ] No `*.test.ts`, vitest-only, or file-inspection test is added for CARL coverage.
   - [ ] Step definitions use real temp project directories and are ready to drive installer, hook launcher, doctor, Codex gate, report, and benchmark commands.
+  - [ ] CARL001_15 kills the missing-adaptation mutant through the real installer mutation harness.
 
 ## Phase 1: Claude Code managed CARL install and runtime consumer (Green)
 
-- [x] Implement CARL rule and skill adaptation script — id: implement-carl-adaptation-script — Status: DONE | Est: 75m
+- [ ] Implement CARL rule and skill adaptation script — id: implement-carl-adaptation-script — Status: IN_PROGRESS | Est: 75m
   _Requirements: [FR-1](FR.md#fr-1-claude-code-managed-carl-install), [FR-8](FR.md#fr-8-review-audit-and-reporting)_
   _Files: `tools/carl/adapt-rules.ts` (create), `.carl/carl.json` (create), `tests/step_definitions/feature_carl_integration.ts` (edit)_
   _Depends: author-carl-bdd-red_
@@ -74,8 +75,9 @@ CARL implementation follows Red → Green → Refactor. Phase 0 creates executab
   - [ ] @feature1 verifies adding or changing a rule/skill refreshes `.carl/carl.json` and updates its source hash.
   - [ ] @feature1 verifies Russian aliases are generated from safe Cyrillic source text or curated overrides, not invented when no safe alias exists.
   - [ ] @feature8 verifies the adapter report lists ready, stale, and `ru:needs-alias` sources so new rules/skills cannot silently miss Russian CARL recall.
+  - [ ] CARL001_13 proves the real installer automatically runs adaptation and lazy context-diet generation for fresh Russian rule and skill sources.
 
-- [x] Implement managed CARL manifest and installer — id: implement-managed-carl-install — Status: DONE | Est: 90m
+- [ ] Implement managed CARL manifest and installer — id: implement-managed-carl-install — Status: IN_PROGRESS | Est: 90m
   _Requirements: [FR-1](FR.md#fr-1-claude-code-managed-carl-install), [FR-2](FR.md#fr-2-no-fake-green-when-carl-is-absent), [FR-6](FR.md#fr-6-managed-markers-preserve-user-configuration)_
   _Files: `tools/carl/manifest.ts` (create), `tools/carl/install.ts` (create), `.carl/carl.json` (create)_
   _Depends: implement-carl-adaptation-script_
@@ -89,8 +91,9 @@ CARL implementation follows Red → Green → Refactor. Phase 0 creates executab
   - [ ] @feature1 verifies Russian prompts without project `ru` metadata report degraded language status instead of healthy empty recall.
   - [ ] @feature2 verifies missing runtime consumer produces degraded status rather than healthy/installed/ready.
   - [ ] @feature6 verifies user-owned config outside managed markers is preserved and conflicts report `user-conflict`.
+  - [ ] CARL001_14 proves the real SessionStart doctor bootstraps project Russian CARL before the next prompt hook runs.
 
-- [x] Wire Claude Code CARL runtime consumer through plugin hook — id: wire-runtime-consumer — Status: DONE | Est: 90m
+- [ ] Wire Claude Code CARL runtime consumer through plugin hook — id: wire-runtime-consumer — Status: IN_PROGRESS | Est: 90m
   _Requirements: [FR-1](FR.md#fr-1-claude-code-managed-carl-install), [FR-3](FR.md#fr-3-runtime-consumer-and-end-to-end-proof)_
   _Files: `tools/carl/runner.ts` (create), `tools/carl/hook-wrapper.ts` (create), `.claude-plugin/hooks.json` (edit)_
   _Depends: implement-managed-carl-install_
@@ -106,7 +109,7 @@ CARL implementation follows Red → Green → Refactor. Phase 0 creates executab
 
 ## Phase 2: Fail-open warning path (Green)
 
-- [x] Implement fail-open warning injection — id: implement-fail-open-warning — Status: DONE | Est: 60m
+- [ ] Implement fail-open warning injection — id: implement-fail-open-warning — Status: IN_PROGRESS | Est: 60m
   _Requirements: [FR-4](FR.md#fr-4-fail-open-warning-injection)_
   _Files: `tools/carl/runner.ts` (edit), `tools/carl/hook-wrapper.ts` (edit), `tests/step_definitions/feature_carl_integration.ts` (edit)_
   _Depends: wire-runtime-consumer, capture-real-carl-artifact_
@@ -122,7 +125,7 @@ CARL implementation follows Red → Green → Refactor. Phase 0 creates executab
 
 ## Phase 3: Doctor health and managed repair (Green)
 
-- [x] Add doctor CARL health and repair — id: implement-doctor-carl-repair — Status: DONE | Est: 90m
+- [ ] Add doctor CARL health and repair — id: implement-doctor-carl-repair — Status: IN_PROGRESS | Est: 90m
   _Requirements: [FR-5](FR.md#fr-5-doctor-health-and-repair), [FR-6](FR.md#fr-6-managed-markers-preserve-user-configuration)_
   _Files: `.claude/skills/pomogator-doctor/scripts/engine/checks/carl.ts` (create), `.claude/skills/pomogator-doctor/scripts/engine/checks/index.ts` (edit), `.claude/skills/pomogator-doctor/scripts/engine/types.ts` (edit)_
   _Depends: implement-managed-carl-install, implement-fail-open-warning_
@@ -139,7 +142,7 @@ CARL implementation follows Red → Green → Refactor. Phase 0 creates executab
 
 ## Phase 4: Codex gated dispatcher path (Green, blocked until prerequisites)
 
-- [x] Gate Codex CARL through launcher and dispatcher prerequisites — id: gate-codex-carl-dispatcher — Status: DONE | Est: 75m
+- [ ] Gate Codex CARL through launcher and dispatcher prerequisites — id: gate-codex-carl-dispatcher — Status: IN_PROGRESS | Est: 75m
   _Requirements: [FR-7](FR.md#fr-7-codex-path-gated-by-launcher-and-dispatcher-prerequisites)_
   _Files: `.codex/hooks.json` (edit), `tools/context-menu/postinstall.ts` (edit), `tools/carl/install.ts` (edit), `tools/carl/manifest.ts` (edit), `tests/step_definitions/feature_carl_integration.ts` (edit)_
   _Depends: wire-runtime-consumer_
@@ -156,7 +159,7 @@ CARL implementation follows Red → Green → Refactor. Phase 0 creates executab
 
 ## Phase 5: Benchmark, reporting, and review evidence (Green)
 
-- [x] Implement real-artifact recall benchmark and baseline gate — id: implement-recall-benchmark — Status: DONE | Est: 75m
+- [ ] Implement real-artifact recall benchmark and baseline gate — id: implement-recall-benchmark — Status: IN_PROGRESS | Est: 75m
   _Requirements: [FR-9](FR.md#fr-9-recall-benchmark-threshold-and-regression-gate)_
   _Files: `tools/carl/bench.ts` (create), `tests/fixtures/carl/real-output/README.md` (edit), `tests/step_definitions/feature_carl_integration.ts` (edit)_
   _Depends: capture-real-carl-artifact, wire-runtime-consumer_
@@ -171,7 +174,7 @@ CARL implementation follows Red → Green → Refactor. Phase 0 creates executab
   - [x] @feature9 scenario `CARL001_10` verifies a captured real CARL artifact records a baseline for supported metrics.
   - [x] Benchmark output names the artifact/source and threshold status so future regressions compare against the accepted baseline only.
 
-- [x] Evaluate Russian CARL prompts and propose optimizations — id: evaluate-russian-carl-report — Status: DONE | Est: 75m
+- [ ] Evaluate Russian CARL prompts and propose optimizations — id: evaluate-russian-carl-report — Status: IN_PROGRESS | Est: 75m
   _Requirements: [FR-8](FR.md#fr-8-review-audit-and-reporting), [FR-9](FR.md#fr-9-recall-benchmark-threshold-and-regression-gate)_
   _Files: `tools/carl/evaluate-russian.ts` (create), `tests/fixtures/carl/russian-eval/README.md` (create), `tests/step_definitions/feature_carl_integration.ts` (edit)_
   _Depends: implement-carl-adaptation-script, implement-recall-benchmark_
@@ -186,7 +189,7 @@ CARL implementation follows Red → Green → Refactor. Phase 0 creates executab
   - [x] The report lists false positives, false negatives, and a concrete optimization recommendation for every observed Russian coverage gap.
   - [x] Fixture-backed sibling output is clearly labelled as evidence for output shape/benchmark behavior, not proof that dev-pomogator Russian CARL runtime is ready.
 
-- [x] Add CARL review and evidence reporting — id: implement-review-report — Status: DONE | Est: 60m
+- [ ] Add CARL review and evidence reporting — id: implement-review-report — Status: IN_PROGRESS | Est: 60m
   _Requirements: [FR-8](FR.md#fr-8-review-audit-and-reporting)_
   _Files: `tools/carl/manifest.ts` (edit), `tests/step_definitions/feature_carl_integration.ts` (edit)_
   _Depends: implement-doctor-carl-repair, implement-recall-benchmark_
@@ -203,7 +206,7 @@ CARL implementation follows Red → Green → Refactor. Phase 0 creates executab
 
 ## Final Phase: Refactor and verification
 
-- [x] Refactor and verify CARL integration end-to-end — id: final-refactor-verification — Status: DONE | Est: 60m
+- [ ] Refactor and verify CARL integration end-to-end — id: final-refactor-verification — Status: IN_PROGRESS | Est: 60m
   _Requirements: [FR-1](FR.md#fr-1-claude-code-managed-carl-install), [FR-2](FR.md#fr-2-no-fake-green-when-carl-is-absent), [FR-3](FR.md#fr-3-runtime-consumer-and-end-to-end-proof), [FR-4](FR.md#fr-4-fail-open-warning-injection), [FR-5](FR.md#fr-5-doctor-health-and-repair), [FR-6](FR.md#fr-6-managed-markers-preserve-user-configuration), [FR-7](FR.md#fr-7-codex-path-gated-by-launcher-and-dispatcher-prerequisites), [FR-8](FR.md#fr-8-review-audit-and-reporting), [FR-9](FR.md#fr-9-recall-benchmark-threshold-and-regression-gate)_
   _Files: `tools/carl/` (edit/refactor), `tests/step_definitions/feature_carl_integration.ts` (edit), `cucumber.json` (verify/edit if needed)_
   _Depends: implement-review-report, gate-codex-carl-dispatcher if Codex prerequisites are in scope; otherwise document Codex as blocked/deferred_
@@ -217,3 +220,22 @@ CARL implementation follows Red → Green → Refactor. Phase 0 creates executab
   - [x] Docker BDD verifies every CARL001 scenario that is in scope; gated Codex work is explicitly blocked/deferred if prerequisites remain unavailable.
   - [x] CARL runtime consumer proof and real-artifact benchmark proof are present before any corresponding FR is marked done.
   - [x] `get_spec_status` and conformance checks report no structural traceability gaps beyond honest `TESTS_NOT_RUN` or explicit blocked implementation evidence.
+
+
+
+### Finalization gate note
+
+- Verdict: **PARTIAL / NOT_READY**.
+- CARL001_13, CARL001_14, and CARL001_15 remain BDD scope, but canonical evidence is stale or unverified; no green completion claim is allowed.
+- Re-run Docker BDD through the shared `cucumber.json` path, then independently verify adaptation, SessionStart ordering, and mutation checks before returning these tasks to `DONE`.
+
+
+### Scenario-to-task reconciliation
+
+| Scenario | Mapped task(s) | Evidence state |
+|---|---|---|
+| `CARL001_13` | `implement-carl-adaptation-script`, `implement-managed-carl-install`, `final-refactor-verification` | `PASSED` result is stale; completion remains unverified |
+| `CARL001_14` | `implement-managed-carl-install`, `wire-runtime-consumer`, `final-refactor-verification` | `PASSED` result is stale; SessionStart ordering remains unverified |
+| `CARL001_15` | `author-carl-bdd-red`, `implement-carl-adaptation-script`, `final-refactor-verification` | `PASSED` result is stale; mutation-check proof remains unverified |
+
+These mappings keep the 15 BDD scenarios traceable to the 12-task board without converting stale execution evidence into `DONE`.

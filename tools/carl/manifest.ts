@@ -12,6 +12,11 @@ export interface ManagedCarlManifest {
   runtime: {
     command: string;
     status: 'unverified' | 'missing-runtime' | 'verified';
+    lastInvocation?: {
+      proof: 'registered-runner-executed';
+      hookEvent: 'UserPromptSubmit';
+      sessionId: string;
+    };
   };
   platforms: {
     claudeCode: { status: 'installed' | 'degraded' | 'unsupported'; reason?: string };
@@ -392,8 +397,8 @@ export function buildReviewReport(projectRoot: string): CarlReviewReport {
   const userPreservationVerified = fileContains(REPO_ROOT, path.join('tools', 'carl', 'install.ts'), [
     'hasConflictingUserManagedKey',
     'user-conflict',
-    '...settings',
-    'atomicWriteJson',
+    'beforeClosingBrace',
+    'atomicWriteText',
   ]);
   const doctorVerified = doctorSource.exists && fileContains(REPO_ROOT, doctorSource.path, ['checkCarlProject', 'repairCarl', REQUIRED_WARNING]);
   const benchmarkVerified = benchSource.exists && fileContains(REPO_ROOT, benchSource.path, ['fixture-backed-real-artifact', 'draft-no-real-artifact']);

@@ -91,7 +91,11 @@ function projectRootFrom(input: UserPromptSubmitInput): string {
   return path.resolve(process.env.CARL_PROJECT_DIR || input.cwd || process.cwd());
 }
 
-function verifyRuntimeConsumer(manifest: ManagedCarlManifest, projectRoot: string): 'verified' | 'unverified' | 'runtime-command-external-or-unverified' | 'missing-runtime' {
+function verifyRuntimeConsumer(
+  manifest: ManagedCarlManifest,
+  projectRoot: string,
+  sessionId: string,
+): 'verified' | 'unverified' | 'runtime-command-external-or-unverified' | 'missing-runtime' {
   const runtimeCommand = manifest.runtime?.command ?? '';
   if (!runtimeCommand || /missing|definitely-missing/u.test(runtimeCommand)) return 'missing-runtime';
 
@@ -99,22 +103,25 @@ function verifyRuntimeConsumer(manifest: ManagedCarlManifest, projectRoot: strin
   const runnerPath = path.join(pluginRoot, runtimeCommand);
   if (!fs.existsSync(runnerPath)) return 'runtime-command-external-or-unverified';
 
-  if (manifest.runtime.status !== 'verified') {
-    atomicWriteJson(manifestPath(projectRoot), {
-      ...manifest,
-      runtime: {
-        ...manifest.runtime,
-        status: 'verified',
+  atomicWriteJson(manifestPath(projectRoot), {
+    ...manifest,
+    runtime: {
+      ...manifest.runtime,
+      status: 'verified',
+      lastInvocation: {
+        proof: 'registered-runner-executed',
+        hookEvent: 'UserPromptSubmit',
+        sessionId,
       },
-    });
-  }
+    },
+  });
 
   return 'verified';
 }
 
-function statusFromManifest(manifest: ManagedCarlManifest | null, projectRoot: string): string {
+function statusFromManifest(manifest: ManagedCarlManifest | null, projectRoot: string, sessionId: string): string {
   if (!manifest) return 'project-missing';
-  const runtimeState = verifyRuntimeConsumer(manifest, projectRoot);
+  const runtimeState = verifyRuntimeConsumer(manifest, projectRoot, sessionId);
   const ruStatus = manifest.languageStatus?.ru?.status ?? 'project-language-missing';
   const diet = readContextDiet(projectRoot);
   const contextMode = diet?.mode === 'lazy-managed' ? 'lazy-managed' : 'additive';
@@ -214,7 +221,7 @@ function buildCarlContext(input: UserPromptSubmitInput, projectRoot: string): st
     ].join(' ');
   }
 
-  const status = statusFromManifest(manifest, projectRoot);
+  const status = statusFromManifest(manifest, projectRoot, input.session_id ?? 'unknown-session');
   const snippets = relevantRuleContext(manifest, projectRoot, prompt);
   return [
     `CARL guidance ran for this prompt in project ${projectRoot}.`,

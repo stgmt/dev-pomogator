@@ -1,125 +1,118 @@
 # Research
 
-## Контекст
+## Research question and root-cause frame
 
-CARL integration is a new dev-pomogator integration area: CARL rules/recall hooks must become a managed package path for dev-pomogator users, with Claude Code support first and Codex support sequenced after the Codex context-menu launcher path.
+How can dev-pomogator integrate CARL without confusing plugin registration, project deployment, runtime consumption, and producer provenance?
 
-Current implementation baseline:
+The evidence points to one causal chain rather than an isolated missing file: CARL was registered and dispatched, but the project-local manifest was not reliably deployed; stale project-root selection then made valid projects appear `project-missing`; static registration checks also went stale after the HTTP dispatcher moved targets into the hook-service registry. The integration must therefore make event-root selection, deployment completion, executable consumer proof, and provenance explicit independent gates.
 
-- [VERIFIED: local repo inventory command on 2026-07-07] The current repo has no `.carl/`, `.claude/hooks/carl-hook.py`, or `scripts/carl/` artifacts, so this spec starts from an implementation gap rather than extending tracked CARL code.
-- [VERIFIED: local repo inventory command on 2026-07-07] The current repo has Codex artifacts at `.codex/config.toml`, `.codex/hooks.json`, and `.codex/agents/*.toml`; these are the current project-local Codex baseline.
-- [VERIFIED: `codex-cli-support:FR-1`..`FR-5`] Existing specs already model Codex as a first-class platform with trusted project-local artifacts, existing artifact protection, version-aware hook capability checks, and deterministic hook orchestration.
-- [VERIFIED: `context-menu:FR-8`..`FR-11`] Existing context-menu requirements already establish parallel Claude Code/Codex channels and Codex launch/trust handling; CARL Codex work should wait for that launcher path instead of inventing a parallel launcher.
-- [VERIFIED: `pomogator-doctor:FR-3`, `FR-4`, `FR-11`, `FR-12`] Doctor already owns managed structure, hooks registry sync, version drift, and managed gitignore checks; CARL health/repair should extend that repair pattern.
-- [VERIFIED: `dev-pomogator-canonical-plugin:FR-1`..`FR-6`] Canonical plugin layout, marketplace catalog, `/plugin install`, install scope, and `/reload-plugins` activation are already specified; CARL packaging must fit the canonical plugin distribution model.
+## Scope context
 
-User-provided context:
+The current repository has **60 open issues**. CARL-specific open issues include #128, #130, #173, #203, #205, and #206. This is context for evidence drift and operational exposure, not proof that every issue is part of this spec.
 
-- [UNVERIFIED: user-provided context, not repo code] A CARL benchmark issue exists and should inform later research/reporting, but the current repo inventory does not verify its contents or implementation shape.
+Evidence: [cmd:GitHub open-issue query for stgmt/dev-pomogator returned total_count=60 on 2026-07-27].
 
-## Источники
+## Root-cause evidence
 
-- User task for `carl-integration` Discovery phase: intent, sequencing, doctor repair, hook warning behavior, and CARL benchmark issue context.
-- [VERIFIED: `codex-cli-support:FR-1`..`FR-5`] Codex platform and hook constraints.
-- [VERIFIED: `context-menu:FR-8`..`FR-11`] Parallel Claude/Codex context-menu channel constraints and Codex launcher dependency.
-- [VERIFIED: `pomogator-doctor:FR-3`, `FR-4`, `FR-11`, `FR-12`] Doctor managed repair precedents.
-- [VERIFIED: `dev-pomogator-canonical-plugin:FR-1`..`FR-6`] Canonical Claude Code plugin packaging and activation precedents.
-- [VERIFIED: local repo inventory command on 2026-07-07] Current CARL artifacts are absent; current Codex artifacts are present.
+### 1. Registered consumer without reliable project deployment — VERIFIED history, current state requires replay
 
-## Технические находки
+Merged PR #202 states that CARL was already registered through `.claude-plugin/hooks.json` → `tools/hook-service/session-bootstrap.mjs` → the local hook service → `tools/hook-service/registry.json` → `tools/carl/runner.ts`, but project CARL state “did not deploy”. The repair added automatic first deployment while retaining explicit repair for existing managed artifacts. The same PR records four chained defects: stale registration lookup, an extra `node` token in the legacy doctor command, bundled-module main-guards firing during unrelated execution, and a race that truncated work at the ten-second banner timeout.
 
-### CARL implementation gap
+PR #94 independently reports automatic Russian adaptation and SessionStart bootstrap, with a real SessionStart/UserPromptSubmit smoke claim and three Docker BDD scenarios. PR #97 reports the managed rule diet and a 1695-scenario full Docker BDD run. These are historical claims and do not remove the current ambiguity: PR #202's merged state must be replayed against the currently installed/plugin-distributed artifact, not accepted merely because its body says “fixed”.
 
-[VERIFIED: local repo inventory command on 2026-07-07] There is no current tracked `.carl/`, `.claude/hooks/carl-hook.py`, or `scripts/carl/` implementation to reuse directly. The implementation phase must therefore either create a new managed CARL package path or vendor/bridge real CARL artifacts after verifying their source, license, runtime, and expected output.
+Evidence: [src:https://github.com/stgmt/dev-pomogator/pull/202], [src:https://github.com/stgmt/dev-pomogator/pull/94], [src:https://github.com/stgmt/dev-pomogator/pull/97].
 
-### Claude Code packaging path
+### 2. Wrong project selected by stale `CARL_PROJECT_DIR` — VERIFIED
 
-[VERIFIED: `dev-pomogator-canonical-plugin:FR-1`..`FR-6`] dev-pomogator is distributed as a canonical Claude Code plugin with a defined plugin layout, marketplace catalog, install flow, install scopes, and activation via reload. CARL should be packaged as a managed plugin integration rather than as an undocumented local dotfile recipe.
+Issue #128 reports `project-missing` from a subfolder because root selection did not reliably locate the repository project marker. Issue #130 shows a settings-injected `CARL_PROJECT_DIR` pointing at `C:\repos\lm-saas` while the event was under `C:\repos\lm-saas\source-code\AiPomogator`; upward walking could select an unrelated project. Issue #203 reproduces a cross-drive mismatch where `CARL_PROJECT_DIR=C:\repos\lm-saas` was selected while the event `cwd` and valid manifest were `E:\repos\lm-saas`. Issue #205 reports multiple candidate `.carl/carl.json` locations selected from the wrong project context. Issue #206 describes the same stale override precedence and proposes event `input.cwd` as primary, with an override only when it resolves to a valid `.carl` marker.
 
-[ASSUMED] Where supported, a normal dev-pomogator install/refresh should make CARL installable or active by default. This assumption must be checked against CARL's actual license/runtime requirements before implementation.
+This is the causal root for the observed “project CARL exists but session says project-missing” symptom: an environment/settings path can redirect lookup before the event's project is considered. Final precedence semantics remain an implementation decision, not a Discovery fact.
 
-### Codex platform path
+Evidence: [src:https://github.com/stgmt/dev-pomogator/issues/128], [src:https://github.com/stgmt/dev-pomogator/issues/130], [src:https://github.com/stgmt/dev-pomogator/issues/203], [src:https://github.com/stgmt/dev-pomogator/issues/205], [src:https://github.com/stgmt/dev-pomogator/issues/206].
 
-[VERIFIED: `codex-cli-support:FR-1`..`FR-5`] Codex integration must respect first-class platform status, project-local artifacts, existing artifact protection, version-aware hook capability checks, and deterministic hook orchestration.
+### 3. Static hook grep missed live registry route — VERIFIED
 
-[VERIFIED: `context-menu:FR-8`..`FR-11`] Codex CARL integration is sequenced after the context-menu Codex launcher/trust work. CARL must not introduce a second unmanaged Codex launch channel.
+The current registry routes `UserPromptSubmit/0/0` to `tools/carl/runner.ts`. The canonical plugin manifest starts SessionStart with `tools/hook-service/session-bootstrap.mjs`, while HTTP dispatch targets live in the registry. PR #202 explicitly says that grepping only `hooks.json` could not prove registration after the HTTP dispatcher migration; manifest reporting was changed to inspect both legacy direct commands and the live registry.
 
-[UNVERIFIED] The exact Codex hook output contract for injecting agent-visible warnings/context still needs current Codex documentation or runtime verification.
+Evidence: [ref:tools/hook-service/registry.json:307-313], [ref:.claude-plugin/hooks.json:3-11], [ref:tools/carl/manifest.ts:340-389], [src:https://github.com/stgmt/dev-pomogator/pull/202].
 
-### Doctor repair path
+### 4. Runtime consumer and fail-open contract — VERIFIED locally, external transport boundary open
 
-[VERIFIED: `pomogator-doctor:FR-3`, `FR-4`, `FR-11`, `FR-12`] Doctor already checks managed structure, hook registry sync, version matching, and managed gitignore blocks. CARL should add a doctor check that can classify states such as healthy, missing, stale, unsupported, broken dependency, and repairable drift.
+`tools/carl/runner.ts` is builtins-only and emits `hookSpecificOutput.additionalContext`. Its controlled failure path maps missing, timeout, malformed, unsupported, and exception modes to diagnostics, includes the load-bearing warning `CARL did not run; tell the user CARL guidance/recall was unavailable.`, and exits with status zero. The manifest updates runtime status only when the runner can verify the packaged command; the review report keeps a fake-green block while project execution is unverified.
 
-[ASSUMED] Repair should be opt-in when it mutates project/user files, but the detection/report should always be visible when doctor runs.
+Evidence: [ref:tools/carl/runner.ts:1-16], [ref:tools/carl/runner.ts:70-110], [ref:tools/carl/runner.ts:184-259], [ref:tools/carl/manifest.ts:340-440]. The exact Claude Code agent-visible transport and a clean installed-plugin dependency-absent run remain audit gates.
 
-### Hook failure visibility
+### 5. Managed ownership and doctor repair — VERIFIED locally, adaptation failure currently swallowed
 
-[ASSUMED] CARL hooks should fail open so a broken recall/rule path does not block the main agent session.
+The installer writes a deterministic managed key, checks whether an existing owner is different, returns `user-conflict`, and uses atomic JSON writes. However, `install.ts` catches `applyContextDiet` and `adaptProject` exceptions, converts them to `null`, and still returns `ok: true` with an `installed`/`repaired` status. This means a failed adaptation can be reported as successful deployment. The Discovery contract must require explicit degraded/adaptation-failed evidence rather than treating `adaptation: null` as readiness.
 
-[UNVERIFIED] The exact Claude Code and Codex mechanisms for injecting hook warnings into chat/agent-visible context must be verified before coding. The required behavior is clear: if CARL cannot run, the AI agent must see a warning reminding it to tell the user that CARL guidance was unavailable.
+Evidence: [ref:tools/carl/install.ts:133-213]. Exact byte-for-byte preservation across every doctor path still requires executable BDD proof.
 
-### CARL external details and benchmark issue
+### 6. Codex sequencing is separate from Claude Code — VERIFIED locally
 
-[VERIFIED: `tests/fixtures/carl/manifest.json`, `tests/fixtures/carl/smoke.stdout.txt`, `tests/fixtures/carl/bench.stdout.tsv`] Real CARL runtime evidence was captured on 2026-07-07 from sibling repo `E:/repos/presentation-reels`. The captured producer uses `.carl/carl.json`, `.claude/hooks/carl-hook.py`, `scripts/carl/smoke-carl-hooks.mjs`, and `scripts/carl/bench-carl-hooks.mjs`; the hook commands in that repo point Claude Code and Codex UserPromptSubmit events at `carl-hook.py` through PowerShell-spawned Python.
+The CARL manifest evaluates Codex prerequisites independently: context-menu launcher, Codex plugin manifest, and deterministic version-aware hook dispatcher. Missing prerequisites produce `codex-deferred-prerequisite`; the Claude Code path is evaluated separately. This preserves the existing Codex/context-menu sequencing rule and forbids ad-hoc copied Claude Code hooks.
 
-[VERIFIED: `tests/fixtures/carl/smoke.stdout.txt`] The real smoke run reports `CARL smoke OK`, `domains=116`, `neutral_chars=691`, Claude debug prompt loading `CORE__DONT_BLAME_INFRA_BEFORE_TRACING` and `CORE__REPRODUCE_NOT_THEORIZE`, and Codex debug prompt loading `CORE__REPRODUCE_NOT_THEORIZE`.
+Evidence: [ref:tools/carl/manifest.ts:257-301], [src:https://github.com/stgmt/dev-pomogator/issues/173]. Version capability semantics and a fully ready Codex producer path remain implementation/audit scope.
 
-[VERIFIED: `tests/fixtures/carl/bench.stdout.tsv`] The real benchmark run reports `old_bulk_autoload_chars=683575`, `iterations=5`, and five rows (`neutral-continue`, `ru-debug-root-cause`, `render-legibility`, `feature-index`, `codex-ru-debug`) with p50/p95 timings, injected context chars, estimated tokens, thresholds, and loaded-domain summaries.
+## Graph/spec versus executable evidence drift
 
-[NEEDS_CONFIRMATION: `tests/fixtures/carl/manifest.json`] The sibling CARL source artifacts were untracked in `presentation-reels` at capture time (`.carl/`, `.claude/hooks/carl-hook.py`, `.codex/`, `scripts/carl/`). This capture verifies real CARL producer shape and benchmark behavior, but dev-pomogator still needs an explicit source/vendor decision and plugin-distributed runtime proof before claiming CARL is implemented here.
+The current spec-level CARL feature contains 12 scenarios (`CARL001_01` through `CARL001_12`). The executable `tests/features/carl-integration.feature` adds `CARL001_13`, `CARL001_14`, and `CARL001_15`, so the executable inventory has 15 named scenarios. The audit's current graph census says 9 FR, 9 AC, and 12 scenario/task units, while the executable feature has 15; these counts are not interchangeable and must be reconciled before any coverage green claim. In addition, the current spec inventory says 9 FR, 9 AC, and 10/10 coverage in one summary while task history contains 12 CARL IDs; this is evidence of stale or mixed snapshots, not proof of completeness.
 
-[UNVERIFIED] CARL's final dev-pomogator packaging source, accepted license/source-of-truth, recall backend durability, and Claude Code/Codex warning transport remain implementation-phase research items.
+Evidence: [ref:.specs/carl-integration/carl-integration.feature:1-119], [ref:tests/features/carl-integration.feature:1-148], [ref:.specs/carl-integration/AUDIT_REPORT.md:1-85], [ref:.specs/carl-integration/README.md:1-51].
 
-## Где лежит реализация
+## External producer and benchmark evidence
 
-- Current CARL implementation: none found in tracked repo inventory for `.carl/`, `.claude/hooks/carl-hook.py`, or `scripts/carl/` [VERIFIED: local repo inventory command on 2026-07-07].
-- Current Codex baseline: `.codex/config.toml`, `.codex/hooks.json`, `.codex/agents/*.toml` [VERIFIED: local repo inventory command on 2026-07-07].
-- Likely future installer/repair code: `tools/` and/or `.claude/skills/pomogator-doctor/` integration points [ASSUMED: exact file ownership deferred to Requirements/Design].
-- Likely future plugin registration: `.claude-plugin/hooks.json` and canonical plugin package files [ASSUMED: exact CARL hook registration deferred to Requirements/Design].
-- Likely future Codex registration: `.codex/hooks.json` dispatcher integration after context-menu/Codex launcher support [ASSUMED: capability check required before implementation].
+### Sibling fixture — VERIFIED as captured output, NOT VERIFIED as dev-pomogator ownership
 
-## Выводы
+The repository includes a CARL fixture ledger with a captured sibling producer at `E:/repos/presentation-reels`. The captured smoke output reports `CARL OK`, `domains=116`, `neutral_chars=691`, and loaded domains including `CORE__DONT_BLAME_INFRA_BEFORE_TRACING` and `CORE__REPRODUCE_NOT_THEORIZE`. The benchmark output reports `old_bulk_autoload_chars=683575`, `iterations=5`, and five prompt rows with latency/context/loaded-domain summaries.
 
-1. CARL is currently not implemented in this repo, so the spec must define a new managed integration lifecycle: install, verify, repair, fail-open warning, and review.
-2. Claude Code packaging should follow canonical plugin constraints; Codex packaging should follow the existing Codex project-local/version-aware dispatcher model.
-3. `pomogator-doctor` is the right user-facing repair surface for CARL drift because it already owns managed structure, hook registry, version, and gitignore checks.
-4. External CARL runtime shape and benchmark output are now partially verified by `tests/fixtures/carl/manifest.json`, `smoke.stdout.txt`, and `bench.stdout.tsv`; remaining unknowns are the accepted dev-pomogator source/vendor path, final packaging, warning transport, and plugin-distributed runtime proof.
+Evidence: [ref:tests/fixtures/carl/manifest.json], [ref:tests/fixtures/carl/smoke.stdout.txt], [ref:tests/fixtures/carl/bench.stdout.tsv], [ref:tests/fixtures/carl/real-output/README.md]. These prove producer shape and captured measurements only. The source/vendor relationship, license, and dev-pomogator plugin-distributed runtime remain `[NEEDS_CONFIRMATION]`/`[UNVERIFIED]`; they cannot establish dev-pomogator readiness.
 
-## Project Context & Constraints
+### Benchmark policy — VERIFIED contract, threshold UNVERIFIED
 
-### Relevant Rules
+`tools/carl/bench.ts` is designed to remain `draft-no-real-artifact` when provenance is incomplete. Numeric thresholds must not be invented from the sibling rows. A future baseline must cite the artifact provenance, source hashes, producer ground truth, and only metrics actually supported by the producer output.
 
-| Rule | Path | Summary | Triggered By | Impacts |
-|------|------|---------|--------------|---------|
-| dead-integration-guard | `.claude/rules/testing/dead-integration-guard.md` | Installed artifacts are not enough; a runtime consumer and real e2e are required. | CARL hook/package distribution | CARL installer, hook runtime, doctor repair tests |
-| verify-against-real-artifact | `.claude/rules/testing/verify-against-real-artifact.md` | Parser/hook fixtures must mirror real producer output. | CARL hook output and benchmark issue evidence | CARL research, BDD fixtures, doctor diagnostics |
-| integration-tests-first | `.claude/rules/integration-tests-first.md` | Critical flows need real end-to-end checks, not only unit tests. | Install/doctor/hook flows | CARL verification plan |
-| no-host-bdd-runs | `.claude/rules/pomogator/no-host-bdd-runs.md` | BDD verification must run through Docker, not host cucumber. | Later BDD scenarios | CARL scenario verification |
-| spec-authoring-via-subskills | `.claude/rules/spec-authoring-via-subskills.md` | Form docs should be filled by sanctioned automators. | Discovery/Requirements/Tasks form docs | This Discovery fill uses MCP door + skip marker |
+Evidence: [ref:tools/carl/bench.ts:1-40], [ref:tests/fixtures/carl/bench.stdout.tsv], [src:https://github.com/stgmt/dev-pomogator/blob/main/tools/carl/bench.ts].
 
-### Existing Patterns & Extensions
+## Russian recall and context-diet findings
 
-| Source | Path | What It Provides | Relevance |
-|--------|------|-------------------|-----------|
-| Codex platform spec | `.specs/codex-cli-support/FR.md` | First-class Codex platform, project-local artifacts, version-aware hook capability, deterministic dispatcher. | CARL Codex path must use this model. |
-| Context-menu spec | `.specs/context-menu/FR.md` | Parallel Claude/Codex channels and Codex launcher/trust handling. | CARL Codex work is sequenced after this launcher path. |
-| Pomogator doctor spec | `.specs/pomogator-doctor/FR.md` | Managed structure, hook registry, version, and gitignore checks. | CARL repair should extend doctor checks. |
-| Canonical plugin spec | `.specs/dev-pomogator-canonical-plugin/FR.md` | Canonical plugin layout, marketplace/install/activation constraints. | CARL Claude Code packaging must fit canonical plugin distribution. |
-| Current Codex artifacts | `.codex/config.toml`, `.codex/hooks.json`, `.codex/agents/*.toml` | Existing project-local Codex configuration and agents. | Baseline for future Codex CARL dispatcher integration. |
+PR #94 establishes historical intent for auto-adaptation and Russian aliases; PR #97 establishes the managed lazy-rule diet and its large BDD verification run. The current adapter/runner design keeps Russian coverage explicit in `.carl/carl.json`: `project-language-missing`, `project-language-stale`, `partial`, or `ready`, with source hashes, generated aliases, and `needsAliasSources`. The sibling fixture demonstrates Russian prompt rows, but it is not evidence that dev-pomogator's project runtime loads the same domains.
 
-### Architectural Constraints Summary
+The observed project output `lazy-managed; reduction=21562->4239` demonstrates a measurable context-diet optimization lane, but issue #203 simultaneously reports `project-missing`. Context reduction must therefore never upgrade runtime health, producer readiness, or benchmark status. Russian evaluation must report expected/actual domains, false positives, false negatives, and concrete alias/normalization/ranking/domain-splitting/context-budget recommendations.
 
-- CARL must not be documented as working until a real runtime consumer invokes it and an end-to-end check proves the managed hook path.
-- CARL must preserve user-owned config and only mutate clearly managed blocks/artifacts.
-- Codex CARL support is gated by the Codex launcher/hook capability path; unsupported Codex versions must receive honest unsupported status, not a fake install.
-- Broken CARL must be visible to the agent/user as degraded mode and must not silently remove expected recall/rule context.
+Evidence: [src:https://github.com/stgmt/dev-pomogator/pull/94], [src:https://github.com/stgmt/dev-pomogator/pull/97], [src:https://github.com/stgmt/dev-pomogator/issues/203], [src:https://github.com/stgmt/dev-pomogator/pull/202], [ref:tools/carl/adapt-rules.ts:1-40], [ref:tools/carl/context-diet.ts:1-30].
 
-## Risk Assessment
+## Research matrix
 
-| Risk | Likelihood | Impact | Mitigation |
-|------|------------|--------|------------|
-| External CARL file layout, hook contract, runtime dependencies, or benchmark issue details differ from assumptions. | High | High | Keep all CARL external details marked [UNVERIFIED] until later research verifies the real CARL source/docs/artifacts and captures real hook output. |
-| CARL files are installed but never consumed by a real hook runtime, creating a dead integration. | Medium | High | Require a runtime consumer check plus an e2e scenario that forces the managed hook to execute and fail if the hook is not wired. |
-| Broken CARL hook fails silently, causing the agent and user to trust a session that missed expected recall/rule context. | Medium | High | Implement fail-open warning injection into agent-visible context and test an induced failure path. |
-| Doctor repair overwrites user-owned CARL or hook configuration. | Medium | High | Use managed markers/blocks, preserve unrelated config, and test repair against mixed managed/user-owned artifacts. |
-| Codex hook capability or launcher sequencing is not ready when CARL work starts. | High | Medium | Gate Codex CARL tasks behind context-menu/Codex launcher completion and version-aware capability checks; keep Claude Code path independent. |
+| Claim | Evidence | Status | Consequence |
+|---|---|---|---|
+| Canonical plugin starts CARL bootstrap | `.claude-plugin/hooks.json`, PR #202 | [VERIFIED history/current shape] | Replay the real SessionStart chain. |
+| UserPromptSubmit routes to runner | `tools/hook-service/registry.json` | [VERIFIED current source] | Test registry-backed runtime consumption. |
+| Project CARL deployment is required | PR #202, issue #173 | [VERIFIED history] | Separate install from registration. |
+| Stale `CARL_PROJECT_DIR` causes wrong-root/project-missing | issues #128/#130/#203/#206 | [VERIFIED] | Define and test event-root precedence. |
+| Runner fail-open warning shape | `tools/carl/runner.ts` | [VERIFIED locally] | Exercise real output and exit status. |
+| User-owned config preservation | `tools/carl/install.ts` | [VERIFIED locally] | Add byte-preservation and conflict BDD. |
+| Install adaptation errors are surfaced | `tools/carl/install.ts` catches them | [NOT VERIFIED; current code swallows] | Fix or explicitly gate readiness on adaptation result. |
+| Codex prerequisite gate | `tools/carl/manifest.ts`, issue #173 | [VERIFIED locally] | Keep Codex independent and deferred when needed. |
+| Sibling producer output shape | CARL fixture files | [VERIFIED captured output] | Use only as fixture-backed evidence. |
+| Sibling source/vendor relationship | fixture manifest/research | [NEEDS_CONFIRMATION] | Do not claim dev-pomogator runtime readiness. |
+| Agent-visible transport semantics | runner/local contract | [UNVERIFIED external boundary] | Prove through installed-plugin hook execution. |
+| Numeric recall threshold | no approved real baseline | [UNVERIFIED] | Keep benchmark draft/blocked. |
+| Final project-root precedence | issue proposals, not accepted contract | [UNVERIFIED] | Resolve before closing implementation. |
+| Graph census equals executable census | 9/9/12/12 versus 15 executable | [FALSE / DRIFTED] | Reconcile graph, feature, task, and result inventories. |
+| Dependency-absent installed-plugin path | no captured proof | [UNVERIFIED] | Run deps-absent test; silent skip is failure. |
+
+## Discovery conclusions
+
+1. The primary failure is causal: registered CARL did not reliably imply deployed project CARL, and stale root selection could make deployment appear absent.
+2. The live runtime path is registry-backed; file greps and static manifests are insufficient proof after HTTP dispatch migration.
+3. Install currently catches adaptation errors and may still return a successful status; adaptation readiness must be explicit.
+4. Project-local deployment, runtime-consumer execution, fail-open disclosure, doctor ownership safety, Codex gating, and producer provenance must be separate evidence lanes.
+5. The sibling fixture is valuable real producer-shape evidence but cannot be promoted to dev-pomogator-owned runtime evidence without source/vendor proof and a dependency-absent installed-plugin run.
+6. The graph/spec census is stale or mixed: 9 FR, 9 AC, 12/12 units versus 15 executable CARL scenarios. This is a reconciliation blocker, not a green coverage result.
+7. Context-diet reduction and Russian alias coverage are optimization/evaluation outputs, not health or readiness proofs.
+8. Implementation must preserve the current explicit non-green states: `project-missing`, `missing-runtime`, `broken-runtime`, `unsupported`, `user-conflict`, `codex-deferred-prerequisite`, `draft-no-real-artifact`, and fake-green blocking.
+
+## Discovery boundary
+
+Discovery is complete for the causal model and evidence inventory. It deliberately does not assert final root-precedence semantics, dev-pomogator ownership of the external CARL producer, clean installed-plugin dependency-absent proof, adaptation-success propagation, reconciled graph/executable census, or numeric benchmark thresholds. Those remain Requirements/Implementation/Audit gates.

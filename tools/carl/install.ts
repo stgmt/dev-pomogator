@@ -54,13 +54,9 @@ function parseArgs(argv: string[]): InstallArgs {
 
 function readJsonObject(filePath: string): Record<string, unknown> {
   if (!fs.existsSync(filePath)) return {};
-  try {
-    const parsed = JSON.parse(fs.readFileSync(filePath, 'utf-8')) as unknown;
-    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) return parsed as Record<string, unknown>;
-  } catch {
-    return {};
-  }
-  return {};
+  const parsed = JSON.parse(fs.readFileSync(filePath, 'utf-8')) as unknown;
+  if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) return parsed as Record<string, unknown>;
+  throw new Error(`CARL settings must contain a JSON object: ${filePath}`);
 }
 
 function hasConflictingUserManagedKey(settings: Record<string, unknown>): boolean {
@@ -80,17 +76,36 @@ function managedSettingsValue(): Record<string, unknown> {
   };
 }
 
+function atomicWriteText(filePath: string, content: string): void {
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+  const tempPath = `${filePath}.tmp-${process.pid}`;
+  fs.writeFileSync(tempPath, content, 'utf-8');
+  fs.renameSync(tempPath, filePath);
+}
+
 function writeSettings(projectRoot: string): 'updated' | 'user-conflict' {
   const settingsPath = path.join(projectRoot, '.claude', 'settings.json');
   const settings = readJsonObject(settingsPath);
   if (hasConflictingUserManagedKey(settings)) return 'user-conflict';
 
-  const nextSettings: Record<string, unknown> = {
-    ...settings,
-    [MANAGED_SETTINGS_KEY]: managedSettingsValue(),
-  };
+  const managedValue = managedSettingsValue();
+  if (!fs.existsSync(settingsPath)) {
+    atomicWriteJson(settingsPath, { [MANAGED_SETTINGS_KEY]: managedValue });
+    return 'updated';
+  }
 
-  atomicWriteJson(settingsPath, nextSettings);
+  const original = fs.readFileSync(settingsPath, 'utf-8');
+  const closingBrace = original.lastIndexOf('}');
+  if (closingBrace < 0) {
+    throw new Error(`CARL settings parse mismatch: ${settingsPath}`);
+  }
+
+  const beforeClosingBrace = original.slice(0, closingBrace).replace(/[ \t\r\n]+$/u, '');
+  const hasExistingProperties = Object.keys(settings).length > 0;
+  const newline = original.includes('\r\n') ? '\r\n' : '\n';
+  const managedProperty = `  ${JSON.stringify(MANAGED_SETTINGS_KEY)}: ${JSON.stringify(managedValue, null, 2).replace(/\n/gu, `${newline}  `)}`;
+  const nextSettings = `${beforeClosingBrace}${hasExistingProperties ? ',' : ''}${newline}${managedProperty}${newline}}${original.slice(closingBrace + 1)}`;
+  atomicWriteText(settingsPath, nextSettings);
   return 'updated';
 }
 

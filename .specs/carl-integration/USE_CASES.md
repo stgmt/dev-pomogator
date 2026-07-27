@@ -2,68 +2,103 @@
 
 ## UC-1: Название
 
-**Supported Claude Code install gets managed CARL artifacts.**
+**Managed Claude Code project deployment.**
 
-A dev-pomogator user installs or refreshes the plugin in a supported Claude Code environment and expects CARL rules/recall hooks to work without a separate manual setup.
+A user installs or starts the canonical dev-pomogator plugin in a supported project. The plugin's SessionStart/bootstrap flow must deploy project data; plugin registration alone is not enough.
 
-- Detect that the current environment supports the Claude Code CARL integration path.
-- Create or refresh dev-pomogator-managed CARL artifacts idempotently.
-- Preserve any user-owned CARL or hook configuration that is outside the managed block.
-- Record enough marker/version data for `pomogator-doctor` to verify the managed artifacts later.
-- Result: Claude Code sessions can receive CARL guidance where supported, and unsupported setups degrade with a visible warning rather than a broken install.
+- SessionStart selects the event project and runs the existing bootstrap/deployment path.
+- The project receives `.carl/carl.json` with `managedBy=dev-pomogator`, version/schema metadata, runtime status, platform state, and language metadata.
+- User-owned `.claude/settings.json` content outside the reserved managed key remains unchanged.
+- A subsequent UserPromptSubmit event resolves the same project-local manifest.
+- Initial deployment is awaited; it must not be lost to a hook timeout or an unrelated bundled-module CLI guard.
+- Result: project-local CARL state is available or the session receives a visible degraded state rather than silent absence.
 
 ## UC-2: Название
 
-**Doctor detects and repairs missing CARL integration.**
+**Root selection and missing-state diagnosis.**
 
-A user suspects CARL is not working, or a hook file was removed/staled, and runs `pomogator-doctor` to diagnose the dev-pomogator environment.
+A user works across Windows drives, nested repositories, worktrees, or multiple sessions while a stale `CARL_PROJECT_DIR` may be present.
 
-- Doctor checks for managed CARL structure, hook registration, version marker, and executable/runtime availability.
-- Doctor reports whether CARL is healthy, missing, stale, unsupported, or broken.
-- When repair is requested, doctor reinstalls only the managed CARL artifacts and leaves unrelated user configuration intact.
-- Result: the user can recover CARL integration through the normal dev-pomogator repair flow instead of hand-editing dotfiles.
+- The runner receives `input.cwd` from the hook event and records the selected root source in diagnostics.
+- An explicit override is accepted only according to a documented, validated precedence; a stale override must not silently redirect a different project's request.
+- The runner does not walk to an unrelated parent merely because another `.carl/carl.json` exists there.
+- Missing, stale, or wrong-root state is reported as `project-missing` or another degraded diagnostic.
+- Result: CARL never claims healthy guidance for the wrong project, and cross-drive paths such as `C:\` versus `E:\` remain distinct.
+
+**Evidence basis:** GitHub issues #128, #130, #203, #205, and #206.
 
 ## UC-3: Название
 
-**Broken CARL hook warns the agent and user instead of failing silently.**
+**Real hook consumer and fail-open warning.**
 
-The managed CARL hook is configured, but its runtime or recall backend cannot run during an agent session.
+A plugin user has the canonical hooks installed, but the runtime may be absent, malformed, timed out, unsupported, or exceptional.
 
-- The hook catches the failure and chooses fail-open behavior so the main agent workflow can continue.
-- The hook injects a concise warning into agent-visible chat/context that says CARL did not run.
-- The warning explicitly reminds the AI agent to tell the user that CARL guidance/recall was unavailable.
-- The hook emits enough diagnostic detail for doctor or logs to identify the missing dependency, timeout, or unsupported mode.
-- Result: the session is not blocked, but degraded CARL behavior is visible to both the agent and the user.
+- `.claude-plugin/hooks.json` starts the SessionStart bootstrap.
+- The hook-service registry routes `UserPromptSubmit` to `tools/carl/runner.ts`; registration is checked through the registry, not only through the transport manifest.
+- The runtime-consumer scenario executes the registered path and records project runtime proof; file presence alone is insufficient.
+- On controlled failure, the runner emits `hookSpecificOutput.additionalContext`, exits fail-open, and includes the instruction that the AI agent must tell the user CARL guidance/recall was unavailable.
+- On success, the runner emits normal context without a false failure warning.
+- Result: unrelated agent work continues while CARL degradation remains visible.
+
+**Evidence basis:** merged PR #202 and the current runner/registry contract.
 
 ## UC-4: Название
 
-**Codex plugin path is integrated after context-menu launcher support.**
+**Doctor repair and ownership boundary.**
 
-After the Codex context-menu launcher and Codex hook dispatcher path are available, a dev-pomogator user expects CARL to work for Codex too.
+A user runs `pomogator-doctor` after CARL becomes missing, stale, unsupported, or broken.
 
-- Treat Codex as a first-class platform, not as a copy of Claude Code hook files.
-- Use the Codex version-aware hook capability model before installing or enabling CARL on the Codex path.
-- Register CARL through the deterministic Codex dispatcher and project-local artifact model when supported.
-- If the installed Codex version lacks the required hook capability, report an unsupported status and keep Claude Code CARL behavior unchanged.
-- Result: Codex receives managed CARL support only after the platform prerequisites exist and only through the safe dispatcher path.
+- Doctor distinguishes managed project state, runtime-consumer verification, language coverage, platform support, and ownership conflict.
+- Repair refreshes only managed files/keys and reports before/after evidence.
+- User-owned settings, aliases, hook entries, and other content outside the managed boundary remain byte-equivalent.
+- A conflicting reserved key returns `user-conflict` and refuses overwrite.
+- Runtime dependency failure is reported as `broken-runtime`, not “fixed” by rewriting configuration.
+- Result: repair is idempotent, auditable, and conservative.
 
 ## UC-5: Название
 
-**Fresh install has no CARL code yet, so implementation starts from a verified gap.**
+**Independent Codex prerequisite gate.**
 
-A maintainer checks the current repository before designing CARL implementation and confirms there are no existing CARL artifacts to reuse directly.
+A user has Claude Code CARL available while Codex launcher, plugin manifest, dispatcher, or version capability may be absent.
 
-- Verify that `.carl/`, `.claude/hooks/carl-hook.py`, and `scripts/carl/` are absent in the current repo inventory.
-- Verify that `.codex/config.toml`, `.codex/hooks.json`, and `.codex/agents/*.toml` exist and form the current Codex artifact baseline.
-- Mark CARL external behavior and benchmark details as unverified until researched against the real CARL source/documentation or user-provided artifact.
-- Result: the spec starts from an honest implementation gap rather than claiming CARL code already exists in the repo.
+- The evaluator checks context-menu Codex launcher, project/plugin artifact model, deterministic hook dispatcher, and required version capability.
+- Missing prerequisites produce `codex-deferred-prerequisite` or an equivalent unsupported state.
+- Codex does not copy Claude Code hook files or change Claude Code health.
+- When prerequisites are complete, registration uses the deterministic Codex dispatcher and project-local artifact model.
+- Result: Codex support is staged without weakening the already supported Claude Code path.
+
+**Evidence basis:** existing Codex/context-menu contracts, current CARL manifest gate, and issue #173.
 
 ## UC-6: Later review checks install, repair, warning, and sequencing
 
-Before implementation is called ready, maintainers review the CARL integration across the installer, doctor, hook runtime, and Codex sequencing.
+**Provenance-bound review and benchmark.**
 
-- Review the Claude Code managed install path against canonical plugin layout and hook distribution rules.
-- Review doctor checks against managed structure, hook registry, version, and gitignore repair patterns.
-- Review broken-hook warning behavior with an injected-failure scenario.
-- Review Codex integration only after context-menu/Codex hook prerequisites are present.
-- Result: review covers the full CARL lifecycle instead of only confirming that files were copied.
+A maintainer evaluates whether CARL can be called ready and whether recall/performance thresholds are justified.
+
+- The review report covers install, runtime consumer, fail-open warning, doctor repair, user preservation, Codex sequencing, and benchmark evidence.
+- Local source/registration evidence is marked separately from project runtime-consumer execution.
+- Sibling CARL fixture output is identified as fixture-backed unless source/vendor provenance proves it belongs to dev-pomogator.
+- Missing real artifact keeps benchmark status draft/blocked and prevents invented numeric thresholds.
+- A provenance-complete real artifact records source hashes, producer ground truth, supported latency/context/recall metrics, and a baseline for future regression checks.
+- Russian evaluation compares expected and actual domains and records false positives, false negatives, and concrete optimization recommendations without upgrading runtime readiness.
+- Result: readiness is an evidence decision, not a file inventory.
+
+**Evidence basis:** repository fixture ledger, benchmark contract, current review report, and the external producer evidence marked [UNVERIFIED]/[NEEDS_CONFIRMATION].
+
+## UC-7: SessionStart race and bundled-module guard regression
+
+**Bootstrap completes reliably under the real launcher.**
+
+A clean project triggers SessionStart while the plugin uses bundled doctor modules and a bounded hook lifecycle.
+
+- Bootstrap completes initial project deployment before its lifecycle ends.
+- The completion/result is not replaced by usage output from an inlined module.
+- Renamed installer copies still run their intended CLI because guards do not depend on a basename.
+- A mutation check catches the old extra `node` token and early timeout behavior.
+- Result: initial CARL deployment is deterministic under the plugin launcher.
+
+**Evidence basis:** merged PR #202, including the 1871-scenario Docker run and CARL regression scenarios.
+
+## Discovery boundary
+
+This phase defines the use-case system but does not close the remaining evidence gaps: clean dependency-absent installed-plugin proof, a dev-pomogator-owned external CARL producer/source contract, final event-root precedence semantics, and benchmark thresholds. Those are implementation/audit gates.

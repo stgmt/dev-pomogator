@@ -27,3 +27,10 @@ All notable changes to this feature specification will be documented in this fil
 ### Added
 
 - Initial CARL integration specification scaffold and Phase 3 finalization plan.
+
+
+### Finalization reconciliation
+
+- Recorded the finalization verdict as **PARTIAL / NOT_READY** rather than green.
+- Reconciled CARL001_13, CARL001_14, and CARL001_15 with stale/unverified canonical BDD evidence; related implementation, doctor, runtime, benchmark, report, and final-verification tasks remain `IN_PROGRESS`.
+- Preserved the explicit fake-green, degraded-runtime, blocked-Codex, and draft-threshold safeguards. No `.progress.json` completion claim was changed.

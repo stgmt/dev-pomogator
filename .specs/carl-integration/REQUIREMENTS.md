@@ -1,96 +1,48 @@
-# Requirements Index
+# Requirements and Verification Matrix
 
-## Traceability Matrix
+## Requirement index
 
-| ID | Name | Linked AC | @featureN | Status |
-|----|------|-----------|-----------|--------|
-| [FR-1](FR.md#fr-1-claude-code-managed-carl-install) | Claude Code managed CARL install, including explicit project language coverage | AC-1 | @feature1 | Draft |
-| [FR-2](FR.md#fr-2-no-fake-green-when-carl-is-absent) | No fake green when CARL is absent | AC-2 | @feature2 | Draft |
-| [FR-3](FR.md#fr-3-runtime-consumer-and-end-to-end-proof) | Runtime consumer and end-to-end proof | AC-3 | @feature3 | Draft |
-| [FR-4](FR.md#fr-4-fail-open-warning-injection) | Fail-open warning injection | AC-4 | @feature4 | Draft |
-| [FR-5](FR.md#fr-5-doctor-health-and-repair) | Doctor health and repair | AC-5 | @feature5 | Draft |
-| [FR-6](FR.md#fr-6-managed-markers-preserve-user-configuration) | Managed markers preserve user configuration | AC-6 | @feature6 | Draft |
-| [FR-7](FR.md#fr-7-codex-path-gated-by-launcher-and-dispatcher-prerequisites) | Codex path gated by launcher and dispatcher prerequisites | AC-7 | @feature7 | Draft |
-| [FR-8](FR.md#fr-8-review-audit-and-reporting) | Review, audit, reporting, and Russian self-evaluation | AC-8 | @feature8 | Draft |
-| [FR-9](FR.md#fr-9-recall-benchmark-threshold-and-regression-gate) | Recall benchmark threshold and regression gate | AC-9 | @feature9 | Draft |
+| FR | Acceptance criteria | Use cases | Verification boundary |
+|---|---|---|---|
+| [FR-1](FR.md#fr-1-claude-code-managed-carl-install) | [AC-1](ACCEPTANCE_CRITERIA.md#ac-1-fr-1) | UC-1, UC-4 | Managed project artifact, idempotence, language metadata, Russian adaptation, SessionStart ordering |
+| [FR-2](FR.md#fr-2-no-fake-green-when-carl-is-absent) | [AC-2](ACCEPTANCE_CRITERIA.md#ac-2-fr-2) | UC-2, UC-6 | Runtime consumer evidence versus file inventory |
+| [FR-3](FR.md#fr-3-runtime-consumer-and-end-to-end-proof) | [AC-3](ACCEPTANCE_CRITERIA.md#ac-3-fr-3) | UC-1, UC-3, UC-6 | Dispatcher-to-runner execution; files-only/manifest-only rejection |
+| [FR-4](FR.md#fr-4-fail-open-warning-injection) | [AC-4](ACCEPTANCE_CRITERIA.md#ac-4-fr-4) | UC-3 | Fail-open result and agent-visible warning |
+| [FR-5](FR.md#fr-5-doctor-health-and-repair) | [AC-5](ACCEPTANCE_CRITERIA.md#ac-5-fr-5) | UC-2, UC-4 | Doctor states, repair scope, before/after evidence |
+| [FR-6](FR.md#fr-6-managed-markers-preserve-user-configuration) | [AC-6](ACCEPTANCE_CRITERIA.md#ac-6-fr-6) | UC-1, UC-2, UC-4 | Managed markers, user-owned byte/value preservation, conflict refusal |
+| [FR-7](FR.md#fr-7-codex-path-gated-by-launcher-and-dispatcher-prerequisites) | [AC-7](ACCEPTANCE_CRITERIA.md#ac-7-fr-7) | UC-4, UC-5 | Independent launcher, dispatcher, capability gates |
+| [FR-8](FR.md#fr-8-review-audit-and-reporting) | [AC-8](ACCEPTANCE_CRITERIA.md#ac-8-fr-8) | UC-6 | Provenance labels and Russian evaluation |
+| [FR-9](FR.md#fr-9-recall-benchmark-threshold-and-regression-gate) | [AC-9](ACCEPTANCE_CRITERIA.md#ac-9-fr-9) | UC-6 | Real artifact baseline or honest draft/blocked state |
 
-## Functional Requirements
+## Trade-offs and operational requirements
 
-- [FR-1: Claude Code managed CARL install](FR.md#fr-1-claude-code-managed-carl-install)
-- [FR-2: No fake green when CARL is absent](FR.md#fr-2-no-fake-green-when-carl-is-absent)
-- [FR-3: Runtime consumer and end-to-end proof](FR.md#fr-3-runtime-consumer-and-end-to-end-proof)
-- [FR-4: Fail-open warning injection](FR.md#fr-4-fail-open-warning-injection)
-- [FR-5: Doctor health and repair](FR.md#fr-5-doctor-health-and-repair)
-- [FR-6: Managed markers preserve user configuration](FR.md#fr-6-managed-markers-preserve-user-configuration)
-- [FR-7: Codex path gated by launcher and dispatcher prerequisites](FR.md#fr-7-codex-path-gated-by-launcher-and-dispatcher-prerequisites)
-- [FR-8: Review, audit, and reporting](FR.md#fr-8-review-audit-and-reporting)
-- [FR-9: Recall benchmark threshold and regression gate](FR.md#fr-9-recall-benchmark-threshold-and-regression-gate)
+1. Claude Code is the supported first platform; Codex remains gated until its launcher, dispatcher, and version capability are verified.
+2. Fail-open warning injection is preferred over silent recovery: CARL errors must not block the agent, but the agent must receive actionable degraded context.
+3. Project-local `.carl/` metadata is the source of truth for managed ownership, language coverage, runtime verification, and platform states; file presence alone is not readiness.
+4. External CARL producer behavior, runtime shape, source/license, and numeric benchmark thresholds remain `[UNVERIFIED]` until provenance-complete evidence exists.
+5. Tests are Cucumber.js BDD in Docker. New non-BDD test files are out of scope. The runtime-consumer scenario must invoke the real launcher/dispatcher.
 
-## Non-Functional Requirements
+## CHK matrix
 
-- [Performance](NFR.md#performance) — hook latency, timeout, token budget, benchmark regression gate.
-- [Security](NFR.md#security) — no secrets, user trust boundary, safe diagnostics, verified external runtime.
-- [Reliability](NFR.md#reliability) — fail-open visibility, idempotent repair, honest unsupported state, real-artifact evidence.
-- [Usability](NFR.md#usability) — clear warnings, actionable doctor output, reviewable evidence, platform-specific clarity.
-- [Compatibility](NFR.md#compatibility) — Claude Code first, Codex gated, canonical plugin distribution, deps-absent behavior.
+| CHK-ID | Requirement | Traces To | Verification Method | Status | Notes |
+|---|---|---|---|---|---|
+| CHK-FR1-01 | Managed CARL artifacts and metadata | FR-1, AC-1, UC-1, CARL001_01, CARL001_13, CARL001_14, CARL001_15 | BDD scenario | In Progress | Assert managed owner/version/schema/source hashes plus Russian adaptation evidence and SessionStart-before-prompt ordering. |
+| CHK-FR1-02 | Idempotence and language degradation | FR-1, AC-1, UC-4 | BDD scenario | In Progress | Assert repeat stability and missing/stale Russian state. |
+| CHK-FR2-01 | No fake green without consumer | FR-2, AC-2, UC-2 | BDD scenario | In Progress | Files-only evidence must be degraded. |
+| CHK-FR2-02 | Honest review state | FR-2, AC-2, UC-6 | Manual review | Blocked | Requires fresh runtime-consumer evidence. |
+| CHK-FR3-01 | Registered path invokes runner | FR-3, AC-3, UC-3, CARL001_03 | Integration test | In Progress | Execute the real dispatcher-to-`tools/carl/runner.ts` command in Docker; files-only and manifest-only setup must fail the proof assertion. |
+| CHK-FR3-02 | Dependency-absent proof | FR-3, AC-3, UC-6 | Integration test | Blocked | Requires installed-plugin deps-absent run. |
+| CHK-FR4-01 | Fail-open failure modes | FR-4, AC-4, UC-3 | BDD scenario | In Progress | Outline covers dependency, timeout, malformed, unsupported, exception. |
+| CHK-FR4-02 | Success has no false warning | FR-4, AC-4, UC-3 | BDD scenario | In Progress | Assert successful hook payload. |
+| CHK-FR5-01 | Doctor state classification | FR-5, AC-5, UC-2 | BDD scenario | In Progress | Cover stale, broken-runtime, unsupported, and conflict. |
+| CHK-FR5-02 | Repair scope and evidence | FR-5, AC-5, UC-4 | BDD scenario | In Progress | Assert before/after and unmanaged preservation. |
+| CHK-FR6-01 | Managed boundary | FR-6, AC-6, UC-1 | BDD scenario | In Progress | Assert markers, manifest entry, or deterministic key. |
+| CHK-FR6-02 | User preservation and conflict | FR-6, AC-6, UC-4, CARL001_06 | BDD scenario | In Progress | Assert user-owned bytes and parsed values remain unchanged, plus refusal to overwrite conflicts. |
+| CHK-FR7-01 | Codex prerequisite gate | FR-7, AC-7, UC-5 | BDD scenario | In Progress | Missing launcher/dispatcher/version is deferred or unsupported. |
+| CHK-FR7-02 | Platform independence | FR-7, AC-7, UC-4 | BDD scenario | In Progress | Claude state unaffected; no copied Claude hooks. |
+| CHK-FR8-01 | Review evidence and provenance | FR-8, AC-8, UC-6 | Manual review | In Progress | Report all evidence lanes with labels. |
+| CHK-FR8-02 | Russian evaluation honesty | FR-8, AC-8, UC-6 | Integration test | Blocked | Requires producer-owned or explicitly fixture-backed output. |
+| CHK-FR9-01 | No invented benchmark threshold | FR-9, AC-9, UC-6 | BDD scenario | In Progress | No artifact keeps status draft/blocked. |
+| CHK-FR9-02 | Provenance baseline and regression | FR-9, AC-9, UC-6 | Integration test | Blocked | Requires real artifact, hashes, and producer ground truth. |
 
-## Acceptance Criteria
-
-- AC-1 (FR-1): supported Claude Code install creates managed CARL artifacts and keeps external CARL details [UNVERIFIED] until proven.
-- AC-2 (FR-2): absent or non-runnable CARL cannot be reported as healthy.
-- AC-3 (FR-3): the real hook launcher or dispatcher invokes the CARL runner and the BDD scenario fails if it is not wired.
-- AC-4 (FR-4): CARL failures fail open and inject an agent-visible warning.
-- AC-5 (FR-5): doctor classifies CARL states and repairs managed drift without overwriting user config.
-- AC-6 (FR-6): managed writes preserve user-owned configuration and surface conflicts.
-- AC-7 (FR-7): Codex CARL waits for launcher and dispatcher prerequisites and version-aware capability.
-- AC-8 (FR-8): review reports install, runtime, warning, repair, preservation, sequencing, and benchmark evidence.
-- AC-9 (FR-9): recall benchmarks use real CARL artifacts before thresholds become gates.
-
-## Verification Matrix (CHK)
-
-| CHK-ID | Requirement | Traces To (FR+SC) | Verification Method | Status | Notes |
-|--------|-------------|-------------------|---------------------|--------|-------|
-| CHK-FR1-01 | Managed Claude Code install creates versioned CARL artifacts | FR-1, AC-1, @feature1, UC-1 | BDD scenario | Draft | Install smoke must run against a temp supported Claude Code project. |
-| CHK-FR1-02 | External CARL runtime details remain marked until verified | FR-1, AC-1, UC-5 | Manual review | Draft | Review [UNVERIFIED] markers before implementation close. |
-| CHK-FR2-01 | Absent CARL cannot produce a healthy verdict | FR-2, AC-2, @feature2, UC-5 | BDD scenario | Draft | Fake-green regression guard. |
-| CHK-FR2-02 | Degraded state names exact missing or unsupported condition | FR-2, AC-2, UC-1 | Integration test | Draft | Doctor and installer report surfaces should share state taxonomy. |
-| CHK-FR3-01 | Normal hook launcher invokes the CARL runtime consumer | FR-3, AC-3, @feature3, UC-3 | BDD scenario | Draft | Dead-integration guard: installed files are not enough. |
-| CHK-FR3-02 | CARL output fixtures come from real producer before done | FR-3, AC-3, UC-6 | Manual review | Draft | verify-against-real-artifact gate. |
-| CHK-FR4-01 | Broken CARL hook fails open and injects agent-visible warning | FR-4, AC-4, @feature4, UC-3 | BDD scenario | Draft | Warning must tell the agent to notify the user. |
-| CHK-FR4-02 | Successful CARL hook does not inject false warning | FR-4, AC-4, UC-3 | Integration test | Draft | Positive path avoids alert fatigue. |
-| CHK-FR5-01 | Doctor classifies CARL health states | FR-5, AC-5, @feature5, UC-2 | BDD scenario | Draft | States: healthy, missing, stale, broken-runtime, unsupported, user-conflict, repairable. |
-| CHK-FR5-02 | Doctor repair refreshes only managed artifacts | FR-5, AC-5, UC-2 | Integration test | Draft | Preserve unrelated user config. |
-| CHK-FR6-01 | Managed markers bound every config write | FR-6, AC-6, @feature6, UC-1 | BDD scenario | Draft | Marker or deterministic object key required. |
-| CHK-FR6-02 | User-owned conflicts block silent overwrite | FR-6, AC-6, UC-2 | Integration test | Draft | Expected state: user-conflict. |
-| CHK-FR7-01 | Codex CARL stays gated until launcher and dispatcher prerequisites exist | FR-7, AC-7, @feature7, UC-4 | BDD scenario | Draft | Codex sequence must not fork a second launcher. |
-| CHK-FR7-02 | Unsupported Codex version does not affect Claude Code CARL | FR-7, AC-7, UC-4 | Integration test | Draft | Platform statuses stay separate. |
-| CHK-FR8-01 | Review report covers install, runtime, warning, repair, preservation, sequencing, benchmark | FR-8, AC-8, @feature8, UC-6 | Manual review | Draft | Phase 3+ audit/report requirement. |
-| CHK-FR8-02 | External CARL claims are labeled VERIFIED, UNVERIFIED, or ASSUMED | FR-8, AC-8, UC-6 | Manual review | Draft | Prevents unproven CARL claims from hardening into facts. |
-| CHK-FR9-01 | Recall benchmark uses a real CARL artifact before done | FR-9, AC-9, @feature9, UC-6 | BDD scenario | Draft | Benchmark fixture cannot be hand-fabricated. |
-| CHK-FR9-02 | Numeric thresholds are not invented before evidence | FR-9, AC-9, UC-6 | Manual review | Draft | Threshold starts draft until real baseline exists. |
-
-## Verification Process
-
-### How CHKs are verified
-
-1. Each CHK is attached to at least one BDD scenario, integration test, or manual review item by its Traces To field.
-2. Status transitions only when the linked test passes or the manual review records an evidence path in Notes.
-3. Rows that depend on external CARL behavior stay `Draft` until the real CARL source, runtime output, or benchmark artifact is verified.
-
-### Status lifecycle
-
-`Draft → In Progress → Verified → Blocked` (regression takes `Verified → Blocked` with an issue link in Notes).
-
-### Review cadence
-
-- Phase 2 STOP: all CHKs in `Draft`.
-- Phase 3 STOP: implementation tasks map each CHK to a concrete task and expected BDD scenario.
-- Implementation end: 100% `Verified` or explicit `Blocked` with issue link and remaining [UNVERIFIED] evidence gaps.
-
-## Summary Counts
-
-- Total CHKs: 18
-- Verified: 0
-- In Progress: 0
-- Draft: 18
-- Blocked: 0
+**Matrix total:** 18 checks. Current implementation/test evidence is not assumed green; the verdict gate must use fresh Docker BDD evidence and provenance-backed runtime proof.

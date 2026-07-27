@@ -1,4 +1,4 @@
-Feature: CARL001_CARL integration lifecycle
+Feature: CARL001_CARL integration lifecycle and evidence gates
 
   CARL integration packages CARL rules/recall hooks as a managed dev-pomogator integration for Claude Code first, with Codex support gated behind the Codex launcher and dispatcher path.
 
@@ -117,3 +117,31 @@ Feature: CARL001_CARL integration lifecycle
     When the CARL benchmark runs against that artifact
     Then the benchmark records a baseline for supported metrics
     And future regression checks compare against that baseline
+
+  @feature1
+  @FR-1
+  Scenario: CARL001_13 Claude Code install automatically adapts Russian rule and skill domains
+    Given a supported Claude Code project has a managed CARL manifest
+    And a project rule or skill is added after CARL was generated
+    When the Claude Code CARL installation runs during SessionStart
+    Then the project CARL manifest records the changed source hash
+    And safe Russian aliases are present for the changed rule or skill
+    And sources without safe aliases are marked `ru:needs-alias` rather than omitted
+
+  @feature1
+  @FR-1
+  Scenario: CARL001_14 SessionStart doctor bootstraps project Russian CARL before prompt hooks
+    Given a supported Claude Code project has stale or missing Russian CARL adaptation
+    When the SessionStart doctor bootstrap completes before UserPromptSubmit hooks
+    Then the project CARL manifest contains refreshed Russian source domains and aliases
+    And the subsequent prompt hook consumes the refreshed project-local manifest
+    And the prompt hook does not report healthy empty recall from stale adaptation
+
+  @feature1
+  @FR-1
+  Scenario: CARL001_15 Russian CARL install BDD kills missing-adaptation mutants
+    Given a supported Claude Code project has a rule or skill requiring Russian CARL adaptation
+    When the CARL install BDD mutation checks run
+    Then a missing-adaptation implementation mutant is detected
+    And a missing-SessionStart-ordering mutant is detected
+    And the passing implementation records adaptation evidence in the project CARL manifest

@@ -1,30 +1,42 @@
 # File Changes
 
-Список файлов, которые будут добавлены/изменены при реализации CARL integration.
+## Runtime and managed artifacts
 
-> `edit`/`delete` are used only for paths verified as existing during Discovery or Phase 2 inventory. New planned files use `create`.
+| Path | Change | Requirements |
+|---|---|---|
+| `tools/carl/manifest.ts` | Define managed schema, root selection, platform/language states, diagnostic codes, and runtime-proof fields. | FR-1, FR-2, FR-5, FR-7 |
+| `tools/carl/install.ts` | Install/refresh project-local CARL artifacts atomically; enforce owner/version markers and user-conflict refusal. | FR-1, FR-2, FR-6 |
+| `tools/carl/adapt-rules.ts` | Refresh source hashes/domains and safe Russian aliases; record `ru:needs-alias` when unsafe; expose adaptation evidence for CARL001_13–CARL001_15. | FR-1, FR-8 |
+| `tools/carl/runner.ts` | Resolve event root, consume project manifest, execute/diagnose CARL, emit fail-open agent context, and record runtime proof only after dispatcher execution; files-only or manifest-only state remains degraded. | FR-2, FR-3, FR-4 |
+| `tools/carl/hook-wrapper.ts` | Provide the stable distributed launcher contract without hiding runtime failures. | FR-3, FR-4 |
+| `.carl/carl.json` | Project-local managed state, language metadata, runtime verification, platform status, and benchmark provenance. | FR-1, FR-2, FR-5, FR-6, FR-9 |
+| `.claude-plugin/hooks.json` | Canonical distributed hook declarations. | FR-3 |
+| `tools/hook-service/registry.json` | Registry-backed SessionStart/UserPromptSubmit routing to the CARL runner. | FR-3 |
+| `.claude/settings.json` | Dogfood/project hook integration within managed boundaries. | FR-1, FR-3, FR-6 |
+| `.claude/skills/pomogator-doctor/scripts/engine/checks/carl.ts` | Doctor classification, evidence, actionable repair state, and ownership checks. | FR-2, FR-5, FR-6 |
+| `.claude/skills/pomogator-doctor/scripts/engine/checks/index.ts` | Register the CARL doctor check. | FR-5 |
+| `.claude/skills/pomogator-doctor/scripts/engine/types.ts` | Expose CARL doctor state/evidence types. | FR-5 |
+| `.codex/hooks.json` | Codex dispatcher integration only after launcher/capability gates. | FR-7 |
+| `tools/context-menu/postinstall.ts` | Context-menu launcher/trust prerequisite reporting. | FR-7 |
+| `tools/carl/bench.ts` | Provenance-aware real-artifact benchmark; draft/blocked without evidence. | FR-8, FR-9 |
+| `tools/carl/evaluate-russian.ts` | Expected/actual domain comparison, false-positive/negative report, and optimization recommendations. | FR-1, FR-8 |
 
-| Path | Action | Reason |
-|------|--------|--------|
-| `INSTALL_SCOPE_REPORT.md` | create | Documents the global plugin layer, per-project `.carl/` layer, deferred Codex layer, and environment setup model that resolves the install-scope ambiguity for [FR-1](FR.md#fr-1-claude-code-managed-carl-install) and [FR-5](FR.md#fr-5-doctor-health-and-repair). |
-| `tools/carl/manifest.ts` | create | Defines the managed CARL artifact manifest, scope-selection defaults, env knobs, and layer health model for [FR-1](FR.md#fr-1-claude-code-managed-carl-install), [FR-5](FR.md#fr-5-doctor-health-and-repair), [FR-6](FR.md#fr-6-managed-markers-preserve-user-configuration), and doctor verification. |
-| `tools/carl/install.ts` | create | Implements idempotent install/repair of managed Claude Code CARL artifacts and per-project `.carl/` bootstrap for [FR-1](FR.md#fr-1-claude-code-managed-carl-install), [FR-2](FR.md#fr-2-no-fake-green-when-carl-is-absent), and [FR-6](FR.md#fr-6-managed-markers-preserve-user-configuration). |
-| `tools/carl/adapt-rules.ts` | create | Scans `.claude/rules/**/*.md` and `.claude/skills/*/SKILL.md`, generates/refreshes Russian CARL domains and aliases, records source hashes, and reports partial `ru` coverage for [FR-1](FR.md#fr-1-claude-code-managed-carl-install), [AC-1](ACCEPTANCE_CRITERIA.md#ac-1-fr-1), and doctor language checks. |
-| `tools/carl/runner.ts` | create | Provides the runtime consumer that invokes CARL and returns fail-open warnings for [FR-3](FR.md#fr-3-runtime-consumer-and-end-to-end-proof) and [FR-4](FR.md#fr-4-fail-open-warning-injection). |
-| `tools/carl/hook-wrapper.ts` | create | Planned distributed Claude Code hook wrapper; chosen instead of `.claude/hooks/carl-hook.py` until CARL runtime language requirements are verified for [FR-1](FR.md#fr-1-claude-code-managed-carl-install) and [FR-4](FR.md#fr-4-fail-open-warning-injection). |
-| `tools/carl/bench.ts` | create | Adds the real-artifact recall benchmark harness for [FR-9](FR.md#fr-9-recall-benchmark-threshold-and-regression-gate) if CARL recall is enabled. |
-| `tools/carl/evaluate-russian.ts` | create | Runs the Russian CARL prompt matrix, compares expected vs actual loaded domains, records false positives/negatives, and emits optimization recommendations for [FR-8](FR.md#fr-8-review-audit-and-reporting) and [AC-8](ACCEPTANCE_CRITERIA.md#ac-8-fr-8). |
-| `tests/fixtures/carl/russian-eval/README.md` | create | Stores the Russian CARL self-evaluation report ledger with prompt matrix results, fixture/runtime provenance, optimization recommendations, and explicit readiness boundary for [FR-8](FR.md#fr-8-review-audit-and-reporting). |
-| `.carl/carl.json` | create | Stores managed CARL metadata, schema version, platform state, explicit language coverage (`ru`/`en`), source hashes, generated trigger aliases, and runtime verification status for [FR-1](FR.md#fr-1-claude-code-managed-carl-install), [FR-5](FR.md#fr-5-doctor-health-and-repair), and [FR-6](FR.md#fr-6-managed-markers-preserve-user-configuration). |
-| `.claude-plugin/hooks.json` | edit | Registers the canonical plugin hook entry for Claude Code users, proving the hook has a real plugin-distributed consumer for [FR-3](FR.md#fr-3-runtime-consumer-and-end-to-end-proof). |
-| `.claude/settings.json` | edit | Adds dogfood registration for the managed CARL hook only if implementation enables local repo execution for [FR-1](FR.md#fr-1-claude-code-managed-carl-install). |
-| `.claude/skills/pomogator-doctor/scripts/engine/checks/carl.ts` | create | Implements CARL doctor health states and safe repair logic for [FR-5](FR.md#fr-5-doctor-health-and-repair). |
-| `.claude/skills/pomogator-doctor/scripts/engine/checks/index.ts` | edit | Wires the new CARL doctor check into the existing check registry for [FR-5](FR.md#fr-5-doctor-health-and-repair). |
-| `.claude/skills/pomogator-doctor/scripts/engine/types.ts` | edit | Extends doctor result typing with CARL states and repair metadata for [FR-5](FR.md#fr-5-doctor-health-and-repair). |
-| `.codex/hooks.json` | edit | Adds CARL to the deterministic Codex dispatcher only after launcher/dispatcher prerequisites and version-aware capability checks pass for [FR-7](FR.md#fr-7-codex-path-gated-by-launcher-and-dispatcher-prerequisites). |
-| `tools/context-menu/postinstall.ts` | edit | Update only if the Codex CARL sequence must surface through the existing context-menu launcher/trust validation path for [FR-7](FR.md#fr-7-codex-path-gated-by-launcher-and-dispatcher-prerequisites). |
-| `tests/features/carl-integration.feature` | create | Adds executable BDD scenarios for [FR-1](FR.md#fr-1-claude-code-managed-carl-install) through [FR-9](FR.md#fr-9-recall-benchmark-threshold-and-regression-gate). |
-| `tests/step_definitions/feature_carl_integration.ts` | create | Drives the real installer, doctor, hook runner, Codex gate, and benchmark surfaces for CARL BDD scenarios without new non-BDD tests. |
-| `tests/fixtures/carl/broken-runtime/README.md` | create | Documents induced hook failure fixture for [FR-4](FR.md#fr-4-fail-open-warning-injection) while keeping producer-shape claims [UNVERIFIED]. |
-| `tests/fixtures/carl/real-output/README.md` | create | Placeholder provenance ledger for real CARL output required by [FR-3](FR.md#fr-3-runtime-consumer-and-end-to-end-proof) and [FR-9](FR.md#fr-9-recall-benchmark-threshold-and-regression-gate) before done. |
-| `cucumber.json` | edit | Wires the executable CARL BDD feature only after step definitions exist and shared-tree safety is verified. |
+## BDD and evidence fixtures
+
+| Path | Change | Requirements |
+|---|---|---|
+| `tests/features/carl-integration.feature` | Cucumber scenarios for install, Russian adaptation/order/mutation gates CARL001_13–CARL001_15, no-fake-green, runtime consumer, fail-open modes, doctor, ownership, Codex gate, review, Russian evaluation, and benchmark states. | FR-1–FR-9 |
+| `tests/step_definitions/feature_carl_integration.ts` | Integration steps that execute the registered launcher/dispatcher and assert payloads/manifest evidence. | FR-2–FR-9 |
+| `tests/hooks/before-after.ts` | Isolate project-local CARL fixtures and restore shared state. | FR-1–FR-7 |
+| `tests/hooks/ensure-docker-bdd.ts` | Enforce Docker-only BDD execution. | FR-1–FR-9 |
+| `tests/fixtures/carl/broken-runtime/` | Controlled failure inputs for fail-open diagnostics. | FR-4 |
+| `tests/fixtures/carl/real-output/README.md` | Provenance ledger; remains `[UNVERIFIED]` until captured from a real producer. | FR-3, FR-8, FR-9 |
+| `tests/fixtures/carl/russian-eval/README.md` | Curated prompts and expected domains for report evaluation. | FR-8 |
+| `cucumber.json` | Shared BDD profile updates only when required; preserve concurrent-session safety. | FR-3, FR-4 |
+
+## Explicit non-changes and gates
+
+- Do not add new non-BDD test files; BDD is the acceptance test format.
+- Do not mark runtime verification from file existence or fixture loading.
+- Do not claim dependency-absent plugin readiness without a real installed-plugin run.
+- Do not add numeric benchmark thresholds until provenance-complete producer evidence exists.
