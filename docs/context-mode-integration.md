@@ -17,6 +17,12 @@ The hook is fail-open and guarded by a retry lock, so an offline or broken insta
 /reload-plugins
 ```
 
+## Stale-worker self-heal
+
+Context-mode setup launches its installer through a dev-pomogator-owned worker wrapper. The wrapper terminates its installer process tree on normal completion, cancellation, or a five-minute timeout.
+
+At SessionStart, dev-pomogator runs a bounded, fail-open stale-worker sweep. It selects a root only when its command line has both the owned worker marker and exact private `.ctx-mode-*/script` identity, and the script is older than 15 minutes. It never selects `python`, `bash`, or another runtime merely by executable name. Recovered roots are recorded in `~/.dev-pomogator/context-mode-worker-recovery.jsonl`.
+
 ## Recovery
 
 For a dead in-session context-mode MCP, use the least disruptive path first:

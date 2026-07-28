@@ -35,6 +35,7 @@ import {
 import { HookDecision, evaluateContextModeHook } from '../../tools/context-mode-health/hook-safety.ts';
 import { renderWindowsContextModeGuidance } from '../../tools/context-mode-health/windows-guidance.ts';
 import { renderContextModeValueBoundary } from '../../tools/context-mode-health/value-boundary.ts';
+import { sweepStaleContextModeWorkers } from '../../tools/context-mode-setup/stale-workers.ts';
 import { allChecks } from '../../.claude/skills/pomogator-doctor/scripts/engine/checks/index.ts';
 
 const REPO_ROOT = path.resolve(import.meta.dirname ?? __dirname, '..', '..');
@@ -59,6 +60,14 @@ interface ContextModeWorld extends V4World {
   forceCtxEnv?: NodeJS.ProcessEnv;
   guidanceText?: string;
   docsText?: string;
+  staleSweep?: {
+    now?: number;
+    stale?: string;
+    fresh?: string;
+    snapshot?: Array<{ pid: number; commandLine: string }>;
+    result?: ReturnType<typeof sweepStaleContextModeWorkers>;
+    killed?: number[];
+  } | ReturnType<typeof sweepStaleContextModeWorkers>;
 }
 
 function fixturePath(name: string): string {
@@ -500,4 +509,55 @@ Then(/^it states that disciplined grep or pipe usage can be parity$/, function (
 Then(/^it does not claim universal daily usage reduction$/, function (this: ContextModeWorld) {
   assert.doesNotMatch(this.docsText!, /-99% daily usage/i);
   assert.match(this.docsText!, /Do not claim universal daily usage reduction/);
+});
+
+Given(/^a stale context-mode owned worker and unrelated runtimes$/, function (this: ContextModeWorld) {
+  const stale = path.join(this.tempDir, '.ctx-mode-stale', 'script');
+  const fresh = path.join(this.tempDir, '.ctx-mode-fresh', 'script');
+  fs.mkdirSync(path.dirname(stale), { recursive: true });
+  fs.mkdirSync(path.dirname(fresh), { recursive: true });
+  fs.writeFileSync(stale, 'owned');
+  fs.writeFileSync(fresh, 'owned');
+  const now = Date.now();
+  fs.utimesSync(stale, new Date(now - 20 * 60 * 1000), new Date(now - 20 * 60 * 1000));
+  this.staleSweep = { now, stale, fresh, snapshot: [
+    { pid: 101, commandLine: `node tools/context-mode-setup/worker.ts --worker-script ${stale}` },
+    { pid: 102, commandLine: `node tools/context-mode-setup/worker.ts --worker-script ${fresh}` },
+    { pid: 103, commandLine: 'python C:\\Users\\stigm\\.codex\\scan.py' },
+  ] };
+});
+
+When(/^SessionStart self-heal sweeps the stale workers$/, function (this: ContextModeWorld) {
+  const sweep = this.staleSweep as NonNullable<ContextModeWorld['staleSweep']> & { snapshot: Array<{ pid: number; commandLine: string }>; now: number };
+  const killed: number[] = [];
+  const result = sweepStaleContextModeWorkers({
+    snapshot: sweep.snapshot, nowMs: sweep.now, ageMs: 15 * 60 * 1000,
+    platform: 'win32', homeRoot: this.contextModeHome,
+    killTree: pid => { killed.push(pid); },
+  });
+  this.staleSweep = { ...sweep, result, killed };
+});
+
+Then(/^only the stale owned process tree is terminated$/, function (this: ContextModeWorld) {
+  const sweep = this.staleSweep as NonNullable<ContextModeWorld['staleSweep']> & { result: ReturnType<typeof sweepStaleContextModeWorkers>; killed: number[]; stale: string };
+  assert.deepEqual(sweep.killed, [101], 'only the stale owned root must be tree-killed');
+  assert.equal(sweep.result.killed[0].pid, 101, 'kill report must name the stale owned root');
+  assert.equal(sweep.result.killed[0].scriptPath, sweep.stale, 'identity must bind to the private temp script');
+});
+
+Then(/^fresh and unrelated runtime processes are preserved$/, function (this: ContextModeWorld) {
+  const sweep = this.staleSweep as NonNullable<ContextModeWorld['staleSweep']> & { killed: number[] };
+  assert.equal(sweep.killed.includes(102), false, 'fresh owned worker must remain alive');
+  assert.equal(sweep.killed.includes(103), false, 'unrelated python must never be selected');
+});
+
+When(/^the process APIs are unavailable$/, function (this: ContextModeWorld) {
+  this.staleSweep = sweepStaleContextModeWorkers({ listProcesses: () => { throw new Error('missing process API'); } });
+});
+
+Then(/^SessionStart self-heal fails open without killing a process$/, function (this: ContextModeWorld) {
+  const result = this.staleSweep as ReturnType<typeof sweepStaleContextModeWorkers>;
+  assert.equal(result.failOpen, true, 'process API failure must fail open');
+  assert.deepEqual(result.killed, [], 'fail-open branch must not kill any process');
+  assert.match(result.skipped[0], /missing process API/, 'diagnostic must preserve the cause');
 });

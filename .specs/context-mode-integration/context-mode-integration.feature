@@ -79,3 +79,15 @@ Feature: CTXMODE001_context_mode_integration
     Then it names large raw artifacts and session survival as value cases
     And it states that disciplined grep or pipe usage can be parity
     And it does not claim universal daily usage reduction
+
+  @FR-10 @feature10
+  Scenario: CTXMODE001_10 SessionStart self-heals only stale owned context-mode worker trees
+    Given a stale context-mode owned worker and unrelated runtimes
+    When SessionStart self-heal sweeps the stale workers
+    Then only the stale owned process tree is terminated
+    And fresh and unrelated runtime processes are preserved
+
+  @FR-11 @feature11
+  Scenario: CTXMODE001_11 SessionStart worker recovery fails open when process inspection is unavailable
+    When the process APIs are unavailable
+    Then SessionStart self-heal fails open without killing a process

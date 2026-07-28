@@ -1,7 +1,9 @@
 import { spawn, spawnSync } from 'node:child_process';
+import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
-import { pathToFileURL } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+import { sweepStaleContextModeWorkers } from './stale-workers.ts';
 import {
   CONTEXT_MODE_SERVER_NAME,
   CONTEXT_MODE_PLUGIN_ID,
@@ -129,28 +131,25 @@ export function buildContextModeInstallInvocation(platform: NodeJS.Platform = pr
 export function fireContextModeInstaller(env: NodeJS.ProcessEnv = process.env): boolean {
   const inv = buildContextModeInstallInvocation();
   const launcher = env.DEV_POMOGATOR_CONTEXT_MODE_INSTALL_LAUNCHER;
-  const childEnv = {
-    ...process.env,
-    ...env,
-    ...inv.env,
-  };
+  const childEnv = { ...process.env, ...env, ...inv.env };
 
   try {
     if (launcher) {
-      const result = spawnSync(process.execPath, [launcher, inv.cmd, ...inv.args], {
-        env: childEnv,
-        stdio: 'ignore',
-      });
+      const result = spawnSync(process.execPath, [launcher, inv.cmd, ...inv.args], { env: childEnv, stdio: 'ignore' });
       return result.status === 0;
     }
 
-    const child = spawn(inv.cmd, inv.args, {
-      detached: true,
-      env: childEnv,
-      stdio: 'ignore',
-      windowsHide: true,
-    });
-    child.unref();
+    const workerDir = fs.mkdtempSync(path.join(os.tmpdir(), '.ctx-mode-'));
+    const workerScript = path.join(workerDir, 'script');
+    fs.writeFileSync(workerScript, 'dev-pomogator context-mode owned worker\n', { mode: 0o600 });
+    const worker = spawn(process.execPath, [
+      '-e', `require(${JSON.stringify(path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '_shared', 'bootstrap.cjs'))})`, '--',
+      path.join(path.dirname(fileURLToPath(import.meta.url)), 'worker.ts'),
+      '--worker-script', workerScript,
+      '--command', inv.cmd,
+      '--args', JSON.stringify(inv.args),
+    ], { detached: true, env: childEnv, stdio: 'ignore', windowsHide: true });
+    worker.unref();
     return true;
   } catch {
     return false;
@@ -232,6 +231,9 @@ export function runContextModeSessionStart(options: {
   pluginRoot?: string;
 }): { decision: SetupDecision; output: ContextModeHookOutput; mcpOnlyResult?: McpOnlyResult } {
   const env = options.env ?? process.env;
+  // Reap only roots that carry both our launcher marker and a stale, private temp script.
+  // The bounded sweep is intentionally diagnostic/fail-open and never broad-kills runtimes.
+  sweepStaleContextModeWorkers({ homeRoot: options.homeRoot });
   const decisionResult = runContextModeSetupHook({
     homeRoot: options.homeRoot,
     env,
