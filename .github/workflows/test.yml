@@ -27,6 +27,9 @@ jobs:
       - name: Review managed hook registrations
         run: node tools/hook-review/check.mjs
 
+      - name: Check shipped skill health
+        run: npm run check:skill-health
+
       - name: Test
         run: npm test
         continue-on-error: true

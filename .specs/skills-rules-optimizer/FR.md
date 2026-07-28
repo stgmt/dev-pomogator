@@ -125,3 +125,59 @@ System SHALL preserve current `rules-optimizer` API surface unchanged:
 > OUT OF SCOPE — system never auto-merges skills без explicit `--execute` flag от user. Detection — automatic, execution — manual. Это design choice ради safety, не technical limitation.
 >
 > Связанные UC, AC отсутствуют (по definition not applicable).
+
+## FR-12: Shipped dependency-free checker and shared gates
+
+System SHALL ship `tools/skill-health/check.mjs` as the sole canonical skill-health executable. It SHALL use Node built-in modules only, SHALL run without `tsx`, `yaml`, or package resolution, and source CI, the release gate, and installed-plugin dependency-absent verification SHALL invoke that exact shipped executable.
+
+**Связанные AC:** [AC-12](ACCEPTANCE_CRITERIA.md#ac-12-fr-12)
+**Use Case:** [UC-4](USE_CASES.md#uc-4-bulk-pre-commit-audit-gate)
+
+## FR-13: Strict frontmatter parser and metadata contract
+
+System SHALL parse a SKILL.md frontmatter block without collapsing malformed or unterminated YAML into empty metadata. It SHALL emit structural findings for malformed YAML/frontmatter and validate required non-empty `name`, `description`, and `allowed-tools` values before evaluating downstream checks.
+
+**Связанные AC:** [AC-13](ACCEPTANCE_CRITERIA.md#ac-13-fr-13)
+**Use Case:** [UC-1](USE_CASES.md#uc-1-audit-skills-repo-happy-path)
+
+## FR-14: Active tool permission coverage with false-positive pins
+
+System SHALL compare only unambiguous active `Skill(...)`, `Agent(...)`, and `mcp__server__tool(...)` invocations with `allowed-tools`, preserving the exact MCP tool identity in every finding. It SHALL not report `ALLOWED_TOOLS_MISSING` for negated prose such as `never raw Write`, bare tool-name prose, or non-executing generic examples.
+
+**Связанные AC:** [AC-14](ACCEPTANCE_CRITERIA.md#ac-14-fr-14)
+**Use Case:** [UC-1](USE_CASES.md#uc-1-audit-skills-repo-happy-path)
+
+## FR-15: Local reference integrity and root containment
+
+System SHALL validate each statically resolvable local Markdown reference relative to the referring SKILL.md and SHALL emit a deterministic finding when the target is missing or resolves outside the plugin root. External URLs, templates, and generic examples that cannot be statically resolved SHALL not be treated as local references.
+
+**Связанные AC:** [AC-15](ACCEPTANCE_CRITERIA.md#ac-15-fr-15)
+**Use Case:** [UC-1](USE_CASES.md#uc-1-audit-skills-repo-happy-path)
+
+## FR-16: Deterministic report and strict modes
+
+System SHALL provide deterministic text and JSON reports. `--report` SHALL emit findings without converting them into a failing exit status, while `--strict` SHALL fail only for unbaselined error findings; the same unchanged input SHALL produce byte-identical ordered output in either format.
+
+**Связанные AC:** [AC-16](ACCEPTANCE_CRITERIA.md#ac-16-fr-16)
+**Use Case:** [UC-4](USE_CASES.md#uc-4-bulk-pre-commit-audit-gate)
+
+## FR-17: Exact fingerprint baseline
+
+System SHALL baseline a finding only when its relative path, finding code, and SHA-256 content fingerprint exactly match one explicit baseline entry. It SHALL reject wildcard, prefix, directory-wide, and regular-expression exemptions; a changed content fingerprint SHALL make the finding blocking again.
+
+**Связанные AC:** [AC-17](ACCEPTANCE_CRITERIA.md#ac-17-fr-17)
+**Use Case:** [UC-4](USE_CASES.md#uc-4-bulk-pre-commit-audit-gate)
+
+## FR-18: Explicit mirror policy
+
+System SHALL validate a declared mirror contract whose only supported modes are `exact`, `adapted`, `canonical-only`, and `legacy`. `exact` SHALL compare normalized content, `adapted` SHALL permit only declared transformations, and the other modes SHALL make their non-mirror expectation explicit rather than silently ignoring drift.
+
+**Связанные AC:** [AC-18](ACCEPTANCE_CRITERIA.md#ac-18-fr-18)
+**Use Case:** [UC-6](USE_CASES.md#uc-6-edge-suggest-rules-backwards-compat)
+
+## FR-19: No prompt lifecycle hook rollout
+
+System SHALL expose skill-health checking through the executable and explicit CI/release verification only. This feature SHALL NOT add a `SessionStart` or `UserPromptSubmit` hook invocation, registration, or prompt-time scan for the checker.
+
+**Связанные AC:** [AC-19](ACCEPTANCE_CRITERIA.md#ac-19-fr-19)
+**Use Case:** [UC-4](USE_CASES.md#uc-4-bulk-pre-commit-audit-gate)

@@ -180,3 +180,122 @@ tests/e2e/
 **Install Command:** already installed (vitest 4.x в package.json)
 **Evidence:** `tests/e2e/specs-generator-variant-matrix.test.ts` использует тот же pattern (vitest + .feature через manual scenario mapping); `package.json` уже содержит vitest dependency. См. RESEARCH.md "Existing Patterns" row "[spec-variant-matrix](../spec-variant-matrix/FR.md) benchmark".
 **Verdict:** No hooks required. Tests reading test fixtures from `tests/fixtures/skills-rules-optimizer/` (read-only) и проверяющие audit/detect/merge output JSON structure. No state mutation, no API calls, no DB. `vitest run` straight без setup/teardown.
+
+
+## Shipped Skill-Health Checker Extension
+
+### Component boundary
+- `tools/skill-health/check.mjs` is the one shipped, Node-builtins-only executable for [FR-12](FR.md#fr-12-shipped-dependency-free-checker-and-shared-gates). Source CI, release verification, and installed-plugin dependency-absent verification call this file rather than source-only optimizer scripts.
+- `tools/skill-health/baseline.json` holds finite exact exemptions for [FR-17](FR.md#fr-17-exact-fingerprint-baseline); `tools/skill-health/mirror-contract.json` declares every mirror relationship for [FR-18](FR.md#fr-18-explicit-mirror-policy).
+- The checker is a CLI/gate component, not a lifecycle hook. Hook registries remain outside this change by [FR-19](FR.md#fr-19-no-prompt-lifecycle-hook-rollout).
+
+### Validation flow
+1. Enumerate plugin SKILL.md files and fingerprint their full content.
+2. Parse frontmatter losslessly. A malformed block produces a structural finding before required-field validation, satisfying [FR-13](FR.md#fr-13-strict-frontmatter-parser-and-metadata-contract).
+3. Inspect syntax-qualified active calls, local references, baseline entries, and mirror entries under the separate rules in [FR-14](FR.md#fr-14-active-tool-permission-coverage-with-false-positive-pins), [FR-15](FR.md#fr-15-local-reference-integrity-and-root-containment), [FR-17](FR.md#fr-17-exact-fingerprint-baseline), and [FR-18](FR.md#fr-18-explicit-mirror-policy).
+4. Sort findings deterministically, render text or JSON, then select report or strict exit semantics defined by [FR-16](FR.md#fr-16-deterministic-report-and-strict-modes).
+
+### CLI and gate contract
+- `--report` is the non-blocking diagnostic mode; `--strict` is the blocking gate mode; `--json` changes only the rendered format, not finding identity or ordering.
+- The source CI workflow, release workflow, and dependency-absent installed runtime test assert the same canonical executable path and exercise a real plugin tree with dependencies unavailable.
+
+### BDD proof boundary
+BDD scenarios cover parser regressions derived from `bdd-migrator`, `edge-debug-port`, `task-status`, `proxy-up`, and `use-claude-subscription`; active permissions and false-positive pins; local references; baseline identity; all mirror modes; deterministic CLI modes; installed dependency-absent execution; and the absence of prompt lifecycle wiring.
+
+## Key Decisions
+
+### Decision: Use the shipped builtins-only checker at every distribution gate
+
+**Требование:** [FR-12](FR.md#fr-12-shipped-dependency-free-checker-and-shared-gates)
+
+**Rationale:** One executable exercises the artifact users receive and makes source CI, release, and installed dependency-absent evidence comparable.
+
+**Trade-off:** The parser supports only the frontmatter subset the checker explicitly owns instead of accepting every YAML feature through a runtime dependency.
+
+**Alternatives considered:**
+- Reuse `audit-skills.ts` through `tsx` — rejected because a source dependency proves neither packaging nor installed-user viability.
+- Install `yaml` during verification — rejected because dependency installation masks the condition the gate must prove.
+
+### Decision: Fail closed on malformed frontmatter before downstream checks
+
+**Требование:** [FR-13](FR.md#fr-13-strict-frontmatter-parser-and-metadata-contract)
+
+**Rationale:** Structural parse findings prevent malformed YAML from silently becoming empty metadata and producing misleading secondary diagnostics.
+
+**Trade-off:** Some uncommon YAML constructs are rejected until they are deliberately specified and tested.
+
+**Alternatives considered:**
+- Continue with an empty metadata object — rejected because it hides parser failures and produces false validation results.
+- Depend on a full YAML package — rejected because installed dependency-absent execution is a required property.
+
+### Decision: Detect syntax-qualified active calls and pin prose negatives
+
+**Требование:** [FR-14](FR.md#fr-14-active-tool-permission-coverage-with-false-positive-pins)
+
+**Rationale:** Exact call syntax preserves useful missing-permission findings while keeping prohibitions, prose, and examples from making strict CI noisy.
+
+**Trade-off:** Ambiguous natural-language instructions may require a clearer executable call form to be checked automatically.
+
+**Alternatives considered:**
+- Flag every tool-name token — rejected because confirmed prohibitions are false positives.
+- Disable permission coverage — rejected because undeclared active tool calls remain a runtime failure source.
+
+### Decision: Resolve only static local links inside the plugin root
+
+**Требование:** [FR-15](FR.md#fr-15-local-reference-integrity-and-root-containment)
+
+**Rationale:** Root-contained resolution catches broken shipped references and traversal without pretending to validate templates or remote documentation.
+
+**Trade-off:** Dynamic link generation is intentionally outside this static checker.
+
+**Alternatives considered:**
+- Resolve every Markdown-looking string — rejected because examples and templates create false findings.
+- Allow parent traversal if the target exists — rejected because plugin artifacts must not depend on paths outside their install root.
+
+### Decision: Make baseline identity and mirror modes explicit contracts
+
+**Требование:** [FR-16](FR.md#fr-16-deterministic-report-and-strict-modes)
+
+**Rationale:** Deterministic output, exact fingerprints, and finite policy modes make every gate decision reproducible and reviewable.
+
+**Trade-off:** Baseline refreshes and cross-agent adaptations require an intentional contract update when content changes.
+
+**Alternatives considered:**
+- Permit glob or regex baselines — rejected because broad exemptions can suppress unrelated future defects.
+- Infer mirror status from directory names — rejected because inferred policy silently accepts drift.
+
+### Decision: Keep skill health out of prompt lifecycle hooks
+
+**Требование:** [FR-19](FR.md#fr-19-no-prompt-lifecycle-hook-rollout)
+
+**Rationale:** CI, release, and explicit installed checks provide strong evidence without slowing or surprising interactive prompt flows.
+
+**Trade-off:** Authors receive feedback at deliberate gate boundaries rather than on every prompt.
+
+**Alternatives considered:**
+- Add a SessionStart scan — rejected because startup cost and repeated noise do not improve release evidence.
+- Add a UserPromptSubmit guard — rejected because prompt-time enforcement is disproportionate to a repository health audit.
+
+### Decision: Bind baseline exemptions to content fingerprints
+
+**Требование:** [FR-17](FR.md#fr-17-exact-fingerprint-baseline)
+
+**Rationale:** Path, finding code, and fingerprint together make an exemption narrow, reviewable, and automatically invalid when content changes.
+
+**Trade-off:** Intentional content edits require a deliberate baseline refresh rather than retaining an old exemption.
+
+**Alternatives considered:**
+- Path-only baselines — rejected because they would conceal changed defects at the same location.
+- Wildcard or regex exemptions — rejected because they can suppress unrelated future findings.
+
+### Decision: Express mirror behavior through finite named modes
+
+**Требование:** [FR-18](FR.md#fr-18-explicit-mirror-policy)
+
+**Rationale:** Exact, adapted, canonical-only, and legacy modes document whether and how a mirror is expected to diverge.
+
+**Trade-off:** New mirror relationships need an explicit contract entry before verification can pass.
+
+**Alternatives considered:**
+- Infer policy from directory names — rejected because the intended adaptation is not reviewable.
+- Treat every pair as an exact mirror — rejected because legitimate platform adaptations would become indistinguishable from accidental drift.

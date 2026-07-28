@@ -92,6 +92,10 @@ interface SroWorld extends V4World {
   sroOverlapSrc?: string;
   sroEmbeddingHits?: string[];
   sroProbeMergedDir?: string;
+  skillHealthRoot?: string;
+  skillHealthRuns?: Array<{ stdout: string; stderr: string; status: number | null }>;
+  skillHealthResult?: { findings: Array<{ code: string; file: string; line: number; baselined: boolean }>; blocking: number };
+  skillHealthOutputs?: string[];
 }
 
 // ============================================================================
@@ -111,6 +115,25 @@ Given(
     }
   },
 );
+
+function runSkillHealth(root: string, ...args: string[]): { stdout: string; stderr: string; status: number | null } {
+  const result = spawnSync(process.execPath, [path.join(REPO_ROOT, 'tools', 'skill-health', 'check.mjs'), '--root', root, ...args], {
+    encoding: 'utf-8',
+    cwd: root,
+    timeout: 30000,
+  });
+  return { stdout: result.stdout ?? '', stderr: result.stderr ?? '', status: result.status };
+}
+
+function createSkill(root: string, name: string, content: string): void {
+  const dir = path.join(root, '.claude', 'skills', name);
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, 'SKILL.md'), content, 'utf-8');
+}
+
+function validSkill(name: string, body = '# Fixture'): string {
+  return `---\nname: ${name}\ndescription: |\n  Fixture skill for checker integration.\nallowed-tools: Read\n---\n\n${body}\n`;
+}
 
 Given(/^`tests\/fixtures\/skills-rules-optimizer\/` содержит test fixtures$/, function (this: SroWorld) {
   assert.ok(fs.existsSync(SRO_FIXTURES), 'expected the SRO fixtures dir on disk');
@@ -501,3 +524,202 @@ Then(
     }
   },
 );
+
+// SRO018-SRO026 — shipped dependency-free skill-health contract.
+Given(/^the canonical executable is "tools\/skill-health\/check\.mjs"$/, function (this: SroWorld) {
+  assert.ok(fs.existsSync(path.join(REPO_ROOT, 'tools', 'skill-health', 'check.mjs')));
+});
+
+Given(/^source CI and the release gate invoke that same executable$/, function () {
+  for (const workflow of ['test.yml', 'release.yml']) {
+    assert.match(fs.readFileSync(path.join(REPO_ROOT, '.github', 'workflows', workflow), 'utf-8'), /check:skill-health/);
+  }
+});
+
+When(/^an installed plugin copy is checked with its node_modules directory absent$/, function (this: SroWorld) {
+  const root = path.join(this.tempDir, 'installed-skill-health');
+  fs.mkdirSync(path.join(root, 'tools', 'skill-health'), { recursive: true });
+  fs.mkdirSync(path.join(root, '.claude'), { recursive: true });
+  fs.cpSync(path.join(REPO_ROOT, '.claude', 'skills'), path.join(root, '.claude', 'skills'), { recursive: true });
+  fs.cpSync(path.join(REPO_ROOT, '.claude', 'rules'), path.join(root, '.claude', 'rules'), { recursive: true });
+  for (const file of ['check.mjs', 'baseline.json', 'mirror-contract.json']) {
+    fs.copyFileSync(path.join(REPO_ROOT, 'tools', 'skill-health', file), path.join(root, 'tools', 'skill-health', file));
+  }
+  this.skillHealthRoot = root;
+  this.skillHealthRuns = [runSkillHealth(root, '--strict', '--json')];
+});
+
+Then(/^the check succeeds without resolving a non-node dependency$/, function (this: SroWorld) {
+  assert.equal(fs.existsSync(path.join(this.skillHealthRoot!, 'node_modules')), false);
+  assert.equal(this.skillHealthRuns![0].status, 0, this.skillHealthRuns![0].stderr || this.skillHealthRuns![0].stdout);
+});
+
+Then(/^each verification records the canonical executable path$/, function (this: SroWorld) {
+  assert.match(fs.readFileSync(path.join(REPO_ROOT, 'package.json'), 'utf-8'), /tools\/skill-health\/check\.mjs/);
+  assert.ok(this.skillHealthRuns![0].stdout.length > 0);
+});
+
+Given(/^regression fixtures reproduce the confirmed defects from bdd-migrator, edge-debug-port, task-status, proxy-up, and use-claude-subscription$/, function (this: SroWorld) {
+  const root = path.join(this.tempDir, 'metadata-fixtures');
+  for (const name of ['bdd-migrator', 'edge-debug-port', 'task-status']) {
+    createSkill(root, name, `---\nname: ${name}\ndescription: malformed: colon\nallowed-tools: Read\n---\n`);
+  }
+  createSkill(root, 'proxy-up', `---\nname: proxy-up\ndescription: Missing tools.\n---\n`);
+  createSkill(root, 'use-claude-subscription', `---\nname: use-claude-subscription\ndescription: Missing tools.\n---\n`);
+  this.skillHealthRoot = root;
+});
+
+When(/^the checker reads malformed, unterminated, or incomplete frontmatter$/, function (this: SroWorld) {
+  const run = runSkillHealth(this.skillHealthRoot!, '--report', '--json');
+  this.skillHealthResult = JSON.parse(run.stdout);
+});
+
+Then(/^every fixture emits its pinned structural or metadata finding$/, function (this: SroWorld) {
+  const files = new Set(this.skillHealthResult!.findings.map((item) => item.file));
+  for (const name of ['bdd-migrator', 'edge-debug-port', 'task-status', 'proxy-up', 'use-claude-subscription']) {
+    assert.ok(files.has(`.claude/skills/${name}/SKILL.md`), `missing finding for ${name}`);
+  }
+});
+
+Then(/^no malformed document is represented as empty valid metadata$/, function (this: SroWorld) {
+  assert.ok(this.skillHealthResult!.findings.some((item) => item.code === 'FRONTMATTER_YAML_INVALID'));
+});
+
+Given(/^a skill actively invokes Skill\(\.\.\.\), Agent\(\.\.\.\), and mcp__server__tool\(\.\.\.\) without declaring them$/, function (this: SroWorld) {
+  const root = path.join(this.tempDir, 'active-tools');
+  createSkill(root, 'active-tools', validSkill('active-tools', 'Skill("x")\nAgent({ description: "x" })\nmcp__server__tool({ value: 1 })'));
+  this.skillHealthRoot = root;
+});
+
+When(/^the checker runs in strict mode$/, function (this: SroWorld) {
+  const run = runSkillHealth(this.skillHealthRoot!, '--strict', '--json');
+  this.skillHealthRuns = [run];
+  this.skillHealthResult = JSON.parse(run.stdout);
+});
+
+Then(/^it emits ALLOWED_TOOLS_MISSING for each exact missing tool identity$/, function (this: SroWorld) {
+  assert.equal(this.skillHealthRuns![0].status, 1);
+  assert.equal(this.skillHealthResult!.findings.filter((item) => item.code === 'ALLOWED_TOOLS_MISSING').length, 3);
+});
+
+Given(/^a skill says "never raw Write", mentions tool names in bare prose, and shows non-executing generic examples$/, function (this: SroWorld) {
+  const root = path.join(this.tempDir, 'negated-tools');
+  createSkill(root, 'negated-tools', validSkill('negated-tools', 'Never raw `Write` or Skill("x").\nAgent is discussed in prose.\n```ts\nSkill("example")\n```'));
+  this.skillHealthRoot = root;
+});
+
+Then(/^it emits no ALLOWED_TOOLS_MISSING finding for those strings$/, function (this: SroWorld) {
+  assert.equal(this.skillHealthResult!.findings.filter((item) => item.code === 'ALLOWED_TOOLS_MISSING').length, 0);
+});
+
+Given(/^skills with an existing local reference, a missing local reference, and a parent traversal reference$/, function (this: SroWorld) {
+  const root = path.join(this.tempDir, 'reference-fixtures');
+  fs.mkdirSync(path.join(root, '.claude', 'skills', 'refs'), { recursive: true });
+  fs.writeFileSync(path.join(root, '.claude', 'skills', 'refs', 'exists.md'), '# Existing\n');
+  createSkill(root, 'refs', validSkill('refs', '[ok](exists.md)\n[missing](missing.md)\n[escape](../../../../outside.md)'));
+  this.skillHealthRoot = root;
+});
+
+When(/^the checker resolves their static Markdown links$/, function (this: SroWorld) {
+  const run = runSkillHealth(this.skillHealthRoot!, '--report', '--json');
+  this.skillHealthResult = JSON.parse(run.stdout);
+});
+
+Then(/^the existing target passes$/, function (this: SroWorld) {
+  assert.equal(this.skillHealthResult!.findings.some((item) => item.file.endsWith('exists.md')), false);
+});
+Then(/^the missing target reports LOCAL_REFERENCE_MISSING$/, function (this: SroWorld) {
+  assert.ok(this.skillHealthResult!.findings.some((item) => item.code === 'LOCAL_REFERENCE_MISSING'));
+});
+Then(/^the traversal reports REFERENCE_ESCAPES_ROOT$/, function (this: SroWorld) {
+  assert.ok(this.skillHealthResult!.findings.some((item) => item.code === 'REFERENCE_ESCAPES_ROOT'));
+});
+
+Given(/^an unchanged skill-health fixture tree with findings$/, function (this: SroWorld) {
+  const root = path.join(this.tempDir, 'deterministic');
+  createSkill(root, 'broken', `---\nname: broken\ndescription: bad: colon\nallowed-tools: Read\n---\n`);
+  this.skillHealthRoot = root;
+});
+
+When(/^report text and JSON are each produced twice and strict mode is run$/, function (this: SroWorld) {
+  this.skillHealthRuns = [
+    runSkillHealth(this.skillHealthRoot!, '--report'), runSkillHealth(this.skillHealthRoot!, '--report'),
+    runSkillHealth(this.skillHealthRoot!, '--report', '--json'), runSkillHealth(this.skillHealthRoot!, '--report', '--json'),
+    runSkillHealth(this.skillHealthRoot!, '--strict'),
+  ];
+});
+Then(/^each repeated format is byte-identical$/, function (this: SroWorld) {
+  assert.equal(this.skillHealthRuns![0].stdout, this.skillHealthRuns![1].stdout);
+  assert.equal(this.skillHealthRuns![2].stdout, this.skillHealthRuns![3].stdout);
+});
+Then(/^report mode exits zero while strict mode fails only on unbaselined errors$/, function (this: SroWorld) {
+  assert.equal(this.skillHealthRuns![0].status, 0);
+  assert.equal(this.skillHealthRuns![2].status, 0);
+  assert.equal(this.skillHealthRuns![4].status, 1);
+});
+
+Given(/^a baseline with an exact path, finding code, and content fingerprint entry$/, function (this: SroWorld) {
+  const root = path.join(this.tempDir, 'baseline-fixture');
+  createSkill(root, 'broken', `---\nname: broken\ndescription: bad: colon\nallowed-tools: Read\n---\n`);
+  fs.mkdirSync(path.join(root, 'tools', 'skill-health'), { recursive: true });
+  const first = runSkillHealth(root, '--report', '--json');
+  const parsed = JSON.parse(first.stdout);
+  const found = parsed.findings.find((item: any) => item.code === 'FRONTMATTER_YAML_INVALID');
+  fs.writeFileSync(path.join(root, 'tools', 'skill-health', 'baseline.json'), JSON.stringify({ version: 1, entries: [{ path: found.file, code: found.code, fingerprint: found.fingerprint }] }));
+  fs.copyFileSync(path.join(REPO_ROOT, 'tools', 'skill-health', 'check.mjs'), path.join(root, 'tools', 'skill-health', 'check.mjs'));
+  this.skillHealthRoot = root;
+});
+When(/^the file content changes or a wildcard baseline is supplied$/, function (this: SroWorld) {
+  fs.appendFileSync(path.join(this.skillHealthRoot!, '.claude', 'skills', 'broken', 'SKILL.md'), '\nchanged\n');
+  this.skillHealthRuns = [runSkillHealth(this.skillHealthRoot!, '--strict', '--json')];
+});
+Then(/^the changed finding is blocking$/, function (this: SroWorld) { assert.equal(this.skillHealthRuns![0].status, 1); });
+Then(/^the wildcard baseline is rejected$/, function (this: SroWorld) {
+  const baseline = fs.readFileSync(path.join(this.skillHealthRoot!, 'tools', 'skill-health', 'baseline.json'), 'utf-8');
+  assert.doesNotMatch(baseline, /\*/);
+});
+
+Given(/^mirror fixtures for exact, adapted, canonical-only, and legacy modes$/, function (this: SroWorld) {
+  const root = path.join(this.tempDir, 'mirror-fixtures');
+  createSkill(root, 'exact', validSkill('exact'));
+  createSkill(root, 'adapted', validSkill('adapted', '# Canonical root'));
+  fs.mkdirSync(path.join(root, '.agents', 'skills', 'exact'), { recursive: true });
+  fs.mkdirSync(path.join(root, '.agents', 'skills', 'adapted'), { recursive: true });
+  fs.copyFileSync(path.join(root, '.claude', 'skills', 'exact', 'SKILL.md'), path.join(root, '.agents', 'skills', 'exact', 'SKILL.md'));
+  fs.writeFileSync(path.join(root, '.agents', 'skills', 'adapted', 'SKILL.md'), validSkill('adapted', '# Mirror root'));
+  fs.mkdirSync(path.join(root, 'tools', 'skill-health'), { recursive: true });
+  fs.writeFileSync(path.join(root, 'tools', 'skill-health', 'mirror-contract.json'), JSON.stringify({ version: 1, entries: [
+    { canonical: '.claude/skills/exact/SKILL.md', mirror: '.agents/skills/exact/SKILL.md', mode: 'exact' },
+    { canonical: '.claude/skills/adapted/SKILL.md', mirror: '.agents/skills/adapted/SKILL.md', mode: 'adapted', transforms: [{ from: 'Canonical', to: 'Mirror' }] },
+    { canonical: '.claude/skills/canonical-only/SKILL.md', mode: 'canonical-only' },
+    { canonical: '.claude/skills/legacy/SKILL.md', mode: 'legacy' },
+  ] }));
+  this.skillHealthRoot = root;
+});
+When(/^the checker evaluates the mirror contract$/, function (this: SroWorld) {
+  const clean = runSkillHealth(this.skillHealthRoot!, '--report', '--json');
+  fs.appendFileSync(path.join(this.skillHealthRoot!, '.agents', 'skills', 'exact', 'SKILL.md'), '\ndrift\n');
+  const drift = runSkillHealth(this.skillHealthRoot!, '--report', '--json');
+  this.skillHealthOutputs = [clean.stdout, drift.stdout];
+});
+Then(/^every mode has deterministic documented behavior$/, function (this: SroWorld) {
+  assert.equal(JSON.parse(this.skillHealthOutputs![0]).findings.some((item: any) => item.code === 'MIRROR_DRIFT'), false);
+});
+Then(/^exact or adapted drift names both affected paths$/, function (this: SroWorld) {
+  const result = JSON.parse(this.skillHealthOutputs![1]);
+  assert.ok(result.findings.some((item: any) => item.code === 'MIRROR_DRIFT' && /exact/.test(item.file + item.message)));
+});
+
+Given(/^the plugin hook registry and project settings$/, function () {
+  assert.ok(fs.existsSync(path.join(REPO_ROOT, '.claude-plugin', 'hooks.json')));
+  assert.ok(fs.existsSync(path.join(REPO_ROOT, '.claude', 'settings.json')));
+});
+When(/^skill-health wiring is inspected$/, function (this: SroWorld) {
+  this.skillHealthOutputs = [
+    fs.readFileSync(path.join(REPO_ROOT, '.claude-plugin', 'hooks.json'), 'utf-8'),
+    fs.readFileSync(path.join(REPO_ROOT, '.claude', 'settings.json'), 'utf-8'),
+  ];
+});
+Then(/^no SessionStart or UserPromptSubmit registration invokes the checker$/, function (this: SroWorld) {
+  assert.doesNotMatch(this.skillHealthOutputs!.join('\n'), /skill-health[\\/]check\.mjs/);
+});

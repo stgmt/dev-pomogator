@@ -112,3 +112,66 @@ Feature: SRO001_Skills_Rules_Optimizer
     Given the SRO overlap-pair skills a and b
     When merge-skills runs --execute over the overlap pair with a probe merged-name
     Then it emits an invoke-agent envelope and writes no merged skill directory to disk
+
+
+  @feature12
+  Scenario: SRO018_shipped_checker_runs_in_source_release_and_dependency_absent_plugin
+    Given the canonical executable is "tools/skill-health/check.mjs"
+    And source CI and the release gate invoke that same executable
+    When an installed plugin copy is checked with its node_modules directory absent
+    Then the check succeeds without resolving a non-node dependency
+    And each verification records the canonical executable path
+
+  @feature13
+  Scenario: SRO019_parser_preserves_canonical_frontmatter_regressions
+    Given regression fixtures reproduce the confirmed defects from bdd-migrator, edge-debug-port, task-status, proxy-up, and use-claude-subscription
+    When the checker reads malformed, unterminated, or incomplete frontmatter
+    Then every fixture emits its pinned structural or metadata finding
+    And no malformed document is represented as empty valid metadata
+
+  @feature14
+  Scenario: SRO020_active_skill_agent_and_mcp_calls_require_exact_permissions
+    Given a skill actively invokes Skill(...), Agent(...), and mcp__server__tool(...) without declaring them
+    When the checker runs in strict mode
+    Then it emits ALLOWED_TOOLS_MISSING for each exact missing tool identity
+
+  @feature14
+  Scenario: SRO021_negated_prose_bare_prose_and_generic_examples_do_not_block
+    Given a skill says "never raw Write", mentions tool names in bare prose, and shows non-executing generic examples
+    When the checker runs in strict mode
+    Then it emits no ALLOWED_TOOLS_MISSING finding for those strings
+
+  @feature15
+  Scenario: SRO022_local_references_are_resolved_without_root_escape
+    Given skills with an existing local reference, a missing local reference, and a parent traversal reference
+    When the checker resolves their static Markdown links
+    Then the existing target passes
+    And the missing target reports LOCAL_REFERENCE_MISSING
+    And the traversal reports REFERENCE_ESCAPES_ROOT
+
+  @feature16
+  Scenario: SRO023_report_json_and_strict_modes_are_deterministic
+    Given an unchanged skill-health fixture tree with findings
+    When report text and JSON are each produced twice and strict mode is run
+    Then each repeated format is byte-identical
+    And report mode exits zero while strict mode fails only on unbaselined errors
+
+  @feature17
+  Scenario: SRO024_baseline_requires_exact_path_finding_and_content_fingerprint
+    Given a baseline with an exact path, finding code, and content fingerprint entry
+    When the file content changes or a wildcard baseline is supplied
+    Then the changed finding is blocking
+    And the wildcard baseline is rejected
+
+  @feature18
+  Scenario: SRO025_mirror_contract_enforces_all_declared_policies
+    Given mirror fixtures for exact, adapted, canonical-only, and legacy modes
+    When the checker evaluates the mirror contract
+    Then every mode has deterministic documented behavior
+    And exact or adapted drift names both affected paths
+
+  @feature19
+  Scenario: SRO026_skill_health_has_no_prompt_lifecycle_hook
+    Given the plugin hook registry and project settings
+    When skill-health wiring is inspected
+    Then no SessionStart or UserPromptSubmit registration invokes the checker

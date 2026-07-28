@@ -75,6 +75,18 @@
 | CHK-FR9-03 | check-antipatterns.ts на rules-only — verbatim | FR-9, AC-8, UC-6 | Unit test | Draft | regression test |
 | CHK-FR9-04 | report.ts --before --after на rules-only — verbatim | FR-9, AC-8, UC-6 | Unit test | Draft | regression test |
 
+
+
+| CHK-FR12-01 | Source CI, release, and installed dependency-absent verification invoke one shipped Node-builtins-only checker | FR-12, AC-12, @feature12 | Integration test | Draft | `tools/skill-health/check.mjs`; NFR-Distribution-1 |
+| CHK-FR13-01 | Unterminated, malformed, and incomplete frontmatter produces structural or required-field findings | FR-13, AC-13, @feature13 | BDD scenario | Draft | Canonical parser regression fixtures |
+| CHK-FR14-01 | Active Skill, Agent, and exact MCP calls missing from allowed-tools are reported | FR-14, AC-14, @feature14 | BDD scenario | Draft | Exact tool identity retained |
+| CHK-FR14-02 | Negated prose, bare prose, and generic examples do not become missing-permission findings | FR-14, AC-14, @feature14 | BDD scenario | Draft | False-positive pin set |
+| CHK-FR15-01 | Static local Markdown links distinguish present targets, missing targets, and plugin-root escapes | FR-15, AC-15, @feature15 | BDD scenario | Draft | `LOCAL_REFERENCE_MISSING` and `REFERENCE_ESCAPES_ROOT` |
+| CHK-FR16-01 | Repeated text and JSON output is byte-identical and `--report` versus `--strict` exit behavior is deterministic | FR-16, AC-16, @feature16 | BDD scenario | Draft | NFR-Determinism-1 |
+| CHK-FR17-01 | Baseline matching requires exact path, code, and SHA-256 content fingerprint with no broad wildcard escape | FR-17, AC-17, @feature17 | BDD scenario | Draft | Changed fingerprint returns finding to blocking state |
+| CHK-FR18-01 | Exact, adapted, canonical-only, and legacy mirror policies have deterministic contract behavior | FR-18, AC-18, @feature18 | BDD scenario | Draft | Unknown mode is rejected; drift names both paths |
+| CHK-FR19-01 | Checker has no SessionStart or UserPromptSubmit registration or invocation | FR-19, AC-19, @feature19 | Manual review | Draft | NFR-Scope-1 |
+
 ## Verification Process
 
 ### How CHKs are verified
@@ -95,8 +107,51 @@
 
 ## Summary Counts
 
-- Total CHKs: 24
+- Total CHKs: 33
 - Verified: 0
 - In Progress: 0
-- Draft: 24
+- Draft: 33
 - Blocked: 0
+
+
+
+## Shipped Skill-Health Checker Extension
+
+### Traceability Matrix additions
+
+| ID | Name | Linked AC | @featureN | Status |
+|----|------|-----------|-----------|--------|
+| [FR-12](FR.md#fr-12-shipped-dependency-free-checker-and-shared-gates) | Shipped dependency-free checker and shared gates | [AC-12](ACCEPTANCE_CRITERIA.md#ac-12-fr-12) | @feature12 | Draft |
+| [FR-13](FR.md#fr-13-strict-frontmatter-parser-and-metadata-contract) | Strict frontmatter parser and metadata contract | [AC-13](ACCEPTANCE_CRITERIA.md#ac-13-fr-13) | @feature13 | Draft |
+| [FR-14](FR.md#fr-14-active-tool-permission-coverage-with-false-positive-pins) | Active tool permission coverage with false-positive pins | [AC-14](ACCEPTANCE_CRITERIA.md#ac-14-fr-14) | @feature14 | Draft |
+| [FR-15](FR.md#fr-15-local-reference-integrity-and-root-containment) | Local reference integrity and root containment | [AC-15](ACCEPTANCE_CRITERIA.md#ac-15-fr-15) | @feature15 | Draft |
+| [FR-16](FR.md#fr-16-deterministic-report-and-strict-modes) | Deterministic report and strict modes | [AC-16](ACCEPTANCE_CRITERIA.md#ac-16-fr-16) | @feature16 | Draft |
+| [FR-17](FR.md#fr-17-exact-fingerprint-baseline) | Exact fingerprint baseline | [AC-17](ACCEPTANCE_CRITERIA.md#ac-17-fr-17) | @feature17 | Draft |
+| [FR-18](FR.md#fr-18-explicit-mirror-policy) | Explicit mirror policy | [AC-18](ACCEPTANCE_CRITERIA.md#ac-18-fr-18) | @feature18 | Draft |
+| [FR-19](FR.md#fr-19-no-prompt-lifecycle-hook-rollout) | No prompt lifecycle hook rollout | [AC-19](ACCEPTANCE_CRITERIA.md#ac-19-fr-19) | @feature19 | Draft |
+
+### Functional Requirements additions
+
+- [FR-12: Shipped dependency-free checker and shared gates](FR.md#fr-12-shipped-dependency-free-checker-and-shared-gates)
+- [FR-13: Strict frontmatter parser and metadata contract](FR.md#fr-13-strict-frontmatter-parser-and-metadata-contract)
+- [FR-14: Active tool permission coverage with false-positive pins](FR.md#fr-14-active-tool-permission-coverage-with-false-positive-pins)
+- [FR-15: Local reference integrity and root containment](FR.md#fr-15-local-reference-integrity-and-root-containment)
+- [FR-16: Deterministic report and strict modes](FR.md#fr-16-deterministic-report-and-strict-modes)
+- [FR-17: Exact fingerprint baseline](FR.md#fr-17-exact-fingerprint-baseline)
+- [FR-18: Explicit mirror policy](FR.md#fr-18-explicit-mirror-policy)
+- [FR-19: No prompt lifecycle hook rollout](FR.md#fr-19-no-prompt-lifecycle-hook-rollout)
+
+### Non-Functional Requirements additions
+
+- [Distribution, determinism, and scope safety](NFR.md#distribution-determinism-and-scope-safety)
+
+### Acceptance Criteria additions
+
+- [AC-12 (FR-12): shipped checker gates](ACCEPTANCE_CRITERIA.md#ac-12-fr-12)
+- [AC-13 (FR-13): strict frontmatter parser](ACCEPTANCE_CRITERIA.md#ac-13-fr-13)
+- [AC-14 (FR-14): exact active permission coverage](ACCEPTANCE_CRITERIA.md#ac-14-fr-14)
+- [AC-15 (FR-15): local references and root containment](ACCEPTANCE_CRITERIA.md#ac-15-fr-15)
+- [AC-16 (FR-16): deterministic report and strict modes](ACCEPTANCE_CRITERIA.md#ac-16-fr-16)
+- [AC-17 (FR-17): exact fingerprint baseline](ACCEPTANCE_CRITERIA.md#ac-17-fr-17)
+- [AC-18 (FR-18): explicit mirror policy](ACCEPTANCE_CRITERIA.md#ac-18-fr-18)
+- [AC-19 (FR-19): no prompt lifecycle hook rollout](ACCEPTANCE_CRITERIA.md#ac-19-fr-19)
