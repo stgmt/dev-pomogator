@@ -140,8 +140,6 @@ CLAUDE.md                                              # 4 rule rows removed fro
 
 **Trade-off:** One more skill in metadata (~150 tokens). Negligible. Skill composition adds one extra tool call hop during Phase 1, but produces identical research behavior.
 
-**Hard-gate pipeline:** Recommendation research uses a two-cost pipeline: (1) extract explicit constraints and cheaply verify price/region/availability, rejecting failed or unverified candidates; (2) spend deep-research calls only on survivors, then re-check volatile price/availability before ranking. Model/provider research uses a contract matrix over active provider, endpoint/protocol, model namespace, consumer-read credential sources, persistence boundary, and coexistence precedence. This prevents expensive analysis of a known-over-budget product and prevents credential plumbing failures from being laundered into model-availability claims.
-
 **Alternatives considered:**
 - (a) Inline in `create-spec/references/research-workflow.md` only — rejected: triggers won't fire outside spec context
 - (b) Path-scoped rule — rejected: research not bound to file path

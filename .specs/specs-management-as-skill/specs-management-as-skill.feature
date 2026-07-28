@@ -103,20 +103,6 @@ Feature: SPECMGT001 Specs Management as Skill
     And SKILL.md description should contain trigger phrases for "исследуй", "найди", "погугли", "ресерч"
 
   # @feature5
-  Scenario: SPECMGT001_15 research treats a EUR 200 ceiling as an eligibility gate
-    Given the canonical research-workflow skill is available
-    When its recommendation constraint contract is inspected
-    Then a candidate above EUR 200 is rejected before deep research
-    And only candidates passing budget, region, and availability gates may be recommended
-
-  # @feature5
-  Scenario: SPECMGT001_16 model availability requires a consumer credential precedence matrix
-    Given the canonical research-workflow skill is available
-    When its model-provider verification contract is inspected
-    Then provider, endpoint, model namespace, credential source, and precedence are required
-    And a credential-name mismatch is not classified as model unavailability
-
-  # @feature5
   Scenario: SPECMGT001_11 create-spec description includes all triggers within 1024-char limit
     Given .claude/skills/create-spec/SKILL.md frontmatter is parsed
     Then description field length should be at most 1024 characters
