@@ -101,3 +101,8 @@ Feature: CTXMODE001_context_mode_integration
   Scenario: CTXMODE001_13 SessionStart stale-worker self-heal obeys its sweep deadline
     When a bounded self-heal sweep reaches its deadline before a second kill
     Then it skips the remaining root with a deadline diagnostic
+
+  @FR-14 @feature14
+  Scenario: CTXMODE001_14 POSIX stale-worker recovery owns the installer tree
+    When a context-mode installer worker starts on POSIX
+    Then its installer stays in the owned worker process group

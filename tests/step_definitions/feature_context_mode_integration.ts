@@ -36,6 +36,7 @@ import { HookDecision, evaluateContextModeHook } from '../../tools/context-mode-
 import { renderWindowsContextModeGuidance } from '../../tools/context-mode-health/windows-guidance.ts';
 import { renderContextModeValueBoundary } from '../../tools/context-mode-health/value-boundary.ts';
 import { sweepStaleContextModeWorkers } from '../../tools/context-mode-setup/stale-workers.ts';
+import { installerSpawnOptions } from '../../tools/context-mode-setup/worker.ts';
 import { allChecks } from '../../.claude/skills/pomogator-doctor/scripts/engine/checks/index.ts';
 
 const REPO_ROOT = path.resolve(import.meta.dirname ?? __dirname, '..', '..');
@@ -60,6 +61,7 @@ interface ContextModeWorld extends V4World {
   forceCtxEnv?: NodeJS.ProcessEnv;
   guidanceText?: string;
   docsText?: string;
+  workerSpawnOptions?: ReturnType<typeof installerSpawnOptions>;
   staleSweep?: {
     now?: number;
     stale?: string;
@@ -601,4 +603,14 @@ Then(/^it skips the remaining root with a deadline diagnostic$/, function (this:
   const result = this.staleSweep as ReturnType<typeof sweepStaleContextModeWorkers> & { killedPids: number[] };
   assert.deepEqual(result.killedPids, [300], 'deadline must prevent the second kill');
   assert.match(result.skipped.join('\n'), /sweep deadline 5000ms reached; 1 selected owned stale worker\(s\) left untouched/, 'deadline skip must be explicit');
+});
+
+When(/^a context-mode installer worker starts on POSIX$/, function (this: ContextModeWorld) {
+  this.workerSpawnOptions = installerSpawnOptions();
+});
+
+Then(/^its installer stays in the owned worker process group$/, function (this: ContextModeWorld) {
+  assert.equal(this.workerSpawnOptions.detached, false, 'installer must inherit the detached outer worker group');
+  assert.equal(this.workerSpawnOptions.stdio, 'ignore', 'worker remains non-interactive');
+  assert.equal(this.workerSpawnOptions.env.CI, '1', 'installer keeps non-interactive environment');
 });

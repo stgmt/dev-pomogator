@@ -10,6 +10,20 @@ function argument(name: string): string | undefined {
   return index >= 0 ? process.argv[index + 1] : undefined;
 }
 
+/**
+ * The outer worker is the owned detached POSIX process group. Its installer MUST
+ * stay in that group: stale recovery kills the worker group by the worker pid.
+ * Detaching the installer would create a second group that survives that sweep.
+ */
+export function installerSpawnOptions(): { detached: false; env: NodeJS.ProcessEnv; stdio: 'ignore'; windowsHide: true } {
+  return {
+    detached: false,
+    env: { ...process.env, CI: '1', NO_COLOR: '1' },
+    stdio: 'ignore',
+    windowsHide: true,
+  };
+}
+
 async function main(): Promise<void> {
   const workerScript = argument('--worker-script');
   const command = argument('--command');
@@ -29,12 +43,7 @@ async function main(): Promise<void> {
   process.once('SIGTERM', terminate);
   process.once('SIGINT', terminate);
   try {
-    child = spawn(command, args, {
-      detached: process.platform !== 'win32',
-      env: { ...process.env, CI: '1', NO_COLOR: '1' },
-      stdio: 'ignore',
-      windowsHide: true,
-    });
+    child = spawn(command, args, installerSpawnOptions());
     await new Promise<void>(resolve => child!.once('close', resolve));
   } catch {
     // The SessionStart caller is intentionally fail-open.
