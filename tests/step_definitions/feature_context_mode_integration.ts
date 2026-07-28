@@ -25,6 +25,7 @@ import {
   getContextModeSetupDecision,
   runContextModeSessionStart,
   runContextModeSetupHook,
+  buildContextModeWorkerInvocation,
 } from '../../tools/context-mode-setup/setup.ts';
 import {
   ContextModeDoctorReport,
@@ -36,7 +37,7 @@ import { HookDecision, evaluateContextModeHook } from '../../tools/context-mode-
 import { renderWindowsContextModeGuidance } from '../../tools/context-mode-health/windows-guidance.ts';
 import { renderContextModeValueBoundary } from '../../tools/context-mode-health/value-boundary.ts';
 import { sweepStaleContextModeWorkers } from '../../tools/context-mode-setup/stale-workers.ts';
-import { installerSpawnOptions } from '../../tools/context-mode-setup/worker.ts';
+import { installerSpawnOptions } from '../../tools/context-mode-setup/worker.cjs';
 import { allChecks } from '../../.claude/skills/pomogator-doctor/scripts/engine/checks/index.ts';
 
 const REPO_ROOT = path.resolve(import.meta.dirname ?? __dirname, '..', '..');
@@ -62,6 +63,7 @@ interface ContextModeWorld extends V4World {
   guidanceText?: string;
   docsText?: string;
   workerSpawnOptions?: ReturnType<typeof installerSpawnOptions>;
+  workerInvocation?: ReturnType<typeof buildContextModeWorkerInvocation>;
   boundedKillOptions?: Array<{ platform?: NodeJS.Platform; timeoutMs?: number }>;
   staleSweep?: {
     now?: number;
@@ -524,8 +526,8 @@ Given(/^a stale context-mode owned worker and unrelated runtimes$/, function (th
   const now = Date.now();
   fs.utimesSync(stale, new Date(now - 20 * 60 * 1000), new Date(now - 20 * 60 * 1000));
   this.staleSweep = { now, stale, fresh, snapshot: [
-    { pid: 101, commandLine: `node tools/context-mode-setup/worker.ts --worker-script ${stale}` },
-    { pid: 102, commandLine: `node tools/context-mode-setup/worker.ts --worker-script ${fresh}` },
+    { pid: 101, commandLine: `node tools/context-mode-setup/worker.cjs --worker-script ${stale}` },
+    { pid: 102, commandLine: `node tools/context-mode-setup/worker.cjs --worker-script ${fresh}` },
     { pid: 103, commandLine: 'python C:\\Users\\stigm\\.codex\\scan.py' },
   ] };
 });
@@ -572,7 +574,7 @@ When(/^a bounded self-heal sweep receives too many stale owned workers$/, functi
     fs.mkdirSync(path.dirname(script), { recursive: true });
     fs.writeFileSync(script, 'owned');
     fs.utimesSync(script, new Date(now - 20 * 60 * 1000), new Date(now - 20 * 60 * 1000));
-    return { pid: 200 + index, commandLine: `node tools/context-mode-setup/worker.ts --worker-script ${script}` };
+    return { pid: 200 + index, commandLine: `node tools/context-mode-setup/worker.cjs --worker-script ${script}` };
   });
   const killed: number[] = [];
   this.staleSweep = sweepStaleContextModeWorkers({ snapshot, nowMs: now, platform: 'linux', candidateCap: 2, killTree: pid => { killed.push(pid); } });
@@ -592,7 +594,7 @@ When(/^a bounded self-heal sweep reaches its deadline before a second kill$/, fu
     fs.mkdirSync(path.dirname(script), { recursive: true });
     fs.writeFileSync(script, 'owned');
     fs.utimesSync(script, new Date(now - 20 * 60 * 1000), new Date(now - 20 * 60 * 1000));
-    return { pid: 300 + index, commandLine: `node tools/context-mode-setup/worker.ts --worker-script ${script}` };
+    return { pid: 300 + index, commandLine: `node tools/context-mode-setup/worker.cjs --worker-script ${script}` };
   });
   const ticks = [now, now, now + 5_001];
   const killed: number[] = [];
@@ -625,8 +627,8 @@ When(/^a POSIX scan sees an owned worker group leader and its tsx descendant$/, 
   const killed: number[] = [];
   this.staleSweep = sweepStaleContextModeWorkers({
     snapshot: [
-      { pid: 401, pgid: 401, commandLine: `node tools/context-mode-setup/worker.ts --worker-script ${script}` },
-      { pid: 402, pgid: 401, commandLine: `node tsx tools/context-mode-setup/worker.ts --worker-script ${script}` },
+      { pid: 401, pgid: 401, commandLine: `node tools/context-mode-setup/worker.cjs --worker-script ${script}` },
+      { pid: 402, pgid: 401, commandLine: `node tsx tools/context-mode-setup/worker.cjs --worker-script ${script}` },
     ], nowMs: now, platform: 'linux', killTree: pid => { killed.push(pid); },
   });
   (this.staleSweep as ReturnType<typeof sweepStaleContextModeWorkers> & { killedPids?: number[] }).killedPids = killed;
@@ -647,8 +649,8 @@ When(/^a Windows stale-worker sweep invokes a bounded tree kill$/, function (thi
   const killOptions: Array<{ platform?: NodeJS.Platform; timeoutMs?: number }> = [];
   this.staleSweep = sweepStaleContextModeWorkers({
     snapshot: [
-      { pid: 501, commandLine: `node tools/context-mode-setup/worker.ts --worker-script ${script}` },
-      { pid: 502, commandLine: `node tools/context-mode-setup/worker.ts --worker-script ${script}` },
+      { pid: 501, commandLine: `node tools/context-mode-setup/worker.cjs --worker-script ${script}` },
+      { pid: 502, commandLine: `node tools/context-mode-setup/worker.cjs --worker-script ${script}` },
     ], nowMs: now, platform: 'win32', deadlineMs: 5_000,
     killTree: (_pid, options) => { killOptions.push(options ?? {}); },
   });
@@ -660,4 +662,14 @@ Then(/^it performs one timeout-bounded Windows tree kill$/, function (this: Cont
   assert.equal(this.boundedKillOptions!.length, 1, 'Windows synchronous taskkill must run only once per sweep');
   assert.ok(this.boundedKillOptions![0].timeoutMs! <= 5_000, 'taskkill timeout must fit the sweep deadline');
   assert.match(result.skipped.join('\n'), /Windows candidate cap 1 reached; 1 owned stale worker\(s\) left untouched/, 'Windows cap must report untouched root');
+});
+
+When(/^context-mode builds its default worker launch$/, function (this: ContextModeWorld) {
+  this.workerInvocation = buildContextModeWorkerInvocation(path.join(this.tempDir, '.ctx-mode-node18', 'script'));
+});
+
+Then(/^the worker launch is executable by the declared minimum Node runtime$/, function (this: ContextModeWorld) {
+  assert.equal(this.workerInvocation!.command, process.execPath, 'default worker must use the active Node runtime');
+  assert.match(this.workerInvocation!.args[0], /worker\.cjs$/, 'default worker must be CommonJS, not strip-types TypeScript');
+  assert.equal(this.workerInvocation!.args.includes('--experimental-strip-types'), false, 'Node 18/20 incompatible flag must not be used');
 });

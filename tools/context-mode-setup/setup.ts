@@ -128,6 +128,18 @@ export function buildContextModeInstallInvocation(platform: NodeJS.Platform = pr
   };
 }
 
+export function buildContextModeWorkerInvocation(workerScript: string, inv = buildContextModeInstallInvocation()): { command: string; args: string[] } {
+  return {
+    command: process.execPath,
+    args: [
+      path.join(path.dirname(fileURLToPath(import.meta.url)), 'worker.cjs'),
+      '--worker-script', workerScript,
+      '--command', inv.cmd,
+      '--args', JSON.stringify(inv.args),
+    ],
+  };
+}
+
 export function fireContextModeInstaller(env: NodeJS.ProcessEnv = process.env): boolean {
   const inv = buildContextModeInstallInvocation();
   const launcher = env.DEV_POMOGATOR_CONTEXT_MODE_INSTALL_LAUNCHER;
@@ -144,13 +156,8 @@ export function fireContextModeInstaller(env: NodeJS.ProcessEnv = process.env): 
     fs.writeFileSync(workerScript, 'dev-pomogator context-mode owned worker\n', { mode: 0o600 });
     // Direct Node execution makes this detached worker the POSIX process-group leader.
     // Do not route through bootstrap/tsx: their parent/child pair both expose worker args.
-    const worker = spawn(process.execPath, [
-      '--experimental-strip-types',
-      path.join(path.dirname(fileURLToPath(import.meta.url)), 'worker.ts'),
-      '--worker-script', workerScript,
-      '--command', inv.cmd,
-      '--args', JSON.stringify(inv.args),
-    ], { detached: true, env: childEnv, stdio: 'ignore', windowsHide: true });
+    const workerInvocation = buildContextModeWorkerInvocation(workerScript, inv);
+    const worker = spawn(workerInvocation.command, workerInvocation.args, { detached: true, env: childEnv, stdio: 'ignore', windowsHide: true });
     worker.unref();
     return true;
   } catch {

@@ -4,7 +4,7 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { forceKillProcessTree } from '../_shared/process-tree.ts';
 
-export const CONTEXT_MODE_WORKER_MARKER = 'tools/context-mode-setup/worker.ts';
+export const CONTEXT_MODE_WORKER_MARKER = 'tools/context-mode-setup/worker.cjs';
 export const CONTEXT_MODE_WORKER_DIR_PREFIX = '.ctx-mode-';
 export const DEFAULT_STALE_WORKER_AGE_MS = 15 * 60 * 1000;
 export const DEFAULT_STALE_WORKER_SCAN_TIMEOUT_MS = 1_500;

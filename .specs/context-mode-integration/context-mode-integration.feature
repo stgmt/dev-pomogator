@@ -116,3 +116,8 @@ Feature: CTXMODE001_context_mode_integration
   Scenario: CTXMODE001_16 Windows recovery bounds synchronous tree termination
     When a Windows stale-worker sweep invokes a bounded tree kill
     Then it performs one timeout-bounded Windows tree kill
+
+  @FR-17 @feature17
+  Scenario: CTXMODE001_17 Default worker launch supports the declared Node runtime floor
+    When context-mode builds its default worker launch
+    Then the worker launch is executable by the declared minimum Node runtime
