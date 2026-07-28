@@ -39,7 +39,7 @@ function lineOf(text, offset) {
 }
 
 function hash(text) {
-  return crypto.createHash('sha256').update(text).digest('hex');
+  return crypto.createHash('sha256').update(text.replace(/\r\n/g, '\n')).digest('hex');
 }
 
 function finding(code, file, line, message, severity = 'error') {
@@ -309,6 +309,8 @@ function runSelfTest() {
 
   const example = parseFrontmatter(sample('generic example', '```ts\nSkill("proxy-up")\n```'), 'fixture/SKILL.md');
   check('generic fenced example does not block', activeToolFindings(example, 'fixture/SKILL.md').length === 0);
+
+  check('fingerprints ignore CRLF versus LF', hash('line one\r\nline two\r\n') === hash('line one\nline two\n'));
 
   return { version: 1, selfTest: true, cases };
 }

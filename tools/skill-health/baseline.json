@@ -4,19 +4,19 @@
     {
       "path": ".claude/skills/spec-review/SKILL.md",
       "code": "LOCAL_REFERENCE_MISSING",
-      "fingerprint": "0ca27ae527fe2ec2fb7c81c362a28334ff29195cb83b5d3a0b53cd9bd00d4fc9",
+      "fingerprint": "267cccada8cde41cc67fd0fc4f063d3924a6bc7a6d10b59081fd9f8e247557b6",
       "reason": "Pre-existing missing category-14 reference; tracked in the 2026-07-28 skill-health report for a dedicated spec-review repair."
     },
     {
       "path": ".claude/skills/variant-matrix-build/SKILL.md",
       "code": "REFERENCE_ESCAPES_ROOT",
-      "fingerprint": "3dd600e2d4d2963aff1775ce4772536bad1cb8af521d641ff6c4cb0d668faf7e",
+      "fingerprint": "393dced69e7f31d86627d6da7b99b75262cf029b970dc1a7973e3ecb6b363a87",
       "reason": "Pre-existing cross-repository documentation link; ownership and installed-user behavior require a separate compatibility decision."
     },
     {
       "path": ".claude/skills/verify-generic-scope-fix/SKILL.md",
       "code": "REFERENCE_ESCAPES_ROOT",
-      "fingerprint": "081c81b60e863bef749ca37cef904042bbd629e31c01ca504cec4edce0b8f300",
+      "fingerprint": "99bb5a53a62d6027edfa281551c0ec6e9b9865ca75ed08614ec180d2de29e680",
       "reason": "Pre-existing source-repository spec link that cannot resolve in an installed plugin; tracked for a dedicated distribution fix."
     }
   ]
