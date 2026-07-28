@@ -1,7 +1,7 @@
 ---
 name: research-workflow
 description: |
-  Use this skill for technical research workflows: investigating libraries, frameworks, APIs, code patterns, or external documentation. Guides through 4-phase research cycle (Уточнение → Исследование → Верификация → Отчёт) with HYPOTHESIS-FIRST verification across MCP tools, GitHub code search, and Web Search. Triggers (Russian): "исследуй", "найди", "погугли", "ресерч". Triggers (English): "research", "investigate", "find", "google", "look up". The skill is also invoked by create-spec via Skill("research-workflow") during Phase 1 step 5 when filling RESEARCH.md technical findings. Each hypothesis MUST be verified across ≥3 INDEPENDENT sources (not just 3 search hits) with direct quotes and explicit [VERIFIED]/[UNVERIFIED]/[ASSUMED]/[SINGLE_SOURCE] markers in output. Schema/API/protocol questions REQUIRE exhaustive field enumeration, not "key fields". Do NOT use for refactoring, writing scripts from scratch, debugging business logic, code review, or general programming concepts.
+  Use for verified technical research and product/buying recommendations. Covers libraries, APIs, external docs, and requests such as "подбери", "посоветуй товар", "что купить", or "recommend a product". Explicit budget, region, and availability limits are HARD eligibility gates before deep research. Triggers: "исследуй", "найди", "погугли", "ресерч", "research", "investigate", "find", "google", "look up". Uses a 4-phase HYPOTHESIS-FIRST workflow with ≥3 independent sources and explicit verification markers. Invoked by create-spec during Phase 1 research. API/provider work must enumerate the exact consumer credential and precedence contract. Do NOT use for refactoring, debugging business logic, code review, or general programming concepts.
 allowed-tools: Read, Glob, Grep, Bash, WebFetch, WebSearch
 ---
 
@@ -10,6 +10,32 @@ allowed-tools: Read, Glob, Grep, Bash, WebFetch, WebSearch
 4-фазный workflow с **hypothesis-FIRST** подходом и обязательной triangulation через ≥3 INDEPENDENT источника.
 
 > **Shared base:** общая research-дисциплина (таксономия источников, маркеры верификации, триангуляция, anti-patterns AP-1..8, external-pain, misconception-flush) живёт в [`.claude/skills/_shared/research-base.md`](../_shared/research-base.md) — один источник правды, общий с `architecture-research-workflow` (его Stage 3 «broad research» зовёт этот навык примитивом). Этот SKILL — конкретный 4-фазный процесс поверх той базы.
+
+## Hard constraints are eligibility gates (BEFORE hypotheses or search)
+
+First extract every explicit user constraint into a table: budget ceiling, currency, region,
+availability, condition, deadline, size/spec minimums, excluded brands/categories, and any “must/not”.
+Normalize currency only with a dated exchange-rate source; never silently widen a limit.
+
+| Constraint | Type | Pass condition | Evidence needed |
+|---|---|---|---|
+| Example: price ≤ €200 | HARD | total payable price is ≤ €200 | current product/checkout price, including mandatory charges |
+
+**HARD means filter, not ranking preference.** A candidate that fails or lacks evidence for one hard
+constraint is ineligible: do not deep-research it, benchmark it, rank it, recommend it, or spend tool
+calls comparing its secondary qualities. Put it only in a short rejected table with the failed gate.
+If fewer candidates remain, report fewer candidates; never pad with over-budget items.
+
+For product research use this fixed order:
+
+1. Extract and echo the eligibility gates.
+2. Cheap pre-filter from current price/region/availability evidence.
+3. Deep research only the surviving candidates.
+4. Re-check price and availability immediately before the recommendation.
+5. Rank survivors; keep rejected items outside the recommendation list.
+
+A user correction such as “I said under €200” is a workflow failure signal: stop current research,
+discard all ineligible work, update the constraint table, and restart from the cheap pre-filter.
 
 ## Anti-patterns from past failures
 
@@ -25,6 +51,8 @@ allowed-tools: Read, Glob, Grep, Bash, WebFetch, WebSearch
 | AP-6 | **Hypothesis-after-research** | Сначала research, потом «гипотезы по результатам» — гипотезы подгоняются под findings | Hypothesis-FIRST: формулировать гипотезы ДО search, искать proof/disproof, не интерпретацию |
 | AP-7 | **Self-citation / circular reference** | Agent цитировал собственный `RESEARCH.md` или `FR.md` как evidence для своих же hypothesis-ов — circular validation | Source taxonomy excludes generated artifacts: spec files (`.specs/**`), plan files (`~/.claude/plans/**`), research output of THIS skill — НЕ являются sources. Только external docs / source code / community refs. Если только internal docs cited — `[CIRCULAR_RISK]` marker |
 | AP-8 | **Cited-but-not-fetched** | Agent ссылался на URL без actual fetch и quote — присваивал «verified» status по name только | Каждый docs URL обязан быть actually FETCHED через WebFetch (not just listed). Quote с line number / paragraph должна быть в output. URL без quote → `[CITED_NOT_FETCHED]` (=`[UNVERIFIED]`) |
+| AP-9 | **Hard constraint treated as preference** | Пользователь задал потолок €200, но дорогой товар всё равно попал в глубокий анализ/рекомендации | Hard-gate до research: неизвестная или превышающая лимит цена → reject; не тратить deep-research tool calls |
+| AP-10 | **Provider support inferred from wrong credential name** | Рабочий DeepSeek/AiPomogator объявлен недоступным, потому что consumer не читал имя ключа соседнего компонента | Проверить provider+endpoint+model namespace+consumer credential source+precedence matrix; configuration mismatch ≠ unsupported model |
 
 ## ФАЗА 1: УТОЧНЕНИЕ + HYPOTHESIS FORMULATION
 
@@ -62,6 +90,14 @@ H3: **Response schema** — success + error shapes
 H4: **Authentication** — exact mechanism (header/cookie/OAuth/API key), scope/permissions
 H5: **Rate limits + quotas** — exact numbers, window, burst behavior
 H6: **Versioning** — header? URL prefix? deprecation policy?
+H7: **Consumer credential contract** — какие ТОЧНЫЕ env/settings читает реальный consumer, не соседний компонент
+H8: **Provider/model namespace** — direct ID vs routed catalog ID; exact base URL + protocol
+H9: **Precedence matrix** — результат при одновременных config key / provider env / gateway env
+
+Для model/provider research H7–H9 обязательны. Ошибка из-за неподдерживаемого consumer-ом имени
+переменной = configuration incompatibility, а не «модель недоступна». Такой вывод допустим только
+после live `/models` и consumer-shaped запроса. Если интеграция пишет persistent config или запускает
+child process, отдельно проверить, где реально должен жить ключ и наследуется ли env.
 
 #### Для CLI tool research
 
@@ -80,6 +116,10 @@ H5: **Output formats** — exit codes, stdout/stderr conventions, machine-readab
 подтверждённую потребность. (Общее правило — `_shared/research-base.md` §8.)
 
 ### Output of Phase 1
+
+For recommendation/product tasks, output `## Eligibility gates` and the rejected-candidate table
+before hypotheses. State `eligible candidate count`; if it is zero, stop rather than researching
+known-ineligible products.
 
 ```markdown
 ## Hypotheses (formulated before research)
@@ -270,13 +310,17 @@ H5: **Output formats** — exit codes, stdout/stderr conventions, machine-readab
 
 ### Чек-лист (mandatory before report finalize)
 
+- [ ] Explicit hard constraints extracted before any search; every recommended candidate passes each gate
+- [ ] No deep-research tool calls were spent on known-ineligible candidates
+- [ ] Price/region/availability rechecked immediately before product recommendation
 - [ ] Hypotheses written BEFORE research (Phase 1)
 - [ ] Required Reading List все items прочитаны (or marked [INCOMPLETE_READING])
 - [ ] Каждая hypothesis имеет triangulation от 3 INDEPENDENT angles (или marker)
 - [ ] Schema/API research — ВСЕ поля enumerated в таблице
+- [ ] Model/provider research includes consumer credential source and precedence matrix
 - [ ] Recency check — каждый main URL с датой
 - [ ] Markers `[VERIFIED]/[UNVERIFIED]/[NEEDS_CONFIRMATION]/[SINGLE_SOURCE]/[ASSUMED]` использованы explicitly
-- [ ] Anti-pattern checklist (AP-1 .. AP-6) reviewed against current research
+- [ ] Anti-pattern checklist (AP-1 .. AP-10) reviewed against current research
 
 ---
 

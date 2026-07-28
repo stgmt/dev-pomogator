@@ -25,12 +25,33 @@ import os from 'node:os';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { claudeMemPaths, resolveClaudeMemHome } from './claude-mem-state.ts';
+import {
+  AIPOMOGATOR_DEEPSEEK_MODEL,
+  OPENROUTER_DEEPSEEK_MODEL,
+} from '../_shared/deepseek-model.ts';
 import { log as logShared } from '../_shared/hook-utils.ts';
 
 const LOG_PREFIX = 'claude-mem-bootstrap';
 const VERBOSE = process.env.DEV_POMOGATOR_HOOK_VERBOSE === '1';
 const BACKOFF_MS = 6 * 60 * 60 * 1000; // 6h between attempts — a failing/offline install isn't retried every session
-export const CLAUDE_MEM_DEEPSEEK_MODEL = 'deepseek/deepseek-v4-flash';
+export const CLAUDE_MEM_DEEPSEEK_MODEL = OPENROUTER_DEEPSEEK_MODEL;
+export const CLAUDE_MEM_AIPOMOGATOR_BASE_URL = 'https://aipomogator.ru/go/v1';
+export const CLAUDE_MEM_AIPOMOGATOR_MODEL = AIPOMOGATOR_DEEPSEEK_MODEL;
+const LEGACY_CLAUDE_MEM_MODELS = new Set([
+  'claude-haiku-4-5-20251001',
+  'anthropic/claude-haiku-4.5',
+  'anthropic/claude-3-haiku',
+  'openrouter/anthropic/claude-haiku-4.5',
+  'openrouter/anthropic/claude-3-haiku',
+]);
+
+export type ClaudeMemModelMigration =
+  | 'migrated'
+  | 'credential-required'
+  | 'custom-preserved'
+  | 'not-configured'
+  | 'invalid-settings'
+  | 'failed';
 
 /** The confirmed non-interactive installer arguments (dev-pomogator defaults). */
 export const INSTALL_ARGS = [
@@ -41,8 +62,6 @@ export const INSTALL_ARGS = [
   'claude-code',
   '--provider',
   'openrouter',
-  '--model',
-  CLAUDE_MEM_DEEPSEEK_MODEL,
   '--runtime',
   'worker',
 ] as const;
@@ -63,6 +82,27 @@ function log(level: 'INFO' | 'DEBUG' | 'WARN' | 'ERROR', msg: string): void {
   }
 }
 
+function loadProjectLlmEnv(env: NodeJS.ProcessEnv, cwd: string): NodeJS.ProcessEnv {
+  const resolved = { ...env };
+  for (const name of ['.env', '.env.local']) {
+    try {
+      const file = path.join(cwd, name);
+      if (!fs.existsSync(file)) continue;
+      for (const raw of fs.readFileSync(file, 'utf-8').split('\n')) {
+        const match = raw.trim().match(/^([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$/);
+        if (!match || resolved[match[1]]) continue;
+        let value = match[2].trim();
+        if ((value.startsWith('"') && value.endsWith('"'))
+          || (value.startsWith("'") && value.endsWith("'"))) value = value.slice(1, -1);
+        resolved[match[1]] = value;
+      }
+    } catch {
+      /* unreadable dotenv → keep exported environment */
+    }
+  }
+  return resolved;
+}
+
 export interface InstallInvocation {
   cmd: string;
   args: string[];
@@ -73,12 +113,32 @@ export interface InstallInvocation {
  * Build the platform-correct invocation. Windows requires `cmd /c npx ...` (Claude Code's own
  * MCP launcher uses the same wrapping) because `npx` is a `.cmd` shim there.
  */
-export function buildInstallInvocation(platform: NodeJS.Platform): InstallInvocation {
+export function buildInstallInvocation(
+  platform: NodeJS.Platform,
+  env: NodeJS.ProcessEnv = process.env,
+  cwd = process.cwd(),
+): InstallInvocation {
+  const resolvedEnv = loadProjectLlmEnv(env, cwd);
+  const aipomogatorKey = resolvedEnv.AUTO_COMMIT_API_KEY?.trim();
+  const openRouterKey = resolvedEnv.OPENROUTER_API_KEY?.trim();
+  const apiKey = aipomogatorKey || openRouterKey;
   const args = [...INSTALL_ARGS];
+  const installEnv = {
+    ...INSTALL_ENV,
+    ...(apiKey ? {
+      CLAUDE_MEM_OPENROUTER_API_KEY: apiKey,
+      CLAUDE_MEM_OPENROUTER_BASE_URL: aipomogatorKey
+        ? CLAUDE_MEM_AIPOMOGATOR_BASE_URL
+        : '',
+      CLAUDE_MEM_OPENROUTER_MODEL: aipomogatorKey
+        ? CLAUDE_MEM_AIPOMOGATOR_MODEL
+        : CLAUDE_MEM_DEEPSEEK_MODEL,
+    } : {}),
+  };
   if (platform === 'win32') {
-    return { cmd: 'cmd', args: ['/c', 'npx', ...args], env: { ...INSTALL_ENV } };
+    return { cmd: 'cmd', args: ['/c', 'npx', ...args], env: installEnv };
   }
-  return { cmd: 'npx', args, env: { ...INSTALL_ENV } };
+  return { cmd: 'npx', args, env: installEnv };
 }
 
 export type BootstrapDecision = 'install' | 'skip-installed' | 'skip-optout' | 'skip-backoff';
@@ -144,6 +204,85 @@ function stampLock(homeDir: string): void {
   }
 }
 
+/** Migrate known legacy Haiku defaults only when claude-mem already has a compatible credential. */
+export function migrateInstalledClaudeMemModel(
+  homeDir: string,
+  env: NodeJS.ProcessEnv = process.env,
+): ClaudeMemModelMigration {
+  const settingsPath = claudeMemPaths(homeDir).settings;
+  if (!fs.existsSync(settingsPath)) return 'not-configured';
+
+  let settings: Record<string, unknown>;
+  try {
+    const parsed = JSON.parse(fs.readFileSync(settingsPath, 'utf-8')) as unknown;
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return 'invalid-settings';
+    settings = parsed as Record<string, unknown>;
+  } catch {
+    return 'invalid-settings';
+  }
+
+  const nested = settings.env;
+  const values = nested && typeof nested === 'object' && !Array.isArray(nested)
+    ? nested as Record<string, unknown>
+    : settings;
+  const provider = typeof values.CLAUDE_MEM_PROVIDER === 'string'
+    ? values.CLAUDE_MEM_PROVIDER.trim().toLowerCase()
+    : 'claude';
+  const modelKey = provider === 'openrouter'
+    ? 'CLAUDE_MEM_OPENROUTER_MODEL'
+    : 'CLAUDE_MEM_MODEL';
+  const rawModel = values[modelKey];
+  const configured = typeof rawModel === 'string' ? rawModel.trim() : '';
+  if (configured && !LEGACY_CLAUDE_MEM_MODELS.has(configured)) return 'custom-preserved';
+  if (!configured) return 'not-configured';
+
+  const settingsKey = typeof values.CLAUDE_MEM_OPENROUTER_API_KEY === 'string'
+    ? values.CLAUDE_MEM_OPENROUTER_API_KEY.trim()
+    : '';
+  const openRouterKey = typeof env.OPENROUTER_API_KEY === 'string'
+    ? env.OPENROUTER_API_KEY.trim()
+    : '';
+  const aipomogatorKey = typeof env.AUTO_COMMIT_API_KEY === 'string'
+    ? env.AUTO_COMMIT_API_KEY.trim()
+    : '';
+  // A legacy Claude provider has no active OpenRouter route. Prefer the project's
+  // AiPomogator credential over stale inactive OpenRouter settings when both exist.
+  const useAipomogator = provider !== 'openrouter' && Boolean(aipomogatorKey);
+  const apiKey = useAipomogator
+    ? aipomogatorKey
+    : settingsKey || openRouterKey;
+  if (!apiKey) return 'credential-required';
+  const nextValues = {
+    ...values,
+    CLAUDE_MEM_PROVIDER: 'openrouter',
+    CLAUDE_MEM_OPENROUTER_API_KEY: apiKey,
+    CLAUDE_MEM_OPENROUTER_BASE_URL: useAipomogator
+      ? CLAUDE_MEM_AIPOMOGATOR_BASE_URL
+      : '',
+    CLAUDE_MEM_OPENROUTER_MODEL: useAipomogator
+      ? AIPOMOGATOR_DEEPSEEK_MODEL
+      : CLAUDE_MEM_DEEPSEEK_MODEL,
+  };
+  delete nextValues.CLAUDE_MEM_MODEL;
+  const next = values === settings ? nextValues : { ...settings, env: nextValues };
+
+  const tmpPath = `${settingsPath}.${process.pid}.tmp`;
+  try {
+    const mode = fs.statSync(settingsPath).mode & 0o777;
+    fs.writeFileSync(tmpPath, JSON.stringify(next, null, 2) + '\n', {
+      encoding: 'utf-8',
+      flag: 'wx',
+      mode,
+    });
+    fs.chmodSync(tmpPath, mode);
+    fs.renameSync(tmpPath, settingsPath);
+    return 'migrated';
+  } catch {
+    try { fs.unlinkSync(tmpPath); } catch { /* best-effort */ }
+    return 'failed';
+  }
+}
+
 /**
  * Fire the installer. In production it's DETACHED (fire-and-forget). A test seam:
  * `CLAUDE_MEM_INSTALL_LAUNCHER` redirects the spawn through a stub binary (receiving the real
@@ -194,7 +333,17 @@ async function main(): Promise<void> {
 
   const optOut = (process.env.DEV_POMOGATOR_CLAUDE_MEM ?? '').toLowerCase() === 'off';
   const homeDir = resolveClaudeMemHome(process.platform, process.env, os.homedir());
+  const projectEnv = loadProjectLlmEnv(process.env, process.cwd());
   const installed = optOut ? false : isClaudeMemInstalled(homeDir);
+  if (installed) {
+    const migration = migrateInstalledClaudeMemModel(homeDir, projectEnv);
+    const level = migration === 'failed'
+      ? 'ERROR'
+      : migration === 'credential-required'
+        ? 'WARN'
+        : 'DEBUG';
+    log(level, `installed claude-mem model migration: ${migration}`);
+  }
   const lockFresh = optOut || installed ? false : lockIsFresh(homeDir, Date.now());
 
   const decision = claudeMemBootstrapDecision({ installed, optOut, lockFresh });

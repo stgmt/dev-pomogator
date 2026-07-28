@@ -9,6 +9,7 @@ export interface ClaudeMemPaths {
   memDir: string;
   workerPid: string;
   database: string;
+  settings: string;
   lock: string;
 }
 
@@ -29,6 +30,7 @@ export function claudeMemPaths(homeDir: string): ClaudeMemPaths {
     memDir,
     workerPid: path.join(memDir, '.worker.pid'),
     database: path.join(memDir, 'claude-mem.db'),
+    settings: path.join(memDir, 'settings.json'),
     lock: path.join(homeDir, '.dev-pomogator', '.claude-mem-bootstrap.lock'),
   };
 }

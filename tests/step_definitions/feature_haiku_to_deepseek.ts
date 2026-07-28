@@ -9,7 +9,11 @@ import {
 } from '../../tools/prompt-suggest/prompt_suggest_core.ts';
 import { clearDeepSeekCatalogCache, selectAipomogatorDeepSeek } from '../../tools/_shared/deepseek-model.ts';
 import { LEARNINGS_DEFAULT_MODEL } from '../../tools/learnings-capture/semantic.ts';
-import { CLAUDE_MEM_DEEPSEEK_MODEL, INSTALL_ARGS } from '../../tools/claude-mem-bootstrap/install-claude-mem.ts';
+import {
+  CLAUDE_MEM_AIPOMOGATOR_MODEL,
+  CLAUDE_MEM_DEEPSEEK_MODEL,
+  INSTALL_ARGS,
+} from '../../tools/claude-mem-bootstrap/install-claude-mem.ts';
 
 interface DeepSeekWorld {
   deepSeekConfig?: ReturnType<typeof loadConfig>;
@@ -131,8 +135,8 @@ Then<DeepSeekWorld>(/^every routed AiPomogator default is "([^"]+)"$/, function 
 Then<DeepSeekWorld>(/^the learning and claude-mem defaults use DeepSeek V4 Flash$/, function () {
   assert.equal(LEARNINGS_DEFAULT_MODEL, AIPOMOGATOR_DEEPSEEK_MODEL);
   assert.equal(CLAUDE_MEM_DEEPSEEK_MODEL, OPENROUTER_DEEPSEEK_MODEL);
+  assert.equal(CLAUDE_MEM_AIPOMOGATOR_MODEL, AIPOMOGATOR_DEEPSEEK_MODEL);
   assert.ok(INSTALL_ARGS.includes('openrouter'));
-  assert.ok(INSTALL_ARGS.includes(CLAUDE_MEM_DEEPSEEK_MODEL));
 });
 
 Then<DeepSeekWorld>(/^no scoped active selector contains a Haiku model ID$/, function () {

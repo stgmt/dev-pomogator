@@ -10,7 +10,7 @@
       "name": "dev-pomogator",
       "source": "./",
       "description": "Help your Claude Code team plan consistently, connect specs to tests, catch agent mistakes, and automate reliable delivery.",
-      "version": "2.0.5",
+      "version": "2.0.6",
       "author": {
         "name": "stgmt"
       },

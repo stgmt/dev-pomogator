@@ -133,3 +133,48 @@ Feature: CMEM001 claude-mem bootstrap and doctor detection
     And the Codex hooks register the SessionStart lifecycle hooks
     And the canonical plugin manifest registers the reaper on PreToolUse
     And the dogfood settings register the reaper on PreToolUse
+
+  @feature8 @HDS006
+  Scenario: CMEM001_28 existing dev-pomogator Haiku default migrates to DeepSeek
+    Given an existing claude-mem settings file with model "claude-haiku-4-5-20251001"
+    When the installed-user model migration runs
+    Then the migration result is "migrated"
+    And claude-mem uses provider "openrouter" and model "deepseek/deepseek-v4-flash"
+
+  @feature8 @HDS007
+  Scenario: CMEM001_29 existing custom claude-mem model is preserved
+    Given an existing claude-mem settings file with model "custom/provider-model"
+    When the installed-user model migration runs
+    Then the migration result is "custom-preserved"
+    And the custom model "custom/provider-model" remains unchanged
+
+  @feature8 @HDS008
+  Scenario: CMEM001_30 legacy Haiku migrates through AiPomogator when its credential is available
+    Given an existing claude-mem settings file with model "claude-haiku-4-5-20251001" and no OpenRouter credential
+    And the AiPomogator credential is available
+    And a stale OpenRouter credential is also present
+    When the installed-user model migration runs
+    Then the migration result is "migrated"
+    And claude-mem uses provider "openrouter" and model "openrouter/deepseek/deepseek-v4-flash"
+    And claude-mem routes through AiPomogator at "https://aipomogator.ru/go/v1"
+
+  @feature8 @HDS010
+  Scenario: CMEM001_32 legacy Haiku remains usable when neither AiPomogator nor OpenRouter has a credential
+    Given an existing claude-mem settings file with model "claude-haiku-4-5-20251001" and no OpenRouter credential
+    When the installed-user model migration runs
+    Then the migration result is "credential-required"
+    And the existing provider "claude" and model "claude-haiku-4-5-20251001" remain unchanged
+
+  @feature8 @HDS011
+  Scenario: CMEM001_33 active OpenRouter route wins over a coexisting AiPomogator credential
+    Given active OpenRouter claude-mem settings with legacy model "anthropic/claude-3-haiku"
+    When the installed-user model migration runs
+    Then the migration result is "migrated"
+    And claude-mem keeps the active OpenRouter credential and direct route
+
+  @feature8 @HDS009
+  Scenario: CMEM001_31 active custom model wins over a stale provider setting
+    Given nested claude-mem settings with active custom model "custom/claude-model" and stale OpenRouter model "anthropic/claude-3-haiku"
+    When the installed-user model migration runs
+    Then the migration result is "custom-preserved"
+    And the custom model "custom/claude-model" remains unchanged

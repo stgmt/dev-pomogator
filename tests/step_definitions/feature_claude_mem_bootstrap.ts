@@ -17,7 +17,9 @@ import assert from 'node:assert/strict';
 import { V4World } from '../hooks/before-after.ts';
 import {
   claudeMemBootstrapDecision,
+  migrateInstalledClaudeMemModel,
   type BootstrapDecision,
+  type ClaudeMemModelMigration,
 } from '../../tools/claude-mem-bootstrap/install-claude-mem.ts';
 import { resolveClaudeMemHome } from '../../tools/claude-mem-bootstrap/claude-mem-state.ts';
 import { claudeMemPluginCheck } from '../../.claude/skills/pomogator-doctor/scripts/engine/checks/claude-mem-plugin.ts';
@@ -43,6 +45,10 @@ interface CmemWorld extends V4World {
   windowsProfile: string;
   windowsHome: string;
   resolvedHome: string;
+  modelMigrationResult: ClaudeMemModelMigration;
+  modelMigrationSettings: Record<string, unknown>;
+  modelMigrationMode: number;
+  modelMigrationEnv: NodeJS.ProcessEnv;
   workerServer: http.Server;
   workerPort: number;
   healthHookExit: number;
@@ -235,6 +241,126 @@ Then<CmemWorld>(/^the installer provenance records a package specifier and outco
 
 Then<CmemWorld>(/^no installer invocation is recorded$/, function () {
   assert.ok(!fs.existsSync(this.recordPath), `no install expected, but record exists: ${this.recordPath}`);
+});
+
+Given<CmemWorld>(/^an existing claude-mem settings file with model "([^"]+)"$/, function (model: string) {
+  const memDir = path.join(this.tempDir, '.claude-mem');
+  fs.mkdirSync(memDir, { recursive: true });
+  const provider = model.includes('claude') ? 'claude' : 'openrouter';
+  fs.writeFileSync(path.join(memDir, 'settings.json'), JSON.stringify({
+    CLAUDE_MEM_PROVIDER: provider,
+    ...(provider === 'openrouter'
+      ? { CLAUDE_MEM_OPENROUTER_MODEL: model }
+      : { CLAUDE_MEM_MODEL: model }),
+    CLAUDE_MEM_OPENROUTER_API_KEY: 'redacted-existing-key',
+    CUSTOM_SETTING: 'preserve-me',
+  }, null, 2));
+});
+
+Given<CmemWorld>(/^an existing claude-mem settings file with model "([^"]+)" and no OpenRouter credential$/, function (model: string) {
+  const memDir = path.join(this.tempDir, '.claude-mem');
+  fs.mkdirSync(memDir, { recursive: true });
+  fs.writeFileSync(path.join(memDir, 'settings.json'), JSON.stringify({
+    CLAUDE_MEM_PROVIDER: 'claude',
+    CLAUDE_MEM_MODEL: model,
+    CUSTOM_SETTING: 'preserve-me',
+  }, null, 2));
+  this.modelMigrationEnv = { OPENROUTER_API_KEY: undefined, AUTO_COMMIT_API_KEY: undefined };
+});
+
+Given<CmemWorld>(/^the AiPomogator credential is available$/, function () {
+  this.modelMigrationEnv = {
+    OPENROUTER_API_KEY: undefined,
+    AUTO_COMMIT_API_KEY: 'redacted-aipomogator-key',
+  };
+});
+
+Given<CmemWorld>(/^a stale OpenRouter credential is also present$/, function () {
+  const settingsPath = path.join(this.tempDir, '.claude-mem', 'settings.json');
+  const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8')) as Record<string, unknown>;
+  settings.CLAUDE_MEM_OPENROUTER_API_KEY = 'redacted-stale-openrouter-key';
+  fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2));
+});
+
+Given<CmemWorld>(/^active OpenRouter claude-mem settings with legacy model "([^"]+)"$/, function (model: string) {
+  const memDir = path.join(this.tempDir, '.claude-mem');
+  fs.mkdirSync(memDir, { recursive: true });
+  fs.writeFileSync(path.join(memDir, 'settings.json'), JSON.stringify({
+    CLAUDE_MEM_PROVIDER: 'openrouter',
+    CLAUDE_MEM_OPENROUTER_MODEL: model,
+    CLAUDE_MEM_OPENROUTER_API_KEY: 'redacted-active-openrouter-key',
+    CUSTOM_SETTING: 'preserve-me',
+  }, null, 2));
+  this.modelMigrationEnv = {
+    AUTO_COMMIT_API_KEY: 'redacted-aipomogator-key',
+    OPENROUTER_API_KEY: undefined,
+  };
+});
+
+Given<CmemWorld>(/^nested claude-mem settings with active custom model "([^"]+)" and stale OpenRouter model "([^"]+)"$/, function (model: string, staleModel: string) {
+  const memDir = path.join(this.tempDir, '.claude-mem');
+  fs.mkdirSync(memDir, { recursive: true });
+  const settingsPath = path.join(memDir, 'settings.json');
+  fs.writeFileSync(settingsPath, JSON.stringify({
+    env: {
+      CLAUDE_MEM_PROVIDER: 'claude',
+      CLAUDE_MEM_MODEL: model,
+      CLAUDE_MEM_OPENROUTER_MODEL: staleModel,
+      CLAUDE_MEM_OPENROUTER_API_KEY: 'redacted-existing-key',
+      CUSTOM_SETTING: 'preserve-me',
+    },
+  }, null, 2));
+});
+
+When<CmemWorld>(/^the installed-user model migration runs$/, function () {
+  const settingsPath = path.join(this.tempDir, '.claude-mem', 'settings.json');
+  this.modelMigrationMode = fs.statSync(settingsPath).mode & 0o777;
+  this.modelMigrationResult = migrateInstalledClaudeMemModel(
+    this.tempDir,
+    this.modelMigrationEnv ?? { OPENROUTER_API_KEY: undefined, AUTO_COMMIT_API_KEY: undefined },
+  );
+  assert.equal(fs.statSync(settingsPath).mode & 0o777, this.modelMigrationMode);
+  this.modelMigrationSettings = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
+});
+
+Then<CmemWorld>(/^the migration result is "([^"]+)"$/, function (result: ClaudeMemModelMigration) {
+  assert.equal(this.modelMigrationResult, result);
+});
+
+Then<CmemWorld>(/^claude-mem uses provider "([^"]+)" and model "([^"]+)"$/, function (provider: string, model: string) {
+  assert.equal(this.modelMigrationSettings.CLAUDE_MEM_PROVIDER, provider);
+  assert.equal(this.modelMigrationSettings.CLAUDE_MEM_OPENROUTER_MODEL, model);
+  assert.equal(this.modelMigrationSettings.CLAUDE_MEM_MODEL, undefined);
+  assert.equal(this.modelMigrationSettings.CUSTOM_SETTING, 'preserve-me');
+  assert.ok(typeof this.modelMigrationSettings.CLAUDE_MEM_OPENROUTER_API_KEY === 'string');
+});
+
+Then<CmemWorld>(/^claude-mem routes through AiPomogator at "([^"]+)"$/, function (baseUrl: string) {
+  assert.equal(this.modelMigrationSettings.CLAUDE_MEM_OPENROUTER_BASE_URL, baseUrl);
+  assert.equal(this.modelMigrationSettings.CLAUDE_MEM_OPENROUTER_API_KEY, 'redacted-aipomogator-key');
+});
+
+Then<CmemWorld>(/^claude-mem keeps the active OpenRouter credential and direct route$/, function () {
+  assert.equal(this.modelMigrationSettings.CLAUDE_MEM_OPENROUTER_API_KEY, 'redacted-active-openrouter-key');
+  assert.equal(this.modelMigrationSettings.CLAUDE_MEM_OPENROUTER_BASE_URL, '');
+  assert.equal(this.modelMigrationSettings.CLAUDE_MEM_OPENROUTER_MODEL, 'deepseek/deepseek-v4-flash');
+});
+
+Then<CmemWorld>(/^the existing provider "([^"]+)" and model "([^"]+)" remain unchanged$/, function (provider: string, model: string) {
+  assert.equal(this.modelMigrationSettings.CLAUDE_MEM_PROVIDER, provider);
+  assert.equal(this.modelMigrationSettings.CLAUDE_MEM_MODEL, model);
+  assert.equal(this.modelMigrationSettings.CLAUDE_MEM_OPENROUTER_MODEL, undefined);
+  assert.equal(this.modelMigrationSettings.CUSTOM_SETTING, 'preserve-me');
+});
+
+Then<CmemWorld>(/^the custom model "([^"]+)" remains unchanged$/, function (model: string) {
+  const values = this.modelMigrationSettings.env as Record<string, unknown> | undefined
+    ?? this.modelMigrationSettings;
+  const activeModel = values.CLAUDE_MEM_PROVIDER === 'openrouter'
+    ? values.CLAUDE_MEM_OPENROUTER_MODEL
+    : values.CLAUDE_MEM_MODEL;
+  assert.equal(activeModel, model);
+  assert.equal(values.CUSTOM_SETTING, 'preserve-me');
 });
 
 Then<CmemWorld>(/^the hook exits 0 with a continue payload$/, function () {
