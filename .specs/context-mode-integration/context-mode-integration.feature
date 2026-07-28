@@ -91,3 +91,13 @@ Feature: CTXMODE001_context_mode_integration
   Scenario: CTXMODE001_11 SessionStart worker recovery fails open when process inspection is unavailable
     When the process APIs are unavailable
     Then SessionStart self-heal fails open without killing a process
+
+  @FR-12 @feature12
+  Scenario: CTXMODE001_12 SessionStart stale-worker self-heal caps recovery roots
+    When a bounded self-heal sweep receives too many stale owned workers
+    Then it kills only the capped roots and reports the untouched remainder
+
+  @FR-13 @feature13
+  Scenario: CTXMODE001_13 SessionStart stale-worker self-heal obeys its sweep deadline
+    When a bounded self-heal sweep reaches its deadline before a second kill
+    Then it skips the remaining root with a deadline diagnostic

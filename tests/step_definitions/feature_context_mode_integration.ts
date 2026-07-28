@@ -561,3 +561,44 @@ Then(/^SessionStart self-heal fails open without killing a process$/, function (
   assert.deepEqual(result.killed, [], 'fail-open branch must not kill any process');
   assert.match(result.skipped[0], /missing process API/, 'diagnostic must preserve the cause');
 });
+
+When(/^a bounded self-heal sweep receives too many stale owned workers$/, function (this: ContextModeWorld) {
+  const now = Date.now();
+  const snapshot = Array.from({ length: 4 }, (_, index) => {
+    const script = path.join(this.tempDir, `.ctx-mode-cap-${index}`, 'script');
+    fs.mkdirSync(path.dirname(script), { recursive: true });
+    fs.writeFileSync(script, 'owned');
+    fs.utimesSync(script, new Date(now - 20 * 60 * 1000), new Date(now - 20 * 60 * 1000));
+    return { pid: 200 + index, commandLine: `node tools/context-mode-setup/worker.ts --worker-script ${script}` };
+  });
+  const killed: number[] = [];
+  this.staleSweep = sweepStaleContextModeWorkers({ snapshot, nowMs: now, candidateCap: 2, killTree: pid => { killed.push(pid); } });
+  (this.staleSweep as ReturnType<typeof sweepStaleContextModeWorkers> & { killedPids?: number[] }).killedPids = killed;
+});
+
+Then(/^it kills only the capped roots and reports the untouched remainder$/, function (this: ContextModeWorld) {
+  const result = this.staleSweep as ReturnType<typeof sweepStaleContextModeWorkers> & { killedPids: number[] };
+  assert.deepEqual(result.killedPids, [200, 201], 'candidate cap must bound kill calls');
+  assert.match(result.skipped.join('\n'), /candidate cap 2 reached; 2 owned stale worker\(s\) left untouched/, 'cap skip must be explicit');
+});
+
+When(/^a bounded self-heal sweep reaches its deadline before a second kill$/, function (this: ContextModeWorld) {
+  const now = Date.now();
+  const snapshot = [0, 1].map(index => {
+    const script = path.join(this.tempDir, `.ctx-mode-deadline-${index}`, 'script');
+    fs.mkdirSync(path.dirname(script), { recursive: true });
+    fs.writeFileSync(script, 'owned');
+    fs.utimesSync(script, new Date(now - 20 * 60 * 1000), new Date(now - 20 * 60 * 1000));
+    return { pid: 300 + index, commandLine: `node tools/context-mode-setup/worker.ts --worker-script ${script}` };
+  });
+  const ticks = [now, now, now + 5_001];
+  const killed: number[] = [];
+  this.staleSweep = sweepStaleContextModeWorkers({ snapshot, nowMs: now, deadlineMs: 5_000, clock: () => ticks.shift() ?? now + 5_001, killTree: pid => { killed.push(pid); } });
+  (this.staleSweep as ReturnType<typeof sweepStaleContextModeWorkers> & { killedPids?: number[] }).killedPids = killed;
+});
+
+Then(/^it skips the remaining root with a deadline diagnostic$/, function (this: ContextModeWorld) {
+  const result = this.staleSweep as ReturnType<typeof sweepStaleContextModeWorkers> & { killedPids: number[] };
+  assert.deepEqual(result.killedPids, [300], 'deadline must prevent the second kill');
+  assert.match(result.skipped.join('\n'), /sweep deadline 5000ms reached; 1 selected owned stale worker\(s\) left untouched/, 'deadline skip must be explicit');
+});

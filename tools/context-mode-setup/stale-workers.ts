@@ -8,6 +8,10 @@ export const CONTEXT_MODE_WORKER_MARKER = 'tools/context-mode-setup/worker.ts';
 export const CONTEXT_MODE_WORKER_DIR_PREFIX = '.ctx-mode-';
 export const DEFAULT_STALE_WORKER_AGE_MS = 15 * 60 * 1000;
 export const DEFAULT_STALE_WORKER_SCAN_TIMEOUT_MS = 1_500;
+/** Keep recovery comfortably below the 30-second SessionStart hook budget. */
+export const DEFAULT_STALE_WORKER_SWEEP_DEADLINE_MS = 5_000;
+/** A corrupted process snapshot must not multiply the hook's kill latency. */
+export const DEFAULT_STALE_WORKER_CANDIDATE_CAP = 3;
 
 export interface ProcessSnapshot {
   pid: number;
@@ -100,17 +104,34 @@ export function sweepStaleContextModeWorkers(options: {
   platform?: NodeJS.Platform;
   listProcesses?: (platform: NodeJS.Platform) => ProcessSnapshot[];
   killTree?: (pid: number, options?: { platform?: NodeJS.Platform }) => void;
+  deadlineMs?: number;
+  candidateCap?: number;
+  clock?: () => number;
 } = {}): StaleWorkerSweepResult {
   const platform = options.platform ?? process.platform;
   try {
+    const clock = options.clock ?? Date.now;
+    const startedAt = clock();
+    const deadlineMs = options.deadlineMs ?? DEFAULT_STALE_WORKER_SWEEP_DEADLINE_MS;
+    const candidateCap = options.candidateCap ?? DEFAULT_STALE_WORKER_CANDIDATE_CAP;
     const snapshot = options.snapshot ?? (options.listProcesses ?? readProcessSnapshot)(platform);
-    const found = findProvablyOwnedStaleWorkers(snapshot, options.nowMs, options.ageMs);
+    const found = findProvablyOwnedStaleWorkers(snapshot, options.nowMs ?? startedAt, options.ageMs);
+    const skipped = [...found.skipped];
+    const selected = found.workers.slice(0, Math.max(0, candidateCap));
+    if (found.workers.length > selected.length) {
+      skipped.push(`candidate cap ${candidateCap} reached; ${found.workers.length - selected.length} owned stale worker(s) left untouched`);
+    }
     const killed: StaleContextModeWorker[] = [];
-    for (const worker of found.workers) {
+    for (let index = 0; index < selected.length; index += 1) {
+      if (clock() - startedAt >= deadlineMs) {
+        skipped.push(`sweep deadline ${deadlineMs}ms reached; ${selected.length - index} selected owned stale worker(s) left untouched`);
+        break;
+      }
+      const worker = selected[index];
       (options.killTree ?? forceKillProcessTree)(worker.pid, { platform });
       killed.push(worker);
     }
-    const result = { scanned: snapshot.length, candidates: found.workers.length, killed, skipped: found.skipped, failOpen: false };
+    const result = { scanned: snapshot.length, candidates: found.workers.length, killed, skipped, failOpen: false };
     appendStaleWorkerReport(options.homeRoot ?? (process.env.CLAUDE_HOME || process.env.USERPROFILE || os.homedir()), result);
     return result;
   } catch (error) {
