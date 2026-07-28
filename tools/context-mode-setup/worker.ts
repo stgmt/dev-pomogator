@@ -21,12 +21,13 @@ async function main(): Promise<void> {
     if (child?.pid) forceKillProcessTree(child.pid);
     try { fs.rmSync(path.dirname(workerScript), { recursive: true, force: true }); } catch { /* best effort */ }
   };
-  const timer = setTimeout(() => {
+  const terminate = () => {
     cleanup();
-    process.exitCode = 1;
-  }, MAX_INSTALL_RUNTIME_MS);
-  process.once('SIGTERM', cleanup);
-  process.once('SIGINT', cleanup);
+    process.exit(1);
+  };
+  const timer = setTimeout(terminate, MAX_INSTALL_RUNTIME_MS);
+  process.once('SIGTERM', terminate);
+  process.once('SIGINT', terminate);
   try {
     child = spawn(command, args, {
       detached: process.platform !== 'win32',
