@@ -2,7 +2,15 @@
 
 **NOT_READY — Unreleased work on `release/spec-generator-v4-finalization`. Latest published release: `v1.5.0` (historical baseline).**
 
-Current graph: 64 FR, 171 AC, 521 scenarios, 238 tasks. Effective evidence: 0 passed, 507 stale, 14 `not_run`. Historical canonical run: 506 passed, 15 `not_run`. Forty-five legacy `DONE` tasks remain execution-unverified.
+## Execution-aware task planning slice (planned)
+
+Phase 45 plans a canonical `task/v1` model, a typed dependency DAG, execution-surface reconciliation, a derived conflict graph, deterministic waves, task-owned evidence freshness, bounded discovery, and MCP/SQLite planning reports. A dependency DAG alone only proves ordering; it cannot explain overlapping execution surfaces, safe parallel batches, actual-versus-declared work, stale evidence, or the impact of a blocked task. The planned outputs are stable execution-plan, conflict, impact, critical-path/slack, staleness, migration, and redacted-security reports.
+
+**Systematic AI-agent planner (FR-80):** requirements, design, and five FR-80 planner tasks are authored. Implementation has not started; `SPECGEN004_657`–`SPECGEN004_664` are unexecuted and `UNKNOWN`.
+
+**NOT_IMPLEMENTED:** Phase 45 is specification and task planning only. `SPECGEN004_616` through `SPECGEN004_656` remain **BDD UNKNOWN** until the real Docker BDD suite records them as `PASSED`; this slice is not release-ready.
+
+Current graph: 79 FR, 253 AC, 616 scenarios, 272 tasks. Effective evidence: 0 passed, 507 stale, 14 `not_run`. Historical canonical run: 506 passed, 15 `not_run`. Forty-five legacy `DONE` tasks remain execution-unverified.
 
 ---
 

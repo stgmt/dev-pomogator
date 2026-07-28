@@ -109,3 +109,18 @@ The V4World After hook removes the per-scenario tempDir, including the isolated 
 |------|-----|----------------|------------|------------|
 | `guardExit` | number | When step (runGuard) | Then step | the guard's exit code |
 | `guardStdout` | string | When step (runGuard) | Then step | the guard's stdout JSON |
+
+### Decision: Git-tracked census is a mandatory migration-readiness input
+
+**Требование:** [FR-11](FR.md#fr-11-repository-wide-remaining-old-test-census-blocks-false-ready)
+
+The census uses `git ls-files -z` as the repository ownership boundary, applies the four legacy-test filename patterns, classifies every match exactly once, and returns a fail-closed report when Git inventory or an invariant is unavailable. `spec-verdict` and MCP status consume the same report and merge its debt into the mandatory `BDD_SYNC` readiness lane.
+
+**Rationale:** Git ownership avoids worktree/cache inflation and one shared report prevents CLI/MCP split-brain.
+
+**Trade-off:** A repository checkout without Git metadata cannot claim migration readiness; this deliberate fail-closed result is stricter than the old filesystem scan.
+
+**Alternatives considered:**
+- Continue recursive filesystem scanning; rejected because checked-out worktree mirrors and generated files inflate the product corpus.
+- Keep the census as a standalone report; rejected because a disconnected report cannot prevent CLI/MCP false READY.
+

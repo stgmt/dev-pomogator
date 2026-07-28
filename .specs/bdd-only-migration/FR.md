@@ -74,3 +74,14 @@ HONEST LIMIT (false-positive surface, stated openly per claims-need-evidence): a
 **Связанные AC:** [AC-10](ACCEPTANCE_CRITERIA.md#ac-10-fr-10)
 
 **Use Case:** [UC-4](USE_CASES.md#uc-4-editing-an-existing-not-yet-migrated-test-is-still-allowed)
+
+## FR-11: Repository-wide remaining-old-test census blocks false READY
+
+`bdd-only-migration` SHALL own a deterministic census of Git-tracked repository files matching `*.test.ts`, `*_test.py`, `*Tests.cs`, or `*_test.go`. Each match SHALL be classified exactly once as either `in_scope` migration debt or `exempt`, and every exemption SHALL carry a non-empty repository-owned reason. Worktree mirrors, generated artifacts, dependency trees, caches, and fixtures SHALL NOT inflate the tracked-product census.
+
+The census SHALL publish conservation and cardinality invariants: `tracked = in_scope + exempt`, paths are unique, classifications are disjoint, and no matched path is silently dropped. If Git inventory is unavailable, an exemption lacks a reason, an invariant fails, or any `in_scope` file remains, both the authoritative CLI verdict and MCP `get_spec_status(view=status)` SHALL report `NOT_READY` for `bdd-only-migration`; they SHALL NOT preserve a structural/execution-only `READY` result.
+
+**Связанные AC:** [AC-11](ACCEPTANCE_CRITERIA.md#ac-11-fr-11)
+
+**Use Case:** [UC-4](USE_CASES.md#uc-4-editing-an-existing-not-yet-migrated-test-is-still-allowed)
+

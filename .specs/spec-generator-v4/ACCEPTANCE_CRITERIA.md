@@ -1103,3 +1103,343 @@ WHEN existing markdown, Gherkin, implementation, result, and trace producers bui
 
 WHEN the markdown producer builds a graph from a DESIGN decision carrying a `**Требование:**` line AND a Gherkin scenario tagged to that requirement records a PASSED result THEN an `entitles` edge SHALL be emitted from the Decision to its FR/NFR AND a `verifies` edge SHALL be emitted from the passing Scenario to the FR/NFR carrying producer and version provenance from the run.
 
+
+
+## AC-68.1
+
+**Требование:** [FR-68](FR.md#fr-68)
+
+WHEN an AC has no own `tested-by` scenario THEN conformance SHALL emit blocking `UNCOVERED_AC` for that AC.
+
+## AC-68.2
+
+**Требование:** [FR-68](FR.md#fr-68)
+
+WHEN an AC has own scenarios but none has current non-stale passing `verifies` evidence THEN conformance SHALL emit blocking `UNVERIFIED_AC`.
+
+## AC-68.3
+
+**Требование:** [FR-68](FR.md#fr-68)
+
+WHEN only the parent FR has a passing scenario THEN the AC SHALL expose that scenario as `inherited` context and SHALL remain unsatisfied.
+
+## AC-68.4
+
+**Требование:** [FR-68](FR.md#fr-68)
+
+WHEN mandatory readiness is evaluated THEN `AC_SATISFACTION` SHALL be GREEN only when every in-scope AC has own current passing evidence and the set is non-empty.
+
+## AC-68.5
+
+**Требование:** [FR-68](FR.md#fr-68)
+
+WHEN a retrofit mechanically copies sibling AC tags without distinct behavioral assertions THEN the graph SHALL emit blocking `TAG_BULK_SUSPECT` and SHALL NOT count those tags as proof.
+
+
+## AC-69.1
+
+**Требование:** [FR-69](FR.md#fr-69)
+
+WHEN the readiness inventory is built THEN NFR nodes and their own `tested-by` and `verifies` edges SHALL be retained on the same canonical/spec-scoped path as FR nodes.
+
+## AC-69.2
+
+**Требование:** [FR-69](FR.md#fr-69)
+
+WHEN a required NFR has no own scenario THEN conformance SHALL emit blocking `UNCOVERED_NFR`; WHEN it has scenarios but no current passing verification THEN conformance SHALL emit blocking `UNVERIFIED_NFR`.
+
+## AC-69.3
+
+**Требование:** [FR-69](FR.md#fr-69)
+
+WHEN mandatory readiness is evaluated THEN `NFR_SATISFACTION` SHALL use non-empty ALL over every required NFR and SHALL keep optional or justified not-applicable NFRs visible but non-blocking.
+
+## AC-69.4
+
+**Требование:** [FR-69](FR.md#fr-69)
+
+WHEN NFR metadata declares test, analysis, review, inspection or demonstration THEN delivery evaluation, SQLite restore and MCP query SHALL preserve and evaluate that declared method consistently.
+
+
+## AC-70.1
+
+**Требование:** [FR-70](FR.md#fr-70)
+
+WHEN an evidence manifest is parsed THEN the graph SHALL create an `Evidence` node and typed `evidenced-by` edge with one exhaustive endpoint rule.
+
+## AC-70.2
+
+**Требование:** [FR-70](FR.md#fr-70)
+
+WHEN artifact evidence is valid THEN its manifest SHALL contain schemaVersion, attachment-relative path, media kind/type, sha256, byte size, producer, invocation/run id, finalized time and subject revision.
+
+## AC-70.3
+
+**Требование:** [FR-70](FR.md#fr-70)
+
+WHEN the file is missing, non-regular, empty, escapes the attachment root, has a mismatched digest, is not finalized or is stale for its subject revision THEN required operational proof SHALL evaluate MISSING and block the smart verdict.
+
+## AC-70.4
+
+**Требование:** [FR-70](FR.md#fr-70)
+
+WHEN verification method is `demonstration` or `inspection` THEN a required operational-proof demand SHALL be implied unless a justified not-applicable record is explicit.
+
+## AC-70.5
+
+**Требование:** [FR-70](FR.md#fr-70)
+
+WHEN operational proof declares hand-authored `PRESENT` or references an evidence node whose evaluated state is not PRESENT THEN validation SHALL reject or keep the demand incomplete.
+
+## AC-70.6
+
+**Требование:** [FR-70](FR.md#fr-70)
+
+WHEN evidence nodes and edges pass through full/incremental graph builds, MCP transactions or SQLite cold/warm restore THEN identity, manifest fields, endpoint validation and verdict SHALL remain equivalent.
+
+
+## AC-71.1
+
+**Требование:** [FR-71](FR.md#fr-71)
+
+WHEN a demonstration is produced THEN the live target SHALL be exercised and recording SHALL be finalized before hashing or review begins.
+
+## AC-71.2
+
+**Требование:** [FR-71](FR.md#fr-71)
+
+WHEN a demonstration is reviewed THEN reviewer and producer SHALL be distinct auditable identities and the review SHALL bind to the exact artifact digest.
+
+## AC-71.3
+
+**Требование:** [FR-71](FR.md#fr-71)
+
+WHEN the judge emits a verdict THEN it SHALL include judge invocation reference, criterion ids, timestamped observations and a `CONFIRMED|DENIED` result for every required criterion.
+
+## AC-71.4
+
+**Требование:** [FR-71](FR.md#fr-71)
+
+WHEN reviewer equals producer, either identity is absent, the digest differs, review is incomplete, the judge is unavailable or any required criterion is DENIED THEN operational proof SHALL remain incomplete and the smart verdict SHALL NOT be GREEN.
+
+## AC-71.5
+
+**Требование:** [FR-71](FR.md#fr-71)
+
+WHEN FR-71 is claimed complete THEN its own `verificationMethod: demonstration` obligation SHALL be backed by an independently reviewed MP4 that demonstrates the full producer-to-judge protocol.
+
+
+
+## AC-72.1
+**Требование:** [FR-72](FR.md#fr-72)
+WHEN the versioned `task/v1` parser reads a strict human-authored TASKS.md task with all supported fields THEN it SHALL return a canonical record containing immutable qualified ID, title, kind, definition revision, declared status, estimateMinutes, typed requirement/AC links, ordered DoneWhen criteria, dependencies, surfaces, artifacts, and evidence policy; AND the response SHALL identify `task/v1` as representation version.
+
+## AC-72.2
+**Требование:** [FR-72](FR.md#fr-72)
+WHEN an unchanged supported `task/v1` record containing ordered criteria, dependencies, unknown fields, comments, and READY is parsed, rendered, and parsed again THEN the normalized canonical JSON SHALL be byte-equivalent under stable ordering; AND READY, unknown fields, comments, and source spans SHALL be preserved.
+
+## AC-72.3
+**Требование:** [FR-72](FR.md#fr-72)
+WHEN strict TASKS.md contains a legacy, loose, unknown-field, or invalid task record during observe or warn THEN the task census and MCP query SHALL retain its source text, source location, normalized candidate ID when available, and named migration diagnostic; AND the planner SHALL not silently omit it or schedule it as canonical READY work.
+
+## AC-72.4
+**Требование:** [FR-72](FR.md#fr-72)
+WHEN a valid `task/v1` record is accepted from Markdown source THEN SpecGraph, MCP, lifecycle, census, and summary renderer SHALL expose the same normalized qualified ID, declared status, definition revision, representation version, and diagnostic set; AND any disagreement SHALL return `TASK_PROJECTION_DIVERGENCE` rather than competing values.
+
+## AC-72.5
+**Требование:** [FR-72](FR.md#fr-72)
+IF a proposed canonical mutation has mutable ID, exact/case/Unicode-normalized duplicate ID, invalid kind/status, or unresolved typed requirement/AC link THEN dry-run and apply SHALL return field-level named findings with every source location; AND apply SHALL retain prior canonical model while query continues to expose the rejected record and diagnostic.
+
+## AC-73.1
+**Требование:** [FR-73](FR.md#fr-73)
+WHEN a `task/v1` task declares depends-on, blocks, or consumes with normalized target and non-empty reason THEN graph SHALL persist source, target, relation, hard/soft semantics, and reason; AND IF target does not resolve THEN it SHALL return `TASK_DEPENDENCY_TARGET_MISSING` with source location and SHALL not add the edge.
+
+## AC-73.2
+**Требование:** [FR-73](FR.md#fr-73)
+IF a dry-run or apply proposes a self-referential dependency or a directed cycle THEN it SHALL return `TASK_SELF_DEPENDENCY` or `TASK_DEPENDENCY_CYCLE`, including normalized cycle path and source locations; AND it SHALL retain the prior DAG and return no execution schedule.
+
+## AC-73.3
+**Требование:** [FR-73](FR.md#fr-73)
+WHEN execution planning selects a task with unfinished hard predecessor THEN MCP SHALL return deterministic reverse blocker entries with predecessor ID, relation, reason, declared status, current evidence state, and source location; AND selected task status SHALL be BLOCKED rather than READY.
+
+## AC-73.4
+**Требование:** [FR-73](FR.md#fr-73)
+WHEN readiness evaluates a task THEN it SHALL return READY only if every hard predecessor has current-success evidence; AND prose-only ordering SHALL return a queryable `TASK_PROSE_ORDERING` migration diagnostic without creating edge or changing readiness.
+
+## AC-73.5
+**Требование:** [FR-73](FR.md#fr-73)
+WHEN identical valid dependency declarations load through source parse, incremental refresh, cold SQLite restoration, and warm SQLite restoration THEN each projection SHALL return byte-equivalent stable-key DAG JSON and reverse blockers ordered by normalized qualified ID.
+
+## AC-74.1
+**Требование:** [FR-74](FR.md#fr-74)
+WHEN a task declares an execution surface THEN validation SHALL require a permitted kind, read/write/exclusive access, normalized locator and scope, and non-empty rationale; AND it SHALL return the normalized typed claim only when every required field is valid.
+
+## AC-74.2
+**Требование:** [FR-74](FR.md#fr-74)
+IF a file/glob locator contains `..`, absolute or UNC form, case/Unicode normalization collision, repository-root escape, realpath symlink/junction escape, or exceeds configured glob depth/match budget THEN validation SHALL return the named confinement or expansion finding with redacted locator; AND planner SHALL emit no safe batch containing that claim.
+
+## AC-74.3
+**Требование:** [FR-74](FR.md#fr-74)
+WHEN execution records changed files or emitted artifacts for a task THEN reconciliation SHALL compare normalized actual outputs with declared claims and return undeclared, missing, and over-broad findings with task ID and redacted paths; AND it SHALL not alter declared claims automatically.
+
+## AC-74.4
+**Требование:** [FR-74](FR.md#fr-74)
+WHEN MCP queries a valid task surface THEN it SHALL return direct normalized/redacted claims and every transitive impacted task or artifact with deterministic explanatory path; AND it SHALL distinguish declared, actual, and external-resource impact.
+
+## AC-74.5
+**Требование:** [FR-74](FR.md#fr-74)
+WHEN a nonlocal external-contract or runtime-resource claim has no local path THEN the system SHALL retain typed boundary, rationale, and redacted locator as data; AND it SHALL neither execute locator text nor infer a filesystem path or credential from it.
+
+## AC-75.1
+**Требование:** [FR-75](FR.md#fr-75)
+WHEN dependency-ready tasks contain overlapping normalized claims THEN conflict derivation SHALL return write/write, stable read/write, and exclusive conflict entries for every unsafe pair; AND each entry SHALL identify its access-mode rule rather than create a dependency.
+
+## AC-75.2
+**Требование:** [FR-75](FR.md#fr-75)
+WHEN tasks touch different files but claim the same normalized API contract, schema, registry, configuration, generated artifact, or test artifact THEN the planner SHALL return a semantic conflict with both claim locations; AND it SHALL not treat differing file names as evidence of independence.
+
+## AC-75.3
+**Требование:** [FR-75](FR.md#fr-75)
+WHEN MCP returns a derived conflict THEN it SHALL name both normalized task IDs, conflict class, contributing claim locations, normalized overlap, deterministic derivation rule, audit-override state, and redacted explanation; AND absence of any required field SHALL return `TASK_CONFLICT_EXPLANATION_INCOMPLETE`.
+
+## AC-75.4
+**Требование:** [FR-75](FR.md#fr-75)
+IF a conflict override is requested THEN validation SHALL require identified conflict ID, exact scope, actor, rationale, creation time, and future expiry; AND IF expiry has passed, scope differs, or audit fields are missing THEN it SHALL return `TASK_CONFLICT_OVERRIDE_INVALID` and SHALL not suppress conflict.
+
+## AC-75.5
+**Требование:** [FR-75](FR.md#fr-75)
+WHEN conflict exists in a dependency-ready wave THEN planner SHALL partition the wave into conflict-free batches whose union equals the wave; AND it SHALL preserve the original dependency-edge set and return `TASK_UNBATCHABLE_CONFLICT` for any task that cannot be safely placed.
+
+## AC-76.1
+**Требование:** [FR-76](FR.md#fr-76)
+WHEN planner receives a selected acyclic subgraph with resolved hard dependencies THEN it SHALL emit topological waves in which no task precedes unfinished hard predecessor; AND IF selected ID is missing or graph is cyclic THEN it SHALL return named finding and no schedule.
+
+## AC-76.2
+**Требование:** [FR-76](FR.md#fr-76)
+WHEN a topological wave contains derived conflicts THEN planner SHALL emit conflict-free batches whose deterministic union equals that wave; AND every batch response SHALL include readiness explanation and conflict IDs for deferred tasks.
+
+## AC-76.3
+**Требование:** [FR-76](FR.md#fr-76)
+WHEN selected tasks provide estimates or documented default applies THEN planner SHALL half-up round to minutes, calculate weighted longest critical path and per-task slack, and mark defaulted/unavailable estimate source; AND invalid estimate SHALL return `TASK_ESTIMATE_INVALID` with no inferred metric.
+
+## AC-76.4
+**Требование:** [FR-76](FR.md#fr-76)
+WHEN a selected task is blocked or stale THEN planner SHALL return its blocker or stale reason, deterministic affected downstream path, and schedule impact; AND it SHALL not present the prior critical path as executable.
+
+## AC-76.5
+**Требование:** [FR-76](FR.md#fr-76)
+WHEN the 300-task, 450-edge, 1,500-claim benchmark corpus is planned at least 30 times from defined cold and warm states using identical input/configuration THEN stable-key JSON output for waves, batches, critical path, slack, and normalized-ID tie order SHALL be byte-equivalent; AND warm p95 SHALL be ≤200ms.
+
+## AC-77.1
+**Требование:** [FR-77](FR.md#fr-77)
+WHEN a validation run stores task-owned evidence THEN graph SHALL persist validates/tested-by edges plus owner task, validated task/artifact IDs, run identity, redacted environment, result, proof scope, and fingerprints/digests; AND missing owner or required fingerprint SHALL return `TASK_EVIDENCE_INVALID`.
+
+## AC-77.2
+**Требование:** [FR-77](FR.md#fr-77)
+WHEN consumed artifact digest, prerequisite definition revision, scenario, or evidence input changes THEN evaluator SHALL return deterministic downstream stale closure with every task ID, propagation path, and stale reason; AND affected current completion SHALL become STALE.
+
+## AC-77.3
+**Требование:** [FR-77](FR.md#fr-77)
+WHEN current successful evidence becomes stale THEN it SHALL remain queryable as historical and SHALL not satisfy DONE; AND lifecycle SHALL permit stale-to-READY or in-progress only after current prerequisite and evidence evaluation succeeds.
+
+## AC-77.4
+**Требование:** [FR-77](FR.md#fr-77)
+IF evidence policy requires full proof and only filtered passing evidence is attached THEN MCP SHALL retain its scope and result as historical/current diagnostic; AND evaluator SHALL return `TASK_FULL_PROOF_REQUIRED` and SHALL not mark task DONE.
+
+## AC-77.5
+**Требование:** [FR-77](FR.md#fr-77)
+WHEN evidence is persisted then restored through cold or warm SQLite and queried through MCP THEN Graph, SQLite, and MCP SHALL return equal owner, redacted environment, result, current/historical state, fingerprints, and stale reason; AND divergence SHALL return `TASK_EVIDENCE_PERSISTENCE_DIVERGENCE`.
+
+## AC-78.1
+**Требование:** [FR-78](FR.md#fr-78)
+WHEN discovery finds candidate work THEN it SHALL return schema-valid graph-patch proposal containing output digest and requested changes; AND graph state SHALL remain unchanged until ordinary validated apply succeeds.
+
+## AC-78.2
+**Требование:** [FR-78](FR.md#fr-78)
+WHEN discovery proposes child tasks THEN each child ID SHALL be stable normalized derivation of parent ID plus semantic key; AND validation SHALL return named bound finding and retain state when configured child-count, scope, or write budget is exceeded.
+
+## AC-78.3
+**Требование:** [FR-78](FR.md#fr-78)
+WHEN a previously accepted discovery output digest replays with equal normalized content THEN dedupe SHALL return the prior proposal or idempotent no-op; AND graph SHALL contain no duplicate child node or edge.
+
+## AC-78.4
+**Требование:** [FR-78](FR.md#fr-78)
+WHEN discovery patch is dry-run or applied THEN it SHALL execute same target, DAG, conflict, evidence, CAS, and all-or-nothing validators as authored typed task; AND any finding SHALL leave every proposed child and edge unpersisted.
+
+## AC-78.5
+**Требование:** [FR-78](FR.md#fr-78)
+WHEN discovery yields no candidate THEN evidence SHALL record `no_children` with output digest; AND IF proposal reaches configured high-impact threshold THEN response SHALL be awaiting_approval and apply SHALL refuse until authorized approval is recorded.
+
+## AC-79.1
+**Требование:** [FR-79](FR.md#fr-79)
+WHEN agent calls versioned execution-plan MCP query for valid selected subgraph THEN response SHALL return stable-key JSON with typed nodes/edges, direct/transitive impact, conflicts, waves, batches, critical path, slack, stale reasons, diagnostics, and redacted explanations.
+
+## AC-79.2
+**Требование:** [FR-79](FR.md#fr-79)
+WHEN typed task or graph-patch mutation is dry-run or applies expected revision THEN dry-run SHALL write nothing; AND stale CAS, validation failure, or persistence failure SHALL return deterministic findings and retain every affected record, while valid CAS apply SHALL commit all changes atomically.
+
+## AC-79.3
+**Требование:** [FR-79](FR.md#fr-79)
+WHEN canonical planning data is persisted then restored from defined cold and warm SQLite states THEN model, diagnostics, edges, plan, stale state, and reports SHALL be byte-equivalent stable-key JSON; AND any mismatch SHALL return `TASK_PLANNING_PERSISTENCE_DIVERGENCE`.
+
+## AC-79.4
+**Требование:** [FR-79](FR.md#fr-79)
+WHEN installed server.bundle.mjs runs with project dependencies absent against real spec data THEN execution-plan query and validation SHALL return normal result or explicit failure; AND it SHALL not silently skip planning or report false success.
+
+## AC-79.5
+**Требование:** [FR-79](FR.md#fr-79)
+WHEN planning reports are requested THEN each quality, conflict, impact, critical-path, stale-evidence, migration, or security report SHALL identify source task IDs and actionable redacted explanation; AND no report SHALL expose secret locator or environment value.
+
+## AC-79.6
+**Требование:** [FR-79](FR.md#fr-79)
+WHEN identical legacy source is evaluated in observe, warn, and enforce modes THEN each report SHALL preserve equal source task count and queryable diagnostics; AND enforce SHALL return explicit canonicalization rejection for unresolved record without dropping it.
+
+
+
+## AC-80.1
+**Требование:** [FR-80](FR.md#fr-80)
+WHEN the same ordered FR, AC, DESIGN, BDD, and repository-reality inputs are synthesized twice THEN the system SHALL produce one stable-key, byte-equivalent ordered set of canonical `task/v1` records in the stored SpecGraph before FR-72..FR-79 consume it.
+
+## AC-80.2
+**Требование:** [FR-80](FR.md#fr-80)
+WHEN repository reality establishes a domain boundary THEN the system SHALL set `domainMode: ddd` and SHALL record the verified boundary, aggregate, invariant, and contract on relevant synthesized records.
+
+
+
+The responsibility map SHALL name each DDD component owner and interface; aggregates and invariants remain valid only when repository evidence supports them.
+## AC-80.3
+**Требование:** [FR-80](FR.md#fr-80)
+WHEN repository reality does not establish a domain boundary THEN the system SHALL set `domainMode: none`, SHALL record module, adapter, and contract boundaries, and SHALL NOT fabricate entities, aggregates, or invariants.
+
+## AC-80.4
+**Требование:** [FR-80](FR.md#fr-80)
+WHEN synthesis selects applicable acceptance criteria THEN the system SHALL create exactly one owning acceptance lane per applicable criterion and SHALL report a named finding for every missing, duplicate, or unowned lane.
+
+## AC-80.5
+**Требование:** [FR-80](FR.md#fr-80)
+WHEN an implementation surface cannot be established from repository reality THEN the system SHALL create a named `BLOCKED` investigation record with its owning acceptance lane and SHALL reject finalization until the investigation resolves it.
+
+## AC-80.6
+**Требование:** [FR-80](FR.md#fr-80)
+WHEN an acceptance lane is synthesized THEN the system SHALL assign one vertical BDD slice that owns its requirement, acceptance criterion, scenario, and verification evidence.
+
+## AC-80.7
+**Требование:** [FR-80](FR.md#fr-80)
+WHEN a synthesized vertical BDD slice changes behavior THEN the system SHALL retain typed causal BDD-only TDD edges in the order `RED -> GREEN -> REFACTOR` and SHALL reject a reordered, absent, or cross-slice causal edge.
+
+## AC-80.8
+**Требование:** [FR-80](FR.md#fr-80)
+WHEN the system generates a canonical task record THEN it SHALL include measurable `doneWhen`, an estimate, requirement and acceptance references, typed dependencies, and declared read, write, and exclusive surfaces.
+
+## AC-80.9
+**Требование:** [FR-80](FR.md#fr-80)
+WHEN synthesized output is validated against source claims and acceptance lanes THEN the system SHALL conserve every source claim and lane exactly once and SHALL emit deterministic named findings instead of silently losing or duplicating a record.
+
+## AC-80.10
+**Требование:** [FR-80](FR.md#fr-80)
+WHEN FR-72..FR-79 request planning input THEN the system SHALL consume synthesized canonical records and edges from the stored SpecGraph directly and SHALL NOT create, persist, or reconcile a second planning graph.
+
+
+
+
+The deterministic inputs SHALL include an approved design revision with digest and a repository-verified component/interface responsibility map; `domainMode: ddd` retains only repository-verified boundaries, aggregates, invariants, and contracts, while `domainMode: none` retains module/adapter/contract ownership without fabricated domain concepts. Each canonical graph task SHALL be one independently valuable AC/BDD vertical outcome; its ordered 2–5-minute BDD-only RED/GREEN/REFACTOR execution steps remain inside its brief and SHALL NOT become separately schedulable graph tasks. A deterministic pre-planner synthesis-review gate SHALL emit named failures for placeholders, lane-conservation violations, missing boundary or ownership, absent exact source locations or interfaces, infeasibility, untyped or cyclic causal order, and incomplete declared surfaces. `TaskPlanResult` SHALL give an AI agent a self-contained canonical-data brief containing full task text, exact repository-relative files/source ranges, interfaces, typed dependencies, relevant predecessor summaries, linked scenario and evidence command, blockers, safe-batch identity, machine next action, and pairwise no-causal-path/no-conflict independence proof. It SHALL provide `DONE`, `DONE_WITH_CONCERNS`, `NEEDS_CONTEXT`, and `BLOCKED` outcomes: only evidence-backed `DONE` completes; every other outcome preserves evidence-backed diagnostics and creates a follow-up proposal. The projection SHALL neither persist a second planning authority nor introduce an executor.

@@ -3766,3 +3766,459 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Then the markdown producer emits an entitles edge from the decision to its requirement
     And the builder emits a verifies edge from the passing scenario carrying producer and version
 
+
+
+  @feature68 @FR-68 @AC-68.1
+  Scenario: SPECGEN004_596 uncovered acceptance criterion is a blocking error
+    Given a graph fixture with an AC that has no own tested-by scenario
+    When I evaluate completion evidence conformance
+    Then UNCOVERED_AC is reported as an error for that exact criterion
+
+  @feature68 @FR-68 @AC-68.2
+  Scenario: SPECGEN004_597 unverified acceptance criterion is a blocking error
+    Given an AC with own scenarios but no current passing verifies edge
+    When I evaluate completion evidence conformance
+    Then UNVERIFIED_AC is reported as an error for that exact criterion
+
+  @feature68 @FR-68 @AC-68.3
+  Scenario: SPECGEN004_598 parent requirement evidence does not complete sibling criteria
+    Given two sibling ACs whose parent FR has a passing scenario
+    And only the first AC has its own passing scenario
+    When I build the readiness inventory
+    Then the first AC is satisfied and the second has inherited non-completing context
+
+  @feature68 @FR-68 @AC-68.4
+  Scenario: SPECGEN004_599 AC satisfaction is non-empty ALL
+    Given multiple ACs with one satisfied criterion and one open criterion
+    When I evaluate mandatory readiness lanes
+    Then AC_SATISFACTION is RED until every criterion has own passing evidence
+
+  @feature68 @FR-68 @AC-68.5
+  Scenario: SPECGEN004_600 bulk criterion tag laundering is rejected
+    Given sibling AC tags copied across scenarios without distinct behavioral assertions
+    When I evaluate tag bulk suspicion
+    Then blocking TAG_BULK_SUSPECT is emitted and copied tags are not counted as proof
+
+  @feature69 @FR-69 @AC-69.1
+  Scenario: SPECGEN004_601 NFR nodes and evidence survive readiness inventory
+    Given a required NFR with its own tagged and passing scenario
+    When I build the spec-scoped readiness inventory
+    Then the NFR and its tested-by and verifies edges remain in the inventory
+
+  @feature69 @FR-69 @AC-69.2
+  Scenario: SPECGEN004_602 uncovered and unverified NFRs are blocking
+    Given one required NFR with no scenario and another with no passing scenario
+    When I evaluate completion evidence conformance
+    Then UNCOVERED_NFR and UNVERIFIED_NFR are reported as errors
+
+  @feature69 @FR-69 @AC-69.3
+  Scenario: SPECGEN004_603 NFR satisfaction is required non-empty ALL
+    Given required optional and justified not-applicable NFRs
+    When I evaluate mandatory readiness lanes
+    Then NFR_SATISFACTION depends on every required NFR and keeps the others visible
+
+  @feature69 @FR-69 @AC-69.4
+  Scenario: SPECGEN004_604 NFR verification methods persist across all surfaces
+    Given NFR fixtures using test analysis review inspection and demonstration methods
+    When I round-trip them through parser MCP query and SQLite restore
+    Then every surface returns the same method and evaluated evidence state
+
+  @feature70 @FR-70 @AC-70.1
+  Scenario: SPECGEN004_605 evidence node has a typed endpoint contract
+    Given a requirement and a valid content-addressed evidence manifest
+    When I build and validate the graph
+    Then an Evidence node and evidenced-by edge are present with valid endpoints
+
+  @feature70 @FR-70 @AC-70.2
+  Scenario: SPECGEN004_606 evidence manifest preserves provenance and integrity fields
+    Given a complete artifact manifest with identity timing digest and subject fields
+    When I parse persist restore and query its Evidence node
+    Then all manifest fields remain byte-equivalent across surfaces
+
+  @feature70 @FR-70 @AC-70.3
+  Scenario Outline: SPECGEN004_607 invalid artifact evidence never becomes present
+    Given required operational proof with an artifact that is <invalidity>
+    When I derive its evidence state
+    Then the evidence is MISSING and the smart verdict is not GREEN
+
+    Examples:
+      | invalidity |
+      | missing |
+      | non-regular |
+      | empty |
+      | outside the attachment root |
+      | digest-mismatched |
+      | not finalized |
+      | stale for the subject revision |
+
+  @feature70 @FR-70 @AC-70.4
+  Scenario: SPECGEN004_608 demonstration and inspection imply operational proof
+    Given requirements whose verification methods are demonstration inspection and test
+    When I normalize their delivery demands
+    Then demonstration and inspection require operational proof and test does not gain it implicitly
+
+  @feature70 @FR-70 @AC-70.5
+  Scenario: SPECGEN004_609 manual present and dead evidence targets are rejected
+    Given operational proof with hand-authored PRESENT or a non-present evidence target
+    When I validate and evaluate the demand
+    Then manual PRESENT is invalid and target existence alone cannot satisfy the demand
+
+  @feature70 @FR-70 @AC-70.6
+  Scenario: SPECGEN004_610 evidence survives graph MCP transaction and SQLite restore
+    Given a valid Evidence node edge manifest and review fixture
+    When I use full and incremental builds staged MCP transactions and SQLite cold-warm restore
+    Then identity endpoint validation fields and verdict are equivalent on every path
+
+  @feature71 @FR-71 @AC-71.1
+  Scenario: SPECGEN004_611 demonstration recording is finalized before review
+    Given a live target exercise with a video recorder
+    When the producer closes the recording and registers its manifest
+    Then hashing and judge review begin only after the artifact is finalized
+
+  @feature71 @FR-71 @AC-71.2
+  Scenario: SPECGEN004_612 independent reviewer binds the exact artifact digest
+    Given a finalized demonstration with distinct producer and reviewer identities
+    When the reviewer evaluates the artifact
+    Then the review records both identities and the exact reviewed digest
+
+  @feature71 @FR-71 @AC-71.3
+  Scenario: SPECGEN004_613 judge verdict is complete and timestamped
+    Given a demonstration with multiple required criteria
+    When the independent judge emits its structured verdict
+    Then every criterion has a timestamped observation and CONFIRMED or DENIED outcome
+
+  @feature71 @FR-71 @AC-71.4
+  Scenario Outline: SPECGEN004_614 invalid independent review never completes proof
+    Given required demonstration proof whose review is <invalidity>
+    When I evaluate independent judgment
+    Then operational proof remains incomplete and the smart verdict is not GREEN
+
+    Examples:
+      | invalidity |
+      | reviewer equals producer |
+      | producer identity absent |
+      | reviewer identity absent |
+      | bound to a different digest |
+      | missing a required criterion |
+      | contains a required DENIED outcome |
+      | unavailable |
+
+  @feature71 @FR-71 @AC-71.5
+  Scenario: SPECGEN004_615 protocol dogfoods its own independently reviewed MP4
+    Given the FR-71 live producer-to-judge walkthrough has been recorded
+    When an independent judge reviews that exact MP4 against every AC-71 criterion
+    Then the evidence manifest and CONFIRMED verdict satisfy FR-71 demonstration proof
+
+
+
+@feature72 @FR-72 @AC-72.1
+Scenario: SPECGEN004_616 Canonical parsing retains task contract
+  Given a strict task declares identity, revision, typed links, criteria, surfaces, artifacts, and evidence policy
+  When the execution planner parses it
+  Then the query returns every declared canonical field
+
+@feature72 @FR-72 @AC-72.2
+Scenario: SPECGEN004_617 Canonical READY task round-trips losslessly
+  Given a canonical READY task with ordered dependencies and criteria
+  When it is parsed rendered and parsed again
+  Then canonical stable-key JSON is byte-equivalent after Unicode/case normalization and READY, unknown fields, comments, and source spans remain equal
+
+@feature72 @FR-72 @AC-72.3
+Scenario: SPECGEN004_618 Legacy task text remains visible
+  Given strict TASKS.md contains a loose legacy item
+  When census loads it
+  Then the item remains visible with actionable migration finding
+
+@feature72 @FR-72 @AC-72.4
+Scenario: SPECGEN004_619 Task views share canonical identity
+  Given a canonical task revision and READY status
+  When Graph MCP lifecycle census and summary query it
+  Then each view reports equal ID revision and status
+
+@feature72 @FR-72 @AC-72.5
+Scenario: SPECGEN004_620 Invalid task apply is atomic
+  Given a persisted canonical task snapshot
+  When apply proposes duplicate ID and unresolved AC link
+  Then field findings return and snapshot is unchanged
+
+@feature73 @FR-73 @AC-73.1
+Scenario: SPECGEN004_621 Typed dependency retains reason
+  Given task A depends-on task B because schema generation must finish
+  When graph builds dependencies
+  Then A has typed edge to B with that reason
+
+@feature73 @FR-73 @AC-73.2
+Scenario: SPECGEN004_622 Cycle proposal is refused
+  Given A depends-on B and B depends-on C
+  When dry-run proposes C depends-on A
+  Then response names cycle and DAG remains unchanged
+
+@feature73 @FR-73 @AC-73.3
+Scenario: SPECGEN004_623 Blocker explanation names predecessor
+  Given task A depends-on incomplete B for contract publication
+  When task A is planned
+  Then A shows B relation reason and state as blocker
+
+@feature73 @FR-73 @AC-73.4
+Scenario: SPECGEN004_624 Prose ordering cannot make task ready
+  Given task A says after B in prose and task C has unfinished typed predecessor
+  When readiness is evaluated
+  Then A gets migration warning and C is not READY
+
+@feature73 @FR-73 @AC-73.5
+Scenario: SPECGEN004_625 Dependency graph restores deterministically
+  Given a valid typed DAG from TASKS.md
+  When source incremental and SQLite paths load it
+  Then ordered edges and reverse blockers match
+
+@feature74 @FR-74 @AC-74.1
+Scenario: SPECGEN004_626 Surface claim is structured
+  Given a task declares file write locator scope and rationale
+  When validation runs
+  Then permitted kind access normalized locator scope and rationale persist
+
+@feature74 @FR-74 @AC-74.2
+Scenario: SPECGEN004_627 Unsafe locators are flagged
+  Given task claims ../outside.ts and an unbounded glob
+  When planner validates surfaces
+  Then named redacted finding for traversal, absolute/UNC, normalization, realpath symlink/junction, or bounded-glob breach prevents safe scheduling without command execution
+
+@feature74 @FR-74 @AC-74.3
+Scenario: SPECGEN004_628 Actual artifacts reconcile with plan
+  Given task declares only src/planner.ts
+  When execution records src/planner.ts and config/runtime.json
+  Then report identifies undeclared actual artifact
+
+@feature74 @FR-74 @AC-74.4
+Scenario: SPECGEN004_629 Impact query shows paths
+  Given a task writes schema consumed by two dependent tasks
+  When MCP queries blast radius
+  Then direct claim and transitive tasks include explanations
+
+@feature74 @FR-74 @AC-74.5
+Scenario: SPECGEN004_630 Nonlocal locator is never executed
+  Given a task declares shell-like external-contract locator
+  When planner validates it
+  Then boundary remains typed data without command execution
+
+@feature75 @FR-75 @AC-75.1
+Scenario: SPECGEN004_631 Access overlap derives conflicts
+  Given ready tasks with write/write read/write and exclusive overlap
+  When conflicts are derived
+  Then each unsafe pair has applicable class
+
+@feature75 @FR-75 @AC-75.2
+Scenario: SPECGEN004_632 Semantic resource conflicts across files
+  Given two tasks edit different files but write API contract billing.v2
+  When conflicts are derived
+  Then semantic API conflict is returned
+
+@feature75 @FR-75 @AC-75.3
+Scenario: SPECGEN004_633 Conflict explanation is inspectable
+  Given two tasks conflict on normalized schema
+  When MCP queries conflict
+  Then tasks claims overlap and derivation rule are shown
+
+@feature75 @FR-75 @AC-75.4
+Scenario: SPECGEN004_634 Override expires
+  Given scoped audited conflict override with expiry
+  When time advances past expiry
+  Then it no longer suppresses conflict and audit remains visible
+
+@feature75 @FR-75 @AC-75.5
+Scenario: SPECGEN004_635 Batches never forge dependency
+  Given two ready tasks conflict in a wave
+  When batches are planned
+  Then they separate without adding DAG edge
+
+@feature76 @FR-76 @AC-76.1
+Scenario: SPECGEN004_636 Selected DAG yields parallel waves
+  Given A precedes B and C is independent
+  When selected subgraph is planned
+  Then A and C occur before B in labelled waves
+
+@feature76 @FR-76 @AC-76.2
+Scenario: SPECGEN004_637 Wave batches are conflict free
+  Given a wave has two conflicting tasks and one independent task
+  When planner partitions it
+  Then each batch is conflict free and union equals wave
+
+@feature76 @FR-76 @AC-76.3
+Scenario: SPECGEN004_638 Critical path uses estimates
+  Given acyclic graph with estimates and one documented default
+  When metrics calculate
+  Then weighted critical path slack and default marker return
+
+@feature76 @FR-76 @AC-76.4
+Scenario: SPECGEN004_639 Blocked task reveals schedule impact
+  Given blocked task lies on critical path
+  When plan reports schedule
+  Then blocker reason and affected downstream path are shown
+
+@feature76 @FR-76 @AC-76.5
+Scenario: SPECGEN004_640 Identical input gives identical plan
+  Given unchanged selected graph with equal candidates
+  When cold and warm planning run
+  Then stable-key JSON for waves, batches, critical path, slack, normalized-ID tie order, and half-up estimate rounding is byte-equivalent and warm p95 meets the 300-task/450-edge/1500-claim harness budget
+
+@feature77 @FR-77 @AC-77.1
+Scenario: SPECGEN004_641 Evidence is task owned
+  Given a validation run owns scenario and artifact evidence
+  When evidence stores
+  Then owner validated IDs run environment result and fingerprints persist
+
+@feature77 @FR-77 @AC-77.2
+Scenario: SPECGEN004_642 Input change closes stale descendants
+  Given B consumes artifact from A and C depends on B
+  When A fingerprint changes
+  Then B and C become stale with paths and reasons
+
+@feature77 @FR-77 @AC-77.3
+Scenario: SPECGEN004_643 Historical proof cannot complete stale task
+  Given successful evidence becomes stale
+  When lifecycle recovers task
+  Then history stays visible and task is not DONE before READY or in-progress
+
+@feature77 @FR-77 @AC-77.4
+Scenario: SPECGEN004_644 Filtered success is not full proof
+  Given evidence policy requires full suite
+  When only filtered passing run attaches
+  Then run remains visible and task is not DONE
+
+@feature77 @FR-77 @AC-77.5
+Scenario: SPECGEN004_645 Evidence survives restoration
+  Given current historical evidence and stale reasons
+  When graph persists restores and MCP queries
+  Then ownership result fingerprints and reasons agree
+
+@feature78 @FR-78 @AC-78.1
+Scenario: SPECGEN004_646 Discovery proposes instead of mutating
+  Given discovery finds candidate child task
+  When it finishes
+  Then schema-valid proposal returns and graph waits for apply
+
+@feature78 @FR-78 @AC-78.2
+Scenario: SPECGEN004_647 Discovery identities and budgets are bounded
+  Given stable semantic key and child scope write limits
+  When proposal exceeds limit
+  Then child ID derives from parent key and excess is rejected
+
+@feature78 @FR-78 @AC-78.3
+Scenario: SPECGEN004_648 Discovery replay is idempotent
+  Given accepted discovery output digest
+  When same output replays
+  Then no-op returns without duplicate task or edge
+
+@feature78 @FR-78 @AC-78.4
+Scenario: SPECGEN004_649 Discovery patch is atomic
+  Given patch has valid child and cyclic dependency
+  When dry-run and apply run
+  Then both report cycle and persist no patch part
+
+@feature78 @FR-78 @AC-78.5
+Scenario: SPECGEN004_650 Empty and high impact discovery are controlled
+  Given one discovery is empty and another is high impact
+  When proposals evaluate
+  Then first records no_children and second awaits approval
+
+@feature79 @FR-79 @AC-79.1
+Scenario: SPECGEN004_651 MCP query explains plan
+  Given selected graph has dependencies surfaces conflicts and stale evidence
+  When agent queries execution plan
+  Then typed graph impact conflicts waves batches path slack stale reasons and explanations return
+
+@feature79 @FR-79 @AC-79.2
+Scenario: SPECGEN004_652 Mutation honors dry-run CAS atomicity
+  Given graph revision and patch with invalid change
+  When dry-run and CAS apply request
+  Then dry-run writes nothing and apply leaves all records unchanged
+
+@feature79 @FR-79 @AC-79.3
+Scenario: SPECGEN004_653 SQLite preserves planning truth
+  Given canonical tasks claims evidence and plan persist
+  When cold and warm restore occur
+  Then model edges plan stale state and reports are equivalent
+
+@feature79 @FR-79 @AC-79.4
+Scenario: SPECGEN004_654 Installed bundle survives dependency absence
+  Given installed bundle launches without project node_modules
+  When plan query and validation run against real data
+  Then expected results return without silent dependency skip
+
+@feature79 @FR-79 @AC-79.5
+Scenario: SPECGEN004_655 Reports explain planning risk
+  Given plan has migration debt conflicts broad impact critical work and stale evidence
+  When reports query
+  Then source task IDs and actionable redacted explanations return without exposing secret locator or environment values
+
+@feature79 @FR-79 @AC-79.6
+Scenario: SPECGEN004_656 Rollout never loses legacy task
+  Given legacy task source in observe warn and enforce modes
+  When reports generate
+  Then count is preserved and enforce explicitly rejects unresolved record
+
+
+
+@feature80 @FR-80 @AC-80.1 @AC-80.2 @AC-80.4 @AC-80.6 @AC-80.8
+Scenario: SPECGEN004_657 synthesizes a DDD vertical acceptance slice before scheduling
+  Given repository reality identifies the "task-synthesis" domain boundary, "TaskSynthesis" aggregate, "one lane per acceptance criterion" invariant, and "task/v1" contract
+  And FR-80 has one applicable acceptance criterion and tagged BDD evidence
+  When deterministic pre-scheduling synthesis runs
+  Then it stores one `domainMode: ddd` canonical task/v1 vertical slice with its requirement, acceptance criterion, scenario, evidence, estimate, doneWhen, dependencies, and declared surfaces
+  And no FR-72..FR-79 scheduling operation creates another planning graph
+
+@feature80 @FR-80 @AC-80.1 @AC-80.3 @AC-80.8
+Scenario: SPECGEN004_658 synthesizes an infrastructure slice without invented domain entities
+  Given repository reality identifies a CLI module, filesystem adapter, and stable JSON contract but no domain boundary
+  When deterministic pre-scheduling synthesis runs
+  Then it stores `domainMode: none` with the module, adapter, and contract boundaries
+  And the generated task has measurable doneWhen, an estimate, requirement and acceptance references, typed dependencies, and read, write, and exclusive surfaces
+  And it does not create an entity, aggregate, or invariant
+
+@feature80 @FR-80 @AC-80.5
+Scenario: SPECGEN004_659 blocks finalization for an unknown implementation surface
+  Given an applicable acceptance lane has no repository-supported implementation surface
+  When deterministic pre-scheduling synthesis runs
+  Then it creates a named BLOCKED investigation record that owns the acceptance lane
+  And task finalization is rejected until that investigation is resolved
+
+@feature80 @FR-80 @AC-80.1 @AC-80.4 @AC-80.9 @AC-80.10
+Scenario: SPECGEN004_660 conserves every acceptance lane without loss or duplication
+  Given ordered FR, acceptance-criterion, DESIGN, BDD, and repository-reality inputs contain three applicable acceptance lanes
+  When deterministic pre-scheduling synthesis runs twice
+  Then each result contains exactly three uniquely owned lanes and stable-key byte-equivalent canonical task/v1 records
+  And a missing or duplicate source claim produces a named deterministic finding instead of silent loss or duplication
+  And the stored SpecGraph is the direct input to FR-72..FR-79 planning
+
+@feature80 @FR-80 @AC-80.6 @AC-80.7
+Scenario: SPECGEN004_661 preserves BDD-only RED GREEN REFACTOR causal ordering
+  Given an acceptance lane has a vertical BDD slice with RED, GREEN, and REFACTOR work
+  When deterministic pre-scheduling synthesis validates the slice
+  Then the slice owns its requirement, acceptance criterion, scenario, and verification evidence
+  And it persists typed causal edges in RED then GREEN then REFACTOR order
+  And a reordered, missing, or cross-slice causal edge is rejected
+
+
+
+@feature80 @FR-80 @AC-80.10
+Scenario: SPECGEN004_662 synthesizes canonical agent work from approved design ownership without micro-task explosion
+  Given an approved design revision and digest plus a repository-verified component/interface responsibility map
+  When deterministic task synthesis creates an AC/BDD vertical outcome
+  Then the stored SpecGraph contains one canonical task with exact source locations and interfaces
+  And its ordered 2–5-minute BDD-only RED, GREEN, and REFACTOR steps are embedded in its brief rather than separately schedulable graph nodes
+  And conditional `domainMode: ddd` retains only verified boundaries while `domainMode: none` invents no domain entities
+
+@feature80 @FR-80 @AC-80.10
+Scenario: SPECGEN004_663 rejects an incomplete synthesis before planning
+  Given a synthesized task set with a placeholder, an unconserved lane, missing ownership, no exact interface location, infeasible work, an untyped causal edge, and incomplete surfaces
+  When the deterministic pre-planner synthesis review runs
+  Then planning is rejected with stable named findings for every violation
+  And a cyclic or reordered BDD-only RED to GREEN to REFACTOR edge is rejected before batching
+
+@feature80 @FR-80 @AC-80.10
+Scenario: SPECGEN004_664 projects an evidence-safe agent brief and machine-proven parallel batch
+  Given canonical tasks with exact source context, interfaces, typed dependencies, predecessor summaries, scenarios, evidence commands, blockers, and declared surfaces
+  When `TaskPlanResult` is projected for an AI agent
+  Then each task brief is self-contained from the stored SpecGraph without a second plan authority or executor
+  And a safe batch includes pairwise proof of no causal path in either direction and no conflict pair rather than an assertion in prose
+  And only evidence-backed `DONE` completes a task while `DONE_WITH_CONCERNS`, `NEEDS_CONTEXT`, and `BLOCKED` retain diagnostics and create follow-up proposals

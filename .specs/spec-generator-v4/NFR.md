@@ -233,3 +233,34 @@ After FR-36 the graph holds ≈470 FR nodes instead of 47 (collision-dropped); t
 ## NFR-Reliability-12 (FR-41)
 
 Фазовый headless-агент SHALL иметь таймаут (default 15 мин, конфигурируемо) и бюджет ретраев гейта (default 2); исчерпание → оркестратор останавливается с явным FAIL-отчётом фазы (никогда не вечное ожидание и не тихий пропуск фазы).
+
+
+### NFR-Performance-11
+
+**Completion-evidence gate budget:** AC/NFR satisfaction plus artifact-manifest evaluation SHALL keep the existing agent-facing MCP/readiness response budget on a corpus of at least 811 AC nodes and 58 NFR nodes. Graph-only evaluation SHALL be linear in nodes plus edges; artifact hashing/probing SHALL be cached by stable path+size+mtime+digest metadata and SHALL NOT reread unchanged media on every status query.
+
+### NFR-Security-9
+
+**Artifact path confinement and bounded parsing:** Evidence paths SHALL resolve under the owning spec's declared attachment root; absolute paths, `..` traversal and symlink/junction escape SHALL be rejected. A manifest SHALL provide SHA-256 and byte size. Configurable byte/duration limits SHALL be enforced before semantic review; hashing and media probing SHALL stream rather than buffer the full artifact.
+
+### NFR-Reliability-13
+
+**Required evidence fails closed:** When a required artifact, integrity probe or independent judge is unavailable, malformed or times out, operational proof SHALL remain incomplete with an actionable retry reason; the system SHALL NOT infer CONFIRMED or PRESENT. This intentionally differs from NFR-Reliability-10's fail-open policy for advisory test-body auditing: operational proof is a delivery obligation whose absence is itself material evidence, so fail-open would recreate false completion. Optional evidence SHALL remain non-blocking.
+
+
+## NFR-Performance-12 (FR-72..FR-79)
+
+**Execution-plan workload and harness budget:** A benchmark corpus SHALL contain exactly 300 canonical `task/v1` tasks, 450 typed dependency edges distributed across at least 30 independent branches and at least 60 join/fan-in edges, and 1,500 surface claims distributed across every supported claim kind and all read/write/exclusive access modes. Cold means no in-memory graph, normalized-claim index, planner cache, or SQLite page cache; warm means all four are populated from the identical corpus. Harness SHALL run at least 30 independently timed warm queries after one warm-up pass, calculate p95 without excluding slow samples, and require ≤200ms. Validation/planning SHALL be linear or near-linear in nodes, edges, and claims except configured bounded conflict partitioning; discovery validation SHALL enforce child-count, scope, and write budgets before expansion.
+
+## NFR-Reliability-14 (FR-72..FR-79)
+
+**Determinism and completion truth:** Equal `task/v1` canonical JSON, selected-ID set, revision set, and configuration SHALL yield byte-equivalent stable-key JSON for model, DAG, conflict graph, waves, batches, critical path, slack, findings, and report order across incremental, defined cold, and defined warm paths. Every collection SHALL sort first by normalized qualified ID and then canonical secondary key; estimates SHALL use documented half-up minute rounding before path calculation. Cycles, stale completion, invalid estimates, and missing selected IDs SHALL fail closed with named findings and no inferred completion or schedule. Optional scheduling hints, absent-estimate defaults, and reconciliation advisories SHALL fail open only with explicit assumptions and SHALL never make blocked work READY or DONE.
+
+## NFR-Security-10 (FR-74, FR-79)
+
+**Surface confinement, normalization, and redaction:** Before validation, every file/glob locator SHALL undergo Unicode NFC normalization and platform-aware case normalization. The validator SHALL reject `..` traversal, absolute drive/root paths, UNC paths, normalization collisions, and any normalized or realpath-resolved target that escapes approved repository root. It SHALL resolve each existing component through realpath and reject symlink/junction escape. Glob expansion SHALL enforce configured maximum depth and match count before enumeration is returned. Locators/rationales are inert data: planner SHALL not execute command, script, URL, shell fragment, or embedded credential from them. MCP responses, diagnostics, reports, audits, evidence environments, and plan output SHALL redact secret-like values, preserving only non-secret path identity required for actionability.
+
+## NFR-Reliability-15 (FR-72, FR-77, FR-78)
+
+**Migration and discovery preservation:** Migration, parser, renderer, persistence, and rollout SHALL never silently drop tasks, dependencies, evidence, or discovery output. Legacy/rejected items, no-child results, and historical stale evidence remain inspectable with source identity and reason.
+

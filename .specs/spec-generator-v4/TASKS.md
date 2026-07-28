@@ -2227,14 +2227,15 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
 Источник: GitHub #171 and #169
 
 
-- [ ] Deliver typed requirement metadata and delivery demands -- @feature66 — id: P40-1 — Status: TODO | Est: 360m
+- [x] Deliver typed requirement metadata and delivery demands -- @feature66 — id: P40-1 — Status: DONE | Est: 360m
   _Requirements: [FR-66](FR.md#fr-66)_
+  _Acceptance: AC-66.1, AC-66.2, AC-66.3, AC-66.4, AC-66.5, AC-66.6_
   **Done When:**
-  - [ ] Docker BDD SPECGEN004_583..588 is authored against real parser/graph/census/MCP/SQLite and a pre-implementation RED run is retained.
-  - [ ] Typed metadata, closed demand registry, taskVerdict/delivery split, non-empty ALL and forwarded conflict/dedup behavior satisfy AC-66.1..AC-66.5.
-  - [ ] Validated MCP author/query and metadata schema migration dry-run/apply use the same validator as parser/conformance.
-  - [ ] SQLite cold/warm round-trip preserves schemaVersion, typed fields, _unknown, demands and delivery state.
-  - [ ] SPECGEN004_583..588 each has lastResult===PASSED; lint, MCP build, deps-absent, full Docker suite and CI are green; PR closes #171 and #169 and is merged to main.
+  - [x] `SPECGEN004_583`..`SPECGEN004_588` are implemented against real parser/graph/census/MCP/SQLite surfaces.
+  - [x] Typed metadata, closed demand registry, taskVerdict/delivery split, non-empty ALL and forwarded conflict/dedup behavior satisfy AC-66.1..AC-66.5.
+  - [x] Validated MCP author/query and metadata schema migration dry-run/apply use the same validator as parser/conformance.
+  - [x] SQLite cold/warm round-trip preserves schemaVersion, typed fields, _unknown, demands and delivery state.
+  - [x] `SPECGEN004_583`..`SPECGEN004_588` each has canonical `lastResult===PASSED` in full Docker run `1784931041687`; merged commit `741e0073` closes #171 and #169.
 
 
 ## Phase 41 — Typed edge endpoint contract (2026-07-24)
@@ -2270,3 +2271,316 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   - [ ] focused/full Docker suites, lint, build, and smart spec verdict are green.
   - [ ] `SPECGEN004_589`–`SPECGEN004_594` each have canonical `lastResult===PASSED`.
   - [ ] one merged PR closes GitHub #181 and #182 with green CI.
+
+
+## Phase 42 — Criterion and NFR completion truth (FR-68, FR-69)
+
+- [ ] Capture criterion/NFR gate Docker RED -- @feature68 @feature69 — id: P42-1 — Status: TODO | Est: 90m
+  _Requirements: [FR-68](FR.md#fr-68), [FR-69](FR.md#fr-69)_
+  _Acceptance: AC-68.1, AC-68.2, AC-68.3, AC-68.4, AC-68.5, AC-69.1, AC-69.2, AC-69.3, AC-69.4_
+  **Done When:**
+  - [ ] `SPECGEN004_596`..`SPECGEN004_604` have real step definitions with no undefined steps
+  - [ ] focused Docker BDD fails on missing own-AC/NFR evidence behavior before implementation
+  - [ ] RED evidence is retained outside the spec tree
+
+- [ ] Implement own-AC evidence and AC_SATISFACTION -- @feature68 — id: P42-2 — Status: TODO | Est: 180m
+  _Requirements: [FR-68](FR.md#fr-68)_
+  _Acceptance: AC-68.1, AC-68.2, AC-68.3, AC-68.4, AC-68.5_
+  **Done When:**
+  - [ ] own, inherited and passing AC evidence remain distinct in readiness inventory
+  - [ ] `UNCOVERED_AC` and `UNVERIFIED_AC` are blocking findings while inherited-only AC stays open
+  - [ ] `AC_SATISFACTION` uses non-empty ALL and bulk-tag laundering is rejected
+  - [ ] `SPECGEN004_596`..`SPECGEN004_600` are canonical PASSED
+
+- [ ] Implement NFR evidence parity and NFR_SATISFACTION -- @feature69 — id: P42-3 — Status: TODO | Est: 180m
+  _Requirements: [FR-69](FR.md#fr-69)_
+  _Acceptance: AC-69.1, AC-69.2, AC-69.3, AC-69.4_
+  **Done When:**
+  - [ ] NFR nodes/edges survive inventory, delivery evaluation, MCP and SQLite paths
+  - [ ] `UNCOVERED_NFR` and `UNVERIFIED_NFR` are blocking findings for required NFRs
+  - [ ] `NFR_SATISFACTION` applies method-aware required non-empty ALL
+  - [ ] `SPECGEN004_601`..`SPECGEN004_604` are canonical PASSED and performance budget is measured
+
+
+## Phase 43 — Content-addressed evidence and independent demonstration (FR-70, FR-71)
+
+- [ ] Capture artifact/judge protocol Docker RED -- @feature70 @feature71 — id: P43-1 — Status: TODO | Est: 90m
+  _Requirements: [FR-70](FR.md#fr-70), [FR-71](FR.md#fr-71)_
+  _Acceptance: AC-70.1, AC-70.2, AC-70.3, AC-70.4, AC-70.5, AC-70.6, AC-71.1, AC-71.2, AC-71.3, AC-71.4, AC-71.5_
+  **Done When:**
+  - [ ] `SPECGEN004_605`..`SPECGEN004_615` have real integration step definitions
+  - [ ] focused Docker BDD fails on absent Evidence node/evaluator/judge protocol
+  - [ ] RED evidence is retained outside the spec tree
+
+- [ ] Implement Evidence node edge manifest and persistence -- @feature70 — id: P43-2 — Status: TODO | Est: 240m
+  _Requirements: [FR-70](FR.md#fr-70)_
+  _Acceptance: AC-70.1, AC-70.2, AC-70.6_
+  **Done When:**
+  - [ ] `Evidence` and `evidenced-by` have exhaustive endpoint rules and full/incremental parity
+  - [ ] manifest fields round-trip through parser, MCP transaction and SQLite cold/warm restore
+  - [ ] distributed MCP bundle passes dependency-absent launch
+  - [ ] `SPECGEN004_605`, `SPECGEN004_606` and `SPECGEN004_610` are canonical PASSED
+
+- [ ] Implement fail-closed operational-proof evaluator -- @feature70 — id: P43-3 — Status: TODO | Est: 180m
+  _Requirements: [FR-70](FR.md#fr-70)_
+  _Acceptance: AC-70.3, AC-70.4, AC-70.5_
+  **Done When:**
+  - [ ] path escape, symlink escape, missing, non-regular, empty, digest mismatch, unfinished and stale variants all remain MISSING
+  - [ ] demonstration/inspection imply required operational proof and hand-authored PRESENT is invalid
+  - [ ] evidence refs use evaluated target state rather than target existence
+  - [ ] `SPECGEN004_607`..`SPECGEN004_609` are canonical PASSED
+
+- [ ] Implement independent digest-bound demonstration judge -- @feature71 — id: P43-4 — Status: TODO | Est: 240m
+  _Requirements: [FR-71](FR.md#fr-71)_
+  _Acceptance: AC-71.1, AC-71.2, AC-71.3, AC-71.4_
+  **Done When:**
+  - [ ] live producer finalizes recording before hash/review and judge sees the exact digest
+  - [ ] producer/reviewer identities and judge invocation are auditable and equality becomes `self-attested`
+  - [ ] every required criterion has timestamped `CONFIRMED|DENIED`; unavailable/incomplete/denied fails closed
+  - [ ] `SPECGEN004_611`..`SPECGEN004_614` are canonical PASSED
+
+- [ ] Dogfood FR-71 with an independently reviewed MP4 -- @feature71 — id: P43-5 — Status: TODO | Est: 90m
+  _Requirements: [FR-71](FR.md#fr-71)_
+  _Acceptance: AC-71.5_
+  **Done When:**
+  - [ ] the live producer-to-judge walkthrough is recorded as a finalized MP4 under the spec attachment root
+  - [ ] manifest digest, producer/run metadata and subject revision match the actual artifact
+  - [ ] a distinct judge reviews every AC-71 criterion and records timestamped CONFIRMED outcomes bound to the exact digest
+  - [ ] `SPECGEN004_615` is canonical PASSED and the smart verdict consumes the evidence instead of a hand-set flag
+
+
+## Phase 44 — Corpus retrofit before hard-gate activation (FR-68, FR-69)
+
+Measured baseline: 869 blocking gaps across 63 specs (803 AC without own scenario, 8 tagged AC without green own evidence, 58 NFR without own evidence). Each retrofit task requires semantic per-criterion review; mechanical tag copying is not completion evidence.
+
+- [ ] Retrofit spec-generator-v4 own AC and NFR evidence -- @feature68 @feature69 — id: P44-1 — Status: TODO | Est: 720m
+  _Requirements: [FR-68](FR.md#fr-68), [FR-69](FR.md#fr-69)_
+  _Acceptance: AC-68.1, AC-68.2, AC-68.3, AC-68.4, AC-68.5, AC-69.1, AC-69.2, AC-69.3_
+  **Done When:**
+  - [ ] all 233 measured spec-generator-v4 gaps have own semantically matching evidence or justified not-applicable state
+  - [ ] no criterion is closed only by copied parent-FR tags
+  - [ ] focused/full Docker suite stays green after the retrofit
+
+- [ ] Retrofit highest-debt subsystem specs -- @feature68 @feature69 — id: P44-2 — Status: TODO | Est: 720m
+  _Requirements: [FR-68](FR.md#fr-68), [FR-69](FR.md#fr-69)_
+  _Acceptance: AC-68.1, AC-68.2, AC-68.5, AC-69.2, AC-69.3_
+  **Done When:**
+  - [ ] `pomogator-doctor` 37, `session-pilot` 27 and `architecture-decision-builder` 21 measured gaps are zero
+  - [ ] every new tag is justified by the scenario's distinct assertions or a new scenario is authored
+  - [ ] each affected spec has a green smart verdict before moving to the next batch
+
+- [ ] Retrofit remaining named high-debt specs -- @feature68 @feature69 — id: P44-3 — Status: TODO | Est: 720m
+  _Requirements: [FR-68](FR.md#fr-68), [FR-69](FR.md#fr-69)_
+  _Acceptance: AC-68.1, AC-68.2, AC-68.5, AC-69.2, AC-69.3_
+  **Done When:**
+  - [ ] `tui-test-runner`, `onboard-repo-phase0` and `spec-workflow-md-validation` each reach zero from 20 measured gaps
+  - [ ] `forbid-root-artifacts` reaches zero from 19 and `personal-pomogator` from 16
+  - [ ] every affected spec has a green smart verdict
+
+- [ ] Retrofit long-tail specs to zero completion-evidence debt -- @feature68 @feature69 — id: P44-4 — Status: TODO | Est: 1440m
+  _Requirements: [FR-68](FR.md#fr-68), [FR-69](FR.md#fr-69)_
+  _Acceptance: AC-68.1, AC-68.2, AC-68.5, AC-69.2, AC-69.3_
+  **Done When:**
+  - [ ] every remaining spec is processed in bounded batches with before/after debt counts
+  - [ ] corpus measurement reports zero uncovered/unverified ACs and zero uncovered/unverified required NFRs
+  - [ ] no batch introduces `TAG_BULK_SUSPECT` or regresses an existing canonical scenario
+
+- [ ] Enable corpus-wide blocking AC and NFR completion gates -- @feature68 @feature69 — id: P44-5 — Status: TODO | Est: 90m
+  _Requirements: [FR-68](FR.md#fr-68), [FR-69](FR.md#fr-69)_
+  _Acceptance: AC-68.1, AC-68.2, AC-68.4, AC-68.5, AC-69.2, AC-69.3_
+  **Done When:**
+  - [ ] this task starts only after P44-1 through P44-4 report zero corpus debt
+  - [ ] `UNCOVERED_AC`, `UNVERIFIED_AC`, `UNCOVERED_NFR`, `UNVERIFIED_NFR` are errors on every spec with no legacy warning exception
+  - [ ] `AC_SATISFACTION` and `NFR_SATISFACTION` are mandatory lanes on every verdict surface
+  - [ ] full Docker suite, corpus-health, smart verdict and CI are green after activation
+
+## Phase 45 — Execution-aware task creation and planning (planned)
+
+TDD/delivery order: establish the lossless `task/v1` contract first; then add its dependency and execution-surface projections; then derive conflicts, schedules, evidence freshness, discovery, persistence, and installed rollout proof. Every task below remains `TODO` until its own listed scenarios have real Docker BDD evidence.
+
+- [ ] Task/v1 contract migration — id: p45-task-v1-contract — Status: TODO | Est: 360m
+  _Requirements: [FR-72](FR.md#fr-72)_
+  _Acceptance: AC-72.1, AC-72.2, AC-72.3, AC-72.4, AC-72.5_
+  _depends: none_
+  **Files:** `tools/spec-graph/types.ts`, `tools/spec-graph/parsers/tasks.ts`, `tools/spec-graph/task-plan.ts`, `tools/spec-graph/task-census.ts`, `tools/specs-generator/specs-generator-core.mjs`, `.claude/skills/task-board-forms/SKILL.md`, `tests/step_definitions/feature72_task_planning.ts`, `.specs/spec-generator-v4/spec-generator-v4.feature`.
+  **Done When:**
+  - [ ] `task/v1` preserves required fields, unknown fields, comments, source spans, identity, status, estimate, and Done When through parser → renderer → parser without semantic loss.
+  - [ ] Legacy task text remains queryable during observe/warn/enforce migration, while malformed canonical task writes are refused atomically.
+  - [ ] Core summaries and the task-board skill consume the same canonical task identity and retain the strict inline task header format.
+  - [ ] Docker BDD records `SPECGEN004_616`, `SPECGEN004_617`, `SPECGEN004_618`, `SPECGEN004_619`, and `SPECGEN004_620` passes against the real parser and MCP apply path.
+
+- [ ] Typed dependency DAG and readiness — id: p45-dependency-dag — Status: TODO | Est: 300m
+  _Requirements: [FR-73](FR.md#fr-73)_
+  _Acceptance: AC-73.1, AC-73.2, AC-73.3, AC-73.4, AC-73.5_
+  _depends: hard:p45-task-v1-contract_
+  **Files:** `tools/spec-graph/edge-schema.ts`, `tools/spec-graph/task-lifecycle.ts`, `tools/spec-graph/builder.ts`, `tools/spec-graph/incremental.ts`, `tools/spec-graph/conformance.ts`, `tools/spec-mcp-server/sqlite/persist.ts`, `tests/step_definitions/feature72_task_planning.ts`, `.specs/spec-generator-v4/spec-generator-v4.feature`.
+  **Done When:**
+  - [ ] `depends-on` edges retain kind and reason, reject missing/self/cyclic predecessors, and retain a stable reverse-blocker explanation.
+  - [ ] A task becomes ready only when every hard predecessor has current successful evidence; prose order cannot make it ready.
+  - [ ] Persisted and incrementally rebuilt DAGs restore in deterministic order with the same diagnostics.
+  - [ ] Docker BDD records `SPECGEN004_621`, `SPECGEN004_622`, `SPECGEN004_623`, `SPECGEN004_624`, and `SPECGEN004_625` passes.
+
+- [ ] Execution-surface claims and reconciliation — id: p45-execution-surfaces — Status: TODO | Est: 300m
+  _Requirements: [FR-74](FR.md#fr-74)_
+  _Acceptance: AC-74.1, AC-74.2, AC-74.3, AC-74.4, AC-74.5_
+  _depends: hard:p45-task-v1-contract_
+  **Files:** `tools/spec-graph/types.ts`, `tools/spec-graph/parsers/tasks.ts`, `tools/spec-graph/builder.ts`, `tools/spec-graph/task-impact.ts`, `tools/spec-graph/conformance.ts`, `tools/spec-mcp-server/tools.ts`, `tests/step_definitions/feature72_task_planning.ts`, `.specs/spec-generator-v4/spec-generator-v4.feature`.
+  **Done When:**
+  - [ ] Claims carry typed scope, locator, access mode, and artifact identity, and unsafe/non-local locators are diagnosed without execution.
+  - [ ] Actual artifacts reconcile against declared surfaces and an impact query returns direct and transitive blast-radius paths.
+  - [ ] Redacted output never exposes prohibited locator data while retaining actionable planning diagnostics.
+  - [ ] Docker BDD records `SPECGEN004_626`, `SPECGEN004_627`, `SPECGEN004_628`, `SPECGEN004_629`, and `SPECGEN004_630` passes.
+
+- [ ] Derived conflict graph and override controls — id: p45-conflict-graph — Status: TODO | Est: 300m
+  _Requirements: [FR-75](FR.md#fr-75)_
+  _Acceptance: AC-75.1, AC-75.2, AC-75.3, AC-75.4, AC-75.5_
+  _depends: hard:p45-dependency-dag, hard:p45-execution-surfaces_
+  **Files:** `tools/spec-graph/task-conflicts.ts`, `tools/spec-graph/task-planner.ts`, `tools/spec-graph/conformance.ts`, `tools/spec-mcp-server/tools.ts`, `tools/spec-mcp-server/sqlite/persist.ts`, `tests/step_definitions/feature72_task_planning.ts`, `.specs/spec-generator-v4/spec-generator-v4.feature`.
+  **Done When:**
+  - [ ] File-access and semantic-resource overlap derive inspectable conflicts without converting a conflict into a dependency edge.
+  - [ ] Each conflict report identifies both tasks, the shared evidence, severity, and a redacted explanation.
+  - [ ] Explicit overrides are bounded, auditable, and expire; no batch can fabricate a dependency to hide a conflict.
+  - [ ] Docker BDD records `SPECGEN004_631`, `SPECGEN004_632`, `SPECGEN004_633`, `SPECGEN004_634`, and `SPECGEN004_635` passes.
+
+- [ ] FR-80 synthesis contract, classification, and acceptance-lane conservation — id: p45-fr80-synthesis-contract — Status: TODO | Est: 240m
+  _Requirements: [FR-80](FR.md#fr-80)_
+  _Acceptance: AC-80.1, AC-80.2, AC-80.3, AC-80.4, AC-80.8, AC-80.9, AC-80.10_
+  _depends: hard:p45-task-v1-contract_
+  **Files:** `tools/spec-graph/types.ts`, `tools/spec-graph/task-synthesis.ts`, `tools/spec-graph/conformance.ts`, `tools/spec-graph/task-census.ts`, `tests/step_definitions/feature80_task_synthesis.ts`, `.specs/spec-generator-v4/spec-generator-v4.feature`.
+  **BDD:** `SPECGEN004_657`, `SPECGEN004_658`, `SPECGEN004_660`, `SPECGEN004_662`.
+  **Done When:**
+  - [ ] The deterministic synthesis input contract normalizes FR, AC, approved DESIGN ownership, tagged BDD, and inspected repository reality into stable-key, byte-equivalent `task/v1` candidates without creating a planner-private graph.
+  - [ ] Classification records `domainMode: ddd` only with repository-supported boundary, aggregate, and invariant evidence; infrastructure slices record `domainMode: none` and never invent those entities.
+  - [ ] Every applicable acceptance lane is owned exactly once, with requirement, acceptance, scenario, evidence, estimate, Done When, typed dependencies, and declared read/write/exclusive surfaces; missing or duplicate source claims emit named deterministic findings.
+  - [ ] `SPECGEN004_662` proves canonical agent work is synthesized from approved DESIGN ownership and repository-verified component/interface evidence without micro-task explosion.
+  - [ ] Docker BDD records `SPECGEN004_657`, `SPECGEN004_658`, `SPECGEN004_660`, and `SPECGEN004_662` pass against the real synthesis input and canonical SpecGraph path.
+
+- [ ] FR-80 task synthesis, causal ownership edges, and BLOCKED investigation — id: p45-fr80-synthesis-engine — Status: TODO | Est: 300m
+  _Requirements: [FR-80](FR.md#fr-80)_
+  _Acceptance: AC-80.1, AC-80.4, AC-80.5, AC-80.6, AC-80.7, AC-80.8, AC-80.10_
+  _depends: hard:p45-fr80-synthesis-contract, hard:p45-dependency-dag, hard:p45-execution-surfaces_
+  **Files:** `tools/spec-graph/task-synthesis.ts`, `tools/spec-graph/edge-schema.ts`, `tools/spec-graph/task-lifecycle.ts`, `tools/spec-graph/builder.ts`, `tools/spec-graph/conformance.ts`, `tests/step_definitions/feature80_task_synthesis.ts`, `.specs/spec-generator-v4/spec-generator-v4.feature`.
+  **BDD:** `SPECGEN004_659`, `SPECGEN004_661`, `SPECGEN004_663`.
+  **Done When:**
+  - [ ] Synthesis persists the owned canonical `task/v1` task, requirement, acceptance, scenario, and verification-evidence relations in the existing SpecGraph, with typed execution-surface and dependency edges rather than a second planner, store, executor, or task graph.
+  - [ ] A vertical BDD slice stores typed causal edges in RED → GREEN → REFACTOR order; reordered, missing, cross-slice, or ownership-breaking edges are rejected deterministically.
+  - [ ] An acceptance lane lacking a repository-supported implementation surface creates a named `BLOCKED` investigation record that owns the lane, and finalization rejects the lane until the investigation resolves.
+  - [ ] `SPECGEN004_663` rejects an incomplete ownership or typed-edge synthesis before planning, with a named deterministic finding rather than a partial plan.
+  - [ ] Docker BDD records `SPECGEN004_659`, `SPECGEN004_661`, and `SPECGEN004_663` pass against real persisted task and edge validation paths.
+
+- [ ] FR-80 SpecGraph, planner, MCP integration, and deterministic synthesis report — id: p45-fr80-synthesis-integration — Status: TODO | Est: 300m
+  _Requirements: [FR-80](FR.md#fr-80)_
+  _Acceptance: AC-80.1, AC-80.4, AC-80.8, AC-80.9, AC-80.10_
+  _depends: hard:p45-fr80-synthesis-engine, hard:p45-conflict-graph_
+  **Files:** `tools/spec-graph/task-synthesis.ts`, `tools/spec-graph/task-plan.ts`, `tools/spec-graph/task-planner.ts`, `tools/spec-graph/incremental.ts`, `tools/spec-mcp-server/tools.ts`, `tools/spec-mcp-server/server.ts`, `tools/spec-mcp-server/sqlite/persist.ts`, `tools/specs-generator/spec-status.ts`, `tests/step_definitions/feature80_task_synthesis.ts`, `.specs/spec-generator-v4/spec-generator-v4.feature`.
+  **BDD:** `SPECGEN004_657`, `SPECGEN004_658`, `SPECGEN004_660`.
+  **Done When:**
+  - [ ] The stored canonical synthesis result is the direct input to existing SpecGraph queries, conflict derivation, and wave planning; no FR-72..FR-79 operation creates, reads, or persists a second planner, store, executor, or planning graph.
+  - [ ] The integration exposes the canonical `TaskPlanResult` through the MCP handoff to the existing planner and query surfaces, preserving one authoritative graph and plan rather than duplicating authority.
+  - [ ] The MCP synthesis/report surface returns stable-order, byte-equivalent task records, lane ownership, edges, surfaces, BLOCKED investigations, and named conservation findings across fresh and restored SQLite state.
+  - [ ] Equivalent normalized inputs and restored state produce the same deterministic synthesis report and planner-visible graph ordering.
+  - [ ] Docker BDD records `SPECGEN004_657`, `SPECGEN004_658`, and `SPECGEN004_660` pass through the real SpecGraph, planner, and MCP integration path.
+
+- [ ] FR-80 real Docker BDD proof for synthesis — id: p45-fr80-synthesis-bdd-proof — Status: TODO | Est: 180m
+  _Requirements: [FR-80](FR.md#fr-80)_
+  _Acceptance: AC-80.1, AC-80.2, AC-80.3, AC-80.4, AC-80.5, AC-80.6, AC-80.7, AC-80.8, AC-80.9, AC-80.10_
+  _depends: hard:p45-fr80-synthesis-integration_
+  **Files:** `tests/step_definitions/feature80_task_synthesis.ts`, `tests/fixtures/v4-self-test/`, `.specs/spec-generator-v4/spec-generator-v4.feature`.
+  **BDD:** `SPECGEN004_657`, `SPECGEN004_658`, `SPECGEN004_659`, `SPECGEN004_660`, `SPECGEN004_661`, `SPECGEN004_662`, `SPECGEN004_663`, `SPECGEN004_664`.
+  **Done When:**
+  - [ ] Real Docker BDD records `SPECGEN004_657`, `SPECGEN004_658`, `SPECGEN004_659`, `SPECGEN004_660`, `SPECGEN004_661`, `SPECGEN004_662`, `SPECGEN004_663`, and `SPECGEN004_664` each pass through the implementation, parser, graph, planner, MCP, and persistence surfaces they claim.
+  - [ ] The proof asserts DDD and infrastructure classification, no invented domain entities, named BLOCKED investigation ownership, exact acceptance-lane conservation, approved-DESIGN ownership without micro-task explosion, incomplete-synthesis rejection, canonical `TaskPlanResult` MCP handoff, and RED → GREEN → REFACTOR causal ordering.
+  - [ ] The proof asserts that every pair admitted to a concurrent batch has no causal path in either direction and no conflict pair; either condition alone is insufficient for independence.
+  - [ ] The recorded evidence identifies each exact scenario result and rejects a filtered, undefined, pending, or inherited-only result as FR-80 completion proof; `DONE` remains evidence-backed only.
+
+- [ ] FR-80 canonical agent execution brief and next-action safe-batch projection — id: p45-fr80-agent-execution-projection — Status: TODO | Est: 240m
+  _Requirements: [FR-80](FR.md#fr-80)_
+  _Acceptance: AC-80.1, AC-80.4, AC-80.5, AC-80.8, AC-80.9, AC-80.10_
+  _depends: hard:p45-fr80-synthesis-integration, hard:p45-conflict-graph_
+  **Files:** `tools/spec-graph/task-synthesis.ts`, `tools/spec-graph/task-plan.ts`, `tools/spec-graph/task-planner.ts`, `tools/spec-graph/task-impact.ts`, `tools/spec-mcp-server/tools.ts`, `tools/specs-generator/spec-status.ts`, `tests/step_definitions/feature80_task_synthesis.ts`, `.specs/spec-generator-v4/spec-generator-v4.feature`.
+  **BDD:** `SPECGEN004_657`, `SPECGEN004_659`, `SPECGEN004_660`, `SPECGEN004_661`, `SPECGEN004_664`.
+  **Done When:**
+  - [ ] Each ready synthesized task has a canonical self-contained agent execution brief derived only from the existing SpecGraph and canonical `TaskPlanResult`: task identity and purpose, owned FR/AC/scenario/evidence lanes, typed predecessor and successor reasons, execution surfaces and access modes, causal RED → GREEN → REFACTOR obligations, exact Done When checks, and named BLOCKED investigation or refusal when any required field is unavailable.
+  - [ ] The deterministic next-action projection returns only ready tasks and safe concurrent batches from the canonical graph after hard dependencies, conflict evidence, surface ownership, acceptance-lane ownership, and BLOCKED investigations are evaluated; it reads no prose or second planner, store, or executor.
+  - [ ] A pair is independent only when it has no causal path in either direction and no conflict pair; batches exclude any pair failing either condition and return the canonical exclusion reason.
+  - [ ] Equivalent graph state, restored SQLite state, and repeated MCP reads produce byte-equivalent briefs, next-action ordering, safe-batch membership, exclusions, and explanations, so an agent can execute without rediscovering task context.
+  - [ ] `SPECGEN004_664` proves the evidence-safe agent brief and machine-proven safe batch projection through the real canonical SpecGraph/MCP path, including refusal for incomplete or blocked briefs.
+  - [ ] Docker BDD records `SPECGEN004_657`, `SPECGEN004_659`, `SPECGEN004_660`, `SPECGEN004_661`, and `SPECGEN004_664` pass through the real SpecGraph/MCP projection path.
+
+- [ ] Deterministic wave planner — id: p45-wave-planner — Status: TODO | Est: 360m
+  _Requirements: [FR-76](FR.md#fr-76)_
+  _Acceptance: AC-76.1, AC-76.2, AC-76.3, AC-76.4, AC-76.5_
+  _depends: hard:p45-conflict-graph, hard:p45-fr80-synthesis-integration, hard:p45-fr80-agent-execution-projection_
+  **Files:** `tools/spec-graph/task-plan.ts`, `tools/spec-graph/task-planner.ts`, `tools/spec-graph/incremental.ts`, `tools/specs-generator/spec-status.ts`, `tools/spec-mcp-server/tools.ts`, `tools/spec-mcp-server/sqlite/persist.ts`, `tests/step_definitions/feature72_task_planning.ts`, `.specs/spec-generator-v4/spec-generator-v4.feature`.
+  **Done When:**
+  - [ ] A selected validated subgraph yields topological waves whose batches contain neither a hard dependency violation nor an unapproved conflict.
+  - [ ] Critical path, estimate-weighted duration, slack, and blocked-task schedule impact are calculated from canonical estimates.
+  - [ ] Equivalent input and restored state produce byte-equivalent plan ordering and explanations.
+  - [ ] Docker BDD records `SPECGEN004_636`, `SPECGEN004_637`, `SPECGEN004_638`, `SPECGEN004_639`, and `SPECGEN004_640` passes.
+
+- [ ] Task-owned evidence and staleness closure — id: p45-owned-evidence-staleness — Status: TODO | Est: 330m
+  _Requirements: [FR-77](FR.md#fr-77)_
+  _Acceptance: AC-77.1, AC-77.2, AC-77.3, AC-77.4, AC-77.5_
+  _depends: hard:p45-task-v1-contract, hard:p45-dependency-dag_
+  **Files:** `tools/spec-graph/edge-schema.ts`, `tools/spec-graph/task-lifecycle.ts`, `tools/spec-graph/coverage.ts`, `tools/spec-graph/task-impact.ts`, `tools/spec-graph/conformance.ts`, `tools/spec-graph/verdict.ts`, `tools/spec-mcp-server/sqlite/persist.ts`, `tests/step_definitions/feature72_task_planning.ts`, `.specs/spec-generator-v4/spec-generator-v4.feature`.
+  **Done When:**
+  - [ ] Evidence is owned by one task and fingerprints the task inputs, dependency state, and proof scope needed to complete it.
+  - [ ] Relevant input changes close stale descendants with a stored reason; historical or filtered proof cannot complete a stale task.
+  - [ ] A restored database preserves evidence history and re-evaluates current validity rather than resurrecting stale completion.
+  - [ ] Docker BDD records `SPECGEN004_641`, `SPECGEN004_642`, `SPECGEN004_643`, `SPECGEN004_644`, and `SPECGEN004_645` passes.
+
+- [ ] Bounded proposal-only discovery — id: p45-bounded-discovery — Status: TODO | Est: 300m
+  _Requirements: [FR-78](FR.md#fr-78)_
+  _Acceptance: AC-78.1, AC-78.2, AC-78.3, AC-78.4, AC-78.5_
+  _depends: hard:p45-dependency-dag, hard:p45-execution-surfaces, hard:p45-conflict-graph_
+  **Files:** `tools/spec-graph/types.ts`, `tools/spec-graph/parsers/tasks.ts`, `tools/spec-graph/builder.ts`, `tools/spec-graph/conformance.ts`, `tools/spec-mcp-server/tools.ts`, `tools/spec-mcp-server/server.ts`, `tests/step_definitions/feature72_task_planning.ts`, `.specs/spec-generator-v4/spec-generator-v4.feature`.
+  **Done When:**
+  - [ ] Discovery emits an identified, bounded proposal and never mutates the canonical graph before explicit approval.
+  - [ ] Budgets cap nodes, edges, and affected surfaces; replaying an accepted proposal is idempotent.
+  - [ ] Empty, high-impact, invalid, or partially persisted proposals produce deterministic diagnostics and preserve prior state.
+  - [ ] Docker BDD records `SPECGEN004_646`, `SPECGEN004_647`, `SPECGEN004_648`, `SPECGEN004_649`, and `SPECGEN004_650` passes.
+
+- [ ] MCP persistence and planning reports — id: p45-mcp-persistence-reports — Status: TODO | Est: 420m
+  _Requirements: [FR-79](FR.md#fr-79)_
+  _Acceptance: AC-79.1, AC-79.2, AC-79.3, AC-79.4, AC-79.5_
+  _depends: hard:p45-wave-planner, hard:p45-owned-evidence-staleness, hard:p45-bounded-discovery_
+  **Files:** `tools/spec-mcp-server/tools.ts`, `tools/spec-mcp-server/server.ts`, `tools/spec-mcp-server/sqlite/persist.ts`, `tools/spec-graph/task-census.ts`, `tools/specs-generator/spec-status.ts`, `tools/specs-generator/spec-verdict.ts`, `tests/step_definitions/feature72_task_planning.ts`, `.specs/spec-generator-v4/spec-generator-v4.feature`.
+  **Done When:**
+  - [ ] Versioned MCP query returns stable-order selected nodes and edges, impact, conflicts, waves, batches, critical path, slack, staleness, and redacted explanations.
+  - [ ] Dry-run and CAS mutation report deterministic findings; a stale revision, validation error, or persistence failure changes neither graph nor SQLite state.
+  - [ ] SQLite cold/warm restoration preserves canonical records, diagnostics, plans, evidence state, and byte-equivalent planning query output.
+  - [ ] Reports identify task IDs and explanations for quality, conflicts, impact, critical path, stale evidence, migration diagnostics, and security findings.
+  - [ ] Docker BDD records `SPECGEN004_651`, `SPECGEN004_652`, `SPECGEN004_653`, `SPECGEN004_654`, and `SPECGEN004_655` passes.
+
+- [ ] Installed rollout proof — id: p45-installed-rollout-proof — Status: TODO | Est: 180m
+  _Requirements: [FR-79](FR.md#fr-79)_
+  _Acceptance: AC-79.6_
+  _depends: hard:p45-mcp-persistence-reports_
+  **Files:** `tools/spec-mcp-server/server.bundle.mjs`, `tools/specs-generator/specs-generator-core.mjs`, `tools/spec-graph/conformance.ts`, `tools/spec-mcp-server/tools.ts`, `tests/step_definitions/feature72_task_planning.ts`, `.specs/spec-generator-v4/spec-generator-v4.feature`.
+  **Done When:**
+  - [ ] The installed dependency-absent bundle performs real planning query and validation, rather than skipping the feature path.
+  - [ ] Observe → warn → enforce retains the source task count and queryability of legacy/invalid records, and enforce explicitly refuses unresolved canonicalization without silent loss.
+  - [ ] Docker BDD records `SPECGEN004_656` passes against the installed bundle and the source/declared task-count reconciliation.
+
+- [ ] Full execution-aware planning verification — id: p45-full-verification — Status: TODO | Est: 240m
+  _Requirements: [FR-72](FR.md#fr-72), [FR-73](FR.md#fr-73), [FR-74](FR.md#fr-74), [FR-75](FR.md#fr-75), [FR-76](FR.md#fr-76), [FR-77](FR.md#fr-77), [FR-78](FR.md#fr-78), [FR-79](FR.md#fr-79)_
+  _Acceptance: AC-72.1, AC-72.2, AC-72.3, AC-72.4, AC-72.5, AC-73.1, AC-73.2, AC-73.3, AC-73.4, AC-73.5, AC-74.1, AC-74.2, AC-74.3, AC-74.4, AC-74.5, AC-75.1, AC-75.2, AC-75.3, AC-75.4, AC-75.5, AC-76.1, AC-76.2, AC-76.3, AC-76.4, AC-76.5, AC-77.1, AC-77.2, AC-77.3, AC-77.4, AC-77.5, AC-78.1, AC-78.2, AC-78.3, AC-78.4, AC-78.5, AC-79.1, AC-79.2, AC-79.3, AC-79.4, AC-79.5, AC-79.6_
+  _depends: hard:p45-task-v1-contract, hard:p45-dependency-dag, hard:p45-execution-surfaces, hard:p45-conflict-graph, hard:p45-wave-planner, hard:p45-owned-evidence-staleness, hard:p45-bounded-discovery, hard:p45-mcp-persistence-reports, hard:p45-installed-rollout-proof_
+  **Files:** `tests/step_definitions/feature72_task_planning.ts`, `.specs/spec-generator-v4/spec-generator-v4.feature`, `tools/specs-generator/spec-verdict.ts`, `tools/specs-generator/spec-status.ts`, `tools/spec-graph/task-census.ts`, `tools/spec-graph/task-impact.ts`.
+  **Done When:**
+  - [ ] Full Docker BDD, corpus-health, smart spec verdict, and task census complete with no execution-aware planning regression.
+  - [ ] Actual-versus-declared execution-surface reconciliation reports zero unexplained in-scope discrepancy or fails with task IDs and paths.
+  - [ ] Every FR-72..FR-79 acceptance criterion has the listed task-owned scenario evidence; no status is inferred from a task checkbox or a filtered run.
+  - [ ] Docker BDD records `SPECGEN004_616`, `SPECGEN004_617`, `SPECGEN004_618`, `SPECGEN004_619`, `SPECGEN004_620`, `SPECGEN004_621`, `SPECGEN004_622`, `SPECGEN004_623`, `SPECGEN004_624`, `SPECGEN004_625`, `SPECGEN004_626`, `SPECGEN004_627`, `SPECGEN004_628`, `SPECGEN004_629`, `SPECGEN004_630`, `SPECGEN004_631`, `SPECGEN004_632`, `SPECGEN004_633`, `SPECGEN004_634`, `SPECGEN004_635`, `SPECGEN004_636`, `SPECGEN004_637`, `SPECGEN004_638`, `SPECGEN004_639`, `SPECGEN004_640`, `SPECGEN004_641`, `SPECGEN004_642`, `SPECGEN004_643`, `SPECGEN004_644`, `SPECGEN004_645`, `SPECGEN004_646`, `SPECGEN004_647`, `SPECGEN004_648`, `SPECGEN004_649`, `SPECGEN004_650`, `SPECGEN004_651`, `SPECGEN004_652`, `SPECGEN004_653`, `SPECGEN004_654`, `SPECGEN004_655`, and `SPECGEN004_656` passes.
+
+### Parallel plan
+
+- Wave 1 is `p45-task-v1-contract` alone because all later slices consume its canonical identity, parser, and rendering contract.
+- Wave 2 may run `p45-dependency-dag` and `p45-execution-surfaces` in parallel after Wave 1, provided each branch isolates shared `types.ts`, `parsers/tasks.ts`, and builder changes before integration.
+- Wave 3 admits `p45-conflict-graph` after both Wave-2 slices; `p45-owned-evidence-staleness` may then proceed after its dependency-DAG prerequisite. `p45-wave-planner` follows the conflict graph; `p45-bounded-discovery` follows dependency, surface, and conflict evidence. These are safe only when ownership of shared planner, conformance, and MCP tool surfaces is serialized at merge time.
+- Wave 4 is `p45-mcp-persistence-reports`, then `p45-installed-rollout-proof`, then `p45-full-verification`. There is no fake parallelism: concurrent edits to the shared parser or MCP bundle are a conflict, not a parallel batch.
+
+
+### Phase 45 managed summary
+
+Phase 45 contains 10 planned TODO slices. All headers use the strict graph-native `id` / `Status` / `Est` form; each owns explicit requirements, exact acceptance IDs, typed dependencies, file surfaces, and Docker-BDD scenario evidence. The canonical corpus-wide summary table remains unchanged because regenerating it would rewrite unrelated historical task rows; this Phase-local summary is intentionally additive and idempotent-safe.

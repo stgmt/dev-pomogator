@@ -507,3 +507,128 @@ This block enumerates the spec-doc edits applied as part of the v3→v4 transiti
 
 
 - ACCEPTANCE_CRITERIA.md: add AC-67.7 (FR-67)
+
+
+## FR-68..FR-71 — Completion evidence hardening
+
+| Path | Action | Requirement | Planned change |
+|---|---|---|---|
+| `tools/spec-graph/types.ts` | MODIFY | FR-68, FR-69, FR-70, FR-71 | Add AC/NFR satisfaction records, `Evidence` node, manifest/review verdict types and new finding codes. |
+| `tools/spec-graph/edge-schema.ts` | MODIFY | FR-70 | Add `evidenced-by` endpoints and preserve exhaustive endpoint validation. |
+| `tools/spec-graph/parsers/md.ts` | MODIFY | FR-70 | Parse evidence manifests into graph nodes/edges through the same metadata validation path. |
+| `tools/spec-graph/readiness-inventory.ts` | MODIFY | FR-68, FR-69 | Build own AC evidence, retain NFR evidence and evaluate mandatory `AC_SATISFACTION` / `NFR_SATISFACTION` lanes. |
+| `tools/spec-graph/conformance.ts` | MODIFY | FR-68, FR-69, FR-70 | Emit blocking uncovered/unverified AC/NFR findings, reject bulk-tag laundering and invalid operational proof. |
+| `tools/spec-graph/delivery-demands.ts` | MODIFY | FR-69, FR-70, FR-71 | Evaluate NFR demands, derive operational proof from live evidence state and independent review; forbid hand-authored PRESENT. |
+| `tools/spec-graph/metadata-schema.ts` | MODIFY | FR-70 | Make demonstration/inspection imply operational proof and validate manifest/reference constraints. |
+| `tools/spec-graph/verdict.ts` | MODIFY | FR-68, FR-69 | Include AC/NFR completion debt and mandatory lane results in one smart verdict. |
+| `tools/spec-graph/builder.ts` | MODIFY | FR-70 | Ingest evidence manifests and preserve full/incremental parity. |
+| `tools/spec-mcp-server/tools.ts` | MODIFY | FR-70, FR-71 | Expose evidence/review details and refuse invalid evidence-bearing transactions before write. |
+| `tools/spec-mcp-server/mutations.ts` | MODIFY | FR-70 | Validate evidence graph changes atomically. |
+| `tools/spec-mcp-server/sqlite/persist.ts` | MODIFY | FR-70, FR-71 | Persist/restore Evidence nodes, edges, manifests and independent review verdicts losslessly. |
+| `tools/spec-llm-judge/` | MODIFY | FR-71 | Add digest-bound media review with distinct producer/reviewer identities and structured per-criterion outcomes. |
+| `.claude/skills/` demonstration workflow | CREATE | FR-71 | Drive live exercise, finalized recording, manifest generation, independent judge invocation and evidence registration. |
+| `tests/step_definitions/feature68_completion_evidence.ts` | CREATE | FR-68, FR-69, FR-70, FR-71 | Real integration step definitions for SPECGEN004_596..615; no inline duplicate fixtures/helpers. |
+| `.specs/spec-generator-v4/spec-generator-v4.feature` | MODIFY | FR-68, FR-69, FR-70, FR-71 | BDD scenarios with both FR and AC tags, including invariant and counterfeit-artifact cases. |
+| `.specs/spec-generator-v4/attachments/` | CREATE | FR-71 | Dogfood MP4, manifest and independent review record for FR-71's own demonstration obligation. |
+
+
+## FR-72..FR-79 — Execution-aware task creation and planning
+
+| Action | Path | FRs | Planned responsibility |
+|---|---|---|---|
+| MODIFY | `tools/spec-graph/types.ts` | FR-72..FR-79 | Canonical task, dependency, surface, conflict, plan, evidence, discovery-patch, and report types. |
+| MODIFY | `tools/spec-graph/parsers/tasks.ts` | FR-72, FR-73, FR-74, FR-77, FR-78 | Strict TASKS.md compatibility parser, lossless renderer, legacy findings, and typed-task validation input. |
+| MODIFY | `tools/spec-graph/builder.ts` | FR-72, FR-73, FR-74, FR-77, FR-78 | Build/incrementally refresh typed task nodes, edges, claims, evidence, and proposal state. |
+| MODIFY | `tools/spec-graph/edge-schema.ts` | FR-73, FR-77 | Typed dependency and task-owned evidence endpoint contracts. |
+| MODIFY | `tools/spec-graph/task-lifecycle.ts` | FR-72, FR-73, FR-77 | READY/current-success evaluation, stale recovery, and evidence-policy completion. |
+| MODIFY | `tools/spec-graph/coverage.ts` | FR-77 | Task-owned scenario/evidence coverage and filtered-versus-full proof evaluation. |
+| MODIFY | `tools/spec-graph/conformance.ts` | FR-72..FR-79 | Typed task, DAG, surface, discovery, rollout, and stale-completion findings. |
+| MODIFY | `tools/spec-graph/task-census.ts` | FR-72, FR-79 | Canonical summary/census projection, migration counts, and rollout reports. |
+| CREATE | `tools/spec-graph/task-plan.ts` | FR-72, FR-73, FR-76 | Canonical plan input/result contracts and deterministic scheduling primitives. |
+| CREATE | `tools/spec-graph/task-conflicts.ts` | FR-74, FR-75 | Surface normalization, semantic overlap, conflict derivation, explanations, and expiring overrides. |
+| CREATE | `tools/spec-graph/task-planner.ts` | FR-73, FR-75, FR-76 | Selected-subgraph topological waves, conflict-free batches, critical path, slack, and blocked impact. |
+| CREATE | `tools/spec-graph/task-impact.ts` | FR-74, FR-77 | Direct/transitive blast radius, planned-vs-actual reconciliation, and stale closure explanations. |
+| MODIFY | `tools/spec-mcp-server/tools.ts` | FR-72..FR-79 | Execution-plan query and typed task/graph-patch dry-run/apply MCP contracts. |
+| MODIFY | `tools/spec-mcp-server/server.ts` | FR-79 | Register planning, report, and CAS/all-or-nothing mutation routes. |
+| MODIFY | `tools/spec-mcp-server/sqlite/persist.ts` | FR-72..FR-79 | Persist/restore canonical tasks, typed edges, claims, evidence, stale state, and plans. |
+| MODIFY | `tools/spec-mcp-server/server.bundle.mjs` | FR-79 | Rebuild installed runtime and prove dependency-absent behavior. |
+| MODIFY | `tools/specs-generator/specs-generator-core.mjs` | FR-72, FR-79 | Generator compatibility, observe/warn/enforce migration, and task projection integration. |
+| MODIFY | `tools/specs-generator/spec-verdict.ts` | FR-73, FR-77, FR-79 | Fail-closed cycle/stale-completion truth plus planning-quality report integration. |
+| MODIFY | `.claude/skills/task-board-forms/SKILL.md` | FR-72, FR-79 | Authoring guidance for canonical task fields and migration-safe summary generation. |
+| MODIFY | `.claude/skills/create-spec/references/phase3_finalization.md` | FR-72..FR-79 | Finalization workflow for typed task planning, evidence, discovery, reports, and rollout. |
+| CREATE | `tests/step_definitions/feature72_task_planning.ts` | FR-72..FR-79 | Real-engine BDD step definitions for SPECGEN004_616..656; no new non-BDD test file. |
+| MODIFY | `.specs/spec-generator-v4/spec-generator-v4.feature` | FR-72..FR-79 | Behavioral BDD scenarios SPECGEN004_616..656. |
+
+
+
+## FR-72..FR-79 file-change completeness amendment
+
+This table is the explicit implementation inventory for the execution-aware task-planning slice; every existing path is MODIFY and only the planner/conflict/impact modules plus BDD step definition are CREATE.
+
+| Action | Path | FR/AC responsibility |
+|---|---|---|
+| MODIFY | `tools/spec-graph/types.ts` | FR-72; AC-72.1..72.5 — versioned canonical task representation and preservation fields. |
+| MODIFY | `tools/spec-graph/parsers/tasks.ts` | FR-72; AC-72.1..72.5 — Markdown mapping, unknown/comment retention, diagnostics, and duplicate IDs. |
+| MODIFY | `tools/spec-graph/task-census.ts` | FR-72, FR-79; AC-72.3, AC-79.6 — source-preserving census and rollout counts. |
+| MODIFY | `tools/spec-graph/incremental.ts` | FR-72, FR-73, FR-76; AC-72.4, AC-73.5, AC-76.5 — deterministic incremental projection invalidation. |
+| MODIFY | `tools/spec-graph/coverage.ts` | FR-77; AC-77.1..77.5 — task-owned proof and full-proof evaluation. |
+| MODIFY | `tools/spec-graph/conformance.ts` | FR-72..FR-79; AC-72.3, AC-73.2, AC-74.2, AC-77.4, AC-78.4, AC-79.6 — named fail-closed diagnostics. |
+| MODIFY | `tools/spec-graph/builder.ts` | FR-72, FR-73, FR-74, FR-77, FR-78; AC-72.4, AC-73.1, AC-74.1, AC-77.1, AC-78.1 — typed graph construction. |
+| MODIFY | `tools/spec-graph/edge-schema.ts` | FR-73, FR-77; AC-73.1, AC-77.1 — dependency/evidence endpoints. |
+| MODIFY | `tools/spec-mcp-server/tools.ts` | FR-74..FR-79; AC-74.4, AC-75.3, AC-76.5, AC-79.1..79.6 — versioned query, redaction, CAS, and reports. |
+| MODIFY | `tools/spec-mcp-server/server.ts` | FR-79; AC-79.1, AC-79.2, AC-79.4 — actual source server route registration and dependency-absent error path. |
+| MODIFY | `tools/spec-mcp-server/sqlite/persist.ts` | FR-72, FR-73, FR-76, FR-77, FR-79; AC-73.5, AC-76.5, AC-77.5, AC-79.3 — canonical persistence/cold-warm parity. |
+| MODIFY | `tools/specs-generator/specs-generator-core.mjs` | FR-72, FR-79; AC-72.4, AC-79.6 — core task-summary renderer and staged migration output. |
+| MODIFY | `tools/specs-generator/spec-status.ts` | FR-72, FR-76, FR-79; AC-72.4, AC-76.4, AC-79.5 — human summary rendering and planning-risk status. |
+| MODIFY | `tools/specs-generator/spec-verdict.ts` | FR-73, FR-77, FR-79; AC-73.2, AC-77.4, AC-79.5 — cycle/stale fail-closed verdict integration. |
+| MODIFY | `tools/spec-mcp-server/server.bundle.mjs` | FR-79; AC-79.4 — bundled installed runtime. |
+| MODIFY | `.claude/skills/task-board-forms/SKILL.md` | FR-72, FR-79 — typed task authoring/summary workflow. |
+| MODIFY | `.claude/skills/create-spec/references/phase3_finalization.md` | FR-72..FR-79 — finalization and rollout workflow. |
+| CREATE | `tools/spec-graph/task-plan.ts` | FR-72, FR-73, FR-76; AC-72.4, AC-73.5, AC-76.1..76.5 — plan contract. |
+| CREATE | `tools/spec-graph/task-conflicts.ts` | FR-74, FR-75; AC-74.2, AC-75.1..75.5 — claim normalization/conflict derivation. |
+| CREATE | `tools/spec-graph/task-planner.ts` | FR-73, FR-75, FR-76; AC-73.4, AC-75.5, AC-76.1..76.5 — waves/batches/schedule. |
+| CREATE | `tools/spec-graph/task-impact.ts` | FR-74, FR-77; AC-74.3..74.5, AC-77.2 — reconciliation and stale impact. |
+| CREATE | `tests/step_definitions/feature72_task_planning.ts` | FR-72..FR-79; SPECGEN004_616..656 — real-engine BDD step definitions only. |
+| MODIFY | `.specs/spec-generator-v4/spec-generator-v4.feature` | FR-72..FR-79; SPECGEN004_616..656 — behavioral BDD contracts. |
+
+
+
+## Phase 45 prior-art reference
+
+| Action | Path | Requirement / purpose |
+|---|---|---|
+| CREATE | `.specs/spec-generator-v4/TASK_PLANNING_PRIOR_ART.md` | [FR-72](FR.md#fr-72)–[FR-79](FR.md#fr-79); canonical Russian prior-art reference for Phase 45 algorithms, original source URLs, licenses, adoption boundaries, local P45 mapping, and first-increment exclusions. |
+
+
+
+## FR-80 pre-scheduling task-synthesis implementation inventory
+
+| Action | Path | FR/AC responsibility |
+|---|---|---|
+| MODIFY | `tools/spec-graph/types.ts` | FR-80; AC-80.1..80.10 — canonical synthesis inputs, `domainMode`, acceptance-lane ownership, causal edge, investigation, surface, and conservation types. |
+| CREATE | `tools/spec-graph/task-synthesis.ts` | FR-80; AC-80.1..80.10 — pure deterministic FR/AC/DESIGN/BDD/repository-reality to `task/v1` synthesis, stable ordering, conditional DDD classification, conservation, and named diagnostics. |
+| MODIFY | `tools/spec-graph/builder.ts` | FR-80; AC-80.1, AC-80.10 — invoke synthesis into the existing stored SpecGraph before FR-72..FR-79 planning consumers. |
+| MODIFY | `tools/spec-graph/edge-schema.ts` | FR-80; AC-80.6, AC-80.7, AC-80.10 — validate vertical-slice ownership and typed `RED -> GREEN -> REFACTOR` causal edges without a second graph. |
+| MODIFY | `tools/spec-graph/conformance.ts` | FR-80; AC-80.4, AC-80.5, AC-80.7, AC-80.9 — fail closed for lane conservation, unknown-surface investigations, causal ordering, loss, and duplication. |
+| MODIFY | `tools/spec-graph/task-census.ts` | FR-80; AC-80.4, AC-80.9 — deterministic source-claim and acceptance-lane conservation census. |
+| MODIFY | `tools/spec-graph/task-lifecycle.ts` | FR-80; AC-80.5 — prevent finalization while a synthesis-owned `BLOCKED` investigation remains unresolved. |
+| CREATE | `tools/spec-graph/task-plan.ts` | FR-80; AC-80.10 — consume existing synthesized canonical nodes and edges as the planner input contract. |
+| MODIFY | `tools/spec-mcp-server/tools.ts` | FR-80; AC-80.1, AC-80.5, AC-80.9, AC-80.10 — return deterministic synthesis records and named diagnostics from the stored graph. |
+| CREATE | `tests/step_definitions/feature80_task_synthesis.ts` | FR-80; SPECGEN004_657..661 — real-engine BDD step definitions for domain, no-domain, blocked, conservation, and causal-order lanes. |
+| MODIFY | `.specs/spec-generator-v4/spec-generator-v4.feature` | FR-80; SPECGEN004_657..661 — traceable BDD scenarios. |
+
+
+
+
+### FR-80 agent-execution-plan amendment
+
+| Action | Path | FR/AC responsibility |
+|---|---|---|
+| MODIFY | `tools/spec-graph/types.ts` | FR-80; AC-80.10 — approved-design and responsibility-map input, canonical-vs-micro-step types, `TaskBrief`, `ExecutionOutcome`, `SafeBatch` and machine-checkable independence proof. |
+| MODIFY | `tools/spec-graph/task-synthesis.ts` | FR-80; AC-80.10 — deterministic synthesis, embedded 2–5-minute steps, pre-planner review gate, named findings, and outcome follow-up proposals. |
+| MODIFY | `tools/spec-graph/task-plan.ts` | FR-80; AC-80.10 — self-contained `TaskPlanResult` canonical-data projection with no second authority or executor. |
+| MODIFY | `tools/spec-graph/task-planner.ts` | FR-80; AC-80.10 — safe-batch calculation and pairwise no-path/no-conflict proof. |
+| MODIFY | `tools/spec-graph/task-lifecycle.ts` | FR-80; AC-80.10 — evidence-backed `DONE` completion and diagnostic/follow-up handling for `DONE_WITH_CONCERNS`, `NEEDS_CONTEXT`, and `BLOCKED`. |
+| MODIFY | `tools/spec-mcp-server/tools.ts` | FR-80; AC-80.10 — agent-consumable brief, outcome diagnostics, and safe-batch proof projection. |
+| MODIFY | `tests/step_definitions/feature80_task_synthesis.ts` | FR-80; SPECGEN004_662..664 — real-engine BDD steps for inputs/step granularity, review gate, and plan handoff/outcomes/batch proof. |
+| MODIFY | `.specs/spec-generator-v4/spec-generator-v4.feature` | FR-80; SPECGEN004_662..664 — traceable BDD contracts for the amendment. |

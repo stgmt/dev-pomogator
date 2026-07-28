@@ -1509,3 +1509,166 @@ Source code for v3 form-guards remains at `tools/specs-validator/*.ts` (producti
 Live transcript analysis in `audit-reports/hook-output-context-bloat-biet-handoff.md` found that the PostToolUse conformance push can print hundreds of kilobytes into Claude Code history: one captured hook event had `attachment.stdout len=713574`, and later events repeated around `stdoutLen=716640` for roughly 2690 findings. The source producer is `tools/spec-conformance-push/spec-conformance-push.ts`: the formatter iterates every finding for the agent-facing reminder, while `appendFindings(...)` already persists the full audit record separately. The fix is to cap only the agent-facing reminder and keep the durable log complete. [VERIFIED: handoff report + source inspection]
 
 
+
+
+## 2026-07-27 — Evidence provenance and independent demonstration review (FR-70/FR-71)
+
+### Hypotheses before research
+
+- **H1:** Content digest plus producer/run/time metadata can make an attachment tamper-evident and bind a review to exact bytes.
+- **H2:** Video is a first-class test-report attachment, but attachment support alone does not prove that the claimed behavior occurred.
+- **H3:** Independent review must be a separate verdict bound to the artifact digest; `reviewer == producer` is self-attestation, not independent evidence.
+- **H4:** A required operational proof must fail closed when its file, integrity metadata or independent review is unavailable.
+
+### Findings
+
+- [VERIFIED: SLSA Provenance v1.1, https://slsa.dev/spec/v1.1/provenance, fetched 2026-07-27] SLSA models provenance as an in-toto Statement, requires `buildDefinition` and `runDetails.builder.id` at level 1, defines an invocation identity, and provides start/finish timestamps. This supports a local evidence manifest with a producer identity, run identity, timestamps and a subject/resource descriptor. SLSA is a supply-chain build standard, so this is an adapted data model, not a claim that an MP4 itself is a SLSA build artifact.
+
+- [VERIFIED: Allure Attachments, https://allurereport.org/docs/attachments/, fetched 2026-07-27] Allure can attach arbitrary files to a test result, step or fixture and preview supported media. Its video section explicitly supports `video/mp4`, `video/ogg` and `video/webm` and says attached video lets a reader understand how the system reacted to user input/events. This confirms that MP4 is a practical test-evidence transport and that the review surface should preserve the relation to a concrete test/result.
+
+- [VERIFIED: Playwright Videos, https://playwright.dev/docs/videos, fetched 2026-07-27] Playwright records videos through test configuration/browser contexts, stores them under test results or a configured directory, and makes the video file available after `browserContext.close()`. This supports an implementation constraint: evidence ingestion must occur after the producer closes/finalizes the recording, never while bytes are still being written.
+
+- [SINGLE_SOURCE: NIST SP 800-86 landing page and publication, https://doi.org/10.6028/NIST.SP.800-86, fetched 2026-07-27] NIST provides an official guide for integrating forensic techniques into incident response. The fetched landing page confirms the publication but did not expose enough body text for a precise hash/chain-of-custody claim in this research run; do not use it as the sole normative source for the manifest schema.
+
+- [VERIFIED: local code, tools/spec-graph/delivery-demands.ts:20-37, inspected 2026-07-26] Current delivery evaluation trusts an explicit state before deriving evidence, checks `evidenceRefs` only for node existence, derives only implementation/integration-test automatically, and requires actor/audit reference only for WAIVED. Therefore `operational-proof` currently has no evidence adapter and permits hand-written `PRESENT` to bypass artifact inspection.
+
+- [VERIFIED: local code, tools/spec-mcp-server/tools.ts:1626-1798, inspected 2026-07-26] Attachments can be inventoried and read through the MCP door, but they are not SpecGraph nodes and do not participate in verdict computation.
+
+- [VERIFIED: local rule, .claude/rules/pomogator/screenshot-driven-verification.md, inspected 2026-07-26] The repository already requires an observation verdict in `CONFIRMED`/`DENIED` form for screenshots. FR-71 extends this local protocol from one image to timestamped video observations rather than inventing a second verdict vocabulary.
+
+### Decisions supported by the evidence
+
+1. `Evidence` is a first-class graph node. Its manifest carries `schemaVersion`, attachment-relative path, media type/kind, `sha256`, byte size, producer identity, run/invocation identity, creation/finalization time and subject revision.
+2. `evidenced-by` binds FR/NFR/AC/Scenario to the Evidence node. A review binds to the exact `sha256`; replacing bytes invalidates the review even when the path stays the same.
+3. Presence is derived, never asserted: file within the attachment root, regular and non-empty; digest matches; finalized timestamp exists; subject revision/freshness policy passes.
+4. `demonstration` and `inspection` verification methods create a required `operational-proof` demand unless explicitly `not-applicable` with rationale. Explicit `PRESENT` is invalid for this demand type.
+5. Independent review is a separate structured record with `reviewer`, `producer`, artifact digest, criterion ids, timestamped observations and per-criterion `CONFIRMED|DENIED`. `reviewer == producer`, missing review, digest mismatch or any required DENIED outcome means incomplete proof.
+6. Required operational proof fails closed on missing file, malformed manifest, integrity failure, unavailable judge or unreadable media. Optional proof remains non-blocking.
+7. Video-specific probes (duration, dimensions, codec/container) diagnose malformed evidence but do not replace semantic review. Allure demonstrates transport/preview, not truth of the claim.
+
+### Risks and mitigations
+
+| Risk | Likelihood | Impact | Mitigation |
+|---|---|---|---|
+| Hash is valid but the video shows the wrong behavior | High | High | Independent criterion-by-criterion review bound to the exact digest; digest alone never satisfies demonstration |
+| Producer and reviewer are the same agent under two labels | Medium | High | Require distinct auditable actor identities and judge invocation reference; classify equality or missing identity as `self-attested` and blocking |
+| File is ingested before recording finalizes | Medium | Medium | Require finalized timestamp/closed recorder; Playwright evidence indicates video becomes available after context close |
+| Old video survives a new code revision | High | High | Store subject revision and compare to the current relevant revision; stale evidence is MISSING, not warning |
+| Arbitrary path reads or huge media exhaust resources | Medium | High | Resolve only attachment-relative paths, reject traversal/symlink escapes, impose byte/duration limits, hash and probe in streaming mode |
+| External judge is temporarily unavailable | Medium | Medium | Required proof stays incomplete with an actionable retry reason; never convert dependency absence to CONFIRMED |
+
+### Unverified / deferred
+
+- [UNVERIFIED] The exact independent-judge identity mechanism (model invocation id, signed agent id, or process principal) needs implementation design against the existing `tools/spec-llm-judge` runtime.
+- [UNVERIFIED] The optimal freshness boundary (whole repository SHA versus evidence-declared relevant file digest set) requires a performance and usability benchmark; the spec should require deterministic policy and forbid a path-only timestamp shortcut.
+- [ASSUMED] MP4 will be the first supported demonstration medium, while the schema remains extensible to screenshots, logs and reports.
+
+
+
+---
+
+## 2026-07-27 — Execution-aware task creation and planning
+
+### Baseline evidence
+
+- **[VERIFIED — supplied code evidence]** `TaskNode` currently carries `status`, `refs`, `title`, `phase`, raw `doneWhen`, and `waiver`, but no typed task dependency or execution-surface fields (`tools/spec-graph/types.ts:183-204`).
+- **[VERIFIED — supplied code evidence]** The task parser emits no task-to-task edges (`tools/spec-graph/parsers/tasks.ts:118-125`).
+- **[VERIFIED — supplied code evidence]** `_depends` is summary-only rather than a graph relation (`tools/specs-generator/specs-generator-core.mjs:335-340`).
+- **[VERIFIED — supplied code evidence]** Task-file handling is a prose-only audit path (`tools/specs-generator/specs-generator-core.mjs:2801-2835`).
+
+**Consequence [ASSUMED]:** The current representation can display and audit task prose, but cannot prove dependency ordering, derive safe parallel work, detect execution-surface conflicts, calculate a schedule, or invalidate task proof when its inputs change.
+
+### External patterns and their bounded adoption
+
+- **[VERIFIED — supplied research]** Argo DAG workflows expose a maximum-parallelism control. The planner should similarly make concurrency an explicit, bounded outcome rather than an accidental property of agent fan-out; it must still respect dependency and conflict constraints.
+- **[VERIFIED — supplied research]** Bazel distinguishes declared dependencies from dependencies observed in practice. Preserve this distinction: typed `dependsOn` is canonical planning input, while discovery may propose corrections but cannot silently rewrite the graph from observations.
+- **[VERIFIED — supplied research]** Nx affected-graph analysis and Turborepo task dependencies plus inputs/outputs show the value of declared input/output scopes. Adopt task surfaces that cover files, symbols, contracts, configuration, data, tests, and runtime resources, not only file paths.
+- **[VERIFIED — supplied research]** NetworkX provides topological generations, antichains, and longest-path operations. Use dependency antichains as candidates for parallel waves, partition each with the derived conflict graph, and compute critical path and slack from the dependency DAG and estimates.
+- **[VERIFIED — supplied research]** Fowler's frequent-smaller-integration guidance favors small independently integrated changes. Prefer small, evidence-bearing task batches with explicit integration surfaces over large optimistic parallel waves.
+
+### Proposed canonical model [ASSUMED]
+
+A canonical typed task keeps current identity, title, phase, status, references, raw completion text, and waiver fields for compatibility, and adds:
+
+1. `dependsOn: TaskId[]` as explicit directed dependency edges; the graph must be acyclic.
+2. `surfaces: ExecutionSurface[]`, where every surface has a kind (`file`, `symbol`, `contract`, `config`, `data`, `test`, or `runtime-resource`), a stable locator, and an access mode (`read`, `write`, or `exclusive`).
+3. Optional estimate and scheduling metadata used only for critical-path/slack analysis; absent values remain unavailable or explicitly assumed.
+4. Task-owned evidence records with provenance, declared input digests, creation/verification time, and a freshness state.
+5. `discovery` metadata with hard limits for depth, candidates, time, and scope; its only output is a validation-ready graph-patch proposal.
+
+The planner derives, but does not persist as a replacement for, a conflict graph. Two surfaces with the same normalized locator conflict conservatively when either is `exclusive`, or when concurrent access includes a write that can observe or change mutable state. `read`/`read` overlap is non-conflicting unless a declared semantic-conflict rule says otherwise. Conflict edges carry their source surfaces and explain a batching decision; they never masquerade as dependency edges.
+
+### Planning and evidence semantics [ASSUMED]
+
+1. Validate `dependsOn` IDs and cycles before scheduling.
+2. Compute dependency-ready antichains/topological generations, then split each candidate wave into conflict-free batches using the derived conflict graph.
+3. Calculate critical path and slack only over declared dependency edges and estimates. Explain missing estimates and do not infer ordering solely to simplify a schedule.
+4. Bind task evidence to hashes of declared inputs and relevant prerequisite evidence. A changed input or changed transitive prerequisite invalidates dependent evidence until renewed.
+5. Discovery tasks are bounded investigations. They may propose new tasks, dependencies, surfaces, or semantic conflicts as graph patches, but validation and review own canonical mutation.
+
+### Compatibility and migration from current `TASKS.md` [ASSUMED]
+
+Import existing prose tasks losslessly into the canonical model: retain title, phase, status, references, raw `Done When`, waiver, and audit text. Treat `_depends` and other prose relations as migration hints, not typed edges. Where a hint resolves unambiguously to concrete task IDs, propose a reviewable typed-edge patch; otherwise preserve it as unresolved migration metadata and surface it in the plan. This avoids both a breaking replacement of existing `TASKS.md` and fabricated ordering.
+
+## Risk Assessment — 2026-07-27
+
+| Risk | Impact | Mitigation / decision boundary |
+|---|---|---|
+| **[ASSUMED] An omitted surface causes unsafe parallelism.** | Concurrent agents can corrupt shared state, invalidate tests, or produce misleading evidence. | Require declared surfaces for planned parallel work; treat missing or ambiguous write/exclusive scope as a blocking investigation or conservative conflict; retain explanations for review. |
+| **[ASSUMED] Broad globs over-serialize work.** | Safe independent work is unnecessarily delayed and the planner loses the value of parallel waves. | Normalize locators, prefer exact symbols/contracts/resources when known, record why a conflict exists, and allow refinement through a reviewed graph patch. |
+| **[ASSUMED] Semantic conflicts occur across different files.** | File-only analysis misses API, schema, config, data, test-fixture, or runtime-resource collisions. | Model multiple surface kinds and allow explicit semantic-conflict declarations; discovery can propose, but not auto-apply, these relations. |
+| **[ASSUMED] Stale evidence survives changed inputs.** | A task may appear complete even though its proof no longer corresponds to the implementation. | Store task-owned provenance and input digests; propagate stale state across declared prerequisite/evidence relationships and exclude stale proof from fresh completion claims. |
+| **[ASSUMED] Discovery explodes in scope or cost.** | Planning becomes unbounded, slow, or creates speculative graph noise. | Enforce candidate, depth, time, and scope budgets; emit reviewable graph-patch proposals only, with an explicit incomplete/budget-exhausted result. |
+
+
+
+## Phase 45 — task-planning prior art (2026-07-27)
+
+**[VERIFIED: direct upstream source index in TASK_PLANNING_PRIOR_ART.md, 2026-07-27]** Для [FR-72](FR.md#fr-72)–[FR-79](FR.md#fr-79) принят conditional direct-adopt только для Graphlib: MIT-библиотека допустима лишь при bundled и real deps-absent proof; иначе её DAG/cycle/toposort semantics копируются поверх SpecGraph. Nx, Rush, Lage, Wireit, BuildXL, Bazel, Buck2, Pants, DVC, Snakemake, Dagster, Airflow, Tekton, Argo и BullMQ дают алгоритм или read-model semantics, но не runtime; literal copy из Buck2 требует per-file license-header check. Nextflow, Graphile Worker, Temporal и managed products вроде Inngest отклонены как runtime/control-plane вне первого инкремента или с external-control/license uncertainty. Канонические URLs, точные upstream files/functions, лицензии, adopted algorithms, P45 mapping и exclusions закреплены в [TASK_PLANNING_PRIOR_ART.md](TASK_PLANNING_PRIOR_ART.md).
+
+## Pre-scheduling task-synthesis gap (2026-07-28)
+
+**[VERIFIED: TASK_PLANNING_PRIOR_ART.md]** The current task-planning direction starts with canonical `TASKS.md` records, typed dependencies, execution surfaces, evidence, and downstream conflict/DAG views. Before those views are safe to derive, synthesis must first transform FR, every mandatory AC lane, DESIGN, and linked BDD scenarios into vertical acceptance slices. The mode is conditional: `domainMode: ddd` requires boundary analysis around evidenced aggregates, invariants, and contracts; `domainMode: none` instead uses module, adapter, and contract boundaries and must not manufacture domain objects.
+
+**Gap / consequence [ASSUMED]:** Each mandatory AC lane needs conserved ownership by at least one vertical slice, with BDD proof and an ordered BDD-only TDD RED → GREEN → REFACTOR chain. When the implementation surface is unknown, the output must be a canonical BLOCKED investigation with owner, unresolved surface, and unblock evidence—not a guessed surface or READY scheduled task. Downstream blast-radius and DAG planning consume these records only after this synthesis step. This note relies solely on [TASK_PLANNING_PRIOR_ART.md](TASK_PLANNING_PRIOR_ART.md), not an external donor catalog.
+
+
+## Superpowers v6.2.0 mechanism review for umbrella task synthesis
+
+**Snapshot:** [`obra/superpowers@3dcbd5c`](https://github.com/obra/superpowers/tree/3dcbd5c4b48e02263fbf4a3c01e3fe4f81d584d9), release `v6.2.0` (2026-07-24), MIT.
+
+### Hypotheses and verdicts
+
+| H# | Hypothesis | Status | Evidence |
+|---|---|---|---|
+| H-SP1 | Superpowers has an explicit design-to-plan workflow | **[VERIFIED]** | `brainstorming` requires approved design; `writing-plans` maps file responsibilities/interfaces into self-contained tasks; README describes the lifecycle; independent `superpowers-evals` checks early skill invocation |
+| H-SP2 | Superpowers has strict task-level TDD and fresh completion verification | **[VERIFIED]** | `test-driven-development` requires failing test before production code and RED→GREEN→REFACTOR; `verification-before-completion` requires fresh full command output; SDD implementer/reviewer flow consumes these contracts |
+| H-SP3 | Superpowers has first-class BDD and DDD task synthesis | **[UNVERIFIED / disproved for v6.2.0 snapshot]** | Bounded exhaustive search of nine canonical workflow files (73,505 bytes) found no BDD/Gherkin/Cucumber or DDD/bounded-context/aggregate contract; open issue #374 requests BDD/E2E support |
+| H-SP4 | Superpowers has formal dependency/blast-radius/conflict scheduling | **[UNVERIFIED / disproved for v6.2.0 snapshot]** | No DAG/topological/read-write/exclusive/conflict-path contracts in canonical skills; parallel dispatch uses manual independent-domain/no-shared-state judgment; issue #1917 discusses unresolved tightly-coupled fan-out routing |
+| H-SP5 | Superpowers can replace FR-80 or FR-72..79 | **[DENIED]** | It produces prose plans and plan-scoped execution ledgers, not canonical SpecGraph nodes/typed edges/evidence; adoption would create a second authority |
+
+### Mechanism implications
+
+**ADAPT:** approved-design gate; component/file responsibility and interface map; self-contained task brief; strict RED/GREEN proof; plan self-review and re-review; fresh implementer context; `DONE_WITH_CONCERNS | NEEDS_CONTEXT | BLOCKED` as non-completion diagnostics; explanation of why parallel work is independent.
+
+**BUILD locally:** conditional DDD (`domainMode: ddd|none`), BDD acceptance ownership, acceptance-lane conservation, typed causal DAG, read/write/exclusive surfaces, conflict derivation, deterministic waves/batches/critical path/slack, content-addressed task evidence and stale reason chains.
+
+**REJECT:** importing Superpowers as runtime planner; treating 2–5-minute execution steps as hundreds of graph tasks; making plan Markdown or `.superpowers/sdd` a second canonical store; treating generic unit TDD as BDD or file boundaries as DDD.
+
+### Required spec deltas
+
+1. FR-80 input includes approved design revision and component/interface responsibility map.
+2. Canonical graph task is an independently valuable AC/BDD vertical outcome; micro-steps remain execution steps/Done-When actions inside it.
+3. A deterministic synthesis-review gate precedes FR-72..79 planner admission.
+4. `TaskPlanResult` exposes a self-contained task brief from canonical graph data without a second ledger.
+5. Only FR-77 evidence-backed `DONE` completes; concerns/context/blockers yield diagnostics or follow-up graph-patch proposals.
+6. Parallel explanation proves absence of both a causal path and a conflict pair.
+
+Full mechanism table, commit-pinned sources, gap matrix and adoption verdict: [TASK_PLANNING_PRIOR_ART.md — «Сверка с Superpowers v6.2.0»](TASK_PLANNING_PRIOR_ART.md#сверка-с-superpowers-v620).
+
+### Sources
+
+- [`brainstorming`](https://github.com/obra/superpowers/blob/3dcbd5c4b48e02263fbf4a3c01e3fe4f81d584d9/skills/brainstorming/SKILL.md), [`writing-plans`](https://github.com/obra/superpowers/blob/3dcbd5c4b48e02263fbf4a3c01e3fe4f81d584d9/skills/writing-plans/SKILL.md), [`test-driven-development`](https://github.com/obra/superpowers/blob/3dcbd5c4b48e02263fbf4a3c01e3fe4f81d584d9/skills/test-driven-development/SKILL.md), [`subagent-driven-development`](https://github.com/obra/superpowers/blob/3dcbd5c4b48e02263fbf4a3c01e3fe4f81d584d9/skills/subagent-driven-development/SKILL.md), [`dispatching-parallel-agents`](https://github.com/obra/superpowers/blob/3dcbd5c4b48e02263fbf4a3c01e3fe4f81d584d9/skills/dispatching-parallel-agents/SKILL.md), [`verification-before-completion`](https://github.com/obra/superpowers/blob/3dcbd5c4b48e02263fbf4a3c01e3fe4f81d584d9/skills/verification-before-completion/SKILL.md).
+- Independent behavior checks: [`prime-radiant-inc/superpowers-evals@11ffd99`](https://github.com/prime-radiant-inc/superpowers-evals/tree/11ffd999c9bc16e4b757b84482b5b65358d11599/scenarios).
+- Community gap evidence: [`obra/superpowers#374`](https://github.com/obra/superpowers/issues/374), [`obra/superpowers#1917`](https://github.com/obra/superpowers/issues/1917).
+

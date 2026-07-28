@@ -1185,3 +1185,116 @@ The spec generator SHALL classify externally observable acceptance claims and SH
 **Связанные AC:** [AC-67.1](ACCEPTANCE_CRITERIA.md#ac-671), [AC-67.2](ACCEPTANCE_CRITERIA.md#ac-672), [AC-67.3](ACCEPTANCE_CRITERIA.md#ac-673), [AC-67.4](ACCEPTANCE_CRITERIA.md#ac-674), [AC-67.5](ACCEPTANCE_CRITERIA.md#ac-675), [AC-67.6](ACCEPTANCE_CRITERIA.md#ac-676), [AC-67.7](ACCEPTANCE_CRITERIA.md#ac-677)
 **User Story:** [User Story 46](USER_STORIES.md#user-story-46-typed-edge-truth-priority-p1)
 
+
+
+## FR-68
+
+**Acceptance criterion owns its proof:** Each AC SHALL be evaluated from its own `tested-by` and current passing `verifies` evidence. Parent-FR scenarios MAY be surfaced as `inherited` context but SHALL NOT complete the AC. An AC with no own scenario SHALL emit error `UNCOVERED_AC`; an AC with own scenarios but no current passing verification SHALL emit error `UNVERIFIED_AC`. Mandatory readiness SHALL include `AC_SATISFACTION`, computed by non-empty ALL over every AC in scope. Bulk tag patterns that mechanically attach sibling ACs without distinct behavioral assertions SHALL emit blocking `TAG_BULK_SUSPECT` rather than laundering retrofit debt.
+
+**Связанные AC:** AC-68.1, AC-68.2, AC-68.3, AC-68.4, AC-68.5
+**User Story:** [User Story 47](USER_STORIES.md#user-story-47-acceptance-criterion-owns-its-proof-priority-p1)
+
+
+## FR-69
+
+**Non-functional requirements participate in completion truth:** NFR nodes SHALL be inventoried, traced, verified, delivery-evaluated and persisted on the same fail-closed path as FR nodes. A required NFR with no own scenario SHALL emit error `UNCOVERED_NFR`; a required NFR with scenarios but no current passing verification SHALL emit error `UNVERIFIED_NFR`. Mandatory readiness SHALL include `NFR_SATISFACTION`, computed by non-empty ALL over required NFRs; optional or justified not-applicable NFRs SHALL remain visible without completing required siblings.
+
+**Связанные AC:** AC-69.1, AC-69.2, AC-69.3, AC-69.4
+**User Story:** [User Story 48](USER_STORIES.md#user-story-48-non-functional-requirements-participate-in-readiness-priority-p1)
+
+
+## FR-70
+
+**Content-addressed artifact evidence:** The graph SHALL model an `Evidence` node and typed `evidenced-by` edge from FR/NFR/AC/Scenario to evidence. An evidence manifest SHALL carry `schemaVersion`, attachment-relative path, kind/media type, `sha256`, byte size, producer, run/invocation id, finalized time and subject revision. For required `operational-proof`, state SHALL be derived as PRESENT only when the path remains within the spec attachment root, the regular file exists and is non-empty, its digest matches, recording is finalized, and freshness policy passes; missing, malformed, escaped, digest-mismatched or stale evidence SHALL be MISSING. `demonstration` and `inspection` verification methods SHALL imply required operational proof unless explicitly not-applicable with rationale. Hand-authored `PRESENT` SHALL be invalid for operational proof, and evidence references SHALL be evaluated by target state, not target existence alone.
+
+**Связанные AC:** AC-70.1, AC-70.2, AC-70.3, AC-70.4, AC-70.5, AC-70.6
+**User Story:** [User Story 49](USER_STORIES.md#user-story-49-artifact-evidence-is-graph-verifiable-priority-p1)
+
+
+## FR-71
+
+**Independent demonstration judgment:** A demonstration SHALL be produced by exercising the live target and finalizing a reviewable artifact. A separate judge whose auditable identity differs from the producer SHALL inspect the exact artifact digest and issue a structured verdict containing reviewer, producer, judge invocation reference, artifact digest, criterion ids, timestamped observations, and per-criterion `CONFIRMED|DENIED`. Equality or absence of identities SHALL classify the review as `self-attested`; self-attested, unavailable, digest-mismatched, incomplete or any required DENIED review SHALL NOT satisfy operational proof. Required proof SHALL fail closed when artifact or judge is unavailable. FR-71 itself SHALL use verification method `demonstration` and SHALL be completed only by an independently reviewed demonstration of this protocol.
+
+**Связанные AC:** AC-71.1, AC-71.2, AC-71.3, AC-71.4, AC-71.5
+**User Story:** [User Story 50](USER_STORIES.md#user-story-50-independent-judge-watches-the-demonstration-priority-p1)
+
+
+
+## FR-72
+
+**Canonical versioned typed-task representation:** The task-planning subsystem SHALL parse the strict human-authored `TASKS.md` Markdown source into canonical representation version `task/v1`. Each `task/v1` record SHALL contain immutable qualified ID, title, kind, definition revision, declared status, `estimateMinutes`, typed requirement and AC links, structured DoneWhen criteria, typed dependencies, execution surfaces, input/output artifacts, evidence policy, unknown-field bag, and comment/source-span preservation data. The exact migration mapping is: strict task heading/key → `qualifiedId`; title → `title`; kind/status/estimate metadata → `kind`/`declaredStatus`/`estimateMinutes`; requirement/AC references → typed links; Done When list → ordered criteria; dependency/surface/artifact/evidence blocks → like-named fields; unsupported metadata and non-semantic comments → preserved unknown/comment payload. One version-aware parser, model, and renderer SHALL supply SpecGraph, MCP, lifecycle, task census, and summary renderer. Parse-render-parse of an unchanged supported record SHALL produce byte-equivalent canonical JSON after stable ordering and preserve READY; comments and unknown fields SHALL round-trip. Markdown remains source of truth during observe/warn/enforce migration. Every legacy, loose, duplicate, or invalid record SHALL remain queryable with source location and diagnostic; only a mutation that creates an ambiguous or invalid `task/v1` document SHALL be rejected, retaining the prior model. The system SHALL never silently drop a task. Exact or case/Unicode-normalization duplicate qualified IDs SHALL yield error findings listing every source location.
+
+**Связанные AC:** AC-72.1, AC-72.2, AC-72.3, AC-72.4, AC-72.5
+**Use Case:** [UC-31](USE_CASES.md#uc-31-create-an-execution-aware-safe-parallel-task-plan)
+**User Story:** [User Story 52](USER_STORIES.md#user-story-52-canonical-task-model-priority-p1)
+
+## FR-73
+
+**Validated typed dependency DAG:** The task-planning subsystem SHALL represent `depends-on`, `blocks`, and `consumes` as first-class versioned edges containing source ID, target ID, relation, hard/soft semantics, and non-empty reason. Before an edge enters the executable DAG, the validator SHALL resolve its target, normalize IDs, and reject a missing target, self-dependency, or directed cycle with deterministic named findings, source locations, and cycle path while retaining the prior DAG. The query SHALL return deterministic reverse blockers with relation, reason, predecessor status, and evidence state. A task SHALL be READY only when every hard predecessor has current-success evidence; soft edges remain explanatory. Prose-only sequencing SHALL be a queryable migration diagnostic and SHALL neither create an edge nor change readiness. Source, incremental, and SQLite restoration SHALL return the same normalized DAG and blocker order.
+
+**Связанные AC:** AC-73.1, AC-73.2, AC-73.3, AC-73.4, AC-73.5
+**Use Case:** [UC-31](USE_CASES.md#uc-31-create-an-execution-aware-safe-parallel-task-plan)
+**User Story:** [User Story 53](USER_STORIES.md#user-story-53-typed-dependency-dag-priority-p1)
+
+## FR-74
+
+**Constrained blast-radius execution surfaces:** Each task SHALL declare typed execution-surface claims with kind `file|glob|symbol|api-contract|schema|data|config|generated-artifact|test-resource|runtime-resource|external-contract`, access `read|write|exclusive`, normalized locator/scope, and non-empty rationale. For file/glob claims, planner SHALL normalize case and Unicode, resolve realpath through symlink/junction chains, and confine result to repository root; it SHALL reject `..`, absolute/UNC path, root escape, normalization collision, symlink/junction escape, and glob expansion beyond configured match/depth budget with named findings and no safe schedule. Locator/rationale text is data: no command/script/URL/shell fragment may execute. Planner SHALL redact secrets from claims, findings, reports, and MCP output. After execution it SHALL compare declarations to actual changed files/artifacts, report undeclared/missing/over-broad claims, and return direct/transitive impact paths; nonlocal claims remain explicit external resources.
+
+**Связанные AC:** AC-74.1, AC-74.2, AC-74.3, AC-74.4, AC-74.5
+**Use Case:** [UC-31](USE_CASES.md#uc-31-create-an-execution-aware-safe-parallel-task-plan)
+**User Story:** [User Story 54](USER_STORIES.md#user-story-54-typed-execution-surfaces-priority-p1)
+
+## FR-75
+
+**Derived non-causal conflict graph:** From valid surface claims, planner SHALL derive conflict graph separately from dependency DAG. It SHALL identify write/write, stable read/write, and exclusive conflicts, including semantic overlap across differing files for same API contract, schema, registry, configuration, generated/test artifact, or normalized resource. Each conflict output SHALL include both task IDs, class, contributing claims, normalized overlap, deterministic derivation rule, and redacted explanation. Override SHALL only suppress identified conflict within scope until explicit expiry and SHALL record actor, rationale, creation, expiry, and audit ID; expired/missing/mismatched overrides do not suppress. Planner SHALL never change a dependency edge because of conflict. It SHALL partition each dependency-ready wave into conflict-free batches and report task that cannot be safely batched.
+
+**Связанные AC:** AC-75.1, AC-75.2, AC-75.3, AC-75.4, AC-75.5
+**Use Case:** [UC-31](USE_CASES.md#uc-31-create-an-execution-aware-safe-parallel-task-plan)
+**User Story:** [User Story 55](USER_STORIES.md#user-story-55-derived-conflict-graph-priority-p1)
+
+## FR-76
+
+**Deterministic bounded execution planner:** For selected valid subgraph, planner SHALL compute the zero-predecessor frontier independently of task readiness; return every frontier task as `READY`, `BLOCKED`, `STALE`, or `INVALID` with an explanation; schedule only READY tasks into topological parallel waves and conflict-free batches; and return an explicit explained `unscheduled` remainder. Any non-empty remainder SHALL yield `complete: false`; the planner SHALL never report a complete plan while selected nodes remain. It SHALL normalize `estimateMinutes` using documented half-up minute rounding/default, calculate weighted longest critical path and per-task slack, and show blocked/stale downstream impact. It SHALL use stable normalized qualified-ID ascending tie-break for equals and serialize canonical stable-key JSON. Identical canonical input, selected IDs, configuration, and persistence state SHALL produce byte-equivalent JSON through incremental, cold, and warm planning. Harness defines cold as no graph/planner cache and warm as graph, claim index, and SQLite page cache populated; it SHALL measure p95 over at least 30 repetitions of corpus with 300 tasks, 450 typed dependency edges, and 1,500 claims distributed across all kinds/access modes. Warm query SHALL finish ≤200ms p95. Cycle, invalid estimate, or missing selected task SHALL return deterministic findings and no inferred schedule.
+
+**Связанные AC:** AC-76.1, AC-76.2, AC-76.3, AC-76.4, AC-76.5
+**Use Case:** [UC-31](USE_CASES.md#uc-31-create-an-execution-aware-safe-parallel-task-plan)
+**User Story:** [User Story 56](USER_STORIES.md#user-story-56-deterministic-execution-planner-priority-p1)
+
+## FR-77
+
+**Task-owned evidence and fail-closed stale invalidation:** Graph SHALL persist task-owned `validates`/`tested-by` edges and evidence containing owner, validated task/artifact IDs, run identity, redacted environment, result, proof scope, and input fingerprints/digests. When consumed artifact, prerequisite definition, scenario, or evidence input changes, evaluator SHALL return deterministic downstream stale closure with path/reason. Historical evidence remains queryable but SHALL not satisfy current DONE; affected task transitions succeeded → stale → READY/in-progress only after current prerequisites reevaluate. Full-proof policy SHALL retain but reject filtered-only evidence for completion. Missing, stale, malformed, or unowned proof SHALL fail closed with actionable status. Graph, MCP, and SQLite restoration SHALL preserve ownership, current/historical state, fingerprints, stale reason, and redacted fields.
+
+**Связанные AC:** AC-77.1, AC-77.2, AC-77.3, AC-77.4, AC-77.5
+**Use Case:** [UC-31](USE_CASES.md#uc-31-create-an-execution-aware-safe-parallel-task-plan)
+**User Story:** [User Story 57](USER_STORIES.md#user-story-57-task-owned-evidence-priority-p1)
+
+## FR-78
+
+**Bounded reviewed discovery expansion:** Discovery task SHALL produce schema-valid graph-patch proposal and SHALL not mutate graph directly. Proposal SHALL derive child ID from parent ID plus normalized semantic key, include output digest and requested surface/write scope, and enforce configured child-count, scope, and write budget. Equal output-digest replay SHALL return prior proposal or idempotent no-op without duplicates. Every dry-run/apply SHALL use ordinary target, DAG, conflict, evidence, CAS, and all-or-nothing validation; refusal returns named findings and leaves state unchanged. Empty discovery retains `no_children` evidence. Proposal at/above high-impact threshold remains `awaiting_approval` until authorized approval, and SHALL not auto-apply.
+
+**Связанные AC:** AC-78.1, AC-78.2, AC-78.3, AC-78.4, AC-78.5
+**Use Case:** [UC-31](USE_CASES.md#uc-31-create-an-execution-aware-safe-parallel-task-plan)
+**User Story:** [User Story 58](USER_STORIES.md#user-story-58-bounded-discovery-expansion-priority-p1)
+
+## FR-79
+
+**MCP planning API, reports, persistence, and staged rollout:** MCP SHALL expose versioned execution-plan query returning selected typed nodes/edges, direct/transitive impact, conflicts, waves, batches, zero-predecessor frontier entries with readiness/explanations, explicit unscheduled remainder, `complete`, critical path, slack, stale reasons, diagnostics, and redacted explanations in stable JSON order. Typed task/graph-patch mutation SHALL provide dry-run and CAS/all-or-nothing apply: stale revision, validation error, or persistence failure SHALL return deterministic findings and leave state unchanged. SQLite cold/warm restoration SHALL preserve canonical records, diagnostics, plans, evidence state, and byte-equivalent query result. Installed `server.bundle.mjs` SHALL prove planning query/validation when dependencies absent, not skip behavior. Reports SHALL identify task IDs/explanations for quality, conflicts, impact, critical path, stale evidence, migration diagnostics, and redacted security findings; a non-empty unscheduled remainder SHALL be reported as incomplete and SHALL NOT be presented as complete. Observe → warn → enforce SHALL preserve source task count/queryability of invalid/legacy records; enforce SHALL reject unresolved canonicalization explicitly and never silently lose task.
+
+**Связанные AC:** AC-79.1, AC-79.2, AC-79.3, AC-79.4, AC-79.5, AC-79.6
+**Use Case:** [UC-31](USE_CASES.md#uc-31-create-an-execution-aware-safe-parallel-task-plan)
+**User Story:** [User Story 59](USER_STORIES.md#user-story-59-planning-api-and-rollout-priority-p1)
+
+
+
+## FR-80
+
+**Deterministic pre-scheduling task synthesis:** Before any FR-72..FR-79 scheduling, planning, conflict, impact, wave, or rollout operation, the system SHALL deterministically synthesize canonical `task/v1` records from applicable FR, acceptance criteria, DESIGN decisions, BDD scenarios, and repository reality into one stored SpecGraph. The synthesis SHALL set `domainMode` to `ddd` only when repository reality establishes a domain boundary; in `ddd` mode it SHALL record the verified boundary, aggregate, invariant, and contract, while in `none` mode it SHALL record module, adapter, and contract boundaries and SHALL NOT invent domain entities, aggregates, or invariants. It SHALL conserve every applicable acceptance lane, assign each lane to one vertical BDD slice that owns the requirement, acceptance criterion, scenario, and verification evidence, and preserve causal `RED -> GREEN -> REFACTOR` BDD-only TDD edges. An unknown implementation surface SHALL create a named `BLOCKED` investigation record, retain its owning acceptance lane, and prevent task finalization. Every generated record SHALL have measurable `doneWhen`, estimate, requirement and acceptance references, typed dependencies, and declared read, write, and exclusive surfaces. Identical inputs SHALL yield stable-key byte-equivalent output with neither silent loss nor duplication, and the resulting single SpecGraph SHALL feed FR-72..FR-79 directly without a second planning graph.
+
+**Связанные AC:** AC-80.1, AC-80.2, AC-80.3, AC-80.4, AC-80.5, AC-80.6, AC-80.7, AC-80.8, AC-80.9, AC-80.10
+**Use Case:** UC-32
+**User Story:** [User Story 60](USER_STORIES.md#user-story-60-pre-scheduling-task-synthesis-preserves-acceptance-proof-priority-p1)
+
+
+
+
+**Agent-execution plan amendment:** Synthesis SHALL accept the approved design revision and its digest plus a repository-verified component/interface responsibility map. It SHALL project one canonical agent-execution plan from the stored SpecGraph: each graph task is an independently valuable AC/BDD vertical outcome, while its ordered 2–5-minute execution steps are embedded instructions and SHALL NOT become separate graph nodes. Before FR-72..FR-79 planning, a deterministic synthesis-review gate SHALL reject placeholders; unconserved lanes; missing boundary or ownership; absent exact file/source locations or interfaces; infeasible work; untyped or cyclic causal order; and incomplete declared surfaces. `TaskPlanResult` SHALL hand an agent a self-contained canonical task brief containing the full task text, exact files/source locations, interfaces, dependencies, relevant predecessor summaries, scenario and evidence command, safe-batch membership, blockers, machine next action, and a proof of independence. The handoff is a projection of canonical SpecGraph data and SHALL NOT create a `.superpowers/sdd`-like second authority or executor. Execution outcomes SHALL include `DONE`, `DONE_WITH_CONCERNS`, `NEEDS_CONTEXT`, and `BLOCKED`; only evidence-backed `DONE` completes a task, and every other outcome SHALL emit evidence-backed diagnostics and follow-up proposals. A parallel batch SHALL prove each pair’s independence by the absence of a causal path in either direction and the absence of a conflict pair, not by prose assertion.

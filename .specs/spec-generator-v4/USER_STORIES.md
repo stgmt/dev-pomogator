@@ -1058,3 +1058,283 @@ As a spec author and MCP consumer, I want coverage, evidence, and authorization 
 
 **Independent Test:** Run `SPECGEN004_589`–`SPECGEN004_594` in Docker and verify exhaustive edge rules, valid traversal, `ENDPOINT_VIOLATION`, atomic MCP refusal, SQLite parity, and backward-compatible producers.
 
+
+
+### User Story 47: Acceptance criterion owns its proof (Priority: P1)
+
+As a repository owner, I want every acceptance criterion to carry its own executable proof instead of borrowing the parent requirement's scenarios, so that one green scenario cannot make unverified sibling criteria look complete.
+
+**Требование:** [FR-68](FR.md#fr-68)
+
+**Why:** The current readiness inventory maps every AC to the parent FR's scenario set. `@feature68` must distinguish own proof from inherited context and block `UNCOVERED_AC` or `UNVERIFIED_AC` before task/feature completion.
+
+**Independent Test:** Build a fixture with two sibling ACs under one FR, give only the first AC its own passing scenario, and verify that the second remains blocking despite the parent FR being green.
+
+**Acceptance Scenarios:**
+
+Given two sibling acceptance criteria under one functional requirement
+When only the first criterion has its own passing scenario
+Then the first criterion is satisfied and the inherited-only sibling remains blocking
+
+
+### User Story 48: Non-functional requirements participate in readiness (Priority: P1)
+
+As a repository owner, I want performance, reliability, security and usability requirements to participate in the same fail-closed readiness decision as functional requirements, so that a feature cannot be called complete while every NFR is unverified.
+
+**Требование:** [FR-69](FR.md#fr-69)
+
+**Why:** The current inventory and delivery evaluator filter NFR nodes out of mandatory readiness. `@feature69` must surface uncovered and unverified NFRs as blocking findings.
+
+**Independent Test:** Build one functional requirement and one required NFR with the FR green and the NFR unverified, then verify that the smart verdict stays NOT_READY until the NFR receives current evidence.
+
+**Acceptance Scenarios:**
+
+Given a green functional requirement and an unverified required NFR
+When the mandatory readiness lanes are evaluated
+Then NFR_SATISFACTION is RED and the smart verdict is not GREEN
+
+
+### User Story 49: Artifact evidence is graph-verifiable (Priority: P1)
+
+As an evidence reviewer, I want demonstration artifacts to be content-addressed graph nodes with provenance and freshness, so that a hand-written `PRESENT` flag or a stale/missing MP4 cannot satisfy an operational-proof obligation.
+
+**Требование:** [FR-70](FR.md#fr-70)
+
+**Why:** Attachments are currently readable but disconnected from requirement truth. `@feature70` must bind an artifact manifest, file digest, producer, run identity and freshness to the requirement through a typed evidence edge.
+
+**Independent Test:** Create a valid content-addressed video evidence fixture, mutate one byte and separately advance the source revision, then verify digest mismatch and stale provenance both become blocking MISSING evidence.
+
+**Acceptance Scenarios:**
+
+Given an operational-proof demand and a content-addressed artifact manifest
+When the artifact is absent empty outside the attachment root digest-mismatched or stale
+Then the evidence state is MISSING and the smart verdict is not GREEN
+
+
+### User Story 50: Independent judge watches the demonstration (Priority: P1)
+
+As a repository owner, I want a judge other than the artifact producer to watch the recorded demonstration and issue a criterion-by-criterion verdict, so that an agent's self-attestation cannot pass as independent acceptance evidence.
+
+**Требование:** [FR-71](FR.md#fr-71)
+
+**Why:** Integrity metadata proves which bytes were reviewed, not that those bytes demonstrate the claim. `@feature71` must require reviewer/producer separation, timestamped observations and a structured CONFIRMED/DENIED result.
+
+**Independent Test:** Submit the same artifact once with producer and reviewer equal and once with distinct identities plus a CONFIRMED criterion verdict; verify only the independently reviewed exact digest can satisfy the demand.
+
+**Acceptance Scenarios:**
+
+Given a recorded demonstration and its exact digest
+When its reviewer equals its producer or any criterion is DENIED
+Then the review is self-attested or denied and operational proof remains incomplete
+
+
+
+---
+
+### User Story 51: Execution-aware task creation and planning (Priority: P1)
+
+**Требование:** [FR-72](FR.md#fr-72) *(temporary trace anchor; the later Requirements phase will replace this linkage when it adds the task-planning requirement; no FR is created by this Discovery change)*
+
+As a spec author or implementation agent, I want tasks represented as a typed dependency DAG with declared execution surfaces and evidence, so that the generator can create a safe, explainable execution plan instead of treating `TASKS.md` as prose only.
+
+**Why:** A task title, phase, and free-form completion text do not reveal ordering, resource conflicts, or whether its proof remains valid after inputs change. Typed task planning makes independent work visible while preventing agents from running conflicting work in parallel.
+
+**Independent Test:** Load a fixture containing typed tasks, explicit dependencies, read/write/exclusive surfaces, estimates, evidence digests, and a bounded discovery task. The planner rejects cycles, derives a conflict graph, emits dependency-respecting conflict-free batches with critical-path and slack values, invalidates affected evidence after an input digest changes, and returns discovery output only as a reviewable graph-patch proposal. A legacy prose task fixture remains readable and is reported as migration-needed rather than gaining invented dependency edges.
+
+**Acceptance Scenarios:**
+
+Given canonical tasks have typed dependency edges and declared read, write, or exclusive surfaces across files, symbols, contracts, configuration, data, tests, and runtime resources
+When the planner builds an execution plan
+Then it validates the dependency graph as a DAG and derives a separate conflict graph from overlapping surfaces
+
+Given two dependency-ready tasks belong to the same antichain and do not conflict
+When the planner creates parallel waves
+Then it places them in the same conflict-free batch and explains why they may run together
+
+Given two dependency-ready tasks overlap on a write or exclusive surface
+When the planner creates parallel waves
+Then it separates them into ordered or distinct conflict-free batches and records the colliding surfaces
+
+Given estimated task durations and a valid dependency DAG
+When the planner analyzes the execution plan
+Then it reports a critical path and per-task slack without treating a conflict edge as an undeclared dependency edge
+
+Given a task-owned evidence record contains digests of its declared inputs
+When an input digest or a transitive prerequisite changes
+Then the record becomes stale and the planner excludes it from fresh completion evidence until it is renewed
+
+Given a bounded discovery task finds candidate dependencies or execution surfaces
+When its discovery budget is exhausted or it produces candidates
+Then it returns a graph-patch proposal for validation and review rather than mutating the canonical task graph directly
+
+Given an existing `TASKS.md` task has only prose audit fields or a summary-only `_depends` hint
+When it is imported into the canonical task model
+Then the original prose is preserved, unknown relations are marked for migration, and no dependency edge is fabricated
+
+
+
+### User Story 52: Canonical task model (Priority: P1)
+
+**Требование:** [FR-72](FR.md#fr-72)
+
+As an implementation agent, I want one lossless canonical task model so every task view preserves identity, revision, READY state, and human-authored migration context.
+
+**Why:** Multiple task projections must not create contradictory truth.
+
+**Independent Test:** Parse, render, and reparse a READY task, then compare Graph, MCP, lifecycle, census, and summary output.
+
+**Acceptance Scenarios:**
+
+Given a strict task has complete typed fields
+When it passes through canonical parse-render-parse
+Then every field and READY state remains equivalent
+
+### User Story 53: Typed dependency DAG (Priority: P1)
+
+**Требование:** [FR-73](FR.md#fr-73)
+
+As an implementation agent, I want typed causal dependencies and reverse blockers so readiness is based on current predecessor success rather than prose.
+
+**Why:** An executable plan cannot safely infer causal order.
+
+**Independent Test:** Propose a cycle and query a blocked task's typed predecessor reason.
+
+**Acceptance Scenarios:**
+
+Given a task has an unfinished hard predecessor
+When readiness is evaluated
+Then reverse blockers explain why it is not READY
+
+### User Story 54: Typed execution surfaces (Priority: P1)
+
+**Требование:** [FR-74](FR.md#fr-74)
+
+As an implementation agent, I want normalized resource claims and actual-work reconciliation so direct and transitive blast radius is known before and after work.
+
+**Why:** File names alone cannot express contracts, schemas, or runtime resources.
+
+**Independent Test:** Reject escaped/unbounded claims and query direct/transitive impact after actual output is recorded.
+
+**Acceptance Scenarios:**
+
+Given a task declares a normalized schema write claim
+When the planner queries impact
+Then direct and transitive affected work is explained
+
+### User Story 55: Derived conflict graph (Priority: P1)
+
+**Требование:** [FR-75](FR.md#fr-75)
+
+As an implementation agent, I want resource conflicts separate from dependencies so unsafe parallel work is batched without inventing causal ordering.
+
+**Why:** Concurrency risk is not prerequisite completion.
+
+**Independent Test:** Derive semantic cross-file conflict, expire its override, and prove DAG edges were not rewritten.
+
+**Acceptance Scenarios:**
+
+Given two ready tasks share a semantic API contract
+When conflicts are derived
+Then they are split into batches without a new dependency
+
+### User Story 56: Deterministic execution planner (Priority: P1)
+
+**Требование:** [FR-76](FR.md#fr-76)
+
+As an implementation agent, I want stable waves, batches, critical path, and slack so I can execute selected work predictably.
+
+**Why:** Equal input must not reshuffle work or hide a blocked schedule impact.
+
+**Independent Test:** Plan identical selected DAG input through cold/warm paths and compare metrics and ordering.
+
+**Acceptance Scenarios:**
+
+Given an unchanged selected DAG
+When it is planned repeatedly
+Then waves, batches, critical path, slack, and ordering match
+
+### User Story 57: Task-owned evidence (Priority: P1)
+
+**Требование:** [FR-77](FR.md#fr-77)
+
+As an implementation agent, I want task-owned proof and stale closure so obsolete success cannot mark current work done.
+
+**Why:** Evidence is valid only for the inputs and definitions it consumed.
+
+**Independent Test:** Change a prerequisite fingerprint and verify historical evidence remains visible while downstream tasks become stale.
+
+**Acceptance Scenarios:**
+
+Given a task succeeded with a consumed fingerprint
+When the fingerprint changes
+Then history remains visible and current completion becomes stale
+
+### User Story 58: Bounded discovery expansion (Priority: P1)
+
+**Требование:** [FR-78](FR.md#fr-78)
+
+As an implementation agent, I want bounded discovery proposals so newly found work is reviewable and cannot mutate graph truth without validation.
+
+**Why:** Unknown work must be tracked without autonomous expansion.
+
+**Independent Test:** Replay a discovery digest without duplicate children and require approval for high-impact proposals.
+
+**Acceptance Scenarios:**
+
+Given a discovery output exceeds its configured impact budget
+When it is submitted
+Then it awaits approval without mutating the graph
+
+### User Story 59: Planning API and rollout (Priority: P1)
+
+**Требование:** [FR-79](FR.md#fr-79)
+
+As an implementation agent, I want a complete MCP planning surface and staged rollout so task truth can be queried, dry-run, applied, and migrated without loss.
+
+**Why:** Planning must work identically in installed dependency-absent environments.
+
+**Independent Test:** Prove CAS atomicity, cold/warm parity, dependency-absent query, and observe-to-enforce preserved counts.
+
+**Acceptance Scenarios:**
+
+Given an unresolved legacy task in observe, warn, and enforce modes
+When rollout reports are queried
+Then counts remain preserved and enforce rejects it explicitly
+
+---
+
+### User Story 60: Pre-scheduling task synthesis preserves acceptance proof (Priority: P1)
+
+**Требование:** [FR-80](FR.md#fr-80)
+
+**Related scheduling requirements:** [FR-72](FR.md#fr-72), [FR-73](FR.md#fr-73), [FR-74](FR.md#fr-74), [FR-77](FR.md#fr-77)
+
+As a spec author, I want task synthesis to convert FR, AC, DESIGN, and BDD inputs into canonical, evidence-owning vertical acceptance slices before downstream blast-radius and DAG planning, so that scheduling never loses a mandatory acceptance lane or invents a domain model.
+
+**Why:** A dependency graph can order work only after the work is explicit: every mandatory AC lane needs an owning slice, BDD proof, and a BDD-only TDD RED → GREEN → REFACTOR chain; an unknown implementation surface must stop synthesis as a BLOCKED investigation rather than becoming speculative work.
+
+**Independent Test:** Synthesize tasks for a spec with `domainMode: ddd` and one with `domainMode: none`. The former performs DDD boundary analysis where aggregates, invariants, and contracts are evidenced; the latter uses module, adapter, and contract boundaries without fake domain objects. In both outputs, every mandatory AC lane maps to exactly one or more vertical slices, each slice declares its BDD scenario/evidence owner and ordered BDD-only RED → GREEN → REFACTOR records; an unresolved surface produces a BLOCKED investigation record and is excluded from ready scheduling.
+
+**Acceptance Scenarios:**
+
+Given FR, mandatory AC lanes, DESIGN decisions, and linked BDD scenarios are inputs to task synthesis
+When `domainMode: ddd` is declared
+Then the synthesis performs DDD boundary analysis and emits canonical task records for vertical acceptance slices before blast-radius or DAG planning
+
+Given the same inputs declare `domainMode: none`
+When task synthesis identifies implementation boundaries
+Then it uses module, adapter, and contract boundaries and does not create fake aggregates, entities, or value objects
+
+Given a mandatory AC lane is supplied to task synthesis
+When vertical slices are created
+Then the lane is conserved by an owning slice with its BDD proof plus ordered BDD-only TDD RED, GREEN, and REFACTOR records
+
+Given the implementation surface for an AC lane cannot be determined from the inputs
+When task synthesis completes
+Then it creates a canonical BLOCKED investigation record with ownership, unknown surface, and required evidence, and downstream scheduling does not treat it as READY
+
+
+
+### Story 60 execution-agent consumption amendment
+
+As an AI implementation agent or spec-generator worker, I need one canonical, self-contained task brief with exact source locations, interfaces, dependencies, predecessor context, scenario/evidence command, blockers, safe-batch proof, and next action, so that I can execute a valuable AC/BDD vertical outcome without recreating a private plan or treating a 2–5-minute substep as an independent graph task. A non-`DONE` outcome remains diagnostic and proposes follow-up work; it never falsely completes the task.

@@ -212,3 +212,124 @@
 | CHK-FR67-05 | FR-67, AC-67.5 | BDD `SPECGEN004_593` checks SQLite cold/warm parity | Draft |
 | CHK-FR67-06 | FR-67, AC-67.6 | BDD `SPECGEN004_594` checks producer compatibility and traversal | Draft |
 
+
+
+## Verification Matrix — FR-68 Acceptance criterion owns its proof
+
+| CHK-ID | Requirement | Traces To | Verification Method | Status | Notes |
+|---|---|---|---|---|---|
+| CHK-FR68-01 | Own AC scenario is mandatory | FR-68, AC-68.1, @feature68 | BDD scenario | Draft | SPECGEN004_596; `UNCOVERED_AC` error |
+| CHK-FR68-02 | Own passing verification is mandatory | FR-68, AC-68.2, @feature68 | BDD scenario | Draft | SPECGEN004_597; `UNVERIFIED_AC` error |
+| CHK-FR68-03 | Parent coverage is inherited non-proof | FR-68, AC-68.3, @feature68 | BDD scenario | Draft | SPECGEN004_598; sibling AC stays open |
+| CHK-FR68-04 | AC_SATISFACTION uses non-empty ALL | FR-68, AC-68.4, @feature68 | BDD scenario | Draft | SPECGEN004_599; mandatory lane |
+| CHK-FR68-05 | Bulk-tag retrofit is rejected | FR-68, AC-68.5, @feature68 | BDD scenario | Draft | SPECGEN004_600; `TAG_BULK_SUSPECT` blocks |
+
+## Verification Matrix — FR-69 NFR completion parity
+
+| CHK-ID | Requirement | Traces To | Verification Method | Status | Notes |
+|---|---|---|---|---|---|
+| CHK-FR69-01 | NFR nodes/edges survive readiness inventory | FR-69, AC-69.1, @feature69 | BDD scenario | Draft | SPECGEN004_601; FR/NFR parity |
+| CHK-FR69-02 | Uncovered/unverified required NFR blocks | FR-69, AC-69.2, @feature69 | BDD scenario | Draft | SPECGEN004_602; two blocking codes |
+| CHK-FR69-03 | NFR_SATISFACTION uses required non-empty ALL | FR-69, AC-69.3, @feature69 | BDD scenario | Draft | SPECGEN004_603; optional/non-applicable visible |
+| CHK-FR69-04 | Verification method survives all surfaces | FR-69, AC-69.4, @feature69 | Integration test | Draft | SPECGEN004_604; MCP + SQLite parity |
+| CHK-FR69-05 | Completion gate meets corpus budget | FR-69, @feature69, NFR-Performance-11 | Integration test | Draft | 811 AC + 58 NFR floor |
+
+## Verification Matrix — FR-70 Content-addressed artifact evidence
+
+| CHK-ID | Requirement | Traces To | Verification Method | Status | Notes |
+|---|---|---|---|---|---|
+| CHK-FR70-01 | Evidence node and endpoint contract | FR-70, AC-70.1, @feature70 | BDD scenario | Draft | SPECGEN004_605; typed `evidenced-by` |
+| CHK-FR70-02 | Manifest has provenance/integrity fields | FR-70, AC-70.2, @feature70 | BDD scenario | Draft | SPECGEN004_606; exact schema |
+| CHK-FR70-03 | Missing/escaped/empty/mismatch/stale blocks | FR-70, AC-70.3, @feature70 | BDD scenario | Draft | SPECGEN004_607; invalid-variant invariants |
+| CHK-FR70-04 | Demonstration/inspection implies proof | FR-70, AC-70.4, @feature70 | BDD scenario | Draft | SPECGEN004_608; method becomes binding |
+| CHK-FR70-05 | Manual PRESENT and dead target are rejected | FR-70, AC-70.5, @feature70 | BDD scenario | Draft | SPECGEN004_609; no self-attested state |
+| CHK-FR70-06 | Graph/MCP/SQLite remain equivalent | FR-70, AC-70.6, @feature70 | Integration test | Draft | SPECGEN004_610; cold/warm + transaction parity |
+| CHK-FR70-07 | Artifact path and parser are bounded | FR-70, @feature70, NFR-Security-9 | Integration test | Draft | traversal/symlink/limit variants |
+
+## Verification Matrix — FR-71 Independent demonstration judgment
+
+| CHK-ID | Requirement | Traces To | Verification Method | Status | Notes |
+|---|---|---|---|---|---|
+| CHK-FR71-01 | Recording is live and finalized | FR-71, AC-71.1, @feature71 | Manual review | Draft | SPECGEN004_611; hash only after finalize |
+| CHK-FR71-02 | Reviewer differs and binds exact digest | FR-71, AC-71.2, @feature71 | BDD scenario | Draft | SPECGEN004_612; identity separation |
+| CHK-FR71-03 | Judge verdict is complete and timestamped | FR-71, AC-71.3, @feature71 | BDD scenario | Draft | SPECGEN004_613; all criterion ids |
+| CHK-FR71-04 | Self/denied/unavailable cannot complete | FR-71, AC-71.4, NFR-Reliability-13 | BDD scenario | Draft | SPECGEN004_614; fail-closed variant matrix |
+| CHK-FR71-05 | Protocol dogfoods its own MP4 evidence | FR-71, AC-71.5, @feature71 | Manual review | Draft | SPECGEN004_615; exact digest + CONFIRMED review |
+
+
+
+## Verification Matrix — FR-72..FR-79 execution-aware task planning
+
+| CHK-ID | Requirement | Traces To | Verification Method | Status | Notes |
+|---|---|---|---|---|---|
+| CHK-FR72-01 | Canonical record retains all typed fields | FR-72, AC-72.1, @feature72, UC-31 | BDD scenario | Draft | SPECGEN004_616 |
+| CHK-FR72-02 | Parse-render-parse preserves READY | FR-72, AC-72.2, @feature72, UC-31 | BDD scenario | Draft | SPECGEN004_617 |
+| CHK-FR72-03 | Legacy task remains visible with migration finding | FR-72, AC-72.3, @feature72, UC-31 | BDD scenario | Draft | SPECGEN004_618 |
+| CHK-FR72-04 | All task views use one canonical projection | FR-72, AC-72.4, @feature72, UC-31 | BDD scenario | Draft | SPECGEN004_619 |
+| CHK-FR72-05 | Invalid task input fails atomically | FR-72, AC-72.5, @feature72, UC-31 | BDD scenario | Draft | SPECGEN004_620 |
+| CHK-FR73-01 | Typed dependency retains target and reason | FR-73, AC-73.1, @feature73, UC-31 | BDD scenario | Draft | SPECGEN004_621 |
+| CHK-FR73-02 | Self/cycle dependency is rejected | FR-73, AC-73.2, @feature73, UC-31 | BDD scenario | Draft | SPECGEN004_622 |
+| CHK-FR73-03 | Reverse blockers explain state and reason | FR-73, AC-73.3, @feature73, UC-31 | BDD scenario | Draft | SPECGEN004_623 |
+| CHK-FR73-04 | READY requires current predecessor success | FR-73, AC-73.4, @feature73, UC-31 | BDD scenario | Draft | SPECGEN004_624 |
+| CHK-FR73-05 | DAG projection is deterministic | FR-73, AC-73.5, @feature73, UC-31 | BDD scenario | Draft | SPECGEN004_625 |
+| CHK-FR74-01 | Surface schema is typed and complete | FR-74, AC-74.1, @feature74, UC-31 | BDD scenario | Draft | SPECGEN004_626 |
+| CHK-FR74-02 | Escape and unbounded glob are unsafe | FR-74, AC-74.2, @feature74, UC-31 | BDD scenario | Draft | SPECGEN004_627 |
+| CHK-FR74-03 | Actual work reconciles with plan | FR-74, AC-74.3, @feature74, UC-31 | BDD scenario | Draft | SPECGEN004_628 |
+| CHK-FR74-04 | Impact query explains direct/transitive radius | FR-74, AC-74.4, @feature74, UC-31 | BDD scenario | Draft | SPECGEN004_629 |
+| CHK-FR74-05 | Nonlocal locators stay non-executable data | FR-74, AC-74.5, @feature74, UC-31 | BDD scenario | Draft | SPECGEN004_630 |
+| CHK-FR75-01 | Access modes derive conflicts | FR-75, AC-75.1, @feature75, UC-31 | BDD scenario | Draft | SPECGEN004_631 |
+| CHK-FR75-02 | Semantic resource conflicts cross files | FR-75, AC-75.2, @feature75, UC-31 | BDD scenario | Draft | SPECGEN004_632 |
+| CHK-FR75-03 | Conflict explanations are complete | FR-75, AC-75.3, @feature75, UC-31 | BDD scenario | Draft | SPECGEN004_633 |
+| CHK-FR75-04 | Override is audited scoped and expiring | FR-75, AC-75.4, @feature75, UC-31 | BDD scenario | Draft | SPECGEN004_634 |
+| CHK-FR75-05 | Batching never rewrites dependencies | FR-75, AC-75.5, @feature75, UC-31 | BDD scenario | Draft | SPECGEN004_635 |
+| CHK-FR76-01 | Selected subgraph yields dependency-safe waves | FR-76, AC-76.1, @feature76, UC-31 | BDD scenario | Draft | SPECGEN004_636 |
+| CHK-FR76-02 | Every wave partitions conflict-free batches | FR-76, AC-76.2, @feature76, UC-31 | BDD scenario | Draft | SPECGEN004_637 |
+| CHK-FR76-03 | Weighted critical path and slack are calculated | FR-76, AC-76.3, @feature76, UC-31 | BDD scenario | Draft | SPECGEN004_638 |
+| CHK-FR76-04 | Blocked/stale schedule impact is explained | FR-76, AC-76.4, @feature76, UC-31 | BDD scenario | Draft | SPECGEN004_639 |
+| CHK-FR76-05 | Same input gives same plan | FR-76, AC-76.5, @feature76, UC-31 | BDD scenario | Draft | SPECGEN004_640 |
+| CHK-FR77-01 | Evidence is owned and fingerprinted | FR-77, AC-77.1, @feature77, UC-31 | BDD scenario | Draft | SPECGEN004_641 |
+| CHK-FR77-02 | Input change closes downstream stale set | FR-77, AC-77.2, @feature77, UC-31 | BDD scenario | Draft | SPECGEN004_642 |
+| CHK-FR77-03 | Historical proof cannot complete stale work | FR-77, AC-77.3, @feature77, UC-31 | BDD scenario | Draft | SPECGEN004_643 |
+| CHK-FR77-04 | Filtered-only proof cannot satisfy full policy | FR-77, AC-77.4, @feature77, UC-31 | BDD scenario | Draft | SPECGEN004_644 |
+| CHK-FR77-05 | Query and persistence preserve evidence truth | FR-77, AC-77.5, @feature77, UC-31 | BDD scenario | Draft | SPECGEN004_645 |
+| CHK-FR78-01 | Discovery produces proposal, not direct mutation | FR-78, AC-78.1, @feature78, UC-31 | BDD scenario | Draft | SPECGEN004_646 |
+| CHK-FR78-02 | Child identity and budgets are bounded | FR-78, AC-78.2, @feature78, UC-31 | BDD scenario | Draft | SPECGEN004_647 |
+| CHK-FR78-03 | Output-digest replay is idempotent | FR-78, AC-78.3, @feature78, UC-31 | BDD scenario | Draft | SPECGEN004_648 |
+| CHK-FR78-04 | Discovery patch uses normal atomic validation | FR-78, AC-78.4, @feature78, UC-31 | BDD scenario | Draft | SPECGEN004_649 |
+| CHK-FR78-05 | Empty/high-impact discovery has explicit controls | FR-78, AC-78.5, @feature78, UC-31 | BDD scenario | Draft | SPECGEN004_650 |
+| CHK-FR79-01 | MCP returns complete planning explanation | FR-79, AC-79.1, @feature79, UC-31 | BDD scenario | Draft | SPECGEN004_651 |
+| CHK-FR79-02 | Mutation supports dry-run CAS atomicity | FR-79, AC-79.2, @feature79, UC-31 | BDD scenario | Draft | SPECGEN004_652 |
+| CHK-FR79-03 | SQLite cold/warm preserves planning truth | FR-79, AC-79.3, @feature79, UC-31 | BDD scenario | Draft | SPECGEN004_653 |
+| CHK-FR79-04 | Installed bundle works dependencies-absent | FR-79, AC-79.4, @feature79, UC-31 | BDD scenario | Draft | SPECGEN004_654 |
+| CHK-FR79-05 | Reports explain planning risks | FR-79, AC-79.5, @feature79, UC-31 | BDD scenario | Draft | SPECGEN004_655 |
+| CHK-FR79-06 | Observe/warn/enforce preserve legacy tasks | FR-79, AC-79.6, @feature79, UC-31 | BDD scenario | Draft | SPECGEN004_656 |
+
+
+
+## Verification Matrix — FR-80 deterministic pre-scheduling task synthesis
+
+| CHK-ID | Requirement | Traces To | Verification Method | Status | Notes |
+|---|---|---|---|---|---|
+| CHK-FR80-01 | Stable one-graph synthesis precedes planning | FR-80, AC-80.1, @feature80, UC-32 | BDD scenario | Draft | SPECGEN004_657; User Story 60 |
+| CHK-FR80-02 | DDD mode records verified boundary facts | FR-80, AC-80.2, @feature80, UC-32 | BDD scenario | Draft | SPECGEN004_657; User Story 60 |
+| CHK-FR80-03 | No-domain mode refuses fabricated entities | FR-80, AC-80.3, @feature80, UC-32 | BDD scenario | Draft | SPECGEN004_658; User Story 60 |
+| CHK-FR80-04 | Acceptance lanes are exactly once and owned | FR-80, AC-80.4, @feature80, UC-32 | BDD scenario | Draft | SPECGEN004_660; User Story 60 |
+| CHK-FR80-05 | Unknown surface blocks finalization | FR-80, AC-80.5, @feature80, UC-32 | BDD scenario | Draft | SPECGEN004_659; User Story 60 |
+| CHK-FR80-06 | Vertical slice owns FR AC scenario evidence | FR-80, AC-80.6, @feature80, UC-32 | BDD scenario | Draft | SPECGEN004_657; User Story 60 |
+| CHK-FR80-07 | BDD-only TDD causal order is enforced | FR-80, AC-80.7, @feature80, UC-32 | BDD scenario | Draft | SPECGEN004_661; User Story 60 |
+| CHK-FR80-08 | Generated task contract is measurable and typed | FR-80, AC-80.8, @feature80, UC-32 | BDD scenario | Draft | SPECGEN004_657, SPECGEN004_658; User Story 60 |
+| CHK-FR80-09 | Claims and lanes conserve without loss or duplication | FR-80, AC-80.9, @feature80, UC-32 | BDD scenario | Draft | SPECGEN004_660; User Story 60 |
+| CHK-FR80-10 | FR-72..FR-79 consume the stored graph directly | FR-80, AC-80.10, @feature80, UC-32 | BDD scenario | Draft | SPECGEN004_660; User Story 60 |
+
+
+
+## FR-80 agent-execution-plan amendments
+
+| Check | Trace | Verification focus |
+|---|---|---|
+| CHK-FR80-11 | FR-80, AC-80.10, UC-32, BDD SPECGEN004_662 | Approved design revision/digest and component/interface responsibility map are canonical inputs; conditional DDD remains repository-verified. |
+| CHK-FR80-12 | FR-80, AC-80.10, UC-32, BDD SPECGEN004_662 | A canonical task is an independently valuable AC/BDD vertical outcome; 2–5-minute execution steps remain inside its brief, never graph nodes. |
+| CHK-FR80-13 | FR-80, AC-80.10, UC-32, BDD SPECGEN004_663 | Deterministic pre-planner gate rejects placeholders, lane loss, ownership/boundary gaps, absent exact files/interfaces, infeasibility, invalid causal order, and incomplete surfaces. |
+| CHK-FR80-14 | FR-80, AC-80.10, UC-32, BDD SPECGEN004_664 | `TaskPlanResult` provides canonical self-contained agent briefs with location, interface, dependency, predecessor, scenario/evidence, blocker, batch, and next-action context. |
+| CHK-FR80-15 | FR-80, AC-80.10, UC-32, BDD SPECGEN004_664 | `DONE_WITH_CONCERNS`, `NEEDS_CONTEXT`, and `BLOCKED` create diagnostics/follow-ups; only evidence-backed `DONE` completes. |
+| CHK-FR80-16 | FR-80, AC-80.10, UC-32, BDD SPECGEN004_664 | Batch independence is proven by no causal path and no conflict pair, not prose; no second authority or executor is created. |

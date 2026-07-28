@@ -57,3 +57,24 @@ As an operator, I want a hook that prevents creating new tests on the old engine
 Given the bdd-only-test-guard hook is registered
 When an agent writes a brand-new non-BDD test file
 Then the hook denies the write with a BDD-only reason
+
+### User Story 5: See honest remaining migration debt (Priority: P1)
+
+As a repository maintainer, I want every Git-tracked legacy test classified as migration debt or a justified exemption, so that the migration spec cannot report READY while old product tests remain.
+
+**Требование:** [FR-11](FR.md#fr-11-repository-wide-remaining-old-test-census-blocks-false-ready)
+
+**Why:** A structural/execution-green spec is misleading when repository-owned non-BDD tests still exist outside its scenario graph.
+
+**Independent Test:** Run BDDONLY001_07 and BDDONLY001_08 against the real Git census, authoritative verdict, and MCP status surfaces.
+
+**Acceptance Scenarios:**
+
+Given tracked product tests, fixtures, generated mirrors, and justified exemptions
+When the repository census runs
+Then every matched path is classified exactly once and conservation holds
+
+Given an otherwise ready migration spec with residual in-scope old tests
+When CLI and MCP readiness are evaluated
+Then both report NOT_READY with the same census debt
+

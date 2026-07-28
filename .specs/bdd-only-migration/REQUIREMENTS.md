@@ -59,6 +59,10 @@
 | CHK-FR8-01 | FR-8 covered by AC-8 via @feature8 | FR-8, AC-8, @feature8 | Manual review | Draft | spec smart verdict GREEN |
 | CHK-FR9-01 | FR-9 covered by AC-9 via @feature1 | FR-9, AC-9, @feature1 | BDD scenario | Verified | guard scenarios BDDONLY001_01..04 |
 
+
+| CHK-FR11-01 | Git-tracked legacy tests are classified exactly once with conservation and mandatory exemption reasons | FR-11, AC-11, BDDONLY001_07 | BDD scenario | In Progress | repository census invariant |
+| CHK-FR11-02 | Residual in-scope debt or unavailable census blocks both CLI and MCP readiness | FR-11, AC-11, BDDONLY001_08 | Integration test | In Progress | shared readiness debt |
+
 ## Verification Process
 
 ### How CHKs are verified

@@ -42,3 +42,16 @@ Feature: BDDONLY001 Staged BDD-only test-file guard
     Given an existing non-BDD test file with 3 test cases
     When the bdd-only guard receives an Edit that lowers its test-case count to 2
     Then the bdd-only guard should allow the write
+
+  @feature11 @FR-11 @AC-11
+  Scenario: BDDONLY001_07 tracked old-test census conserves every matched path
+    Given a Git-tracked old-test corpus with product files, fixtures, generated mirrors, and explicit exemptions
+    When the repository old-test census runs
+    Then every matched path is classified exactly once with conservation and mandatory exemption reasons
+
+  @feature11 @FR-11 @AC-11
+  Scenario: BDDONLY001_08 residual old-test debt blocks CLI and MCP readiness
+    Given an otherwise ready bdd-only-migration spec with tracked in-scope old-test debt
+    When spec-verdict and MCP status evaluate migration readiness
+    Then both surfaces report NOT_READY with the same repository old-test debt
+

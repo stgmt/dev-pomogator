@@ -1417,3 +1417,234 @@ The analyzer remains project-agnostic: it never hardcodes marketplace field name
 - Drop invalid edges (rejected: false-green graph and no repair evidence).
 - Validate only MCP mutations (rejected: builder, incremental, and SQLite paths would bypass the contract).
 
+
+
+## Completion evidence hardening (FR-68..FR-71)
+
+### Decision: Separate mandatory AC and NFR readiness lanes
+
+**Требование:** FR-68, FR-69
+
+**Rationale:** AC and NFR failure classes need different diagnostics and remediation: an AC requires criterion-specific behavioral proof, while an NFR may use test, analysis, review, inspection or demonstration. `AC_SATISFACTION` and `NFR_SATISFACTION` remain separate mandatory lanes and each uses non-empty ALL, so one complete member cannot hide an open sibling. Parent-FR scenarios remain discoverable as inherited context but never become own AC evidence.
+
+**Trade-off:** Two lanes increase surface/API cardinality and retrofit work; the benefit is an actionable first blocking lane instead of an opaque aggregate.
+
+**Alternatives considered:**
+- Keep both under `TRACEABILITY`: rejected because structural green can mask missing execution evidence.
+- Reuse `EXECUTION` alone: rejected because it has no criterion-level or NFR-method accounting.
+
+
+### Decision: Evidence is a first-class content-addressed graph node
+
+**Требование:** FR-70
+
+**Rationale:** An attachment path is mutable and currently disconnected from verdict truth. A first-class `Evidence` node gives the existing edge schema, endpoint validator, SQLite persistence and MCP query surfaces one shared identity. The node identity derives from canonical spec scope plus artifact `sha256`; `evidenced-by` is a typed edge from FR/NFR/AC/Scenario to Evidence. The manifest adapts provenance fields supported by SLSA/in-toto (subject digest, producer/builder identity, invocation identity and timestamps) without claiming that demonstration video is itself a SLSA build artifact.
+
+**Trade-off:** Graph and SQLite schemas gain a node/edge type and artifact I/O; the benefit is immutable review identity and graph-native diagnosis.
+
+**Alternatives considered:**
+- Keep evidence inside free-form FR metadata: rejected because it cannot deduplicate exact bytes or validate graph endpoints.
+- Identify evidence by path only: rejected because replacing bytes at the same path would retain stale approval.
+
+
+### Decision: Operational-proof presence is derived and fail-closed
+
+**Требование:** FR-70
+
+**Rationale:** Existing delivery evaluation accepts hand-authored `state: PRESENT` before inspecting anything and checks evidence references only for node existence. For `operational-proof`, explicit PRESENT is invalid. The evaluator derives PRESENT only after path confinement, regular/non-empty file check, finalized recording, SHA-256 match, subject-revision freshness and successful target-state evaluation. `verificationMethod: demonstration|inspection` implies a required operational-proof demand unless a justified not-applicable record is explicit.
+
+**Trade-off:** Missing storage or an unavailable probe blocks required completion; optional proof remains non-blocking and every failure carries a retry action.
+
+**Alternatives considered:**
+- Fail open when artifact inspection is unavailable: rejected because it recreates the target false-green.
+- Trust an explicit `PRESENT` plus rationale: rejected because metadata would self-attest the fact it is meant to prove.
+
+
+### Decision: Demonstration judgment is independent and digest-bound
+
+**Требование:** FR-71
+
+**Rationale:** Integrity proves which bytes were reviewed, not that those bytes satisfy an acceptance claim. The producer finalizes the artifact; a separate `spec-llm-judge` invocation reviews that exact digest and emits per-criterion `CONFIRMED|DENIED` observations with timestamps. Distinct auditable identities are mandatory. Equal/missing identities classify the verdict as `self-attested`, which is retained for audit but cannot satisfy required proof. Any required DENIED, incomplete review, digest mismatch or judge unavailability keeps the demand incomplete.
+
+**Trade-off:** Independent review costs an extra model invocation and can block on judge availability; the benefit is separation of production from acceptance.
+
+**Alternatives considered:**
+- Require human-only approval: rejected because every demonstration would become a mandatory owner handoff.
+- Let the producer self-review: rejected because the resulting evidence is not independent.
+
+
+### Decision: Retrofit first and enable the corpus-wide hard gate last
+
+**Требование:** FR-68, FR-69
+
+**Rationale:** A measured current graph contains 811 ACs (803 without own scenario evidence) and 58 NFRs (58 without own evidence), which would yield 869 immediate blocking findings across 63 specs. The owner's policy remains error everywhere, not warning-on-legacy. Phase 44 therefore retrofits each spec first and switches the hard codes/mandatory lanes on only after the debt reaches zero. Bulk tag copying is not retrofit evidence and is blocked by `TAG_BULK_SUSPECT` unless distinct assertions prove each criterion.
+
+**Trade-off:** Delivery is longer and requires semantic review of existing scenarios; the benefit is a hard gate without a permanently red main branch.
+
+**Alternatives considered:**
+- Enable the hard gate before retrofit: rejected because it leaves the whole corpus blocked during migration.
+- Keep warnings on legacy forever: rejected because false completion remains possible.
+- Mechanically copy tags: rejected because it launders parent-FR coverage into criterion proof.
+
+
+
+### Decision: NFRs use method-aware evidence on their own mandatory lane
+
+**Требование:** [FR-69](FR.md#fr-69)
+
+**Rationale:** NFRs need the same fail-closed completion contract as FRs but may be verified by test, analysis, review, inspection or demonstration. `NFR_SATISFACTION` therefore evaluates each required NFR's declared method and evidence instead of forcing every NFR through a Cucumber-only route.
+
+**Trade-off:** Method-aware adapters add evaluator branches; the benefit is evidence that matches the requirement rather than a meaningless green test.
+
+**Alternatives considered:**
+- Treat every NFR as an integration test: rejected because review, analysis and demonstration obligations cannot be represented honestly.
+- Keep NFRs advisory: rejected because the requested completion contract requires them to block false-green delivery.
+
+
+
+### Decision: Canonical task model is the source of every task view
+
+**Требование:** [FR-72](FR.md#fr-72)
+
+**Rationale:** One parser/model/renderer prevents Markdown, graph, MCP, lifecycle, census, and summary from diverging while strict TASKS.md remains the human projection during migration.
+
+**Trade-off:** Compatibility parsing adds migration work but prevents silent loss and status drift.
+
+**Alternatives considered:**
+- Keep a parser per consumer: rejected because READY and revision could diverge.
+- Replace TASKS.md immediately: rejected because it removes the current reviewed human source.
+
+### Decision: Dependencies are a typed causal DAG
+
+**Требование:** [FR-73](FR.md#fr-73)
+
+**Rationale:** First-class dependency edges, reasons, cycle checks, and reverse blockers make readiness computable rather than inferred from prose.
+
+**Trade-off:** Authors must supply structured targets and reasons, but blockers become actionable.
+
+**Alternatives considered:**
+- Retain prose-only ordering: rejected because no validator or planner can safely execute it.
+- Infer dependency from conflicts: rejected because resource risk is not causal completion.
+
+### Decision: Execution surfaces are typed claims reconciled with actual work
+
+**Требование:** [FR-74](FR.md#fr-74)
+
+**Rationale:** Typed resource kind, access, locator/scope, and rationale describe file and semantic blast radius before execution; repository-root confinement applies Unicode/case normalization, realpath symlink/junction resolution, absolute/UNC and traversal rejection, bounded glob expansion, and secret redaction. Reconciliation makes incorrect declarations visible afterward without executing locator text.
+
+**Trade-off:** Authoring is more structured and reconciliation can emit advisory variance, but planned parallelism becomes explainable.
+
+**Alternatives considered:**
+- Infer surfaces only from a final diff: rejected because it cannot prevent unsafe parallel work.
+- Use file paths only: rejected because contracts and schemas span files.
+
+### Decision: Conflict graph is derived and remains separate from dependencies
+
+**Требование:** [FR-75](FR.md#fr-75)
+
+**Rationale:** Conflict represents temporary concurrency risk, not a causal edge. A separate derived graph retains explanations, supports scoped expiring override, and partitions waves without falsifying the DAG.
+
+**Trade-off:** Planner evaluates two graphs, but avoids fake ordering and distorted critical paths.
+
+**Alternatives considered:**
+- Convert conflicts to depends-on: rejected because it creates fake causality.
+- Ignore semantic conflicts across files: rejected because shared contracts still collide.
+
+### Decision: Plan deterministically with topological waves and weighted paths
+
+**Требование:** [FR-76](FR.md#fr-76)
+
+**Rationale:** Topological waves, conflict-free batches, stable tie-breaks, and weighted longest-path metrics produce reproducible scheduling explanations.
+
+**Trade-off:** The system chooses explainable bounded scheduling over global optimum search.
+
+**Alternatives considered:**
+- Nondeterministic worker queue: rejected because equal input produces review noise.
+- Global optimal scheduler: rejected because complexity and opacity exceed the contract.
+
+### Decision: Evidence fingerprint invalidation preserves history
+
+**Требование:** [FR-77](FR.md#fr-77)
+
+**Rationale:** Input fingerprints/digests derive stale closure when proof prerequisites change; historical proof remains auditable while current completion fails closed.
+
+**Trade-off:** Storage and invalidation traversal increase, but recovery has an exact stale reason.
+
+**Alternatives considered:**
+- Delete old evidence: rejected because audit history disappears.
+- Use timestamps alone: rejected because they do not prove consumed bytes or definitions.
+
+### Decision: Discovery emits reviewed bounded patches
+
+**Требование:** [FR-78](FR.md#fr-78)
+
+**Rationale:** Stable child IDs, budgets, output-digest dedupe, normal validation, and high-impact approval allow discovery without autonomous unbounded graph mutation.
+
+**Trade-off:** Some discoveries await approval, but replay and failure cannot corrupt task truth.
+
+**Alternatives considered:**
+- Mutate graph directly: rejected because replay/failure can corrupt planning state.
+- Ban discovery: rejected because unknown work remains untracked prose.
+
+### Decision: Roll out typed planning from observe through enforce
+
+**Требование:** [FR-79](FR.md#fr-79)
+
+**Rationale:** Observe measures debt, warn guides migration, and enforce blocks unresolved records while preserved counts prove no silent loss.
+
+**Trade-off:** Compatibility code is temporary overhead but avoids abrupt breakage and fake migration success.
+
+**Alternatives considered:**
+- Enforce immediately: rejected because current source becomes unusable before verified migration.
+- Warn forever: rejected because unsafe prose-only state remains implicitly executable.
+
+
+
+
+**Алгоритмический владелец:** [TASK_PLANNING_PRIOR_ART.md](TASK_PLANNING_PRIOR_ART.md#4-алгоритмы-первого-инкремента) владеет алгоритмами Phase 45: DAG/циклы, surfaces/conflicts, waves/slack, fingerprints/evidence, bounded discovery и JSON read model. Этот DESIGN сохраняет product decisions и связи с FR.
+
+
+### Task-planning prior art
+
+The execution-aware task-planning design is grounded in [TASK_PLANNING_PRIOR_ART.md](TASK_PLANNING_PRIOR_ART.md#45-safe-parallel-waves-и-batches), including the frontier-aware wave algorithm, conflict batching, evidence invalidation, migration constraints, and direct-adoption licensing boundaries. Implementation must follow its [research snapshot and link-stability note](TASK_PLANNING_PRIOR_ART.md#research-snapshot-and-link-stability).
+
+
+### Decision: Synthesize one canonical task graph before scheduling
+
+**Требование:** [FR-80](FR.md#fr-80)
+
+**Rationale:** FR-72..FR-79 operate on canonical records, dependencies, surfaces, evidence, and readiness. Deriving those records after scheduling would let separate planner state drift from the SpecGraph and would obscure whether an acceptance claim has an owner. A pure deterministic synthesis pass therefore reads normalized FR/AC/DESIGN/BDD inputs plus inspected repository reality and writes the resulting `task/v1` nodes and typed edges into the existing stored SpecGraph once; scheduling reads those exact nodes and edges rather than building another graph.
+
+**Trade-off:** Synthesis must model incomplete repository knowledge explicitly and may block planning earlier. This is preferable to allowing a scheduler to infer an implementation surface or complete an acceptance lane without evidence.
+
+**Alternatives considered:**
+- Synthesize a planner-private graph: rejected because reconciliation with the SpecGraph would create an additional drift and loss path.
+- Always model a DDD aggregate: rejected because infrastructure and integration work may have no domain boundary, and invented entities are false evidence.
+- Defer task construction until wave selection: rejected because waves would be selected before acceptance-lane ownership and evidence are known.
+
+### Algorithm: Deterministic synthesis precedes FR-72..FR-79 wave planning
+
+**Требование:** [FR-80](FR.md#fr-80)
+
+1. Normalize and stable-sort applicable FR, AC, DESIGN decisions, tagged BDD scenarios, and inspected repository surfaces; use their durable IDs as synthesis keys.
+2. Classify each verified implementation area as `domainMode: ddd` only when a repository-supported domain boundary exists; then capture boundary, aggregate, invariant, and contract. Otherwise classify it as `domainMode: none` and capture only module, adapter, and contract boundaries.
+3. Create one acceptance lane for each applicable AC, with a vertical BDD slice that owns the FR, AC, scenario, and evidence; record causal `RED -> GREEN -> REFACTOR` typed edges within that slice only.
+4. For every lane, emit one or more canonical `task/v1` records with measurable `doneWhen`, estimate, requirement/AC references, typed dependency edges, and read/write/exclusive surfaces. A missing implementation surface becomes a `BLOCKED` investigation record that retains its lane and prevents finalization.
+5. Validate source-claim and acceptance-lane conservation, uniqueness, causal order, and stable-key output. Any discrepancy is a named deterministic finding, never an implicit drop or duplicate.
+6. Persist synthesized nodes and edges in the existing SpecGraph. Only after this succeeds may FR-72..FR-79 consume the same graph for lifecycle validation, conflict analysis, impact, waves, scheduling, and rollout; no secondary planning graph is constructed.
+
+
+
+## FR-80 canonical agent-execution-plan projection
+
+`task-synthesis.ts` receives `TaskSynthesisInput { approvedDesignRevision: { id, digest, approvalEvidence }, responsibilityMap: ComponentResponsibility[] }` in addition to the canonical FR/AC/DESIGN/BDD/repository-reality inputs. A responsibility item records the owning component, repository-relative file/source range, interface contract, and `domainMode`; DDD aggregates and invariants are accepted only when repository evidence establishes them, otherwise `domainMode: none` retains module/adapter/contract ownership without fabrication.
+
+The synthesis result stores one canonical `TaskNode` per independently valuable AC/BDD vertical outcome. `executionSteps: ExecutionStep[]` are ordered, 2–5-minute RED/GREEN/REFACTOR actions nested in that node rather than graph nodes. This prevents micro-step DAG explosion while preserving the executable route to a measurable `doneWhen`.
+
+Before `task-planner.ts` reads nodes, `reviewTaskSynthesis()` deterministically stable-sorts and rejects named findings for: placeholders; acceptance-lane conservation failure; missing boundary or responsibility owner; absent exact file/source range or interface; infeasible task; untyped or cyclic causal order; and incomplete read/write/exclusive surfaces. The review uses no LLM decision and is a prerequisite, not an advisory report.
+
+`TaskPlanResult` is a read-only projection of stored SpecGraph nodes and edges. Each `TaskBrief` carries `fullTaskText`, `files` with exact source ranges, `interfaces`, typed `dependencies`, relevant `predecessorSummaries`, `scenario`, `evidenceCommand`, `blockers`, `safeBatchId`, `independenceProof`, and `nextAction`. It is sufficient for an AI agent or spec-generator worker to begin work without consulting a second plan directory. The plan neither persists a `.superpowers/sdd`-like store nor executes work.
+
+`ExecutionOutcome` is `DONE | DONE_WITH_CONCERNS | NEEDS_CONTEXT | BLOCKED`. The lifecycle accepts completion only for `DONE` with the task-owned evidence required by FR-77. The other variants retain their evidence, emit diagnostics, and create canonical follow-up proposals without falsely closing the parent task.
+
+A `SafeBatch` contains an `independenceProof` for every member pair: graph reachability must be absent in both directions and `task-conflicts.ts` must derive no conflict pair. Planner prose is descriptive only and cannot establish parallel safety. Typed BDD-only causal edges keep `RED -> GREEN -> REFACTOR`; conditional DDD never weakens that order.

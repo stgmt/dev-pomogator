@@ -59,3 +59,10 @@ WHEN the FR-1 guard scenarios run against the real guard THEN a new non-BDD test
 **Требование:** [FR-10](FR.md#fr-10-shrink-only-invariant-for-existing-non-bdd-test-files)
 
 WHEN an agent issues an Edit/MultiEdit to an existing non-BDD test file AND the post-edit test-case opener count is GREATER than the pre-edit count THEN the `bdd-only-test-guard` hook SHALL deny the call with a shrink-only reason that names the false-positive surface; WHEN the edit keeps or lowers the test-case count, OR a `BDD_ONLY_SKIP` escape is set, THEN the hook SHALL allow it (the escape recorded in the escape log).
+
+## AC-11 (FR-11)
+
+**Требование:** [FR-11](FR.md#fr-11-repository-wide-remaining-old-test-census-blocks-false-ready)
+
+WHEN the repository census evaluates Git-tracked `*.test.ts`, `*_test.py`, `*Tests.cs`, and `*_test.go` files THEN every matched path SHALL appear exactly once in `in_scope` or `exempt`, every exemption SHALL have a non-empty reason, and `tracked = in_scope + exempt` SHALL hold. WHEN any `in_scope` file remains, Git inventory is unavailable, or a conservation/cardinality invariant fails THEN both `spec-verdict` and MCP `get_spec_status(view=status)` for `bdd-only-migration` SHALL return `NOT_READY` with concrete migration-census debt.
+

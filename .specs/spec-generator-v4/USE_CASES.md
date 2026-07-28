@@ -437,3 +437,77 @@ A feature request claims a public catalog/policy surface and an authenticated pa
 **Requirement:** FR-65
 
 **Linked stories:** US-44
+
+
+---
+
+## UC-31: Create an execution-aware, safe parallel task plan
+
+**Primary actor:** Spec author or implementation agent.
+
+**Goal:** Turn canonical typed tasks into an explainable execution plan that maximizes safe parallelism while preserving dependencies, declared resource conflicts, and evidence freshness.
+
+**Preconditions:**
+
+- The input contains canonical task records or imported legacy prose tasks.
+- A canonical task may declare dependency IDs, an estimate, task-owned evidence, and surfaces classified as `read`, `write`, or `exclusive` for files, symbols, contracts, configuration, data, tests, or runtime resources.
+- Legacy `_depends` text is available only as a migration hint unless it can be resolved to concrete task IDs.
+
+**Trigger:** The actor asks the planner to create or refresh the execution plan for a selected task set.
+
+**Main success flow:**
+
+1. The planner loads task records and preserves legacy prose, raw completion text, waivers, phase, status, and references.
+2. It validates typed dependency IDs, rejects cycles, and computes dependency-ready antichains.
+3. It normalizes declared surfaces, derives conflict edges from overlap, and retains the contributing surface identities for explanation.
+4. It splits each dependency-ready antichain into conflict-free batches; conflicts constrain concurrency but do not silently become dependency edges.
+5. It computes critical path and slack from estimates and the dependency DAG, clearly identifying unavailable or assumed estimates.
+6. It verifies each task-owned evidence record against its input digests and marks evidence stale when a declared input or transitive prerequisite changed.
+7. It returns waves, batches, conflict explanations, dependency explanations, critical-path/slack results, evidence freshness, and migration warnings.
+
+**Extensions:**
+
+- If a task is a bounded discovery task, the planner limits traversal depth, candidate count, and elapsed work; it emits candidate dependencies or surfaces as a graph-patch proposal for validation instead of editing the graph.
+- If a surface is missing or ambiguous, the plan records a blocking investigation or conservative conflict; it does not claim the tasks are safe to run in parallel.
+- If a legacy task has prose-only dependencies, the plan remains readable but labels the relation unresolved and asks for a typed migration decision.
+- If estimates are absent, the planner still emits dependency and conflict waves, but reports critical-path/slack values as unavailable or explicitly assumed.
+
+**Postconditions:**
+
+- Every parallel batch is both dependency-ready and conflict-free according to declared knowledge.
+- The canonical dependency DAG remains distinct from the derived conflict graph.
+- Existing prose tasks remain intact and have an explicit compatibility/migration path.
+- Discovery never applies an unreviewed graph change, and stale evidence cannot be presented as fresh task proof.
+
+**Linked stories:** US-51
+
+---
+
+## UC-32: Synthesize proof-owning vertical tasks before scheduling
+
+**Goal:** turn FR, mandatory AC lanes, DESIGN decisions, and linked BDD scenarios into canonical task records before blast-radius analysis and dependency-DAG planning.
+
+**Trigger:** A maintainer requests an execution plan for a changed requirement set.
+
+**Main flow:**
+
+1. The synthesizer collects FR, every mandatory AC lane, DESIGN decisions, linked BDD scenarios, and available implementation surfaces.
+2. It reads `domainMode`. With `ddd`, it performs DDD boundary analysis for evidenced aggregates, invariants, and contracts. With `none`, it uses module, adapter, and contract boundaries and does not invent domain objects.
+3. It creates vertical acceptance slices, conserving every mandatory AC lane and assigning each slice an owner, affected surfaces, BDD proof, and an ordered BDD-only TDD chain: RED, GREEN, then REFACTOR.
+4. It emits canonical task records with requirement/AC/scenario links, ownership, surfaces, evidence policy, and TDD order.
+5. If a needed implementation surface remains unknown, it emits a BLOCKED investigation task with its owner, unresolved surface, and evidence needed to unblock it; it does not fabricate a surface or mark the task READY.
+6. Only then do downstream blast-radius analysis and DAG planning consume the canonical records; they preserve blocked state and acceptance-lane ownership.
+
+**Outcome:** scheduling is derived from a complete, evidence-owning task model rather than from prose or speculative domain structure.
+
+**Linked stories:** US-60
+
+
+
+### UC-32 execution-agent handoff amendment
+
+1. The agent requests `TaskPlanResult` from canonical SpecGraph data.
+2. It receives a self-contained `TaskBrief`: full task text, approved-design/responsibility context, exact files/source ranges, interfaces, dependencies, relevant predecessor summaries, scenario/evidence command, blockers, safe batch, independence proof, and machine next action.
+3. It performs nested 2–5-minute BDD-only RED/GREEN/REFACTOR steps for the canonical AC/BDD vertical task, never treating a micro-step as a separate graph task.
+4. It reports `DONE` only with task-owned evidence, otherwise `DONE_WITH_CONCERNS`, `NEEDS_CONTEXT`, or `BLOCKED` with diagnostics and a follow-up proposal.
+5. It parallelizes only a batch whose every pair has no causal path in either direction and no conflict pair. No second plan store or executor is introduced.
