@@ -50,8 +50,6 @@ The system SHALL relocate `.claude/rules/specs-workflow/research-workflow.md` to
 
 Additionally, `create-spec` SKILL.md and `references/phase1_discovery.md` SHALL explicitly invoke `research-workflow` skill during Phase 1 step 5 (RESEARCH.md filling) via the `Skill("research-workflow")` tool call. The two skills are decoupled by triggers but composed by workflow — research is a sub-step of spec creation when context investigation is needed.
 
-For recommendation and product research, `research-workflow` SHALL extract explicit budget, currency, region, availability, condition, deadline, and include/exclude constraints before hypotheses or search. Each explicit limit SHALL be a hard eligibility gate: a candidate that violates the gate or lacks current evidence SHALL NOT receive deep research, ranking, or recommendation. The workflow SHALL re-check price and availability immediately before the final recommendation and SHALL never pad a shortlist with ineligible candidates. For model/provider research, the workflow SHALL verify the actual consumer's provider, endpoint/protocol, model-ID namespace, credential sources, persistence boundary, and precedence when multiple credentials coexist; a credential-name mismatch SHALL NOT be reported as model unavailability.
-
 **Связанные AC:** [AC-5](ACCEPTANCE_CRITERIA.md#ac-5-fr-5-feature5)
 **Use Case:** [UC-5](USE_CASES.md#uc-5-research-workflow-split-separate-skill-separate-trigger-feature5)
 

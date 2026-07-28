@@ -33,8 +33,7 @@
 
 | Path | Action | Reason |
 |------|--------|--------|
-| `.claude/skills/research-workflow/SKILL.md` | create + amend | New standalone skill per [FR-5](FR.md#fr-5-research-workflow-extracted-as-standalone-skill-and-invoked-by-create-spec-feature5); content ported from `.claude/rules/specs-workflow/research-workflow.md` (157 lines), with pre-search hard eligibility gates and model/provider credential-contract verification |
-| `tests/step_definitions/feature_research_workflow_constraints.ts` | create | Executable BDD assertions that budget/region/availability gates precede deep research and credential-name mismatches cannot be called model unavailability |
+| `.claude/skills/research-workflow/SKILL.md` | create | New standalone skill per [FR-5](FR.md#fr-5-research-workflow-extracted-as-standalone-skill-and-invoked-by-create-spec-feature5); content ported from `.claude/rules/specs-workflow/research-workflow.md` (157 lines) |
 
 ## Source rule deletions
 

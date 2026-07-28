@@ -58,12 +58,6 @@ WHEN `create-spec` SKILL.md is read THEN it SHALL contain at least one explicit 
 
 WHEN `references/phase1_discovery.md` is read THEN it SHALL document calling `Skill("research-workflow")` as a sub-step before filling RESEARCH.md technical findings.
 
-WHEN a research prompt specifies a maximum price, region, availability, condition, deadline, or explicit include/exclude constraint THEN `research-workflow` SHALL list that constraint as a hard eligibility gate before search AND SHALL exclude candidates with failed or unverified gates before deep research, ranking, and recommendation.
-
-WHEN the workflow recommends a product THEN it SHALL re-verify current total price and availability immediately before the recommendation; a product above the user's ceiling (for example, above EUR 200) SHALL appear only in a rejected table and SHALL NOT appear in the recommendation list.
-
-WHEN research evaluates model/provider availability THEN it SHALL verify the real consumer's provider, endpoint/protocol, direct-vs-routed model ID, exact credential sources, persistence boundary, and multi-credential precedence. A request failure caused by an unsupported credential variable SHALL be classified as configuration incompatibility, not model unavailability.
-
 ---
 
 ## AC-6 (FR-6) @feature4
