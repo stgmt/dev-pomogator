@@ -59,3 +59,51 @@ WHEN `/suggest-rules` Phase 6 invokes `audit.ts --dir .claude/rules --save audit
 **Требование:** [FR-11](FR.md#fr-11-auto-apply-без-human-review-out-of-scope)
 
 > OUT OF SCOPE — см. FR-11. Auto-apply без `--execute` flag — намеренный design choice ради safety, never implementing.
+
+## AC-12 (FR-12)
+
+**Требование:** [FR-12](FR.md#fr-12-shipped-dependency-free-checker-and-shared-gates)
+
+WHEN source CI, the release gate, and an installed plugin tree with its `node_modules` directory absent verify skill health THEN each SHALL invoke `tools/skill-health/check.mjs` and the installed run SHALL complete without resolving a non-`node:` dependency.
+
+## AC-13 (FR-13)
+
+**Требование:** [FR-13](FR.md#fr-13-strict-frontmatter-parser-and-metadata-contract)
+
+IF a SKILL.md contains unterminated or malformed YAML/frontmatter, or omits a required `name`, `description`, or `allowed-tools` value, THEN the checker SHALL emit the relevant structured frontmatter finding and SHALL NOT represent that document as valid empty metadata.
+
+## AC-14 (FR-14)
+
+**Требование:** [FR-14](FR.md#fr-14-active-tool-permission-coverage-with-false-positive-pins)
+
+WHEN an executable instruction actively calls `Skill(...)`, `Agent(...)`, or `mcp__server__tool(...)` without the exact declared permission THEN the checker SHALL emit `ALLOWED_TOOLS_MISSING`; WHEN the same names occur only in negated prose, bare prose, or generic examples THEN it SHALL emit no such finding.
+
+## AC-15 (FR-15)
+
+**Требование:** [FR-15](FR.md#fr-15-local-reference-integrity-and-root-containment)
+
+WHEN a statically resolvable local Markdown reference is inspected THEN an existing contained target SHALL pass, a missing target SHALL produce `LOCAL_REFERENCE_MISSING`, and a traversal outside the plugin root SHALL produce `REFERENCE_ESCAPES_ROOT`.
+
+## AC-16 (FR-16)
+
+**Требование:** [FR-16](FR.md#fr-16-deterministic-report-and-strict-modes)
+
+WHEN unchanged input is checked twice in text and JSON modes THEN the output SHALL be byte-identical and deterministically ordered; `--report` SHALL exit zero after reporting findings, while `--strict` SHALL exit non-zero only when an unbaselined error remains.
+
+## AC-17 (FR-17)
+
+**Требование:** [FR-17](FR.md#fr-17-exact-fingerprint-baseline)
+
+IF a baseline entry exactly matches a finding path, finding code, and content fingerprint THEN the finding SHALL be marked baselined; IF any member differs, or the entry uses a wildcard or broad match, THEN the finding SHALL remain blocking or the baseline SHALL be rejected.
+
+## AC-18 (FR-18)
+
+**Требование:** [FR-18](FR.md#fr-18-explicit-mirror-policy)
+
+WHEN a mirror-contract entry is evaluated THEN `exact`, `adapted`, `canonical-only`, and `legacy` SHALL each have explicit deterministic behavior, unknown modes SHALL be rejected, and an `exact` or `adapted` drift SHALL identify the canonical and mirror paths.
+
+## AC-19 (FR-19)
+
+**Требование:** [FR-19](FR.md#fr-19-no-prompt-lifecycle-hook-rollout)
+
+WHEN plugin hooks and settings are inspected for this feature THEN neither `SessionStart` nor `UserPromptSubmit` SHALL register or invoke the skill-health checker.

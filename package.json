@@ -54,6 +54,7 @@
     "build:bundles": "npm run build:mcp && npm run build:gate && npm run build:guard && npm run build:push && npm run build:ingest && npm run build:pinator && npm run build:claim-gate && npm run build:tui-test-runner && npm run build:pomogator-doctor",
     "build:hook-service-registry": "node tools/hook-service/generate-registry.mjs .",
     "check:status-drift": "tsx scripts/check-status-drift.mts",
+    "check:skill-health": "node tools/skill-health/check.mjs --root . --strict",
     "check:hook-review": "node tools/hook-review/check.mjs",
     "prepush": "node tools/hook-review/check.mjs --staged",
     "test": "bash scripts/docker-test.sh",

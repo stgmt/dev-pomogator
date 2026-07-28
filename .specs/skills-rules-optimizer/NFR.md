@@ -28,3 +28,14 @@
 - **Cleanup suggestions как dim text:** не выполняются автоматически, чтобы пользователь явно подтвердил `rm -rf` командой. Защита от accidental data loss.
 - **Error messages actionable:** каждое error finding содержит `code` (machine-readable), `path` (file location), `suggestion` (как fix). Пример: `{ code: "ALLOWED_TOOLS_MISSING", path: ".claude/skills/foo/SKILL.md", missing: ["Skill"], suggestion: "Add 'Skill' to allowed-tools in frontmatter" }`.
 - **Ratchet decision visible:** на regression — explanation от scorer (не binary fail), чтобы user понимал почему rejected merge.
+
+## Distribution, determinism, and scope safety
+
+### NFR-Distribution-1: Dependency-isolated installed runtime
+The checker SHALL execute under the supported Node runtime using only `node:*` modules. A dependency-absent installed-plugin run is required evidence; success in a source checkout with `tsx`, `yaml`, or repository `node_modules` available is insufficient.
+
+### NFR-Determinism-1: Reproducible diagnostics
+Findings and both report formats SHALL have a stable schema and stable sort order by path, line, and code. Baseline and mirror decisions SHALL be explainable from explicit on-disk contracts.
+
+### NFR-Scope-1: Non-interrupting rollout
+The checker SHALL run only at explicit source CI, release, or installed verification boundaries. It SHALL not add latency, prompts, or enforcement to `SessionStart` or `UserPromptSubmit`.

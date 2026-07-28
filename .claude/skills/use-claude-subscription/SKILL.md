@@ -11,6 +11,7 @@ description: |
   here", "wire claude in this project", "claude через подписку",
   "хочу клода в этом проекте без ключа", "анthropic api без ключа",
   "set up claude api locally", "use my claude subscription here".
+allowed-tools: Read, Glob, Grep, Edit, Write, Bash, Skill
 ---
 
 # use-claude-subscription — wire any project to the local Claude subscription proxy
