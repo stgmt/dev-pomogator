@@ -16,6 +16,8 @@ export const DEFAULT_STALE_WORKER_CANDIDATE_CAP = 3;
 export interface ProcessSnapshot {
   pid: number;
   commandLine: string;
+  /** POSIX process-group id; only a group leader is safe for group termination. */
+  pgid?: number;
 }
 
 export interface StaleContextModeWorker {
@@ -53,6 +55,10 @@ export function findProvablyOwnedStaleWorkers(
   const skipped: string[] = [];
   for (const process of snapshot) {
     if (!Number.isInteger(process.pid) || process.pid <= 0) continue;
+    if (process.pgid !== undefined && process.pgid !== process.pid) {
+      skipped.push(`owned worker descendant ${process.pid} ignored; group leader is ${process.pgid}`);
+      continue;
+    }
     const scriptPath = parseWorkerScript(process.commandLine);
     if (!scriptPath) continue;
     try {
@@ -77,11 +83,11 @@ function readProcessSnapshot(platform: NodeJS.Platform = process.platform): Proc
     return (Array.isArray(parsed) ? parsed : [parsed]).flatMap(item =>
       typeof item.ProcessId === 'number' && typeof item.CommandLine === 'string' ? [{ pid: item.ProcessId, commandLine: item.CommandLine }] : []);
   }
-  const result = spawnSync('ps', ['-axo', 'pid=,command='], { encoding: 'utf8', timeout: DEFAULT_STALE_WORKER_SCAN_TIMEOUT_MS });
+  const result = spawnSync('ps', ['-axo', 'pid=,pgid=,command='], { encoding: 'utf8', timeout: DEFAULT_STALE_WORKER_SCAN_TIMEOUT_MS });
   if (result.status !== 0) throw new Error('process snapshot unavailable');
   return result.stdout.split(/\r?\n/).flatMap(line => {
-    const match = line.trim().match(/^(\d+)\s+(.+)$/);
-    return match ? [{ pid: Number(match[1]), commandLine: match[2] }] : [];
+    const match = line.trim().match(/^(\d+)\s+(\d+)\s+(.+)$/);
+    return match ? [{ pid: Number(match[1]), pgid: Number(match[2]), commandLine: match[3] }] : [];
   });
 }
 
@@ -103,7 +109,7 @@ export function sweepStaleContextModeWorkers(options: {
   ageMs?: number;
   platform?: NodeJS.Platform;
   listProcesses?: (platform: NodeJS.Platform) => ProcessSnapshot[];
-  killTree?: (pid: number, options?: { platform?: NodeJS.Platform }) => void;
+  killTree?: (pid: number, options?: { platform?: NodeJS.Platform; timeoutMs?: number }) => void;
   deadlineMs?: number;
   candidateCap?: number;
   clock?: () => number;
@@ -117,9 +123,12 @@ export function sweepStaleContextModeWorkers(options: {
     const snapshot = options.snapshot ?? (options.listProcesses ?? readProcessSnapshot)(platform);
     const found = findProvablyOwnedStaleWorkers(snapshot, options.nowMs ?? startedAt, options.ageMs);
     const skipped = [...found.skipped];
-    const selected = found.workers.slice(0, Math.max(0, candidateCap));
+    // taskkill is synchronous; on Windows a single bounded call preserves the sweep deadline.
+    const platformCap = platform === 'win32' ? Math.min(1, Math.max(0, candidateCap)) : Math.max(0, candidateCap);
+    const selected = found.workers.slice(0, platformCap);
     if (found.workers.length > selected.length) {
-      skipped.push(`candidate cap ${candidateCap} reached; ${found.workers.length - selected.length} owned stale worker(s) left untouched`);
+      const capLabel = platform === 'win32' && candidateCap > platformCap ? `Windows candidate cap ${platformCap}` : `candidate cap ${candidateCap}`;
+      skipped.push(`${capLabel} reached; ${found.workers.length - selected.length} owned stale worker(s) left untouched`);
     }
     const killed: StaleContextModeWorker[] = [];
     for (let index = 0; index < selected.length; index += 1) {
@@ -128,7 +137,8 @@ export function sweepStaleContextModeWorkers(options: {
         break;
       }
       const worker = selected[index];
-      (options.killTree ?? forceKillProcessTree)(worker.pid, { platform });
+      const remainingMs = Math.max(1, deadlineMs - (clock() - startedAt));
+      (options.killTree ?? forceKillProcessTree)(worker.pid, { platform, timeoutMs: remainingMs });
       killed.push(worker);
     }
     const result = { scanned: snapshot.length, candidates: found.workers.length, killed, skipped, failOpen: false };

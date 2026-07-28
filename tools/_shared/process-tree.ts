@@ -34,6 +34,8 @@ export interface SignalTreeOptions {
   platform?: NodeJS.Platform;
   /** Test seam: record the intent to this JSON file instead of signalling. */
   recordFile?: string;
+  /** Bound the Windows taskkill invocation so callers can enforce an overall deadline. */
+  timeoutMs?: number;
 }
 
 export interface KillIntent {
@@ -102,7 +104,7 @@ function apply(pid: number, opts: SignalTreeOptions, force: boolean): void {
 
   try {
     if (platform === 'win32') {
-      spawnSync('taskkill', intent.args, { windowsHide: true, timeout: 5000 });
+      spawnSync('taskkill', intent.args, { windowsHide: true, timeout: Math.max(1, opts.timeoutMs ?? 5000) });
       return;
     }
     const sig = force ? 'SIGKILL' : signal;

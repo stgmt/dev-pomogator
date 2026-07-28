@@ -106,3 +106,13 @@ Feature: CTXMODE001_context_mode_integration
   Scenario: CTXMODE001_14 POSIX stale-worker recovery owns the installer tree
     When a context-mode installer worker starts on POSIX
     Then its installer stays in the owned worker process group
+
+  @FR-15 @feature15
+  Scenario: CTXMODE001_15 POSIX recovery selects only the owned worker group leader
+    When a POSIX scan sees an owned worker group leader and its tsx descendant
+    Then it kills only the owned process-group leader
+
+  @FR-16 @feature16
+  Scenario: CTXMODE001_16 Windows recovery bounds synchronous tree termination
+    When a Windows stale-worker sweep invokes a bounded tree kill
+    Then it performs one timeout-bounded Windows tree kill

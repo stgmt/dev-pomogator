@@ -62,6 +62,7 @@ interface ContextModeWorld extends V4World {
   guidanceText?: string;
   docsText?: string;
   workerSpawnOptions?: ReturnType<typeof installerSpawnOptions>;
+  boundedKillOptions?: Array<{ platform?: NodeJS.Platform; timeoutMs?: number }>;
   staleSweep?: {
     now?: number;
     stale?: string;
@@ -574,7 +575,7 @@ When(/^a bounded self-heal sweep receives too many stale owned workers$/, functi
     return { pid: 200 + index, commandLine: `node tools/context-mode-setup/worker.ts --worker-script ${script}` };
   });
   const killed: number[] = [];
-  this.staleSweep = sweepStaleContextModeWorkers({ snapshot, nowMs: now, candidateCap: 2, killTree: pid => { killed.push(pid); } });
+  this.staleSweep = sweepStaleContextModeWorkers({ snapshot, nowMs: now, platform: 'linux', candidateCap: 2, killTree: pid => { killed.push(pid); } });
   (this.staleSweep as ReturnType<typeof sweepStaleContextModeWorkers> & { killedPids?: number[] }).killedPids = killed;
 });
 
@@ -613,4 +614,50 @@ Then(/^its installer stays in the owned worker process group$/, function (this: 
   assert.equal(this.workerSpawnOptions.detached, false, 'installer must inherit the detached outer worker group');
   assert.equal(this.workerSpawnOptions.stdio, 'ignore', 'worker remains non-interactive');
   assert.equal(this.workerSpawnOptions.env.CI, '1', 'installer keeps non-interactive environment');
+});
+
+When(/^a POSIX scan sees an owned worker group leader and its tsx descendant$/, function (this: ContextModeWorld) {
+  const now = Date.now();
+  const script = path.join(this.tempDir, '.ctx-mode-group', 'script');
+  fs.mkdirSync(path.dirname(script), { recursive: true });
+  fs.writeFileSync(script, 'owned');
+  fs.utimesSync(script, new Date(now - 20 * 60 * 1000), new Date(now - 20 * 60 * 1000));
+  const killed: number[] = [];
+  this.staleSweep = sweepStaleContextModeWorkers({
+    snapshot: [
+      { pid: 401, pgid: 401, commandLine: `node tools/context-mode-setup/worker.ts --worker-script ${script}` },
+      { pid: 402, pgid: 401, commandLine: `node tsx tools/context-mode-setup/worker.ts --worker-script ${script}` },
+    ], nowMs: now, platform: 'linux', killTree: pid => { killed.push(pid); },
+  });
+  (this.staleSweep as ReturnType<typeof sweepStaleContextModeWorkers> & { killedPids?: number[] }).killedPids = killed;
+});
+
+Then(/^it kills only the owned process-group leader$/, function (this: ContextModeWorld) {
+  const result = this.staleSweep as ReturnType<typeof sweepStaleContextModeWorkers> & { killedPids: number[] };
+  assert.deepEqual(result.killedPids, [401], 'only the process-group leader is safe for group termination');
+  assert.match(result.skipped.join('\n'), /owned worker descendant 402 ignored; group leader is 401/, 'tsx descendant must not become a raw kill candidate');
+});
+
+When(/^a Windows stale-worker sweep invokes a bounded tree kill$/, function (this: ContextModeWorld) {
+  const now = Date.now();
+  const script = path.join(this.tempDir, '.ctx-mode-windows-bound', 'script');
+  fs.mkdirSync(path.dirname(script), { recursive: true });
+  fs.writeFileSync(script, 'owned');
+  fs.utimesSync(script, new Date(now - 20 * 60 * 1000), new Date(now - 20 * 60 * 1000));
+  const killOptions: Array<{ platform?: NodeJS.Platform; timeoutMs?: number }> = [];
+  this.staleSweep = sweepStaleContextModeWorkers({
+    snapshot: [
+      { pid: 501, commandLine: `node tools/context-mode-setup/worker.ts --worker-script ${script}` },
+      { pid: 502, commandLine: `node tools/context-mode-setup/worker.ts --worker-script ${script}` },
+    ], nowMs: now, platform: 'win32', deadlineMs: 5_000,
+    killTree: (_pid, options) => { killOptions.push(options ?? {}); },
+  });
+  this.boundedKillOptions = killOptions;
+});
+
+Then(/^it performs one timeout-bounded Windows tree kill$/, function (this: ContextModeWorld) {
+  const result = this.staleSweep as ReturnType<typeof sweepStaleContextModeWorkers>;
+  assert.equal(this.boundedKillOptions!.length, 1, 'Windows synchronous taskkill must run only once per sweep');
+  assert.ok(this.boundedKillOptions![0].timeoutMs! <= 5_000, 'taskkill timeout must fit the sweep deadline');
+  assert.match(result.skipped.join('\n'), /Windows candidate cap 1 reached; 1 owned stale worker\(s\) left untouched/, 'Windows cap must report untouched root');
 });

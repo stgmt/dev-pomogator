@@ -142,8 +142,10 @@ export function fireContextModeInstaller(env: NodeJS.ProcessEnv = process.env): 
     const workerDir = fs.mkdtempSync(path.join(os.tmpdir(), '.ctx-mode-'));
     const workerScript = path.join(workerDir, 'script');
     fs.writeFileSync(workerScript, 'dev-pomogator context-mode owned worker\n', { mode: 0o600 });
+    // Direct Node execution makes this detached worker the POSIX process-group leader.
+    // Do not route through bootstrap/tsx: their parent/child pair both expose worker args.
     const worker = spawn(process.execPath, [
-      '-e', `require(${JSON.stringify(path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '_shared', 'bootstrap.cjs'))})`, '--',
+      '--experimental-strip-types',
       path.join(path.dirname(fileURLToPath(import.meta.url)), 'worker.ts'),
       '--worker-script', workerScript,
       '--command', inv.cmd,
