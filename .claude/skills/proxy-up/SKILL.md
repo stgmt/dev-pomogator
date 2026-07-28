@@ -9,6 +9,7 @@ description: |
   or wants to bring the proxy up before running an Anthropic SDK app.
   Triggers: "подними proxy", "проверь claude proxy", "claude-proxy
   status", "meridian up", "запусти локальный claude api".
+allowed-tools: Bash
 ---
 
 # proxy-up — operate the local Claude subscription proxy

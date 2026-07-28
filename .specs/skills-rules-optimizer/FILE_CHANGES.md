@@ -63,3 +63,19 @@
 | `tests/e2e/skills-rules-optimizer-overlap.test.ts` | create | Triple-axis Jaccard tests; [FR-4](FR.md#fr-4-triple-axis-overlap-detection) |
 | `tests/e2e/skills-rules-optimizer-merge.test.ts` | create | Envelope output structure + integration (mock Agent response); [FR-5](FR.md#fr-5-llm-merge-synthesis-через-sub-agent), [FR-6](FR.md#fr-6-ratchet-scorer-regression-prevention) |
 | `tests/e2e/skills-rules-optimizer-rules-compat.test.ts` | create | FR-9 backward compat (output JSON byte-identical to baseline); [FR-9](FR.md#fr-9-backward-compatibility-для-rules-side) |
+
+
+## Shipped skill-health checker extension
+
+| Path | Action | Reason |
+|------|--------|--------|
+| `tools/skill-health/check.mjs` | edit | Keep the shipped canonical checker Node-builtins-only; add strict parser, active-call, reference, deterministic report, baseline, and mirror-policy behavior. [FR-12](FR.md#fr-12-shipped-dependency-free-checker-and-shared-gates), [FR-13](FR.md#fr-13-strict-frontmatter-parser-and-metadata-contract), [FR-14](FR.md#fr-14-active-tool-permission-coverage-with-false-positive-pins), [FR-15](FR.md#fr-15-local-reference-integrity-and-root-containment), [FR-16](FR.md#fr-16-deterministic-report-and-strict-modes) |
+| `tools/skill-health/baseline.json` | edit | Store only exact path + finding-code + content-fingerprint baseline entries. [FR-17](FR.md#fr-17-exact-fingerprint-baseline) |
+| `tools/skill-health/mirror-contract.json` | edit | Declare exact, adapted, canonical-only, and legacy mirror policies. [FR-18](FR.md#fr-18-explicit-mirror-policy) |
+| `.github/workflows/test.yml` | edit | Run the shipped checker in strict source CI mode. [FR-12](FR.md#fr-12-shipped-dependency-free-checker-and-shared-gates) |
+| `.github/workflows/release.yml` | edit | Gate release with the same shipped checker executable. [FR-12](FR.md#fr-12-shipped-dependency-free-checker-and-shared-gates) |
+| `tests/fixtures/skill-health/` | create | Realistic parser, permission, false-positive, reference, baseline, and mirror fixtures, including named canonical regression cases. [FR-13](FR.md#fr-13-strict-frontmatter-parser-and-metadata-contract), [FR-14](FR.md#fr-14-active-tool-permission-coverage-with-false-positive-pins), [FR-15](FR.md#fr-15-local-reference-integrity-and-root-containment), [FR-17](FR.md#fr-17-exact-fingerprint-baseline), [FR-18](FR.md#fr-18-explicit-mirror-policy) |
+| `tests/step_definitions/feature_skills_rules_optimizer.ts` | edit | Add BDD steps for checker behavior and deterministic output. [FR-13](FR.md#fr-13-strict-frontmatter-parser-and-metadata-contract), [FR-14](FR.md#fr-14-active-tool-permission-coverage-with-false-positive-pins), [FR-16](FR.md#fr-16-deterministic-report-and-strict-modes) |
+| `tests/step_definitions/feature14_plugin_deps_safe.ts` | edit | Run the installed plugin checker with dependency resolution unavailable. [FR-12](FR.md#fr-12-shipped-dependency-free-checker-and-shared-gates) |
+| `.claude-plugin/hooks.json` | preserve | No SessionStart or UserPromptSubmit skill-health hook is added. [FR-19](FR.md#fr-19-no-prompt-lifecycle-hook-rollout) |
+| `.claude/settings.json` | preserve | No prompt-time checker registration is added. [FR-19](FR.md#fr-19-no-prompt-lifecycle-hook-rollout) |

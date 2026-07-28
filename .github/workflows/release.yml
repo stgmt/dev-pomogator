@@ -24,6 +24,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Check shipped skill health
+        run: npm run check:skill-health
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:

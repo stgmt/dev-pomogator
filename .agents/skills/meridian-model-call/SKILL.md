@@ -44,6 +44,25 @@ Use `tools/_shared/deepseek-model.ts::selectAipomogatorDeepSeek` rather than rei
 catalog parsing, selection, cache, or failure codes. Direct OpenRouter calls use
 `deepseek/deepseek-v4-flash`.
 
+### Provider-contract proof gate — mandatory before saying “model unavailable”
+
+For every integration, verify and record this matrix from the **actual consumer code**, not from
+variable names or another component's convention:
+
+| Contract axis | Required proof |
+|---|---|
+| Provider | Which provider is active for this exact consumer? |
+| Endpoint/protocol | Exact base URL plus `/chat/completions` vs `/v1/messages` |
+| Model ID namespace | Direct ID vs provider-routed ID returned by `/models` |
+| Credential source | Exact variables/settings the consumer itself reads |
+| Precedence | Outcome when settings key, `OPENROUTER_API_KEY`, and `AUTO_COMMIT_API_KEY` coexist |
+| Persistence | Whether a child process inherits env or needs settings written explicitly |
+
+A failed call with the wrong credential variable is **configuration incompatibility**, not evidence
+that DeepSeek is unsupported. Before that claim, reproduce against the provider catalog and one real
+consumer-shaped request. For plugin-distributed consumers, add BDD for every credential/route
+precedence row and preserve custom active-provider settings.
+
 For a Claude-subscription call, Meridian remains available through its Anthropic-compatible
 `/v1/messages` endpoint, but its model ID must be one accepted by Meridian — never an OpenRouter ID.
 
