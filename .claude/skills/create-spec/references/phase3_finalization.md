@@ -83,6 +83,16 @@
 - Каждый Phase содержит verify-шаг (Red→Green проверка)
 - Рефакторинг — ПОСЛЕДНИЙ Phase (после всех Green)
 
+## Pre-STOP #3: Independent Adversarial Review (GitHub #153 — MANDATORY)
+
+До `ConfirmStop Finalization` спека ОБЯЗАНА пройти независимое адверсариальное
+ревью ОТДЕЛЬНЫМ агентом — см. [`phase3.9_adversarial-review.md`](phase3.9_adversarial-review.md).
+Автор speки НЕ пишет и НЕ аппрувит `ADVERSARIAL_REVIEW.md` сам: engine
+(`spec-status.ts -ConfirmStop Finalization`) fail-closed блокирует STOP при
+отсутствующем, устаревшем (спека изменилась после ревью), self-authored
+(Reviewer run = Author run) или блокирующем (unresolved P0/P1, P2 без фикса
+или user-waiver) артефакте.
+
 ## STOP #3
 
 Финальный отчёт со summary (Executive Summary с key decisions Phase 3).

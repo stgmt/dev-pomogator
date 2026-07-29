@@ -23,7 +23,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-export const PHASES = ['discovery', 'requirements', 'finalization', 'audit'] as const;
+export const PHASES = ['discovery', 'requirements', 'finalization', 'review', 'audit'] as const;
 export type Phase = (typeof PHASES)[number];
 
 /** What a phase gate decides from a verdict. */
@@ -36,8 +36,11 @@ export interface GateResult {
  *  the gate trusts the verdict over the agent's self-report). Injectable. */
 export type SpawnPhase = (phase: Phase, slug: string, gapList: string[]) => Promise<string>;
 
-/** Run the authoritative verdict for the gate. Injectable (defaults to real). */
-export type RunGate = (slug: string) => Promise<GateResult>;
+/** Run the authoritative verdict for the gate. Injectable (defaults to real).
+ *  The `phase` lets the review phase gate on the independent adversarial
+ *  review verdict (GitHub #153) instead of the spec-verdict; 1-arg injects
+ *  stay compatible. */
+export type RunGate = (slug: string, phase?: Phase) => Promise<GateResult>;
 
 /**
  * PRODUCTION gate (FR-41b): the REAL authoritative verdict over the spec.
@@ -45,10 +48,50 @@ export type RunGate = (slug: string) => Promise<GateResult>;
  * lesson). Lazy-imports spec-verdict so unit tests that inject their own gate
  * never pay the cost. GREEN iff the verdict is GREEN; gapList = its gap list.
  */
-export async function productionGate(slug: string): Promise<GateResult> {
+export async function productionGate(slug: string, phase: Phase = 'audit'): Promise<GateResult> {
+  if (phase === 'review') {
+    return productionReviewGate(slug);
+  }
   const { runSpecVerdict } = await import('../../../../tools/specs-generator/spec-verdict.ts');
   const r = await runSpecVerdict(`.specs/${slug}`, { semantic: false });
   return { verdict: r.verdict, gapList: r.gapList };
+}
+
+/**
+ * Review-phase gate (GitHub #153): GREEN iff the INDEPENDENT adversarial
+ * review artifact passes the engine — fresh spec revision, reviewer run
+ * distinct from the author run, no unresolved/unverifiable P0/P1, every P2
+ * fixed or explicitly waived. Drives the REAL engine CLI (the same evaluator
+ * `spec-status -ConfirmStop Finalization` enforces), so the orchestrator and
+ * the STOP gate can never diverge. Fail-closed: any non-zero exit is RED.
+ */
+export async function productionReviewGate(slug: string): Promise<GateResult> {
+  const { spawnSync } = await import('node:child_process');
+  const { fileURLToPath } = await import('node:url');
+  const core = path.join(
+    path.dirname(fileURLToPath(import.meta.url)),
+    '..', '..', '..', '..', 'tools', 'specs-generator', 'specs-generator-core.mjs',
+  );
+  const r = spawnSync(
+    process.execPath,
+    [core, 'adversarial-review', 'evaluate', '-Path', `.specs/${slug}`, '-Format', 'json'],
+    { encoding: 'utf-8' },
+  );
+  if (r.status === 0) {
+    return { verdict: 'GREEN', gapList: [] };
+  }
+  let gapList: string[] = [];
+  try {
+    const parsed = JSON.parse(r.stdout || '{}') as { blockers?: string[] };
+    gapList = Array.isArray(parsed.blockers) ? parsed.blockers : [];
+  } catch {
+    gapList = [];
+  }
+  if (gapList.length === 0) {
+    const firstLine = (r.stderr || '').trim().split('\n')[0] || 'unknown reason';
+    gapList = [`adversarial review gate failed (exit ${r.status}): ${firstLine}`];
+  }
+  return { verdict: 'RED', gapList };
 }
 
 /**
@@ -63,10 +106,19 @@ export function productionSpawn(phase: Phase, slug: string, gapList: string[]): 
     import('node:child_process').then(({ spawn }) => {
       const bin = process.env.CLAUDE_BIN ?? 'claude';
       const gaps = gapList.length ? `\nOpen verdict gaps to fix:\n- ${gapList.join('\n- ')}` : '';
-      const prompt =
-        `You are the spec-phase-${phase} agent. Work ONLY through the ` +
-        `dev-pomogator-specs MCP tools (no file tools over .specs/). ` +
-        `Author the ${phase} phase of spec "${slug}".${gaps}`;
+      const prompt = phase === 'review'
+        ? `You are the spec-phase-review agent — the INDEPENDENT ADVERSARIAL ` +
+          `REVIEWER for spec "${slug}" (GitHub #153). You run in a separate ` +
+          `context from the spec author; do not trust the author's rationale. ` +
+          `Inspect the ACTUAL repository (target code, API contracts, routes, ` +
+          `data sources, test tooling, runtime constraints), attach file/line ` +
+          `evidence, order findings P0→P3, and write .specs/${slug}/ADVERSARIAL_REVIEW.md ` +
+          `per .claude/agents/spec-phase-review.md. Your "Reviewer run" id MUST ` +
+          `differ from the "Author run" id. Fail closed on missing evidence.` +
+          (gapList.length ? `\nEngine blockers from the previous round:\n- ${gapList.join('\n- ')}` : '')
+        : `You are the spec-phase-${phase} agent. Work ONLY through the ` +
+          `dev-pomogator-specs MCP tools (no file tools over .specs/). ` +
+          `Author the ${phase} phase of spec "${slug}".${gaps}`;
       const child = spawn(bin, ['-p', '--agent', `spec-phase-${phase}`, prompt], {
         stdio: ['ignore', 'pipe', 'pipe'],
       });
@@ -148,7 +200,7 @@ export async function runPhases(opts: PhaseRunOptions): Promise<PhaseRunResult> 
       let g: GateResult;
       try {
         await spawn(phase, opts.slug, gapList);
-        g = await gate(opts.slug);
+        g = await gate(opts.slug, phase);
       } catch (e) {
         record({ phase, attempt, event: 'gate-red', detail: `threw: ${e instanceof Error ? e.message : String(e)}` });
         gapList = [`phase ${phase} attempt ${attempt} threw: ${e instanceof Error ? e.message : String(e)}`];

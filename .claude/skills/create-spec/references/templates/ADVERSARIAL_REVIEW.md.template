@@ -1,0 +1,49 @@
+# Adversarial Review — {slug}
+
+Independent adversarial review per GitHub #153. Authored by a SEPARATE agent
+(`spec-phase-review`) — never by the spec author. The engine
+(`spec-status -ConfirmStop Finalization`) validates every field below and
+fails closed on anything missing, stale, self-authored, or blocking.
+
+**Reviewed revision:** {sha256 of the canonical spec docs + .feature — output of `adversarial-review require`/`evaluate`}
+**Reviewer run:** {reviewer agent/session id — MUST differ from Author run}
+**Author run:** {authoring session id}
+**Round:** 1
+**Verdict:** BLOCKED
+
+<!-- Verdict values: PASS | PASS_WITH_WAIVERS | BLOCKED | ESCALATED.
+     The engine computes the authoritative verdict; this field is the
+     reviewer's own declaration. -->
+
+## Findings
+
+<!-- Code-review ordering: findings first, highest severity first.
+     All P0, then all P1, then P2, then P3. Ids contiguous per severity:
+     P0-1, P0-2, P1-1, P2-1... Relabeling/deleting ids is detected. -->
+
+### P0-1: {short title}
+- Mechanism: {what is wrong, concretely}
+- Impact: {why it breaks the feature/users/contract}
+- Evidence: {exact path/to/file.ts:123 references — or [UNVERIFIED] + reason}
+- Resolution: {required fix}
+- Status: OPEN
+<!-- Status: OPEN | RESOLVED | WAIVED.
+     P0/P1 cannot be WAIVED. RESOLVED requires:
+- Resolution evidence: {rerun verdict + path/to/file.ts:123 or [VERIFIED]} -->
+
+<!-- P2-only waiver fields:
+- Waiver rationale: {non-empty, user's words}
+- Waiver approver: {who approved} -->
+
+<!-- If the draft is sound, replace the findings above with:
+
+### No findings
+
+The draft was challenged against the repository (contracts, routes, data
+sources, test tooling, runtime constraints); no P0-P3 findings.
+-->
+
+## Residual Risks
+
+<!-- Mandatory, non-empty — even when there are no findings. -->
+- {risk the review cannot eliminate, e.g. runtime behavior only provable after implementation}

@@ -14,6 +14,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | `npx tsx tools/specs-generator/validate-spec.ts -Path ".specs/feature"` | Validate spec formats |
 | `npx tsx tools/specs-generator/audit-spec.ts -Path ".specs/feature"` | Audit spec cross-references |
 | `npx tsx tools/specs-generator/spec-status.ts -Path ".specs/feature" -ConfirmStop Discovery` | Confirm STOP point |
+| `npx tsx tools/specs-generator/adversarial-review.ts require -Path ".specs/feature"` | Mandatory independent adversarial review gate (GitHub #153): `require` activates the engine-owned gate, `evaluate` reports the P0–P3 verdict; `ConfirmStop Finalization` fails closed without a fresh, independent, non-blocking `ADVERSARIAL_REVIEW.md` |
 | `npx tsx tools/specs-generator/analyze-features.ts -Format text` | Analyze .feature file patterns |
 | `npx tsx tools/migrate-v1-to-v2/migrate-v1-to-v2.ts --global` | Migration v1 → v2 cleanup (project + global v1 artifacts) |
 | `/reflect` | Просмотр и управление очередью автозахваченных сигналов |

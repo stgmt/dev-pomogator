@@ -497,6 +497,7 @@ function createDefaultProgressState(targetDir, currentPhase) {
       Requirements: { completedAt: null, stopConfirmed: false, stopConfirmedAt: null },
       Finalization: { completedAt: null, stopConfirmed: false, stopConfirmedAt: null },
     },
+    adversarialReview: { required: false, state: 'not_started', verdict: null, specRevision: null, reviewedRevision: null, reviewerRun: null, authorRun: null, round: null, blockingCount: 0, waiverCount: 0, reason: '' },
   };
 }
 
@@ -1525,6 +1526,35 @@ async function commandSpecStatus(argv) {
     progressState = createDefaultProgressState(targetDir, currentPhase);
   }
 
+  // GitHub #153: mandatory INDEPENDENT adversarial review gate (fail-closed). The
+  // requirement flag is engine-owned (.progress.json) — deleting ADVERSARIAL_REVIEW.md
+  // does NOT disable it; the reviewer must be a separate agent run (spec-phase-review).
+  const adversarialRequired = Boolean(progressState.adversarialReview && progressState.adversarialReview.required);
+  let adversarialEvaluation = null;
+  let adversarialBlockers = [];
+  try {
+    const adversarialModule = await import('./adversarial-review.mjs');
+    adversarialEvaluation = adversarialModule.evaluateAdversarialReview(targetDir, { required: adversarialRequired });
+    if (adversarialRequired && !adversarialEvaluation.ready) {
+      adversarialBlockers = [...adversarialEvaluation.blockers];
+    }
+  } catch (adversarialError) {
+    if (adversarialRequired) {
+      adversarialBlockers = [`independent adversarial review engine unavailable (${adversarialError.message}); failing closed`];
+    }
+  }
+  if (adversarialEvaluation && progressState.adversarialReview) {
+    progressState.adversarialReview = { ...progressState.adversarialReview, ...adversarialEvaluation.progress };
+  }
+  if (adversarialRequired
+    && progressState.phases.Finalization.stopConfirmed
+    && adversarialEvaluation
+    && !adversarialEvaluation.ready) {
+    progressState.phases.Finalization.stopConfirmed = false;
+    progressState.phases.Finalization.stopConfirmedAt = null;
+    log('WARN', 'Finalization STOP revoked: independent adversarial review is stale or blocking (GitHub #153)');
+  }
+
   if (options.confirmStop) {
     // Discovery evidence gate (GitHub #58): the explicit trigger marker makes
     // PoC/cost proof mandatory only for specs that adopt an external/new mechanism.
@@ -1564,6 +1594,17 @@ async function commandSpecStatus(argv) {
         log('ERROR', 'ConfirmStop Requirements blocked: DESIGN.md missing BDD Test Infrastructure Classification');
         return 1;
       }
+    }
+
+    // GitHub #153: Finalization STOP is gated on the independent adversarial review verdict.
+    if (options.confirmStop === 'Finalization' && adversarialBlockers.length > 0) {
+      process.stderr.write(
+        'ERROR: ConfirmStop Finalization blocked by independent adversarial review:\n'
+        + adversarialBlockers.map((finding) => `  - ${finding}`).join('\n')
+        + '\nFix the spec, rerun the independent reviewer (agent type spec-phase-review); findings resolve only with rerun evidence.\n',
+      );
+      log('ERROR', `ConfirmStop Finalization blocked by ${adversarialBlockers.length} adversarial-review condition(s)`);
+      return 1;
     }
 
     const phaseFiles = phases[options.confirmStop] ?? [];
@@ -1660,7 +1701,7 @@ async function commandSpecStatus(argv) {
   }
 
   let nextAction = '';
-  const blockers = [];
+  const blockers = [...adversarialBlockers];
 
   // Check for open questions in RESEARCH.md (reuse already-computed state from files map)
   const researchState = files['RESEARCH.md'];
@@ -3743,6 +3784,8 @@ function main() {
       return commandValidateSpec(argv);
     case 'spec-status':
       return commandSpecStatus(argv);
+    case 'adversarial-review':
+      return import('./adversarial-review.mjs').then((adversarialCliModule) => adversarialCliModule.runAdversarialReviewCli(argv));
     case 'list-specs':
       return commandListSpecs(argv);
     case 'audit-spec':

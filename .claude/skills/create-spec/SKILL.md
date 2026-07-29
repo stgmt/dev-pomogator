@@ -80,11 +80,14 @@ proof without server-side dispatch/readiness evidence.
 | **2. Requirements + Design** | [`references/phase2_requirements-and-design.md`](references/phase2_requirements-and-design.md) | FR, NFR, AC (EARS), REQUIREMENTS, DESIGN, FILE_CHANGES, `.feature`; вызывает `Skill("requirements-chk-matrix")` |
 | **2 (BDD subsection)** | [`references/phase2_bdd-test-infrastructure.md`](references/phase2_bdd-test-infrastructure.md) | TEST_DATA / TEST_FORMAT classification, hooks design, FIXTURES.md |
 | **3. Finalization** | [`references/phase3_finalization.md`](references/phase3_finalization.md) | TASKS (TDD-порядок), README, CHANGELOG; вызывает `Skill("task-board-forms")` |
+| **3.9. Adversarial Review (mandatory)** | [`references/phase3.9_adversarial-review.md`](references/phase3.9_adversarial-review.md) | INDEPENDENT adversarial reviewer (`spec-phase-review`, отдельный агент) → `ADVERSARIAL_REVIEW.md`; P0/P1 block, P2 fix/user-waiver, ≤3 раундов, fail-closed gate перед STOP #3 (GitHub #153) |
 | **3+. Audit (entry)** | [`references/phase3plus_audit-overview.md`](references/phase3plus_audit-overview.md) | Workflow аудита + dispatch к 7 категориям + AUDIT_REPORT.md |
 
 Sub-skill ecosystem (вызываются через `Skill(...)`): `discovery-forms` (Phase 1 step 3), `requirements-chk-matrix` (Phase 2 step 4b), `variant-matrix-build` (Phase 2 step 4c), `cross-spec-reconcile` (Phase 2 step 4e + Phase 3 step 1d light, Phase 3+ Audit `CROSS_SPEC_CONSISTENCY` full — FR-17), `task-board-forms` (Phase 3 step 1b), `research-workflow` (Phase 1 step 5), `architecture-decision-builder` (Phase 1.75, greenfield only — enumerate + per-axis).
 
 > **Pre-STOP semantic check:** before each `ConfirmStop` (#1/#2/#3), run `Skill("spec-review")` to catch external-claim drift, name collisions, antipattern violations, and 10 other categories that `audit-spec.ts` does not detect. See [`.claude/skills/spec-review/SKILL.md`](../spec-review/SKILL.md).
+>
+> **Pre-STOP #3 independent gate (GitHub #153, mandatory):** after the complete FR/AC/DESIGN/TASKS/BDD draft and before `ConfirmStop Finalization`, the spec MUST pass an **Independent Adversarial Review** by a SEPARATE agent (`spec-phase-review`) — see [`references/phase3.9_adversarial-review.md`](references/phase3.9_adversarial-review.md). The authoring agent may neither write nor self-approve `ADVERSARIAL_REVIEW.md`; the engine (`spec-status.ts -ConfirmStop Finalization`) fails closed on a missing, stale, self-authored, or blocking review artifact. This complements `spec-review` and the Phase 3+ audit; it does not replace either.
 
 ## Алгоритм запуска
 
