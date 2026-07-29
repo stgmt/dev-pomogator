@@ -3564,6 +3564,50 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Then each anchor Stop-gate classifies only its own touched spec without mutating the Git index
     And a session without reliable baseline evidence reports provenance unknown and fails open
 
+  @feature41 @FR-41
+  Scenario: SPECGEN004_665 independent review rejects missing, stale, and self-authored verdicts
+    Given a complete draft with an adversarial-review artifact fixture
+    When the real review gate evaluates missing, self-authored, and stale review records
+    Then missing review artifact is RED with actionable debt
+    And a self-authored review is RED with identity debt
+    And a stale review is RED with digest debt
+
+  @feature41 @FR-41
+  Scenario: SPECGEN004_666 independent review blocks unresolved P0 and P1 findings
+    Given a complete draft with an adversarial-review artifact fixture
+    When the real review gate evaluates unresolved P0 and P1 findings
+    Then unresolved P0 and P1 findings are each RED and blocking
+
+  @feature41 @FR-41
+  Scenario: SPECGEN004_667 independent review requires a complete P2 waiver
+    Given a complete draft with an adversarial-review artifact fixture
+    When the real review gate evaluates incomplete and approved P2 waivers
+    Then incomplete P2 waivers are RED and the approved waiver is GREEN
+
+  @feature41 @FR-41
+  Scenario: SPECGEN004_668 independent review validates evidence paths and lines
+    Given a complete draft with an adversarial-review artifact fixture
+    When the real review gate evaluates missing outside and unverified repository evidence
+    Then every invalid or unavailable repository evidence reference is RED
+
+  @feature41 @FR-41
+  Scenario: SPECGEN004_669 independent review digest is CRLF stable and nested-draft sensitive
+    Given a complete draft with an adversarial-review artifact fixture
+    When the review digest sees CRLF-only and nested authored-document changes
+    Then CRLF-only changes preserve the digest and nested authored changes invalidate review freshness
+
+  @feature41 @FR-41
+  Scenario: SPECGEN004_670 independent review status is machine-readable through MCP
+    Given a complete draft with an adversarial-review artifact fixture
+    When get_spec_status reads a fresh independent review artifact
+    Then MCP serializes review status reviewer identity execution and revision digest
+
+  @feature41 @FR-41
+  Scenario: SPECGEN004_671 Finalization STOP does not mutate progress when review is red
+    Given a complete draft with an adversarial-review artifact fixture
+    When Finalization STOP runs without an accepted independent review
+    Then Finalization STOP is refused and progress remains unconfirmed
+
   @feature39 @FR-39
   Scenario: SPECGEN004_564 spec access enforcement defaults on and hook launchers resolve without plugin root
     Given the spec guard environment precedence and canonical command-hook launchers

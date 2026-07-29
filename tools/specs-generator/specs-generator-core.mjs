@@ -2,6 +2,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
+import crypto from 'node:crypto';
+import { evaluateAdversarialReview } from './adversarial-review.mjs';
 // NOTE: the scaffold-sentinels classifier (FR-57) is lazy-imported inside commandAuditSpec,
 // NOT statically here, so `specs-generator-core.mjs` stays SINGLE-FILE PORTABLE: `scaffold-spec`
 // (and any consumer that copies core.mjs standalone — e.g. the arch-decision e2e fixture) must
@@ -496,6 +498,18 @@ function createDefaultProgressState(targetDir, currentPhase) {
       Context: { completedAt: null, stopConfirmed: false, stopConfirmedAt: null },
       Requirements: { completedAt: null, stopConfirmed: false, stopConfirmedAt: null },
       Finalization: { completedAt: null, stopConfirmed: false, stopConfirmedAt: null },
+    },
+    // #153 is engine-owned state, not reviewer-controlled markdown. The
+    // Finalization writer stamps the accepted digest and identities atomically.
+    independentAdversarialReview: {
+      status: 'NOT_REVIEWED',
+      reviewedSpecSha256: null,
+      authorRunId: null,
+      reviewerRunId: null,
+      round: null,
+      artifactSha256: null,
+      acceptedAt: null,
+      debt: ['MISSING_ARTIFACT'],
     },
   };
 }
@@ -1577,6 +1591,33 @@ async function commandSpecStatus(argv) {
       return 1;
     }
 
+    // GitHub #153: Finalization is not an author self-attestation. A separate
+    // reviewer must have produced a fresh, evidence-backed artifact before the
+    // implementation handoff can be persisted.
+    if (options.confirmStop === 'Finalization') {
+      const review = evaluateAdversarialReview(targetDir);
+      if (review.status !== 'GREEN') {
+        process.stderr.write(
+          `ERROR: ConfirmStop Finalization blocked by Independent Adversarial Review:\n` +
+          review.debt.map((item) => `- ${item}`).join('\n') + '\n' +
+          'Run an independent reviewer against the current draft and record a fresh ADVERSARIAL_REVIEW.md artifact.\n',
+        );
+        log('ERROR', `ConfirmStop Finalization blocked by adversarial review: ${review.debt.join(', ')}`);
+        return 1;
+      }
+      const artifact = fs.readFileSync(review.artifact);
+      progressState.independentAdversarialReview = {
+        status: 'ACCEPTED',
+        reviewedSpecSha256: review.current_spec_sha256,
+        authorRunId: review.author_run_id,
+        reviewerRunId: review.reviewer_run_id,
+        round: review.round,
+        artifactSha256: crypto.createHash('sha256').update(artifact).digest('hex'),
+        acceptedAt: new Date().toISOString(),
+        debt: [],
+      };
+    }
+
     const phaseState = progressState.phases[options.confirmStop];
     if (phaseState) {
       phaseState.stopConfirmed = true;
@@ -1608,11 +1649,18 @@ async function commandSpecStatus(argv) {
   }
 
   let finalizationComplete = testPhaseComplete(phases.Finalization, files);
+  // A complete document set cannot claim handoff without the independent
+  // review lane; otherwise a later status read would incorrectly say Complete.
+  if (finalizationComplete && evaluateAdversarialReview(targetDir).status !== 'GREEN') {
+    finalizationComplete = false;
+    log('WARN', 'Finalization held: Independent Adversarial Review is not GREEN');
+  }
   if (!finalizationComplete
     && progressState.phases.Finalization.stopConfirmed
-    && testPhaseFilesExist(phases.Finalization, files)) {
+    && testPhaseFilesExist(phases.Finalization, files)
+    && evaluateAdversarialReview(targetDir).status === 'GREEN') {
     finalizationComplete = true;
-    log('INFO', 'Finalization override: stopConfirmed=true');
+    log('INFO', 'Finalization override: stopConfirmed=true with fresh independent review');
   }
 
   if (!discoveryComplete) {

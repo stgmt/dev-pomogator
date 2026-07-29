@@ -69,11 +69,21 @@
 
 2. **Сгенерировать README.md** (Краткое описание + Ключевые идеи + Где лежит реализация + Где читать дальше).
 
-3. **Финальная валидация** — ДВА уровня (FR-37a/d, правило `no-structural-valid.md`):
+3. **Independent Adversarial Review — обязательный отдельный контекст (#153).** После полного FR/AC/DESIGN/TASKS/BDD draft и до `Spec ready` автор фиксирует свой `author_run_id`, затем dispatches a **fresh reviewer agent/context**. Автор НЕ вызывает `Skill("spec-review")` сам для выполнения этой фазы и НЕ может принять собственный verdict.
+
+   Reviewer получает user request, текущий draft diff и repository evidence — но не hidden author rationale. Он сначала выдаёт findings severity-descending (P0→P3), проверяя actual target code/API contracts/routes/data ownership/test tooling/runtime constraints: compatibility, source-of-truth, metrics, auth/IDOR/secrets, query bounds/N+1, executable BDD, response envelopes, scope creep and unstated product decisions. Каждый repository-dependent finding имеет `{ evidence: { file, line } }`; при unavailable evidence reviewer writes `unverified_blocker: true`.
+
+   Reviewer записывает через MCP-door `.specs/{feature}/ADVERSARIAL_REVIEW.md`: machine JSON record inside `<!-- adversarial-review … -->` with schema `adversarial-review@1`, `reviewed_spec_sha256`, distinct `author_run_id`/`reviewer_run_id`, `reviewer_execution: "independent-agent"`, capability, round (1–3), findings, P2 waivers, resolution evidence, verdict and residual risks. No findings is valid only as `findings: []` plus explicit `residual_risks`.
+
+   P0/P1 block; P2 needs `RESOLVED` or `WAIVED` with non-empty `waiver.approved_by` and `waiver.rationale`; P3 may remain backlog. After each remediation rerun the independent reviewer against the new diff. Maximum three rounds: unresolved issues after round 3 are surfaced to the user, never downgraded or looped silently. Missing reviewer capability/repository evidence/artifact fails closed.
+
+4. **Финальная валидация** — ТРИ уровня (FR-37a/d + #153):
    - pre-filter: `validate-spec.ts -Path ".specs/{feature}"` — 0 errors (структура/ссылки);
    - **вердикт**: `npx tsx tools/specs-generator/spec-verdict.ts -Path ".specs/{feature}" --no-semantic` —
-     GREEN (audit + traceability + conformance над одним графом). Голый «validate-spec: 0 errors»
-     НЕ репортится как «спека валидна» — это pre-filter, не здоровье.
+     GREEN, including the mandatory `INDEPENDENT_REVIEW` lane;
+   - `ADVERSARIAL_REVIEW.md` digest MUST equal the current draft. A changed spec, missing artifact, self-authored review, unresolved P0/P1, invalid P2 waiver, or unavailable evidence leaves readiness RED.
+
+   Голый «validate-spec: 0 errors» НЕ репортится как «спека валидна» — это pre-filter, не здоровье.
 
 ## Правила TDD-порядка в TASKS.md
 
@@ -84,6 +94,8 @@
 - Рефакторинг — ПОСЛЕДНИЙ Phase (после всех Green)
 
 ## STOP #3
+
+`spec-status.ts -ConfirmStop Finalization` independently validates the current review artifact before mutating `.progress.json`; it refuses the transition on every red `INDEPENDENT_REVIEW` state. Implementation handoff is therefore prohibited until this command succeeds.
 
 Финальный отчёт со summary (Executive Summary с key decisions Phase 3).
 

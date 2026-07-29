@@ -85,6 +85,8 @@ proof without server-side dispatch/readiness evidence.
 Sub-skill ecosystem (вызываются через `Skill(...)`): `discovery-forms` (Phase 1 step 3), `requirements-chk-matrix` (Phase 2 step 4b), `variant-matrix-build` (Phase 2 step 4c), `cross-spec-reconcile` (Phase 2 step 4e + Phase 3 step 1d light, Phase 3+ Audit `CROSS_SPEC_CONSISTENCY` full — FR-17), `task-board-forms` (Phase 3 step 1b), `research-workflow` (Phase 1 step 5), `architecture-decision-builder` (Phase 1.75, greenfield only — enumerate + per-axis).
 
 > **Pre-STOP semantic check:** before each `ConfirmStop` (#1/#2/#3), run `Skill("spec-review")` to catch external-claim drift, name collisions, antipattern violations, and 10 other categories that `audit-spec.ts` does not detect. See [`.claude/skills/spec-review/SKILL.md`](../spec-review/SKILL.md).
+>
+> **Finalization independence gate (#153):** `spec-review` complements but cannot satisfy the mandatory Independent Adversarial Review. After the complete draft, dispatch a distinct reviewer context which writes the digest-bound `ADVERSARIAL_REVIEW.md` artifact. `ConfirmStop Finalization`, Spec ready, and implementation handoff fail closed unless its `INDEPENDENT_REVIEW` lane is GREEN.
 
 ## Алгоритм запуска
 

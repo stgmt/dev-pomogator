@@ -38,6 +38,7 @@ import { checkConformance, type Finding } from '../spec-graph/conformance.ts';
 import { gapsFromFindings, summariseGaps } from '../spec-graph/traceability.ts';
 import { buildReadinessInventory } from '../spec-graph/readiness-inventory.ts';
 import { computeSpecVerdict } from '../spec-graph/verdict.ts';
+import { evaluateAdversarialReview } from '../specs-generator/adversarial-review.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
 import { logSpecAccess } from './spec-access-log.ts';
@@ -1508,6 +1509,7 @@ export function buildToolRegistry(
       const specFindings = checkConformance(graph).filter((finding) => inSpec(finding.location.file));
       const gaps = summariseGaps(gapsFromFindings(specFindings, { spec: slug }));
       const inventory = buildReadinessInventory(graph, { spec: slug });
+      const independentReview = evaluateAdversarialReview(path.join(repoRoot, '.specs', slug));
       const canonicalVerdict = computeSpecVerdict({
         inventory,
         lanes: {
@@ -1526,6 +1528,10 @@ export function buildToolRegistry(
           BDD_SYNC: {
             status: bddSync.debt.length > 0 ? 'RED' : 'GREEN',
             debt: bddSync.debt,
+          },
+          INDEPENDENT_REVIEW: {
+            status: independentReview.status === 'GREEN' ? 'GREEN' : independentReview.status === 'DEPENDENCY_ABSENT' ? 'DEPENDENCY_ABSENT' : 'RED',
+            debt: independentReview.debt,
           },
           FILTERED_PROOF: {
             status: filteredProof.latest ? 'GREEN' : 'NONE',
@@ -1588,6 +1594,7 @@ export function buildToolRegistry(
           totals: canonicalStatusCoverage.totals,
           task_verification: canonicalStatusCoverage.tasks,
         },
+        independent_adversarial_review: independentReview,
         readiness: {
           ...readiness,
           next_action:

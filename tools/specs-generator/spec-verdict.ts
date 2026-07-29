@@ -27,6 +27,7 @@ import { execFileSync, spawnSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { evaluateAdversarialReview } from './adversarial-review.mjs';
 import { buildGraphFromCwd } from '../spec-graph/builder.ts';
 import { checkConformance, type Finding } from '../spec-graph/conformance.ts';
 import { computeCoverage, scenarioKey, specOf, type ScenarioLike, type TaskLike } from '../spec-graph/coverage.ts';
@@ -585,6 +586,7 @@ export async function runSpecVerdict(
 
   // THE definition of «what blocks» — the verdict derives from this list and
   // nothing else (a future 6th gate is added HERE once, not in two places).
+  const adversarialReview = evaluateAdversarialReview(specPath);
   const gapList: string[] = [
     ...(validation.errors ?? []).map(
       (e: any) => `[STRUCTURAL] ${e.file ?? ''}: ${e.message ?? JSON.stringify(e)}`,
@@ -593,6 +595,7 @@ export async function runSpecVerdict(
     ...gaps.map((g) => `[${g.class}] ${g.file}:${g.line} — ${g.message}`),
     ...confErrors.map((f) => `[CONFORMANCE:${f.code}] ${f.location.file}:${f.location.line} — ${f.message}`),
     ...drifts.map((d) => `[SEMANTIC_DRIFT:${d.severity}] ${d.frId} ↔ ${d.scenarioId} — ${d.explanation}`),
+    ...adversarialReview.debt.map((item) => `[INDEPENDENT_REVIEW] ${item}`),
   ];
 
   const notes: string[] = [];
@@ -677,6 +680,14 @@ export async function runSpecVerdict(
       blocking: bddSyncDebt.length > 0,
       summary: bddSyncDebt.length > 0 ? `${bddSyncDebt.length} BDD sync or repository migration debt item(s)` : 'no source/executable BDD sync or repository migration debt reported by the current verdict inputs',
       debt: bddSyncDebt,
+    },
+    INDEPENDENT_REVIEW: {
+      status: adversarialReview.status === 'GREEN' ? 'GREEN' : adversarialReview.status === 'DEPENDENCY_ABSENT' ? 'DEPENDENCY_ABSENT' : 'RED',
+      blocking: adversarialReview.status !== 'GREEN',
+      summary: adversarialReview.status === 'GREEN'
+        ? 'fresh independent adversarial review accepted'
+        : `independent adversarial review unavailable: ${adversarialReview.debt.join(', ')}`,
+      debt: adversarialReview.debt,
     },
     SEMANTIC: {
       status: !semanticWanted ? 'SKIPPED' : semanticDebt.length > 0 ? 'SKIPPED' : 'GREEN',

@@ -475,6 +475,7 @@ export type ReadinessLaneName =
   | 'EXECUTION'
   | 'TASK_TRUTH'
   | 'BDD_SYNC'
+  | 'INDEPENDENT_REVIEW'
   | 'SEMANTIC'
   | 'FILTERED_PROOF';
 
@@ -489,6 +490,7 @@ export const MANDATORY_READINESS_LANES: readonly ReadinessLaneName[] = [
   'EXECUTION',
   'TASK_TRUTH',
   'BDD_SYNC',
+  'INDEPENDENT_REVIEW',
 ];
 
 export const OPTIONAL_READINESS_LANES: readonly ReadinessLaneName[] = ['SEMANTIC', 'FILTERED_PROOF'];
@@ -573,6 +575,7 @@ const LANE_NEXT_ACTION: Record<string, (e: ReadinessCandidate) => string> = {
   },
   TASK_TRUTH: () => 'Reopen/downgrade DONE-but-unverified tasks or provide canonical passed scenario evidence.',
   BDD_SYNC: () => 'Fix source/executable BDD sync drift or mark intentional EXEC_ONLY/OUT_OF_SCOPE/PENDING scenarios.',
+  INDEPENDENT_REVIEW: () => 'Run an independent adversarial reviewer and record a fresh evidence-backed ADVERSARIAL_REVIEW.md artifact for the current draft.',
 };
 
 /**

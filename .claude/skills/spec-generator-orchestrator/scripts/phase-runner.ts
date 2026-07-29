@@ -23,7 +23,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-export const PHASES = ['discovery', 'requirements', 'finalization', 'audit'] as const;
+export const PHASES = ['discovery', 'requirements', 'finalization', 'adversarial-review', 'audit'] as const;
 export type Phase = (typeof PHASES)[number];
 
 /** What a phase gate decides from a verdict. */
@@ -35,6 +35,9 @@ export interface GateResult {
 /** Spawn a headless phase agent. Returns its final text (unused by the gate —
  *  the gate trusts the verdict over the agent's self-report). Injectable. */
 export type SpawnPhase = (phase: Phase, slug: string, gapList: string[]) => Promise<string>;
+
+/** Reviewer dispatch is deliberately distinct from phase authorship (#153). */
+export type SpawnIndependentReviewer = (slug: string, gapList: string[]) => Promise<string>;
 
 /** Run the authoritative verdict for the gate. Injectable (defaults to real). */
 export type RunGate = (slug: string) => Promise<GateResult>;
@@ -63,11 +66,12 @@ export function productionSpawn(phase: Phase, slug: string, gapList: string[]): 
     import('node:child_process').then(({ spawn }) => {
       const bin = process.env.CLAUDE_BIN ?? 'claude';
       const gaps = gapList.length ? `\nOpen verdict gaps to fix:\n- ${gapList.join('\n- ')}` : '';
-      const prompt =
-        `You are the spec-phase-${phase} agent. Work ONLY through the ` +
-        `dev-pomogator-specs MCP tools (no file tools over .specs/). ` +
-        `Author the ${phase} phase of spec "${slug}".${gaps}`;
-      const child = spawn(bin, ['-p', '--agent', `spec-phase-${phase}`, prompt], {
+      const independentReview = phase === 'adversarial-review';
+      const agent = independentReview ? 'spec-phase-adversarial-review' : `spec-phase-${phase}`;
+      const prompt = independentReview
+        ? `You are an INDEPENDENT adversarial reviewer, not the spec author. Inspect repository code and the current spec draft for "${slug}". Do not rely on author rationale. Write the required digest-bound ADVERSARIAL_REVIEW.md through the MCP door. Findings first, P0→P3, exact repository evidence or unverified_blocker. ${gaps}`
+        : `You are the spec-phase-${phase} agent. Work ONLY through the dev-pomogator-specs MCP tools (no file tools over .specs/). Author the ${phase} phase of spec "${slug}".${gaps}`;
+      const child = spawn(bin, ['-p', '--agent', agent, prompt], {
         stdio: ['ignore', 'pipe', 'pipe'],
       });
       const out: Buffer[] = [];
@@ -149,6 +153,18 @@ export async function runPhases(opts: PhaseRunOptions): Promise<PhaseRunResult> 
       try {
         await spawn(phase, opts.slug, gapList);
         g = await gate(opts.slug);
+        // The review artifact is intentionally absent while authors draft the
+        // earlier phases. It becomes mandatory only after the distinct review
+        // phase runs; otherwise Finalization consumes its retry budget before
+        // an independent reviewer can ever be dispatched.
+        if (phase !== 'adversarial-review') {
+          const nonReviewGaps = g.gapList.filter((gap) => !gap.startsWith('[INDEPENDENT_REVIEW]'));
+          if (g.verdict !== 'GREEN' && nonReviewGaps.length === 0) {
+            g = { verdict: 'GREEN', gapList: [] };
+          } else {
+            g = { ...g, gapList: nonReviewGaps };
+          }
+        }
       } catch (e) {
         record({ phase, attempt, event: 'gate-red', detail: `threw: ${e instanceof Error ? e.message : String(e)}` });
         gapList = [`phase ${phase} attempt ${attempt} threw: ${e instanceof Error ? e.message : String(e)}`];

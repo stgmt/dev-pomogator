@@ -58,11 +58,18 @@ Then('the agent has no direct file tools over specs', function (this: F41World) 
   for (const phase of PHASES) {
     const body = fs.readFileSync(path.join(AGENTS_DIR, `spec-phase-${phase}.md`), 'utf-8');
     const allowed = (body.match(/allowed-tools:(.*)/) ?? [])[1] ?? '';
-    for (const fileTool of ['Read', 'Grep', 'Glob', 'Edit', 'Write']) {
-      assert.ok(
-        !new RegExp(`(^|[,\\s])${fileTool}([,\\s]|$)`).test(allowed),
-        `spec-phase-${phase} must NOT grant the ${fileTool} file tool (got: ${allowed.trim()})`,
-      );
+    // #153 reviewer is deliberately an exception: it must inspect actual target
+    // code/contracts, while its spec mutation remains MCP-door-only.
+    if (phase === 'adversarial-review') {
+      assert.ok(allowed.includes('Read') && allowed.includes('Grep'), 'independent reviewer must be able to inspect repository evidence');
+      assert.ok(!/(^|[,\s])(Edit|Write)([,\s]|$)/.test(allowed), 'reviewer must not directly author spec files');
+    } else {
+      for (const fileTool of ['Read', 'Grep', 'Glob', 'Edit', 'Write']) {
+        assert.ok(
+          !new RegExp(`(^|[,\\s])${fileTool}([,\\s]|$)`).test(allowed),
+          `spec-phase-${phase} must NOT grant the ${fileTool} file tool (got: ${allowed.trim()})`,
+        );
+      }
     }
     assert.ok(allowed.includes('mcp__dev-pomogator-specs__'), `spec-phase-${phase} must grant the MCP spec tools`);
   }
