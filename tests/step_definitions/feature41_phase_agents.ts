@@ -52,15 +52,31 @@ Then('the phase executes in its dedicated headless agent', function (this: F41Wo
   assert.equal(this.result!.ok, true);
 });
 
-Then('the agent has no direct file tools over specs', function (this: F41World) {
-  // The enforcement is the agent's allowed-tools: MCP tools only, no Read/
-  // Grep/Glob/Edit/Write over .specs/ (FR-39 second layer).
+Then(/^each phase agent has the role-minimal tool surface|the agent has no direct file tools over specs$/, function (this: F41World) {
+  // Creation phases: MCP tools only, no Read/Grep/Glob/Edit/Write over
+  // .specs/ (FR-39 second layer). The INDEPENDENT adversarial reviewer
+  // (GitHub #153) is NOT a creation phase: it must read the real repository
+  // to attach file/line evidence, and writes exactly ONE artifact
+  // (ADVERSARIAL_REVIEW.md) — so it gets Read/Grep/Glob/Write but must NOT be
+  // able to author spec docs: no Edit, no MCP mutation tools.
+  const hasTool = (allowed: string, tool: string): boolean =>
+    new RegExp(`(^|[,\\s])${tool}([,\\s]|$)`).test(allowed);
   for (const phase of PHASES) {
     const body = fs.readFileSync(path.join(AGENTS_DIR, `spec-phase-${phase}.md`), 'utf-8');
     const allowed = (body.match(/allowed-tools:(.*)/) ?? [])[1] ?? '';
+    if (phase === 'review') {
+      for (const tool of ['Read', 'Grep', 'Glob', 'Write']) {
+        assert.ok(hasTool(allowed, tool), `spec-phase-review must grant ${tool} to inspect the repo and write the review artifact`);
+      }
+      assert.ok(!hasTool(allowed, 'Edit'), `spec-phase-review must NOT grant Edit (got: ${allowed.trim()})`);
+      assert.ok(!allowed.includes('apply_spec_change'), 'spec-phase-review must NOT grant spec mutation tools');
+      assert.ok(!allowed.includes('propose_spec_change'), 'spec-phase-review must NOT grant spec mutation tools');
+      assert.ok(allowed.includes('mcp__dev-pomogator-specs__'), 'spec-phase-review must grant MCP read tools');
+      continue;
+    }
     for (const fileTool of ['Read', 'Grep', 'Glob', 'Edit', 'Write']) {
       assert.ok(
-        !new RegExp(`(^|[,\\s])${fileTool}([,\\s]|$)`).test(allowed),
+        !hasTool(allowed, fileTool),
         `spec-phase-${phase} must NOT grant the ${fileTool} file tool (got: ${allowed.trim()})`,
       );
     }

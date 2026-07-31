@@ -1045,7 +1045,10 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Given the phase agent definitions with MCP-only allowed-tools
     When the orchestrator runs a creation phase
     Then the phase executes in its dedicated headless agent
-    And the agent has no direct file tools over specs
+    # creation phases stay MCP-only; the independent reviewer (GitHub #153)
+    # gets Read/Grep/Glob/Write for repo evidence + its ONE artifact, but no
+    # Edit and no spec mutation tools — it reports, it never authors.
+    And each phase agent has the role-minimal tool surface
 
   @FR-41
   Scenario: SPECGEN004_118 the orchestrator gates phase transitions on a green verdict

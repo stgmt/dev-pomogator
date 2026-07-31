@@ -1597,6 +1597,31 @@ export function buildToolRegistry(
         },
         filtered_proof: filteredProof.latest,
         phases,
+        // GitHub #153: engine-owned independent adversarial review gate state
+        // (required flag, reviewed spec revision, reviewer/author run ids,
+        // verdict, blocking count). `spec-status -ConfirmStop Finalization`
+        // fails closed while this gate is RED; evaluated LIVE when required so
+        // the door never reports a stale snapshot.
+        adversarial_review: await (async () => {
+          const persisted = progress && typeof progress === 'object' && 'adversarialReview' in progress
+            ? (progress as { adversarialReview?: Record<string, unknown> | null }).adversarialReview ?? null
+            : null;
+          if (!persisted || persisted.required !== true) {
+            return persisted;
+          }
+          try {
+            const mod = (await import('../specs-generator/adversarial-review.mjs')) as unknown as {
+              evaluateAdversarialReview: (
+                dir: string,
+                opts: { required: boolean },
+              ) => { progress: Record<string, unknown> };
+            };
+            const evaluated = mod.evaluateAdversarialReview(path.join(repoRoot, '.specs', slug), { required: true });
+            return { ...persisted, ...evaluated.progress };
+          } catch {
+            return { ...persisted, state: 'blocking', reason: 'adversarial review engine unavailable; failing closed' };
+          }
+        })(),
         hint: hints[lifecycle],
       });
     },

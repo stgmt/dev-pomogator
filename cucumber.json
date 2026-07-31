@@ -47,7 +47,8 @@
       "tests/features/plugins/plan-pomogator/PLUGIN007_plan-validator.feature",
       "tests/features/plugins/devcontainer/PLUGIN012_devcontainer.feature",
       "tests/features/plugins/claim-evidence-gate/CEGATE001_claim-evidence-gate.feature",
-      ".specs/haiku-to-deepseek-migration/haiku-to-deepseek-migration.feature"
+      ".specs/haiku-to-deepseek-migration/haiku-to-deepseek-migration.feature",
+      "tests/features/plugins/adversarial-review-gate/ADVREV001_adversarial-review-gate.feature"
     ],
     "import": [
       "tests/step_definitions/**/*.ts",
