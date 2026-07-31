@@ -22,6 +22,18 @@ Release-critical work remains ordered TDD-first: FR-62 target-project identity, 
 
 ## TL;DR — что умеет уже сегодня
 
+
+**Hosts:** Claude Code = canonical plugin install. Cursor = same `.claude/` tree (native skill/hook pickup) + one twin file `.cursor/mcp.json` (FR-81). No second skill/hook mirror.
+
+### Cursor install checklist (FR-81)
+
+1. Claude Code plugin or repo dogfood (unchanged).
+2. Cursor Settings → enable Third-party skills/hooks.
+3. Ensure `.cursor/mcp.json` (committed here, or `node --import tsx tools/spec-mcp-server/ensure-cursor-mcp.ts`).
+4. Reload Cursor → MCP list shows `dev-pomogator-specs`.
+5. Smoke: MCP read / `get_spec_status`; under enforce, raw Write to `.specs/` denied.
+
+
 Один MCP-сервер + 8 авто-резолверов + детектор cross-spec несоответствий + LSP wiki-links + hooks которые блокируют поломанные правки до save. Цель — **AI агент видит весь спек целиком за один вызов и не галлюцинирует над спеками**.
 
 ```bash

@@ -511,3 +511,25 @@ A feature request claims a public catalog/policy surface and an authenticated pa
 3. It performs nested 2–5-minute BDD-only RED/GREEN/REFACTOR steps for the canonical AC/BDD vertical task, never treating a micro-step as a separate graph task.
 4. It reports `DONE` only with task-owned evidence, otherwise `DONE_WITH_CONCERNS`, `NEEDS_CONTEXT`, or `BLOCKED` with diagnostics and a follow-up proposal.
 5. It parallelizes only a batch whose every pair has no causal path in either direction and no conflict pair. No second plan store or executor is introduced.
+
+
+## UC-33
+
+**Cursor second-client install and door smoke**
+
+**Goal:** enable Cursor on a tree that already has Claude Code / `.claude` without a second plugin.
+
+**Trigger:** Developer opens the repo in Cursor after Claude Code dogfood or plugin install.
+
+**Main flow:**
+
+1. Confirm Claude Code install is unchanged (skills/hooks/root `.mcp.json`).
+2. Enable Cursor Settings → Third-party skills/hooks.
+3. Ensure `.cursor/mcp.json` exists (committed twin, `ensure-cursor-mcp.ts`, or copy from root `.mcp.json`).
+4. Reload Cursor; verify MCP catalog includes `dev-pomogator-specs`.
+5. Smoke: MCP read/`get_spec_status`; under enforce, raw `.specs` Write denied; MCP `apply_spec_change` succeeds.
+
+**Outcome:** One door, two hosts; install delta is one MCP file + toggle.
+
+**Linked stories:** [User Story 61](USER_STORIES.md#user-story-61-cursor-uses-the-same-spec-door-priority-p1)
+

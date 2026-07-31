@@ -1650,3 +1650,18 @@ Before `task-planner.ts` reads nodes, `reviewTaskSynthesis()` deterministically 
 `ExecutionOutcome` is `DONE | DONE_WITH_CONCERNS | NEEDS_CONTEXT | BLOCKED`. The lifecycle accepts completion only for `DONE` with the task-owned evidence required by FR-77. The other variants retain their evidence, emit diagnostics, and create canonical follow-up proposals without falsely closing the parent task.
 
 A `SafeBatch` contains an `independenceProof` for every member pair: graph reachability must be absent in both directions and `task-conflicts.ts` must derive no conflict pair. Planner prose is descriptive only and cannot establish parallel safety. Typed BDD-only causal edges keep `RED -> GREEN -> REFACTOR`; conditional DDD never weakens that order.
+
+
+### Decision: Claude Code canonical host; Cursor second client via official compat + MCP path glue
+
+**Требование:** [FR-81](FR.md#fr-81)
+
+**Rationale:** Cursor natively loads `.claude/skills/` and (with Third-party toggle) `.claude/settings.json` hooks, including Claude deny JSON. The only layout mismatch is MCP config path: Claude/plugin use root `.mcp.json`; Cursor reads `.cursor/mcp.json`. Shipping a content-equivalent twin plus `ensure-cursor-mcp.ts` / doctor warn avoids forking skills, hooks, or the SpecGraph server.
+
+**Trade-off:** Live enforce/MCP catalog proof stays manual dogfood (Docker cannot drive Cursor UI). Matcher gaps (Glob / `mcp__` names) are documented rather than silently claimed as full FR-39 parity.
+
+**Alternatives considered:**
+- Mirror skills/hooks under `.cursor/`: rejected — drifts from Claude SoT and duplicates maintenance.
+- Cursor marketplace plugin: rejected — Anthropic plugin.json is not Cursor's install channel; overkill for one path adapter.
+- Rewrite FR-41 to Cursor Task agents: deferred — hybrid (phases in Claude Code, day-to-day door in Cursor) is enough for FR-81.
+

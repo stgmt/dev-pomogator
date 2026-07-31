@@ -333,3 +333,17 @@
 | CHK-FR80-14 | FR-80, AC-80.10, UC-32, BDD SPECGEN004_664 | `TaskPlanResult` provides canonical self-contained agent briefs with location, interface, dependency, predecessor, scenario/evidence, blocker, batch, and next-action context. |
 | CHK-FR80-15 | FR-80, AC-80.10, UC-32, BDD SPECGEN004_664 | `DONE_WITH_CONCERNS`, `NEEDS_CONTEXT`, and `BLOCKED` create diagnostics/follow-ups; only evidence-backed `DONE` completes. |
 | CHK-FR80-16 | FR-80, AC-80.10, UC-32, BDD SPECGEN004_664 | Batch independence is proven by no causal path and no conflict pair, not prose; no second authority or executor is created. |
+
+
+## Verification Matrix — FR-81 Cursor compat-first
+
+| CHK-ID | Requirement | Traces To | Verification Method | Status | Notes |
+|---|---|---|---|---|---|
+| CHK-FR81-01 | FR-81 Cursor skills native pickup via AC-81.1 | FR-81, AC-81.1, @feature81, UC-33 | Manual review | Draft | Live dogfood; Third-party toggle; SPECGEN004_668 |
+| CHK-FR81-02 | FR-81 .cursor/mcp.json ships door via AC-81.2 | FR-81, AC-81.2, @feature81, SPECGEN004_665 | BDD scenario | Draft | Deterministic |
+| CHK-FR81-03 | FR-81 enforce deny raw specs write via AC-81.3 | FR-81, AC-81.3, @feature81, SPECGEN004_669 | Manual review | Draft | Live dogfood pending evidence |
+| CHK-FR81-04 | FR-81 MCP apply succeeds via AC-81.4 | FR-81, AC-81.4, @feature81, SPECGEN004_669 | Manual review | Draft | Live dogfood pending evidence |
+| CHK-FR81-05 | FR-81 mcp.json parity via AC-81.5 | FR-81, AC-81.5, @feature81, SPECGEN004_666 | BDD scenario | Draft | ensure-cursor-mcp --check |
+| CHK-FR81-06 | FR-81 install = one MCP file via AC-81.6 | FR-81, AC-81.6, @feature81, UC-33 | Manual review | Draft | No second plugin |
+| CHK-FR81-07 | FR-81 resolveRepoRoot Cursor placeholder via AC-81.2 | FR-81, AC-81.2, @feature81, SPECGEN004_667 | BDD scenario | Draft | Deterministic |
+

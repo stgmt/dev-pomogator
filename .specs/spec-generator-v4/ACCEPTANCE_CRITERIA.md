@@ -1443,3 +1443,28 @@ WHEN FR-72..FR-79 request planning input THEN the system SHALL consume synthesiz
 
 
 The deterministic inputs SHALL include an approved design revision with digest and a repository-verified component/interface responsibility map; `domainMode: ddd` retains only repository-verified boundaries, aggregates, invariants, and contracts, while `domainMode: none` retains module/adapter/contract ownership without fabricated domain concepts. Each canonical graph task SHALL be one independently valuable AC/BDD vertical outcome; its ordered 2–5-minute BDD-only RED/GREEN/REFACTOR execution steps remain inside its brief and SHALL NOT become separately schedulable graph tasks. A deterministic pre-planner synthesis-review gate SHALL emit named failures for placeholders, lane-conservation violations, missing boundary or ownership, absent exact source locations or interfaces, infeasibility, untyped or cyclic causal order, and incomplete declared surfaces. `TaskPlanResult` SHALL give an AI agent a self-contained canonical-data brief containing full task text, exact repository-relative files/source ranges, interfaces, typed dependencies, relevant predecessor summaries, linked scenario and evidence command, blockers, safe-batch identity, machine next action, and pairwise no-causal-path/no-conflict independence proof. It SHALL provide `DONE`, `DONE_WITH_CONCERNS`, `NEEDS_CONTEXT`, and `BLOCKED` outcomes: only evidence-backed `DONE` completes; every other outcome preserves evidence-backed diagnostics and creates a follow-up proposal. The projection SHALL neither persist a second planning authority nor introduce an executor.
+
+
+## AC-81.1
+**Требование:** [FR-81](FR.md#fr-81)
+WHEN Cursor loads a project with `.claude/skills/` and Third-party skills enabled THEN the agent SHALL discover the same spec skills without a `.cursor/skills` mirror (live dogfood evidence).
+
+## AC-81.2
+**Требование:** [FR-81](FR.md#fr-81)
+WHEN the repository is checked out THEN `.cursor/mcp.json` SHALL exist and its `dev-pomogator-specs` entry SHALL launch `tools/spec-mcp-server/server.bundle.mjs` (deterministic).
+
+## AC-81.3
+**Требование:** [FR-81](FR.md#fr-81)
+WHEN Cursor has loaded project `.claude/settings.json` hooks and SPEC_ACCESS enforce is on THEN a raw Write/Edit of `.specs/**` SHALL be denied (live dogfood evidence).
+
+## AC-81.4
+**Требование:** [FR-81](FR.md#fr-81)
+WHEN the Cursor MCP door is loaded THEN `apply_spec_change` / `create_spec` SHALL succeed for a valid mutation (live dogfood evidence).
+
+## AC-81.5
+**Требование:** [FR-81](FR.md#fr-81)
+WHEN root `.mcp.json` and `.cursor/mcp.json` are compared THEN their `dev-pomogator-specs` entries SHALL be content-equivalent (deterministic; `ensure-cursor-mcp.ts --check`).
+
+## AC-81.6
+**Требование:** [FR-81](FR.md#fr-81)
+WHEN documenting or performing install THEN Claude Code install SHALL be unchanged and Cursor enablement SHALL require at most `.cursor/mcp.json` plus the Third-party toggle — not a second marketplace package or duplicated skills/hooks.

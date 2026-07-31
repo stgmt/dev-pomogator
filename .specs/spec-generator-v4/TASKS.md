@@ -2584,3 +2584,33 @@ TDD/delivery order: establish the lossless `task/v1` contract first; then add it
 ### Phase 45 managed summary
 
 Phase 45 contains 10 planned TODO slices. All headers use the strict graph-native `id` / `Status` / `Est` form; each owns explicit requirements, exact acceptance IDs, typed dependencies, file surfaces, and Docker-BDD scenario evidence. The canonical corpus-wide summary table remains unchanged because regenerating it would rewrite unrelated historical task rows; this Phase-local summary is intentionally additive and idempotent-safe.
+
+
+## Phase 46 — Cursor compat-first (FR-81)
+
+- [ ] Ship Cursor MCP twin — id: p46-cursor-mcp-twin — Status: TODO | Est: 60m
+  _Requirements: [FR-81](FR.md#fr-81)_
+  _Acceptance: AC-81.2, AC-81.5, AC-81.6_
+  **Files:** `.cursor/mcp.json`, `tools/spec-mcp-server/ensure-cursor-mcp.ts`, `.claude/skills/pomogator-doctor/scripts/engine/checks/cursor-mcp-twin.ts`
+  **Done When:**
+  - [ ] `.cursor/mcp.json` matches root `dev-pomogator-specs` entry
+  - [ ] `ensure-cursor-mcp.ts --check` exits 0
+  - [ ] Doctor C33 warns when twin missing and hints apply command
+  - [ ] Docker BDD records SPECGEN004_665 and SPECGEN004_666
+
+- [ ] resolveRepoRoot Cursor env smoke — id: p46-cursor-repo-root — Status: TODO | Est: 45m
+  _Requirements: [FR-81](FR.md#fr-81)_
+  _Acceptance: AC-81.2_
+  _depends: hard:p46-cursor-mcp-twin_
+  **Files:** `tools/spec-mcp-server/server.ts`, `tests/step_definitions/feature81_cursor_compat.ts`
+  **Done When:**
+  - [ ] SPECGEN004_667 passes against real `resolveRepoRoot`
+
+- [ ] Cursor live dogfood evidence — id: p46-cursor-live-dogfood — Status: TODO | Est: 90m
+  _Requirements: [FR-81](FR.md#fr-81)_
+  _Acceptance: AC-81.1, AC-81.3, AC-81.4_
+  _depends: hard:p46-cursor-mcp-twin_
+  **Files:** `README.md` checklist, `CHANGELOG.md` evidence note
+  **Done When:**
+  - [ ] Manual evidence recorded for SPECGEN004_668 and SPECGEN004_669 (not claimed via suite-green alone)
+

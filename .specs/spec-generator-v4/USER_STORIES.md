@@ -1338,3 +1338,29 @@ Then it creates a canonical BLOCKED investigation record with ownership, unknown
 ### Story 60 execution-agent consumption amendment
 
 As an AI implementation agent or spec-generator worker, I need one canonical, self-contained task brief with exact source locations, interfaces, dependencies, predecessor context, scenario/evidence command, blockers, safe-batch proof, and next action, so that I can execute a valuable AC/BDD vertical outcome without recreating a private plan or treating a 2–5-minute substep as an independent graph task. A non-`DONE` outcome remains diagnostic and proposes follow-up work; it never falsely completes the task.
+
+
+### User Story 61: Cursor uses the same spec door (Priority: P1)
+
+**Требование:** [FR-81](FR.md#fr-81)
+
+As a developer using Cursor on a project that already has Claude Code / `.claude` dogfood, I want the same SpecGraph MCP door without porting skills or hooks, so that I can author and gate specs from either IDE.
+
+**Why:** Dual-host rewrite would drift; Cursor already loads `.claude/skills` and project hooks — only the MCP path layout differs.
+
+**Independent Test:** With Third-party skills/hooks enabled and `.cursor/mcp.json` present, Cursor lists `dev-pomogator-specs` tools; create-spec skill is discoverable from `.claude/skills`; raw Write under `.specs/` is denied when enforce is on and MCP apply succeeds.
+
+**Acceptance Scenarios:**
+
+Given the project has `.claude/skills/create-spec` and root `.mcp.json` door
+When Cursor loads the workspace with Third-party skills enabled
+Then create-spec (or equivalent) is available without a `.cursor/skills` copy
+
+Given `.cursor/mcp.json` registers `dev-pomogator-specs`
+When the Cursor MCP catalog is inspected after reload
+Then the door tools are listed
+
+Given SPEC_ACCESS enforce is on and project hooks loaded
+When the agent attempts a raw Write to a `.specs/**` path
+Then the PreToolUse guard denies and points to MCP mutation tools
+

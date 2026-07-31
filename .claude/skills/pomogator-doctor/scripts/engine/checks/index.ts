@@ -17,6 +17,7 @@ import { hookScriptPathsCheck } from './hook-script-paths.js';
 import { hookServiceCheck } from './hook-service.js';
 import { hooksExecCheck } from './hooks-exec.js';
 import { hooksRegistryCheck } from './hooks-registry.js';
+import { cursorMcpTwinCheck } from './cursor-mcp-twin.js';
 import { mcpAuthCheck } from './mcp-auth.js';
 import { mcpParseCheck } from './mcp-parse.js';
 import { mcpProbeCheck } from './mcp-probe.js';
@@ -58,6 +59,7 @@ export const phase4Checks: CheckDefinition[] = [
   mcpParseCheck,
   mcpProbeCheck,
   mcpAuthCheck,
+  cursorMcpTwinCheck,
   pluginLoaderCheck,
   claudeMemPluginCheck,
   claudeMemWorkerCheck,
@@ -77,6 +79,7 @@ export {
   claudeMemPluginCheck,
   contextModeCheck,
   contextMenuCheck,
+  cursorMcpTwinCheck,
   dockerCheck,
   envExampleCheck,
   envVarsCheck,

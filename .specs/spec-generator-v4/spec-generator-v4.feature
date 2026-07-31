@@ -1449,6 +1449,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     When the real hook evaluates completion prose without an authoritative source
     Then the hook approves silently and does not create Pinator fire state
 
+  # HISTORICAL: Pinator policy scenarios — superseded by .specs/pinator/; not a second live executor (CEGATE001 owns execution).
   @historical @superseded-by-pinator
   Scenario: SPECGEN004_187 legacy judge-prompt policy moved to pinator (historical; executor = CEGATE001)
     Given a judge input reporting twenty open tasks
@@ -4222,3 +4223,38 @@ Scenario: SPECGEN004_664 projects an evidence-safe agent brief and machine-prove
   Then each task brief is self-contained from the stored SpecGraph without a second plan authority or executor
   And a safe batch includes pairwise proof of no causal path in either direction and no conflict pair rather than an assertion in prose
   And only evidence-backed `DONE` completes a task while `DONE_WITH_CONCERNS`, `NEEDS_CONTEXT`, and `BLOCKED` retain diagnostics and create follow-up proposals
+
+
+@feature81 @FR-81 @AC-81.2
+Scenario: SPECGEN004_665 Cursor mcp twin file ships the door bundle
+  Given the repository root contains ".cursor/mcp.json"
+  When the Cursor MCP config is loaded
+  Then it names the "dev-pomogator-specs" server
+  And the launch path includes "tools/spec-mcp-server/server.bundle.mjs"
+
+@feature81 @FR-81 @AC-81.5
+Scenario: SPECGEN004_666 root and Cursor door entries stay equivalent
+  Given root ".mcp.json" and ".cursor/mcp.json" both declare "dev-pomogator-specs"
+  When ensure-cursor-mcp runs with "--check"
+  Then it exits 0 reporting the door entries match
+
+@feature81 @FR-81 @AC-81.2
+Scenario: SPECGEN004_667 resolveRepoRoot tolerates Cursor-like placeholder env
+  Given DEV_POMOGATOR_REPO_ROOT is the literal "${CLAUDE_PROJECT_DIR}"
+  And process.cwd() is a directory that contains ".specs"
+  When resolveRepoRoot runs
+  Then it returns the cwd that contains ".specs"
+
+@feature81 @FR-81 @AC-81.1 @AC-81.4
+Scenario: SPECGEN004_668 Cursor session lists the MCP door
+  Given Cursor Third-party skills are enabled and ".cursor/mcp.json" is loaded
+  When the agent inspects the MCP tool catalog
+  Then "dev-pomogator-specs" tools are listed
+
+@feature81 @FR-81 @AC-81.3 @AC-81.4
+Scenario: SPECGEN004_669 Cursor enforce denies raw specs write and MCP apply succeeds
+  Given SPEC_ACCESS enforce is on and project ".claude/settings.json" hooks are loaded in Cursor
+  When the agent attempts a raw Write under ".specs/"
+  Then the PreToolUse guard denies the write
+  And a valid MCP apply_spec_change succeeds
+

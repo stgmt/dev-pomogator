@@ -634,3 +634,15 @@ This table is the explicit implementation inventory for the execution-aware task
 | MODIFY | `.specs/spec-generator-v4/spec-generator-v4.feature` | FR-80; SPECGEN004_662..664 — traceable BDD contracts for the amendment. |
 
 - FR.md: amend FR-49 (+4 AC link(s))
+
+
+## Phase 46 — Cursor compat-first (FR-81)
+
+| Path | Action | Reason |
+|------|--------|--------|
+| `.cursor/mcp.json` | create | Cursor path-layout twin of root door ([FR-81](FR.md#fr-81)) |
+| `tools/spec-mcp-server/ensure-cursor-mcp.ts` | create | Sync/check twin vs root ([FR-81](FR.md#fr-81) e/g) |
+| `.claude/skills/pomogator-doctor/scripts/engine/checks/cursor-mcp-twin.ts` | create | Doctor C33 warn + apply hint ([FR-81](FR.md#fr-81) g) |
+| `.claude/skills/pomogator-doctor/scripts/engine/checks/index.ts` | edit | Register C33 |
+| `tests/step_definitions/feature81_cursor_compat.ts` | create | Deterministic SPECGEN004_665–667 steps |
+| `README.md` (spec) | edit | Host note + Cursor install checklist |
