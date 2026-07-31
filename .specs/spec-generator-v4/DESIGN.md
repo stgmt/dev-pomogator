@@ -717,17 +717,19 @@ A new user-facing tool MUST be added to TOOL_CONSUMERS with a real consumer skil
 - Refuse content silently / NOT_FOUND (rejected) — the agent can't tell «no such entity» from «status is derived»; the typed `STATUS_DERIVED` + live verdict is the discoverable answer.
 - A second `.progress.json` writer inside `set_entity_status` (rejected) — diverges from `-ConfirmStop` (dual truth); reuse the one transform.
 
-### Decision: Honest-status auto-surface is a closed loop over LIVE pieces, not 4 net-new subsystems (FR-49)
+### Decision: FR-49 owns reusable census and routing, not Pinator policy (FR-49)
 
 **Требование:** [FR-49](FR.md#fr-49)
 
-**Rationale:** The false-close incident (the agent declared done while 11 FRs were in-progress, IGNORING the per-prompt census banner) is not «add a tool» — the surfacing already existed and was ignored. So FR-49 ENFORCES, not just shows. Advisor-vetted scope: 3 of 4 parts WIRE+ENRICH live machinery, 1 is net-new:
+**Rationale:** Task census, target-root resolution, next-step routing, transcript replay, and stale-marker reconciliation are shared spec infrastructure; `claim-evidence-gate` separately owns whether a Stop may be judged.
+
+**Historical rationale superseded:** The false-close incident (the agent declared done while 11 FRs were in-progress, IGNORING the per-prompt census banner) is not «add a tool» — the surfacing already existed and was ignored. So FR-49 ENFORCES, not just shows. Advisor-vetted scope: 3 of 4 parts WIRE+ENRICH live machinery, 1 is net-new:
 - **FR-49a** — enrich the EXISTING `buildTaskCensusLine` with the next open task (`nextOpen` on the census cache).
 - **FR-49b** — make the LIVE `claim-evidence-gate` census-AWARE: a whole-spec completion claim while the census shows unfinished work blocks with the real numbers. The text classes (works-done/deferred-work) miss the CLEAN false-close (executor ran, no defer phrasing); the census IS the disproof.
 - **FR-49c** — NO new writer: the existing `lifecycle.ts` watcher already refreshes the census on every door write (`refreshCensus` on boot + each `onPatch`). Verified, not rebuilt.
 - **FR-49d** — the ONE net-new piece: a flag-only reconciler for stale in-progress markers.
 
-**Trade-off:** Three guards keep it from becoming noise / false-green. (1) anti-H1 (FR-49b): `isSpecCompletionClaim` is WHOLE-spec only (not per-task, not a progress report) AND requires a REAL unfinished census — a non-spec «fixed the typo» never trips the census branch (the gate already had SELF_MARKERS false-fire history; same discipline). (2) false-green (FR-49d): the reconciler FLAGS, never auto-closes (an auto-closing reconciler would be the very false-green the honesty machinery fights); a task with no scenario is never flagged. (3) dep-safety: the gate's new `task-census` import is builtins-only (`coverage.ts` has zero imports), so the plugin-distributed Stop hook stays runnable for users with no `node_modules`. Turtle: the gate that blocks false-close is itself specced through the door it guards; FR-49's own whole-spec claims self-block while the spec is unfinished — correct, not a bug (report component-level done).
+**Trade-off:** The integration boundary spans two specs and requires explicit cross-spec scenarios, but ordinary census use cannot accidentally arm a completion judge. Historical implementation guards remain below for provenance. (1) anti-H1 (FR-49b): `isSpecCompletionClaim` is WHOLE-spec only (not per-task, not a progress report) AND requires a REAL unfinished census — a non-spec «fixed the typo» never trips the census branch (the gate already had SELF_MARKERS false-fire history; same discipline). (2) false-green (FR-49d): the reconciler FLAGS, never auto-closes (an auto-closing reconciler would be the very false-green the honesty machinery fights); a task with no scenario is never flagged. (3) dep-safety: the gate's new `task-census` import is builtins-only (`coverage.ts` has zero imports), so the plugin-distributed Stop hook stays runnable for users with no `node_modules`. Turtle: the gate that blocks false-close is itself specced through the door it guards; FR-49's own whole-spec claims self-block while the spec is unfinished — correct, not a bug (report component-level done).
 
 **Alternatives considered:**
 - 4 net-new hooks (rejected) — 3 of the 4 concerns already had live machinery; net-new would duplicate + drift.

@@ -1641,7 +1641,7 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   **Done When:**
   - [x] `phase-lifecycle.ts` (parsePhaseId / canConfirmPhaseStop = порядок STOP + входы + предусловие Requirements / `done`-only переход); `set_entity_status` перехватывает id фазы ДО графа → гейт → спавн `node specs-generator-core.mjs spec-status -ConfirmStop` (паттерн create_spec, plain-ESM, без tsx/второго писателя); task-словарь на фазе = ILLEGAL-for-type; `get_spec_status` публикует `phases[]` (discoverability FR-48c). Verified by SPECGEN004_176/177 (реальный спавн + реальный обработчик); @feature48 7/7; @feature38 5/5; deps-absent доказан статически; бандл пересобран. Коммит 3d9ee23
 
-## Phase 25 — FR-49: авто-сёрфинг честного статуса + анти-false-close (гибрид)
+## Phase 25 — FR-49 historical delivery: census/router foundation and superseded global gate
 
 - [x] P25-1: баннер несёт следующий шаг (FR-49a) — id: p25-banner-next — Status: DONE | Est: 60m
   _depends: p24-phase-path_
@@ -1649,7 +1649,7 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
   **Done When:**
   - [x] `computeTaskCensus` несёт `nextOpen` (первая открытая задача, title→id fallback); `buildTaskCensusLine` рендерит «👉 следующее». Unit + SPECGEN004_178. Коммит f703b5b
 
-- [x] P25-2: census-aware стоп-гейт (FR-49b) — id: p25-census-gate — Status: DONE | Est: 150m
+- [x] P25-2: historical census-aware стоп-гейт, superseded by claim-evidence-gate eligibility-first contract — id: p25-census-gate — Status: DONE | Est: 150m
   _depends: p25-banner-next_
   _Requirements: [FR-49](FR.md#fr-49)_
   **Done When:**

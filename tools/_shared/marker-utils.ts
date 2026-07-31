@@ -27,6 +27,9 @@ export interface MarkerData {
    * from every block message so the agent can't learn "I get one free investigation" and game it.
    */
   metaStreak?: number;
+  /** Optional session/context scope for consumers that must not reuse stale anti-loop state. */
+  sessionId?: string;
+  contextRevision?: string;
 }
 
 export function markerPath(repoRoot: string, markerDir: string, markerFilename: string): string {

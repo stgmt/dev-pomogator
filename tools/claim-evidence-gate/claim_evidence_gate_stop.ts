@@ -32,11 +32,14 @@ import path from 'node:path';
 
 import { log as _logShared, normalizePath } from '../_shared/hook-utils.ts';
 import { markerPath, readMarker, writeMarkerAtomic, isWithinCooldown, hashFileList } from '../_shared/marker-utils.ts';
-import { extractTurnWindow, bgInFlightInWindow, agentBgInFlightCount, bgCommandInFlight, sessionUserPrompts, effectiveUserRequest, latestActionableStopFeedback, AWAITS_RESULT_RE } from './turn_window.ts';
+import { extractTurnWindowFromEvents, bgInFlightInWindow, agentBgInFlightCount, bgCommandInFlight, sessionUserPrompts, effectiveUserRequest, latestActionableStopFeedback, AWAITS_RESULT_RE } from './turn_window.ts';
 import { firstUnsupported, isSpecCompletionClaim } from './claim_classifier.ts';
-import { readTaskCensusCache, scopeCensusToSlugs, sessionEditedSpecSlugs, lastEditedSpecSlug, agentOpenTodoCount, liveOpenForUncensusedSlugs, selectNextStepRoute, type NextStepRoute, type TaskCensusCache } from '../spec-graph/task-census.ts';
+import { readTaskCensusCache, scopeCensusToSlugs, lastEditedSpecSlug, liveOpenForUncensusedSlugs, selectNextStepRoute, type NextStepRoute, type TaskCensusCache } from '../spec-graph/task-census.ts';
 import { judgeStop, judgeAvailable, buildJudgeNoTokenDemand, isJudgeArmed } from './meridian-judge.ts';
 import { MUTATING_TOOL, isDoorWrite, gateSelfEdit, ownerDirectedDeferral, ownerRequestedAnalysisReportOnly, selfMarkedBlockedOrBacklog } from './game_guard_facts.ts';
+import { parseTranscriptEvents, resultConfirmedEvidence } from './transcript_events.ts';
+import { collectPinatorWorkContext } from './work_context.ts';
+import { reconcilePlanVerdict } from './plan_commitment_ledger.ts';
 
 interface StopHookInput {
   cwd?: string;
@@ -44,6 +47,9 @@ interface StopHookInput {
   transcript_path?: string;
   stop_hook_active?: boolean;
   session_id?: string;
+  last_assistant_message?: string;
+  background_tasks?: unknown[];
+  session_crons?: unknown[];
 }
 
 const MARKER_DIR = '.dev-pomogator';
@@ -94,6 +100,21 @@ function getConfig() {
     // doing no observable work). Bounds the loop by work-delta, not the time-delta cooldown cap.
     noProgressCap: parseInt(process.env.CLAIM_GATE_NO_PROGRESS_CAP || '3', 10) || 3,
   };
+}
+
+function officialAsyncInFlight(input: StopHookInput): number {
+  let count = 0;
+  for (const value of [input.background_tasks, input.session_crons]) {
+    if (!Array.isArray(value)) continue;
+    for (const item of value) {
+      if (!item || typeof item !== 'object') continue;
+      const record = item as Record<string, unknown>;
+      const id = String(record.id ?? record.task_id ?? record.cron_id ?? '').trim();
+      const status = String(record.status ?? record.state ?? '').toLowerCase();
+      if (id && (status === 'running' || status === 'pending' || status === 'in_progress')) count += 1;
+    }
+  }
+  return count;
 }
 
 async function readStdin(): Promise<string> {
@@ -223,16 +244,24 @@ async function main(): Promise<void> {
     return approve();
   }
 
-  const { claimText, toolUses } = extractTurnWindow(rawTranscript);
+  const transcriptEvents = parseTranscriptEvents(rawTranscript);
+  const workContext = collectPinatorWorkContext(input, transcriptEvents);
+  if (!workContext) return approve();
+
+  const turnWindow = extractTurnWindowFromEvents(transcriptEvents);
+  const claimText = input.last_assistant_message?.trim() || turnWindow.claimText;
+  const confirmedEvidence = resultConfirmedEvidence(transcriptEvents);
+  const confirmedIds = new Set(confirmedEvidence.map((item) => item.id));
+  const toolUses = turnWindow.toolUses.filter((toolUse) => !toolUse.id || confirmedIds.has(toolUse.id));
   if (!claimText.trim()) return approve();
 
-  const repoRoot = normalizePath(input.cwd || input.workspace_roots?.[0] || process.cwd());
+  const repoRoot = normalizePath(input.workspace_roots?.[0] || input.cwd || process.cwd());
 
   // FR-9 (2026-06-18): scope the unfinished-work census to specs THIS session actually WROTE
   // (transcript-derived), NOT the global corpus backlog — otherwise the gate stays permanently
   // armed by other specs' open tasks in any non-empty repo. A pure-analysis session that edited
   // no spec scopes to ZERO → the census/judge precondition is false → the gate does not fire.
-  const editedSlugs = sessionEditedSpecSlugs(tx);
+  const editedSlugs = new Set(workContext.sources.filter((source) => source.kind === 'spec').map((source) => source.id));
   const globalCensus = readTaskCensusCache(repoRoot);
   const scoped: TaskCensusCache | null = globalCensus
     ? { ...scopeCensusToSlugs(globalCensus, editedSlugs), ts: globalCensus.ts }
@@ -245,7 +274,12 @@ async function main(): Promise<void> {
   // a pending todo («при чём тут спеки если агент явный анонс делал что дальше нужно делать»). Counting
   // the agent's todos arms the gate on exactly that. Session-scoped BY CONSTRUCTION (this transcript's
   // todos, not the global backlog) → it does NOT reintroduce the FR-9 over-fire.
-  const agentOpen = agentOpenTodoCount(tx);
+  const agentOpen = workContext.sources
+    .filter((source) => source.kind === 'task')
+    .reduce((count, source) => count + source.commitments.length, 0);
+  const contextOpen = workContext.sources
+    .filter((source) => source.kind !== 'task' && source.kind !== 'spec')
+    .reduce((count, source) => count + source.commitments.length, 0);
   const scopedSpecOpen = scoped ? scoped.total.open + scoped.total.doneRed : 0;
   // FR-19 (2026-06-25): for session-edited slugs the census SNAPSHOT lacks (a freshly-created / just-edited
   // spec it predates), count their open tasks LIVE from TASKS.md. This is used only for whole-spec false-close
@@ -256,7 +290,7 @@ async function main(): Promise<void> {
   // Most gate layers still need the scoped-spec open count (no-next-section / blocker-proof / judge /
   // whole-spec false-close). The WS-F leak fix is NOT to hide open work; it is to stop the helper text from
   // naming a scoped spec backlog unless the message claims the whole spec/feature is done.
-  const openWork = scopedCompletionOpen + agentOpen;
+  const openWork = scopedCompletionOpen + agentOpen + contextOpen;
   const recencySlug = lastEditedSpecSlug(tx);
   let nextStep: NextStepRoute | null = null;
   let nextLine = '';
@@ -296,7 +330,11 @@ async function main(): Promise<void> {
   // suppresses the DETERMINISTIC no-next-section / blocker so a genuine same-turn wait isn't false-kicked.
   const agentBgCount = agentBgInFlightCount(rawTranscript);
   const awaitingAsync =
-    bgInFlightInWindow(rawTranscript) || bgJobMarkerActive(repoRoot) || agentBgCount > 0 || bgCommandInFlight(rawTranscript);
+    officialAsyncInFlight(input) > 0
+    || bgInFlightInWindow(rawTranscript)
+    || bgJobMarkerActive(repoRoot)
+    || agentBgCount > 0
+    || bgCommandInFlight(rawTranscript);
   // 1+3 (2026-06-21): a genuine bg wait whose named next step CONSUMES the pending result (can't run until
   // it lands — «когда придёт — обработаю/коммичу», «если 19/19 — коммичу») is NOT an announce-and-stop. The
   // gate computes a deterministic HINT from the claim text (only meaningful while awaiting); the judge weighs
@@ -356,10 +394,21 @@ async function main(): Promise<void> {
   const GATE_INTERNAL = /claim.?evidence.?gate|meridian.?judge|bg.?task.?guard|turn_window|claim_classifier|transcript/i;
   const gateMetaThisTurn = mutatingToolsThisTurn === 0 && toolUses.length > 0 && toolUses.some((t) => GATE_INTERNAL.test(t.input));
   const mp = markerPath(repoRoot, MARKER_DIR, MARKER_FILENAME);
-  const priorMarker = readMarker(mp);
+  const storedMarker = readMarker(mp);
+  const priorMarker = storedMarker
+    && storedMarker.sessionId === (input.session_id ?? 'unknown-session')
+    && storedMarker.contextRevision === workContext.revision
+      ? storedMarker
+      : null;
   const metaStreak = gateMetaThisTurn ? (priorMarker?.metaStreak ?? 0) + 1 : 0;
 
-  let unsupported = firstUnsupported(claimText, toolUses, config.minSearch);
+  const activeTitles = workContext.commitments.map((commitment) => commitment.title.toLowerCase());
+  const messageLower = claimText.toLowerCase();
+  const mapsToActiveCommitment = activeTitles.some((title) => {
+    const words = title.match(/[a-zа-яё0-9_-]{4,}/gi) ?? [];
+    return words.some((word) => messageLower.includes(word));
+  }) || workContext.commitments.length === 1;
+  let unsupported = mapsToActiveCommitment ? firstUnsupported(claimText, toolUses, config.minSearch) : null;
   // FR-49b: a WHOLE-SPEC "done" claim while the task-census shows unfinished work is a
   // false-close — block even when tools ran and there is no defer phrasing (the gap the
   // text classes miss). Tightly spec-scoped: isSpecCompletionClaim is whole-spec (not
@@ -386,9 +435,6 @@ async function main(): Promise<void> {
     const open = openWork; // scoped open + agent todos; helper text is gated separately from the fire condition
     // V2: skip the «Дальше:» requirement while a background job is in flight — the agent is awaiting
     // an async result and legitimately has no actionable next step until it lands.
-    if (open > 0 && GRAY_SIGNAL.test(claimText) && !NEXT_SECTION_RE.test(claimText) && !awaitingAsync) {
-      unsupported = { cls: 'no-next-section', need: 'в ответе при незакрытой работе нет секции «Дальше:» с конкретным следующим шагом' };
-    }
   }
 
   // FR-11 (blocker-proof): a stop that rests on a BLOCKER claim ("жду / заблокировано / держит
@@ -400,12 +446,6 @@ async function main(): Promise<void> {
   // No fuzzy file-extraction / no git-in-hook: it leans only on harness-recorded, agent-independent facts.
   if (!unsupported) {
     const open = openWork; // spec-scope open + agent todos (K3); FR-9b: doneUnrun already excluded in scopedSpecOpen
-    if (open > 0 && BLOCKER_SIGNAL.test(claimText) && !awaitingAsync && toolUses.length === 0) {
-      unsupported = {
-        cls: 'unproven-blocker',
-        need: 'заявлен блокер (жду/заблокировано/держит), но в этом ходе нет улики — ни запущенной фоновой задачи, ни прогона проверки (git diff/log)',
-      };
-    }
   }
 
   // FR-31: a Stop-hook block reason is not the user's original mandate, but it IS an active, actionable
@@ -459,9 +499,11 @@ async function main(): Promise<void> {
       // FR-10: feed the observable, agent-independent turn facts (computed above) to the judge so it
       // weighs them FIRST — the message text is secondary narrative the agent can polish.
       const jInput = {
+        context: workContext,
         finalMessage: claimText,
         tools: toolUses.map((t) => t.name),
-        openTasks: openWork, // K3: spec-scope open + agent todos (no `scoped!` — agentOpen can be > 0 with a null census)
+        resultConfirmedEvidence: resultConfirmedEvidence(transcriptEvents),
+        openTasks: openWork,
         mutatingToolsThisTurn,
         bgTaskLaunchedThisTurn: awaitingAsync,
         nextStepAwaitsResult, // 1+3 (2026-06-21): the named next step consumes the pending bg result → legit wait
@@ -481,6 +523,16 @@ async function main(): Promise<void> {
       };
       let verdict = await judgeStop(jInput);
       if (verdict === null) verdict = await judgeStop(jInput);
+      const activePlan = workContext.sources.find((source) => source.kind === 'plan');
+      if (verdict?.commitments && activePlan && input.session_id) {
+        reconcilePlanVerdict(
+          repoRoot,
+          input.session_id,
+          activePlan.id,
+          verdict.commitments,
+          jInput.resultConfirmedEvidence,
+        );
+      }
       if (verdict?.block) {
         unsupported = { cls: 'judge-block', need: verdict.reason };
       } else if (verdict === null) {
@@ -509,10 +561,6 @@ async function main(): Promise<void> {
 
   // α: 2nd+ consecutive gate-inspection turn (read-only, no edit) while scope-work remains → block
   // with a BARE next-step demand. The hidden meta-reason is never shown, so it can't be gamed.
-  const metaOpen = openWork; // spec-scope open + agent todos (K3)
-  if (!unsupported && !analysisOnly && metaStreak >= 2 && metaOpen > 0) {
-    unsupported = { cls: 'gate-meta', need: nextStep ? `делай: ${nextStep.title}` : 'делай конкретный следующий шаг по открытой задаче' };
-  }
   // α: persist the streak even on an approve, so the SECOND inspection is caught (resets to 0 on any
   // real-work / non-meta turn). Preserve the anti-loop fields; only metaStreak changes.
   if (!unsupported && metaStreak !== (priorMarker?.metaStreak ?? 0)) {
@@ -522,6 +570,8 @@ async function main(): Promise<void> {
       count: priorMarker?.count ?? 0,
       noProgressStreak: priorMarker?.noProgressStreak,
       metaStreak,
+      sessionId: input.session_id ?? 'unknown-session',
+      contextRevision: workContext.revision,
     });
   }
 
@@ -536,6 +586,8 @@ async function main(): Promise<void> {
     claim_snippet: claimText.replace(/\s+/g, ' ').slice(0, 200),
     mode: config.mode,
     session_id: input.session_id ?? null,
+    context_revision: workContext.revision,
+    source_kinds: workContext.sources.map((source) => source.kind),
     cwd: repoRoot,
     nextStepSource: nextStep?.source ?? null,
     nextStepTaskId: nextStep?.id ?? null,
@@ -562,7 +614,7 @@ async function main(): Promise<void> {
   }
 
   // Anti-loop bookkeeping. (mp + priorMarker were read early for the α gate-meta streak.)
-  const marker = readMarker(mp);
+  const marker = priorMarker;
   const currentHash = hashFileList([claimText]);
   if (marker && marker.hash === currentHash) return approve(); // same message re-submitted
 
@@ -592,7 +644,7 @@ async function main(): Promise<void> {
       ? 'awaiting async (bg in flight) — non-judge-block class'
       : `no work-delta across ${noProgressStreak} consecutive zero-tool kicks`;
     log('INFO', `FR-11 release: ${why}`);
-    writeMarkerAtomic(mp, { hash: currentHash, timestamp: new Date().toISOString(), count: marker?.count ?? 1, noProgressStreak, metaStreak });
+    writeMarkerAtomic(mp, { hash: currentHash, timestamp: new Date().toISOString(), count: marker?.count ?? 1, noProgressStreak, metaStreak, sessionId: input.session_id ?? 'unknown-session', contextRevision: workContext.revision });
     return approve();
   }
 
@@ -606,7 +658,7 @@ async function main(): Promise<void> {
     log('INFO', `retry cap (${cap}${inContinuation ? ', continuation' : ''}) in cooldown → approve`);
     return approve();
   }
-  writeMarkerAtomic(mp, { hash: currentHash, timestamp: new Date().toISOString(), count: newCount, noProgressStreak, metaStreak });
+  writeMarkerAtomic(mp, { hash: currentHash, timestamp: new Date().toISOString(), count: newCount, noProgressStreak, metaStreak, sessionId: input.session_id ?? 'unknown-session', contextRevision: workContext.revision });
 
   log('INFO', `blocking ${unsupported.cls} (attempt ${newCount})`);
   const censusTail =

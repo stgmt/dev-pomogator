@@ -700,27 +700,27 @@ WHEN `set_entity_status` переводит ФАЗУ в `done` (подтверд
 
 ## AC-49.1
 
-**Требование:** [FR-49a](FR.md#fr-49), [FR-49b](FR.md#fr-49), [FR-49c](FR.md#fr-49), [FR-49d](FR.md#fr-49)
+**Требование:** [FR-49a](FR.md#fr-49), [FR-49b](FR.md#fr-49)
 
-WHEN per-prompt баннер переписи рендерится при наличии незавершённого THEN он SHALL называть ОДИН конкретный следующий шаг в дополнение к числам, но SHALL выбирать его по scope-aware приоритету, а не из глобально самой нагруженной спеки; WHEN у агента есть открытый todo в transcript THEN этот todo SHALL быть назван как `следующее` раньше любого spec-census; WHEN есть активный background Bash / background Agent / subagent без completion THEN `следующее` SHALL указывать на ожидание/обработку этого результата и SHALL NOT подсовывать независимую backlog-задачу; WHEN agent todo и async отсутствуют, но текущий рабочий slug известен из spec-mutation/create_spec/apply_spec_change в текущем repo root THEN баннер/Stop-gate MAY назвать `nextOpen` только этой спеки; WHEN текущий slug неизвестен или текущая спека по контексту завершена THEN глобальный census SHALL оставаться health-сводкой без `👉 следующее` из чужой спеки; WHEN hook запускается из установленного plugin root, но payload `cwd` указывает на другой проект THEN `.task-census.json` SHALL читаться из payload `cwd` / `workspace_roots[0]`, и чужой `CLAUDE_PLUGIN_ROOT` / `process.cwd()` corpus SHALL NOT leak `spec-generator-v4` / `WS-F` в проектную сессию; WHEN claim-evidence-gate видит claim про завершение СПЕКИ И кэш переписи показывает незавершённое по затронутой спеке THEN текст блока SHALL нести реальные числа (готово/в-работе); WHEN claim про завершение НЕ спек-контекст (напр. не-спек фикс) THEN census-ветка SHALL НЕ срабатывать (без ложного блока); WHEN статус спеки меняется через дверь THEN кэш переписи SHALL оставаться свежим, чтобы баннер и гейт читали актуальные числа; WHEN полный прогон тестов оставил свежие результаты THEN сверщик SHALL ФЛАЖИТЬ (никогда не авто-закрывать) задачи `in-progress`, у которых все сопоставленные сценарии PASSED и Done-When выполнен, как «вероятно устарело — проверь».
+WHEN prompt-time census runs for a target workspace THEN it SHALL read that workspace's census and SHALL NOT surface the plugin repository's backlog; WHEN several route sources are available THEN the shared router SHALL prefer current-session agent todo, then relevant active async work, then current-spec open work; WHEN scope is unknown THEN it SHALL return no route.
 
 ## AC-49.2
 
-**Требование:** [FR-49e](FR.md#fr-49)
+**Требование:** [FR-49c](FR.md#fr-49)
 
-WHEN финальное сообщение хода — claim прогресса/завершения, быстрый слой (regex works-done/not-found/verified + census-факт; deferred-work-regex УДАЛЁН 2026-06-16 — и мазал, и ложно фаерил, судья теперь его ЕДИНСТВЕННЫЙ детектор) НЕ дал блок-вердикта, а перепись показывает незакрытое THEN стоп-гейт SHALL эскалировать на LLM-судью (Хайку через Meridian `POST /v1/messages`, thinking OFF), положив в промпт финальное сообщение + действия хода + факт переписи, и применить вернувшийся `{block, reason}`; WHEN Meridian недоступен или вызов упал THEN судья SHALL быть ПРОПУЩЕН, вердикт остаётся за быстрым слоем (fail-open — хук не падает и не виснет); WHEN судью зовут THEN транспорт SHALL быть Meridian-прокси с выключенным thinking, НЕ `claude -p`.
+WHEN a spec lifecycle mutation changes task status THEN the cached census SHALL refresh; WHEN an in-progress marker's own mapped scenarios are all green THEN the reconciler MAY flag it with a manual status hint but SHALL NOT auto-close it; unrelated green scenarios SHALL NOT make the task stale.
 
 ## AC-49.3
 
-**Требование:** [FR-49f](FR.md#fr-49)
+**Требование:** [FR-49d](FR.md#fr-49)
 
-WHEN запись `.feature` через дверь (`apply_spec_change`) ДОБАВЛЯЕТ сценарий-заготовку — шаг, целиком состоящий из плейсхолдера (`<...>` с пробелом ИЛИ `{...}`) либо несущий НОВЫЙ маркер `[TBD]` — THEN дверь SHALL ОТКЛОНИТЬ запись finding'ом слоя `strength` с перечнем пустых сценариев; WHEN запись добавляет полностью написанный сценарий THEN strength-finding SHALL НЕ появляться; WHEN шаг — параметр Scenario Outline (`<amount>`, один токен без пробела) ИЛИ скобка внутри текста (`{"k":"v"}`) THEN он SHALL НЕ считаться заготовкой (точный сигнал, анти-H1); WHEN прежняя заготовка лишь СОХРАНЯЕТСЯ без добавления новой THEN запись SHALL НЕ отклоняться (net-new, doc-scoped — легаси не клинит несвязанные правки); WHEN спеку создают через `create_spec` THEN стартовый каркас из шаблона SHALL писаться мимо двери by design (гейт кусает на авторинге/правке через `apply_spec_change`, не на скаффолде).
+WHEN transcript task IDs are sparse, non-monotonic, re-keyed, or compacted THEN replay SHALL use the real successful result ID rather than an array position; WHEN a TaskUpdate fails THEN it SHALL not mutate reconstructed state; WHEN duplicate subjects are ambiguous THEN the agent-todo route SHALL be demoted instead of inventing work.
 
 ## AC-49.4
 
-**Требование:** [FR-49a](FR.md#fr-49), [FR-49b](FR.md#fr-49)
+**Требование:** [FR-49e](FR.md#fr-49)
 
-WHEN transcript-derived agent todos are reconstructed from `TaskCreate` / `TaskUpdate` tool events whose visible task ids are sparse, non-monotonic, or preserved across compaction THEN replay SHALL key every update by the REAL task id carried in the tool metadata/result/input, not by array position (`id - 1`); WHEN a later `TaskUpdate` marks task `#N` completed THEN no earlier pending state for that same real id SHALL remain eligible as `agentOpenTodo`; WHEN several transcript todos have the same normalized subject and scope (for example repeated `Capture real CARL runtime evidence`) THEN the canonical todo set SHALL collapse duplicates using newest-event precedence and completion/evidence precedence, so an older stale open duplicate cannot outrank a newer completed duplicate or current-spec work; WHEN duplicate state cannot be collapsed safely THEN the router SHALL log the ambiguity and demote the todo below active async/current-spec routing rather than block on a guessed stale task; WHEN the Stop-gate blocks on an agent todo THEN the fire log SHALL include `nextStepSource`, real task id, transcript event location/range, selected subject, and reconciliation reason so the next incident is diagnosable without reparsing the full transcript; WHEN the captured CARL incident transcript is replayed THEN completing `Task #72` SHALL close task `#72` (not array slot 71 or stale internal id 5) and SHALL NOT select stale `Capture real CARL runtime evidence` as the next step after the real CARL runtime evidence file and BDD proof exist.
+WHEN FR-49 census or routing runs without an active `claim-evidence-gate` work context THEN it SHALL NOT invoke a Pinator judge, classify completion prose, write Pinator fire or marker state, or block Stop; claim-gate policy scenarios SHALL live under the `claim-evidence-gate` contract while FR-49 retains only generic integration boundaries.
 
 ## AC-50.1
 

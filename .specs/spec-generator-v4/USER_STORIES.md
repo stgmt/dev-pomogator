@@ -616,30 +616,30 @@ Given задача фазы-спеки, создающая ноги требов
 When агент переводит её в `in-progress`
 Then переход разрешён, гейт не клинит создание самих ног
 
-### User Story 26: Честный статус спеки сам всплывает, false-close блокируется (Priority: P1)
+### User Story 26: Текущий следующий шаг не загрязняется чужим backlog (Priority: P1)
 
 **Требование:** [FR-49](FR.md#fr-49)
 
-Как владелец репозитория, я хочу чтобы остаток работы по спеке САМ всплывал в каждом
-ходе и агент не мог объявить «готово» при незакрытых требованиях, чтобы не приходилось
+Как пользователь нескольких репозиториев, я хочу видеть следующий шаг только текущей сессии и проекта,
+чтобы чужой backlog или stale transcript task не уводили агента в другую спеку, чтобы не приходилось
 каждый раз переспрашивать «что дальше» и ловить false-close вручную.
 
-**Why:** Агент повторно объявлял спеку готовой при 11 требованиях в работе; пассивный
+**Why:** Shared census serves status, MCP, and Pinator, so its route must be scoped before any consumer uses it; historically an agent
 баннер переписи игнорировался; стоп-гейт ловил передачу хода по фразам, не по данным.
-Нужна автоматическая петля: показать следующий шаг + заблокировать враньё реальными числами.
+Eligibility and Stop judgment remain a separate `claim-evidence-gate` responsibility.
 
-**Independent Test:** claim «спека готова» при незакрытой переписи блокируется стоп-гейтом
-с реальными числами; не-спек claim не блокируется (анти-H1); баннер называет следующую задачу.
+**Independent Test:** real router uses target workspace and real task IDs; generic routing alone never invokes Pinator,
+uses deterministic todo → relevant async → current-spec priority and returns no global fallback for unknown scope.
 
 **Acceptance Scenarios:**
 
-Given незакрытая перепись и claim о завершении СПЕКИ с прогоном тулов в этом ходе
-When стоп-гейт оценивает ход
-Then ход заблокирован с реальными числами и следующим шагом
+- Target workspace census excludes plugin repository backlog.
+- Failed updates and ambiguous duplicate subjects do not invent an open task.
+- Generic routing alone never invokes a judge or writes Pinator state.
 
-Given баннер переписи при наличии незавершённого
-When баннер рендерится
-Then он называет одну конкретную следующую открытую задачу
+- Current-spec open work is used only when stronger current-session sources are absent.
+- Unknown scope returns no global or busiest-spec fallback.
+- Route diagnostics preserve the selected real task identity and reconciliation reason.
 
 ### User Story 27: Расхождения между спеками всплывают до того, как уедут в код (Priority: P2)
 

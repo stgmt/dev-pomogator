@@ -99,7 +99,7 @@ Opt-out: `DEV_POMOGATOR_STATUSLINE=off`. Домен НЕ пересекаетс�
 | tools/auto-commit | Stop | авто-коммит с LLM-сообщением |
 | tools/auto-simplify | Stop | триггерит /simplify-ревью изменений |
 | tools/answer-simple | Stop | аудит ответа: жаргон/коды/перегруженные вопросы (правило clear-questions) |
-| tools/claim-evidence-gate | Stop | заявления без evidence не проходят |
+| tools/claim-evidence-gate | Stop (Claude Code) | проверяет завершение только при активной задаче, одобренном плане, активной спеке или `/goal`; обычный диалог пропускает молча; в Codex не регистрируется, пока нет доказанного lifecycle-контракта |
 | tools/learnings-capture | Stop + UserPromptSubmit | очередь сигналов для /reflect и /suggest-rules |
 | tools/bg-task-guard | PostToolUse(Bash) + Stop | не даёт завершить сессию при живых bg-задачах |
 | tools/prompt-suggest | UserPromptSubmit + Stop | подсказки по промптам |

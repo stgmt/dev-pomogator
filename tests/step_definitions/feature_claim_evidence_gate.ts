@@ -14,18 +14,26 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import assert from 'node:assert/strict';
+import { isDeepStrictEqual } from 'node:util';
 import { classify, firstUnsupported, stripCode } from '../../tools/claim-evidence-gate/claim_classifier.ts';
 import { extractTurnWindow, bgInFlightInWindow, lastUserPrompt, agentBgInFlightCount, agentBgInFlight, sessionUserPrompts, latestActionableStopFeedback, AWAITS_RESULT_RE } from '../../tools/claim-evidence-gate/turn_window.ts';
 import { agentOpenTodoCount, liveOpenForUncensusedSlugs, lastEditedSpecSlug } from '../../tools/spec-graph/task-census.ts';
 import { gateSelfEdit, ownerDirectedDeferral, ownerRequestedAnalysisReportOnly, selfMarkedBlockedOrBacklog } from '../../tools/claim-evidence-gate/game_guard_facts.ts';
-import { buildJudgeNoTokenDemand, resolveEndpoint, isJudgeArmed, judgeStop } from '../../tools/claim-evidence-gate/meridian-judge.ts';
+import { buildJudgeNoTokenDemand, buildJudgePrompt, resolveEndpoint, isJudgeArmed, judgeStop, type CommitmentVerdict } from '../../tools/claim-evidence-gate/meridian-judge.ts';
+import { collectPinatorWorkContext, type PinatorWorkContext } from '../../tools/claim-evidence-gate/work_context.ts';
+import { parseTranscriptEvents, resultConfirmedEvidence } from '../../tools/claim-evidence-gate/transcript_events.ts';
+import { ensureApprovedPlanLedger, planLedgerIsActive, readPlanLedger, reconcilePlanVerdict, type ApprovedPlanLedger } from '../../tools/claim-evidence-gate/plan_commitment_ledger.ts';
 
 const REPO = process.env.APP_DIR || process.cwd();
-const HOOK = path.resolve(REPO, 'tools', 'claim-evidence-gate', 'claim_evidence_gate_stop.ts');
+const HOOK = path.resolve(REPO, 'tools', 'claim-evidence-gate', 'claim_evidence_gate_stop.bundle.mjs');
 
 type Block = Record<string, unknown>;
 const U = (text: string): Block => ({ type: 'user', message: { role: 'user', content: [{ type: 'text', text }] } });
 const A = (content: Block[]): Block => ({ type: 'assistant', message: { role: 'assistant', content } });
+const R = (toolUseId: string, content: string, isError = false): Block => ({
+  type: 'user',
+  message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: toolUseId, content, ...(isError ? { is_error: true } : {}) }] },
+});
 const txt = (text: string): Block => ({ type: 'text', text });
 const tool = (name: string, input: unknown = {}): Block => ({ type: 'tool_use', name, input });
 const GRID = 'Итог:\n| q1 | FAIL |\n| q2 | FAIL |\n| q3 | PASS |';
@@ -98,6 +106,19 @@ interface CegWorld extends V4World {
   cegFr19Slug?: string;
   cegFr19Results?: number[];
   cegRecencyResults?: Array<string | null>;
+  cegAuthoritativeSource?: 'none' | 'task' | 'plan' | 'spec' | 'goal';
+  cegLifecycleRows?: Block[];
+  cegContexts?: Array<PinatorWorkContext | null>;
+  cegContext?: PinatorWorkContext | null;
+  cegPacket?: Record<string, unknown>;
+  cegLedger?: ApprovedPlanLedger | null;
+  cegLedgerAfter?: ApprovedPlanLedger | null;
+  cegLedgerDirBefore?: boolean;
+  cegLedgerDirAfter?: boolean;
+  cegEvidenceIds?: string[];
+  cegLedgerSnapshot?: ApprovedPlanLedger;
+  cegLedgerMutationResults?: Array<{ label: string; unchanged: boolean; active: boolean }>;
+  cegLastMessageSeen?: string;
 }
 
 /** Write the task-census cache fixture the gate reads (FR-49b), mirroring the vitest writeCensus. */
@@ -107,12 +128,70 @@ function writeCensus(d: string, total: { open: number; doneRed: number; doneUnru
   fs.writeFileSync(path.join(cacheDir, '.task-census.json'), JSON.stringify({ total, specs: [{ slug: 'demo', ...total, nextOpen }], ts: '2026-06-13T00:00:00Z' }));
 }
 
+interface CensusSpecRow {
+  slug: string;
+  open: number;
+  doneRed?: number;
+  doneUnrun?: number;
+  nextOpen?: { id: string; title: string };
+}
+
+function writeMultiCensus(d: string, rows: CensusSpecRow[]): void {
+  const specs = rows.map((row) => ({ doneRed: 0, doneUnrun: 0, ...row }));
+  const total = specs.reduce((sum, row) => ({
+    open: sum.open + row.open,
+    doneRed: sum.doneRed + (row.doneRed ?? 0),
+    doneUnrun: sum.doneUnrun + (row.doneUnrun ?? 0),
+  }), { open: 0, doneRed: 0, doneUnrun: 0 });
+  const cacheDir = path.join(d, '.dev-pomogator');
+  fs.mkdirSync(cacheDir, { recursive: true });
+  fs.writeFileSync(path.join(cacheDir, '.task-census.json'), JSON.stringify({ total, specs, ts: '2026-07-31T00:00:00Z' }));
+}
+
+function toolUse(id: string, name: string, input: Record<string, unknown>): Block {
+  return { type: 'tool_use', id, name, input };
+}
+
+function specMutation(id: string, slug: string, doc: string): Block {
+  return toolUse(id, 'mcp__dev-pomogator-specs__apply_spec_change', { spec: slug, doc });
+}
+
+function goalStatus(met: boolean, condition: string): Block {
+  return { type: 'attachment', attachment: { type: 'goal_status', met, condition } };
+}
+
+function collectContext(world: CegWorld, name: string, rows: Block[]): PinatorWorkContext | null {
+  const transcriptPath = path.join(world.tempDir, `${name}.jsonl`);
+  const raw = rows.map((row) => JSON.stringify(row)).join('\n');
+  fs.writeFileSync(transcriptPath, raw);
+  return collectPinatorWorkContext({
+    session_id: 'bdd-session',
+    transcript_path: transcriptPath,
+    cwd: world.tempDir,
+    workspace_roots: [world.tempDir],
+  }, parseTranscriptEvents(raw));
+}
+
+function judgePacket(context: PinatorWorkContext, finalMessage = 'Current work remains.'): Record<string, unknown> {
+  const prompt = buildJudgePrompt({
+    context,
+    finalMessage,
+    tools: [],
+    openTasks: context.commitments.length,
+    userRequest: 'Complete the current work.',
+    sessionUserPrompts: ['Complete the current work.'],
+  });
+  const line = prompt.split('\n').find((value) => value.startsWith('{"sessionId"'));
+  assert.ok(line, 'the production judge prompt must contain a JSON packet');
+  return JSON.parse(line) as Record<string, unknown>;
+}
+
 /** Run the real hook against a fully-built transcript (used by the spec-false-close / streak scenarios). */
 function runHookExplicit(world: CegWorld, rows: Block[], env: Record<string, string> = {}, stopHookActive = false): { blocked: boolean; raw: string } {
   const fp = path.join(world.tempDir, 'transcript.jsonl');
   fs.writeFileSync(fp, rows.map((r) => JSON.stringify(r)).join('\n'));
-  const stdin = JSON.stringify({ transcript_path: fp, cwd: world.tempDir, ...(stopHookActive ? { stop_hook_active: true } : {}) });
-  const res = spawnSync('npx', ['tsx', HOOK], { input: stdin, encoding: 'utf-8', env: { ...process.env, CLAIM_GATE_ENABLED: 'true', ...env } });
+  const stdin = JSON.stringify({ session_id: 'bdd-session', transcript_path: fp, cwd: world.tempDir, ...(stopHookActive ? { stop_hook_active: true } : {}) });
+  const res = spawnSync(process.execPath, [HOOK], { input: stdin, encoding: 'utf-8', env: { ...process.env, CLAIM_GATE_ENABLED: 'true', ...env } });
   const raw = (res.stdout || '').trim();
   return { blocked: raw.includes('"decision":"block"'), raw };
 }
@@ -126,11 +205,213 @@ function runHookRows(world: CegWorld, env: Record<string, string> = {}, stopHook
     A([txt(world.cegFinal ?? '')]),
   ];
   fs.writeFileSync(fp, rows.map((r) => JSON.stringify(r)).join('\n'));
-  const stdin = JSON.stringify({ transcript_path: fp, cwd: world.tempDir, ...(stopHookActive ? { stop_hook_active: true } : {}) });
-  const res = spawnSync('npx', ['tsx', HOOK], { input: stdin, encoding: 'utf-8', env: { ...process.env, CLAIM_GATE_ENABLED: 'true', ...env } });
+  const stdin = JSON.stringify({ session_id: 'bdd-session', transcript_path: fp, cwd: world.tempDir, ...(stopHookActive ? { stop_hook_active: true } : {}) });
+  const res = spawnSync(process.execPath, [HOOK], { input: stdin, encoding: 'utf-8', env: { ...process.env, CLAIM_GATE_ENABLED: 'true', ...env } });
   const raw = (res.stdout || '').trim();
   return { blocked: raw.includes('"decision":"block"'), raw };
 }
+
+// ── Eligibility-first lifecycle fixtures ──────────────────────────────────────────────────
+Given<CegWorld>('an inactive Stop in enforce mode and shadow mode', function () {
+  this.cegLedgerDirBefore = fs.existsSync(path.join(this.tempDir, '.dev-pomogator'));
+  this.cegLifecycleRows = [];
+  this.cegPrompt = 'ordinary question';
+  this.cegFinal = 'всё работает';
+});
+
+When<CegWorld>('the real claim-evidence Stop hook evaluates both turns', function () {
+  const rows = [U(this.cegPrompt ?? 'ordinary question'), A([txt(this.cegFinal ?? 'всё работает')])];
+  const enforce = runHookExplicit(this, rows, { CLAIM_GATE_JUDGE: 'false' });
+  const shadow = runHookExplicit(this, rows, { CLAIM_GATE_JUDGE: 'false', CLAIM_GATE_ENABLED: 'shadow' });
+  this.cegBlocked = enforce.blocked || shadow.blocked;
+  this.cegRaw = `${enforce.raw}\n${shadow.raw}`;
+  this.cegLedgerDirAfter = fs.existsSync(path.join(this.tempDir, '.dev-pomogator'));
+});
+
+Then<CegWorld>('neither turn creates judge marker fire or plan-ledger state', function () {
+  assert.equal(this.cegBlocked, false);
+  assert.equal(this.cegRaw?.includes('claim-evidence-gate'), false);
+  assert.equal(this.cegLedgerDirBefore, false);
+  assert.equal(this.cegLedgerDirAfter, false);
+});
+
+Given<CegWorld>('the current session has no authoritative Pinator work source', function () {
+  this.cegAuthoritativeSource = 'none';
+  this.cegLifecycleRows = [];
+});
+
+Given<CegWorld>('the current session has one open Claude task', function () {
+  this.cegAuthoritativeSource = 'task';
+  this.cegLifecycleRows = [
+    A([{ type: 'tool_use', id: 'task-create-1', name: 'TaskCreate', input: { subject: 'Implement active-work eligibility' } }]),
+    R('task-create-1', 'Task #41 created successfully: Implement active-work eligibility'),
+  ];
+});
+
+Given<CegWorld>('failed sidechain and unrelated task records plus one owned open task', function () {
+  this.cegLifecycleRows = [
+    { type: 'assistant', isSidechain: true, message: { role: 'assistant', content: [toolUse('child-task', 'TaskCreate', { subject: 'Child work' })] } },
+    R('child-task', 'Task #500 created successfully'),
+    A([toolUse('failed-task', 'TaskCreate', { subject: 'Failed work' })]),
+    R('failed-task', 'creation failed', true),
+    U('Reminder: unrelated task #700 is pending'),
+    A([toolUse('owned-task', 'TaskCreate', { subject: 'Owned work' })]),
+    R('owned-task', 'Task #900 created successfully'),
+  ];
+});
+
+When<CegWorld>('the task collector reconstructs current-session ownership', function () {
+  this.cegContext = collectContext(this, 'cegate70', this.cegLifecycleRows ?? []);
+});
+
+Then<CegWorld>('only the successfully created main-chain task activates Pinator', function () {
+  assert.deepEqual(this.cegContext?.sources.map((source) => source.title), ['Owned work']);
+});
+
+Given<CegWorld>('the current session has a successful approved plan result', function () {
+  this.cegAuthoritativeSource = 'plan';
+  this.cegLifecycleRows = [
+    A([{ type: 'tool_use', id: 'exit-plan-1', name: 'ExitPlanMode', input: { planFilePath: path.join(this.tempDir, 'approved-plan.md') } }]),
+    R('exit-plan-1', 'User has approved your plan.\n\n## Approved Plan:\n## 📋 Todos\n- [ ] Implement active-work eligibility'),
+  ];
+});
+
+Given<CegWorld>('an approved plan ledger has two open commitments and two confirmed result ids', function () {
+  const planHash = 'a'.repeat(64);
+  this.cegLedger = ensureApprovedPlanLedger(this.tempDir, {
+    sessionId: 'bdd-session', planHash, planPath: 'approved.md', approvalToolUseId: 'approve', approvalResultSeq: 1, approvalResultLine: 1,
+    commitments: [{ id: 'c1', title: 'First', ordinal: 1 }, { id: 'c2', title: 'Second', ordinal: 2 }],
+  });
+  this.cegEvidenceIds = ['e1', 'e2'];
+});
+
+When<CegWorld>('the first commitment alone is completed through the ledger', function () {
+  this.cegLedgerAfter = reconcilePlanVerdict(this.tempDir, 'bdd-session', 'a'.repeat(64), [
+    { id: 'c1', state: 'complete', evidenceIds: ['e1'], reason: 'done' },
+  ], [{ id: 'e1', toolName: 'Bash', resultSeq: 2, resultLine: 2 }]);
+});
+
+Then<CegWorld>('the plan remains active with exactly one open commitment', function () {
+  assert.equal(this.cegLedgerAfter?.commitments.filter((item) => item.state === 'open').length, 1, 'partial completion leaves exactly one open commitment');
+  assert.equal(planLedgerIsActive(this.cegLedgerAfter!), true, 'ANY/OR mutation must not deactivate a partially complete plan');
+  assert.deepEqual(this.cegLedgerAfter?.commitments.map((item) => ({ id: item.id, state: item.state, evidenceIds: item.evidenceIds })), [
+    { id: 'c1', state: 'complete', evidenceIds: ['e1'] },
+    { id: 'c2', state: 'open', evidenceIds: [] },
+  ], 'only the commitment named by a valid verdict changes state');
+});
+
+When<CegWorld>('the second commitment is completed through the ledger', function () {
+  this.cegLedgerAfter = reconcilePlanVerdict(this.tempDir, 'bdd-session', 'a'.repeat(64), [
+    { id: 'c2', state: 'complete', evidenceIds: ['e2'], reason: 'done' },
+  ], [{ id: 'e2', toolName: 'Bash', resultSeq: 3, resultLine: 3 }]);
+});
+
+Then<CegWorld>('the plan ledger is inactive only after every commitment is complete', function () {
+  assert.deepEqual(this.cegLedgerAfter?.commitments.map((item) => ({ id: item.id, state: item.state, evidenceIds: item.evidenceIds })), [
+    { id: 'c1', state: 'complete', evidenceIds: ['e1'] },
+    { id: 'c2', state: 'complete', evidenceIds: ['e2'] },
+  ], 'both immutable commitments persist their own exact completion evidence');
+  assert.equal(planLedgerIsActive(this.cegLedgerAfter!), false, 'ALL complete is the only normal lifecycle state that deactivates a plan');
+});
+
+Given<CegWorld>('the session approves two different plans in order', function () {
+  const one = '1'.repeat(64);
+  const two = '2'.repeat(64);
+  ensureApprovedPlanLedger(this.tempDir, { sessionId: 'bdd-session', planHash: one, planPath: 'one.md', approvalToolUseId: 'a1', approvalResultSeq: 1, approvalResultLine: 1, commitments: [{ id: 'one', title: 'One', ordinal: 1 }] });
+  ensureApprovedPlanLedger(this.tempDir, { sessionId: 'bdd-session', planHash: two, planPath: 'two.md', approvalToolUseId: 'a2', approvalResultSeq: 2, approvalResultLine: 2, commitments: [{ id: 'two', title: 'Two', ordinal: 1 }] });
+});
+
+When<CegWorld>('both approvals are collected into plan ledgers', function () {
+  const dir = path.join(this.tempDir, '.dev-pomogator', 'claim-evidence-plan-ledger');
+  const sessionDir = fs.readdirSync(dir).map((name) => path.join(dir, name))[0];
+  this.cegContexts = fs.readdirSync(sessionDir).filter((name) => name.endsWith('.json')).map((name) => JSON.parse(fs.readFileSync(path.join(sessionDir, name), 'utf-8')) as ApprovedPlanLedger as unknown as PinatorWorkContext);
+});
+
+Then<CegWorld>('only the newer plan remains active and the old ledger records supersession', function () {
+  const ledgers = (this.cegContexts ?? []) as unknown as ApprovedPlanLedger[];
+  const oldLedger = ledgers.find((ledger) => ledger.planHash === '1'.repeat(64));
+  const newLedger = ledgers.find((ledger) => ledger.planHash === '2'.repeat(64));
+  assert.equal(ledgers.filter((ledger) => planLedgerIsActive(ledger)).length, 1, 'only one approved plan may remain active per session');
+  assert.equal(oldLedger?.supersededBy, '2'.repeat(64), 'strictly later approval records the exact successor hash');
+  assert.equal(planLedgerIsActive(oldLedger!), false, 'superseded ledger is inactive even with open commitments');
+  assert.equal(planLedgerIsActive(newLedger!), true, 'new unsuperseded ledger remains active');
+});
+
+Given<CegWorld>('the current session successfully mutates a spec with open scoped work', function () {
+  this.cegAuthoritativeSource = 'spec';
+  writeCensus(this.tempDir, { open: 1, doneRed: 0, doneUnrun: 0 }, { id: 'spec-open-1', title: 'Implement spec context' });
+  this.cegLifecycleRows = [
+    A([{ type: 'tool_use', id: 'spec-write-1', name: 'mcp__dev-pomogator-specs__apply_spec_change', input: { spec: 'demo', doc: 'FR.md' } }]),
+    R('spec-write-1', 'Spec change applied successfully'),
+  ];
+});
+
+Given<CegWorld>('the session mutates a spec feature with and without an open mapped task', function () {
+  writeMultiCensus(this.tempDir, [{ slug: 'feature-open', open: 1, nextOpen: { id: 't1', title: 'Feature work' } }, { slug: 'feature-closed', open: 0 }]);
+  this.cegContexts = [
+    collectContext(this, 'feature-open', [A([specMutation('open-write', 'feature-open', 'feature-open.feature')]), R('open-write', 'applied')]),
+    collectContext(this, 'feature-closed', [A([specMutation('closed-write', 'feature-closed', 'feature-closed.feature')]), R('closed-write', 'applied')]),
+  ];
+});
+
+When<CegWorld>('the spec collector evaluates both feature mutations', function () {});
+
+Then<CegWorld>('only the feature mutation with mapped open work activates the spec source', function () {
+  assert.deepEqual(this.cegContexts?.[0]?.sources.map((source) => source.id), ['feature-open']);
+  assert.equal(this.cegContexts?.[1], null);
+});
+
+Given<CegWorld>('the current session actively works two specs with open mapped work', function () {
+  writeMultiCensus(this.tempDir, [{ slug: 'alpha', open: 1, nextOpen: { id: 'a1', title: 'Alpha' } }, { slug: 'beta', open: 1, nextOpen: { id: 'b1', title: 'Beta' } }]);
+  this.cegLifecycleRows = [A([specMutation('aw', 'alpha', 'alpha.feature')]), R('aw', 'applied'), A([specMutation('bw', 'beta', 'beta.feature')]), R('bw', 'applied')];
+});
+
+When<CegWorld>('one spec closes and the spec collector reevaluates the same session', function () {
+  const rows = this.cegLifecycleRows ?? [];
+  const before = collectContext(this, 'two-specs-before', rows);
+  writeMultiCensus(this.tempDir, [{ slug: 'beta', open: 1, nextOpen: { id: 'b1', title: 'Beta' } }]);
+  this.cegContexts = [before, collectContext(this, 'two-specs-after', rows)];
+});
+
+Then<CegWorld>('both initially appear with provenance and the remaining spec is never hidden by first-spec selection', function () {
+  assert.deepEqual(this.cegContexts?.[0]?.sources.map((source) => source.id), ['alpha', 'beta']);
+  assert.deepEqual(this.cegContexts?.[1]?.sources.map((source) => source.id), ['beta']);
+  assert.ok(this.cegContexts?.[0]?.sources.every((source) => source.evidence.some((value) => value.startsWith('transcript:'))));
+});
+
+Given<CegWorld>('the current session has a native active goal', function () {
+  this.cegAuthoritativeSource = 'goal';
+  this.cegLifecycleRows = [{ type: 'attachment', attachment: { type: 'goal_status', met: false, sentinel: true, condition: 'Implement active-work eligibility' } }];
+});
+
+When<CegWorld>('that Claude task is completed and the gate evaluates the next turn', function () {
+  const rows = [
+    ...(this.cegLifecycleRows ?? []),
+    A([{ type: 'tool_use', id: 'task-update-1', name: 'TaskUpdate', input: { taskId: '41', status: 'completed' } }]),
+    R('task-update-1', 'Updated task #41 status'),
+    U('continue'),
+    A([txt(this.cegFinal ?? '')]),
+  ];
+  const result = runHookExplicit(this, rows, { CLAIM_GATE_JUDGE: 'false' });
+  this.cegBlocked = result.blocked;
+  this.cegRaw = result.raw;
+});
+
+When<CegWorld>('the native goal becomes met and the gate evaluates the next turn', function () {
+  const rows = [
+    ...(this.cegLifecycleRows ?? []),
+    { type: 'attachment', attachment: { type: 'goal_status', met: true, condition: 'Implement active-work eligibility' } },
+    U('continue'),
+    A([txt(this.cegFinal ?? '')]),
+  ];
+  const result = runHookExplicit(this, rows, { CLAIM_GATE_JUDGE: 'false' });
+  this.cegBlocked = result.blocked;
+  this.cegRaw = result.raw;
+});
+
+Then<CegWorld>('it does not append a fire record to the log', function () {
+  assert.equal(fs.existsSync(path.join(this.tempDir, '.dev-pomogator', '.claim-evidence-gate-fires.jsonl')), false);
+});
 
 // ── Given: the final message ──────────────────────────────────────────────────────────────
 Given<CegWorld>(/^the final message is a PASS\/FAIL verdict grid$/, function () {
@@ -153,6 +434,118 @@ Given<CegWorld>('the final message contains {string}', function (marker: string)
 Given<CegWorld>('the gate is in shadow mode', function () {
   this.cegEnv = { ...(this.cegEnv ?? {}), CLAIM_GATE_ENABLED: 'shadow' };
 });
+Given<CegWorld>('transcript assistant text differs from Stop last_assistant_message', function () {
+  this.cegLifecycleRows = [A([toolUse('task81', 'TaskCreate', { subject: 'Verify final response' })]), R('task81', 'Task #81 created successfully'), U('continue'), A([txt('stale transcript response')])];
+  this.cegFinal = 'fresh Stop response';
+});
+
+When<CegWorld>('the active hook evaluates the Stop payload', function () {
+  const context = collectContext(this, 'last-message-context', this.cegLifecycleRows ?? []);
+  assert.ok(context);
+  this.cegPacket = judgePacket(context!, this.cegFinal);
+});
+
+Then<CegWorld>('the judge request uses last_assistant_message as the final response', function () {
+  assert.equal(this.cegPacket?.finalMessage, 'fresh Stop response');
+});
+
+Given<CegWorld>('the transcript has successful failed and result-less tool uses', function () {
+  this.cegLifecycleRows = [A([toolUse('ok', 'Bash', { command: 'ok' })]), R('ok', 'done'), A([toolUse('bad', 'Bash', { command: 'bad' })]), R('bad', 'failed', true), A([toolUse('pending', 'Bash', { command: 'pending' })])];
+});
+
+When<CegWorld>('result-confirmed evidence is collected', function () {
+  const raw = (this.cegLifecycleRows ?? []).map((row) => JSON.stringify(row)).join('\n');
+  this.cegEvidenceIds = resultConfirmedEvidence(parseTranscriptEvents(raw)).map((item) => item.id);
+});
+
+Then<CegWorld>('only the exact successful tool use id is admissible', function () {
+  assert.deepEqual(this.cegEvidenceIds, ['ok']);
+});
+
+Given<CegWorld>('an active context contains long source fields and secret-like tool output', function () {
+  const long = 'x'.repeat(500);
+  this.cegContext = { sessionId: 'bdd', revision: 'r', conflicts: [], sources: [{ kind: 'task', id: long, title: long, revision: 'rev', evidence: [long], commitments: [{ id: 'c', title: 'work', status: 'pending', sourceKind: 'task' }] }], commitments: [{ id: 'c', title: 'work', status: 'pending', sourceKind: 'task' }] };
+});
+
+When<CegWorld>('Pinator builds the bounded judge packet', function () {
+  this.cegPacket = judgePacket(this.cegContext!);
+});
+
+Then<CegWorld>('the packet truncates source fields and excludes tool result content', function () {
+  const source = (this.cegPacket?.sources as Array<Record<string, unknown>>)[0];
+  assert.ok(String(source.id).length <= 160);
+  assert.ok(String(source.title).length <= 240);
+  assert.equal(JSON.stringify(this.cegPacket).includes('tool_result'), false);
+});
+
+Given<CegWorld>('a plan ledger has two commitments and one completion verdict', function () {
+  ensureApprovedPlanLedger(this.tempDir, { sessionId: 'bdd-session', planHash: '8'.repeat(64), planPath: 'p.md', approvalToolUseId: 'a', approvalResultSeq: 1, approvalResultLine: 1, commitments: [{ id: 'c1', title: 'one', ordinal: 1 }, { id: 'c2', title: 'two', ordinal: 2 }] });
+});
+
+When<CegWorld>('the structured completion proposal is reconciled', function () {
+  this.cegLedgerAfter = reconcilePlanVerdict(this.tempDir, 'bdd-session', '8'.repeat(64), [{ id: 'c1', state: 'complete', evidenceIds: ['ok'], reason: 'done' }], [{ id: 'ok', toolName: 'Bash', resultSeq: 2, resultLine: 2 }]);
+});
+
+Then<CegWorld>('one remaining actionable commitment keeps the plan active', function () {
+  assert.deepEqual(this.cegLedgerAfter?.commitments.map((item) => ({ id: item.id, state: item.state, evidenceIds: item.evidenceIds })), [
+    { id: 'c1', state: 'complete', evidenceIds: ['ok'] },
+    { id: 'c2', state: 'open', evidenceIds: [] },
+  ], 'valid completion mutates exactly one named commitment');
+  assert.equal(planLedgerIsActive(this.cegLedgerAfter!), true, 'one actionable commitment keeps the ALL rollup active');
+});
+
+Given<CegWorld>('a plan ledger receives blocked awaiting and malformed commitment verdicts', function () {
+  const ledger = ensureApprovedPlanLedger(this.tempDir, { sessionId: 'bdd-session', planHash: '9'.repeat(64), planPath: 'p.md', approvalToolUseId: 'a', approvalResultSeq: 1, approvalResultLine: 1, commitments: [{ id: 'c1', title: 'one', ordinal: 1 }, { id: 'c2', title: 'two', ordinal: 2 }] });
+  assert.ok(ledger, 'production ledger creation succeeds for the malformed-verdict fixture');
+  this.cegLedgerSnapshot = structuredClone(ledger);
+});
+
+When<CegWorld>('non-completing and invalid verdicts are reconciled', function () {
+  const confirmed = [{ id: 'ok', toolName: 'Bash', resultSeq: 2, resultLine: 2 }];
+  const batches: Array<{ label: string; verdicts: CommitmentVerdict[] }> = [
+    { label: 'blocked-awaiting', verdicts: [{ id: 'c1', state: 'blocked', evidenceIds: [], reason: 'blocked' }, { id: 'c2', state: 'awaiting', evidenceIds: [], reason: 'awaiting' }] },
+    { label: 'duplicate-id', verdicts: [{ id: 'c1', state: 'complete', evidenceIds: ['ok'], reason: 'done' }, { id: 'c1', state: 'complete', evidenceIds: ['ok'], reason: 'duplicate' }] },
+    { label: 'unknown-commitment', verdicts: [{ id: 'missing', state: 'complete', evidenceIds: ['ok'], reason: 'unknown' }] },
+    { label: 'unknown-evidence', verdicts: [{ id: 'c1', state: 'complete', evidenceIds: ['missing'], reason: 'unconfirmed' }] },
+    { label: 'duplicate-evidence', verdicts: [{ id: 'c1', state: 'complete', evidenceIds: ['ok', 'ok'], reason: 'duplicate evidence' }] },
+    { label: 'empty-evidence', verdicts: [{ id: 'c1', state: 'complete', evidenceIds: [], reason: 'model-only' }] },
+  ];
+  this.cegLedgerMutationResults = batches.map(({ label, verdicts }) => {
+    const result = reconcilePlanVerdict(this.tempDir, 'bdd-session', '9'.repeat(64), verdicts, confirmed);
+    return {
+      label,
+      unchanged: isDeepStrictEqual(readPlanLedger(this.tempDir, 'bdd-session', '9'.repeat(64)), this.cegLedgerSnapshot),
+      active: Boolean(result && planLedgerIsActive(result)),
+    };
+  });
+  this.cegLedgerAfter = readPlanLedger(this.tempDir, 'bdd-session', '9'.repeat(64));
+});
+
+Then<CegWorld>('every rejected verdict leaves the exact persisted ledger active and unchanged', function () {
+  assert.deepEqual(this.cegLedgerMutationResults, [
+    { label: 'blocked-awaiting', unchanged: true, active: true },
+    { label: 'duplicate-id', unchanged: true, active: true },
+    { label: 'unknown-commitment', unchanged: true, active: true },
+    { label: 'unknown-evidence', unchanged: true, active: true },
+    { label: 'duplicate-evidence', unchanged: true, active: true },
+    { label: 'empty-evidence', unchanged: true, active: true },
+  ], 'each guard rejects atomically and keeps the plan active');
+  assert.deepEqual(this.cegLedgerAfter, this.cegLedgerSnapshot, 'persisted production ledger is structurally unchanged after all rejected batches');
+  assert.equal(planLedgerIsActive(this.cegLedgerAfter!), true, 'rejected verdicts cannot deactivate an open plan');
+});
+
+Given<CegWorld>('only official background task and cron state is active', function () {
+  this.cegLifecycleRows = [U('ordinary dialogue')];
+});
+
+When<CegWorld>('Pinator collects work context', function () {
+  this.cegContext = collectContext(this, 'async-only', this.cegLifecycleRows ?? []);
+});
+
+Then<CegWorld>('the session remains inactive', function () {
+  assert.equal(this.cegContext, null);
+});
+
 Given<CegWorld>('the final message is an unsupported verdict grid', function () {
   this.cegPrompt = 'проверь';
   this.cegFinal = 'Итог:\n| q1 | FAIL |\n| q2 | FAIL |';
@@ -211,7 +604,69 @@ Given<CegWorld>('a Bash running {string} ran this turn', function (cmd: string) 
 });
 
 // ── When ──────────────────────────────────────────────────────────────────────────────────
+Given<CegWorld>('goal clear and resume prose around native active and met goal artifacts', function () {
+  this.cegContexts = [
+    collectContext(this, 'goal-active-prose', [goalStatus(false, 'Ship release'), U('/goal clear')]),
+    collectContext(this, 'goal-resume-prose', [U('resume goal Ship release')]),
+    collectContext(this, 'goal-met-prose', [goalStatus(true, 'Ship release'), U('resume goal Ship release')]),
+  ];
+});
+
+When<CegWorld>('the goal collector evaluates the lifecycle evidence', function () {});
+
+Then<CegWorld>('only structured native goal status changes eligibility and prose does not', function () {
+  assert.deepEqual(this.cegContexts?.[0]?.sources.map((source) => source.title), ['Ship release']);
+  assert.equal(this.cegContexts?.[1], null);
+  assert.equal(this.cegContexts?.[2], null);
+});
+
+Given<CegWorld>('Pinator receives active native goal context without a Pinator completion verdict', function () {
+  this.cegContext = collectContext(this, 'native-independent', [goalStatus(false, 'Native goal')]);
+});
+
+When<CegWorld>('the judge packet and ledger state are inspected', function () {
+  assert.ok(this.cegContext);
+  this.cegPacket = judgePacket(this.cegContext!);
+});
+
+Then<CegWorld>('Pinator does not persist native goal completion', function () {
+  assert.deepEqual(this.cegContext?.sources.map((source) => source.kind), ['goal']);
+  assert.equal(fs.existsSync(path.join(this.tempDir, '.dev-pomogator', 'claim-evidence-plan-ledger')), false);
+});
+
+Given<CegWorld>('all four authoritative source kinds are active with one shared commitment title', function () {
+  const title = 'Ship shared change';
+  const planPath = path.join(this.tempDir, 'plan.md');
+  writeMultiCensus(this.tempDir, [{ slug: 'packet-spec', open: 1, nextOpen: { id: 's1', title } }]);
+  this.cegLifecycleRows = [
+    A([toolUse('tc', 'TaskCreate', { subject: title })]), R('tc', 'Task #901 created successfully'),
+    A([toolUse('pa', 'ExitPlanMode', { planFilePath: planPath })]), R('pa', `User has approved your plan.\n\n## Approved Plan:\n## 📋 Todos\n- [ ] ${title}`),
+    A([specMutation('sm', 'packet-spec', 'packet-spec.feature')]), R('sm', 'applied'), goalStatus(false, title),
+  ];
+});
+
+When<CegWorld>('Pinator assembles the judge packet', function () {
+  this.cegContext = collectContext(this, 'merged', this.cegLifecycleRows ?? []);
+  assert.ok(this.cegContext);
+  this.cegPacket = judgePacket(this.cegContext!);
+});
+
+Then<CegWorld>('every source appears in deterministic order with provenance lifecycle revision and explicit conflicts', function () {
+  assert.deepEqual(this.cegContext?.sources.map((source) => source.kind), ['task', 'plan', 'spec', 'goal']);
+  const sources = this.cegPacket?.sources as Array<Record<string, unknown>>;
+  assert.deepEqual(sources.map((source) => source.kind), ['task', 'plan', 'spec', 'goal']);
+  assert.ok(sources.every((source) => typeof source.revision === 'string' && Array.isArray(source.evidence)));
+  assert.deepEqual(this.cegPacket?.conflicts, ['ship shared change: goal+plan+spec+task']);
+});
+
 When<CegWorld>('the gate evaluates the turn', function () {
+  if (this.cegLifecycleRows) {
+    const rows = [...this.cegLifecycleRows, U(this.cegPrompt ?? 'continue'), ...(this.cegTurnTools ?? []).map((item) => A([item])), A([txt(this.cegFinal ?? '')])];
+    const r = runHookExplicit(this, rows, { CLAIM_GATE_JUDGE: 'false', ...(this.cegEnv ?? {}) }, this.cegStopHookActive ?? false);
+    this.cegBlocked = r.blocked;
+    this.cegRaw = r.raw;
+    return;
+  }
   if (this.cegRows) {
     const r = runHookExplicit(this, this.cegRows, this.cegEnv ?? {}, this.cegStopHookActive ?? false);
     this.cegBlocked = r.blocked;
@@ -635,6 +1090,72 @@ Then<CegWorld>('the doneUnrun-only turn stays quiet while the doneRed turn still
   const doneRed = runHookExplicit(this, doneRedRows, { CLAIM_GATE_JUDGE: 'false' }).blocked;
   assert.equal(doneUnrunOnly, false, 'doneUnrun-only must NOT arm the Дальше gate');
   assert.equal(doneRed, true, 'doneRed must still fire');
+});
+
+Given<CegWorld>('judge credentials are missing for one active and one inactive Stop', function () {
+  this.cegLifecycleRows = [A([toolUse('cred-task', 'TaskCreate', { subject: 'Credential work' })]), R('cred-task', 'Task #87 created successfully')];
+  this.cegFinal = 'Дальше: продолжаю работу.';
+});
+
+When<CegWorld>('the real Stop hook evaluates both credential cases', function () {
+  const env = { CLAIM_GATE_JUDGE: 'true', CLAIM_GATE_JUDGE_KEY: '', OPENROUTER_API_KEY: '', AUTO_COMMIT_API_KEY: '', CLAUDE_MEM_OPENROUTER_API_KEY: '' };
+  const active = runHookExplicit(this, [...(this.cegLifecycleRows ?? []), U('continue'), A([txt(this.cegFinal ?? '')])], env);
+  const inactive = runHookExplicit(this, [U('ordinary question'), A([txt(this.cegFinal ?? '')])], env);
+  this.cegRaw = `${active.raw}\n---inactive---\n${inactive.raw}`;
+});
+
+Then<CegWorld>('only the active Stop emits the credential demand', function () {
+  const [active, inactive] = (this.cegRaw ?? '').split('\n---inactive---\n');
+  assert.match(active, /claim-evidence-gate|судья недоступен|AUTO_COMMIT_API_KEY|OPENROUTER_API_KEY|CLAIM_GATE_JUDGE_KEY/, 'active work reaches credential-aware Pinator enforcement');
+  assert.doesNotMatch(inactive, /claim-evidence-gate|судья недоступен|AUTO_COMMIT_API_KEY|OPENROUTER_API_KEY|CLAIM_GATE_JUDGE_KEY/, 'inactive dialogue remains silent');
+});
+
+Given<CegWorld>('two active contexts have different lifecycle revisions', function () {
+  this.cegContexts = [collectContext(this, 'rev-one', [A([toolUse('r1', 'TaskCreate', { subject: 'One' })]), R('r1', 'Task #1 created successfully')]), collectContext(this, 'rev-two', [A([toolUse('r2', 'TaskCreate', { subject: 'Two' })]), R('r2', 'Task #2 created successfully')])];
+});
+When<CegWorld>('their marker scopes are compared', function () {});
+Then<CegWorld>('the context revisions are different and stale state cannot match', function () {
+  assert.notEqual(this.cegContexts?.[0]?.revision, this.cegContexts?.[1]?.revision);
+});
+
+Given<CegWorld>('all four source kinds share one parsed transcript event set', function () {
+  const title = 'Shared parse';
+  const planPath = path.join(this.tempDir, 'shared-plan.md');
+  writeMultiCensus(this.tempDir, [{ slug: 'shared-spec', open: 1, nextOpen: { id: 's', title } }]);
+  this.cegLifecycleRows = [A([toolUse('pt', 'TaskCreate', { subject: title })]), R('pt', 'Task #89 created successfully'), A([toolUse('pp', 'ExitPlanMode', { planFilePath: planPath })]), R('pp', `User has approved your plan.\n\n## Approved Plan:\n## 📋 Todos\n- [ ] ${title}`), A([specMutation('ps', 'shared-spec', 'shared.feature')]), R('ps', 'applied'), goalStatus(false, title)];
+});
+When<CegWorld>('Pinator collects the merged context from that set', function () {
+  this.cegContext = collectContext(this, 'single-parse', this.cegLifecycleRows ?? []);
+});
+Then<CegWorld>('every source is present without rereading the transcript file', function () {
+  assert.deepEqual(this.cegContext?.sources.map((source) => source.kind), ['task', 'plan', 'spec', 'goal']);
+});
+
+Given<CegWorld>('an isolated plugin fixture contains only the shipped claim gate bundle', function () {
+  const target = path.join(this.tempDir, 'plugin', 'claim_evidence_gate_stop.bundle.mjs');
+  fs.mkdirSync(path.dirname(target), { recursive: true });
+  fs.copyFileSync(path.resolve(REPO, 'tools', 'claim-evidence-gate', 'claim_evidence_gate_stop.bundle.mjs'), target);
+  this.cegRaw = target;
+});
+When<CegWorld>('the fixture evaluates an inactive Stop without node_modules', function () {
+  const transcript = path.join(this.tempDir, 'isolated.jsonl');
+  fs.writeFileSync(transcript, JSON.stringify(U('ordinary')) + '\n');
+  const result = spawnSync(process.execPath, [this.cegRaw!], { cwd: this.tempDir, input: JSON.stringify({ session_id: 'isolated', cwd: this.tempDir, transcript_path: transcript, last_assistant_message: 'готово' }), encoding: 'utf-8', env: { ...process.env, NODE_PATH: '', CLAIM_GATE_ENABLED: 'true' } });
+  this.cegRaw = `${result.status}|${result.stdout.trim()}|${result.stderr.trim()}`;
+});
+Then<CegWorld>('the bundle approves without a missing import', function () {
+  assert.equal(this.cegRaw, '0|{}|');
+  assert.equal(fs.existsSync(path.join(this.tempDir, 'node_modules')), false);
+});
+
+Given<CegWorld>('the Codex hook manifest is loaded', function () {
+  this.cegRaw = fs.readFileSync(path.resolve(REPO, '.codex', 'hooks.json'), 'utf-8');
+});
+When<CegWorld>('its Stop registrations are inspected', function () {});
+Then<CegWorld>('no Codex Stop hook invokes the Claude claim evidence gate', function () {
+  const config = JSON.parse(this.cegRaw!) as { hooks?: { Stop?: Array<{ hooks?: Array<{ command?: string }> }> } };
+  const commands = (config.hooks?.Stop ?? []).flatMap((entry) => entry.hooks ?? []).map((hook) => hook.command ?? '');
+  assert.equal(commands.some((command) => /claim.?evidence.?gate/i.test(command)), false);
 });
 
 Given<CegWorld>('an open-work count for the no-token demand', function () {

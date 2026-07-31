@@ -28,6 +28,8 @@
 
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import type { PinatorWorkContext } from './work_context.ts';
+import type { ResultConfirmedEvidence } from './transcript_events.ts';
 import {
   AIPOMOGATOR_DEEPSEEK_MODEL,
   OPENROUTER_DEEPSEEK_MODEL,
@@ -38,10 +40,14 @@ export { AIPOMOGATOR_DEEPSEEK_MODEL, OPENROUTER_DEEPSEEK_MODEL };
 const TIMEOUT_MS = 6000; // user-set: 6s, then log + fail-open(null) → caller fail-closes
 
 export interface JudgeInput {
+  /** Authoritative current-session work sources. Required by the Stop hook; optional for legacy bench callers. */
+  context?: PinatorWorkContext;
   /** The agent's final assistant message this turn. */
   finalMessage: string;
   /** Tool names the agent ran this turn (for "did it actually do work?"). */
   tools: string[];
+  /** Bounded catalogue of exact successful tool-use/result pairs admissible as completion evidence. */
+  resultConfirmedEvidence?: ResultConfirmedEvidence[];
   /** Open/unfinished task count — SESSION-scoped (FR-9), the objective fact. */
   openTasks: number;
   /**
@@ -84,9 +90,17 @@ export interface JudgeInput {
   selfMarkedBlockedOrBacklogThisTurn?: boolean;
 }
 
+export interface CommitmentVerdict {
+  id: string;
+  state: 'complete' | 'blocked' | 'awaiting' | 'actionable';
+  evidenceIds: string[];
+  reason: string;
+}
+
 export interface JudgeVerdict {
   block: boolean;
   reason: string;
+  commitments?: CommitmentVerdict[];
 }
 
 function logUnavailable(reason: string): void {
@@ -224,6 +238,48 @@ export function buildJudgePrompt(i: JudgeInput): string {
   const mandateBlock = mandate.length
     ? mandate.map((p, n) => `    ${n + 1}. ${p.replace(/\s+/g, ' ').slice(0, 300)}`).join('\n')
     : '    (none captured)';
+  if (i.context) {
+    const sources = i.context.sources.map((source) => ({
+      kind: source.kind,
+      id: source.id.slice(0, 160),
+      title: source.title.replace(/\s+/g, ' ').slice(0, 240),
+      revision: source.revision,
+      evidence: source.evidence.slice(0, 3).map((item) => item.slice(0, 240)),
+    }));
+    const commitments = i.context.commitments.slice(0, 50).map((commitment) => ({
+      id: commitment.id.slice(0, 120),
+      source: commitment.sourceKind,
+      status: commitment.status,
+      title: commitment.title.replace(/\s+/g, ' ').slice(0, 300),
+    }));
+    const packet = {
+      sessionId: i.context.sessionId,
+      revision: i.context.revision,
+      sources,
+      commitments,
+      conflicts: i.context.conflicts.slice(0, 20),
+      finalMessage: i.finalMessage.replace(/\s+/g, ' ').slice(0, 4000),
+      currentTurnTools: i.tools.slice(0, 50),
+      resultConfirmedEvidence: (i.resultConfirmedEvidence ?? []).slice(0, 50),
+      currentUserRequest: i.userRequest?.replace(/\s+/g, ' ').slice(0, 500) ?? null,
+      async: {
+        launchedThisTurn: Boolean(i.bgTaskLaunchedThisTurn),
+        nextStepAwaitsResult: Boolean(i.nextStepAwaitsResult),
+      },
+    };
+    return [
+      'You judge whether an AI coding agent may stop while authoritative current-session work remains.',
+      'Use ONLY the bounded packet below. Never infer a work source from prose.',
+      'For every commitment choose complete, blocked, awaiting, or actionable.',
+      'A commitment is complete only with result-confirmed evidence in this packet. Completion rollup is ALL, never ANY.',
+      'Blocked or awaiting may allow this Stop but do not close the source. Actionable means block=true.',
+      '',
+      JSON.stringify(packet),
+      '',
+      'Respond with ONLY one JSON line:',
+      '{"commitments":[{"id":"...","state":"complete|blocked|awaiting|actionable","evidenceIds":[],"reason":"<=12 words"}],"block":true|false,"reason":"<=12 words"}',
+    ].join('\n');
+  }
   return [
     'You are a STOP-GATE judge for an AI coding agent that just ENDED its turn.',
     'Decide ONE thing: did it STOP while it still had a concrete next step it could do RIGHT NOW with no blocker? If yes → BLOCK (kick it). If it is genuinely done / answering the user / truly blocked / legitimately awaiting an async result → APPROVE.',
@@ -325,7 +381,7 @@ export async function judgeStop(input: JudgeInput, opts: JudgeOpts = {}): Promis
       headers: { 'content-type': 'application/json', authorization: `Bearer ${ep.key}` },
       body: JSON.stringify({
         model,
-        max_tokens: 120,
+        max_tokens: input.context ? 1200 : 120,
         temperature: 0,
         messages: [{ role: 'user', content: buildJudgePrompt(input) }],
       }),
@@ -336,17 +392,32 @@ export async function judgeStop(input: JudgeInput, opts: JudgeOpts = {}): Promis
     }
     const j = (await r.json()) as { choices?: Array<{ message?: { content?: string } }> };
     const text = j?.choices?.[0]?.message?.content ?? '';
-    const m = text.match(/\{[^{}]*"block"[^{}]*\}/);
+    const m = text.match(/\{[\s\S]*"block"[\s\S]*\}/);
     if (!m) {
       logUnavailable(`ответ без JSON-вердикта от ${base}`);
       return null;
     }
-    const v = JSON.parse(m[0]) as { block?: unknown; reason?: unknown };
+    const v = JSON.parse(m[0]) as { block?: unknown; reason?: unknown; commitments?: unknown };
     if (typeof v.block !== 'boolean') {
       logUnavailable(`в вердикте поле block не boolean (${base})`);
       return null;
     }
-    return { block: v.block, reason: typeof v.reason === 'string' ? v.reason : 'judge verdict' };
+    const commitments = Array.isArray(v.commitments)
+      ? v.commitments.filter((item): item is CommitmentVerdict => {
+        if (!item || typeof item !== 'object') return false;
+        const record = item as Record<string, unknown>;
+        return typeof record.id === 'string'
+          && ['complete', 'blocked', 'awaiting', 'actionable'].includes(String(record.state));
+      }).map((item) => ({
+        id: item.id,
+        state: item.state,
+        evidenceIds: Array.isArray(item.evidenceIds) ? item.evidenceIds.filter((id): id is string => typeof id === 'string') : [],
+        reason: typeof item.reason === 'string' ? item.reason : '',
+      }))
+      : undefined;
+    return commitments
+      ? { block: v.block, reason: typeof v.reason === 'string' ? v.reason : 'judge verdict', commitments }
+      : { block: v.block, reason: typeof v.reason === 'string' ? v.reason : 'judge verdict' };
   } catch (e) {
     const msg = e instanceof Error ? (e.name === 'AbortError' ? `таймаут ${opts.timeoutMs ?? TIMEOUT_MS}ms` : e.message) : String(e);
     logUnavailable(`${msg} (${base})`);

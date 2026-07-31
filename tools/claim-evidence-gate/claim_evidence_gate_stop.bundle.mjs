@@ -2,8 +2,8 @@
 import { createRequire as __cr } from 'module'; const require = __cr(import.meta.url);
 
 // tools/claim-evidence-gate/claim_evidence_gate_stop.ts
-import fs4 from "node:fs";
-import path4 from "node:path";
+import fs6 from "node:fs";
+import path6 from "node:path";
 
 // tools/_shared/hook-utils.ts
 function log(level, prefix, message) {
@@ -58,6 +58,88 @@ function hashFileList(files) {
   return createHash("sha256").update(files.join("\n")).digest("hex").slice(0, 16);
 }
 
+// tools/claim-evidence-gate/transcript_events.ts
+function isTypedHumanPrompt(event) {
+  const raw = event.raw;
+  const message = raw.message;
+  const role2 = String(raw.type ?? message?.role ?? "");
+  if (role2 !== "user") return false;
+  if (raw.isMeta === true || raw.isCompactSummary === true || raw.isVisibleInTranscriptOnly === true) return false;
+  if (raw.promptSource === "system") return false;
+  const blocks = event.blocks;
+  const hasText = blocks.some((block2) => block2.type === "text" && typeof block2.text === "string" && block2.text.trim().length > 0);
+  const hasToolResult = blocks.some((block2) => block2.type === "tool_result");
+  return hasText && !hasToolResult;
+}
+function blocksOf(value) {
+  const message = value && typeof value === "object" ? value.message : void 0;
+  const content = message && typeof message === "object" ? message.content : void 0;
+  if (!Array.isArray(content)) return [];
+  return content.filter((block2) => Boolean(block2 && typeof block2 === "object"));
+}
+function transcriptText(value) {
+  if (typeof value === "string") return value;
+  if (Array.isArray(value)) return value.map(transcriptText).filter(Boolean).join("\n");
+  if (!value || typeof value !== "object") return "";
+  const record = value;
+  if (typeof record.text === "string") return record.text;
+  if (record.content !== void 0) return transcriptText(record.content);
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return "";
+  }
+}
+function parseTranscriptEvents(rawTranscript) {
+  const events = [];
+  const toolUses = /* @__PURE__ */ new Map();
+  const toolResults = /* @__PURE__ */ new Map();
+  const lines = rawTranscript.split(/\r?\n/);
+  for (let index = 0; index < lines.length; index++) {
+    const line = lines[index];
+    if (!line?.trim()) continue;
+    try {
+      const raw = JSON.parse(line);
+      const blocks = blocksOf(raw);
+      const event = {
+        seq: events.length,
+        line: index + 1,
+        type: String(raw.type ?? ""),
+        raw,
+        blocks,
+        text: transcriptText(raw.message?.content),
+        isSidechain: raw.isSidechain === true
+      };
+      events.push(event);
+      for (const block2 of blocks) {
+        if (block2.type === "tool_use" && block2.id) toolUses.set(block2.id, { ...event, block: block2 });
+        if (block2.type === "tool_result" && block2.tool_use_id) toolResults.set(block2.tool_use_id, { ...event, block: block2 });
+      }
+    } catch {
+    }
+  }
+  return { raw: rawTranscript, events, toolUses, toolResults };
+}
+function resultSucceeded(result) {
+  if (!result || result.isSidechain) return false;
+  return result.block.is_error !== true;
+}
+function resultConfirmedEvidence(events) {
+  const evidence = [];
+  for (const [id, use] of events.toolUses) {
+    if (use.isSidechain) continue;
+    const result = events.toolResults.get(id);
+    if (!resultSucceeded(result)) continue;
+    evidence.push({
+      id,
+      toolName: String(use.block.name ?? ""),
+      resultSeq: result.seq,
+      resultLine: result.line
+    });
+  }
+  return evidence;
+}
+
 // tools/claim-evidence-gate/turn_window.ts
 var MAX_LINE_BYTES = 1e6;
 function parseLines(raw) {
@@ -92,11 +174,15 @@ function isRealUser(e) {
 function assistantText(e) {
   return contentBlocks(e).filter((b) => b?.type === "text" && typeof b.text === "string").map((b) => b.text).join("\n");
 }
-function extractTurnWindow(rawTranscript) {
-  const lines = parseLines(rawTranscript);
+function extractTurnWindowFromEvents(parsed) {
+  const lines = parsed.events.map((event) => event.raw);
   let boundary = -1;
-  for (let i = lines.length - 1; i >= 0; i--) {
-    if (!lines[i].isSidechain && isRealUser(lines[i])) {
+  for (let i = parsed.events.length - 1; i >= 0; i--) {
+    const event = parsed.events[i];
+    if (event.raw.isSidechain !== true && isTypedHumanPrompt({
+      raw: event.raw,
+      blocks: event.blocks ?? contentBlocks(event.raw)
+    })) {
       boundary = i;
       break;
     }
@@ -123,7 +209,7 @@ function extractTurnWindow(rawTranscript) {
         } catch {
           input = "";
         }
-        toolUses.push({ name: String(b.name ?? "").toLowerCase(), input });
+        toolUses.push({ id: typeof b.id === "string" ? b.id : void 0, name: String(b.name ?? "").toLowerCase(), input });
       }
     }
   }
@@ -239,16 +325,16 @@ var AWAITS_RESULT_RE = /когда\s+придёт|как\s+придёт|по\s+�
 var HOOK_INJECTION_RE = /^\s*(📋|👉|…ещё|\[specs-validator\]|⚠️|PHASE GATE WARNING|Stop hook feedback|Stop hook blocking error|UserPromptSubmit hook|<\/?task-notification|<(?:task-id|tool-use-id|output-file|status|summary)|<\/?command-(?:name|message|args)|<\/?local-command-(?:stdout|caveat)|\[SYSTEM NOTIFICATION|This is an automated|Do NOT interpret|[A-Za-z][\w.-]*:\s*\d+\s*(?:open|⏸))/u;
 var ACTIONABLE_STOP_FEEDBACK_RE = /(?:Stop hook feedback|Stop hook blocking error)[\s\S]{0,1200}(?:UNVERIFIED_COMPLETION|TASK_UNTESTED|done without a strong test|Strengthen the test|blocking error|blocked|не закрыто|Нужно:|run\s+\S|fix\s+\S|почини|исправь|доделай)/i;
 var INTERRUPTED_PROMPT_RE = /^\s*\[Request interrupted by user(?: for tool use)?\]\s*$/i;
-function isTypedHumanPrompt(e) {
-  if (!isRealUser(e)) return false;
-  if (e.isMeta === true || e.isCompactSummary === true || e.isVisibleInTranscriptOnly === true) return false;
-  if (e.promptSource === "system") return false;
-  return true;
+function isTypedHumanPrompt2(e) {
+  return isTypedHumanPrompt({
+    raw: e,
+    blocks: contentBlocks(e)
+  });
 }
 function lastUserPrompt(rawTranscript) {
   const lines = parseLines(rawTranscript);
   for (let i = lines.length - 1; i >= 0; i--) {
-    if (lines[i].isSidechain || !isTypedHumanPrompt(lines[i])) continue;
+    if (lines[i].isSidechain || !isTypedHumanPrompt2(lines[i])) continue;
     const allLines = assistantText(lines[i]).split(/\r?\n/);
     const firstNonEmpty = allLines.find((ln) => ln.trim()) ?? "";
     if (HOOK_INJECTION_RE.test(firstNonEmpty)) continue;
@@ -271,7 +357,7 @@ function sessionUserPrompts(rawTranscript) {
   const lines = parseLines(rawTranscript);
   const out = [];
   for (const e of lines) {
-    if (e.isSidechain || !isTypedHumanPrompt(e)) continue;
+    if (e.isSidechain || !isTypedHumanPrompt2(e)) continue;
     const allLines = assistantText(e).split(/\r?\n/);
     const firstNonEmpty = allLines.find((ln) => ln.trim()) ?? "";
     if (HOOK_INJECTION_RE.test(firstNonEmpty)) continue;
@@ -426,43 +512,6 @@ function liveOpenForUncensusedSlugs(repoRoot, editedSlugs, census) {
 var SPEC_PATH_RE = /\.specs[/\\]([a-z0-9][a-z0-9._-]*)[/\\]/i;
 var RAW_WRITE_TOOL_RE = /^(edit|write|multiedit|notebookedit)$/i;
 var DOOR_WRITE_TOOL_RE = /(?:^|__)(apply_spec_change|create_spec|delete_spec_doc|rename_spec_doc|set_entity_status|archive_spec)$/i;
-function sessionEditedSpecSlugs(transcriptPath) {
-  const slugs = /* @__PURE__ */ new Set();
-  let raw;
-  try {
-    raw = fs2.readFileSync(transcriptPath, "utf-8");
-  } catch {
-    return slugs;
-  }
-  for (const line of raw.split(/\r?\n/)) {
-    if (!line.includes('"tool_use"') || line.length > 2e6) continue;
-    let entry;
-    try {
-      entry = JSON.parse(line);
-    } catch {
-      continue;
-    }
-    const content = entry?.message?.content;
-    if (!Array.isArray(content)) continue;
-    for (const b of content) {
-      if (b?.type !== "tool_use") continue;
-      const name = String(b.name ?? "");
-      const input = b.input ?? {};
-      if (DOOR_WRITE_TOOL_RE.test(name)) {
-        if (typeof input.doc === "string" && input.doc.endsWith(".feature")) continue;
-        if (typeof input.spec === "string") slugs.add(input.spec);
-        else if (typeof input.slug === "string") slugs.add(input.slug);
-        continue;
-      }
-      if (RAW_WRITE_TOOL_RE.test(name) && typeof input.file_path === "string") {
-        if (input.file_path.endsWith(".feature")) continue;
-        const m = input.file_path.match(SPEC_PATH_RE);
-        if (m) slugs.add(m[1]);
-      }
-    }
-  }
-  return slugs;
-}
 function lastEditedSpecSlug(transcriptPath) {
   let last = null;
   let raw;
@@ -562,13 +611,7 @@ function canonicalizeTaskReplay(tasks) {
   }
   return canonical.sort((a, b) => a.seq - b.seq);
 }
-function parseAgentTodos(transcriptPath) {
-  let raw;
-  try {
-    raw = fs2.readFileSync(transcriptPath, "utf-8");
-  } catch {
-    return [];
-  }
+function parseAgentTodosRaw(raw) {
   const tasks = /* @__PURE__ */ new Map();
   const useToTaskKey = /* @__PURE__ */ new Map();
   const updateRollback = /* @__PURE__ */ new Map();
@@ -587,6 +630,21 @@ function parseAgentTodos(transcriptPath) {
     for (const [useId, key] of useToTaskKey.entries()) if (key === oldKey) useToTaskKey.set(useId, realId);
   };
   const lines = raw.split(/\r?\n/);
+  const sidechainUseIds = /* @__PURE__ */ new Set();
+  const failedUseIds = /* @__PURE__ */ new Set();
+  for (const line of lines) {
+    if (line.length > 2e6) continue;
+    try {
+      const entry = JSON.parse(line);
+      const content = entry.message?.content;
+      if (!Array.isArray(content)) continue;
+      for (const block2 of content) {
+        if (entry.isSidechain === true && block2.type === "tool_use" && block2.id) sidechainUseIds.add(String(block2.id));
+        if (block2.type === "tool_result" && block2.tool_use_id && block2.is_error === true) failedUseIds.add(String(block2.tool_use_id));
+      }
+    } catch {
+    }
+  }
   for (let lineNo = 0; lineNo < lines.length; lineNo++) {
     const line = lines[lineNo];
     if (!line.includes('"tool_use"') && !line.includes('"tool_result"') || line.length > 2e6) continue;
@@ -596,18 +654,20 @@ function parseAgentTodos(transcriptPath) {
     } catch {
       continue;
     }
+    if (entry.isSidechain === true) continue;
     const content = entry?.message?.content;
     if (!Array.isArray(content)) continue;
     for (const b of content) {
       const type = String(b?.type ?? "");
       if (type === "tool_result") {
-        const toolUseId = String(b.tool_use_id ?? "");
+        const toolUseId2 = String(b.tool_use_id ?? "");
+        if (sidechainUseIds.has(toolUseId2)) continue;
         const contentText = blockText(b);
         const realId = taskIdFromText(contentText);
-        const oldKey = toolUseId ? useToTaskKey.get(toolUseId) : void 0;
+        const oldKey = toolUseId2 ? useToTaskKey.get(toolUseId2) : void 0;
         if (oldKey && realId) rekeyTask(oldKey, realId, lineNo + 1);
-        if (toolUseId && TASK_UPDATE_NOT_FOUND_RE.test(contentText)) {
-          const rollback = updateRollback.get(toolUseId);
+        if (toolUseId2 && TASK_UPDATE_NOT_FOUND_RE.test(contentText)) {
+          const rollback = updateRollback.get(toolUseId2);
           if (rollback) {
             if (rollback.previous) tasks.set(rollback.key, rollback.previous);
             else tasks.delete(rollback.key);
@@ -618,6 +678,8 @@ function parseAgentTodos(transcriptPath) {
         continue;
       }
       if (type !== "tool_use") continue;
+      const toolUseId = String(b.id ?? "");
+      if (toolUseId && sidechainUseIds.has(toolUseId) || toolUseId && failedUseIds.has(toolUseId)) continue;
       const name = String(b.name ?? "");
       const input = b.input ?? {};
       if (name === "TodoWrite" && Array.isArray(input.todos)) {
@@ -667,8 +729,12 @@ function parseAgentTodos(transcriptPath) {
   const todoOpen = latestTodoWrite ? latestTodoWrite.filter((t) => OPEN_TODO_STATUS.has(t.status)).length : 0;
   return latestTodoWrite && todoOpen > taskOpen ? latestTodoWrite : taskReplay;
 }
-function agentOpenTodoCount(transcriptPath) {
-  return parseAgentTodos(transcriptPath).filter((t) => OPEN_TODO_STATUS.has(t.status) && !t.ambiguous).length;
+function parseAgentTodos(transcriptPath) {
+  try {
+    return parseAgentTodosRaw(fs2.readFileSync(transcriptPath, "utf-8"));
+  } catch {
+    return [];
+  }
 }
 function agentNextOpenTodoDetail(transcriptPath) {
   const next = parseAgentTodos(transcriptPath).find((t) => OPEN_TODO_STATUS.has(t.status) && !t.ambiguous);
@@ -861,6 +927,48 @@ function buildJudgePrompt(i) {
   const mut = i.mutatingToolsThisTurn ?? null;
   const mandate = i.sessionUserPrompts && i.sessionUserPrompts.length ? i.sessionUserPrompts : i.userRequest ? [i.userRequest] : [];
   const mandateBlock = mandate.length ? mandate.map((p, n) => `    ${n + 1}. ${p.replace(/\s+/g, " ").slice(0, 300)}`).join("\n") : "    (none captured)";
+  if (i.context) {
+    const sources = i.context.sources.map((source) => ({
+      kind: source.kind,
+      id: source.id.slice(0, 160),
+      title: source.title.replace(/\s+/g, " ").slice(0, 240),
+      revision: source.revision,
+      evidence: source.evidence.slice(0, 3).map((item) => item.slice(0, 240))
+    }));
+    const commitments = i.context.commitments.slice(0, 50).map((commitment) => ({
+      id: commitment.id.slice(0, 120),
+      source: commitment.sourceKind,
+      status: commitment.status,
+      title: commitment.title.replace(/\s+/g, " ").slice(0, 300)
+    }));
+    const packet = {
+      sessionId: i.context.sessionId,
+      revision: i.context.revision,
+      sources,
+      commitments,
+      conflicts: i.context.conflicts.slice(0, 20),
+      finalMessage: i.finalMessage.replace(/\s+/g, " ").slice(0, 4e3),
+      currentTurnTools: i.tools.slice(0, 50),
+      resultConfirmedEvidence: (i.resultConfirmedEvidence ?? []).slice(0, 50),
+      currentUserRequest: i.userRequest?.replace(/\s+/g, " ").slice(0, 500) ?? null,
+      async: {
+        launchedThisTurn: Boolean(i.bgTaskLaunchedThisTurn),
+        nextStepAwaitsResult: Boolean(i.nextStepAwaitsResult)
+      }
+    };
+    return [
+      "You judge whether an AI coding agent may stop while authoritative current-session work remains.",
+      "Use ONLY the bounded packet below. Never infer a work source from prose.",
+      "For every commitment choose complete, blocked, awaiting, or actionable.",
+      "A commitment is complete only with result-confirmed evidence in this packet. Completion rollup is ALL, never ANY.",
+      "Blocked or awaiting may allow this Stop but do not close the source. Actionable means block=true.",
+      "",
+      JSON.stringify(packet),
+      "",
+      "Respond with ONLY one JSON line:",
+      '{"commitments":[{"id":"...","state":"complete|blocked|awaiting|actionable","evidenceIds":[],"reason":"<=12 words"}],"block":true|false,"reason":"<=12 words"}'
+    ].join("\n");
+  }
   return [
     "You are a STOP-GATE judge for an AI coding agent that just ENDED its turn.",
     "Decide ONE thing: did it STOP while it still had a concrete next step it could do RIGHT NOW with no blocker? If yes \u2192 BLOCK (kick it). If it is genuinely done / answering the user / truly blocked / legitimately awaiting an async result \u2192 APPROVE.",
@@ -948,7 +1056,7 @@ async function judgeStop(input, opts = {}) {
       headers: { "content-type": "application/json", authorization: `Bearer ${ep.key}` },
       body: JSON.stringify({
         model,
-        max_tokens: 120,
+        max_tokens: input.context ? 1200 : 120,
         temperature: 0,
         messages: [{ role: "user", content: buildJudgePrompt(input) }]
       })
@@ -959,7 +1067,7 @@ async function judgeStop(input, opts = {}) {
     }
     const j = await r.json();
     const text = j?.choices?.[0]?.message?.content ?? "";
-    const m = text.match(/\{[^{}]*"block"[^{}]*\}/);
+    const m = text.match(/\{[\s\S]*"block"[\s\S]*\}/);
     if (!m) {
       logUnavailable(`\u043E\u0442\u0432\u0435\u0442 \u0431\u0435\u0437 JSON-\u0432\u0435\u0440\u0434\u0438\u043A\u0442\u0430 \u043E\u0442 ${base}`);
       return null;
@@ -969,7 +1077,17 @@ async function judgeStop(input, opts = {}) {
       logUnavailable(`\u0432 \u0432\u0435\u0440\u0434\u0438\u043A\u0442\u0435 \u043F\u043E\u043B\u0435 block \u043D\u0435 boolean (${base})`);
       return null;
     }
-    return { block: v.block, reason: typeof v.reason === "string" ? v.reason : "judge verdict" };
+    const commitments = Array.isArray(v.commitments) ? v.commitments.filter((item) => {
+      if (!item || typeof item !== "object") return false;
+      const record = item;
+      return typeof record.id === "string" && ["complete", "blocked", "awaiting", "actionable"].includes(String(record.state));
+    }).map((item) => ({
+      id: item.id,
+      state: item.state,
+      evidenceIds: Array.isArray(item.evidenceIds) ? item.evidenceIds.filter((id) => typeof id === "string") : [],
+      reason: typeof item.reason === "string" ? item.reason : ""
+    })) : void 0;
+    return commitments ? { block: v.block, reason: typeof v.reason === "string" ? v.reason : "judge verdict", commitments } : { block: v.block, reason: typeof v.reason === "string" ? v.reason : "judge verdict" };
   } catch (e) {
     const msg = e instanceof Error ? e.name === "AbortError" ? `\u0442\u0430\u0439\u043C\u0430\u0443\u0442 ${opts.timeoutMs ?? TIMEOUT_MS}ms` : e.message : String(e);
     logUnavailable(`${msg} (${base})`);
@@ -1005,6 +1123,403 @@ function ownerRequestedAnalysisReportOnly(ownerRequests) {
   return requests.some((request) => ANALYSIS_REPORT_RE.test(request)) && !requests.some((request) => IMPLEMENT_REQUEST_RE.test(request));
 }
 
+// tools/claim-evidence-gate/work_context.ts
+import crypto2 from "node:crypto";
+import fs5 from "node:fs";
+import path5 from "node:path";
+
+// tools/claim-evidence-gate/plan_commitment_ledger.ts
+import crypto from "node:crypto";
+import fs4 from "node:fs";
+import path4 from "node:path";
+var STORE_DIR = path4.join(".dev-pomogator", "claim-evidence-plan-ledger");
+var LOCK_WAIT_MS = 2e3;
+var STALE_LOCK_MS = 3e4;
+function fullSha256(value) {
+  return crypto.createHash("sha256").update(value).digest("hex");
+}
+function safeSessionId(sessionId) {
+  return `${sessionId.replace(/[^A-Za-z0-9_-]/g, "_").slice(0, 80) || "unknown"}-${fullSha256(sessionId).slice(0, 12)}`;
+}
+function storeDir(repoRoot, sessionId) {
+  const base = path4.resolve(repoRoot);
+  const root = path4.resolve(base, STORE_DIR);
+  if (!root.startsWith(base + path4.sep)) return null;
+  const dir = path4.resolve(root, safeSessionId(sessionId));
+  return dir.startsWith(root + path4.sep) ? dir : null;
+}
+function ledgerPath(repoRoot, sessionId, planHash) {
+  const dir = storeDir(repoRoot, sessionId);
+  if (!dir || !/^[a-f0-9]{64}$/i.test(planHash)) return null;
+  const target = path4.resolve(dir, `${planHash.toLowerCase()}.json`);
+  return target.startsWith(dir + path4.sep) ? target : null;
+}
+function parseLedger(raw, sessionId, planHash) {
+  try {
+    const value = JSON.parse(raw);
+    if (value.schemaVersion !== 1 || value.sessionId !== sessionId || value.planHash !== planHash) return null;
+    if (!Array.isArray(value.commitments)) return null;
+    return value;
+  } catch {
+    return null;
+  }
+}
+function readPlanLedger(repoRoot, sessionId, planHash) {
+  const target = ledgerPath(repoRoot, sessionId, planHash);
+  if (!target) return null;
+  try {
+    return parseLedger(fs4.readFileSync(target, "utf-8"), sessionId, planHash);
+  } catch {
+    return null;
+  }
+}
+function sleep(ms) {
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+}
+function withLedgerLock(target, action) {
+  fs4.mkdirSync(path4.dirname(target), { recursive: true });
+  const lockPath = `${target}.lock`;
+  const deadline = Date.now() + LOCK_WAIT_MS;
+  let lockFd = null;
+  while (lockFd === null) {
+    try {
+      lockFd = fs4.openSync(lockPath, "wx");
+    } catch (error) {
+      if (error.code !== "EEXIST") throw error;
+      try {
+        if (Date.now() - fs4.statSync(lockPath).mtimeMs > STALE_LOCK_MS) fs4.unlinkSync(lockPath);
+      } catch {
+      }
+      if (Date.now() >= deadline) throw new Error("plan ledger lock timeout");
+      sleep(10);
+    }
+  }
+  try {
+    return action();
+  } finally {
+    try {
+      fs4.closeSync(lockFd);
+    } catch {
+    }
+    try {
+      fs4.unlinkSync(lockPath);
+    } catch {
+    }
+  }
+}
+function writeLedgerAtomic(target, ledger) {
+  const temp = `${target}.${process.pid}.${fullSha256(`${ledger.updatedAt}:${ledger.planHash}`).slice(0, 12)}.tmp`;
+  fs4.writeFileSync(temp, JSON.stringify(ledger, null, 2), { encoding: "utf-8", flag: "wx" });
+  try {
+    fs4.renameSync(temp, target);
+  } catch (error) {
+    try {
+      fs4.unlinkSync(temp);
+    } catch {
+    }
+    throw error;
+  }
+}
+function initialLedger(seed) {
+  const now = (/* @__PURE__ */ new Date()).toISOString();
+  return {
+    schemaVersion: 1,
+    sessionId: seed.sessionId,
+    planHash: seed.planHash,
+    planPath: seed.planPath,
+    approvalToolUseId: seed.approvalToolUseId,
+    approvalResultSeq: seed.approvalResultSeq,
+    approvalResultLine: seed.approvalResultLine,
+    commitments: seed.commitments.map((commitment) => ({ ...commitment, state: "open", evidenceIds: [] })),
+    updatedAt: now
+  };
+}
+function ensureApprovedPlanLedger(repoRoot, seed) {
+  if (!seed.sessionId || !/^[a-f0-9]{64}$/i.test(seed.planHash)) return null;
+  const target = ledgerPath(repoRoot, seed.sessionId, seed.planHash);
+  const dir = storeDir(repoRoot, seed.sessionId);
+  if (!target || !dir) return null;
+  try {
+    return withLedgerLock(target, () => {
+      const current = readPlanLedger(repoRoot, seed.sessionId, seed.planHash);
+      if (current) return current;
+      const ledger = initialLedger(seed);
+      writeLedgerAtomic(target, ledger);
+      for (const name of fs4.readdirSync(dir)) {
+        if (!name.endsWith(".json") || name === path4.basename(target)) continue;
+        const oldPath = path4.join(dir, name);
+        try {
+          const oldHash = name.slice(0, -5);
+          const old = parseLedger(fs4.readFileSync(oldPath, "utf-8"), seed.sessionId, oldHash);
+          if (!old || old.supersededBy || old.approvalResultSeq >= ledger.approvalResultSeq) continue;
+          old.supersededBy = ledger.planHash;
+          old.updatedAt = ledger.updatedAt;
+          writeLedgerAtomic(oldPath, old);
+        } catch {
+        }
+      }
+      return ledger;
+    });
+  } catch {
+    return null;
+  }
+}
+function planLedgerIsActive(ledger) {
+  return !ledger.supersededBy && ledger.commitments.some((commitment) => commitment.state !== "complete");
+}
+function reconcilePlanVerdict(repoRoot, sessionId, planHash, verdicts, evidence) {
+  const target = ledgerPath(repoRoot, sessionId, planHash);
+  if (!target || !verdicts?.length) return readPlanLedger(repoRoot, sessionId, planHash);
+  const evidenceIds = new Set(evidence.map((item) => item.id));
+  const seen = /* @__PURE__ */ new Set();
+  const valid = /* @__PURE__ */ new Map();
+  for (const verdict of verdicts) {
+    if (seen.has(verdict.id)) return readPlanLedger(repoRoot, sessionId, planHash);
+    seen.add(verdict.id);
+    if (verdict.state !== "complete") continue;
+    const ids = [...new Set(verdict.evidenceIds)].filter((id) => evidenceIds.has(id));
+    if (ids.length === 0 || ids.length !== verdict.evidenceIds.length) return readPlanLedger(repoRoot, sessionId, planHash);
+    valid.set(verdict.id, ids);
+  }
+  if (valid.size === 0) return readPlanLedger(repoRoot, sessionId, planHash);
+  try {
+    return withLedgerLock(target, () => {
+      const ledger = readPlanLedger(repoRoot, sessionId, planHash);
+      if (!ledger || ledger.supersededBy) return ledger;
+      const known = new Set(ledger.commitments.map((commitment) => commitment.id));
+      if ([...seen].some((id) => !known.has(id))) return ledger;
+      const now = (/* @__PURE__ */ new Date()).toISOString();
+      for (const commitment of ledger.commitments) {
+        const ids = valid.get(commitment.id);
+        if (!ids || commitment.state === "complete") continue;
+        commitment.state = "complete";
+        commitment.evidenceIds = [.../* @__PURE__ */ new Set([...commitment.evidenceIds, ...ids])];
+        commitment.completedAt = now;
+      }
+      ledger.updatedAt = now;
+      writeLedgerAtomic(target, ledger);
+      return ledger;
+    });
+  } catch {
+    return readPlanLedger(repoRoot, sessionId, planHash);
+  }
+}
+
+// tools/claim-evidence-gate/work_context.ts
+var OPEN_STATUS = /* @__PURE__ */ new Set(["pending", "in_progress", "in-progress", "blocked"]);
+var EXIT_PLAN_TOOL = /(?:^|__)ExitPlanMode$/i;
+var SPEC_TOOL = /(?:^|__)(?:apply_spec_change|apply_spec_transaction|apply_proposed_patch|replace_in_section|amend_requirement|create_spec|set_entity_status)$/i;
+function sha(value) {
+  return crypto2.createHash("sha256").update(value).digest("hex").slice(0, 16);
+}
+function stableRevision(sources) {
+  return sha(JSON.stringify(sources.map((source) => ({
+    kind: source.kind,
+    id: source.id,
+    revision: source.revision,
+    commitments: source.commitments.map((commitment) => [commitment.id, commitment.status])
+  }))));
+}
+function blockInput(block2) {
+  return block2.input && typeof block2.input === "object" ? block2.input : {};
+}
+function resultText(event) {
+  return event ? transcriptText(event.block.content) : "";
+}
+function planPathFromResult(text) {
+  const explicit = text.match(/plan has been saved to:\s*([^\r\n]+\.md)/i)?.[1]?.trim();
+  if (explicit) return explicit;
+  const first = text.split(/\r?\n/, 1)[0]?.trim();
+  if (first && /^(?:[a-z]:[\\/]|\/).+\.md$/i.test(first)) return first;
+  return null;
+}
+function latestApprovedPlan(events) {
+  let latest = null;
+  for (const [id, use] of events.toolUses) {
+    if (use.isSidechain || !EXIT_PLAN_TOOL.test(String(use.block.name ?? ""))) continue;
+    const result = events.toolResults.get(id);
+    if (!resultSucceeded(result)) continue;
+    const text = resultText(result);
+    if (!/(?:user has approved your plan|## Approved Plan(?: \(edited by user\))?:)/i.test(text)) continue;
+    const input = blockInput(use.block);
+    const planPath = typeof input.planFilePath === "string" ? input.planFilePath : planPathFromResult(text);
+    if (!planPath) continue;
+    const approved = text.match(/## Approved Plan(?: \(edited by user\))?:\s*([\s\S]+)/i)?.[1]?.trim();
+    let body = approved ?? "";
+    if (!body) {
+      try {
+        body = fs5.readFileSync(planPath, "utf-8");
+      } catch {
+        body = "";
+      }
+    }
+    if (!body) continue;
+    if (!latest || result.seq > latest.seq) latest = { path: planPath, body, toolUseId: id, seq: result.seq, line: result.line };
+  }
+  return latest;
+}
+function extractPlanCommitments(body, planHash) {
+  const todoSection = body.match(/##\s+📋\s+Todos\s*([\s\S]*?)(?=\n##\s|$)/i)?.[1] ?? body.match(/##\s+(?:Implementation Plan|План реализации)\s*([\s\S]*?)(?=\n##\s|$)/i)?.[1] ?? "";
+  const commitments = [];
+  for (const line of todoSection.split(/\r?\n/)) {
+    const checkbox = line.match(/^\s*(?:[-*]\s+)?\[([ xX])\]\s+(.+)/);
+    const numbered = line.match(/^\s*\d+[.)]\s+(.+)/);
+    if (!checkbox && !numbered) continue;
+    if (checkbox?.[1]?.toLowerCase() === "x") continue;
+    const title = (checkbox?.[2] ?? numbered?.[1] ?? "").replace(/[*`>#]/g, "").trim();
+    if (!title) continue;
+    const ordinal = commitments.length + 1;
+    const explicit = line.match(/`([a-z0-9][a-z0-9._-]{2,})`/i)?.[1] ?? line.match(/\bid:\s*([a-z0-9][a-z0-9._-]+)/i)?.[1];
+    const id = explicit ? `${explicit}:${ordinal}` : `plan-${fullSha256(`${planHash}\0${ordinal}\0${title.toLowerCase()}`).slice(0, 20)}`;
+    commitments.push({ id, title, ordinal });
+  }
+  if (commitments.length === 0) {
+    commitments.push({ id: `plan-${fullSha256(`${planHash}\0fallback`).slice(0, 20)}`, title: "Execute the approved implementation plan", ordinal: 1 });
+  }
+  return commitments;
+}
+function taskSources(input, events) {
+  if (!input.transcript_path) return [];
+  let tasks;
+  try {
+    tasks = parseAgentTodosRaw(events.raw);
+  } catch {
+    return [];
+  }
+  return tasks.filter((task) => OPEN_STATUS.has(task.status) && !task.ambiguous).map((task) => ({
+    kind: "task",
+    id: task.id ?? `task-line-${task.line ?? task.seq}`,
+    title: task.subject || task.id || "Open Claude task",
+    revision: `${task.seq}:${task.status}`,
+    evidence: [`transcript:${task.line ?? task.seq}`],
+    commitments: [{
+      id: task.id ?? `task-line-${task.line ?? task.seq}`,
+      title: task.subject || task.id || "Open Claude task",
+      status: task.status === "blocked" ? "blocked" : task.status === "pending" ? "pending" : "in_progress",
+      sourceKind: "task"
+    }]
+  }));
+}
+function planSource(input, events, repoRoot) {
+  const approval = latestApprovedPlan(events);
+  const sessionId = input.session_id?.trim();
+  if (!approval || !sessionId) return [];
+  const planHash = fullSha256(approval.body);
+  const ledger = ensureApprovedPlanLedger(repoRoot, {
+    sessionId,
+    planHash,
+    planPath: approval.path,
+    approvalToolUseId: approval.toolUseId,
+    approvalResultSeq: approval.seq,
+    approvalResultLine: approval.line,
+    commitments: extractPlanCommitments(approval.body, planHash)
+  });
+  if (!ledger || !planLedgerIsActive(ledger)) return [];
+  return [{
+    kind: "plan",
+    id: planHash,
+    title: path5.basename(approval.path),
+    revision: `${ledger.updatedAt}:${planHash}`,
+    evidence: [`transcript:${approval.line}`, `approval:${approval.toolUseId}`],
+    commitments: ledger.commitments.filter((commitment) => commitment.state !== "complete").map((commitment) => ({ id: commitment.id, title: commitment.title, status: "pending", sourceKind: "plan" }))
+  }];
+}
+function selectedSpecSlugs(events) {
+  const selected = /* @__PURE__ */ new Map();
+  for (const [id, use] of events.toolUses) {
+    if (use.isSidechain || !SPEC_TOOL.test(String(use.block.name ?? ""))) continue;
+    if (!resultSucceeded(events.toolResults.get(id))) continue;
+    const input = blockInput(use.block);
+    const slug = typeof input.spec === "string" ? input.spec : typeof input.slug === "string" ? input.slug : "";
+    if (slug) selected.set(slug, use.line);
+  }
+  return selected;
+}
+function specSources(input, events, repoRoot) {
+  const selected = selectedSpecSlugs(events);
+  if (selected.size === 0) return [];
+  let census = null;
+  try {
+    census = readTaskCensusCache(repoRoot);
+  } catch {
+    census = null;
+  }
+  if (!census) return [];
+  const sources = [];
+  for (const [slug, line] of selected) {
+    const row = census.specs.find((spec) => spec.slug === slug);
+    if (!row || row.open <= 0) continue;
+    const commitment = {
+      id: row.nextOpen?.id ?? `spec-${slug}-open`,
+      title: row.nextOpen?.title ?? `${row.open} open spec task${row.open === 1 ? "" : "s"}`,
+      status: "in_progress",
+      sourceKind: "spec"
+    };
+    sources.push({
+      kind: "spec",
+      id: slug,
+      title: slug,
+      revision: `${census.ts}:${row.open}:${row.nextOpen?.id ?? ""}`,
+      evidence: [line ? `transcript:${line}` : `session-spec:${slug}`, `.dev-pomogator/.task-census.json`],
+      commitments: [commitment]
+    });
+  }
+  return sources;
+}
+function goalSources(events) {
+  let latest = null;
+  for (const event of events.events) {
+    if (event.isSidechain) continue;
+    const attachment = event.raw.attachment;
+    if (!attachment || typeof attachment !== "object") continue;
+    const record = attachment;
+    if (record.type !== "goal_status" || typeof record.met !== "boolean") continue;
+    const condition = typeof record.condition === "string" ? record.condition.trim() : "";
+    latest = { met: record.met, condition, seq: event.seq, line: event.line };
+  }
+  if (!latest || latest.met || !latest.condition) return [];
+  return [{
+    kind: "goal",
+    id: `goal-${sha(latest.condition)}`,
+    title: latest.condition,
+    revision: `${latest.seq}:active`,
+    evidence: [`transcript:${latest.line}`],
+    commitments: [{ id: `goal-${sha(latest.condition)}`, title: latest.condition, status: "in_progress", sourceKind: "goal" }]
+  }];
+}
+function conflictsOf(sources) {
+  const byTitle = /* @__PURE__ */ new Map();
+  for (const source of sources) for (const commitment of source.commitments) {
+    const key = commitment.title.trim().toLowerCase();
+    if (!key) continue;
+    const kinds = byTitle.get(key) ?? /* @__PURE__ */ new Set();
+    kinds.add(source.kind);
+    byTitle.set(key, kinds);
+  }
+  return [...byTitle.entries()].filter(([, kinds]) => kinds.size > 1).map(([title, kinds]) => `${title}: ${[...kinds].sort().join("+")}`);
+}
+function collectPinatorWorkContext(input, events) {
+  const repoRoot = path5.resolve(input.workspace_roots?.[0] ?? input.cwd ?? process.cwd());
+  const sources = [
+    ...taskSources(input, events),
+    ...planSource(input, events, repoRoot),
+    ...specSources(input, events, repoRoot),
+    ...goalSources(events)
+  ].sort((a, b) => {
+    const order = { task: 0, plan: 1, spec: 2, goal: 3 };
+    return order[a.kind] - order[b.kind] || a.id.localeCompare(b.id);
+  });
+  if (sources.length === 0) return null;
+  const commitments = sources.flatMap((source) => source.commitments);
+  return {
+    sessionId: input.session_id ?? "unknown-session",
+    revision: stableRevision(sources),
+    sources,
+    commitments,
+    conflicts: conflictsOf(sources)
+  };
+}
+
 // tools/claim-evidence-gate/claim_evidence_gate_stop.ts
 var MARKER_DIR = ".dev-pomogator";
 var MARKER_FILENAME = ".claim-evidence-gate-marker.json";
@@ -1012,7 +1527,6 @@ var FIRES_FILENAME = ".claim-evidence-gate-fires.jsonl";
 var SELF_MARKER = "claim-evidence-gate";
 var LOG_PREFIX = "CLAIM-EVIDENCE-GATE";
 var GRAY_SIGNAL = /(готов|сделал|закоммич|закрыл|реализова|продолж|дальше|двину|перехож|беру|next\b|done\b|commit|fixed|finish|ship|complete|wrap)/i;
-var BLOCKER_SIGNAL = /(жду\b|ожида\w*|заблокирован\w*|заблокировал\w*|держит\s+(?:друг|параллел|чуж)|параллельн\w*\s+сесси\w*|нельзя\s+(?:тронуть|трогать|править)|blocked\b|waiting\s+on\b|held\s+by\b|can'?t\s+touch)/i;
 var NEXT_SECTION_RE = /(?:^|\n)[ \t]{0,4}(?:#{1,6}[ \t]*|\*\*[ \t]*|[-*][ \t]+)?(?:(?:что[ \t-]+)?дальше|следующ(?:ий|ие)[ \t]+шаг|next[ \t]+steps?\b|next[ \t]*:)/i;
 function log2(level, message) {
   log(level, LOG_PREFIX, message);
@@ -1028,6 +1542,20 @@ function getConfig() {
     // doing no observable work). Bounds the loop by work-delta, not the time-delta cooldown cap.
     noProgressCap: parseInt(process.env.CLAIM_GATE_NO_PROGRESS_CAP || "3", 10) || 3
   };
+}
+function officialAsyncInFlight(input) {
+  let count = 0;
+  for (const value of [input.background_tasks, input.session_crons]) {
+    if (!Array.isArray(value)) continue;
+    for (const item of value) {
+      if (!item || typeof item !== "object") continue;
+      const record = item;
+      const id = String(record.id ?? record.task_id ?? record.cron_id ?? "").trim();
+      const status = String(record.status ?? record.state ?? "").toLowerCase();
+      if (id && (status === "running" || status === "pending" || status === "in_progress")) count += 1;
+    }
+  }
+  return count;
 }
 async function readStdin() {
   const chunks = [];
@@ -1045,9 +1573,9 @@ function warn(systemMessage) {
 }
 function logFire(repoRoot, entry) {
   try {
-    const p = path4.join(repoRoot, MARKER_DIR, FIRES_FILENAME);
-    fs4.mkdirSync(path4.dirname(p), { recursive: true });
-    fs4.appendFileSync(p, JSON.stringify(entry) + "\n");
+    const p = path6.join(repoRoot, MARKER_DIR, FIRES_FILENAME);
+    fs6.mkdirSync(path6.dirname(p), { recursive: true });
+    fs6.appendFileSync(p, JSON.stringify(entry) + "\n");
   } catch {
   }
 }
@@ -1070,21 +1598,21 @@ function censusReminder(c, nextStep) {
 var BG_MARKER_TTL_MS = 9e5;
 function bgJobMarkerActive(repoRoot) {
   try {
-    const dir = path4.join(repoRoot, MARKER_DIR);
+    const dir = path6.join(repoRoot, MARKER_DIR);
     const now = Date.now();
-    for (const name of fs4.readdirSync(dir)) {
+    for (const name of fs6.readdirSync(dir)) {
       if (!name.startsWith(".bg-task-active")) continue;
-      const p = path4.join(dir, name);
+      const p = path6.join(dir, name);
       let st;
       try {
-        st = fs4.statSync(p);
+        st = fs6.statSync(p);
       } catch {
         continue;
       }
       if (!st.isFile() || now - st.mtimeMs > BG_MARKER_TTL_MS) continue;
       let body = "";
       try {
-        body = fs4.readFileSync(p, "utf-8");
+        body = fs6.readFileSync(p, "utf-8");
       } catch {
         continue;
       }
@@ -1109,25 +1637,33 @@ async function main() {
   }
   const inContinuation = input.stop_hook_active === true;
   const tx = input.transcript_path;
-  if (!tx || !fs4.existsSync(tx)) return approve();
+  if (!tx || !fs6.existsSync(tx)) return approve();
   let rawTranscript = "";
   try {
-    rawTranscript = fs4.readFileSync(tx, "utf-8");
+    rawTranscript = fs6.readFileSync(tx, "utf-8");
   } catch {
     return approve();
   }
-  const { claimText, toolUses } = extractTurnWindow(rawTranscript);
+  const transcriptEvents = parseTranscriptEvents(rawTranscript);
+  const workContext = collectPinatorWorkContext(input, transcriptEvents);
+  if (!workContext) return approve();
+  const turnWindow = extractTurnWindowFromEvents(transcriptEvents);
+  const claimText = input.last_assistant_message?.trim() || turnWindow.claimText;
+  const confirmedEvidence = resultConfirmedEvidence(transcriptEvents);
+  const confirmedIds = new Set(confirmedEvidence.map((item) => item.id));
+  const toolUses = turnWindow.toolUses.filter((toolUse) => !toolUse.id || confirmedIds.has(toolUse.id));
   if (!claimText.trim()) return approve();
-  const repoRoot = normalizePath(input.cwd || input.workspace_roots?.[0] || process.cwd());
-  const editedSlugs = sessionEditedSpecSlugs(tx);
+  const repoRoot = normalizePath(input.workspace_roots?.[0] || input.cwd || process.cwd());
+  const editedSlugs = new Set(workContext.sources.filter((source) => source.kind === "spec").map((source) => source.id));
   const globalCensus = readTaskCensusCache(repoRoot);
   const scoped = globalCensus ? { ...scopeCensusToSlugs(globalCensus, editedSlugs), ts: globalCensus.ts } : null;
-  const agentOpen = agentOpenTodoCount(tx);
+  const agentOpen = workContext.sources.filter((source) => source.kind === "task").reduce((count, source) => count + source.commitments.length, 0);
+  const contextOpen = workContext.sources.filter((source) => source.kind !== "task" && source.kind !== "spec").reduce((count, source) => count + source.commitments.length, 0);
   const scopedSpecOpen = scoped ? scoped.total.open + scoped.total.doneRed : 0;
   const liveOpen = liveOpenForUncensusedSlugs(repoRoot, editedSlugs, globalCensus);
   const specCompletionClaim = isSpecCompletionClaim(claimText);
   const scopedCompletionOpen = scopedSpecOpen + liveOpen;
-  const openWork = scopedCompletionOpen + agentOpen;
+  const openWork = scopedCompletionOpen + agentOpen + contextOpen;
   const recencySlug = lastEditedSpecSlug(tx);
   let nextStep = null;
   let nextLine = "";
@@ -1136,7 +1672,7 @@ async function main() {
   const gateSelfEditThisTurn = gateSelfEdit(toolUses);
   const selfMarkedBlockedOrBacklogThisTurn = selfMarkedBlockedOrBacklog(toolUses);
   const agentBgCount = agentBgInFlightCount(rawTranscript);
-  const awaitingAsync = bgInFlightInWindow(rawTranscript) || bgJobMarkerActive(repoRoot) || agentBgCount > 0 || bgCommandInFlight(rawTranscript);
+  const awaitingAsync = officialAsyncInFlight(input) > 0 || bgInFlightInWindow(rawTranscript) || bgJobMarkerActive(repoRoot) || agentBgCount > 0 || bgCommandInFlight(rawTranscript);
   const nextStepAwaitsResult = awaitingAsync && AWAITS_RESULT_RE.test(claimText);
   nextStep = selectNextStepRoute({
     transcriptPath: tx,
@@ -1155,27 +1691,25 @@ async function main() {
   const GATE_INTERNAL = /claim.?evidence.?gate|meridian.?judge|bg.?task.?guard|turn_window|claim_classifier|transcript/i;
   const gateMetaThisTurn = mutatingToolsThisTurn === 0 && toolUses.length > 0 && toolUses.some((t) => GATE_INTERNAL.test(t.input));
   const mp = markerPath(repoRoot, MARKER_DIR, MARKER_FILENAME);
-  const priorMarker = readMarker(mp);
+  const storedMarker = readMarker(mp);
+  const priorMarker = storedMarker && storedMarker.sessionId === (input.session_id ?? "unknown-session") && storedMarker.contextRevision === workContext.revision ? storedMarker : null;
   const metaStreak = gateMetaThisTurn ? (priorMarker?.metaStreak ?? 0) + 1 : 0;
-  let unsupported = firstUnsupported(claimText, toolUses, config.minSearch);
+  const activeTitles = workContext.commitments.map((commitment) => commitment.title.toLowerCase());
+  const messageLower = claimText.toLowerCase();
+  const mapsToActiveCommitment = activeTitles.some((title) => {
+    const words = title.match(/[a-zа-яё0-9_-]{4,}/gi) ?? [];
+    return words.some((word) => messageLower.includes(word));
+  }) || workContext.commitments.length === 1;
+  let unsupported = mapsToActiveCommitment ? firstUnsupported(claimText, toolUses, config.minSearch) : null;
   const censusMsg = specCompletionClaim ? censusReminder(scoped, nextStep) : null;
   if (!unsupported && censusMsg) {
     unsupported = { cls: "spec-false-close", need: censusMsg };
   }
   if (!unsupported) {
     const open = openWork;
-    if (open > 0 && GRAY_SIGNAL.test(claimText) && !NEXT_SECTION_RE.test(claimText) && !awaitingAsync) {
-      unsupported = { cls: "no-next-section", need: "\u0432 \u043E\u0442\u0432\u0435\u0442\u0435 \u043F\u0440\u0438 \u043D\u0435\u0437\u0430\u043A\u0440\u044B\u0442\u043E\u0439 \u0440\u0430\u0431\u043E\u0442\u0435 \u043D\u0435\u0442 \u0441\u0435\u043A\u0446\u0438\u0438 \xAB\u0414\u0430\u043B\u044C\u0448\u0435:\xBB \u0441 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u044B\u043C \u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0438\u043C \u0448\u0430\u0433\u043E\u043C" };
-    }
   }
   if (!unsupported) {
     const open = openWork;
-    if (open > 0 && BLOCKER_SIGNAL.test(claimText) && !awaitingAsync && toolUses.length === 0) {
-      unsupported = {
-        cls: "unproven-blocker",
-        need: "\u0437\u0430\u044F\u0432\u043B\u0435\u043D \u0431\u043B\u043E\u043A\u0435\u0440 (\u0436\u0434\u0443/\u0437\u0430\u0431\u043B\u043E\u043A\u0438\u0440\u043E\u0432\u0430\u043D\u043E/\u0434\u0435\u0440\u0436\u0438\u0442), \u043D\u043E \u0432 \u044D\u0442\u043E\u043C \u0445\u043E\u0434\u0435 \u043D\u0435\u0442 \u0443\u043B\u0438\u043A\u0438 \u2014 \u043D\u0438 \u0437\u0430\u043F\u0443\u0449\u0435\u043D\u043D\u043E\u0439 \u0444\u043E\u043D\u043E\u0432\u043E\u0439 \u0437\u0430\u0434\u0430\u0447\u0438, \u043D\u0438 \u043F\u0440\u043E\u0433\u043E\u043D\u0430 \u043F\u0440\u043E\u0432\u0435\u0440\u043A\u0438 (git diff/log)"
-      };
-    }
   }
   if (!unsupported && actionableStopFeedback && mutatingToolsThisTurn === 0 && !awaitingAsync) {
     unsupported = { cls: "stop-feedback-unaddressed", need: "\u043F\u0440\u0435\u0434\u044B\u0434\u0443\u0449\u0438\u0439 Stop-hook \u0434\u0430\u043B \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u043E\u0435 \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0435, \u043D\u043E \u0432 \u044D\u0442\u043E\u043C \u0445\u043E\u0434\u0435 \u043D\u0435 \u0431\u044B\u043B\u043E \u0440\u0430\u0431\u043E\u0442\u044B \u2014 \u0441\u0434\u0435\u043B\u0430\u0439 \u0435\u0433\u043E \u0441\u0435\u0439\u0447\u0430\u0441" };
@@ -1194,10 +1728,11 @@ async function main() {
   })) {
     {
       const jInput = {
+        context: workContext,
         finalMessage: claimText,
         tools: toolUses.map((t) => t.name),
+        resultConfirmedEvidence: resultConfirmedEvidence(transcriptEvents),
         openTasks: openWork,
-        // K3: spec-scope open + agent todos (no `scoped!` — agentOpen can be > 0 with a null census)
         mutatingToolsThisTurn,
         bgTaskLaunchedThisTurn: awaitingAsync,
         nextStepAwaitsResult,
@@ -1222,6 +1757,16 @@ async function main() {
       };
       let verdict = await judgeStop(jInput);
       if (verdict === null) verdict = await judgeStop(jInput);
+      const activePlan = workContext.sources.find((source) => source.kind === "plan");
+      if (verdict?.commitments && activePlan && input.session_id) {
+        reconcilePlanVerdict(
+          repoRoot,
+          input.session_id,
+          activePlan.id,
+          verdict.commitments,
+          jInput.resultConfirmedEvidence
+        );
+      }
       if (verdict?.block) {
         unsupported = { cls: "judge-block", need: verdict.reason };
       } else if (verdict === null) {
@@ -1235,17 +1780,15 @@ async function main() {
       }
     }
   }
-  const metaOpen = openWork;
-  if (!unsupported && !analysisOnly && metaStreak >= 2 && metaOpen > 0) {
-    unsupported = { cls: "gate-meta", need: nextStep ? `\u0434\u0435\u043B\u0430\u0439: ${nextStep.title}` : "\u0434\u0435\u043B\u0430\u0439 \u043A\u043E\u043D\u043A\u0440\u0435\u0442\u043D\u044B\u0439 \u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0438\u0439 \u0448\u0430\u0433 \u043F\u043E \u043E\u0442\u043A\u0440\u044B\u0442\u043E\u0439 \u0437\u0430\u0434\u0430\u0447\u0435" };
-  }
   if (!unsupported && metaStreak !== (priorMarker?.metaStreak ?? 0)) {
     writeMarkerAtomic(mp, {
       hash: priorMarker?.hash ?? "",
       timestamp: priorMarker?.timestamp ?? (/* @__PURE__ */ new Date()).toISOString(),
       count: priorMarker?.count ?? 0,
       noProgressStreak: priorMarker?.noProgressStreak,
-      metaStreak
+      metaStreak,
+      sessionId: input.session_id ?? "unknown-session",
+      contextRevision: workContext.revision
     });
   }
   if (!unsupported) return approve();
@@ -1258,6 +1801,8 @@ async function main() {
     claim_snippet: claimText.replace(/\s+/g, " ").slice(0, 200),
     mode: config.mode,
     session_id: input.session_id ?? null,
+    context_revision: workContext.revision,
+    source_kinds: workContext.sources.map((source) => source.kind),
     cwd: repoRoot,
     nextStepSource: nextStep?.source ?? null,
     nextStepTaskId: nextStep?.id ?? null,
@@ -1273,7 +1818,7 @@ async function main() {
     log2("INFO", "no token \u2192 warn (not block)");
     return warn(`\u26A0\uFE0F ${SELF_MARKER}: ${unsupported.need}`);
   }
-  const marker = readMarker(mp);
+  const marker = priorMarker;
   const currentHash = hashFileList([claimText]);
   if (marker && marker.hash === currentHash) return approve();
   const ranNoTools = toolUses.length === 0;
@@ -1282,7 +1827,7 @@ async function main() {
   if (awaitReleases || noProgressStreak >= config.noProgressCap) {
     const why = awaitReleases ? "awaiting async (bg in flight) \u2014 non-judge-block class" : `no work-delta across ${noProgressStreak} consecutive zero-tool kicks`;
     log2("INFO", `FR-11 release: ${why}`);
-    writeMarkerAtomic(mp, { hash: currentHash, timestamp: (/* @__PURE__ */ new Date()).toISOString(), count: marker?.count ?? 1, noProgressStreak, metaStreak });
+    writeMarkerAtomic(mp, { hash: currentHash, timestamp: (/* @__PURE__ */ new Date()).toISOString(), count: marker?.count ?? 1, noProgressStreak, metaStreak, sessionId: input.session_id ?? "unknown-session", contextRevision: workContext.revision });
     return approve();
   }
   const within = marker ? isWithinCooldown(marker.timestamp, config.cooldownMinutes) : false;
@@ -1292,7 +1837,7 @@ async function main() {
     log2("INFO", `retry cap (${cap}${inContinuation ? ", continuation" : ""}) in cooldown \u2192 approve`);
     return approve();
   }
-  writeMarkerAtomic(mp, { hash: currentHash, timestamp: (/* @__PURE__ */ new Date()).toISOString(), count: newCount, noProgressStreak, metaStreak });
+  writeMarkerAtomic(mp, { hash: currentHash, timestamp: (/* @__PURE__ */ new Date()).toISOString(), count: newCount, noProgressStreak, metaStreak, sessionId: input.session_id ?? "unknown-session", contextRevision: workContext.revision });
   log2("INFO", `blocking ${unsupported.cls} (attempt ${newCount})`);
   const censusTail = censusMsg && unsupported.cls !== "spec-false-close" && unsupported.cls !== "judge-block" && unsupported.cls !== "gate-meta" ? `
 \u{1F4CB} ${censusMsg}` : "";

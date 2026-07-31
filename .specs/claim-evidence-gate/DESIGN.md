@@ -1,43 +1,105 @@
-# Design
+# Claim-Evidence Gate — Design
 
-## Реализуемые требования
+## Architecture
 
-FR-1..FR-13 (детект + судья + блокер-пруф + режимы + анти-луп + наблюдаемые факты) + новые FR-14, FR-15 (токен судьи + громкое требование).
+One bounded event reader feeds four source collectors. Empty source context exits before side effects. Active commitments merge into a bounded packet and structured judge result. Plan completion is ALL-not-ANY. Native goal stays independent. State is session/context scoped. Client shapes are explicit.
 
-## Поток (Stop-хук)
+### Decision: Eligibility-first Stop flow
+**Требование:** [FR-1](FR.md#fr-1)
+**Rationale:** Prose cannot safely establish that the user assigned unfinished work.
+**Trade-off:** Every Stop must parse enough lifecycle evidence before classification.
+**Alternatives considered:**
+- Keep global claim classification and add more carve-outs.
+- Disable Pinator for all dialogue and all implementation work.
 
-1. Прочитать вход (`cwd`, `transcript_path`, `stop_hook_active`); `CLAIM_GATE_ENABLED=false` → approve.
-2. `extractTurnWindow` (FR-1): последний текст + tool_uses с последнего реального user-сообщения.
-3. `firstUnsupported` (FR-2/FR-3): первый класс заявления без улики → block.
-4. Серая зона (FR-8..FR-11): открытая работа сессии (`task-census` scope) + gray-signal → ИИ-судья `judgeStop`.
-   - verdict.block → block; verdict===null → **FR-15**: если `judgeAvailable()===false` (нет токена) → block c `buildJudgeNoTokenDemand(openWork)` (видимое требование токена); иначе endpoint-down reason.
-5. Анти-луп (FR-6/FR-11): хеш/cooldown/work-delta release; fail-open на любой ошибке → approve.
+### Decision: Replay only owned task lifecycle
+**Требование:** [FR-2](FR.md#fr-2)
+**Rationale:** Shared task lists otherwise contaminate the current session.
+**Trade-off:** Result correlation and re-key handling add parser state.
+**Alternatives considered:**
+- Count every visible TaskList row.
+- Trust only assistant prose about task status.
 
-## Ключевые решения (FR-15)
+### Decision: Correlate successful plan approval
+**Требование:** [FR-3](FR.md#fr-3)
+**Rationale:** Plan files and attempts do not prove user approval or execution.
+**Trade-off:** Multiple real result shapes require fixtures.
+**Alternatives considered:**
+- Use newest plan file mtime.
+- Activate on every ExitPlanMode tool use.
 
-| Решение | Почему |
-|---|---|
-| `buildJudgeNoTokenDemand` вынесена в `meridian-judge.ts`, экспортируется | тестируемо без запуска `main()` (хук зовёт main на верхнем уровне); судья-доменная |
-| Различать «нет токена» vs «endpoint лежит» через `judgeAvailable()` | юзеру без токена нужно ДРУГОЕ сообщение (подключи), чем при сетевом сбое |
-| Требование = block-reason, не stderr | block-reason виден в чате; stderr — нет (корень инцидента) |
-| Ограничено FR-11 release | реально оффлайн-юзер не виснет навсегда |
+### Decision: Persist an evidence-backed plan ledger
+**Требование:** [FR-4](FR.md#fr-4)
+**Rationale:** One completed task must not false-green the whole plan.
+**Trade-off:** Completion state needs atomic persistence by plan hash.
+**Alternatives considered:**
+- Close a plan when any linked task completes.
+- Keep every approved plan active forever.
 
-## Reuse
+### Decision: Require spec activity and mapped open work
+**Требование:** [FR-5](FR.md#fr-5)
+**Rationale:** Mutation alone and global backlog alone are both insufficient.
+**Trade-off:** Spec activation requires a scoped census lookup.
+**Alternatives considered:**
+- Arm on any spec read or write.
+- Arm from every open repository spec.
 
-`resolveEndpoint`/`judgeAvailable`/`judgeStop` (`meridian-judge.ts`), `task-census` scope (FR-9), marker-utils анти-луп.
+### Decision: Treat native goal as independent
+**Требование:** [FR-6](FR.md#fr-6)
+**Rationale:** Claude already owns goal evaluation and lifecycle.
+**Trade-off:** Clear/resume parser support waits for real artifacts.
+**Alternatives considered:**
+- Reimplement goal state in Pinator.
+- Let Pinator judge and close native goals.
 
-## Project Context & Constraints
+### Decision: Merge sources with provenance
+**Требование:** [FR-7](FR.md#fr-7)
+**Rationale:** Selecting one source hides simultaneous obligations.
+**Trade-off:** The packet must expose duplicate links and conflicts.
+**Alternatives considered:**
+- Use a fixed source priority and discard the rest.
+- Ask the user to select one source at every Stop.
 
-> Skipped: brownfield хук в устоявшейся подсистеме (`tools/claim-evidence-gate/`); стек и ограничения фиксированы (Node builtins + esbuild-бандл + Stop-hook контракт). FR-15 — локальная правка поведения, новой архитектуры нет.
+### Decision: Send bounded current evidence
+**Требование:** [FR-8](FR.md#fr-8)
+**Rationale:** Full transcript prompts are noisy and can expose secrets.
+**Trade-off:** Bounded fields can omit useful history and must mark truncation.
+**Alternatives considered:**
+- Send the whole transcript to the judge.
+- Send only the final assistant message.
 
-## BDD Test Infrastructure
+### Decision: Judge commitments structurally
+**Требование:** [FR-9](FR.md#fr-9)
+**Rationale:** Per-commitment states and evidence make ALL rollup verifiable.
+**Trade-off:** Judge output requires schema validation.
+**Alternatives considered:**
+- Accept one free-text block boolean.
+- Let deterministic claim classes decide every stop.
 
-**Classification:** TEST_DATA_NONE — pure-function + spawn-the-real-hook тесты, без фикстур/внешнего состояния. Судья-путь пинится judge-bench.ts.
+### Decision: Scope atomic state to context revision
+**Требование:** [FR-10](FR.md#fr-10)
+**Rationale:** Retry state and warnings must not leak across contexts.
+**Trade-off:** Context hashing and atomic ledger writes are required.
+**Alternatives considered:**
+- Keep one repository-global marker.
+- Remove anti-loop state entirely.
 
-## BDD/Test
+### Decision: Delete global activation heuristics
+**Требование:** [FR-11](FR.md#fr-11)
+**Rationale:** Their carve-out maze exists because activation is too broad.
+**Trade-off:** Historical tests must be retired or rewritten.
+**Alternatives considered:**
+- Keep the heuristics behind eligibility as dead complexity.
+- Add more regex exceptions.
 
-`tools/claim-evidence-gate/__tests__/claim-evidence-gate.test.ts` — CEGATE001_17 (текст требования), CEGATE001_18 (token→endpoint flip). Судья-путь пинится judge-bench.ts.
+### Decision: Share one parser and isolate clients
+**Требование:** [FR-12](FR.md#fr-12)
+**Rationale:** One parse controls performance while client adapters prevent false assumptions.
+**Trade-off:** Codex may fail open until its real contract is captured.
+**Alternatives considered:**
+- Parse JSONL separately in every collector.
+- Apply Claude transcript rules to every client.
 
-## Judge layer — non-tail exception (FR-23, 2026-06-29)
+## Verification architecture
 
-The Meridian/помогатор LLM judge (`meridian-judge.ts`) is pinned LIVE in `tools/claim-evidence-gate/bench/judge-bench.ts` — a non-deterministic LLM cannot be a deterministic `@featureN` cucumber scenario, so its behaviour is asserted by a majority-of-3 live bench against the real endpoint, NOT a `*.test.ts`. The judge layer is therefore NOT a target of the BDD-only migration (FR-5 of `bdd-only-migration`), and its absence from cucumber is NOT an FR-6 "keep-on-vitest" refusal — it is the genuine non-deterministic-judge exception. Only the DETERMINISTIC gate surface (classifier / evidence-window / blocker-proof / census / game_guard facts — the `CEGATE001` scenarios) is BDD-migratable.
+Source BDD specifies lifecycle and invariants; external CEGATE001 drives the real Stop hook in Docker. Sanitized real fixtures pin task, plan, goal clear/resume, and client records. A local judge spy proves zero inactive calls and packet shape. Live judge bench covers semantics only. Mutation pins eligibility, statuses, plan correlation, ALL rollup, goal met, spec AND predicate, final-message precedence, and merge cardinality.

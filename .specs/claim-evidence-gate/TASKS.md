@@ -1,79 +1,96 @@
-# Tasks — Claim-Evidence Gate (pinator)
+# Claim-Evidence Gate — Implementation Tasks
 
-> FR-1..FR-13 already implemented in `tools/claim-evidence-gate/`. These tasks cover FR-14/FR-15
-> (loud token demand). Each task: `**Done When:**` ≥1 checkbox, Status, Est.
+All tasks are pending. Historical implementation satisfied the superseded globally-armed contract and is not evidence that this redesign is complete.
 
-## Phase 0: BDD Foundation (Red)
+## Phase 1: Context foundations
 
-- [x] Author CEGATE001_17/18 scenarios + tests for FR-14/FR-15 BEFORE wiring -- @feature15 — Status: DONE | Est: 20m
-  _Requirements: FR-14, FR-15_
+- [ ] Capture real lifecycle fixtures — id: context-fixtures — Status: TODO | Est: 120m
+  _Requirements: FR-2, FR-3, FR-6, FR-12_
   **Done When:**
-  - [x] CEGATE001_17/18 exist in `claim-evidence-gate.test.ts` and the `.feature`
-  - [x] they assert the demand text + the token-priority flip (Red before the impl)
+  - [ ] Real sanitized fixtures cover task failure/re-key/ownership, both plan approval shapes, native goal set/met/clear/resume, and Codex adapter or fail-open.
+  - [ ] Fixtures retain producer/version provenance and no secret values.
 
-## Phase 1: Loud token demand (FR-15)
-
-- [x] Surface a chat-visible "connect the aipomogator token" message when the smart judge has no token -- @feature15 — Status: DONE | Est: 45m
-  _Requirements: FR-14, FR-15_
+- [ ] Build one-pass event reader — id: transcript-events — Status: TODO | Est: 120m
+  _Requirements: FR-8, FR-12_
   **Done When:**
-  - [ ] In `claim_evidence_gate_stop.ts` gray-zone branch: when `resolveEndpoint()===null` (no token) and a gray stop with open work, the message names the token env vars + endpoint
-  - [ ] The "why judge can't run" is in the chat-visible message, not stderr-only
-  - [ ] @feature15 scenarios pass
+  - [ ] Task, plan, spec, goal, and turn consumers share one bounded parsed event set.
+  - [ ] `last_assistant_message`, result correlation, malformed lines, and truncation are covered.
 
-## Phase 2: BDD
+## Phase 2: Source collectors
 
-- [ ] BDD CEGATE001_17/18 driving the real hook decision, green in Docker -- @feature15 — Status: TODO | Est: 30m
-  _Requirements: FR-15_
+- [ ] Implement session task source — id: task-context — Status: TODO | Est: 120m
+  _Requirements: FR-2_
   **Done When:**
-  - [ ] CEGATE001_17: gray stop + no token -> chat-visible demand
-  - [ ] CEGATE001_18: gray stop + token set -> no-token branch does not fire
-  - [ ] scenarios run in Docker green
+  - [ ] Open/closed, failed update, re-key, duplicate, reminder/List/Get ownership, and final closure scenarios pass.
 
-## Phase 3: Verify for all users
-
-- [x] Prove the demand fires deps-absent (bundled, no node_modules) -- @feature15 — Status: DONE | Est: 20m
-  _Requirements: FR-15_
+- [ ] Implement approved plan ledger — id: plan-context — Status: TODO | Est: 180m
+  _Requirements: FR-3, FR-4_
   **Done When:**
-  - [ ] rebuild `claim_evidence_gate_stop.bundle.mjs`; run it deps-absent with no token -> chat-visible message contains the token demand
+  - [ ] Only successful correlated approval activates and extracts stable commitment IDs.
+  - [ ] Linked evidence closes one commitment; ALL-not-ANY, blocked/awaiting, abandon, and supersede pass.
 
-## Phase 4: Offloading + fighting-the-gate hardening (FR-23..FR-30)
-
-- [x] Judge catches offloading + weakening-the-gate; facts computed from real inputs; Docker fixed via TCP -- @feature15 — Status: DONE | Est: 90m
-  _Requirements: FR-23, FR-24, FR-25, FR-26, FR-27, FR-28, FR-29, FR-30_
+- [ ] Implement active spec source — id: spec-context — Status: TODO | Est: 120m
+  _Requirements: FR-5_
   **Done When:**
-  - [x] game_guard_facts compute YES on real Edit / apply_spec_change / set_spec_status, NO on normal edits
-  - [x] Docker test suite runs in-container via the TCP endpoint with no sudo
-  - [ ] judge-bench green twice: offloading and gaming cases BLOCK, legit carve-outs APPROVE
+  - [ ] Session activity AND mapped open work activate; read-only/global/feature-only-without-task do not.
+  - [ ] Multiple specs remain visible and close independently.
 
-## Phase 5: BDD-coverage findings (2026-06-29 audit)
-
-- [x] Retire-or-wire the orphan CEGATE001 .feature -- @feature15 — Status: DONE | Est: 60m
-  _Requirements: FR-23, FR-24, FR-25, FR-26_
+- [ ] Implement native goal source — id: goal-context — Status: TODO | Est: 120m
+  _Requirements: FR-6_
   **Done When:**
-  - [x] `tests/features/plugins/claim-evidence-gate/CEGATE001_claim-evidence-gate.feature` given real step-defs and wired into `cucumber.json` — 46/46 scenarios green in Docker (commit fb043ad7)
-  - [x] CEGATE001_43 drives the real `gateSelfEdit` / `selfMarkedBlockedOrBacklog` against real tool_use shapes (verified green, commit fb043ad7)
-- [x] Record judge-bench as the legit non-tail exception -- @feature15 — Status: DONE | Est: 15m
-  _Requirements: FR-23_
+  - [ ] Set/met/clear/resume fixtures replay without prose regexes.
+  - [ ] Native evaluator coexistence cannot cross-close or create an unbounded loop.
+
+## Phase 3: Stop and judge
+
+- [ ] Invert Stop flow to eligibility-first — id: eligibility-first — Status: TODO | Est: 120m
+  _Requirements: FR-1, FR-11_
   **Done When:**
-  - [x] DESIGN/README note that the LLM-judge behaviour is pinned LIVE in `tools/claim-evidence-gate/bench/judge-bench.ts` (not a `*.test.ts`), so it is NOT an FR-5 migration target nor an FR-6 refusal — it is the genuine non-deterministic-judge exception
+  - [ ] No-source and every old prose arming signal approve before classifier, judge, warning, census, and state.
+  - [ ] Enforce and shadow inactive paths have zero side effects.
 
-## Phase 6: Actionable Stop feedback stays live (FR-31)
-
-- [x] Block review-only stops after actionable Stop-hook feedback -- @feature18 — id: fr31-stop-feedback-active — Status: DONE | Est: 45m
-  _Requirements: FR-31_
+- [ ] Merge bounded current context — id: merged-context — Status: TODO | Est: 120m
+  _Requirements: FR-7, FR-8_
   **Done When:**
-  - [x] CEGATE001_56 blocks a review-only response after `TASK_UNTESTED` / strong-test Stop-hook feedback
-  - [x] CEGATE001_57 approves an ordinary human review request with no Stop-hook feedback
-  - [x] `claim_evidence_gate_stop.bundle.mjs` is rebuilt and the real bundle contains `stop-feedback-unaddressed`
+  - [ ] Four-source merge preserves deterministic provenance/conflicts.
+  - [ ] Final-message precedence, result evidence, redaction, and truncation pass.
 
-## Phase 7: Flag-less async agents of the new harness (FR-32..FR-34, incident 2026-07-18)
-
-- [x] Count flag-less Agent/Task + SendMessage as in-flight; widen the awaits-result hint -- @feature11 — id: fr32-flagless-async — Status: DONE | Est: 60m
-  _Requirements: FR-32, FR-33, FR-34_
+- [ ] Implement structured commitment judge — id: structured-judge — Status: TODO | Est: 180m
+  _Requirements: FR-9_
   **Done When:**
-  - [x] CEGATE001_58: Agent launch WITHOUT `run_in_background` + launch-ACK only → `agentBgInFlightCount` ≥ 1
-  - [x] CEGATE001_59: task-notification with the launch's `<tool-use-id>` + done-text clears it; a non-ACK tool_result (old sync mode) also clears it
-  - [x] CEGATE001_60: SendMessage ACK counts as in-flight until its task-notification lands
-  - [x] CEGATE001_61: the real 2026-07-18 stop text («жду отчёты…, затем свожу анализ») passes `AWAITS_RESULT_RE`
-  - [x] fixtures are trimmed from the REAL lm-saas transcript `0704ee11` (real-fixtures discipline, not hand-fabricated shapes)
-  - [x] `claim_evidence_gate_stop.bundle.mjs` rebuilt (52/52 CEGATE001 green in Docker, incl. the 4 new; runtime-verified on the real incident transcript: 4 in-flight at the kicked stop, 0 false phantoms)
+  - [ ] Every commitment and evidence ID is schema-validated.
+  - [ ] Actionable blocks ALL rollup; blocked/awaiting approve without closure; async alone never activates.
+
+- [ ] Scope state and credentials — id: scoped-state — Status: TODO | Est: 90m
+  _Requirements: FR-10_
+  **Done When:**
+  - [ ] Active no-token warns without blocking and inactive stays silent.
+  - [ ] Same revision bounds retries; changed revision rejects stale state; inactive writes nothing.
+
+## Phase 4: Cross-spec and distribution
+
+- [ ] Reconcile spec-generator-v4 FR-49 ownership — id: specgen-reconcile — Status: TODO | Est: 180m
+  _Requirements: FR-5, FR-7, FR-11_
+  **Done When:**
+  - [ ] Generic census/task routing remains in spec-generator-v4 and structured active-spec context replaces global gate arming.
+  - [ ] Dependent FR/AC/scenario/task edges are updated without duplicate claim-gate ownership.
+
+- [ ] Rebuild and verify shipped clients — id: distribution — Status: TODO | Est: 120m
+  _Requirements: FR-12_
+  **Done When:**
+  - [ ] Deps-absent Claude bundle works, endpoint resolver consumer remains, and canonical route is unchanged.
+  - [ ] Codex uses a proven adapter or explicit observable fail-open.
+
+## Phase 5: Evidence
+
+- [ ] Implement BDD and mutation pins — id: bdd-mutation — Status: TODO | Est: 240m
+  _Requirements: FR-1, FR-2, FR-3, FR-4, FR-5, FR-6, FR-7, FR-8, FR-9, FR-10, FR-11, FR-12_
+  **Done When:**
+  - [ ] External CEGATE001 mirrors source scenarios CEGATE001_66..91 and drives the real Stop hook in Docker.
+  - [ ] Mutation pins kill eligibility, status, approval, ALL-rollup, goal, spec-AND, final-message, and merge-cardinality mutations.
+
+- [ ] Run final evidence matrix — id: final-verification — Status: TODO | Est: 120m
+  _Requirements: FR-1, FR-12_
+  **Done When:**
+  - [ ] Targeted/full Docker BDD, build, lint, hook review, semantic judge bench, pack, and deps-absent smoke have fresh evidence.
+  - [ ] Conformance, coverage, and smart spec verdict are recorded honestly.

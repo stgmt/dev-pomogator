@@ -632,3 +632,5 @@ This table is the explicit implementation inventory for the execution-aware task
 | MODIFY | `tools/spec-mcp-server/tools.ts` | FR-80; AC-80.10 — agent-consumable brief, outcome diagnostics, and safe-batch proof projection. |
 | MODIFY | `tests/step_definitions/feature80_task_synthesis.ts` | FR-80; SPECGEN004_662..664 — real-engine BDD steps for inputs/step granularity, review gate, and plan handoff/outcomes/batch proof. |
 | MODIFY | `.specs/spec-generator-v4/spec-generator-v4.feature` | FR-80; SPECGEN004_662..664 — traceable BDD contracts for the amendment. |
+
+- FR.md: amend FR-49 (+4 AC link(s))

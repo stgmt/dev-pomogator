@@ -1444,79 +1444,79 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Then the produced scenario node carries the inherited feature-level tag
 
   @feature49
-  Scenario: SPECGEN004_186 the stop-gate requires a «Дальше» next-step section while work remains
-    Given a task census with open work and the real claim-evidence-gate stop hook
-    When the hook judges a progress claim without a «Дальше» section and then one with it
-    Then the hook blocks the one lacking the section and approves the one carrying it
+  Scenario: SPECGEN004_186 repository backlog does not activate Pinator without session ownership
+    Given a task census with open backlog but no current-session work source
+    When the real hook evaluates completion prose without an authoritative source
+    Then the hook approves silently and does not create Pinator fire state
 
-  @feature49
-  Scenario: SPECGEN004_187 the judge prompt carries the open-task count and demands one JSON verdict line
+  @moved-to-claim-evidence-gate
+  Scenario: SPECGEN004_187 legacy judge-prompt policy moved to claim-evidence-gate
     Given a judge input reporting twenty open tasks
     When the помогатор judge prompt is built
     Then the prompt states the open-task count and instructs a single JSON verdict line and keeps the clarifying-question carve-out
 
-  @feature49
-  Scenario: SPECGEN004_188 the judge resolves its endpoint and key by priority and returns null with no token
+  @moved-to-claim-evidence-gate
+  Scenario: SPECGEN004_188 legacy judge-provider policy moved to claim-evidence-gate
     Given the помогатор judge endpoint resolver
     When it resolves an OpenRouter key a claude-mem key an auto-commit key an explicit override and no token at all
     Then OpenRouter-family keys pick openrouter.ai the auto-commit key picks aipomogator the explicit override wins and no token resolves to null
 
   @feature49
-  Scenario: SPECGEN004_189 the stop-gate blocks a whole-spec done claim while the census shows unfinished work
+  Scenario: SPECGEN004_189 only the successfully mutated scoped spec becomes active through the collector
     Given a census with a foreign busiest spec plus current-spec unfinished work and the real claim-evidence-gate stop hook
-    When the hook judges a whole-spec done claim made after a tool ran
-    Then the hook blocks it and the block names the unfinished count and only the current spec next task
+    When the scoped collector receives one successful current-spec mutation
+    Then only the mutated spec appears and the foreign busiest backlog stays out of context
 
-  @feature49
-  Scenario: SPECGEN004_190 the census-false-close gate does not fire on a non-spec works-done claim
+  @moved-to-claim-evidence-gate
+  Scenario: SPECGEN004_190 legacy non-spec claim policy moved to claim-evidence-gate
     Given a census with a foreign busiest spec plus current-spec unfinished work and the real claim-evidence-gate stop hook
     When the hook judges a task-level fixed-it claim made after a tool ran
     Then the hook does not block it
 
-  @feature49
-  Scenario: SPECGEN004_191 the gate blocks a works-done claim with no real executor and approves it once one runs
+  @moved-to-claim-evidence-gate
+  Scenario: SPECGEN004_191 legacy works-done evidence policy moved to claim-evidence-gate
     Given a fresh repo with no census and the real claim-evidence-gate stop hook
     When the hook judges a works-done claim first with only an edit and then after a real run
     Then the hook blocks the edit-only claim and approves the one backed by a real run
 
-  @feature49
-  Scenario: SPECGEN004_192 the gate blocks a not-found claim with too few searches and approves it after enough
+  @moved-to-claim-evidence-gate
+  Scenario: SPECGEN004_192 legacy not-found evidence policy moved to claim-evidence-gate
     Given a fresh repo with no census and the real claim-evidence-gate stop hook
     When the hook judges a not-found claim first after one search and then after two searches
     Then the hook blocks the under-searched claim and approves the one backed by enough searches
 
-  @feature49
-  Scenario: SPECGEN004_193 the gate blocks a verdict grid with no tool run and approves it once one runs
+  @moved-to-claim-evidence-gate
+  Scenario: SPECGEN004_193 legacy verdict-grid evidence policy moved to claim-evidence-gate
     Given a fresh repo with no census and the real claim-evidence-gate stop hook
     When the hook judges a verdict grid first with no tool and then after a tool ran
     Then the hook blocks the unbacked grid and approves the one backed by a tool run
 
-  @feature49
-  Scenario: SPECGEN004_194 the gate blocks a verified-via marker with no matching tool and approves it once that command ran
+  @moved-to-claim-evidence-gate
+  Scenario: SPECGEN004_194 legacy verified-via evidence policy moved to claim-evidence-gate
     Given a fresh repo with no census and the real claim-evidence-gate stop hook
     When the hook judges a verified-via-command claim first with no matching tool and then after that command ran
     Then the hook blocks the unmatched marker and approves the one whose command actually ran
 
-  @feature49
-  Scenario: SPECGEN004_195 the census-false-close gate does not fire on a whole-spec done claim when the census is clean
+  @moved-to-claim-evidence-gate
+  Scenario: SPECGEN004_195 legacy clean-census claim policy moved to claim-evidence-gate
     Given a clean zero-open task census and the real claim-evidence-gate stop hook
-    When the hook judges a whole-spec done claim made after a tool ran
+    When the scoped collector receives one successful current-spec mutation
     Then the hook does not block it
 
-  @feature49
-  Scenario: SPECGEN004_196 the gate pure classifier units hold (fenced code ignored, negation, turn-scoped evidence, stripCode)
+  @moved-to-claim-evidence-gate
+  Scenario: SPECGEN004_196 legacy claim-classifier policy moved to claim-evidence-gate
     Given the claim-evidence-gate pure classifier functions
     When fenced-code verdicts a negated claim a prior-turn tool and an inline-code-plus-quote string are classified
     Then fenced verdicts do not fire negation is not a works-claim evidence is scoped to the current turn and stripCode removes code and quotes
 
-  @feature49
-  Scenario: SPECGEN004_197 the gate shadow and disabled modes and fail-open hold
+  @moved-to-claim-evidence-gate
+  Scenario: SPECGEN004_197 legacy gate-mode policy moved to claim-evidence-gate
     Given the claim-evidence-gate stop hook under varying modes
     When it runs in shadow mode in disabled mode and against a missing transcript
     Then shadow approves but still logs a fire disabled approves outright and a missing transcript approves
 
-  @feature49
-  Scenario: SPECGEN004_198 a continuation stop is judged not exempted and the anti-loop still terminates
+  @moved-to-claim-evidence-gate
+  Scenario: SPECGEN004_198 legacy anti-loop policy moved to claim-evidence-gate
     Given the claim-evidence-gate stop hook and an unsupported works-done continuation stop
     When the same continuation stop fires twice with stop_hook_active set
     Then the first fire blocks and the identical re-fire is released by the anti-loop
@@ -1546,10 +1546,10 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Then the stale CARL evidence duplicate is collapsed or demoted and the route does not name it as the next step
 
   @feature49
-  Scenario: SPECGEN004_528 Stop-gate fire logs expose the selected todo id and reconciliation reason
-    Given a Pinator Stop-gate block caused by an agent todo route
-    When the fire is appended to .claim-evidence-gate-fires.jsonl
-    Then the log entry includes nextStepSource the real task id transcript location selected subject and duplicate reconciliation reason
+  Scenario: SPECGEN004_528 Pinator logs provenance only for an active task-owned Stop
+    Given one inactive Stop and one active task-owned Stop
+    When Pinator fire logging is inspected after both Stops
+    Then only the active Stop logs task provenance and context revision
 
   @feature49
   Scenario: SPECGEN004_533 the Stop-gate does not force the WS-F umbrella backlog after a narrow spec-generator-v4 report
@@ -1727,16 +1727,16 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Then they route filtered BDD diagnostics through docker-bdd and not host cucumber
 
   @feature49
-  Scenario: SPECGEN004_222 the gate releases after consecutive zero-tool kicks and a tool-run resets the no-progress streak
-    Given a census with unfinished work and the real claim-evidence-gate stop hook with the time-cap raised
-    When the agent stops with a gray claim and no tool across consecutive kicks then runs a tool
-    Then the first kicks block the streak cap releases the stop and a tool-running kick resets the streak so the gate blocks again
+  Scenario: SPECGEN004_222 task lifecycle rather than stop streak controls eligibility
+    Given an open task lifecycle followed by successful completion
+    When the task is collected before and after its successful completed update
+    Then the task source activates only while the task remains open
 
   @feature49
-  Scenario: SPECGEN004_223 the gate blocks an unproven blocker claim but approves a substantiated or real-async one
-    Given a census with unfinished work and the real claim-evidence-gate stop hook
-    When the stop rests on a blocker claim with no tool then with a tool run then with a background task launched
-    Then the bare blocker is blocked for lacking evidence while the tool-backed and background-task ones are approved
+  Scenario: SPECGEN004_223 blocker prose alone never arms Pinator
+    Given blocker prose with no current-session work source
+    When the real hook evaluates the blocker prose in ordinary dialogue
+    Then blocker prose neither activates Pinator nor creates state
 
   @feature45
   Scenario: SPECGEN004_224 investigateDrifted recommends KEEP_DRIFTED when README marks shipped and impl exists on disk
@@ -3397,10 +3397,10 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     And an expired scenario trace returns a rerun hint instead of throwing
 
   @feature49
-  Scenario: SPECGEN004_530 stop hook keeps previous substantive intent across terse follow-up prompts
-    Given a Pinator-fix mandate followed by a terse continuation prompt and a live judge endpoint
+  Scenario: SPECGEN004_530 inherited prose stays non-authoritative while an owned task may arm Pinator
+    Given a Pinator-fix mandate with terse prose both without and with an owned task
     When the real Stop hook sends that turn to the judge
-    Then the judge facts say gate editing is not armed and the stop is approved
+    Then prose alone is inactive while the owned task supplies the only work authority
 
   # ── FR-60: high-level MCP authoring API (pending implementation) ─────────────
 

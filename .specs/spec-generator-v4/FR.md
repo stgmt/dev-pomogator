@@ -877,6 +877,18 @@ FR-46 закрыл заднюю скобку («нельзя ЗАКОНЧИТЬ 
 
 ---
 
+
+
+### 2026-07-30 ownership clarification
+
+FR-49 owns reusable spec/task state machinery only:
+- scoped task census resolves the target workspace and never leaks the plugin repository backlog;
+- shared next-step routing prefers current-session agent todo, then relevant active async work, then current-spec open work, with no global fallback for unknown scope;
+- lifecycle mutations refresh census and stale in-progress reconciliation remains flag-only and own-scenario-based;
+- task replay keys successful TaskCreate/TaskUpdate events by real task ID, rolls back failed updates, and demotes ambiguous duplicate subjects;
+- Pinator eligibility, completion-claim classification, judge/provider behavior, fire/marker policy, no-progress/blocker handling, and native `/goal` integration are owned by the `claim-evidence-gate` spec and are not activated by FR-49 alone.
+
+The earlier global-gate clauses in this section are superseded by this clarification; their completed tasks remain historical implementation evidence, not the current product contract.
 ## FR-50
 
 **Жёсткий отказ закрывать намеренно-отложенную (waived) задачу — анти-fake-close через дверь**

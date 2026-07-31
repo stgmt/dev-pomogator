@@ -1,88 +1,65 @@
 # Claim-Evidence Gate — Functional Requirements
 
-## Контекст
+## Scope
 
-Stop-хук, который ловит инцидент-первопричину этой фичи: агент презентует РЕЗУЛЬТАТ (таблицу вердиктов fact-check, «работает», «не существует», `[VERIFIED via X]`), которого в этом ходе не производил. Существующие сторожа (pinator) ловят формулировку по словам-триггерам, а не наличие улики. Этот гейт — объединение: один сторож на класс «заявил результат без улики».
+Pinator is a Stop-time completion judge, not a universal conversation fact checker. It evaluates a Stop only while the current agent session has unfinished authoritative work.
 
-Реализация: `tools/claim-evidence-gate/` (`turn_window.ts`, `claim_classifier.ts`, `claim_evidence_gate_stop.ts`, `meridian-judge.ts`). Зарегистрирован в `.claude-plugin/hooks.json` (canonical) + `.claude/settings.json` (dogfood).
+## FR-1
+**Eligibility and inactive silence**
 
-## FR (Functional Requirements)
+The gate SHALL collect work context before any classifier, judge, credential warning, census, fire, or marker behavior. Only open current-session Claude tasks/todos, a successfully approved executing plan, actively worked specs with open mapped work, or active native `/goal` SHALL activate it. Empty/all-closed context SHALL silently approve with zero side effects. Dialogue and completion-sounding prose SHALL NOT activate it. Disabled, malformed, missing-transcript, and unknown lifecycle data SHALL fail open; shadow MAY record only after eligibility.
 
-- **FR-1**: Хук SHALL извлекать turn-window — всё после последнего реального user-сообщения (не tool_result): последний assistant-текст (claim) + все `tool_use` (name+input) главной цепочки, ИСКЛЮЧАЯ sidechain-линии.
-- **FR-2**: Классификатор SHALL распознавать 4 класса заявлений на `stripCode(text)`: `analysis-verdict` (≥2 строки вердикт-токенов PASS/FAIL/✅/❌), `works-done` («работает/починено/фикс деплоен/тесты зелёные», standalone, не negated, не explainer), `not-found-impossible` («не нашёл/не существует/архитектурно невозможно»), `verified-marker` (`[VERIFIED via X]` на raw-тексте).
-- **FR-3**: Гейт SHALL блокировать первый класс, чья улика отсутствует: analysis-verdict/works-done → ≥1 исполнитель (Bash/PowerShell/Task/Agent/mcp); not-found → ≥`CLAIM_GATE_MIN_SEARCH` (default 2) поисковых вызовов (Grep/Glob/WebSearch/WebFetch/octocode/Task); verified-marker → tool_use, чьё имя/вход содержит токен из X.
-- **FR-4**: `CLAIM_GATE_ENABLED` SHALL принимать `true` (enforce, **дефолт**), `shadow` (только лог, никогда не блок), `false` (выкл).
-- **FR-5**: Каждое срабатывание SHALL дописываться в `.dev-pomogator/.claim-evidence-gate-fires.jsonl` (ts, class, need, tool_uses, claim_snippet, mode, session_id, cwd) — даже в shadow.
-- **FR-6**: Гейт SHALL иметь anti-loop (одинаковый claim-hash → approve; > `CLAIM_GATE_MAX_RETRIES` за cooldown → approve), self-marker short-circuit, honor `stop_hook_active`, и fail-open на любой ошибке (вернуть пустой результат).
-- **FR-7**: Гейт НЕ ДОЛЖЕН блокировать репорт результата, полученного ПОСЛЕ реального запуска в том же user-ходе (улика в окне) — окно ограничено сообщениями юзера, не ходами ассистента.
+## FR-2
+**Session task lifecycle**
 
-### Реализация-2: судить РЕАЛЬНОСТЬ, а не нарратив (решения владельца 2026-06-18)
+Replay latest `TodoWrite` and successful current-session `TaskCreate`/`TaskUpdate`. `pending|in_progress` are active; `completed|deleted` are closed. Failed updates and unrelated reminder/List/Get rows SHALL NOT arm without ownership/claim correlation. Closing the final owned task removes the source.
 
-Судья-слой судил по сообщению агента + глобальному бэклогу — геймабельно (Goodhart). Анализ: `audit-reports/pinator-token-burn-analysis.md`. FR-8..FR-13 — валидированные решения.
+## FR-3
+**Approved plan activation**
 
-- **FR-8**: Промпт судьи (`meridian-judge.ts::buildJudgePrompt`) SHALL ставить НАБЛЮДАЕМЫЕ tool-факты ПЕРВИЧНО; «running tools this turn is IRRELEVANT» SHALL быть снято. Текст агента — вторичный tiebreaker.
-- **FR-9**: Предусловие «осталась незакрытая работа» SHALL считаться по SCOPE СЕССИИ (файлы из tool_use Edit/Write/apply_spec_change → spec-папки → open-задачи в них), не по глобальному бэклогу. Сессия без правок спек → scope 0 → гейт НЕ взводится.
-- **FR-10**: Вход судьи SHALL включать наблюдаемые факты от ХУКА: число мутирующих tool_use в ходе; менялось ли рабочее дерево (`git diff`/`git status`); есть ли pending background task. Вердикт по ним в первую очередь (FR-8). Git недоступен → fail-open.
-- **FR-11**: Гейт SHALL детектить no-progress: 0 мутаций И 0 изменений дерева между киками → release. Сигналы (tool-delta/tree-delta/повтор claim/верификация блокера) комбинируются СКОРИНГОМ. Заявленный блокер требует наблюдаемого пруфа — хук САМ гонит `git diff/log` — иначе дефолт «не заблокирован».
-- **FR-12** (DONE, 2026-06-21; было DEFERRED): APPROVE-кейс «легитимно жду делегированную фоновую задачу». Реализовано сопоставление spawn↔completion по tool_use id: `turn_window.ts::agentBgInFlightCount` (запуски Agent/Task, очистка по tool_result с done-текстом ИЛИ по `<tool-use-id>` в task-notification) + `bgInFlightInWindow` / `bgCommandInFlight` / `.bg-task-active`-маркер, OR-ится в `awaitingAsync` и подаётся судье ФАКТОМ (не hard-suppress). См. Реализация-7 (FR-32..FR-34) — регрессия 2026-07 из-за смены harness и её фикс.
-- **FR-13**: Монитор долгого тула + эскалация к человеку. **РЕАЛИЗОВАНО** в отдельном живом хуке `bg-task-guard` (FR-16, `.specs/bg-task-guard/`): на зависании в окне [3мин,6мин) блок с инструкцией позвать AskUserQuestion (ждать/убить/продолжить), за окном — allow-stop recovery (headless НЕ виснет, HARD_TTL 15мин). Внутри claim-evidence-gate НЕ дублируется. Тесты GUARD002_36/37.
+A plan SHALL activate only from a successful current-session `ExitPlanMode` result correlated by tool-use ID. Support explicit `planFilePath` and the observed result-first-line absolute-path form. Rejected, validation-failed, uncorrelated, mtime, mere-existence, and other-session plans SHALL NOT activate; newer approval supersedes old.
 
-### Реализация-3: громкое требование токена судьи (решение владельца 2026-06-24)
+## FR-4
+**Plan commitment ledger**
 
-LLM-судья (FR-8) — единственный слой, ловящий хитрые ленивые стопы, которые regex не берёт («что дальше — чинить X или коммит?»). Без токена `resolveEndpoint()` → null, судья молча не запускается, «почему» — ТОЛЬКО в stderr (юзер в чате не видит). Итог: у юзера без токена умный пинатор тихо выключен. Инцидент 2026-06-24: пинатор не дожал «что дальше?»-спихивание, владелец пинал руками.
+Extract stable commitment IDs from plan Todos, falling back to numbered implementation steps, and key the ledger by `session_id + plan_hash`. Evidence closes only its linked commitment. Judge-persisted completion requires result-confirmed evidence IDs. Rollup is ALL, never ANY. `blocked|awaiting` MAY approve a Stop but SHALL NOT disarm; all-evidenced-complete, explicit abandon/supersede, or newer approval closes the source.
 
-- **FR-14**: Резолвер токена (`meridian-judge.ts::resolveEndpoint`) SHALL пробовать ключи в порядке: `CLAIM_GATE_JUDGE_KEY` (→ `CLAIM_GATE_JUDGE_URL` или OpenRouter) → `OPENROUTER_API_KEY` → `CLAUDE_MEM_OPENROUTER_API_KEY` → `AUTO_COMMIT_API_KEY` (→ `AUTO_COMMIT_LLM_URL` или `https://aipomogator.ru/go/v1`). Нет ни одного → null → судья не запускается.
-- **FR-15**: WHEN серая зона (стоп с открытой работой сессии, gray-signal) AND `resolveEndpoint()` вернул null THEN гейт SHALL разветвить по причине: **(а) НЕТ токена** (`judgeAvailable()===false`) → **НЕ блокировать**, вернуть НЕ-блокирующее предупреждение (`{decision:'approve', systemMessage}`, видимое в чате), которое требует подключить токен аипомогатора + называет точные переменные (`AUTO_COMMIT_API_KEY` / `OPENROUTER_API_KEY` / `CLAIM_GATE_JUDGE_KEY`) и endpoint (`https://aipomogator.ru/go/v1`) — отсутствие токена это config-пробел юзера, не ленивый стоп (решение владельца 2026-06-25: «без токена блокировать не должен, только предупреждать в чате»); **(б) токен ЕСТЬ, но endpoint недоступен** → блокировать fail-closed (класс `judge-unavailable`: юзер подключил судью и ждёт enforcement; ограничено анти-лупом FR-11). «Почему судья не работает» SHALL быть в чате (предупреждение/reason), НЕ только в stderr. Реализация: `buildJudgeNoTokenDemand` + `warn()` (approve+systemMessage) + `judgeAvailable`-развилка. Управляется `CLAIM_GATE_ENABLED` (shadow/false убирают и предупреждение).
+## FR-5
+**Active spec lifecycle**
 
-### Реализация-4: «Дальше»-блок всегда будит судью (решение владельца 2026-06-25)
+A spec SHALL require current-session selection/mutation AND open mapped task/phase in scoped census. Read-only access, discussion, recency, and global backlog SHALL NOT activate. `.feature` mutation counts only with open mapped work. Preserve every active spec, never guess `specs[0]`; closing all mapped work removes that source.
 
-Инцидент 2026-06-25: пинатор не пнул announce-and-stop («…Берусь за них? скажи»). Корень (улики: `audit-reports/pinator-no-kick-analysis.md`): судья запускался только при `openWork > 0`, а `openWork` берётся из кэш-снимка task-census, который ОТСТАЁТ от свежеотредактированных спек → `openWork=0` ложно → судья не запускался (доказано: editedSlugs=[claude-mem-integration, claim-evidence-gate, spec-mcp-usability-dogfood], ни одной в census → openWork=0; судья при openTasks=0 блокирует 6/6). Плюс `lastUserPrompt` возвращал СОБСТВЕННЫЙ многострочный блок-окрик гейта как «запрос юзера».
+## FR-6
+**Native goal lifecycle and independence**
 
-- **FR-17**: WHEN ход заканчивается секцией «Дальше:» (NEXT_SECTION_RE) при gray-signal THEN гейт SHALL эскалировать к судье НЕЗАВИСИМО от `openWork` И `analysisOnly` — именованный next-блок это собственный сигнал агента «анонсировал и встал», а кэш может лгать `openWork=0`. Путь `openWork>0` сохраняет guard `analysisOnly`. Судья сам ОДОБРЯЕТ легитимный отчёт-стоп (нет over-fire). Реализация: чистая `isJudgeArmed` (`meridian-judge.ts`). Тесты: CEGATE001_19/20/21 + judge-bench `next-block-announce-and-stop` (block) / `next-block-legit-report` (approve).
-- **FR-18**: WHEN последнее user-сообщение является блок-окриком Stop-хука (первая непустая строка — маркер инъекции ⚠️/📋/«Stop hook feedback») THEN `lastUserPrompt` SHALL пропустить ВСЁ сообщение (не построчно), чтобы продолжение многострочного окрика («Нужно: …») не утекало как «запрос юзера» и не переключало `analysisOnly`. Тест: CEGATE001_38.
-- **FR-19** (DONE): `openWork` для session-edited спек, отсутствующих в кэш-снимке census, SHALL считаться по живому TASKS.md (топ-уровневые `- [ ]`, без placeholder'ов/sub-items), fail-open, без rebuild на hot-path. Чинит корень напрямую (openWork 0→реальное на свежей спеке; защищает non-«Дальше» announce-and-stop). Реализация: `liveOpenForUncensusedSlugs` (`task-census.ts`), wired в `openWork`. Тест: CEGATE001_39 (2/0/0). FR-17 остаётся load-bearing.
+Verified native `goal_status met:false` SHALL activate the exact condition and `met:true` SHALL deactivate it. Clear and resume support require captured real artifacts; prose-regex guesses are forbidden. Native `/goal` remains an independent Stop evaluator; Pinator SHALL NOT replace it, interpret its verdict, or persist goal completion.
 
-- **FR-20** (DONE): ранний само-пропуск по ИМЕНИ гейта (`claimText.includes('claim-evidence-gate'|'deferred-work')` → `return approve()`) УДАЛЁН (решение владельца 2026-06-25 «выпиливай эту хуйню»). Он давал бесплатный стоп ЛЮБОМУ отчёту, называющему гейт/спеку/файл по имени — статус-отчёт с открытой работой и без «Дальше:» проскакивал, ничего не проверялось (инцидент 2026-06-25, пруф: `audit-reports/pinator-no-kick-analysis.md`). Тот же класс, что снятие маркеров «пинатор»/«ДОДЕЛЫВАЙ» 2026-06-17. Отчёт ПРО гейт теперь оценивается как любой другой (карв-ауты судьи + standalone-claim guard ловят настоящую мета-дискуссию без blanket-скипа по имени). `SELF_MARKER` (только ПРЕФИКС блок-причины) сохранён; `!claimText.trim()` сохранён. Тест: CEGATE001_40. Доказано: тот самый инцидент-отчёт теперь блокируется (no-next-section, openWork=4 через FR-19).
+## FR-7
+**Merge all sources**
 
-- **FR-21** (DONE): судья НЕ одобряет вопрос «какую задачу/спеку делать или приоритезировать ПЕРВОЙ» — даже при нескольких правленых спеках (решение владельца 2026-06-25 «что брать первым — это не вопрос для юзера»). Убран multi-spec carve-out, который раньше approve'ил «какую спеку первой?». Агент сам берёт предложенную NEXT OPEN TASK (👉 из census — первая открытая задача правленой в сессии спеки) и делает; не рандом, не вопрос юзеру. Карвинг сужен ТОЛЬКО до приоритезации: настоящая дизайн-развилка / необратимый выбор (Postgres vs Mongo, прод-или-нет) остаётся owner-decision → APPROVE. Проверено на живом судье: «какую первой?» → блок 4/4; чистая дизайн-развилка → пропуск 4/4 (старый промпт её тоже пропускал — регрессии нет, я её поймал сравнением и сузил). Реализация: `meridian-judge.ts::buildJudgePrompt`. Бенч: `which-spec-is-fake-handoff` (block). Известное ограничение (кандидат на улучшение): предлагаемая задача — первая открытая в TASKS.md спеки `specs[0]` (порядок census), не самой свежеправленой — для multi-spec сессий выбор спеки произволен.
+Merge every simultaneous source in deterministic order with kind, stable ID, status, activation evidence, source location, lifecycle revision, retained provenance, and explicit conflicts.
 
-- **FR-22** (DONE): гейт предлагает (`👉 Следующее` / `nextOpenTask` судье) NEXT OPEN TASK спеки, правленой ПОСЛЕДНЕЙ в сессии (`lastEditedSpecSlug` — последняя door/raw-правка в транскрипте, `.feature` игнор), а НЕ произвольной `specs[0]` — чтобы «бери что предлагают» означало КОНТЕКСТНУЮ задачу (ту спеку, на которой ты сейчас), а не рандом (решение владельца 2026-06-25 «агент должен выбирать из того что пинатор предлагает, чтоб не делать рандомные задачи»). Fallback при отсутствии в census-снимке: `specs[0]` → agent-todo. Снимает «известное ограничение» из FR-21. Реализация: `task-census.ts::lastEditedSpecSlug` + `nextStepHint`/`nextOpenTask`. Тест: CEGATE001_41 (recency A,B,A→A; `.feature` игнор; fail-open→null).
+## FR-8
+**Current bounded evidence**
 
-### Реализация-5: ловить перекладывание на владельца + борьбу с гейтом (решение владельца 2026-06-25)
+Use Stop `last_assistant_message` as the final response and include only latest actionable real-human mandate, result-confirmed current-turn tools, official `background_tasks`/`session_crons`, transcript-derived async state, and merged commitments. Exclude secrets, full transcripts, unbounded outputs, and irrelevant prompts; mark truncation.
 
-Сквозной инцидент сессии: агент систематически ПЕРЕКЛАДЫВАЛ работу на владельца («это за тобой», «нужен твой sudo», «твой выбор») для того, что мог сделать сам (Docker «нельзя без sudo» опровергнут — TCP-эндпоинт демона `127.0.0.1:2375` работает без рута); а когда гейт блокировал — БОРОЛСЯ с гейтом (само-пометка задач blocked/backlog, правка самого кода гейта ради тишины) вместо работы. Гейт-мета (α) освобождала ЛЮБУЮ правку гейта как «работу», а судья не получал фактов о само-правке/само-пометке. Обобщённо (не буквально про sudo/docker — это иллюстрации принципа). Пруфы: `audit-reports/pinator-no-kick-analysis.md`.
+## FR-9
+**Structured judge and scoped claims**
 
-- **FR-23**: Промпт судьи SHALL нести BLOCK-правило OFFLOADING — стоп, опирающийся на то, что ДЕЙСТВОВАТЬ должен ВЛАДЕЛЕЦ («нужен твой ввод/пароль/sudo/доступ/решение», «это за тобой», «скажи — сделаю») для работы, чьё собственное БЕССИЛИЕ агент НЕ доказал уликой и не исчерпал свои варианты → BLOCK «делай сам». Карв-аут APPROVE: учётка/секрет/доступ физически только у владельца ИЛИ owner-decision без безопасного дефолта — И агент показал, что исчерпал свои опции (см. truly-blocked).
-- **FR-24**: Промпт судьи SHALL нести BLOCK-правило FIGHTING THE GATE — ход ушёл в ОСЛАБЛЕНИЕ механизма проверки (правка кода/конфига гейта чтобы перестал срабатывать; само-пометка своей работы blocked/parked/backlog; отключение гейта) ВМЕСТО задачи → BLOCK «вместо борьбы с гейтом — делай работу». Карв-аут APPROVE: `userRequest` ЯВНО про гейт/пинатор → правка гейта ЕСТЬ задача.
-- **FR-25**: BLOCK-правило SELF-AUTHORIZED SKIP SHALL быть расширено на само-объявленный агентом блокер: «заблокировано/отложено/parked/backlog/не делается» на СОБСТВЕННЫЙ авторитет — непроверяемое заявление (класс fabricated blocker); реальная причина стопа ТОЛЬКО при проверяемом ВНЕШНЕМ блокере (улика, которую агент не мог сфабриковать) ИЛИ словах владельца.
-- **FR-26**: Хук SHALL вычислять два НАБЛЮДАЕМЫХ agent-independent факта в `JudgeInput`: `gateSelfEditThisTurn` (мутирующий tool хода тронул файл-самого-гейта — `GATE_OWN_FILE`: claim-evidence-gate / meridian-judge / turn_window / claim_classifier / task-census / spec-status-store / judge-bench / `.spec-status`) и `selfMarkedBlockedOrBacklogThisTurn` (`set_spec_status`/`set_entity_status` с `backlog`, ИЛИ Write/Edit/apply на TASKS.md со `Status: BLOCKED`). Из harness-записанных tool_use → агент не подделает.
-- **FR-27**: Промпт SHALL перечислять оба факта в OBSERVABLE FACTS и инструктировать: `gateSelfEditThisTurn=YES` + открытая работа + `userRequest` не про гейт → fighting-the-gate → BLOCK; `userRequest` про гейт → не штраф (честная разработка гейта). `selfMarkedBlockedOrBacklogThisTurn=YES` без улик внешнего блокера → self-exemption → BLOCK. Факт подаётся СУДЬЕ (LLM решает «по просьбе vs ради тишины»), НЕ жёсткий детерминированный блок — иначе ломает честную gate-разработку.
-- **FR-28**: Текст judge-block SHALL нести рамку «Делай сам — ты это можешь; НЕ перекладывай на владельца (докажи бессилие уликой); НЕ борись с гейтом — делай настоящую задачу» (`claim_evidence_gate_stop.ts` dispatch).
-- **FR-29**: judge-bench SHALL пинить новое поведение: (block) `offload-needs-your-X`, `fixable-dressed-as-owner-only`, `edit-gate-to-dodge`, `self-mark-blocked-no-evidence`, `self-park-backlog`; (approve) `gate-dev-is-the-task` (userRequest про гейт), `truly-blocked-with-evidence`. Поля `gateSelfEditThisTurn`/`selfMarkedBlockedOrBacklogThisTurn` в shape.
-- **FR-30**: Прогон тестов SHALL чиниться БЕЗ sudo: `scripts/docker-test.sh` + `scripts/_docker-wsl.sh` используют `DOCKER_HOST=tcp://127.0.0.1:2375` (TCP-эндпоинт демона, уже включён в `docker.service` ExecStart, без зависимости от группы unix-сокета). Чинит «permission denied» на `/run/docker.sock` (группа 1001 ≠ docker 989) навсегда, без рута. Проверено: docker отвечает через TCP (Server 29.6.0).
+The judge SHALL return each commitment as `complete|blocked|awaiting|actionable` with evidence IDs plus one Stop decision. It SHALL NOT infer work from prose. Missing/unknown evidence and ANY rollup keep commitments active. Claim classes MAY block only after eligibility and only when mapped to active commitments. Async MAY justify waiting but SHALL NOT create a source.
 
-### Реализация-6: Stop-hook feedback остаётся активным мандатом (2026-07-10)
+## FR-10
+**Context-scoped state and credentials**
 
-Инцидент: после Stop-hook feedback `TASK_UNTESTED` агент вместо выполнения следующего действия остановился на ревью/пересказе («если следующий шаг — чинить gate, нужно...»). Это не должен быть approve-кейс analysis-only: feedback от live gate — активное действие, пока агент не сделал observable work.
+Scope marker/fire state by `session_id` and context revision; changed context resets retry state and inactive flow performs no state I/O. Missing judge credentials remain WARN-not-block only for active eligible context.
 
-- **FR-31**: WHEN последнее user-role сообщение является actionable Stop-hook feedback / blocking error (например `TASK_UNTESTED`, `Strengthen the test`, `Нужно:` или другой конкретный remediate-текст) AND следующий assistant turn заканчивается без mutating/door tool_use и без реального async wait THEN claim-evidence-gate SHALL block with class `stop-feedback-unaddressed`. Такой feedback SHALL NOT become the human's typed mandate for `analysisOnly`, but SHALL remain an active harness mandate until the agent performs observable work or proves impossibility. A normal human review request without Stop-hook feedback SHALL still approve when it only delivers review.
+## FR-11
+**Remove obsolete global activation**
 
-### Реализация-7: гейт ослеп на новые async-агенты без флага (инцидент 2026-07-18)
+Remove `GRAY_SIGNAL`, `NEXT_SECTION_RE`, generic blocker prose outside active work, gate-inspection streaks, whole-session mandate dumping, first-spec guessing, and historical carve-outs that exist only to compensate for global arming.
 
-Инцидент (транскрипт lm-saas `0704ee11`): агент запустил 4 сборщика тулом `Agent`, валидно встал ждать отчёты — гейт пнул «Named next step (awaiting reports) but could do analysis work now». Корень: в новых версиях Claude Code у `Agent`/`Task` НЕТ поля `run_in_background` (агенты асинхронны по умолчанию), а ВСЕ детекторы ожидания (`agentBgInFlightCount`, `bgInFlightInWindow`, `bgCommandInFlight`) фильтровали по `run_in_background === true` → `awaitingAsync=false` → судья получил ложный факт «pending background task: NO» и честно заблокировал. Вторая дыра: `SendMessage` (перезапрос отчёта у агента) не считался ожиданием вовсе. Третья: hint `AWAITS_RESULT_RE` не матчил «жду отчёты…, затем свожу анализ» (проверено на реальном тексте стопа → false).
+## FR-12
+**Single parse, distribution, and clients**
 
-- **FR-32** (DONE 2026-07-18): `agentBgInFlightCount` SHALL считать запуск `Agent`/`Task` фоновым и когда `run_in_background` ОТСУТСТВУЕТ во входе (новый harness), не только при `=== true`. Очистка для флаг-less запусков: (а) существующий путь — task-notification c `<tool-use-id>` + done-текст; (б) tool_result с тем же id, НЕ являющийся launch-ACK («Async agent launched successfully…»), очищает — это даёт обратную совместимость со старым SYNC-режимом Agent (его tool_result — финальный отчёт), чтобы флаг-less подсчёт не взводил `awaitingAsync` навсегда (иначе гейт обезоружен). Launch-ACK НЕ очищает никогда.
-- **FR-33** (DONE 2026-07-18): `SendMessage` (продолжение ранее запущенного агента) SHALL считаться возобновлением ожидания: его tool_use id входит в in-flight набор по тем же правилам FR-32; ACK («…resumed … in the background… You'll be notified…») не очищает; task-notification с этим id очищает. Подтверждено реальным транскриптом: ответ агента на SendMessage приходит task-notification'ом с tool-use-id самого SendMessage.
-- **FR-34** (DONE 2026-07-18): `AWAITS_RESULT_RE` (hint «следующий шаг потребляет ожидаемый результат») SHALL дополнительно матчить формы ожидания отчёта: «жду отчёт(ы/ов)», «отчёты … придут», «придут автоматически», «после отчётов/результатов», «затем свожу/сведу/обработаю/оформлю/проанализирую», англ. «waiting for the report(s)», «once the reports arrive/land». Hint остаётся осмысленным ТОЛЬКО при `awaitingAsync=true` (вычисляется как AND), так что расширение не даёт бесплатных стопов без реального фонового ожидания.
-
-## NFR (Non-Functional Requirements)
-
-- **Performance**: синхронно, без сети/subprocess в быстром слое; пропуск линий >1MB; Stop-таймаут (<5s).
-- **Security**: snippet усечён до 200 символов; per-repo marker/fires scoping через cwd; токен не логируется и не в reason (только имена переменных).
-- **Reliability**: fail-open везде; atomic marker write; corrupt JSONL-линии пропускаются; self-contained бандл.
-- **Usability**: причина блока простым языком + что прогнать + подсказка `[UNVERIFIED]`; env kill-switch (`false`).
-
-## Out of Scope
-
-- Улика в ПРЕДЫДУЩЕМ user-ходе — known limitation.
-- Семантическая проверка claim↔tool в быстром слое — гейт лексический/структурный для скорости (судья — отдельный слой).
+Parse transcript JSONL once through a shared bounded reader. Preserve the deps-absent claim-gate bundle, Claude Stop route, and shared endpoint resolver. The Codex launcher SHALL use a proven adapter or explicit tested fail-open; it SHALL NOT assume Claude lifecycle shapes.

@@ -1,52 +1,37 @@
 # Claim-Evidence Gate — Acceptance Criteria (EARS)
 
-Покрытие тестами: `tools/claim-evidence-gate/__tests__/claim-evidence-gate.test.ts` (CEGATE001_01..16),
-сценарии: `tests/features/plugins/claim-evidence-gate/CEGATE001_claim-evidence-gate.feature`.
+## AC-1 (FR-1): Inactive path is silent
+WHEN no task, approved executing plan, active spec work, or native goal is active THEN the hook SHALL approve before classifier/judge entry with no warning, scan, fire, or marker I/O. Completion prose SHALL remain inert. Disabled/malformed/unknown input SHALL fail open and inactive shadow SHALL not record.
 
-## analysis-verdict (FR-1, FR-3)
+## AC-2 (FR-2): Task ownership and closure
+WHEN owned tasks are pending/in-progress THEN task context SHALL contain them; WHEN the final becomes completed/deleted THEN task source SHALL close. Failed updates, re-keying, and unrelated reminder/List/Get rows SHALL not create extra open work.
 
-- **AC-1**: WHEN последнее сообщение содержит вердикт-grid (≥2 строки PASS/FAIL) AND в turn-window нет исполнитель-инструмента THEN хук SHALL вернуть `{decision:"block"}`. *(CEGATE001_01)*
-- **AC-2**: WHEN тот же grid AND Bash выполнялся в этом ходе THEN хук SHALL вернуть `{}`. *(CEGATE001_02)*
-- **AC-3**: IF вердикт-токены находятся ТОЛЬКО внутри ```fenced``` блока THEN analysis-verdict НЕ детектится. *(CEGATE001_13)*
+## AC-3 (FR-3): Valid plan approval only
+WHEN either verified successful correlated ExitPlanMode result shape occurs THEN plan SHALL activate with path/hash; rejected, validation-failed, uncorrelated, stale, and mere-file cases SHALL not, and newer approval SHALL supersede old.
 
-## works-done (FR-2, FR-3)
+## AC-4 (FR-4): Plan completion is ALL-not-ANY
+WHEN one linked commitment completes THEN only it closes. WHEN any commitment lacks result-confirmed evidence THEN plan remains active. `blocked|awaiting` MAY approve without closure. All-evidenced-complete or explicit abandon/supersede SHALL close the proper plan.
 
-- **AC-4**: WHEN сообщение утверждает «всё работает» AND нет исполнителя в ходе THEN хук SHALL заблокировать. *(CEGATE001_03)*
-- **AC-5**: WHEN сообщение лишь резюмирует правку без works-claim («Готово, можно тестировать») THEN хук SHALL вернуть `{}`. *(CEGATE001_04)*
-- **AC-6**: IF works-фраза negated («не работает») THEN works-done НЕ детектится. *(CEGATE001_14)*
+## AC-5 (FR-5): Active mapped spec work
+WHEN session selection/mutation and open mapped task/phase coexist THEN spec SHALL activate; read-only/global backlog SHALL not. `.feature` requires mapped work. Multiple active specs SHALL all remain visible and close independently.
 
-## not-found-impossible (FR-3)
+## AC-6 (FR-6): Verified independent native goal
+WHEN latest verified goal_status is `met:false` THEN exact condition SHALL activate; WHEN `met:true` THEN it SHALL deactivate. Clear/resume SHALL use captured artifacts. Native goal and Pinator SHALL remain independent without cross-completion or unbounded loops.
 
-- **AC-7**: WHEN сообщение утверждает «не существует» AND поисков < 2 THEN хук SHALL заблокировать. *(CEGATE001_05)*
-- **AC-8**: WHEN «не существует» AND поисков ≥ 2 THEN хук SHALL вернуть `{}`. *(CEGATE001_06)*
+## AC-7 (FR-7): Four-source merge
+WHEN task, plan, spec, and goal are active THEN one deterministic packet SHALL contain all four with provenance, duplicate links, and explicit conflicts.
 
-## verified-marker (FR-3)
+## AC-8 (FR-8): Current bounded packet
+WHEN transcript assistant text differs from `last_assistant_message` THEN the packet SHALL use the latter. Secrets, large outputs, full history, and irrelevant prompts SHALL be absent; truncation SHALL be explicit.
 
-- **AC-9**: WHEN текст содержит `[VERIFIED via npm test]` AND нет tool_use, совпадающего с «npm test» THEN хук SHALL заблокировать. *(CEGATE001_07)*
-- **AC-10**: WHEN тот же маркер AND Bash «npm test» выполнялся THEN хук SHALL вернуть `{}`. *(CEGATE001_08)*
+## AC-9 (FR-9): Result-confirmed per-commitment judgment
+WHEN tools are successful, failed, or result-less THEN only successful result-confirmed IDs SHALL support completion. Any actionable commitment SHALL block despite completed siblings. Legitimate blocked/awaiting MAY approve without closure, and async alone SHALL not activate.
 
-## Режимы, anti-loop, fail-open (FR-4, FR-5, FR-6, FR-7)
+## AC-10 (FR-10): Conditional state and warning
+WHEN active context needs judge and token is absent THEN warn without blocking; inactive SHALL stay silent. Same-revision retries SHALL be bounded; changed revision SHALL not be released by stale state.
 
-- **AC-11**: IF `CLAIM_GATE_ENABLED=shadow` THEN хук SHALL вернуть `{}` AND дописать запись в fires.jsonl. *(CEGATE001_09)*
-- **AC-12**: IF `CLAIM_GATE_ENABLED=false` THEN хук SHALL вернуть `{}` без анализа. *(CEGATE001_10)*
-- **AC-13**: IF transcript_path отсутствует THEN хук SHALL вернуть `{}` (fail-open). *(CEGATE001_11)*
-- **AC-14**: IF `stop_hook_active=true` THEN хук SHALL вернуть `{}` (no re-block). *(CEGATE001_12)*
-- **AC-15**: WHEN Bash выполнялся ДО последнего user-сообщения, но не после THEN turn-window НЕ засчитывает его как улику. *(CEGATE001_15)*
-- **AC-16**: WHEN сообщение содержит inline-код и цитату THEN stripCode удаляет их до классификации. *(CEGATE001_16)*
+## AC-11 (FR-11): Old arming paths are absent
+WHEN gray, next-section, blocker, gate-meta, first-spec, works-done, not-found, verified, PASS/FAIL, «готово», or «дальше» signals appear without an authoritative source THEN they SHALL have no activation effect.
 
-## Громкое требование токена судьи (FR-14, FR-15)
-
-- **AC-17**: WHEN gray-zone стоп (открытая работа сессии + gray-signal) AND ни один из `CLAIM_GATE_JUDGE_KEY`/`OPENROUTER_API_KEY`/`CLAUDE_MEM_OPENROUTER_API_KEY`/`AUTO_COMMIT_API_KEY` не задан THEN хук SHALL **НЕ блокировать**, а вернуть `{decision:"approve", systemMessage}`, systemMessage которого требует подключить токен аипомогатора + называет точные переменные + endpoint `https://aipomogator.ru/go/v1` (решение владельца 2026-06-25: без токена — только предупреждение в чате, стоп проходит). *(CEGATE001_17)*
-- **AC-18**: WHEN тот же gray-zone стоп AND токен задан THEN ветка «нет токена» НЕ срабатывает (управление уходит реальному LLM-судье). *(CEGATE001_18)*
-
-## Actionable Stop-hook feedback (FR-31)
-
-- **AC-19**: WHEN последняя user-role запись является actionable Stop-hook feedback / blocking error with concrete remediation (for example `TASK_UNTESTED` / `Strengthen the test` / `Нужно:`) AND the next assistant turn stops without mutating/door tool work and without a real async wait THEN the hook SHALL block with `stop-feedback-unaddressed`, even if the latest human prompt was review/analysis-only. *(CEGATE001_56)*
-- **AC-20**: WHEN the latest prompt is a normal human review request (not Stop-hook feedback) AND the assistant delivers a review without claiming completion THEN the hook SHALL approve. *(CEGATE001_57)*
-
-## Async-агенты нового harness без `run_in_background` (FR-32, FR-33, FR-34)
-
-- **AC-21**: WHEN транскрипт содержит запуск `Agent` БЕЗ поля `run_in_background`, за которым следует только launch-ACK tool_result («Async agent launched successfully…») THEN `agentBgInFlightCount` SHALL вернуть ≥1 (агент в полёте). *(CEGATE001_58)*
-- **AC-22**: WHEN за флаг-less запуском следует task-notification с его `<tool-use-id>` и done-текстом (`<status>completed</status>`) OR tool_result с тем же id, не являющийся launch-ACK (старый sync-режим) THEN этот запуск SHALL быть очищен (count 0). *(CEGATE001_59)*
-- **AC-23**: WHEN транскрипт содержит `SendMessage` c ACK «resumed … in the background» и БЕЗ последующего task-notification с его id THEN `agentBgInFlightCount` SHALL вернуть ≥1; после task-notification с этим id — 0. *(CEGATE001_60)*
-- **AC-24**: WHEN текст стопа — «жду отчёты всех четырёх сборщиков (уведомления придут автоматически), затем свожу анализ и оформляю спеку» AND `awaitingAsync=true` THEN `nextStepAwaitsResult` SHALL быть true (реальный текст инцидента 2026-07-18). *(CEGATE001_61)*
+## AC-12 (FR-12): Shared parser and shipped clients
+WHEN all collectors use one transcript THEN they SHALL consume one shared bounded event set. The deps-absent Claude bundle SHALL work. Codex SHALL use a proven adapter or explicit observable fail-open.

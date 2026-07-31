@@ -502,13 +502,7 @@ function canonicalizeTaskReplay(tasks: AgentTodo[]): AgentTodo[] {
 
 /** Reconstruct the agent's current task list from the transcript. Returns whichever of the two task
  * systems carries MORE open work (Task-replay vs latest TodoWrite) — never under-count. Fail-open → []. */
-export function parseAgentTodos(transcriptPath: string): AgentTodo[] {
-  let raw: string;
-  try {
-    raw = fs.readFileSync(transcriptPath, 'utf-8');
-  } catch {
-    return [];
-  }
+export function parseAgentTodosRaw(raw: string): AgentTodo[] {
   const tasks = new Map<string, AgentTodo>();
   const useToTaskKey = new Map<string, string>();
   const updateRollback = new Map<string, { key: string; previous: AgentTodo | null }>();
@@ -529,21 +523,39 @@ export function parseAgentTodos(transcriptPath: string): AgentTodo[] {
   };
 
   const lines = raw.split(/\r?\n/);
+  const sidechainUseIds = new Set<string>();
+  const failedUseIds = new Set<string>();
+  for (const line of lines) {
+    if (line.length > 2_000_000) continue;
+    try {
+      const entry = JSON.parse(line) as { isSidechain?: boolean; message?: { content?: unknown } };
+      const content = entry.message?.content;
+      if (!Array.isArray(content)) continue;
+      for (const block of content as Array<Record<string, unknown>>) {
+        if (entry.isSidechain === true && block.type === 'tool_use' && block.id) sidechainUseIds.add(String(block.id));
+        if (block.type === 'tool_result' && block.tool_use_id && block.is_error === true) failedUseIds.add(String(block.tool_use_id));
+      }
+    } catch {
+      // Ignore malformed transcript rows.
+    }
+  }
   for (let lineNo = 0; lineNo < lines.length; lineNo++) {
     const line = lines[lineNo];
     if ((!line.includes('"tool_use"') && !line.includes('"tool_result"')) || line.length > 2_000_000) continue;
-    let entry: { message?: { content?: unknown } };
+    let entry: { isSidechain?: boolean; message?: { content?: unknown } };
     try {
       entry = JSON.parse(line);
     } catch {
       continue;
     }
+    if (entry.isSidechain === true) continue;
     const content = entry?.message?.content;
     if (!Array.isArray(content)) continue;
     for (const b of content as Array<Record<string, unknown>>) {
       const type = String(b?.type ?? '');
       if (type === 'tool_result') {
         const toolUseId = String(b.tool_use_id ?? '');
+        if (sidechainUseIds.has(toolUseId)) continue;
         const contentText = blockText(b);
         const realId = taskIdFromText(contentText);
         const oldKey = toolUseId ? useToTaskKey.get(toolUseId) : undefined;
@@ -560,6 +572,8 @@ export function parseAgentTodos(transcriptPath: string): AgentTodo[] {
         continue;
       }
       if (type !== 'tool_use') continue;
+      const toolUseId = String(b.id ?? '');
+      if ((toolUseId && sidechainUseIds.has(toolUseId)) || (toolUseId && failedUseIds.has(toolUseId))) continue;
       const name = String(b.name ?? '');
       const input = (b.input ?? {}) as Record<string, unknown>;
       if (name === 'TodoWrite' && Array.isArray(input.todos)) {
@@ -613,6 +627,14 @@ export function parseAgentTodos(transcriptPath: string): AgentTodo[] {
   const taskOpen = taskReplay.filter((t) => OPEN_TODO_STATUS.has(t.status)).length;
   const todoOpen = latestTodoWrite ? latestTodoWrite.filter((t) => OPEN_TODO_STATUS.has(t.status)).length : 0;
   return latestTodoWrite && todoOpen > taskOpen ? latestTodoWrite : taskReplay;
+}
+
+export function parseAgentTodos(transcriptPath: string): AgentTodo[] {
+  try {
+    return parseAgentTodosRaw(fs.readFileSync(transcriptPath, 'utf-8'));
+  } catch {
+    return [];
+  }
 }
 
 /**

@@ -14,7 +14,10 @@
  * parent Task/Agent tool_use that spawned them lives in the main chain and counts instead.
  */
 
+import { isTypedHumanPrompt as isTypedTranscriptHumanPrompt } from './transcript_events.ts';
+
 export interface ToolUse {
+  id?: string;
   name: string; // lowercased tool name, e.g. "bash", "grep", "mcp__octocode__..."
   input: string; // serialized + lowercased input, for cheap substring checks
 }
@@ -22,6 +25,10 @@ export interface ToolUse {
 export interface TurnWindow {
   claimText: string;
   toolUses: ToolUse[];
+}
+
+export interface ParsedTranscriptLike {
+  events: Array<{ raw: Record<string, unknown>; blocks?: Array<Record<string, unknown>> }>;
 }
 
 interface TranscriptLine {
@@ -79,13 +86,17 @@ function assistantText(e: TranscriptLine): string {
     .join('\n');
 }
 
-export function extractTurnWindow(rawTranscript: string): TurnWindow {
-  const lines = parseLines(rawTranscript);
+export function extractTurnWindowFromEvents(parsed: ParsedTranscriptLike): TurnWindow {
+  const lines = parsed.events.map((event) => event.raw as TranscriptLine);
 
-  // boundary = last real (non-sidechain) user message
+  // boundary = last genuinely typed main-chain user message
   let boundary = -1;
-  for (let i = lines.length - 1; i >= 0; i--) {
-    if (!lines[i].isSidechain && isRealUser(lines[i])) {
+  for (let i = parsed.events.length - 1; i >= 0; i--) {
+    const event = parsed.events[i];
+    if (event.raw.isSidechain !== true && isTypedTranscriptHumanPrompt({
+      raw: event.raw,
+      blocks: event.blocks ?? contentBlocks(event.raw as TranscriptLine),
+    })) {
       boundary = i;
       break;
     }
@@ -117,12 +128,19 @@ export function extractTurnWindow(rawTranscript: string): TurnWindow {
         } catch {
           input = '';
         }
-        toolUses.push({ name: String((b as any).name ?? '').toLowerCase(), input });
+        toolUses.push({ id: typeof b.id === 'string' ? b.id : undefined, name: String((b as any).name ?? '').toLowerCase(), input });
       }
     }
   }
 
   return { claimText, toolUses };
+}
+
+export function extractTurnWindow(rawTranscript: string): TurnWindow {
+  return extractTurnWindowFromEvents({ events: parseLines(rawTranscript).map((raw) => ({
+    raw: raw as unknown as Record<string, unknown>,
+    blocks: contentBlocks(raw),
+  })) });
 }
 
 /**
@@ -334,10 +352,10 @@ const INTERRUPTED_PROMPT_RE = /^\s*\[Request interrupted by user(?: for tool use
  * fixtures set none of these flags → treated as genuine (a negative filter, not a promptSource allowlist).
  */
 function isTypedHumanPrompt(e: TranscriptLine): boolean {
-  if (!isRealUser(e)) return false;
-  if (e.isMeta === true || e.isCompactSummary === true || e.isVisibleInTranscriptOnly === true) return false;
-  if (e.promptSource === 'system') return false;
-  return true;
+  return isTypedTranscriptHumanPrompt({
+    raw: e as unknown as Record<string, unknown>,
+    blocks: contentBlocks(e),
+  });
 }
 
 /**

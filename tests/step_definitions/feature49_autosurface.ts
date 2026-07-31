@@ -27,6 +27,8 @@ import { validateSpecChange, type ValidateResult } from '../../tools/spec-mcp-se
 import { buildJudgePrompt, resolveEndpoint } from '../../tools/claim-evidence-gate/meridian-judge.ts';
 import { classify, firstUnsupported, stripCode } from '../../tools/claim-evidence-gate/claim_classifier.ts';
 import { effectiveUserRequest, extractTurnWindow, sessionUserPrompts } from '../../tools/claim-evidence-gate/turn_window.ts';
+import { collectPinatorWorkContext } from '../../tools/claim-evidence-gate/work_context.ts';
+import { parseTranscriptEvents } from '../../tools/claim-evidence-gate/transcript_events.ts';
 
 interface AutoSurfaceWorld extends V4World {
   asRoot?: string;
@@ -94,6 +96,10 @@ interface AutoSurfaceWorld extends V4World {
   gateFollowRaw?: string;
   gateFollowBlocked?: boolean;
   gateFollowPrompt?: string;
+  inactiveFireExists?: boolean;
+  activeFire?: Record<string, unknown>;
+  closedTaskRaw?: string;
+  promptOnlyContextActive?: boolean;
   promptList?: string[];
   effectivePrompt?: string;
 }
@@ -291,30 +297,34 @@ Then('the door refuses the stub write with a strength-layer finding and accepts 
   );
 });
 
-// SPECGEN004_186 (FR-49g): the deterministic require-next-section layer. Drives the REAL Stop
-// hook (spawn via node --import tsx; judge OFF to isolate the deterministic layer — Docker carries
-// no помогатор token) on a census-open tmpdir: a gray progress claim WITHOUT a «Дальше» section
-// must block; the same claim WITH one must approve. Pins the Cyrillic-\b regex fix (commit 2fe24e0)
-// against silent re-breakage — `дальше\b` never matched «Дальше:» so the whole layer was dead.
+// FR-49 owns reusable task-census and routing mechanics; Pinator activation policy lives in
+// claim-evidence-gate. These compatibility scenarios drive the real Stop hook and prove that
+// neither census rows nor completion prose can manufacture an authoritative work source.
 const NS_HOOK = path.resolve('tools', 'claim-evidence-gate', 'claim_evidence_gate_stop.ts');
 function runStopHook(
   root: string,
   claimText: string,
-  // FR-9 (session-scoped census): the default simulated turn EDITS the `demo` spec — the same slug the
-  // census fixtures carry — so the census is in this session's scope and the census-dependent layers
-  // (spec-false-close / no-next-section) arm. An empty Edit (no file_path) scopes to ZERO specs (FR-9's
-  // own contract) → those layers correctly stay quiet, which is why the old default broke 186/189.
   tools: Array<{ name: string; input: unknown }> = [{ name: 'Edit', input: { file_path: '.specs/demo/FR.md' } }],
   extra: { env?: Record<string, string>; stopHookActive?: boolean } = {},
 ): { blocked: boolean; raw: string } {
+  const toolBlocks: Array<Record<string, unknown>> = [];
+  const resultRows: Array<Record<string, unknown>> = [];
+  for (const [index, tool] of tools.entries()) {
+    const id = `fr49-tool-${index}`;
+    toolBlocks.push({ type: 'tool_use', id, name: tool.name, input: tool.input });
+    resultRows.push({ type: 'user', message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: id, content: 'completed' }] } });
+  }
   const rows = [
     { type: 'user', message: { role: 'user', content: [{ type: 'text', text: 'почини' }] } },
-    { type: 'assistant', message: { role: 'assistant', content: tools.map((t) => ({ type: 'tool_use', name: t.name, input: t.input })) } },
+    { type: 'assistant', message: { role: 'assistant', content: [{ type: 'tool_use', id: 'fr49-task', name: 'TaskCreate', input: { subject: 'Finish demo work' } }] } },
+    { type: 'user', message: { role: 'user', content: [{ type: 'tool_result', tool_use_id: 'fr49-task', content: 'Task #49 created successfully' }] } },
+    { type: 'assistant', message: { role: 'assistant', content: toolBlocks } },
+    ...resultRows,
     { type: 'assistant', message: { role: 'assistant', content: [{ type: 'text', text: claimText }] } },
   ];
   const fp = path.join(root, 'transcript.jsonl');
   fs.writeFileSync(fp, rows.map((r) => JSON.stringify(r)).join('\n'));
-  const input: Record<string, unknown> = { transcript_path: fp, cwd: root };
+  const input: Record<string, unknown> = { session_id: 'specgen-fr49', transcript_path: fp, cwd: root };
   if (extra.stopHookActive) input.stop_hook_active = true;
   const res = spawnSync(process.execPath, ['--import', 'tsx', NS_HOOK], {
     input: JSON.stringify(input),
@@ -339,7 +349,7 @@ function driveStopHook(root: string, claimText: string): boolean {
   return runStopHook(root, claimText).blocked;
 }
 
-Given('a task census with open work and the real claim-evidence-gate stop hook', function (this: AutoSurfaceWorld) {
+Given('a task census with open backlog but no current-session work source', function (this: AutoSurfaceWorld) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'fr49g-'));
   writeTaskCensusCache(
     root,
@@ -349,15 +359,25 @@ Given('a task census with open work and the real claim-evidence-gate stop hook',
   this.nsRoot = root;
 });
 
-When('the hook judges a progress claim without a «Дальше» section and then one with it', function (this: AutoSurfaceWorld) {
-  this.nsBlocked = driveStopHook(this.nsRoot!, 'Готово. Закоммитил фикс.');
-  this.nsAllowed = driveStopHook(this.nsRoot!, 'Готово. Закоммитил фикс.\n\nДальше: гоняю прогон, потом коммичу.');
+When('the real hook evaluates completion prose without an authoritative source', function (this: AutoSurfaceWorld) {
+  const transcript = path.join(this.nsRoot!, 'transcript.jsonl');
+  writeJsonl(transcript, [
+    { type: 'user', message: { role: 'user', content: [{ type: 'text', text: 'что осталось в backlog?' }] } },
+    { type: 'assistant', message: { role: 'assistant', content: [{ type: 'text', text: 'Готово. Закоммитил фикс.' }] } },
+  ]);
+  const res = spawnSync(process.execPath, ['--import', 'tsx', NS_HOOK], {
+    input: JSON.stringify({ transcript_path: transcript, cwd: this.nsRoot!, session_id: 'fr49-inactive' }),
+    encoding: 'utf-8',
+    env: { ...process.env, CLAIM_GATE_ENABLED: 'true', CLAIM_GATE_JUDGE: 'false' },
+  });
+  this.nsBlocked = isBlockDecision(res.stdout || '');
+  this.inactiveFireExists = fs.existsSync(path.join(this.nsRoot!, '.dev-pomogator', '.claim-evidence-gate-fires.jsonl'));
 });
 
-Then('the hook blocks the one lacking the section and approves the one carrying it', function (this: AutoSurfaceWorld) {
+Then('the hook approves silently and does not create Pinator fire state', function (this: AutoSurfaceWorld) {
   fs.rmSync(this.nsRoot!, { recursive: true, force: true });
-  assert.equal(this.nsBlocked, true, 'a gray claim with open census and NO «Дальше» → block');
-  assert.equal(this.nsAllowed, false, 'the same claim WITH a «Дальше:» section → approve');
+  assert.equal(this.nsBlocked, false, 'repository backlog without session ownership must not activate Pinator');
+  assert.equal(this.inactiveFireExists, false, 'inactive compatibility path must not append fire state');
 });
 
 // SPECGEN004_187 (FR-49e): the judge prompt the помогатор Haiku receives. Drives the REAL pure
@@ -423,10 +443,8 @@ Then(
   },
 );
 
-// SPECGEN004_189 (FR-49b): the census-aware false-close block — a WHOLE-spec "done" claim while the
-// task census still shows unfinished work is blocked, with the real numbers + next task injected.
-// Migrated from the vitest CEGATE001_25 to a BDD scenario driving the REAL hook (judge OFF; the
-// census-false-close is deterministic and fires before the judge).
+// Compatibility pin: a successful current-session spec mutation plus scoped open work is the
+// authoritative source. A foreign busier spec remains census data, never the selected obligation.
 Given('a census with a foreign busiest spec plus current-spec unfinished work and the real claim-evidence-gate stop hook', function (this: AutoSurfaceWorld) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'fr49b-'));
   writeTaskCensusCache(
@@ -443,21 +461,27 @@ Given('a census with a foreign busiest spec plus current-spec unfinished work an
   this.csRoot = root;
 });
 
-When('the hook judges a whole-spec done claim made after a tool ran', function (this: AutoSurfaceWorld) {
-  const out = runStopHook(this.csRoot!, 'Спека готова, всё закрыто. 37 из 48.', [
-    { name: 'Edit', input: { file_path: '.specs/spec-generator-v4/FR.md' } },
-    { name: 'Edit', input: { file_path: '.specs/demo/FR.md' } },
+When('the scoped collector receives one successful current-spec mutation', function (this: AutoSurfaceWorld) {
+  const tx = path.join(this.csRoot!, 'scoped-spec.jsonl');
+  writeJsonl(tx, [
+    { type: 'user', message: { role: 'user', content: [{ type: 'text', text: 'почини demo' }] } },
+    { type: 'assistant', message: { role: 'assistant', content: [{ type: 'tool_use', id: 'edit-demo', name: 'mcp__dev-pomogator-specs__apply_spec_change', input: { spec: 'demo', doc: 'FR.md', old_string: 'old', new_string: 'new' } }] } },
+    taskResult('edit-demo', 'Applied demo/FR.md successfully'),
   ]);
-  this.csBlocked = out.blocked;
-  this.csRaw = out.raw;
+  const context = collectPinatorWorkContext(
+    { session_id: 'fr49-scoped-spec', transcript_path: tx, cwd: this.csRoot },
+    parseTranscriptEvents(fs.readFileSync(tx, 'utf-8')),
+  );
+  this.csRaw = JSON.stringify(context);
 });
 
-Then('the hook blocks it and the block names the unfinished count and only the current spec next task', function (this: AutoSurfaceWorld) {
+Then('only the mutated spec appears and the foreign busiest backlog stays out of context', function (this: AutoSurfaceWorld) {
   fs.rmSync(this.csRoot!, { recursive: true, force: true });
-  assert.equal(this.csBlocked, true, 'whole-spec done claim + unfinished census → block');
-  assert.match(this.csRaw!, /в работе|незакрыто/, 'the block injects the real unfinished count');
-  assert.match(this.csRaw!, /Wire the gate/, 'the block names the current spec next open task');
-  assert.doesNotMatch(this.csRaw!, /WS-F: remaining feature work/, 'the block must not leak the foreign busiest backlog next step');
+  const parsed = JSON.parse(this.csRaw!) as { sources: Array<{ kind: string; id: string; commitments: Array<{ id: string }> }> };
+  assert.deepEqual(parsed.sources.map((source) => ({ kind: source.kind, id: source.id, commitmentIds: source.commitments.map((item) => item.id) })), [
+    { kind: 'spec', id: 'demo', commitmentIds: ['demo:wire-gate'] },
+  ], 'successful scoped mutation selects exactly the matching open spec work');
+  assert.doesNotMatch(this.csRaw!, /WS-F: remaining feature work|ws-f-remaining/, 'context must not leak the foreign busiest backlog');
 });
 
 // SPECGEN004_190 (FR-49b anti-H1): the census branch is tightly spec-scoped — a task-level "fixed
@@ -662,72 +686,61 @@ function runStopHookScopedRaw(
   return (res.stdout || '').trim();
 }
 
-function runStopHookScoped(
-  root: string,
-  claimText: string,
-  currentTurnTools: Array<{ name: string; input: unknown }> = [],
-  extraEnv: Record<string, string> = {},
-  currentUserPrompt = 'идём',
-): boolean {
-  return isBlockDecision(runStopHookScopedRaw(root, claimText, currentTurnTools, extraEnv, currentUserPrompt));
-}
+Given('an open task lifecycle followed by successful completion', function (this: AutoSurfaceWorld) {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'fr49-task-life-'));
+  const tx = path.join(root, 'transcript.jsonl');
+  writeJsonl(tx, [
+    taskUse('create-72', 'TaskCreate', { subject: 'Finish task lifecycle' }),
+    taskResult('create-72', 'Task #72 created successfully: Finish task lifecycle'),
+  ]);
+  this.npRoot = root;
+  this.replayTx = tx;
+});
 
-function censusRoot(prefix: string): string {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), prefix));
-  writeTaskCensusCache(
-    root,
-    { total: { open: 11, doneRed: 0, doneUnrun: 0 }, specs: [{ slug: 'demo', open: 11, doneRed: 0, doneUnrun: 0, nextOpen: { id: 'demo:t1', title: 'Wire the gate' } }] },
-    '2026-06-17T00:00:00Z',
+When('the task is collected before and after its successful completed update', function (this: AutoSurfaceWorld) {
+  const before = collectPinatorWorkContext(
+    { session_id: 'fr49-task-life', transcript_path: this.replayTx, cwd: this.npRoot },
+    parseTranscriptEvents(fs.readFileSync(this.replayTx!, 'utf-8')),
   );
-  return root;
-}
-
-// SPECGEN004_222 (FR-11 no-progress release): consecutive ZERO-tool kicks bound the loop by work-delta
-// (the time-cap, raised here via MAX_RETRIES=99, is out of the picture); a tool-running kick resets the
-// streak. Migrated from the vitest CEGATE001_28; drives the REAL hook across sequential kicks.
-Given('a census with unfinished work and the real claim-evidence-gate stop hook with the time-cap raised', function (this: AutoSurfaceWorld) {
-  this.npRoot = censusRoot('fr11-np-');
+  fs.appendFileSync(this.replayTx!, [
+    JSON.stringify(taskUse('close-72', 'TaskUpdate', { taskId: '72', status: 'completed' })),
+    JSON.stringify(taskResult('close-72', 'Task #72 updated successfully')),
+  ].join('\n') + '\n');
+  const after = collectPinatorWorkContext(
+    { session_id: 'fr49-task-life', transcript_path: this.replayTx, cwd: this.npRoot },
+    parseTranscriptEvents(fs.readFileSync(this.replayTx!, 'utf-8')),
+  );
+  this.npKicks = [before !== null, after !== null];
 });
 
-When('the agent stops with a gray claim and no tool across consecutive kicks then runs a tool', function (this: AutoSurfaceWorld) {
-  const env = { CLAIM_GATE_MAX_RETRIES: '99' }; // isolate FR-11 from the time-based cap
-  this.npKicks = [
-    runStopHookScoped(this.npRoot!, 'Готово, всё закрыто. 37 из 48.', [], env), // streak 1
-    runStopHookScoped(this.npRoot!, 'Готово, всё закрыто. 38 из 48.', [], env), // streak 2
-    runStopHookScoped(this.npRoot!, 'Готово, всё закрыто. 39 из 48.', [], env), // streak 3 → release
-    runStopHookScoped(this.npRoot!, 'Готово, всё закрыто. 40 из 48.', [{ name: 'Read', input: { file_path: 'x.ts' } }], env), // tool → reset
-  ];
-});
-
-Then('the first kicks block the streak cap releases the stop and a tool-running kick resets the streak so the gate blocks again', function (this: AutoSurfaceWorld) {
+Then('the task source activates only while the task remains open', function (this: AutoSurfaceWorld) {
   fs.rmSync(this.npRoot!, { recursive: true, force: true });
-  assert.deepEqual(this.npKicks, [true, true, false, true], 'block, block, FR-11 release at the cap, then a tool-run resets the streak → block');
+  assert.deepEqual(this.npKicks, [true, false], 'open task activates Pinator and its successful completion deactivates it');
 });
 
-// SPECGEN004_223 (FR-11 blocker-proof): a stop resting on a blocker claim is honoured ONLY with
-// observable evidence — bare (0 tools, no bg) → block; a tool run / a launched bg task → approve.
-// Migrated from the vitest CEGATE001_29; each case uses its own fresh census root.
-Given('a census with unfinished work and the real claim-evidence-gate stop hook', function () {
-  // each blocker case below uses its own fresh census root (created in the When)
+Given('blocker prose with no current-session work source', function (this: AutoSurfaceWorld) {
+  this.npRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'fr49-blocker-chat-'));
 });
 
-When('the stop rests on a blocker claim with no tool then with a tool run then with a background task launched', function (this: AutoSurfaceWorld) {
-  const blocker = 'Жду — cucumber.json держит параллельная сессия, трогать нельзя.';
-  const a = censusRoot('fr11-bp-a-');
-  this.bpBare = runStopHookScoped(a, blocker, []);
-  fs.rmSync(a, { recursive: true, force: true });
-  const b = censusRoot('fr11-bp-b-');
-  this.bpTool = runStopHookScoped(b, blocker, [{ name: 'Bash', input: { command: 'git diff -- cucumber.json' } }]);
-  fs.rmSync(b, { recursive: true, force: true });
-  const c = censusRoot('fr11-bp-c-');
-  this.bpBg = runStopHookScoped(c, blocker, [{ name: 'Bash', input: { command: 'npm test', run_in_background: true } }]);
-  fs.rmSync(c, { recursive: true, force: true });
+When('the real hook evaluates the blocker prose in ordinary dialogue', function (this: AutoSurfaceWorld) {
+  const tx = path.join(this.npRoot!, 'transcript.jsonl');
+  writeJsonl(tx, [
+    { type: 'user', message: { role: 'user', content: [{ type: 'text', text: 'объясни почему тесты долго идут' }] } },
+    { type: 'assistant', message: { role: 'assistant', content: [{ type: 'text', text: 'Жду — тест ещё выполняется.' }] } },
+  ]);
+  const res = spawnSync(process.execPath, ['--import', 'tsx', NS_HOOK], {
+    input: JSON.stringify({ transcript_path: tx, cwd: this.npRoot, session_id: 'fr49-blocker-chat' }),
+    encoding: 'utf-8',
+    env: { ...process.env, CLAIM_GATE_ENABLED: 'true', CLAIM_GATE_JUDGE: 'false' },
+  });
+  this.bpBare = isBlockDecision(res.stdout || '');
+  this.inactiveFireExists = fs.existsSync(path.join(this.npRoot!, '.dev-pomogator', '.claim-evidence-gate-fires.jsonl'));
 });
 
-Then('the bare blocker is blocked for lacking evidence while the tool-backed and background-task ones are approved', function (this: AutoSurfaceWorld) {
-  assert.equal(this.bpBare, true, 'a bare blocker claim with no tool and no bg → block (prove it or work)');
-  assert.equal(this.bpTool, false, 'the same blocker after a real tool run → approve (substantiated)');
-  assert.equal(this.bpBg, false, 'the same blocker after launching a bg task → approve (real async wait)');
+Then('blocker prose neither activates Pinator nor creates state', function (this: AutoSurfaceWorld) {
+  fs.rmSync(this.npRoot!, { recursive: true, force: true });
+  assert.equal(this.bpBare, false, 'blocker prose alone must not activate Pinator');
+  assert.equal(this.inactiveFireExists, false, 'ordinary blocker dialogue must not persist Pinator state');
 });
 
 Given('a captured transcript where TaskCreate and TaskUpdate events have sparse visible ids after compaction', function (this: AutoSurfaceWorld) {
@@ -834,36 +847,49 @@ Then('the stale CARL evidence duplicate is collapsed or demoted and the route do
   assert.match(this.replayTodos![0].reconciliation ?? '', /newest-closed/, 'completed newest duplicate wins the cluster');
 });
 
-Given('a Pinator Stop-gate block caused by an agent todo route', function (this: AutoSurfaceWorld) {
+Given('one inactive Stop and one active task-owned Stop', function (this: AutoSurfaceWorld) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'fr49h-fire-'));
-  const tx = path.join(root, 'transcript.jsonl');
-  writeJsonl(tx, [
-    { type: 'user', message: { role: 'user', content: [{ type: 'text', text: 'почини пинатор' }] } },
-    taskUse('u72', 'TaskCreate', { subject: 'Capture real CARL runtime evidence' }),
-    taskResult('u72', 'Task #72 created successfully: Capture real CARL runtime evidence'),
-    { type: 'assistant', message: { role: 'assistant', content: [{ type: 'text', text: 'Готово. Продолжаю.' }] } },
+  const inactiveTx = path.join(root, 'inactive.jsonl');
+  writeJsonl(inactiveTx, [
+    { type: 'user', message: { role: 'user', content: [{ type: 'text', text: 'объясни текущий backlog' }] } },
+    { type: 'assistant', message: { role: 'assistant', content: [{ type: 'text', text: 'Готово.' }] } },
   ]);
-  const res = spawnSync(process.execPath, ['--import', 'tsx', NS_HOOK], {
-    input: JSON.stringify({ transcript_path: tx, cwd: root, session_id: 'fr49h-fire' }),
+  const inactive = spawnSync(process.execPath, ['--import', 'tsx', NS_HOOK], {
+    input: JSON.stringify({ transcript_path: inactiveTx, cwd: root, session_id: 'fr49h-inactive' }),
     encoding: 'utf-8',
     env: { ...process.env, CLAIM_GATE_ENABLED: 'true', CLAIM_GATE_JUDGE: 'false' },
   });
-  assert.equal(isBlockDecision(res.stdout || ''), true, `fixture must produce a real block, raw=${res.stdout}`);
+  assert.equal(isBlockDecision(inactive.stdout || ''), false, 'inactive Stop must approve');
+  this.inactiveFireExists = fs.existsSync(path.join(root, '.dev-pomogator', '.claim-evidence-gate-fires.jsonl'));
+
+  const activeTx = path.join(root, 'active.jsonl');
+  writeJsonl(activeTx, [
+    { type: 'user', message: { role: 'user', content: [{ type: 'text', text: 'почини пинатор' }] } },
+    taskUse('u72', 'TaskCreate', { subject: 'Capture real CARL runtime evidence' }),
+    taskResult('u72', 'Task #72 created successfully: Capture real CARL runtime evidence'),
+    { type: 'assistant', message: { role: 'assistant', content: [{ type: 'text', text: 'Фикс работает.' }] } },
+  ]);
+  const active = spawnSync(process.execPath, ['--import', 'tsx', NS_HOOK], {
+    input: JSON.stringify({ transcript_path: activeTx, cwd: root, session_id: 'fr49h-active' }),
+    encoding: 'utf-8',
+    env: { ...process.env, CLAIM_GATE_ENABLED: 'true', CLAIM_GATE_JUDGE: 'false' },
+  });
+  assert.equal(isBlockDecision(active.stdout || ''), true, `task-owned Stop must block, raw=${active.stdout}`);
   this.replayRoot = root;
 });
 
-When('the fire is appended to .claim-evidence-gate-fires.jsonl', function (this: AutoSurfaceWorld) {
+When('Pinator fire logging is inspected after both Stops', function (this: AutoSurfaceWorld) {
   const fires = fs.readFileSync(path.join(this.replayRoot!, '.dev-pomogator', '.claim-evidence-gate-fires.jsonl'), 'utf-8').trim().split(/\r?\n/);
-  this.fireLog = JSON.parse(fires.at(-1)!);
+  assert.equal(fires.length, 1, 'only the active Stop may append a fire record');
+  this.activeFire = JSON.parse(fires[0]);
 });
 
-Then('the log entry includes nextStepSource the real task id transcript location selected subject and duplicate reconciliation reason', function (this: AutoSurfaceWorld) {
+Then('only the active Stop logs task provenance and context revision', function (this: AutoSurfaceWorld) {
   fs.rmSync(this.replayRoot!, { recursive: true, force: true });
-  assert.equal(this.fireLog!.nextStepSource, 'agent-todo');
-  assert.equal(this.fireLog!.nextStepTaskId, '72');
-  assert.equal(typeof this.fireLog!.nextStepTranscriptLine, 'number');
-  assert.equal(this.fireLog!.nextStepSubject, 'Capture real CARL runtime evidence');
-  assert.match(String(this.fireLog!.nextStepReconciliation), /real-id:72|unique/);
+  assert.equal(this.inactiveFireExists, false, 'inactive Stop must not create a fire file');
+  assert.deepEqual(this.activeFire!.source_kinds, ['task'], 'active record names the authoritative source kind');
+  assert.equal(typeof this.activeFire!.context_revision, 'string', 'active record carries context revision');
+  assert.ok(String(this.activeFire!.context_revision).length > 10, 'context revision is a nontrivial stable hash');
 });
 
 // SPECGEN004_533 (FR-49a/FR-49e regression): touching spec-generator-v4 for a narrow task must not make
@@ -903,18 +929,29 @@ Then('the hook approves the report and never suggests the WS-F umbrella backlog 
   assert.doesNotMatch(this.ubRaw!, /ws-f-remaining/i, 'the block text must not name the umbrella task id');
 });
 
-// SPECGEN004_530 (FR-49e/FR-29): a terse follow-up prompt like «дальше» must inherit the previous
-// substantive user intent. If that previous intent is to fix Pinator, editing gate files is honest work,
-// not "weakening the gate". Drives the REAL Stop hook and a local OpenAI-compatible judge endpoint.
-Given('a Pinator-fix mandate followed by a terse continuation prompt and a live judge endpoint', function (this: AutoSurfaceWorld) {
+// Inherited conversational intent remains useful to the generic router, but it is never an
+// authoritative Pinator source. Only the successfully created task below arms the active case.
+Given('a Pinator-fix mandate with terse prose both without and with an owned task', function (this: AutoSurfaceWorld) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'fr49-follow-'));
+  const proseOnly = path.join(root, 'prose-only.jsonl');
+  writeJsonl(proseOnly, [
+    { type: 'user', message: { role: 'user', content: [{ type: 'text', text: 'почини пинатор: он считает honest gate-dev правкой сторожа' }] } },
+    { type: 'user', message: { role: 'user', content: [{ type: 'text', text: 'дальше' }] } },
+    { type: 'assistant', message: { role: 'assistant', content: [{ type: 'text', text: 'Готово.' }] } },
+  ]);
+  this.promptOnlyContextActive = collectPinatorWorkContext(
+    { session_id: 'fr49-prose-only', transcript_path: proseOnly, cwd: root },
+    parseTranscriptEvents(fs.readFileSync(proseOnly, 'utf-8')),
+  ) !== null;
+
   const tx = path.join(root, 'transcript.jsonl');
   writeJsonl(tx, [
     { type: 'user', message: { role: 'user', content: [{ type: 'text', text: 'почини пинатор: он считает honest gate-dev правкой сторожа' }] } },
     { type: 'user', message: { role: 'user', content: [{ type: 'text', text: 'дальше' }] } },
     taskUse('u1', 'TaskCreate', { subject: 'Fix gate follow-up intent' }),
     taskResult('u1', 'Task #91 created successfully: Fix gate follow-up intent'),
-    { type: 'assistant', message: { role: 'assistant', content: [{ type: 'tool_use', name: 'Edit', input: { file_path: 'tools/claim-evidence-gate/claim_evidence_gate_stop.ts' } }] } },
+    { type: 'assistant', message: { role: 'assistant', content: [{ type: 'tool_use', id: 'edit-1', name: 'Edit', input: { file_path: 'tools/claim-evidence-gate/claim_evidence_gate_stop.ts' } }] } },
+    taskResult('edit-1', 'Updated claim_evidence_gate_stop.ts'),
     { type: 'assistant', message: { role: 'assistant', content: [{ type: 'text', text: 'Готово.\n\nДальше: запускаю focused BDD.' }] } },
   ]);
   this.gateFollowRoot = root;
@@ -968,10 +1005,10 @@ When('the real Stop hook sends that turn to the judge', async function (this: Au
   }
 });
 
-Then('the judge facts say gate editing is not armed and the stop is approved', function (this: AutoSurfaceWorld) {
+Then('prose alone is inactive while the owned task supplies the only work authority', function (this: AutoSurfaceWorld) {
   fs.rmSync(this.gateFollowRoot!, { recursive: true, force: true });
-  assert.equal(this.gateFollowBlocked, false, `gate-dev follow-up must approve, raw=${this.gateFollowRaw}`);
-  assert.match(this.gateFollowPrompt!, /the user's LAST request[^\n]*почини пинатор/i, 'the terse «дальше» prompt inherits the previous substantive Pinator request');
-  assert.match(this.gateFollowPrompt!, /this turn EDITED the gate's OWN enforcement files[^\n]*: no/i, 'gate self-edit fact is suppressed for honest Pinator work');
-  assert.doesNotMatch(this.gateFollowRaw!, /real task is not gate-fixing/i, 'the old overfire reason must not return');
+  assert.equal(this.promptOnlyContextActive, false, 'mandate and terse continuation prose must not manufacture Pinator work');
+  assert.equal(this.gateFollowBlocked, false, `the owned gate-fix task may be judged and approved, raw=${this.gateFollowRaw}`);
+  assert.match(this.gateFollowPrompt!, /Fix gate follow-up intent/, 'judge packet names the owned task commitment');
+  assert.doesNotMatch(this.gateFollowRaw!, /real task is not gate-fixing/i, 'the old global prose overfire reason must not return');
 });
