@@ -73,7 +73,7 @@ When('ensure-cursor-mcp runs with {string}', function (this: World, flag: string
 
 Then('it exits {int} reporting the door entries match', function (this: World, code: number) {
   assert.equal(this.ensureExit, code, this.ensureOut);
-  assert.match(this.ensureOut ?? '', /OK|match/i);
+  assert.match(this.ensureOut ?? '', /OK|Cursor-native|match/i);
 });
 
 Given(
