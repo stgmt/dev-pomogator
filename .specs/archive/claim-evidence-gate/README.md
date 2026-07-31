@@ -20,5 +20,6 @@ Stop-хук, который ловит ленивый стоп / спихива�
 
 ## Связанные
 
-- [`.specs/bg-task-guard/FR.md`](../bg-task-guard/FR.md) — монитор фоновых задач + эскалация (FR-16).
-- [`.specs/prompt-suggest/`](../prompt-suggest/FR.md) — sibling «следующий шаг» хук.
+- [`.specs/bg-task-guard/FR.md`](../../bg-task-guard/FR.md) — монитор фоновых задач + эскалация (FR-16).
+- [`.specs/prompt-suggest/`](../../prompt-suggest/FR.md) — sibling «следующий шаг» хук.
+- Superseded by live [`.specs/pinator/`](../../pinator/README.md).

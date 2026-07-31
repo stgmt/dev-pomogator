@@ -2845,7 +2845,10 @@ export function buildToolRegistry(
     // (2) markdown/path links from OTHER live specs into .specs/<slug>/
     const specsDir = path.join(process.cwd(), '.specs');
     if (fs.existsSync(specsDir)) {
-      const linkRe = new RegExp(`(?:\\.specs/|\\.\\./|/|\\]\\()${slug.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\$&')}/`);
+      // Match only live SPEC links (`.specs/<slug>/`, `../<slug>/`, markdown `](...<slug>/`).
+      // Do NOT match bare `/<slug>/` — that false-positives on runtime dirs like `tools/claim-evidence-gate/`.
+      const esc = slug.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const linkRe = new RegExp(`(?:\\.specs/${esc}/|\\.\\./${esc}/|\\]\\([^)\\n]*${esc}/)`);
       const walk = (dir: string, otherSlug: string): void => {
         for (const ent of fs.readdirSync(dir, { withFileTypes: true })) {
           const abs = path.join(dir, ent.name);

@@ -721,11 +721,11 @@ A new user-facing tool MUST be added to TOOL_CONSUMERS with a real consumer skil
 
 **Требование:** [FR-49](FR.md#fr-49)
 
-**Rationale:** Task census, target-root resolution, next-step routing, transcript replay, and stale-marker reconciliation are shared spec infrastructure; `claim-evidence-gate` separately owns whether a Stop may be judged.
+**Rationale:** Task census, target-root resolution, next-step routing, transcript replay, and stale-marker reconciliation are shared spec infrastructure; [.specs/pinator/](../pinator/README.md) separately owns whether a Stop may be judged (M1–M2).
 
 **Historical rationale superseded:** The false-close incident (the agent declared done while 11 FRs were in-progress, IGNORING the per-prompt census banner) is not «add a tool» — the surfacing already existed and was ignored. So FR-49 ENFORCES, not just shows. Advisor-vetted scope: 3 of 4 parts WIRE+ENRICH live machinery, 1 is net-new:
 - **FR-49a** — enrich the EXISTING `buildTaskCensusLine` with the next open task (`nextOpen` on the census cache).
-- **FR-49b** — make the LIVE `claim-evidence-gate` census-AWARE: a whole-spec completion claim while the census shows unfinished work blocks with the real numbers. The text classes (works-done/deferred-work) miss the CLEAN false-close (executor ran, no defer phrasing); the census IS the disproof.
+- **FR-49b** — historical: Pinator census-aware Stop policy now lives in pinator M2 (not redefined here).
 - **FR-49c** — NO new writer: the existing `lifecycle.ts` watcher already refreshes the census on every door write (`refreshCensus` on boot + each `onPatch`). Verified, not rebuilt.
 - **FR-49d** — the ONE net-new piece: a flag-only reconciler for stale in-progress markers.
 

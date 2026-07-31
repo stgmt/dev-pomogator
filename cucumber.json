@@ -46,14 +46,14 @@
       "tests/features/plugins/specs-workflow/PLUGIN006_specs-generator.feature",
       "tests/features/plugins/plan-pomogator/PLUGIN007_plan-validator.feature",
       "tests/features/plugins/devcontainer/PLUGIN012_devcontainer.feature",
-      "tests/features/plugins/claim-evidence-gate/CEGATE001_claim-evidence-gate.feature",
+      "tests/features/plugins/claim-evidence-gate/CEGATE001_pinator.feature",
       ".specs/haiku-to-deepseek-migration/haiku-to-deepseek-migration.feature"
     ],
     "import": [
       "tests/step_definitions/**/*.ts",
       "tests/hooks/**/*.ts"
     ],
-    "tags": "not @wip and not @manual and not @windows-only and not @e2e",
+    "tags": "not @wip and not @manual and not @windows-only and not @e2e and not @historical",
     "format": [
       "message:.dev-pomogator/.last-test-run.ndjson",
       "progress-bar"

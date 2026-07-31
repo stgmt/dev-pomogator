@@ -99,10 +99,10 @@ Opt-out: `DEV_POMOGATOR_STATUSLINE=off`. Домен НЕ пересекаетс�
 | tools/auto-commit | Stop | авто-коммит с LLM-сообщением |
 | tools/auto-simplify | Stop | триггерит /simplify-ревью изменений |
 | tools/answer-simple | Stop | аудит ответа: жаргон/коды/перегруженные вопросы (правило clear-questions) |
-| tools/claim-evidence-gate | Stop (Claude Code) | проверяет завершение только при активной задаче, одобренном плане, активной спеке или `/goal`; обычный диалог пропускает молча; в Codex не регистрируется, пока нет доказанного lifecycle-контракта |
+| tools/claim-evidence-gate | Stop (Claude Code) | **Pinator** Stop-judge (canonical spec: `.specs/pinator/`). Eligibility + evidence while active task/plan/spec/`/goal`; ordinary dialogue passes silently. Runtime path not renamed this wave. |
 | tools/learnings-capture | Stop + UserPromptSubmit | очередь сигналов для /reflect и /suggest-rules |
-| tools/bg-task-guard | PostToolUse(Bash) + Stop | не даёт завершить сессию при живых bg-задачах |
-| tools/prompt-suggest | UserPromptSubmit + Stop | подсказки по промптам |
+| tools/bg-task-guard | PostToolUse(Bash) + Stop | Pinator **M4** dependency: не даёт idle-stop при живых bg-задачах |
+| tools/prompt-suggest | UserPromptSubmit + Stop | optional Pinator **M5** sibling: подсказки «что набрать дальше» (не Stop-judge; build: `build:prompt-suggest`) |
 | tools/plan-pomogator | PreToolUse(ExitPlanMode) + … | гейт формата планов (9 секций + File Changes) |
 | tools/scope-gate | pre-commit | ловит no-op «фиксы» при расширении enum/switch |
 

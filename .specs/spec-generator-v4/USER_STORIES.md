@@ -626,7 +626,7 @@ Then переход разрешён, гейт не клинит создани�
 
 **Why:** Shared census serves status, MCP, and Pinator, so its route must be scoped before any consumer uses it; historically an agent
 баннер переписи игнорировался; стоп-гейт ловил передачу хода по фразам, не по данным.
-Eligibility and Stop judgment remain a separate `claim-evidence-gate` responsibility.
+Eligibility and Stop judgment remain a separate [pinator](../pinator/README.md) responsibility.
 
 **Independent Test:** real router uses target workspace and real task IDs; generic routing alone never invokes Pinator,
 uses deterministic todo → relevant async → current-spec priority and returns no global fallback for unknown scope.

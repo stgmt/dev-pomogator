@@ -1449,14 +1449,14 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     When the real hook evaluates completion prose without an authoritative source
     Then the hook approves silently and does not create Pinator fire state
 
-  @moved-to-claim-evidence-gate
-  Scenario: SPECGEN004_187 legacy judge-prompt policy moved to claim-evidence-gate
+  @historical @superseded-by-pinator
+  Scenario: SPECGEN004_187 legacy judge-prompt policy moved to pinator (historical; executor = CEGATE001)
     Given a judge input reporting twenty open tasks
     When the помогатор judge prompt is built
     Then the prompt states the open-task count and instructs a single JSON verdict line and keeps the clarifying-question carve-out
 
-  @moved-to-claim-evidence-gate
-  Scenario: SPECGEN004_188 legacy judge-provider policy moved to claim-evidence-gate
+  @historical @superseded-by-pinator
+  Scenario: SPECGEN004_188 legacy judge-provider policy moved to pinator (historical; executor = CEGATE001)
     Given the помогатор judge endpoint resolver
     When it resolves an OpenRouter key a claude-mem key an auto-commit key an explicit override and no token at all
     Then OpenRouter-family keys pick openrouter.ai the auto-commit key picks aipomogator the explicit override wins and no token resolves to null
@@ -1467,56 +1467,56 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     When the scoped collector receives one successful current-spec mutation
     Then only the mutated spec appears and the foreign busiest backlog stays out of context
 
-  @moved-to-claim-evidence-gate
-  Scenario: SPECGEN004_190 legacy non-spec claim policy moved to claim-evidence-gate
+  @historical @superseded-by-pinator
+  Scenario: SPECGEN004_190 legacy non-spec claim policy moved to pinator (historical; executor = CEGATE001)
     Given a census with a foreign busiest spec plus current-spec unfinished work and the real claim-evidence-gate stop hook
     When the hook judges a task-level fixed-it claim made after a tool ran
     Then the hook does not block it
 
-  @moved-to-claim-evidence-gate
-  Scenario: SPECGEN004_191 legacy works-done evidence policy moved to claim-evidence-gate
+  @historical @superseded-by-pinator
+  Scenario: SPECGEN004_191 legacy works-done evidence policy moved to pinator (historical; executor = CEGATE001)
     Given a fresh repo with no census and the real claim-evidence-gate stop hook
     When the hook judges a works-done claim first with only an edit and then after a real run
     Then the hook blocks the edit-only claim and approves the one backed by a real run
 
-  @moved-to-claim-evidence-gate
-  Scenario: SPECGEN004_192 legacy not-found evidence policy moved to claim-evidence-gate
+  @historical @superseded-by-pinator
+  Scenario: SPECGEN004_192 legacy not-found evidence policy moved to pinator (historical; executor = CEGATE001)
     Given a fresh repo with no census and the real claim-evidence-gate stop hook
     When the hook judges a not-found claim first after one search and then after two searches
     Then the hook blocks the under-searched claim and approves the one backed by enough searches
 
-  @moved-to-claim-evidence-gate
-  Scenario: SPECGEN004_193 legacy verdict-grid evidence policy moved to claim-evidence-gate
+  @historical @superseded-by-pinator
+  Scenario: SPECGEN004_193 legacy verdict-grid evidence policy moved to pinator (historical; executor = CEGATE001)
     Given a fresh repo with no census and the real claim-evidence-gate stop hook
     When the hook judges a verdict grid first with no tool and then after a tool ran
     Then the hook blocks the unbacked grid and approves the one backed by a tool run
 
-  @moved-to-claim-evidence-gate
-  Scenario: SPECGEN004_194 legacy verified-via evidence policy moved to claim-evidence-gate
+  @historical @superseded-by-pinator
+  Scenario: SPECGEN004_194 legacy verified-via evidence policy moved to pinator (historical; executor = CEGATE001)
     Given a fresh repo with no census and the real claim-evidence-gate stop hook
     When the hook judges a verified-via-command claim first with no matching tool and then after that command ran
     Then the hook blocks the unmatched marker and approves the one whose command actually ran
 
-  @moved-to-claim-evidence-gate
-  Scenario: SPECGEN004_195 legacy clean-census claim policy moved to claim-evidence-gate
+  @historical @superseded-by-pinator
+  Scenario: SPECGEN004_195 legacy clean-census claim policy moved to pinator (historical; executor = CEGATE001)
     Given a clean zero-open task census and the real claim-evidence-gate stop hook
     When the scoped collector receives one successful current-spec mutation
     Then the hook does not block it
 
-  @moved-to-claim-evidence-gate
-  Scenario: SPECGEN004_196 legacy claim-classifier policy moved to claim-evidence-gate
+  @historical @superseded-by-pinator
+  Scenario: SPECGEN004_196 legacy claim-classifier policy moved to pinator (historical; executor = CEGATE001)
     Given the claim-evidence-gate pure classifier functions
     When fenced-code verdicts a negated claim a prior-turn tool and an inline-code-plus-quote string are classified
     Then fenced verdicts do not fire negation is not a works-claim evidence is scoped to the current turn and stripCode removes code and quotes
 
-  @moved-to-claim-evidence-gate
-  Scenario: SPECGEN004_197 legacy gate-mode policy moved to claim-evidence-gate
+  @historical @superseded-by-pinator
+  Scenario: SPECGEN004_197 legacy gate-mode policy moved to pinator (historical; executor = CEGATE001)
     Given the claim-evidence-gate stop hook under varying modes
     When it runs in shadow mode in disabled mode and against a missing transcript
     Then shadow approves but still logs a fire disabled approves outright and a missing transcript approves
 
-  @moved-to-claim-evidence-gate
-  Scenario: SPECGEN004_198 legacy anti-loop policy moved to claim-evidence-gate
+  @historical @superseded-by-pinator
+  Scenario: SPECGEN004_198 legacy anti-loop policy moved to pinator (historical; executor = CEGATE001)
     Given the claim-evidence-gate stop hook and an unsupported works-done continuation stop
     When the same continuation stop fires twice with stop_hook_active set
     Then the first fire blocks and the identical re-fire is released by the anti-loop

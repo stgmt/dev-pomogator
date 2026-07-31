@@ -38,3 +38,7 @@
 
 - `.claude/rules/atomic-config-save.md` — паттерн atomic write для state file
 - `.claude/rules/extension-manifest-integrity.md` — manifest update rules
+
+## Related
+
+Optional [Pinator M5](../pinator/README.md) sibling: user-facing next-prompt hints. **Not** the Stop-judge. Build script: `npm run build:prompt-suggest` (formerly misnamed `build:pinator`).

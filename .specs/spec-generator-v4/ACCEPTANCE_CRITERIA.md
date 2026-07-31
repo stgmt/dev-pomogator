@@ -718,9 +718,9 @@ WHEN transcript task IDs are sparse, non-monotonic, re-keyed, or compacted THEN 
 
 ## AC-49.4
 
-**Требование:** [FR-49e](FR.md#fr-49)
+**Требование:** [FR-49b](FR.md#fr-49), [FR-49a](FR.md#fr-49)
 
-WHEN FR-49 census or routing runs without an active `claim-evidence-gate` work context THEN it SHALL NOT invoke a Pinator judge, classify completion prose, write Pinator fire or marker state, or block Stop; claim-gate policy scenarios SHALL live under the `claim-evidence-gate` contract while FR-49 retains only generic integration boundaries.
+WHEN FR-49 census or routing runs without an active Pinator work context THEN it SHALL NOT invoke a Pinator judge, classify completion prose, write Pinator fire or marker state, or block Stop; Pinator policy scenarios SHALL live under [.specs/pinator/](../pinator/) while FR-49 retains only generic integration boundaries.
 
 ## AC-50.1
 

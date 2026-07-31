@@ -23,3 +23,7 @@ Claude Code hooks (PostToolUse + Stop) для автоматического п�
 
 - Hook scripts: `extensions/test-statusline/tools/bg-task-guard/`
 - Hook config: `extensions/test-statusline/extension.json`
+
+## Related
+
+Consumed by [Pinator M4 (async)](../pinator/README.md) — Stop-judge waits on in-flight bg work via this guard. Pinator owns eligibility/judge; this spec owns the bg marker/TTL contract.
