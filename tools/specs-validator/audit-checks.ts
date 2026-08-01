@@ -85,8 +85,11 @@ export function checkPartialImpl(specPath: string): AuditFinding[] {
       if (markerPresent(body, marker)) {
         // Check if task referencing this FR is [x]
         const tasksLines = tasksContent.split('\n');
+        const frRef = new RegExp(`(?<![\\\\p{L}\\\\p{N}_-])${frId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![\\\\p{L}\\\\p{N}_-])`, 'iu');
         for (const line of tasksLines) {
-          if (/^\s*-\s*\[x\]/i.test(line) && line.includes(frId)) {
+          // A completion claim is a canonical top-level task header. Indented
+          // checked Done-When evidence must not complete a deferred sibling FR.
+          if (/^-\s*\[x\]/i.test(line) && frRef.test(line)) {
             findings.push({
               check: 'PARTIAL_IMPL_DETECTION',
               category: 'ERRORS',

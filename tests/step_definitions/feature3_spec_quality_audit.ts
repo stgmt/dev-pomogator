@@ -61,6 +61,14 @@ Given(
   },
 );
 
+Given(
+  /^a spec where FR-83 is deferred but only a completed FR-82 task exists$/,
+  function (this: AuditWorld) {
+    write.call(this, 'FR.md', '## FR-82: Implemented\n\nComplete.\n\n## FR-83: Follow-up\n\nDeferred until FR-82.\n');
+    write.call(this, 'TASKS.md', '- [x] finish FR-82 first\n  - [x] verdict records FR-83 remains deferred\n- [ ] later FR-83 work\n');
+  },
+);
+
 Given(/^a spec with a TASKS\.md but no FR\.md$/, function (this: AuditWorld) {
   write.call(this, 'TASKS.md', '- [x] do FR-3\n');
 });

@@ -192,6 +192,12 @@ Feature: PLUGIN008 Spec Phase Gate Anti-Hallucination
     Then the partial-implementation audit reports nothing
 
   @feature3
+  Scenario: PLUGIN008_35 partial-impl audit does not confuse FR-82 with deferred FR-83
+    Given a spec where FR-83 is deferred but only a completed FR-82 task exists
+    When the partial-implementation audit runs
+    Then the partial-implementation audit reports nothing
+
+  @feature3
   Scenario: PLUGIN008_26 partial-impl audit is silent when FR.md is missing
     Given a spec with a TASKS.md but no FR.md
     When the partial-implementation audit runs

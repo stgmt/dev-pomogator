@@ -4260,14 +4260,14 @@ Scenario: SPECGEN004_669 Cursor enforce denies raw specs write and MCP apply suc
 
 
 
-@pending @feature82 @FR-82 @AC-82.1
+@feature82 @FR-82 @AC-82.1
 Scenario: SPECGEN004_670 lists every unfinished task with evidence-backed fields
   Given the live SpecGraph contains task nodes and the harness loads the captured corpus artifact for wf_0315d03b-28
   When the real list_tasks MCP handler is called for one spec without a status filter
   Then it returns every non-terminal task with id title status phase rationale links source location and evidence-backed blockers only
   And the response includes total returned truncated and next cursor metadata
 
-@pending @feature82 @FR-82 @AC-82.2
+@feature82 @FR-82 @AC-82.2
 Scenario: SPECGEN004_671 paginates task inventory without silent caps or cardinality loss
   Given the real captured task corpus has more matching tasks than the requested page limit
   When the real list_tasks MCP handler is called repeatedly with its returned cursor
@@ -4275,7 +4275,7 @@ Scenario: SPECGEN004_671 paginates task inventory without silent caps or cardina
   And every page reports returned cardinality consistently and no task is silently omitted
   And the reference corpus completes at most two pages when the limit is 200
 
-@pending @feature82 @FR-82 @AC-82.3
+@feature82 @FR-82 @AC-82.3
 Scenario: SPECGEN004_672 distinguishes an unknown phase from an empty phase
   Given the real graph exposes canonical phases and the captured corpus has a known phase with no matching tasks
   When the real list_phase_tasks MCP handler is called with the spec and each phase query
@@ -4283,35 +4283,35 @@ Scenario: SPECGEN004_672 distinguishes an unknown phase from an empty phase
   And the unknown phase returns PHASE_NOT_FOUND with nearest canonical phase candidates
   And a populated phase uses bounded deterministic pagination
 
-@pending @feature82 @FR-82 @AC-82.4
+@feature82 @FR-82 @AC-82.4
 Scenario: SPECGEN004_673 searches one spec with complete cursor pagination
   Given the real graph contains matching and non-matching nodes across more than one page
   When the real search MCP handler is called with a spec scope and fixed query filters
   Then cursor pages concatenate to the complete matching set in stable order
   And total returned truncated and next cursor values conserve the matching cardinality
 
-@pending @feature82 @FR-82 @AC-82.5
+@feature82 @FR-82 @AC-82.5
 Scenario: SPECGEN004_674 returns compact summary without unchanged census recomputation
   Given the real graph revision is unchanged between two summary requests
   When the real get_spec_status MCP handler is called with view summary twice
   Then each response contains status counts and gap summary but no full task inventory payload
   And the second call does not recompute an unchanged read-side global census
 
-@pending @feature82 @FR-82 @AC-82.6
+@feature82 @FR-82 @AC-82.6
 Scenario: SPECGEN004_675 bounds document reads and suggests canonical missing-section anchors
   Given the real spec corpus contains a document larger than the safe page bound
   When the real read_spec_doc MCP handler is called without pagination and then with a missing section
   Then the first response is bounded and a whole-document read requires explicit opt-in
   And the missing section response identifies nearest canonical headings or anchors
 
-@pending @feature82 @FR-82 @AC-82.7
+@feature82 @FR-82 @AC-82.7
 Scenario: SPECGEN004_676 keeps list phase documentation and tests truthful
   Given the live graph contains task nodes and the existing phase-query description and test are loaded
   When the list_phase_tasks contract regression runs through the real MCP handler
   Then neither the tool description nor the assertion claims that task nodes are not produced
   And a genuinely empty phase is not reported as evidence that the task inventory is absent
 
-@pending @feature82 @FR-82 @AC-82.8 @AC-82.9
+@feature82 @FR-82 @AC-82.8 @AC-82.9
 Scenario: SPECGEN004_677 meets bounded incident verification without an N by M crawl
   Given the real captured wf_0315d03b-28 incident and corpus artifact are loaded rather than a hand-invented producer shape
   When one bounded task-inventory request and bounded verification are run through real MCP handlers

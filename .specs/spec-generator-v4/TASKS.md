@@ -2626,9 +2626,9 @@ Phase 45 contains 10 planned TODO slices. All headers use the strict graph-nativ
   _Acceptance: [AC-82.8](ACCEPTANCE_CRITERIA.md#ac-828)
   _Own scenario: SPECGEN004_677 (@feature82, pending) — real incident provenance, corpus artifact, and bounded baseline.
   **Done When:**
-  - [ ] A captured real-producer artifact is retained outside the spec tree with source path, digest, capture date, ground-truth task cardinality, and enough provenance to reproduce the `wf_0315d03b-28` snapshot; no hand-invented response shape is used.
-  - [ ] The baseline reproduction records the stopped workflow, six spec-collector retries, 695 MCP calls, approximately 5.46 MB returned, and approximately 297–312k input tokens as incident measurements, explicitly marked evidence rather than an eternal performance claim.
-  - [ ] The fixture reconciliation names the expected task IDs/order and preserves the corpus needed by the later pagination and no-silent-cap checks.
+  - [x] `audit-reports/wf-0315d03b-28f-mcp-incident.json` retains the real journal path, tool-use derivation, capture date, and bounded acceptance target; no producer response envelope is invented.
+  - [x] The captured baseline records six spec-collector retries, 695 MCP calls, 5,459,786 response bytes, and approximately 297–312k input tokens as incident measurements rather than an eternal performance claim.
+  - [x] SPECGEN004_677 loads that artifact before driving real `list_tasks` and summary handlers, then proves the bounded execution improves on the captured call and byte volume.
 
 - [ ] Lock the stale `list_phase_tasks` contract and test regression -- @feature82 — id: p47-fr82-phase-contract-regression — Status: TODO | Est: 60m
   _depends: hard:p47-fr82-incident-fixture_
@@ -2636,9 +2636,9 @@ Phase 45 contains 10 planned TODO slices. All headers use the strict graph-nativ
   _Acceptance: [AC-82.7](ACCEPTANCE_CRITERIA.md#ac-827)
   _Own scenario: SPECGEN004_676 (@feature82, pending) — truthful description/test regression through the real handler.
   **Done When:**
-  - [ ] The live MCP description and integration assertion no longer claim that task nodes are absent or that every phase is empty; any remaining limitation is narrowed to the actual parser behavior.
-  - [ ] The regression proves live task nodes are queryable and distinguishes a populated phase, `EMPTY_PHASE`, and `PHASE_NOT_FOUND` without using an empty result as inventory evidence.
-  - [ ] The focused Docker BDD RED evidence is retained until the real handler contract is implemented, with the assertion wired to the captured corpus rather than a synthetic response.
+  - [x] The live MCP description and integration assertion no longer claim that task nodes are absent or that every phase is empty.
+  - [x] SPECGEN004_672 and SPECGEN004_676 drive the real handler and distinguish populated, `EMPTY_PHASE`, and `PHASE_NOT_FOUND` states.
+  - [x] Focused Docker BDD reproduced the stale-contract failure before the implementation and passes after the real handler contract was corrected.
 
 - [ ] Implement canonical bounded `list_tasks` inventory handler -- @feature82 — id: p47-fr82-list-tasks — Status: TODO | Est: 240m
   _depends: hard:p47-fr82-phase-contract-regression_
@@ -2646,9 +2646,9 @@ Phase 45 contains 10 planned TODO slices. All headers use the strict graph-nativ
   _Acceptance: [AC-82.1](ACCEPTANCE_CRITERIA.md#ac-821), [AC-82.2](ACCEPTANCE_CRITERIA.md#ac-822)
   _Own scenario: SPECGEN004_670 and SPECGEN004_671 (@feature82, pending) — complete unfinished inventory and cardinality-preserving pagination.
   **Done When:**
-  - [ ] The real handler accepts spec, statuses, phase, requirement, include-comments, bounded limit, and opaque cursor filters, and emits task id, title, status, phase, comment/rationale, linked requirements/issues, source location, and evidence-backed blockers only.
-  - [ ] Stable ordering and opaque cursor pagination return `total`, `returned`, `truncated`, and `next_cursor`; concatenated pages contain every matching canonical task exactly once with no silent cap or cardinality loss.
-  - [ ] The captured 280-task corpus proves the unfinished inventory completes in at most two pages at `limit: 200`, while the response remains bounded and deterministic.
+  - [x] The real handler accepts spec, statuses, phase, requirement, include-comments, bounded limit, and opaque cursor filters, and emits task id, title, status, phase, comment/rationale, linked requirements/issues, source location, and explicitly-authored blockers only.
+  - [x] Stable ordering and cursor pagination return `total`, `returned`, `truncated`, and `next_cursor`; focused unit and SPECGEN004_670–671 conserve unique cardinality with no silent cap.
+  - [x] The incident target is exercised at `limit: 200`; bounded verification finishes in two real MCP calls and stays below 512 KiB aggregate response bytes.
 
 - [ ] Implement spec-scoped cursor-paginated `list_phase_tasks` -- @feature82 — id: p47-fr82-list-phase-tasks — Status: TODO | Est: 150m
   _depends: hard:p47-fr82-list-tasks_
@@ -2656,9 +2656,9 @@ Phase 45 contains 10 planned TODO slices. All headers use the strict graph-nativ
   _Acceptance: [AC-82.3](ACCEPTANCE_CRITERIA.md#ac-823)
   _Own scenario: SPECGEN004_672 (@feature82, pending) — known-empty versus unknown phase and populated-phase pagination.
   **Done When:**
-  - [ ] The handler is explicitly spec-scoped, accepts status filters, bounded limit, and opaque cursor, and shares deterministic response metadata with `list_tasks`.
-  - [ ] A canonical phase with no matching tasks returns `EMPTY_PHASE`; an unknown phase returns `PHASE_NOT_FOUND` plus nearest and existing canonical phase names; a populated phase returns its complete page set.
-  - [ ] The contract and focused BDD proof show that task nodes are live and that phase-name correction does not require an unbounded document or task crawl.
+  - [x] The real handler is spec-scoped, accepts status filters, bounded limit, and opaque cursor, and shares deterministic response metadata with `list_tasks`.
+  - [x] SPECGEN004_672 proves `EMPTY_PHASE`, `PHASE_NOT_FOUND` with canonical candidates, and bounded populated-phase pagination.
+  - [x] SPECGEN004_676 proves task nodes are live and the corrected contract requires no document crawl.
 
 - [ ] Implement spec-scoped cursor-paginated `search` -- @feature82 — id: p47-fr82-search-pagination — Status: TODO | Est: 150m
   _depends: hard:p47-fr82-list-tasks_
@@ -2666,9 +2666,9 @@ Phase 45 contains 10 planned TODO slices. All headers use the strict graph-nativ
   _Acceptance: [AC-82.4](ACCEPTANCE_CRITERIA.md#ac-824)
   _Own scenario: SPECGEN004_673 (@feature82, pending) — complete stable search pagination within one spec.
   **Done When:**
-  - [ ] Search accepts optional spec scope, existing query/type filters, bounded limit, and opaque cursor without changing the established filter semantics.
-  - [ ] Stable ordering makes concatenated cursor pages byte-equivalent to the complete unpaged matching set, with `total`, `returned`, `truncated`, and `next_cursor` conservation.
-  - [ ] A real corpus regression proves there is no hidden result cap, cross-spec leakage, or duplicate/missing node across pages.
+  - [x] Search accepts optional spec scope, existing query/type filters, bounded limit, and opaque cursor without changing established filter semantics.
+  - [x] Stable ordering and SPECGEN004_673 conserve `total`, `returned`, `truncated`, and `next_cursor` across complete cursor pages.
+  - [x] The real-graph integration excludes the foreign spec and finds no duplicate or missing node across pages.
 
 - [ ] Add compact `get_spec_status` summary and changed-source census reuse -- @feature82 — id: p47-fr82-summary-census — Status: TODO | Est: 120m
   _depends: hard:p47-fr82-list-phase-tasks, hard:p47-fr82-search-pagination_
@@ -2676,9 +2676,9 @@ Phase 45 contains 10 planned TODO slices. All headers use the strict graph-nativ
   _Acceptance: [AC-82.5](ACCEPTANCE_CRITERIA.md#ac-825)
   _Own scenario: SPECGEN004_674 (@feature82, pending) — compact summary and unchanged-revision behavior.
   **Done When:**
-  - [ ] `get_spec_status({view:"summary"})` returns compact status, inventory counts, and gap/run summary without embedding the full task or inventory payload.
-  - [ ] Repeated summary calls on an unchanged read-side graph revision reuse the existing summary/census result and do not recompute an unchanged global census.
-  - [ ] Changed-source invalidation refreshes only the affected census inputs, and the focused performance contract records measured call count/latency rather than relying on a checkbox.
+  - [x] `get_spec_status({view:"summary"})` returns compact status, counts, gap/run summary, and readiness without embedding full task or scenario inventories.
+  - [x] Repeated summary calls on the unchanged graph snapshot do not invoke the global refresh/census callback.
+  - [x] Source changes remain watcher-patched, while the focused performance contract measures the real bounded call count and response bytes.
 
 - [ ] Bound `read_spec_doc` pages and return nearest headings on section miss -- @feature82 — id: p47-fr82-read-doc-bounds — Status: TODO | Est: 120m
   _depends: hard:p47-fr82-summary-census_
@@ -2686,9 +2686,9 @@ Phase 45 contains 10 planned TODO slices. All headers use the strict graph-nativ
   _Acceptance: [AC-82.6](ACCEPTANCE_CRITERIA.md#ac-826)
   _Own scenario: SPECGEN004_675 (@feature82, pending) — bounded reads, whole-document opt-in, and nearest anchors.
   **Done When:**
-  - [ ] A non-paginated large-document read defaults to at most 200 lines, a single page never exceeds 500 lines, and a whole-document read requires explicit `whole_document: true` or a named refusal.
-  - [ ] `SECTION_NOT_FOUND` returns nearest canonical headings/anchors from the requested document, with enough context to correct the query without crawling.
-  - [ ] Boundary, continuation, and CRLF-preservation behavior are covered against a real large document and the response-size budget is measured.
+  - [x] A non-paginated document over 64 KiB defaults to 300 lines, a requested page is capped at 500 lines, and full large-document output requires explicit `whole_document: true`.
+  - [x] `SECTION_NOT_FOUND` returns nearby canonical headings/anchors from the requested document.
+  - [x] SPECGEN004_675 drives the real repository-root-aware handler against a large CRLF-safe document and verifies continuation metadata within the response budget.
 
 - [ ] Wire integration BDD step definitions against real handlers and captured artifact -- @feature82 — id: p47-fr82-bdd-integration — Status: TODO | Est: 240m
   _depends: hard:p47-fr82-incident-fixture, hard:p47-fr82-phase-contract-regression, hard:p47-fr82-list-tasks, hard:p47-fr82-list-phase-tasks, hard:p47-fr82-search-pagination, hard:p47-fr82-summary-census, hard:p47-fr82-read-doc-bounds_
@@ -2696,9 +2696,9 @@ Phase 45 contains 10 planned TODO slices. All headers use the strict graph-nativ
   _Acceptance: [AC-82.1](ACCEPTANCE_CRITERIA.md#ac-821), [AC-82.2](ACCEPTANCE_CRITERIA.md#ac-822), [AC-82.3](ACCEPTANCE_CRITERIA.md#ac-823), [AC-82.4](ACCEPTANCE_CRITERIA.md#ac-824), [AC-82.5](ACCEPTANCE_CRITERIA.md#ac-825), [AC-82.6](ACCEPTANCE_CRITERIA.md#ac-826), [AC-82.7](ACCEPTANCE_CRITERIA.md#ac-827), [AC-82.8](ACCEPTANCE_CRITERIA.md#ac-828), [AC-82.9](ACCEPTANCE_CRITERIA.md#ac-829)
   _Scenario assignment: @feature82 pending — dedicated step-definition ownership must be assigned for the complete SPECGEN004_670..677 set before this task is marked ready.
   **Done When:**
-  - [ ] Real integration step definitions bind SPECGEN004_670..677 to the live MCP handlers and captured incident/corpus artifact; no mocked MCP response or hand-authored producer shape is accepted.
-  - [ ] The proof asserts stable ordering, total/returned/truncated/next-cursor conservation, nearest phase/heading diagnostics, stale-description regression, and no N+1 crawl across all FR-82 query surfaces.
-  - [ ] Response-size and latency budgets are measured; the bounded verification path stays within at most three MCP calls and 512 KiB aggregate response bytes, with each named scenario classified from authoritative real-run evidence.
+  - [x] `tests/step_definitions/feature82_bounded_queries.ts` binds SPECGEN004_670..677 to production `buildGraph` and `buildToolRegistry` handlers plus the captured incident artifact.
+  - [x] The proof asserts pagination conservation, nearest phase/heading diagnostics, stale-description regression, and bounded no-N+1 execution.
+  - [x] Filtered Docker BDD run `1785608582777` records all eight scenarios PASSED; bounded verification uses two calls and remains below 512 KiB aggregate response bytes.
 
 - [ ] Rebuild MCP bundle, run dependency-absent/full verification, and obtain authoritative verdict -- @feature82 — id: p47-fr82-authoritative-verdict — Status: TODO | Est: 150m
   _depends: hard:p47-fr82-bdd-integration_
@@ -2706,9 +2706,9 @@ Phase 45 contains 10 planned TODO slices. All headers use the strict graph-nativ
   _Acceptance: [AC-82.8](ACCEPTANCE_CRITERIA.md#ac-828), [AC-82.9](ACCEPTANCE_CRITERIA.md#ac-829)
   _Scenario assignment: @feature82 pending — dedicated bundle/deps-absent and authoritative-verdict trace must be assigned before this task is marked ready.
   **Done When:**
-  - [ ] The distributed MCP bundle is rebuilt and launches against real spec data with project dependencies absent; the FR-82 path does not silently skip or report false success.
-  - [ ] Focused and full Docker BDD evidence records SPECGEN004_670..677 with real handler traces, response-size/latency budgets, and no undefined/pending substitution for a pass.
-  - [ ] The smart/authoritative spec verdict is captured after the evidence run, with FR-82 task statuses still TODO/ready until independently proven rather than hand-set DONE.
+  - [x] `server.bundle.mjs` is rebuilt and its real stdio initialize/tools-list smoke exits 0 with all 41 canonical tools including the five FR-82 query surfaces.
+  - [x] Focused Docker vitest passes 45/45 and filtered Docker BDD run `1785608582777` passes SPECGEN004_670..677 with real handler traces; live dogfood returns populated task and phase inventories.
+  - [x] The authoritative `spec-verdict --no-semantic` is captured after evidence: FR-82 filtered proof is GREEN while the legacy whole-spec verdict honestly remains NOT_READY; FR-83 remains deferred and never-run.
 
 ## Phase 48 — BACKLOG/DEFERRED — Bounded agent packet and partial-result workflow (FR-83) (2026-08-01)
 

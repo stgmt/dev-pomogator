@@ -2420,9 +2420,12 @@ async function commandAuditSpec(argv) {
     }
 
     for (const [frId, marker] of Object.entries(frWithMarkers)) {
-      const frPattern = new RegExp(escapeRegExp(frId), 'i');
+      const frPattern = new RegExp(`(?<![\\\\p{L}\\\\p{N}_-])${escapeRegExp(frId)}(?![\\\\p{L}\\\\p{N}_-])`, 'iu');
       for (const taskLine of tasksLines) {
-        if (/^\s*-\s*\[x\]/i.test(taskLine) && frPattern.test(taskLine)) {
+        // Only canonical top-level task headers claim an FR complete. Indented
+        // checked Done-When evidence may mention deferred sibling FRs without
+        // completing them (FR-82/FR-83 incident, 2026-08-01).
+        if (/^-\s*\[x\]/i.test(taskLine) && frPattern.test(taskLine)) {
           findings.push({
             check: 'PARTIAL_IMPL_DETECTION',
             category: 'ERRORS',
