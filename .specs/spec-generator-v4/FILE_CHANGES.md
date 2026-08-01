@@ -650,7 +650,7 @@ This table is the explicit implementation inventory for the execution-aware task
 
 ## Phase 47 — Bounded MCP query contracts (FR-82)
 
-| Action | Path | FR/AC responsibility |
+| Action | Path | Reason |
 |---|---|---|
 | EDIT | `tools/spec-graph/types.ts` | FR-82; task query nodes carry explicit comment, blocker, and GitHub-issue evidence fields. |
 | EDIT | `tools/spec-graph/parsers/tasks.ts` | FR-82; parse only authored task comments/blockers and linked GitHub issue references. |
