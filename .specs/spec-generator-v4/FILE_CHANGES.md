@@ -652,21 +652,25 @@ This table is the explicit implementation inventory for the execution-aware task
 
 | Action | Path | FR/AC responsibility |
 |---|---|---|
-| MODIFY | `tools/spec-graph/types.ts` | FR-82; task query nodes carry explicit comment, blocker, and GitHub-issue evidence fields. |
-| MODIFY | `tools/spec-graph/parsers/tasks.ts` | FR-82; parse only authored task comments/blockers and linked GitHub issue references. |
-| MODIFY | `tools/spec-mcp-server/tools.ts` | FR-82; add bounded `list_tasks`, truthful `list_phase_tasks`, spec-scoped complete `search`, compact `get_spec_status` summary, bounded `read_spec_doc`, and filtered-proof next-action contracts. |
-| MODIFY | `tools/spec-mcp-server/lifecycle.ts` | FR-82; reuse unchanged graph/census state instead of an unnecessary read-side global census recomputation. |
-| MODIFY | `tools/spec-mcp-server/server.ts` | FR-82; distributed stdio server treats stdin EOF as a clean session shutdown for real bundle verification. |
-| MODIFY | `tools/spec-mcp-server/server.bundle.mjs` | FR-82; rebuilt user-distributed MCP artifact containing the bounded query contracts. |
-| MODIFY | `tools/spec-mcp-server/__tests__/tools.test.ts` | FR-82; real-handler regressions for pagination, phase states, summary reuse, filtered proof, and canonical registry shape. |
-| MODIFY | `tools/spec-mcp-server/dogfood-dataset.ts` | FR-82; live probes for bounded task and phase inventory. |
+| EDIT | `tools/spec-graph/types.ts` | FR-82; task query nodes carry explicit comment, blocker, and GitHub-issue evidence fields. |
+| EDIT | `tools/spec-graph/parsers/tasks.ts` | FR-82; parse only authored task comments/blockers and linked GitHub issue references. |
+| EDIT | `tools/spec-mcp-server/tools.ts` | FR-82; add bounded `list_tasks`, truthful `list_phase_tasks`, spec-scoped complete `search`, compact `get_spec_status` summary, bounded `read_spec_doc`, and filtered-proof next-action contracts. |
+| EDIT | `tools/spec-mcp-server/lifecycle.ts` | FR-82; reuse unchanged graph/census state instead of an unnecessary read-side global census recomputation. |
+| EDIT | `tools/spec-mcp-server/server.ts` | FR-82; distributed stdio server treats stdin EOF as a clean session shutdown for real bundle verification. |
+| EDIT | `tools/spec-mcp-server/server.bundle.mjs` | FR-82; rebuilt user-distributed MCP artifact containing the bounded query contracts. |
+| EDIT | `tools/spec-mcp-server/__tests__/tools.test.ts` | FR-82; real-handler regressions for pagination, phase states, summary reuse, filtered proof, and canonical registry shape. |
+| EDIT | `tools/spec-mcp-server/dogfood-dataset.ts` | FR-82; live probes for bounded task and phase inventory. |
 | CREATE | `tests/step_definitions/feature82_bounded_queries.ts` | FR-82; integration BDD steps drive real MCP handlers and the captured incident acceptance target. |
-| MODIFY | `tests/step_definitions/feature_spec_hooks_stdin.ts` | FR-82; real bundle stdin tool-set smoke includes `list_tasks` and the canonical registry. |
-| MODIFY | `.claude/skills/spec-graph-query/SKILL.md` | FR-82; user-facing query workflow documents bounded task inventory and allowed tools. |
-| MODIFY | `.claude/skills/spec-generator-orchestrator/scripts/feature-map.ts` | FR-82; capability/consumer drift maps reference the new task query tool. |
-| MODIFY | `.specs/spec-generator-v4/spec-generator-v4.feature` | FR-82; SPECGEN004_670..677 source scenarios with real-handler and invariant contracts. |
+| EDIT | `tests/step_definitions/feature_spec_hooks_stdin.ts` | FR-82; real bundle stdin tool-set smoke includes `list_tasks` and the canonical registry. |
+| EDIT | `.claude/skills/spec-graph-query/SKILL.md` | FR-82; user-facing query workflow documents bounded task inventory and allowed tools. |
+| EDIT | `.claude/skills/spec-generator-orchestrator/scripts/feature-map.ts` | FR-82; capability/consumer drift maps reference the new task query tool. |
+| EDIT | `.specs/spec-generator-v4/spec-generator-v4.feature` | FR-82; SPECGEN004_670..677 source scenarios with real-handler and invariant contracts. |
 | CREATE | `audit-reports/wf-0315d03b-28f-mcp-incident.json` | FR-82; captured six-attempt/695-call incident baseline and bounded acceptance target with journal provenance. |
-| MODIFY | `NFR.md` | FR-82; explicit page, response-byte, latency, call-count, and no-N×M budgets. |
+| EDIT | `tools/specs-generator/specs-generator-core.mjs` | FR-82; authoritative audit matches exact top-level task FR claims and ignores checked Done-When evidence for deferred siblings. |
+| EDIT | `tools/specs-validator/audit-checks.ts` | FR-82; typed partial-implementation audit shares the exact top-level FR-token contract. |
+| EDIT | `tests/step_definitions/feature3_spec_quality_audit.ts` | FR-82; regression fixture for FR-82 completion evidence beside deferred FR-83. |
+| EDIT | `.specs/spec-phase-gate/spec-phase-gate.feature` | FR-82; PLUGIN008_35 regression for deferred-sibling false positives. |
+| EDIT | `NFR.md` | FR-82; explicit page, response-byte, latency, call-count, and no-N×M budgets. |
 
 ## Phase 48 — Deferred bounded agent packet (FR-83; backlog after FR-82)
 
