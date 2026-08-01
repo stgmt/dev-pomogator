@@ -108,11 +108,11 @@ const EXPECTED_TOOLS = [
   'archive_spec', 'conformance_check', 'create_spec', 'delete_spec_doc',
   'find_by_tags', 'find_orphans', 'find_refs', 'get_archival_proof',
   'get_node', 'get_scenario_trace', 'get_spec_status', 'get_test_result',
-  'get_trace', 'insert_after_heading', 'insert_at_eof', 'list_phase_tasks',
+  'get_trace', 'insert_after_heading', 'insert_at_eof', 'list_phase_tasks', 'list_tasks',
   'list_spec_docs', 'list_specs', 'propose_patch', 'propose_spec_change',
   'read_attachment', 'read_spec_doc', 'register_incident_backlog', 'rename_spec_doc',
-  'replace_in_section', 'search', 'set_entity_status', 'set_spec_status',
-  'validate_anchor',
+  'replace_in_section', 'search', 'set_entity_status', 'set_requirement_metadata', 'set_spec_status',
+  'policy_query_requirements', 'validate_anchor', 'validate_requirement_metadata',
 ].sort();
 
 function runBundle(w: HookStdinWorld, input: string, cwd?: string) {

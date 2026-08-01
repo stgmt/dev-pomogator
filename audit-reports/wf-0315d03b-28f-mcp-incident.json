@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "captured_at": "2026-08-01",
+  "source": "Claude Code Dynamic Workflow journal wf_0315d03b-28f",
+  "scope": "spec collector retries and spec-MCP calls",
+  "ground_truth": {
+    "spec_collector_attempts": 6,
+    "spec_mcp_calls": 695,
+    "aggregate_response_bytes": 5459786,
+    "observed_attempt_input_token_range": {
+      "minimum_approx": 297000,
+      "maximum_approx": 312000
+    },
+    "github_collector_completed": true,
+    "spec_collector_structured_outputs": 0
+  },
+  "provenance": {
+    "session_id": "daf63440-cdb2-402f-b00a-fb2ef5e69190",
+    "workflow_run_id": "wf_0315d03b-28f",
+    "journal_path_at_capture": "C:/Users/stigm/.claude/projects/E--repos-dev-pomogator/daf63440-cdb2-402f-b00a-fb2ef5e69190/subagents/workflows/wf_0315d03b-28f/journal.jsonl",
+    "derivation": "Matched real tool_use and tool_result records by tool_use_id; counted only mcp__dev-pomogator-specs__ calls. Response bytes are UTF-8 bytes of matched MCP tool-result text."
+  },
+  "acceptance_target": {
+    "maximum_mcp_calls": 3,
+    "maximum_aggregate_response_bytes": 524288,
+    "task_inventory": "one bounded list_tasks call plus one bounded summary verification"
+  }
+}

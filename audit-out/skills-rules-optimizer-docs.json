@@ -1,0 +1,26 @@
+{
+  "ok": true,
+  "spec": "skills-rules-optimizer",
+  "docs": [
+    ".progress.json",
+    "ACCEPTANCE_CRITERIA.md",
+    "CHANGELOG.md",
+    "DECISION_RECOMMENDATION.md",
+    "DESIGN.md",
+    "FILE_CHANGES.md",
+    "FIXTURES.md",
+    "FR.md",
+    "NFR.md",
+    "README.md",
+    "REQUIREMENTS.md",
+    "RESEARCH.md",
+    "TASKS.md",
+    "USER_STORIES.md",
+    "USE_CASES.md",
+    "skills-rules-optimizer.feature",
+    "skills-rules-optimizer_SCHEMA.md",
+    "validation-report.md"
+  ],
+  "count": 18,
+  "attachments": []
+}

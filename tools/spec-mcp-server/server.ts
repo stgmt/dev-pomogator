@@ -134,8 +134,9 @@ async function main(): Promise<void> {
 
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  // Closing transport (EOF on stdin) resolves connect(); we treat that as a
-  // clean shutdown signal — the parent agent decided we're done.
+  // The SDK keeps connect() alive after stdin EOF. Treat EOF as the parent
+  // closing the MCP session so bundle smoke tests and real clients shut down cleanly.
+  process.stdin.once('end', () => void shutdownAndExit(0));
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

@@ -347,3 +347,30 @@
 | CHK-FR81-06 | FR-81 install = one MCP file via AC-81.6 | FR-81, AC-81.6, @feature81, UC-33 | Manual review | Draft | No second plugin |
 | CHK-FR81-07 | FR-81 resolveRepoRoot Cursor placeholder via AC-81.2 | FR-81, AC-81.2, @feature81, SPECGEN004_667 | BDD scenario | Draft | Deterministic |
 
+
+
+## Verification Matrix — FR-82 bounded MCP query contracts
+
+| CHK-ID | Requirement | Traces To | Verification Method | Status | Notes |
+|---|---|---|---|---|---|
+| CHK-FR82-01 | Unfinished task inventory exposes complete task records and evidence-backed blockers | FR-82, AC-82.1, @feature82, UC-34 | Integration test | Draft | `tools/spec-mcp-server/tools.ts`; captured corpus required |
+| CHK-FR82-02 | Task pagination conserves cardinality and has no silent cap | FR-82, AC-82.2, @feature82, UC-34 | Integration test | Draft | Reference corpus target: 280 tasks, max 2 pages |
+| CHK-FR82-03 | Phase query is spec-scoped and distinguishes not-found from empty | FR-82, AC-82.3, @feature82, UC-34 | Integration test | Draft | Canonical phase candidates required |
+| CHK-FR82-04 | Search is scoped and completely cursor-paginated | FR-82, AC-82.4, @feature82, UC-34 | Integration test | Draft | Stable order and total/returned invariants |
+| CHK-FR82-05 | Summary status is compact and avoids unchanged global recomputation | FR-82, AC-82.5, @feature82, UC-34 | Integration test | Draft | `tools/spec-mcp-server/lifecycle.ts` |
+| CHK-FR82-06 | Document reads are bounded and missing sections suggest canonical anchors | FR-82, AC-82.6, @feature82, UC-34 | Integration test | Draft | Default 200/max 500 lines; explicit whole read |
+| CHK-FR82-07 | Stale list-phase description/test is corrected to live task-node behavior | FR-82, AC-82.7, @feature82, UC-34 | Integration test | Draft | `tools/spec-mcp-server/__tests__/tools.test.ts` |
+| CHK-FR82-08 | Incident-driven bounded inventory meets declared call/byte/latency budgets | FR-82, AC-82.8, @feature82, UC-34 | Integration test | Draft | Incident measurements are evidence, not eternal performance claims |
+| CHK-FR82-09 | Executable pending scenarios use real handlers and real producer artifact | FR-82, AC-82.9, @feature82, UC-34 | Integration test | Draft | No hand-invented producer response shape |
+
+## Verification Matrix — FR-83 deferred bounded agent packet
+
+| CHK-ID | Requirement | Traces To | Verification Method | Status | Notes |
+|---|---|---|---|---|---|
+| CHK-FR83-01 | Packet declares finite scopes, budgets, stop condition, and partial fallback | FR-83, AC-83.1, @feature83, UC-35 | Integration test | Draft | Deferred/backlog after FR-82; Dynamic Workflow path TBD-owned-by-discovery |
+| CHK-FR83-02 | Context/invalid-request retry is classified and at most one narrowed retry | FR-83, AC-83.2, @feature83, UC-35 | Integration test | Draft | Same-prompt retry forbidden; deferred/backlog |
+| CHK-FR83-03 | Completed sibling output and blocked/dropped scopes remain visible | FR-83, AC-83.3, @feature83, UC-35 | Integration test | Draft | GitHub output must survive spec failure; deferred/backlog |
+| CHK-FR83-04 | Per-agent telemetry and repeated-key/journal signals are exposed | FR-83, AC-83.4, @feature83, UC-35 | Integration test | Draft | Real provenance replay; deferred/backlog |
+| CHK-FR83-05 | Deterministic collectors precede model loops | FR-83, AC-83.5, @feature83, UC-35 | Integration test | Draft | No repeated discovery crawl; deferred/backlog |
+| CHK-FR83-06 | wf_0315d03b-28 regression stops early and surfaces partial output | FR-83, AC-83.6, @feature83, UC-35 | Integration test | Draft | GitHub completed; spec retried six times; deferred/backlog |
+

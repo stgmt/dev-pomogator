@@ -1,0 +1,56 @@
+[
+  {
+    "doc": "FR.md",
+    "ok": false,
+    "err": "{\"ok\":false,\"error\":\"VALIDATION_FAILED\",\"spec\":\"pinator\",\"doc\":\"FR.md\",\"findings\":[{\"layer\":\"anchor\",\"line\":5,\"message\":\"broken anchor #fr-1-название → .specs/pinator/FR.md (.specs/pinator/ACCEPTANCE_CRITERIA.md)\"},{\"layer\":\"anchor\",\"line\":11,\"message\":\"broken anchor #fr-2-название → .specs/pinator/FR.md (.specs/pinator/ACCEPTANCE_CRITERIA.md)\"},{\"layer\":\"anchor\",\"line\":17,\"message\":\"broken anchor #fr-3-название → .specs/pinator/FR.md (.specs/pinator/ACCEPTANCE_CRITERIA.md)\"},{\"layer\":\"anchor\",\""
+  },
+  {
+    "doc": "NFR.md",
+    "ok": true
+  },
+  {
+    "doc": "ACCEPTANCE_CRITERIA.md",
+    "ok": false,
+    "err": "{\"ok\":false,\"error\":\"VALIDATION_FAILED\",\"spec\":\"pinator\",\"doc\":\"ACCEPTANCE_CRITERIA.md\",\"findings\":[{\"layer\":\"anchor\",\"line\":7,\"message\":\"broken anchor #ac-1-fr-1 → .specs/pinator/ACCEPTANCE_CRITERIA.md (.specs/pinator/FR.md)\"},{\"layer\":\"anchor\",\"line\":14,\"message\":\"broken anchor #ac-2-fr-2 → .specs/pinator/ACCEPTANCE_CRITERIA.md (.specs/pinator/FR.md)\"},{\"layer\":\"anchor\",\"line\":21,\"message\":\"broken anchor #ac-3-fr-3 → .specs/pinator/ACCEPTANCE_CRITERIA.md (.specs/pinator/FR.md)\"},{\"layer\":\"anch"
+  },
+  {
+    "doc": "DESIGN.md",
+    "ok": false,
+    "err": "{\"ok\":false,\"error\":\"VALIDATION_FAILED\",\"spec\":\"pinator\",\"doc\":\"DESIGN.md\",\"findings\":[{\"layer\":\"anchor\",\"line\":8,\"message\":\"broken anchor #fr-1 → .specs/pinator/FR.md (.specs/pinator/DESIGN.md)\"},{\"layer\":\"anchor\",\"line\":16,\"message\":\"broken anchor #fr-2 → .specs/pinator/FR.md (.specs/pinator/DESIGN.md)\"},{\"layer\":\"anchor\",\"line\":24,\"message\":\"broken anchor #fr-3 → .specs/pinator/FR.md (.specs/pinator/DESIGN.md)\"},{\"layer\":\"anchor\",\"line\":32,\"message\":\"broken anchor #fr-4 → .specs/pinator/FR.md"
+  },
+  {
+    "doc": "REQUIREMENTS.md",
+    "ok": true
+  },
+  {
+    "doc": "FILE_CHANGES.md",
+    "ok": true
+  },
+  {
+    "doc": "CHANGELOG.md",
+    "ok": true
+  },
+  {
+    "doc": "USER_STORIES.md",
+    "ok": false,
+    "err": "{\"ok\":false,\"error\":\"VALIDATION_FAILED\",\"spec\":\"pinator\",\"doc\":\"USER_STORIES.md\",\"findings\":[{\"layer\":\"anchor\",\"line\":4,\"message\":\"broken anchor #fr-1 → .specs/pinator/FR.md (.specs/pinator/USER_STORIES.md)\"},{\"layer\":\"anchor\",\"line\":11,\"message\":\"broken anchor #fr-2 → .specs/pinator/FR.md (.specs/pinator/USER_STORIES.md)\"},{\"layer\":\"anchor\",\"line\":18,\"message\":\"broken anchor #fr-3 → .specs/pinator/FR.md (.specs/pinator/USER_STORIES.md)\"},{\"layer\":\"anchor\",\"line\":25,\"message\":\"broken anchor #fr-"
+  },
+  {
+    "doc": "USE_CASES.md",
+    "ok": false,
+    "err": "{\"ok\":false,\"error\":\"VALIDATION_FAILED\",\"spec\":\"pinator\",\"doc\":\"USE_CASES.md\",\"findings\":[{\"layer\":\"anchor\",\"line\":8,\"message\":\"broken anchor #uc-1-название → .specs/pinator/USE_CASES.md (.specs/pinator/FR.md)\"},{\"layer\":\"anchor\",\"line\":15,\"message\":\"broken anchor #uc-2-название → .specs/pinator/USE_CASES.md (.specs/pinator/FR.md)\"},{\"layer\":\"anchor\",\"line\":22,\"message\":\"broken anchor #uc-3-название → .specs/pinator/USE_CASES.md (.specs/pinator/FR.md)\"},{\"layer\":\"anchor\",\"line\":29,\"message\":\"bro"
+  },
+  {
+    "doc": "RESEARCH.md",
+    "ok": true
+  },
+  {
+    "doc": "TASKS.md",
+    "ok": false,
+    "err": "{}"
+  },
+  {
+    "doc": "pinator.feature",
+    "ok": true
+  }
+]

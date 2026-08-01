@@ -1,5 +1,12 @@
 # Spec Generator v4 production finalization
 
+## FR-82 / FR-83 package status (2026-08-01)
+
+- **FR-82 — next/immediate:** new Phase 47 adds nine TODO TDD tasks for the real `wf_0315d03b-28` artifact, truthful bounded MCP inventory/read contracts, real BDD budgets, and dependency-absent bundle plus authoritative-verdict proof. Scenarios `SPECGEN004_670`–`SPECGEN004_677` remain pending; no implementation is claimed.
+- **FR-83 — deferred after FR-82:** new Phase 48 is explicitly BACKLOG/DEFERRED with seven TODO tasks for bounded agent packets, one narrowed retry, partial-result barriers, telemetry/repeated-key detection, deterministic collectors, and incident regression. Its Dynamic Workflow implementation path is TBD-owned-by-discovery and every task depends on the FR-82 phase.
+- **Task inventory:** the finalization transaction adds 16 canonical task records to the 280-task pre-finalization baseline; task statuses remain TODO/ready, never DONE.
+
+
 **NOT_READY — Unreleased work on `release/spec-generator-v4-finalization`. Latest published release: `v1.5.0` (historical baseline).**
 
 ## Execution-aware task planning slice (planned)

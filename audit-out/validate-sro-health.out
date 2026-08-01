@@ -1,0 +1,25 @@
+{
+  "valid": true,
+  "path": ".specs/skills-rules-optimizer",
+  "errors": [],
+  "warnings": [
+    {
+      "file": "DESIGN.md",
+      "rule": "BDD_INFRA",
+      "message": "BDD Test Infrastructure section exists but has no Classification (TEST_DATA_ACTIVE or TEST_DATA_NONE). Agent must classify the feature."
+    },
+    {
+      "file": "DESIGN.md",
+      "line": 181,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [spec-variant-matrix](../spec-variant-matrix/FR.md) - target file '../spec-variant-matrix/FR.md' not found in spec folder"
+    }
+  ],
+  "summary": {
+    "total_files": 19,
+    "valid_files": 18,
+    "files_with_errors": 0,
+    "files_with_warnings": 1,
+    "unfilled_placeholders": 0
+  }
+}

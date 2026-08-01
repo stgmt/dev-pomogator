@@ -1,0 +1,28 @@
+{
+  "version": 4,
+  "featureSlug": "dynamic-workflow-engineering",
+  "createdAt": "2026-08-01T16:45:35.540Z",
+  "currentPhase": "Complete",
+  "phases": {
+    "Discovery": {
+      "completedAt": "2026-08-01T17:57:46.175Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-08-01T17:57:46.175Z"
+    },
+    "Context": {
+      "completedAt": "2026-08-01T17:57:46.175Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-08-01T17:57:48.021Z"
+    },
+    "Requirements": {
+      "completedAt": "2026-08-01T17:57:46.175Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-08-01T17:57:50.971Z"
+    },
+    "Finalization": {
+      "completedAt": "2026-08-01T17:57:46.175Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-08-01T17:57:57.375Z"
+    }
+  }
+}

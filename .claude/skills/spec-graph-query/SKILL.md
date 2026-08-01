@@ -14,12 +14,12 @@ description: >
   NOT use for: markdown link/anchor NAVIGATION or rename (markdown-lsp / Marksman), bulk
   broken-anchor scan+fix (anchor-fix), the honest per-task DONE verdict (get_spec_status view
   coverage / spec-status), or cross-spec drift (cross-spec-reconcile).
-allowed-tools: mcp__dev-pomogator-specs__get_trace, mcp__dev-pomogator-specs__find_by_tags, mcp__dev-pomogator-specs__conformance_check, mcp__dev-pomogator-specs__search, mcp__dev-pomogator-specs__get_node, mcp__dev-pomogator-specs__get_spec_status, mcp__dev-pomogator-specs__list_phase_tasks, mcp__dev-pomogator-specs__get_test_result, mcp__dev-pomogator-specs__get_scenario_trace, mcp__dev-pomogator-specs__find_orphans, mcp__dev-pomogator-specs__validate_anchor, mcp__dev-pomogator-specs__list_specs, mcp__dev-pomogator-specs__find_refs, mcp__dev-pomogator-specs__list_spec_docs, mcp__dev-pomogator-specs__read_spec_doc, mcp__dev-pomogator-specs__read_attachment, Bash, Read
+allowed-tools: mcp__dev-pomogator-specs__get_trace, mcp__dev-pomogator-specs__find_by_tags, mcp__dev-pomogator-specs__conformance_check, mcp__dev-pomogator-specs__search, mcp__dev-pomogator-specs__get_node, mcp__dev-pomogator-specs__get_spec_status, mcp__dev-pomogator-specs__list_phase_tasks, mcp__dev-pomogator-specs__list_tasks, mcp__dev-pomogator-specs__get_test_result, mcp__dev-pomogator-specs__get_scenario_trace, mcp__dev-pomogator-specs__find_orphans, mcp__dev-pomogator-specs__validate_anchor, mcp__dev-pomogator-specs__validate_requirement_metadata, mcp__dev-pomogator-specs__policy_query_requirements, mcp__dev-pomogator-specs__set_requirement_metadata, mcp__dev-pomogator-specs__list_specs, mcp__dev-pomogator-specs__find_refs, mcp__dev-pomogator-specs__list_spec_docs, mcp__dev-pomogator-specs__read_spec_doc, mcp__dev-pomogator-specs__read_attachment, Bash, Read
 ---
 
 # spec-graph-query — one cheatsheet for the spec-graph MCP
 
-The `dev-pomogator-specs` MCP server exposes 15 query tools over the built spec graph. Querying
+The `dev-pomogator-specs` MCP server exposes a typed query surface over the built spec graph. Querying
 the graph beats grepping `.specs/`: the graph resolved tag inheritance, dual-anchor slugs, and
 the FR↔AC↔scenario↔task edges that text search can't see. Pick by the question you're asking.
 
@@ -48,10 +48,13 @@ file-local by design (FR-36b).
 | What **covers / tests / implements** a node (semantic edges, before a rename) | `find_refs` | `{ node_id: "<slug>:FR-7" }` |
 | Scenarios carrying ALL these @feature tags (AND, inheritance-aware) | `find_by_tags` | `{ tags: ["@feature5","@regression"] }` |
 | Which specs are loaded in the graph | `list_specs` | `{}` |
-| Tasks under a phase heading | `list_phase_tasks` | `{ phase: "Phase 2: MCP server + hooks" }` |
+| Every unfinished task in ONE spec (bounded, complete pagination) | `list_tasks` | `{ spec: "spec-generator-v4", statuses: ["todo","ready","in-progress","blocked"], include_comments: true }` |
+| Tasks under an exact phase heading | `list_phase_tasks` | `{ spec: "spec-generator-v4", phase: "Phase 2: MCP server + hooks" }` |
 | Per-spec FR/AC/Scenario/Task **counts** (structural census) | `get_spec_status` | `{ view: "counts" }` (bare) or `{ spec, view: "counts" }` |
 | Honest FR-32 per-scenario buckets + per-task DONE verdict | `get_spec_status` | `{ spec: "<slug>", view: "coverage" }` |
 | Runtime trace detail for ONE scenario — run id/source, trace chunk, stale marker, failing step/error if available | `get_scenario_trace` | `{ scenario_id: "<slug>:SCEN-..." }` |
+| Query requirements by typed policy metadata | `policy_query_requirements` | `{ spec: "spec-generator-v4", verification_method_missing: true }` |
+| Validate/render typed requirement metadata before a transaction | `validate_requirement_metadata` / `set_requirement_metadata` | `{ metadata: {...} }` / `{ node_id: "spec-generator-v4:FR-82", metadata: {...} }` |
 | Does ONE anchor (compact id or slug) resolve? | `validate_anchor` | `{ anchor: "ac-7-1" }` |
 | List ONE spec's readable docs + binary attachments (recurses subdirs: ARCHITECTURE/, attachments/) (FR-39a/P19-6) | `list_spec_docs` | `{ spec: "spec-generator-v4" }` → `{ docs[], attachments[] }` |
 | Read a WHOLE spec document — prose outside graph nodes (README/DESIGN/RESUME or a SUBPATH `ARCHITECTURE/AXIS-1.md`); audited (FR-39a/b) | `read_spec_doc` | `{ spec: "...", doc: "RESUME.md" }` |

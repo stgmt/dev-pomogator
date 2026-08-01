@@ -1,0 +1,8 @@
+{
+  "action": "apply",
+  "spec": "specs-management-as-skill",
+  "doc": "specs-management-as-skill.feature",
+  "old_string": "  # @feature5\r\n  Scenario: SPECMGT001_11 create-spec description includes all triggers within 1024-char limit\r\n",
+  "new_string": "  # @feature5\r\n  Scenario: SPECMGT001_14 research treats a EUR 200 ceiling as an eligibility gate\r\n    Given the canonical research-workflow skill is available\r\n    When its recommendation constraint contract is inspected\r\n    Then a candidate above EUR 200 is rejected before deep research\r\n    And only candidates passing budget, region, and availability gates may be recommended\r\n\r\n  # @feature5\r\n  Scenario: SPECMGT001_15 model availability requires a consumer credential precedence matrix\r\n    Given the canonical research-workflow skill is available\r\n    When its model-provider verification contract is inspected\r\n    Then provider, endpoint, model namespace, credential source, and precedence are required\r\n    And a credential-name mismatch is not classified as model unavailability\r\n\r\n  # @feature5\r\n  Scenario: SPECMGT001_11 create-spec description includes all triggers within 1024-char limit\r\n",
+  "reason": "Add BDD regressions for hard budget filtering and provider credential-contract verification. [skip-spec-steer: executable feature patch through spec door]"
+}

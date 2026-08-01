@@ -1,0 +1,5493 @@
+{
+  "mode": "dry-run",
+  "entries": [
+    {
+      "id": "answer-simple:FR-1",
+      "file": ".specs/answer-simple/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "answer-simple:FR-2",
+      "file": ".specs/answer-simple/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "answer-simple:FR-3",
+      "file": ".specs/answer-simple/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "answer-simple:FR-4",
+      "file": ".specs/answer-simple/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "answer-simple:FR-6",
+      "file": ".specs/answer-simple/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "answer-simple:FR-7",
+      "file": ".specs/answer-simple/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "answer-simple:FR-5",
+      "file": ".specs/answer-simple/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "answer-simple:FR-8",
+      "file": ".specs/answer-simple/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "answer-simple:FR-12",
+      "file": ".specs/answer-simple/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "architecture-decision-builder:FR-1",
+      "file": ".specs/architecture-decision-builder/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "architecture-decision-builder:FR-2",
+      "file": ".specs/architecture-decision-builder/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "architecture-decision-builder:FR-3",
+      "file": ".specs/architecture-decision-builder/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "architecture-decision-builder:FR-4",
+      "file": ".specs/architecture-decision-builder/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "architecture-decision-builder:FR-5",
+      "file": ".specs/architecture-decision-builder/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "architecture-decision-builder:FR-6",
+      "file": ".specs/architecture-decision-builder/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "architecture-decision-builder:FR-7",
+      "file": ".specs/architecture-decision-builder/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "architecture-decision-builder:FR-8",
+      "file": ".specs/architecture-decision-builder/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "architecture-decision-builder:FR-9",
+      "file": ".specs/architecture-decision-builder/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "architecture-decision-builder:FR-10",
+      "file": ".specs/architecture-decision-builder/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "architecture-decision-builder:FR-11",
+      "file": ".specs/architecture-decision-builder/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "architecture-decision-builder:FR-12",
+      "file": ".specs/architecture-decision-builder/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "architecture-decision-builder:FR-13",
+      "file": ".specs/architecture-decision-builder/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "architecture-decision-builder:FR-14",
+      "file": ".specs/architecture-decision-builder/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "architecture-decision-builder:FR-15",
+      "file": ".specs/architecture-decision-builder/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "architecture-decision-builder:FR-16",
+      "file": ".specs/architecture-decision-builder/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "architecture-decision-builder:FR-17",
+      "file": ".specs/architecture-decision-builder/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "architecture-decision-builder:FR-18",
+      "file": ".specs/architecture-decision-builder/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "architecture-decision-builder:FR-19",
+      "file": ".specs/architecture-decision-builder/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "architecture-decision-builder:FR-20",
+      "file": ".specs/architecture-decision-builder/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "architecture-decision-builder:FR-21",
+      "file": ".specs/architecture-decision-builder/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "archive/docker-win-test:FR-1",
+      "file": ".specs/archive/docker-win-test/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "archive/docker-win-test:FR-2",
+      "file": ".specs/archive/docker-win-test/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "archive/docker-win-test:FR-3",
+      "file": ".specs/archive/docker-win-test/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "archive/docker-win-test:FR-4",
+      "file": ".specs/archive/docker-win-test/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "archive/docker-win-test:FR-5",
+      "file": ".specs/archive/docker-win-test/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "archive/docker-win-test:FR-6",
+      "file": ".specs/archive/docker-win-test/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "archive/docker-win-test:FR-7",
+      "file": ".specs/archive/docker-win-test/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "auto-capture:FR-1",
+      "file": ".specs/auto-capture/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "auto-capture:FR-2",
+      "file": ".specs/auto-capture/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "auto-capture:FR-3",
+      "file": ".specs/auto-capture/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "auto-capture:FR-4",
+      "file": ".specs/auto-capture/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "auto-capture:FR-5",
+      "file": ".specs/auto-capture/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "auto-capture:FR-6",
+      "file": ".specs/auto-capture/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "auto-capture:FR-7",
+      "file": ".specs/auto-capture/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "auto-capture:FR-8",
+      "file": ".specs/auto-capture/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "auto-capture:FR-9",
+      "file": ".specs/auto-capture/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "auto-capture:FR-10",
+      "file": ".specs/auto-capture/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "backlog/chrome-devtools-mcp-mux:FR-1",
+      "file": ".specs/backlog/chrome-devtools-mcp-mux/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "backlog/chrome-devtools-mcp-mux:FR-2",
+      "file": ".specs/backlog/chrome-devtools-mcp-mux/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "backlog/chrome-devtools-mcp-mux:FR-3",
+      "file": ".specs/backlog/chrome-devtools-mcp-mux/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "backlog/chrome-devtools-mcp-mux:FR-4",
+      "file": ".specs/backlog/chrome-devtools-mcp-mux/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "backlog/chrome-devtools-mcp-mux:FR-5",
+      "file": ".specs/backlog/chrome-devtools-mcp-mux/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "backlog/chrome-devtools-mcp-mux:FR-6",
+      "file": ".specs/backlog/chrome-devtools-mcp-mux/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "backlog/chrome-devtools-mcp-mux:FR-7",
+      "file": ".specs/backlog/chrome-devtools-mcp-mux/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "backlog/chrome-devtools-mcp-mux:FR-8",
+      "file": ".specs/backlog/chrome-devtools-mcp-mux/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "backlog/chrome-devtools-mcp-mux:FR-9",
+      "file": ".specs/backlog/chrome-devtools-mcp-mux/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "backlog/claude-in-chrome-multisession:FR-1",
+      "file": ".specs/backlog/claude-in-chrome-multisession/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "backlog/claude-in-chrome-multisession:FR-2",
+      "file": ".specs/backlog/claude-in-chrome-multisession/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "backlog/claude-in-chrome-multisession:FR-3",
+      "file": ".specs/backlog/claude-in-chrome-multisession/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "backlog/claude-in-chrome-multisession:FR-4",
+      "file": ".specs/backlog/claude-in-chrome-multisession/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "backlog/claude-in-chrome-multisession:FR-5",
+      "file": ".specs/backlog/claude-in-chrome-multisession/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "backlog/claude-in-chrome-multisession:FR-6",
+      "file": ".specs/backlog/claude-in-chrome-multisession/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "backlog/claude-in-chrome-multisession:FR-7",
+      "file": ".specs/backlog/claude-in-chrome-multisession/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "backlog/claude-in-chrome-multisession:FR-8",
+      "file": ".specs/backlog/claude-in-chrome-multisession/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "backlog/claude-in-chrome-multisession:FR-9",
+      "file": ".specs/backlog/claude-in-chrome-multisession/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "backlog/claude-in-chrome-multisession:FR-10",
+      "file": ".specs/backlog/claude-in-chrome-multisession/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "backlog/honest-status-command:FR-1",
+      "file": ".specs/backlog/honest-status-command/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "backlog/honest-status-command:FR-2",
+      "file": ".specs/backlog/honest-status-command/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "backlog/honest-status-command:FR-3",
+      "file": ".specs/backlog/honest-status-command/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "backlog/honest-status-command:FR-4",
+      "file": ".specs/backlog/honest-status-command/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "backlog/honest-status-command:FR-5",
+      "file": ".specs/backlog/honest-status-command/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "backlog/honest-status-command:FR-6",
+      "file": ".specs/backlog/honest-status-command/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "backlog/honest-status-command:FR-7",
+      "file": ".specs/backlog/honest-status-command/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "backlog/honest-status-command:FR-8",
+      "file": ".specs/backlog/honest-status-command/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "backlog/honest-status-command:FR-9",
+      "file": ".specs/backlog/honest-status-command/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "backlog/honest-status-command:FR-10",
+      "file": ".specs/backlog/honest-status-command/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "bdd-mutation-quality:FR-1",
+      "file": ".specs/bdd-mutation-quality/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "bdd-mutation-quality:FR-2",
+      "file": ".specs/bdd-mutation-quality/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "bdd-mutation-quality:FR-3",
+      "file": ".specs/bdd-mutation-quality/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "bdd-mutation-quality:FR-4",
+      "file": ".specs/bdd-mutation-quality/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "bdd-mutation-quality:FR-5",
+      "file": ".specs/bdd-mutation-quality/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "bdd-mutation-quality:FR-6",
+      "file": ".specs/bdd-mutation-quality/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "bdd-only-migration:FR-1",
+      "file": ".specs/bdd-only-migration/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "bdd-only-migration:FR-2",
+      "file": ".specs/bdd-only-migration/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "bdd-only-migration:FR-3",
+      "file": ".specs/bdd-only-migration/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "bdd-only-migration:FR-4",
+      "file": ".specs/bdd-only-migration/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "bdd-only-migration:FR-5",
+      "file": ".specs/bdd-only-migration/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "bdd-only-migration:FR-6",
+      "file": ".specs/bdd-only-migration/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "bdd-only-migration:FR-7",
+      "file": ".specs/bdd-only-migration/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "bdd-only-migration:FR-8",
+      "file": ".specs/bdd-only-migration/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "bdd-only-migration:FR-9",
+      "file": ".specs/bdd-only-migration/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "bdd-only-migration:FR-10",
+      "file": ".specs/bdd-only-migration/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "bdd-test-scanner:FR-1",
+      "file": ".specs/bdd-test-scanner/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "bdd-test-scanner:FR-2",
+      "file": ".specs/bdd-test-scanner/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "bdd-test-scanner:FR-3",
+      "file": ".specs/bdd-test-scanner/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "bdd-test-scanner:FR-4",
+      "file": ".specs/bdd-test-scanner/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "bdd-test-scanner:FR-5",
+      "file": ".specs/bdd-test-scanner/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "bdd-test-scanner:FR-6",
+      "file": ".specs/bdd-test-scanner/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "bg-task-guard:FR-1",
+      "file": ".specs/bg-task-guard/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "bg-task-guard:FR-2",
+      "file": ".specs/bg-task-guard/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "bg-task-guard:FR-3",
+      "file": ".specs/bg-task-guard/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "bg-task-guard:FR-5",
+      "file": ".specs/bg-task-guard/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "bg-task-guard:FR-4",
+      "file": ".specs/bg-task-guard/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "bg-task-guard:FR-6",
+      "file": ".specs/bg-task-guard/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "bg-task-guard:FR-7",
+      "file": ".specs/bg-task-guard/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "bg-task-guard:FR-8",
+      "file": ".specs/bg-task-guard/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "bg-task-guard:FR-9",
+      "file": ".specs/bg-task-guard/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "bg-task-guard:FR-10",
+      "file": ".specs/bg-task-guard/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "bg-task-guard:FR-11",
+      "file": ".specs/bg-task-guard/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "bg-task-guard:FR-12",
+      "file": ".specs/bg-task-guard/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "bg-task-guard:FR-13",
+      "file": ".specs/bg-task-guard/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "bg-task-guard:FR-14",
+      "file": ".specs/bg-task-guard/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "bg-task-guard:FR-15",
+      "file": ".specs/bg-task-guard/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "bg-task-guard:FR-16",
+      "file": ".specs/bg-task-guard/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "carl-integration:FR-1",
+      "file": ".specs/carl-integration/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "carl-integration:FR-2",
+      "file": ".specs/carl-integration/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "carl-integration:FR-3",
+      "file": ".specs/carl-integration/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "carl-integration:FR-4",
+      "file": ".specs/carl-integration/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "carl-integration:FR-5",
+      "file": ".specs/carl-integration/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "carl-integration:FR-6",
+      "file": ".specs/carl-integration/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "carl-integration:FR-7",
+      "file": ".specs/carl-integration/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "carl-integration:FR-8",
+      "file": ".specs/carl-integration/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "carl-integration:FR-9",
+      "file": ".specs/carl-integration/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "claim-sanity-check:FR-1",
+      "file": ".specs/claim-sanity-check/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "claim-sanity-check:FR-2",
+      "file": ".specs/claim-sanity-check/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "claim-sanity-check:FR-3",
+      "file": ".specs/claim-sanity-check/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "claim-sanity-check:FR-4",
+      "file": ".specs/claim-sanity-check/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "claim-sanity-check:FR-5",
+      "file": ".specs/claim-sanity-check/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "claude-mem-integration:FR-1",
+      "file": ".specs/claude-mem-integration/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "claude-mem-integration:FR-2",
+      "file": ".specs/claude-mem-integration/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "claude-mem-integration:FR-3",
+      "file": ".specs/claude-mem-integration/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "claude-mem-integration:FR-4",
+      "file": ".specs/claude-mem-integration/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "claude-mem-integration:FR-5",
+      "file": ".specs/claude-mem-integration/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "claude-mem-integration:FR-6",
+      "file": ".specs/claude-mem-integration/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "claude-mem-integration:FR-7",
+      "file": ".specs/claude-mem-integration/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "claude-mem-midsession-reaper:FR-1",
+      "file": ".specs/claude-mem-midsession-reaper/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "claude-mem-midsession-reaper:FR-2",
+      "file": ".specs/claude-mem-midsession-reaper/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "claude-mem-midsession-reaper:FR-3",
+      "file": ".specs/claude-mem-midsession-reaper/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "claude-mem-midsession-reaper:FR-4",
+      "file": ".specs/claude-mem-midsession-reaper/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "claude-mem-midsession-reaper:FR-5",
+      "file": ".specs/claude-mem-midsession-reaper/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "claude-mem-midsession-reaper:FR-6",
+      "file": ".specs/claude-mem-midsession-reaper/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "codex-cli-support:FR-1",
+      "file": ".specs/codex-cli-support/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "codex-cli-support:FR-2",
+      "file": ".specs/codex-cli-support/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "codex-cli-support:FR-3",
+      "file": ".specs/codex-cli-support/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "codex-cli-support:FR-4",
+      "file": ".specs/codex-cli-support/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "codex-cli-support:FR-5",
+      "file": ".specs/codex-cli-support/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "codex-cli-support:FR-6",
+      "file": ".specs/codex-cli-support/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "codex-cli-support:FR-7",
+      "file": ".specs/codex-cli-support/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "codex-cli-support:FR-8",
+      "file": ".specs/codex-cli-support/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "codex-cli-support:FR-9",
+      "file": ".specs/codex-cli-support/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "codex-cli-support:FR-10",
+      "file": ".specs/codex-cli-support/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "codex-cli-support:FR-11",
+      "file": ".specs/codex-cli-support/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "codex-cli-support:FR-12",
+      "file": ".specs/codex-cli-support/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "codex-init:FR-1",
+      "file": ".specs/codex-init/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "codex-init:FR-2",
+      "file": ".specs/codex-init/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "codex-init:FR-3",
+      "file": ".specs/codex-init/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "codex-init:FR-4",
+      "file": ".specs/codex-init/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "codex-init:FR-5",
+      "file": ".specs/codex-init/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "codex-init:FR-6",
+      "file": ".specs/codex-init/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "codex-init:FR-7",
+      "file": ".specs/codex-init/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "context-menu:FR-1",
+      "file": ".specs/context-menu/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "context-menu:FR-2",
+      "file": ".specs/context-menu/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "context-menu:FR-3",
+      "file": ".specs/context-menu/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "context-menu:FR-4",
+      "file": ".specs/context-menu/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "context-menu:FR-5",
+      "file": ".specs/context-menu/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "context-menu:FR-6",
+      "file": ".specs/context-menu/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "context-menu:FR-7",
+      "file": ".specs/context-menu/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "context-menu:FR-8",
+      "file": ".specs/context-menu/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "context-menu:FR-9",
+      "file": ".specs/context-menu/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "context-menu:FR-10",
+      "file": ".specs/context-menu/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "context-menu:FR-11",
+      "file": ".specs/context-menu/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "context-menu:FR-12",
+      "file": ".specs/context-menu/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "context-menu:FR-13",
+      "file": ".specs/context-menu/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "context-menu:FR-14",
+      "file": ".specs/context-menu/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "context-mode-integration:FR-1",
+      "file": ".specs/context-mode-integration/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "context-mode-integration:FR-2",
+      "file": ".specs/context-mode-integration/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "context-mode-integration:FR-3",
+      "file": ".specs/context-mode-integration/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "context-mode-integration:FR-4",
+      "file": ".specs/context-mode-integration/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "context-mode-integration:FR-5",
+      "file": ".specs/context-mode-integration/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "context-mode-integration:FR-6",
+      "file": ".specs/context-mode-integration/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "context-mode-integration:FR-7",
+      "file": ".specs/context-mode-integration/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "context-mode-integration:FR-8",
+      "file": ".specs/context-mode-integration/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "context-mode-integration:FR-9",
+      "file": ".specs/context-mode-integration/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "create-specs-bdd-enforcement:FR-1",
+      "file": ".specs/create-specs-bdd-enforcement/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "create-specs-bdd-enforcement:FR-2",
+      "file": ".specs/create-specs-bdd-enforcement/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "create-specs-bdd-enforcement:FR-3",
+      "file": ".specs/create-specs-bdd-enforcement/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "create-specs-bdd-enforcement:FR-4",
+      "file": ".specs/create-specs-bdd-enforcement/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "create-specs-bdd-enforcement:FR-5",
+      "file": ".specs/create-specs-bdd-enforcement/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "create-specs-bdd-enforcement:FR-6",
+      "file": ".specs/create-specs-bdd-enforcement/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "create-specs-bdd-enforcement:FR-7",
+      "file": ".specs/create-specs-bdd-enforcement/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "create-specs-bdd-enforcement:FR-8",
+      "file": ".specs/create-specs-bdd-enforcement/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "create-specs-bdd-enforcement:FR-9",
+      "file": ".specs/create-specs-bdd-enforcement/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "cursor-dead-code-cleanup:FR-1",
+      "file": ".specs/cursor-dead-code-cleanup/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "cursor-dead-code-cleanup:FR-2",
+      "file": ".specs/cursor-dead-code-cleanup/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "cursor-dead-code-cleanup:FR-3",
+      "file": ".specs/cursor-dead-code-cleanup/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "cursor-dead-code-cleanup:FR-4",
+      "file": ".specs/cursor-dead-code-cleanup/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "cursor-dead-code-cleanup:FR-5",
+      "file": ".specs/cursor-dead-code-cleanup/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "cursor-dead-code-cleanup:FR-6",
+      "file": ".specs/cursor-dead-code-cleanup/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "dev-pomogator-canonical-plugin:FR-1",
+      "file": ".specs/dev-pomogator-canonical-plugin/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "dev-pomogator-canonical-plugin:FR-2",
+      "file": ".specs/dev-pomogator-canonical-plugin/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "dev-pomogator-canonical-plugin:FR-3",
+      "file": ".specs/dev-pomogator-canonical-plugin/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "dev-pomogator-canonical-plugin:FR-4",
+      "file": ".specs/dev-pomogator-canonical-plugin/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "dev-pomogator-canonical-plugin:FR-5",
+      "file": ".specs/dev-pomogator-canonical-plugin/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "dev-pomogator-canonical-plugin:FR-6",
+      "file": ".specs/dev-pomogator-canonical-plugin/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "dev-pomogator-canonical-plugin:FR-7",
+      "file": ".specs/dev-pomogator-canonical-plugin/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "dev-pomogator-canonical-plugin:FR-8",
+      "file": ".specs/dev-pomogator-canonical-plugin/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "dev-pomogator-canonical-plugin:FR-9",
+      "file": ".specs/dev-pomogator-canonical-plugin/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "dev-pomogator-canonical-plugin:FR-10",
+      "file": ".specs/dev-pomogator-canonical-plugin/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "dev-pomogator-canonical-plugin:FR-11",
+      "file": ".specs/dev-pomogator-canonical-plugin/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "dev-pomogator-canonical-plugin:FR-12",
+      "file": ".specs/dev-pomogator-canonical-plugin/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "dev-pomogator-canonical-plugin:FR-13",
+      "file": ".specs/dev-pomogator-canonical-plugin/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "dev-pomogator-canonical-plugin:FR-14",
+      "file": ".specs/dev-pomogator-canonical-plugin/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "dev-pomogator-canonical-plugin:FR-15",
+      "file": ".specs/dev-pomogator-canonical-plugin/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "dev-pomogator-canonical-plugin:FR-16",
+      "file": ".specs/dev-pomogator-canonical-plugin/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "dev-pomogator-canonical-plugin:FR-17",
+      "file": ".specs/dev-pomogator-canonical-plugin/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "dev-pomogator-canonical-plugin:FR-18",
+      "file": ".specs/dev-pomogator-canonical-plugin/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "dev-pomogator-canonical-plugin:FR-19",
+      "file": ".specs/dev-pomogator-canonical-plugin/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "dev-pomogator-canonical-plugin:FR-20",
+      "file": ".specs/dev-pomogator-canonical-plugin/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "dev-pomogator-canonical-plugin:FR-21",
+      "file": ".specs/dev-pomogator-canonical-plugin/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "dev-pomogator-canonical-plugin:FR-22",
+      "file": ".specs/dev-pomogator-canonical-plugin/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "dev-pomogator-canonical-plugin:FR-23",
+      "file": ".specs/dev-pomogator-canonical-plugin/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "dev-pomogator-canonical-plugin:FR-24",
+      "file": ".specs/dev-pomogator-canonical-plugin/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "extension-beta-flag:FR-1",
+      "file": ".specs/extension-beta-flag/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "extension-beta-flag:FR-2",
+      "file": ".specs/extension-beta-flag/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "extension-beta-flag:FR-3",
+      "file": ".specs/extension-beta-flag/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "extension-beta-flag:FR-4",
+      "file": ".specs/extension-beta-flag/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "extension-beta-flag:FR-5",
+      "file": ".specs/extension-beta-flag/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "extension-beta-flag:FR-6",
+      "file": ".specs/extension-beta-flag/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "fix-bg-output-loss:FR-1",
+      "file": ".specs/fix-bg-output-loss/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "fix-bg-output-loss:FR-2",
+      "file": ".specs/fix-bg-output-loss/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "fix-bg-output-loss:FR-3",
+      "file": ".specs/fix-bg-output-loss/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "fix-bg-output-loss:FR-4",
+      "file": ".specs/fix-bg-output-loss/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "fix-bg-output-loss:FR-5",
+      "file": ".specs/fix-bg-output-loss/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "fix-bg-output-loss:FR-6",
+      "file": ".specs/fix-bg-output-loss/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "fix-bg-output-loss:FR-8",
+      "file": ".specs/fix-bg-output-loss/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "fix-bg-output-loss:FR-9",
+      "file": ".specs/fix-bg-output-loss/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "forbid-root-artifacts:FR-1",
+      "file": ".specs/forbid-root-artifacts/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "forbid-root-artifacts:FR-2",
+      "file": ".specs/forbid-root-artifacts/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "forbid-root-artifacts:FR-3",
+      "file": ".specs/forbid-root-artifacts/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "forbid-root-artifacts:FR-4",
+      "file": ".specs/forbid-root-artifacts/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "forbid-root-artifacts:FR-7",
+      "file": ".specs/forbid-root-artifacts/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "forbid-root-artifacts:FR-8",
+      "file": ".specs/forbid-root-artifacts/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "forbid-root-artifacts:FR-9",
+      "file": ".specs/forbid-root-artifacts/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "forbid-root-artifacts:FR-10",
+      "file": ".specs/forbid-root-artifacts/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "global-dir-guard:FR-1",
+      "file": ".specs/global-dir-guard/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "global-dir-guard:FR-2",
+      "file": ".specs/global-dir-guard/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "global-dir-guard:FR-3",
+      "file": ".specs/global-dir-guard/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "global-dir-guard:FR-4",
+      "file": ".specs/global-dir-guard/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "global-dir-guard:FR-5",
+      "file": ".specs/global-dir-guard/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "install-diagnostics:FR-1",
+      "file": ".specs/install-diagnostics/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "install-diagnostics:FR-2",
+      "file": ".specs/install-diagnostics/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "install-diagnostics:FR-3",
+      "file": ".specs/install-diagnostics/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "install-diagnostics:FR-4",
+      "file": ".specs/install-diagnostics/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "install-diagnostics:FR-5",
+      "file": ".specs/install-diagnostics/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "install-diagnostics:FR-6",
+      "file": ".specs/install-diagnostics/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "install-diagnostics:FR-7",
+      "file": ".specs/install-diagnostics/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "install-diagnostics:FR-8",
+      "file": ".specs/install-diagnostics/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "install-diagnostics:FR-9",
+      "file": ".specs/install-diagnostics/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "install-diagnostics:FR-10",
+      "file": ".specs/install-diagnostics/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "install-diagnostics:FR-12",
+      "file": ".specs/install-diagnostics/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "lint-self-bootstrap:FR-1",
+      "file": ".specs/lint-self-bootstrap/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "lint-self-bootstrap:FR-2",
+      "file": ".specs/lint-self-bootstrap/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "lint-self-bootstrap:FR-3",
+      "file": ".specs/lint-self-bootstrap/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "lint-self-bootstrap:FR-4",
+      "file": ".specs/lint-self-bootstrap/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "lint-self-bootstrap:FR-5",
+      "file": ".specs/lint-self-bootstrap/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "lsp-setup:FR-1",
+      "file": ".specs/lsp-setup/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "lsp-setup:FR-2",
+      "file": ".specs/lsp-setup/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "lsp-setup:FR-3",
+      "file": ".specs/lsp-setup/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "lsp-setup:FR-4",
+      "file": ".specs/lsp-setup/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "lsp-setup:FR-5",
+      "file": ".specs/lsp-setup/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "lsp-setup:FR-6",
+      "file": ".specs/lsp-setup/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "lsp-setup:FR-7",
+      "file": ".specs/lsp-setup/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "lsp-setup:FR-8",
+      "file": ".specs/lsp-setup/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "lsp-setup:FR-9",
+      "file": ".specs/lsp-setup/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "native-statusline:FR-1",
+      "file": ".specs/native-statusline/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "native-statusline:FR-2",
+      "file": ".specs/native-statusline/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "native-statusline:FR-3",
+      "file": ".specs/native-statusline/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "native-statusline:FR-4",
+      "file": ".specs/native-statusline/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "native-statusline:FR-5",
+      "file": ".specs/native-statusline/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "native-statusline:FR-6",
+      "file": ".specs/native-statusline/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "native-statusline:FR-7",
+      "file": ".specs/native-statusline/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "native-statusline:FR-8",
+      "file": ".specs/native-statusline/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "native-statusline:FR-9",
+      "file": ".specs/native-statusline/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "native-statusline:FR-10",
+      "file": ".specs/native-statusline/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "native-statusline:FR-11",
+      "file": ".specs/native-statusline/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "onboard-repo-phase0:FR-1",
+      "file": ".specs/onboard-repo-phase0/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "onboard-repo-phase0:FR-2",
+      "file": ".specs/onboard-repo-phase0/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "onboard-repo-phase0:FR-3",
+      "file": ".specs/onboard-repo-phase0/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "onboard-repo-phase0:FR-4",
+      "file": ".specs/onboard-repo-phase0/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "onboard-repo-phase0:FR-5",
+      "file": ".specs/onboard-repo-phase0/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "onboard-repo-phase0:FR-6",
+      "file": ".specs/onboard-repo-phase0/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "onboard-repo-phase0:FR-7",
+      "file": ".specs/onboard-repo-phase0/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "onboard-repo-phase0:FR-8",
+      "file": ".specs/onboard-repo-phase0/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "onboard-repo-phase0:FR-9",
+      "file": ".specs/onboard-repo-phase0/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "onboard-repo-phase0:FR-10",
+      "file": ".specs/onboard-repo-phase0/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "onboard-repo-phase0:FR-11",
+      "file": ".specs/onboard-repo-phase0/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "onboard-repo-phase0:FR-12",
+      "file": ".specs/onboard-repo-phase0/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "onboard-repo-phase0:FR-13",
+      "file": ".specs/onboard-repo-phase0/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "onboard-repo-phase0:FR-14",
+      "file": ".specs/onboard-repo-phase0/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "onboard-repo-phase0:FR-15",
+      "file": ".specs/onboard-repo-phase0/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "onboard-repo-phase0:FR-16",
+      "file": ".specs/onboard-repo-phase0/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "onboard-repo-phase0:FR-17",
+      "file": ".specs/onboard-repo-phase0/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "onboard-repo-phase0:FR-18",
+      "file": ".specs/onboard-repo-phase0/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "onboard-repo-phase0:FR-19",
+      "file": ".specs/onboard-repo-phase0/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "onboard-repo-phase0:FR-20",
+      "file": ".specs/onboard-repo-phase0/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "personal-pomogator:FR-1",
+      "file": ".specs/personal-pomogator/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "personal-pomogator:FR-2",
+      "file": ".specs/personal-pomogator/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "personal-pomogator:FR-3",
+      "file": ".specs/personal-pomogator/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "personal-pomogator:FR-4",
+      "file": ".specs/personal-pomogator/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "personal-pomogator:FR-5",
+      "file": ".specs/personal-pomogator/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "personal-pomogator:FR-6",
+      "file": ".specs/personal-pomogator/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "personal-pomogator:FR-7",
+      "file": ".specs/personal-pomogator/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "personal-pomogator:FR-8",
+      "file": ".specs/personal-pomogator/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "personal-pomogator:FR-9",
+      "file": ".specs/personal-pomogator/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "personal-pomogator:FR-10",
+      "file": ".specs/personal-pomogator/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "personal-pomogator:FR-11",
+      "file": ".specs/personal-pomogator/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "personal-pomogator:FR-12",
+      "file": ".specs/personal-pomogator/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "personal-pomogator:FR-13",
+      "file": ".specs/personal-pomogator/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "personal-pomogator:FR-14",
+      "file": ".specs/personal-pomogator/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "personal-pomogator:FR-15",
+      "file": ".specs/personal-pomogator/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "personal-pomogator:FR-16",
+      "file": ".specs/personal-pomogator/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "plan-evidence-enforcement:FR-1",
+      "file": ".specs/plan-evidence-enforcement/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "plan-evidence-enforcement:FR-2",
+      "file": ".specs/plan-evidence-enforcement/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "plan-pomogator-plain-language:FR-1",
+      "file": ".specs/plan-pomogator-plain-language/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "plan-pomogator-plain-language:FR-2",
+      "file": ".specs/plan-pomogator-plain-language/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "plan-pomogator-plain-language:FR-3",
+      "file": ".specs/plan-pomogator-plain-language/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "plan-pomogator-plain-language:FR-4",
+      "file": ".specs/plan-pomogator-plain-language/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "plan-pomogator-plain-language:FR-5",
+      "file": ".specs/plan-pomogator-plain-language/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "plan-pomogator-plain-language:FR-6",
+      "file": ".specs/plan-pomogator-plain-language/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "plan-pomogator-plain-language:FR-7",
+      "file": ".specs/plan-pomogator-plain-language/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "plan-pomogator-plain-language:FR-8",
+      "file": ".specs/plan-pomogator-plain-language/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "plan-pomogator-prompt-isolation:FR-1",
+      "file": ".specs/plan-pomogator-prompt-isolation/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "plan-pomogator-prompt-isolation:FR-2",
+      "file": ".specs/plan-pomogator-prompt-isolation/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "plan-pomogator-prompt-isolation:FR-3",
+      "file": ".specs/plan-pomogator-prompt-isolation/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "plan-pomogator-prompt-isolation:FR-4",
+      "file": ".specs/plan-pomogator-prompt-isolation/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "plan-pomogator-prompt-isolation:FR-5",
+      "file": ".specs/plan-pomogator-prompt-isolation/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "plan-pomogator-prompt-isolation:FR-6",
+      "file": ".specs/plan-pomogator-prompt-isolation/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "plan-pomogator-prompt-isolation:FR-7",
+      "file": ".specs/plan-pomogator-prompt-isolation/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "pomogator-doctor:FR-1",
+      "file": ".specs/pomogator-doctor/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "pomogator-doctor:FR-2",
+      "file": ".specs/pomogator-doctor/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "pomogator-doctor:FR-3",
+      "file": ".specs/pomogator-doctor/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "pomogator-doctor:FR-4",
+      "file": ".specs/pomogator-doctor/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "pomogator-doctor:FR-5",
+      "file": ".specs/pomogator-doctor/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "pomogator-doctor:FR-6",
+      "file": ".specs/pomogator-doctor/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "pomogator-doctor:FR-7",
+      "file": ".specs/pomogator-doctor/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "pomogator-doctor:FR-8",
+      "file": ".specs/pomogator-doctor/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "pomogator-doctor:FR-9",
+      "file": ".specs/pomogator-doctor/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "pomogator-doctor:FR-10",
+      "file": ".specs/pomogator-doctor/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "pomogator-doctor:FR-11",
+      "file": ".specs/pomogator-doctor/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "pomogator-doctor:FR-12",
+      "file": ".specs/pomogator-doctor/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "pomogator-doctor:FR-13",
+      "file": ".specs/pomogator-doctor/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "pomogator-doctor:FR-14",
+      "file": ".specs/pomogator-doctor/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "pomogator-doctor:FR-15",
+      "file": ".specs/pomogator-doctor/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "pomogator-doctor:FR-16",
+      "file": ".specs/pomogator-doctor/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "pomogator-doctor:FR-17",
+      "file": ".specs/pomogator-doctor/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "pomogator-doctor:FR-18",
+      "file": ".specs/pomogator-doctor/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "pomogator-doctor:FR-19",
+      "file": ".specs/pomogator-doctor/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "pomogator-doctor:FR-20",
+      "file": ".specs/pomogator-doctor/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "pomogator-doctor:FR-21",
+      "file": ".specs/pomogator-doctor/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "pomogator-doctor:FR-22",
+      "file": ".specs/pomogator-doctor/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "pomogator-doctor:FR-23",
+      "file": ".specs/pomogator-doctor/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "pomogator-doctor:FR-24",
+      "file": ".specs/pomogator-doctor/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "pomogator-doctor:FR-25",
+      "file": ".specs/pomogator-doctor/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "pomogator-doctor:FR-26",
+      "file": ".specs/pomogator-doctor/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "pomogator-doctor:FR-27",
+      "file": ".specs/pomogator-doctor/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "pomogator-doctor:FR-28",
+      "file": ".specs/pomogator-doctor/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "pomogator-doctor:FR-29",
+      "file": ".specs/pomogator-doctor/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "pomogator-doctor:FR-30",
+      "file": ".specs/pomogator-doctor/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "pomogator-doctor:FR-31",
+      "file": ".specs/pomogator-doctor/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "pomogator-doctor:FR-32",
+      "file": ".specs/pomogator-doctor/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "pomogator-doctor:FR-33",
+      "file": ".specs/pomogator-doctor/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "pomogator-doctor:FR-34",
+      "file": ".specs/pomogator-doctor/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "pomogator-doctor:FR-35",
+      "file": ".specs/pomogator-doctor/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "pomogator-doctor:FR-36",
+      "file": ".specs/pomogator-doctor/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "pomogator-doctor:FR-37",
+      "file": ".specs/pomogator-doctor/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "prompt-suggest:FR-1",
+      "file": ".specs/prompt-suggest/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "prompt-suggest:FR-2",
+      "file": ".specs/prompt-suggest/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "prompt-suggest:FR-3",
+      "file": ".specs/prompt-suggest/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "prompt-suggest:FR-4",
+      "file": ".specs/prompt-suggest/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "prompt-suggest:FR-5",
+      "file": ".specs/prompt-suggest/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "prompt-suggest:FR-6",
+      "file": ".specs/prompt-suggest/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "prompt-suggest:FR-7",
+      "file": ".specs/prompt-suggest/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "prompt-suggest:FR-8",
+      "file": ".specs/prompt-suggest/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "prompt-suggest:FR-9",
+      "file": ".specs/prompt-suggest/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "report-issue:FR-1",
+      "file": ".specs/report-issue/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "report-issue:FR-2",
+      "file": ".specs/report-issue/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "report-issue:FR-3",
+      "file": ".specs/report-issue/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "report-issue:FR-4",
+      "file": ".specs/report-issue/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "report-issue:FR-5",
+      "file": ".specs/report-issue/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "session-pilot:FR-1",
+      "file": ".specs/session-pilot/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "session-pilot:FR-2",
+      "file": ".specs/session-pilot/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "session-pilot:FR-3",
+      "file": ".specs/session-pilot/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "session-pilot:FR-4",
+      "file": ".specs/session-pilot/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "session-pilot:FR-5",
+      "file": ".specs/session-pilot/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "session-pilot:FR-6",
+      "file": ".specs/session-pilot/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "session-pilot:FR-7",
+      "file": ".specs/session-pilot/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "session-pilot:FR-8",
+      "file": ".specs/session-pilot/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "session-pilot:FR-9",
+      "file": ".specs/session-pilot/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "session-pilot:FR-10",
+      "file": ".specs/session-pilot/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "session-pilot:FR-11",
+      "file": ".specs/session-pilot/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "session-pilot:FR-12",
+      "file": ".specs/session-pilot/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "session-pilot:FR-13",
+      "file": ".specs/session-pilot/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "session-pilot:FR-14",
+      "file": ".specs/session-pilot/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "session-pilot:FR-15",
+      "file": ".specs/session-pilot/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "session-pilot:FR-16",
+      "file": ".specs/session-pilot/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "session-pilot:FR-17",
+      "file": ".specs/session-pilot/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "session-pilot:FR-18",
+      "file": ".specs/session-pilot/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "session-pilot:FR-19",
+      "file": ".specs/session-pilot/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "session-pilot:FR-20",
+      "file": ".specs/session-pilot/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "session-pilot:FR-26",
+      "file": ".specs/session-pilot/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "session-pilot:FR-25",
+      "file": ".specs/session-pilot/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "session-pilot:FR-24",
+      "file": ".specs/session-pilot/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "session-pilot:FR-23",
+      "file": ".specs/session-pilot/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "session-pilot:FR-27",
+      "file": ".specs/session-pilot/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "session-pilot:FR-22",
+      "file": ".specs/session-pilot/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "session-pilot:FR-21",
+      "file": ".specs/session-pilot/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "skill-listing-budget:FR-1",
+      "file": ".specs/skill-listing-budget/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "skill-listing-budget:FR-2",
+      "file": ".specs/skill-listing-budget/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "skill-listing-budget:FR-3",
+      "file": ".specs/skill-listing-budget/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "skill-listing-budget:FR-4",
+      "file": ".specs/skill-listing-budget/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "skill-listing-budget:FR-5",
+      "file": ".specs/skill-listing-budget/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "skills-rules-optimizer:FR-1",
+      "file": ".specs/skills-rules-optimizer/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "skills-rules-optimizer:FR-2",
+      "file": ".specs/skills-rules-optimizer/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "skills-rules-optimizer:FR-3",
+      "file": ".specs/skills-rules-optimizer/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "skills-rules-optimizer:FR-4",
+      "file": ".specs/skills-rules-optimizer/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "skills-rules-optimizer:FR-5",
+      "file": ".specs/skills-rules-optimizer/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "skills-rules-optimizer:FR-6",
+      "file": ".specs/skills-rules-optimizer/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "skills-rules-optimizer:FR-7",
+      "file": ".specs/skills-rules-optimizer/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "skills-rules-optimizer:FR-8",
+      "file": ".specs/skills-rules-optimizer/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "skills-rules-optimizer:FR-9",
+      "file": ".specs/skills-rules-optimizer/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "skills-rules-optimizer:FR-10",
+      "file": ".specs/skills-rules-optimizer/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "skills-rules-optimizer:FR-11",
+      "file": ".specs/skills-rules-optimizer/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v3:FR-1",
+      "file": ".specs/spec-generator-v3/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v3:FR-2",
+      "file": ".specs/spec-generator-v3/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v3:FR-3",
+      "file": ".specs/spec-generator-v3/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v3:FR-4",
+      "file": ".specs/spec-generator-v3/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v3:FR-5",
+      "file": ".specs/spec-generator-v3/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v3:FR-6",
+      "file": ".specs/spec-generator-v3/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v3:FR-7",
+      "file": ".specs/spec-generator-v3/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v3:FR-8",
+      "file": ".specs/spec-generator-v3/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v3:FR-9",
+      "file": ".specs/spec-generator-v3/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v3:FR-10",
+      "file": ".specs/spec-generator-v3/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v3:FR-11",
+      "file": ".specs/spec-generator-v3/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v3:FR-12",
+      "file": ".specs/spec-generator-v3/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v3:FR-13",
+      "file": ".specs/spec-generator-v3/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v3:FR-14",
+      "file": ".specs/spec-generator-v3/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v3:FR-15",
+      "file": ".specs/spec-generator-v3/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v3:FR-16",
+      "file": ".specs/spec-generator-v3/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:FR-1",
+      "file": ".specs/spec-generator-v4/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:FR-2",
+      "file": ".specs/spec-generator-v4/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:FR-3",
+      "file": ".specs/spec-generator-v4/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:FR-4",
+      "file": ".specs/spec-generator-v4/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:FR-5",
+      "file": ".specs/spec-generator-v4/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:FR-6",
+      "file": ".specs/spec-generator-v4/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:FR-7",
+      "file": ".specs/spec-generator-v4/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:FR-8",
+      "file": ".specs/spec-generator-v4/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:FR-9",
+      "file": ".specs/spec-generator-v4/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:FR-10",
+      "file": ".specs/spec-generator-v4/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:FR-11",
+      "file": ".specs/spec-generator-v4/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:FR-12",
+      "file": ".specs/spec-generator-v4/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:FR-13",
+      "file": ".specs/spec-generator-v4/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:FR-14",
+      "file": ".specs/spec-generator-v4/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:FR-15",
+      "file": ".specs/spec-generator-v4/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:FR-16",
+      "file": ".specs/spec-generator-v4/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:FR-17",
+      "file": ".specs/spec-generator-v4/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:FR-18",
+      "file": ".specs/spec-generator-v4/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:FR-19",
+      "file": ".specs/spec-generator-v4/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:FR-20",
+      "file": ".specs/spec-generator-v4/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:FR-21",
+      "file": ".specs/spec-generator-v4/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:FR-22",
+      "file": ".specs/spec-generator-v4/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:FR-23",
+      "file": ".specs/spec-generator-v4/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:FR-24",
+      "file": ".specs/spec-generator-v4/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:FR-25",
+      "file": ".specs/spec-generator-v4/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:FR-26",
+      "file": ".specs/spec-generator-v4/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:FR-27",
+      "file": ".specs/spec-generator-v4/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:FR-28",
+      "file": ".specs/spec-generator-v4/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:FR-29",
+      "file": ".specs/spec-generator-v4/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:FR-30",
+      "file": ".specs/spec-generator-v4/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:FR-31",
+      "file": ".specs/spec-generator-v4/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:FR-32",
+      "file": ".specs/spec-generator-v4/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:FR-33",
+      "file": ".specs/spec-generator-v4/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:FR-34",
+      "file": ".specs/spec-generator-v4/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:FR-35",
+      "file": ".specs/spec-generator-v4/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:FR-36",
+      "file": ".specs/spec-generator-v4/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:FR-37",
+      "file": ".specs/spec-generator-v4/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:FR-38",
+      "file": ".specs/spec-generator-v4/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:FR-39",
+      "file": ".specs/spec-generator-v4/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:FR-40",
+      "file": ".specs/spec-generator-v4/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:FR-41",
+      "file": ".specs/spec-generator-v4/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:FR-42",
+      "file": ".specs/spec-generator-v4/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:FR-43",
+      "file": ".specs/spec-generator-v4/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:FR-44",
+      "file": ".specs/spec-generator-v4/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:FR-45",
+      "file": ".specs/spec-generator-v4/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:FR-46",
+      "file": ".specs/spec-generator-v4/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:FR-47",
+      "file": ".specs/spec-generator-v4/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:FR-48",
+      "file": ".specs/spec-generator-v4/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:FR-49",
+      "file": ".specs/spec-generator-v4/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:FR-50",
+      "file": ".specs/spec-generator-v4/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:FR-51",
+      "file": ".specs/spec-generator-v4/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:FR-52",
+      "file": ".specs/spec-generator-v4/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:FR-53",
+      "file": ".specs/spec-generator-v4/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:FR-54",
+      "file": ".specs/spec-generator-v4/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:FR-55",
+      "file": ".specs/spec-generator-v4/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:FR-56",
+      "file": ".specs/spec-generator-v4/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:FR-57",
+      "file": ".specs/spec-generator-v4/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:FR-58",
+      "file": ".specs/spec-generator-v4/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:FR-59",
+      "file": ".specs/spec-generator-v4/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:FR-60",
+      "file": ".specs/spec-generator-v4/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:FR-61",
+      "file": ".specs/spec-generator-v4/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:FR-62",
+      "file": ".specs/spec-generator-v4/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:FR-63",
+      "file": ".specs/spec-generator-v4/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:FR-64",
+      "file": ".specs/spec-generator-v4/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:FR-65",
+      "file": ".specs/spec-generator-v4/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:FR-66",
+      "file": ".specs/spec-generator-v4/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:NFR-Performance-1",
+      "file": ".specs/spec-generator-v4/NFR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:NFR-Performance-2",
+      "file": ".specs/spec-generator-v4/NFR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:NFR-Performance-3",
+      "file": ".specs/spec-generator-v4/NFR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:NFR-Performance-4",
+      "file": ".specs/spec-generator-v4/NFR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:NFR-Performance-5",
+      "file": ".specs/spec-generator-v4/NFR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:NFR-Performance-6",
+      "file": ".specs/spec-generator-v4/NFR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:NFR-Performance-7",
+      "file": ".specs/spec-generator-v4/NFR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:NFR-Performance-8",
+      "file": ".specs/spec-generator-v4/NFR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:NFR-Security-1",
+      "file": ".specs/spec-generator-v4/NFR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:NFR-Security-2",
+      "file": ".specs/spec-generator-v4/NFR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:NFR-Security-3",
+      "file": ".specs/spec-generator-v4/NFR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:NFR-Security-4",
+      "file": ".specs/spec-generator-v4/NFR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:NFR-Security-5",
+      "file": ".specs/spec-generator-v4/NFR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:NFR-Security-6",
+      "file": ".specs/spec-generator-v4/NFR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:NFR-Security-7",
+      "file": ".specs/spec-generator-v4/NFR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:NFR-Security-8",
+      "file": ".specs/spec-generator-v4/NFR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:NFR-Reliability-1",
+      "file": ".specs/spec-generator-v4/NFR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:NFR-Reliability-2",
+      "file": ".specs/spec-generator-v4/NFR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:NFR-Reliability-3",
+      "file": ".specs/spec-generator-v4/NFR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:NFR-Reliability-4",
+      "file": ".specs/spec-generator-v4/NFR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:NFR-Reliability-5",
+      "file": ".specs/spec-generator-v4/NFR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:NFR-Reliability-6",
+      "file": ".specs/spec-generator-v4/NFR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:NFR-Reliability-7",
+      "file": ".specs/spec-generator-v4/NFR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:NFR-Reliability-8",
+      "file": ".specs/spec-generator-v4/NFR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:NFR-Reliability-9",
+      "file": ".specs/spec-generator-v4/NFR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:NFR-Reliability-10",
+      "file": ".specs/spec-generator-v4/NFR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:NFR-Usability-1",
+      "file": ".specs/spec-generator-v4/NFR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:NFR-Usability-2",
+      "file": ".specs/spec-generator-v4/NFR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:NFR-Usability-3",
+      "file": ".specs/spec-generator-v4/NFR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:NFR-Usability-4",
+      "file": ".specs/spec-generator-v4/NFR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:NFR-Usability-5",
+      "file": ".specs/spec-generator-v4/NFR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:NFR-Usability-6",
+      "file": ".specs/spec-generator-v4/NFR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:NFR-Usability-7",
+      "file": ".specs/spec-generator-v4/NFR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:NFR-Legacy-1",
+      "file": ".specs/spec-generator-v4/NFR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:NFR-Legacy-2",
+      "file": ".specs/spec-generator-v4/NFR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:NFR-Legacy-3",
+      "file": ".specs/spec-generator-v4/NFR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:NFR-Legacy-4",
+      "file": ".specs/spec-generator-v4/NFR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:NFR-Legacy-5",
+      "file": ".specs/spec-generator-v4/NFR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:NFR-Legacy-6",
+      "file": ".specs/spec-generator-v4/NFR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:NFR-Reliability-11",
+      "file": ".specs/spec-generator-v4/NFR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-generator-v4:NFR-Performance-9",
+      "file": ".specs/spec-generator-v4/NFR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-mcp-usability-dogfood:FR-1",
+      "file": ".specs/spec-mcp-usability-dogfood/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-mcp-usability-dogfood:FR-2",
+      "file": ".specs/spec-mcp-usability-dogfood/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-mcp-usability-dogfood:FR-3",
+      "file": ".specs/spec-mcp-usability-dogfood/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-mcp-usability-dogfood:FR-4",
+      "file": ".specs/spec-mcp-usability-dogfood/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-mcp-usability-dogfood:FR-5",
+      "file": ".specs/spec-mcp-usability-dogfood/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-phase-gate:FR-1",
+      "file": ".specs/spec-phase-gate/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-phase-gate:FR-2",
+      "file": ".specs/spec-phase-gate/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-phase-gate:FR-3",
+      "file": ".specs/spec-phase-gate/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-phase-gate:FR-4",
+      "file": ".specs/spec-phase-gate/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-phase-gate:FR-5",
+      "file": ".specs/spec-phase-gate/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-phase-gate:FR-6",
+      "file": ".specs/spec-phase-gate/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-phase-gate:FR-7",
+      "file": ".specs/spec-phase-gate/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-phase-gate:FR-8",
+      "file": ".specs/spec-phase-gate/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-phase-gate:FR-9",
+      "file": ".specs/spec-phase-gate/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-phase-gate:FR-10",
+      "file": ".specs/spec-phase-gate/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-phase-gate:FR-11",
+      "file": ".specs/spec-phase-gate/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-phase-gate:FR-12",
+      "file": ".specs/spec-phase-gate/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-phase-gate:FR-13",
+      "file": ".specs/spec-phase-gate/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-phase-gate:FR-14",
+      "file": ".specs/spec-phase-gate/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-reality-check:FR-1",
+      "file": ".specs/spec-reality-check/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-reality-check:FR-2",
+      "file": ".specs/spec-reality-check/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-reality-check:FR-3",
+      "file": ".specs/spec-reality-check/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-reality-check:FR-4",
+      "file": ".specs/spec-reality-check/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-reality-check:FR-5",
+      "file": ".specs/spec-reality-check/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-reality-check:FR-6",
+      "file": ".specs/spec-reality-check/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-reality-check:FR-7",
+      "file": ".specs/spec-reality-check/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-reality-check:FR-8",
+      "file": ".specs/spec-reality-check/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-reality-check:FR-9",
+      "file": ".specs/spec-reality-check/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-reality-check:FR-10",
+      "file": ".specs/spec-reality-check/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-reality-check:FR-11",
+      "file": ".specs/spec-reality-check/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-reality-check:FR-12",
+      "file": ".specs/spec-reality-check/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-reality-check:FR-13",
+      "file": ".specs/spec-reality-check/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-reality-check:FR-14",
+      "file": ".specs/spec-reality-check/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-reality-check:FR-15",
+      "file": ".specs/spec-reality-check/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-variant-matrix:FR-1",
+      "file": ".specs/spec-variant-matrix/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-variant-matrix:FR-2",
+      "file": ".specs/spec-variant-matrix/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-variant-matrix:FR-3",
+      "file": ".specs/spec-variant-matrix/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-variant-matrix:FR-4",
+      "file": ".specs/spec-variant-matrix/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-variant-matrix:FR-5",
+      "file": ".specs/spec-variant-matrix/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-variant-matrix:FR-6",
+      "file": ".specs/spec-variant-matrix/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-variant-matrix:FR-7",
+      "file": ".specs/spec-variant-matrix/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-variant-matrix:FR-8",
+      "file": ".specs/spec-variant-matrix/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-variant-matrix:FR-9",
+      "file": ".specs/spec-variant-matrix/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-workflow-feature-steps-validation:FR-1",
+      "file": ".specs/spec-workflow-feature-steps-validation/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-workflow-feature-steps-validation:FR-2",
+      "file": ".specs/spec-workflow-feature-steps-validation/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-workflow-feature-steps-validation:FR-3",
+      "file": ".specs/spec-workflow-feature-steps-validation/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-workflow-feature-steps-validation:FR-4",
+      "file": ".specs/spec-workflow-feature-steps-validation/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-workflow-feature-steps-validation:FR-5",
+      "file": ".specs/spec-workflow-feature-steps-validation/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-workflow-feature-steps-validation:FR-6",
+      "file": ".specs/spec-workflow-feature-steps-validation/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-workflow-feature-steps-validation:FR-7",
+      "file": ".specs/spec-workflow-feature-steps-validation/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-workflow-feature-steps-validation:FR-8",
+      "file": ".specs/spec-workflow-feature-steps-validation/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-workflow-feature-steps-validation:FR-9",
+      "file": ".specs/spec-workflow-feature-steps-validation/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-workflow-feature-steps-validation:FR-10",
+      "file": ".specs/spec-workflow-feature-steps-validation/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-workflow-feature-steps-validation:NFR-1",
+      "file": ".specs/spec-workflow-feature-steps-validation/NFR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-workflow-feature-steps-validation:NFR-2",
+      "file": ".specs/spec-workflow-feature-steps-validation/NFR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-workflow-feature-steps-validation:NFR-3",
+      "file": ".specs/spec-workflow-feature-steps-validation/NFR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-workflow-feature-steps-validation:NFR-4",
+      "file": ".specs/spec-workflow-feature-steps-validation/NFR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-workflow-feature-steps-validation:NFR-5",
+      "file": ".specs/spec-workflow-feature-steps-validation/NFR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-workflow-feature-steps-validation:NFR-6",
+      "file": ".specs/spec-workflow-feature-steps-validation/NFR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-workflow-feature-steps-validation:NFR-7",
+      "file": ".specs/spec-workflow-feature-steps-validation/NFR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-workflow-feature-steps-validation:NFR-8",
+      "file": ".specs/spec-workflow-feature-steps-validation/NFR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-workflow-md-validation:FR-1",
+      "file": ".specs/spec-workflow-md-validation/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-workflow-md-validation:FR-2",
+      "file": ".specs/spec-workflow-md-validation/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-workflow-md-validation:FR-3",
+      "file": ".specs/spec-workflow-md-validation/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-workflow-md-validation:FR-4",
+      "file": ".specs/spec-workflow-md-validation/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-workflow-md-validation:FR-5",
+      "file": ".specs/spec-workflow-md-validation/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-workflow-md-validation:FR-6",
+      "file": ".specs/spec-workflow-md-validation/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-workflow-md-validation:FR-7",
+      "file": ".specs/spec-workflow-md-validation/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-workflow-md-validation:FR-8",
+      "file": ".specs/spec-workflow-md-validation/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-workflow-md-validation:FR-9",
+      "file": ".specs/spec-workflow-md-validation/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-workflow-md-validation:FR-10",
+      "file": ".specs/spec-workflow-md-validation/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-workflow-md-validation:FR-11",
+      "file": ".specs/spec-workflow-md-validation/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-workflow-md-validation:NFR-1",
+      "file": ".specs/spec-workflow-md-validation/NFR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-workflow-md-validation:NFR-2",
+      "file": ".specs/spec-workflow-md-validation/NFR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-workflow-md-validation:NFR-3",
+      "file": ".specs/spec-workflow-md-validation/NFR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-workflow-md-validation:NFR-4",
+      "file": ".specs/spec-workflow-md-validation/NFR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-workflow-md-validation:NFR-5",
+      "file": ".specs/spec-workflow-md-validation/NFR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-workflow-md-validation:NFR-6",
+      "file": ".specs/spec-workflow-md-validation/NFR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-workflow-md-validation:NFR-7",
+      "file": ".specs/spec-workflow-md-validation/NFR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-workflow-md-validation:NFR-8",
+      "file": ".specs/spec-workflow-md-validation/NFR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-workflow-md-validation:NFR-9",
+      "file": ".specs/spec-workflow-md-validation/NFR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-workflow-vmodel:FR-1",
+      "file": ".specs/spec-workflow-vmodel/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-workflow-vmodel:FR-2",
+      "file": ".specs/spec-workflow-vmodel/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-workflow-vmodel:FR-3",
+      "file": ".specs/spec-workflow-vmodel/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-workflow-vmodel:FR-4",
+      "file": ".specs/spec-workflow-vmodel/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-workflow-vmodel:FR-5",
+      "file": ".specs/spec-workflow-vmodel/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-workflow-vmodel:FR-6",
+      "file": ".specs/spec-workflow-vmodel/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-workflow-vmodel:FR-006",
+      "file": ".specs/spec-workflow-vmodel/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-workflow-vmodel:FR-007",
+      "file": ".specs/spec-workflow-vmodel/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "spec-workflow-vmodel:FR-021",
+      "file": ".specs/spec-workflow-vmodel/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "specs-management-as-skill:FR-1",
+      "file": ".specs/specs-management-as-skill/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "specs-management-as-skill:FR-2",
+      "file": ".specs/specs-management-as-skill/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "specs-management-as-skill:FR-3",
+      "file": ".specs/specs-management-as-skill/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "specs-management-as-skill:FR-4",
+      "file": ".specs/specs-management-as-skill/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "specs-management-as-skill:FR-5",
+      "file": ".specs/specs-management-as-skill/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "specs-management-as-skill:FR-6",
+      "file": ".specs/specs-management-as-skill/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "specs-management-as-skill:FR-7",
+      "file": ".specs/specs-management-as-skill/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "specs-management-as-skill:FR-8",
+      "file": ".specs/specs-management-as-skill/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "specs-management-as-skill:FR-9",
+      "file": ".specs/specs-management-as-skill/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "specs-management-as-skill:FR-10",
+      "file": ".specs/specs-management-as-skill/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "specs-management-as-skill:FR-11",
+      "file": ".specs/specs-management-as-skill/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "specs-management-as-skill:FR-12",
+      "file": ".specs/specs-management-as-skill/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "specs-management-as-skill:FR-13",
+      "file": ".specs/specs-management-as-skill/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "specs-workflow-jira-mode:FR-1",
+      "file": ".specs/specs-workflow-jira-mode/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "specs-workflow-jira-mode:FR-2",
+      "file": ".specs/specs-workflow-jira-mode/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "specs-workflow-jira-mode:FR-3",
+      "file": ".specs/specs-workflow-jira-mode/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "specs-workflow-jira-mode:FR-4",
+      "file": ".specs/specs-workflow-jira-mode/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "specs-workflow-jira-mode:FR-5",
+      "file": ".specs/specs-workflow-jira-mode/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "specs-workflow-jira-mode:FR-6",
+      "file": ".specs/specs-workflow-jira-mode/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "specs-workflow-jira-mode:FR-7",
+      "file": ".specs/specs-workflow-jira-mode/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "stale-build-guard:FR-1",
+      "file": ".specs/stale-build-guard/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "stale-build-guard:FR-2",
+      "file": ".specs/stale-build-guard/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "stale-build-guard:FR-3",
+      "file": ".specs/stale-build-guard/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "stale-build-guard:FR-4",
+      "file": ".specs/stale-build-guard/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "stale-build-guard:FR-5",
+      "file": ".specs/stale-build-guard/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "stale-build-guard:FR-6",
+      "file": ".specs/stale-build-guard/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "stale-build-guard:FR-7",
+      "file": ".specs/stale-build-guard/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "strong-tests:FR-1",
+      "file": ".specs/strong-tests/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "strong-tests:FR-2",
+      "file": ".specs/strong-tests/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "strong-tests:FR-3",
+      "file": ".specs/strong-tests/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "strong-tests:FR-4",
+      "file": ".specs/strong-tests/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "strong-tests:FR-5",
+      "file": ".specs/strong-tests/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "strong-tests:FR-6",
+      "file": ".specs/strong-tests/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "strong-tests:FR-7",
+      "file": ".specs/strong-tests/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "strong-tests:FR-11",
+      "file": ".specs/strong-tests/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "strong-tests:FR-12",
+      "file": ".specs/strong-tests/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "strong-tests:FR-13",
+      "file": ".specs/strong-tests/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "strong-tests:FR-14",
+      "file": ".specs/strong-tests/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "strong-tests:FR-15",
+      "file": ".specs/strong-tests/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "strong-tests:FR-16",
+      "file": ".specs/strong-tests/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "strong-tests:FR-17",
+      "file": ".specs/strong-tests/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "suggest-rules-insights:FR-1",
+      "file": ".specs/suggest-rules-insights/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "suggest-rules-insights:FR-2",
+      "file": ".specs/suggest-rules-insights/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "suggest-rules-insights:FR-3",
+      "file": ".specs/suggest-rules-insights/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "suggest-rules-insights:FR-4",
+      "file": ".specs/suggest-rules-insights/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "suggest-rules-insights:FR-5",
+      "file": ".specs/suggest-rules-insights/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "suggest-rules-insights:FR-6",
+      "file": ".specs/suggest-rules-insights/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "suggest-rules-insights:FR-7",
+      "file": ".specs/suggest-rules-insights/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "suggest-rules-insights:FR-8",
+      "file": ".specs/suggest-rules-insights/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "suggest-rules-insights:FR-9",
+      "file": ".specs/suggest-rules-insights/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "suggest-rules-insights:FR-10",
+      "file": ".specs/suggest-rules-insights/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "test-statusline:FR-1",
+      "file": ".specs/test-statusline/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "test-statusline:FR-2",
+      "file": ".specs/test-statusline/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "test-statusline:FR-3",
+      "file": ".specs/test-statusline/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "test-statusline:FR-4",
+      "file": ".specs/test-statusline/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "test-statusline:FR-5",
+      "file": ".specs/test-statusline/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "test-statusline:FR-6",
+      "file": ".specs/test-statusline/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "test-statusline:FR-7",
+      "file": ".specs/test-statusline/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "test-statusline:FR-8",
+      "file": ".specs/test-statusline/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "test-statusline:FR-9",
+      "file": ".specs/test-statusline/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "test-statusline:FR-10",
+      "file": ".specs/test-statusline/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "test-statusline:FR-12",
+      "file": ".specs/test-statusline/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "test-statusline:FR-11",
+      "file": ".specs/test-statusline/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "tests-create-update:FR-1",
+      "file": ".specs/tests-create-update/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "tests-create-update:FR-2",
+      "file": ".specs/tests-create-update/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "tests-create-update:FR-3",
+      "file": ".specs/tests-create-update/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "tests-create-update:FR-4",
+      "file": ".specs/tests-create-update/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "tests-create-update:FR-5",
+      "file": ".specs/tests-create-update/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "tests-create-update:FR-6",
+      "file": ".specs/tests-create-update/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "tests-create-update:FR-7",
+      "file": ".specs/tests-create-update/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "tests-create-update:FR-8",
+      "file": ".specs/tests-create-update/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "tui-statusline-mode:FR-1",
+      "file": ".specs/tui-statusline-mode/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "tui-statusline-mode:FR-2",
+      "file": ".specs/tui-statusline-mode/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "tui-statusline-mode:FR-3",
+      "file": ".specs/tui-statusline-mode/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "tui-statusline-mode:FR-4",
+      "file": ".specs/tui-statusline-mode/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "tui-statusline-mode:FR-5",
+      "file": ".specs/tui-statusline-mode/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "tui-statusline-mode:FR-6",
+      "file": ".specs/tui-statusline-mode/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "tui-statusline-mode:FR-7",
+      "file": ".specs/tui-statusline-mode/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "tui-statusline-mode:FR-8",
+      "file": ".specs/tui-statusline-mode/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "tui-statusline-mode:FR-9",
+      "file": ".specs/tui-statusline-mode/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "tui-statusline-mode:FR-10",
+      "file": ".specs/tui-statusline-mode/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "tui-test-runner-v2:FR-1",
+      "file": ".specs/tui-test-runner-v2/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "tui-test-runner-v2:FR-2",
+      "file": ".specs/tui-test-runner-v2/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "tui-test-runner-v2:FR-3",
+      "file": ".specs/tui-test-runner-v2/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "tui-test-runner-v2:FR-4",
+      "file": ".specs/tui-test-runner-v2/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "tui-test-runner-v2:FR-5",
+      "file": ".specs/tui-test-runner-v2/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "tui-test-runner-v2:FR-6",
+      "file": ".specs/tui-test-runner-v2/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "tui-test-runner-v2:FR-7",
+      "file": ".specs/tui-test-runner-v2/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "tui-test-runner:FR-1",
+      "file": ".specs/tui-test-runner/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "tui-test-runner:FR-2",
+      "file": ".specs/tui-test-runner/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "tui-test-runner:FR-3",
+      "file": ".specs/tui-test-runner/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "tui-test-runner:FR-4",
+      "file": ".specs/tui-test-runner/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "tui-test-runner:FR-5",
+      "file": ".specs/tui-test-runner/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "tui-test-runner:FR-6",
+      "file": ".specs/tui-test-runner/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "tui-test-runner:FR-7",
+      "file": ".specs/tui-test-runner/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "tui-test-runner:FR-8",
+      "file": ".specs/tui-test-runner/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "tui-test-runner:FR-9",
+      "file": ".specs/tui-test-runner/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "tui-test-runner:FR-10",
+      "file": ".specs/tui-test-runner/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "tui-test-runner:FR-11",
+      "file": ".specs/tui-test-runner/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "tui-test-runner:FR-12",
+      "file": ".specs/tui-test-runner/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "tui-test-runner:FR-13",
+      "file": ".specs/tui-test-runner/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "tui-test-runner:FR-15",
+      "file": ".specs/tui-test-runner/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "tui-test-runner:FR-14",
+      "file": ".specs/tui-test-runner/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "tui-test-runner:FR-16",
+      "file": ".specs/tui-test-runner/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "tui-test-runner:FR-17",
+      "file": ".specs/tui-test-runner/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "tui-test-runner:FR-18",
+      "file": ".specs/tui-test-runner/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "tui-test-runner:FR-19",
+      "file": ".specs/tui-test-runner/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "tui-test-runner:FR-20",
+      "file": ".specs/tui-test-runner/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "undefined:FR-1",
+      "file": ".specs/undefined/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "undefined:FR-2",
+      "file": ".specs/undefined/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "undefined:FR-3",
+      "file": ".specs/undefined/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "undefined:FR-4",
+      "file": ".specs/undefined/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "undefined:FR-5",
+      "file": ".specs/undefined/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "verify-generic-scope-fix:FR-1",
+      "file": ".specs/verify-generic-scope-fix/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "verify-generic-scope-fix:FR-2",
+      "file": ".specs/verify-generic-scope-fix/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "verify-generic-scope-fix:FR-3",
+      "file": ".specs/verify-generic-scope-fix/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "verify-generic-scope-fix:FR-4",
+      "file": ".specs/verify-generic-scope-fix/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "verify-generic-scope-fix:FR-5",
+      "file": ".specs/verify-generic-scope-fix/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "verify-generic-scope-fix:FR-6",
+      "file": ".specs/verify-generic-scope-fix/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "verify-generic-scope-fix:FR-7",
+      "file": ".specs/verify-generic-scope-fix/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "verify-generic-scope-fix:FR-8",
+      "file": ".specs/verify-generic-scope-fix/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "verify-generic-scope-fix:FR-9",
+      "file": ".specs/verify-generic-scope-fix/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "voice-s5:FR-1",
+      "file": ".specs/voice-s5/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "voice-s5:FR-2",
+      "file": ".specs/voice-s5/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "voice-s5:FR-3",
+      "file": ".specs/voice-s5/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "voice-s5:FR-4",
+      "file": ".specs/voice-s5/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "voice-s5:FR-5",
+      "file": ".specs/voice-s5/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "worktree-setup:FR-1",
+      "file": ".specs/worktree-setup/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "worktree-setup:FR-2",
+      "file": ".specs/worktree-setup/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "worktree-setup:FR-3",
+      "file": ".specs/worktree-setup/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "worktree-setup:FR-4",
+      "file": ".specs/worktree-setup/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "worktree-setup:FR-5",
+      "file": ".specs/worktree-setup/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "worktree-setup:FR-6",
+      "file": ".specs/worktree-setup/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "worktree-setup:FR-7",
+      "file": ".specs/worktree-setup/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "worktree-setup:FR-8",
+      "file": ".specs/worktree-setup/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "worktree-setup:FR-10",
+      "file": ".specs/worktree-setup/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "worktree-setup:FR-11",
+      "file": ".specs/worktree-setup/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "worktree-setup:FR-12",
+      "file": ".specs/worktree-setup/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    },
+    {
+      "id": "worktree-setup:FR-9",
+      "file": ".specs/worktree-setup/FR.md",
+      "fromVersion": null,
+      "toVersion": 1,
+      "status": "not-declared"
+    }
+  ]
+}

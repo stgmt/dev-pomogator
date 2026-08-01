@@ -104,3 +104,24 @@
   - [ ] `validate-spec.ts -Path .specs/{slug}` → 0 errors
   - [ ] `audit-spec.ts -Path .specs/{slug}` → 0 findings
   - [ ] `/simplify` final review clean
+
+## Phase 4 — undefined (2026-08-01)
+
+
+## Backlog
+
+- [ ] Incident 2026-08-01: undefined — id: incident-2026-08-01-undefined — Status: TODO | Est: 120m
+  **Done When:**
+  - [ ] incident reproduced and root cause captured (2026-08-01)
+
+- [ ] Incident 2026-08-01: undefined — id: incident-2026-08-01-undefined-2 — Status: TODO | Est: 120m
+  **Done When:**
+  - [ ] incident reproduced and root cause captured (2026-08-01)
+- [ ] Incident 2026-08-01: undefined — id: incident-2026-08-01-undefined-3 — Status: TODO | Est: 120m
+  **Done When:**
+  - [ ] incident reproduced and root cause captured (2026-08-01)
+## Phase 5 — undefined (2026-08-01)
+
+
+## Phase 6 — undefined (2026-08-01)
+

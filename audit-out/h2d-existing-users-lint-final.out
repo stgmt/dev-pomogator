@@ -1,0 +1,15 @@
+
+> dev-pomogator@2.0.6 lint
+> node tools/lint-self-bootstrap/run-lint.cjs
+
+{
+  "exitCode": 0,
+  "installAttempted": false,
+  "lintAttempted": true,
+  "usedLocalEslint": true,
+  "installCommand": "npm install",
+  "lintCommand": "\"E:\\repos\\dev-pomogator\\node_modules\\.bin\\eslint.cmd\" .claude tools",
+  "logPath": "E:\\repos\\dev-pomogator\\.dev-pomogator\\.lint-self-bootstrap\\install.log",
+  "stdout": "",
+  "stderr": ""
+}

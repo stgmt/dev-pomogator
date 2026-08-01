@@ -1,0 +1,1542 @@
+{
+  "repo": "stgmt/dev-pomogator",
+  "fetched": "2026-07-31",
+  "totals": {
+    "total": 119,
+    "open": 64,
+    "closed": 55,
+    "withComments": 55
+  },
+  "domainRows": [
+    {
+      "domain": "hooks / gates",
+      "total": 32,
+      "open": 16,
+      "closed": 16,
+      "comments": 25,
+      "closeRate": 50
+    },
+    {
+      "domain": "misc / other",
+      "total": 20,
+      "open": 9,
+      "closed": 11,
+      "comments": 8,
+      "closeRate": 55
+    },
+    {
+      "domain": "spec-generator / specs",
+      "total": 16,
+      "open": 8,
+      "closed": 8,
+      "comments": 13,
+      "closeRate": 50
+    },
+    {
+      "domain": "BDD / cucumber / tests",
+      "total": 12,
+      "open": 8,
+      "closed": 4,
+      "comments": 9,
+      "closeRate": 33
+    },
+    {
+      "domain": "skills / rules",
+      "total": 8,
+      "open": 6,
+      "closed": 2,
+      "comments": 7,
+      "closeRate": 25
+    },
+    {
+      "domain": "headroom / proxy",
+      "total": 8,
+      "open": 5,
+      "closed": 3,
+      "comments": 34,
+      "closeRate": 38
+    },
+    {
+      "domain": "MCP / providers / memory",
+      "total": 4,
+      "open": 2,
+      "closed": 2,
+      "comments": 2,
+      "closeRate": 50
+    },
+    {
+      "domain": "plugin / install / migrate",
+      "total": 4,
+      "open": 0,
+      "closed": 4,
+      "comments": 3,
+      "closeRate": 100
+    },
+    {
+      "domain": "misc / enhancement",
+      "total": 3,
+      "open": 2,
+      "closed": 1,
+      "comments": 0,
+      "closeRate": 33
+    },
+    {
+      "domain": "misc / bug",
+      "total": 3,
+      "open": 2,
+      "closed": 1,
+      "comments": 0,
+      "closeRate": 33
+    },
+    {
+      "domain": "doctor / diagnostics",
+      "total": 3,
+      "open": 3,
+      "closed": 0,
+      "comments": 0,
+      "closeRate": 0
+    },
+    {
+      "domain": "session-pilot / worktree / TUI",
+      "total": 3,
+      "open": 1,
+      "closed": 2,
+      "comments": 1,
+      "closeRate": 67
+    },
+    {
+      "domain": "context-mode",
+      "total": 1,
+      "open": 1,
+      "closed": 0,
+      "comments": 2,
+      "closeRate": 0
+    },
+    {
+      "domain": "research / planning",
+      "total": 1,
+      "open": 0,
+      "closed": 1,
+      "comments": 0,
+      "closeRate": 100
+    },
+    {
+      "domain": "CI / docker / release",
+      "total": 1,
+      "open": 1,
+      "closed": 0,
+      "comments": 3,
+      "closeRate": 0
+    }
+  ],
+  "byMonthDomain": {
+    "2026-07": {
+      "hooks / gates": 15,
+      "misc / enhancement": 1,
+      "spec-generator / specs": 14,
+      "context-mode": 1,
+      "misc / bug": 2,
+      "MCP / providers / memory": 3,
+      "skills / rules": 7,
+      "BDD / cucumber / tests": 5,
+      "doctor / diagnostics": 3,
+      "misc / other": 16,
+      "session-pilot / worktree / TUI": 2,
+      "headroom / proxy": 7,
+      "plugin / install / migrate": 3
+    },
+    "2026-06": {
+      "hooks / gates": 16,
+      "plugin / install / migrate": 1,
+      "misc / bug": 1,
+      "BDD / cucumber / tests": 7,
+      "research / planning": 1,
+      "misc / other": 4,
+      "MCP / providers / memory": 1,
+      "spec-generator / specs": 2,
+      "session-pilot / worktree / TUI": 1,
+      "CI / docker / release": 1,
+      "headroom / proxy": 1,
+      "misc / enhancement": 2,
+      "skills / rules": 1
+    },
+    "2026-05": {
+      "hooks / gates": 1
+    }
+  },
+  "months": {
+    "2026-07": {
+      "created": 79,
+      "openNow": 50,
+      "closedNow": 29
+    },
+    "2026-06": {
+      "created": 39,
+      "openNow": 14,
+      "closedNow": 25
+    },
+    "2026-05": {
+      "created": 1,
+      "openNow": 0,
+      "closedNow": 1
+    }
+  },
+  "byWeek": {
+    "2026-07-27": {
+      "open": 4,
+      "closed": 0,
+      "created": 4
+    },
+    "2026-07-20": {
+      "open": 32,
+      "closed": 13,
+      "created": 45
+    },
+    "2026-07-13": {
+      "open": 5,
+      "closed": 10,
+      "created": 15
+    },
+    "2026-07-06": {
+      "open": 2,
+      "closed": 4,
+      "created": 6
+    },
+    "2026-06-29": {
+      "open": 7,
+      "closed": 3,
+      "created": 10
+    },
+    "2026-06-22": {
+      "open": 1,
+      "closed": 2,
+      "created": 3
+    },
+    "2026-06-15": {
+      "open": 0,
+      "closed": 2,
+      "created": 2
+    },
+    "2026-06-08": {
+      "open": 4,
+      "closed": 10,
+      "created": 14
+    },
+    "2026-06-01": {
+      "open": 9,
+      "closed": 10,
+      "created": 19
+    },
+    "2026-05-04": {
+      "open": 0,
+      "closed": 1,
+      "created": 1
+    }
+  },
+  "openByDomain": {
+    "hooks / gates": [
+      {
+        "number": 215,
+        "title": "Feature: PreToolUse enforcement for #212 ΓÇö block solo/direct Agent spawn when no Dynamic Workflow dispatch is active",
+        "created": "2026-07-29",
+        "updated": "2026-07-29",
+        "labels": [
+          "enhancement",
+          "claude-code",
+          "tooling"
+        ],
+        "url": "https://github.com/stgmt/dev-pomogator/issues/215",
+        "commentCount": 1,
+        "comments": [
+          "undefined @stgmt: ## Dogfood update: practical value and live boundary proof We applied the narrow enforcement slice from this issue in a real project and then used Dynamic Workflow again to investi"
+        ]
+      },
+      {
+        "number": 193,
+        "title": "╨í╨╛╨╖╨┤╨░╤é╤î ╨╛╤é╨┤╨╡╨╗╤î╨╜╤â╤Ä issue ╨▓ stgmt/dev-pomogator ╨┐╤Ç╨╛ ╨┐╨╛╤ü╤é╨╛╤Å╨╜╨╜╤ï╨╣ HTTP 503 ╨╜╨░ managed HTTP Stop hook Stop/9/0 (claim-evidence",
+        "created": "2026-07-24",
+        "updated": "2026-07-24",
+        "labels": [],
+        "url": "https://github.com/stgmt/dev-pomogator/issues/193",
+        "commentCount": 0,
+        "comments": []
+      },
+      {
+        "number": 161,
+        "title": "claim-evidence-gate ╤ü╨╗╨╡╨┐ ╨║ ╨┐╤Ç╨╛╤ê╨╗╤ï╨╝ ╤à╨╛╨┤╨░╨╝: ╤é╤Ç╨╡╨▒╤â╨╡╤é ╨┐╨╡╤Ç╨╡╨┐╤Ç╨╛╨│╨╛╨╜ ╤é╨╡╤ü╤é╨╛╨▓, ╤à╨╛╤é╤Å ╨╛╨╜╨╕ ╤ê╨╗╨╕ ╤à╨╛╨┤╨╛╨╝ ╤Ç╨░╨╜╤î╤ê╨╡ ╨┐╤Ç╨╕ ╨╜╨╡╨╕╨╖╨╝╨╡╨╜╨╜╨╛╨╝ ╨║╨╛╨┤╨╡ (carry-over evidence)",
+        "created": "2026-07-23",
+        "updated": "2026-07-23",
+        "labels": [],
+        "url": "https://github.com/stgmt/dev-pomogator/issues/161",
+        "commentCount": 1,
+        "comments": [
+          "undefined @stgmt: ## ╨Æ╨╡╤Ç╨╕╤ä╨╕╨║╨░╤å╨╕╤Å ╤ä╨╕╨║╤ü╨░ (╤ü╨╜╨╕╨╝╨░╤Ä [UNVERIFIED]) ╨ƒ╨╛╨╝╨╕╨╝╨╛ ╤Ä╨╜╨╕╤é-╨╗╨╛╨│╨╕╨║╨╕ (9/9), ╨┐╤Ç╨╛╨│╨╜╨░╨╗ **╨╢╨╕╨▓╨╛╨╣ e2e ╨┐╤Ç╨╛╤é╨╕╨▓ ╤ü╨░╨╝╨╛╨│╨╛ ╨▒╨░╨╜╨┤╨╗╨░** "
+        ]
+      },
+      {
+        "number": 149,
+        "title": "claim-evidence-gate 12 ╤Ç╨░╨╖ ╤é╤Ç╨╡╨▒╨╛╨▓╨░╨╗ ╨╜╨░╤Ç╤â╤ê╨╕╤é╤î git-push-safety: ┬½awaiting user permission┬╗ ╤é╤Ç╨░╨║╤é╤â╨╡╤é╤ü╤Å ╨║╨░╨║ fake hand-off",
+        "created": "2026-07-22",
+        "updated": "2026-07-22",
+        "labels": [],
+        "url": "https://github.com/stgmt/dev-pomogator/issues/149",
+        "commentCount": 5,
+        "comments": [
+          "undefined @stgmt: ## ╨É╨┐╨┤╨╡╨╣╤é: ╨│╨╡╨╣╤é ╨┐╤Ç╨╛╨┤╨╛╨╗╨╢╨╕╨╗ ╤ü╤Ç╨░╨▒╨░╤é╤ï╨▓╨░╤é╤î ╨▓╨╛ ╨▓╤Ç╨╡╨╝╤Å ╨╜╨░╨┐╨╕╤ü╨░╨╜╨╕╤Å ╤ü╨░╨╝╨╛╨│╨╛ ╨▒╨░╨│-╤Ç╨╡╨┐╨╛╤Ç╤é╨░ ╨ƒ╨╛╤ü╨╗╨╡ ╤ü╨╛╨╖╨┤╨░╨╜╨╕╤Å ╤ì╤é╨╛╨│╨╛ iss",
+          "undefined @stgmt: ## ╨á╨░╨╖╨▒╨╛╤Ç ╨┐╨╛ ╨╕╤ü╤à╨╛╨┤╨╜╨╕╨║╤â (`tools/claim-evidence-gate/`) ΓÇö ╤â╤é╨╛╤ç╨╜╤Å╤Ä ╨┐.4 ╨╕ ╨┤╨╛╨▒╨░╨▓╨╗╤Å╤Ä ╨║╨╛╤Ç╨╜╨╡╨▓╤â╤Ä ╨┐╤Ç╨╕╤ç╨╕╨╜╤â ### 1. ╨¢╨╛╨▓╤â╤ê╨║╨░ ┬½╨ö╨░╨╗╤î╤",
+          "undefined @stgmt: ## ╨ÿ╨í╨ƒ╨á╨É╨Æ╨¢╨ò╨¥╨ÿ╨ò ╨┐.4: ╨╛╨│╤Ç╨░╨╜╨╕╤ç╨╕╤é╨╡╨╗╤î ╨ò╨í╨ó╨¼, ╨╜╨╛ ╨╝╨╛╨╕ ╨╢╨╡ ╨┐╨╛╨┐╤ï╤é╨║╨╕ ╨╡╨│╨╛ ╤ü╨▒╤Ç╨░╤ü╤ï╨▓╨░╨╗╨╕ ╨ƒ╤Ç╨╛╤ê╨╗╤ï╨╣ ╨║╨╛╨╝╨╝╨╡╨╜╤é╨░╤Ç╨╕╨╣ ╤â╤é╨▓╨╡╤Ç╨╢╨┤╨",
+          "undefined @stgmt: ## ╨ƒ╨╛╨┐╤ï╤é╨║╨░ ╨┐╨╛╤ç╨╕╨╜╨║╨╕: ╨┐╨░╤é╤ç ┬½╨┤╨░╤é╤î ╤ü╤â╨┤╤î╨╡ ╤ä╨░╨║╤é╤ï┬╗ + ╤Ç╨╡╨╖╤â╨╗╤î╤é╨░╤é╤ï ╨┐╤Ç╨╛╨▓╨╡╤Ç╨║╨╕ ╨º╨╕╨╜╨╕╨╗ ╨┐╨╛ ╨┐╤Ç╨╕╨╜╤å╨╕╨┐╤â ┬½╨╜╨╡ ╨╛╨▒╤à╨╛╨┤╨╕╤é╤î ╨╕ ╨╜",
+          "undefined @stgmt: ## ╨Æ╨╛╤ü╨┐╤Ç╨╛╨╕╨╖╨▓╨╡╨┤╨╡╨╜╨╛: ╨╛╤é╨║╤â╨┤╨░ ╨▒╨╡╤Ç╤æ╤é╤ü╤Å ┬½14 open tasks┬╗ ╨╕ ┬½╨╖╨░╨┤╨░╤ç╨╕ ╨╜╨╡ ╨╕╨╖ ╨╝╨╛╨╡╨│╨╛ ╨╝╨░╨╜╨┤╨░╤é╨░┬╗ ╨£╨╡╤à╨░╨╜╨╕╨╖╨╝ ╨╜╨░╨╣╨┤╨╡╨╜ ╨╕ ╨┐╨╛╤ü╤ç╨╕╤é"
+        ]
+      },
+      {
+        "number": 130,
+        "title": "CARL: CARL_PROJECT_DIR workaround (#128) does not reach the hook process ΓÇö implement cwd walk-up (patch included)",
+        "created": "2026-07-19",
+        "updated": "2026-07-19",
+        "labels": [],
+        "url": "https://github.com/stgmt/dev-pomogator/issues/130",
+        "commentCount": 0,
+        "comments": []
+      },
+      {
+        "number": 96,
+        "title": "Claude Code compact/recovery hooks: durable post-compact handoff, capsule schema, doctor + evals",
+        "created": "2026-07-08",
+        "updated": "2026-07-08",
+        "labels": [
+          "enhancement",
+          "claude-code",
+          "tooling"
+        ],
+        "url": "https://github.com/stgmt/dev-pomogator/issues/96",
+        "commentCount": 0,
+        "comments": []
+      },
+      {
+        "number": 86,
+        "title": "claude-mem File Read Gate ╨┤╨╡╨╜╨╛╨╕╤é/╨▒╨╗╨╛╨║╨╕╤Ç╤â╨╡╤é Read ΓåÆ ╨┐╤Ç╨╛╤é╤â╤à╤ê╨╕╨╡ ╨▓╤ï╨╢╨╕╨╝╨║╨╕ (╨╜╨╡ ╨▓╤ê╨╕╨▓╨░╤é╤î gate ╨┐╨╛ ╤â╨╝╨╛╨╗╤ç╨░╨╜╨╕╤Ä)",
+        "created": "2026-07-04",
+        "updated": "2026-07-04",
+        "labels": [
+          "cannot reproduce"
+        ],
+        "url": "https://github.com/stgmt/dev-pomogator/issues/86",
+        "commentCount": 0,
+        "comments": []
+      },
+      {
+        "number": 76,
+        "title": "Stop hooks ╨╖╨░╨╜╨╕╨╝╨░╤Ä╤é ╨╝╨╕╨╜╤â╤é╤ï (7 ╤à╤â╨║╨╛╨▓ ╨┐╨╛╨┤╤Ç╤Å╨┤, ╨╝╨╕╨╜╨╕╨╝╤â╨╝ 3 ╨▒╨╗╨╛╨║╨╕╤Ç╤â╤Ä╤é╤ü╤Å LLM-╨▓╤ï╨╖╨╛╨▓╨╛╨╝) ΓÇö fire-and-forget ╨┐╨░╤é╤é╨╡╤Ç╨╜ ╤ç╨░╤ü╤é╨╕╤ç╨╜╨╛ ╨┐╤Ç╨╕╨╝╨╡╨╜╤æ╨╜",
+        "created": "2026-07-01",
+        "updated": "2026-07-01",
+        "labels": [],
+        "url": "https://github.com/stgmt/dev-pomogator/issues/76",
+        "commentCount": 1,
+        "comments": [
+          "undefined @stgmt: ## ╨₧╨▒╨╜╨╛╨▓╨╗╨╡╨╜╨╕╨╡: ╤Ç╨╡╨░╨╗╤î╨╜╤ï╨╣ ╨▓╨╕╨╜╨╛╨▓╨╜╨╕╨║ ╨▓ ╨╛╤ü╨╜╨╛╨▓╨╜╨╛╨╝ ╨¥╨ò ╨╖╨┤╨╡╤ü╤î (╨┤╨░╨╜╨╜╤ï╨╡ ╨╕╨╖ tsx-runner.log) ╨ƒ╤Ç╨╛╨▓╨╡╤Ç╨╕╨╗ `~/.dev-pomogator/logs/tsx-runner"
+        ]
+      },
+      {
+        "number": 74,
+        "title": "Referent-grounding guard (Component A): stateful \"N user-rejections ΓåÆ stop guessing, enumerate referents, ask which\" UserPromptSubmit hook + pinator carve-out",
+        "created": "2026-06-25",
+        "updated": "2026-06-25",
+        "labels": [],
+        "url": "https://github.com/stgmt/dev-pomogator/issues/74",
+        "commentCount": 0,
+        "comments": []
+      },
+      {
+        "number": 61,
+        "title": "guard: blame-infra-╨╕╨╖-╨╕╨╜╤ä╨╡╤Ç╨╡╨╜╤ü╨░ ╨▓╨╝╨╡╤ü╤é╨╛ trace (+ ╨╕╤ü╤é╨╛╤Ç╨╕╤Å ╤ü╨╡╤ü╤ü╨╕╨╕: 5 ╨┐╨╛╨▓╤é╨╛╤Ç╨╛╨▓ claim-╨▒╨╡╨╖-╨┐╤Ç╤â╤ä╨░)",
+        "created": "2026-06-11",
+        "updated": "2026-06-11",
+        "labels": [],
+        "url": "https://github.com/stgmt/dev-pomogator/issues/61",
+        "commentCount": 0,
+        "comments": []
+      },
+      {
+        "number": 60,
+        "title": "guard: claims ╨▒╨╡╨╖ ╨┐╤Ç╤â╤ä╨░ (╨┐╨░╨╝╤Å╤é╤î/╨╕╨╜╤ä╨╡╤Ç╨╡╨╜╤ü) + ╤ì╤ü╨║╨░╨╗╨░╤å╨╕╤Å tool-permission-deny ╨▓ user-policy",
+        "created": "2026-06-11",
+        "updated": "2026-06-11",
+        "labels": [],
+        "url": "https://github.com/stgmt/dev-pomogator/issues/60",
+        "commentCount": 0,
+        "comments": []
+      },
+      {
+        "number": 52,
+        "title": "hooks: ╨╛╤é╨╜╨╛╤ü╨╕╤é╨╡╨╗╤î╨╜╤ï╨╡ ╨┐╤â╤é╨╕ ╤ü╨║╤Ç╨╕╨┐╤é╨╛╨▓ ╨╗╨╛╨╝╨░╤Ä╤é╤ü╤Å ╨┐╤Ç╨╕ cwd ╨▓╨╜╨╡ ╨║╨╛╤Ç╨╜╤Å ╨┐╤Ç╨╛╨╡╨║╤é╨░ (╨▓╨┐╨╗╨╛╤é╤î ╨┤╨╛ deadlock ╨▓╤ü╨╡╤à Bash-╨▓╤ï╨╖╨╛╨▓╨╛╨▓) ΓÇö ╨╜╤â╨╢╨╡╨╜ $CLAUDE_PROJECT_DIR",
+        "created": "2026-06-06",
+        "updated": "2026-06-06",
+        "labels": [],
+        "url": "https://github.com/stgmt/dev-pomogator/issues/52",
+        "commentCount": 0,
+        "comments": []
+      },
+      {
+        "number": 45,
+        "title": "Automated guards for the \"full-suite-only\" false-failure class (test-isolation leaks, stale assertions, dirty-tree confounds)",
+        "created": "2026-06-05",
+        "updated": "2026-06-05",
+        "labels": [],
+        "url": "https://github.com/stgmt/dev-pomogator/issues/45",
+        "commentCount": 0,
+        "comments": []
+      },
+      {
+        "number": 44,
+        "title": "Feature: zombie-hunter / vestige-detector plugin (analyst skill + UserPromptSubmit hook) ΓÇö PoC attached",
+        "created": "2026-06-04",
+        "updated": "2026-06-04",
+        "labels": [],
+        "url": "https://github.com/stgmt/dev-pomogator/issues/44",
+        "commentCount": 0,
+        "comments": []
+      },
+      {
+        "number": 42,
+        "title": "test_guard: PreToolUse-╤à╤â╨║ ╨╛╨▒╤à╨╛╨┤╨╕╤é╤ü╤Å ╨┐╤Ç╨╕ run_in_background (false negative) + false-positive ╨╜╨░ ╨┐╨╛╨┤╤ü╤é╤Ç╨╛╨║╤â ╨▓ echo/grep",
+        "created": "2026-06-03",
+        "updated": "2026-06-03",
+        "labels": [
+          "bug"
+        ],
+        "url": "https://github.com/stgmt/dev-pomogator/issues/42",
+        "commentCount": 0,
+        "comments": []
+      },
+      {
+        "number": 35,
+        "title": "claim-sanity-check: pre-claim verification gate ╨┤╨╗╤Å ╤ä╨░╨║╤é╨╛╨▓ (╨┤╨╛╨┤╨╡╨╗╨░╤é╤î)",
+        "created": "2026-06-01",
+        "updated": "2026-06-01",
+        "labels": [],
+        "url": "https://github.com/stgmt/dev-pomogator/issues/35",
+        "commentCount": 0,
+        "comments": []
+      }
+    ],
+    "misc / enhancement": [
+      {
+        "number": 212,
+        "title": "Feature: Universal Workflow Orchestrator ╨┤╨╗╤Å bounded development-╤ü╨╡╤ü╤ü╨╕╨╣",
+        "created": "2026-07-28",
+        "updated": "2026-07-28",
+        "labels": [
+          "enhancement",
+          "claude-code",
+          "tooling"
+        ],
+        "url": "https://github.com/stgmt/dev-pomogator/issues/212",
+        "commentCount": 0,
+        "comments": []
+      },
+      {
+        "number": 38,
+        "title": "feat: ╨║╨░╤ü╤é╨╛╨╝╨╜╨░╤Å ╤ü╨╗╨╡╤ê-╨║╨╛╨╝╨░╨╜╨┤╨░ /review-and-clean ΓÇö ╨▒╨░╨│╤à╨░╨╜╤é╨╕╨╜╨│ ╤ü ╨║╨╛╨╝╨╝╨╡╨╜╤é╨░╨╝╨╕ ╨▓ PR + ╨░╨▓╤é╨╛-cleanup ╨╖╨░ ╨╛╨┤╨╕╨╜ ╨▓╤ï╨╖╨╛╨▓",
+        "created": "2026-06-03",
+        "updated": "2026-06-03",
+        "labels": [
+          "enhancement",
+          "claude-code",
+          "tooling"
+        ],
+        "url": "https://github.com/stgmt/dev-pomogator/issues/38",
+        "commentCount": 0,
+        "comments": []
+      }
+    ],
+    "spec-generator / specs": [
+      {
+        "number": 210,
+        "title": "╨á╨╡╨░╨╗╨╕╨╖╨╛╨▓╨░╤é╤î ╤ü╨╕╤ü╤é╨╡╨╝╨╜╤ï╨╣ planner ╨╖╨░╨┤╨░╤ç ╨┤╨╗╤Å AI-╨░╨│╨╡╨╜╤é╨╛╨▓ ╨╕╨╖ spec-generator-v4",
+        "created": "2026-07-28",
+        "updated": "2026-07-28",
+        "labels": [
+          "tooling"
+        ],
+        "url": "https://github.com/stgmt/dev-pomogator/issues/210",
+        "commentCount": 0,
+        "comments": []
+      },
+      {
+        "number": 178,
+        "title": "Reverse-╨░╨╜╨╜╨╛╤é╨░╤å╨╕╨╕ ╤é╤Ç╨╡╨▒╨╛╨▓╨░╨╜╨╕╨╣ ╨╕╨╖ ╨╕╤ü╤à╨╛╨┤╨╜╨╕╨║╨╛╨▓: ╨╕╨╜╨┤╨╡╨║╤ü ┬½╤ü╨╕╨╝╨▓╨╛╨╗/╤ä╨░╨╣╨╗/╤ü╤é╤Ç╨╛╨║╨░ ΓåÆ ╤é╤Ç╨╡╨▒╨╛╨▓╨░╨╜╨╕╨╡┬╗ (@implements/@req/@see FR-N), ╨╖╨░╨┐╨╛╨╗╨╜╤Å╤Ä╤ë╨╕╨╣ ╨╜╨╡╨╕╤ü╨┐╨╛╨╗╤î╨╖╤â╨╡╨╝╨╛╨╡ ╤Ç╨╡╨▒╤Ç╨╛ code-impl ╤ü provenance",
+        "created": "2026-07-23",
+        "updated": "2026-07-23",
+        "labels": [],
+        "url": "https://github.com/stgmt/dev-pomogator/issues/178",
+        "commentCount": 0,
+        "comments": []
+      },
+      {
+        "number": 167,
+        "title": "Generated traceability matrix + graph views (HTML/JSON) instead of hand tables",
+        "created": "2026-07-23",
+        "updated": "2026-07-23",
+        "labels": [],
+        "url": "https://github.com/stgmt/dev-pomogator/issues/167",
+        "commentCount": 0,
+        "comments": []
+      },
+      {
+        "number": 165,
+        "title": "LSP definition/references/rename for spec entity IDs (FR/AC/Task), not just headings",
+        "created": "2026-07-23",
+        "updated": "2026-07-23",
+        "labels": [],
+        "url": "https://github.com/stgmt/dev-pomogator/issues/165",
+        "commentCount": 0,
+        "comments": []
+      },
+      {
+        "number": 162,
+        "title": "spec-generator-v4 closure program: evidence truth, legacy backlog, BDD rollout, and post-#158 gaps",
+        "created": "2026-07-23",
+        "updated": "2026-07-23",
+        "labels": [],
+        "url": "https://github.com/stgmt/dev-pomogator/issues/162",
+        "commentCount": 2,
+        "comments": [
+          "undefined @stgmt: WP-1 evidence/readiness foundation is implemented in PR #184: https://github.com/stgmt/dev-pomogator/pull/184 Verified outcomes: - stale canonical passes now block effective EXECUT",
+          "undefined @stgmt: WP-2 / FR-56 merged via PR #186: https://github.com/stgmt/dev-pomogator/pull/186 Delivered: - commit-bound overlay evidence with backward-compatible legacy-row reads; - stale class"
+        ]
+      },
+      {
+        "number": 159,
+        "title": "╨í╨┐╨╡╨║-╨┤╨▓╨╡╤Ç╤î UX: ╨╛╤é╨┤╨░╨▓╨░╤é╤î ╨▓╤ü╨╡ ╨╜╨╡╨┤╨╛╤ü╤é╨░╤Ä╤ë╨╕╨╡ ╨┐╨╛╨╗╤Å ╤ä╨╛╤Ç╨╝╤ï ╤Ç╨░╨╖╨╛╨╝ + ╤â╨▒╤Ç╨░╤é╤î ╨║╤Ç╨╛╤ü╤ü-╨┤╨╛╨║╤â╨╝╨╡╨╜╤é╨╜╤ï╨╣ ╨┤╨╡╨┤╨╗╨╛╨║ FRΓåöStory ╤ç╨╡╤Ç╨╡╨╖ ╨╝╤â╨╗╤î╤é╨╕╨┤╨╛╨║-atomic apply (╨┐╨╛╤ç╨╕╨╜╨╡╨╜╨╛, ╤é╨╡╤ü╤é╤ï ╨╖╨╡╨╗╤æ╨╜╤ï╨╡)",
+        "created": "2026-07-23",
+        "updated": "2026-07-23",
+        "labels": [],
+        "url": "https://github.com/stgmt/dev-pomogator/issues/159",
+        "commentCount": 0,
+        "comments": []
+      },
+      {
+        "number": 157,
+        "title": "create-spec: require executable live verification task before feature done",
+        "created": "2026-07-22",
+        "updated": "2026-07-22",
+        "labels": [
+          "enhancement",
+          "claude-code",
+          "tooling"
+        ],
+        "url": "https://github.com/stgmt/dev-pomogator/issues/157",
+        "commentCount": 0,
+        "comments": []
+      },
+      {
+        "number": 153,
+        "title": "create-spec: mandatory independent adversarial review gate before Spec ready",
+        "created": "2026-07-22",
+        "updated": "2026-07-22",
+        "labels": [
+          "enhancement",
+          "claude-code",
+          "tooling"
+        ],
+        "url": "https://github.com/stgmt/dev-pomogator/issues/153",
+        "commentCount": 0,
+        "comments": []
+      }
+    ],
+    "context-mode": [
+      {
+        "number": 209,
+        "title": "╨₧╤ä╨╛╤Ç╨╝╨╕╤é╤î ╨╕ ╨╛╤é╨┐╤Ç╨░╨▓╨╕╤é╤î issue ╨▓ dev-pomogator: context-mode ctx_execute ╨╛╤ü╤é╨░╨▓╨╕╨╗ orphan Python recursive scan ~\\.codex, ╨┐╤Ç╨╛╤å",
+        "created": "2026-07-28",
+        "updated": "2026-07-28",
+        "labels": [],
+        "url": "https://github.com/stgmt/dev-pomogator/issues/209",
+        "commentCount": 2,
+        "comments": [
+          "undefined @stgmt: Root-cause correction after live forensics: the orphan was not the dev-pomogator installer. It was a context-mode `ctx_execute` shell tree (`bash -c %TEMP%/.ctx-mode-*/script` ΓåÆ ",
+          "undefined @stgmt: Implemented the corrected fix in the actual owner repository and opened upstream PR: https://github.com/mksglu/context-mode/pull/1009 Proof: - MCP request AbortSignal now reaches c"
+        ]
+      }
+    ],
+    "misc / bug": [
+      {
+        "number": 208,
+        "title": "anchor-integrity/fix.mjs: ╨║╨╗╨░╤ü╤ü {#id}+╨┤╨╡╨║╨╛╤Ç╨░╤é╨╕╨▓╨╜╨╛╨╡ ╤é╨╕╤Ç╨╡ ╨┐╨╛╨╝╨╡╤ç╨░╨╡╤é╤ü╤Å ambiguous, ╤à╨╛╤é╤Å ╤ç╨╕╨╜╨╕╤é╤ü╤Å ╨┤╨╡╤é╨╡╤Ç╨╝╨╕╨╜╨╕╤Ç╨╛╨▓╨░╨╜╨╜╨╛",
+        "created": "2026-07-26",
+        "updated": "2026-07-26",
+        "labels": [
+          "bug",
+          "tooling"
+        ],
+        "url": "https://github.com/stgmt/dev-pomogator/issues/208",
+        "commentCount": 0,
+        "comments": []
+      },
+      {
+        "number": 204,
+        "title": "subagent-watchdog: ╨╢╨╕╨▓╨╛╨╣ ╤ü╨░╨▒╨░╨│╨╡╨╜╤é ╨▓╤ü╨╡╨│╨┤╨░ ╤ü╤é╨░╨╜╨╛╨▓╨╕╤é╤ü╤Å stale-running ╨╜╨░ Windows (.output ╨╜╨╕╨║╨╛╨│╨┤╨░ ╨╜╨╡ ╨┤╨▓╨╕╨│╨░╨╡╤é╤ü╤Å)",
+        "created": "2026-07-25",
+        "updated": "2026-07-25",
+        "labels": [
+          "bug",
+          "tooling"
+        ],
+        "url": "https://github.com/stgmt/dev-pomogator/issues/204",
+        "commentCount": 0,
+        "comments": []
+      }
+    ],
+    "MCP / providers / memory": [
+      {
+        "number": 207,
+        "title": "╨ö╨╡╨┤╨╗╨╛╨║: anchor-╨│╨╡╨╣╤é ╤é╤Ç╨╡╨▒╤â╨╡╤é ╨┐╨╛╤ç╨╕╨╜╨║╨╕, ╨░ MCP-╨┤╨▓╨╡╤Ç╤î ╨▒╨╗╨╛╨║╨╕╤Ç╤â╨╡╤é ╨╖╨░╨┐╨╕╤ü╤î ╨╕╨╖-╨╖╨░ 135 ╨╜╨╡╤ü╨▓╤Å╨╖╨░╨╜╨╜╤ï╤à pre-existing ╨╜╨░╤à╨╛╨┤╨╛╨║",
+        "created": "2026-07-26",
+        "updated": "2026-07-26",
+        "labels": [
+          "bug",
+          "tooling"
+        ],
+        "url": "https://github.com/stgmt/dev-pomogator/issues/207",
+        "commentCount": 0,
+        "comments": []
+      },
+      {
+        "number": 87,
+        "title": "claude-mem reaper (262b5206) ╨╜╨╡ ╨┤╨╛╤à╨╛╨┤╨╕╤é ╨┤╨╛ lm-saas ΓÇö vendored .dev-pomogator ╨┐╤Ç╨╛╤é╤â╤à, SessionStart ╨│╨╛╨╜╨╕╤é ╤ü╤é╨░╤Ç╤ï╨╣ Chroma-╨┐╤Ç╨╛╨▒╨╜╨╕╨║",
+        "created": "2026-07-04",
+        "updated": "2026-07-04",
+        "labels": [],
+        "url": "https://github.com/stgmt/dev-pomogator/issues/87",
+        "commentCount": 0,
+        "comments": []
+      }
+    ],
+    "skills / rules": [
+      {
+        "number": 206,
+        "title": "CARL: CARL_PROJECT_DIR ╨┐╤Ç╨╕╨╛╤Ç╨╕╤é╨╡╤é╨╜╨╡╨╡ cwd ΓÇö ╨╖╨░╤ü╤é╤Ç╤Å╨▓╤ê╨╕╨╣ ╨┐╤â╤é╤î ╨╝╨╛╨╗╤ç╨░ ╨╛╤é╨║╨╗╤Ä╤ç╨░╨╡╤é recall ╨╜╨░ ╨▓╤ü╤Ä ╤ü╨╡╤ü╤ü╨╕╤Ä",
+        "created": "2026-07-25",
+        "updated": "2026-07-25",
+        "labels": [],
+        "url": "https://github.com/stgmt/dev-pomogator/issues/206",
+        "commentCount": 0,
+        "comments": []
+      },
+      {
+        "number": 205,
+        "title": "╨æ╨░╨│: CARL ╨┐╨╡╤Ç╨╡╤ü╤é╨░╤æ╤é ╤Ç╨░╨▒╨╛╤é╨░╤é╤î ╨▓ ╤ü╨╡╤Ç╨╡╨┤╨╕╨╜╨╡ ╤ü╨╡╤ü╤ü╨╕╨╕, ╨┐╨╛╤é╨╛╨╝╤â ╤ç╤é╨╛ ╨╕╤ë╨╡╤é .carl/carl.json ╨╛╤é╨╜╨╛╤ü╨╕╤é╨╡╨╗╤î╨╜╨╛ ╤é╨╡╨║╤â╤ë╨╡╨╣ ╤Ç╨░╨▒╨╛╤ç╨╡╨╣ ╨┤╨╕╤Ç╨╡╨║╤é╨╛╤Ç╨╕╨╕ ",
+        "created": "2026-07-25",
+        "updated": "2026-07-25",
+        "labels": [],
+        "url": "https://github.com/stgmt/dev-pomogator/issues/205",
+        "commentCount": 0,
+        "comments": []
+      },
+      {
+        "number": 203,
+        "title": "CARL: ╤â╤ü╤é╨░╤Ç╨╡╨▓╤ê╨░╤Å CARL_PROJECT_DIR ╨▒╨╡╨╖╤â╤ü╨╗╨╛╨▓╨╜╨╛ ╨┐╨╡╤Ç╨╡╨▒╨╕╨▓╨░╨╡╤é cwd ΓåÆ project-missing ╨╜╨░ ╨▓╤ü╤Ä ╤ü╨╡╤ü╤ü╨╕╤Ä",
+        "created": "2026-07-25",
+        "updated": "2026-07-25",
+        "labels": [
+          "bug",
+          "tooling"
+        ],
+        "url": "https://github.com/stgmt/dev-pomogator/issues/203",
+        "commentCount": 0,
+        "comments": []
+      },
+      {
+        "number": 173,
+        "title": "╨ƒ╨╛╨┤╨│╨╛╤é╨╛╨▓╨╕╤é╤î ╨╕ ╤ü╨╛╨╖╨┤╨░╤é╤î GitHub issue ╨▓ stgmt/dev-pomogator ╨╛ ╨╜╨╡╤â╨┤╨░╤ç╨╜╨╛╨╣ ╤â╤ü╤é╨░╨╜╨╛╨▓╨║╨╡/╨╕╨╜╨╕╤å╨╕╨░╨╗╨╕╨╖╨░╤å╨╕╨╕ CARL: ╨╜╨░ SessionStart ╨▒╤ï╨╗ s",
+        "created": "2026-07-23",
+        "updated": "2026-07-23",
+        "labels": [],
+        "url": "https://github.com/stgmt/dev-pomogator/issues/173",
+        "commentCount": 1,
+        "comments": [
+          "undefined @stgmt: ## ╨ö╨╕╨░╨│╨╜╨╛╤ü╤é╨╕╨║╨░ ╨╕ ╨╕╤ü╨┐╤Ç╨░╨▓╨╗╨╡╨╜╨╕╨╡ ### ╨¥╨░╨▒╨╗╤Ä╨┤╨░╨╡╨╝╤ï╨╣ ╤ü╨▒╨╛╨╣ ╨¥╨░ ╨┐╨╡╤Ç╨▓╨╛╨╝ `SessionStart` CARL ╨▓╨╡╤Ç╨╜╤â╨╗ `status=project-missing`: ╨▓ ╨┐╤Ç╨╛╨╡╨║╤é"
+        ]
+      },
+      {
+        "number": 131,
+        "title": "╨í╨╛╨╖╨┤╨░╤é╤î ╨┐╨╡╤Ç╨╡╨╕╤ü╨┐╨╛╨╗╤î╨╖╤â╨╡╨╝╤ï╨╣ hyperv-vm skill: Windows LTSC, WSL2/Docker ╨╕ nested virtualization",
+        "created": "2026-07-19",
+        "updated": "2026-07-20",
+        "labels": [],
+        "url": "https://github.com/stgmt/dev-pomogator/issues/131",
+        "commentCount": 2,
+        "comments": [
+          "undefined @stgmt: ╨á╨╡╨░╨╗╨╕╨╖╨░╤å╨╕╤Å ╨╛╨▒╨╜╨╛╨▓╨╗╨╡╨╜╨░ ╨▓ commit ce4a378b. ╨ö╨╛╨▒╨░╨▓╨╗╨╡╨╜ generation-neutral repair ╨┤╨╗╤Å ╤ü╤â╤ë╨╡╤ü╤é╨▓╤â╤Ä╤ë╨╡╨╣ Windows 11 VM ╨┐╨╛ ╨╕╨╝╨╡╨╜╨╕: Plan/Apply/Rol",
+          "undefined @stgmt: ## ╨ƒ╨╛╨╗╨╡╨▓╤ï╨╡ ╨┤╨░╨╜╨╜╤ï╨╡ lm-saas, 19ΓÇô20.07: ╨┐╨╛╤ç╨╡╨╝╤â WSL2+Docker ┬½╤Ç╨░╨╖╨▓╨░╨╗╨╕╨▓╨░╨╡╤é╤ü╤Å ╨┐╨╛╤ü╤Ç╨╡╨┤╨╕ ╨┐╤Ç╨╛╨│╨╛╨╜╨░┬╗ ╨ƒ╨╛╤é╤Ç╨░╤é╨╕╨╗ ╨╜╨░ ╤ì╤é╨╛ ~6 ╤ç╨░╤ü╨╛╨▓"
+        ]
+      },
+      {
+        "number": 128,
+        "title": "CARL: project-missing when session cwd is a repo subfolder (no upward root walk)",
+        "created": "2026-07-18",
+        "updated": "2026-07-19",
+        "labels": [],
+        "url": "https://github.com/stgmt/dev-pomogator/issues/128",
+        "commentCount": 1,
+        "comments": [
+          "undefined @stgmt: Update: the CARL_PROJECT_DIR workaround documented here is unreliable ΓÇö settings.json env vars are injected into Bash tool subprocesses but NOT into UserPromptSubmit hook process"
+        ]
+      }
+    ],
+    "BDD / cucumber / tests": [
+      {
+        "number": 198,
+        "title": "╨í╨╛╨╖╨┤╨░╨╣ GitHub issue ╨▓ stgmt/dev-pomogator: ╨┐╨╛╨┤╨║╨╗╤Ä╤ç╨╕╤é╤î Reqnroll (.NET), Behave (Python) ╨╕ Cucumber-JVM (Java) ╨║ productio",
+        "created": "2026-07-24",
+        "updated": "2026-07-24",
+        "labels": [],
+        "url": "https://github.com/stgmt/dev-pomogator/issues/198",
+        "commentCount": 0,
+        "comments": []
+      },
+      {
+        "number": 194,
+        "title": "PowerShell Start-Job around the test-runner silently kills the .NET testhost - use Start-Process.",
+        "created": "2026-07-24",
+        "updated": "2026-07-24",
+        "labels": [],
+        "url": "https://github.com/stgmt/dev-pomogator/issues/194",
+        "commentCount": 0,
+        "comments": []
+      },
+      {
+        "number": 168,
+        "title": "╨ƒ╨╗╨░╨│╨╕╤Ç╤â╨╡╨╝╤ï╨╡ ╨░╨┤╨░╨┐╤é╨╡╤Ç╤ï ╤é╨╡╤ü╤é-╤Ç╨╡╨╖╤â╨╗╤î╤é╨░╤é╨╛╨▓ (JUnit XML, TRX) ╨║ ╨╡╨┤╨╕╨╜╨╛╨╣ ╨╝╨╛╨┤╨╡╨╗╨╕ ╨▓╨╡╤Ç╨┤╨╕╨║╤é╨░",
+        "created": "2026-07-23",
+        "updated": "2026-07-23",
+        "labels": [],
+        "url": "https://github.com/stgmt/dev-pomogator/issues/168",
+        "commentCount": 0,
+        "comments": []
+      },
+      {
+        "number": 160,
+        "title": "tsx-runner native:fail(2) ╨╜╨░ Windows ╨▓╨░╨╗╨╕╤é ╨¥╨ò ╤é╨╛╨╗╤î╨║╨╛ spec-access-guard: plan-gate ╨╕ bdd-only-test-guard ╤é╨╛╨╢╨╡, ╨╛╨▒╨░ fail-CLOSED (╤ê╨╕╤Ç╨╡ #137)",
+        "created": "2026-07-23",
+        "updated": "2026-07-23",
+        "labels": [],
+        "url": "https://github.com/stgmt/dev-pomogator/issues/160",
+        "commentCount": 0,
+        "comments": []
+      },
+      {
+        "number": 129,
+        "title": "╨ó╨╡╤ü╤é-╤é╤â╨╗: ╨╝╤æ╤Ç╤é╨▓╤ï╨╣ ╨┐╤â╤é╤î wrapper ╨▓ /run-tests, ╤ü╨╗╨╡╨┐╨╛╨╣ ╨░╨▓╤é╨╛╨┤╨╡╤é╨╡╨║╤é dotnet, ╨╜╨╡╤ç╨╕╤é╨░╨╡╨╝╤ï╨╣ DENY test_guard (╨┤╨╛╨│╤ä╤â╨┤ lm-saas/Window",
+        "created": "2026-07-18",
+        "updated": "2026-07-19",
+        "labels": [],
+        "url": "https://github.com/stgmt/dev-pomogator/issues/129",
+        "commentCount": 1,
+        "comments": [
+          "undefined @stgmt: ## ╨ö╨╛╨┐╨╛╨╗╨╜╨╡╨╜╨╕╨╡ (╨▓╨╗╨░╨┤╨╡╨╗╨╡╤å ╨┐╨╛╨┐╤Ç╨╛╤ü╨╕╨╗ ╤Ç╨░╤ü╤ê╨╕╤Ç╨╕╤é╤î): ╨┐╤Ç╨╛╨▓╨╡╤Ç╨║╨░ ┬½╨┐╤Ç╨╛╨│╨╛╨╜ ╤â╨╢╨╡ ╨╕╨┤╤æ╤é┬╗ ╨▓ ╨╛╨▒╤æ╤Ç╤é╨║╨╡ ╨ƒ╤Ç╨╛╨┤╨╛╨╗╨╢╨╡╨╜╨╕╨╡ ╨┤╨╛╨│╤ä╤"
+        ]
+      },
+      {
+        "number": 59,
+        "title": "automation: guard ╨┐╤Ç╨╛╤é╨╕╨▓ fake-green / exclude-instead-of-implement ╨▓ BDD (.feature.test.ts)",
+        "created": "2026-06-11",
+        "updated": "2026-06-11",
+        "labels": [],
+        "url": "https://github.com/stgmt/dev-pomogator/issues/59",
+        "commentCount": 0,
+        "comments": []
+      },
+      {
+        "number": 51,
+        "title": "test-runner: ╨┐╨╛╨┤╨┤╨╡╤Ç╨╢╨░╤é╤î headless WSL2 Docker (DOCKER_HOST=tcp) ΓÇö ╤é╨╡╤ü╤é╤ï ╤ü Testcontainers/Docker.DotNet ╨┐╨░╨┤╨░╤Ä╤é TimeoutException ╨▒╨╡╨╖ Docker Desktop",
+        "created": "2026-06-06",
+        "updated": "2026-06-06",
+        "labels": [],
+        "url": "https://github.com/stgmt/dev-pomogator/issues/51",
+        "commentCount": 1,
+        "comments": [
+          "undefined @stgmt: ## ╨ú╤é╨╛╤ç╨╜╨╡╨╜╨╕╨╡ ╨┐╨╛ ╨╕╤é╨╛╨│╨░╨╝ ╤Ç╨╡╨░╨╗╨╕╨╖╨░╤å╨╕╨╕ ╨▓╨╛╤Ç╨║╤ì╤Ç╨░╤â╨╜╨┤╨░ ╨ƒ╤Ç╨╛╨║╨╛╨┐╨░╨╗╨╕ ╨│╨╗╤â╨▒╨╢╨╡ ΓÇö ╨╜╨░╤ê╨╗╨╕ ╤é╤Ç╨╕ ╨╜╨╡╨╖╨░╨▓╨╕╤ü╨╕╨╝╤ï╤à ╤ü╨╗╨╛╤Å ╨┐╤Ç╨╛╨▒╨╗"
+        ]
+      },
+      {
+        "number": 33,
+        "title": "tui-test-runner: detectFramework ╨╜╨╡ ╨▓╨╕╨┤╨╕╤é framework ╨▓ ╨╝╨╛╨╜╨╛╤Ç╨╡╨┐╨╛ (╨▓╨╗╨╛╨╢╨╡╨╜╨╜╤ï╨╡ .csproj) ΓåÆ Unsupported framework adapter: unknown",
+        "created": "2026-06-01",
+        "updated": "2026-06-01",
+        "labels": [],
+        "url": "https://github.com/stgmt/dev-pomogator/issues/33",
+        "commentCount": 0,
+        "comments": []
+      }
+    ],
+    "doctor / diagnostics": [
+      {
+        "number": 188,
+        "title": "╨í╨╛╨╖╨┤╨░╤é╤î ╨╛╤é╨┤╨╡╨╗╤î╨╜╤â╤Ä GitHub issue ╨▓ stgmt/dev-pomogator ╨┐╤Ç╨╛ false-positive C-CTXM ╨▓ 2.0.5: bundled doctor ╨▓╤ï╤ç╨╕╤ü╨╗╤Å╨╡╤é bundled",
+        "created": "2026-07-23",
+        "updated": "2026-07-23",
+        "labels": [],
+        "url": "https://github.com/stgmt/dev-pomogator/issues/188",
+        "commentCount": 0,
+        "comments": []
+      },
+      {
+        "number": 164,
+        "title": "Loss-aware ReqIF round-trip: export/import with stable IDs and loss diagnostics",
+        "created": "2026-07-23",
+        "updated": "2026-07-23",
+        "labels": [],
+        "url": "https://github.com/stgmt/dev-pomogator/issues/164",
+        "commentCount": 0,
+        "comments": []
+      },
+      {
+        "number": 163,
+        "title": "Typed spec DSL (optional format): AST parser, imports, multi-file diagnostics",
+        "created": "2026-07-23",
+        "updated": "2026-07-23",
+        "labels": [],
+        "url": "https://github.com/stgmt/dev-pomogator/issues/163",
+        "commentCount": 0,
+        "comments": []
+      }
+    ],
+    "misc / other": [
+      {
+        "number": 183,
+        "title": "╨ƒ╤Ç╨╕╨▓╤Å╨╖╨║╨░ ╤é╨╡╤ü╤é-╨┤╨╛╨║╨░╨╖╨░╤é╨╡╨╗╤î╤ü╤é╨▓ ╨║ ╤à╨╡╤ê╤â ╨░╤Ç╤é╨╡╤ä╨░╨║╤é╨░, producer/version, run ID, ╨║╨╛╨╝╨╝╨╕╤é╤â, ╨╛╨║╤Ç╤â╨╢╨╡╨╜╨╕╤Ä ╨╕ ╨▓╤Ç╨╡╨╝╨╡╨╜╨╕ ╨╖╨░╤à╨▓╨░╤é╨░",
+        "created": "2026-07-23",
+        "updated": "2026-07-23",
+        "labels": [],
+        "url": "https://github.com/stgmt/dev-pomogator/issues/183",
+        "commentCount": 0,
+        "comments": []
+      },
+      {
+        "number": 180,
+        "title": "╨₧╨▒╤Å╨╖╨░╤é╨╡╨╗╤î╨╜╨░╤Å ╨╜╨╡╨┐╤â╤ü╤é╨░╤Å reason ╨╜╨░ ╨╝╤â╤é╨░╤å╨╕╤Ä + ╨░╤â╨┤╨╕╤é actor/session/time/commit (╨╜╨╡ ╨╜╨╡╨╛╨▒╤Ç╨░╤é╨╕╨╝╤ï╨╣ ╤à╨╡╤ê) ╤ü ╤ü╨░╨╜╨╕╤é╨╕╨╖╨░╤å╨╕╨╡╨╣",
+        "created": "2026-07-23",
+        "updated": "2026-07-23",
+        "labels": [],
+        "url": "https://github.com/stgmt/dev-pomogator/issues/180",
+        "commentCount": 0,
+        "comments": []
+      },
+      {
+        "number": 179,
+        "title": "╨£╤â╤é╨░╤å╨╕╤Å ╤ü╨▓╤Å╨╖╨╡╨╣ ╨│╤Ç╨░╤ä╨░: ╨╛╤é╨┐╨╡╤ç╨░╤é╨╛╨║ (fingerprint) + dry-run + ╤Å╨▓╨╜╤ï╨╡ refuse/orphan/cascade ╨┐╤Ç╨╕ ╨░╤é╨╛╨╝╨░╤Ç╨╜╨╛╤ü╤é╨╕ ╤é╤Ç╨░╨╜╨╖╨░╨║╤å╨╕╨╕",
+        "created": "2026-07-23",
+        "updated": "2026-07-23",
+        "labels": [],
+        "url": "https://github.com/stgmt/dev-pomogator/issues/179",
+        "commentCount": 0,
+        "comments": []
+      },
+      {
+        "number": 176,
+        "title": "╨º╨╡╤é╤ï╤Ç╨╡ evidence-╤ü╨╛╤ü╤é╨╛╤Å╨╜╨╕╤Å ╤é╤Ç╨╡╨▒╨╛╨▓╨░╨╜╨╕╤Å (untagged / exercised / impl-only / verified) + ╤Å╨▓╨╜╨░╤Å ╨┐╨╛╨╗╨╕╤é╨╕╨║╨░ ╤â╤ü╤é╨░╤Ç╨╡╨▓╨░╨╜╨╕╤Å (stale): ╨╛╨┤╨╜╨╛ ╨┐╨╛╨╗╨╡ ╨▓╨╝╨╡╤ü╤é╨╛ ╤Ç╨░╨╖╤Ç╨╛╨╖╨╜╨╡╨╜╨╜╤ï╤à bucket/verdict/quality",
+        "created": "2026-07-23",
+        "updated": "2026-07-23",
+        "labels": [],
+        "url": "https://github.com/stgmt/dev-pomogator/issues/176",
+        "commentCount": 0,
+        "comments": []
+      },
+      {
+        "number": 175,
+        "title": "Fail-closed rollup ╨│╤Ç╨░╤ä╨░: ╤Ç╨╛╨┤╨╕╤é╨╡╨╗╤î ╨│╨╛╤é╨╛╨▓ ╨╗╨╕╤ê╤î ╨║╨╛╨│╨┤╨░ ╨Æ╨í╨ò ╨╛╨▒╤Å╨╖╨░╤é╨╡╨╗╤î╨╜╤ï╨╡ ╨┐╨╛╤é╨╛╨╝╨║╨╕ ╨╕ ╨╖╨░╨▓╨╕╤ü╨╕╨╝╨╛╤ü╤é╨╕ ╨╖╨╡╨╗╤æ╨╜╤ï╨╡; ╤à╤â╨┤╤ê╨╡╨╡ ╤ü╨╛╤ü╤é╨╛╤Å╨╜╨╕╨╡ ╨▓╤ü╨┐╨╗╤ï╨▓╨░╨╡╤é ╨╜╨░╨▓╨╡╤Ç╤à",
+        "created": "2026-07-23",
+        "updated": "2026-07-23",
+        "labels": [],
+        "url": "https://github.com/stgmt/dev-pomogator/issues/175",
+        "commentCount": 0,
+        "comments": []
+      },
+      {
+        "number": 170,
+        "title": "╨ö╨╡╨║╨╗╨░╤Ç╨░╤é╨╕╨▓╨╜╤ï╨╡ ╨╕╨╜╨▓╨░╤Ç╨╕╨░╨╜╤é╤ï ╤ü╨┐╨╡╨║╨╕ + ╨╛╨┐╤å╨╕╨╛╨╜╨░╨╗╤î╨╜╤ï╨╣ SMT-╤Ç╨░╨╖╤Ç╤Å╨┤ ╨┤╨╗╤Å ╨▒╨╡╨╖╨╛╨┐╨░╤ü╨╜╨╛╨│╨╛ ╤ä╤Ç╨░╨│╨╝╨╡╨╜╤é╨░",
+        "created": "2026-07-23",
+        "updated": "2026-07-23",
+        "labels": [],
+        "url": "https://github.com/stgmt/dev-pomogator/issues/170",
+        "commentCount": 0,
+        "comments": []
+      },
+      {
+        "number": 166,
+        "title": "Forward change-impact analysis: transitive blast radius from any spec ID",
+        "created": "2026-07-23",
+        "updated": "2026-07-23",
+        "labels": [],
+        "url": "https://github.com/stgmt/dev-pomogator/issues/166",
+        "commentCount": 0,
+        "comments": []
+      },
+      {
+        "number": 100,
+        "title": "Productize Claude subagent watchdog for failed/stale Agent work",
+        "created": "2026-07-11",
+        "updated": "2026-07-11",
+        "labels": [],
+        "url": "https://github.com/stgmt/dev-pomogator/issues/100",
+        "commentCount": 1,
+        "comments": [
+          "undefined @stgmt: ## Field report: lm-saas reel marketplace session ΓÇö dead children, lost day, then ghost rows in the agent panel A concrete incident from `E:\\repos\\lm-saas` on 2026-07-11 exposed "
+        ]
+      },
+      {
+        "number": 63,
+        "title": "╨ƒ╨╗╨░╨│╨╕╨╜ ┬½╨┐╨╕╨╜╨░╤é╨╛╤Ç┬╗: goal-driven ╨░╨▓╤é╨╛-╨┐╤Ç╨╛╨┤╨╛╨╗╨╢╨╡╨╜╨╕╨╡ ╨░╨│╨╡╨╜╤é╨░ ╨▒╨╡╨╖ ╤Ç╤â╤ç╨╜╨╛╨│╨╛ ╨┐╨╕╨╜╨║╨░ ╤Ä╨╖╨╡╤Ç╨╛╨╝",
+        "created": "2026-06-11",
+        "updated": "2026-06-11",
+        "labels": [],
+        "url": "https://github.com/stgmt/dev-pomogator/issues/63",
+        "commentCount": 0,
+        "comments": []
+      }
+    ],
+    "headroom / proxy": [
+      {
+        "number": 139,
+        "title": "context-mode: canonical integration runbook (install, doctor, MCP reconnect, Windows/worktree gotchas, value boundary)",
+        "created": "2026-07-21",
+        "updated": "2026-07-21",
+        "labels": [
+          "bug",
+          "claude-code",
+          "headroom-integration"
+        ],
+        "url": "https://github.com/stgmt/dev-pomogator/issues/139",
+        "commentCount": 0,
+        "comments": []
+      },
+      {
+        "number": 90,
+        "title": "╨É╨▓╤é╨╛-╨▓╨║╨╗╤Ä╤ç╨░╤é╤î ENABLE_TOOL_SEARCH=1 ╨▓╤ü╨╡╨╝ ╤Ä╨╖╨╡╤Ç╨░╨╝ (╨┤╨╡╤ä╨╡╤Ç MCP-╤ü╤à╨╡╨╝: ΓêÆ90-120K ╤é╨╛╨║╨╡╨╜╨╛╨▓ ╤ü╨╛ ╤ü╤é╨░╤Ç╤é╨░)",
+        "created": "2026-07-05",
+        "updated": "2026-07-21",
+        "labels": [
+          "backlog",
+          "headroom-integration"
+        ],
+        "url": "https://github.com/stgmt/dev-pomogator/issues/90",
+        "commentCount": 1,
+        "comments": [
+          "undefined @stgmt: Cross-linking canonical context-mode issue: #139 now contains the context-mode integration/runbook material and references this `ENABLE_TOOL_SEARCH=1` task as related MCP-startup d"
+        ]
+      },
+      {
+        "number": 84,
+        "title": "╨ú╨╝╨╜╤ï╨╣ full-install headroom + context-mode (╨│╨╗╨╛╨▒╨░╨╗╤î╨╜╨╛, doctor-heal, ╨▓╨╡╤Ç╨╕╤ä╨╕╨║╨░╤å╨╕╤Å, Windows-╨│╨╛╤é╤ç╨╕)",
+        "created": "2026-07-03",
+        "updated": "2026-07-21",
+        "labels": [
+          "backlog",
+          "headroom-integration"
+        ],
+        "url": "https://github.com/stgmt/dev-pomogator/issues/84",
+        "commentCount": 12,
+        "comments": [
+          "undefined @stgmt: ## ╨û╨╕╨▓╤ï╨╡ ╨│╨╛╤é╤ç╨╕ ╤â╤ü╤é╨░╨╜╨╛╨▓╨║╨╕ (╨┐╤Ç╨╛╤ê╤æ╨╗ ╨₧╨æ╨É ╨│╨╗╨╛╨▒╨░╨╗╤î╨╜╨╛ ╨╜╨░ Win11/py3.14/Node24 ΓÇö ╤â╨┐╤Ç╨╛╤ë╨░╨╡╤é ╨╕╨╜╤é╨╡╨│╤Ç╨░╤å╨╕╤Ä) ╨ƒ╨╛╤ü╤é╨░╨▓╨╕╨╗ ╨╛╨▒╨░ ╤Ç╨╡",
+          "undefined @stgmt: ## ╨ô╨╛╤é╤ç╨░: ╨│╨╗╨╛╨▒╨░╨╗╤î╨╜╤ï╨╣ PreToolUse-╤à╤â╨║ `rtk hook claude` ╤ü╨┐╨░╨╝╨╕╤é `command not found` ╨╜╨░ ╨Ü╨É╨û╨ö╨½╨Ö Bash **╨í╨╕╨╝╨┐╤é╨╛╨╝** (╨╗╨╛╨▓╨╕╤é╤ü╤Å ╨┐╤Ç╨╕ ╨╗╤Ä╨▒╨╛╨╣",
+          "undefined @stgmt: ╨í╨▓╤Å╨╖╨░╨╜╨╜╤ï╨╣ ╤é╤â╨╗ ╨┤╨╗╤Å ╤ì╤é╨╛╨│╨╛ ╨╢╨╡ SessionStart-background-install ╨┐╨░╤é╤é╨╡╤Ç╨╜╨░: **#85 ΓÇö ╨░╨▓╤é╨╛-╤â╤ü╤é╨░╨╜╨╛╨▓╨║╨░ claude-context** (Windows-native semantic c",
+          "undefined @stgmt: ## Turnkey-╤Ç╨╡╤å╨╡╨┐╤é: ╨║╨╛╨╜╤é╨╡╨║╤ü╤é-╤ì╨║╨╛╨╜╨╛╨╝ ╤ü╤é╨╡╨║, ╨║╨╛╤é╨╛╤Ç╤ï╨╣ ╨á╨ò╨É╨¢╨¼╨¥╨₧ ╤Ç╨░╨▒╨╛╤é╨░╨╡╤é (╨┐╤Ç╨╛╨▓╨╡╤Ç╨╡╨╜╨╛ ╨▓╨╢╨╕╨▓╤â╤Ä 2026-07-04) ╨¥╨╕╨╢╨╡ ΓÇö ╤é╨╛╤ç╨╜╨░",
+          "undefined @stgmt: ## ╨æ╨╡╨╜╤ç-v2: ╨╖╨░╨╝╨╡╤Ç ╤é╤â╨╗╨╛╨▓ ╨╜╨░ ╨á╨ò╨É╨¢╨¼╨¥╨₧╨£ ╨┤╨╡╨▓-╤å╨╕╨║╨╗╨╡ (editΓåÆbuildΓåÆtest) ΓÇö ╨╜╨╡ ╤é╨╛╨╗╤î╨║╨╛ ╨░╨╜╨░╨╗╨╕╨╖ Workload: ╤Ç╨╡╨░╨╗╤î╨╜╨╛ ╨╜╨░╤ç╨░╨╗ ╨┤╨╡╨╗╨░╤",
+          "undefined @stgmt: # ≡ƒôè ╨£╨É╨í╨ó╨ò╨á-╨É╨¥╨É╨¢╨ÿ╨ó╨ÿ╨Ü╨É: ╨║╨╛╨╜╤é╨╡╨║╤ü╤é-╤ì╨║╨╛╨╜╨╛╨╝ ╤ü╤é╨╡╨║ (context-mode / force-ctx / rtk / headroom / claude-mem) ΓÇö ╨┐╨╛╨╗╨╜╤ï╨╣ ╤Ç╨░╨╖╨▒╨╛╤Ç ╤ü ╤å╨╕╤ä╤Ç╨░╨",
+          "undefined @stgmt: ## ΓÜá∩╕Å ╨Ü╨₧╨á╨á╨ò╨Ü╨ª╨ÿ╨» #1158: headroom ╨¥╨ò ╤Ç╨╛╨╜╤Å╨╡╤é context-1m (╤ì╨╝╨┐╨╕╤Ç╨╕╤ç╨╡╤ü╨║╨╕ ╨╛╨┐╤Ç╨╛╨▓╨╡╤Ç╨│╨╜╤â╤é╨╛) ╨á╨░╨╜╨╜╨╡╨╡ ╤â╤é╨▓╨╡╤Ç╨╢╨┤╨╡╨╜╨╕╨╡ ╨▓ ╤ì╤é╨╛╨╝ ╨╛╨▒╤ü╤â",
+          "undefined @stgmt: ## ╨ô╨╛╤é╤ç╨╕, ╤ü╨╛╨▒╤Ç╨░╨╜╨╜╤ï╨╡ ╨╖╨░ ╤ü╨╡╤ü╤ü╨╕╤Ä ╨▒╨╡╨╜╤ç╨░ (╨┤╨╗╤Å installer + doctor) ╨₧╨┐╨╡╤Ç╨░╤å╨╕╨╛╨╜╨╜╤ï╨╡ ╨│╤Ç╨░╨▒╨╗╨╕, ╨╜╨░ ╨║╨╛╤é╨╛╤Ç╤ï╨╡ ╤Ç╨╡╨░╨╗╤î╨╜╨╛ ╨╜╨░╤ü╤é╤â╨┐╨╕╨",
+          "undefined @stgmt: ## ΓÜá∩╕Å ╨º╨╡╤ü╤é╨╜╤ï╨╣ ╨╗╨╕╨╝╨╕╤é: ╤ç╤é╨╛ ╨╕╨╝╨╡╨╜╨╜╨╛ ╤ì╨║╨╛╨╜╨╛╨╝╨╕╤é╤ü╤Å ╨╕ ╨┐╨╛╤ç╨╡╨╝╤â ╨┤╨╜╨╡╨▓╨╜╨╛╨╣ usage ╤Ç╨░╨╜╤î╤ê╨╡ ╨╜╨╡ ╨┐╨░╨┤╨░╨╗ (╨┤╨╗╤Å ╨┤╨╛╨║╨╕ installer'╨░) ╨Ü╨╗╤",
+          "undefined @stgmt: ## Q&A: ┬½╤é╤ï ╨▓╨╛ ╨▓╤ü╨╡╤à ╤ü╨╡╤ü╤ü╨╕╤Å╤à ╤ç╨╕╤é╨░╨╡╤ê╤î ╤ä╨░╨╣╨╗ ╤å╨╡╨╗╨╕╨║╨╛╨╝, ╨░ ╨╜╨╡ ╨│╤Ç╨╡╨┐╨░╨╡╤ê╤î / ╨▒╨╡╤Ç╤æ╤ê╤î ╤ü╤é╤Ç╨╛╨║╨╕?┬╗ ΓÇö ╤ç╨╡╤ü╤é╨╜╨░╤Å ╨┐╨╛╨┐╤Ç╨░╨▓╨║╨░ ╤å╨╡",
+          "undefined @stgmt: ## ΓÜá∩╕Å ╨Ü╨₧╨á╨á╨ò╨Ü╨ª╨ÿ╨»: ╤ç╨╕╤ü╨╗╨░ ┬½ΓêÆ99%┬╗ ╨▓ ╤ì╤é╨╛╨╣ ╨╕╤ê╤â╨╡ ╨╖╨░╨▓╤ï╤ê╨╡╨╜╤ï strawman-╨▒╨░╨╖╨╗╨░╨╣╨╜╨╛╨╝ + review-╤ç╨╡╨║╨╗╨╕╤ü╤é ┬½╨║╨░╨║ ╤ç╨╕╤é╨░╤é╤î┬╗ ╨Æ╨╗╨░╨┤╨╡╨╗╨╡",
+          "undefined @stgmt: Context-mode-specific install/runbook/gotcha material from this umbrella issue has been consolidated into #139 as the canonical context-mode issue. Keeping this issue open for the "
+        ]
+      },
+      {
+        "number": 88,
+        "title": "headroom: ╨│╨╛╨╗╤ï╨╣ proxy ╨╝╨╕╤ü╨║╨╛╨╜╤ä╨╕╨│ ΓÇö ╨╜╤â╨╢╨╜╤ï --code-aware + --no-ccr-proactive-expansion; MCP-╨░╤Ç╨╝ idle; #1158 ╤Ç╨╛╨╜╤Å╨╡╤é opus[1m]ΓåÆ200k",
+        "created": "2026-07-04",
+        "updated": "2026-07-16",
+        "labels": [
+          "backlog",
+          "headroom-integration"
+        ],
+        "url": "https://github.com/stgmt/dev-pomogator/issues/88",
+        "commentCount": 4,
+        "comments": [
+          "undefined @stgmt: ## ╨æ╨╡╨╜╤ç╨╝╨░╤Ç╨║ ╨║╨╛╨╜╤é╨╡╨║╤ü╤é-╤é╤â╨╗╨╛╨▓ ╨╜╨░ ╤Ç╨╡╨░╨╗╤î╨╜╨╛╨╝ workload (investigation lm-saas #99) ΓÇö ╨▓╨╡╤Ç╨┤╨╕╨║╤é╤ï ╤ü ╤å╨╕╤ä╤Ç╨░╨╝╨╕ ╨ƒ╤Ç╨╛╨│╨╛╨╜ ╨╜╨░ ╤Ç╨╡╨░╨╗╤î╨╜╨╛╨╝",
+          "undefined @stgmt: ## ΓÜá∩╕Å ╨Ü╨₧╨á╨á╨ò╨Ü╨ª╨ÿ╨» #1158: headroom ╨¥╨ò ╤Ç╨╛╨╜╤Å╨╡╤é context-1m (╤ì╨╝╨┐╨╕╤Ç╨╕╤ç╨╡╤ü╨║╨╕ ╨╛╨┐╤Ç╨╛╨▓╨╡╤Ç╨│╨╜╤â╤é╨╛) ╨á╨░╨╜╨╜╨╡╨╡ ╤â╤é╨▓╨╡╤Ç╨╢╨┤╨╡╨╜╨╕╨╡ ╨▓ ╤ì╤é╨╛╨╝ ╨╛╨▒╤ü╤â",
+          "undefined @stgmt: ## ╨á╨╡╨▓╤î╤Ä ╨Ü╨É╨º╨ò╨í╨ó╨Æ╨É ╨╛╨▒╤Ç╨╡╨╖╨║╨╕ (╨╜╨╡ ╨║╨╛╨╗╨╕╤ç╨╡╤ü╤é╨▓╨░) + ╨┐╨╛╨┐╤Ç╨░╨▓╨║╨░ ╨┐╨╛ CCR ΓÇö headroom vs context-mode ╨ö╨╛ ╤ü╨╕╤à ╨┐╨╛╤Ç ╨▓╨╡╤ü╤î ╨▒╨╡╨╜╤ç ╨╝╨╡╤Ç╨╕╨╗ *",
+          "undefined @stgmt: ΓÜá∩╕Å ╨º╨╕╤ü╨╗╨░ ╤ì╨║╨╛╨╜╨╛╨╝╨╕╨╕ ╨▓ ╤Ç╨░╨╖╨▒╨╛╤Ç╨╡ ╨▓╤ï╤ê╨╡ ╨╖╨░╨▓╤ï╤ê╨╡╨╜╤ï strawman-╨▒╨░╨╖╨╗╨░╨╣╨╜╨╛╨╝ (┬½╤ç╨╕╤é╨░╤é╤î ╤å╨╡╨╗╨╕╨║╨╛╨╝┬╗ vs ╤Ç╨╡╨░╨╗╤î╨╜╤ï╨╣ Grep). ╨º╨╡╤ü╤é╨╜╨╛:"
+        ]
+      },
+      {
+        "number": 85,
+        "title": "╨É╨▓╤é╨╛-╤â╤ü╤é╨░╨╜╨╛╨▓╨║╨░ + ╨║╨╛╨╜╤ä╨╕╨│ claude-context (Windows-native semantic code-search MCP) ΓÇö ╨┐╨╛╨╗╨╜╤ï╨╣ ╤ü╨┐╨╡╨║ ╨┤╨╗╤Å ╤â╤ü╤é╨░╨╜╨╛╨▓╤ë╨╕╨║╨░",
+        "created": "2026-07-03",
+        "updated": "2026-07-16",
+        "labels": [
+          "backlog",
+          "headroom-integration"
+        ],
+        "url": "https://github.com/stgmt/dev-pomogator/issues/85",
+        "commentCount": 0,
+        "comments": []
+      }
+    ],
+    "session-pilot / worktree / TUI": [
+      {
+        "number": 127,
+        "title": "Context-menu launcher (launch-claude-tui.ps1) runs Windows-side claude for WSL-hosted repos over the UNC/9P bridge ΓÇö und",
+        "created": "2026-07-18",
+        "updated": "2026-07-18",
+        "labels": [],
+        "url": "https://github.com/stgmt/dev-pomogator/issues/127",
+        "commentCount": 0,
+        "comments": []
+      }
+    ],
+    "CI / docker / release": [
+      {
+        "number": 49,
+        "title": "docker-test.sh: ╨╝╨░╤ê╨╕╨╜╤ï ╨▒╨╡╨╖ Docker Desktop (docker ╤é╨╛╨╗╤î╨║╨╛ ╨▓╨╜╤â╤é╤Ç╨╕ WSL) ΓÇö WSL-╤ê╨╕╨╝",
+        "created": "2026-06-05",
+        "updated": "2026-06-06",
+        "labels": [],
+        "url": "https://github.com/stgmt/dev-pomogator/issues/49",
+        "commentCount": 3,
+        "comments": [
+          "undefined @stgmt: ╨¿╨╕╨╝ ╨╖╨░╨╗╨╕╤é: commit e2b5145 (feat/phase-2a-mcp-server-and-hooks, PR #32). ╨ƒ╨╛╨╗╨╜╤ï╨╣ ╤ü╤î╤Ä╤é ╨┐╤Ç╨╛╤ê╤æ╨╗ ╤ç╨╡╤Ç╨╡╨╖ ╨╛╨▒╨▓╤Å╨╖╨║╤â end-to-end ╨▓╨╜╤â╤é╤Ç╨╕ WSL: 567s, 1829",
+          "undefined @stgmt: ╨ö╨▓╨░ ╨╛╨│╤Ç╨░╨╜╨╕╤ç╨╡╨╜╨╕╤Å ╨╛╨▒╨▓╤Å╨╖╨║╨╕, ╨▓╤ï╤Å╨▓╨╗╨╡╨╜╨╜╤ï╨╡ ╨╜╨░ ╨┐╤Ç╨░╨║╤é╨╕╨║╨╡ (multi-session ╨╝╨░╤ê╨╕╨╜╨░): 1. **╨ô╤Ç╤Å╨╖╨╜╨╛╨╡ ╨╛╨▒╤ë╨╡╨╡ ╨┤╨╡╤Ç╨╡╨▓╨╛ ΓåÆ ╨╜╨╡╨┤╨╡╤é╨╡╤",
+          "undefined @stgmt: ╨ù╨░╨║╤Ç╤ï╤é╨╛ ╨┤╨╛╨║╨░╨╖╨░╤é╨╡╨╗╤î╨╜╨╛ (commit b3d90f9): clean-worktree ╨┐╤Ç╨╛╨│╨╛╨╜╤ï e2b5145 ╨╕ baseline 4bf8d5c ΓÇö ╨┐╨╛ 12 ╨┐╨░╨┤╨╡╨╜╨╕╨╣, 11 ╨╛╨▒╤ë╨╕╤à ╨┐╤Ç╨╡╨┤╤ü╤â╤ë╨╡╤ü╤é╨▓"
+        ]
+      }
+    ]
+  },
+  "commented": [
+    {
+      "number": 84,
+      "title": "╨ú╨╝╨╜╤ï╨╣ full-install headroom + context-mode (╨│╨╗╨╛╨▒╨░╨╗╤î╨╜╨╛, doctor-heal, ╨▓╨╡╤Ç╨╕╤ä╨╕╨║╨░╤å╨╕╤Å, Windows-╨│╨╛╤é╤ç╨╕)",
+      "state": "OPEN",
+      "domain": "headroom / proxy",
+      "created": "2026-07-03",
+      "updated": "2026-07-21",
+      "commentCount": 12,
+      "lastComments": [
+        {
+          "author": "stgmt",
+          "date": "2026-07-05",
+          "preview": "## ΓÜá∩╕Å ╨Ü╨₧╨á╨á╨ò╨Ü╨ª╨ÿ╨»: ╤ç╨╕╤ü╨╗╨░ ┬½ΓêÆ99%┬╗ ╨▓ ╤ì╤é╨╛╨╣ ╨╕╤ê╤â╨╡ ╨╖╨░╨▓╤ï╤ê╨╡╨╜╤ï strawman-╨▒╨░╨╖╨╗╨░╨╣╨╜╨╛╨╝ + review-╤ç╨╡╨║╨╗╨╕╤ü╤é ┬½╨║╨░╨║ ╤ç╨╕╤é╨░╤é╤î┬╗ ╨Æ╨╗╨░╨┤╨╡╨╗╨╡"
+        },
+        {
+          "author": "stgmt",
+          "date": "2026-07-21",
+          "preview": "Context-mode-specific install/runbook/gotcha material from this umbrella issue has been consolidated into #139 as the canonical context-mode issue. Keeping this issue open for the "
+        }
+      ]
+    },
+    {
+      "number": 91,
+      "title": "context-mode: 2 friction points on Windows + git-worktree (bench-measured)",
+      "state": "CLOSED",
+      "domain": "headroom / proxy",
+      "created": "2026-07-05",
+      "updated": "2026-07-21",
+      "commentCount": 11,
+      "lastComments": [
+        {
+          "author": "stgmt",
+          "date": "2026-07-21",
+          "preview": "Merged into #139. The Windows/worktree friction points, A/B benchmark conclusions, `ctx_execute_file` root confinement, shell=bash guidance, `ctx_batch_execute` prefix gotcha, and "
+        },
+        {
+          "author": "stgmt",
+          "date": "2026-07-21",
+          "preview": "Closing as consolidated into canonical context-mode issue #139."
+        }
+      ]
+    },
+    {
+      "number": 149,
+      "title": "claim-evidence-gate 12 ╤Ç╨░╨╖ ╤é╤Ç╨╡╨▒╨╛╨▓╨░╨╗ ╨╜╨░╤Ç╤â╤ê╨╕╤é╤î git-push-safety: ┬½awaiting user permission┬╗ ╤é╤Ç╨░╨║╤é╤â╨╡╤é╤ü╤Å ╨║╨░╨║ fake hand-off",
+      "state": "OPEN",
+      "domain": "hooks / gates",
+      "created": "2026-07-22",
+      "updated": "2026-07-22",
+      "commentCount": 5,
+      "lastComments": [
+        {
+          "author": "stgmt",
+          "date": "2026-07-22",
+          "preview": "## ╨ƒ╨╛╨┐╤ï╤é╨║╨░ ╨┐╨╛╤ç╨╕╨╜╨║╨╕: ╨┐╨░╤é╤ç ┬½╨┤╨░╤é╤î ╤ü╤â╨┤╤î╨╡ ╤ä╨░╨║╤é╤ï┬╗ + ╤Ç╨╡╨╖╤â╨╗╤î╤é╨░╤é╤ï ╨┐╤Ç╨╛╨▓╨╡╤Ç╨║╨╕ ╨º╨╕╨╜╨╕╨╗ ╨┐╨╛ ╨┐╤Ç╨╕╨╜╤å╨╕╨┐╤â ┬½╨╜╨╡ ╨╛╨▒╤à╨╛╨┤╨╕╤é╤î ╨╕ ╨╜"
+        },
+        {
+          "author": "stgmt",
+          "date": "2026-07-22",
+          "preview": "## ╨Æ╨╛╤ü╨┐╤Ç╨╛╨╕╨╖╨▓╨╡╨┤╨╡╨╜╨╛: ╨╛╤é╨║╤â╨┤╨░ ╨▒╨╡╤Ç╤æ╤é╤ü╤Å ┬½14 open tasks┬╗ ╨╕ ┬½╨╖╨░╨┤╨░╤ç╨╕ ╨╜╨╡ ╨╕╨╖ ╨╝╨╛╨╡╨│╨╛ ╨╝╨░╨╜╨┤╨░╤é╨░┬╗ ╨£╨╡╤à╨░╨╜╨╕╨╖╨╝ ╨╜╨░╨╣╨┤╨╡╨╜ ╨╕ ╨┐╨╛╤ü╤ç╨╕╤é"
+        }
+      ]
+    },
+    {
+      "number": 88,
+      "title": "headroom: ╨│╨╛╨╗╤ï╨╣ proxy ╨╝╨╕╤ü╨║╨╛╨╜╤ä╨╕╨│ ΓÇö ╨╜╤â╨╢╨╜╤ï --code-aware + --no-ccr-proactive-expansion; MCP-╨░╤Ç╨╝ idle; #1158 ╤Ç╨╛╨╜╤Å╨╡╤é opus[1m]ΓåÆ200k",
+      "state": "OPEN",
+      "domain": "headroom / proxy",
+      "created": "2026-07-04",
+      "updated": "2026-07-16",
+      "commentCount": 4,
+      "lastComments": [
+        {
+          "author": "stgmt",
+          "date": "2026-07-04",
+          "preview": "## ╨á╨╡╨▓╤î╤Ä ╨Ü╨É╨º╨ò╨í╨ó╨Æ╨É ╨╛╨▒╤Ç╨╡╨╖╨║╨╕ (╨╜╨╡ ╨║╨╛╨╗╨╕╤ç╨╡╤ü╤é╨▓╨░) + ╨┐╨╛╨┐╤Ç╨░╨▓╨║╨░ ╨┐╨╛ CCR ΓÇö headroom vs context-mode ╨ö╨╛ ╤ü╨╕╤à ╨┐╨╛╤Ç ╨▓╨╡╤ü╤î ╨▒╨╡╨╜╤ç ╨╝╨╡╤Ç╨╕╨╗ *"
+        },
+        {
+          "author": "stgmt",
+          "date": "2026-07-05",
+          "preview": "ΓÜá∩╕Å ╨º╨╕╤ü╨╗╨░ ╤ì╨║╨╛╨╜╨╛╨╝╨╕╨╕ ╨▓ ╤Ç╨░╨╖╨▒╨╛╤Ç╨╡ ╨▓╤ï╤ê╨╡ ╨╖╨░╨▓╤ï╤ê╨╡╨╜╤ï strawman-╨▒╨░╨╖╨╗╨░╨╣╨╜╨╛╨╝ (┬½╤ç╨╕╤é╨░╤é╤î ╤å╨╡╨╗╨╕╨║╨╛╨╝┬╗ vs ╤Ç╨╡╨░╨╗╤î╨╜╤ï╨╣ Grep). ╨º╨╡╤ü╤é╨╜╨╛:"
+        }
+      ]
+    },
+    {
+      "number": 115,
+      "title": "╨ó╤â╨╗╤ï: spec-graph ╨┐╨╛╨║╨░╨╖╤ï╨▓╨░╨╡╤é NOT_RUN ╨┐╤Ç╨╕ ╨╖╨╡╨╗╤æ╨╜╤ï╤à ╤é╨╡╤ü╤é╨░╤à, ╨╡╤ü╨╗╨╕ ╤ä╨╕╤ç╨╕ ╨╜╨╡ ╨┐╨╛╨┤ .specs/; watchdog --ack ╨╜╨╡ ╨│╨░╤ü╨╜╨╡╤é ╨╜╨░ UNC/WSL",
+      "state": "CLOSED",
+      "domain": "spec-generator / specs",
+      "created": "2026-07-14",
+      "updated": "2026-07-15",
+      "commentCount": 4,
+      "lastComments": [
+        {
+          "author": "stgmt",
+          "date": "2026-07-14",
+          "preview": "## ╨ñ╨╕╨║╤ü ╨æ╨░╨│╨░ 2 ╤Ç╨╡╨░╨╗╨╕╨╖╨╛╨▓╨░╨╜ ╨╕ ╨┐╤Ç╨╛╨▓╨╡╤Ç╨╡╨╜ `resolveStateRoot()` ╤é╨╡╨┐╨╡╤Ç╤î **╨║╨░╨╜╨╛╨╜╨╕╨╖╨╕╤Ç╤â╨╡╤é cwd ╨║ git-toplevel**, ╨┐╨╛╤ì╤é╨╛╨╝╤â write(ack) ╨╕ rea"
+        },
+        {
+          "author": "stgmt",
+          "date": "2026-07-15",
+          "preview": "## ╨ú╤é╨╛╤ç╨╜╨╡╨╜╨╕╨╡ ╨┐╨╛ ╨æ╨░╨│╤â 2 (╤ü╨░╨╝╨╛╨┐╤Ç╨╛╨▓╨╡╤Ç╨║╨░) ╨ƒ╨╡╤Ç╨╡╨┐╤Ç╨╛╨▓╨╡╤Ç╨╕╨╗ ╤ü╨▓╨╛╨╣ ╨╢╨╡ ╤é╨╡╨╖╨╕╤ü ┬½argv `--ack/--cwd/--reason` ╨╜╨╡ ╨┤╨╛╤à╨╛╨┤╤Å╤é ╨┤╨╛ `runHook`┬"
+        }
+      ]
+    },
+    {
+      "number": 103,
+      "title": "╨Ü╨╛╨╜╤é╨╡╨║╤ü╤é╨╜╨╛╨╡ ╨╝╨╡╨╜╤Ä ╨╜╨╡ ╤â╤ü╤é╨░╨╜╨░╨▓╨╗╨╕╨▓╨░╨╡╤é╤ü╤Å ╨┐╨╛╤ü╨╗╨╡ /plugin install (v2.0.3): postinstall ╨╜╨╡ ╨▓╤ï╨╖╤ï╨▓╨░╨╡╤é╤ü╤Å, winget-ID ╨╜╨╡╤ü╤â╤ë╨╡╤ü╤é╨▓╤â╤Ä╤ë╨╕╨╣, doctor ╨║╤Ç╨╡╤ê╨╕╤é╤ü╤Å",
+      "state": "CLOSED",
+      "domain": "plugin / install / migrate",
+      "created": "2026-07-13",
+      "updated": "2026-07-23",
+      "commentCount": 3,
+      "lastComments": [
+        {
+          "author": "stgmt",
+          "date": "2026-07-13",
+          "preview": "## ╨ƒ╨╛╤ç╨╕╨╜╨╕╨╗ ╨╜╨░ ╤ì╤é╨╛╨╣ ╨╢╨╡ ╨╝╨░╤ê╨╕╨╜╨╡ ΓÇö ╨▓╨╛╤é ╤ç╤é╨╛ ╤ü╤Ç╨░╨▒╨╛╤é╨░╨╗╨╛, ╤ê╨░╨│ ╨╖╨░ ╤ê╨░╨│╨╛╨╝ ╨ó╨░ ╨╢╨╡ ╤ü╤Ç╨╡╨┤╨░, ╤ç╤é╨╛ ╨▓ ╨╛╨┐╨╕╤ü╨░╨╜╨╕╨╕ (Windows 11, plugin "
+        },
+        {
+          "author": "stgmt",
+          "date": "2026-07-23",
+          "preview": "## ╨ƒ╤Ç╨╛╨▓╨╡╤Ç╨╡╨╜╨╛ ╨╜╨░ ╤Ç╨╡╨░╨╗╤î╨╜╨╛╨╣ Windows 10 LTSC 19044 / dev-pomogator 2.0.5 ΓÇö ╨╝╨╡╨╜╤Ä ╨▓╨╛╤ü╤ü╤é╨░╨╜╨╛╨▓╨╗╨╡╨╜╨╛ ╨ÿ╤ü╨┐╤Ç╨░╨▓╨╕╨╗ ╤ü╨▓╨╡╨╢╤â╤Ä ╤â╤ü╤é╨░╨╜╨╛╨▓╨║╤â, ╨│"
+        }
+      ]
+    },
+    {
+      "number": 135,
+      "title": "╨í╨┐╨╡╨║-╨┤╨▓╨╡╤Ç╤î: ╨┤╨╛╨▒╨░╨▓╨╕╤é╤î ╨╜╨╛╨▓╨╛╨╡ FR ╨╜╨╡╨▓╨╛╨╖╨╝╨╛╨╢╨╜╨╛ ΓÇö ╤å╨╕╨║╨╗╨╕╤ç╨╡╤ü╨║╨╕╨╣ ╨┤╨╡╨┤╨╗╨╛╨║ FRΓåöStory, ╨╕ ╨║╨╛╨╜╤é╤Ç╨░╨║╤é ╤ä╨╛╤Ç╨╝╤ï ╨╜╨╕╨│╨┤╨╡ ╨╜╨╡ ╨┐╨╛╨║╨░╨╖╨░╨╜",
+      "state": "CLOSED",
+      "domain": "spec-generator / specs",
+      "created": "2026-07-19",
+      "updated": "2026-07-22",
+      "commentCount": 3,
+      "lastComments": [
+        {
+          "author": "stgmt",
+          "date": "2026-07-21",
+          "preview": "Dogfood 2026-07-21 hit the same bootstrap deadlock while creating .specs/context-mode-integration. Added a narrower follow-up for the newly observed layer: FR-60 transaction tools "
+        },
+        {
+          "author": "stgmt",
+          "date": "2026-07-22",
+          "preview": "╨ÿ╨╖ #144 ╤ü╤Ä╨┤╨░ ╨┐╨╛╨│╨╗╨╛╤ë╤æ╨╜ ╨╡╤ë╤æ ╨╛╨┤╨╕╨╜ ╤Ç╨╡╨░╨╗╤î╨╜╤ï╨╣ repro monotonic-form ╤é╤Ç╨╡╨▒╨╛╨▓╨░╨╜╨╕╤Å: deterministic anchor repair ╨╜╨╡ ╨┤╨╛╨╗╨╢╨╡╨╜ ╨▒╨╗╨╛╨║╨╕╤Ç╨╛╨▓╨░╤é╤î"
+        }
+      ]
+    },
+    {
+      "number": 75,
+      "title": "Windows: claude-mem UserPromptSubmit hook blocks every prompt (exit 2) ΓÇö worker can't bind 37777 (zombie socket, needs reboot to free) + DEP0190 from stale 13.8.1 runner",
+      "state": "CLOSED",
+      "domain": "hooks / gates",
+      "created": "2026-06-30",
+      "updated": "2026-07-16",
+      "commentCount": 3,
+      "lastComments": [
+        {
+          "author": "stgmt",
+          "date": "2026-07-01",
+          "preview": "**Follow-up: bake detect + auto-fix into `pomogator-doctor` (SessionStart hook)** This recurs and the manual remediation is mechanical ΓÇö it should be a `pomogator-doctor` check w"
+        },
+        {
+          "author": "stgmt",
+          "date": "2026-07-16",
+          "preview": "Resolved by the claude-mem Windows worker reaper delivered in commit 262b5206 and subsequent bounded/fail-open lifecycle coverage. Current Docker verification: CMEM001_25 and CMEM0"
+        }
+      ]
+    },
+    {
+      "number": 111,
+      "title": "Headroom beta: bounded compression ╨╕ autonomous recovery ╨▓╨╝╨╡╤ü╤é╨╛ 10-╨╝╨╕╨╜╤â╤é╨╜╤ï╤à ╨╖╨░╨▓╨╕╤ü╨░╨╜╨╕╨╣ ╨╕ unsafe fail-open",
+      "state": "CLOSED",
+      "domain": "headroom / proxy",
+      "created": "2026-07-14",
+      "updated": "2026-07-15",
+      "commentCount": 3,
+      "lastComments": [
+        {
+          "author": "stgmt",
+          "date": "2026-07-14",
+          "preview": "Follow-up maintenance pack is now published so the investigation and operational fixes are not trapped in chat history or machine-local files. - [sub2api skill/research commit](htt"
+        },
+        {
+          "author": "stgmt",
+          "date": "2026-07-15",
+          "preview": "╨ù╨░╨║╤Ç╤ï╨▓╨░╤Ä: Headroom ╨╕ sub2api ╨╜╨╡ ╨┤╨╛╨╗╨╢╨╜╤ï ╨╜╨░╤à╨╛╨┤╨╕╤é╤î╤ü╤Å ╨╕╨╗╨╕ ╤Ç╨╡╨░╨╗╨╕╨╖╨╛╨▓╤ï╨▓╨░╤é╤î╤ü╤Å ╨▓ dev-pomogator. ╨Ü╤Ç╤â╨┐╨╜╨░╤Å ╨▒╤â╨┤╤â╤ë╨░╤Å ╤Ç╨░╨▒╨╛╤é╨░ ╨┐╨╡"
+        }
+      ]
+    },
+    {
+      "number": 41,
+      "title": "feat: supervised relaunch ΓÇö ╨░╨▓╤é╨╛-resume Claude Code ╨┐╨╛╤ü╨╗╨╡ rate-limit halt (\"Server is temporarily limiting requests\")",
+      "state": "CLOSED",
+      "domain": "headroom / proxy",
+      "created": "2026-06-03",
+      "updated": "2026-07-13",
+      "commentCount": 3,
+      "lastComments": [
+        {
+          "author": "m13v",
+          "date": "2026-06-18",
+          "preview": "╨╝╤ï ╨║╨░╨║ ╤Ç╨░╨╖ ╤ç╨╕╤é╨░╨╡╨╝ ╤é╨╛╤é ╨╢╨╡ usage-╤ì╨╜╨┤╨┐╨╛╨╕╨╜╤é, ╤ç╤é╨╛ ╤Ç╨╡╨╜╨┤╨╡╤Ç╨╕╤é https://claude-meter.com/r/83gawqa7, ╤ç╤é╨╛╨▒╤ï ╨▓╨╕╨┤╨╡╤é╤î ╤ü╨▒╤Ç╨╛╤ü ╨╕ ╨┐╤Ç╨╛╤å╨╡╨╜╤"
+        },
+        {
+          "author": "stgmt",
+          "date": "2026-07-13",
+          "preview": "╨ù╨░╨║╤Ç╤ï╨▓╨░╤Ä ╨▒╨╡╨╖ ╤Ç╨╡╨░╨╗╨╕╨╖╨░╤å╨╕╨╕ supervisor/relaunch ╨▓ ╨╗╨░╤â╨╜╤ç╨╡╤Ç╨╡. ╨ö╨╗╤Å ╤â╤ü╤é╨╛╨╣╤ç╨╕╨▓╨╛╨│╨╛ ╨┐╨╡╤Ç╨╡╨╢╨╕╨▓╨░╨╜╨╕╤Å rate-limit ╨╜╤â╨╢╨╜╨╛ ╨╕╤ü╨┐╨╛╨╗╤î╨╖╨╛╨▓╨"
+        }
+      ]
+    },
+    {
+      "number": 81,
+      "title": "╨ÿ╨╜╤é╨╡╨│╤Ç╨╕╤Ç╨╛╨▓╨░╤é╤î carl (JIT-╨╕╨╜╨╢╨╡╨║╤é ╨┐╤Ç╨░╨▓╨╕╨╗) + rich-context: ╤â╨▒╤Ç╨░╤é╤î eager-╨╖╨░╨│╤Ç╤â╨╖╨║╤â ╨▓╤ü╨╡╨│╨╛ .claude/rules/",
+      "state": "CLOSED",
+      "domain": "skills / rules",
+      "created": "2026-07-02",
+      "updated": "2026-07-12",
+      "commentCount": 3,
+      "lastComments": [
+        {
+          "author": "stgmt",
+          "date": "2026-07-02",
+          "preview": "## ΓÜá∩╕Å ╨¥╤â╨╢╨╜╨░ ╤Ç╤â╤ü╤ü╨║╨░╤Å ╨░╨┤╨░╨┐╤é╨░╤å╨╕╤Å carl (RU-╨▓╨╗╨░╨┤╨╡╨╗╨╡╤å ╨┐╤Ç╨╛╨╝╨┐╤é╨╕╤é ╨┐╨╛-╤Ç╤â╤ü╤ü╨║╨╕) ╨ù╨░╨╝╨╡╤Ç ╨╜╨░ ╤Ç╨╡╨░╨╗╤î╨╜╤ï╤à ╤Ç╤â╤ü╤ü╨║╨╕╤à ╨┐╤Ç╨╛╨╝╨┐╤é╨░╤"
+        },
+        {
+          "author": "stgmt",
+          "date": "2026-07-12",
+          "preview": "Implemented and verified in the current CARL integration. All 63 auto-loaded rules are managed lazy stubs with full UTF-8 bodies under .carl/rules; integrity check found 0 stub/lib"
+        }
+      ]
+    },
+    {
+      "number": 49,
+      "title": "docker-test.sh: ╨╝╨░╤ê╨╕╨╜╤ï ╨▒╨╡╨╖ Docker Desktop (docker ╤é╨╛╨╗╤î╨║╨╛ ╨▓╨╜╤â╤é╤Ç╨╕ WSL) ΓÇö WSL-╤ê╨╕╨╝",
+      "state": "OPEN",
+      "domain": "CI / docker / release",
+      "created": "2026-06-05",
+      "updated": "2026-06-06",
+      "commentCount": 3,
+      "lastComments": [
+        {
+          "author": "stgmt",
+          "date": "2026-06-06",
+          "preview": "╨ö╨▓╨░ ╨╛╨│╤Ç╨░╨╜╨╕╤ç╨╡╨╜╨╕╤Å ╨╛╨▒╨▓╤Å╨╖╨║╨╕, ╨▓╤ï╤Å╨▓╨╗╨╡╨╜╨╜╤ï╨╡ ╨╜╨░ ╨┐╤Ç╨░╨║╤é╨╕╨║╨╡ (multi-session ╨╝╨░╤ê╨╕╨╜╨░): 1. **╨ô╤Ç╤Å╨╖╨╜╨╛╨╡ ╨╛╨▒╤ë╨╡╨╡ ╨┤╨╡╤Ç╨╡╨▓╨╛ ΓåÆ ╨╜╨╡╨┤╨╡╤é╨╡╤"
+        },
+        {
+          "author": "stgmt",
+          "date": "2026-06-06",
+          "preview": "╨ù╨░╨║╤Ç╤ï╤é╨╛ ╨┤╨╛╨║╨░╨╖╨░╤é╨╡╨╗╤î╨╜╨╛ (commit b3d90f9): clean-worktree ╨┐╤Ç╨╛╨│╨╛╨╜╤ï e2b5145 ╨╕ baseline 4bf8d5c ΓÇö ╨┐╨╛ 12 ╨┐╨░╨┤╨╡╨╜╨╕╨╣, 11 ╨╛╨▒╤ë╨╕╤à ╨┐╤Ç╨╡╨┤╤ü╤â╤ë╨╡╤ü╤é╨▓"
+        }
+      ]
+    },
+    {
+      "number": 209,
+      "title": "╨₧╤ä╨╛╤Ç╨╝╨╕╤é╤î ╨╕ ╨╛╤é╨┐╤Ç╨░╨▓╨╕╤é╤î issue ╨▓ dev-pomogator: context-mode ctx_execute ╨╛╤ü╤é╨░╨▓╨╕╨╗ orphan Python recursive scan ~\\.codex, ╨┐╤Ç╨╛╤å",
+      "state": "OPEN",
+      "domain": "context-mode",
+      "created": "2026-07-28",
+      "updated": "2026-07-28",
+      "commentCount": 2,
+      "lastComments": [
+        {
+          "author": "stgmt",
+          "date": "2026-07-28",
+          "preview": "Root-cause correction after live forensics: the orphan was not the dev-pomogator installer. It was a context-mode `ctx_execute` shell tree (`bash -c %TEMP%/.ctx-mode-*/script` ΓåÆ "
+        },
+        {
+          "author": "stgmt",
+          "date": "2026-07-28",
+          "preview": "Implemented the corrected fix in the actual owner repository and opened upstream PR: https://github.com/mksglu/context-mode/pull/1009 Proof: - MCP request AbortSignal now reaches c"
+        }
+      ]
+    },
+    {
+      "number": 162,
+      "title": "spec-generator-v4 closure program: evidence truth, legacy backlog, BDD rollout, and post-#158 gaps",
+      "state": "OPEN",
+      "domain": "spec-generator / specs",
+      "created": "2026-07-23",
+      "updated": "2026-07-23",
+      "commentCount": 2,
+      "lastComments": [
+        {
+          "author": "stgmt",
+          "date": "2026-07-23",
+          "preview": "WP-1 evidence/readiness foundation is implemented in PR #184: https://github.com/stgmt/dev-pomogator/pull/184 Verified outcomes: - stale canonical passes now block effective EXECUT"
+        },
+        {
+          "author": "stgmt",
+          "date": "2026-07-23",
+          "preview": "WP-2 / FR-56 merged via PR #186: https://github.com/stgmt/dev-pomogator/pull/186 Delivered: - commit-bound overlay evidence with backward-compatible legacy-row reads; - stale class"
+        }
+      ]
+    },
+    {
+      "number": 131,
+      "title": "╨í╨╛╨╖╨┤╨░╤é╤î ╨┐╨╡╤Ç╨╡╨╕╤ü╨┐╨╛╨╗╤î╨╖╤â╨╡╨╝╤ï╨╣ hyperv-vm skill: Windows LTSC, WSL2/Docker ╨╕ nested virtualization",
+      "state": "OPEN",
+      "domain": "skills / rules",
+      "created": "2026-07-19",
+      "updated": "2026-07-20",
+      "commentCount": 2,
+      "lastComments": [
+        {
+          "author": "stgmt",
+          "date": "2026-07-20",
+          "preview": "╨á╨╡╨░╨╗╨╕╨╖╨░╤å╨╕╤Å ╨╛╨▒╨╜╨╛╨▓╨╗╨╡╨╜╨░ ╨▓ commit ce4a378b. ╨ö╨╛╨▒╨░╨▓╨╗╨╡╨╜ generation-neutral repair ╨┤╨╗╤Å ╤ü╤â╤ë╨╡╤ü╤é╨▓╤â╤Ä╤ë╨╡╨╣ Windows 11 VM ╨┐╨╛ ╨╕╨╝╨╡╨╜╨╕: Plan/Apply/Rol"
+        },
+        {
+          "author": "stgmt",
+          "date": "2026-07-20",
+          "preview": "## ╨ƒ╨╛╨╗╨╡╨▓╤ï╨╡ ╨┤╨░╨╜╨╜╤ï╨╡ lm-saas, 19ΓÇô20.07: ╨┐╨╛╤ç╨╡╨╝╤â WSL2+Docker ┬½╤Ç╨░╨╖╨▓╨░╨╗╨╕╨▓╨░╨╡╤é╤ü╤Å ╨┐╨╛╤ü╤Ç╨╡╨┤╨╕ ╨┐╤Ç╨╛╨│╨╛╨╜╨░┬╗ ╨ƒ╨╛╤é╤Ç╨░╤é╨╕╨╗ ╨╜╨░ ╤ì╤é╨╛ ~6 ╤ç╨░╤ü╨╛╨▓"
+        }
+      ]
+    },
+    {
+      "number": 65,
+      "title": "test-runner wrapper ╤é╤Ç╨╡╨▒╤â╨╡╤é per-machine pinned tsx ΓåÆ ╨╝╨╛╨╗╤ç╨░╨╗╨╕╨▓╤ï╨╣ ╤ü╨║╨╕╨┐ ╤é╨╡╤ü╤é╨░ ╨╜╨░ ╤ü╨▓╨╡╨╢╨╡╨╝ ╨║╨╗╨╛╨╜╨╡ / 2-╨╣ ╨╝╨░╤ê╨╕╨╜╨╡",
+      "state": "CLOSED",
+      "domain": "BDD / cucumber / tests",
+      "created": "2026-06-12",
+      "updated": "2026-07-15",
+      "commentCount": 2,
+      "lastComments": [
+        {
+          "author": "stgmt",
+          "date": "2026-07-15",
+          "preview": "╨É╤â╨┤╨╕╤é 2026-07-15: ╨╖╨░╨║╤Ç╤ï╨▓╨░╤Ä ╨║╨░╨║ ╨╕╤ü╨┐╤Ç╨░╨▓╨╗╨╡╨╜╨╜╨╛╨╡. ╨í╤é╨░╤Ç╤ï╨╣ per-machine pinned-tsx ╨┐╤â╤é╤î ╨▒╨╛╨╗╤î╤ê╨╡ ╨╜╨╡ ╤Å╨▓╨╗╤Å╨╡╤é╤ü╤Å runtime-╨║╨╛╨╜╤é╤Ç╨░╨║╤é╨╛╨"
+        },
+        {
+          "author": "stgmt",
+          "date": "2026-07-15",
+          "preview": "Correction to the truncated audit comment above: issue is resolved by PR #109 and PR #114. PR #109 replaced the per-machine pinned-tsx runtime path with the self-contained test_run"
+        }
+      ]
+    },
+    {
+      "number": 53,
+      "title": "test-runner wrapper: exit 127 ╨╜╨░ ╨┤╨╗╨╕╨╜╨╜╨╛╨╝ ╨┐╤Ç╨╛╨│╨╛╨╜╨╡ ╤é╨╡╤Ç╤Å╨╡╤é TRX + ╤ü╤é╨░╤é╤â╤ü + ╨▓╤ü╨╡ ╤ü╤é╤Ç╨╛╨║╨╕ (╨▒╤â╤ä╨╡╤Ç╨╕╨╖╤â╨╡╤é, ╨╜╨╡ ╤ü╤é╤Ç╨╕╨╝╨╕╤é); .sh-╨▓╤à╨╛╨┤ ╨┐╨░╨┤╨░╨╡╤é ERR_MODULE_NOT_FOUND ╨╜╨░ Node 24",
+      "state": "CLOSED",
+      "domain": "BDD / cucumber / tests",
+      "created": "2026-06-09",
+      "updated": "2026-07-15",
+      "commentCount": 2,
+      "lastComments": [
+        {
+          "author": "stgmt",
+          "date": "2026-07-15",
+          "preview": "╨É╤â╨┤╨╕╤é 2026-07-15: ╨╖╨░╨║╤Ç╤ï╨▓╨░╤Ä ╨║╨░╨║ ╤â╤ü╤é╤Ç╨░╨╜╤æ╨╜╨╜╨╛╨╡ ╤ü╨╛╨▓╨╛╨║╤â╨┐╨╜╨╛╤ü╤é╤î╤Ä PR #89 ╨╕ #109. ╨ƒ╤Ç╨╕╤ç╨╕╨╜╨░ -╨▓╤à╨╛╨┤╨░ ╤ü ΓåÆ ╨╕╨╝╨┐╨╛╤Ç╤é╨░╨╝╨╕ ╨▒╨╛╨╗╤î╤ê╨╡ ╨"
+        },
+        {
+          "author": "stgmt",
+          "date": "2026-07-15",
+          "preview": "Correction to the truncated audit comment above: the issue is resolved by PR #89 plus PR #109. Canonical TypeScript imports use explicit .ts extensions, while the CJS shim now laun"
+        }
+      ]
+    },
+    {
+      "number": 43,
+      "title": "test_runner_wrapper + tsx-runner: ╨╜╨╕ ╨┐╤Ç╨╡╤Ç╤ï╨▓╨░╨╜╨╕╨╡, ╨╜╨╕ 180s-╤é╨░╨╣╨╝╨░╤â╤é ╨╜╨╡ ╤â╨▒╨╕╨▓╨░╤Ä╤é ╨┤╨╡╤Ç╨╡╨▓╨╛ ╨┐╤Ç╨╛╤å╨╡╤ü╤ü╨╛╨▓ ΓåÆ ╨╛╤ü╨╕╤Ç╨╛╤é╨╡╨▓╤ê╨╕╨╡ testhost/testcontainers ╨╗╨╛╨╝╨░╤Ä╤é ╤ü╨╗╨╡╨┤╤â╤Ä╤ë╨╕╨╡ ╨┐╤Ç╨╛╨│╨╛╨╜╤ï",
+      "state": "CLOSED",
+      "domain": "BDD / cucumber / tests",
+      "created": "2026-06-04",
+      "updated": "2026-07-15",
+      "commentCount": 2,
+      "lastComments": [
+        {
+          "author": "stgmt",
+          "date": "2026-07-15",
+          "preview": "╨É╤â╨┤╨╕╤é 2026-07-15: ╨╖╨░╨║╤Ç╤ï╨▓╨░╤Ä ╨╛╤ü╨╜╨╛╨▓╨╜╨╛╨╣ ╨┤╨╡╤ä╨╡╨║╤é ╨║╨░╨║ ╨╕╤ü╨┐╤Ç╨░╨▓╨╗╨╡╨╜╨╜╤ï╨╣ PR #89 (merge 2be04c57). Wrapper ╤é╨╡╨┐╨╡╤Ç╤î ╨▓╨╗╨░╨┤╨╡╨╡╤é ╨┤╨╡╤Ç╨╡╨▓╨╛╨╝ ╨┤"
+        },
+        {
+          "author": "stgmt",
+          "date": "2026-07-15",
+          "preview": "Correction to the truncated audit comment above: PR #89 (merge 2be04c57) resolves the reported process-lifecycle and 180-second ceiling defect. The wrapper handles SIGTERM, SIGINT,"
+        }
+      ]
+    },
+    {
+      "number": 46,
+      "title": "score-diff SCOPEGATE001_20: non-guard 3-item enum diff scores 6, test expects Γëñ4 ΓÇö heuristic-vs-fixture decision (don't game the threshold)",
+      "state": "CLOSED",
+      "domain": "hooks / gates",
+      "created": "2026-06-05",
+      "updated": "2026-06-05",
+      "commentCount": 2,
+      "lastComments": [
+        {
+          "author": "stgmt",
+          "date": "2026-06-05",
+          "preview": "Resolved ΓÇö option 3 (scorer over-scores), the principled fix. **Root cause:** when items are inserted into an array, the previous last line gains a trailing comma (`- 'orange'` Γ"
+        },
+        {
+          "author": "stgmt",
+          "date": "2026-06-05",
+          "preview": "**Correction ΓÇö final resolution superseded the earlier close comment.** A full-suite run surfaced a SECOND pin I'd missed when verifying score-diff in isolation: `tests/regressio"
+        }
+      ]
+    },
+    {
+      "number": 215,
+      "title": "Feature: PreToolUse enforcement for #212 ΓÇö block solo/direct Agent spawn when no Dynamic Workflow dispatch is active",
+      "state": "OPEN",
+      "domain": "hooks / gates",
+      "created": "2026-07-29",
+      "updated": "2026-07-29",
+      "commentCount": 1,
+      "lastComments": [
+        {
+          "author": "stgmt",
+          "date": "2026-07-29",
+          "preview": "## Dogfood update: practical value and live boundary proof We applied the narrow enforcement slice from this issue in a real project and then used Dynamic Workflow again to investi"
+        }
+      ]
+    },
+    {
+      "number": 182,
+      "title": "╨ª╨╡╨╜╤é╤Ç╨░╨╗╨╕╨╖╨╛╨▓╨░╨╜╨╜╤ï╨╡ ╨╛╨│╤Ç╨░╨╜╨╕╤ç╨╡╨╜╨╕╤Å source/target ╨╜╨░ ╨║╨░╨╢╨┤╤ï╨╣ ╨▓╨╕╨┤ ╤Ç╨╡╨▒╤Ç╨░, ╨┐╤Ç╨╕╨╜╤â╨┤╨╕╤é╨╡╨╗╤î╨╜╨╛ ╨╜╨░ ╨┐╨░╤Ç╤ü╨╕╨╜╨│╨╡ ╨╕ ╨▓ MCP-╤é╤Ç╨░╨╜╨╖╨░╨║╤å╨╕╨╕",
+      "state": "CLOSED",
+      "domain": "MCP / providers / memory",
+      "created": "2026-07-23",
+      "updated": "2026-07-24",
+      "commentCount": 1,
+      "lastComments": [
+        {
+          "author": "stgmt",
+          "date": "2026-07-24",
+          "preview": "Delivered by PR #199 (squash-merged to main as 6973c856, mergedAt 2026-07-24T17:59:14Z). Typed EdgeType members verifies/covers/entitles + centralized source/target EndpointRule co"
+        }
+      ]
+    },
+    {
+      "number": 181,
+      "title": "╨ó╨╕╨┐╨╕╨╖╨╕╤Ç╨╛╨▓╨░╨╜╨╜╤ï╨╡ ╨╛╤é╨╜╨╛╤ê╨╡╨╜╨╕╤Å verifies/covers/entitles ╨║╨░╨║ ╤ç╨╗╨╡╨╜╤ï ╨╖╨░╨║╤Ç╤ï╤é╨╛╨│╨╛ EdgeType, ╤ü╨╛╨│╨╗╨░╤ü╨╛╨▓╨░╨╜╨╜╨╛ ╤ü ╤é╨╡╨║╤â╤ë╨╕╨╝ ╤ü╨╗╨╛╨▓╨░╤Ç╤æ╨╝ ╤Ç╤æ╨▒╨╡╤Ç",
+      "state": "CLOSED",
+      "domain": "misc / other",
+      "created": "2026-07-23",
+      "updated": "2026-07-24",
+      "commentCount": 1,
+      "lastComments": [
+        {
+          "author": "stgmt",
+          "date": "2026-07-24",
+          "preview": "Delivered by PR #199 (squash-merged to main as 6973c856, mergedAt 2026-07-24T17:59:14Z). Typed EdgeType members verifies/covers/entitles + centralized source/target EndpointRule co"
+        }
+      ]
+    },
+    {
+      "number": 173,
+      "title": "╨ƒ╨╛╨┤╨│╨╛╤é╨╛╨▓╨╕╤é╤î ╨╕ ╤ü╨╛╨╖╨┤╨░╤é╤î GitHub issue ╨▓ stgmt/dev-pomogator ╨╛ ╨╜╨╡╤â╨┤╨░╤ç╨╜╨╛╨╣ ╤â╤ü╤é╨░╨╜╨╛╨▓╨║╨╡/╨╕╨╜╨╕╤å╨╕╨░╨╗╨╕╨╖╨░╤å╨╕╨╕ CARL: ╨╜╨░ SessionStart ╨▒╤ï╨╗ s",
+      "state": "OPEN",
+      "domain": "skills / rules",
+      "created": "2026-07-23",
+      "updated": "2026-07-23",
+      "commentCount": 1,
+      "lastComments": [
+        {
+          "author": "stgmt",
+          "date": "2026-07-23",
+          "preview": "## ╨ö╨╕╨░╨│╨╜╨╛╤ü╤é╨╕╨║╨░ ╨╕ ╨╕╤ü╨┐╤Ç╨░╨▓╨╗╨╡╨╜╨╕╨╡ ### ╨¥╨░╨▒╨╗╤Ä╨┤╨░╨╡╨╝╤ï╨╣ ╤ü╨▒╨╛╨╣ ╨¥╨░ ╨┐╨╡╤Ç╨▓╨╛╨╝ `SessionStart` CARL ╨▓╨╡╤Ç╨╜╤â╨╗ `status=project-missing`: ╨▓ ╨┐╤Ç╨╛╨╡╨║╤é"
+        }
+      ]
+    },
+    {
+      "number": 161,
+      "title": "claim-evidence-gate ╤ü╨╗╨╡╨┐ ╨║ ╨┐╤Ç╨╛╤ê╨╗╤ï╨╝ ╤à╨╛╨┤╨░╨╝: ╤é╤Ç╨╡╨▒╤â╨╡╤é ╨┐╨╡╤Ç╨╡╨┐╤Ç╨╛╨│╨╛╨╜ ╤é╨╡╤ü╤é╨╛╨▓, ╤à╨╛╤é╤Å ╨╛╨╜╨╕ ╤ê╨╗╨╕ ╤à╨╛╨┤╨╛╨╝ ╤Ç╨░╨╜╤î╤ê╨╡ ╨┐╤Ç╨╕ ╨╜╨╡╨╕╨╖╨╝╨╡╨╜╨╜╨╛╨╝ ╨║╨╛╨┤╨╡ (carry-over evidence)",
+      "state": "OPEN",
+      "domain": "hooks / gates",
+      "created": "2026-07-23",
+      "updated": "2026-07-23",
+      "commentCount": 1,
+      "lastComments": [
+        {
+          "author": "stgmt",
+          "date": "2026-07-23",
+          "preview": "## ╨Æ╨╡╤Ç╨╕╤ä╨╕╨║╨░╤å╨╕╤Å ╤ä╨╕╨║╤ü╨░ (╤ü╨╜╨╕╨╝╨░╤Ä [UNVERIFIED]) ╨ƒ╨╛╨╝╨╕╨╝╨╛ ╤Ä╨╜╨╕╤é-╨╗╨╛╨│╨╕╨║╨╕ (9/9), ╨┐╤Ç╨╛╨│╨╜╨░╨╗ **╨╢╨╕╨▓╨╛╨╣ e2e ╨┐╤Ç╨╛╤é╨╕╨▓ ╤ü╨░╨╝╨╛╨│╨╛ ╨▒╨░╨╜╨┤╨╗╨░** "
+        }
+      ]
+    },
+    {
+      "number": 144,
+      "title": "anchor-integrity/fix.mjs ╨╜╨╡ ╨┐╨╕╤ê╨╡╤é ╨┐╤Ç╨░╨▓╨║╨╕ ╨╜╨░ Windows (╨┤╨▓╨╡╤Ç╤î ╨╜╨╡ ╤Ç╨╡╨╖╨╛╨╗╨▓╨╕╤é╤ü╤Å) + ╨┤╨▓╨╡╤Ç╤î ╨╛╤é╨▓╨╡╤Ç╨│╨░╨╡╤é ╨┐╨╛╤ç╨╕╨╜╨║╤â ╨╕╨╖-╨╖╨░ ╨º╨ú╨û╨₧╨ô╨₧ ╨┤╨╛╨╗╨│╨░ ╨▓ ╨┤╨╛╨║╤â╨╝╨╡╨╜╤é╨╡",
+      "state": "CLOSED",
+      "domain": "misc / other",
+      "created": "2026-07-22",
+      "updated": "2026-07-22",
+      "commentCount": 1,
+      "lastComments": [
+        {
+          "author": "stgmt",
+          "date": "2026-07-22",
+          "preview": "#144 ╨┤╨╡╨║╨╛╨╝╨┐╨╛╨╖╨╕╤Ç╨╛╨▓╨░╨╜ ╨┐╨╛ ╨╝╨╡╤à╨░╨╜╨╕╨╖╨╝╨░╨╝: - Windows `tsx-runner` / `spec-door.ts` resolution ╨╕ ╤Ç╨╡╨░╨╗╤î╨╜╤ï╨╣ ╤â╤ü╤é╨░╨╜╨╛╨▓╨╗╨╡╨╜╨╜╤ï╨╣ runtime ΓåÆ #137; - ╨"
+        }
+      ]
+    }
+  ],
+  "miscTitles": [
+    "#212 [OPEN] Feature: Universal Workflow Orchestrator ╨┤╨╗╤Å bounded development-╤ü╨╡╤ü╤ü╨╕╨╣",
+    "#208 [OPEN] anchor-integrity/fix.mjs: ╨║╨╗╨░╤ü╤ü {#id}+╨┤╨╡╨║╨╛╤Ç╨░╤é╨╕╨▓╨╜╨╛╨╡ ╤é╨╕╤Ç╨╡ ╨┐╨╛╨╝╨╡╤ç╨░╨╡╤é╤ü╤Å ambiguous, ╤à╨╛╤é╤Å ╤ç╨╕╨╜╨╕╤é╤ü╤Å ╨┤╨╡╤é╨╡╤Ç╨╝╨╕╨╜╨╕╤Ç╨╛╨▓╨░╨╜╨╜╨╛",
+    "#204 [OPEN] subagent-watchdog: ╨╢╨╕╨▓╨╛╨╣ ╤ü╨░╨▒╨░╨│╨╡╨╜╤é ╨▓╤ü╨╡╨│╨┤╨░ ╤ü╤é╨░╨╜╨╛╨▓╨╕╤é╤ü╤Å stale-running ╨╜╨░ Windows (.output ╨╜╨╕╨║╨╛╨│╨┤╨░ ╨╜╨╡ ╨┤╨▓╨╕╨│╨░╨╡╤é╤ü╤Å)",
+    "#183 [OPEN] ╨ƒ╤Ç╨╕╨▓╤Å╨╖╨║╨░ ╤é╨╡╤ü╤é-╨┤╨╛╨║╨░╨╖╨░╤é╨╡╨╗╤î╤ü╤é╨▓ ╨║ ╤à╨╡╤ê╤â ╨░╤Ç╤é╨╡╤ä╨░╨║╤é╨░, producer/version, run ID, ╨║╨╛╨╝╨╝╨╕╤é╤â, ╨╛╨║╤Ç╤â╨╢╨╡╨╜╨╕╤Ä ╨╕ ╨▓╤Ç╨╡╨╝╨╡╨╜╨╕ ╨╖╨░╤à╨▓╨░╤é╨░",
+    "#181 [CLOSED] ╨ó╨╕╨┐╨╕╨╖╨╕╤Ç╨╛╨▓╨░╨╜╨╜╤ï╨╡ ╨╛╤é╨╜╨╛╤ê╨╡╨╜╨╕╤Å verifies/covers/entitles ╨║╨░╨║ ╤ç╨╗╨╡╨╜╤ï ╨╖╨░╨║╤Ç╤ï╤é╨╛╨│╨╛ EdgeType, ╤ü╨╛╨│╨╗╨░╤ü╨╛╨▓╨░╨╜╨╜╨╛ ╤ü ╤é╨╡╨║╤â╤ë╨╕╨╝ ╤ü╨╗╨╛╨▓╨░╤Ç╤æ╨╝ ╤Ç╤æ╨▒╨╡╤Ç",
+    "#180 [OPEN] ╨₧╨▒╤Å╨╖╨░╤é╨╡╨╗╤î╨╜╨░╤Å ╨╜╨╡╨┐╤â╤ü╤é╨░╤Å reason ╨╜╨░ ╨╝╤â╤é╨░╤å╨╕╤Ä + ╨░╤â╨┤╨╕╤é actor/session/time/commit (╨╜╨╡ ╨╜╨╡╨╛╨▒╤Ç╨░╤é╨╕╨╝╤ï╨╣ ╤à╨╡╤ê) ╤ü ╤ü╨░╨╜╨╕╤é╨╕╨╖╨░╤å╨╕╨╡╨╣",
+    "#179 [OPEN] ╨£╤â╤é╨░╤å╨╕╤Å ╤ü╨▓╤Å╨╖╨╡╨╣ ╨│╤Ç╨░╤ä╨░: ╨╛╤é╨┐╨╡╤ç╨░╤é╨╛╨║ (fingerprint) + dry-run + ╤Å╨▓╨╜╤ï╨╡ refuse/orphan/cascade ╨┐╤Ç╨╕ ╨░╤é╨╛╨╝╨░╤Ç╨╜╨╛╤ü╤é╨╕ ╤é╤Ç╨░╨╜╨╖╨░╨║╤å╨╕╨╕",
+    "#176 [OPEN] ╨º╨╡╤é╤ï╤Ç╨╡ evidence-╤ü╨╛╤ü╤é╨╛╤Å╨╜╨╕╤Å ╤é╤Ç╨╡╨▒╨╛╨▓╨░╨╜╨╕╤Å (untagged / exercised / impl-only / verified) + ╤Å╨▓╨╜╨░╤Å ╨┐╨╛╨╗╨╕╤é╨╕╨║╨░ ╤â╤ü╤é╨░╤Ç╨╡╨▓╨░╨╜╨╕╤Å (stale): ╨╛╨┤╨╜╨╛ ╨┐╨╛╨╗╨╡ ╨▓╨╝╨╡╤ü╤é╨╛ ╤Ç╨░╨╖╤Ç╨╛╨╖╨╜╨╡╨╜╨╜╤ï╤à bucket/verdict/quality",
+    "#175 [OPEN] Fail-closed rollup ╨│╤Ç╨░╤ä╨░: ╤Ç╨╛╨┤╨╕╤é╨╡╨╗╤î ╨│╨╛╤é╨╛╨▓ ╨╗╨╕╤ê╤î ╨║╨╛╨│╨┤╨░ ╨Æ╨í╨ò ╨╛╨▒╤Å╨╖╨░╤é╨╡╨╗╤î╨╜╤ï╨╡ ╨┐╨╛╤é╨╛╨╝╨║╨╕ ╨╕ ╨╖╨░╨▓╨╕╤ü╨╕╨╝╨╛╤ü╤é╨╕ ╨╖╨╡╨╗╤æ╨╜╤ï╨╡; ╤à╤â╨┤╤ê╨╡╨╡ ╤ü╨╛╤ü╤é╨╛╤Å╨╜╨╕╨╡ ╨▓╤ü╨┐╨╗╤ï╨▓╨░╨╡╤é ╨╜╨░╨▓╨╡╤Ç╤à",
+    "#172 [CLOSED] ╨ƒ╤Ç╨╛╤ü╤é╤Ç╨░╨╜╤ü╤é╨▓╨░ ╨╕╨╝╤æ╨╜ ╨╕ ╨╕╨╡╤Ç╨░╤Ç╤à╨╕╤ç╨╡╤ü╨║╨╕╨╡ ID ╤ü╨┐╨╡╨║╨╛╨▓ ╤ü ╤Å╨▓╨╜╤ï╨╝ ╨║╨╛╨╜╤é╤Ç╨╛╨╗╨╡╨╝ ╨║╨╛╨╗╨╗╨╕╨╖╨╕╨╣",
+    "#171 [CLOSED] ╨ó╨╕╨┐╨╕╨╖╨╕╤Ç╨╛╨▓╨░╨╜╨╜╤ï╨╡ ╨╝╨╡╤é╨░╨┤╨░╨╜╨╜╤ï╨╡ ╤é╤Ç╨╡╨▒╨╛╨▓╨░╨╜╨╕╨╣: ╨╝╨╡╤é╨╛╨┤ ╨▓╨╡╤Ç╨╕╤ä╨╕╨║╨░╤å╨╕╨╕, rationale, ╤Ç╨╕╤ü╨║╨╕, safety-╨║╨╗╨░╤ü╤ü",
+    "#170 [OPEN] ╨ö╨╡╨║╨╗╨░╤Ç╨░╤é╨╕╨▓╨╜╤ï╨╡ ╨╕╨╜╨▓╨░╤Ç╨╕╨░╨╜╤é╤ï ╤ü╨┐╨╡╨║╨╕ + ╨╛╨┐╤å╨╕╨╛╨╜╨░╨╗╤î╨╜╤ï╨╣ SMT-╤Ç╨░╨╖╤Ç╤Å╨┤ ╨┤╨╗╤Å ╨▒╨╡╨╖╨╛╨┐╨░╤ü╨╜╨╛╨│╨╛ ╤ä╤Ç╨░╨│╨╝╨╡╨╜╤é╨░",
+    "#169 [CLOSED] ╨Ü╨░╨╢╨┤╨╛╨╡ ╤é╤Ç╨╡╨▒╨╛╨▓╨░╨╜╨╕╨╡ ╨╛╨▒╤è╤Å╨▓╨╗╤Å╨╡╤é ╨╛╨▒╤Å╨╖╨░╤é╨╡╨╗╤î╨╜╤ï╨╡ ╤é╨╕╨┐╤ï ╨░╤Ç╤é╨╡╤ä╨░╨║╤é╨╛╨▓ ╨┐╨╛╤ü╤é╨░╨▓╨║╨╕",
+    "#166 [OPEN] Forward change-impact analysis: transitive blast radius from any spec ID",
+    "#144 [CLOSED] anchor-integrity/fix.mjs ╨╜╨╡ ╨┐╨╕╤ê╨╡╤é ╨┐╤Ç╨░╨▓╨║╨╕ ╨╜╨░ Windows (╨┤╨▓╨╡╤Ç╤î ╨╜╨╡ ╤Ç╨╡╨╖╨╛╨╗╨▓╨╕╤é╤ü╤Å) + ╨┤╨▓╨╡╤Ç╤î ╨╛╤é╨▓╨╡╤Ç╨│╨░╨╡╤é ╨┐╨╛╤ç╨╕╨╜╨║╤â ╨╕╨╖-╨╖╨░ ╨º╨ú╨û╨₧╨ô╨₧ ╨┤╨╛╨╗╨│╨░ ╨▓ ╨┤╨╛╨║╤â╨╝╨╡╨╜╤é╨╡",
+    "#126 [CLOSED] spec-status/specs-generator-core: ╨▓╨╕╤ü╨╕╤é ╨╜╨░ ╨╛╤é╨║╤Ç╤ï╤é╨╛╨╝ stdin (wsl-╨╖╨░╨┐╤â╤ü╨║) + repoRoot ╨╕╤ë╨╡╤é╤ü╤Å ╨╛╤é SCRIPT_DIR, ╨░ ╨╜╨╡ ╨╛╤é cwd",
+    "#105 [CLOSED] Local gh logged out",
+    "#104 [CLOSED] Crash with token [REDACTED] under ~/repo",
+    "#100 [OPEN] Productize Claude subagent watchdog for failed/stale Agent work",
+    "#69 [CLOSED] tsx-runner Strategy 0 ╨┐╨░╨┤╨░╨╡╤é ╨╜╨░ Node 24: bad option --experimental-default-type=module (+ ╨╜╨╡╤é fall-through ╨╜╨░ tsx)",
+    "#63 [OPEN] ╨ƒ╨╗╨░╨│╨╕╨╜ ┬½╨┐╨╕╨╜╨░╤é╨╛╤Ç┬╗: goal-driven ╨░╨▓╤é╨╛-╨┐╤Ç╨╛╨┤╨╛╨╗╨╢╨╡╨╜╨╕╨╡ ╨░╨│╨╡╨╜╤é╨░ ╨▒╨╡╨╖ ╤Ç╤â╤ç╨╜╨╛╨│╨╛ ╨┐╨╕╨╜╨║╨░ ╤Ä╨╖╨╡╤Ç╨╛╨╝",
+    "#55 [CLOSED] Adapt remaining ~48 loose specs to v4 strict task format (deferred to end of v4)",
+    "#50 [CLOSED] ╨Æ╤ü╨╡ ╤à╤â╨║╨╕ ╨╝╨╛╨╗╤ç╨░ ╨╝╨╡╤Ç╤é╨▓╤ï ╨╜╨░ ╨╝╨░╤ê╨╕╨╜╨░╤à ╨▒╨╡╨╖ Node.js ΓÇö node: command not found ╨▓ ╨║╨░╨╢╨┤╨╛╨╝ entrypoint",
+    "#47 [CLOSED] ╨Æ╤ü╨╡ ╤à╤â╨║╨╕ ╨╝╨╛╨╗╤ç╨░ ╨┐╨░╨┤╨░╤Ä╤é ╨╜╨░ ╨╝╨░╤ê╨╕╨╜╨░╤à ╨▒╨╡╨╖ Node.js ΓÇö node: command not found",
+    "#40 [CLOSED] feat: ╤â╤ü╤é╨░╨╜╨╛╨▓╨║╨░ ╨╕ ╨╜╨░╤ü╤é╤Ç╨╛╨╣╨║╨░ GitHub CLI (gh) ╨┐╤Ç╨╕ ╤â╤ü╤é╨░╨╜╨╛╨▓╨║╨╡ dev-pomogator",
+    "#38 [OPEN] feat: ╨║╨░╤ü╤é╨╛╨╝╨╜╨░╤Å ╤ü╨╗╨╡╤ê-╨║╨╛╨╝╨░╨╜╨┤╨░ /review-and-clean ΓÇö ╨▒╨░╨│╤à╨░╨╜╤é╨╕╨╜╨│ ╤ü ╨║╨╛╨╝╨╝╨╡╨╜╤é╨░╨╝╨╕ ╨▓ PR + ╨░╨▓╤é╨╛-cleanup ╨╖╨░ ╨╛╨┤╨╕╨╜ ╨▓╤ï╨╖╨╛╨▓"
+  ]
+}

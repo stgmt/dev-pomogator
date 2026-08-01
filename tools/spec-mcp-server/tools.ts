@@ -12,9 +12,10 @@
  *   get_trace               primary — structured tree + code_impl + explanation
  *   find_by_tags            scenarios filtered by `@FR/@NFR/@AC` tags
  *   conformance_check       run Phase-1 conformance over current graph
- *   search                  substring scan over node ids + titles
+ *   search                  bounded substring scan over node ids + titles
  *   get_node                raw node lookup by canonical id
- *   list_phase_tasks        tasks filtered by phase string
+ *   list_tasks              bounded task inventory scoped to one spec
+ *   list_phase_tasks        bounded task inventory scoped to one spec + phase
  *   get_test_result         last-result for a scenario id
  *   find_orphans            ORPHAN_* / UNCOVERED_FR findings only
  *   get_spec_status         FR-38/FR-32 — one tool, three `view`s: status (lifecycle +
@@ -355,6 +356,115 @@ function clamp(s: string, max: number): string {
  *  ("## FR-14") or its anchor ("fr-14"). */
 function slugifyHeading(s: string): string {
   return s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+}
+
+const DEFAULT_PAGE_LIMIT = 50;
+const MAX_PAGE_LIMIT = 200;
+const DEFAULT_DOC_PAGE_LINES = 300;
+const MAX_DOC_PAGE_LINES = 500;
+const WHOLE_DOC_SAFE_BYTES = 64 * 1024;
+
+function encodeCursor(offset: number): string {
+  return Buffer.from(String(offset), 'utf8').toString('base64url');
+}
+
+function decodeCursor(cursor: string | undefined): number | null {
+  if (!cursor) return 0;
+  try {
+    const decoded = Buffer.from(cursor, 'base64url').toString('utf8');
+    if (!/^\d+$/.test(decoded)) return null;
+    const offset = Number(decoded);
+    return Number.isSafeInteger(offset) && offset >= 0 ? offset : null;
+  } catch {
+    return null;
+  }
+}
+
+function pageResult<T>(items: readonly T[], cursor: string | undefined, limit = DEFAULT_PAGE_LIMIT): {
+  ok: boolean;
+  error?: 'INVALID_CURSOR';
+  total: number;
+  returned: number;
+  truncated: boolean;
+  next_cursor: string | null;
+  results: T[];
+} {
+  const offset = decodeCursor(cursor);
+  if (offset === null || offset > items.length) {
+    return { ok: false, error: 'INVALID_CURSOR', total: items.length, returned: 0, truncated: false, next_cursor: null, results: [] };
+  }
+  const results = items.slice(offset, offset + limit);
+  const nextOffset = offset + results.length;
+  const truncated = nextOffset < items.length;
+  return {
+    ok: true,
+    total: items.length,
+    returned: results.length,
+    truncated,
+    next_cursor: truncated ? encodeCursor(nextOffset) : null,
+    results,
+  };
+}
+
+interface HeadingCandidate {
+  heading: string;
+  anchor: string;
+  line: number;
+}
+
+function headingCandidates(lines: readonly string[]): HeadingCandidate[] {
+  const out: HeadingCandidate[] = [];
+  let inFence = false;
+  for (let i = 0; i < lines.length; i++) {
+    if (/^\s*```/.test(lines[i])) { inFence = !inFence; continue; }
+    if (inFence) continue;
+    const match = lines[i].match(/^(#{1,6})\s+(.*\S)\s*$/);
+    if (!match) continue;
+    const heading = match[2].trim();
+    out.push({ heading, anchor: slugifyHeading(heading), line: i + 1 });
+  }
+  return out;
+}
+
+function nearestHeadings(lines: readonly string[], query: string, limit = 5): HeadingCandidate[] {
+  const target = slugifyHeading(query.replace(/^#+/, '').trim());
+  const score = (candidate: HeadingCandidate): number => {
+    const anchor = candidate.anchor;
+    if (anchor === target) return 0;
+    if (anchor.startsWith(target) || target.startsWith(anchor)) return 1;
+    const targetTokens = new Set(target.split('-').filter(Boolean));
+    const overlap = anchor.split('-').filter((token) => targetTokens.has(token)).length;
+    return 10 - overlap;
+  };
+  return headingCandidates(lines)
+    .sort((a, b) => score(a) - score(b) || a.line - b.line)
+    .slice(0, limit);
+}
+
+function taskSpec(task: TaskNode): string | undefined {
+  return task.spec ?? specOf(task.file);
+}
+
+function localRef(ref: string): string {
+  return ref.includes(':') ? ref.slice(ref.indexOf(':') + 1) : ref;
+}
+
+function taskInventoryEntry(task: TaskNode, includeComments: boolean): Record<string, unknown> {
+  const entry: Record<string, unknown> = {
+    id: task.id,
+    title: task.title ?? null,
+    status: task.status,
+    phase: task.phase ?? null,
+    requirements: task.refs.map(localRef),
+    issue_refs: task.issueRefs ?? [],
+    location: { file: task.file, line: task.line },
+  };
+  if (includeComments) {
+    entry.comment = task.comment ?? null;
+    entry.rationale = task.waived ?? null;
+    entry.blocker = task.blocker ?? null;
+  }
+  return entry;
 }
 
 /**
@@ -964,19 +1074,23 @@ export function buildToolRegistry(
   tools.push({
     name: 'search',
     description:
-      'Substring match across node ids and titles (case-insensitive), returning file:line per hit. ' +
-      'Pass coverage:true to also get the `tested-by` Scenario edges + a `covered` flag per result — ' +
-      'so "is this covered by a scenario?" is answered in ONE call (which a raw grep cannot do).',
+      'Bounded substring match across node ids and titles (case-insensitive), returning file:line per hit. ' +
+      'Pass spec to scope one spec. Results use stable id ordering and cursor pagination with total/returned/truncated/next_cursor, so "all" is mechanically provable. ' +
+      'Pass coverage:true to also get the `tested-by` Scenario edges + a `covered` flag per result.',
     inputShape: {
       query: z.string().min(1),
+      spec: z.string().optional(),
       types: z.array(z.string()).optional(),
-      limit: z.number().int().min(1).max(200).optional(),
+      limit: z.number().int().min(1).max(MAX_PAGE_LIMIT).optional(),
+      cursor: z.string().optional(),
       coverage: z.boolean().optional(),
     } as const satisfies z.ZodRawShape,
     handler: async (args) => {
       const graph = getGraph();
       const q = (args.query as string).toLowerCase();
-      const limit = (args as { limit?: number }).limit ?? 50;
+      const spec = (args as { spec?: string }).spec;
+      const limit = (args as { limit?: number }).limit ?? DEFAULT_PAGE_LIMIT;
+      const cursor = (args as { cursor?: string }).cursor;
       const types = new Set((args as { types?: string[] }).types ?? []);
       const wantCoverage = (args as { coverage?: boolean }).coverage === true;
       // coverage: index node.id → tested-by Scenario ids ONCE (additive; only when requested).
@@ -992,22 +1106,23 @@ export function buildToolRegistry(
       }
       const out: Array<{ id: string; type: string; file: string; line: number; title?: string; tested_by?: string[]; covered?: boolean }> = [];
       for (const node of graph.nodes.values()) {
+        if (spec && (node.spec ?? specOf(node.file)) !== spec) continue;
         if (types.size > 0 && !types.has(node.type)) continue;
         const titleField = (node as Node & { title?: string }).title;
         const hay = `${node.id} ${titleField ?? ''}`.toLowerCase();
-        if (hay.includes(q)) {
-          const rec: { id: string; type: string; file: string; line: number; title?: string; tested_by?: string[]; covered?: boolean } =
-            { id: node.id, type: node.type, file: node.file, line: node.line, title: titleField };
-          if (wantCoverage) {
-            const ids = testedBy.get(node.id) ?? [];
-            rec.tested_by = ids;
-            rec.covered = ids.length > 0;
-          }
-          out.push(rec);
-          if (out.length >= limit) break;
+        if (!hay.includes(q)) continue;
+        const rec: { id: string; type: string; file: string; line: number; title?: string; tested_by?: string[]; covered?: boolean } =
+          { id: node.id, type: node.type, file: node.file, line: node.line, title: titleField };
+        if (wantCoverage) {
+          const ids = testedBy.get(node.id) ?? [];
+          rec.tested_by = [...ids].sort();
+          rec.covered = ids.length > 0;
         }
+        out.push(rec);
       }
-      return asJsonResult({ ok: true, results: out, count: out.length });
+      out.sort((a, b) => a.id.localeCompare(b.id));
+      const page = pageResult(out, cursor, limit);
+      return asJsonResult({ ...page, count: page.returned, spec: spec ?? null, query: args.query });
     },
   });
 
@@ -1075,34 +1190,105 @@ export function buildToolRegistry(
     },
   });
 
-  // ─── 6) list_phase_tasks ────────────────────────────────────────────────
-  // TaskNode currently has no `phase` field in the Phase-1 schema (the TASKS.md
-  // parser ships in a follow-up Phase 2 sub-PR — see the plan). For now the
-  // handler filters by string match on any optional `phase` property added by
-  // the parser when it lands. Until then the registry returns an empty list
-  // with a note, so callers don't get «UnknownTool» but do get truthful state.
+  // ─── 6) bounded task inventory (FR-82) ─────────────────────────────────
+  const taskStatuses = ['todo', 'ready', 'in-progress', 'done', 'blocked'] as const;
+  const listTasks = (
+    spec: string,
+    statuses: readonly string[] | undefined,
+    phase: string | undefined,
+    requirement: string | undefined,
+    includeComments: boolean,
+    cursor: string | undefined,
+    limit: number,
+  ): ReturnType<typeof pageResult<Record<string, unknown>>> => {
+    const wantedStatuses = new Set(statuses ?? ['todo', 'ready', 'in-progress', 'blocked']);
+    const wantedRequirement = requirement ? localRef(requirement).toLowerCase() : null;
+    const tasks = [...getGraph().nodes.values()]
+      .filter((node): node is TaskNode => node.type === 'Task')
+      .filter((task) => taskSpec(task) === spec)
+      .filter((task) => wantedStatuses.has(task.status))
+      .filter((task) => !phase || task.phase === phase)
+      .filter((task) => !wantedRequirement || task.refs.some((ref) => localRef(ref).toLowerCase() === wantedRequirement))
+      .sort((a, b) => a.id.localeCompare(b.id))
+      .map((task) => taskInventoryEntry(task, includeComments));
+    return pageResult(tasks, cursor, limit);
+  };
+
+  tools.push({
+    name: 'list_tasks',
+    description:
+      'List tasks for ONE spec without reading TASKS.md. By default returns every non-terminal task (todo/ready/in-progress/blocked). ' +
+      'Optional filters: statuses, exact canonical phase, requirement. include_comments exposes only explicitly authored comment/rationale/blocker fields. ' +
+      'Stable cursor pagination returns total/returned/truncated/next_cursor; no silent cap.',
+    inputShape: {
+      spec: z.string().min(1),
+      statuses: z.array(z.enum(taskStatuses)).optional(),
+      phase: z.string().optional(),
+      requirement: z.string().optional(),
+      include_comments: z.boolean().optional(),
+      limit: z.number().int().min(1).max(MAX_PAGE_LIMIT).optional(),
+      cursor: z.string().optional(),
+    } as const satisfies z.ZodRawShape,
+    handler: async ({ spec, statuses, phase, requirement, include_comments, limit, cursor }) => {
+      const result = listTasks(
+        String(spec),
+        statuses as string[] | undefined,
+        phase ? String(phase) : undefined,
+        requirement ? String(requirement) : undefined,
+        include_comments === true,
+        cursor ? String(cursor) : undefined,
+        Number(limit ?? DEFAULT_PAGE_LIMIT),
+      );
+      return asJsonResult({ ...result, spec, filters: { statuses: statuses ?? taskStatuses.filter((status) => status !== 'done'), phase: phase ?? null, requirement: requirement ?? null } });
+    },
+  });
+
   tools.push({
     name: 'list_phase_tasks',
     description:
-      'List Task nodes whose `phase` field equals the given phase string. ' +
-      'Returns [] until the TASKS.md parser ships (see Phase-2 plan).',
-    inputShape: { phase: z.string() } as const satisfies z.ZodRawShape,
-    handler: async ({ phase }) => {
-      const target = phase as string;
-      const out: TaskNode[] = [];
-      for (const node of getGraph().nodes.values()) {
-        if (node.type !== 'Task') continue;
-        const t = node as TaskNode & { phase?: string };
-        if (t.phase === target) out.push(t);
+      'List tasks under an exact canonical phase in ONE spec. Task phases are produced by the live TASKS.md parser. ' +
+      'Returns PHASE_NOT_FOUND with nearest/existing phases when the phase does not exist, EMPTY_PHASE when it exists but filters match no tasks, ' +
+      'or stable bounded pagination with total/returned/truncated/next_cursor.',
+    inputShape: {
+      spec: z.string().min(1),
+      phase: z.string().min(1),
+      statuses: z.array(z.enum(taskStatuses)).optional(),
+      include_comments: z.boolean().optional(),
+      limit: z.number().int().min(1).max(MAX_PAGE_LIMIT).optional(),
+      cursor: z.string().optional(),
+    } as const satisfies z.ZodRawShape,
+    handler: async ({ spec, phase, statuses, include_comments, limit, cursor }) => {
+      const slug = String(spec);
+      const target = String(phase);
+      const phases = [...new Set([...getGraph().nodes.values()]
+        .filter((node): node is TaskNode => node.type === 'Task' && taskSpec(node) === slug)
+        .map((task) => task.phase)
+        .filter((value): value is string => Boolean(value)))]
+        .sort();
+      if (!phases.includes(target)) {
+        const targetSlug = slugifyHeading(target);
+        const candidates = [...phases]
+          .sort((a, b) => {
+            const aStarts = slugifyHeading(a).startsWith(targetSlug) || targetSlug.startsWith(slugifyHeading(a)) ? 0 : 1;
+            const bStarts = slugifyHeading(b).startsWith(targetSlug) || targetSlug.startsWith(slugifyHeading(b)) ? 0 : 1;
+            return aStarts - bStarts || a.localeCompare(b);
+          })
+          .slice(0, 5);
+        return asJsonResult({ ok: false, error: 'PHASE_NOT_FOUND', spec: slug, phase: target, candidates, phases });
       }
-      return asJsonResult({
-        ok: true,
-        tasks: out,
-        count: out.length,
-        note: out.length === 0
-          ? 'Task nodes are not produced by the Phase-1 parsers; populated in Phase 2B.'
-          : undefined,
-      });
+      const result = listTasks(
+        slug,
+        statuses as string[] | undefined,
+        target,
+        undefined,
+        include_comments === true,
+        cursor ? String(cursor) : undefined,
+        Number(limit ?? DEFAULT_PAGE_LIMIT),
+      );
+      if (result.ok && result.total === 0) {
+        return asJsonResult({ ...result, ok: true, state: 'EMPTY_PHASE', spec: slug, phase: target, phases });
+      }
+      return asJsonResult({ ...result, state: 'POPULATED', spec: slug, phase: target, phases });
     },
   });
 
@@ -1268,6 +1454,7 @@ export function buildToolRegistry(
       'get_coverage_summary). `view`: ' +
       '"status" (default, needs `spec`) → lifecycle SPEC_ONLY/TESTS_NOT_RUN/RED/PARTIAL/GREEN ' +
       '+ last-run summary + node counts + FR-37b gaps + phases + hint (FR-38). ' +
+      '"summary" (needs `spec`) → compact lifecycle/count/gap summary for bounded inventory; no per-task or per-scenario payload. ' +
       '"counts" → structural FR/AC/Scenario/Task tallies: with `spec` that one spec, without `spec` ' +
       'the per-spec table across the corpus. ' +
       '"coverage" → FR-32 honesty rollup: per-scenario buckets (passed/pending/undefined/…) + ' +
@@ -1275,13 +1462,13 @@ export function buildToolRegistry(
       'omit for whole-corpus (every spec not in the last run shows not_run — usually pass `spec`).',
     inputShape: {
       spec: z.string().optional(),
-      view: z.enum(['status', 'counts', 'coverage']).optional(),
+      view: z.enum(['status', 'summary', 'counts', 'coverage']).optional(),
     } as const satisfies z.ZodRawShape,
     handler: async ({ spec, view }) => {
-      registryOpts.refreshGraph?.();
+      const v = (view as 'status' | 'summary' | 'counts' | 'coverage' | undefined) ?? 'status';
+      if (v !== 'summary') registryOpts.refreshGraph?.();
       const graph = getGraph();
       const repoRoot = registryOpts.repoRoot ?? process.cwd();
-      const v = (view as 'status' | 'counts' | 'coverage' | undefined) ?? 'status';
       const executionGaps = (
         scopeSpec: string | undefined,
         scenarios: ScenarioLike[],
@@ -1535,6 +1722,11 @@ export function buildToolRegistry(
       }, specFindings);
       const readiness = canonicalVerdict.readiness;
       const readinessLanes = readiness.lanes;
+      const nextAction = bddSync.debt.length > 0
+        ? 'Fix source/executable BDD sync drift or mark intentional exceptions.'
+        : filteredProof.latest && taskTruthDebt.length > 0
+          ? `Filtered run ${filteredProof.latest.runId} is useful proof but does not update canonical coverage. Run the full Docker BDD suite or attach an accepted canonical artifact.`
+          : readiness.next_action;
       const hints: Record<typeof lifecycle, string> = {
         SPEC_ONLY: 'Docs only — no scenarios written yet. Next: author the .feature (FR-38a).',
         TESTS_NOT_RUN: `${counts.scenarios} scenario(s) are SCENARIO_NOT_RUN; no canonical execution has been ingested. Next: run the suite so NDJSON lands.`,
@@ -1560,6 +1752,27 @@ export function buildToolRegistry(
         stop_confirmed: progress?.phases?.[name]?.stopConfirmed ?? false,
         completed_at: progress?.phases?.[name]?.completedAt ?? null,
       }));
+
+      if (v === 'summary') {
+        return asJsonResult({
+          ok: true,
+          view: 'summary',
+          spec: slug,
+          spec_status: readSpecStatus(repoRoot, slug),
+          lifecycle,
+          verdict: canonicalVerdict.verdict,
+          blocking: canonicalVerdict.blocking,
+          counts,
+          last_run,
+          gaps,
+          execution_gaps: statusExecutionGaps,
+          readiness: {
+            overall: readiness.overall,
+            next_action: nextAction,
+          },
+          hint: hints[lifecycle],
+        });
+      }
 
       return asJsonResult({
         ok: true,
@@ -1590,10 +1803,7 @@ export function buildToolRegistry(
         },
         readiness: {
           ...readiness,
-          next_action:
-            bddSync.debt.length > 0
-              ? 'Fix source/executable BDD sync drift or mark intentional exceptions.'
-              : readiness.next_action,
+          next_action: nextAction,
         },
         filtered_proof: filteredProof.latest,
         phases,
@@ -1618,7 +1828,8 @@ export function buildToolRegistry(
         logSpecAccess('list_spec_docs', args, 'denied');
         return asJsonResult({ ok: false, error: 'UNSAFE_SPEC', spec: slug, hint: 'slug must stay within .specs/ (no traversal)' });
       }
-      const dir = path.join(process.cwd(), '.specs', slug);
+      const repoRoot = registryOpts.repoRoot ?? process.cwd();
+      const dir = path.join(repoRoot, '.specs', slug);
       if (!fs.existsSync(dir) || !fs.statSync(dir).isDirectory()) {
         logSpecAccess('list_spec_docs', args, 'not_found');
         return asJsonResult({ ok: false, error: 'SPEC_NOT_FOUND', spec: slug });
@@ -1656,21 +1867,23 @@ export function buildToolRegistry(
       'FR-39a: read ONE spec document (prose outside graph nodes included) by a name ' +
       'from list_spec_docs. Unknown name → explicit DOC_NOT_FOUND (never an empty ' +
       'string). Every read lands in the spec-access audit log — the MCP-only ' +
-      'replacement for direct Read/Grep over .specs/. P21-2 pagination for big docs ' +
-      '(FR.md ≈77KB): pass {section:"FR-14"} for one heading block (down to the next ' +
-      'same/higher heading), OR {offset,limit} for a 1-based line window. No paging ' +
-      'arg → whole doc. Every reply carries total_lines/total_bytes so you can decide ' +
-      'to page; a windowed reply carries truncated + next_offset.',
+      'replacement for direct Read/Grep over .specs/. Bounded reads for big docs: pass ' +
+      '{section:"FR-14"} for one heading block, or {offset,limit} for a 1-based line window (limit ≤500). ' +
+      'A no-paging read returns a whole small doc but safely pages a document over 64 KiB (300 lines by default). ' +
+      'Pass whole_document:true only when the entire large document is genuinely required. ' +
+      'SECTION_NOT_FOUND returns nearest canonical headings/anchors.',
     inputShape: {
       spec: z.string(),
       doc: z.string(),
       offset: z.number().int().min(1).optional(),
-      limit: z.number().int().min(1).optional(),
+      limit: z.number().int().min(1).max(MAX_DOC_PAGE_LINES).optional(),
       section: z.string().optional(),
+      whole_document: z.boolean().optional(),
       read_for_edit: z.boolean().optional(),
     } as const satisfies z.ZodRawShape,
-    handler: async ({ spec, doc, offset, limit, section, read_for_edit }) => {
-      const args = { spec, doc, offset, limit, section, read_for_edit };
+    handler: async ({ spec, doc, offset, limit, section, whole_document, read_for_edit }) => {
+      const args = { spec, doc, offset, limit, section, whole_document, read_for_edit };
+      const repoRoot = registryOpts.repoRoot ?? process.cwd();
       const slug = String(spec).replace(/\\/g, '/').replace(/^\.?\/?\.specs\//, '').replace(/\/+$/, '');
       if (!isSafeSlug(slug)) {
         logSpecAccess('read_spec_doc', args, 'denied');
@@ -1678,7 +1891,7 @@ export function buildToolRegistry(
       }
       // P19-6: accept a SUBPATH (ARCHITECTURE/AXIS-1.md) — containment-checked,
       // not basename-flattened. Traversal/abs/drive → TRAVERSAL (denied), never served.
-      const resolved = resolveSpecDoc(process.cwd(), slug, String(doc));
+      const resolved = resolveSpecDoc(repoRoot, slug, String(doc));
       if (!resolved.ok) {
         logSpecAccess('read_spec_doc', args, 'denied');
         return asJsonResult({ ok: false, error: resolved.reason === 'TRAVERSAL' ? 'DOC_TRAVERSAL' : 'UNSAFE_SPEC', spec: slug, doc: String(doc), hint: 'doc must stay within .specs/<spec>/ (no traversal/abs path)' });
@@ -1708,7 +1921,7 @@ export function buildToolRegistry(
       // tokens so a follow-up section op re-targets the same heading without an exact
       // old_string. `section` (optional) scopes the metadata to ONE heading.
       if (read_for_edit === true) {
-        const meta = readForEdit(process.cwd(), slug, rel, section !== undefined ? String(section) : undefined);
+        const meta = readForEdit(repoRoot, slug, rel, section !== undefined ? String(section) : undefined);
         if (!meta.ok) {
           logSpecAccess('read_spec_doc', args, 'not_found');
           return asJsonResult({ ok: false, error: meta.error === 'DOC_NOT_FOUND' ? 'DOC_NOT_FOUND' : 'UNSAFE_SPEC', spec: slug, doc: rel, hint: meta.hint });
@@ -1725,7 +1938,8 @@ export function buildToolRegistry(
           return asJsonResult({
             ok: false, error: 'SECTION_NOT_FOUND', spec: slug, doc: rel, section,
             total_lines: totalLines, total_bytes: totalBytes,
-            hint: 'Pass a heading text ("FR-14") or its #anchor ("fr-14"); omit section to read the whole doc or use {offset,limit}.',
+            candidates: nearestHeadings(lines, String(section)),
+            hint: 'Use one of candidates[].heading / candidates[].anchor, or page with {offset,limit}.',
           });
         }
         const content = sel.lines.join('\n');
@@ -1748,7 +1962,7 @@ export function buildToolRegistry(
             next_offset: null, sha, content: '', note: 'offset is past end of file',
           });
         }
-        const endIdx = limit !== undefined ? Math.min(startIdx + limit, totalLines) : totalLines;
+        const endIdx = Math.min(startIdx + (limit ?? DEFAULT_DOC_PAGE_LINES), totalLines);
         const slice = lines.slice(startIdx, endIdx);
         const truncated = endIdx < totalLines;
         const content = slice.join('\n');
@@ -1760,7 +1974,19 @@ export function buildToolRegistry(
         });
       }
 
-      // Default: whole doc (back-compat) + size metadata so the agent can decide to page.
+      // Default: whole small docs; bound large docs unless the caller explicitly opts in.
+      if (totalBytes > WHOLE_DOC_SAFE_BYTES && whole_document !== true) {
+        const endIdx = Math.min(DEFAULT_DOC_PAGE_LINES, totalLines);
+        const content = lines.slice(0, endIdx).join('\n');
+        logSpecAccess('read_spec_doc', args, 'ok');
+        return asJsonResult({
+          ok: true, spec: slug, doc: rel, start_line: 1, end_line: endIdx,
+          lines: endIdx, total_lines: totalLines, total_bytes: totalBytes,
+          truncated: endIdx < totalLines, next_offset: endIdx < totalLines ? endIdx + 1 : null,
+          bounded_default: true, whole_document_available: true, bytes: content.length, sha, content,
+          note: 'Large document safely paged. Continue with next_offset, select a section, or pass whole_document:true explicitly.',
+        });
+      }
       logSpecAccess('read_spec_doc', args, 'ok');
       return asJsonResult({ ok: true, spec: slug, doc: rel, bytes: totalBytes, total_lines: totalLines, total_bytes: totalBytes, sha, content: full });
     },

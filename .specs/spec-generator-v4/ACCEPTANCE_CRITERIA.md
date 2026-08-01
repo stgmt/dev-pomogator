@@ -1468,3 +1468,71 @@ WHEN root `.mcp.json` and `.cursor/mcp.json` are compared THEN their `dev-pomoga
 ## AC-81.6
 **Требование:** [FR-81](FR.md#fr-81)
 WHEN documenting or performing install THEN Claude Code install SHALL be unchanged and Cursor enablement SHALL require at most `.cursor/mcp.json` plus the Third-party toggle — not a second marketplace package or duplicated skills/hooks.
+
+
+## AC-82.1
+**Требование:** [FR-82](FR.md#fr-82)
+WHEN an agent requests an unfinished task inventory for one spec THEN `list_tasks` SHALL return canonical task id, title, status, phase, comment or rationale when present, linked requirements/issues, source location, and evidence-backed blockers only, with `total`, `returned`, `truncated`, and `next_cursor` metadata.
+
+## AC-82.2
+**Требование:** [FR-82](FR.md#fr-82)
+WHEN the live task inventory exceeds one page THEN deterministic cursor pagination SHALL return every matching task exactly once in stable order, SHALL conserve `total` and `returned` cardinality, and SHALL never silently cap the collection; on the reference captured corpus of 280 tasks, the unfinished inventory SHALL complete in at most two pages at `limit: 200`.
+
+## AC-82.3
+**Требование:** [FR-82](FR.md#fr-82)
+WHEN `list_phase_tasks` receives a spec, optional statuses, a bounded page request, and a phase query THEN a known phase with no matching tasks SHALL return `EMPTY_PHASE`, an unknown phase SHALL return `PHASE_NOT_FOUND` with nearest canonical candidates, and a populated phase SHALL return the same deterministic pagination metadata as `list_tasks`.
+
+## AC-82.4
+**Требование:** [FR-82](FR.md#fr-82)
+WHEN an agent searches a selected spec with a query and optional types THEN `search` SHALL support complete cursor pagination and stable ordering, and the concatenated pages SHALL equal the unpaged matching set without a hidden result cap.
+
+## AC-82.5
+**Требование:** [FR-82](FR.md#fr-82)
+WHEN `get_spec_status` is called with `view: "summary"` THEN it SHALL return compact status, inventory counts, and gap/run summary without a full task or inventory payload, and repeated calls on an unchanged graph revision SHALL not perform an unchanged read-side global census recomputation.
+
+## AC-82.6
+**Требование:** [FR-82](FR.md#fr-82)
+WHEN `read_spec_doc` is called without a section or pagination on a large document THEN it SHALL return only the safe default page, require explicit `whole_document: true` for the whole document, enforce the maximum page bound, and on `SECTION_NOT_FOUND` return nearest canonical headings/anchors.
+
+## AC-82.7
+**Требование:** [FR-82](FR.md#fr-82)
+WHEN the `list_phase_tasks` tool description and integration test are inspected against the live graph THEN neither SHALL claim that task nodes are not produced or that every phase is empty; the test SHALL distinguish `PHASE_NOT_FOUND`, `EMPTY_PHASE`, and a populated phase through the real MCP handler.
+
+## AC-82.8
+**Требование:** [FR-82](FR.md#fr-82)
+WHEN the captured incident `wf_0315d03b-28` and a real task corpus are used for bounded verification THEN one complete task-inventory request plus bounded verification SHALL stay within the declared call, response-byte, and latency budgets and SHALL not perform an N×M crawl; the incident's six retries, 695 calls, approximately 5.46 MB, and approximately 297–312k input tokens SHALL remain evidence, not an unconditional performance promise.
+
+## AC-82.9
+**Требование:** [FR-82](FR.md#fr-82)
+WHEN the pending integration BDD scenarios execute THEN they SHALL invoke real MCP handlers and consume the captured incident/corpus artifact, and SHALL assert pagination cardinality, stable ordering, no-silent-cap behavior, bounded response size/latency, and the stale-description/test regression rather than hand-inventing a producer response shape.
+
+## AC-83.1
+**Требование:** [FR-83](FR.md#fr-83)
+**Delivery:** Deferred/backlog after FR-82.
+WHEN a bounded agent packet is created THEN it SHALL declare finite scopes, maximum calls, rounds, wall time, response bytes/tokens, and a stop condition, and SHALL preserve partial results when a bound stops execution.
+
+## AC-83.2
+**Требование:** [FR-83](FR.md#fr-83)
+**Delivery:** Deferred/backlog after FR-82.
+WHEN a branch fails from context exhaustion or `invalid_request` THEN the system SHALL classify the failure and preserve partial output, SHALL not retry the same prompt automatically, and SHALL allow at most one narrowed changed-strategy retry.
+
+## AC-83.3
+**Требование:** [FR-83](FR.md#fr-83)
+**Delivery:** Deferred/backlog after FR-82.
+WHEN a sibling collector or branch fails THEN completed GitHub or other ready output SHALL remain visible, while blocked and dropped scopes include explicit reasons; a failed spec branch SHALL not hide ready output.
+
+## AC-83.4
+**Требование:** [FR-83](FR.md#fr-83)
+**Delivery:** Deferred/backlog after FR-82.
+WHEN an agent packet stops or retries THEN per-agent telemetry SHALL expose calls, token counts when available, response bytes, repeated-key detection, and a journaled retry/stop reason tied to scope and branch.
+
+## AC-83.5
+**Требование:** [FR-83](FR.md#fr-83)
+**Delivery:** Deferred/backlog after FR-82.
+WHEN a workflow starts its model loop THEN deterministic collectors SHALL have completed first and their evidence SHALL be passed into the loop, preventing repeated discovery of the same MCP/repository facts.
+
+## AC-83.6
+**Требование:** [FR-83](FR.md#fr-83)
+**Delivery:** Deferred/backlog after FR-82.
+WHEN the real provenance artifact for `wf_0315d03b-28` is replayed THEN the completed GitHub collector output SHALL be surfaced, the six spec-collector retries SHALL be classified as a bounded failure, execution SHALL stop early, and blocked/dropped spec scope SHALL be visible.
+

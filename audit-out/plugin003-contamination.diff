@@ -1,0 +1,25 @@
+diff --git a/audit-out/plugin003-e0ecebb8.feature b/tests/features/plugins/specs-workflow/PLUGIN003_specs-workflow.feature
+index b5754b30..d4418810 100644
+--- a/audit-out/plugin003-e0ecebb8.feature
++++ b/tests/features/plugins/specs-workflow/PLUGIN003_specs-workflow.feature
+@@ -96,6 +96,20 @@ Feature: PLUGIN003 Specs Workflow Extension
+     And SKILL.md frontmatter should contain "name: research-workflow"
+     And SKILL.md description should mention "исследуй", "найди", "погугли", "ресерч"
+ 
++  # @feature5
++  Scenario: SPECMGT001_15 research treats a EUR 200 ceiling as an eligibility gate
++    Given the canonical research-workflow skill is available
++    When its recommendation constraint contract is inspected
++    Then a candidate above EUR 200 is rejected before deep research
++    And only candidates passing budget, region, and availability gates may be recommended
++
++  # @feature5
++  Scenario: SPECMGT001_16 model availability requires a consumer credential precedence matrix
++    Given the canonical research-workflow skill is available
++    When its model-provider verification contract is inspected
++    Then provider, endpoint, model namespace, credential source, and precedence are required
++    And a credential-name mismatch is not classified as model unavailability
++
+   # @feature5
+   Scenario: SPECMGT001_11 create-spec description includes all triggers within 1024-char limit
+     Given .claude/skills/create-spec/SKILL.md frontmatter is parsed

@@ -1,0 +1,8 @@
+{
+  "action": "apply",
+  "spec": "dev-pomogator-canonical-plugin",
+  "doc": "TASKS.md",
+  "old_string": "  - [ ] Targeted BDD and specification conformance are recorded; the review tests do not require a live service.\r\n",
+  "new_string": "  - [ ] Targeted BDD and specification conformance are recorded; the review tests do not require a live service.\r\n\r\n- [ ] Self-heal managed hooks after mid-session daemon loss — id: t16 — Status: TODO | Est: 120m\r\n  _Requirements: FR-13; AC-10; CORE024_12._\r\n  _Files: `tools/hook-service/client.mjs`, `tools/hook-service/ensure-up.mjs`, `tools/hook-service/registry.mjs`, `tools/hook-service/generate-manifest.mjs`, `.claude-plugin/hooks.json`, `.claude/settings.json`, `tests/features/core/CORE024_hook-review.feature`, `tests/step_definitions/feature24_hook_review.ts`, `tests/hook-service.test.mjs`._\r\n  _Depends: t15._\r\n  **Done When:**\r\n  - [ ] `CORE024_12` kills an owned daemon after a successful dispatch and the next client invocation recovers through `ensureUp` without user action.\r\n  - [ ] Concurrent callers coalesce recovery through one startup lease and the original request is retried at most once.\r\n  - [ ] Live 401, 403, 404, and 503 responses are returned without restart or retry.\r\n  - [ ] A foreign listener is never terminated or treated as owned.\r\n  - [ ] Repeated transport failure exits fail-open and appends a sanitized durable diagnostic without credential material.\r\n",
+  "reason": "[skip-spec-steer: targeted incident task amendment after canonical phase agent could not mutate through disconnected MCP] Add implementation task for transparent mid-session hook-service recovery."
+}

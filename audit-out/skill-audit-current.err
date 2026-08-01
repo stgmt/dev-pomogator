@@ -1,0 +1,15 @@
+Warning: malformed YAML frontmatter in E:\repos\dev-pomogator\.claude\skills\bdd-migrator\SKILL.md: Nested mappings are not allowed in compact mappings at line 2, column 14:
+
+description: Migrate a spec's non-BDD (vitest) tests to traceable @featureN cuc…
+             ^
+
+Warning: malformed YAML frontmatter in E:\repos\dev-pomogator\.claude\skills\edge-debug-port\SKILL.md: Nested mappings are not allowed in compact mappings at line 2, column 14:
+
+description: Permanently configure Microsoft Edge on Windows to launch with --r…
+             ^
+
+Warning: malformed YAML frontmatter in E:\repos\dev-pomogator\.claude\skills\task-status\SKILL.md: Nested mappings are not allowed in compact mappings at line 2, column 14:
+
+description: Use when you change ANY spec entity's status through the centraliz…
+             ^
+

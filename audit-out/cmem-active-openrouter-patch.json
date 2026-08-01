@@ -1,0 +1,8 @@
+{
+  "action": "apply",
+  "spec": "claude-mem-integration",
+  "doc": "claude-mem-integration.feature",
+  "old_string": "  @feature8 @HDS009\r\n  Scenario: CMEM001_31 active custom model wins over a stale provider setting\r\n",
+  "new_string": "  @feature8 @HDS011\r\n  Scenario: CMEM001_33 active OpenRouter route wins over a coexisting AiPomogator credential\r\n    Given active OpenRouter claude-mem settings with legacy model \"anthropic/claude-3-haiku\"\r\n    When the installed-user model migration runs\r\n    Then the migration result is \"migrated\"\r\n    And claude-mem keeps the active OpenRouter credential and direct route\r\n\r\n  @feature8 @HDS009\r\n  Scenario: CMEM001_31 active custom model wins over a stale provider setting\r\n",
+  "reason": "Cover both directions of the provider credential precedence matrix: active OpenRouter must remain direct even when AUTO_COMMIT_API_KEY coexists. [skip-spec-steer: executable BDD patch through spec door]"
+}

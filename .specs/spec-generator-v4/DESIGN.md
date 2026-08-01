@@ -1665,3 +1665,33 @@ A `SafeBatch` contains an `independenceProof` for every member pair: graph reach
 - Cursor marketplace plugin: rejected — Anthropic plugin.json is not Cursor's install channel; overkill for one path adapter.
 - Rewrite FR-41 to Cursor Task agents: deferred — hybrid (phases in Claude Code, day-to-day door in Cursor) is enough for FR-81.
 
+
+
+### Decision: Bounded MCP query contracts before workflow fan-out
+
+**Требование:** [FR-82](FR.md#fr-82)
+
+**Rationale:** The live graph already contains task nodes while the `list_phase_tasks` description and test still describe a future parser state. A truthful, spec-scoped query contract with complete cursor pagination lets an agent obtain the unfinished inventory directly, instead of retrying collectors or issuing one call per task. The same contract boundary applies to phase lookup, search, summary status, and document reads so callers can reason about cardinality and response budgets.
+
+**Trade-off:** Pagination metadata, cursors, phase-state errors, cache revision checks, and bounded document-read errors add API surface and migration work. That explicit surface is preferable to silent caps, ambiguous empty results, and large prompt payloads; defaults protect callers while opt-in whole-document reads remain available for deliberate editing workflows.
+
+**Alternatives considered:**
+- Keep the current parser caveat and let callers crawl task nodes: rejected because the live graph contradicts the caveat and the incident showed unbounded retries/call volume.
+- Return a fixed first-N slice without cursors: rejected because it silently loses tasks and cannot satisfy “every unfinished task.”
+- Add a second task-inventory store: rejected because it would create a new source of truth; existing SpecGraph task nodes and lifecycle data must remain authoritative.
+
+### Decision: Record a separate deferred agent-packet contract, consumed by the thin orchestrator
+
+**Требование:** [FR-83](FR.md#fr-83)
+
+**Rationale:** FR-33 owns feature-map routing and delegates to workers; it does not define finite agent budgets, retry classification, partial-result visibility, or per-agent telemetry. Recording FR-83 separately makes those operational guarantees reviewable and testable while keeping FR-33 as the eventual orchestrator integration point. FR-82 is a prerequisite because deterministic bounded collectors and inventory queries must exist before a workflow can safely packetize their work.
+
+**Trade-off:** A separate deferred requirement creates a dependency and an additional acceptance surface before implementation can begin. Deferring it is safer than smuggling workflow behavior into FR-33 or shipping an unbounded fan-out that hides completed branches behind a failed collector.
+
+**Alternatives considered:**
+- Add the packet semantics directly to FR-33 now: rejected because the thin-orchestrator contract and the execution-budget contract have different owners, evidence, and rollout timing.
+- Retry every failed branch with the same prompt until it succeeds: rejected because context exhaustion and `invalid_request` are not repaired by repetition and the incident demonstrated runaway retries.
+- Fail the whole workflow when one sibling fails: rejected because it hides completed GitHub output and discards actionable partial results.
+
+**Discovery boundary:** The Dynamic Workflow engine, packet adapter, collector harness, and their integration test paths are `TBD-owned-by-discovery` until a discovery pass verifies the repository paths. This Requirements phase intentionally does not invent those paths or authorize implementation.
+

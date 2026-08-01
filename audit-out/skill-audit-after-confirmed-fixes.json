@@ -1,0 +1,1343 @@
+{
+  "totalSkills": 54,
+  "withErrors": [
+    {
+      "code": "ALLOWED_TOOLS_MISSING",
+      "path": "E:\\repos\\dev-pomogator\\.claude\\skills\\architecture-research-workflow\\SKILL.md",
+      "severity": "error",
+      "message": "body uses tools NOT declared в `allowed-tools`: Skill",
+      "details": {
+        "missing": [
+          "Skill"
+        ],
+        "declared": [
+          "Read",
+          "Write",
+          "Edit",
+          "Glob",
+          "Grep",
+          "Bash",
+          "AskUserQuestion",
+          "WebSearch",
+          "WebFetch",
+          "mcp__dev-pomogator-specs__apply_spec_change",
+          "mcp__dev-pomogator-specs__read_spec_doc",
+          "mcp__dev-pomogator-specs__list_spec_docs"
+        ]
+      },
+      "suggestion": "Add to frontmatter `allowed-tools`: Skill"
+    },
+    {
+      "code": "FRONTMATTER_DESCRIPTION_TOO_LONG",
+      "path": "E:\\repos\\dev-pomogator\\.claude\\skills\\corpus-health\\SKILL.md",
+      "severity": "error",
+      "message": "frontmatter `description` (1431 chars) exceeds Anthropic limit 1024",
+      "details": {
+        "length": 1431
+      }
+    },
+    {
+      "code": "ALLOWED_TOOLS_MISSING",
+      "path": "E:\\repos\\dev-pomogator\\.claude\\skills\\cross-spec-reconcile\\SKILL.md",
+      "severity": "error",
+      "message": "body uses tools NOT declared в `allowed-tools`: Skill",
+      "details": {
+        "missing": [
+          "Skill"
+        ],
+        "declared": [
+          "Read",
+          "Write",
+          "Edit",
+          "Glob",
+          "Grep",
+          "Bash",
+          "AskUserQuestion",
+          "Agent"
+        ]
+      },
+      "suggestion": "Add to frontmatter `allowed-tools`: Skill"
+    },
+    {
+      "code": "ALLOWED_TOOLS_MISSING",
+      "path": "E:\\repos\\dev-pomogator\\.claude\\skills\\cross-spec-resolve\\SKILL.md",
+      "severity": "error",
+      "message": "body uses tools NOT declared в `allowed-tools`: Skill, Read",
+      "details": {
+        "missing": [
+          "Skill",
+          "Read"
+        ],
+        "declared": [
+          "mcp__dev-pomogator-specs__read_spec_doc",
+          "mcp__dev-pomogator-specs__list_spec_docs",
+          "mcp__dev-pomogator-specs__apply_spec_change",
+          "mcp__dev-pomogator-specs__propose_spec_change",
+          "Bash",
+          "Edit",
+          "AskUserQuestion"
+        ]
+      },
+      "suggestion": "Add to frontmatter `allowed-tools`: Skill, Read"
+    },
+    {
+      "code": "ALLOWED_TOOLS_MISSING",
+      "path": "E:\\repos\\dev-pomogator\\.claude\\skills\\discovery-forms\\SKILL.md",
+      "severity": "error",
+      "message": "body uses tools NOT declared в `allowed-tools`: Edit, Write, Read",
+      "details": {
+        "missing": [
+          "Edit",
+          "Write",
+          "Read"
+        ],
+        "declared": [
+          "mcp__dev-pomogator-specs__read_spec_doc",
+          "mcp__dev-pomogator-specs__list_spec_docs",
+          "mcp__dev-pomogator-specs__apply_spec_change",
+          "mcp__dev-pomogator-specs__propose_spec_change",
+          "mcp__dev-pomogator-specs__append_to_section",
+          "mcp__dev-pomogator-specs__insert_after_heading",
+          "mcp__dev-pomogator-specs__insert_at_eof",
+          "mcp__dev-pomogator-specs__replace_in_section",
+          "Bash",
+          "AskUserQuestion"
+        ]
+      },
+      "suggestion": "Add to frontmatter `allowed-tools`: Edit, Write, Read"
+    },
+    {
+      "code": "ALLOWED_TOOLS_MISSING",
+      "path": "E:\\repos\\dev-pomogator\\.claude\\skills\\pomogator-doctor\\SKILL.md",
+      "severity": "error",
+      "message": "body uses tools NOT declared в `allowed-tools`: Skill",
+      "details": {
+        "missing": [
+          "Skill"
+        ],
+        "declared": [
+          "Read",
+          "Bash",
+          "Glob",
+          "Grep",
+          "AskUserQuestion"
+        ]
+      },
+      "suggestion": "Add to frontmatter `allowed-tools`: Skill"
+    },
+    {
+      "code": "FRONTMATTER_DESCRIPTION_TOO_LONG",
+      "path": "E:\\repos\\dev-pomogator\\.claude\\skills\\real-fixtures\\SKILL.md",
+      "severity": "error",
+      "message": "frontmatter `description` (1146 chars) exceeds Anthropic limit 1024",
+      "details": {
+        "length": 1146
+      }
+    },
+    {
+      "code": "ALLOWED_TOOLS_MISSING",
+      "path": "E:\\repos\\dev-pomogator\\.claude\\skills\\requirements-chk-matrix\\SKILL.md",
+      "severity": "error",
+      "message": "body uses tools NOT declared в `allowed-tools`: Edit, Write, Read",
+      "details": {
+        "missing": [
+          "Edit",
+          "Write",
+          "Read"
+        ],
+        "declared": [
+          "mcp__dev-pomogator-specs__read_spec_doc",
+          "mcp__dev-pomogator-specs__list_spec_docs",
+          "mcp__dev-pomogator-specs__apply_spec_change",
+          "mcp__dev-pomogator-specs__propose_spec_change",
+          "mcp__dev-pomogator-specs__append_to_section",
+          "mcp__dev-pomogator-specs__insert_after_heading",
+          "mcp__dev-pomogator-specs__insert_at_eof",
+          "mcp__dev-pomogator-specs__replace_in_section",
+          "Bash",
+          "AskUserQuestion"
+        ]
+      },
+      "suggestion": "Add to frontmatter `allowed-tools`: Edit, Write, Read"
+    },
+    {
+      "code": "ALLOWED_TOOLS_MISSING",
+      "path": "E:\\repos\\dev-pomogator\\.claude\\skills\\research-workflow\\SKILL.md",
+      "severity": "error",
+      "message": "body uses tools NOT declared в `allowed-tools`: Skill, mcp__context7__resolve-library-id, mcp__octocode__githubSearchCode, mcp__octocode__githubSearchRepositories, mcp__octocode__githubSearchPullRequests, mcp__octocode__githubGetFileContent",
+      "details": {
+        "missing": [
+          "Skill",
+          "mcp__context7__resolve-library-id",
+          "mcp__octocode__githubSearchCode",
+          "mcp__octocode__githubSearchRepositories",
+          "mcp__octocode__githubSearchPullRequests",
+          "mcp__octocode__githubGetFileContent"
+        ],
+        "declared": [
+          "Read",
+          "Glob",
+          "Grep",
+          "Bash",
+          "WebFetch",
+          "WebSearch"
+        ]
+      },
+      "suggestion": "Add to frontmatter `allowed-tools`: Skill, mcp__context7__resolve-library-id, mcp__octocode__githubSearchCode, mcp__octocode__githubSearchRepositories, mcp__octocode__githubSearchPullRequests, mcp__octocode__githubGetFileContent"
+    },
+    {
+      "code": "FRONTMATTER_DESCRIPTION_TOO_LONG",
+      "path": "E:\\repos\\dev-pomogator\\.claude\\skills\\runtime-dogfood\\SKILL.md",
+      "severity": "error",
+      "message": "frontmatter `description` (1277 chars) exceeds Anthropic limit 1024",
+      "details": {
+        "length": 1277
+      }
+    },
+    {
+      "code": "FRONTMATTER_DESCRIPTION_TOO_LONG",
+      "path": "E:\\repos\\dev-pomogator\\.claude\\skills\\session-pilot\\SKILL.md",
+      "severity": "error",
+      "message": "frontmatter `description` (1040 chars) exceeds Anthropic limit 1024",
+      "details": {
+        "length": 1040
+      }
+    },
+    {
+      "code": "ALLOWED_TOOLS_MISSING",
+      "path": "E:\\repos\\dev-pomogator\\.claude\\skills\\session-pilot\\SKILL.md",
+      "severity": "error",
+      "message": "body uses tools NOT declared в `allowed-tools`: Skill",
+      "details": {
+        "missing": [
+          "Skill"
+        ],
+        "declared": [
+          "Read",
+          "Write",
+          "Edit",
+          "Glob",
+          "Grep",
+          "Bash",
+          "AskUserQuestion",
+          "mcp__claude-in-chrome__navigate",
+          "mcp__claude-in-chrome__screenshot",
+          "mcp__claude-in-chrome__read_page",
+          "mcp__claude-in-chrome__tabs_context_mcp",
+          "mcp__claude-in-chrome__tabs_create_mcp"
+        ]
+      },
+      "suggestion": "Add to frontmatter `allowed-tools`: Skill"
+    },
+    {
+      "code": "ALLOWED_TOOLS_MISSING",
+      "path": "E:\\repos\\dev-pomogator\\.claude\\skills\\spec-archive\\SKILL.md",
+      "severity": "error",
+      "message": "body uses tools NOT declared в `allowed-tools`: Edit",
+      "details": {
+        "missing": [
+          "Edit"
+        ],
+        "declared": [
+          "Read",
+          "Glob",
+          "Grep",
+          "Bash",
+          "mcp__dev-pomogator-specs__get_archival_proof",
+          "mcp__dev-pomogator-specs__archive_spec",
+          "mcp__dev-pomogator-specs__find_refs",
+          "mcp__dev-pomogator-specs__get_trace",
+          "mcp__dev-pomogator-specs__read_spec_doc",
+          "mcp__dev-pomogator-specs__list_spec_docs"
+        ]
+      },
+      "suggestion": "Add to frontmatter `allowed-tools`: Edit"
+    },
+    {
+      "code": "ALLOWED_TOOLS_MISSING",
+      "path": "E:\\repos\\dev-pomogator\\.claude\\skills\\spec-backlog\\SKILL.md",
+      "severity": "error",
+      "message": "body uses tools NOT declared в `allowed-tools`: Skill",
+      "details": {
+        "missing": [
+          "Skill"
+        ],
+        "declared": [
+          "Bash",
+          "Read",
+          "Glob",
+          "Grep",
+          "AskUserQuestion"
+        ]
+      },
+      "suggestion": "Add to frontmatter `allowed-tools`: Skill"
+    },
+    {
+      "code": "FRONTMATTER_DESCRIPTION_TOO_LONG",
+      "path": "E:\\repos\\dev-pomogator\\.claude\\skills\\spec-generator-dev\\SKILL.md",
+      "severity": "error",
+      "message": "frontmatter `description` (1144 chars) exceeds Anthropic limit 1024",
+      "details": {
+        "length": 1144
+      }
+    },
+    {
+      "code": "FRONTMATTER_DESCRIPTION_TOO_LONG",
+      "path": "E:\\repos\\dev-pomogator\\.claude\\skills\\spec-graph-query\\SKILL.md",
+      "severity": "error",
+      "message": "frontmatter `description` (1147 chars) exceeds Anthropic limit 1024",
+      "details": {
+        "length": 1147
+      }
+    },
+    {
+      "code": "ALLOWED_TOOLS_MISSING",
+      "path": "E:\\repos\\dev-pomogator\\.claude\\skills\\spec-graph-query\\SKILL.md",
+      "severity": "error",
+      "message": "body uses tools NOT declared в `allowed-tools`: Grep",
+      "details": {
+        "missing": [
+          "Grep"
+        ],
+        "declared": [
+          "mcp__dev-pomogator-specs__get_trace",
+          "mcp__dev-pomogator-specs__find_by_tags",
+          "mcp__dev-pomogator-specs__conformance_check",
+          "mcp__dev-pomogator-specs__search",
+          "mcp__dev-pomogator-specs__get_node",
+          "mcp__dev-pomogator-specs__get_spec_status",
+          "mcp__dev-pomogator-specs__list_phase_tasks",
+          "mcp__dev-pomogator-specs__get_test_result",
+          "mcp__dev-pomogator-specs__get_scenario_trace",
+          "mcp__dev-pomogator-specs__find_orphans",
+          "mcp__dev-pomogator-specs__validate_anchor",
+          "mcp__dev-pomogator-specs__list_specs",
+          "mcp__dev-pomogator-specs__find_refs",
+          "mcp__dev-pomogator-specs__list_spec_docs",
+          "mcp__dev-pomogator-specs__read_spec_doc",
+          "mcp__dev-pomogator-specs__read_attachment",
+          "Bash",
+          "Read"
+        ]
+      },
+      "suggestion": "Add to frontmatter `allowed-tools`: Grep"
+    },
+    {
+      "code": "FRONTMATTER_DESCRIPTION_TOO_LONG",
+      "path": "E:\\repos\\dev-pomogator\\.claude\\skills\\spec-reality-check\\SKILL.md",
+      "severity": "error",
+      "message": "frontmatter `description` (1245 chars) exceeds Anthropic limit 1024",
+      "details": {
+        "length": 1245
+      }
+    },
+    {
+      "code": "ALLOWED_TOOLS_MISSING",
+      "path": "E:\\repos\\dev-pomogator\\.claude\\skills\\spec-review\\SKILL.md",
+      "severity": "error",
+      "message": "body uses tools NOT declared в `allowed-tools`: Write",
+      "details": {
+        "missing": [
+          "Write"
+        ],
+        "declared": [
+          "mcp__dev-pomogator-specs__read_spec_doc",
+          "mcp__dev-pomogator-specs__list_spec_docs",
+          "mcp__dev-pomogator-specs__list_specs",
+          "mcp__dev-pomogator-specs__get_node",
+          "mcp__dev-pomogator-specs__search",
+          "mcp__dev-pomogator-specs__apply_spec_change",
+          "Read",
+          "Grep",
+          "Glob",
+          "Bash(bash:*)",
+          "Bash(node:*)",
+          "Bash(grep:*)",
+          "WebFetch",
+          "Edit",
+          "Agent",
+          "Skill"
+        ]
+      },
+      "suggestion": "Add to frontmatter `allowed-tools`: Write"
+    },
+    {
+      "code": "FRONTMATTER_DESCRIPTION_TOO_LONG",
+      "path": "E:\\repos\\dev-pomogator\\.claude\\skills\\spec-status\\SKILL.md",
+      "severity": "error",
+      "message": "frontmatter `description` (1099 chars) exceeds Anthropic limit 1024",
+      "details": {
+        "length": 1099
+      }
+    },
+    {
+      "code": "ALLOWED_TOOLS_MISSING",
+      "path": "E:\\repos\\dev-pomogator\\.claude\\skills\\spec-status\\SKILL.md",
+      "severity": "error",
+      "message": "body uses tools NOT declared в `allowed-tools`: Skill",
+      "details": {
+        "missing": [
+          "Skill"
+        ],
+        "declared": [
+          "Bash",
+          "Read",
+          "Glob",
+          "Grep",
+          "Agent",
+          "mcp__dev-pomogator-specs__read_spec_doc",
+          "mcp__dev-pomogator-specs__list_spec_docs",
+          "mcp__dev-pomogator-specs__get_spec_status"
+        ]
+      },
+      "suggestion": "Add to frontmatter `allowed-tools`: Skill"
+    },
+    {
+      "code": "ALLOWED_TOOLS_MISSING",
+      "path": "E:\\repos\\dev-pomogator\\.claude\\skills\\strong-tests\\SKILL.md",
+      "severity": "error",
+      "message": "body uses tools NOT declared в `allowed-tools`: Agent",
+      "details": {
+        "missing": [
+          "Agent"
+        ],
+        "declared": [
+          "Read",
+          "Write",
+          "Edit",
+          "Grep",
+          "Glob",
+          "Bash",
+          "AskUserQuestion",
+          "Skill"
+        ]
+      },
+      "suggestion": "Add to frontmatter `allowed-tools`: Agent"
+    },
+    {
+      "code": "ALLOWED_TOOLS_MISSING",
+      "path": "E:\\repos\\dev-pomogator\\.claude\\skills\\task-board-forms\\SKILL.md",
+      "severity": "error",
+      "message": "body uses tools NOT declared в `allowed-tools`: Edit, Write",
+      "details": {
+        "missing": [
+          "Edit",
+          "Write"
+        ],
+        "declared": [
+          "mcp__dev-pomogator-specs__read_spec_doc",
+          "mcp__dev-pomogator-specs__list_spec_docs",
+          "mcp__dev-pomogator-specs__apply_spec_change",
+          "mcp__dev-pomogator-specs__propose_spec_change",
+          "mcp__dev-pomogator-specs__append_to_section",
+          "mcp__dev-pomogator-specs__insert_after_heading",
+          "mcp__dev-pomogator-specs__insert_at_eof",
+          "mcp__dev-pomogator-specs__replace_in_section",
+          "Bash",
+          "AskUserQuestion"
+        ]
+      },
+      "suggestion": "Add to frontmatter `allowed-tools`: Edit, Write"
+    },
+    {
+      "code": "FRONTMATTER_NAME_FORBIDDEN_TOKEN",
+      "path": "E:\\repos\\dev-pomogator\\.claude\\skills\\use-claude-subscription\\SKILL.md",
+      "severity": "error",
+      "message": "frontmatter `name` contains forbidden token \"claude\" (Anthropic spec)",
+      "details": {
+        "value": "use-claude-subscription",
+        "token": "claude"
+      },
+      "suggestion": "Rename без токена \"claude\" в name field"
+    },
+    {
+      "code": "ALLOWED_TOOLS_MISSING",
+      "path": "E:\\repos\\dev-pomogator\\.claude\\skills\\variant-matrix-build\\SKILL.md",
+      "severity": "error",
+      "message": "body uses tools NOT declared в `allowed-tools`: Edit, Write, Read",
+      "details": {
+        "missing": [
+          "Edit",
+          "Write",
+          "Read"
+        ],
+        "declared": [
+          "mcp__dev-pomogator-specs__read_spec_doc",
+          "mcp__dev-pomogator-specs__list_spec_docs",
+          "mcp__dev-pomogator-specs__apply_spec_change",
+          "mcp__dev-pomogator-specs__propose_spec_change",
+          "Bash",
+          "AskUserQuestion"
+        ]
+      },
+      "suggestion": "Add to frontmatter `allowed-tools`: Edit, Write, Read"
+    }
+  ],
+  "withWarnings": [
+    {
+      "code": "TRANSITIVE_REFERENCES",
+      "path": "E:\\repos\\dev-pomogator\\.claude\\skills\\spec-review\\SKILL.md",
+      "severity": "warning",
+      "message": "references chain depth > 1: SKILL.md → category-15-reality-drift.md → checks.md, checks.md, category-14-memory-constraints.md",
+      "details": {
+        "chain": [
+          "SKILL.md",
+          "category-15-reality-drift.md",
+          "checks.md",
+          "checks.md",
+          "category-14-memory-constraints.md"
+        ]
+      },
+      "suggestion": "Anthropic spec: references one-level-deep only. Inline B.md content into A.md или собирай в SKILL.md."
+    },
+    {
+      "code": "OVERSIZE",
+      "path": "E:\\repos\\dev-pomogator\\.claude\\skills\\strong-tests\\SKILL.md",
+      "severity": "warning",
+      "message": "SKILL.md 1034 lines > Anthropic cap 500",
+      "details": {
+        "lines": 1034,
+        "cap": 500
+      },
+      "suggestion": "split domain-specific sections to references/<topic>.md"
+    }
+  ],
+  "overlaps": [],
+  "details": [
+    {
+      "path": "E:\\repos\\dev-pomogator\\.claude\\skills\\anchor-fix\\SKILL.md",
+      "name": "anchor-fix",
+      "tokens": 1299,
+      "lines": 90,
+      "frontmatter": {
+        "name": "anchor-fix",
+        "description": "Keep spec/markdown cross-reference links clickable in the editor (Marksman) when you RENAME a heading. Long descriptive headings (`## FR-7: Title`) are Marksman's standard, but their GLFM slug is derived from the heading TEXT — so renaming a heading silently breaks every inbound `[text](file.md#old-slug)` link. This skill DETECTS broken anchors and AUTO-FIXES them: ~99% deterministically (id-bearing links), the rest via `claude -p`. INVOKE after renaming/retitling a heading, before declaring spec work done, or to clean a corpus of broken anchors. Triggers (RU): \"почини якоря\", \"битые ссылки в спеках\", \"переименовал заголовок ссылки\", \"anchor fix\", \"проверь ссылки спек\". Triggers (EN): \"fix broken anchors\", \"spec links broken after rename\", \"check spec link integrity\", \"anchor integrity\".\n",
+        "allowed-tools": "Bash, Read, Edit, Grep, Glob"
+      },
+      "hasFrontmatter": true,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "E:\\repos\\dev-pomogator\\.claude\\skills\\answer-simple\\SKILL.md",
+      "name": "answer-simple",
+      "tokens": 5287,
+      "lines": 272,
+      "frontmatter": {
+        "name": "answer-simple",
+        "description": "Аудит черновика на жаргон, внутренние коды, multi-select >3 опций и отсутствие микроистории. Триггеры (RU): \"проверь черновик\", \"ревью ответа\", \"answer simple\"; (EN): \"audit draft\", \"check response\", \"answer-simple draft\". Slash invocation `/answer-simple <черновик>` возвращает блоки \"Переформулировано:\" и \"Найдено проблем:\". Без аргумента — usage hint.\n",
+        "allowed-tools": "Read"
+      },
+      "hasFrontmatter": true,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "E:\\repos\\dev-pomogator\\.claude\\skills\\arch-review-loop\\SKILL.md",
+      "name": "arch-review-loop",
+      "tokens": 1304,
+      "lines": 72,
+      "frontmatter": {
+        "name": "arch-review-loop",
+        "description": "Autonomous fix→verify→re-verify loop for architecture-decision-builder. Runs the whole verification battery via one driver (arch-review.ts), triages findings, fixes the mechanical ones, re-runs, and repeats until PASS — WITHOUT a human prompting each cycle. Triggers: \"прогони цикл починок\", \"self-review loop\", \"verify-fix loop\", \"погоняй проверки сам\", after editing any architecture-decision helper/spec, or before declaring the skill done.\n",
+        "disable-model-invocation": false,
+        "allowed-tools": "Read, Write, Edit, Glob, Grep, Bash, AskUserQuestion, mcp__context7__resolve-library-id, mcp__context7__query-docs"
+      },
+      "hasFrontmatter": true,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "E:\\repos\\dev-pomogator\\.claude\\skills\\architecture-decision-builder\\SKILL.md",
+      "name": "architecture-decision-builder",
+      "tokens": 6210,
+      "lines": 135,
+      "frontmatter": {
+        "name": "architecture-decision-builder",
+        "description": "Greenfield architecture decisions — enumerates tech-stack axes from a PRD, generates per-axis multi-variant markdown + self-contained HTML (rendered in browser), auto-applies the recommendation (auto-mode default) with optional override, cascades dependent axes. Standalone triggers (RU): \"выбери стек\", \"спроектируй архитектуру\", \"архитектура для\", \"варианты архитектуры\"; (EN): \"choose stack\", \"design architecture\", \"architecture decision\", \"stack options\". Also invoked by create-spec Phase 1.75 (greenfield only) once for axis-enumeration plus once per axis. Do NOT use for brownfield refactors (existing build manifest), single-tech feature decisions, or post-implementation reviews.\n",
+        "disable-model-invocation": false,
+        "allowed-tools": "Read, Write, Edit, Glob, Grep, Bash, Agent, AskUserQuestion, WebFetch, WebSearch, ToolSearch, mcp__context7__resolve-library-id, mcp__context7__query-docs, mcp__claude_ai_Context7__resolve-library-id, mcp__claude_ai_Context7__query-docs, mcp__dev-pomogator-specs__list_spec_docs, mcp__dev-pomogator-specs__read_spec_doc"
+      },
+      "hasFrontmatter": true,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "E:\\repos\\dev-pomogator\\.claude\\skills\\architecture-research-workflow\\SKILL.md",
+      "name": "architecture-research-workflow",
+      "tokens": 1617,
+      "lines": 114,
+      "frontmatter": {
+        "name": "architecture-research-workflow",
+        "description": "Greenfield-architecture research workflow for genuinely large features\n(rebuilds, version bumps, multi-component systems). Drives 7 sequential\nstages that emit committable markdown into `.specs/<slug>/.architecture-\nresearch/<N>-<stage>.md`, then merges them into a final `RESEARCH.md`\nwith one Appendix per stage. Auto-invoked by `create-spec` when the\ncomplexity heuristic matches (RU/EN keywords: \"архитектур*\", \"v\\d+\",\n\"rebuild\", \"перепроектировать\", OR ≥3 components in the prompt).\n",
+        "allowed-tools": "Read, Write, Edit, Glob, Grep, Bash, AskUserQuestion, WebSearch, WebFetch, mcp__dev-pomogator-specs__apply_spec_change, mcp__dev-pomogator-specs__read_spec_doc, mcp__dev-pomogator-specs__list_spec_docs"
+      },
+      "hasFrontmatter": true,
+      "errors": [
+        "ALLOWED_TOOLS_MISSING"
+      ],
+      "warnings": []
+    },
+    {
+      "path": "E:\\repos\\dev-pomogator\\.claude\\skills\\bdd-migrator\\SKILL.md",
+      "name": "bdd-migrator",
+      "tokens": 6255,
+      "lines": 285,
+      "frontmatter": {
+        "name": "bdd-migrator",
+        "description": "Migrate a spec's non-BDD (vitest) tests to traceable @featureN cucumber\nscenarios so coverage is visible in the spec graph (zero orphan tests,\nzero uncovered specs). An evolution of strong-tests §6.5. Use when a spec\nhas a .feature with comment-tags / no step-defs / unwired, or vitest tests\nthat are graph-invisible orphans. Drives the proven pilot conveyor:\nclassify → fix tags → author real step-defs → wire → green →\nmutation-check → delete vitest. Adaptive across specs; ships for users\nrunning it on their own repos.\n",
+        "allowed-tools": "Read, Grep, Glob, Bash, Write, Edit, mcp__dev-pomogator-specs__read_spec_doc, mcp__dev-pomogator-specs__list_spec_docs, mcp__dev-pomogator-specs__get_trace, mcp__dev-pomogator-specs__get_spec_status, mcp__dev-pomogator-specs__apply_spec_change"
+      },
+      "hasFrontmatter": true,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "E:\\repos\\dev-pomogator\\.claude\\skills\\configure-mcp\\SKILL.md",
+      "name": "configure-mcp",
+      "tokens": 1749,
+      "lines": 94,
+      "frontmatter": {
+        "name": "configure-mcp",
+        "description": "Настроить auth для глобальных MCP-серверов Context7 и Octocode, когда SessionStart-варнинг говорит\n«Context7 без API-ключа» / «Octocode без GitHub-доступа», или когда пользователь даёт ключ/токен\nпрямо в чате. Skill: спрашивает ключ, говорит ГДЕ его взять, либо пробует добыть сам (Context7 OAuth\n`npx ctx7 setup`; Octocode `gh auth login`/`gh auth token`), затем ВПИСЫВАЕТ секрет в user-global\n`~/.claude.json` через `set-mcp-key.ts` и РЕАЛЬНО проверяет, что настройка применилась (не вслепую).\nТриггеры (RU): «настрой mcp», «настрой context7», «настрой octocode», «впиши ключ context7»,\n«вот ключ context7 …», «вот github токен …», «убери варнинг про mcp», «mcp не настроен».\nТриггеры (EN): «configure mcp», «set context7 key», «set octocode token», «wire mcp auth»,\n«here is my context7 key …», «fix the mcp warning». Не использовать для установки самих серверов\n(это делает SessionStart-хук `mcp-bootstrap`) и для общей диагностики (это `/pomogator-doctor`).\n",
+        "allowed-tools": "Read, Bash, Grep, AskUserQuestion"
+      },
+      "hasFrontmatter": true,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "E:\\repos\\dev-pomogator\\.claude\\skills\\context-menu\\SKILL.md",
+      "name": "context-menu",
+      "tokens": 1291,
+      "lines": 139,
+      "frontmatter": {
+        "name": "context-menu",
+        "description": "Enable Claude Code and Codex in Windows right-click context menu. Install Nilesoft Shell, configure parallel menu entries, and manage Claude TUI plus Codex non-TUI YOLO launchers.",
+        "allowed-tools": "Read, Write, Edit, Bash, Glob, AskUserQuestion"
+      },
+      "hasFrontmatter": true,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "E:\\repos\\dev-pomogator\\.claude\\skills\\corpus-health\\SKILL.md",
+      "name": "corpus-health",
+      "tokens": 1452,
+      "lines": 78,
+      "frontmatter": {
+        "name": "corpus-health",
+        "description": "ONE report + 🟢/🔴 verdict over the health of an ENTIRE `.specs/` corpus (this repo or ANY other — corpus root is an input): (1) bare-id collisions across specs via a raw PRE-MAP node dump (the graph's map dedup silently drops last-writer losers), (2) unresolved/dangling edges, (3) untraced atoms (UNCOVERED_FR / TASK_UNTESTED / UNTAGGED_SCENARIO, FR-37b), (4) graph-side stale FILE_CHANGES paths, (5) orphan project tests (FR-44/GT-1 reverse traceability — vitest it() ids with no spec scenario, the \"test from nowhere\" hole), (6) FRs citing no RESEARCH.md finding (FR-44/GT-2 — \"a requirement nobody researched\"), (7) upstream unlinked (FR-44/GT-4 — stories / use-cases / decisions wired to no requirement). The ORGANISM view — catches the disease class FR-36 was (47 of ~470 FR nodes surviving collisions) BEFORE it is rediscovered by hand. INVOKE after touching the graph builder/parsers, before trusting corpus-wide counts, when onboarding a foreign spec corpus, or on a regular hygiene pass. Triggers (RU): \"здоровье корпуса\", \"проверь корпус спек\", \"коллизии id в спеках\", \"битые рёбра графа\", \"corpus health\". Triggers (EN): \"corpus health\", \"spec corpus audit\", \"id collisions across specs\", \"dangling edges\", \"untraced atoms\". Do NOT use for a per-spec verdict (spec-verdict.ts via spec-status), prose-link navigation (markdown-lsp), bulk anchor fixing (anchor-fix), or cross-spec semantic drift (cross-spec-reconcile).\n",
+        "allowed-tools": "Bash, Read"
+      },
+      "hasFrontmatter": true,
+      "errors": [
+        "FRONTMATTER_DESCRIPTION_TOO_LONG"
+      ],
+      "warnings": []
+    },
+    {
+      "path": "E:\\repos\\dev-pomogator\\.claude\\skills\\create-spec\\SKILL.md",
+      "name": "create-spec",
+      "tokens": 3858,
+      "lines": 152,
+      "frontmatter": {
+        "name": "create-spec",
+        "description": "Creates and manages feature specifications under .specs/{slug}/ via 13-file scaffold + 4-phase STOP-confirmed workflow (Discovery → Context → Requirements+Design → Finalization) + Phase 3+ Audit. EN triggers: \"create / make / draft / write / sketch / outline specs\", \"spec out X\", \"scaffold a spec\", \"update / show / status specs\". RU triggers: \"создай / сделай / набросай / напиши / опиши спеки\", \"новые спеки для X\", \"спеки по фиче\", \"обнови / покажи / статус спеков\". Matches terse phrasings like \"ок спеки по фиче сделай\". Invokes Skill(\"research-workflow\") during Phase 1 step 5 for technical research. Do NOT use for plan-pomogator development plans, read-only spec viewing, or non-spec workflows.\n",
+        "allowed-tools": "mcp__dev-pomogator-specs__read_spec_doc, mcp__dev-pomogator-specs__list_spec_docs, mcp__dev-pomogator-specs__read_attachment, mcp__dev-pomogator-specs__apply_spec_change, mcp__dev-pomogator-specs__propose_spec_change, mcp__dev-pomogator-specs__create_spec, mcp__dev-pomogator-specs__delete_spec_doc, mcp__dev-pomogator-specs__rename_spec_doc, mcp__dev-pomogator-specs__append_to_section, mcp__dev-pomogator-specs__insert_after_heading, mcp__dev-pomogator-specs__insert_at_eof, mcp__dev-pomogator-specs__replace_in_section, mcp__dev-pomogator-specs__propose_patch, mcp__dev-pomogator-specs__apply_proposed_patch, mcp__dev-pomogator-specs__apply_spec_transaction, mcp__dev-pomogator-specs__add_backlog_task, mcp__dev-pomogator-specs__add_phase, mcp__dev-pomogator-specs__amend_requirement, mcp__dev-pomogator-specs__add_acceptance_criterion, mcp__dev-pomogator-specs__register_incident_backlog, Read, Write, Edit, Glob, Grep, Bash, AskUserQuestion, Skill, Agent, WebFetch, WebSearch",
+        "argument-hint": "<feature-slug>"
+      },
+      "hasFrontmatter": true,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "E:\\repos\\dev-pomogator\\.claude\\skills\\cross-spec-reconcile\\SKILL.md",
+      "name": "cross-spec-reconcile",
+      "tokens": 2286,
+      "lines": 153,
+      "frontmatter": {
+        "name": "cross-spec-reconcile",
+        "description": "Cross-spec consistency analyzer — scans every `.specs/<slug>/` against\nevery other and against the codebase, surfacing 28 classes of drift\n(uncovered claims, contradictions, runtime-identifier mismatch, missing\nfiles, foreign-spec edits, architectural decisions vs reality).\nTwo modes: `light` (mechanical-only, <5s, no LLM) and `full` (adds\nLLM-semantic comparison via the Phase-3 judge with FR-26 deny-list\nenforcement). Output: per-spec `.specs/<slug>/consistency-report.yaml`\n+ optional `consistency-report.sarif`. CRITICAL findings invoke a\nblocking AskUserQuestion with header ⚠️ CRIT; user override is logged\nto `.claude/logs/cross-spec-overrides.jsonl` for audit trail.\n",
+        "allowed-tools": "Read, Write, Edit, Glob, Grep, Bash, AskUserQuestion, Agent"
+      },
+      "hasFrontmatter": true,
+      "errors": [
+        "ALLOWED_TOOLS_MISSING"
+      ],
+      "warnings": []
+    },
+    {
+      "path": "E:\\repos\\dev-pomogator\\.claude\\skills\\cross-spec-resolve\\SKILL.md",
+      "name": "cross-spec-resolve",
+      "tokens": 2562,
+      "lines": 224,
+      "frontmatter": {
+        "name": "cross-spec-resolve",
+        "description": "Sibling to cross-spec-reconcile — walks the user through every finding\nin `.specs/<slug>/consistency-report.yaml` interactively. For each one\nit emits a 5-field explanation (code/severity/class, files/lines,\nplain-language description, WHY it matters, available options), then\napplies the chosen fix. Three resolution paths for\n`impl-drift/architectural-decision-vs-reality`:\n  A — update the spec (decision was wrong)\n  B — update the code (reality was wrong)\n  C — defer with explicit OUT_OF_SCOPE marker\nForeign-spec edits (modifying another slug's `.md`) fire an additional\nconfirmation banner.\n",
+        "allowed-tools": "mcp__dev-pomogator-specs__read_spec_doc, mcp__dev-pomogator-specs__list_spec_docs, mcp__dev-pomogator-specs__apply_spec_change, mcp__dev-pomogator-specs__propose_spec_change, Bash, Edit, AskUserQuestion"
+      },
+      "hasFrontmatter": true,
+      "errors": [
+        "ALLOWED_TOOLS_MISSING"
+      ],
+      "warnings": []
+    },
+    {
+      "path": "E:\\repos\\dev-pomogator\\.claude\\skills\\debug-screenshot\\SKILL.md",
+      "name": "debug-screenshot",
+      "tokens": 829,
+      "lines": 95,
+      "frontmatter": {
+        "name": "debug-screenshot",
+        "description": "Screenshot-driven debugging and visual verification. Take screenshots of the current screen, analyze what's visible, form and test hypotheses about UI state. Use this skill whenever you need to verify something visually — TUI state, terminal output, window layout, error dialogs, or any situation where \"seeing\" the screen would help debug or confirm behavior. Also use when the user says \"покажи\", \"проверь визуально\", \"скринь\", \"screenshot\", \"что на экране\", \"видно ли\", or asks you to verify UI state.\n",
+        "allowed-tools": "Bash, Read"
+      },
+      "hasFrontmatter": true,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "E:\\repos\\dev-pomogator\\.claude\\skills\\dedup-tests\\SKILL.md",
+      "name": "dedup-tests",
+      "tokens": 659,
+      "lines": 83,
+      "frontmatter": {
+        "name": "dedup-tests",
+        "description": "Scan test files for duplicated code using jscpd, classify findings, extract shared helpers. Use when dedup_stop hook blocks or manually to check for test code duplication.\n",
+        "user-invocable": true,
+        "allowed-tools": "Read, Bash, Glob, Grep, Edit, Write, AskUserQuestion"
+      },
+      "hasFrontmatter": true,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "E:\\repos\\dev-pomogator\\.claude\\skills\\deep-insights\\SKILL.md",
+      "name": "deep-insights",
+      "tokens": 1385,
+      "lines": 172,
+      "frontmatter": {
+        "name": "deep-insights",
+        "description": "Deep analysis of Claude Code usage from /insights data (facets JSON + report.html). Aggregates cross-session friction trends, satisfaction metrics, tool errors, and generates quantitative evidence for rule candidates.",
+        "allowed-tools": "Read, Glob, Grep, Bash"
+      },
+      "hasFrontmatter": true,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "E:\\repos\\dev-pomogator\\.claude\\skills\\dev-pomogator-uninstall\\SKILL.md",
+      "name": "dev-pomogator-uninstall",
+      "tokens": 2343,
+      "lines": 237,
+      "frontmatter": {
+        "name": "dev-pomogator-uninstall",
+        "description": "Use when user asks to remove, uninstall, or delete dev-pomogator from the current project. Triggers on phrases like \"удали dev-pomogator\", \"remove dev-pomogator\", \"uninstall dev-pomogator\", \"снеси dev-pomogator\", \"убери dev-pomogator\", \"снеси помогатор\". Guides the agent through safe soft-removal via CLI-first then manual fallback, with safety checks and post-uninstall verification. Prefers preserving user-authored files.",
+        "allowed-tools": "Read, Bash, Edit, Glob, Grep"
+      },
+      "hasFrontmatter": true,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "E:\\repos\\dev-pomogator\\.claude\\skills\\discovery-forms\\SKILL.md",
+      "name": "discovery-forms",
+      "tokens": 2135,
+      "lines": 167,
+      "frontmatter": {
+        "name": "discovery-forms",
+        "description": "Populates USER_STORIES.md with v3-form blocks (Priority + Why + Independent Test + Acceptance Scenarios) and appends ## Risk Assessment to RESEARCH.md. Called by create-spec Phase 1 (Discovery) step 3. Returns structured JSON summary listing stories populated, risks added, and files touched.\n",
+        "allowed-tools": "mcp__dev-pomogator-specs__read_spec_doc, mcp__dev-pomogator-specs__list_spec_docs, mcp__dev-pomogator-specs__apply_spec_change, mcp__dev-pomogator-specs__propose_spec_change, mcp__dev-pomogator-specs__append_to_section, mcp__dev-pomogator-specs__insert_after_heading, mcp__dev-pomogator-specs__insert_at_eof, mcp__dev-pomogator-specs__replace_in_section, Bash, AskUserQuestion"
+      },
+      "hasFrontmatter": true,
+      "errors": [
+        "ALLOWED_TOOLS_MISSING"
+      ],
+      "warnings": []
+    },
+    {
+      "path": "E:\\repos\\dev-pomogator\\.claude\\skills\\docker-optimize\\SKILL.md",
+      "name": "docker-optimize",
+      "tokens": 2006,
+      "lines": 201,
+      "frontmatter": {
+        "name": "docker-optimize",
+        "description": "Analyze Dockerfiles and docker-compose files for build optimization opportunities. Suggests layer caching, .dockerignore, BuildKit cache mounts, multi-stage splits. Use when Docker builds are slow or when setting up Docker for a new project.\n",
+        "allowed-tools": "Read, Glob, Grep, Bash, Edit, Write, AskUserQuestion, Agent"
+      },
+      "hasFrontmatter": true,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "E:\\repos\\dev-pomogator\\.claude\\skills\\edge-debug-port\\SKILL.md",
+      "name": "edge-debug-port",
+      "tokens": 2069,
+      "lines": 146,
+      "frontmatter": {
+        "name": "edge-debug-port",
+        "description": "Permanently configure Microsoft Edge on Windows to launch with\n--remote-debugging-port=9222 across taskbar, Start Menu, Quick Launch\nshortcuts and MSEdgeHTM/MSEdgeMHT/MSEdgePDF/microsoft-edge registry\nhandlers. Lets Playwright/Puppeteer chromium.connectOverCDP attach to the\nuser's REAL Edge profile (cookies, extensions, sessions, open tabs)\ninstead of spawning an empty disposable Edge instance via\nchromium.launch({channel:'msedge'}). Use this skill BEFORE writing browser\nautomation that needs the user's authenticated state, OR when an agent has\nbeen told not to open empty Edge windows. Reversible via -Revert.\n",
+        "allowed-tools": "Read, Write, Edit, Bash, PowerShell, AskUserQuestion"
+      },
+      "hasFrontmatter": true,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "E:\\repos\\dev-pomogator\\.claude\\skills\\install-diagnostics\\SKILL.md",
+      "name": "install-diagnostics",
+      "tokens": 3205,
+      "lines": 286,
+      "frontmatter": {
+        "name": "install-diagnostics",
+        "description": "Diagnose silent or failed legacy v1 dev-pomogator installation via npx/npm. Do not use for Codex/canonical plugin installs; those use `codex plugin ...` and the context-menu skill. Use when user reports \"ничего не происходит при установке\", \"молча\", \"silent install\", \"npx exits with no output\", \"exit code 2 без ошибок\", \"не работает установка\", \"ничего не выводит\", \"молчком\", \"fyfkbp установки\", \"анализ установки\", \"почему молча\", \"install fails silently\", or shows a screenshot/log where `npx github:stgmt/dev-pomogator` returns to prompt with no installer output. Also use when checking why `~/.dev-pomogator/logs/install.log` was not updated after an install attempt.\n",
+        "allowed-tools": "Bash, Read, Grep, Glob"
+      },
+      "hasFrontmatter": true,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "E:\\repos\\dev-pomogator\\.claude\\skills\\markdown-lsp\\SKILL.md",
+      "name": "markdown-lsp",
+      "tokens": 2186,
+      "lines": 155,
+      "frontmatter": {
+        "name": "markdown-lsp",
+        "description": "How & why to use the Markdown LSP (Marksman, registered as a NATIVE Claude Code LSP plugin) for spec navigation + refactor. INVOKE when navigating or editing specs across files: find every reference to a requirement (FR-N / AC-N) before changing it, rename a heading and propagate links, jump to a definition/anchor, or list a spec's headings — instead of text-grepping and guessing slug variants. Use the agent-callable `LSP` tool (definition / references / rename / hover / documentSymbol) over `[[wiki-links]]` and `[text](#anchor)` links. Pairs with the spec-graph MCP, which owns spec-DOMAIN traceability (coverage / honesty / broken links), NOT prose navigation. Marksman is auto-installed; run /reload-plugins if the LSP tool is inactive.\n",
+        "allowed-tools": "LSP, Read, Grep, Bash, Skill"
+      },
+      "hasFrontmatter": true,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "E:\\repos\\dev-pomogator\\.claude\\skills\\meridian-model-call\\SKILL.md",
+      "name": "meridian-model-call",
+      "tokens": 1590,
+      "lines": 102,
+      "frontmatter": {
+        "name": "meridian-model-call",
+        "description": "HOW and WHY to make a FAST model call from our own hooks, gates, judges, and\nengine scripts. DeepSeek calls use the OpenAI-compatible AiPomogator route;\nClaude-subscription calls may use the local Meridian proxy on http://127.0.0.1:3456.\nDo not send OpenRouter model IDs to Meridian's Anthropic-compatible /v1/messages API.\nMeasured: a direct Meridian call with thinking OFF ≈ 2.4s; `claude -p` ≈ 13s (it\ncold-starts MCP/hooks/plugin every call). USE THIS before writing any \"spawn claude\nto judge X\" code — do not reinvent the slow wheel. Triggers: \"вызвать модель из хука\",\n\"быстрый вызов хайку\", \"судья на хайку\", \"model call from a hook/gate/judge\",\n\"call haiku fast\", \"LLM judge in a hook\", \"meridian api call\", \"как звать модель в плагине\".\n",
+        "allowed-tools": "Read, Bash, Edit, Write, Skill"
+      },
+      "hasFrontmatter": true,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "E:\\repos\\dev-pomogator\\.claude\\skills\\observability-review\\SKILL.md",
+      "name": "observability-review",
+      "tokens": 983,
+      "lines": 69,
+      "frontmatter": {
+        "name": "observability-review",
+        "description": "See, in one view, WHERE the agent stumbled in this repo — gate bypasses (escape-hatch gaming), the last BDD run's reds/pendings, pending self-improve friction, and log errors. INVOKE when asked \"where did it stumble / break\", \"show observability / diagnostics\", \"что сломалось / где споткнулся\", \"посмотри логи / диагностику\", before declaring a long agent run done, or to audit whether gates are being gamed. Reads files only (dep-safe — no SpecGraph build), so it never crashes for plugin users with no node_modules.\n",
+        "allowed-tools": "Bash, Read, Grep"
+      },
+      "hasFrontmatter": true,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "E:\\repos\\dev-pomogator\\.claude\\skills\\pomogator-doctor\\SKILL.md",
+      "name": "pomogator-doctor",
+      "tokens": 3202,
+      "lines": 112,
+      "frontmatter": {
+        "name": "pomogator-doctor",
+        "description": "Diagnostic tool для dev-pomogator plugin: проверяет environment aspects including GitHub CLI readiness, Node/Git/Bun/Python/MCP servers/claude-mem plugin/hooks registry/env vars/Claude Code version match/native statusLine/statusline widgets repo+cwd/context-menu install drift) и предлагает fix actions (incl. установка нативного statusLine ccstatusline, добавление repo/cwd виджетов, переустановка контекстного меню — всё по подтверждению). Use при подозрениях на broken plugin install, missing dependencies, stale hooks, или когда команды plugin behave unexpectedly. Triggers (Russian): \"проверь окружение\", \"доктор\", \"диагностика помогатора\", \"почему не работает плагин\". Triggers (English): \"check environment\", \"doctor\", \"plugin diagnostics\", \"verify install\". Output: severity-coded report (🟢 self-sufficient, 🟡 needs env vars, 🔴 needs external deps) с actionable hints. Можно invoke через slash-command `/pomogator-doctor` (also distributed via plugin) или напрямую как skill.\n",
+        "allowed-tools": "Read, Bash, Glob, Grep, AskUserQuestion"
+      },
+      "hasFrontmatter": true,
+      "errors": [
+        "ALLOWED_TOOLS_MISSING"
+      ],
+      "warnings": []
+    },
+    {
+      "path": "E:\\repos\\dev-pomogator\\.claude\\skills\\proxy-up\\SKILL.md",
+      "name": "proxy-up",
+      "tokens": 1573,
+      "lines": 148,
+      "frontmatter": {
+        "name": "proxy-up",
+        "description": "Ensure the local Claude Code subscription proxy (claude-proxy-infra /\nMeridian) is alive on http://127.0.0.1:3456. Check health, restart on\nfailure, diagnose auth/credentials issues. Use whenever a project\nconfigures `ANTHROPIC_BASE_URL=http://127.0.0.1:3456` and the user\nreports \"proxy down\", \"503 from anthropic\", \"claude not responding\",\nor wants to bring the proxy up before running an Anthropic SDK app.\nTriggers: \"подними proxy\", \"проверь claude proxy\", \"claude-proxy\nstatus\", \"meridian up\", \"запусти локальный claude api\".\n",
+        "allowed-tools": "Bash"
+      },
+      "hasFrontmatter": true,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "E:\\repos\\dev-pomogator\\.claude\\skills\\real-fixtures\\SKILL.md",
+      "name": "real-fixtures",
+      "tokens": 1731,
+      "lines": 124,
+      "frontmatter": {
+        "name": "real-fixtures",
+        "description": "Build REAL test fixtures from ANY external producer's actual output, on ANY stack / language / test framework — instead of hand-fabricated data that fakes the producer's shape and masks bugs. One universal recipe: capture a real sample, trim it to a valid minimal subset spanning the result space, document provenance + ground-truth, and generate an integration test (in the project's own framework) that reconciles with the tool's own summary. Works for test runners (cucumber / pytest / JUnit / xUnit / go test / cargo), git, CLI/JSON, HTTP & API responses, DB dumps, compilers, message queues — anything with a real producer. Triggers (RU): \"сделай нормальную фикстуру\", \"нормальные фикстуры\", \"фикстура из реального вывода\", \"захвати реальный вывод\", \"скил для фикстур\". Triggers (EN): \"real fixture\", \"capture real output\", \"fixture from real tool\", \"stop faking fixtures\", \"proper test fixtures\". Use when building or fixing a parser / ingester / adapter / client for external output on any stack, or when synthetic fixtures are suspected of faking the producer's shape. Do NOT use for pure-logic unit tests that have no external producer.\n",
+        "allowed-tools": "Read, Write, Edit, Glob, Grep, Bash"
+      },
+      "hasFrontmatter": true,
+      "errors": [
+        "FRONTMATTER_DESCRIPTION_TOO_LONG"
+      ],
+      "warnings": []
+    },
+    {
+      "path": "E:\\repos\\dev-pomogator\\.claude\\skills\\report-issue\\SKILL.md",
+      "name": "report-issue",
+      "tokens": 726,
+      "lines": 62,
+      "frontmatter": {
+        "name": "report-issue",
+        "description": "Prepare and submit a dev-pomogator GitHub issue from a user's description. Generate a sanitized local draft, show its repository/title/body and exact approval digest, and create only after the user approves the unchanged digest. If GitHub CLI is unavailable, unauthenticated, or fails, preserve the Markdown draft and provide a filled GitHub new-issue URL. Triggers: \"report issue\", \"file an issue\", \"bug report\", \"сообщить о баге\", \"создай issue\", \"заведи issue\".",
+        "allowed-tools": "Bash, AskUserQuestion",
+        "argument-hint": "<issue description>"
+      },
+      "hasFrontmatter": true,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "E:\\repos\\dev-pomogator\\.claude\\skills\\requirements-chk-matrix\\SKILL.md",
+      "name": "requirements-chk-matrix",
+      "tokens": 2574,
+      "lines": 196,
+      "frontmatter": {
+        "name": "requirements-chk-matrix",
+        "description": "Builds CHK traceability matrix (CHK-FR{n}-{nn} rows linked to FR + AC/@feature/UC) in REQUIREMENTS.md and populates ## Key Decisions with Rationale + Trade-off + Alternatives blocks in DESIGN.md. Called by create-spec Phase 2 (Requirements + Design) step 4b. Preserves Jira trace lines byte-for-byte. Returns JSON summary of CHKs and decisions.\n",
+        "allowed-tools": "mcp__dev-pomogator-specs__read_spec_doc, mcp__dev-pomogator-specs__list_spec_docs, mcp__dev-pomogator-specs__apply_spec_change, mcp__dev-pomogator-specs__propose_spec_change, mcp__dev-pomogator-specs__append_to_section, mcp__dev-pomogator-specs__insert_after_heading, mcp__dev-pomogator-specs__insert_at_eof, mcp__dev-pomogator-specs__replace_in_section, Bash, AskUserQuestion"
+      },
+      "hasFrontmatter": true,
+      "errors": [
+        "ALLOWED_TOOLS_MISSING"
+      ],
+      "warnings": []
+    },
+    {
+      "path": "E:\\repos\\dev-pomogator\\.claude\\skills\\research-workflow\\SKILL.md",
+      "name": "research-workflow",
+      "tokens": 5707,
+      "lines": 300,
+      "frontmatter": {
+        "name": "research-workflow",
+        "description": "Use this skill for technical research workflows: investigating libraries, frameworks, APIs, code patterns, or external documentation. Guides through 4-phase research cycle (Уточнение → Исследование → Верификация → Отчёт) with HYPOTHESIS-FIRST verification across MCP tools, GitHub code search, and Web Search. Triggers (Russian): \"исследуй\", \"найди\", \"погугли\", \"ресерч\". Triggers (English): \"research\", \"investigate\", \"find\", \"google\", \"look up\". The skill is also invoked by create-spec via Skill(\"research-workflow\") during Phase 1 step 5 when filling RESEARCH.md technical findings. Each hypothesis MUST be verified across ≥3 INDEPENDENT sources (not just 3 search hits) with direct quotes and explicit [VERIFIED]/[UNVERIFIED]/[ASSUMED]/[SINGLE_SOURCE] markers in output. Schema/API/protocol questions REQUIRE exhaustive field enumeration, not \"key fields\". Do NOT use for refactoring, writing scripts from scratch, debugging business logic, code review, or general programming concepts.\n",
+        "allowed-tools": "Read, Glob, Grep, Bash, WebFetch, WebSearch"
+      },
+      "hasFrontmatter": true,
+      "errors": [
+        "ALLOWED_TOOLS_MISSING"
+      ],
+      "warnings": []
+    },
+    {
+      "path": "E:\\repos\\dev-pomogator\\.claude\\skills\\run-tests\\SKILL.md",
+      "name": "run-tests",
+      "tokens": 4512,
+      "lines": 273,
+      "frontmatter": {
+        "name": "run-tests",
+        "description": "Centralized wrapper for ANY long-running command — test frameworks (vitest/jest/pytest/dotnet/rust/go) AND non-test long bg via `--framework generic` (npm run build, dotnet ef migrations, sleep). Provides persistent log on disk + YAML status tracking — survives Claude Code Bash tool bg capture drops on Windows. INVOKE PROACTIVELY whenever you plan to run `npm test`, `pytest`, `dotnet test`, `cargo test`, `go test`, `vitest`, `jest` — especially in background. Also use for any non-test long bg command (build, migrations, smoke runs) via generic mode. Detects framework from project config files. Wraps with statusline/TUI monitoring.\n",
+        "allowed-tools": "Read, Bash, Glob, Skill, Monitor"
+      },
+      "hasFrontmatter": true,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "E:\\repos\\dev-pomogator\\.claude\\skills\\runtime-dogfood\\SKILL.md",
+      "name": "runtime-dogfood",
+      "tokens": 1392,
+      "lines": 79,
+      "frontmatter": {
+        "name": "runtime-dogfood",
+        "description": "Find dead / broken / silently-empty entrypoints in ANY tool surface by DRIVING each one against REAL data and recording what it actually returns — not grep, not a green suite. Works for any surface with many entrypoints: CLI subcommands, HTTP/API endpoints, MCP/agent tools, plugin commands, library exports, RPC methods, queue handlers. Catches the worst class of bug: a feature the test suite reaches through a SIDE-CHANNEL while the real path is broken and unasserted (so the suite is GREEN). INVOKE before pruning / a scope decision, after refactoring a handler layer or a builder the entrypoints read from, or to tell \"dead-because-unused\" from \"dead-because-broken\". Triggers (EN): \"dogfood the tools/api/cli\", \"runtime census of the endpoints\", \"which commands/endpoints are dead or broken\", \"drive every handler on real data\", \"what does each endpoint actually return\". Triggers (RU): \"прогони все команды/эндпоинты на реальных данных\", \"рантайм-перепись инструментов\", \"какие команды мёртвые/сломанные\", \"что каждый эндпоинт реально отдаёт\", \"dogfood поверхности\". Do NOT use to triage a RED suite (that's suite-failure-triage) or to write the tests themselves (tests-create-update). For the dev-pomogator spec-MCP specifically, use the ready-made `spec-mcp-dogfood`.\n",
+        "allowed-tools": "Bash, Read, Grep, Glob, Write"
+      },
+      "hasFrontmatter": true,
+      "errors": [
+        "FRONTMATTER_DESCRIPTION_TOO_LONG"
+      ],
+      "warnings": []
+    },
+    {
+      "path": "E:\\repos\\dev-pomogator\\.claude\\skills\\session-pilot\\SKILL.md",
+      "name": "session-pilot",
+      "tokens": 3069,
+      "lines": 150,
+      "frontmatter": {
+        "name": "session-pilot",
+        "description": "Worktree dashboard plugin для Claude Code пользователей с 10+ ворктри.\nТриггеры (RU): \"открой dashboard\", \"покажи мои ворктри\", \"список worktree\",\n\"launch claude в worktree X\", \"ресуми клода в ворктри Y\", \"создай worktree для Z\",\n\"перезапусти session-pilot\", \"проверь dashboard работает\", \"продиагностируй lm-saas LIVE\".\nТриггеры (EN): \"open worktree dashboard\", \"list my worktrees\", \"launch claude in worktree X\",\n\"resume claude in worktree Y\", \"create worktree for Z\", \"restart session-pilot\",\n\"diagnose live detection\".\n\nИспользовать when:\n(1) пользователь хочет открыть dashboard на http://localhost:8083 ИЛИ\n(2) автоматизировать worktree creation + claude launch ИЛИ\n(3) проверить health сервера ИЛИ\n(4) диагностировать почему ворктри не показывается LIVE ИЛИ\n(5) починить broken state (port conflict, stale PID, etc.)\n\nНЕ использовать для:\n- редактирования server.py — используй Edit tool напрямую\n- debugging Claude Code в общем — это про dashboard, not Claude itself\n- questions about Zellij Web Client itself — это отдельный пакет\n",
+        "allowed-tools": "Read, Write, Edit, Glob, Grep, Bash, AskUserQuestion, mcp__claude-in-chrome__navigate, mcp__claude-in-chrome__screenshot, mcp__claude-in-chrome__read_page, mcp__claude-in-chrome__tabs_context_mcp, mcp__claude-in-chrome__tabs_create_mcp",
+        "argument-hint": "<scenario-name>"
+      },
+      "hasFrontmatter": true,
+      "errors": [
+        "FRONTMATTER_DESCRIPTION_TOO_LONG",
+        "ALLOWED_TOOLS_MISSING"
+      ],
+      "warnings": []
+    },
+    {
+      "path": "E:\\repos\\dev-pomogator\\.claude\\skills\\skills-rules-optimizer\\SKILL.md",
+      "name": "skills-rules-optimizer",
+      "tokens": 1948,
+      "lines": 178,
+      "frontmatter": {
+        "name": "skills-rules-optimizer",
+        "description": "Optimizes .claude/rules/ AND .claude/skills/ — audit (token count, frontmatter validation, allowed-tools coverage, oversize cap), triple-axis Jaccard overlap detection between skills, LLM-driven merge synthesis through Claude Code sub-agent, ratchet (regression prevention) via independent scorer. Called automatically from suggest-rules Phase 6 after rule creation. Can also be invoked manually.\n",
+        "allowed-tools": "Read, Write, Edit, Glob, Grep, Bash, Agent, mcp__context7__resolve-library-id, mcp__context7__query-docs"
+      },
+      "hasFrontmatter": true,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "E:\\repos\\dev-pomogator\\.claude\\skills\\spec-archive\\SKILL.md",
+      "name": "spec-archive",
+      "tokens": 623,
+      "lines": 37,
+      "frontmatter": {
+        "name": "spec-archive",
+        "description": "Proof-gated spec archival — proves against the repo that a spec is genuinely abandoned (or catches a false alarm), then archives it, prunes its orphaned tests, and writes a traceable report. Spec work goes through the MCP door (get_archival_proof / archive_spec); git, test removal and reports use Bash. Autonomous on hard proof, escalates ambiguous to a human, git-revertable. Triggers on \"архивируй спеку / archive a retired spec / clean up abandoned specs\".",
+        "allowed-tools": "Read, Glob, Grep, Bash, mcp__dev-pomogator-specs__get_archival_proof, mcp__dev-pomogator-specs__archive_spec, mcp__dev-pomogator-specs__find_refs, mcp__dev-pomogator-specs__get_trace, mcp__dev-pomogator-specs__read_spec_doc, mcp__dev-pomogator-specs__list_spec_docs"
+      },
+      "hasFrontmatter": true,
+      "errors": [
+        "ALLOWED_TOOLS_MISSING"
+      ],
+      "warnings": []
+    },
+    {
+      "path": "E:\\repos\\dev-pomogator\\.claude\\skills\\spec-backlog\\SKILL.md",
+      "name": "spec-backlog",
+      "tokens": 1969,
+      "lines": 188,
+      "frontmatter": {
+        "name": "spec-backlog",
+        "description": "Drives the `dev-pomogator-spec-backlog` CLI to triage cross-spec-reconcile\nfindings and dispatch specialist resolver agents at scale. Replaces the\n\"3,878 AskUserQuestion calls\" problem with a triage-and-batch pipeline:\n\n  finding → classifier (AUTO_FIX / BACKLOG / NOISE)\n          → backlog entry (.dev-pomogator/.specs-backlog/<DATE>.jsonl)\n          → specialist resolver (ac-author / scenario-writer / fr-author /\n                                 decision-arbiter / owner-picker / link-fixer)\n          → produces .md skeleton OR recommendation file in the spec dir\n          → entry marked resolved\n\nUse this skill when the user asks to: \"посмотри что в беклоге\",\n\"почини спеки\", \"запусти fixer\", \"ingest findings\", \"resolve missing\nACs\", or any phrasing about cleaning up cross-spec-reconcile findings\nin bulk.\n",
+        "allowed-tools": "Bash, Read, Glob, Grep, AskUserQuestion"
+      },
+      "hasFrontmatter": true,
+      "errors": [
+        "ALLOWED_TOOLS_MISSING"
+      ],
+      "warnings": []
+    },
+    {
+      "path": "E:\\repos\\dev-pomogator\\.claude\\skills\\spec-generator-dev\\SKILL.md",
+      "name": "spec-generator-dev",
+      "tokens": 8645,
+      "lines": 166,
+      "frontmatter": {
+        "name": "spec-generator-dev",
+        "description": "Maintenance & development discipline for the spec-generator-v4 subsystem (the spec-graph, its parsers, the MCP server, the authoritative verdict, the judge, the backlog resolvers and the auditors). INVOKE when: fixing ANY defect found in spec docs or graph output («почини спеку/граф/вердикт», «откуда этот мусор в FR.md», «false positive у audit/conformance»), extending the subsystem (new MCP tool, new check, new resolver), or reviewing a change that touches tools/spec-graph / tools/spec-mcp-server / tools/specs-generator / tools/spec-backlog / tools/spec-llm-judge. Triggers (RU): «поддержка спек-генератора», «разработка спек-плагина», «почини генератор спек», «producer-фикс», «кто породил этот дефект», «ревью спек-генератора», «почини вердикт/счётчик/граф/хук спек», «оживи guard», «ложная находка», «шум в счётчике». Triggers (EN): \"spec generator dev\", \"maintain the spec plugin\", \"producer fix\", \"what produced this defect\", \"review the spec generator\", \"false finding\", \"noisy counter\". Do NOT use for authoring a spec's CONTENT (create-spec), per-spec health (spec-status / spec-verdict), or corpus hygiene runs (corpus-health).\n",
+        "allowed-tools": "Read, Write, Edit, Glob, Grep, Bash, Agent, mcp__dev-pomogator-specs__list_spec_docs, mcp__dev-pomogator-specs__read_spec_doc, mcp__dev-pomogator-specs__get_spec_status, mcp__dev-pomogator-specs__get_trace, mcp__dev-pomogator-specs__conformance_check, mcp__dev-pomogator-specs__search, mcp__dev-pomogator-specs__propose_spec_change, mcp__dev-pomogator-specs__apply_spec_change"
+      },
+      "hasFrontmatter": true,
+      "errors": [
+        "FRONTMATTER_DESCRIPTION_TOO_LONG"
+      ],
+      "warnings": []
+    },
+    {
+      "path": "E:\\repos\\dev-pomogator\\.claude\\skills\\spec-generator-orchestrator\\SKILL.md",
+      "name": "spec-generator-orchestrator",
+      "tokens": 1624,
+      "lines": 120,
+      "frontmatter": {
+        "name": "spec-generator-orchestrator",
+        "description": "Thin end-to-end orchestrator for the spec-generator-v4 workflow (scaffold → conformance → coverage → reconcile → resolve → honesty-gate). Owns ONLY the feature map + a human-merge self-improve ledger; delegates every unit of work to existing worker skills and MCP tools — never re-implements worker logic. Triggers on \"run the spec workflow / orchestrate specs / end-to-end spec pipeline\".",
+        "allowed-tools": "Read, Write, Edit, Glob, Grep, Bash, Skill, AskUserQuestion, mcp__dev-pomogator-specs__get_trace, mcp__dev-pomogator-specs__get_spec_status, mcp__dev-pomogator-specs__get_test_result, mcp__dev-pomogator-specs__get_scenario_trace, mcp__dev-pomogator-specs__find_orphans, mcp__dev-pomogator-specs__conformance_check"
+      },
+      "hasFrontmatter": true,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "E:\\repos\\dev-pomogator\\.claude\\skills\\spec-graph-query\\SKILL.md",
+      "name": "spec-graph-query",
+      "tokens": 1973,
+      "lines": 93,
+      "frontmatter": {
+        "name": "spec-graph-query",
+        "description": "Cheatsheet for querying the spec-graph MCP (`dev-pomogator-specs`) instead of grepping `.specs/` and guessing slug variants. Pick the right tool for: look up a node by id, find what covers/tests/implements a node, list scenarios by @feature tag, list specs, list a phase's tasks, per-spec FR/AC/Scenario counts, or check a single anchor. Triggers (EN): \"query the spec graph\", \"look up FR-7 / AC-7.1 / a scenario node\", \"what tests/covers FR-7\", \"what depends on this requirement before I change it\", \"scenarios tagged @featureN\", \"what specs exist\", \"tasks in Phase 2\", \"how many FR/AC/scenarios per spec\", \"does this anchor resolve\". Triggers (RU): \"запросить граф спек\", \"найди узел FR-7 / AC-7.1 / сценарий\", \"что тестит/покрывает FR-7\", \"что зависит от требования\", \"сценарии с тегом @featureN\", \"какие спеки есть\", \"задачи фазы 2\", \"сколько FR/AC/сценариев в спеке\", \"резолвится ли якорь\". Do NOT use for: markdown link/anchor NAVIGATION or rename (markdown-lsp / Marksman), bulk broken-anchor scan+fix (anchor-fix), the honest per-task DONE verdict (get_spec_status view coverage / spec-status), or cross-spec drift (cross-spec-reconcile).\n",
+        "allowed-tools": "mcp__dev-pomogator-specs__get_trace, mcp__dev-pomogator-specs__find_by_tags, mcp__dev-pomogator-specs__conformance_check, mcp__dev-pomogator-specs__search, mcp__dev-pomogator-specs__get_node, mcp__dev-pomogator-specs__get_spec_status, mcp__dev-pomogator-specs__list_phase_tasks, mcp__dev-pomogator-specs__get_test_result, mcp__dev-pomogator-specs__get_scenario_trace, mcp__dev-pomogator-specs__find_orphans, mcp__dev-pomogator-specs__validate_anchor, mcp__dev-pomogator-specs__list_specs, mcp__dev-pomogator-specs__find_refs, mcp__dev-pomogator-specs__list_spec_docs, mcp__dev-pomogator-specs__read_spec_doc, mcp__dev-pomogator-specs__read_attachment, Bash, Read"
+      },
+      "hasFrontmatter": true,
+      "errors": [
+        "FRONTMATTER_DESCRIPTION_TOO_LONG",
+        "ALLOWED_TOOLS_MISSING"
+      ],
+      "warnings": []
+    },
+    {
+      "path": "E:\\repos\\dev-pomogator\\.claude\\skills\\spec-mcp-dogfood\\SKILL.md",
+      "name": "spec-mcp-dogfood",
+      "tokens": 1295,
+      "lines": 78,
+      "frontmatter": {
+        "name": "spec-mcp-dogfood",
+        "description": "Dogfood the spec-graph MCP — drive EVERY tool's real handler against the REAL `.specs/` graph and record what each actually returns, so you find live/dead/buggy tools by RUNTIME evidence, not grep. Catches the class of bug a green suite hides: a tool that's broken because the suite reaches its data by a side-channel (tags) the tool itself never uses (edges). INVOKE before a scope update / pruning decision, after changing the graph builder / parsers / tool handlers, or to confirm a \"dead by no consumer\" tool is dead-vs-just-unwired. Triggers (EN): \"dogfood the spec mcp\", \"collect the mcp tool dataset\", \"which spec tools are dead/live at runtime\", \"runtime-check the mcp tools\", \"does each spec tool return data\". Triggers (RU): \"прогони dogfood спек-mcp\", \"собери датасет mcp тулзов\", \"какие тулзы живы/мертвы в рантайме\", \"проверь mcp тулзы на реальном графе\". Do NOT use to write tests (tests-create-update) or for the FR-32 honest DONE verdict (get_coverage / spec-status).\n",
+        "allowed-tools": "Bash, Read"
+      },
+      "hasFrontmatter": true,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "E:\\repos\\dev-pomogator\\.claude\\skills\\spec-mcp-usability-dogfood\\SKILL.md",
+      "name": "spec-mcp-usability-dogfood",
+      "tokens": 1133,
+      "lines": 72,
+      "frontmatter": {
+        "name": "spec-mcp-usability-dogfood",
+        "description": "Harvest REAL usability friction with the spec-graph MCP door (`mcp__dev-pomogator-specs__*`) out of Claude Code SESSION TRANSCRIPTS, so the painful spots surface as DATA (errors, retries, door-bypasses) instead of being re-typed from memory. Sibling of `spec-mcp-dogfood`: that one checks each tool WORKS (runtime), THIS one checks how USABLE each tool is (lived friction across past sessions). INVOKE after a session where the door felt clunky, before improving door DX (tool descriptions / error messages), or periodically to rank what to fix next. Triggers (EN): \"dogfood spec mcp usability\", \"what door tools were painful\", \"mine session logs for mcp friction\", \"rank door DX fixes\". Triggers (RU): \"догфуд юзабилити спек-mcp\", \"что в двери было неудобно\", \"собери трение по двери из сессий\", \"где мучился с mcp дверью\". Do NOT use to check if tools WORK (that is `spec-mcp-dogfood`), nor for the honest DONE verdict (`get_coverage` / `spec-status`).\n",
+        "allowed-tools": "Bash, Read"
+      },
+      "hasFrontmatter": true,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "E:\\repos\\dev-pomogator\\.claude\\skills\\spec-reality-check\\SKILL.md",
+      "name": "spec-reality-check",
+      "tokens": 1645,
+      "lines": 104,
+      "frontmatter": {
+        "name": "spec-reality-check",
+        "description": "Verify spec docs against repository reality. Auto-trigger when the user asks to create, modify, supplement, or implement a spec, or explicitly asks to verify spec readiness.\n\nEN triggers — create: \"create spec\", \"scaffold spec\", \"new spec for\". Modify: \"modify spec\", \"update spec\", \"change spec for\". Supplement: \"supplement spec\", \"extend spec\", \"add FR to spec\", \"add AC to spec\". Implement: \"implement spec\", \"implement feature spec\", \"verify spec ready\", \"ready to ship spec\".\nEN general: \"verify spec ready\", \"spec reality check\", \"check spec drift\", \"spec drift\", \"spec docs vs reality\".\n\nRU триггеры — создать: \"создай спеку\", \"новая спека\", \"сделай спеку для\". Изменить: \"измени спеку\", \"обнови спеку\", \"поменяй спеку\". Дополнить: \"дополни спеку\", \"добавь FR\", \"добавь AC\", \"расширь спеку\". Реализовать: \"реализуй спеку\", \"имплементируй спеку\", \"запили фичу по спеке\", \"сверь спеку с кодом\".\nRU общие: \"проверь спеку\", \"сверить с реальностью\", \"drift в спеке\", \"файлы из спеки существуют?\".\n\nSkill detects six classes of spec-vs-reality drift via `scripts/verify.ts` and supports JSON/human/markdown output formats. Pairs with PreToolUse hook on ExitPlanMode (mechanical backup). Outputs `AuditFinding[]` shape (same as audit-spec.ts).\n",
+        "allowed-tools": "Read, Glob, Grep, Bash, Skill"
+      },
+      "hasFrontmatter": true,
+      "errors": [
+        "FRONTMATTER_DESCRIPTION_TOO_LONG"
+      ],
+      "warnings": []
+    },
+    {
+      "path": "E:\\repos\\dev-pomogator\\.claude\\skills\\spec-review\\SKILL.md",
+      "name": "spec-review",
+      "tokens": 4196,
+      "lines": 257,
+      "frontmatter": {
+        "name": "spec-review",
+        "description": "Семантическое pre-stop ревью спеки/кода через 16 категорий: external claims, acceptance-to-delivery coverage, antipatterns, assumption-vs-requirement, memory-constraint compliance, reality-drift и др. Используй ПЕРЕД каждым ConfirmStop в specs-management workflow И после каждой implementation phase. Триггеры — \"сам ревью\", \"проверь спеку\", \"ревью перед стопом\", \"review phase N\", \"spec-review\", \"pre-stop check\". Skip when — spec не существует, активной фазы нет в .progress.json, или пользователь явно отказался.\n",
+        "license": "Apache 2.0",
+        "allowed-tools": [
+          "mcp__dev-pomogator-specs__read_spec_doc",
+          "mcp__dev-pomogator-specs__list_spec_docs",
+          "mcp__dev-pomogator-specs__list_specs",
+          "mcp__dev-pomogator-specs__get_node",
+          "mcp__dev-pomogator-specs__search",
+          "mcp__dev-pomogator-specs__apply_spec_change",
+          "Read",
+          "Grep",
+          "Glob",
+          "Bash(bash:*)",
+          "Bash(node:*)",
+          "Bash(grep:*)",
+          "WebFetch",
+          "Edit",
+          "Agent",
+          "Skill"
+        ]
+      },
+      "hasFrontmatter": true,
+      "errors": [
+        "ALLOWED_TOOLS_MISSING"
+      ],
+      "warnings": [
+        "TRANSITIVE_REFERENCES"
+      ]
+    },
+    {
+      "path": "E:\\repos\\dev-pomogator\\.claude\\skills\\spec-status\\SKILL.md",
+      "name": "spec-status",
+      "tokens": 2399,
+      "lines": 175,
+      "frontmatter": {
+        "name": "spec-status",
+        "description": "Honest, evidence-backed status of a spec — run it BEFORE claiming a spec/feature is done. Delegates verification to an INDEPENDENT sub-agent (fresh context, no goal-completion bias) that classifies each AC as verified / blocked / claimed-only with an evidence path, audits test-body quality (STRONG / WEAK / FAKE-POSITIVE-RISK), reads test-result recency, and separates environmental blockers from real failures. Triggers (RU): «статус спеки», «честный статус», «проверь готовность спеки», «что реально сделано», «AC проверены?», «перед тем как сказать готово», «все ли требования реализованы», «ревью реализации по спеке», «какие FR готовы», «покрытие требований», «что осталось по спеке». Triggers (EN): «spec status», «honest status check», «before claiming done», «is this spec actually finished», «verify AC evidence», «what is really done», «are all requirements implemented», «per-FR implementation review», «which FRs are done». Do NOT use for: writing/scaffolding a spec (use create-spec), running tests (use /run-tests), or general progress questions answerable from .progress.json alone.\n",
+        "allowed-tools": "Bash, Read, Glob, Grep, Agent, mcp__dev-pomogator-specs__read_spec_doc, mcp__dev-pomogator-specs__list_spec_docs, mcp__dev-pomogator-specs__get_spec_status"
+      },
+      "hasFrontmatter": true,
+      "errors": [
+        "FRONTMATTER_DESCRIPTION_TOO_LONG",
+        "ALLOWED_TOOLS_MISSING"
+      ],
+      "warnings": []
+    },
+    {
+      "path": "E:\\repos\\dev-pomogator\\.claude\\skills\\strong-tests\\SKILL.md",
+      "name": "strong-tests",
+      "tokens": 16598,
+      "lines": 1034,
+      "frontmatter": {
+        "name": "strong-tests",
+        "description": "Use this skill BEFORE writing any tests OR when user reports \"тесты слабые / fake-positive / проходят но баги пропускают / coverage высокий но mutation score низкий\". Triggers (RU): \"напиши крепкие тесты\", \"сильные тесты\", \"mutation testing\", \"переписать тесты сильнее\", \"проверь тесты на крепкость\", \"шаг UndefinedStep / не найден но метод есть\", \"тест выглядит багом Reqnroll/фреймворка / binding не регистрируется\". Triggers (EN): \"write strong tests\", \"strengthen tests\", \"mutation-resistant tests\", \"fix weak tests\", \"no fake-positive tests\". Skill enforces 12-point self-eval checklist + mutation testing feedback loop + property-based testing patterns. Auto-detects framework (vitest/jest, pytest, JUnit, xUnit, Go, Rust) from project config. NOT for: mocking-heavy unit tests, perf benchmarks, e2e UI tests.\n",
+        "argument-hint": "[<test-file-path>] [--mode=greenfield|audit|mutate] [--threshold=70]",
+        "allowed-tools": "Read, Write, Edit, Grep, Glob, Bash, AskUserQuestion, Skill"
+      },
+      "hasFrontmatter": true,
+      "errors": [
+        "ALLOWED_TOOLS_MISSING"
+      ],
+      "warnings": [
+        "OVERSIZE"
+      ]
+    },
+    {
+      "path": "E:\\repos\\dev-pomogator\\.claude\\skills\\stryker-mutation\\SKILL.md",
+      "name": "stryker-mutation",
+      "tokens": 1952,
+      "lines": 106,
+      "frontmatter": {
+        "name": "stryker-mutation",
+        "description": "Run + interpret Stryker mutation testing in this repo — for VITEST targets (real code, the strong-tests detector, the spec-generator subsystem) AND for BDD/cucumber targets (via the official @stryker-mutator/cucumber-runner). Use when you need to measure how well tests KILL mutants, read a mutation report, or decide whether a survivor is a weak test vs an equivalent mutant vs a coverage gap. Keeps the recipe + last scores in .dev-pomogator/.mutation-state.json so you don't re-derive the setup each time.",
+        "allowed-tools": "Read, Write, Edit, Bash, Glob, Grep"
+      },
+      "hasFrontmatter": true,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "E:\\repos\\dev-pomogator\\.claude\\skills\\suite-failure-triage\\SKILL.md",
+      "name": "suite-failure-triage",
+      "tokens": 1789,
+      "lines": 123,
+      "frontmatter": {
+        "name": "suite-failure-triage",
+        "description": "Triage a RED full test-suite into per-failure verdicts — mine / pre-existing-main / dirty-tree-artifact / isolation-bug / genuine-flake — instead of guessing or mislabelling everything a \"flake\". Use when `npm test` (the Docker suite) shows failures and you need to know which are YOURS to fix vs inherited, BEFORE merging or pushing. Triggers (EN): \"triage the failures\", \"is this my regression or pre-existing\", \"why is the suite red\", \"which failures are mine\", \"flake or real bug\", \"before pushing check the reds\". Triggers (RU): \"разбери падения\", \"это мой регресс или нет\", \"почему красный сьют\", \"какие падения мои\", \"флейк или баг\", \"триаж падений\". Do NOT use for a single known failure you already understand, or for writing tests (that's tests-create-update).\n",
+        "allowed-tools": "Bash, Read, Grep, Glob"
+      },
+      "hasFrontmatter": true,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "E:\\repos\\dev-pomogator\\.claude\\skills\\task-board-forms\\SKILL.md",
+      "name": "task-board-forms",
+      "tokens": 2337,
+      "lines": 191,
+      "frontmatter": {
+        "name": "task-board-forms",
+        "description": "Enriches TASKS.md with Done When / Status / Est fields per task and regenerates the ## Task Summary Table header via spec-status.ts -Format task-table. Idempotent (replaces auto-generated block between markers). Called by create-spec Phase 3 (Finalization) step 1b. Returns JSON summary of tasks enriched.\n",
+        "allowed-tools": "mcp__dev-pomogator-specs__read_spec_doc, mcp__dev-pomogator-specs__list_spec_docs, mcp__dev-pomogator-specs__apply_spec_change, mcp__dev-pomogator-specs__propose_spec_change, mcp__dev-pomogator-specs__append_to_section, mcp__dev-pomogator-specs__insert_after_heading, mcp__dev-pomogator-specs__insert_at_eof, mcp__dev-pomogator-specs__replace_in_section, Bash, AskUserQuestion"
+      },
+      "hasFrontmatter": true,
+      "errors": [
+        "ALLOWED_TOOLS_MISSING"
+      ],
+      "warnings": []
+    },
+    {
+      "path": "E:\\repos\\dev-pomogator\\.claude\\skills\\task-status\\SKILL.md",
+      "name": "task-status",
+      "tokens": 1584,
+      "lines": 101,
+      "frontmatter": {
+        "name": "task-status",
+        "description": "Use when you change ANY spec entity's status through the centralized door,\nespecially before starting work (moving a task to `ready` or `in-progress`)\nor confirming a spec PHASE STOP. It is the validated path: read the\nrequirement's trace chain, confirm it is assembled, then set status through\nthe door's `set_entity_status` tool. Covers tasks (5-status machine), spec\nphases (confirm STOP, gated on prior STOPs), and derived entities\n(FR/story/decision are refused because their status is computed). Explains\nwhy a start is refused and how to unblock it. Trigger phrases include taking\na task into work, setting task status, and confirming a phase STOP.\n",
+        "allowed-tools": "mcp__dev-pomogator-specs__get_trace, mcp__dev-pomogator-specs__get_node, mcp__dev-pomogator-specs__get_spec_status, mcp__dev-pomogator-specs__set_entity_status, mcp__dev-pomogator-specs__set_spec_status, mcp__dev-pomogator-specs__read_spec_doc"
+      },
+      "hasFrontmatter": true,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "E:\\repos\\dev-pomogator\\.claude\\skills\\tests-create-update\\SKILL.md",
+      "name": "tests-create-update",
+      "tokens": 4078,
+      "lines": 206,
+      "frontmatter": {
+        "name": "tests-create-update",
+        "description": "This skill should be used when the user asks to \"create a test\", \"write a test\", \"update test\", \"add test\", \"regression test\", \"bugfix test\", \"fix test\", \"создай тест\", \"обнови тест\", \"добавь тест\", \"напиши тест\", \"регрессионный тест\". Also auto-triggered by PostToolUse hook when Claude writes or edits test files (tests/**, *.test.ts, *.test.cs, *Steps.cs). Teaches Claude to write integration-first tests with strong assertions, preventing 7 anti-patterns found in audit of 258+ issues across TypeScript/vitest and C#/xUnit/FluentAssertions projects.\n",
+        "argument-hint": "[create|update] [target file or domain]",
+        "allowed-tools": "Read, Glob, Grep, Write, Edit, Bash, AskUserQuestion, Skill, Agent"
+      },
+      "hasFrontmatter": true,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "E:\\repos\\dev-pomogator\\.claude\\skills\\use-claude-subscription\\SKILL.md",
+      "name": "use-claude-subscription",
+      "tokens": 2177,
+      "lines": 238,
+      "frontmatter": {
+        "name": "use-claude-subscription",
+        "description": "Wire up the current project to use the user's Claude subscription via\nthe local Anthropic-compatible proxy (claude-proxy-infra / Meridian on\nhttp://127.0.0.1:3456) instead of an ANTHROPIC_API_KEY. Detects the\nproject's language stack (Python, Node.js, Go, etc.), edits .env files\nwith the right env vars, handles Windows VPN/NO_PROXY quirk, ensures the\nproxy is alive (delegating to proxy-up skill if needed), and verifies\nend-to-end with a smoke test. Use whenever the user says \"use claude\nhere\", \"wire claude in this project\", \"claude через подписку\",\n\"хочу клода в этом проекте без ключа\", \"анthropic api без ключа\",\n\"set up claude api locally\", \"use my claude subscription here\".\n",
+        "allowed-tools": "Read, Glob, Grep, Edit, Write, Bash, Skill"
+      },
+      "hasFrontmatter": true,
+      "errors": [
+        "FRONTMATTER_NAME_FORBIDDEN_TOKEN"
+      ],
+      "warnings": []
+    },
+    {
+      "path": "E:\\repos\\dev-pomogator\\.claude\\skills\\variant-matrix-build\\SKILL.md",
+      "name": "variant-matrix-build",
+      "tokens": 2519,
+      "lines": 200,
+      "frontmatter": {
+        "name": "variant-matrix-build",
+        "description": "Phase-2 sub-skill that detects polymorphic FRs (shared pipeline + per-variant dispatch) and populates variant matrix artifacts — AC Decision Table, Gherkin Scenario Outline + Examples, per-variant tasks. Invoked by create-spec Phase 2 step 4c. Returns JSON summary. Mirrors requirements-chk-matrix shape.",
+        "disable-model-invocation": true,
+        "allowed-tools": "mcp__dev-pomogator-specs__read_spec_doc, mcp__dev-pomogator-specs__list_spec_docs, mcp__dev-pomogator-specs__apply_spec_change, mcp__dev-pomogator-specs__propose_spec_change, Bash, AskUserQuestion"
+      },
+      "hasFrontmatter": true,
+      "errors": [
+        "ALLOWED_TOOLS_MISSING"
+      ],
+      "warnings": []
+    },
+    {
+      "path": "E:\\repos\\dev-pomogator\\.claude\\skills\\verify-generic-scope-fix\\SKILL.md",
+      "name": "verify-generic-scope-fix",
+      "tokens": 1441,
+      "lines": 105,
+      "frontmatter": {
+        "name": "verify-generic-scope-fix",
+        "description": "Use BEFORE commit when diff adds 2+ items to an enum/switch/array that gates a shared codepath (files matching *Service.ts / *Validator.ts / *Gate.ts / *Guard.ts / *Policy.ts). Prevents adding variants whose creation flow bypasses the gate — making the fix structurally no-op. Triggered manually by user or when hook scope-gate-guard blocks a commit.",
+        "allowed-tools": "Read, Bash, Grep, Glob",
+        "disable-model-invocation": true
+      },
+      "hasFrontmatter": true,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "E:\\repos\\dev-pomogator\\.claude\\skills\\verify-plugin-install\\SKILL.md",
+      "name": "verify-plugin-install",
+      "tokens": 1939,
+      "lines": 114,
+      "frontmatter": {
+        "name": "verify-plugin-install",
+        "description": "Verify the dev-pomogator canonical plugin installs and loads (skills + hooks) in a clean\nDocker container, fully non-interactively, using the real `claude plugin` CLI. Use when asked to\n\"проверь установку плагина\", \"test /plugin install\", \"e2e install в докере\", \"verify plugin loads\",\n\"smoke-test the plugin install\", or to close the canonical-plugin spec's e2e checkbox.\nEN triggers: \"verify plugin install\", \"headless plugin test\", \"test plugin in docker\", \"does the plugin load\".\nDo NOT use for: the normal vitest suite (that's /run-tests), or editing plugin code.\n",
+        "allowed-tools": "Bash, Read, Write, Edit, Glob, Grep"
+      },
+      "hasFrontmatter": true,
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "path": "E:\\repos\\dev-pomogator\\.claude\\skills\\worktree-setup\\SKILL.md",
+      "name": "worktree-setup",
+      "tokens": 1396,
+      "lines": 80,
+      "frontmatter": {
+        "name": "worktree-setup",
+        "description": "Create a ready-to-work git worktree in one command: atomic branch+worktree off main, dev-pomogator bootstrap, sync of lost local env files, npm install + build, standalone doctor verification, optional draft PR, and optional devcontainer bring-up. Also self-heals orphan worktrees (hint via tsx-runner) and works on any repo/owner without hardcoded identifiers. Triggers (RU): «создай worktree», «новый worktree», «worktree для», «сделай ветку в worktree», «worktree + PR», «worktree с девконтейнером». Triggers (EN): «create worktree», «new worktree», «worktree for», «set up a worktree», «worktree + PR», «worktree with devcontainer». Do NOT use for: removing/merging worktrees (that is launch-worktree.ps1's job), non-git projects, or read-only worktree inspection.\n",
+        "allowed-tools": "Bash, Read, Glob, Grep, AskUserQuestion, Skill"
+      },
+      "hasFrontmatter": true,
+      "errors": [],
+      "warnings": []
+    }
+  ]
+}

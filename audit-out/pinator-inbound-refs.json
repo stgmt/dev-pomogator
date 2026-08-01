@@ -1,0 +1,130 @@
+[
+  {
+    "rel": ".specs/spec-generator-v4/spec-generator-v4.feature",
+    "n": 32
+  },
+  {
+    "rel": "tests/step_definitions/feature_claim_evidence_gate.ts",
+    "n": 25
+  },
+  {
+    "rel": "tests/step_definitions/feature49_autosurface.ts",
+    "n": 24
+  },
+  {
+    "rel": ".specs/claim-evidence-gate/FILE_CHANGES.md",
+    "n": 12
+  },
+  {
+    "rel": ".specs/claim-evidence-gate/validation-report.md",
+    "n": 12
+  },
+  {
+    "rel": ".specs/spec-generator-v4/FR.md",
+    "n": 11
+  },
+  {
+    "rel": ".specs/spec-generator-v4/TASKS.md",
+    "n": 8
+  },
+  {
+    "rel": ".specs/claim-evidence-gate/RESEARCH.md",
+    "n": 7
+  },
+  {
+    "rel": ".specs/spec-generator-v4/FILE_CHANGES.md",
+    "n": 5
+  },
+  {
+    "rel": ".specs/haiku-to-deepseek-migration/FILE_CHANGES.md",
+    "n": 4
+  },
+  {
+    "rel": ".specs/claim-evidence-gate/README.md",
+    "n": 3
+  },
+  {
+    "rel": ".specs/haiku-to-deepseek-migration/FR.md",
+    "n": 3
+  },
+  {
+    "rel": ".specs/haiku-to-deepseek-migration/README.md",
+    "n": 3
+  },
+  {
+    "rel": ".specs/spec-generator-v4/DESIGN.md",
+    "n": 3
+  },
+  {
+    "rel": "tests/step_definitions/feature_haiku_to_deepseek.ts",
+    "n": 3
+  },
+  {
+    "rel": ".specs/bdd-mutation-quality/DESIGN.md",
+    "n": 2
+  },
+  {
+    "rel": ".specs/bdd-only-migration/FR.md",
+    "n": 2
+  },
+  {
+    "rel": ".specs/bg-task-guard/FR.md",
+    "n": 2
+  },
+  {
+    "rel": ".specs/spec-generator-v4/ACCEPTANCE_CRITERIA.md",
+    "n": 2
+  },
+  {
+    "rel": "docs/COMPONENTS.md",
+    "n": 2
+  },
+  {
+    "rel": "package.json",
+    "n": 2
+  },
+  {
+    "rel": "cucumber.json",
+    "n": 2
+  },
+  {
+    "rel": "cucumber.docker.json",
+    "n": 2
+  },
+  {
+    "rel": "docs/COMPONENTS.md",
+    "n": 2
+  },
+  {
+    "rel": ".specs/claim-evidence-gate/CHANGELOG.md",
+    "n": 1
+  },
+  {
+    "rel": ".specs/claim-evidence-gate/claim-evidence-gate.feature",
+    "n": 1
+  },
+  {
+    "rel": ".specs/haiku-to-deepseek-migration/ACCEPTANCE_CRITERIA.md",
+    "n": 1
+  },
+  {
+    "rel": ".specs/haiku-to-deepseek-migration/RESEARCH.md",
+    "n": 1
+  },
+  {
+    "rel": ".specs/spec-generator-v4/USER_STORIES.md",
+    "n": 1
+  },
+  {
+    "rel": "tests/features/plugins/claim-evidence-gate/CEGATE001_claim-evidence-gate.feature",
+    "n": 1
+  },
+  {
+    "rel": "CLAUDE.md",
+    "n": 1
+  },
+  {
+    "rel": "AGENTS.md",
+    "n": 1
+  }
+]

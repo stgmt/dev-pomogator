@@ -53,6 +53,14 @@ export function parseTasks(content: string, file: string): TaskNode[] {
     // waived task that is (or becomes) DONE is caught by the TASK_WAIVED_CLOSED floor.
     const wm = body.match(WAIVED_RE);
     if (wm) cur.node.waived = wm[1].trim();
+    const comment = body.match(/^\s*\*\*(?:Comment|Комментарий):\*\*\s*(.+?)\s*$/im);
+    if (comment) cur.node.comment = comment[1].trim();
+    const blocker = body.match(/^\s*\*\*(?:Blocker|Блокер):\*\*\s*(.+?)\s*$/im);
+    if (blocker) cur.node.blocker = blocker[1].trim();
+    const issueRefs = [...body.matchAll(/https?:\/\/github\.com\/[^\s/]+\/[^\s/]+\/issues\/(\d+)/gi)]
+      .map((match) => Number(match[1]))
+      .filter((issue, index, all) => Number.isInteger(issue) && all.indexOf(issue) === index);
+    if (issueRefs.length > 0) cur.node.issueRefs = issueRefs;
     out.push(cur.node);
     cur = null;
   };

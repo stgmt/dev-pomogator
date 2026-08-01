@@ -35,7 +35,7 @@ function scen(id: string, tags: string[] = [], file = '.specs/auth/auth.feature'
   return { id, type: 'Scenario', file, line, tags, steps: [] };
 }
 function task(id: string, refs: string[], file = '.specs/auth/TASKS.md', line = 1): TaskNode {
-  return { id, type: 'Task', file, line, refs, status: 'todo', title: id };
+  return { id, type: 'Task', file, line, refs, status: 'todo', title: id, phase: 'Phase 2' };
 }
 function fileNode(id: string, p: string, file = '.specs/auth/FILE_CHANGES.md', line = 1): FileNode {
   return { id, type: 'File', file, line, path: p };
@@ -92,12 +92,19 @@ describe('tool registry — shape', () => {
     }
   });
 
-  it('registers exactly 25 tools with canonical names', () => {
-    expect(registry).toHaveLength(25);
+  it('registers exactly 41 tools with canonical names', () => {
+    expect(registry).toHaveLength(41);
     const names = registry.map((t) => t.name).sort();
     expect(names).toEqual(
       [
+        'add_acceptance_criterion',
+        'add_backlog_task',
+        'add_phase',
+        'amend_requirement',
+        'append_to_section',
+        'apply_proposed_patch',
         'apply_spec_change', // FR-40 validated atomic write (P17-2)
+        'apply_spec_transaction',
         'archive_spec', // FR-45b gated whole-spec move into archive/
         'conformance_check',
         'create_spec', // FR-40a scaffold through MCP (P17-2)
@@ -111,17 +118,26 @@ describe('tool registry — shape', () => {
         'get_spec_status', // FR-38 full lifecycle + linked last-run summary
         'get_test_result',
         'get_trace',
+        'insert_after_heading',
+        'insert_at_eof',
         'list_phase_tasks',
+        'list_tasks', // FR-82 bounded task inventory
         'list_spec_docs', // FR-39a read inventory (P17-1)
         'list_specs',
+        'policy_query_requirements',
+        'propose_patch',
         'propose_spec_change', // FR-40 dry-run (P17-2)
         'read_attachment', // FR-39a/P19-6 binary attachment read (base64)
         'read_spec_doc', // FR-39a whole-doc read + audit log (P17-1)
+        'register_incident_backlog',
         'rename_spec_doc', // P21-5 anchors-aware rename/move door
+        'replace_in_section',
         'search',
         'set_entity_status', // FR-48d centralized validated status transition
+        'set_requirement_metadata',
         'set_spec_status', // explicit spec-level backlog marker (excluded from census/Stop-gate)
         'validate_anchor',
+        'validate_requirement_metadata',
       ].sort(),
     );
   });
@@ -434,8 +450,23 @@ describe('search', () => {
 
   it('respects type filter', async () => {
     const r = await tool('search').handler({ query: 'fr', types: ['FR'] });
-    const body = parseResult(r) as { results: Array<{ type: string }> };
+    const body = parseResult(r) as { results: Array<{ type: string }>; total: number; returned: number };
     expect(body.results.every((x) => x.type === 'FR')).toBe(true);
+    expect(body.returned).toBe(body.results.length);
+    expect(body.total).toBeGreaterThanOrEqual(body.returned);
+  });
+
+  it('scopes to one spec and cursor pages conserve cardinality', async () => {
+    const first = parseResult(await tool('search').handler({ query: 'task', spec: 'auth', types: ['Task'], limit: 1 })) as {
+      total: number; returned: number; truncated: boolean; next_cursor: string; results: Array<{ id: string }>;
+    };
+    const second = parseResult(await tool('search').handler({ query: 'task', spec: 'auth', types: ['Task'], limit: 1, cursor: first.next_cursor })) as {
+      total: number; returned: number; truncated: boolean; next_cursor: null; results: Array<{ id: string }>;
+    };
+    expect(first.total).toBe(2);
+    expect(first.truncated).toBe(true);
+    expect(second.truncated).toBe(false);
+    expect(new Set([...first.results, ...second.results].map((entry) => entry.id)).size).toBe(first.total);
   });
 });
 
@@ -570,14 +601,21 @@ describe('find_orphans + get_test_result + get_spec_status (view=counts) + list_
     expect(auth.task).toBe(2);
   });
 
-  it('get_spec_status refreshes graph state before reporting results', async () => {
-    let refreshed = false;
-    const reg = buildToolRegistry(() => makeGraph(), { refreshGraph: () => { refreshed = true; } });
+  it('get_spec_status refreshes full status but keeps summary on the unchanged graph snapshot', async () => {
+    let refreshes = 0;
+    const reg = buildToolRegistry(() => makeGraph(), { refreshGraph: () => { refreshes++; } });
     const status = reg.find((t) => t.name === 'get_spec_status')!;
 
-    await status.handler({ spec: 'auth', view: 'status' });
+    await status.handler({ spec: 'auth', view: 'summary' });
+    expect(refreshes).toBe(0);
+    const summary = parseResult(await status.handler({ spec: 'auth', view: 'summary' })) as { view: string; counts: unknown; tasks?: unknown };
+    expect(summary.view).toBe('summary');
+    expect(summary.counts).toBeDefined();
+    expect(summary.tasks).toBeUndefined();
+    expect(refreshes).toBe(0);
 
-    expect(refreshed).toBe(true);
+    await status.handler({ spec: 'auth', view: 'status' });
+    expect(refreshes).toBe(1);
   });
 
   it('get_spec_status exposes filtered proof while canonical coverage stays not_run (FR-61e)', async () => {
@@ -667,10 +705,29 @@ describe('find_orphans + get_test_result + get_spec_status (view=counts) + list_
     expect(body2.specs.find((s) => s.spec === 'backlog')).toBeUndefined();
   });
 
-  it('list_phase_tasks returns empty + note (TaskNode has no phase yet)', async () => {
-    const r = await tool('list_phase_tasks').handler({ phase: 'Phase 2' });
-    const body = parseResult(r) as { tasks: unknown[]; count: number; note?: string };
-    expect(body.count).toBe(0);
-    expect(body.note).toBeDefined();
+  it('list_tasks returns every unfinished task with stable complete pagination', async () => {
+    const page1 = parseResult(await tool('list_tasks').handler({ spec: 'auth', limit: 1 })) as {
+      ok: boolean; total: number; returned: number; truncated: boolean; next_cursor: string; results: Array<{ id: string }>;
+    };
+    const page2 = parseResult(await tool('list_tasks').handler({ spec: 'auth', limit: 1, cursor: page1.next_cursor })) as {
+      ok: boolean; total: number; returned: number; truncated: boolean; next_cursor: null; results: Array<{ id: string }>;
+    };
+    expect(page1).toMatchObject({ ok: true, total: 2, returned: 1, truncated: true });
+    expect(page2).toMatchObject({ ok: true, total: 2, returned: 1, truncated: false, next_cursor: null });
+    expect(new Set([...page1.results, ...page2.results].map((entry) => entry.id)).size).toBe(2);
+  });
+
+  it('list_phase_tasks distinguishes a populated phase from an unknown phase', async () => {
+    const populated = parseResult(await tool('list_phase_tasks').handler({ spec: 'auth', phase: 'Phase 2' })) as {
+      ok: boolean; state: string; total: number; results: Array<{ id: string }>;
+    };
+    const missing = parseResult(await tool('list_phase_tasks').handler({ spec: 'auth', phase: 'Phase 99' })) as {
+      ok: boolean; error: string; candidates: string[];
+    };
+    expect(populated).toMatchObject({ ok: true, state: 'POPULATED', total: 2 });
+    expect(populated.results).toHaveLength(2);
+    expect(missing).toMatchObject({ ok: false, error: 'PHASE_NOT_FOUND' });
+    expect(missing.candidates).toContain('Phase 2');
+    expect(tool('list_phase_tasks').description).not.toContain('Task nodes are not produced');
   });
 });

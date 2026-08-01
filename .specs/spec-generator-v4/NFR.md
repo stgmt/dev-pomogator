@@ -264,3 +264,21 @@ After FR-36 the graph holds ≈470 FR nodes instead of 47 (collision-dropped); t
 
 **Migration and discovery preservation:** Migration, parser, renderer, persistence, and rollout SHALL never silently drop tasks, dependencies, evidence, or discovery output. Legacy/rejected items, no-child results, and historical stale evidence remain inspectable with source identity and reason.
 
+
+
+## NFR-Performance-13 (FR-82)
+
+**Bounded MCP read budget:** A `list_tasks` page SHALL default to at most 50 items and SHALL enforce a maximum of 200 items. A page response SHALL be at most 256 KiB and SHALL complete within 2 seconds warm or 5 seconds cold in the integration harness. On the 280-task reference corpus, a complete unfinished inventory SHALL require no more than two pages plus one bounded verification call, no more than 512 KiB aggregate response bytes, and no per-task follow-up calls. These are test budgets for the declared corpus, not a universal claim about every repository or network.
+
+## NFR-Reliability-16 (FR-82)
+
+**Pagination and read truth:** Every bounded collection response SHALL expose `total`, `returned`, `truncated`, and `next_cursor` as applicable; cursor ordering SHALL be stable for an unchanged graph revision, and concatenated pages SHALL conserve unique canonical IDs. `PHASE_NOT_FOUND` and `EMPTY_PHASE` SHALL remain distinct. Large `read_spec_doc` requests SHALL not bypass the default/max page bounds without explicit whole-document opt-in, and missing sections SHALL return nearest canonical anchors.
+
+## NFR-Performance-14 (FR-83, deferred)
+
+**Bounded agent packet proposal:** The deferred packet contract SHALL have finite hard maxima, with a proposed default envelope of at most 12 tool calls, 3 rounds, 10 minutes wall time, 1 MiB response bytes, and 32k response tokens per packet. Configuration MAY narrow these limits but SHALL not create an unbounded mode; reaching any limit SHALL trigger the declared stop condition and partial-result fallback.
+
+## NFR-Reliability-17 (FR-83, deferred)
+
+**Partial-result and retry truth:** A context-exhaustion or `invalid_request` failure SHALL be classified and journaled with scope, branch, retry/stop reason, calls, tokens when available, response bytes, and repeated-key signal. A same-prompt retry is forbidden; at most one narrowed changed-strategy retry is allowed. Completed sibling output and blocked/dropped scopes SHALL remain inspectable after a failure.
+

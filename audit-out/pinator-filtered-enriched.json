@@ -1,0 +1,263 @@
+{
+  "buckets": {
+    "core_product": [
+      {
+        "n": 74,
+        "state": "OPEN",
+        "title": "Referent-grounding guard (Component A): stateful \"N user-rejections → stop guessing, enumerate referents, ask which\" UserPromptSubmit hook + pinator carve-out",
+        "created": "2026-06-25",
+        "updated": "2026-06-25",
+        "url": "https://github.com/stgmt/dev-pomogator/issues/74",
+        "labels": [],
+        "commentCount": 0,
+        "comments": [],
+        "bodyPreview": "## The case this prevents\n\nA coding/agent assistant was asked to find \"the original\" artifact the user had pointed at (\"я ж показал где оригинал\"). Instead of **locating** that exact referent in conversation history, the agent built its own checklist of \"properties the original s",
+        "note": "pinator carve-out (complement to claim-gate)"
+      },
+      {
+        "n": 63,
+        "state": "OPEN",
+        "title": "Плагин «пинатор»: goal-driven авто-продолжение агента без ручного пинка юзером",
+        "created": "2026-06-11",
+        "updated": "2026-06-11",
+        "url": "https://github.com/stgmt/dev-pomogator/issues/63",
+        "labels": [],
+        "commentCount": 0,
+        "comments": [],
+        "bodyPreview": "## Проблема (из живой сессии)\n\nЮзер вынужден **постоянно пинать** агента: «делай дальше» ×N, в итоге — «**и хуле я тебя пинать должен постоянно, а ты мне постоянно дичь предлагаешь?**». Агент после каждого шага дефолтит в **меню опций / вопрос «что дальше?»** вместо автономного д"
+      }
+    ],
+    "claim_gate_aka": [
+      {
+        "n": 161,
+        "state": "OPEN",
+        "title": "claim-evidence-gate слеп к прошлым ходам: требует перепрогон тестов, хотя они шли ходом раньше при неизменном коде (carry-over evidence)",
+        "created": "2026-07-23",
+        "updated": "2026-07-23",
+        "url": "https://github.com/stgmt/dev-pomogator/issues/161",
+        "labels": [],
+        "commentCount": 1,
+        "comments": [
+          {
+            "author": "stgmt",
+            "date": "2026-07-23",
+            "preview": "## Верификация фикса (снимаю [UNVERIFIED]) Помимо юнит-логики (9/9), прогнал **живой e2e против самого бандла** (spawn процесса гейта с синтетическим транскриптом, проверка verify-маркера после каждог"
+          }
+        ],
+        "bodyPreview": "## Проблема\n\n`claim-evidence-gate` при claim'е «works-done» / «analysis-verdict» требует улику (прогон теста/сборки) **только в ТЕКУЩЕМ ходе** и **слеп к прошлым ходам**. Он не отличает:\n- «тесты прогнаны прошлым ходом, код с тех пор не менялся» (улика есть, просто ходом раньше),",
+        "note": "carry-over evidence"
+      },
+      {
+        "n": 149,
+        "state": "OPEN",
+        "title": "claim-evidence-gate 12 раз требовал нарушить git-push-safety: «awaiting user permission» трактуется как fake hand-off",
+        "created": "2026-07-22",
+        "updated": "2026-07-22",
+        "url": "https://github.com/stgmt/dev-pomogator/issues/149",
+        "labels": [],
+        "commentCount": 5,
+        "comments": [
+          {
+            "author": "stgmt",
+            "date": "2026-07-22",
+            "preview": "## Апдейт: гейт продолжил срабатывать во время написания самого баг-репорта После создания этого issue гейт сработал ещё **4 раза** (итого 16), включая срабатывание на ходе, где единственной задачей б"
+          },
+          {
+            "author": "stgmt",
+            "date": "2026-07-22",
+            "preview": "## Разбор по исходнику (`tools/claim-evidence-gate/`) — уточняю п.4 и добавляю корневую причину ### 1. Ловушка «Дальше:» подтверждена кодом (было [UNVERIFIED]) `meridian-judge.ts:198-207`: ```ts expor"
+          },
+          {
+            "author": "stgmt",
+            "date": "2026-07-22",
+            "preview": "## ИСПРАВЛЕНИЕ п.4: ограничитель ЕСТЬ, но мои же попытки его сбрасывали Прошлый комментарий утверждал «предохранителя нет». **Неверно.** Более точный поиск (`consecutive|repeatCount|stopCount|fireCoun"
+          },
+          {
+            "author": "stgmt",
+            "date": "2026-07-22",
+            "preview": "## Попытка починки: патч «дать судье факты» + результаты проверки Чинил по принципу «не обходить и не крутить пороги, а научить понимать». Ни один порог не тронут: `noProgressCap`, `minSearch`, `coold"
+          },
+          {
+            "author": "stgmt",
+            "date": "2026-07-22",
+            "preview": "## Воспроизведено: откуда берётся «14 open tasks» и «задачи не из моего мандата» Механизм найден и посчитан. ### Цепочка 1. **Грязное рабочее дерево делает спеку «затронутой сессией».** В `lm-saas` ви"
+          }
+        ],
+        "bodyPreview": "## Симптом\n\n`claim-evidence-gate` (Stop-hook + судья Meridian) **12 раз подряд** заблокировал завершение хода, требуя выполнить `git push` на master, — при том что правило проекта `.carl/rules/core/git-push-safety.md` прямо запрещает пуш без явного разрешения владельца.\n\nГейт и п",
+        "note": "weak pinator slang + claim-gate"
+      }
+    ],
+    "prompt_suggest": [],
+    "successor_orch": [
+      {
+        "n": 215,
+        "state": "OPEN",
+        "title": "Feature: PreToolUse enforcement for #212 — block solo/direct Agent spawn when no Dynamic Workflow dispatch is active",
+        "created": "2026-07-29",
+        "updated": "2026-07-29",
+        "url": "https://github.com/stgmt/dev-pomogator/issues/215",
+        "labels": [
+          "enhancement",
+          "claude-code",
+          "tooling"
+        ],
+        "commentCount": 1,
+        "comments": [
+          {
+            "author": "stgmt",
+            "date": "2026-07-29",
+            "preview": "## Dogfood update: practical value and live boundary proof We applied the narrow enforcement slice from this issue in a real project and then used Dynamic Workflow again to investigate, implement, rev"
+          }
+        ],
+        "bodyPreview": "Parent: #212\n\n## Problem / real incident\n\nIn a real long-running Claude Code development session we had a policy expectation: development subagents must be created only as native Dynamic Workflow `agent()` workers, not through direct external `Agent` tool calls.\n\nThat expectation"
+      },
+      {
+        "n": 212,
+        "state": "OPEN",
+        "title": "Feature: Universal Workflow Orchestrator для bounded development-сессий",
+        "created": "2026-07-28",
+        "updated": "2026-07-28",
+        "url": "https://github.com/stgmt/dev-pomogator/issues/212",
+        "labels": [
+          "enhancement",
+          "claude-code",
+          "tooling"
+        ],
+        "commentCount": 0,
+        "comments": [],
+        "bodyPreview": "# Feature: Universal Workflow Orchestrator для всей development-работы\n\n## Проблема\n\nДлинные сессии с прямым fan-out сабагентов производят много анализа и частичных изменений, но не гарантируют интегрированный результат. Нужен общий orchestration layer поверх native Claude Code D"
+      }
+    ],
+    "adjacent_watch": [
+      {
+        "n": 204,
+        "state": "OPEN",
+        "title": "subagent-watchdog: живой сабагент всегда становится stale-running на Windows (.output никогда не двигается)",
+        "created": "2026-07-25",
+        "updated": "2026-07-25",
+        "url": "https://github.com/stgmt/dev-pomogator/issues/204",
+        "labels": [
+          "bug",
+          "tooling"
+        ],
+        "commentCount": 0,
+        "comments": [],
+        "bodyPreview": "## Симптом\n\n`subagent-watchdog` объявил живого, активно работающего сабагента мёртвым:\n\n```\nsubagent-watchdog: inspect/resume/stop a40d76184c49e4fb1\n\"OR ...\" stale-running, age=77m,\noutput=C:\\Users tigm\\AppData\\Local\\Temp\\claude\\E--repos-lm-saas\\<session>\\tasks\\a40d76184c49e4fb1."
+      },
+      {
+        "n": 100,
+        "state": "OPEN",
+        "title": "Productize Claude subagent watchdog for failed/stale Agent work",
+        "created": "2026-07-11",
+        "updated": "2026-07-11",
+        "url": "https://github.com/stgmt/dev-pomogator/issues/100",
+        "labels": [],
+        "commentCount": 1,
+        "comments": [
+          {
+            "author": "stgmt",
+            "date": "2026-07-11",
+            "preview": "## Field report: lm-saas reel marketplace session — dead children, lost day, then ghost rows in the agent panel A concrete incident from `E:\\repos\\lm-saas` on 2026-07-11 exposed two related but distin"
+          }
+        ],
+        "bodyPreview": "## Context\n\nClaude Code can launch background `Agent` / `Explore` work and then continue in the parent session even when the child agent dies with an API/stream failure or loses its completion record. The observed failure class was:\n\n```text\nAgent \"Inspect OCR visual gate\" failed"
+      },
+      {
+        "n": 44,
+        "state": "OPEN",
+        "title": "Feature: zombie-hunter / vestige-detector plugin (analyst skill + UserPromptSubmit hook) — PoC attached",
+        "created": "2026-06-04",
+        "updated": "2026-06-04",
+        "url": "https://github.com/stgmt/dev-pomogator/issues/44",
+        "labels": [],
+        "commentCount": 0,
+        "comments": [],
+        "bodyPreview": "## Feature request: a reusable **zombie-hunter / vestige-detector** plugin (analyst skill + UserPromptSubmit hook)\n\n### Problem\n\nThe dozens of existing \"dead code\" skills/agents (knip / ts-prune / vulture / `deadcode` / staticcheck wrappers) all answer **one** question: *\"is this"
+      },
+      {
+        "n": 41,
+        "state": "CLOSED",
+        "title": "feat: supervised relaunch — авто-resume Claude Code после rate-limit halt (\"Server is temporarily limiting requests\")",
+        "created": "2026-06-03",
+        "updated": "2026-07-13",
+        "url": "https://github.com/stgmt/dev-pomogator/issues/41",
+        "labels": [],
+        "commentCount": 3,
+        "comments": [
+          {
+            "author": "m13v",
+            "date": "2026-06-18",
+            "preview": "различать троттл и квоту по тексту ошибки выходит так: понять, стоит ли ещё стена квоты, можно только словив ещё один отказ. то есть каждый backoff-проб во время quota halt жжёт тот самый бюджет, кото"
+          },
+          {
+            "author": "m13v",
+            "date": "2026-06-18",
+            "preview": "мы как раз читаем тот же usage-эндпоинт, что рендерит https://claude-meter.com/r/83gawqa7, чтобы видеть сброс и процент вне пути запросов: https://claude-meter.com/r/mb3ee9bz"
+          },
+          {
+            "author": "stgmt",
+            "date": "2026-07-13",
+            "preview": "Закрываю без реализации supervisor/relaunch в лаунчере. Для устойчивого переживания rate-limit нужно использовать API-прокси, который централизованно делает retry/backoff и маршрутизацию запросов (нап"
+          }
+        ],
+        "bodyPreview": "## Случай (что нас стопает)\n\nВо время автономного билд-цикла (например, spec-generator-v4 workflow, прогон тасков подряд) сессия Claude Code умирает на транзиентной ошибке:\n\n```\nAPI Error: Server is temporarily limiting requests (not your usage limit) · Rate limited\n```\n\nЭто **се"
+      }
+    ],
+    "false_positive": [
+      {
+        "n": 35,
+        "state": "OPEN",
+        "title": "claim-sanity-check: pre-claim verification gate для фактов (доделать)",
+        "created": "2026-06-01",
+        "updated": "2026-06-01",
+        "url": "https://github.com/stgmt/dev-pomogator/issues/35",
+        "labels": [],
+        "commentCount": 0,
+        "comments": [],
+        "bodyPreview": "Парковка скоупа «самопроверка фактов агента перед утверждением». Полный контекст — в `.specs/claim-sanity-check/RESEARCH.md` (статус TODO, фаза Discovery).\n\n## Зачем\nАгент выдаёт непроверённое за факт под давлением «дай ответ», чинит только из-под пинка юзера. Реактивировано двум"
+      }
+    ]
+  },
+  "claimIssues": [
+    {
+      "n": 193,
+      "state": "OPEN",
+      "title": "Создать отдельную issue в stgmt/dev-pomogator про постоянный HTTP 503 на managed HTTP Stop hook Stop/9/0 (claim-evidence",
+      "created": "2026-07-24",
+      "updated": "2026-07-24",
+      "c": 0,
+      "url": "https://github.com/stgmt/dev-pomogator/issues/193",
+      "last": null
+    },
+    {
+      "n": 161,
+      "state": "OPEN",
+      "title": "claim-evidence-gate слеп к прошлым ходам: требует перепрогон тестов, хотя они шли ходом раньше при неизменном коде (carry-over evidence)",
+      "created": "2026-07-23",
+      "updated": "2026-07-23",
+      "c": 1,
+      "url": "https://github.com/stgmt/dev-pomogator/issues/161",
+      "last": "## Верификация фикса (снимаю [UNVERIFIED]) Помимо юнит-логики (9/9), прогнал **живой e2e против самого бандла** (spawn процесса гейта с синтетическим транскрипт"
+    },
+    {
+      "n": 149,
+      "state": "OPEN",
+      "title": "claim-evidence-gate 12 раз требовал нарушить git-push-safety: «awaiting user permission» трактуется как fake hand-off",
+      "created": "2026-07-22",
+      "updated": "2026-07-22",
+      "c": 5,
+      "url": "https://github.com/stgmt/dev-pomogator/issues/149",
+      "last": "## Воспроизведено: откуда берётся «14 open tasks» и «задачи не из моего мандата» Механизм найден и посчитан. ### Цепочка 1. **Грязное рабочее дерево делает спек"
+    },
+    {
+      "n": 35,
+      "state": "OPEN",
+      "title": "claim-sanity-check: pre-claim verification gate для фактов (доделать)",
+      "created": "2026-06-01",
+      "updated": "2026-06-01",
+      "c": 0,
+      "url": "https://github.com/stgmt/dev-pomogator/issues/35",
+      "last": null
+    }
+  ]
+}

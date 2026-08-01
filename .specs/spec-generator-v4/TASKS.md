@@ -2614,3 +2614,180 @@ Phase 45 contains 10 planned TODO slices. All headers use the strict graph-nativ
   **Done When:**
   - [ ] Manual evidence recorded for SPECGEN004_668 and SPECGEN004_669 (not claimed via suite-green alone)
 
+
+
+## Phase 47 — Bounded, truthful MCP inventory and read-side query contracts (FR-82) (2026-08-01)
+
+> Immediate next phase. TDD order is deliberate: capture the real incident and corpus first, then lock the stale contract regression, implement bounded read-side handlers, wire real BDD evidence, and finish with dependency-absent bundle proof plus the authoritative verdict. Every task remains TODO until its own evidence is recorded; no implementation is claimed by this finalization.
+
+- [ ] Capture `wf_0315d03b-28` provenance artifact and baseline reproduction -- @feature82 — id: p47-fr82-incident-fixture — Status: TODO | Est: 120m
+  _depends: none_
+  _Requirements: [FR-82](FR.md#fr-82)
+  _Acceptance: [AC-82.8](ACCEPTANCE_CRITERIA.md#ac-828)
+  _Own scenario: SPECGEN004_677 (@feature82, pending) — real incident provenance, corpus artifact, and bounded baseline.
+  **Done When:**
+  - [ ] A captured real-producer artifact is retained outside the spec tree with source path, digest, capture date, ground-truth task cardinality, and enough provenance to reproduce the `wf_0315d03b-28` snapshot; no hand-invented response shape is used.
+  - [ ] The baseline reproduction records the stopped workflow, six spec-collector retries, 695 MCP calls, approximately 5.46 MB returned, and approximately 297–312k input tokens as incident measurements, explicitly marked evidence rather than an eternal performance claim.
+  - [ ] The fixture reconciliation names the expected task IDs/order and preserves the corpus needed by the later pagination and no-silent-cap checks.
+
+- [ ] Lock the stale `list_phase_tasks` contract and test regression -- @feature82 — id: p47-fr82-phase-contract-regression — Status: TODO | Est: 60m
+  _depends: hard:p47-fr82-incident-fixture_
+  _Requirements: [FR-82](FR.md#fr-82)
+  _Acceptance: [AC-82.7](ACCEPTANCE_CRITERIA.md#ac-827)
+  _Own scenario: SPECGEN004_676 (@feature82, pending) — truthful description/test regression through the real handler.
+  **Done When:**
+  - [ ] The live MCP description and integration assertion no longer claim that task nodes are absent or that every phase is empty; any remaining limitation is narrowed to the actual parser behavior.
+  - [ ] The regression proves live task nodes are queryable and distinguishes a populated phase, `EMPTY_PHASE`, and `PHASE_NOT_FOUND` without using an empty result as inventory evidence.
+  - [ ] The focused Docker BDD RED evidence is retained until the real handler contract is implemented, with the assertion wired to the captured corpus rather than a synthetic response.
+
+- [ ] Implement canonical bounded `list_tasks` inventory handler -- @feature82 — id: p47-fr82-list-tasks — Status: TODO | Est: 240m
+  _depends: hard:p47-fr82-phase-contract-regression_
+  _Requirements: [FR-82](FR.md#fr-82)
+  _Acceptance: [AC-82.1](ACCEPTANCE_CRITERIA.md#ac-821), [AC-82.2](ACCEPTANCE_CRITERIA.md#ac-822)
+  _Own scenario: SPECGEN004_670 and SPECGEN004_671 (@feature82, pending) — complete unfinished inventory and cardinality-preserving pagination.
+  **Done When:**
+  - [ ] The real handler accepts spec, statuses, phase, requirement, include-comments, bounded limit, and opaque cursor filters, and emits task id, title, status, phase, comment/rationale, linked requirements/issues, source location, and evidence-backed blockers only.
+  - [ ] Stable ordering and opaque cursor pagination return `total`, `returned`, `truncated`, and `next_cursor`; concatenated pages contain every matching canonical task exactly once with no silent cap or cardinality loss.
+  - [ ] The captured 280-task corpus proves the unfinished inventory completes in at most two pages at `limit: 200`, while the response remains bounded and deterministic.
+
+- [ ] Implement spec-scoped cursor-paginated `list_phase_tasks` -- @feature82 — id: p47-fr82-list-phase-tasks — Status: TODO | Est: 150m
+  _depends: hard:p47-fr82-list-tasks_
+  _Requirements: [FR-82](FR.md#fr-82)
+  _Acceptance: [AC-82.3](ACCEPTANCE_CRITERIA.md#ac-823)
+  _Own scenario: SPECGEN004_672 (@feature82, pending) — known-empty versus unknown phase and populated-phase pagination.
+  **Done When:**
+  - [ ] The handler is explicitly spec-scoped, accepts status filters, bounded limit, and opaque cursor, and shares deterministic response metadata with `list_tasks`.
+  - [ ] A canonical phase with no matching tasks returns `EMPTY_PHASE`; an unknown phase returns `PHASE_NOT_FOUND` plus nearest and existing canonical phase names; a populated phase returns its complete page set.
+  - [ ] The contract and focused BDD proof show that task nodes are live and that phase-name correction does not require an unbounded document or task crawl.
+
+- [ ] Implement spec-scoped cursor-paginated `search` -- @feature82 — id: p47-fr82-search-pagination — Status: TODO | Est: 150m
+  _depends: hard:p47-fr82-list-tasks_
+  _Requirements: [FR-82](FR.md#fr-82)
+  _Acceptance: [AC-82.4](ACCEPTANCE_CRITERIA.md#ac-824)
+  _Own scenario: SPECGEN004_673 (@feature82, pending) — complete stable search pagination within one spec.
+  **Done When:**
+  - [ ] Search accepts optional spec scope, existing query/type filters, bounded limit, and opaque cursor without changing the established filter semantics.
+  - [ ] Stable ordering makes concatenated cursor pages byte-equivalent to the complete unpaged matching set, with `total`, `returned`, `truncated`, and `next_cursor` conservation.
+  - [ ] A real corpus regression proves there is no hidden result cap, cross-spec leakage, or duplicate/missing node across pages.
+
+- [ ] Add compact `get_spec_status` summary and changed-source census reuse -- @feature82 — id: p47-fr82-summary-census — Status: TODO | Est: 120m
+  _depends: hard:p47-fr82-list-phase-tasks, hard:p47-fr82-search-pagination_
+  _Requirements: [FR-82](FR.md#fr-82)
+  _Acceptance: [AC-82.5](ACCEPTANCE_CRITERIA.md#ac-825)
+  _Own scenario: SPECGEN004_674 (@feature82, pending) — compact summary and unchanged-revision behavior.
+  **Done When:**
+  - [ ] `get_spec_status({view:"summary"})` returns compact status, inventory counts, and gap/run summary without embedding the full task or inventory payload.
+  - [ ] Repeated summary calls on an unchanged read-side graph revision reuse the existing summary/census result and do not recompute an unchanged global census.
+  - [ ] Changed-source invalidation refreshes only the affected census inputs, and the focused performance contract records measured call count/latency rather than relying on a checkbox.
+
+- [ ] Bound `read_spec_doc` pages and return nearest headings on section miss -- @feature82 — id: p47-fr82-read-doc-bounds — Status: TODO | Est: 120m
+  _depends: hard:p47-fr82-summary-census_
+  _Requirements: [FR-82](FR.md#fr-82)
+  _Acceptance: [AC-82.6](ACCEPTANCE_CRITERIA.md#ac-826)
+  _Own scenario: SPECGEN004_675 (@feature82, pending) — bounded reads, whole-document opt-in, and nearest anchors.
+  **Done When:**
+  - [ ] A non-paginated large-document read defaults to at most 200 lines, a single page never exceeds 500 lines, and a whole-document read requires explicit `whole_document: true` or a named refusal.
+  - [ ] `SECTION_NOT_FOUND` returns nearest canonical headings/anchors from the requested document, with enough context to correct the query without crawling.
+  - [ ] Boundary, continuation, and CRLF-preservation behavior are covered against a real large document and the response-size budget is measured.
+
+- [ ] Wire integration BDD step definitions against real handlers and captured artifact -- @feature82 — id: p47-fr82-bdd-integration — Status: TODO | Est: 240m
+  _depends: hard:p47-fr82-incident-fixture, hard:p47-fr82-phase-contract-regression, hard:p47-fr82-list-tasks, hard:p47-fr82-list-phase-tasks, hard:p47-fr82-search-pagination, hard:p47-fr82-summary-census, hard:p47-fr82-read-doc-bounds_
+  _Requirements: [FR-82](FR.md#fr-82)
+  _Acceptance: [AC-82.1](ACCEPTANCE_CRITERIA.md#ac-821), [AC-82.2](ACCEPTANCE_CRITERIA.md#ac-822), [AC-82.3](ACCEPTANCE_CRITERIA.md#ac-823), [AC-82.4](ACCEPTANCE_CRITERIA.md#ac-824), [AC-82.5](ACCEPTANCE_CRITERIA.md#ac-825), [AC-82.6](ACCEPTANCE_CRITERIA.md#ac-826), [AC-82.7](ACCEPTANCE_CRITERIA.md#ac-827), [AC-82.8](ACCEPTANCE_CRITERIA.md#ac-828), [AC-82.9](ACCEPTANCE_CRITERIA.md#ac-829)
+  _Scenario assignment: @feature82 pending — dedicated step-definition ownership must be assigned for the complete SPECGEN004_670..677 set before this task is marked ready.
+  **Done When:**
+  - [ ] Real integration step definitions bind SPECGEN004_670..677 to the live MCP handlers and captured incident/corpus artifact; no mocked MCP response or hand-authored producer shape is accepted.
+  - [ ] The proof asserts stable ordering, total/returned/truncated/next-cursor conservation, nearest phase/heading diagnostics, stale-description regression, and no N+1 crawl across all FR-82 query surfaces.
+  - [ ] Response-size and latency budgets are measured; the bounded verification path stays within at most three MCP calls and 512 KiB aggregate response bytes, with each named scenario classified from authoritative real-run evidence.
+
+- [ ] Rebuild MCP bundle, run dependency-absent/full verification, and obtain authoritative verdict -- @feature82 — id: p47-fr82-authoritative-verdict — Status: TODO | Est: 150m
+  _depends: hard:p47-fr82-bdd-integration_
+  _Requirements: [FR-82](FR.md#fr-82)
+  _Acceptance: [AC-82.8](ACCEPTANCE_CRITERIA.md#ac-828), [AC-82.9](ACCEPTANCE_CRITERIA.md#ac-829)
+  _Scenario assignment: @feature82 pending — dedicated bundle/deps-absent and authoritative-verdict trace must be assigned before this task is marked ready.
+  **Done When:**
+  - [ ] The distributed MCP bundle is rebuilt and launches against real spec data with project dependencies absent; the FR-82 path does not silently skip or report false success.
+  - [ ] Focused and full Docker BDD evidence records SPECGEN004_670..677 with real handler traces, response-size/latency budgets, and no undefined/pending substitution for a pass.
+  - [ ] The smart/authoritative spec verdict is captured after the evidence run, with FR-82 task statuses still TODO/ready until independently proven rather than hand-set DONE.
+
+## Phase 48 — BACKLOG/DEFERRED — Bounded agent packet and partial-result workflow (FR-83) (2026-08-01)
+
+> Deferred follow-up after Phase 47. This phase is explicitly BACKLOG/DEFERRED; no Dynamic Workflow implementation is authorized here. The implementation path and code owner remain TBD-owned-by-discovery until the first task below records repository-grounded options and a decision.
+
+- [ ] Discover the TBD Dynamic Workflow implementation path and code owner -- @feature83 — id: p48-fr83-discovery — Status: TODO | Est: 120m
+  _depends: hard:p47-fr82-authoritative-verdict_
+  _Requirements: [FR-83](FR.md#fr-83)
+  _Acceptance: [AC-83.1](ACCEPTANCE_CRITERIA.md#ac-831), [AC-83.2](ACCEPTANCE_CRITERIA.md#ac-832), [AC-83.3](ACCEPTANCE_CRITERIA.md#ac-833), [AC-83.4](ACCEPTANCE_CRITERIA.md#ac-834), [AC-83.5](ACCEPTANCE_CRITERIA.md#ac-835), [AC-83.6](ACCEPTANCE_CRITERIA.md#ac-836)
+  _Scenario assignment: @feature83 pending — discovery evidence must assign the implementation path and owner before any code task is created or started.
+  **Delivery:** BACKLOG/DEFERRED — starts only after the FR-82 phase dependency is satisfied; no implementation is authorized by this task.
+  **Done When:**
+  - [ ] Repository-grounded options for the Dynamic Workflow path, boundaries, and existing FR-33 orchestration seam are compared and recorded with evidence.
+  - [ ] One path and one accountable code owner are selected only after discovery; the decision records what remains out of scope and does not imply implementation.
+  - [ ] All downstream FR-83 tasks retain a hard dependency on this discovery decision, and no Dynamic Workflow code task is marked ready before it exists.
+
+- [ ] Define bounded agent packet maxima and partial-result fallback -- @feature83 — id: p48-fr83-bounded-packet — Status: TODO | Est: 150m
+  _depends: hard:p47-fr82-authoritative-verdict, hard:p48-fr83-discovery_
+  _Requirements: [FR-83](FR.md#fr-83)
+  _Acceptance: [AC-83.1](ACCEPTANCE_CRITERIA.md#ac-831)
+  _Own scenario: SPECGEN004_678 (@feature83, pending) — finite packet budgets and journaled partial fallback.
+  **Delivery:** BACKLOG/DEFERRED — no implementation starts before FR-82 completion and discovery-owned path selection.
+  **Done When:**
+  - [ ] A packet declares finite scope, maximum calls, rounds, wall time, response bytes/tokens, and an explicit stop condition before execution.
+  - [ ] Hitting any bound preserves partial results plus blocked/dropped scope state and a journaled stop reason without silently expanding work.
+  - [ ] The contract is independently queryable and does not authorize a Dynamic Workflow executor.
+
+- [ ] Implement at most one narrowed changed-strategy retry -- @feature83 — id: p48-fr83-narrowed-retry — Status: TODO | Est: 120m
+  _depends: hard:p47-fr83-bounded-packet_
+  _Requirements: [FR-83](FR.md#fr-83)
+  _Acceptance: [AC-83.2](ACCEPTANCE_CRITERIA.md#ac-832)
+  _Own scenario: SPECGEN004_679 (@feature83, pending) — classified failure and one narrowed retry.
+  **Delivery:** BACKLOG/DEFERRED — implementation remains blocked on the FR-82 phase and discovery decision.
+  **Done When:**
+  - [ ] Context exhaustion or `invalid_request` is classified and partial output is retained before any retry decision.
+  - [ ] The identical prompt is never resent automatically; the single permitted retry narrows scope, changes strategy, and records the reason.
+  - [ ] A second retry is refused deterministically and the packet remains queryable with its partial result.
+
+- [ ] Preserve partial-result barrier and completed sibling visibility -- @feature83 — id: p48-fr83-partial-barrier — Status: TODO | Est: 120m
+  _depends: hard:p48-fr83-bounded-packet, hard:p48-fr83-narrowed-retry_
+  _Requirements: [FR-83](FR.md#fr-83)
+  _Acceptance: [AC-83.3](ACCEPTANCE_CRITERIA.md#ac-833)
+  _Own scenario: SPECGEN004_680 (@feature83, pending) — completed branch survives sibling failure.
+  **Delivery:** BACKLOG/DEFERRED — no implementation is authorized before the discovery task resolves ownership.
+  **Done When:**
+  - [ ] A completed GitHub or other ready branch remains visible when a sibling spec branch fails or is dropped.
+  - [ ] Blocked and dropped scopes expose explicit reason, state, and provenance; the barrier never converts a failed branch into false success.
+  - [ ] Result assembly is deterministic and preserves every completed branch without requiring a retry of unaffected work.
+
+- [ ] Record bounded packet telemetry and repeated-key detection -- @feature83 — id: p48-fr83-telemetry — Status: TODO | Est: 150m
+  _depends: hard:p48-fr83-bounded-packet, hard:p48-fr83-narrowed-retry_
+  _Requirements: [FR-83](FR.md#fr-83)
+  _Acceptance: [AC-83.4](ACCEPTANCE_CRITERIA.md#ac-834)
+  _Own scenario: SPECGEN004_681 (@feature83, pending) — per-agent telemetry and repeated-key signal.
+  **Delivery:** BACKLOG/DEFERRED — telemetry design is not an implementation authorization.
+  **Done When:**
+  - [ ] Per-agent and per-branch journal records calls, input/output tokens when available, response bytes, scope, branch, retry/stop reason, and repeated-key detection.
+  - [ ] Repeated-key detection is deterministic, bounded, and distinguishable from a normal repeated content key; it cannot create an unbounded retry loop.
+  - [ ] Telemetry is redacted/safe for the spec-MCP boundary and remains queryable when a branch is partial or blocked.
+
+- [ ] Run deterministic collectors before any model loop -- @feature83 — id: p48-fr83-deterministic-collectors — Status: TODO | Est: 150m
+  _depends: hard:p48-fr83-discovery, hard:p48-fr83-bounded-packet_
+  _Requirements: [FR-83](FR.md#fr-83)
+  _Acceptance: [AC-83.5](ACCEPTANCE_CRITERIA.md#ac-835)
+  _Own scenario: SPECGEN004_682 (@feature83, pending) — collector-first evidence ordering.
+  **Delivery:** BACKLOG/DEFERRED — collector design and ownership remain downstream of discovery.
+  **Done When:**
+  - [ ] Deterministic GitHub/spec collectors persist evidence before a model loop begins, with source, scope, digest, and ordering recorded.
+  - [ ] The model loop consumes the persisted collector output rather than rediscovering the same repository or MCP inventory through repeated calls.
+  - [ ] Collector execution remains bounded and deterministic, with failure state visible to downstream packet assembly.
+
+- [ ] Regress `wf_0315d03b-28` with bounded early-stop and partial output -- @feature83 — id: p48-fr83-incident-regression — Status: TODO | Est: 150m
+  _depends: hard:p48-fr83-partial-barrier, hard:p48-fr83-telemetry, hard:p48-fr83-deterministic-collectors_
+  _Requirements: [FR-83](FR.md#fr-83)
+  _Acceptance: [AC-83.6](ACCEPTANCE_CRITERIA.md#ac-836)
+  _Own scenario: SPECGEN004_683 (@feature83, pending) — real incident early stop and preserved completed collector output.
+  **Delivery:** BACKLOG/DEFERRED — this is a follow-up regression only; FR-83 is not immediate and no Dynamic Workflow implementation is implied.
+  **Done When:**
+  - [ ] The real provenance artifact replays a completed GitHub collector and the six spec-collector retries without replacing them with a synthetic failure shape.
+  - [ ] Repeated spec failure is classified, execution stops within the declared bounds, and completed GitHub output remains visible beside blocked/dropped spec scope.
+  - [ ] The deferred authoritative verdict records the exact scenario evidence and does not promote FR-83 tasks to DONE from a partial or filtered run.
+

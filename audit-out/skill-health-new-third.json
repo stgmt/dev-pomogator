@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "root": "E:/repos/dev-pomogator",
+  "skillsScanned": 54,
+  "findings": [
+    {
+      "code": "MIRROR_DRIFT",
+      "file": ".agents/skills/meridian-model-call/SKILL.md",
+      "line": 1,
+      "severity": "error",
+      "message": "mirror differs from .claude/skills/meridian-model-call/SKILL.md under adapted policy",
+      "fingerprint": null,
+      "baselined": false
+    },
+    {
+      "code": "LOCAL_REFERENCE_MISSING",
+      "file": ".claude/skills/spec-review/SKILL.md",
+      "line": 68,
+      "severity": "error",
+      "message": "local reference does not exist: references/category-14-memory-constraints.md",
+      "fingerprint": "0ca27ae527fe2ec2fb7c81c362a28334ff29195cb83b5d3a0b53cd9bd00d4fc9",
+      "baselined": false
+    },
+    {
+      "code": "LOCAL_REFERENCE_MISSING",
+      "file": ".claude/skills/tests-create-update/SKILL.md",
+      "line": 171,
+      "severity": "error",
+      "message": "local reference does not exist: ?:function|class|const|import|export|async|interface",
+      "fingerprint": "58852ed871d56ccf785d29cf8d7436ae10679e2aacc54f16f89c5743284f2a47",
+      "baselined": false
+    },
+    {
+      "code": "REFERENCE_ESCAPES_ROOT",
+      "file": ".claude/skills/variant-matrix-build/SKILL.md",
+      "line": 198,
+      "severity": "error",
+      "message": "reference escapes plugin root: ../../../../scope-gate/.claude/skills/verify-generic-scope-fix/SKILL.md",
+      "fingerprint": "3dd600e2d4d2963aff1775ce4772536bad1cb8af521d641ff6c4cb0d668faf7e",
+      "baselined": false
+    },
+    {
+      "code": "REFERENCE_ESCAPES_ROOT",
+      "file": ".claude/skills/verify-generic-scope-fix/SKILL.md",
+      "line": 100,
+      "severity": "error",
+      "message": "reference escapes plugin root: ../../../../.specs/verify-generic-scope-fix/README.md",
+      "fingerprint": "081c81b60e863bef749ca37cef904042bbd629e31c01ca504cec4edce0b8f300",
+      "baselined": false
+    }
+  ],
+  "blocking": 5
+}

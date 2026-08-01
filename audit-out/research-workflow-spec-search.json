@@ -1,0 +1,154 @@
+{
+  "ok": true,
+  "results": [
+    {
+      "id": "specs-management-as-skill:FR-5",
+      "type": "FR",
+      "file": ".specs/specs-management-as-skill/FR.md",
+      "line": 47,
+      "title": "research-workflow extracted as standalone skill AND invoked by create-spec @feature5",
+      "tested_by": [],
+      "covered": false
+    },
+    {
+      "id": "spec-generator-v4:Decision-phase-6-added-architecture-research-workflow-skill-meta-deliverable",
+      "type": "Decision",
+      "file": ".specs/spec-generator-v4/DESIGN.md",
+      "line": 229,
+      "title": "Phase 6 added — architecture-research-workflow skill (meta-deliverable)",
+      "tested_by": [],
+      "covered": false
+    },
+    {
+      "id": "spec-generator-v4:FR-12",
+      "type": "FR",
+      "file": ".specs/spec-generator-v4/FR.md",
+      "line": 181,
+      "title": "Phase 6 — architecture-research-workflow skill (meta-deliverable)",
+      "tested_by": [
+        "spec-generator-v4:SCEN-specgen004-26-architecture-research-workflow-skill-produces-7-stage-outputs-phase-6",
+        "spec-generator-v4:SCEN-specgen004-27-architecture-research-workflow-skill-suggests-rewind-on-new-constraint",
+        "spec-generator-v4:SCEN-specgen004-28-create-spec-uses-regular-research-workflow-for-small-feature-complexity-heuristic",
+        "spec-generator-v4:SCEN-specgen004-531-shared-research-base-is-the-single-discipline-source-for-both-research-skills",
+        "spec-generator-v4:SCEN-specgen004-532-create-spec-routes-architecture-research-and-honors-research-done-recursion-guard",
+        "spec-generator-v4:SCEN-specgen004-234-detectcomplexity-routes-to-architecture-research-workflow-on-russian-keyword",
+        "spec-generator-v4:SCEN-specgen004-235-detectcomplexity-routes-to-architecture-research-workflow-on-english-rebuild-keyword",
+        "spec-generator-v4:SCEN-specgen004-236-detectcomplexity-routes-to-architecture-research-workflow-on-version-bump-keyword-like-v4",
+        "spec-generator-v4:SCEN-specgen004-237-detectcomplexity-routes-to-architecture-research-workflow-when-3-pascalcase-component-nouns-are-present",
+        "spec-generator-v4:SCEN-specgen004-238-detectcomplexity-routes-to-regular-research-workflow-when-no-keyword-and-fewer-than-3-component-nouns",
+        "spec-generator-v4:SCEN-specgen004-239-detectcomplexity-keyword-wins-over-component-count-early-exit",
+        "spec-generator-v4:SCEN-specgen004-240-detectcomplexity-explains-the-verdict-in-plain-language"
+      ],
+      "covered": true
+    },
+    {
+      "id": "spec-generator-v4:Story-12-phase-6-architecture-research-workflow-skill-priority-p2",
+      "type": "Story",
+      "file": ".specs/spec-generator-v4/USER_STORIES.md",
+      "line": 284,
+      "title": "Phase 6 — architecture-research-workflow skill (Priority: P2)",
+      "tested_by": [],
+      "covered": false
+    },
+    {
+      "id": "spec-generator-v4:enrich-research-workflow",
+      "type": "Task",
+      "file": ".specs/spec-generator-v4/TASKS.md",
+      "line": 531,
+      "title": "Enrich research-workflow -- @feature12",
+      "tested_by": [],
+      "covered": false
+    },
+    {
+      "id": "specs-management-as-skill:SCEN-specmgt001-10-research-workflow-skill-is-registered-separately",
+      "type": "Scenario",
+      "file": ".specs/specs-management-as-skill/specs-management-as-skill.feature",
+      "line": 99,
+      "title": "SPECMGT001_10 research-workflow skill is registered separately",
+      "tested_by": [],
+      "covered": false
+    },
+    {
+      "id": "spec-generator-v4:SCEN-specgen004-26-architecture-research-workflow-skill-produces-7-stage-outputs-phase-6",
+      "type": "Scenario",
+      "file": ".specs/spec-generator-v4/spec-generator-v4.feature",
+      "line": 228,
+      "title": "SPECGEN004_26 architecture-research-workflow skill produces 7 stage outputs (Phase 6)",
+      "tested_by": [],
+      "covered": false
+    },
+    {
+      "id": "spec-generator-v4:SCEN-specgen004-27-architecture-research-workflow-skill-suggests-rewind-on-new-constraint",
+      "type": "Scenario",
+      "file": ".specs/spec-generator-v4/spec-generator-v4.feature",
+      "line": 236,
+      "title": "SPECGEN004_27 architecture-research-workflow skill suggests rewind on new constraint",
+      "tested_by": [],
+      "covered": false
+    },
+    {
+      "id": "spec-generator-v4:SCEN-specgen004-28-create-spec-uses-regular-research-workflow-for-small-feature-complexity-heuristic",
+      "type": "Scenario",
+      "file": ".specs/spec-generator-v4/spec-generator-v4.feature",
+      "line": 244,
+      "title": "SPECGEN004_28 create-spec uses regular research-workflow for small feature (complexity heuristic)",
+      "tested_by": [],
+      "covered": false
+    },
+    {
+      "id": "spec-generator-v4:SCEN-specgen004-234-detectcomplexity-routes-to-architecture-research-workflow-on-russian-keyword",
+      "type": "Scenario",
+      "file": ".specs/spec-generator-v4/spec-generator-v4.feature",
+      "line": 1802,
+      "title": "SPECGEN004_234 detectComplexity routes to architecture-research-workflow on Russian \"архитектура\" keyword",
+      "tested_by": [],
+      "covered": false
+    },
+    {
+      "id": "spec-generator-v4:SCEN-specgen004-235-detectcomplexity-routes-to-architecture-research-workflow-on-english-rebuild-keyword",
+      "type": "Scenario",
+      "file": ".specs/spec-generator-v4/spec-generator-v4.feature",
+      "line": 1808,
+      "title": "SPECGEN004_235 detectComplexity routes to architecture-research-workflow on English \"rebuild\" keyword",
+      "tested_by": [],
+      "covered": false
+    },
+    {
+      "id": "spec-generator-v4:SCEN-specgen004-236-detectcomplexity-routes-to-architecture-research-workflow-on-version-bump-keyword-like-v4",
+      "type": "Scenario",
+      "file": ".specs/spec-generator-v4/spec-generator-v4.feature",
+      "line": 1814,
+      "title": "SPECGEN004_236 detectComplexity routes to architecture-research-workflow on version-bump keyword like \"v4\"",
+      "tested_by": [],
+      "covered": false
+    },
+    {
+      "id": "spec-generator-v4:SCEN-specgen004-237-detectcomplexity-routes-to-architecture-research-workflow-when-3-pascalcase-component-nouns-are-present",
+      "type": "Scenario",
+      "file": ".specs/spec-generator-v4/spec-generator-v4.feature",
+      "line": 1820,
+      "title": "SPECGEN004_237 detectComplexity routes to architecture-research-workflow when ≥3 PascalCase component nouns are present",
+      "tested_by": [],
+      "covered": false
+    },
+    {
+      "id": "spec-generator-v4:SCEN-specgen004-238-detectcomplexity-routes-to-regular-research-workflow-when-no-keyword-and-fewer-than-3-component-nouns",
+      "type": "Scenario",
+      "file": ".specs/spec-generator-v4/spec-generator-v4.feature",
+      "line": 1826,
+      "title": "SPECGEN004_238 detectComplexity routes to regular research-workflow when no keyword and fewer than 3 component nouns",
+      "tested_by": [],
+      "covered": false
+    },
+    {
+      "id": "SCEN-specmgt001-10-research-workflow-skill-is-registered-separately",
+      "type": "Scenario",
+      "file": "tests/features/plugins/specs-workflow/PLUGIN003_specs-workflow.feature",
+      "line": 93,
+      "title": "SPECMGT001_10 research-workflow skill is registered separately",
+      "tested_by": [],
+      "covered": false
+    }
+  ],
+  "count": 15
+}

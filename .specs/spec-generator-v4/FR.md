@@ -1328,3 +1328,45 @@ Claude Code remains the canonical install (marketplace plugin / repo dogfood: sk
 **Связанные AC:** [AC-81.1](ACCEPTANCE_CRITERIA.md#ac-811), [AC-81.2](ACCEPTANCE_CRITERIA.md#ac-812), [AC-81.3](ACCEPTANCE_CRITERIA.md#ac-813), [AC-81.4](ACCEPTANCE_CRITERIA.md#ac-814), [AC-81.5](ACCEPTANCE_CRITERIA.md#ac-815), [AC-81.6](ACCEPTANCE_CRITERIA.md#ac-816)
 **Use Case:** [UC-33](USE_CASES.md#uc-33)
 **User Story:** [User Story 61](USER_STORIES.md#user-story-61-cursor-uses-the-same-spec-door-priority-p1)
+
+
+## FR-82
+
+**Bounded, truthful MCP inventory and read-side query contracts (immediate)**
+
+**Delivery status:** Immediate Requirements-phase package. The SpecGraph MCP SHALL expose bounded, complete read-side queries whose contracts describe the live graph rather than a future parser state. The package SHALL support one complete task-inventory request followed by bounded verification; it SHALL NOT require an N×M crawl of task nodes.
+
+- **FR-82a (`list_tasks`):** The server SHALL expose `list_tasks({spec,statuses?,phase?,requirement?,include_comments?,limit?,cursor?})`. With no `statuses` filter it SHALL return every non-terminal task for the selected spec, so “give me every unfinished task” is one paginated collection operation. Each item SHALL include canonical task id, title, status, phase, comment or rationale when present, linked requirements, linked issues when present, and source file plus line/range. A blocker SHALL be emitted only with evidence identifying its source or verification; an unsupported or unevidenced blocker SHALL not be presented as fact. The response SHALL include `total`, `returned`, `truncated`, and an opaque `next_cursor` when more records remain.
+- **FR-82b (`list_phase_tasks`):** The query SHALL be spec-scoped and SHALL accept status filters, a bounded `limit`, and an opaque cursor. It SHALL use canonical phase names or return nearest canonical phase candidates. It SHALL distinguish `PHASE_NOT_FOUND` for an unknown phase from `EMPTY_PHASE` for a known phase with no matching tasks. Its description and tests SHALL state that live task nodes are available; they SHALL not claim that task phases are always absent until a future parser.
+- **FR-82c (`search`):** Search SHALL accept an optional spec scope and a cursor, and SHALL provide complete deterministic pagination with `total`, `returned`, `truncated`, and `next_cursor`; a silent result cap is forbidden. Existing query and type filters remain supported.
+- **FR-82d (`get_spec_status`):** `view: "summary"` SHALL provide a compact inventory/status view for agent routing without embedding the full task or inventory payload. On an unchanged read-side graph revision it SHALL reuse the existing summary/census result and SHALL not recompute an unchanged global census merely to answer the summary request.
+- **FR-82e (`read_spec_doc`):** A read without pagination or a section SHALL use a safe bounded page default of 200 lines and SHALL reject or require explicit `whole_document: true` for a large whole-document read. A single page SHALL be capped at 500 lines. `SECTION_NOT_FOUND` SHALL return nearest canonical headings/anchors from the requested document so the caller can correct the query without crawling the document.
+- **FR-82f (truthful contract regression):** The implementation contract, MCP tool metadata, and existing integration test SHALL be updated together. The live inventory already contains task nodes, so the stale “Task nodes are not produced by the Phase-1 parsers; populated in Phase 2B” claim SHALL be removed or narrowed to the actual limitation, and an empty phase SHALL never be used to imply that the task inventory is empty.
+- **FR-82g (incident and budget evidence):** The measured incident snapshot `wf_0315d03b-28` from 2026-08-01 SHALL be retained as incident evidence: a stopped workflow retried six collectors, made 695 MCP calls, returned approximately 5.46 MB, and reached approximately 297–312k input tokens across attempts. These measurements motivate the bounded contract and are not an eternal performance claim. Acceptance SHALL prove one bounded task-inventory request plus bounded verification, explicit response-size/latency budgets, deterministic cardinality, and no silent cap against a real captured corpus artifact.
+
+**Зависит от:** [FR-4](FR.md#fr-4), [FR-14](FR.md#fr-14), [FR-32](FR.md#fr-32), [FR-39](FR.md#fr-39), [FR-40](FR.md#fr-40).
+**Связанные AC:** [AC-82.1](ACCEPTANCE_CRITERIA.md#ac-821), [AC-82.2](ACCEPTANCE_CRITERIA.md#ac-822), [AC-82.3](ACCEPTANCE_CRITERIA.md#ac-823), [AC-82.4](ACCEPTANCE_CRITERIA.md#ac-824), [AC-82.5](ACCEPTANCE_CRITERIA.md#ac-825), [AC-82.6](ACCEPTANCE_CRITERIA.md#ac-826), [AC-82.7](ACCEPTANCE_CRITERIA.md#ac-827), [AC-82.8](ACCEPTANCE_CRITERIA.md#ac-828), [AC-82.9](ACCEPTANCE_CRITERIA.md#ac-829)
+**Use Case:** [UC-34](USE_CASES.md#uc-34)
+**User Story:** [User Story 62](USER_STORIES.md#user-story-62-bounded-task-inventory-and-truthful-read-contracts-priority-p1)
+
+---
+
+## FR-83
+
+**Deferred bounded agent packet and partial-result workflow contract**
+
+**Delivery status:** Deferred/backlog. This package is recorded now for deliberate follow-up after FR-82; no Dynamic Workflow implementation is authorized by this Requirements-phase transaction. FR-83 is a separate requirement because it governs bounded multi-agent execution and failure semantics, while FR-33 remains the thin routing/orchestration owner.
+
+- **FR-83a (finite packet):** A future agent packet SHALL declare finite scopes and hard maxima for tool calls, rounds, wall-clock time, response bytes, and response tokens, plus an explicit stop condition. When a budget or stop condition is reached, the packet SHALL preserve a partial-result fallback with scope-level state rather than expanding work silently.
+- **FR-83b (retry discipline):** Context exhaustion or `invalid_request` SHALL not trigger an automatic same-prompt retry. The system SHALL preserve the partial result, classify the failure, and retry at most once only with a narrowed scope and a changed strategy that is recorded in the journal.
+- **FR-83c (partial branch visibility):** A completed branch SHALL be surfaced even when a sibling fails. The result SHALL expose blocked and dropped scopes with reasons; a failed spec branch SHALL not hide ready GitHub or other completed collector output.
+- **FR-83d (telemetry):** Each agent SHALL report calls, input/output tokens when available, response bytes, repeated-key detection, and a journaled retry/stop reason. Telemetry SHALL identify the scope and branch that produced each partial result.
+- **FR-83e (collector ordering):** Deterministic collectors SHALL run and persist their evidence before model loops. A model loop SHALL consume collector output rather than rediscovering the same repository or MCP inventory through repeated calls.
+- **FR-83f (incident regression):** The deferred regression SHALL use the real provenance of `wf_0315d03b-28`: the GitHub collector completed while the spec collector retried six times. Future behavior SHALL stop early, classify the repeated failure, and surface the completed GitHub output plus blocked/dropped spec scope.
+
+**Зависит от:** [FR-82](FR.md#fr-82), [FR-33](FR.md#fr-33), [FR-41](FR.md#fr-41).
+**Связанные AC:** [AC-83.1](ACCEPTANCE_CRITERIA.md#ac-831), [AC-83.2](ACCEPTANCE_CRITERIA.md#ac-832), [AC-83.3](ACCEPTANCE_CRITERIA.md#ac-833), [AC-83.4](ACCEPTANCE_CRITERIA.md#ac-834), [AC-83.5](ACCEPTANCE_CRITERIA.md#ac-835), [AC-83.6](ACCEPTANCE_CRITERIA.md#ac-836)
+**Use Case:** [UC-35](USE_CASES.md#uc-35)
+**User Story:** [User Story 63](USER_STORIES.md#user-story-63-bounded-agent-packet-with-partial-results-priority-p2)
+
+---

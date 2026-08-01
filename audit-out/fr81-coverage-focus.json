@@ -1,0 +1,21 @@
+{
+  "ok": true,
+  "lifecycle_note": "Canonical suite not updated by filtered @feature81 run; 665–667 passed in Docker filtered; 668–669 pending live",
+  "fr81_buckets": {
+    "passed": [],
+    "stale": [],
+    "pending": [],
+    "not_run": [
+      "spec-generator-v4:SCEN-specgen004-665-cursor-mcp-twin-file-ships-the-door-bundle",
+      "spec-generator-v4:SCEN-specgen004-666-root-and-cursor-door-entries-stay-equivalent",
+      "spec-generator-v4:SCEN-specgen004-667-resolvereporoot-tolerates-cursor-like-placeholder-env",
+      "spec-generator-v4:SCEN-specgen004-668-cursor-session-lists-the-mcp-door",
+      "spec-generator-v4:SCEN-specgen004-669-cursor-enforce-denies-raw-specs-write-and-mcp-apply-succeeds"
+    ],
+    "undefined": [],
+    "ambiguous": [],
+    "failed": [],
+    "skipped": []
+  },
+  "focused": null
+}

@@ -1,0 +1,8 @@
+{
+  "action": "apply",
+  "spec": "specs-management-as-skill",
+  "doc": "ACCEPTANCE_CRITERIA.md",
+  "old_string": "WHEN `references/phase1_discovery.md` is read THEN it SHALL document calling `Skill(\"research-workflow\")` as a sub-step before filling RESEARCH.md technical findings.\r\n",
+  "new_string": "WHEN `references/phase1_discovery.md` is read THEN it SHALL document calling `Skill(\"research-workflow\")` as a sub-step before filling RESEARCH.md technical findings.\r\n\r\nWHEN a research prompt specifies a maximum price, region, availability, condition, deadline, or explicit include/exclude constraint THEN `research-workflow` SHALL list that constraint as a hard eligibility gate before search AND SHALL exclude candidates with failed or unverified gates before deep research, ranking, and recommendation.\r\n\r\nWHEN the workflow recommends a product THEN it SHALL re-verify current total price and availability immediately before the recommendation; a product above the user's ceiling (for example, above EUR 200) SHALL appear only in a rejected table and SHALL NOT appear in the recommendation list.\r\n\r\nWHEN research evaluates model/provider availability THEN it SHALL verify the real consumer's provider, endpoint/protocol, direct-vs-routed model ID, exact credential sources, persistence boundary, and multi-credential precedence. A request failure caused by an unsupported credential variable SHALL be classified as configuration incompatibility, not model unavailability.\r\n",
+  "reason": "Add executable acceptance rules for hard product constraints and model-provider credential verification. [skip-spec-steer: amend existing AC through spec door]"
+}

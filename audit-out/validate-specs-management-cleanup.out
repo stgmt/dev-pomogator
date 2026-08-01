@@ -1,0 +1,1063 @@
+{
+  "valid": true,
+  "path": ".specs/specs-management-as-skill",
+  "errors": [],
+  "warnings": [
+    {
+      "file": "specs-management-as-skill.feature",
+      "rule": "FEATURE_NAMING",
+      "message": "Feature name should follow format: {DOMAIN}{NNN}_{Название}"
+    },
+    {
+      "file": "specs-management-as-skill_SCHEMA.md",
+      "line": 1,
+      "rule": "PLACEHOLDER",
+      "message": "Unfilled placeholder found: {Feature Name}"
+    },
+    {
+      "file": "specs-management-as-skill_SCHEMA.md",
+      "line": 3,
+      "rule": "PLACEHOLDER",
+      "message": "Unfilled placeholder found: {Сущность 1}"
+    },
+    {
+      "file": "specs-management-as-skill_SCHEMA.md",
+      "line": 13,
+      "rule": "PLACEHOLDER",
+      "message": "Unfilled placeholder found: {описание}"
+    },
+    {
+      "file": "specs-management-as-skill_SCHEMA.md",
+      "line": 14,
+      "rule": "PLACEHOLDER",
+      "message": "Unfilled placeholder found: {описание}"
+    },
+    {
+      "file": "specs-management-as-skill_SCHEMA.md",
+      "line": 15,
+      "rule": "PLACEHOLDER",
+      "message": "Unfilled placeholder found: {описание}"
+    },
+    {
+      "file": "specs-management-as-skill_SCHEMA.md",
+      "line": 17,
+      "rule": "PLACEHOLDER",
+      "message": "Unfilled placeholder found: {Сущность 2}"
+    },
+    {
+      "file": "specs-management-as-skill_SCHEMA.md",
+      "line": 26,
+      "rule": "PLACEHOLDER",
+      "message": "Unfilled placeholder found: {описание}"
+    },
+    {
+      "file": "specs-management-as-skill_SCHEMA.md",
+      "line": 27,
+      "rule": "PLACEHOLDER",
+      "message": "Unfilled placeholder found: {описание}"
+    },
+    {
+      "file": "specs-management-as-skill_SCHEMA.md",
+      "line": 31,
+      "rule": "PLACEHOLDER",
+      "message": "Unfilled placeholder found: {Правило 1}"
+    },
+    {
+      "file": "specs-management-as-skill_SCHEMA.md",
+      "line": 32,
+      "rule": "PLACEHOLDER",
+      "message": "Unfilled placeholder found: {Правило 2}"
+    },
+    {
+      "file": "ACCEPTANCE_CRITERIA.md",
+      "line": 5,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-1](FR.md#fr-1-skill-structure-with-progressive-disclosure-feature1) - anchor '#fr-1-skill-structure-with-progressive-disclosure-feature1' not found in FR.md"
+    },
+    {
+      "file": "ACCEPTANCE_CRITERIA.md",
+      "line": 15,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-2](FR.md#fr-2-reference-file-naming-convention-phasenmdescriptive-feature2) - anchor '#fr-2-reference-file-naming-convention-phasenmdescriptive-feature2' not found in FR.md"
+    },
+    {
+      "file": "ACCEPTANCE_CRITERIA.md",
+      "line": 25,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-3](FR.md#fr-3-phase-3-audit-categories-split-into-separate-files-feature3) - anchor '#fr-3-phase-3-audit-categories-split-into-separate-files-feature3' not found in FR.md"
+    },
+    {
+      "file": "ACCEPTANCE_CRITERIA.md",
+      "line": 37,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-4](FR.md#fr-4-hard-cutover-migration-via-installer-feature4) - anchor '#fr-4-hard-cutover-migration-via-installer-feature4' not found in FR.md"
+    },
+    {
+      "file": "ACCEPTANCE_CRITERIA.md",
+      "line": 49,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-5](FR.md#fr-5-research-workflow-extracted-as-standalone-skill-and-invoked-by-create-spec-feature5) - anchor '#fr-5-research-workflow-extracted-as-standalone-skill-and-invoked-by-create-spec-feature5' not found in FR.md"
+    },
+    {
+      "file": "ACCEPTANCE_CRITERIA.md",
+      "line": 65,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-6](FR.md#fr-6-source-rule-files-removed-atomically-feature4) - anchor '#fr-6-source-rule-files-removed-atomically-feature4' not found in FR.md"
+    },
+    {
+      "file": "ACCEPTANCE_CRITERIA.md",
+      "line": 75,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-7](FR.md#fr-7-extensionjson-manifest-updated-atomically-feature4) - anchor '#fr-7-extensionjson-manifest-updated-atomically-feature4' not found in FR.md"
+    },
+    {
+      "file": "ACCEPTANCE_CRITERIA.md",
+      "line": 89,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-8](FR.md#fr-8-claudemd-glossary-synced-with-new-skill-layout-feature4) - anchor '#fr-8-claudemd-glossary-synced-with-new-skill-layout-feature4' not found in FR.md"
+    },
+    {
+      "file": "ACCEPTANCE_CRITERIA.md",
+      "line": 99,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-9](FR.md#fr-9-skill-description-preserves-all-trigger-phrases-feature5) - anchor '#fr-9-skill-description-preserves-all-trigger-phrases-feature5' not found in FR.md"
+    },
+    {
+      "file": "ACCEPTANCE_CRITERIA.md",
+      "line": 109,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-10](FR.md#fr-10-allowed-tools-covers-full-workflow-feature5) - anchor '#fr-10-allowed-tools-covers-full-workflow-feature5' not found in FR.md"
+    },
+    {
+      "file": "ACCEPTANCE_CRITERIA.md",
+      "line": 119,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-11](FR.md#fr-11-specs-validation-hook-unaffected-by-migration-feature4) - anchor '#fr-11-specs-validation-hook-unaffected-by-migration-feature4' not found in FR.md"
+    },
+    {
+      "file": "ACCEPTANCE_CRITERIA.md",
+      "line": 137,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-13](FR.md#fr-13-token-efficiency-floor-for-non-spec-sessions-feature1) - anchor '#fr-13-token-efficiency-floor-for-non-spec-sessions-feature1' not found in FR.md"
+    },
+    {
+      "file": "DESIGN.md",
+      "line": 5,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-1: Skill structure with progressive disclosure](FR.md#fr-1-skill-structure-with-progressive-disclosure-feature1) - anchor '#fr-1-skill-structure-with-progressive-disclosure-feature1' not found in FR.md"
+    },
+    {
+      "file": "DESIGN.md",
+      "line": 6,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-2: Reference file naming convention](FR.md#fr-2-reference-file-naming-convention-phasenmdescriptive-feature2) - anchor '#fr-2-reference-file-naming-convention-phasenmdescriptive-feature2' not found in FR.md"
+    },
+    {
+      "file": "DESIGN.md",
+      "line": 7,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-3: Phase 3+ Audit categories split](FR.md#fr-3-phase-3-audit-categories-split-into-separate-files-feature3) - anchor '#fr-3-phase-3-audit-categories-split-into-separate-files-feature3' not found in FR.md"
+    },
+    {
+      "file": "DESIGN.md",
+      "line": 8,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-4: Hard cutover migration via installer](FR.md#fr-4-hard-cutover-migration-via-installer-feature4) - anchor '#fr-4-hard-cutover-migration-via-installer-feature4' not found in FR.md"
+    },
+    {
+      "file": "DESIGN.md",
+      "line": 9,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-5: research-workflow extracted as standalone skill](FR.md#fr-5-research-workflow-extracted-as-standalone-skill-and-invoked-by-create-spec-feature5) - anchor '#fr-5-research-workflow-extracted-as-standalone-skill-and-invoked-by-create-spec-feature5' not found in FR.md"
+    },
+    {
+      "file": "DESIGN.md",
+      "line": 10,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-6: Source rule files removed atomically](FR.md#fr-6-source-rule-files-removed-atomically-feature4) - anchor '#fr-6-source-rule-files-removed-atomically-feature4' not found in FR.md"
+    },
+    {
+      "file": "DESIGN.md",
+      "line": 11,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-7: extension.json manifest updated atomically](FR.md#fr-7-extensionjson-manifest-updated-atomically-feature4) - anchor '#fr-7-extensionjson-manifest-updated-atomically-feature4' not found in FR.md"
+    },
+    {
+      "file": "DESIGN.md",
+      "line": 12,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-8: CLAUDE.md glossary synced](FR.md#fr-8-claudemd-glossary-synced-with-new-skill-layout-feature4) - anchor '#fr-8-claudemd-glossary-synced-with-new-skill-layout-feature4' not found in FR.md"
+    },
+    {
+      "file": "DESIGN.md",
+      "line": 13,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-9: Skill description preserves trigger phrases](FR.md#fr-9-skill-description-preserves-all-trigger-phrases-feature5) - anchor '#fr-9-skill-description-preserves-all-trigger-phrases-feature5' not found in FR.md"
+    },
+    {
+      "file": "DESIGN.md",
+      "line": 14,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-10: allowed-tools covers full workflow](FR.md#fr-10-allowed-tools-covers-full-workflow-feature5) - anchor '#fr-10-allowed-tools-covers-full-workflow-feature5' not found in FR.md"
+    },
+    {
+      "file": "DESIGN.md",
+      "line": 15,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-11: specs-validation hook unaffected](FR.md#fr-11-specs-validation-hook-unaffected-by-migration-feature4) - anchor '#fr-11-specs-validation-hook-unaffected-by-migration-feature4' not found in FR.md"
+    },
+    {
+      "file": "DESIGN.md",
+      "line": 16,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-13: Token efficiency floor](FR.md#fr-13-token-efficiency-floor-for-non-spec-sessions-feature1) - anchor '#fr-13-token-efficiency-floor-for-non-spec-sessions-feature1' not found in FR.md"
+    },
+    {
+      "file": "FILE_CHANGES.md",
+      "line": 11,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-1](FR.md#fr-1-skill-structure-with-progressive-disclosure-feature1) - anchor '#fr-1-skill-structure-with-progressive-disclosure-feature1' not found in FR.md"
+    },
+    {
+      "file": "FILE_CHANGES.md",
+      "line": 11,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-9](FR.md#fr-9-skill-description-preserves-all-trigger-phrases-feature5) - anchor '#fr-9-skill-description-preserves-all-trigger-phrases-feature5' not found in FR.md"
+    },
+    {
+      "file": "FILE_CHANGES.md",
+      "line": 11,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-10](FR.md#fr-10-allowed-tools-covers-full-workflow-feature5) - anchor '#fr-10-allowed-tools-covers-full-workflow-feature5' not found in FR.md"
+    },
+    {
+      "file": "FILE_CHANGES.md",
+      "line": 12,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-1](FR.md#fr-1-skill-structure-with-progressive-disclosure-feature1) - anchor '#fr-1-skill-structure-with-progressive-disclosure-feature1' not found in FR.md"
+    },
+    {
+      "file": "FILE_CHANGES.md",
+      "line": 13,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-2](FR.md#fr-2-reference-file-naming-convention-phasenmdescriptive-feature2) - anchor '#fr-2-reference-file-naming-convention-phasenmdescriptive-feature2' not found in FR.md"
+    },
+    {
+      "file": "FILE_CHANGES.md",
+      "line": 14,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-1](FR.md#fr-1-skill-structure-with-progressive-disclosure-feature1) - anchor '#fr-1-skill-structure-with-progressive-disclosure-feature1' not found in FR.md"
+    },
+    {
+      "file": "FILE_CHANGES.md",
+      "line": 15,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-1](FR.md#fr-1-skill-structure-with-progressive-disclosure-feature1) - anchor '#fr-1-skill-structure-with-progressive-disclosure-feature1' not found in FR.md"
+    },
+    {
+      "file": "FILE_CHANGES.md",
+      "line": 16,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-1](FR.md#fr-1-skill-structure-with-progressive-disclosure-feature1) - anchor '#fr-1-skill-structure-with-progressive-disclosure-feature1' not found in FR.md"
+    },
+    {
+      "file": "FILE_CHANGES.md",
+      "line": 17,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-3](FR.md#fr-3-phase-3-audit-categories-split-into-separate-files-feature3) - anchor '#fr-3-phase-3-audit-categories-split-into-separate-files-feature3' not found in FR.md"
+    },
+    {
+      "file": "FILE_CHANGES.md",
+      "line": 18,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-3](FR.md#fr-3-phase-3-audit-categories-split-into-separate-files-feature3) - anchor '#fr-3-phase-3-audit-categories-split-into-separate-files-feature3' not found in FR.md"
+    },
+    {
+      "file": "FILE_CHANGES.md",
+      "line": 19,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-3](FR.md#fr-3-phase-3-audit-categories-split-into-separate-files-feature3) - anchor '#fr-3-phase-3-audit-categories-split-into-separate-files-feature3' not found in FR.md"
+    },
+    {
+      "file": "FILE_CHANGES.md",
+      "line": 20,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-3](FR.md#fr-3-phase-3-audit-categories-split-into-separate-files-feature3) - anchor '#fr-3-phase-3-audit-categories-split-into-separate-files-feature3' not found in FR.md"
+    },
+    {
+      "file": "FILE_CHANGES.md",
+      "line": 21,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-3](FR.md#fr-3-phase-3-audit-categories-split-into-separate-files-feature3) - anchor '#fr-3-phase-3-audit-categories-split-into-separate-files-feature3' not found in FR.md"
+    },
+    {
+      "file": "FILE_CHANGES.md",
+      "line": 22,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-3](FR.md#fr-3-phase-3-audit-categories-split-into-separate-files-feature3) - anchor '#fr-3-phase-3-audit-categories-split-into-separate-files-feature3' not found in FR.md"
+    },
+    {
+      "file": "FILE_CHANGES.md",
+      "line": 23,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-3](FR.md#fr-3-phase-3-audit-categories-split-into-separate-files-feature3) - anchor '#fr-3-phase-3-audit-categories-split-into-separate-files-feature3' not found in FR.md"
+    },
+    {
+      "file": "FILE_CHANGES.md",
+      "line": 24,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-3](FR.md#fr-3-phase-3-audit-categories-split-into-separate-files-feature3) - anchor '#fr-3-phase-3-audit-categories-split-into-separate-files-feature3' not found in FR.md"
+    },
+    {
+      "file": "FILE_CHANGES.md",
+      "line": 25,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-1](FR.md#fr-1-skill-structure-with-progressive-disclosure-feature1) - anchor '#fr-1-skill-structure-with-progressive-disclosure-feature1' not found in FR.md"
+    },
+    {
+      "file": "FILE_CHANGES.md",
+      "line": 26,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-1](FR.md#fr-1-skill-structure-with-progressive-disclosure-feature1) - anchor '#fr-1-skill-structure-with-progressive-disclosure-feature1' not found in FR.md"
+    },
+    {
+      "file": "FILE_CHANGES.md",
+      "line": 27,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-1](FR.md#fr-1-skill-structure-with-progressive-disclosure-feature1) - anchor '#fr-1-skill-structure-with-progressive-disclosure-feature1' not found in FR.md"
+    },
+    {
+      "file": "FILE_CHANGES.md",
+      "line": 28,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-6](FR.md#fr-6-source-rule-files-removed-atomically-feature4) - anchor '#fr-6-source-rule-files-removed-atomically-feature4' not found in FR.md"
+    },
+    {
+      "file": "FILE_CHANGES.md",
+      "line": 29,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-6](FR.md#fr-6-source-rule-files-removed-atomically-feature4) - anchor '#fr-6-source-rule-files-removed-atomically-feature4' not found in FR.md"
+    },
+    {
+      "file": "FILE_CHANGES.md",
+      "line": 30,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-6](FR.md#fr-6-source-rule-files-removed-atomically-feature4) - anchor '#fr-6-source-rule-files-removed-atomically-feature4' not found in FR.md"
+    },
+    {
+      "file": "FILE_CHANGES.md",
+      "line": 36,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-5](FR.md#fr-5-research-workflow-extracted-as-standalone-skill-and-invoked-by-create-spec-feature5) - anchor '#fr-5-research-workflow-extracted-as-standalone-skill-and-invoked-by-create-spec-feature5' not found in FR.md"
+    },
+    {
+      "file": "FILE_CHANGES.md",
+      "line": 42,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-6](FR.md#fr-6-source-rule-files-removed-atomically-feature4) - anchor '#fr-6-source-rule-files-removed-atomically-feature4' not found in FR.md"
+    },
+    {
+      "file": "FILE_CHANGES.md",
+      "line": 43,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-6](FR.md#fr-6-source-rule-files-removed-atomically-feature4) - anchor '#fr-6-source-rule-files-removed-atomically-feature4' not found in FR.md"
+    },
+    {
+      "file": "FILE_CHANGES.md",
+      "line": 44,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-5](FR.md#fr-5-research-workflow-extracted-as-standalone-skill-and-invoked-by-create-spec-feature5) - anchor '#fr-5-research-workflow-extracted-as-standalone-skill-and-invoked-by-create-spec-feature5' not found in FR.md"
+    },
+    {
+      "file": "FILE_CHANGES.md",
+      "line": 44,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-6](FR.md#fr-6-source-rule-files-removed-atomically-feature4) - anchor '#fr-6-source-rule-files-removed-atomically-feature4' not found in FR.md"
+    },
+    {
+      "file": "FILE_CHANGES.md",
+      "line": 45,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-6](FR.md#fr-6-source-rule-files-removed-atomically-feature4) - anchor '#fr-6-source-rule-files-removed-atomically-feature4' not found in FR.md"
+    },
+    {
+      "file": "FILE_CHANGES.md",
+      "line": 45,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-11](FR.md#fr-11-specs-validation-hook-unaffected-by-migration-feature4) - anchor '#fr-11-specs-validation-hook-unaffected-by-migration-feature4' not found in FR.md"
+    },
+    {
+      "file": "FILE_CHANGES.md",
+      "line": 46,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-6](FR.md#fr-6-source-rule-files-removed-atomically-feature4) - anchor '#fr-6-source-rule-files-removed-atomically-feature4' not found in FR.md"
+    },
+    {
+      "file": "FILE_CHANGES.md",
+      "line": 47,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-6](FR.md#fr-6-source-rule-files-removed-atomically-feature4) - anchor '#fr-6-source-rule-files-removed-atomically-feature4' not found in FR.md"
+    },
+    {
+      "file": "FILE_CHANGES.md",
+      "line": 53,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-7](FR.md#fr-7-extensionjson-manifest-updated-atomically-feature4) - anchor '#fr-7-extensionjson-manifest-updated-atomically-feature4' not found in FR.md"
+    },
+    {
+      "file": "FILE_CHANGES.md",
+      "line": 54,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-8](FR.md#fr-8-claudemd-glossary-synced-with-new-skill-layout-feature4) - anchor '#fr-8-claudemd-glossary-synced-with-new-skill-layout-feature4' not found in FR.md"
+    },
+    {
+      "file": "FILE_CHANGES.md",
+      "line": 62,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-11](FR.md#fr-11-specs-validation-hook-unaffected-by-migration-feature4) - anchor '#fr-11-specs-validation-hook-unaffected-by-migration-feature4' not found in FR.md"
+    },
+    {
+      "file": "FILE_CHANGES.md",
+      "line": 63,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-11](FR.md#fr-11-specs-validation-hook-unaffected-by-migration-feature4) - anchor '#fr-11-specs-validation-hook-unaffected-by-migration-feature4' not found in FR.md"
+    },
+    {
+      "file": "FILE_CHANGES.md",
+      "line": 64,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-11](FR.md#fr-11-specs-validation-hook-unaffected-by-migration-feature4) - anchor '#fr-11-specs-validation-hook-unaffected-by-migration-feature4' not found in FR.md"
+    },
+    {
+      "file": "FILE_CHANGES.md",
+      "line": 65,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-11](FR.md#fr-11-specs-validation-hook-unaffected-by-migration-feature4) - anchor '#fr-11-specs-validation-hook-unaffected-by-migration-feature4' not found in FR.md"
+    },
+    {
+      "file": "FR.md",
+      "line": 10,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [AC-1](ACCEPTANCE_CRITERIA.md#ac-1-fr-1-feature1) - anchor '#ac-1-fr-1-feature1' not found in ACCEPTANCE_CRITERIA.md"
+    },
+    {
+      "file": "FR.md",
+      "line": 11,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [UC-1](USE_CASES.md#uc-1-trigger-via-natural-language-scaffolding-request-feature1-feature5) - anchor '#uc-1-trigger-via-natural-language-scaffolding-request-feature1-feature5' not found in USE_CASES.md"
+    },
+    {
+      "file": "FR.md",
+      "line": 19,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [AC-2](ACCEPTANCE_CRITERIA.md#ac-2-fr-2-feature2) - anchor '#ac-2-fr-2-feature2' not found in ACCEPTANCE_CRITERIA.md"
+    },
+    {
+      "file": "FR.md",
+      "line": 20,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [UC-2](USE_CASES.md#uc-2-resume-existing-spec-at-correct-phase-feature1-feature2) - anchor '#uc-2-resume-existing-spec-at-correct-phase-feature1-feature2' not found in USE_CASES.md"
+    },
+    {
+      "file": "FR.md",
+      "line": 28,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [AC-3](ACCEPTANCE_CRITERIA.md#ac-3-fr-3-feature3) - anchor '#ac-3-fr-3-feature3' not found in ACCEPTANCE_CRITERIA.md"
+    },
+    {
+      "file": "FR.md",
+      "line": 29,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [UC-3](USE_CASES.md#uc-3-phase-3-audit-with-category-specific-reference-files-feature3) - anchor '#uc-3-phase-3-audit-with-category-specific-reference-files-feature3' not found in USE_CASES.md"
+    },
+    {
+      "file": "FR.md",
+      "line": 42,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [AC-4](ACCEPTANCE_CRITERIA.md#ac-4-fr-4-feature4) - anchor '#ac-4-fr-4-feature4' not found in ACCEPTANCE_CRITERIA.md"
+    },
+    {
+      "file": "FR.md",
+      "line": 43,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [UC-4](USE_CASES.md#uc-4-hard-cutover-migration-via-installer-update-feature4) - anchor '#uc-4-hard-cutover-migration-via-installer-update-feature4' not found in USE_CASES.md"
+    },
+    {
+      "file": "FR.md",
+      "line": 53,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [AC-5](ACCEPTANCE_CRITERIA.md#ac-5-fr-5-feature5) - anchor '#ac-5-fr-5-feature5' not found in ACCEPTANCE_CRITERIA.md"
+    },
+    {
+      "file": "FR.md",
+      "line": 54,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [UC-5](USE_CASES.md#uc-5-research-workflow-split-separate-skill-separate-trigger-feature5) - anchor '#uc-5-research-workflow-split-separate-skill-separate-trigger-feature5' not found in USE_CASES.md"
+    },
+    {
+      "file": "FR.md",
+      "line": 62,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [AC-6](ACCEPTANCE_CRITERIA.md#ac-6-fr-6-feature4) - anchor '#ac-6-fr-6-feature4' not found in ACCEPTANCE_CRITERIA.md"
+    },
+    {
+      "file": "FR.md",
+      "line": 63,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [UC-4](USE_CASES.md#uc-4-hard-cutover-migration-via-installer-update-feature4) - anchor '#uc-4-hard-cutover-migration-via-installer-update-feature4' not found in USE_CASES.md"
+    },
+    {
+      "file": "FR.md",
+      "line": 77,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [AC-7](ACCEPTANCE_CRITERIA.md#ac-7-fr-7-feature4) - anchor '#ac-7-fr-7-feature4' not found in ACCEPTANCE_CRITERIA.md"
+    },
+    {
+      "file": "FR.md",
+      "line": 78,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [UC-4](USE_CASES.md#uc-4-hard-cutover-migration-via-installer-update-feature4) - anchor '#uc-4-hard-cutover-migration-via-installer-update-feature4' not found in USE_CASES.md"
+    },
+    {
+      "file": "FR.md",
+      "line": 89,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [AC-8](ACCEPTANCE_CRITERIA.md#ac-8-fr-8-feature4) - anchor '#ac-8-fr-8-feature4' not found in ACCEPTANCE_CRITERIA.md"
+    },
+    {
+      "file": "FR.md",
+      "line": 90,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [UC-4](USE_CASES.md#uc-4-hard-cutover-migration-via-installer-update-feature4) - anchor '#uc-4-hard-cutover-migration-via-installer-update-feature4' not found in USE_CASES.md"
+    },
+    {
+      "file": "FR.md",
+      "line": 98,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [AC-9](ACCEPTANCE_CRITERIA.md#ac-9-fr-9-feature5) - anchor '#ac-9-fr-9-feature5' not found in ACCEPTANCE_CRITERIA.md"
+    },
+    {
+      "file": "FR.md",
+      "line": 99,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [UC-1](USE_CASES.md#uc-1-trigger-via-natural-language-scaffolding-request-feature1-feature5) - anchor '#uc-1-trigger-via-natural-language-scaffolding-request-feature1-feature5' not found in USE_CASES.md"
+    },
+    {
+      "file": "FR.md",
+      "line": 107,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [AC-10](ACCEPTANCE_CRITERIA.md#ac-10-fr-10-feature5) - anchor '#ac-10-fr-10-feature5' not found in ACCEPTANCE_CRITERIA.md"
+    },
+    {
+      "file": "FR.md",
+      "line": 108,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [UC-1](USE_CASES.md#uc-1-trigger-via-natural-language-scaffolding-request-feature1-feature5) - anchor '#uc-1-trigger-via-natural-language-scaffolding-request-feature1-feature5' not found in USE_CASES.md"
+    },
+    {
+      "file": "FR.md",
+      "line": 116,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [AC-11](ACCEPTANCE_CRITERIA.md#ac-11-fr-11-feature4) - anchor '#ac-11-fr-11-feature4' not found in ACCEPTANCE_CRITERIA.md"
+    },
+    {
+      "file": "FR.md",
+      "line": 117,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [UC-6](USE_CASES.md#uc-6-specs-validation-hook-validates-without-rule-file-dependency-feature4) - anchor '#uc-6-specs-validation-hook-validates-without-rule-file-dependency-feature4' not found in USE_CASES.md"
+    },
+    {
+      "file": "FR.md",
+      "line": 133,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [AC-13](ACCEPTANCE_CRITERIA.md#ac-13-fr-13-feature1) - anchor '#ac-13-fr-13-feature1' not found in ACCEPTANCE_CRITERIA.md"
+    },
+    {
+      "file": "FR.md",
+      "line": 134,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [UC-2](USE_CASES.md#uc-2-resume-existing-spec-at-correct-phase-feature1-feature2) - anchor '#uc-2-resume-existing-spec-at-correct-phase-feature1-feature2' not found in USE_CASES.md"
+    },
+    {
+      "file": "REQUIREMENTS.md",
+      "line": 7,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-1](FR.md#fr-1-skill-structure-with-progressive-disclosure-feature1) - anchor '#fr-1-skill-structure-with-progressive-disclosure-feature1' not found in FR.md"
+    },
+    {
+      "file": "REQUIREMENTS.md",
+      "line": 7,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [AC-1](ACCEPTANCE_CRITERIA.md#ac-1-fr-1-feature1) - anchor '#ac-1-fr-1-feature1' not found in ACCEPTANCE_CRITERIA.md"
+    },
+    {
+      "file": "REQUIREMENTS.md",
+      "line": 8,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-2](FR.md#fr-2-reference-file-naming-convention-phasenmdescriptive-feature2) - anchor '#fr-2-reference-file-naming-convention-phasenmdescriptive-feature2' not found in FR.md"
+    },
+    {
+      "file": "REQUIREMENTS.md",
+      "line": 8,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [AC-2](ACCEPTANCE_CRITERIA.md#ac-2-fr-2-feature2) - anchor '#ac-2-fr-2-feature2' not found in ACCEPTANCE_CRITERIA.md"
+    },
+    {
+      "file": "REQUIREMENTS.md",
+      "line": 9,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-3](FR.md#fr-3-phase-3-audit-categories-split-into-separate-files-feature3) - anchor '#fr-3-phase-3-audit-categories-split-into-separate-files-feature3' not found in FR.md"
+    },
+    {
+      "file": "REQUIREMENTS.md",
+      "line": 9,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [AC-3](ACCEPTANCE_CRITERIA.md#ac-3-fr-3-feature3) - anchor '#ac-3-fr-3-feature3' not found in ACCEPTANCE_CRITERIA.md"
+    },
+    {
+      "file": "REQUIREMENTS.md",
+      "line": 10,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-4](FR.md#fr-4-hard-cutover-migration-via-installer-feature4) - anchor '#fr-4-hard-cutover-migration-via-installer-feature4' not found in FR.md"
+    },
+    {
+      "file": "REQUIREMENTS.md",
+      "line": 10,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [AC-4](ACCEPTANCE_CRITERIA.md#ac-4-fr-4-feature4) - anchor '#ac-4-fr-4-feature4' not found in ACCEPTANCE_CRITERIA.md"
+    },
+    {
+      "file": "REQUIREMENTS.md",
+      "line": 11,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-5](FR.md#fr-5-research-workflow-extracted-as-standalone-skill-and-invoked-by-create-spec-feature5) - anchor '#fr-5-research-workflow-extracted-as-standalone-skill-and-invoked-by-create-spec-feature5' not found in FR.md"
+    },
+    {
+      "file": "REQUIREMENTS.md",
+      "line": 11,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [AC-5](ACCEPTANCE_CRITERIA.md#ac-5-fr-5-feature5) - anchor '#ac-5-fr-5-feature5' not found in ACCEPTANCE_CRITERIA.md"
+    },
+    {
+      "file": "REQUIREMENTS.md",
+      "line": 12,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-6](FR.md#fr-6-source-rule-files-removed-atomically-feature4) - anchor '#fr-6-source-rule-files-removed-atomically-feature4' not found in FR.md"
+    },
+    {
+      "file": "REQUIREMENTS.md",
+      "line": 12,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [AC-6](ACCEPTANCE_CRITERIA.md#ac-6-fr-6-feature4) - anchor '#ac-6-fr-6-feature4' not found in ACCEPTANCE_CRITERIA.md"
+    },
+    {
+      "file": "REQUIREMENTS.md",
+      "line": 13,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-7](FR.md#fr-7-extensionjson-manifest-updated-atomically-feature4) - anchor '#fr-7-extensionjson-manifest-updated-atomically-feature4' not found in FR.md"
+    },
+    {
+      "file": "REQUIREMENTS.md",
+      "line": 13,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [AC-7](ACCEPTANCE_CRITERIA.md#ac-7-fr-7-feature4) - anchor '#ac-7-fr-7-feature4' not found in ACCEPTANCE_CRITERIA.md"
+    },
+    {
+      "file": "REQUIREMENTS.md",
+      "line": 14,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-8](FR.md#fr-8-claudemd-glossary-synced-with-new-skill-layout-feature4) - anchor '#fr-8-claudemd-glossary-synced-with-new-skill-layout-feature4' not found in FR.md"
+    },
+    {
+      "file": "REQUIREMENTS.md",
+      "line": 14,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [AC-8](ACCEPTANCE_CRITERIA.md#ac-8-fr-8-feature4) - anchor '#ac-8-fr-8-feature4' not found in ACCEPTANCE_CRITERIA.md"
+    },
+    {
+      "file": "REQUIREMENTS.md",
+      "line": 15,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-9](FR.md#fr-9-skill-description-preserves-all-trigger-phrases-feature5) - anchor '#fr-9-skill-description-preserves-all-trigger-phrases-feature5' not found in FR.md"
+    },
+    {
+      "file": "REQUIREMENTS.md",
+      "line": 15,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [AC-9](ACCEPTANCE_CRITERIA.md#ac-9-fr-9-feature5) - anchor '#ac-9-fr-9-feature5' not found in ACCEPTANCE_CRITERIA.md"
+    },
+    {
+      "file": "REQUIREMENTS.md",
+      "line": 16,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-10](FR.md#fr-10-allowed-tools-covers-full-workflow-feature5) - anchor '#fr-10-allowed-tools-covers-full-workflow-feature5' not found in FR.md"
+    },
+    {
+      "file": "REQUIREMENTS.md",
+      "line": 16,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [AC-10](ACCEPTANCE_CRITERIA.md#ac-10-fr-10-feature5) - anchor '#ac-10-fr-10-feature5' not found in ACCEPTANCE_CRITERIA.md"
+    },
+    {
+      "file": "REQUIREMENTS.md",
+      "line": 17,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-11](FR.md#fr-11-specs-validation-hook-unaffected-by-migration-feature4) - anchor '#fr-11-specs-validation-hook-unaffected-by-migration-feature4' not found in FR.md"
+    },
+    {
+      "file": "REQUIREMENTS.md",
+      "line": 17,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [AC-11](ACCEPTANCE_CRITERIA.md#ac-11-fr-11-feature4) - anchor '#ac-11-fr-11-feature4' not found in ACCEPTANCE_CRITERIA.md"
+    },
+    {
+      "file": "REQUIREMENTS.md",
+      "line": 19,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-13](FR.md#fr-13-token-efficiency-floor-for-non-spec-sessions-feature1) - anchor '#fr-13-token-efficiency-floor-for-non-spec-sessions-feature1' not found in FR.md"
+    },
+    {
+      "file": "REQUIREMENTS.md",
+      "line": 19,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [AC-13](ACCEPTANCE_CRITERIA.md#ac-13-fr-13-feature1) - anchor '#ac-13-fr-13-feature1' not found in ACCEPTANCE_CRITERIA.md"
+    },
+    {
+      "file": "REQUIREMENTS.md",
+      "line": 23,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-1: Skill structure with progressive disclosure](FR.md#fr-1-skill-structure-with-progressive-disclosure-feature1) - anchor '#fr-1-skill-structure-with-progressive-disclosure-feature1' not found in FR.md"
+    },
+    {
+      "file": "REQUIREMENTS.md",
+      "line": 24,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-2: Reference file naming convention](FR.md#fr-2-reference-file-naming-convention-phasenmdescriptive-feature2) - anchor '#fr-2-reference-file-naming-convention-phasenmdescriptive-feature2' not found in FR.md"
+    },
+    {
+      "file": "REQUIREMENTS.md",
+      "line": 25,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-3: Phase 3+ Audit categories split](FR.md#fr-3-phase-3-audit-categories-split-into-separate-files-feature3) - anchor '#fr-3-phase-3-audit-categories-split-into-separate-files-feature3' not found in FR.md"
+    },
+    {
+      "file": "REQUIREMENTS.md",
+      "line": 26,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-4: Hard cutover migration via installer](FR.md#fr-4-hard-cutover-migration-via-installer-feature4) - anchor '#fr-4-hard-cutover-migration-via-installer-feature4' not found in FR.md"
+    },
+    {
+      "file": "REQUIREMENTS.md",
+      "line": 27,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-5: research-workflow extracted as standalone skill](FR.md#fr-5-research-workflow-extracted-as-standalone-skill-and-invoked-by-create-spec-feature5) - anchor '#fr-5-research-workflow-extracted-as-standalone-skill-and-invoked-by-create-spec-feature5' not found in FR.md"
+    },
+    {
+      "file": "REQUIREMENTS.md",
+      "line": 28,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-6: Source rule files removed atomically](FR.md#fr-6-source-rule-files-removed-atomically-feature4) - anchor '#fr-6-source-rule-files-removed-atomically-feature4' not found in FR.md"
+    },
+    {
+      "file": "REQUIREMENTS.md",
+      "line": 29,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-7: extension.json manifest updated atomically](FR.md#fr-7-extensionjson-manifest-updated-atomically-feature4) - anchor '#fr-7-extensionjson-manifest-updated-atomically-feature4' not found in FR.md"
+    },
+    {
+      "file": "REQUIREMENTS.md",
+      "line": 30,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-8: CLAUDE.md glossary synced](FR.md#fr-8-claudemd-glossary-synced-with-new-skill-layout-feature4) - anchor '#fr-8-claudemd-glossary-synced-with-new-skill-layout-feature4' not found in FR.md"
+    },
+    {
+      "file": "REQUIREMENTS.md",
+      "line": 31,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-9: Skill description preserves trigger phrases](FR.md#fr-9-skill-description-preserves-all-trigger-phrases-feature5) - anchor '#fr-9-skill-description-preserves-all-trigger-phrases-feature5' not found in FR.md"
+    },
+    {
+      "file": "REQUIREMENTS.md",
+      "line": 32,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-10: allowed-tools covers full workflow](FR.md#fr-10-allowed-tools-covers-full-workflow-feature5) - anchor '#fr-10-allowed-tools-covers-full-workflow-feature5' not found in FR.md"
+    },
+    {
+      "file": "REQUIREMENTS.md",
+      "line": 33,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-11: specs-validation hook unaffected](FR.md#fr-11-specs-validation-hook-unaffected-by-migration-feature4) - anchor '#fr-11-specs-validation-hook-unaffected-by-migration-feature4' not found in FR.md"
+    },
+    {
+      "file": "REQUIREMENTS.md",
+      "line": 35,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-13: Token efficiency floor non-spec sessions](FR.md#fr-13-token-efficiency-floor-for-non-spec-sessions-feature1) - anchor '#fr-13-token-efficiency-floor-for-non-spec-sessions-feature1' not found in FR.md"
+    },
+    {
+      "file": "REQUIREMENTS.md",
+      "line": 48,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [AC-1 (FR-1): Skill structure](ACCEPTANCE_CRITERIA.md#ac-1-fr-1-feature1) - anchor '#ac-1-fr-1-feature1' not found in ACCEPTANCE_CRITERIA.md"
+    },
+    {
+      "file": "REQUIREMENTS.md",
+      "line": 49,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [AC-2 (FR-2): Naming convention](ACCEPTANCE_CRITERIA.md#ac-2-fr-2-feature2) - anchor '#ac-2-fr-2-feature2' not found in ACCEPTANCE_CRITERIA.md"
+    },
+    {
+      "file": "REQUIREMENTS.md",
+      "line": 50,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [AC-3 (FR-3): Audit category files](ACCEPTANCE_CRITERIA.md#ac-3-fr-3-feature3) - anchor '#ac-3-fr-3-feature3' not found in ACCEPTANCE_CRITERIA.md"
+    },
+    {
+      "file": "REQUIREMENTS.md",
+      "line": 51,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [AC-4 (FR-4): Hard cutover](ACCEPTANCE_CRITERIA.md#ac-4-fr-4-feature4) - anchor '#ac-4-fr-4-feature4' not found in ACCEPTANCE_CRITERIA.md"
+    },
+    {
+      "file": "REQUIREMENTS.md",
+      "line": 52,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [AC-5 (FR-5): research-workflow skill](ACCEPTANCE_CRITERIA.md#ac-5-fr-5-feature5) - anchor '#ac-5-fr-5-feature5' not found in ACCEPTANCE_CRITERIA.md"
+    },
+    {
+      "file": "REQUIREMENTS.md",
+      "line": 53,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [AC-6 (FR-6): Source files removed](ACCEPTANCE_CRITERIA.md#ac-6-fr-6-feature4) - anchor '#ac-6-fr-6-feature4' not found in ACCEPTANCE_CRITERIA.md"
+    },
+    {
+      "file": "REQUIREMENTS.md",
+      "line": 54,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [AC-7 (FR-7): Manifest updated](ACCEPTANCE_CRITERIA.md#ac-7-fr-7-feature4) - anchor '#ac-7-fr-7-feature4' not found in ACCEPTANCE_CRITERIA.md"
+    },
+    {
+      "file": "REQUIREMENTS.md",
+      "line": 55,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [AC-8 (FR-8): CLAUDE.md glossary](ACCEPTANCE_CRITERIA.md#ac-8-fr-8-feature4) - anchor '#ac-8-fr-8-feature4' not found in ACCEPTANCE_CRITERIA.md"
+    },
+    {
+      "file": "REQUIREMENTS.md",
+      "line": 56,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [AC-9 (FR-9): Description preserves triggers](ACCEPTANCE_CRITERIA.md#ac-9-fr-9-feature5) - anchor '#ac-9-fr-9-feature5' not found in ACCEPTANCE_CRITERIA.md"
+    },
+    {
+      "file": "REQUIREMENTS.md",
+      "line": 57,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [AC-10 (FR-10): allowed-tools complete](ACCEPTANCE_CRITERIA.md#ac-10-fr-10-feature5) - anchor '#ac-10-fr-10-feature5' not found in ACCEPTANCE_CRITERIA.md"
+    },
+    {
+      "file": "REQUIREMENTS.md",
+      "line": 58,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [AC-11 (FR-11): Hook unaffected](ACCEPTANCE_CRITERIA.md#ac-11-fr-11-feature4) - anchor '#ac-11-fr-11-feature4' not found in ACCEPTANCE_CRITERIA.md"
+    },
+    {
+      "file": "REQUIREMENTS.md",
+      "line": 59,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [AC-13 (FR-13): Token efficiency floor](ACCEPTANCE_CRITERIA.md#ac-13-fr-13-feature1) - anchor '#ac-13-fr-13-feature1' not found in ACCEPTANCE_CRITERIA.md"
+    },
+    {
+      "file": "TASKS.md",
+      "line": 28,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-4](FR.md#fr-4-hard-cutover-migration-via-installer-feature4) - anchor '#fr-4-hard-cutover-migration-via-installer-feature4' not found in FR.md"
+    },
+    {
+      "file": "TASKS.md",
+      "line": 28,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-5](FR.md#fr-5-research-workflow-extracted-as-standalone-skill-and-invoked-by-create-spec-feature5) - anchor '#fr-5-research-workflow-extracted-as-standalone-skill-and-invoked-by-create-spec-feature5' not found in FR.md"
+    },
+    {
+      "file": "TASKS.md",
+      "line": 28,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-13](FR.md#fr-13-token-efficiency-floor-for-non-spec-sessions-feature1) - anchor '#fr-13-token-efficiency-floor-for-non-spec-sessions-feature1' not found in FR.md"
+    },
+    {
+      "file": "TASKS.md",
+      "line": 43,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-4](FR.md#fr-4-hard-cutover-migration-via-installer-feature4) - anchor '#fr-4-hard-cutover-migration-via-installer-feature4' not found in FR.md"
+    },
+    {
+      "file": "TASKS.md",
+      "line": 43,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-6](FR.md#fr-6-source-rule-files-removed-atomically-feature4) - anchor '#fr-6-source-rule-files-removed-atomically-feature4' not found in FR.md"
+    },
+    {
+      "file": "TASKS.md",
+      "line": 43,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-7](FR.md#fr-7-extensionjson-manifest-updated-atomically-feature4) - anchor '#fr-7-extensionjson-manifest-updated-atomically-feature4' not found in FR.md"
+    },
+    {
+      "file": "TASKS.md",
+      "line": 43,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-11](FR.md#fr-11-specs-validation-hook-unaffected-by-migration-feature4) - anchor '#fr-11-specs-validation-hook-unaffected-by-migration-feature4' not found in FR.md"
+    },
+    {
+      "file": "TASKS.md",
+      "line": 57,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-11](FR.md#fr-11-specs-validation-hook-unaffected-by-migration-feature4) - anchor '#fr-11-specs-validation-hook-unaffected-by-migration-feature4' not found in FR.md"
+    },
+    {
+      "file": "TASKS.md",
+      "line": 89,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-1](FR.md#fr-1-skill-structure-with-progressive-disclosure-feature1) - anchor '#fr-1-skill-structure-with-progressive-disclosure-feature1' not found in FR.md"
+    },
+    {
+      "file": "TASKS.md",
+      "line": 89,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-9](FR.md#fr-9-skill-description-preserves-all-trigger-phrases-feature5) - anchor '#fr-9-skill-description-preserves-all-trigger-phrases-feature5' not found in FR.md"
+    },
+    {
+      "file": "TASKS.md",
+      "line": 89,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-10](FR.md#fr-10-allowed-tools-covers-full-workflow-feature5) - anchor '#fr-10-allowed-tools-covers-full-workflow-feature5' not found in FR.md"
+    },
+    {
+      "file": "TASKS.md",
+      "line": 108,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-1](FR.md#fr-1-skill-structure-with-progressive-disclosure-feature1) - anchor '#fr-1-skill-structure-with-progressive-disclosure-feature1' not found in FR.md"
+    },
+    {
+      "file": "TASKS.md",
+      "line": 108,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-2](FR.md#fr-2-reference-file-naming-convention-phasenmdescriptive-feature2) - anchor '#fr-2-reference-file-naming-convention-phasenmdescriptive-feature2' not found in FR.md"
+    },
+    {
+      "file": "TASKS.md",
+      "line": 108,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-5](FR.md#fr-5-research-workflow-extracted-as-standalone-skill-and-invoked-by-create-spec-feature5) - anchor '#fr-5-research-workflow-extracted-as-standalone-skill-and-invoked-by-create-spec-feature5' not found in FR.md"
+    },
+    {
+      "file": "TASKS.md",
+      "line": 123,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-1](FR.md#fr-1-skill-structure-with-progressive-disclosure-feature1) - anchor '#fr-1-skill-structure-with-progressive-disclosure-feature1' not found in FR.md"
+    },
+    {
+      "file": "TASKS.md",
+      "line": 137,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [phase2_bdd-test-infrastructure.md](phase2_bdd-test-infrastructure.md) - target file 'phase2_bdd-test-infrastructure.md' not found in spec folder"
+    },
+    {
+      "file": "TASKS.md",
+      "line": 139,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-1](FR.md#fr-1-skill-structure-with-progressive-disclosure-feature1) - anchor '#fr-1-skill-structure-with-progressive-disclosure-feature1' not found in FR.md"
+    },
+    {
+      "file": "TASKS.md",
+      "line": 153,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-1](FR.md#fr-1-skill-structure-with-progressive-disclosure-feature1) - anchor '#fr-1-skill-structure-with-progressive-disclosure-feature1' not found in FR.md"
+    },
+    {
+      "file": "TASKS.md",
+      "line": 168,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-1](FR.md#fr-1-skill-structure-with-progressive-disclosure-feature1) - anchor '#fr-1-skill-structure-with-progressive-disclosure-feature1' not found in FR.md"
+    },
+    {
+      "file": "TASKS.md",
+      "line": 184,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-3](FR.md#fr-3-phase-3-audit-categories-split-into-separate-files-feature3) - anchor '#fr-3-phase-3-audit-categories-split-into-separate-files-feature3' not found in FR.md"
+    },
+    {
+      "file": "TASKS.md",
+      "line": 198,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-3](FR.md#fr-3-phase-3-audit-categories-split-into-separate-files-feature3) - anchor '#fr-3-phase-3-audit-categories-split-into-separate-files-feature3' not found in FR.md"
+    },
+    {
+      "file": "TASKS.md",
+      "line": 198,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-6](FR.md#fr-6-source-rule-files-removed-atomically-feature4) - anchor '#fr-6-source-rule-files-removed-atomically-feature4' not found in FR.md"
+    },
+    {
+      "file": "TASKS.md",
+      "line": 215,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-1](FR.md#fr-1-skill-structure-with-progressive-disclosure-feature1) - anchor '#fr-1-skill-structure-with-progressive-disclosure-feature1' not found in FR.md"
+    },
+    {
+      "file": "TASKS.md",
+      "line": 232,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-6](FR.md#fr-6-source-rule-files-removed-atomically-feature4) - anchor '#fr-6-source-rule-files-removed-atomically-feature4' not found in FR.md"
+    },
+    {
+      "file": "TASKS.md",
+      "line": 249,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-5](FR.md#fr-5-research-workflow-extracted-as-standalone-skill-and-invoked-by-create-spec-feature5) - anchor '#fr-5-research-workflow-extracted-as-standalone-skill-and-invoked-by-create-spec-feature5' not found in FR.md"
+    },
+    {
+      "file": "TASKS.md",
+      "line": 249,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-9](FR.md#fr-9-skill-description-preserves-all-trigger-phrases-feature5) - anchor '#fr-9-skill-description-preserves-all-trigger-phrases-feature5' not found in FR.md"
+    },
+    {
+      "file": "TASKS.md",
+      "line": 249,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-10](FR.md#fr-10-allowed-tools-covers-full-workflow-feature5) - anchor '#fr-10-allowed-tools-covers-full-workflow-feature5' not found in FR.md"
+    },
+    {
+      "file": "TASKS.md",
+      "line": 269,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-7](FR.md#fr-7-extensionjson-manifest-updated-atomically-feature4) - anchor '#fr-7-extensionjson-manifest-updated-atomically-feature4' not found in FR.md"
+    },
+    {
+      "file": "TASKS.md",
+      "line": 283,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-8](FR.md#fr-8-claudemd-glossary-synced-with-new-skill-layout-feature4) - anchor '#fr-8-claudemd-glossary-synced-with-new-skill-layout-feature4' not found in FR.md"
+    },
+    {
+      "file": "TASKS.md",
+      "line": 297,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-6](FR.md#fr-6-source-rule-files-removed-atomically-feature4) - anchor '#fr-6-source-rule-files-removed-atomically-feature4' not found in FR.md"
+    },
+    {
+      "file": "TASKS.md",
+      "line": 344,
+      "rule": "CROSS_REF_LINKS",
+      "message": "Broken link: [FR-13](FR.md#fr-13-token-efficiency-floor-for-non-spec-sessions-feature1) - anchor '#fr-13-token-efficiency-floor-for-non-spec-sessions-feature1' not found in FR.md"
+    }
+  ],
+  "summary": {
+    "total_files": 19,
+    "valid_files": 17,
+    "files_with_errors": 0,
+    "files_with_warnings": 2,
+    "unfilled_placeholders": 10
+  }
+}

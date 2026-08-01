@@ -533,3 +533,53 @@ A feature request claims a public catalog/policy surface and an authenticated pa
 
 **Linked stories:** [User Story 61](USER_STORIES.md#user-story-61-cursor-uses-the-same-spec-door-priority-p1)
 
+
+
+## UC-34
+
+**Bounded task inventory and truthful read-side queries**
+
+**Goal:** Give an agent every unfinished task for one spec and enough bounded read context to act without an N×M MCP crawl.
+
+**Trigger:** The agent needs task inventory, phase tasks, search results, summary status, or a document section while the graph is live and larger than one prompt-safe page.
+
+**Main flow:**
+
+1. Request `list_tasks` with the spec and optional status, phase, requirement, comment, limit, and cursor filters.
+2. Follow deterministic cursors until `truncated` is false; validate total/returned cardinality and stable task IDs.
+3. Use spec-scoped `list_phase_tasks` or `search` for bounded follow-up, distinguishing `PHASE_NOT_FOUND` from `EMPTY_PHASE`.
+4. Request `get_spec_status` with `view: "summary"` for compact routing state instead of a full inventory payload.
+5. Request a bounded `read_spec_doc` page; use nearest canonical heading/anchor suggestions when a section is missing.
+6. Run only the declared bounded verification against the real captured corpus/incident artifact.
+
+**Failure paths:** A page budget, byte budget, or latency budget is exceeded; a cursor is invalidated by a graph revision; an unknown phase is requested; or a section is absent. Each outcome is explicit and actionable, never a silent empty result.
+
+**Outcome:** Complete, deterministic, bounded query results whose cardinality and source locations are inspectable.
+
+**Linked stories:** [User Story 62](USER_STORIES.md#user-story-62-bounded-task-inventory-and-truthful-read-contracts-priority-p1)
+
+## UC-35
+
+**Deferred bounded agent packet and partial-result recovery**
+
+**Status:** Deferred/backlog after FR-82.
+
+**Goal:** Execute finite workflow scopes without retry storms and preserve completed sibling output when another branch fails.
+
+**Trigger:** A future Dynamic Workflow harness starts deterministic collectors and model-backed branches under explicit budgets.
+
+**Main flow:**
+
+1. Declare finite scopes and hard maxima for calls, rounds, wall time, response bytes, and response tokens.
+2. Run deterministic collectors first and journal their evidence for the model loop.
+3. Execute branches until a success, failure, or budget stop condition; preserve partial results and scope states.
+4. Classify context exhaustion or `invalid_request`; do not retry the same prompt, and allow at most one narrowed changed-strategy retry.
+5. Surface completed GitHub output alongside blocked/dropped spec scopes and emit per-agent telemetry including repeated-key detection.
+6. Replay the real `wf_0315d03b-28` provenance as the regression oracle.
+
+**Failure paths:** A branch exhausts context, returns `invalid_request`, repeats keys, exceeds a budget, or becomes blocked. The packet stops or narrows as declared and never hides completed sibling output.
+
+**Outcome:** A bounded partial or complete packet with an auditable stop/retry journal rather than an unbounded workflow.
+
+**Linked stories:** [User Story 63](USER_STORIES.md#user-story-63-bounded-agent-packet-with-partial-results-priority-p2)
+

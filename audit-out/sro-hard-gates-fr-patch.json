@@ -1,0 +1,8 @@
+{
+  "action": "apply",
+  "spec": "skills-rules-optimizer",
+  "doc": "FR.md",
+  "old_string": "**Связанные AC:** [AC-8](ACCEPTANCE_CRITERIA.md#ac-8-fr-9)\r\n**Use Case:** [UC-6](USE_CASES.md#uc-6-edge-suggest-rules-backwards-compat)\r\n\r\n## FR-10: Embedding-based semantic merge — OUT OF SCOPE\r\n",
+  "new_string": "**Связанные AC:** [AC-8](ACCEPTANCE_CRITERIA.md#ac-8-fr-9)\r\n**Use Case:** [UC-6](USE_CASES.md#uc-6-edge-suggest-rules-backwards-compat)\r\n\r\n## FR-12: Persist corrections as executable skill contracts @feature12\r\n\r\nWhen a user correction exposes a repeatable workflow failure, the system SHALL amend the responsible canonical skill with a fail-fast invariant and SHALL add an executable BDD scenario that reads that skill and proves the invariant is present. Recommendation research SHALL treat explicit budget, region, availability, deadline, condition, and include/exclude limits as hard eligibility gates before deep research. Model/provider research SHALL require the real consumer's provider, endpoint/protocol, model-ID namespace, credential sources, persistence boundary, and multi-credential precedence before claiming model unavailability.\r\n\r\n**Связанные AC:** [AC-12](ACCEPTANCE_CRITERIA.md#ac-12-fr-12)\r\n\r\n## FR-10: Embedding-based semantic merge — OUT OF SCOPE\r\n",
+  "reason": "Specify executable persistence of user corrections into canonical skills. [skip-spec-steer: add FR through spec door]"
+}

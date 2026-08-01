@@ -196,6 +196,12 @@ export interface TaskNode extends NodeBase {
   title?: string;
   /** The `## Phase …` heading this task sits under in TASKS.md (for list_phase_tasks). */
   phase?: string;
+  /** Human rationale/comment copied from an explicit `**Comment:**` / `**Комментарий:**` line. */
+  comment?: string;
+  /** Explicit blocker text copied only from an authored `**Blocker:**` / `**Блокер:**` line. */
+  blocker?: string;
+  /** GitHub issue numbers explicitly linked in the task block. */
+  issueRefs?: number[];
   /**
    * Full text of the task block (header + Done-When), so consumers can map the
    * task to scenarios via `SPECGEN004_NN` / `@featureN` mentions (FR-32). The

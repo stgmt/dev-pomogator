@@ -11,3 +11,15 @@
 | `{путь/к/файлу1}` | create | [FR-1](FR.md#fr-1-название) |
 | `{путь/к/файлу2}` | create | [FR-2](FR.md#fr-2-название) |
 | `{путь/к/файлу3}` | create | {причина} |
+
+- TASKS.md: add Phase 4 — undefined
+
+- TASKS.md: register incident `incident-2026-08-01-undefined` (untraced)
+
+- TASKS.md: add Phase 5 — undefined
+
+- TASKS.md: register incident `incident-2026-08-01-undefined-2` (untraced)
+
+- TASKS.md: add Phase 6 — undefined
+
+- TASKS.md: register incident `incident-2026-08-01-undefined-3` (untraced)

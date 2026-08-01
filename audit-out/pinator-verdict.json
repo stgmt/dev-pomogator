@@ -1,0 +1,1291 @@
+﻿{
+  "specPath": ".specs/pinator",
+  "verdict": "RED",
+  "blocking": [
+    {
+      "code": "UPSTREAM_UNLINKED",
+      "severity": "error",
+      "nodeId": ".specs/pinator",
+      "message": "[LINK_VALIDITY] AC-1 (FR-1) has no clickable link back to FR.md",
+      "location": {
+        "file": ".specs/pinator",
+        "line": 1
+      }
+    },
+    {
+      "code": "UPSTREAM_UNLINKED",
+      "severity": "error",
+      "nodeId": ".specs/pinator",
+      "message": "[LINK_VALIDITY] AC-2 (FR-2) has no clickable link back to FR.md",
+      "location": {
+        "file": ".specs/pinator",
+        "line": 1
+      }
+    },
+    {
+      "code": "UPSTREAM_UNLINKED",
+      "severity": "error",
+      "nodeId": ".specs/pinator",
+      "message": "[LINK_VALIDITY] AC-3 (FR-3) has no clickable link back to FR.md",
+      "location": {
+        "file": ".specs/pinator",
+        "line": 1
+      }
+    },
+    {
+      "code": "UPSTREAM_UNLINKED",
+      "severity": "error",
+      "nodeId": ".specs/pinator",
+      "message": "[LINK_VALIDITY] AC-4 (FR-4) has no clickable link back to FR.md",
+      "location": {
+        "file": ".specs/pinator",
+        "line": 1
+      }
+    },
+    {
+      "code": "UPSTREAM_UNLINKED",
+      "severity": "error",
+      "nodeId": ".specs/pinator",
+      "message": "[LINK_VALIDITY] AC-5 (FR-5) has no clickable link back to FR.md",
+      "location": {
+        "file": ".specs/pinator",
+        "line": 1
+      }
+    },
+    {
+      "code": "UPSTREAM_UNLINKED",
+      "severity": "error",
+      "nodeId": ".specs/pinator",
+      "message": "[LINK_VALIDITY] AC-6 (FR-6) has no clickable link back to FR.md",
+      "location": {
+        "file": ".specs/pinator",
+        "line": 1
+      }
+    },
+    {
+      "code": "UPSTREAM_UNLINKED",
+      "severity": "error",
+      "nodeId": ".specs/pinator",
+      "message": "[LINK_VALIDITY] AC-7 (FR-7) has no clickable link back to FR.md",
+      "location": {
+        "file": ".specs/pinator",
+        "line": 1
+      }
+    },
+    {
+      "code": "UPSTREAM_UNLINKED",
+      "severity": "error",
+      "nodeId": ".specs/pinator",
+      "message": "[LINK_VALIDITY] AC-8 (FR-8) has no clickable link back to FR.md",
+      "location": {
+        "file": ".specs/pinator",
+        "line": 1
+      }
+    },
+    {
+      "code": "UPSTREAM_UNLINKED",
+      "severity": "error",
+      "nodeId": ".specs/pinator",
+      "message": "[LINK_VALIDITY] AC-9 (FR-9) has no clickable link back to FR.md",
+      "location": {
+        "file": ".specs/pinator",
+        "line": 1
+      }
+    },
+    {
+      "code": "UPSTREAM_UNLINKED",
+      "severity": "error",
+      "nodeId": ".specs/pinator",
+      "message": "[LINK_VALIDITY] AC-10 (FR-10) has no clickable link back to FR.md",
+      "location": {
+        "file": ".specs/pinator",
+        "line": 1
+      }
+    },
+    {
+      "code": "UPSTREAM_UNLINKED",
+      "severity": "error",
+      "nodeId": ".specs/pinator",
+      "message": "[LINK_VALIDITY] AC-11 (FR-11) has no clickable link back to FR.md",
+      "location": {
+        "file": ".specs/pinator",
+        "line": 1
+      }
+    },
+    {
+      "code": "UPSTREAM_UNLINKED",
+      "severity": "error",
+      "nodeId": ".specs/pinator",
+      "message": "[LINK_VALIDITY] AC-12 (FR-12) has no clickable link back to FR.md",
+      "location": {
+        "file": ".specs/pinator",
+        "line": 1
+      }
+    },
+    {
+      "code": "UPSTREAM_UNLINKED",
+      "severity": "error",
+      "nodeId": ".specs/pinator",
+      "message": "[FILE_CHANGES_VERIFY] FILE_CHANGES: \"tests/features/plugins/claim-evidence-gate/CEGATE001_pinator.feature\" has action=edit but file does not exist",
+      "location": {
+        "file": ".specs/pinator",
+        "line": 1
+      }
+    },
+    {
+      "code": "UPSTREAM_UNLINKED",
+      "severity": "error",
+      "nodeId": ".specs/pinator",
+      "message": "[FILE_CHANGES_VERIFY] FILE_CHANGES: \".specs/spec-generator-v4/{FR.md,ACCEPTANCE_CRITERIA.md,DESIGN.md,USER_STORIES.md,TASKS.md,spec-generator-v4.feature}\" has action=edit but file does not exist",
+      "location": {
+        "file": ".specs/pinator",
+        "line": 1
+      }
+    }
+  ],
+  "prefilter": {
+    "structuralErrors": 0,
+    "warnings": 31,
+    "note": "pre-filter only ΓÇö a structural pass is NOT reportable as \"valid/clean/done\" (FR-37a)"
+  },
+  "auditGate": {
+    "errorCount": 14,
+    "byClass": {
+      "LINK_VALIDITY": [
+        {
+          "check": "LINK_VALIDITY",
+          "category": "INCONSISTENCY",
+          "severity": "ERROR",
+          "message": "AC-1 (FR-1) has no clickable link back to FR.md",
+          "details": "Add '**FR:** [FR-1](FR.md#fr-1-...)' to AC-1 section"
+        },
+        {
+          "check": "LINK_VALIDITY",
+          "category": "INCONSISTENCY",
+          "severity": "ERROR",
+          "message": "AC-2 (FR-2) has no clickable link back to FR.md",
+          "details": "Add '**FR:** [FR-2](FR.md#fr-2-...)' to AC-2 section"
+        },
+        {
+          "check": "LINK_VALIDITY",
+          "category": "INCONSISTENCY",
+          "severity": "ERROR",
+          "message": "AC-3 (FR-3) has no clickable link back to FR.md",
+          "details": "Add '**FR:** [FR-3](FR.md#fr-3-...)' to AC-3 section"
+        },
+        {
+          "check": "LINK_VALIDITY",
+          "category": "INCONSISTENCY",
+          "severity": "ERROR",
+          "message": "AC-4 (FR-4) has no clickable link back to FR.md",
+          "details": "Add '**FR:** [FR-4](FR.md#fr-4-...)' to AC-4 section"
+        },
+        {
+          "check": "LINK_VALIDITY",
+          "category": "INCONSISTENCY",
+          "severity": "ERROR",
+          "message": "AC-5 (FR-5) has no clickable link back to FR.md",
+          "details": "Add '**FR:** [FR-5](FR.md#fr-5-...)' to AC-5 section"
+        },
+        {
+          "check": "LINK_VALIDITY",
+          "category": "INCONSISTENCY",
+          "severity": "ERROR",
+          "message": "AC-6 (FR-6) has no clickable link back to FR.md",
+          "details": "Add '**FR:** [FR-6](FR.md#fr-6-...)' to AC-6 section"
+        },
+        {
+          "check": "LINK_VALIDITY",
+          "category": "INCONSISTENCY",
+          "severity": "ERROR",
+          "message": "AC-7 (FR-7) has no clickable link back to FR.md",
+          "details": "Add '**FR:** [FR-7](FR.md#fr-7-...)' to AC-7 section"
+        },
+        {
+          "check": "LINK_VALIDITY",
+          "category": "INCONSISTENCY",
+          "severity": "ERROR",
+          "message": "AC-8 (FR-8) has no clickable link back to FR.md",
+          "details": "Add '**FR:** [FR-8](FR.md#fr-8-...)' to AC-8 section"
+        },
+        {
+          "check": "LINK_VALIDITY",
+          "category": "INCONSISTENCY",
+          "severity": "ERROR",
+          "message": "AC-9 (FR-9) has no clickable link back to FR.md",
+          "details": "Add '**FR:** [FR-9](FR.md#fr-9-...)' to AC-9 section"
+        },
+        {
+          "check": "LINK_VALIDITY",
+          "category": "INCONSISTENCY",
+          "severity": "ERROR",
+          "message": "AC-10 (FR-10) has no clickable link back to FR.md",
+          "details": "Add '**FR:** [FR-10](FR.md#fr-10-...)' to AC-10 section"
+        },
+        {
+          "check": "LINK_VALIDITY",
+          "category": "INCONSISTENCY",
+          "severity": "ERROR",
+          "message": "AC-11 (FR-11) has no clickable link back to FR.md",
+          "details": "Add '**FR:** [FR-11](FR.md#fr-11-...)' to AC-11 section"
+        },
+        {
+          "check": "LINK_VALIDITY",
+          "category": "INCONSISTENCY",
+          "severity": "ERROR",
+          "message": "AC-12 (FR-12) has no clickable link back to FR.md",
+          "details": "Add '**FR:** [FR-12](FR.md#fr-12-...)' to AC-12 section"
+        }
+      ],
+      "FILE_CHANGES_VERIFY": [
+        {
+          "check": "FILE_CHANGES_VERIFY",
+          "category": "ERRORS",
+          "severity": "ERROR",
+          "message": "FILE_CHANGES: \"tests/features/plugins/claim-evidence-gate/CEGATE001_pinator.feature\" has action=edit but file does not exist",
+          "details": "Verify the path exists or change action to 'create'"
+        },
+        {
+          "check": "FILE_CHANGES_VERIFY",
+          "category": "ERRORS",
+          "severity": "ERROR",
+          "message": "FILE_CHANGES: \".specs/spec-generator-v4/{FR.md,ACCEPTANCE_CRITERIA.md,DESIGN.md,USER_STORIES.md,TASKS.md,spec-generator-v4.feature}\" has action=edit but file does not exist",
+          "details": "Verify the path exists or change action to 'create'"
+        }
+      ]
+    }
+  },
+  "traceabilityGate": {
+    "gapCount": 0,
+    "byClass": {
+      "UNCOVERED_FR": 0,
+      "UNVERIFIED_FR": 0,
+      "TASK_UNTESTED": 0,
+      "UNTAGGED_SCENARIO": 0
+    },
+    "gaps": []
+  },
+  "conformance": {
+    "errorCount": 0,
+    "warningCount": 0,
+    "byCode": {
+      "TASK_NO_REQUIREMENT": 3
+    }
+  },
+  "coverage": {
+    "buckets": {
+      "passed": 26,
+      "stale": 0,
+      "pending": 0,
+      "not_run": 0,
+      "undefined": 0,
+      "ambiguous": 0,
+      "failed": 0,
+      "skipped": 0
+    },
+    "canonicalBuckets": {
+      "passed": 26,
+      "stale": 0,
+      "pending": 0,
+      "not_run": 0,
+      "undefined": 0,
+      "ambiguous": 0,
+      "failed": 0,
+      "skipped": 0
+    },
+    "unverifiedDoneTasks": []
+  },
+  "inventory": {
+    "spec": "pinator",
+    "baseline": {
+      "graph_built_at": "2026-07-31T19:45:33.775Z",
+      "canonical_timestamp": "2026-07-31T00:36:36.691Z",
+      "run_ids": [
+        "1785518040131"
+      ],
+      "sources": [
+        "canonical-full-run",
+        "docker-bdd:filtered"
+      ]
+    },
+    "frs": [
+      {
+        "id": "FR-1",
+        "composite_id": "pinator:FR-1",
+        "never_run": false,
+        "classification": "passed",
+        "scenario_keys": [
+          "cegate001_66",
+          "cegate001_67",
+          "cegate001_68"
+        ],
+        "scenario_ids": [
+          "pinator:SCEN-cegate001-66-ordinary-dialogue-has-no-active-work-context",
+          "pinator:SCEN-cegate001-67-inactive-evaluation-has-zero-side-effects",
+          "pinator:SCEN-cegate001-68-completion-prose-does-not-arm-pinator"
+        ],
+        "ac_ids": [
+          "AC-1"
+        ]
+      },
+      {
+        "id": "FR-10",
+        "composite_id": "pinator:FR-10",
+        "never_run": false,
+        "classification": "passed",
+        "scenario_keys": [
+          "cegate001_67",
+          "cegate001_87",
+          "cegate001_88"
+        ],
+        "scenario_ids": [
+          "pinator:SCEN-cegate001-67-inactive-evaluation-has-zero-side-effects",
+          "pinator:SCEN-cegate001-87-missing-judge-token-warns-only-for-active-context",
+          "pinator:SCEN-cegate001-88-anti-loop-state-is-scoped-to-context-revision"
+        ],
+        "ac_ids": [
+          "AC-10"
+        ]
+      },
+      {
+        "id": "FR-11",
+        "composite_id": "pinator:FR-11",
+        "never_run": false,
+        "classification": "passed",
+        "scenario_keys": [
+          "cegate001_68"
+        ],
+        "scenario_ids": [
+          "pinator:SCEN-cegate001-68-completion-prose-does-not-arm-pinator"
+        ],
+        "ac_ids": [
+          "AC-11"
+        ]
+      },
+      {
+        "id": "FR-12",
+        "composite_id": "pinator:FR-12",
+        "never_run": false,
+        "classification": "passed",
+        "scenario_keys": [
+          "cegate001_89",
+          "cegate001_90",
+          "cegate001_91"
+        ],
+        "scenario_ids": [
+          "pinator:SCEN-cegate001-89-transcript-events-are-parsed-once",
+          "pinator:SCEN-cegate001-90-shipped-bundle-works-without-repository-dependencies",
+          "pinator:SCEN-cegate001-91-codex-never-inherits-claude-lifecycle-assumptions"
+        ],
+        "ac_ids": [
+          "AC-12"
+        ]
+      },
+      {
+        "id": "FR-2",
+        "composite_id": "pinator:FR-2",
+        "never_run": false,
+        "classification": "passed",
+        "scenario_keys": [
+          "cegate001_69",
+          "cegate001_70"
+        ],
+        "scenario_ids": [
+          "pinator:SCEN-cegate001-69-open-and-closed-claude-task-lifecycle-controls-eligibility",
+          "pinator:SCEN-cegate001-70-failed-and-unrelated-task-records-do-not-create-work"
+        ],
+        "ac_ids": [
+          "AC-2"
+        ]
+      },
+      {
+        "id": "FR-3",
+        "composite_id": "pinator:FR-3",
+        "never_run": false,
+        "classification": "passed",
+        "scenario_keys": [
+          "cegate001_71",
+          "cegate001_73"
+        ],
+        "scenario_ids": [
+          "pinator:SCEN-cegate001-71-both-approved-plan-result-shapes-activate-the-correlated-plan",
+          "pinator:SCEN-cegate001-73-a-newer-plan-supersedes-the-old-plan"
+        ],
+        "ac_ids": [
+          "AC-3"
+        ]
+      },
+      {
+        "id": "FR-4",
+        "composite_id": "pinator:FR-4",
+        "never_run": false,
+        "classification": "passed",
+        "scenario_keys": [
+          "cegate001_72",
+          "cegate001_73",
+          "cegate001_85"
+        ],
+        "scenario_ids": [
+          "pinator:SCEN-cegate001-72-plan-completion-is-per-commitment-and-all-not-any",
+          "pinator:SCEN-cegate001-73-a-newer-plan-supersedes-the-old-plan",
+          "pinator:SCEN-cegate001-85-blocked-awaiting-and-malformed-verdicts-never-close-plan-commitments"
+        ],
+        "ac_ids": [
+          "AC-4"
+        ]
+      },
+      {
+        "id": "FR-5",
+        "composite_id": "pinator:FR-5",
+        "never_run": false,
+        "classification": "passed",
+        "scenario_keys": [
+          "cegate001_74",
+          "cegate001_75",
+          "cegate001_76"
+        ],
+        "scenario_ids": [
+          "pinator:SCEN-cegate001-74-active-spec-requires-session-activity-and-mapped-open-work",
+          "pinator:SCEN-cegate001-75-feature-authoring-requires-an-open-mapped-spec-task",
+          "pinator:SCEN-cegate001-76-all-simultaneously-active-specs-are-preserved"
+        ],
+        "ac_ids": [
+          "AC-5"
+        ]
+      },
+      {
+        "id": "FR-6",
+        "composite_id": "pinator:FR-6",
+        "never_run": false,
+        "classification": "passed",
+        "scenario_keys": [
+          "cegate001_77",
+          "cegate001_78",
+          "cegate001_79"
+        ],
+        "scenario_ids": [
+          "pinator:SCEN-cegate001-77-native-goal-set-and-achieved-artifacts-control-eligibility",
+          "pinator:SCEN-cegate001-78-goal-clear-and-resume-parsers-require-real-artifacts",
+          "pinator:SCEN-cegate001-79-native-goal-and-pinator-remain-independent-stop-evaluators"
+        ],
+        "ac_ids": [
+          "AC-6"
+        ]
+      },
+      {
+        "id": "FR-7",
+        "composite_id": "pinator:FR-7",
+        "never_run": false,
+        "classification": "passed",
+        "scenario_keys": [
+          "cegate001_80"
+        ],
+        "scenario_ids": [
+          "pinator:SCEN-cegate001-80-task-plan-spec-and-goal-merge-into-one-packet"
+        ],
+        "ac_ids": [
+          "AC-7"
+        ]
+      },
+      {
+        "id": "FR-8",
+        "composite_id": "pinator:FR-8",
+        "never_run": false,
+        "classification": "passed",
+        "scenario_keys": [
+          "cegate001_81",
+          "cegate001_82",
+          "cegate001_83",
+          "cegate001_86"
+        ],
+        "scenario_ids": [
+          "pinator:SCEN-cegate001-81-stop-final-message-overrides-lagging-transcript-text",
+          "pinator:SCEN-cegate001-82-attempted-tools-are-not-completion-evidence",
+          "pinator:SCEN-cegate001-83-judge-packet-is-bounded-and-redacted",
+          "pinator:SCEN-cegate001-86-async-activity-is-evidence-but-not-a-work-source"
+        ],
+        "ac_ids": [
+          "AC-8"
+        ]
+      },
+      {
+        "id": "FR-9",
+        "composite_id": "pinator:FR-9",
+        "never_run": false,
+        "classification": "passed",
+        "scenario_keys": [
+          "cegate001_84",
+          "cegate001_85"
+        ],
+        "scenario_ids": [
+          "pinator:SCEN-cegate001-84-one-actionable-commitment-blocks-the-all-rollup",
+          "pinator:SCEN-cegate001-85-blocked-awaiting-and-malformed-verdicts-never-close-plan-commitments"
+        ],
+        "ac_ids": [
+          "AC-9"
+        ]
+      }
+    ],
+    "acs": [
+      {
+        "id": "AC-1",
+        "composite_id": "pinator:AC-1",
+        "parent_fr": "FR-1",
+        "test_paths": [
+          ".specs/pinator/pinator.feature"
+        ],
+        "scenario_keys": [
+          "cegate001_66",
+          "cegate001_67",
+          "cegate001_68"
+        ],
+        "scenario_ids": [
+          "pinator:SCEN-cegate001-66-ordinary-dialogue-has-no-active-work-context",
+          "pinator:SCEN-cegate001-67-inactive-evaluation-has-zero-side-effects",
+          "pinator:SCEN-cegate001-68-completion-prose-does-not-arm-pinator"
+        ]
+      },
+      {
+        "id": "AC-10",
+        "composite_id": "pinator:AC-10",
+        "parent_fr": "FR-10",
+        "test_paths": [
+          ".specs/pinator/pinator.feature"
+        ],
+        "scenario_keys": [
+          "cegate001_67",
+          "cegate001_87",
+          "cegate001_88"
+        ],
+        "scenario_ids": [
+          "pinator:SCEN-cegate001-67-inactive-evaluation-has-zero-side-effects",
+          "pinator:SCEN-cegate001-87-missing-judge-token-warns-only-for-active-context",
+          "pinator:SCEN-cegate001-88-anti-loop-state-is-scoped-to-context-revision"
+        ]
+      },
+      {
+        "id": "AC-11",
+        "composite_id": "pinator:AC-11",
+        "parent_fr": "FR-11",
+        "test_paths": [
+          ".specs/pinator/pinator.feature"
+        ],
+        "scenario_keys": [
+          "cegate001_68"
+        ],
+        "scenario_ids": [
+          "pinator:SCEN-cegate001-68-completion-prose-does-not-arm-pinator"
+        ]
+      },
+      {
+        "id": "AC-12",
+        "composite_id": "pinator:AC-12",
+        "parent_fr": "FR-12",
+        "test_paths": [
+          ".specs/pinator/pinator.feature"
+        ],
+        "scenario_keys": [
+          "cegate001_89",
+          "cegate001_90",
+          "cegate001_91"
+        ],
+        "scenario_ids": [
+          "pinator:SCEN-cegate001-89-transcript-events-are-parsed-once",
+          "pinator:SCEN-cegate001-90-shipped-bundle-works-without-repository-dependencies",
+          "pinator:SCEN-cegate001-91-codex-never-inherits-claude-lifecycle-assumptions"
+        ]
+      },
+      {
+        "id": "AC-2",
+        "composite_id": "pinator:AC-2",
+        "parent_fr": "FR-2",
+        "test_paths": [
+          ".specs/pinator/pinator.feature"
+        ],
+        "scenario_keys": [
+          "cegate001_69",
+          "cegate001_70"
+        ],
+        "scenario_ids": [
+          "pinator:SCEN-cegate001-69-open-and-closed-claude-task-lifecycle-controls-eligibility",
+          "pinator:SCEN-cegate001-70-failed-and-unrelated-task-records-do-not-create-work"
+        ]
+      },
+      {
+        "id": "AC-3",
+        "composite_id": "pinator:AC-3",
+        "parent_fr": "FR-3",
+        "test_paths": [
+          ".specs/pinator/pinator.feature"
+        ],
+        "scenario_keys": [
+          "cegate001_71",
+          "cegate001_73"
+        ],
+        "scenario_ids": [
+          "pinator:SCEN-cegate001-71-both-approved-plan-result-shapes-activate-the-correlated-plan",
+          "pinator:SCEN-cegate001-73-a-newer-plan-supersedes-the-old-plan"
+        ]
+      },
+      {
+        "id": "AC-4",
+        "composite_id": "pinator:AC-4",
+        "parent_fr": "FR-4",
+        "test_paths": [
+          ".specs/pinator/pinator.feature"
+        ],
+        "scenario_keys": [
+          "cegate001_72",
+          "cegate001_73",
+          "cegate001_85"
+        ],
+        "scenario_ids": [
+          "pinator:SCEN-cegate001-72-plan-completion-is-per-commitment-and-all-not-any",
+          "pinator:SCEN-cegate001-73-a-newer-plan-supersedes-the-old-plan",
+          "pinator:SCEN-cegate001-85-blocked-awaiting-and-malformed-verdicts-never-close-plan-commitments"
+        ]
+      },
+      {
+        "id": "AC-5",
+        "composite_id": "pinator:AC-5",
+        "parent_fr": "FR-5",
+        "test_paths": [
+          ".specs/pinator/pinator.feature"
+        ],
+        "scenario_keys": [
+          "cegate001_74",
+          "cegate001_75",
+          "cegate001_76"
+        ],
+        "scenario_ids": [
+          "pinator:SCEN-cegate001-74-active-spec-requires-session-activity-and-mapped-open-work",
+          "pinator:SCEN-cegate001-75-feature-authoring-requires-an-open-mapped-spec-task",
+          "pinator:SCEN-cegate001-76-all-simultaneously-active-specs-are-preserved"
+        ]
+      },
+      {
+        "id": "AC-6",
+        "composite_id": "pinator:AC-6",
+        "parent_fr": "FR-6",
+        "test_paths": [
+          ".specs/pinator/pinator.feature"
+        ],
+        "scenario_keys": [
+          "cegate001_77",
+          "cegate001_78",
+          "cegate001_79"
+        ],
+        "scenario_ids": [
+          "pinator:SCEN-cegate001-77-native-goal-set-and-achieved-artifacts-control-eligibility",
+          "pinator:SCEN-cegate001-78-goal-clear-and-resume-parsers-require-real-artifacts",
+          "pinator:SCEN-cegate001-79-native-goal-and-pinator-remain-independent-stop-evaluators"
+        ]
+      },
+      {
+        "id": "AC-7",
+        "composite_id": "pinator:AC-7",
+        "parent_fr": "FR-7",
+        "test_paths": [
+          ".specs/pinator/pinator.feature"
+        ],
+        "scenario_keys": [
+          "cegate001_80"
+        ],
+        "scenario_ids": [
+          "pinator:SCEN-cegate001-80-task-plan-spec-and-goal-merge-into-one-packet"
+        ]
+      },
+      {
+        "id": "AC-8",
+        "composite_id": "pinator:AC-8",
+        "parent_fr": "FR-8",
+        "test_paths": [
+          ".specs/pinator/pinator.feature"
+        ],
+        "scenario_keys": [
+          "cegate001_81",
+          "cegate001_82",
+          "cegate001_83",
+          "cegate001_86"
+        ],
+        "scenario_ids": [
+          "pinator:SCEN-cegate001-81-stop-final-message-overrides-lagging-transcript-text",
+          "pinator:SCEN-cegate001-82-attempted-tools-are-not-completion-evidence",
+          "pinator:SCEN-cegate001-83-judge-packet-is-bounded-and-redacted",
+          "pinator:SCEN-cegate001-86-async-activity-is-evidence-but-not-a-work-source"
+        ]
+      },
+      {
+        "id": "AC-9",
+        "composite_id": "pinator:AC-9",
+        "parent_fr": "FR-9",
+        "test_paths": [
+          ".specs/pinator/pinator.feature"
+        ],
+        "scenario_keys": [
+          "cegate001_84",
+          "cegate001_85"
+        ],
+        "scenario_ids": [
+          "pinator:SCEN-cegate001-84-one-actionable-commitment-blocks-the-all-rollup",
+          "pinator:SCEN-cegate001-85-blocked-awaiting-and-malformed-verdicts-never-close-plan-commitments"
+        ]
+      }
+    ],
+    "scenarios": [
+      {
+        "scenario_key": "cegate001_66",
+        "scenario_id": "pinator:SCEN-cegate001-66-ordinary-dialogue-has-no-active-work-context",
+        "run_id": "1785518040131",
+        "recency": {
+          "stale": false,
+          "canonical": true
+        },
+        "outcome": "PASSED",
+        "result": "PASSED",
+        "source": "docker-bdd:filtered",
+        "timestamp": "2026-07-31T00:36:27.623Z",
+        "provenance": "canonical-full-run"
+      },
+      {
+        "scenario_key": "cegate001_67",
+        "scenario_id": "pinator:SCEN-cegate001-67-inactive-evaluation-has-zero-side-effects",
+        "run_id": "1785518040131",
+        "recency": {
+          "stale": false,
+          "canonical": true
+        },
+        "outcome": "PASSED",
+        "result": "PASSED",
+        "source": "docker-bdd:filtered",
+        "timestamp": "2026-07-31T00:36:27.850Z",
+        "provenance": "canonical-full-run"
+      },
+      {
+        "scenario_key": "cegate001_68",
+        "scenario_id": "pinator:SCEN-cegate001-68-completion-prose-does-not-arm-pinator",
+        "run_id": "1785518040131",
+        "recency": {
+          "stale": false,
+          "canonical": true
+        },
+        "outcome": "PASSED",
+        "result": "PASSED",
+        "source": "docker-bdd:filtered",
+        "timestamp": "2026-07-31T00:36:28.106Z",
+        "provenance": "canonical-full-run"
+      },
+      {
+        "scenario_key": "cegate001_69",
+        "scenario_id": "pinator:SCEN-cegate001-69-open-and-closed-claude-task-lifecycle-controls-eligibility",
+        "run_id": "1785518040131",
+        "recency": {
+          "stale": false,
+          "canonical": true
+        },
+        "outcome": "PASSED",
+        "result": "PASSED",
+        "source": "docker-bdd:filtered",
+        "timestamp": "2026-07-31T00:36:29.005Z",
+        "provenance": "canonical-full-run"
+      },
+      {
+        "scenario_key": "cegate001_70",
+        "scenario_id": "pinator:SCEN-cegate001-70-failed-and-unrelated-task-records-do-not-create-work",
+        "run_id": "1785518040131",
+        "recency": {
+          "stale": false,
+          "canonical": true
+        },
+        "outcome": "PASSED",
+        "result": "PASSED",
+        "source": "docker-bdd:filtered",
+        "timestamp": "2026-07-31T00:36:29.274Z",
+        "provenance": "canonical-full-run"
+      },
+      {
+        "scenario_key": "cegate001_71",
+        "scenario_id": "pinator:SCEN-cegate001-71-both-approved-plan-result-shapes-activate-the-correlated-plan",
+        "run_id": "1785518040131",
+        "recency": {
+          "stale": false,
+          "canonical": true
+        },
+        "outcome": "PASSED",
+        "result": "PASSED",
+        "source": "docker-bdd:filtered",
+        "timestamp": "2026-07-31T00:36:29.466Z",
+        "provenance": "canonical-full-run"
+      },
+      {
+        "scenario_key": "cegate001_72",
+        "scenario_id": "pinator:SCEN-cegate001-72-plan-completion-is-per-commitment-and-all-not-any",
+        "run_id": "1785518040131",
+        "recency": {
+          "stale": false,
+          "canonical": true
+        },
+        "outcome": "PASSED",
+        "result": "PASSED",
+        "source": "docker-bdd:filtered",
+        "timestamp": "2026-07-31T00:36:29.698Z",
+        "provenance": "canonical-full-run"
+      },
+      {
+        "scenario_key": "cegate001_73",
+        "scenario_id": "pinator:SCEN-cegate001-73-a-newer-plan-supersedes-the-old-plan",
+        "run_id": "1785518040131",
+        "recency": {
+          "stale": false,
+          "canonical": true
+        },
+        "outcome": "PASSED",
+        "result": "PASSED",
+        "source": "docker-bdd:filtered",
+        "timestamp": "2026-07-31T00:36:29.895Z",
+        "provenance": "canonical-full-run"
+      },
+      {
+        "scenario_key": "cegate001_74",
+        "scenario_id": "pinator:SCEN-cegate001-74-active-spec-requires-session-activity-and-mapped-open-work",
+        "run_id": "1785518040131",
+        "recency": {
+          "stale": false,
+          "canonical": true
+        },
+        "outcome": "PASSED",
+        "result": "PASSED",
+        "source": "docker-bdd:filtered",
+        "timestamp": "2026-07-31T00:36:30.086Z",
+        "provenance": "canonical-full-run"
+      },
+      {
+        "scenario_key": "cegate001_75",
+        "scenario_id": "pinator:SCEN-cegate001-75-feature-authoring-requires-an-open-mapped-spec-task",
+        "run_id": "1785518040131",
+        "recency": {
+          "stale": false,
+          "canonical": true
+        },
+        "outcome": "PASSED",
+        "result": "PASSED",
+        "source": "docker-bdd:filtered",
+        "timestamp": "2026-07-31T00:36:30.280Z",
+        "provenance": "canonical-full-run"
+      },
+      {
+        "scenario_key": "cegate001_76",
+        "scenario_id": "pinator:SCEN-cegate001-76-all-simultaneously-active-specs-are-preserved",
+        "run_id": "1785518040131",
+        "recency": {
+          "stale": false,
+          "canonical": true
+        },
+        "outcome": "PASSED",
+        "result": "PASSED",
+        "source": "docker-bdd:filtered",
+        "timestamp": "2026-07-31T00:36:30.434Z",
+        "provenance": "canonical-full-run"
+      },
+      {
+        "scenario_key": "cegate001_77",
+        "scenario_id": "pinator:SCEN-cegate001-77-native-goal-set-and-achieved-artifacts-control-eligibility",
+        "run_id": "1785518040131",
+        "recency": {
+          "stale": false,
+          "canonical": true
+        },
+        "outcome": "PASSED",
+        "result": "PASSED",
+        "source": "docker-bdd:filtered",
+        "timestamp": "2026-07-31T00:36:30.590Z",
+        "provenance": "canonical-full-run"
+      },
+      {
+        "scenario_key": "cegate001_78",
+        "scenario_id": "pinator:SCEN-cegate001-78-goal-clear-and-resume-parsers-require-real-artifacts",
+        "run_id": "1785518040131",
+        "recency": {
+          "stale": false,
+          "canonical": true
+        },
+        "outcome": "PASSED",
+        "result": "PASSED",
+        "source": "docker-bdd:filtered",
+        "timestamp": "2026-07-31T00:36:30.822Z",
+        "provenance": "canonical-full-run"
+      },
+      {
+        "scenario_key": "cegate001_79",
+        "scenario_id": "pinator:SCEN-cegate001-79-native-goal-and-pinator-remain-independent-stop-evaluators",
+        "run_id": "1785518040131",
+        "recency": {
+          "stale": false,
+          "canonical": true
+        },
+        "outcome": "PASSED",
+        "result": "PASSED",
+        "source": "docker-bdd:filtered",
+        "timestamp": "2026-07-31T00:36:30.976Z",
+        "provenance": "canonical-full-run"
+      },
+      {
+        "scenario_key": "cegate001_80",
+        "scenario_id": "pinator:SCEN-cegate001-80-task-plan-spec-and-goal-merge-into-one-packet",
+        "run_id": "1785518040131",
+        "recency": {
+          "stale": false,
+          "canonical": true
+        },
+        "outcome": "PASSED",
+        "result": "PASSED",
+        "source": "docker-bdd:filtered",
+        "timestamp": "2026-07-31T00:36:31.131Z",
+        "provenance": "canonical-full-run"
+      },
+      {
+        "scenario_key": "cegate001_81",
+        "scenario_id": "pinator:SCEN-cegate001-81-stop-final-message-overrides-lagging-transcript-text",
+        "run_id": "1785518040131",
+        "recency": {
+          "stale": false,
+          "canonical": true
+        },
+        "outcome": "PASSED",
+        "result": "PASSED",
+        "source": "docker-bdd:filtered",
+        "timestamp": "2026-07-31T00:36:31.288Z",
+        "provenance": "canonical-full-run"
+      },
+      {
+        "scenario_key": "cegate001_82",
+        "scenario_id": "pinator:SCEN-cegate001-82-attempted-tools-are-not-completion-evidence",
+        "run_id": "1785518040131",
+        "recency": {
+          "stale": false,
+          "canonical": true
+        },
+        "outcome": "PASSED",
+        "result": "PASSED",
+        "source": "docker-bdd:filtered",
+        "timestamp": "2026-07-31T00:36:31.443Z",
+        "provenance": "canonical-full-run"
+      },
+      {
+        "scenario_key": "cegate001_83",
+        "scenario_id": "pinator:SCEN-cegate001-83-judge-packet-is-bounded-and-redacted",
+        "run_id": "1785518040131",
+        "recency": {
+          "stale": false,
+          "canonical": true
+        },
+        "outcome": "PASSED",
+        "result": "PASSED",
+        "source": "docker-bdd:filtered",
+        "timestamp": "2026-07-31T00:36:31.597Z",
+        "provenance": "canonical-full-run"
+      },
+      {
+        "scenario_key": "cegate001_84",
+        "scenario_id": "pinator:SCEN-cegate001-84-one-actionable-commitment-blocks-the-all-rollup",
+        "run_id": "1785518040131",
+        "recency": {
+          "stale": false,
+          "canonical": true
+        },
+        "outcome": "PASSED",
+        "result": "PASSED",
+        "source": "docker-bdd:filtered",
+        "timestamp": "2026-07-31T00:36:31.751Z",
+        "provenance": "canonical-full-run"
+      },
+      {
+        "scenario_key": "cegate001_85",
+        "scenario_id": "pinator:SCEN-cegate001-85-blocked-awaiting-and-malformed-verdicts-never-close-plan-commitments",
+        "run_id": "1785518040131",
+        "recency": {
+          "stale": false,
+          "canonical": true
+        },
+        "outcome": "PASSED",
+        "result": "PASSED",
+        "source": "docker-bdd:filtered",
+        "timestamp": "2026-07-31T00:36:31.907Z",
+        "provenance": "canonical-full-run"
+      },
+      {
+        "scenario_key": "cegate001_86",
+        "scenario_id": "pinator:SCEN-cegate001-86-async-activity-is-evidence-but-not-a-work-source",
+        "run_id": "1785518040131",
+        "recency": {
+          "stale": false,
+          "canonical": true
+        },
+        "outcome": "PASSED",
+        "result": "PASSED",
+        "source": "docker-bdd:filtered",
+        "timestamp": "2026-07-31T00:36:32.100Z",
+        "provenance": "canonical-full-run"
+      },
+      {
+        "scenario_key": "cegate001_87",
+        "scenario_id": "pinator:SCEN-cegate001-87-missing-judge-token-warns-only-for-active-context",
+        "run_id": "1785518040131",
+        "recency": {
+          "stale": false,
+          "canonical": true
+        },
+        "outcome": "PASSED",
+        "result": "PASSED",
+        "source": "docker-bdd:filtered",
+        "timestamp": "2026-07-31T00:36:32.254Z",
+        "provenance": "canonical-full-run"
+      },
+      {
+        "scenario_key": "cegate001_88",
+        "scenario_id": "pinator:SCEN-cegate001-88-anti-loop-state-is-scoped-to-context-revision",
+        "run_id": "1785518040131",
+        "recency": {
+          "stale": false,
+          "canonical": true
+        },
+        "outcome": "PASSED",
+        "result": "PASSED",
+        "source": "docker-bdd:filtered",
+        "timestamp": "2026-07-31T00:36:36.185Z",
+        "provenance": "canonical-full-run"
+      },
+      {
+        "scenario_key": "cegate001_89",
+        "scenario_id": "pinator:SCEN-cegate001-89-transcript-events-are-parsed-once",
+        "run_id": "1785518040131",
+        "recency": {
+          "stale": false,
+          "canonical": true
+        },
+        "outcome": "PASSED",
+        "result": "PASSED",
+        "source": "docker-bdd:filtered",
+        "timestamp": "2026-07-31T00:36:36.339Z",
+        "provenance": "canonical-full-run"
+      },
+      {
+        "scenario_key": "cegate001_90",
+        "scenario_id": "pinator:SCEN-cegate001-90-shipped-bundle-works-without-repository-dependencies",
+        "run_id": "1785518040131",
+        "recency": {
+          "stale": false,
+          "canonical": true
+        },
+        "outcome": "PASSED",
+        "result": "PASSED",
+        "source": "docker-bdd:filtered",
+        "timestamp": "2026-07-31T00:36:36.496Z",
+        "provenance": "canonical-full-run"
+      },
+      {
+        "scenario_key": "cegate001_91",
+        "scenario_id": "pinator:SCEN-cegate001-91-codex-never-inherits-claude-lifecycle-assumptions",
+        "run_id": "1785518040131",
+        "recency": {
+          "stale": false,
+          "canonical": true
+        },
+        "outcome": "PASSED",
+        "result": "PASSED",
+        "source": "docker-bdd:filtered",
+        "timestamp": "2026-07-31T00:36:36.691Z",
+        "provenance": "canonical-full-run"
+      }
+    ],
+    "duplicates": [],
+    "counts": {
+      "fr": 12,
+      "ac": 12,
+      "scenario": 26
+    }
+  },
+  "evidence": {
+    "bddSync": {
+      "debt": [
+        "SOURCE_ONLY cegate001_66: source scenario has no executable counterpart or pending marker",
+        "SOURCE_ONLY cegate001_67: source scenario has no executable counterpart or pending marker",
+        "SOURCE_ONLY cegate001_68: source scenario has no executable counterpart or pending marker",
+        "SOURCE_ONLY cegate001_69: source scenario has no executable counterpart or pending marker",
+        "SOURCE_ONLY cegate001_70: source scenario has no executable counterpart or pending marker",
+        "SOURCE_ONLY cegate001_71: source scenario has no executable counterpart or pending marker",
+        "SOURCE_ONLY cegate001_72: source scenario has no executable counterpart or pending marker",
+        "SOURCE_ONLY cegate001_73: source scenario has no executable counterpart or pending marker",
+        "SOURCE_ONLY cegate001_74: source scenario has no executable counterpart or pending marker",
+        "SOURCE_ONLY cegate001_75: source scenario has no executable counterpart or pending marker",
+        "SOURCE_ONLY cegate001_76: source scenario has no executable counterpart or pending marker",
+        "SOURCE_ONLY cegate001_77: source scenario has no executable counterpart or pending marker",
+        "SOURCE_ONLY cegate001_78: source scenario has no executable counterpart or pending marker",
+        "SOURCE_ONLY cegate001_79: source scenario has no executable counterpart or pending marker",
+        "SOURCE_ONLY cegate001_80: source scenario has no executable counterpart or pending marker",
+        "SOURCE_ONLY cegate001_81: source scenario has no executable counterpart or pending marker",
+        "SOURCE_ONLY cegate001_82: source scenario has no executable counterpart or pending marker",
+        "SOURCE_ONLY cegate001_83: source scenario has no executable counterpart or pending marker",
+        "SOURCE_ONLY cegate001_84: source scenario has no executable counterpart or pending marker",
+        "SOURCE_ONLY cegate001_85: source scenario has no executable counterpart or pending marker",
+        "SOURCE_ONLY cegate001_86: source scenario has no executable counterpart or pending marker",
+        "SOURCE_ONLY cegate001_87: source scenario has no executable counterpart or pending marker",
+        "SOURCE_ONLY cegate001_88: source scenario has no executable counterpart or pending marker",
+        "SOURCE_ONLY cegate001_89: source scenario has no executable counterpart or pending marker",
+        "SOURCE_ONLY cegate001_90: source scenario has no executable counterpart or pending marker",
+        "SOURCE_ONLY cegate001_91: source scenario has no executable counterpart or pending marker"
+      ]
+    },
+    "filteredProof": {
+      "latest": {
+        "runId": "1785518040131",
+        "artifact": ".dev-pomogator/.test-history/run-1785518040131-filtered.ndjson",
+        "selectedScenarioIds": [
+          "CEGATE001_66",
+          "CEGATE001_67",
+          "CEGATE001_68",
+          "CEGATE001_69",
+          "CEGATE001_70",
+          "CEGATE001_71",
+          "CEGATE001_72",
+          "CEGATE001_73",
+          "CEGATE001_74",
+          "CEGATE001_75",
+          "CEGATE001_76",
+          "CEGATE001_77",
+          "CEGATE001_78",
+          "CEGATE001_79",
+          "CEGATE001_80",
+          "CEGATE001_81",
+          "CEGATE001_82",
+          "CEGATE001_83",
+          "CEGATE001_84",
+          "CEGATE001_85",
+          "CEGATE001_86",
+          "CEGATE001_87",
+          "CEGATE001_88",
+          "CEGATE001_89",
+          "CEGATE001_90",
+          "CEGATE001_91"
+        ],
+        "passed": 26,
+        "nonPassed": 0,
+        "timestamp": "2026-07-31T17:13:58.702Z",
+        "source": "docker-bdd:filtered",
+        "canonicalCoverageUnchanged": true,
+        "acceptedAttachment": false
+      },
+      "proofs": [
+        "1785518040131: 26 passed / 0 non-passed; selected CEGATE001_66, CEGATE001_67, CEGATE001_68, CEGATE001_69, CEGATE001_70, CEGATE001_71, CEGATE001_72, CEGATE001_73, CEGATE001_74, CEGATE001_75, CEGATE001_76, CEGATE001_77, CEGATE001_78, CEGATE001_79, CEGATE001_80, CEGATE001_81, CEGATE001_82, CEGATE001_83, CEGATE001_84, CEGATE001_85, CEGATE001_86, CEGATE001_87, CEGATE001_88, CEGATE001_89, CEGATE001_90, CEGATE001_91; source=docker-bdd:filtered; at=2026-07-31T17:13:58.702Z; artifact=.dev-pomogator/.test-history/run-1785518040131-filtered.ndjson; canonical coverage unchanged until full run or accepted attachment"
+      ],
+      "artifacts": [
+        ".dev-pomogator/.test-history/run-1785518040131-filtered.ndjson"
+      ]
+    },
+    "oldTestCensus": null
+  },
+  "semantic": {
+    "ran": false,
+    "binaryPresent": false,
+    "pairsChecked": 0,
+    "drifts": [],
+    "failures": 0,
+    "note": "SEMANTIC_SKIPPED ΓÇö no claude binary available (or semantic disabled); unchecked content is NOT \"no drift\" (FR-37c)"
+  },
+  "gapList": [
+    "[LINK_VALIDITY] AC-1 (FR-1) has no clickable link back to FR.md",
+    "[LINK_VALIDITY] AC-2 (FR-2) has no clickable link back to FR.md",
+    "[LINK_VALIDITY] AC-3 (FR-3) has no clickable link back to FR.md",
+    "[LINK_VALIDITY] AC-4 (FR-4) has no clickable link back to FR.md",
+    "[LINK_VALIDITY] AC-5 (FR-5) has no clickable link back to FR.md",
+    "[LINK_VALIDITY] AC-6 (FR-6) has no clickable link back to FR.md",
+    "[LINK_VALIDITY] AC-7 (FR-7) has no clickable link back to FR.md",
+    "[LINK_VALIDITY] AC-8 (FR-8) has no clickable link back to FR.md",
+    "[LINK_VALIDITY] AC-9 (FR-9) has no clickable link back to FR.md",
+    "[LINK_VALIDITY] AC-10 (FR-10) has no clickable link back to FR.md",
+    "[LINK_VALIDITY] AC-11 (FR-11) has no clickable link back to FR.md",
+    "[LINK_VALIDITY] AC-12 (FR-12) has no clickable link back to FR.md",
+    "[FILE_CHANGES_VERIFY] FILE_CHANGES: \"tests/features/plugins/claim-evidence-gate/CEGATE001_pinator.feature\" has action=edit but file does not exist",
+    "[FILE_CHANGES_VERIFY] FILE_CHANGES: \".specs/spec-generator-v4/{FR.md,ACCEPTANCE_CRITERIA.md,DESIGN.md,USER_STORIES.md,TASKS.md,spec-generator-v4.feature}\" has action=edit but file does not exist"
+  ],
+  "notes": [
+    "SEMANTIC_SKIPPED ΓÇö no claude binary available (or semantic disabled); unchecked content is NOT \"no drift\" (FR-37c)"
+  ],
+  "readiness": {
+    "lanes": {
+      "STRUCTURE": {
+        "status": "RED",
+        "blocking": true,
+        "summary": "0 structural error(s), 14 audit error(s), 0 conformance error(s)",
+        "debt": [
+          "14 audit error(s)"
+        ]
+      },
+      "TRACEABILITY": {
+        "status": "GREEN",
+        "blocking": false,
+        "summary": "0 traceability gaps",
+        "debt": []
+      },
+      "EXECUTION": {
+        "status": "GREEN",
+        "blocking": false,
+        "summary": "all effective scenario evidence is current and passing",
+        "debt": []
+      },
+      "TASK_TRUTH": {
+        "status": "GREEN",
+        "blocking": false,
+        "summary": "no DONE-but-unverified tasks",
+        "debt": []
+      },
+      "BDD_SYNC": {
+        "status": "RED",
+        "blocking": true,
+        "summary": "26 BDD sync or repository migration debt item(s)",
+        "debt": [
+          "SOURCE_ONLY cegate001_66: source scenario has no executable counterpart or pending marker",
+          "SOURCE_ONLY cegate001_67: source scenario has no executable counterpart or pending marker",
+          "SOURCE_ONLY cegate001_68: source scenario has no executable counterpart or pending marker",
+          "SOURCE_ONLY cegate001_69: source scenario has no executable counterpart or pending marker",
+          "SOURCE_ONLY cegate001_70: source scenario has no executable counterpart or pending marker",
+          "SOURCE_ONLY cegate001_71: source scenario has no executable counterpart or pending marker",
+          "SOURCE_ONLY cegate001_72: source scenario has no executable counterpart or pending marker",
+          "SOURCE_ONLY cegate001_73: source scenario has no executable counterpart or pending marker",
+          "SOURCE_ONLY cegate001_74: source scenario has no executable counterpart or pending marker",
+          "SOURCE_ONLY cegate001_75: source scenario has no executable counterpart or pending marker",
+          "SOURCE_ONLY cegate001_76: source scenario has no executable counterpart or pending marker",
+          "SOURCE_ONLY cegate001_77: source scenario has no executable counterpart or pending marker",
+          "SOURCE_ONLY cegate001_78: source scenario has no executable counterpart or pending marker",
+          "SOURCE_ONLY cegate001_79: source scenario has no executable counterpart or pending marker",
+          "SOURCE_ONLY cegate001_80: source scenario has no executable counterpart or pending marker",
+          "SOURCE_ONLY cegate001_81: source scenario has no executable counterpart or pending marker",
+          "SOURCE_ONLY cegate001_82: source scenario has no executable counterpart or pending marker",
+          "SOURCE_ONLY cegate001_83: source scenario has no executable counterpart or pending marker",
+          "SOURCE_ONLY cegate001_84: source scenario has no executable counterpart or pending marker",
+          "SOURCE_ONLY cegate001_85: source scenario has no executable counterpart or pending marker",
+          "SOURCE_ONLY cegate001_86: source scenario has no executable counterpart or pending marker",
+          "SOURCE_ONLY cegate001_87: source scenario has no executable counterpart or pending marker",
+          "SOURCE_ONLY cegate001_88: source scenario has no executable counterpart or pending marker",
+          "SOURCE_ONLY cegate001_89: source scenario has no executable counterpart or pending marker",
+          "SOURCE_ONLY cegate001_90: source scenario has no executable counterpart or pending marker",
+          "SOURCE_ONLY cegate001_91: source scenario has no executable counterpart or pending marker"
+        ]
+      },
+      "SEMANTIC": {
+        "status": "SKIPPED",
+        "blocking": false,
+        "summary": "semantic check explicitly disabled for this run",
+        "debt": []
+      },
+      "FILTERED_PROOF": {
+        "status": "GREEN",
+        "blocking": false,
+        "summary": "1785518040131: 26 passed / 0 non-passed; selected CEGATE001_66, CEGATE001_67, CEGATE001_68, CEGATE001_69, CEGATE001_70, CEGATE001_71, CEGATE001_72, CEGATE001_73, CEGATE001_74, CEGATE001_75, CEGATE001_76, CEGATE001_77, CEGATE001_78, CEGATE001_79, CEGATE001_80, CEGATE001_81, CEGATE001_82, CEGATE001_83, CEGATE001_84, CEGATE001_85, CEGATE001_86, CEGATE001_87, CEGATE001_88, CEGATE001_89, CEGATE001_90, CEGATE001_91; source=docker-bdd:filtered; at=2026-07-31T17:13:58.702Z; artifact=.dev-pomogator/.test-history/run-1785518040131-filtered.ndjson; canonical coverage unchanged until full run or accepted attachment",
+        "debt": []
+      }
+    },
+    "overall": "NOT_READY",
+    "nextAction": "Fix structural/audit/conformance errors, then rerun the readiness check."
+  }
+}

@@ -1,0 +1,67 @@
+{
+  "ok": true,
+  "claims": [
+    {
+      "acId": "AC-65.1",
+      "text": "**Требование:** [FR-65](FR.md#fr-65)\r\n\r\nWHEN an acceptance claim exposes a public API, catalog, policy, DTO field/value, version, UI input schema, or internal detail THEN the coverage analyzer SHALL emit AC-linked required lanes for DTO/config/source-of-truth implementation mapping, producer/consumer compatibility or an architecture decision, input-schema or no-schema UX decision, allowlist/redaction, a regression contract test, and live response-shape evidence as applicable.",
+      "kinds": [
+        "public_contract",
+        "version",
+        "ui_input",
+        "redaction",
+        "deployment"
+      ],
+      "requiredLanes": [
+        "source_mapping",
+        "contract_regression",
+        "semantic_readback",
+        "version_compatibility",
+        "input_schema",
+        "redaction",
+        "route_prefix"
+      ],
+      "mappedTaskCount": 4,
+      "missingLanes": [],
+      "blockedInvestigation": false
+    },
+    {
+      "acId": "AC-65.2",
+      "text": "**Требование:** [FR-65](FR.md#fr-65)\r\n\r\nWHEN acceptance includes authenticated or paid admission, balance, reservation, dispatch, settlement, or result delivery THEN the generated plan SHALL map that AC to unauthenticated `401`, insufficient-balance `402`, funded success, settlement/idempotency, and result/artifact readback verification; IF production execution is costly or unsafe THEN a controlled smoke task SHALL name test accounts and spend guardrails.",
+      "kinds": [
+        "paid_auth"
+      ],
+      "requiredLanes": [
+        "unauthenticated",
+        "insufficient_balance",
+        "funded_success",
+        "settlement_idempotency",
+        "artifact_readback",
+        "controlled_spend"
+      ],
+      "mappedTaskCount": 4,
+      "missingLanes": [],
+      "blockedInvestigation": false
+    },
+    {
+      "acId": "AC-65.4",
+      "text": "**Требование:** [FR-65](FR.md#fr-65)\r\n\r\nWHEN `audit-spec`, `spec-verdict`, or the Phase-3 reviewer inspects a high-risk spec THEN a missing AC-to-implementation/test/deploy-evidence mapping SHALL produce blocking `ACCEPTANCE_DELIVERY_COVERAGE`; AND the synthetic paid-SPA corpus SHALL distinguish root `/api` from prefixed `/go/api`, HTML infrastructure `404` from JSON auth/billing boundaries, and require registry publication, slug/settlement mapping, funded execution, and semantic status/content-type/body readback rather than accepting endpoint existence.",
+      "kinds": [
+        "paid_auth",
+        "deployment"
+      ],
+      "requiredLanes": [
+        "unauthenticated",
+        "insufficient_balance",
+        "funded_success",
+        "settlement_idempotency",
+        "artifact_readback",
+        "semantic_readback",
+        "route_prefix"
+      ],
+      "mappedTaskCount": 4,
+      "missingLanes": [],
+      "blockedInvestigation": false
+    }
+  ],
+  "findings": []
+}

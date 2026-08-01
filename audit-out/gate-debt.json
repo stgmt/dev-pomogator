@@ -1,0 +1,229 @@
+{
+  "builtAt": "2026-07-26T17:00:53.222Z",
+  "totals": {
+    "specs": 63,
+    "ac": {
+      "total": 811,
+      "untagged": 803,
+      "tagged_but_not_green": 8
+    },
+    "nfr": {
+      "total": 58,
+      "untagged": 58,
+      "tagged_but_not_green": 0
+    },
+    "would_be_blocking_errors": 869
+  },
+  "top_15_specs_by_debt": [
+    {
+      "spec": "spec-generator-v4",
+      "ac": {
+        "untagged": 185,
+        "unverified": 7,
+        "total": 192
+      },
+      "nfr": {
+        "untagged": 41,
+        "unverified": 0,
+        "total": 41
+      },
+      "debt": 233
+    },
+    {
+      "spec": "pomogator-doctor",
+      "ac": {
+        "untagged": 37,
+        "unverified": 0,
+        "total": 37
+      },
+      "nfr": {
+        "untagged": 0,
+        "unverified": 0,
+        "total": 0
+      },
+      "debt": 37
+    },
+    {
+      "spec": "session-pilot",
+      "ac": {
+        "untagged": 27,
+        "unverified": 0,
+        "total": 27
+      },
+      "nfr": {
+        "untagged": 0,
+        "unverified": 0,
+        "total": 0
+      },
+      "debt": 27
+    },
+    {
+      "spec": "architecture-decision-builder",
+      "ac": {
+        "untagged": 21,
+        "unverified": 0,
+        "total": 21
+      },
+      "nfr": {
+        "untagged": 0,
+        "unverified": 0,
+        "total": 0
+      },
+      "debt": 21
+    },
+    {
+      "spec": "tui-test-runner",
+      "ac": {
+        "untagged": 20,
+        "unverified": 0,
+        "total": 20
+      },
+      "nfr": {
+        "untagged": 0,
+        "unverified": 0,
+        "total": 0
+      },
+      "debt": 20
+    },
+    {
+      "spec": "spec-workflow-md-validation",
+      "ac": {
+        "untagged": 11,
+        "unverified": 0,
+        "total": 11
+      },
+      "nfr": {
+        "untagged": 9,
+        "unverified": 0,
+        "total": 9
+      },
+      "debt": 20
+    },
+    {
+      "spec": "onboard-repo-phase0",
+      "ac": {
+        "untagged": 20,
+        "unverified": 0,
+        "total": 20
+      },
+      "nfr": {
+        "untagged": 0,
+        "unverified": 0,
+        "total": 0
+      },
+      "debt": 20
+    },
+    {
+      "spec": "forbid-root-artifacts",
+      "ac": {
+        "untagged": 19,
+        "unverified": 0,
+        "total": 19
+      },
+      "nfr": {
+        "untagged": 0,
+        "unverified": 0,
+        "total": 0
+      },
+      "debt": 19
+    },
+    {
+      "spec": "personal-pomogator",
+      "ac": {
+        "untagged": 16,
+        "unverified": 0,
+        "total": 16
+      },
+      "nfr": {
+        "untagged": 0,
+        "unverified": 0,
+        "total": 0
+      },
+      "debt": 16
+    },
+    {
+      "spec": "spec-reality-check",
+      "ac": {
+        "untagged": 15,
+        "unverified": 0,
+        "total": 15
+      },
+      "nfr": {
+        "untagged": 0,
+        "unverified": 0,
+        "total": 0
+      },
+      "debt": 15
+    },
+    {
+      "spec": "strong-tests",
+      "ac": {
+        "untagged": 14,
+        "unverified": 0,
+        "total": 14
+      },
+      "nfr": {
+        "untagged": 0,
+        "unverified": 0,
+        "total": 0
+      },
+      "debt": 14
+    },
+    {
+      "spec": "spec-phase-gate",
+      "ac": {
+        "untagged": 14,
+        "unverified": 0,
+        "total": 14
+      },
+      "nfr": {
+        "untagged": 0,
+        "unverified": 0,
+        "total": 0
+      },
+      "debt": 14
+    },
+    {
+      "spec": "fix-bg-output-loss",
+      "ac": {
+        "untagged": 14,
+        "unverified": 0,
+        "total": 14
+      },
+      "nfr": {
+        "untagged": 0,
+        "unverified": 0,
+        "total": 0
+      },
+      "debt": 14
+    },
+    {
+      "spec": "context-menu",
+      "ac": {
+        "untagged": 14,
+        "unverified": 0,
+        "total": 14
+      },
+      "nfr": {
+        "untagged": 0,
+        "unverified": 0,
+        "total": 0
+      },
+      "debt": 14
+    },
+    {
+      "spec": "specs-management-as-skill",
+      "ac": {
+        "untagged": 13,
+        "unverified": 0,
+        "total": 13
+      },
+      "nfr": {
+        "untagged": 0,
+        "unverified": 0,
+        "total": 0
+      },
+      "debt": 13
+    }
+  ]
+}

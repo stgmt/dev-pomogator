@@ -1,0 +1,7 @@
+{
+  "action": "apply",
+  "spec": "pinator",
+  "doc": "NFR.md",
+  "content": "# Non-Functional Requirements\r\n\r\n## Performance\r\n\r\nСинхронно, без сети/subprocess в быстром слое; пропуск линий >1MB; укладывается в Stop-таймаут (<5s). ИИ-судья — единственный сетевой вызов, только в серой зоне, с одним ретраем; нет токена → мгновенный null (без сети).\r\n\r\n## Security\r\n\r\nSnippet усечён до 200 символов; per-repo marker/fires scoping через `cwd`; токен судьи читается из env/.env, не логируется и не попадает в reason (в требовании — только ИМЕНА переменных, не значения).\r\n\r\n## Reliability\r\n\r\nFail-open везде (любая ошибка → `{}`); atomic marker write; corrupt JSONL-линии пропускаются; бандл self-contained (esbuild) → работает у юзеров без `node_modules`; warn-on-failure wrapper в манифесте.\r\n\r\n## Usability\r\n\r\nПричина блока простым языком с конкретным следующим шагом; FR-15 — требование токена с точными переменными + endpoint; env kill-switch `CLAIM_GATE_ENABLED=false`; `shadow` для тихого аудита.\r\n",
+  "reason": "migrate claim-evidence-gate contract into canonical pinator M1-M4"
+}

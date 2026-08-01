@@ -1,0 +1,8 @@
+{
+  "action": "apply",
+  "spec": "dev-pomogator-canonical-plugin",
+  "doc": "ACCEPTANCE_CRITERIA.md",
+  "old_string": "**BDD:** `CORE024_01`, `CORE024_02`, `CORE024_06`, `CORE024_07` in `tests/features/core/CORE024_hook-review.feature`; `tests/step_definitions/feature24_hook_review.ts`.\r\n",
+  "new_string": "WHEN a managed non-SessionStart hook runs after its owned hook-service daemon has died or become stale during the same Claude Code session\r\nTHEN the builtins-only client SHALL coalesce startup through `ensureUp`, start or recycle only the verified-owned daemon, and dispatch the original request successfully without user action\r\nAND a connection-class first failure SHALL retry the exact request at most once after recovery\r\nAND a live 401, 403, 404, or 503 response SHALL be returned without restart or retry\r\nAND a foreign process or listener SHALL never be terminated or treated as owned\r\nAND a second transport failure SHALL fail open and persist a sanitized client diagnostic without the credential.\r\n\r\n**BDD:** `CORE024_01`, `CORE024_02`, `CORE024_06`, `CORE024_07`, `CORE024_12` in `tests/features/core/CORE024_hook-review.feature`; `tests/step_definitions/feature24_hook_review.ts`.\r\n",
+  "reason": "[skip-spec-steer: targeted incident amendment to existing AC-10 after the canonical phase agent could not mutate through disconnected MCP] Add executable no-user-action daemon recovery acceptance."
+}

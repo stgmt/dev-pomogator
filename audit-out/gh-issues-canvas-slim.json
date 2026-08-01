@@ -1,0 +1,1023 @@
+{
+  "totals": {
+    "total": 119,
+    "open": 64,
+    "closed": 55,
+    "withComments": 55
+  },
+  "domainRows": [
+    {
+      "domain": "hooks / gates",
+      "total": 31,
+      "open": 16,
+      "closed": 15,
+      "comments": 24,
+      "closeRate": 48
+    },
+    {
+      "domain": "spec-generator / specs",
+      "total": 21,
+      "open": 9,
+      "closed": 12,
+      "comments": 15,
+      "closeRate": 57
+    },
+    {
+      "domain": "BDD / cucumber / tests",
+      "total": 12,
+      "open": 8,
+      "closed": 4,
+      "comments": 9,
+      "closeRate": 33
+    },
+    {
+      "domain": "misc / other",
+      "total": 12,
+      "open": 3,
+      "closed": 9,
+      "comments": 7,
+      "closeRate": 75
+    },
+    {
+      "domain": "skills / rules",
+      "total": 8,
+      "open": 6,
+      "closed": 2,
+      "comments": 7,
+      "closeRate": 25
+    },
+    {
+      "domain": "headroom / proxy",
+      "total": 8,
+      "open": 5,
+      "closed": 3,
+      "comments": 34,
+      "closeRate": 38
+    },
+    {
+      "domain": "spec backlog (jul23)",
+      "total": 6,
+      "open": 5,
+      "closed": 1,
+      "comments": 1,
+      "closeRate": 17
+    },
+    {
+      "domain": "plugin / install / migrate",
+      "total": 4,
+      "open": 0,
+      "closed": 4,
+      "comments": 3,
+      "closeRate": 100
+    },
+    {
+      "domain": "misc / enhancement",
+      "total": 3,
+      "open": 2,
+      "closed": 1,
+      "comments": 0,
+      "closeRate": 33
+    },
+    {
+      "domain": "misc / bug",
+      "total": 3,
+      "open": 2,
+      "closed": 1,
+      "comments": 0,
+      "closeRate": 33
+    },
+    {
+      "domain": "MCP / providers / memory",
+      "total": 3,
+      "open": 2,
+      "closed": 1,
+      "comments": 1,
+      "closeRate": 33
+    },
+    {
+      "domain": "doctor / diagnostics",
+      "total": 2,
+      "open": 2,
+      "closed": 0,
+      "comments": 0,
+      "closeRate": 0
+    },
+    {
+      "domain": "session-pilot / worktree / TUI",
+      "total": 2,
+      "open": 1,
+      "closed": 1,
+      "comments": 1,
+      "closeRate": 50
+    },
+    {
+      "domain": "context-mode",
+      "total": 1,
+      "open": 1,
+      "closed": 0,
+      "comments": 2,
+      "closeRate": 0
+    },
+    {
+      "domain": "research / planning",
+      "total": 1,
+      "open": 0,
+      "closed": 1,
+      "comments": 0,
+      "closeRate": 100
+    },
+    {
+      "domain": "pinator / pack",
+      "total": 1,
+      "open": 1,
+      "closed": 0,
+      "comments": 0,
+      "closeRate": 0
+    },
+    {
+      "domain": "CI / docker / release",
+      "total": 1,
+      "open": 1,
+      "closed": 0,
+      "comments": 3,
+      "closeRate": 0
+    }
+  ],
+  "months": {
+    "2026-07": {
+      "created": 79,
+      "openNow": 50,
+      "closedNow": 29
+    },
+    "2026-06": {
+      "created": 39,
+      "openNow": 14,
+      "closedNow": 25
+    },
+    "2026-05": {
+      "created": 1,
+      "openNow": 0,
+      "closedNow": 1
+    }
+  },
+  "byMonthDomain": {
+    "2026-07": {
+      "hooks / gates": 14,
+      "misc / enhancement": 1,
+      "spec-generator / specs": 18,
+      "context-mode": 1,
+      "misc / bug": 2,
+      "MCP / providers / memory": 3,
+      "skills / rules": 7,
+      "BDD / cucumber / tests": 5,
+      "doctor / diagnostics": 2,
+      "spec backlog (jul23)": 6,
+      "misc / other": 9,
+      "headroom / proxy": 7,
+      "session-pilot / worktree / TUI": 1,
+      "plugin / install / migrate": 3
+    },
+    "2026-06": {
+      "hooks / gates": 16,
+      "plugin / install / migrate": 1,
+      "misc / bug": 1,
+      "BDD / cucumber / tests": 7,
+      "research / planning": 1,
+      "pinator / pack": 1,
+      "spec-generator / specs": 3,
+      "misc / other": 3,
+      "session-pilot / worktree / TUI": 1,
+      "CI / docker / release": 1,
+      "headroom / proxy": 1,
+      "misc / enhancement": 2,
+      "skills / rules": 1
+    },
+    "2026-05": {
+      "hooks / gates": 1
+    }
+  },
+  "openSlim": [
+    {
+      "n": 198,
+      "title": "Создай GitHub issue в stgmt/dev-pomogator: подключить Reqnroll (.NET), Behave (Python) и Cucumber-JVM (Java) к productio",
+      "domain": "BDD / cucumber / tests",
+      "created": "2026-07-24",
+      "updated": "2026-07-24",
+      "c": 0,
+      "last": null,
+      "url": "https://github.com/stgmt/dev-pomogator/issues/198"
+    },
+    {
+      "n": 194,
+      "title": "PowerShell Start-Job around the test-runner silently kills the .NET testhost - use Start-Process.",
+      "domain": "BDD / cucumber / tests",
+      "created": "2026-07-24",
+      "updated": "2026-07-24",
+      "c": 0,
+      "last": null,
+      "url": "https://github.com/stgmt/dev-pomogator/issues/194"
+    },
+    {
+      "n": 168,
+      "title": "Плагируемые адаптеры тест-результатов (JUnit XML, TRX) к единой модели вердикта",
+      "domain": "BDD / cucumber / tests",
+      "created": "2026-07-23",
+      "updated": "2026-07-23",
+      "c": 0,
+      "last": null,
+      "url": "https://github.com/stgmt/dev-pomogator/issues/168"
+    },
+    {
+      "n": 160,
+      "title": "tsx-runner native:fail(2) на Windows валит НЕ только spec-access-guard: plan-gate и bdd-only-test-guard тоже, оба fail-CLOSED (шире #137)",
+      "domain": "BDD / cucumber / tests",
+      "created": "2026-07-23",
+      "updated": "2026-07-23",
+      "c": 0,
+      "last": null,
+      "url": "https://github.com/stgmt/dev-pomogator/issues/160"
+    },
+    {
+      "n": 129,
+      "title": "Тест-тул: мёртвый путь wrapper в /run-tests, слепой автодетект dotnet, нечитаемый DENY test_guard (догфуд lm-saas/Window",
+      "domain": "BDD / cucumber / tests",
+      "created": "2026-07-18",
+      "updated": "2026-07-19",
+      "c": 1,
+      "last": "@stgmt 2026-07-19: ## Дополнение (владелец попросил расширить): проверка «прогон уже идёт» в обёртке Продолжение догфуда вскрыло 4-ю проблему, самую дорогую: **обёртка не защищает от параллельного за",
+      "url": "https://github.com/stgmt/dev-pomogator/issues/129"
+    },
+    {
+      "n": 59,
+      "title": "automation: guard против fake-green / exclude-instead-of-implement в BDD (.feature.test.ts)",
+      "domain": "BDD / cucumber / tests",
+      "created": "2026-06-11",
+      "updated": "2026-06-11",
+      "c": 0,
+      "last": null,
+      "url": "https://github.com/stgmt/dev-pomogator/issues/59"
+    },
+    {
+      "n": 51,
+      "title": "test-runner: поддержать headless WSL2 Docker (DOCKER_HOST=tcp) — тесты с Testcontainers/Docker.DotNet падают TimeoutException без Docker Desktop",
+      "domain": "BDD / cucumber / tests",
+      "created": "2026-06-06",
+      "updated": "2026-06-06",
+      "c": 1,
+      "last": "@stgmt 2026-06-06: ## Уточнение по итогам реализации воркэраунда Прокопали глубже — нашли три независимых слоя проблемы (все нужны для headless-WSL): 1. Docker.DotNet НЕ понимает схему tcp:// (формат",
+      "url": "https://github.com/stgmt/dev-pomogator/issues/51"
+    },
+    {
+      "n": 33,
+      "title": "tui-test-runner: detectFramework не видит framework в монорепо (вложенные .csproj) → Unsupported framework adapter: unknown",
+      "domain": "BDD / cucumber / tests",
+      "created": "2026-06-01",
+      "updated": "2026-06-01",
+      "c": 0,
+      "last": null,
+      "url": "https://github.com/stgmt/dev-pomogator/issues/33"
+    },
+    {
+      "n": 49,
+      "title": "docker-test.sh: машины без Docker Desktop (docker только внутри WSL) — WSL-шим",
+      "domain": "CI / docker / release",
+      "created": "2026-06-05",
+      "updated": "2026-06-06",
+      "c": 3,
+      "last": "@stgmt 2026-06-06: Закрыто доказательно (commit b3d90f9): clean-worktree прогоны e2b5145 и baseline 4bf8d5c — по 12 падений, 11 общих предсуществующих + tui-test-runner (order-зависимый, в изоляции п",
+      "url": "https://github.com/stgmt/dev-pomogator/issues/49"
+    },
+    {
+      "n": 209,
+      "title": "Оформить и отправить issue в dev-pomogator: context-mode ctx_execute оставил orphan Python recursive scan ~\\.codex, проц",
+      "domain": "context-mode",
+      "created": "2026-07-28",
+      "updated": "2026-07-28",
+      "c": 2,
+      "last": "@stgmt 2026-07-28: Implemented the corrected fix in the actual owner repository and opened upstream PR: https://github.com/mksglu/context-mode/pull/1009 Proof: - MCP request AbortSignal now reaches c",
+      "url": "https://github.com/stgmt/dev-pomogator/issues/209"
+    },
+    {
+      "n": 188,
+      "title": "Создать отдельную GitHub issue в stgmt/dev-pomogator про false-positive C-CTXM в 2.0.5: bundled doctor вычисляет bundled",
+      "domain": "doctor / diagnostics",
+      "created": "2026-07-23",
+      "updated": "2026-07-23",
+      "c": 0,
+      "last": null,
+      "url": "https://github.com/stgmt/dev-pomogator/issues/188"
+    },
+    {
+      "n": 163,
+      "title": "Typed spec DSL (optional format): AST parser, imports, multi-file diagnostics",
+      "domain": "doctor / diagnostics",
+      "created": "2026-07-23",
+      "updated": "2026-07-23",
+      "c": 0,
+      "last": null,
+      "url": "https://github.com/stgmt/dev-pomogator/issues/163"
+    },
+    {
+      "n": 139,
+      "title": "context-mode: canonical integration runbook (install, doctor, MCP reconnect, Windows/worktree gotchas, value boundary)",
+      "domain": "headroom / proxy",
+      "created": "2026-07-21",
+      "updated": "2026-07-21",
+      "c": 0,
+      "last": null,
+      "url": "https://github.com/stgmt/dev-pomogator/issues/139"
+    },
+    {
+      "n": 90,
+      "title": "Авто-включать ENABLE_TOOL_SEARCH=1 всем юзерам (дефер MCP-схем: −90-120K токенов со старта)",
+      "domain": "headroom / proxy",
+      "created": "2026-07-05",
+      "updated": "2026-07-21",
+      "c": 1,
+      "last": "@stgmt 2026-07-21: Cross-linking canonical context-mode issue: #139 now contains the context-mode integration/runbook material and references this `ENABLE_TOOL_SEARCH=1` task as related MCP-startup d",
+      "url": "https://github.com/stgmt/dev-pomogator/issues/90"
+    },
+    {
+      "n": 84,
+      "title": "Умный full-install headroom + context-mode (глобально, doctor-heal, верификация, Windows-готчи)",
+      "domain": "headroom / proxy",
+      "created": "2026-07-03",
+      "updated": "2026-07-21",
+      "c": 12,
+      "last": "@stgmt 2026-07-21: Context-mode-specific install/runbook/gotcha material from this umbrella issue has been consolidated into #139 as the canonical context-mode issue. Keeping this issue open for the ",
+      "url": "https://github.com/stgmt/dev-pomogator/issues/84"
+    },
+    {
+      "n": 88,
+      "title": "headroom: голый proxy мисконфиг — нужны --code-aware + --no-ccr-proactive-expansion; MCP-арм idle; #1158 роняет opus[1m]→200k",
+      "domain": "headroom / proxy",
+      "created": "2026-07-04",
+      "updated": "2026-07-16",
+      "c": 4,
+      "last": "@stgmt 2026-07-05: ⚠️ Числа экономии в разборе выше завышены strawman-базлайном («читать целиком» vs реальный Grep). Честно: **Grep ~95 ток vs ctx_ ~30 ток**, а не «2.7M vs 30». 2.7M физически не вле",
+      "url": "https://github.com/stgmt/dev-pomogator/issues/88"
+    },
+    {
+      "n": 85,
+      "title": "Авто-установка + конфиг claude-context (Windows-native semantic code-search MCP) — полный спек для установщика",
+      "domain": "headroom / proxy",
+      "created": "2026-07-03",
+      "updated": "2026-07-16",
+      "c": 0,
+      "last": null,
+      "url": "https://github.com/stgmt/dev-pomogator/issues/85"
+    },
+    {
+      "n": 215,
+      "title": "Feature: PreToolUse enforcement for #212 — block solo/direct Agent spawn when no Dynamic Workflow dispatch is active",
+      "domain": "hooks / gates",
+      "created": "2026-07-29",
+      "updated": "2026-07-29",
+      "c": 1,
+      "last": "@stgmt 2026-07-29: ## Dogfood update: practical value and live boundary proof We applied the narrow enforcement slice from this issue in a real project and then used Dynamic Workflow again to investi",
+      "url": "https://github.com/stgmt/dev-pomogator/issues/215"
+    },
+    {
+      "n": 193,
+      "title": "Создать отдельную issue в stgmt/dev-pomogator про постоянный HTTP 503 на managed HTTP Stop hook Stop/9/0 (claim-evidence",
+      "domain": "hooks / gates",
+      "created": "2026-07-24",
+      "updated": "2026-07-24",
+      "c": 0,
+      "last": null,
+      "url": "https://github.com/stgmt/dev-pomogator/issues/193"
+    },
+    {
+      "n": 161,
+      "title": "claim-evidence-gate слеп к прошлым ходам: требует перепрогон тестов, хотя они шли ходом раньше при неизменном коде (carry-over evidence)",
+      "domain": "hooks / gates",
+      "created": "2026-07-23",
+      "updated": "2026-07-23",
+      "c": 1,
+      "last": "@stgmt 2026-07-23: ## Верификация фикса (снимаю [UNVERIFIED]) Помимо юнит-логики (9/9), прогнал **живой e2e против самого бандла** (spawn процесса гейта с синтетическим транскриптом, проверка verify-",
+      "url": "https://github.com/stgmt/dev-pomogator/issues/161"
+    },
+    {
+      "n": 149,
+      "title": "claim-evidence-gate 12 раз требовал нарушить git-push-safety: «awaiting user permission» трактуется как fake hand-off",
+      "domain": "hooks / gates",
+      "created": "2026-07-22",
+      "updated": "2026-07-22",
+      "c": 5,
+      "last": "@stgmt 2026-07-22: ## Воспроизведено: откуда берётся «14 open tasks» и «задачи не из моего мандата» Механизм найден и посчитан. ### Цепочка 1. **Грязное рабочее дерево делает спеку «затронутой сессие",
+      "url": "https://github.com/stgmt/dev-pomogator/issues/149"
+    },
+    {
+      "n": 130,
+      "title": "CARL: CARL_PROJECT_DIR workaround (#128) does not reach the hook process — implement cwd walk-up (patch included)",
+      "domain": "hooks / gates",
+      "created": "2026-07-19",
+      "updated": "2026-07-19",
+      "c": 0,
+      "last": null,
+      "url": "https://github.com/stgmt/dev-pomogator/issues/130"
+    },
+    {
+      "n": 96,
+      "title": "Claude Code compact/recovery hooks: durable post-compact handoff, capsule schema, doctor + evals",
+      "domain": "hooks / gates",
+      "created": "2026-07-08",
+      "updated": "2026-07-08",
+      "c": 0,
+      "last": null,
+      "url": "https://github.com/stgmt/dev-pomogator/issues/96"
+    },
+    {
+      "n": 86,
+      "title": "claude-mem File Read Gate деноит/блокирует Read → протухшие выжимки (не вшивать gate по умолчанию)",
+      "domain": "hooks / gates",
+      "created": "2026-07-04",
+      "updated": "2026-07-04",
+      "c": 0,
+      "last": null,
+      "url": "https://github.com/stgmt/dev-pomogator/issues/86"
+    },
+    {
+      "n": 76,
+      "title": "Stop hooks занимают минуты (7 хуков подряд, минимум 3 блокируются LLM-вызовом) — fire-and-forget паттерн частично применён",
+      "domain": "hooks / gates",
+      "created": "2026-07-01",
+      "updated": "2026-07-01",
+      "c": 1,
+      "last": "@stgmt 2026-07-01: ## Обновление: реальный виновник в основном НЕ здесь (данные из tsx-runner.log) Проверил `~/.dev-pomogator/logs/tsx-runner.log` за реальную сессию, где Stop-фаза визуально висела ~",
+      "url": "https://github.com/stgmt/dev-pomogator/issues/76"
+    },
+    {
+      "n": 74,
+      "title": "Referent-grounding guard (Component A): stateful \"N user-rejections → stop guessing, enumerate referents, ask which\" UserPromptSubmit hook + pinator carve-out",
+      "domain": "hooks / gates",
+      "created": "2026-06-25",
+      "updated": "2026-06-25",
+      "c": 0,
+      "last": null,
+      "url": "https://github.com/stgmt/dev-pomogator/issues/74"
+    },
+    {
+      "n": 61,
+      "title": "guard: blame-infra-из-инференса вместо trace (+ история сессии: 5 повторов claim-без-пруфа)",
+      "domain": "hooks / gates",
+      "created": "2026-06-11",
+      "updated": "2026-06-11",
+      "c": 0,
+      "last": null,
+      "url": "https://github.com/stgmt/dev-pomogator/issues/61"
+    },
+    {
+      "n": 60,
+      "title": "guard: claims без пруфа (память/инференс) + эскалация tool-permission-deny в user-policy",
+      "domain": "hooks / gates",
+      "created": "2026-06-11",
+      "updated": "2026-06-11",
+      "c": 0,
+      "last": null,
+      "url": "https://github.com/stgmt/dev-pomogator/issues/60"
+    },
+    {
+      "n": 52,
+      "title": "hooks: относительные пути скриптов ломаются при cwd вне корня проекта (вплоть до deadlock всех Bash-вызовов) — нужен $CLAUDE_PROJECT_DIR",
+      "domain": "hooks / gates",
+      "created": "2026-06-06",
+      "updated": "2026-06-06",
+      "c": 0,
+      "last": null,
+      "url": "https://github.com/stgmt/dev-pomogator/issues/52"
+    },
+    {
+      "n": 45,
+      "title": "Automated guards for the \"full-suite-only\" false-failure class (test-isolation leaks, stale assertions, dirty-tree confounds)",
+      "domain": "hooks / gates",
+      "created": "2026-06-05",
+      "updated": "2026-06-05",
+      "c": 0,
+      "last": null,
+      "url": "https://github.com/stgmt/dev-pomogator/issues/45"
+    },
+    {
+      "n": 44,
+      "title": "Feature: zombie-hunter / vestige-detector plugin (analyst skill + UserPromptSubmit hook) — PoC attached",
+      "domain": "hooks / gates",
+      "created": "2026-06-04",
+      "updated": "2026-06-04",
+      "c": 0,
+      "last": null,
+      "url": "https://github.com/stgmt/dev-pomogator/issues/44"
+    },
+    {
+      "n": 42,
+      "title": "test_guard: PreToolUse-хук обходится при run_in_background (false negative) + false-positive на подстроку в echo/grep",
+      "domain": "hooks / gates",
+      "created": "2026-06-03",
+      "updated": "2026-06-03",
+      "c": 0,
+      "last": null,
+      "url": "https://github.com/stgmt/dev-pomogator/issues/42"
+    },
+    {
+      "n": 35,
+      "title": "claim-sanity-check: pre-claim verification gate для фактов (доделать)",
+      "domain": "hooks / gates",
+      "created": "2026-06-01",
+      "updated": "2026-06-01",
+      "c": 0,
+      "last": null,
+      "url": "https://github.com/stgmt/dev-pomogator/issues/35"
+    },
+    {
+      "n": 207,
+      "title": "Дедлок: anchor-гейт требует починки, а MCP-дверь блокирует запись из-за 135 несвязанных pre-existing находок",
+      "domain": "MCP / providers / memory",
+      "created": "2026-07-26",
+      "updated": "2026-07-26",
+      "c": 0,
+      "last": null,
+      "url": "https://github.com/stgmt/dev-pomogator/issues/207"
+    },
+    {
+      "n": 87,
+      "title": "claude-mem reaper (262b5206) не доходит до lm-saas — vendored .dev-pomogator протух, SessionStart гонит старый Chroma-пробник",
+      "domain": "MCP / providers / memory",
+      "created": "2026-07-04",
+      "updated": "2026-07-04",
+      "c": 0,
+      "last": null,
+      "url": "https://github.com/stgmt/dev-pomogator/issues/87"
+    },
+    {
+      "n": 208,
+      "title": "anchor-integrity/fix.mjs: класс {#id}+декоративное тире помечается ambiguous, хотя чинится детерминированно",
+      "domain": "misc / bug",
+      "created": "2026-07-26",
+      "updated": "2026-07-26",
+      "c": 0,
+      "last": null,
+      "url": "https://github.com/stgmt/dev-pomogator/issues/208"
+    },
+    {
+      "n": 204,
+      "title": "subagent-watchdog: живой сабагент всегда становится stale-running на Windows (.output никогда не двигается)",
+      "domain": "misc / bug",
+      "created": "2026-07-25",
+      "updated": "2026-07-25",
+      "c": 0,
+      "last": null,
+      "url": "https://github.com/stgmt/dev-pomogator/issues/204"
+    },
+    {
+      "n": 212,
+      "title": "Feature: Universal Workflow Orchestrator для bounded development-сессий",
+      "domain": "misc / enhancement",
+      "created": "2026-07-28",
+      "updated": "2026-07-28",
+      "c": 0,
+      "last": null,
+      "url": "https://github.com/stgmt/dev-pomogator/issues/212"
+    },
+    {
+      "n": 38,
+      "title": "feat: кастомная слеш-команда /review-and-clean — багхантинг с комментами в PR + авто-cleanup за один вызов",
+      "domain": "misc / enhancement",
+      "created": "2026-06-03",
+      "updated": "2026-06-03",
+      "c": 0,
+      "last": null,
+      "url": "https://github.com/stgmt/dev-pomogator/issues/38"
+    },
+    {
+      "n": 180,
+      "title": "Обязательная непустая reason на мутацию + аудит actor/session/time/commit (не необратимый хеш) с санитизацией",
+      "domain": "misc / other",
+      "created": "2026-07-23",
+      "updated": "2026-07-23",
+      "c": 0,
+      "last": null,
+      "url": "https://github.com/stgmt/dev-pomogator/issues/180"
+    },
+    {
+      "n": 165,
+      "title": "LSP definition/references/rename for spec entity IDs (FR/AC/Task), not just headings",
+      "domain": "misc / other",
+      "created": "2026-07-23",
+      "updated": "2026-07-23",
+      "c": 0,
+      "last": null,
+      "url": "https://github.com/stgmt/dev-pomogator/issues/165"
+    },
+    {
+      "n": 100,
+      "title": "Productize Claude subagent watchdog for failed/stale Agent work",
+      "domain": "misc / other",
+      "created": "2026-07-11",
+      "updated": "2026-07-11",
+      "c": 1,
+      "last": "@stgmt 2026-07-11: ## Field report: lm-saas reel marketplace session — dead children, lost day, then ghost rows in the agent panel A concrete incident from `E:\\repos\\lm-saas` on 2026-07-11 exposed tw",
+      "url": "https://github.com/stgmt/dev-pomogator/issues/100"
+    },
+    {
+      "n": 63,
+      "title": "Плагин «пинатор»: goal-driven авто-продолжение агента без ручного пинка юзером",
+      "domain": "pinator / pack",
+      "created": "2026-06-11",
+      "updated": "2026-06-11",
+      "c": 0,
+      "last": null,
+      "url": "https://github.com/stgmt/dev-pomogator/issues/63"
+    },
+    {
+      "n": 127,
+      "title": "Context-menu launcher (launch-claude-tui.ps1) runs Windows-side claude for WSL-hosted repos over the UNC/9P bridge — und",
+      "domain": "session-pilot / worktree / TUI",
+      "created": "2026-07-18",
+      "updated": "2026-07-18",
+      "c": 0,
+      "last": null,
+      "url": "https://github.com/stgmt/dev-pomogator/issues/127"
+    },
+    {
+      "n": 206,
+      "title": "CARL: CARL_PROJECT_DIR приоритетнее cwd — застрявший путь молча отключает recall на всю сессию",
+      "domain": "skills / rules",
+      "created": "2026-07-25",
+      "updated": "2026-07-25",
+      "c": 0,
+      "last": null,
+      "url": "https://github.com/stgmt/dev-pomogator/issues/206"
+    },
+    {
+      "n": 205,
+      "title": "Баг: CARL перестаёт работать в середине сессии, потому что ищет .carl/carl.json относительно текущей рабочей директории ",
+      "domain": "skills / rules",
+      "created": "2026-07-25",
+      "updated": "2026-07-25",
+      "c": 0,
+      "last": null,
+      "url": "https://github.com/stgmt/dev-pomogator/issues/205"
+    },
+    {
+      "n": 203,
+      "title": "CARL: устаревшая CARL_PROJECT_DIR безусловно перебивает cwd → project-missing на всю сессию",
+      "domain": "skills / rules",
+      "created": "2026-07-25",
+      "updated": "2026-07-25",
+      "c": 0,
+      "last": null,
+      "url": "https://github.com/stgmt/dev-pomogator/issues/203"
+    },
+    {
+      "n": 173,
+      "title": "Подготовить и создать GitHub issue в stgmt/dev-pomogator о неудачной установке/инициализации CARL: на SessionStart был s",
+      "domain": "skills / rules",
+      "created": "2026-07-23",
+      "updated": "2026-07-23",
+      "c": 1,
+      "last": "@stgmt 2026-07-23: ## Диагностика и исправление ### Наблюдаемый сбой На первом `SessionStart` CARL вернул `status=project-missing`: в проекте не было `.carl/carl.json`, поэтому project-specific guida",
+      "url": "https://github.com/stgmt/dev-pomogator/issues/173"
+    },
+    {
+      "n": 131,
+      "title": "Создать переиспользуемый hyperv-vm skill: Windows LTSC, WSL2/Docker и nested virtualization",
+      "domain": "skills / rules",
+      "created": "2026-07-19",
+      "updated": "2026-07-20",
+      "c": 2,
+      "last": "@stgmt 2026-07-20: ## Полевые данные lm-saas, 19–20.07: почему WSL2+Docker «разваливается посреди прогона» Потратил на это ~6 часов и три раза назвал неверную причину. Ниже — то, что стоит зашить в s",
+      "url": "https://github.com/stgmt/dev-pomogator/issues/131"
+    },
+    {
+      "n": 128,
+      "title": "CARL: project-missing when session cwd is a repo subfolder (no upward root walk)",
+      "domain": "skills / rules",
+      "created": "2026-07-18",
+      "updated": "2026-07-19",
+      "c": 1,
+      "last": "@stgmt 2026-07-19: Update: the CARL_PROJECT_DIR workaround documented here is unreliable — settings.json env vars are injected into Bash tool subprocesses but NOT into UserPromptSubmit hook processes",
+      "url": "https://github.com/stgmt/dev-pomogator/issues/128"
+    },
+    {
+      "n": 183,
+      "title": "Привязка тест-доказательств к хешу артефакта, producer/version, run ID, коммиту, окружению и времени захвата",
+      "domain": "spec backlog (jul23)",
+      "created": "2026-07-23",
+      "updated": "2026-07-23",
+      "c": 0,
+      "last": null,
+      "url": "https://github.com/stgmt/dev-pomogator/issues/183"
+    },
+    {
+      "n": 179,
+      "title": "Мутация связей графа: отпечаток (fingerprint) + dry-run + явные refuse/orphan/cascade при атомарности транзакции",
+      "domain": "spec backlog (jul23)",
+      "created": "2026-07-23",
+      "updated": "2026-07-23",
+      "c": 0,
+      "last": null,
+      "url": "https://github.com/stgmt/dev-pomogator/issues/179"
+    },
+    {
+      "n": 176,
+      "title": "Четыре evidence-состояния требования (untagged / exercised / impl-only / verified) + явная политика устаревания (stale): одно поле вместо разрозненных bucket/verdict/quality",
+      "domain": "spec backlog (jul23)",
+      "created": "2026-07-23",
+      "updated": "2026-07-23",
+      "c": 0,
+      "last": null,
+      "url": "https://github.com/stgmt/dev-pomogator/issues/176"
+    },
+    {
+      "n": 175,
+      "title": "Fail-closed rollup графа: родитель готов лишь когда ВСЕ обязательные потомки и зависимости зелёные; худшее состояние всплывает наверх",
+      "domain": "spec backlog (jul23)",
+      "created": "2026-07-23",
+      "updated": "2026-07-23",
+      "c": 0,
+      "last": null,
+      "url": "https://github.com/stgmt/dev-pomogator/issues/175"
+    },
+    {
+      "n": 166,
+      "title": "Forward change-impact analysis: transitive blast radius from any spec ID",
+      "domain": "spec backlog (jul23)",
+      "created": "2026-07-23",
+      "updated": "2026-07-23",
+      "c": 0,
+      "last": null,
+      "url": "https://github.com/stgmt/dev-pomogator/issues/166"
+    },
+    {
+      "n": 210,
+      "title": "Реализовать системный planner задач для AI-агентов из spec-generator-v4",
+      "domain": "spec-generator / specs",
+      "created": "2026-07-28",
+      "updated": "2026-07-28",
+      "c": 0,
+      "last": null,
+      "url": "https://github.com/stgmt/dev-pomogator/issues/210"
+    },
+    {
+      "n": 178,
+      "title": "Reverse-аннотации требований из исходников: индекс «символ/файл/строка → требование» (@implements/@req/@see FR-N), заполняющий неиспользуемое ребро code-impl с provenance",
+      "domain": "spec-generator / specs",
+      "created": "2026-07-23",
+      "updated": "2026-07-23",
+      "c": 0,
+      "last": null,
+      "url": "https://github.com/stgmt/dev-pomogator/issues/178"
+    },
+    {
+      "n": 170,
+      "title": "Декларативные инварианты спеки + опциональный SMT-разряд для безопасного фрагмента",
+      "domain": "spec-generator / specs",
+      "created": "2026-07-23",
+      "updated": "2026-07-23",
+      "c": 0,
+      "last": null,
+      "url": "https://github.com/stgmt/dev-pomogator/issues/170"
+    },
+    {
+      "n": 167,
+      "title": "Generated traceability matrix + graph views (HTML/JSON) instead of hand tables",
+      "domain": "spec-generator / specs",
+      "created": "2026-07-23",
+      "updated": "2026-07-23",
+      "c": 0,
+      "last": null,
+      "url": "https://github.com/stgmt/dev-pomogator/issues/167"
+    },
+    {
+      "n": 164,
+      "title": "Loss-aware ReqIF round-trip: export/import with stable IDs and loss diagnostics",
+      "domain": "spec-generator / specs",
+      "created": "2026-07-23",
+      "updated": "2026-07-23",
+      "c": 0,
+      "last": null,
+      "url": "https://github.com/stgmt/dev-pomogator/issues/164"
+    },
+    {
+      "n": 162,
+      "title": "spec-generator-v4 closure program: evidence truth, legacy backlog, BDD rollout, and post-#158 gaps",
+      "domain": "spec-generator / specs",
+      "created": "2026-07-23",
+      "updated": "2026-07-23",
+      "c": 2,
+      "last": "@stgmt 2026-07-23: WP-2 / FR-56 merged via PR #186: https://github.com/stgmt/dev-pomogator/pull/186 Delivered: - commit-bound overlay evidence with backward-compatible legacy-row reads; - stale class",
+      "url": "https://github.com/stgmt/dev-pomogator/issues/162"
+    },
+    {
+      "n": 159,
+      "title": "Спек-дверь UX: отдавать все недостающие поля формы разом + убрать кросс-документный дедлок FR↔Story через мультидок-atomic apply (починено, тесты зелёные)",
+      "domain": "spec-generator / specs",
+      "created": "2026-07-23",
+      "updated": "2026-07-23",
+      "c": 0,
+      "last": null,
+      "url": "https://github.com/stgmt/dev-pomogator/issues/159"
+    },
+    {
+      "n": 157,
+      "title": "create-spec: require executable live verification task before feature done",
+      "domain": "spec-generator / specs",
+      "created": "2026-07-22",
+      "updated": "2026-07-22",
+      "c": 0,
+      "last": null,
+      "url": "https://github.com/stgmt/dev-pomogator/issues/157"
+    },
+    {
+      "n": 153,
+      "title": "create-spec: mandatory independent adversarial review gate before Spec ready",
+      "domain": "spec-generator / specs",
+      "created": "2026-07-22",
+      "updated": "2026-07-22",
+      "c": 0,
+      "last": null,
+      "url": "https://github.com/stgmt/dev-pomogator/issues/153"
+    }
+  ],
+  "commented": [
+    {
+      "n": 84,
+      "title": "Умный full-install headroom + context-mode (глобально, doctor-heal, верификация, Windows-готчи)",
+      "state": "OPEN",
+      "domain": "headroom / proxy",
+      "c": 12,
+      "updated": "2026-07-21",
+      "last": "@stgmt 2026-07-21: Context-mode-specific install/runbook/gotcha material from this umbrella issue has been consolidated into #139 as the canonical context-mode"
+    },
+    {
+      "n": 91,
+      "title": "context-mode: 2 friction points on Windows + git-worktree (bench-measured)",
+      "state": "CLOSED",
+      "domain": "headroom / proxy",
+      "c": 11,
+      "updated": "2026-07-21",
+      "last": "@stgmt 2026-07-21: Closing as consolidated into canonical context-mode issue #139."
+    },
+    {
+      "n": 149,
+      "title": "claim-evidence-gate 12 раз требовал нарушить git-push-safety: «awaiting user permission» трактуется как fake hand-off",
+      "state": "OPEN",
+      "domain": "hooks / gates",
+      "c": 5,
+      "updated": "2026-07-22",
+      "last": "@stgmt 2026-07-22: ## Воспроизведено: откуда берётся «14 open tasks» и «задачи не из моего мандата» Механизм найден и посчитан. ### Цепочка 1. **Грязное рабоче"
+    },
+    {
+      "n": 88,
+      "title": "headroom: голый proxy мисконфиг — нужны --code-aware + --no-ccr-proactive-expansion; MCP-арм idle; #1158 роняет opus[1m]→200k",
+      "state": "OPEN",
+      "domain": "headroom / proxy",
+      "c": 4,
+      "updated": "2026-07-16",
+      "last": "@stgmt 2026-07-05: ⚠️ Числа экономии в разборе выше завышены strawman-базлайном («читать целиком» vs реальный Grep). Честно: **Grep ~95 ток vs ctx_ ~30 ток**, "
+    },
+    {
+      "n": 115,
+      "title": "Тулы: spec-graph показывает NOT_RUN при зелёных тестах, если фичи не под .specs/; watchdog --ack не гаснет на UNC/WSL",
+      "state": "CLOSED",
+      "domain": "spec-generator / specs",
+      "c": 4,
+      "updated": "2026-07-15",
+      "last": "@stgmt 2026-07-15: ## Уточнение по Багу 2 (самопроверка) Перепроверил свой же тезис «argv `--ack/--cwd/--reason` не доходят до `runHook`» — **он неверен, снима"
+    },
+    {
+      "n": 103,
+      "title": "Контекстное меню не устанавливается после /plugin install (v2.0.3): postinstall не вызывается, winget-ID несуществующий, doctor крешится",
+      "state": "CLOSED",
+      "domain": "plugin / install / migrate",
+      "c": 3,
+      "updated": "2026-07-23",
+      "last": "@stgmt 2026-07-23: ## Проверено на реальной Windows 10 LTSC 19044 / dev-pomogator 2.0.5 — меню восстановлено Исправил свежую установку, где `/plugin install` б"
+    },
+    {
+      "n": 135,
+      "title": "Спек-дверь: добавить новое FR невозможно — циклический дедлок FR↔Story, и контракт формы нигде не показан",
+      "state": "CLOSED",
+      "domain": "spec-generator / specs",
+      "c": 3,
+      "updated": "2026-07-22",
+      "last": "@stgmt 2026-07-22: Из #144 сюда поглощён ещё один реальный repro monotonic-form требования: deterministic anchor repair не должен блокироваться 110 предсуществ"
+    },
+    {
+      "n": 75,
+      "title": "Windows: claude-mem UserPromptSubmit hook blocks every prompt (exit 2) — worker can't bind 37777 (zombie socket, needs reboot to free) + DEP0190 from stale 13.8.1 runner",
+      "state": "CLOSED",
+      "domain": "hooks / gates",
+      "c": 3,
+      "updated": "2026-07-16",
+      "last": "@stgmt 2026-07-16: Resolved by the claude-mem Windows worker reaper delivered in commit 262b5206 and subsequent bounded/fail-open lifecycle coverage. Current D"
+    },
+    {
+      "n": 111,
+      "title": "Headroom beta: bounded compression и autonomous recovery вместо 10-минутных зависаний и unsafe fail-open",
+      "state": "CLOSED",
+      "domain": "headroom / proxy",
+      "c": 3,
+      "updated": "2026-07-15",
+      "last": "@stgmt 2026-07-15: Закрываю: Headroom и sub2api не должны находиться или реализовываться в dev-pomogator. Крупная будущая работа перенесена в общий backlog фор"
+    },
+    {
+      "n": 41,
+      "title": "feat: supervised relaunch — авто-resume Claude Code после rate-limit halt (\"Server is temporarily limiting requests\")",
+      "state": "CLOSED",
+      "domain": "headroom / proxy",
+      "c": 3,
+      "updated": "2026-07-13",
+      "last": "@stgmt 2026-07-13: Закрываю без реализации supervisor/relaunch в лаунчере. Для устойчивого переживания rate-limit нужно использовать API-прокси, который центра"
+    },
+    {
+      "n": 81,
+      "title": "Интегрировать carl (JIT-инжект правил) + rich-context: убрать eager-загрузку всего .claude/rules/",
+      "state": "CLOSED",
+      "domain": "skills / rules",
+      "c": 3,
+      "updated": "2026-07-12",
+      "last": "@stgmt 2026-07-12: Implemented and verified in the current CARL integration. All 63 auto-loaded rules are managed lazy stubs with full UTF-8 bodies under .carl"
+    },
+    {
+      "n": 49,
+      "title": "docker-test.sh: машины без Docker Desktop (docker только внутри WSL) — WSL-шим",
+      "state": "OPEN",
+      "domain": "CI / docker / release",
+      "c": 3,
+      "updated": "2026-06-06",
+      "last": "@stgmt 2026-06-06: Закрыто доказательно (commit b3d90f9): clean-worktree прогоны e2b5145 и baseline 4bf8d5c — по 12 падений, 11 общих предсуществующих + tui-te"
+    },
+    {
+      "n": 209,
+      "title": "Оформить и отправить issue в dev-pomogator: context-mode ctx_execute оставил orphan Python recursive scan ~\\.codex, проц",
+      "state": "OPEN",
+      "domain": "context-mode",
+      "c": 2,
+      "updated": "2026-07-28",
+      "last": "@stgmt 2026-07-28: Implemented the corrected fix in the actual owner repository and opened upstream PR: https://github.com/mksglu/context-mode/pull/1009 Proof:"
+    },
+    {
+      "n": 162,
+      "title": "spec-generator-v4 closure program: evidence truth, legacy backlog, BDD rollout, and post-#158 gaps",
+      "state": "OPEN",
+      "domain": "spec-generator / specs",
+      "c": 2,
+      "updated": "2026-07-23",
+      "last": "@stgmt 2026-07-23: WP-2 / FR-56 merged via PR #186: https://github.com/stgmt/dev-pomogator/pull/186 Delivered: - commit-bound overlay evidence with backward-co"
+    },
+    {
+      "n": 131,
+      "title": "Создать переиспользуемый hyperv-vm skill: Windows LTSC, WSL2/Docker и nested virtualization",
+      "state": "OPEN",
+      "domain": "skills / rules",
+      "c": 2,
+      "updated": "2026-07-20",
+      "last": "@stgmt 2026-07-20: ## Полевые данные lm-saas, 19–20.07: почему WSL2+Docker «разваливается посреди прогона» Потратил на это ~6 часов и три раза назвал неверную "
+    },
+    {
+      "n": 65,
+      "title": "test-runner wrapper требует per-machine pinned tsx → молчаливый скип теста на свежем клоне / 2-й машине",
+      "state": "CLOSED",
+      "domain": "BDD / cucumber / tests",
+      "c": 2,
+      "updated": "2026-07-15",
+      "last": "@stgmt 2026-07-15: Correction to the truncated audit comment above: issue is resolved by PR #109 and PR #114. PR #109 replaced the per-machine pinned-tsx runti"
+    },
+    {
+      "n": 53,
+      "title": "test-runner wrapper: exit 127 на длинном прогоне теряет TRX + статус + все строки (буферизует, не стримит); .sh-вход падает ERR_MODULE_NOT_FOUND на Node 24",
+      "state": "CLOSED",
+      "domain": "BDD / cucumber / tests",
+      "c": 2,
+      "updated": "2026-07-15",
+      "last": "@stgmt 2026-07-15: Correction to the truncated audit comment above: the issue is resolved by PR #89 plus PR #109. Canonical TypeScript imports use explicit .ts"
+    },
+    {
+      "n": 43,
+      "title": "test_runner_wrapper + tsx-runner: ни прерывание, ни 180s-таймаут не убивают дерево процессов → осиротевшие testhost/testcontainers ломают следующие прогоны",
+      "state": "CLOSED",
+      "domain": "BDD / cucumber / tests",
+      "c": 2,
+      "updated": "2026-07-15",
+      "last": "@stgmt 2026-07-15: Correction to the truncated audit comment above: PR #89 (merge 2be04c57) resolves the reported process-lifecycle and 180-second ceiling defe"
+    },
+    {
+      "n": 46,
+      "title": "score-diff SCOPEGATE001_20: non-guard 3-item enum diff scores 6, test expects ≤4 — heuristic-vs-fixture decision (don't game the threshold)",
+      "state": "CLOSED",
+      "domain": "hooks / gates",
+      "c": 2,
+      "updated": "2026-06-05",
+      "last": "@stgmt 2026-06-05: **Correction — final resolution superseded the earlier close comment.** A full-suite run surfaced a SECOND pin I'd missed when verifying sco"
+    },
+    {
+      "n": 215,
+      "title": "Feature: PreToolUse enforcement for #212 — block solo/direct Agent spawn when no Dynamic Workflow dispatch is active",
+      "state": "OPEN",
+      "domain": "hooks / gates",
+      "c": 1,
+      "updated": "2026-07-29",
+      "last": "@stgmt 2026-07-29: ## Dogfood update: practical value and live boundary proof We applied the narrow enforcement slice from this issue in a real project and the"
+    }
+  ]
+}

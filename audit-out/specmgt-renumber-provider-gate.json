@@ -1,0 +1,8 @@
+{
+  "action": "apply",
+  "spec": "specs-management-as-skill",
+  "doc": "specs-management-as-skill.feature",
+  "old_string": "Scenario: SPECMGT001_15 model availability requires a consumer credential precedence matrix",
+  "new_string": "Scenario: SPECMGT001_16 model availability requires a consumer credential precedence matrix",
+  "reason": "Assign a unique scenario ID after preserving existing SPECMGT001_14. [skip-spec-steer: scenario ID correction through spec door]"
+}

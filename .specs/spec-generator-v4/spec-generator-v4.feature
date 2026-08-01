@@ -4258,3 +4258,103 @@ Scenario: SPECGEN004_669 Cursor enforce denies raw specs write and MCP apply suc
   Then the PreToolUse guard denies the write
   And a valid MCP apply_spec_change succeeds
 
+
+
+@pending @feature82 @FR-82 @AC-82.1
+Scenario: SPECGEN004_670 lists every unfinished task with evidence-backed fields
+  Given the live SpecGraph contains task nodes and the harness loads the captured corpus artifact for wf_0315d03b-28
+  When the real list_tasks MCP handler is called for one spec without a status filter
+  Then it returns every non-terminal task with id title status phase rationale links source location and evidence-backed blockers only
+  And the response includes total returned truncated and next cursor metadata
+
+@pending @feature82 @FR-82 @AC-82.2
+Scenario: SPECGEN004_671 paginates task inventory without silent caps or cardinality loss
+  Given the real captured task corpus has more matching tasks than the requested page limit
+  When the real list_tasks MCP handler is called repeatedly with its returned cursor
+  Then the concatenated pages contain exactly total unique canonical task ids in stable order
+  And every page reports returned cardinality consistently and no task is silently omitted
+  And the reference corpus completes at most two pages when the limit is 200
+
+@pending @feature82 @FR-82 @AC-82.3
+Scenario: SPECGEN004_672 distinguishes an unknown phase from an empty phase
+  Given the real graph exposes canonical phases and the captured corpus has a known phase with no matching tasks
+  When the real list_phase_tasks MCP handler is called with the spec and each phase query
+  Then the known empty phase returns EMPTY_PHASE
+  And the unknown phase returns PHASE_NOT_FOUND with nearest canonical phase candidates
+  And a populated phase uses bounded deterministic pagination
+
+@pending @feature82 @FR-82 @AC-82.4
+Scenario: SPECGEN004_673 searches one spec with complete cursor pagination
+  Given the real graph contains matching and non-matching nodes across more than one page
+  When the real search MCP handler is called with a spec scope and fixed query filters
+  Then cursor pages concatenate to the complete matching set in stable order
+  And total returned truncated and next cursor values conserve the matching cardinality
+
+@pending @feature82 @FR-82 @AC-82.5
+Scenario: SPECGEN004_674 returns compact summary without unchanged census recomputation
+  Given the real graph revision is unchanged between two summary requests
+  When the real get_spec_status MCP handler is called with view summary twice
+  Then each response contains status counts and gap summary but no full task inventory payload
+  And the second call does not recompute an unchanged read-side global census
+
+@pending @feature82 @FR-82 @AC-82.6
+Scenario: SPECGEN004_675 bounds document reads and suggests canonical missing-section anchors
+  Given the real spec corpus contains a document larger than the safe page bound
+  When the real read_spec_doc MCP handler is called without pagination and then with a missing section
+  Then the first response is bounded and a whole-document read requires explicit opt-in
+  And the missing section response identifies nearest canonical headings or anchors
+
+@pending @feature82 @FR-82 @AC-82.7
+Scenario: SPECGEN004_676 keeps list phase documentation and tests truthful
+  Given the live graph contains task nodes and the existing phase-query description and test are loaded
+  When the list_phase_tasks contract regression runs through the real MCP handler
+  Then neither the tool description nor the assertion claims that task nodes are not produced
+  And a genuinely empty phase is not reported as evidence that the task inventory is absent
+
+@pending @feature82 @FR-82 @AC-82.8 @AC-82.9
+Scenario: SPECGEN004_677 meets bounded incident verification without an N by M crawl
+  Given the real captured wf_0315d03b-28 incident and corpus artifact are loaded rather than a hand-invented producer shape
+  When one bounded task-inventory request and bounded verification are run through real MCP handlers
+  Then the run stays within the declared maximum of three MCP calls, 512 KiB aggregate response bytes, and the declared page latency budget
+  And the six retries, 695 calls, approximately 5.46 MB, and approximately 297 to 312k input tokens remain recorded as incident evidence rather than an eternal performance claim
+
+@pending @deferred @feature83 @FR-83 @AC-83.1
+Scenario: SPECGEN004_678 stops a bounded agent packet with a partial fallback
+  Given a future packet declares finite scopes and maxima for calls rounds time response bytes and response tokens
+  When one scope reaches a stop condition
+  Then the packet returns partial results with blocked or dropped scope state and a journaled stop reason
+
+@pending @deferred @feature83 @FR-83 @AC-83.2
+Scenario: SPECGEN004_679 narrows at most one retry after a classified request failure
+  Given a branch has partial output and fails from context exhaustion or invalid request
+  When the deferred retry policy evaluates the failure
+  Then it does not resend the same prompt automatically
+  And it permits at most one narrowed changed-strategy retry with the failure classification recorded
+
+@pending @deferred @feature83 @FR-83 @AC-83.3
+Scenario: SPECGEN004_680 surfaces a completed sibling when another branch fails
+  Given the GitHub branch completed and the spec branch failed
+  When the deferred packet result is assembled
+  Then completed GitHub output remains visible
+  And blocked or dropped spec scopes expose explicit reasons instead of hiding the completed branch
+
+@pending @deferred @feature83 @FR-83 @AC-83.4
+Scenario: SPECGEN004_681 records per-agent packet telemetry and repeated-key detection
+  Given multiple bounded agent branches have run
+  When the packet journal is finalized
+  Then it reports calls tokens when available response bytes repeated-key signals and retry or stop reasons for each scope and branch
+
+@pending @deferred @feature83 @FR-83 @AC-83.5
+Scenario: SPECGEN004_682 runs deterministic collectors before model loops
+  Given a future packet has deterministic GitHub and spec collectors
+  When the workflow starts
+  Then collector evidence is persisted before any model loop begins
+  And the model loop consumes that evidence instead of rediscovering it through repeated MCP calls
+
+@pending @deferred @feature83 @FR-83 @AC-83.6
+Scenario: SPECGEN004_683 stops early on real wf_0315d03b-28 provenance and preserves partial output
+  Given the real provenance records a completed GitHub collector and six retries by the spec collector
+  When the deferred bounded packet regression replays the artifact
+  Then execution stops early after classifying the repeated spec failure
+  And completed GitHub output plus blocked or dropped spec scope is surfaced
+

@@ -1364,3 +1364,55 @@ Given SPEC_ACCESS enforce is on and project hooks loaded
 When the agent attempts a raw Write to a `.specs/**` path
 Then the PreToolUse guard denies and points to MCP mutation tools
 
+
+
+### User Story 62: Bounded task inventory and truthful read contracts (Priority: P1)
+
+**Требование:** [FR-82](FR.md#fr-82)
+
+As an AI coding agent using the SpecGraph MCP door, I need one bounded, complete task inventory and predictable paginated reads, so that I can find unfinished work without retry storms, silent caps, or a per-task crawl.
+
+**Why:** The live graph already contains task nodes, but the phase-query description/test claims they are not produced; the incident `wf_0315d03b-28` shows that ambiguous and oversized reads can consume 695 MCP calls and approximately 297–312k input tokens across attempts.
+
+**Independent Test:** Against the real graph and a captured incident/corpus artifact, one `list_tasks` inventory plus bounded verification returns stable complete cardinality, distinguishes phase-not-found from empty, keeps each page within declared byte/latency limits, and exposes no silent cap; no synthetic producer shape is accepted.
+
+**Acceptance Scenarios:**
+
+Given a spec contains live task nodes and unfinished tasks
+When the agent requests the bounded task inventory
+Then every matching task is returned through deterministic cursor pages with total and next-cursor metadata
+
+Given the agent asks for a known empty phase or an unknown phase
+When the real phase-query handler runs
+Then it returns EMPTY_PHASE or PHASE_NOT_FOUND respectively and offers canonical candidates for the unknown phase
+
+Given a large document or a missing section is requested
+When the bounded document-read handler runs
+Then it returns a safe page or nearest canonical anchors and requires explicit opt-in for the whole document
+
+### User Story 63: Bounded agent packet with partial results (Priority: P2)
+
+**Требование:** [FR-83](FR.md#fr-83)
+
+**Status:** Deferred/backlog after FR-82.
+
+As a workflow owner, I need finite agent packets with classified retries, per-agent telemetry, and visible partial branches, so that one exhausted spec collector cannot hide completed GitHub output or consume an unbounded budget.
+
+**Why:** The real `wf_0315d03b-28` provenance shows a completed GitHub collector alongside six spec-collector retries; the next workflow contract must stop early and preserve what is already ready.
+
+**Independent Test:** Replaying the real provenance artifact against the eventual packet harness proves finite calls/rounds/time/bytes/tokens, no same-prompt retry, at most one narrowed changed-strategy retry, visible completed sibling output, explicit blocked/dropped scopes, and journaled telemetry.
+
+**Acceptance Scenarios:**
+
+Given finite scopes and packet budgets
+When one branch reaches a stop condition
+Then the packet returns partial results with explicit scope states and a stop reason
+
+Given a context-exhaustion or invalid-request failure
+When retry policy evaluates it
+Then it preserves partial output and permits at most one narrowed changed-strategy retry
+
+Given a sibling branch has completed
+When another branch fails
+Then the completed output remains visible and the failed scope is classified rather than hiding the whole result
+

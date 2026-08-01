@@ -272,7 +272,8 @@ export async function startLifecycle(opts: LifecycleOptions): Promise<LifecycleH
         // Result evidence is advisory for reads; never break the door if a result file is mid-write.
       }
     }
-    refreshCensus();
+    // Census is graph-derived and refreshed at boot + watcher patch. Recomputing it
+    // on every read-only status request caused the FR-82 N×M inventory incident.
   };
   refreshCensus();
 

@@ -1,0 +1,8 @@
+{
+  "action": "apply",
+  "spec": "specs-management-as-skill",
+  "doc": "specs-management-as-skill.feature",
+  "old_string": "Scenario: SPECMGT001_14 research treats a EUR 200 ceiling as an eligibility gate",
+  "new_string": "Scenario: SPECMGT001_15 research treats a EUR 200 ceiling as an eligibility gate",
+  "reason": "Avoid collision with existing SPECMGT001_14. [skip-spec-steer: scenario ID correction through spec door]"
+}

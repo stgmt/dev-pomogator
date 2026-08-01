@@ -1,0 +1,18 @@
+FR_NO_RESEARCH (FR sections citing no RESEARCH.md, in specs that have one): 682
+  64	spec-generator-v4
+  36	pomogator-doctor
+  27	session-pilot
+  24	dev-pomogator-canonical-plugin
+  21	architecture-decision-builder
+  20	tui-test-runner
+  19	onboard-repo-phase0
+  17	fix-bg-output-loss
+  16	bg-task-guard
+  16	personal-pomogator
+  15	spec-generator-v3
+  15	spec-reality-check
+  14	strong-tests
+  13	context-menu
+  13	spec-phase-gate
+
+INFO (non-gating) — reverse-traceability gap FR-44/GT-2. Promote-to-gate after cleanup = P20-5 pattern.

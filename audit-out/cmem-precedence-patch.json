@@ -1,0 +1,8 @@
+{
+  "action": "apply",
+  "spec": "claude-mem-integration",
+  "doc": "claude-mem-integration.feature",
+  "old_string": "    Given an existing claude-mem settings file with model \"claude-haiku-4-5-20251001\" and no OpenRouter credential\r\n    And the AiPomogator credential is available\r\n    When the installed-user model migration runs\r\n",
+  "new_string": "    Given an existing claude-mem settings file with model \"claude-haiku-4-5-20251001\" and no OpenRouter credential\r\n    And the AiPomogator credential is available\r\n    And a stale OpenRouter credential is also present\r\n    When the installed-user model migration runs\r\n",
+  "reason": "Pin credential precedence: for an active legacy Claude provider, AiPomogator must win over an inactive stale OpenRouter key. [skip-spec-steer: executable BDD regression patch through spec door]"
+}

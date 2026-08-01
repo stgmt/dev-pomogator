@@ -1,0 +1,8 @@
+{
+  "action": "apply",
+  "spec": "specs-management-as-skill",
+  "doc": "DESIGN.md",
+  "old_string": "**Trade-off:** One more skill in metadata (~150 tokens). Negligible. Skill composition adds one extra tool call hop during Phase 1, but produces identical research behavior.\r\n",
+  "new_string": "**Trade-off:** One more skill in metadata (~150 tokens). Negligible. Skill composition adds one extra tool call hop during Phase 1, but produces identical research behavior.\r\n\r\n**Hard-gate pipeline:** Recommendation research uses a two-cost pipeline: (1) extract explicit constraints and cheaply verify price/region/availability, rejecting failed or unverified candidates; (2) spend deep-research calls only on survivors, then re-check volatile price/availability before ranking. Model/provider research uses a contract matrix over active provider, endpoint/protocol, model namespace, consumer-read credential sources, persistence boundary, and coexistence precedence. This prevents expensive analysis of a known-over-budget product and prevents credential plumbing failures from being laundered into model-availability claims.\r\n",
+  "reason": "Document the hard-gate and provider-contract architecture behind FR-5. [skip-spec-steer: amend existing design through spec door]"
+}
