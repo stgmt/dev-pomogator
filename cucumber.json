@@ -2,6 +2,7 @@
   "default": {
     "paths": [
       ".specs/spec-generator-v4/spec-generator-v4.feature",
+      ".specs/dynamic-workflow-engineering/dynamic-workflow-engineering.feature",
       ".specs/answer-simple/answer-simple.feature",
       ".specs/skill-listing-budget/skill-listing-budget.feature",
       ".specs/native-statusline/native-statusline.feature",

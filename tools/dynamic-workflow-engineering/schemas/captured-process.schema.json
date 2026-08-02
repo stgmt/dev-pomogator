@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dev-pomogator://dynamic-workflow/captured-process-v1",
+  "type": "object",
+  "required": ["schemaVersion", "executable", "argv", "stdoutRef", "stderrRef", "evidenceRef", "encoding", "exitCode", "classification"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "executable": { "type": "string", "minLength": 1 },
+    "argv": { "type": "array", "items": { "type": "string" } },
+    "encoding": { "const": "UTF-8" },
+    "exitCode": { "type": "integer" },
+    "classification": { "enum": ["SUCCESS", "HARNESS_DEFECT", "CAPABILITY_GAP", "PRODUCT_FAILURE", "TIMEOUT", "CANCELLED"] }
+  },
+  "additionalProperties": true
+}

@@ -21,7 +21,9 @@
  * @see .claude/agents/spec-phase-*.md
  */
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
+import { runCapturedProcess } from '../../../../tools/dynamic-workflow-engineering/captured-process.ts';
 
 export const PHASES = ['discovery', 'requirements', 'finalization', 'audit'] as const;
 export type Phase = (typeof PHASES)[number];
@@ -58,24 +60,30 @@ export async function productionGate(slug: string): Promise<GateResult> {
  * allowed-tools); we trust the verdict gate over its self-report, so the
  * stdout is returned but not parsed.
  */
-export function productionSpawn(phase: Phase, slug: string, gapList: string[]): Promise<string> {
-  return new Promise((resolve, reject) => {
-    import('node:child_process').then(({ spawn }) => {
-      const bin = process.env.CLAUDE_BIN ?? 'claude';
-      const gaps = gapList.length ? `\nOpen verdict gaps to fix:\n- ${gapList.join('\n- ')}` : '';
-      const prompt =
-        `You are the spec-phase-${phase} agent. Work ONLY through the ` +
-        `dev-pomogator-specs MCP tools (no file tools over .specs/). ` +
-        `Author the ${phase} phase of spec "${slug}".${gaps}`;
-      const child = spawn(bin, ['-p', '--agent', `spec-phase-${phase}`, prompt], {
-        stdio: ['ignore', 'pipe', 'pipe'],
-      });
-      const out: Buffer[] = [];
-      child.stdout.on('data', (c) => out.push(c));
-      child.on('error', reject);
-      child.on('exit', () => resolve(Buffer.concat(out).toString('utf8')));
-    });
+export async function productionSpawn(phase: Phase, slug: string, gapList: string[]): Promise<string> {
+  const bin = process.env.CLAUDE_BIN ?? 'claude';
+  const boundedGaps = gapList.slice(0, 50).map((gap) => gap.slice(0, 1_000));
+  const gaps = boundedGaps.length ? `\nOpen verdict gaps to fix:\n- ${boundedGaps.join('\n- ')}` : '';
+  const prompt =
+    `You are the spec-phase-${phase} agent. Work ONLY through the ` +
+    `dev-pomogator-specs MCP tools (no file tools over .specs/). ` +
+    `Author the ${phase} phase of spec "${slug}".${gaps}`;
+  const evidenceDirectory = fs.mkdtempSync(path.join(os.tmpdir(), `dwe-spec-phase-${phase}-`));
+  const result = await runCapturedProcess({
+    executable: bin,
+    argv: ['-p', '--agent', `spec-phase-${phase}`, prompt],
+    cwd: process.cwd(),
+    evidenceDirectory,
+    timeoutMs: 15 * 60_000,
+    maxOutputBytes: 1_048_576,
   });
+  const stdout = fs.readFileSync(result.stdoutRef, 'utf8');
+  const stderr = fs.readFileSync(result.stderrRef, 'utf8');
+  if (result.exitCode !== 0 || result.classification !== 'SUCCESS') {
+    const detail = stderr.trim() || stdout.trim() || result.classification;
+    throw new Error(`spec phase ${phase} child exited ${result.exitCode}: ${detail}`);
+  }
+  return stdout;
 }
 
 export interface PhaseRunEvent {
@@ -126,6 +134,7 @@ function defaultLogger(repoRoot: string): (e: PhaseRunEvent) => void {
  */
 export async function runPhases(opts: PhaseRunOptions): Promise<PhaseRunResult> {
   const maxRetries = opts.maxRetries ?? 2;
+  if (!Number.isSafeInteger(maxRetries) || maxRetries < 0 || maxRetries > 2) throw new Error('maxRetries must be an integer from 0 through 2');
   const spawn = opts.spawn ?? productionSpawn; // real headless agent unless injected
   const gate = opts.gate ?? productionGate; // real verdict unless injected
   const emit = opts.onEvent ?? defaultLogger(opts.repoRoot ?? process.cwd());

@@ -31,8 +31,8 @@ Planned implementation surface only. This specification-only consolidation does 
 | `tools/hook-service/generate-manifest.mjs` | edit | DWE-T09 | Keep generated manifest parity [FR-12](FR.md#fr-12-distribution-parity-and-guarantee-tiers) |
 | `.claude-plugin/plugin.json` | edit | DWE-T03 | Bundle skill and dependency-safe runtime; no assumed `.claude/workflows/` distribution [FR-3](FR.md#fr-3-bundled-skill-and-deterministic-steering) |
 | `package.json` | edit | DWE-T03 | Build/bundle and dependency-absent launcher wiring [FR-3](FR.md#fr-3-bundled-skill-and-deterministic-steering) |
-| `tests/features/core/dynamic-workflow-engineering.feature` | create | DWE-T02 | Executable BDD paths for DWE001_01..13 [FR-13](FR.md#fr-13-dogfood-regression-contract) |
-| `tests/step_definitions/feature_dynamic_workflow_engineering.ts` | create | DWE-T02 | Integration step definitions for real runtime/adapter paths [FR-13](FR.md#fr-13-dogfood-regression-contract) |
+| `cucumber.json` | edit | DWE-T02 | Execute the canonical `.specs/dynamic-workflow-engineering/dynamic-workflow-engineering.feature` directly without a competing copied feature [FR-13](FR.md#fr-13-dogfood-regression-contract) |
+| `tests/step_definitions/feature_dynamic_workflow_engineering.ts` | create | DWE-T02 | Integration step definitions for all DWE001_01..DWE001_28 scenarios against real runtime and adapter paths [FR-13](FR.md#fr-13-dogfood-regression-contract) |
 | `tests/fixtures/dynamic-workflow-engineering/consumer-contracts.json` | create | DWE-T02 | Valid, forged, stale, widened, expired, and budget contract fixtures [FR-2](FR.md#fr-2-origin-safe-workflow-child-policy) |
 | `tests/fixtures/dynamic-workflow-engineering/journals/incident-1.jsonl` | create | DWE-T08 | Real-producer-shaped finite inventory journal, not invented positive fields [FR-13](FR.md#fr-13-dogfood-regression-contract) |
 | `tests/fixtures/dynamic-workflow-engineering/journals/incident-2.jsonl` | create | DWE-T08 | Real-producer-shaped partial useful review journal [FR-8](FR.md#fr-8-partial-result-preservation-and-barrier-policy) |

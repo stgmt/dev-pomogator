@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "cases": [
+    { "id": "valid", "mutation": null, "expected": "allow" },
+    { "id": "forged-digest", "mutation": { "populationDigest": "forged" }, "expected": "DWE_POPULATION_DIGEST_MISMATCH" },
+    { "id": "expired", "mutation": { "expiresAt": "2020-01-01T00:00:00.000Z" }, "expected": "DWE_PACKET_EXPIRED" },
+    { "id": "widened", "mutation": { "workScope": "foreign-scope" }, "expected": "DWE_WORK_SCOPE_WIDENED" },
+    { "id": "over-budget", "mutation": { "logicalCalls": 999 }, "expected": "DWE_CONTRACT_CEILING_EXCEEDED:logicalCalls" }
+  ]
+}

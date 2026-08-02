@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 1,
+  "guaranteeTier": "STEERING_ONLY",
+  "protectedHookEligible": false,
+  "evidence": {
+    "boundedRuntimeAvailable": true,
+    "nativeAgentPreSpawnBoundary": false,
+    "workflowNativeAgentAllowed": false
+  }
+}

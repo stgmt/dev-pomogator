@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dev-pomogator://dynamic-workflow/recovery-capsule-v1",
+  "type": "object",
+  "required": ["root", "owner", "baseSha", "dirtyPaths", "acceptedEvidenceOrCommits", "unprovenWork", "lastGreenGate", "blocker", "nextAction", "doNotTouch"],
+  "properties": {
+    "root": { "type": "string" },
+    "owner": { "type": "string" },
+    "baseSha": { "type": "string" },
+    "dirtyPaths": { "type": "array", "items": { "type": "string" } },
+    "acceptedEvidenceOrCommits": { "type": "array", "items": { "type": "string" } },
+    "unprovenWork": { "type": "array", "items": { "type": "string" } },
+    "lastGreenGate": { "type": ["string", "null"] },
+    "blocker": { "type": ["string", "null"] },
+    "nextAction": { "type": "string" },
+    "doNotTouch": { "type": "array", "items": { "type": "string" } }
+  },
+  "additionalProperties": false
+}
