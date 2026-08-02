@@ -1,0 +1,318 @@
+{
+  "schemaVersion": 1,
+  "records": [
+    {
+      "id": "architecture-decision-builder",
+      "subject": "native-Agent",
+      "file": ".claude/skills/architecture-decision-builder/evals/artifact-bench/scenario-bhph/ARCHITECTURE_PROPOSAL.md",
+      "line": 14,
+      "contract": null,
+      "migrationReason": "Exact consumer decomposition, packet ceilings, workflow script contract, and executable real-path proof remain required before migration.",
+      "disposition": "blocked"
+    },
+    {
+      "id": "architecture-decision-builder",
+      "subject": "native-Agent",
+      "file": ".claude/skills/architecture-decision-builder/SKILL.md",
+      "line": 85,
+      "contract": null,
+      "migrationReason": "Exact consumer decomposition, packet ceilings, workflow script contract, and executable real-path proof remain required before migration.",
+      "disposition": "blocked"
+    },
+    {
+      "id": "create-spec",
+      "subject": "native-Agent",
+      "file": ".claude/skills/create-spec/references/phase1.75_architecture-decisions.md",
+      "line": 25,
+      "contract": null,
+      "migrationReason": "Exact consumer decomposition, packet ceilings, workflow script contract, and executable real-path proof remain required before migration.",
+      "disposition": "blocked"
+    },
+    {
+      "id": "skills-rules-optimizer",
+      "subject": "native-Agent",
+      "file": ".claude/skills/skills-rules-optimizer/references/ratchet-scoring.md",
+      "line": 13,
+      "contract": null,
+      "migrationReason": "Exact consumer decomposition, packet ceilings, workflow script contract, and executable real-path proof remain required before migration.",
+      "disposition": "blocked"
+    },
+    {
+      "id": "skills-rules-optimizer",
+      "subject": "native-Agent",
+      "file": ".claude/skills/skills-rules-optimizer/scripts/audit-skills.ts",
+      "line": 11,
+      "contract": null,
+      "migrationReason": "Exact consumer decomposition, packet ceilings, workflow script contract, and executable real-path proof remain required before migration.",
+      "disposition": "blocked"
+    },
+    {
+      "id": "skills-rules-optimizer",
+      "subject": "native-Agent",
+      "file": ".claude/skills/skills-rules-optimizer/scripts/audit-skills.ts",
+      "line": 52,
+      "contract": null,
+      "migrationReason": "Exact consumer decomposition, packet ceilings, workflow script contract, and executable real-path proof remain required before migration.",
+      "disposition": "blocked"
+    },
+    {
+      "id": "skills-rules-optimizer",
+      "subject": "native-Agent",
+      "file": ".claude/skills/skills-rules-optimizer/scripts/audit-skills.ts",
+      "line": 57,
+      "contract": null,
+      "migrationReason": "Exact consumer decomposition, packet ceilings, workflow script contract, and executable real-path proof remain required before migration.",
+      "disposition": "blocked"
+    },
+    {
+      "id": "skills-rules-optimizer",
+      "subject": "native-Agent",
+      "file": ".claude/skills/skills-rules-optimizer/scripts/merge-skills.ts",
+      "line": 7,
+      "contract": null,
+      "migrationReason": "Exact consumer decomposition, packet ceilings, workflow script contract, and executable real-path proof remain required before migration.",
+      "disposition": "blocked"
+    },
+    {
+      "id": "skills-rules-optimizer",
+      "subject": "native-Agent",
+      "file": ".claude/skills/skills-rules-optimizer/scripts/verify-merge.ts",
+      "line": 7,
+      "contract": null,
+      "migrationReason": "Exact consumer decomposition, packet ceilings, workflow script contract, and executable real-path proof remain required before migration.",
+      "disposition": "blocked"
+    },
+    {
+      "id": "skills-rules-optimizer",
+      "subject": "native-Agent",
+      "file": ".claude/skills/skills-rules-optimizer/SKILL.md",
+      "line": 92,
+      "contract": null,
+      "migrationReason": "Exact consumer decomposition, packet ceilings, workflow script contract, and executable real-path proof remain required before migration.",
+      "disposition": "blocked"
+    },
+    {
+      "id": "skills-rules-optimizer",
+      "subject": "native-Agent",
+      "file": ".claude/skills/skills-rules-optimizer/SKILL.md",
+      "line": 120,
+      "contract": null,
+      "migrationReason": "Exact consumer decomposition, packet ceilings, workflow script contract, and executable real-path proof remain required before migration.",
+      "disposition": "blocked"
+    },
+    {
+      "id": "spec-review",
+      "subject": "native-Agent",
+      "file": ".claude/skills/spec-review/SKILL.md",
+      "line": 139,
+      "contract": null,
+      "migrationReason": "Exact consumer decomposition, packet ceilings, workflow script contract, and executable real-path proof remain required before migration.",
+      "disposition": "blocked"
+    },
+    {
+      "id": "spec-review",
+      "subject": "native-Agent",
+      "file": ".claude/skills/spec-review/SKILL.md",
+      "line": 145,
+      "contract": null,
+      "migrationReason": "Exact consumer decomposition, packet ceilings, workflow script contract, and executable real-path proof remain required before migration.",
+      "disposition": "blocked"
+    },
+    {
+      "id": "spec-status",
+      "subject": "native-Agent",
+      "file": ".claude/skills/spec-status/references/sub-agent-prompt.md",
+      "line": 5,
+      "contract": null,
+      "migrationReason": "Exact consumer decomposition, packet ceilings, workflow script contract, and executable real-path proof remain required before migration.",
+      "disposition": "blocked"
+    },
+    {
+      "id": "spec-status",
+      "subject": "native-Agent",
+      "file": ".claude/skills/spec-status/SKILL.md",
+      "line": 75,
+      "contract": null,
+      "migrationReason": "Exact consumer decomposition, packet ceilings, workflow script contract, and executable real-path proof remain required before migration.",
+      "disposition": "blocked"
+    },
+    {
+      "id": "strong-tests",
+      "subject": "native-Agent",
+      "file": ".claude/skills/strong-tests/README.md",
+      "line": 110,
+      "contract": null,
+      "migrationReason": "Exact consumer decomposition, packet ceilings, workflow script contract, and executable real-path proof remain required before migration.",
+      "disposition": "blocked"
+    },
+    {
+      "id": "strong-tests",
+      "subject": "native-Agent",
+      "file": ".claude/skills/strong-tests/README.md",
+      "line": 112,
+      "contract": null,
+      "migrationReason": "Exact consumer decomposition, packet ceilings, workflow script contract, and executable real-path proof remain required before migration.",
+      "disposition": "blocked"
+    },
+    {
+      "id": "strong-tests",
+      "subject": "native-Agent",
+      "file": ".claude/skills/strong-tests/README.md",
+      "line": 129,
+      "contract": null,
+      "migrationReason": "Exact consumer decomposition, packet ceilings, workflow script contract, and executable real-path proof remain required before migration.",
+      "disposition": "blocked"
+    },
+    {
+      "id": "strong-tests",
+      "subject": "native-Agent",
+      "file": ".claude/skills/strong-tests/scripts/autopilot-mutation.ts",
+      "line": 21,
+      "contract": null,
+      "migrationReason": "Exact consumer decomposition, packet ceilings, workflow script contract, and executable real-path proof remain required before migration.",
+      "disposition": "blocked"
+    },
+    {
+      "id": "strong-tests",
+      "subject": "native-Agent",
+      "file": ".claude/skills/strong-tests/scripts/autopilot-mutation.ts",
+      "line": 180,
+      "contract": null,
+      "migrationReason": "Exact consumer decomposition, packet ceilings, workflow script contract, and executable real-path proof remain required before migration.",
+      "disposition": "blocked"
+    },
+    {
+      "id": "strong-tests",
+      "subject": "native-Agent",
+      "file": ".claude/skills/strong-tests/scripts/autopilot-mutation.ts",
+      "line": 198,
+      "contract": null,
+      "migrationReason": "Exact consumer decomposition, packet ceilings, workflow script contract, and executable real-path proof remain required before migration.",
+      "disposition": "blocked"
+    },
+    {
+      "id": "strong-tests",
+      "subject": "native-Agent",
+      "file": ".claude/skills/strong-tests/scripts/run-mutation.ts",
+      "line": 494,
+      "contract": null,
+      "migrationReason": "Exact consumer decomposition, packet ceilings, workflow script contract, and executable real-path proof remain required before migration.",
+      "disposition": "blocked"
+    },
+    {
+      "id": "strong-tests",
+      "subject": "native-Agent",
+      "file": ".claude/skills/strong-tests/scripts/run-mutation.ts",
+      "line": 498,
+      "contract": null,
+      "migrationReason": "Exact consumer decomposition, packet ceilings, workflow script contract, and executable real-path proof remain required before migration.",
+      "disposition": "blocked"
+    },
+    {
+      "id": "strong-tests",
+      "subject": "native-Agent",
+      "file": ".claude/skills/strong-tests/scripts/run-mutation.ts",
+      "line": 713,
+      "contract": null,
+      "migrationReason": "Exact consumer decomposition, packet ceilings, workflow script contract, and executable real-path proof remain required before migration.",
+      "disposition": "blocked"
+    },
+    {
+      "id": "strong-tests",
+      "subject": "native-Agent",
+      "file": ".claude/skills/strong-tests/scripts/survivors-batch-prompt.ts",
+      "line": 7,
+      "contract": null,
+      "migrationReason": "Exact consumer decomposition, packet ceilings, workflow script contract, and executable real-path proof remain required before migration.",
+      "disposition": "blocked"
+    },
+    {
+      "id": "strong-tests",
+      "subject": "native-Agent",
+      "file": ".claude/skills/strong-tests/scripts/survivors-batch-prompt.ts",
+      "line": 20,
+      "contract": null,
+      "migrationReason": "Exact consumer decomposition, packet ceilings, workflow script contract, and executable real-path proof remain required before migration.",
+      "disposition": "blocked"
+    },
+    {
+      "id": "strong-tests",
+      "subject": "native-Agent",
+      "file": ".claude/skills/strong-tests/SKILL.md",
+      "line": 57,
+      "contract": null,
+      "migrationReason": "Exact consumer decomposition, packet ceilings, workflow script contract, and executable real-path proof remain required before migration.",
+      "disposition": "blocked"
+    },
+    {
+      "id": "strong-tests",
+      "subject": "native-Agent",
+      "file": ".claude/skills/strong-tests/SKILL.md",
+      "line": 664,
+      "contract": null,
+      "migrationReason": "Exact consumer decomposition, packet ceilings, workflow script contract, and executable real-path proof remain required before migration.",
+      "disposition": "blocked"
+    },
+    {
+      "id": "strong-tests",
+      "subject": "native-Agent",
+      "file": ".claude/skills/strong-tests/SKILL.md",
+      "line": 692,
+      "contract": null,
+      "migrationReason": "Exact consumer decomposition, packet ceilings, workflow script contract, and executable real-path proof remain required before migration.",
+      "disposition": "blocked"
+    },
+    {
+      "id": "strong-tests",
+      "subject": "native-Agent",
+      "file": ".claude/skills/strong-tests/SKILL.md",
+      "line": 698,
+      "contract": null,
+      "migrationReason": "Exact consumer decomposition, packet ceilings, workflow script contract, and executable real-path proof remain required before migration.",
+      "disposition": "blocked"
+    },
+    {
+      "id": "tests-create-update",
+      "subject": "native-Agent",
+      "file": ".claude/skills/tests-create-update/SKILL.md",
+      "line": 31,
+      "contract": null,
+      "migrationReason": "Exact consumer decomposition, packet ceilings, workflow script contract, and executable real-path proof remain required before migration.",
+      "disposition": "blocked"
+    },
+    {
+      "id": "README",
+      "subject": "native-Agent",
+      "file": "tools/subagent-watchdog/README.md",
+      "line": 8,
+      "contract": null,
+      "migrationReason": "Exact consumer decomposition, packet ceilings, workflow script contract, and executable real-path proof remain required before migration.",
+      "disposition": "blocked"
+    },
+    {
+      "id": "README",
+      "subject": "native-Agent",
+      "file": "tools/subagent-watchdog/README.md",
+      "line": 11,
+      "contract": null,
+      "migrationReason": "Exact consumer decomposition, packet ceilings, workflow script contract, and executable real-path proof remain required before migration.",
+      "disposition": "blocked"
+    },
+    {
+      "id": "subagent_watchdog",
+      "subject": "native-Agent",
+      "file": "tools/subagent-watchdog/subagent_watchdog.ts",
+      "line": 235,
+      "contract": null,
+      "migrationReason": "Exact consumer decomposition, packet ceilings, workflow script contract, and executable real-path proof remain required before migration.",
+      "disposition": "blocked"
+    }
+  ],
+  "verification": {
+    "ok": true,
+    "missingArchitectureDecisionBuilder": false,
+    "duplicateLocations": [],
+    "unsupportedSurfaces": [],
+    "uncontractedConsumers": []
+  }
+}

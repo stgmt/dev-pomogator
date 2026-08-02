@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "guaranteeTier": "STEERING_ONLY",
+  "host": {
+    "nativeAgentPreSpawnBoundary": false,
+    "directNativeAgentDenyBeforeSpawn": false,
+    "nestedNativeAgentDenyBeforeSpawn": false,
+    "workflowNativeAgentAllowed": false,
+    "protectedRouteFailClosed": false,
+    "boundedRuntimeAvailable": true
+  },
+  "controls": {
+    "packetAdmission": {
+      "mode": "best-effort",
+      "evidence": "runtime and workflow validators reject malformed packets, but trusted host origin is unavailable",
+      "verified": true
+    },
+    "rootWorktreePreflight": {
+      "mode": "hard admission",
+      "evidence": "git top-level/base/dirty preflight",
+      "verified": true
+    },
+    "nativeAgentDeny": {
+      "mode": "unavailable",
+      "evidence": "requires real direct and Workflow-nested deny-before-spawn proof",
+      "verified": false
+    },
+    "processTreeCancellation": {
+      "mode": "best-effort",
+      "evidence": "cross-platform process-tree signals exist; zero-descendant proof not yet host-verified",
+      "verified": false
+    },
+    "tokenCeiling": {
+      "mode": "monitored circuit",
+      "evidence": "packet declares ceiling; host preemption unavailable until measured",
+      "verified": false
+    },
+    "wallClock": {
+      "mode": "hard cancellation",
+      "evidence": "captured process timeout plus process-tree signal escalation",
+      "verified": true
+    }
+  },
+  "protectedHookEligible": false
+}

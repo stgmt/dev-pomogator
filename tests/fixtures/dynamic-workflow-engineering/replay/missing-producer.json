@@ -1,0 +1,5 @@
+{
+  "schemaVersion": 1,
+  "expected": "REPLAY_UNAVAILABLE",
+  "missing": ["state.json", "progress.jsonl", "terminal.json", "producer readback"]
+}

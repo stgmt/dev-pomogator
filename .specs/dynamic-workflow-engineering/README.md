@@ -34,3 +34,13 @@ Current main has no verified Agent-versus-Workflow PreToolUse policy. The generi
 - [REQUIREMENTS.md](REQUIREMENTS.md)
 - [DESIGN.md](DESIGN.md)
 - [TASKS.md](TASKS.md)
+
+## Second dogfood evidence boundary
+
+The canonical specification also absorbs a second user-supplied harness postmortem. Its general lessons are requirements and planned evidence targets, not proof that this repository implements them. In particular, root/worktree mismatch, detached process writers, concurrent checkout mutation, foreign shared resources, masked terminal errors, partial apply, false probe RED, typed-count errors, mixed-run journals, stale monitors, unsafe resumes, context overflow, nested fan-out, and global-green observability are all treated as explicit failure classes.
+
+The authoritative identity invariant is atomic:
+
+`Agent/Workflow branch → repository root/worktree → process group → shared-resource lease → runId → proof phase`
+
+Any broken binding blocks mutation and completion. The second incident remains `[USER-SUPPLIED][UNVERIFIED_FOR_THIS_REPOSITORY]`; original run-state, journals, process scans, terminal diagnostics, lease/mount evidence, and independent producer readback are required before replay. All tasks remain TODO, and this update does not claim implementation readiness.

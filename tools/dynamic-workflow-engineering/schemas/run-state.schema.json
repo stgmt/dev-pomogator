@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "dev-pomogator://dynamic-workflow/run-state-v1",
+  "type": "object",
+  "required": ["schemaVersion", "runId", "state", "stateVersion", "fencingToken", "ownerTaskId", "ownerInstanceId", "ownerProcess", "expectedRoot", "worktree", "requiredGates", "gateResults", "lockOrder", "collections"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "runId": { "type": "string", "minLength": 1 },
+    "state": { "enum": ["CREATED", "ROOT_VERIFIED", "EXCLUSIVE_OWNERSHIP", "PREFLIGHT_GREEN", "PLAN_FROZEN", "RUNNING", "VERIFYING", "COMMITTING", "DONE", "PARTIAL", "FAILED", "BLOCKED", "CANCELLED", "PAUSED_RESUMABLE", "TERMINATED_NO_RESUME", "HARNESS_REPAIR"] },
+    "stateVersion": { "type": "integer", "minimum": 1 },
+    "fencingToken": { "type": "integer", "minimum": 1 },
+    "ownerProcess": { "type": "object", "required": ["pid", "startedAt"], "properties": { "pid": { "type": "integer", "minimum": 1 }, "startedAt": { "type": "string", "format": "date-time" } } },
+    "lockOrder": { "const": ["checkoutWriterLock", "externalRuntimeLease"] }
+  },
+  "additionalProperties": true
+}

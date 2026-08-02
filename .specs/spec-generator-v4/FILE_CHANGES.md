@@ -671,14 +671,3 @@ This table is the explicit implementation inventory for the execution-aware task
 | EDIT | `tests/step_definitions/feature3_spec_quality_audit.ts` | FR-82; regression fixture for FR-82 completion evidence beside deferred FR-83. |
 | EDIT | `.specs/spec-phase-gate/spec-phase-gate.feature` | FR-82; PLUGIN008_35 regression for deferred-sibling false positives. |
 | EDIT | `NFR.md` | FR-82; explicit page, response-byte, latency, call-count, and no-N×M budgets. |
-
-## Phase 48 — Deferred bounded agent packet (FR-83; backlog after FR-82)
-
-| Action | Path | FR/AC responsibility |
-|---|---|---|
-| DISCOVER | `TBD-owned-by-discovery: Dynamic Workflow engine/packet adapter/collector harness paths` | FR-83; verify the actual implementation owner before selecting files; no invented path is authorized by this spec update. |
-| CREATE | `tests/step_definitions/feature83_bounded_workflow.ts` | FR-83; pending integration BDD steps for finite budgets, retry classification, partial branches, telemetry, collector ordering, and real provenance replay. |
-| MODIFY | `.specs/spec-generator-v4/spec-generator-v4.feature` | FR-83; SPECGEN004_678..683 deferred/backlog source scenarios. |
-| MODIFY | `DESIGN.md` | FR-83; record the deferred boundary, dependency on FR-82, and discovery-owned implementation path. |
-| MODIFY | `NFR.md` | FR-83; proposed finite packet and partial-result/retry budgets, marked deferred. |
-

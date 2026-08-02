@@ -31,7 +31,7 @@ Feature packages the user-provided `dynamic-workflow-engineering` skill inside t
 
 ### Hook enforcement surface
 
-`[VERIFIED: official hooks docs + current repository hook architecture]` `PreToolUse` is a blocking event: exit code 2 blocks the tool call, and hook output may deny before execution. Hooks from settings and enabled plugins also run inside subagents; tool events carry `agent_id` and `agent_type` when inside a subagent.
+`[VERIFIED: official hooks docs + current repository hook architecture]` `PreToolUse` is generically a blocking event: exit code 2 blocks a matched tool call, and hook output may deny before execution. Hooks from settings and enabled plugins also run inside subagents; tool events carry `agent_id` and `agent_type` when inside a subagent. `[NEEDS_CONFIRMATION]` This does not by itself prove that the installed host exposes the native `Agent` call to the expected matcher early enough to deny child creation; that exact path requires the real-host matrix.
 
 `[VERIFIED: official hooks docs]` `SubagentStart` runs when a subagent is spawned through the `Agent` tool, but it cannot block creation. It is useful for telemetry/context injection, not as the primary deny gate.
 
@@ -85,7 +85,7 @@ The preferred corrective design is deterministic-first: enumerate a finite popul
 
 ## Выводы
 
-A hard ban is feasible for the distinct direct `Agent` tool through PreToolUse/permission policy, while Workflow itself remains a separate subject. The safe default is stricter than the initial phrasing: no nested Agent bypass is needed for Workflow-native `agent()` workers, and no exception should trust prompt text. The skill provides steering and design quality; the hook provides enforceable denial; static admission and monitoring provide best-effort safeguards for workflow scripts where Claude Code exposes no hard per-agent budget primitive.
+A hard ban for the distinct native `Agent` tool is an architecture candidate, not a proven product guarantee. Official hook documentation establishes generic blocking semantics, while the actual native-Agent matcher, deny-before-spawn behavior, nested-call behavior, and installed clean-host matrix remain `NEEDS_CONFIRMATION` until real-host probes pass. No nested Agent bypass is needed for Workflow-native `agent()` workers, and no exception may trust prompt text or claimed Workflow provenance. The bundled skill provides steering; only a proven installed boundary may provide native-Agent denial. Workflow ceilings must be classified individually as hard admission, hard cancellation, monitored circuit, best-effort, or unavailable; monitoring after the event is not enforcement.
 
 ## Project Context & Constraints
 
@@ -147,3 +147,29 @@ Required probes:
 | Source-tree tests pass but installed plugin lacks the skill/hook or runtime dependency | Medium | High | Add clean marketplace install and deps-absent execution to BDD acceptance |
 | User-provided incident metrics are inaccurate or not portable across versions | Medium | Medium | Preserve `[USER_ASSERTION_ONLY]`, attach original script/journal, and derive requirements from the failure class rather than exact numbers |
 | Managed settings disable or bypass the plugin hook | Low | High | Document guarantee tiers; support managed force-enable/permission deny for organization enforcement and fail visibly when only steering is active |
+
+## Second dogfood research addendum
+
+### Evidence boundary
+
+The source for this addendum is the user-supplied `E:\Note from ChatGPT.txt` postmortem. It is `[USER-SUPPLIED][UNVERIFIED_FOR_THIS_REPOSITORY]`. It supplies generalizable failure classes and design input only. It does not prove that any named adjacent project, commit, model, container, test, or metric belongs to dev-pomogator, and it does not provide an authoritative local producer artifact.
+
+### Generalizable findings and required proof
+
+| Class | Research implication | Required proof before implementation claim |
+|---|---|---|
+| Root/isolation identity | Prompt paths cannot select the checkout; existing-worktree continuation and explicit isolation are different admission modes | Normalized expectedRoot versus actual git top-level before first action, with base SHA and dirty-path evidence |
+| Process-tree stop | Stopping an owner without descendants/writers leaves a live mutator | OS process-group/Job Object scan and terminal `ownerStopped`, `descendantsRemaining`, `writersRemaining` |
+| Single-writer state | A dev-stack lease does not protect checkout or phase ownership | CAS run state, one mutating owner, separate checkout lock, separate runtime lease, and ownership census |
+| External resources | Fixed names and stale labels can point at a foreign checkout | Run/worktree-derived identity, labels, ownership plus actual mount/source validation, non-destructive foreign handling |
+| Captured execution | Warnings and redirect locks can hide the native failure | argv-array runner, separate UTF-8 evidence, native exit code, atomic JSON, full diagnostics |
+| Transactional evidence | Partial writes can be mistaken for a completed rollout | Baseline hashes, staged/quarantined mutation, rollback/unproven state, typed result collections, all-layer completeness |
+| Probe truth | Scratch or alternate API paths can produce false RED/GREEN | One canonical real API path, schema/invariant validation, harness/capability/product classification, independent readback |
+| Run observability | Shared progress files mix runs and stale monitors | Per-run directory, runId/monotonic seq, owner inheritance, terminal marker, correlated status |
+| Recovery/context | Old context and pulse spam create unsafe resumes and context overflow | 1–3 KiB recovery capsule, lazy references, `TERMINATED_NO_RESUME`, two-failure `HARNESS_REPAIR` cutoff |
+| Verdict | Global green and useful findings do not prove active-run completeness | Required proof-layer correlation, missing-scope disclosure, productive/recovery/restart/stale-writer metrics where available |
+| Fundamental binding | Any broken Agent→root→process→lease→run→proof link invalidates evidence | Atomic binding check before mutation and before completion |
+
+### Research status
+
+These findings strengthen FR-2 and FR-4 through FR-13 and are represented in the existing 13 FR/AC/scenario/task graph. They do not upgrade any host capability, implementation, test, or external producer claim. The authoritative second-incident replay remains `REPLAY_UNAVAILABLE` until the original evidence listed in `FIXTURES.md` is provided.

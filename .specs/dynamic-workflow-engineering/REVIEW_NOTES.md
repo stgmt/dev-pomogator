@@ -1,123 +1,62 @@
 # Spec Review: dynamic-workflow-engineering
 
-**Phase:** Complete (all four authoring stops confirmed)
-**Generated:** 2026-08-01
-**Scope:** full-ban feasibility, proof boundaries, migration completeness, workflow limits, partial results, journal-first judgments, marketplace parity, BDD coverage, and requirement/design/task consistency
+**Reviewed:** 2026-08-02
+**Scope:** consolidated Dynamic Workflow authoring after contract, scenario, task-trace, and fixture-provenance corrections
+**Authoring verdict:** **PASS**
+**Product readiness:** **NOT_READY / TESTS_NOT_RUN**
 
-## Summary
+## Current evidence snapshot
 
-| Severity | Count | Verdict |
-|----------|-------|---------|
-| P0 (authoring blockers) | 4 | fix the specification before implementation |
-| P1 (fix before implementation) | 2 | important consistency corrections |
-| P2 (recommendations) | 2 | evidence hardening |
-| P3 (informational) | 0 | none |
+| Surface | Current fact |
+|---|---|
+| Functional requirements | 13 |
+| Acceptance criteria | 13 |
+| Source BDD scenarios | 28, all `@pending` and not run |
+| Tasks | 13, all author-declared `TODO` |
+| Phase-1 MCP conformance findings | 0 |
+| Authoritative readiness trace warnings | 13 `UNVERIFIED_FR`, because all requirements are intentionally unexecuted |
+| Executable BDD evidence | 0 |
+| Production implementation evidence | 0 |
+| First local incident replay | unavailable until producer records are reconciled |
+| Second user-supplied incident replay | `REPLAY_UNAVAILABLE` |
 
-**Overall verdict:** STOP_BLOCKED
+The graph is structurally coherent, but structural coherence is not product health. The runtime, hook, adapters, exporter, process ownership, install parity, consumer migration, and real-host proof are still unimplemented.
 
-The specification has a strong product direction, but its central enforcement model currently mixes two different things: the forbidden native `Agent` tool and Workflow-native `agent()` workers. That makes part of the proposed authorization path both unnecessary for the requested ban and unsupported by the evidence collected so far.
+## Prior blocker disposition
 
-## P0 Findings — authoring blockers
+| Prior finding | Disposition | Current contract |
+|---|---|---|
+| Native Agent and Workflow-native `agent()` were mixed | **CLOSED in authoring** | They are separate subjects. Caller-controlled provenance never authorizes native Agent. A protected native-Agent boundary may ship only after direct and Workflow-nested deny-before-spawn are proven; valid Workflow-native delivery has its own bounded admission. |
+| Limits were called hard without a host control | **CLOSED in authoring** | Every ceiling is classified as hard admission, hard cancellation, monitored circuit, best-effort, or unavailable. Post-event observation is not enforcement; unavailable required guarantees cause rejection or explicit downgrade. |
+| Native-Agent consumer list was hand-written and incomplete | **CLOSED in authoring** | A deterministic census and a separate migration scenario own discovery and disposition; `architecture-decision-builder` is an explicit prior omission. |
+| Host claims exceeded evidence | **CLOSED in authoring** | The hard gate is an architecture candidate until the real-host matrix proves it. Published tier is exactly `ENFORCED`, `STEERING_ONLY`, or `UNAVAILABLE`. |
+| Unsupported numeric workflow thresholds | **CLOSED in authoring** | The preserved skill no longer hard-codes unsupported version-specific thresholds. |
+| Task summary and body IDs disagreed | **CLOSED in authoring** | Summary and task blocks use `DWE-T01` through `DWE-T13`. |
+| Source scenarios bundled too many independent controls | **CLOSED in authoring** | The source feature now has 28 bounded scenarios, including separate branches for pre-spawn denial, provenance forgery, root mismatch, fenced ownership, stale takeover, ceilings, captured processes, process-tree stop, unsafe resume, harness repair, transactional mutation, resources, incident provenance, census, and migration. |
+| Task-to-scenario ownership used ranges or broad proxies | **CLOSED in authoring** | Every task names concrete scenario IDs; the final evidence task lists all 28 IDs explicitly. |
+| Incident fixtures could be mistaken for hand-authored positive evidence | **CLOSED in authoring** | First-incident journals are only planned producer-derived exports and return `REPLAY_UNAVAILABLE` when records are missing. The second postmortem is provenance-only and cannot close implementation. |
 
-### P0-1: The gate authorizes the wrong thing
+## Open execution gates
 
-**Where:** `FR.md` sections “Workflow-only delegation gate” and “Origin-safe Workflow child policy”; `DESIGN.md` Policy contract and Guarantee model; `dynamic-workflow-engineering_SCHEMA.md` Trusted Invocation Context; scenarios `DWE001_01` and `DWE001_02`.
+These are not authoring defects; they are the implementation work that keeps the feature not ready:
 
-**Problem in plain language:** the requested rule is simple: every call to the native `Agent` tool is forbidden, and workers must be created by Dynamic Workflow's own `agent()` primitive. The current text instead invents a trusted-Workflow exception for an `Agent` call. The schema even carries `tool_name: "Agent"`. That exception is not needed and depends on a Workflow-origin field that the research did not find.
+1. Prove or reject the native-Agent pre-spawn boundary on the real installed host, including a direct call, a nested call from a Workflow worker, and independent valid Workflow-native delivery.
+2. Implement bounded packet admission, universal run states, compare-and-swap transitions, process-start identity, fencing tokens, checkout-writer lock, external-runtime lease, renewal/expiry/release, stale-owner inspection, and old-token denial.
+3. Implement deterministic collectors, the serial phase adapter with non-zero exit propagation, typed captured-process execution, and independent producer readback.
+4. Implement retry accounting, process-tree cancellation, per-run monitoring, partial-result conservation, transactional mutation, redacted journal, offline replay, and safe resume.
+5. Build producer-derived first-incident fixtures; keep positive replay unavailable until reconciliation succeeds.
+6. Implement executable BDD twins against real runtime paths and run them only through the centralized Docker path.
+7. Prove clean install, foreign working directory, dependency absence, consumer census/migration, and distribution parity.
+8. Publish one evidence-backed guarantee tier. Never publish `ENFORCED` from prose, source-only scenarios, mocks, or adjacent-project evidence.
 
-**Required correction:**
+## Evidence boundaries
 
-1. Deny the native `Agent` tool unconditionally at its real pre-spawn boundary.
-2. Treat Workflow invocation/admission as a separate subject. Validate the Workflow script or registered Workflow contract before the run starts where the host exposes such a boundary.
-3. Keep a nested native `Agent` call from inside a Workflow worker denied; it is not a legitimate Workflow child.
-4. Remove native-Agent allowance based on Workflow provenance from the contract and schema.
-5. Make the real-host proof demonstrate the simple matrix: direct `Agent` denied, Workflow-native `agent()` allowed, nested native `Agent` denied.
+- The second postmortem at `E:\Note from ChatGPT.txt` is useful requirements input, not a local producer journal.
+- Adjacent-project commits, tests, model names, container names, and reported results are not dev-pomogator implementation evidence.
+- All source scenarios remain unexecuted; `@pending` is an authoring marker, not a passed test.
+- Coverage currently reports 28 not-run scenarios and all 13 requirements not execution-verified. The authoritative readiness check therefore keeps traceability/execution red even though the Phase-1 MCP conformance query returns no structural findings.
+- All task checkboxes remain open. The coverage view may label graph-linked open tasks `IN_PROGRESS`; that is a computed non-DONE rollup, not an author-declared task status transition.
 
-### P0-2: Several hard limits are promised before an enforcement surface is known
+## Final review conclusion
 
-**Where:** `FR.md` sections “Bounded workflow admission”, “Deterministic-first resource budgets”, and “Structured-output retry circuit breaker”; matching acceptance criteria and scenarios; task “Real-host enforceability PoC”.
-
-**Problem in plain language:** the research explicitly says the plugin has not proved that it can intercept an internal Workflow worker before spawn, control automatic structured-output retries, stop a worker after a tool-call ceiling, or preempt context growth. The requirements nevertheless say these limits SHALL be enforced. Only wall-clock and token limits are currently marked best-effort. Tool-call, physical-attempt, context, and internal-child limits have the same unresolved capability problem.
-
-The first proof task currently checks direct-Agent denial and Workflow allowance, but its Done-When list does not require proof of retry control, journal fields, static admission coverage, tool-call cancellation, context limits, or partial-output access. Implementation could therefore pass the proof task while the next requirements remain impossible to enforce.
-
-**Required correction:**
-
-- Extend the first proof task to test every hard control surface before policy implementation starts.
-- Classify each promised limit as one of: hard pre-run admission, hard runtime cancellation, monitored warning/circuit-break after an event, best-effort, or unavailable.
-- Reject a Workflow before launch only for properties that can be validated soundly from its real script/contract.
-- Do not call monitoring after the fact “enforcement”.
-- Define the fallback behavior when the host does not expose a control: lower the relevant capability claim instead of silently keeping a SHALL guarantee.
-
-### P0-3: The direct-Agent migration census is incomplete
-
-**Where:** `TASKS.md` task “Migrate every current direct Agent consumer” and `FILE_CHANGES.md`.
-
-**Repository evidence:** `.claude/skills/architecture-decision-builder/SKILL.md:85` explicitly requires a fresh `Agent` tool call, but this skill is absent from both the migration checklist and planned file changes. The current tree also carries `Agent` in allowed-tools or direct-call instructions across `spec-status`, `tests-create-update`, `spec-review`, `strong-tests`, `skills-rules-optimizer`, `bdd-migrator`, `create-spec`, `docker-optimize`, `cross-spec-reconcile`, `spec-generator-dev`, onboarding Phase 0, and phase-agent orchestration. Some may be permission-only rather than load-bearing calls, but the spec does not contain a deterministic census that distinguishes them.
-
-**Why this blocks authoring:** enabling the ban with this list would break at least one known current workflow that has no migration task or file owner. “Migrate every consumer” is a good invariant, but the concrete Done-When list is not exhaustive enough to prove it.
-
-**Required correction:**
-
-1. Generate a deterministic inventory of direct-call instructions, invocation envelopes, agent-only orchestrators, custom phase agents, and `allowed-tools: Agent` declarations.
-2. Classify every hit as load-bearing, test prose, fixture, or stale permission.
-3. Add every load-bearing owner to the migration task and `FILE_CHANGES.md`; remove stale Agent permissions from modified skills.
-4. Make the final negative check compare against this inventory, not against a hand-written list.
-
-### P0-4: Central host claims are marked more strongly than their evidence permits
-
-**Where:** `RESEARCH.md` verification table and conclusion.
-
-**Problem in plain language:** the research calls the distinct-Agent PreToolUse ban “VERIFIED” and concludes that a hard ban is feasible, while the same document says real matcher behavior, Workflow origin, and the installed-runtime allow/deny matrix still need confirmation. The source list names official pages, but the report does not retain direct quotes, versions, or exact anchors, and it does not provide the three independent evidence angles required by the research discipline for a `VERIFIED` label.
-
-**Required correction:**
-
-- Downgrade the central host-runtime claims to `NEEDS_CONFIRMATION` until the real-host proof passes.
-- Keep generic hook response-shape facts separate from proof that the actual native `Agent` call is denied before child creation.
-- Add fetched quote/anchor/version evidence for official claims and do not promote one official page plus local design code to three-angle verification.
-- Rewrite the conclusion conditionally: the ban is an architecture candidate; the published tier depends on the host proof.
-
-## P1 Findings — important consistency fixes
-
-### P1-1: The supplied skill contains unsupported numeric runtime claims
-
-**Where:** `dynamic-workflow-engineering_SKILL.md`, Monitoring section.
-
-The preserved input states exact `Large workflow` thresholds of more than 25 agents or more than 1.5 million projected tokens and attaches them to a specific Claude Code version. Those numbers are not proved in the spec research. The implementation task for the bundled skill checks discovery and allowed-tools, but does not require verification or removal of stale runtime facts.
-
-**Fix:** add a Done-When item for the bundled skill: every runtime number and semantic claim must be sourced from current official documentation or real-host evidence; otherwise remove it or mark it unknown. The shipped skill must not inherit unsupported facts merely because the source artifact contained them.
-
-### P1-2: The generated task summary uses different IDs from the real task blocks
-
-**Where:** `TASKS.md` Task Summary Table.
-
-The table shows IDs such as `T-1-01` and `T1-04`, while the actual task blocks and dependency references use `DWE-T01` through `DWE-T09`. The graph correctly parses the body IDs, but a human reader cannot reliably follow the table's dependency chain.
-
-**Fix:** correct the task-table renderer or regenerate the table from the explicit task IDs. Do not leave a generated block that changes task identity.
-
-## P2 Recommendations
-
-| # | Area | Recommendation |
-|---|------|----------------|
-| 1 | External workflow examples | Pin mutable default-branch URLs to immutable commit SHAs and locate executable workflow tests before upgrading any source above `SINGLE_SOURCE`. |
-| 2 | Dogfood fixtures | Attach or hash the original journals and derive sanitized fixtures from the real field shapes before using them as positive parser evidence. Exact user-supplied metrics should remain product input until then. |
-
-## What is already coherent
-
-- The feature stays inside one existing marketplace plugin; no nested plugin is proposed.
-- Steering is not presented as a security boundary.
-- The specification rejects prompt text, labels, frontmatter, subtype, session ID, and caller-supplied environment markers as authorization evidence.
-- Deterministic-first collection, bounded discovery, retry accounting, partial-result preservation, adversarial verification, and journal-first stop/resume are consistently represented across stories, requirements, acceptance criteria, design, tasks, and source scenarios.
-- Marketplace clean-home installation and dependency-absent execution are explicit acceptance work.
-- The source graph is structurally consistent: 13 requirements, 13 acceptance criteria, 13 tagged source scenarios, 9 parsed tasks, and 0 conformance findings.
-
-## Future implementation evidence — not authoring defects
-
-These items remain open by design and must not be reported as mistakes in the specification itself:
-
-- No policy, monitor, bundled skill, migration, or generated hook wiring has been implemented yet.
-- All 13 scenarios are source-only and have no executable twins yet.
-- No canonical BDD run exists; lifecycle is correctly `TESTS_NOT_RUN` and readiness is correctly `NOT_READY`.
-- Direct-Agent denial, Workflow-native allowance, retry control, clean installation, dependency-absent execution, and the final guarantee tier still require real execution evidence.
-
-After the four P0 authoring corrections, implementation should begin with the expanded real-host proof. A failed proof is an acceptable product result only if the specification publishes the lower, precisely scoped guarantee instead of calling it a complete ban.
+The one canonical specification is ready to enter implementation. The Dynamic Workflow product itself is not ready. The next action is the real-host capability and bounded-runtime foundation work, followed by executable integration-first BDD and authoritative replay/install evidence.

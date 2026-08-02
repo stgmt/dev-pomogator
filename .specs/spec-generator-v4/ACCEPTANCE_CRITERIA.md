@@ -1506,33 +1506,3 @@ WHEN the captured incident `wf_0315d03b-28` and a real task corpus are used for 
 **Требование:** [FR-82](FR.md#fr-82)
 WHEN the pending integration BDD scenarios execute THEN they SHALL invoke real MCP handlers and consume the captured incident/corpus artifact, and SHALL assert pagination cardinality, stable ordering, no-silent-cap behavior, bounded response size/latency, and the stale-description/test regression rather than hand-inventing a producer response shape.
 
-## AC-83.1
-**Требование:** [FR-83](FR.md#fr-83)
-**Delivery:** Deferred/backlog after FR-82.
-WHEN a bounded agent packet is created THEN it SHALL declare finite scopes, maximum calls, rounds, wall time, response bytes/tokens, and a stop condition, and SHALL preserve partial results when a bound stops execution.
-
-## AC-83.2
-**Требование:** [FR-83](FR.md#fr-83)
-**Delivery:** Deferred/backlog after FR-82.
-WHEN a branch fails from context exhaustion or `invalid_request` THEN the system SHALL classify the failure and preserve partial output, SHALL not retry the same prompt automatically, and SHALL allow at most one narrowed changed-strategy retry.
-
-## AC-83.3
-**Требование:** [FR-83](FR.md#fr-83)
-**Delivery:** Deferred/backlog after FR-82.
-WHEN a sibling collector or branch fails THEN completed GitHub or other ready output SHALL remain visible, while blocked and dropped scopes include explicit reasons; a failed spec branch SHALL not hide ready output.
-
-## AC-83.4
-**Требование:** [FR-83](FR.md#fr-83)
-**Delivery:** Deferred/backlog after FR-82.
-WHEN an agent packet stops or retries THEN per-agent telemetry SHALL expose calls, token counts when available, response bytes, repeated-key detection, and a journaled retry/stop reason tied to scope and branch.
-
-## AC-83.5
-**Требование:** [FR-83](FR.md#fr-83)
-**Delivery:** Deferred/backlog after FR-82.
-WHEN a workflow starts its model loop THEN deterministic collectors SHALL have completed first and their evidence SHALL be passed into the loop, preventing repeated discovery of the same MCP/repository facts.
-
-## AC-83.6
-**Требование:** [FR-83](FR.md#fr-83)
-**Delivery:** Deferred/backlog after FR-82.
-WHEN the real provenance artifact for `wf_0315d03b-28` is replayed THEN the completed GitHub collector output SHALL be surfaced, the six spec-collector retries SHALL be classified as a bounded failure, execution SHALL stop early, and blocked/dropped spec scope SHALL be visible.
-

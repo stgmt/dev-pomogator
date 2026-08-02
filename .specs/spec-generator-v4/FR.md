@@ -1351,22 +1351,6 @@ Claude Code remains the canonical install (marketplace plugin / repo dogfood: sk
 
 ---
 
-## FR-83
+## Cross-spec dependency: Dynamic Workflow Engineering
 
-**Deferred bounded agent packet and partial-result workflow contract**
-
-**Delivery status:** Deferred/backlog. This package is recorded now for deliberate follow-up after FR-82; no Dynamic Workflow implementation is authorized by this Requirements-phase transaction. FR-83 is a separate requirement because it governs bounded multi-agent execution and failure semantics, while FR-33 remains the thin routing/orchestration owner.
-
-- **FR-83a (finite packet):** A future agent packet SHALL declare finite scopes and hard maxima for tool calls, rounds, wall-clock time, response bytes, and response tokens, plus an explicit stop condition. When a budget or stop condition is reached, the packet SHALL preserve a partial-result fallback with scope-level state rather than expanding work silently.
-- **FR-83b (retry discipline):** Context exhaustion or `invalid_request` SHALL not trigger an automatic same-prompt retry. The system SHALL preserve the partial result, classify the failure, and retry at most once only with a narrowed scope and a changed strategy that is recorded in the journal.
-- **FR-83c (partial branch visibility):** A completed branch SHALL be surfaced even when a sibling fails. The result SHALL expose blocked and dropped scopes with reasons; a failed spec branch SHALL not hide ready GitHub or other completed collector output.
-- **FR-83d (telemetry):** Each agent SHALL report calls, input/output tokens when available, response bytes, repeated-key detection, and a journaled retry/stop reason. Telemetry SHALL identify the scope and branch that produced each partial result.
-- **FR-83e (collector ordering):** Deterministic collectors SHALL run and persist their evidence before model loops. A model loop SHALL consume collector output rather than rediscovering the same repository or MCP inventory through repeated calls.
-- **FR-83f (incident regression):** The deferred regression SHALL use the real provenance of `wf_0315d03b-28`: the GitHub collector completed while the spec collector retried six times. Future behavior SHALL stop early, classify the repeated failure, and surface the completed GitHub output plus blocked/dropped spec scope.
-
-**Зависит от:** [FR-82](FR.md#fr-82), [FR-33](FR.md#fr-33), [FR-41](FR.md#fr-41).
-**Связанные AC:** [AC-83.1](ACCEPTANCE_CRITERIA.md#ac-831), [AC-83.2](ACCEPTANCE_CRITERIA.md#ac-832), [AC-83.3](ACCEPTANCE_CRITERIA.md#ac-833), [AC-83.4](ACCEPTANCE_CRITERIA.md#ac-834), [AC-83.5](ACCEPTANCE_CRITERIA.md#ac-835), [AC-83.6](ACCEPTANCE_CRITERIA.md#ac-836)
-**Use Case:** [UC-35](USE_CASES.md#uc-35)
-**User Story:** [User Story 63](USER_STORIES.md#user-story-63-bounded-agent-packet-with-partial-results-priority-p2)
-
----
+dynamic-workflow-engineering owns all bounded workflow runtime, retry, partial-result, journal, replay, native-Agent capability/security, census/migration, adapters, incident regression, and distribution requirements; FR-82 remains the bounded spec-MCP query prerequisite/consumer surface; spec-generator-v4 must not implement a second runtime.

@@ -59,3 +59,11 @@ The policy loads, fails, or runs on a host with incomplete origin support.
 - Redact prompts and secrets while recording decision metadata and input hashes.
 - Fail closed only for the protected native Agent boundary.
 - Report `ENFORCED`, `STEERING_ONLY`, or `UNAVAILABLE` from runtime evidence.
+
+## Cross-cutting harness invariants for UC-1 through UC-6
+
+The existing use cases share one non-negotiable identity and evidence contract. Before any mutating action, the runtime binds branch, repository root/worktree, process group, shared-resource lease, run ID, and proof phase. It checks normalized expectedRoot against the actual git top-level, requires one CAS mutating owner plus separate checkout/runtime leases, and rejects broken bindings or uncensused nested fan-out.
+
+Stop is terminal only after owner, descendants, and writers are zero with durable terminal evidence. APPLY waits for root verification, exclusive ownership, green preflight, and frozen baseline/plan. Staged/quarantined mutation, typed result collections, per-run journals, monotonic events, owner-inherited monitors, bounded recovery capsules, canonical-path probes, independent readback, and all-layer completeness are shared constraints. Global green or a useful partial result never substitutes for missing current-run proof.
+
+The second user-supplied incident is a provenance-only input. Without original run-state/journals/process scans/terminal diagnostics/lease and mount evidence/independent producer readback, its replay is `REPLAY_UNAVAILABLE` and no implementation task is complete.

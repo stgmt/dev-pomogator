@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "contracts": [
+    {
+      "consumerId": "dwe-pilot",
+      "skillPath": ".claude/skills/dynamic-workflow-engineering/SKILL.md",
+      "operation": "workflow",
+      "subagentTypes": ["workflow-subagent"],
+      "owner": "dev-pomogator",
+      "version": 1,
+      "reviewAfter": "2027-01-01T00:00:00.000Z",
+      "outputSchema": "dwe-bounded-result-v1",
+      "ceilings": {
+        "logicalCalls": 3,
+        "physicalAttempts": 6,
+        "concurrency": 3,
+        "discoveryRounds": 1,
+        "toolCalls": 40,
+        "findings": 20,
+        "inputBytes": 65536,
+        "outputBytes": 524288,
+        "responseTokens": 100000,
+        "wallClockMs": 900000
+      }
+    },
+    {
+      "consumerId": "spec-generator-orchestrator",
+      "skillPath": ".claude/skills/spec-generator-orchestrator/SKILL.md",
+      "operation": "workflow",
+      "subagentTypes": ["spec-phase-discovery", "spec-phase-requirements", "spec-phase-finalization", "spec-phase-audit"],
+      "owner": "dev-pomogator",
+      "version": 1,
+      "reviewAfter": "2027-01-01T00:00:00.000Z",
+      "outputSchema": "spec-phase-result-v1",
+      "ceilings": {
+        "logicalCalls": 4,
+        "physicalAttempts": 8,
+        "concurrency": 1,
+        "discoveryRounds": 1,
+        "toolCalls": 160,
+        "findings": 80,
+        "inputBytes": 131072,
+        "outputBytes": 1048576,
+        "responseTokens": 200000,
+        "wallClockMs": 3600000
+      }
+    }
+  ]
+}
