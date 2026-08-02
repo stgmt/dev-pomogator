@@ -379,7 +379,14 @@ const assertions: Array<[string, (world: DweWorld) => void]> = [
   ['takeover issues a newer fencingToken and ownerInstanceId', (w) => { assert.ok(w.result.next.fencingToken > w.result.old.fencingToken); assert.notEqual(w.result.next.ownerInstanceId, w.result.old.ownerInstanceId); }],
   ['the old owner cannot renew release or write with its stale token', (w) => assert.throws(() => transitionRunState(w.result.next, 'EXCLUSIVE_OWNERSHIP', w.result.next.stateVersion, { ownerInstanceId: w.result.old.ownerInstanceId, fencingToken: w.result.old.fencingToken }))],
   ['lock timeout expiry takeover and release are journaled', (w) => assert.ok(w.result.lock.expiresAt)],
-  ['source scope digest cardinality and ordering are persisted before any model loop', (w) => assert.ok(w.result.inventory.evidence.digest && w.result.inventory.evidence.count >= 1)],
+  ['source scope digest cardinality and ordering are persisted before any model loop', (w) => {
+    const evidence = w.result.inventory.evidence;
+    assert.equal(evidence.source, 'spec-mcp:list_tasks');
+    assert.deepEqual(evidence.scope, ['dynamic-workflow-engineering']);
+    assert.equal(evidence.count, evidence.items.length);
+    assert.match(evidence.digest, /^[0-9a-f]{64}$/);
+    assert.deepEqual(evidence.items.map((item: any) => item.id), [...evidence.items.map((item: any) => item.id)].sort());
+  }],
   ['authoritative serial phase order is unchanged', (w) => assert.deepEqual(w.result.phases.map((p: any) => p.phase), ['collect', 'verify'])],
   ['a non-zero child exit is an explicit phase failure', async () => await assert.rejects(() => runSerialPhases(['bad'], async (phase) => ({ phase, exitCode: 2, stdout: '', stderr: 'failed' })))],
   ['no adapter performs an N-by-M rediscovery crawl', (w) => assert.ok(w.result.inventory.calls <= 3)],
