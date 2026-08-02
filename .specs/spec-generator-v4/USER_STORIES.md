@@ -1390,29 +1390,3 @@ Given a large document or a missing section is requested
 When the bounded document-read handler runs
 Then it returns a safe page or nearest canonical anchors and requires explicit opt-in for the whole document
 
-### User Story 63: Bounded agent packet with partial results (Priority: P2)
-
-**Требование:** [FR-83](FR.md#fr-83)
-
-**Status:** Deferred/backlog after FR-82.
-
-As a workflow owner, I need finite agent packets with classified retries, per-agent telemetry, and visible partial branches, so that one exhausted spec collector cannot hide completed GitHub output or consume an unbounded budget.
-
-**Why:** The real `wf_0315d03b-28` provenance shows a completed GitHub collector alongside six spec-collector retries; the next workflow contract must stop early and preserve what is already ready.
-
-**Independent Test:** Replaying the real provenance artifact against the eventual packet harness proves finite calls/rounds/time/bytes/tokens, no same-prompt retry, at most one narrowed changed-strategy retry, visible completed sibling output, explicit blocked/dropped scopes, and journaled telemetry.
-
-**Acceptance Scenarios:**
-
-Given finite scopes and packet budgets
-When one branch reaches a stop condition
-Then the packet returns partial results with explicit scope states and a stop reason
-
-Given a context-exhaustion or invalid-request failure
-When retry policy evaluates it
-Then it preserves partial output and permits at most one narrowed changed-strategy retry
-
-Given a sibling branch has completed
-When another branch fails
-Then the completed output remains visible and the failed scope is classified rather than hiding the whole result
-

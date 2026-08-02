@@ -238,12 +238,7 @@ N/M agents done · elapsed · tokens · ⚠ Large workflow
 
 показывает progress, не качество.
 
-Подтверждённый смысл `Large workflow` в Claude Code v2.1.203+:
-
-- запланировано больше 25 agents; **или**
-- projected usage превышает 1.5M tokens.
-
-Это advisory warning, не автоматический verdict о зависании и не команда остановки.
+`Large workflow` — advisory warning, а не автоматический verdict о зависании и не команда остановки. Точные числовые пороги и привязку к версии нельзя вшивать в shipped skill без актуальной официальной цитаты или real-host evidence; если такого доказательства нет, порог считается неизвестным и выводится только фактическая метрика UI.
 
 Разделять в отчёте:
 

@@ -1680,18 +1680,7 @@ A `SafeBatch` contains an `independenceProof` for every member pair: graph reach
 - Return a fixed first-N slice without cursors: rejected because it silently loses tasks and cannot satisfy “every unfinished task.”
 - Add a second task-inventory store: rejected because it would create a new source of truth; existing SpecGraph task nodes and lifecycle data must remain authoritative.
 
-### Decision: Record a separate deferred agent-packet contract, consumed by the thin orchestrator
+## Cross-spec dependency: Dynamic Workflow Engineering
 
-**Требование:** [FR-83](FR.md#fr-83)
-
-**Rationale:** FR-33 owns feature-map routing and delegates to workers; it does not define finite agent budgets, retry classification, partial-result visibility, or per-agent telemetry. Recording FR-83 separately makes those operational guarantees reviewable and testable while keeping FR-33 as the eventual orchestrator integration point. FR-82 is a prerequisite because deterministic bounded collectors and inventory queries must exist before a workflow can safely packetize their work.
-
-**Trade-off:** A separate deferred requirement creates a dependency and an additional acceptance surface before implementation can begin. Deferring it is safer than smuggling workflow behavior into FR-33 or shipping an unbounded fan-out that hides completed branches behind a failed collector.
-
-**Alternatives considered:**
-- Add the packet semantics directly to FR-33 now: rejected because the thin-orchestrator contract and the execution-budget contract have different owners, evidence, and rollout timing.
-- Retry every failed branch with the same prompt until it succeeds: rejected because context exhaustion and `invalid_request` are not repaired by repetition and the incident demonstrated runaway retries.
-- Fail the whole workflow when one sibling fails: rejected because it hides completed GitHub output and discards actionable partial results.
-
-**Discovery boundary:** The Dynamic Workflow engine, packet adapter, collector harness, and their integration test paths are `TBD-owned-by-discovery` until a discovery pass verifies the repository paths. This Requirements phase intentionally does not invent those paths or authorize implementation.
+dynamic-workflow-engineering owns all bounded workflow runtime, retry, partial-result, journal, replay, native-Agent capability/security, census/migration, adapters, incident regression, and distribution requirements; FR-82 remains the bounded spec-MCP query prerequisite/consumer surface; spec-generator-v4 must not implement a second runtime.
 

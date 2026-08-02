@@ -363,14 +363,3 @@
 | CHK-FR82-08 | Incident-driven bounded inventory meets declared call/byte/latency budgets | FR-82, AC-82.8, @feature82, UC-34 | Integration test | Draft | Incident measurements are evidence, not eternal performance claims |
 | CHK-FR82-09 | Executable pending scenarios use real handlers and real producer artifact | FR-82, AC-82.9, @feature82, UC-34 | Integration test | Draft | No hand-invented producer response shape |
 
-## Verification Matrix — FR-83 deferred bounded agent packet
-
-| CHK-ID | Requirement | Traces To | Verification Method | Status | Notes |
-|---|---|---|---|---|---|
-| CHK-FR83-01 | Packet declares finite scopes, budgets, stop condition, and partial fallback | FR-83, AC-83.1, @feature83, UC-35 | Integration test | Draft | Deferred/backlog after FR-82; Dynamic Workflow path TBD-owned-by-discovery |
-| CHK-FR83-02 | Context/invalid-request retry is classified and at most one narrowed retry | FR-83, AC-83.2, @feature83, UC-35 | Integration test | Draft | Same-prompt retry forbidden; deferred/backlog |
-| CHK-FR83-03 | Completed sibling output and blocked/dropped scopes remain visible | FR-83, AC-83.3, @feature83, UC-35 | Integration test | Draft | GitHub output must survive spec failure; deferred/backlog |
-| CHK-FR83-04 | Per-agent telemetry and repeated-key/journal signals are exposed | FR-83, AC-83.4, @feature83, UC-35 | Integration test | Draft | Real provenance replay; deferred/backlog |
-| CHK-FR83-05 | Deterministic collectors precede model loops | FR-83, AC-83.5, @feature83, UC-35 | Integration test | Draft | No repeated discovery crawl; deferred/backlog |
-| CHK-FR83-06 | wf_0315d03b-28 regression stops early and surfaces partial output | FR-83, AC-83.6, @feature83, UC-35 | Integration test | Draft | GitHub completed; spec retried six times; deferred/backlog |
-

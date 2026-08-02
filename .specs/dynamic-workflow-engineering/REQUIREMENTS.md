@@ -4,19 +4,19 @@
 
 | ID | Name | Linked AC | @featureN | Status |
 |----|------|-----------|-----------|--------|
-| [FR-1](FR.md#fr-1-workflow-only-delegation-gate) | Workflow-only delegation gate | [AC-1](ACCEPTANCE_CRITERIA.md#ac-1-fr-1) | @feature1 | Draft |
-| [FR-2](FR.md#fr-2-origin-safe-workflow-child-policy) | Origin-safe Workflow child policy | [AC-2](ACCEPTANCE_CRITERIA.md#ac-2-fr-2) | @feature2 | Draft |
-| [FR-3](FR.md#fr-3-bundled-skill-and-deterministic-steering) | Bundled skill and steering | [AC-3](ACCEPTANCE_CRITERIA.md#ac-3-fr-3) | @feature3 | Draft |
-| [FR-4](FR.md#fr-4-bounded-workflow-admission) | Bounded workflow admission | [AC-4](ACCEPTANCE_CRITERIA.md#ac-4-fr-4) | @feature4 | Draft |
-| [FR-5](FR.md#fr-5-deterministic-first-resource-budgets) | Deterministic-first budgets | [AC-5](ACCEPTANCE_CRITERIA.md#ac-5-fr-5) | @feature5 | Draft |
-| [FR-6](FR.md#fr-6-structured-output-retry-circuit-breaker) | Retry circuit breaker | [AC-6](ACCEPTANCE_CRITERIA.md#ac-6-fr-6) | @feature6 | Draft |
-| [FR-7](FR.md#fr-7-progress-and-no-progress-monitoring) | Progress monitoring | [AC-7](ACCEPTANCE_CRITERIA.md#ac-7-fr-7) | @feature7 | Draft |
-| [FR-8](FR.md#fr-8-partial-result-preservation-and-barrier-policy) | Partial results and barriers | [AC-8](ACCEPTANCE_CRITERIA.md#ac-8-fr-8) | @feature8 | Draft |
-| [FR-9](FR.md#fr-9-adversarial-verification-without-rediscovery) | Bounded adversarial verification | [AC-9](ACCEPTANCE_CRITERIA.md#ac-9-fr-9) | @feature9 | Draft |
-| [FR-10](FR.md#fr-10-journal-first-stop-resume-and-accounting) | Journal-first lifecycle | [AC-10](ACCEPTANCE_CRITERIA.md#ac-10-fr-10) | @feature10 | Draft |
-| [FR-11](FR.md#fr-11-sanitized-audit-and-fail-closed-protected-path) | Sanitized fail-closed audit | [AC-11](ACCEPTANCE_CRITERIA.md#ac-11-fr-11) | @feature11 | Draft |
-| [FR-12](FR.md#fr-12-distribution-parity-and-guarantee-tiers) | Distribution parity and tiers | [AC-12](ACCEPTANCE_CRITERIA.md#ac-12-fr-12) | @feature12 | Draft |
-| [FR-13](FR.md#fr-13-dogfood-regression-contract) | Dogfood regression contract | [AC-13](ACCEPTANCE_CRITERIA.md#ac-13-fr-13) | @feature13 | Draft |
+| [FR-1](FR.md#fr-1-workflow-only-delegation-gate) | Workflow-only native-Agent gate with separate Workflow subject | [AC-1](ACCEPTANCE_CRITERIA.md#ac-1-fr-1) | @feature1 | Draft |
+| [FR-2](FR.md#fr-2-origin-safe-workflow-child-policy) | Origin-safe finite Workflow packet admission | [AC-2](ACCEPTANCE_CRITERIA.md#ac-2-fr-2) | @feature2 | Draft |
+| [FR-3](FR.md#fr-3-bundled-skill-and-deterministic-steering) | Bundled skill and plugin-root script resolution | [AC-3](ACCEPTANCE_CRITERIA.md#ac-3-fr-3) | @feature3 | Draft |
+| [FR-4](FR.md#fr-4-bounded-workflow-admission) | Finite scopes, ownership, barriers, and stop contracts | [AC-4](ACCEPTANCE_CRITERIA.md#ac-4-fr-4) | @feature4 | Draft |
+| [FR-5](FR.md#fr-5-deterministic-first-resource-budgets) | Deterministic collectors and adapter budgets | [AC-5](ACCEPTANCE_CRITERIA.md#ac-5-fr-5) | @feature5 | Draft |
+| [FR-6](FR.md#fr-6-structured-output-retry-circuit-breaker) | One changed-strategy retry and circuit-break | [AC-6](ACCEPTANCE_CRITERIA.md#ac-6-fr-6) | @feature6 | Draft |
+| [FR-7](FR.md#fr-7-progress-and-no-progress-monitoring) | Journal-backed evidence monitoring | [AC-7](ACCEPTANCE_CRITERIA.md#ac-7-fr-7) | @feature7 | Draft |
+| [FR-8](FR.md#fr-8-partial-result-preservation-and-barrier-policy) | Partial-result conservation and completeness | [AC-8](ACCEPTANCE_CRITERIA.md#ac-8-fr-8) | @feature8 | Draft |
+| [FR-9](FR.md#fr-9-adversarial-verification-without-rediscovery) | Bounded adversarial verifier | [AC-9](ACCEPTANCE_CRITERIA.md#ac-9-fr-9) | @feature9 | Draft |
+| [FR-10](FR.md#fr-10-journal-first-stop-resume-and-accounting) | Redacted journal, replay, and compatible resume | [AC-10](ACCEPTANCE_CRITERIA.md#ac-10-fr-10) | @feature10 | Draft |
+| [FR-11](FR.md#fr-11-sanitized-audit-and-fail-closed-protected-path) | Redacted audit and conditional protected fail-closed path | [AC-11](ACCEPTANCE_CRITERIA.md#ac-11-fr-11) | @feature11 | Draft |
+| [FR-12](FR.md#fr-12-distribution-parity-and-guarantee-tiers) | Real-host capability matrix and guarantee tiers | [AC-12](ACCEPTANCE_CRITERIA.md#ac-12-fr-12) | @feature12 | Draft |
+| [FR-13](FR.md#fr-13-dogfood-regression-contract) | Incident provenance and adapter regression contract | [AC-13](ACCEPTANCE_CRITERIA.md#ac-13-fr-13) | @feature13 | Draft |
 
 ## Functional Requirements
 
@@ -62,19 +62,19 @@
 
 | CHK-ID | Requirement | Traces To (FR+SC) | Verification Method | Status | Notes |
 |--------|-------------|-------------------|---------------------|--------|-------|
-| CHK-FR1-01 | Direct Agent is denied before spawn | FR-1, AC-1, @feature1 | Integration test | Draft | Real-host proof required |
-| CHK-FR2-01 | Trusted Workflow child is admitted within contract | FR-2, AC-2, @feature2 | Integration test | Draft | Forged-origin negatives included |
-| CHK-FR3-01 | Skill ships and denial steers to it | FR-3, AC-3, @feature3 | Integration test | Draft | Clean-home install |
-| CHK-FR4-01 | Unbounded plans fail admission | FR-4, AC-4, @feature4 | BDD scenario | Draft | No child spawn |
-| CHK-FR5-01 | Deterministic collector and budgets bound work | FR-5, AC-5, @feature5 | BDD scenario | Draft | Time/token tier remains honest |
-| CHK-FR6-01 | Repeated unchanged failure trips breaker | FR-6, AC-6, @feature6 | BDD scenario | Draft | Logical call differs from attempt |
-| CHK-FR7-01 | Monitor reports evidence without metric-only verdict | FR-7, AC-7, @feature7 | BDD scenario | Draft | FACT/INFERENCE/UNKNOWN/ACTION |
-| CHK-FR8-01 | Failed sibling does not hide completed output | FR-8, AC-8, @feature8 | BDD scenario | Draft | Conservation invariant |
-| CHK-FR9-01 | Verifier refutes with bounded evidence | FR-9, AC-9, @feature9 | BDD scenario | Draft | No rediscovery |
-| CHK-FR10-01 | Stop/resume reads journal and reuses results | FR-10, AC-10, @feature10 | BDD scenario | Draft | Resume cache proof |
-| CHK-FR11-01 | Protected path fails closed with redacted audit | FR-11, AC-11, @feature11 | Integration test | Draft | One event per decision |
-| CHK-FR12-01 | Installed runtime publishes evidence-backed tier | FR-12, AC-12, @feature12 | Integration test | Draft | node_modules absent |
-| CHK-FR13-01 | Both dogfood incidents replay deterministically | FR-13, AC-13, @feature13 | BDD scenario | Draft | Real journal-shaped fixtures |
+| CHK-FR1-01 | Native Agent gate is conditional on proven host boundary and separate from Workflow-native agent() | FR-1, AC-1, @feature1 | Integration test | Draft | Real-host capability fixture |
+| CHK-FR2-01 | Finite Workflow packet admits only trusted exact contracts | FR-2, AC-2, @feature2 | Integration test | Draft | Forged/expired/duplicate negatives |
+| CHK-FR3-01 | Bundled skill and plugin-root scriptPath resolve after install | FR-3, AC-3, @feature3 | Integration test | Draft | No .claude/workflows distribution assumption |
+| CHK-FR4-01 | Admission rejects unbounded or widened packet plans | FR-4, AC-4, @feature4 | BDD scenario | Draft | Blocked/dropped states required |
+| CHK-FR5-01 | Deterministic collectors precede bounded model loops and adapters | FR-5, AC-5, @feature5 | BDD scenario | Draft | Time/token controls remain honest |
+| CHK-FR6-01 | One changed-strategy retry and circuit-break semantics hold | FR-6, AC-6, @feature6 | BDD scenario | Draft | Logical versus physical accounting |
+| CHK-FR7-01 | Monitor uses journal evidence and four truth categories | FR-7, AC-7, @feature7 | BDD scenario | Draft | Size alone is not runaway |
+| CHK-FR8-01 | Completed outputs survive siblings and completeness requires all mandatory branches | FR-8, AC-8, @feature8 | BDD scenario | Draft | Conservation invariant |
+| CHK-FR9-01 | Bounded verifier attempts refutation without rediscovery | FR-9, AC-9, @feature9 | BDD scenario | Draft | One allowed verdict |
+| CHK-FR10-01 | Redacted journal enables offline replay and compatible resume | FR-10, AC-10, @feature10 | BDD scenario | Draft | REPLAY_UNAVAILABLE on missing producer proof |
+| CHK-FR11-01 | Protected route conditionally fails closed with one redacted audit event | FR-11, AC-11, @feature11 | Integration test | Draft | Unrelated routes retain behavior |
+| CHK-FR12-01 | Real-host matrix publishes one honest guarantee tier and control modes | FR-12, AC-12, @feature12 | Integration test | Draft | Clean/foreign-CWD/deps-absent |
+| CHK-FR13-01 | Real incident exporter and serial adapters preserve evidence and explicit failures | FR-13, AC-13, @feature13 | BDD scenario | Draft | No implementation/executable evidence claimed |
 
 ## Verification Process
 
@@ -91,10 +91,28 @@
 - Phase 3 STOP: at least half in `In Progress`.
 - Implementation end: all `Verified` or explicit `Blocked` with issue link.
 
+## Second incident CHK extensions
+
+| CHK-ID | Requirement | Traces To (FR+SC) | Verification Method | Status | Notes |
+|--------|-------------|-------------------|---------------------|--------|-------|
+| CHK-FR2-02 | Root/worktree identity and atomic Agent→root→process-group→lease→run→proof binding precede work | FR-2, AC-2, @feature2 | Integration test | Draft | Normalized root mismatch blocks before first action |
+| CHK-FR4-02 | CAS single-writer state, separate checkout/shared-runtime leases, and APPLY gates prevent concurrent mutation | FR-4, AC-4, @feature4 | BDD scenario | Draft | Nested fan-out requires ownership census |
+| CHK-FR5-02 | Typed argv-array runner and canonical probe preserve terminal diagnostics and typed count invariants | FR-5, AC-5, @feature5 | Integration test | Draft | Harness/capability/product outcomes stay distinct |
+| CHK-FR6-02 | Process-group stop, terminal zero scan, stop states, recovery capsule, and HARNESS_REPAIR circuit are bounded | FR-6, AC-6, @feature6 | Integration test | Draft | Covers detached descendants and context overflow |
+| CHK-FR7-02 | Per-run journal and monitor correlate owner, runId, seq, descendants, leases, proof layers, and terminal marker | FR-7, AC-7, @feature7 | BDD scenario | Draft | Stale pulses and monitors do not prove progress |
+| CHK-FR8-02 | Staged/quarantined mutation and all-layer evidence prevent unproven apply from becoming complete | FR-8, AC-8, @feature8 | BDD scenario | Draft | Typed collections and AND completeness |
+| CHK-FR9-02 | Canonical-path probe and independent readback distinguish harness defect, capability gap, and product failure | FR-9, AC-9, @feature9 | Integration test | Draft | External producer provenance required |
+| CHK-FR10-02 | Per-run journal, terminal marker, and bounded capsule govern replay/resume without stale context | FR-10, AC-10, @feature10 | BDD scenario | Draft | Missing producer proof is REPLAY_UNAVAILABLE |
+| CHK-FR11-02 | Native exit/diagnostic evidence outranks warnings and one redacted event preserves audit integrity | FR-11, AC-11, @feature11 | Integration test | Draft | No raw prompt, secret, token, or payload |
+| CHK-FR12-02 | Run/worktree-derived resources use ownership/mount validation and preserve foreign resources | FR-12, AC-12, @feature12 | Integration test | Draft | Fixed names are unsafe |
+| CHK-FR13-02 | Second incident remains provenance-only and cannot close a task or implementation claim | FR-13, AC-13, @feature13 | BDD scenario | Draft | Replay waits for original evidence and independent readback |
+
 ## Summary Counts
 
-- Total CHKs: 13
+- Base traceability CHKs: 13
+- Second-incident extension CHKs: 11
+- Total planned CHKs: 24
 - Verified: 0
 - In Progress: 0
-- Draft: 13
+- Draft: 24
 - Blocked: 0
