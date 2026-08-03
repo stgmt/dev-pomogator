@@ -33,6 +33,8 @@ import { precheckWithInventory, type PrecheckWithInventoryResult } from '../../.
 import {
   buildReadinessInventory,
   classifyEvidence,
+  deriveExecutionLane,
+  deriveLiveEvidenceLane,
   evaluateReadiness,
   type EvidenceOutcome,
   type EvidenceRecord,
@@ -362,11 +364,11 @@ Then(
     assert.ok(ac1.test_paths.includes('tests/features/inventory-demo-mirror.feature'), JSON.stringify(ac1.test_paths));
 
     // Mandatory readiness lanes on every surface.
-    assert.deepEqual([...this.precheckResult.readiness!.mandatory_lanes], ['STRUCTURE', 'TRACEABILITY', 'EXECUTION', 'TASK_TRUTH', 'BDD_SYNC', 'AC_SATISFACTION', 'NFR_SATISFACTION']);
-    for (const lane of ['STRUCTURE', 'TRACEABILITY', 'EXECUTION', 'TASK_TRUTH', 'BDD_SYNC', 'SEMANTIC', 'FILTERED_PROOF']) {
+    assert.deepEqual([...this.precheckResult.readiness!.mandatory_lanes], ['STRUCTURE', 'TRACEABILITY', 'EXECUTION', 'LIVE_EVIDENCE', 'TASK_TRUTH', 'BDD_SYNC', 'AC_SATISFACTION', 'NFR_SATISFACTION']);
+    for (const lane of ['STRUCTURE', 'TRACEABILITY', 'EXECUTION', 'LIVE_EVIDENCE', 'TASK_TRUTH', 'BDD_SYNC', 'SEMANTIC', 'FILTERED_PROOF']) {
       assert.ok(this.verdictResult.readiness.lanes[lane as keyof typeof this.verdictResult.readiness.lanes], `verdict must carry lane ${lane}`);
     }
-    for (const lane of ['TRACEABILITY', 'EXECUTION', 'TASK_TRUTH', 'BDD_SYNC', 'FILTERED_PROOF']) {
+    for (const lane of ['TRACEABILITY', 'EXECUTION', 'LIVE_EVIDENCE', 'TASK_TRUTH', 'BDD_SYNC', 'FILTERED_PROOF']) {
       assert.ok(this.mcpPayload.readiness.lanes[lane], `MCP must carry lane ${lane}`);
     }
   },
@@ -729,7 +731,7 @@ Then(
 
     const ev = this.evaluation!;
     assert.equal(ev.overall, 'NOT_READY');
-    assert.deepEqual([...ev.mandatory_lanes], ['STRUCTURE', 'TRACEABILITY', 'EXECUTION', 'TASK_TRUTH', 'BDD_SYNC', 'AC_SATISFACTION', 'NFR_SATISFACTION']);
+    assert.deepEqual([...ev.mandatory_lanes], ['STRUCTURE', 'TRACEABILITY', 'EXECUTION', 'LIVE_EVIDENCE', 'TASK_TRUTH', 'BDD_SYNC', 'AC_SATISFACTION', 'NFR_SATISFACTION']);
     for (const lane of [...ev.mandatory_lanes, 'SEMANTIC', 'FILTERED_PROOF']) {
       assert.ok(ev.lanes[lane], `lane ${lane} must be rendered`);
     }
@@ -839,3 +841,179 @@ Then('dotted acceptance criterion ids remain exact in the spec-status parser', f
     { id: 'AC-63.10', fr: 'FR-63.2' },
   ]);
 });
+
+// ── SPECGEN004_686/687 — scenario execution-ownership scope (AC-63.4, FR-81a) ─
+
+interface F63ScopeWorld extends F63World {
+  scopeRetiredInventory?: ReadinessInventory;
+  scopeUnprovenInventory?: ReadinessInventory;
+  scopeRetiredLane?: SurfaceLane;
+  scopeRetiredLiveLane?: SurfaceLane;
+  scopeUnprovenEvaluation?: ReadinessEvaluation;
+}
+
+function writeScopeFixture(root: string): void {
+  // Spec owning a PROVEN retired scenario plus an active canonical control.
+  const scopeDemo = path.join(root, '.specs', 'scope-demo');
+  fs.mkdirSync(scopeDemo, { recursive: true });
+  writeMinimalSpecDocs(scopeDemo, [
+    { id: 1, title: 'Retired scope lane', acs: [1] },
+    { id: 2, title: 'Active control lane', acs: [2] },
+  ]);
+  const retiredFeature = [
+    'Feature: SPECGEN004_Scope',
+    '',
+    '  @feature1 @historical @superseded-by-successor-demo',
+    '  Scenario: SPECGEN004_616 retired scope demo',
+    '    Given historical evidence',
+    '',
+    '  @feature2',
+    '  Scenario: SPECGEN004_615 canonical scope control',
+    '    Given canonical scope evidence',
+    '',
+  ].join('\n');
+  fs.writeFileSync(path.join(scopeDemo, 'scope-demo.feature'), retiredFeature, 'utf-8');
+
+  // The successor spec EXISTS in the corpus — that is what proves retirement.
+  const successor = path.join(root, '.specs', 'successor-demo');
+  fs.mkdirSync(successor, { recursive: true });
+  writeMinimalSpecDocs(successor, [{ id: 1, title: 'Successor control', acs: [1] }]);
+
+  // Spec owning UNPROVEN historical scenarios and one external live scenario.
+  const unprovenDemo = path.join(root, '.specs', 'scope-unproven-demo');
+  fs.mkdirSync(unprovenDemo, { recursive: true });
+  writeMinimalSpecDocs(unprovenDemo, [{ id: 1, title: 'Unproven and live lane', acs: [1] }]);
+  const unprovenFeature = [
+    'Feature: SPECGEN004_ScopeUnproven',
+    '',
+    '  @feature1 @historical',
+    '  Scenario: SPECGEN004_617 bare historical scope demo',
+    '    Given bare historical evidence',
+    '',
+    '  @feature1 @historical @superseded-by-missing-demo',
+    '  Scenario: SPECGEN004_618 dangling successor scope demo',
+    '    Given dangling successor evidence',
+    '',
+    '  @feature1 @live-evidence',
+    '  Scenario: SPECGEN004_619 live scope demo',
+    '    Given live evidence',
+    '',
+  ].join('\n');
+  fs.writeFileSync(path.join(unprovenDemo, 'scope-unproven-demo.feature'), unprovenFeature, 'utf-8');
+
+  const dev = path.join(root, '.dev-pomogator');
+  fs.mkdirSync(dev, { recursive: true });
+  fs.writeFileSync(path.join(dev, '.last-test-run.ndjson'), canonicalMessages([
+    { name: 'SPECGEN004_615 canonical scope control', uri: '.specs/scope-demo/scope-demo.feature', line: lineOf(retiredFeature, 'SPECGEN004_615'), status: 'PASSED', seconds: 4_100_002_200, tags: ['@feature2'] },
+  ]));
+  // NOTE: overlayRow emits one compact JSON row WITHOUT a trailing newline —
+  // every row needs its own '\n' or two rows fuse into one unparseable line.
+  fs.writeFileSync(path.join(dev, '.scenario-results.ndjson'), overlayRow({
+    scenarioId: 'SPECGEN004_616', result: 'PASSED',
+    time: '2020-01-01T00:00:00.000Z',
+    runId: 'run-686-retired', source: 'docker-bdd:full',
+    uri: '.specs/scope-demo/scope-demo.feature', line: lineOf(retiredFeature, 'SPECGEN004_616'),
+    tcs: 'tcs63-sc616', traceFile: '.dev-pomogator/.test-history/run-686-retired.ndjson',
+    name: 'SPECGEN004_616 retired scope demo', tags: ['@feature1', '@historical', '@superseded-by-successor-demo'],
+  }) + '\n' + overlayRow({
+    scenarioId: 'SPECGEN004_619', result: 'PENDING',
+    time: '2099-12-03T08:00:00.000Z',
+    runId: 'run-687-live', source: 'docker-bdd:live-evidence',
+    uri: '.specs/scope-unproven-demo/scope-unproven-demo.feature', line: lineOf(unprovenFeature, 'SPECGEN004_619'),
+    tcs: 'tcs63-sc619', traceFile: '.dev-pomogator/.test-history/run-687-live.ndjson',
+    name: 'SPECGEN004_619 live scope demo', tags: ['@feature1', '@live-evidence'],
+  }) + '\n');
+}
+
+Given(
+  'a readiness fixture with a historical scenario superseded by an existing spec and a stale overlay pass',
+  async function (this: F63ScopeWorld) {
+    writeScopeFixture(this.tempDir);
+    const graph = await withGitSha('fixture-sha', () => buildGraphFromCwd(this.tempDir));
+    this.scopeRetiredInventory = buildReadinessInventory(graph, { spec: 'scope-demo' });
+    this.scopeUnprovenInventory = buildReadinessInventory(graph, { spec: 'scope-unproven-demo' });
+  },
+);
+
+When('the readiness inventory classifies its scenario scopes', function (this: F63ScopeWorld) {
+  this.scopeRetiredLane = deriveExecutionLane(this.scopeRetiredInventory!);
+  this.scopeRetiredLiveLane = deriveLiveEvidenceLane(this.scopeRetiredInventory!);
+});
+
+Then(
+  'the scenario is classified historical-retired with its overlay record preserved',
+  function (this: F63ScopeWorld) {
+    const record = this.scopeRetiredInventory!.scenarios.find((r) => r.scenario_key === 'specgen004_616');
+    assert.ok(record, 'retired scenario record must be retained in the inventory');
+    assert.equal(record!.scope, 'historical-retired');
+    assert.equal(record!.superseded_by, 'successor-demo');
+    assert.equal(record!.outcome, 'stale', 'historical overlay pass stays visible as stale evidence, never rewritten');
+    assert.equal(record!.result, 'PASSED');
+    assert.equal(this.scopeRetiredInventory!.scenario_scope.historical_retired.count, 1);
+    assert.deepEqual(this.scopeRetiredInventory!.scenario_scope.historical_retired.by_successor['successor-demo'], ['specgen004_616']);
+  },
+);
+
+Then(
+  'the EXECUTION lane carries no debt for it while LIVE_EVIDENCE reports NONE without live scenarios',
+  function (this: F63ScopeWorld) {
+    assert.deepEqual(this.scopeRetiredLane!.debt, []);
+    assert.equal(this.scopeRetiredLane!.status, 'GREEN');
+    assert.equal(this.scopeRetiredLiveLane!.status, 'NONE');
+    const fr = this.scopeRetiredInventory!.frs.find((f) => f.id === 'FR-1');
+    assert.equal(fr?.execution_scope, 'retired', 'an FR whose scenarios are all proven-retired leaves the EXECUTION lane');
+  },
+);
+
+Given(
+  'a readiness fixture with a bare historical scenario a dangling superseded scenario and a pending live scenario',
+  async function (this: F63ScopeWorld) {
+    if (!this.scopeUnprovenInventory) {
+      writeScopeFixture(this.tempDir);
+      const graph = await withGitSha('fixture-sha', () => buildGraphFromCwd(this.tempDir));
+      this.scopeUnprovenInventory = buildReadinessInventory(graph, { spec: 'scope-unproven-demo' });
+    }
+  },
+);
+
+When(
+  'the readiness inventory classifies its scenario scopes and evaluates readiness',
+  function (this: F63ScopeWorld) {
+    this.scopeUnprovenEvaluation = evaluateReadiness({
+      inventory: this.scopeUnprovenInventory!,
+      lanes: {
+        STRUCTURE: { status: 'GREEN' },
+        TRACEABILITY: { status: 'GREEN' },
+        TASK_TRUTH: { status: 'GREEN' },
+        BDD_SYNC: { status: 'GREEN' },
+      },
+    });
+  },
+);
+
+Then(
+  'both unproven scenarios stay active EXECUTION debt under HISTORICAL_UNPROVEN',
+  function (this: F63ScopeWorld) {
+    const execution = this.scopeUnprovenEvaluation!.lanes.EXECUTION;
+    assert.equal(execution.status, 'RED');
+    const unproven = execution.debt.find((d) => d.startsWith('HISTORICAL_UNPROVEN:'));
+    assert.ok(unproven, `EXECUTION debt must name HISTORICAL_UNPROVEN, got ${JSON.stringify(execution.debt)}`);
+    assert.ok(unproven!.includes('specgen004_617'), unproven);
+    assert.ok(unproven!.includes('specgen004_618'), unproven);
+    assert.ok(execution.debt.includes('SCENARIO_NOT_RUN:2'), JSON.stringify(execution.debt));
+  },
+);
+
+Then(
+  'the live scenario blocks the LIVE_EVIDENCE lane until real producer proof arrives',
+  function (this: F63ScopeWorld) {
+    const live = this.scopeUnprovenEvaluation!.lanes.LIVE_EVIDENCE;
+    assert.equal(live.status, 'RED');
+    assert.equal(live.blocking, true);
+    assert.deepEqual(live.debt, ['specgen004_619:PENDING']);
+    assert.equal(this.scopeUnprovenEvaluation!.overall, 'NOT_READY');
+    const record = this.scopeUnprovenInventory!.scenarios.find((r) => r.scenario_key === 'specgen004_619');
+    assert.equal(record?.scope, 'external-live');
+    assert.equal(this.scopeUnprovenInventory!.scenario_scope.external_live.count, 1);
+  },
+);
