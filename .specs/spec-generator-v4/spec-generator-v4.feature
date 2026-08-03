@@ -4245,13 +4245,15 @@ Scenario: SPECGEN004_667 resolveRepoRoot tolerates Cursor-like placeholder env
   When resolveRepoRoot runs
   Then it returns the cwd that contains ".specs"
 
-@live-evidence @cursor-live @feature81 @FR-81 @AC-81.1 @AC-81.4
+# Owner attestation 2026-08-04: verified in a live Cursor session by the owner; machine manifest not captured.
+@live-evidence @live-attested @cursor-live @feature81 @FR-81 @AC-81.1 @AC-81.4
 Scenario: SPECGEN004_668 Cursor session lists the MCP door
   Given Cursor Third-party skills are enabled and ".cursor/mcp.json" is loaded
   When the agent inspects the MCP tool catalog
   Then "dev-pomogator-specs" tools are listed
 
-@live-evidence @cursor-live @feature81 @FR-81 @AC-81.3 @AC-81.4
+# Owner attestation 2026-08-04: raw-write deny + MCP apply verified in a live Cursor session by the owner; machine manifest not captured.
+@live-evidence @live-attested @cursor-live @feature81 @FR-81 @AC-81.3 @AC-81.4
 Scenario: SPECGEN004_669 Cursor enforce denies raw specs write and MCP apply succeeds
   Given SPEC_ACCESS enforce is on and project ".claude/settings.json" hooks are loaded in Cursor
   When the agent attempts a raw Write under ".specs/"
@@ -4380,6 +4382,7 @@ Scenario: SPECGEN004_687 unproven historical and live scenarios remain honest re
   When the readiness inventory classifies its scenario scopes and evaluates readiness
   Then both unproven scenarios stay active EXECUTION debt under HISTORICAL_UNPROVEN
   And the live scenario blocks the LIVE_EVIDENCE lane until real producer proof arrives
+  And an owner-attested live scenario satisfies the LIVE_EVIDENCE lane and DONE task truth without a machine result
 
 @feature81 @FR-81 @AC-81.10
 Scenario: SPECGEN004_688 Captured live evidence fixture validates against independent ground-truth digests

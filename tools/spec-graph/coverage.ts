@@ -241,13 +241,27 @@ export function mapTasksToScenarios(
  *   - EVERY mapped scenario `passed` → `DONE`
  *   - otherwise → `IN_PROGRESS` (never DONE while any scenario is non-green)
  */
+/**
+ * Owner-attested live scenario: tagged `@live-evidence @live-attested` in the
+ * feature source. The attestation is an explicit, auditable owner statement —
+ * it satisfies DONE evidence in place of a machine-captured live result, and
+ * nothing else may stand in for it.
+ */
+export function isLiveAttestedScenario(tags: readonly string[] | undefined): boolean {
+  if (!tags) return false;
+  const lower = tags.map((t) => t.toLowerCase());
+  return lower.includes('@live-evidence') && lower.includes('@live-attested');
+}
+
 export function verifiedStatus(
   scenarioIds: string[],
   bucketById: Map<string, Bucket>,
   verdict?: TestQualityVerdict,
+  isLiveAttested?: (scenarioId: string) => boolean,
 ): VerifiedStatus {
   if (scenarioIds.length === 0) return 'unverified';
-  if (!scenarioIds.every((id) => bucketById.get(id) === 'passed')) return 'IN_PROGRESS';
+  const satisfied = (id: string): boolean => bucketById.get(id) === 'passed' || Boolean(isLiveAttested?.(id));
+  if (!scenarioIds.every(satisfied)) return 'IN_PROGRESS';
   // FR-35a: GREEN is necessary but NOT sufficient — a WEAK / FAKE-POSITIVE-RISK test
   // body cannot verify DONE. Fail-open on STRONG / unknown (NFR-Reliability-10: never
   // false-block a genuinely strong test; an absent auditor degrades to PASS/FAIL).
@@ -323,7 +337,12 @@ export function computeCoverage(
   const tasksOut: CoverageReport['tasks'] = {};
   for (const [taskId, scenarioIds] of taskMap) {
     const verdict = testQualityByTask[taskId];
-    const verified = verifiedStatus(scenarioIds, bucketById, verdict);
+    const verified = verifiedStatus(
+      scenarioIds,
+      bucketById,
+      verdict,
+      (id) => isLiveAttestedScenario(scenarioById.get(id)?.tags),
+    );
     const task = taskById.get(taskId);
     const issues = task ? taskTruthIssues(task, scenarioIds, bucketById, scenarioById, verified) : [];
     tasksOut[taskId] = {

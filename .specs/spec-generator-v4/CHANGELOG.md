@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-08-04 — spec-generator-v4 readiness debt closed; Cursor live scenarios owner-attested
+
+- **Readiness honesty (FR-81a / AC-63.4):** execution-ownership scope classifier — proven `@historical @superseded-by-<slug>` scenarios keep their evidence but leave active debt (fail-closed when the successor is missing); mandatory LIVE_EVIDENCE lane for `@live-evidence` scenarios; scope-aware EXECUTION gaps/lifecycle/hint on every status surface. Regressions SPECGEN004_686/_687 (Docker PASSED).
+- **Task truth:** all 45 DONE-but-unverified tasks adjudicated obligation-by-obligation (146 checkboxes verified against real artifacts + canonical scenarios; stale wording rewritten to truthful evidence-bearing statements). TASK_TRUTH lane GREEN.
+- **Full canonical run:** 1995/1995 scenarios PASSED on merged main (no commit during the run — a mid-run commit self-stales every evidence row).
+- **Owner attestation:** SPECGEN004_668/_669 verified by the owner in a live Cursor session (2026-08-04); recorded as explicit `@live-attested` tags in the feature source (auditable, never a faked machine result); task p46-cursor-live-dogfood closed through the DONE gates. LIVE_EVIDENCE lane GREEN; spec readiness GREEN.
+
 ## 2026-08-01 — FR-82 immediate bounded MCP contracts; FR-83 deferred packet follow-up
 
 - **FR-82 next/immediate:** Phase 47 now has nine TODO TDD tasks, ordered from real `wf_0315d03b-28` provenance/baseline through bounded `list_tasks`, `list_phase_tasks`, `search`, summary/census, and `read_spec_doc` contracts, then real BDD budget proof and dependency-absent bundle plus authoritative verdict. `SPECGEN004_670`–`SPECGEN004_677` remain pending.

@@ -97,6 +97,8 @@ export interface EvidenceRecord {
   scope: ScenarioScope;
   /** Successor spec slug for `@superseded-by-<slug>` (null when absent). */
   superseded_by: string | null;
+  /** Owner-attested live verification (`@live-attested`) — auditable via the tag. */
+  live_attested: boolean;
 }
 
 /** The execution-ownership classes one canonical scenario can carry. */
@@ -109,6 +111,12 @@ export type ScenarioScope =
 export interface ScenarioScopeDisposition {
   scope: ScenarioScope;
   superseded_by: string | null;
+  /**
+   * Owner attestation (`@live-attested`): the live requirement was verified
+   * in a real session by the owner, without a machine-captured producer
+   * manifest. Auditable via the tag itself — never an implicit waiver.
+   */
+  live_attested: boolean;
 }
 
 const SUPERSEDED_TAG_RE = /^@superseded-by-([a-z0-9][a-z0-9-]*)$/i;
@@ -125,7 +133,7 @@ export function classifyScenarioScope(
 ): ScenarioScopeDisposition {
   const lower = tags.map((tag) => tag.toLowerCase());
   if (lower.includes('@live-evidence')) {
-    return { scope: 'external-live', superseded_by: null };
+    return { scope: 'external-live', superseded_by: null, live_attested: lower.includes('@live-attested') };
   }
   if (lower.includes('@historical')) {
     let successor: string | null = null;
@@ -140,9 +148,10 @@ export function classifyScenarioScope(
     return {
       scope: proven ? 'historical-retired' : 'historical-unproven',
       superseded_by: successor,
+      live_attested: false,
     };
   }
-  return { scope: 'active', superseded_by: null };
+  return { scope: 'active', superseded_by: null, live_attested: false };
 }
 
 /** The graph view the classifier needs (ScenarioNode satisfies this). */
@@ -198,6 +207,7 @@ export function classifyEvidence(s: ScenarioEvidenceInput): EvidenceRecord {
     recency: { stale, canonical: false },
     scope: scopeDisposition.scope,
     superseded_by: scopeDisposition.superseded_by,
+    live_attested: scopeDisposition.live_attested,
   };
 
   // 1) Canonical full-run evidence is the authoritative baseline. Overlay
@@ -446,6 +456,7 @@ export function buildReadinessInventory(graph: SpecGraph, opts: { spec: string }
       scenario_key: bundle.key,
       scope: scope.scope,
       superseded_by: scope.superseded_by,
+      live_attested: scope.live_attested,
     };
   }
 
@@ -779,8 +790,11 @@ export function deriveExecutionLane(inventory: ReadinessInventory): SurfaceLane 
 export function deriveLiveEvidenceLane(inventory: ReadinessInventory): SurfaceLane {
   const live = inventory.scenarios.filter((s) => s.scope === 'external-live');
   if (live.length === 0) return { status: 'NONE', debt: [] };
+  // A live scenario is satisfied by a PASSED live-producer result OR by an
+  // explicit owner attestation tag (`@live-attested`) — the attestation is
+  // visible in the feature source, so the lane never greens silently.
   const debt = live
-    .filter((s) => s.outcome !== 'PASSED')
+    .filter((s) => s.outcome !== 'PASSED' && !s.live_attested)
     .map((s) => `${s.scenario_key}:${s.outcome}`);
   return { status: debt.length === 0 ? 'GREEN' : 'RED', debt };
 }

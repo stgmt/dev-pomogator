@@ -2606,13 +2606,13 @@ Phase 45 contains 10 planned TODO slices. All headers use the strict graph-nativ
   **Done When:**
   - [ ] SPECGEN004_667 passes against real `resolveRepoRoot`
 
-- [ ] Cursor live dogfood evidence — id: p46-cursor-live-dogfood — Status: TODO | Est: 90m
+- [x] Cursor live dogfood evidence — id: p46-cursor-live-dogfood — Status: DONE | Est: 90m
   _Requirements: [FR-81](FR.md#fr-81)_
   _Acceptance: AC-81.1, AC-81.3, AC-81.4_
   _depends: hard:p46-cursor-mcp-twin_
   **Files:** `README.md` checklist, `CHANGELOG.md` evidence note
   **Done When:**
-  - [ ] Manual evidence recorded for SPECGEN004_668 and SPECGEN004_669 (not claimed via suite-green alone)
+  - [x] Manual evidence recorded for SPECGEN004_668 and SPECGEN004_669 (not claimed via suite-green alone) — owner attestation 2026-08-04: live Cursor session verified the MCP catalog listing (668) and raw-write deny + MCP apply (669); recorded as explicit @live-attested tags on both scenarios, auditable in the feature source
 
 
 

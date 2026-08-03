@@ -608,18 +608,21 @@ export async function runSpecVerdict(
   const notRun = canonicalBuckets.not_run ?? 0;
   if (notRun > 0) {
     const scopeByScenarioId = new Map(
-      inventory.scenarios.map((rec) => [rec.scenario_id.toLowerCase(), rec.scope]),
+      inventory.scenarios.map((rec) => [rec.scenario_id.toLowerCase(), { scope: rec.scope, liveAttested: rec.live_attested }]),
     );
     let notRunActive = 0;
     let notRunLive = 0;
+    let notRunLiveAttested = 0;
     let notRunRetired = 0;
     let notRunUnproven = 0;
     for (const s of scenLikes) {
       if (s.canonicalResult) continue;
-      const scope = scopeByScenarioId.get(String(s.id).toLowerCase()) ?? 'active';
-      if (scope === 'external-live') notRunLive += 1;
-      else if (scope === 'historical-retired') notRunRetired += 1;
-      else if (scope === 'historical-unproven') notRunUnproven += 1;
+      const info = scopeByScenarioId.get(String(s.id).toLowerCase()) ?? { scope: 'active' as const, liveAttested: false };
+      if (info.scope === 'external-live') {
+        if (info.liveAttested) notRunLiveAttested += 1;
+        else notRunLive += 1;
+      } else if (info.scope === 'historical-retired') notRunRetired += 1;
+      else if (info.scope === 'historical-unproven') notRunUnproven += 1;
       else notRunActive += 1;
     }
     if (notRunActive > 0) {
@@ -636,7 +639,13 @@ export async function runSpecVerdict(
     if (notRunLive > 0) {
       notes.push(
         `LIVE_EVIDENCE — ${notRunLive} scenario(s) tagged @live-evidence have no canonical cucumber result BY DESIGN; ` +
-          `they are closed only by a real live producer (manifest + trace + readback), never by the full suite.`,
+          `they are closed only by a real live producer (manifest + trace + independent verification) or an explicit owner attestation, never by the full suite.`,
+      );
+    }
+    if (notRunLiveAttested > 0) {
+      notes.push(
+        `LIVE_EVIDENCE_ATTESTED — ${notRunLiveAttested} live scenario(s) carry no machine-captured result but are closed by an explicit ` +
+          `owner attestation tag (@live-attested) in the feature source; the attestation is auditable there, never implicit.`,
       );
     }
     if (notRunRetired > 0) {

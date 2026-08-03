@@ -1560,7 +1560,7 @@ WHEN strict synthesis receives an acceptance lane THEN its requirement and accep
 
 **Требование:** [FR-63](FR.md#fr-63)
 
-WHEN the readiness inventory classifies a scenario's execution ownership THEN a scenario tagged `@historical @superseded-by-<slug>` SHALL be retired ONLY when the successor spec exists in the corpus, a bare `@historical` scenario or one pointing at a missing successor SHALL remain active debt (fail-closed), `@live-evidence` scenarios SHALL be closed only by the LIVE_EVIDENCE lane (real producer manifest/trace plus independent verification of the recorded actions) and never by the canonical cucumber run, and retired scenarios SHALL keep their historical evidence records visible for audit while releasing active EXECUTION debt.
+WHEN the readiness inventory classifies a scenario's execution ownership THEN a scenario tagged `@historical @superseded-by-<slug>` SHALL be retired ONLY when the successor spec exists in the corpus, a bare `@historical` scenario or one pointing at a missing successor SHALL remain active debt (fail-closed), `@live-evidence` scenarios SHALL be closed only by the LIVE_EVIDENCE lane — a real producer result, or an explicit owner attestation recorded as the `@live-attested` tag in the feature source (auditable there, never implicit) — and never by the canonical cucumber run, and retired scenarios SHALL keep their historical evidence records visible for audit while releasing active EXECUTION debt.
 
 
 ## AC-81.8

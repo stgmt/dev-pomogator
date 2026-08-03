@@ -728,6 +728,11 @@ This table is the explicit implementation inventory for the execution-aware task
 | `tools/spec-mcp-server/tools.ts` | edit | [FR-63](FR.md#fr-63) AC-63.4 — scope-aware execution gaps, lifecycle, and hint on the status views. |
 | `tests/step_definitions/feature63_precheck_inventory.ts` | edit | SPECGEN004_686..687 — scope classifier regressions over real readiness fixtures; mandatory-lane pins updated. |
 | `.specs/spec-generator-v4/spec-generator-v4.feature` | edit | [FR-63](FR.md#fr-63) — SPECGEN004_686..687 traceable scenarios for AC-63.4. |
+| `tools/spec-graph/coverage.ts` | edit | [FR-81](FR.md#fr-81) AC-63.4 — owner-attested live scenarios (`@live-evidence @live-attested`) satisfy DONE task evidence explicitly and auditably. |
+| `tools/spec-graph/readiness-inventory.ts` | edit | [FR-81](FR.md#fr-81) AC-63.4 — `@live-attested` recognized in the scope classifier and LIVE_EVIDENCE lane. |
+| `.specs/spec-generator-v4/spec-generator-v4.feature` | edit | [FR-81](FR.md#fr-81) — SPECGEN004_668/_669 owner attestation tags + dated comments (2026-08-04). |
+| `.specs/spec-generator-v4/TASKS.md` | edit | [FR-81](FR.md#fr-81) — p46-cursor-live-dogfood closed with the attestation evidence note. |
+| `.specs/spec-generator-v4/CHANGELOG.md` | edit | 2026-08-04 readiness-debt closure + owner attestation record. |
 
 - ACCEPTANCE_CRITERIA.md: add AC-81.8 (FR-81)
 

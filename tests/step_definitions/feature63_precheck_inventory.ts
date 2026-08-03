@@ -27,7 +27,8 @@ import { V4World } from '../hooks/before-after.ts';
 import { runSpecVerdict, type SpecVerdictResult } from '../../tools/specs-generator/spec-verdict.ts';
 import { parseAcIds } from '../../.claude/skills/spec-status/scripts/ac-claims.ts';
 import { buildGraphFromCwd } from '../../tools/spec-graph/builder.ts';
-import type { ScenarioNode } from '../../tools/spec-graph/types.ts';
+import type { ScenarioNode, SpecGraph, TaskNode } from '../../tools/spec-graph/types.ts';
+import { computeCoverage } from '../../tools/spec-graph/coverage.ts';
 import { buildToolRegistry } from '../../tools/spec-mcp-server/tools.ts';
 import { precheckWithInventory, type PrecheckWithInventoryResult } from '../../.claude/skills/spec-status/scripts/precheck.ts';
 import {
@@ -847,6 +848,8 @@ Then('dotted acceptance criterion ids remain exact in the spec-status parser', f
 interface F63ScopeWorld extends F63World {
   scopeRetiredInventory?: ReadinessInventory;
   scopeUnprovenInventory?: ReadinessInventory;
+  scopeAttestedInventory?: ReadinessInventory;
+  scopeAttestedGraph?: SpecGraph;
   scopeRetiredLane?: SurfaceLane;
   scopeRetiredLiveLane?: SurfaceLane;
   scopeUnprovenEvaluation?: ReadinessEvaluation;
@@ -900,6 +903,30 @@ function writeScopeFixture(root: string): void {
     '',
   ].join('\n');
   fs.writeFileSync(path.join(unprovenDemo, 'scope-unproven-demo.feature'), unprovenFeature, 'utf-8');
+
+  // Spec owning an OWNER-ATTESTED live scenario: no machine result anywhere,
+  // the attestation tag IS the evidence (auditable in this very feature text).
+  const attestedDemo = path.join(root, '.specs', 'scope-attested-demo');
+  fs.mkdirSync(attestedDemo, { recursive: true });
+  writeMinimalSpecDocs(attestedDemo, [{ id: 1, title: 'Attested live lane', acs: [1] }]);
+  const attestedFeature = [
+    'Feature: SPECGEN004_ScopeAttested',
+    '',
+    '  @feature1 @live-evidence @live-attested',
+    '  Scenario: SPECGEN004_620 owner-attested live scope demo',
+    '    Given attested live evidence',
+    '',
+  ].join('\n');
+  fs.writeFileSync(path.join(attestedDemo, 'scope-attested-demo.feature'), attestedFeature, 'utf-8');
+  fs.writeFileSync(path.join(attestedDemo, 'TASKS.md'), [
+    '# Tasks',
+    '',
+    '- [x] Attested live task -- @feature1 — id: attested-live-task — Status: DONE | Est: 10m',
+    '  _Requirements: [FR-1](FR.md#fr-1)_',
+    '  **Done When:**',
+    '  - [x] SPECGEN004_620 owner-attested live evidence',
+    '',
+  ].join('\n'), 'utf-8');
 
   const dev = path.join(root, '.dev-pomogator');
   fs.mkdirSync(dev, { recursive: true });
@@ -972,6 +999,8 @@ Given(
       writeScopeFixture(this.tempDir);
       const graph = await withGitSha('fixture-sha', () => buildGraphFromCwd(this.tempDir));
       this.scopeUnprovenInventory = buildReadinessInventory(graph, { spec: 'scope-unproven-demo' });
+      this.scopeAttestedGraph = graph;
+      this.scopeAttestedInventory = buildReadinessInventory(graph, { spec: 'scope-attested-demo' });
     }
   },
 );
@@ -1014,6 +1043,42 @@ Then(
     assert.equal(this.scopeUnprovenEvaluation!.overall, 'NOT_READY');
     const record = this.scopeUnprovenInventory!.scenarios.find((r) => r.scenario_key === 'specgen004_619');
     assert.equal(record?.scope, 'external-live');
+    assert.equal(record?.live_attested, false, 'a pending live scenario without the attestation tag stays debt');
     assert.equal(this.scopeUnprovenInventory!.scenario_scope.external_live.count, 1);
+  },
+);
+
+Then(
+  'an owner-attested live scenario satisfies the LIVE_EVIDENCE lane and DONE task truth without a machine result',
+  function (this: F63ScopeWorld) {
+    const inventory = this.scopeAttestedInventory!;
+    const record = inventory.scenarios.find((r) => r.scenario_key === 'specgen004_620');
+    assert.ok(record, 'attested scenario must be present in the inventory');
+    assert.equal(record!.scope, 'external-live');
+    assert.equal(record!.live_attested, true, 'the @live-attested tag must be recognized');
+    assert.notEqual(record!.outcome, 'PASSED', 'attestation never fabricates a machine PASSED result');
+    const lane = deriveLiveEvidenceLane(inventory);
+    assert.equal(lane.status, 'GREEN', 'owner attestation satisfies the LIVE_EVIDENCE lane');
+    assert.deepEqual(lane.debt, []);
+    // Task truth: a DONE task whose ONLY mapped scenario is the attested live one verifies.
+    const graph = this.scopeAttestedGraph!;
+    const scenarios = [];
+    const tasks = [];
+    for (const node of graph.nodes.values()) {
+      if ((node as { spec?: string }).spec !== 'scope-attested-demo') continue;
+      if (node.type === 'Scenario') {
+        const s = node as ScenarioNode;
+        scenarios.push({ id: s.id, tags: s.tags, result: s.lastResult, stale: s.resultStale, spec: 'scope-attested-demo', source: s.trace?.source, canonicalResult: s.canonicalResult, canonicalRunAt: s.canonicalRunAt });
+      } else if (node.type === 'Task') {
+        const t = node as TaskNode;
+        tasks.push({ id: t.id, doneWhen: t.doneWhen ?? '', refs: t.refs, spec: 'scope-attested-demo', status: t.status });
+      }
+    }
+    assert.ok(tasks.length > 0, 'fixture task must be parsed');
+    const coverage = computeCoverage(tasks, scenarios);
+    const entry = coverage.tasks['scope-attested-demo:attested-live-task'];
+    assert.ok(entry, 'attested task must appear in the coverage report');
+    assert.equal(entry!.verified_status, 'DONE', 'attested live evidence satisfies DONE task truth');
+    assert.equal((entry!.truth_issues ?? []).length, 0, JSON.stringify(entry!.truth_issues));
   },
 );

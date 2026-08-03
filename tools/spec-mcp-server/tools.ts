@@ -80,6 +80,7 @@ import {
   computeCoverage,
   bucketScenarios,
   verifiedStatus,
+  isLiveAttestedScenario,
   mapTasksToScenarios,
   scenarioKey,
   specOf,
@@ -982,6 +983,11 @@ export function buildToolRegistry(
       const verified_status = verifiedStatus(
         linkedScenarioIds(node, scens, scenarios.map((s) => s.id)),
         bucketById,
+        undefined,
+        (id) => {
+          const scen = scens.find((s) => s.id === id);
+          return isLiveAttestedScenario(scen?.tags);
+        },
       );
       return asJsonResult({
         ok: true,

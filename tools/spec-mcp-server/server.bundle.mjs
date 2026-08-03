@@ -52418,9 +52418,15 @@ function mapTasksToScenarios(tasks, scenarios) {
   }
   return out;
 }
-function verifiedStatus(scenarioIds, bucketById, verdict) {
+function isLiveAttestedScenario(tags) {
+  if (!tags) return false;
+  const lower = tags.map((t) => t.toLowerCase());
+  return lower.includes("@live-evidence") && lower.includes("@live-attested");
+}
+function verifiedStatus(scenarioIds, bucketById, verdict, isLiveAttested) {
   if (scenarioIds.length === 0) return "unverified";
-  if (!scenarioIds.every((id) => bucketById.get(id) === "passed")) return "IN_PROGRESS";
+  const satisfied2 = (id) => bucketById.get(id) === "passed" || Boolean(isLiveAttested?.(id));
+  if (!scenarioIds.every(satisfied2)) return "IN_PROGRESS";
   if (verdict === "WEAK" || verdict === "FAKE-POSITIVE-RISK") return "IN_PROGRESS";
   return "DONE";
 }
@@ -52472,7 +52478,12 @@ function computeCoverage(tasks, scenarios, testQualityByTask = {}) {
   const tasksOut = {};
   for (const [taskId, scenarioIds] of taskMap) {
     const verdict = testQualityByTask[taskId];
-    const verified = verifiedStatus(scenarioIds, bucketById, verdict);
+    const verified = verifiedStatus(
+      scenarioIds,
+      bucketById,
+      verdict,
+      (id) => isLiveAttestedScenario(scenarioById.get(id)?.tags)
+    );
     const task = taskById.get(taskId);
     const issues = task ? taskTruthIssues(task, scenarioIds, bucketById, scenarioById, verified) : [];
     tasksOut[taskId] = {
@@ -56740,7 +56751,7 @@ var SUPERSEDED_TAG_RE = /^@superseded-by-([a-z0-9][a-z0-9-]*)$/i;
 function classifyScenarioScope(tags, opts = {}) {
   const lower = tags.map((tag) => tag.toLowerCase());
   if (lower.includes("@live-evidence")) {
-    return { scope: "external-live", superseded_by: null };
+    return { scope: "external-live", superseded_by: null, live_attested: lower.includes("@live-attested") };
   }
   if (lower.includes("@historical")) {
     let successor = null;
@@ -56754,10 +56765,11 @@ function classifyScenarioScope(tags, opts = {}) {
     const proven = successor !== null && (!opts.knownSpecs || opts.knownSpecs.has(successor));
     return {
       scope: proven ? "historical-retired" : "historical-unproven",
-      superseded_by: successor
+      superseded_by: successor,
+      live_attested: false
     };
   }
-  return { scope: "active", superseded_by: null };
+  return { scope: "active", superseded_by: null, live_attested: false };
 }
 var OUTCOME_ENUM = /* @__PURE__ */ new Set([
   "PASSED",
@@ -56784,7 +56796,8 @@ function classifyEvidence(s) {
     run_id: runId,
     recency: { stale, canonical: false },
     scope: scopeDisposition.scope,
-    superseded_by: scopeDisposition.superseded_by
+    superseded_by: scopeDisposition.superseded_by,
+    live_attested: scopeDisposition.live_attested
   };
   if (s.canonicalResult) {
     const canonicalResult = s.canonicalResult.toUpperCase();
@@ -56902,7 +56915,8 @@ function buildReadinessInventory(graph, opts) {
       ...classifyEvidence(bundle.primary),
       scenario_key: bundle.key,
       scope: scope.scope,
-      superseded_by: scope.superseded_by
+      superseded_by: scope.superseded_by,
+      live_attested: scope.live_attested
     };
   }
   const frKeysById = /* @__PURE__ */ new Map();
@@ -57114,7 +57128,7 @@ function deriveExecutionLane(inventory) {
 function deriveLiveEvidenceLane(inventory) {
   const live = inventory.scenarios.filter((s) => s.scope === "external-live");
   if (live.length === 0) return { status: "NONE", debt: [] };
-  const debt = live.filter((s) => s.outcome !== "PASSED").map((s) => `${s.scenario_key}:${s.outcome}`);
+  const debt = live.filter((s) => s.outcome !== "PASSED" && !s.live_attested).map((s) => `${s.scenario_key}:${s.outcome}`);
   return { status: debt.length === 0 ? "GREEN" : "RED", debt };
 }
 var LANE_NEXT_ACTION = {
@@ -60170,18 +60184,21 @@ ${fr.body ?? ""}`,
   const notRun = canonicalBuckets.not_run ?? 0;
   if (notRun > 0) {
     const scopeByScenarioId = new Map(
-      inventory.scenarios.map((rec) => [rec.scenario_id.toLowerCase(), rec.scope])
+      inventory.scenarios.map((rec) => [rec.scenario_id.toLowerCase(), { scope: rec.scope, liveAttested: rec.live_attested }])
     );
     let notRunActive = 0;
     let notRunLive = 0;
+    let notRunLiveAttested = 0;
     let notRunRetired = 0;
     let notRunUnproven = 0;
     for (const s of scenLikes) {
       if (s.canonicalResult) continue;
-      const scope = scopeByScenarioId.get(String(s.id).toLowerCase()) ?? "active";
-      if (scope === "external-live") notRunLive += 1;
-      else if (scope === "historical-retired") notRunRetired += 1;
-      else if (scope === "historical-unproven") notRunUnproven += 1;
+      const info = scopeByScenarioId.get(String(s.id).toLowerCase()) ?? { scope: "active", liveAttested: false };
+      if (info.scope === "external-live") {
+        if (info.liveAttested) notRunLiveAttested += 1;
+        else notRunLive += 1;
+      } else if (info.scope === "historical-retired") notRunRetired += 1;
+      else if (info.scope === "historical-unproven") notRunUnproven += 1;
       else notRunActive += 1;
     }
     if (notRunActive > 0) {
@@ -60192,7 +60209,12 @@ ${fr.body ?? ""}`,
     }
     if (notRunLive > 0) {
       notes.push(
-        `LIVE_EVIDENCE \u2014 ${notRunLive} scenario(s) tagged @live-evidence have no canonical cucumber result BY DESIGN; they are closed only by a real live producer (manifest + trace + readback), never by the full suite.`
+        `LIVE_EVIDENCE \u2014 ${notRunLive} scenario(s) tagged @live-evidence have no canonical cucumber result BY DESIGN; they are closed only by a real live producer (manifest + trace + independent verification) or an explicit owner attestation, never by the full suite.`
+      );
+    }
+    if (notRunLiveAttested > 0) {
+      notes.push(
+        `LIVE_EVIDENCE_ATTESTED \u2014 ${notRunLiveAttested} live scenario(s) carry no machine-captured result but are closed by an explicit owner attestation tag (@live-attested) in the feature source; the attestation is auditable there, never implicit.`
       );
     }
     if (notRunRetired > 0) {
@@ -61028,7 +61050,12 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
       const { scens, bucketById } = scenarioCoverageIndex(graph);
       const verified_status = verifiedStatus(
         linkedScenarioIds(node, scens, scenarios.map((s) => s.id)),
-        bucketById
+        bucketById,
+        void 0,
+        (id) => {
+          const scen = scens.find((s) => s.id === id);
+          return isLiveAttestedScenario(scen?.tags);
+        }
       );
       return asJsonResult({
         ok: true,
