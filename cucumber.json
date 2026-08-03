@@ -54,9 +54,29 @@
       "tests/step_definitions/**/*.ts",
       "tests/hooks/**/*.ts"
     ],
-    "tags": "not @wip and not @manual and not @windows-only and not @e2e and not @historical",
+    "tags": "not @wip and not @manual and not @windows-only and not @e2e and not @historical and not @live-evidence",
     "format": [
       "message:.dev-pomogator/.last-test-run.ndjson",
+      "progress-bar"
+    ],
+    "publishQuiet": true
+  },
+  "live-evidence": {
+    "paths": [
+      ".specs/spec-generator-v4/spec-generator-v4.feature",
+      ".specs/context-menu/context-menu.feature"
+    ],
+    "import": [
+      "tests/step_definitions/**/*.ts",
+      "tests/hooks/**/*.ts"
+    ],
+    "tags": "@live-evidence",
+    "name": [
+      "SPECGEN004_668",
+      "SPECGEN004_669",
+      "CTXMENU001_27"
+    ],
+    "format": [
       "progress-bar"
     ],
     "publishQuiet": true

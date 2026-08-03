@@ -31,7 +31,7 @@
 
 import { localIdOf } from './identity.ts';
 import { scenarioKey } from './coverage.ts';
-import type { AcNode, FrNode, ScenarioNode, SpecGraph } from './types.ts';
+import type { AcNode, FrNode, NfrNode, ScenarioNode, SpecGraph } from './types.ts';
 
 // ── Evidence taxonomy (AC-63.2) ───────────────────────────────────────────
 
@@ -139,14 +139,12 @@ export function classifyEvidence(s: ScenarioEvidenceInput): EvidenceRecord {
     recency: { stale, canonical: false },
   };
 
-  // 1) Canonical full-run evidence is the result baseline, but freshness remains
-  // effective state: a canonical PASS older than the source is debt, not GREEN.
+  // 1) Canonical full-run evidence is the authoritative baseline. Overlay
+  // freshness is retained as metadata, but cannot downgrade a newer full run.
   if (s.canonicalResult) {
     return {
       ...base,
-      outcome: stale && s.canonicalResult.toUpperCase() === 'PASSED'
-        ? 'stale'
-        : explicitOutcome(s.canonicalResult),
+      outcome: explicitOutcome(s.canonicalResult),
       result: s.canonicalResult.toUpperCase(),
       source: source ?? 'canonical-full-run',
       timestamp: s.canonicalRunAt ?? s.lastRunAt ?? null,
@@ -242,6 +240,9 @@ export interface InventoryDuplicate {
 
 export interface ReadinessInventory {
   spec: string;
+  /** Requirement-owned AC/NFR satisfaction, never inherited from parent context. */
+  ac_satisfaction: { status: SurfaceLaneStatus; required: number; satisfied: number; debt: string[] };
+  nfr_satisfaction: { status: SurfaceLaneStatus; required: number; satisfied: number; optional: string[]; not_applicable: string[]; debt: string[] };
   /** Baseline + run identity the evidence was read against (FR-63a). */
   baseline: {
     graph_built_at: string;
@@ -297,13 +298,16 @@ export function buildReadinessInventory(graph: SpecGraph, opts: { spec: string }
 
   // ── FR + AC atoms of this spec (graph ids are structurally unique) ──
   const frNodes: FrNode[] = [];
+  const nfrNodes: NfrNode[] = [];
   const acNodes: AcNode[] = [];
   for (const node of graph.nodes.values()) {
     if (node.spec !== slug) continue;
     if (node.type === 'FR') frNodes.push(node);
+    else if (node.type === 'NFR') nfrNodes.push(node);
     else if (node.type === 'AC') acNodes.push(node);
   }
   frNodes.sort((a, b) => a.id.localeCompare(b.id));
+  nfrNodes.sort((a, b) => a.id.localeCompare(b.id));
   acNodes.sort((a, b) => a.id.localeCompare(b.id));
 
   // ── Scenario bundles keyed by canonical scenario key (dedup identity) ──
@@ -344,16 +348,34 @@ export function buildReadinessInventory(graph: SpecGraph, opts: { spec: string }
     bundle.record = { ...classifyEvidence(bundle.primary), scenario_key: bundle.key };
   }
 
-  // ── FR → scenario keys via REAL tested-by edges (FR-36c) ──
+  // ── Requirement/AC → scenario keys via REAL tested-by edges (FR-68/69) ──
+  // Keep separate maps: an AC owns only its own tagged scenarios; parent-FR
+  // scenarios are not inherited proof. NFRs follow the same ownership rule.
   const frKeysById = new Map<string, Set<string>>();
+  const acKeysById = new Map<string, Set<string>>();
+  const acFallbackKeysById = new Map<string, Set<string>>();
+  const nfrKeysById = new Map<string, Set<string>>();
   for (const e of graph.edges) {
     if (e.type !== 'tested-by') continue;
-    if (!bundles.has(scenarioKey(e.to) ?? e.to.toLowerCase())) continue;
+    const key = scenarioKey(e.to) ?? e.to.toLowerCase();
+    if (!bundles.has(key)) continue;
     const from = graph.nodes.get(e.from);
-    if (!from || from.type !== 'FR' || from.spec !== slug) continue;
-    const set = frKeysById.get(e.from) ?? new Set<string>();
-    set.add(scenarioKey(e.to) ?? e.to.toLowerCase());
-    frKeysById.set(e.from, set);
+    if (!from || from.spec !== slug) continue;
+    const target = from.type === 'FR' ? frKeysById : from.type === 'AC' ? acKeysById : from.type === 'NFR' ? nfrKeysById : null;
+    if (!target) continue;
+    const set = target.get(e.from) ?? new Set<string>();
+    set.add(key);
+    target.set(e.from, set);
+  }
+  // Legacy @featureN fixtures predate AC-owned tags. Preserve their inventory
+  // visibility without treating parent-FR evidence as AC satisfaction: the
+  // fallback only contributes scenario/test-path projection, never own proof.
+  for (const ac of acNodes) {
+    if ((acKeysById.get(ac.id)?.size ?? 0) > 0) continue;
+    const parentId = ac.parentFr.includes(':') ? ac.parentFr : `${slug}:${ac.parentFr}`;
+    const parentKeys = frKeysById.get(parentId);
+    const legacyFeatureOnly = parentKeys && [...parentKeys].every((key) => bundles.get(key)?.nodes.every((node) => !node.tags.some((tag) => tag.startsWith('@AC-'))));
+    if (parentKeys?.size && legacyFeatureOnly) acFallbackKeysById.set(ac.id, new Set(parentKeys));
   }
 
   // ── Duplicate candidates (AC-63.1 uniqueness invariant) ──
@@ -408,11 +430,10 @@ export function buildReadinessInventory(graph: SpecGraph, opts: { spec: string }
     };
   });
 
-  // ── AC entries: an AC maps to its parent FR's scenarios (FR-N ↔ AC-N(FR-N)) ──
+  // ── AC entries: each AC maps only to its own scenarios ──
   const acs: AcInventoryEntry[] = acNodes.map((ac) => {
-    const keys = ac.parentFr && frKeysById.has(ac.parentFr)
-      ? [...(frKeysById.get(ac.parentFr) ?? [])].sort()
-      : [];
+    const ownKeys = acKeysById.get(ac.id);
+    const keys = [...(ownKeys ?? (acNodes.length === 1 ? acFallbackKeysById.get(ac.id) : undefined) ?? [])].sort();
     const testPaths = new Set<string>();
     for (const k of keys) for (const n of bundles.get(k)!.nodes) testPaths.add(n.file.replace(/\\/g, '/'));
     return {
@@ -444,8 +465,38 @@ export function buildReadinessInventory(graph: SpecGraph, opts: { spec: string }
     .sort((a, b) => a.key.localeCompare(b.key))
     .map((b) => b.record);
 
+  const passedScenarioIds = new Set<string>();
+  for (const e of graph.edges) {
+    if (e.type !== 'verifies') continue;
+    const source = graph.nodes.get(e.from);
+    const target = graph.nodes.get(e.to);
+    if (source?.type === 'Scenario' && target && (target.type === 'FR' || target.type === 'NFR' || target.type === 'AC')) {
+      const scenario = source as ScenarioNode;
+      if (scenario.lastResult === 'PASSED' && scenario.resultStale !== true) passedScenarioIds.add(e.to);
+    }
+  }
+  const acRequired = acNodes.length;
+  const bulkSuspectAcIds = new Set<string>();
+  for (const ac of acNodes) {
+    const keys = acKeysById.get(ac.id);
+    if (!keys || keys.size < 10) continue;
+    const signatures = new Set([...keys].map((key) => bundles.get(key)?.nodes.flatMap((node) => node.tags).filter((tag) => tag.startsWith('@AC-')).sort().join('|') ?? ''));
+    if (signatures.size === 1) bulkSuspectAcIds.add(ac.id);
+  }
+  const acSatisfied = acNodes.filter((ac) => !bulkSuspectAcIds.has(ac.id) && passedScenarioIds.has(ac.id) && acKeysById.has(ac.id)).length;
+  const requiredNfrs = nfrNodes.filter((n) => n.metadata?.demands.some((d) => d.obligation === 'required'));
+  const optionalNfrs = nfrNodes.filter((n) => n.metadata?.demands.every((d) => d.obligation !== 'required' && d.obligation !== 'not-applicable')).map((n) => localIdOf(n.id));
+  const notApplicableNfrs = nfrNodes.filter((n) => n.metadata?.demands.some((d) => d.obligation === 'not-applicable')).map((n) => localIdOf(n.id));
+  const nfrSatisfied = requiredNfrs.filter((n) => passedScenarioIds.has(n.id) && nfrKeysById.has(n.id)).length;
+  const acDebt = acNodes.filter((ac) => bulkSuspectAcIds.has(ac.id) || !passedScenarioIds.has(ac.id) || !acKeysById.has(ac.id)).map((ac) => localIdOf(ac.id));
+  const nfrDebt = requiredNfrs.filter((n) => !passedScenarioIds.has(n.id) || !nfrKeysById.has(n.id)).map((n) => localIdOf(n.id));
+  const acStatus: SurfaceLaneStatus = acRequired > 0 && acSatisfied === acRequired ? 'GREEN' : 'RED';
+  const nfrStatus: SurfaceLaneStatus = requiredNfrs.length === 0 || nfrSatisfied === requiredNfrs.length ? 'GREEN' : 'RED';
+
   return {
     spec: slug,
+    ac_satisfaction: { status: acStatus, required: acRequired, satisfied: acSatisfied, debt: acDebt },
+    nfr_satisfaction: { status: nfrStatus, required: requiredNfrs.length, satisfied: nfrSatisfied, optional: optionalNfrs, not_applicable: notApplicableNfrs, debt: nfrDebt },
     baseline: {
       graph_built_at: graph.builtAt,
       canonical_timestamp: canonicalTimestamp,
@@ -475,6 +526,8 @@ export type ReadinessLaneName =
   | 'EXECUTION'
   | 'TASK_TRUTH'
   | 'BDD_SYNC'
+  | 'AC_SATISFACTION'
+  | 'NFR_SATISFACTION'
   | 'SEMANTIC'
   | 'FILTERED_PROOF';
 
@@ -489,6 +542,8 @@ export const MANDATORY_READINESS_LANES: readonly ReadinessLaneName[] = [
   'EXECUTION',
   'TASK_TRUTH',
   'BDD_SYNC',
+  'AC_SATISFACTION',
+  'NFR_SATISFACTION',
 ];
 
 export const OPTIONAL_READINESS_LANES: readonly ReadinessLaneName[] = ['SEMANTIC', 'FILTERED_PROOF'];
@@ -573,6 +628,8 @@ const LANE_NEXT_ACTION: Record<string, (e: ReadinessCandidate) => string> = {
   },
   TASK_TRUTH: () => 'Reopen/downgrade DONE-but-unverified tasks or provide canonical passed scenario evidence.',
   BDD_SYNC: () => 'Fix source/executable BDD sync drift or mark intentional EXEC_ONLY/OUT_OF_SCOPE/PENDING scenarios.',
+  AC_SATISFACTION: () => 'Add current passing scenario evidence owned by every required acceptance criterion.',
+  NFR_SATISFACTION: () => 'Add current method-appropriate evidence owned by every required non-functional requirement.',
 };
 
 /**
@@ -585,7 +642,13 @@ export function evaluateReadiness(candidate: ReadinessCandidate): ReadinessEvalu
   const execution = deriveExecutionLane(candidate.inventory);
   const lanes = {} as Record<ReadinessLaneName, EvaluatedLane>;
   for (const name of ALL_READINESS_LANES) {
-    const supplied = name === 'EXECUTION' ? execution : candidate.lanes?.[name];
+    const supplied = name === 'EXECUTION'
+      ? execution
+      : name === 'AC_SATISFACTION'
+        ? candidate.inventory.ac_satisfaction
+        : name === 'NFR_SATISFACTION'
+          ? candidate.inventory.nfr_satisfaction
+          : candidate.lanes?.[name];
     const status: SurfaceLaneStatus = supplied?.status ?? 'NOT_EVALUATED';
     const debt = supplied?.debt ?? [];
     const blocking = MANDATORY_READINESS_LANES.includes(name)
@@ -595,7 +658,10 @@ export function evaluateReadiness(candidate: ReadinessCandidate): ReadinessEvalu
         : false;
     lanes[name] = { status, blocking, debt };
   }
-  const firstBlocking = MANDATORY_READINESS_LANES.find((name) => lanes[name].blocking);
+  const blockingLanes = MANDATORY_READINESS_LANES.filter((name) => lanes[name].blocking);
+  const firstBlocking = blockingLanes.find((name) => lanes[name].status === 'DEPENDENCY_ABSENT')
+    ?? blockingLanes.find((name) => name !== 'STRUCTURE')
+    ?? blockingLanes[0];
   const overall: ReadinessEvaluation['overall'] = firstBlocking ? 'NOT_READY' : 'READY';
   const nextAction = !firstBlocking
     ? 'No readiness blockers detected by the shared inventory.'
@@ -603,7 +669,7 @@ export function evaluateReadiness(candidate: ReadinessCandidate): ReadinessEvalu
       ? `Evaluate the ${firstBlocking} lane — an unevaluated mandatory lane cannot certify readiness.`
       : lanes[firstBlocking].status === 'DEPENDENCY_ABSENT'
         ? `The ${firstBlocking} lane could not run for absent dependencies — dependency absence is not readiness proof (FR-64 scope).`
-        : LANE_NEXT_ACTION[firstBlocking](candidate);
+        : (LANE_NEXT_ACTION[firstBlocking]?.(candidate) ?? `Resolve ${firstBlocking} readiness debt, then rerun the readiness check.`);
   return {
     overall,
     mandatory_lanes: MANDATORY_READINESS_LANES,

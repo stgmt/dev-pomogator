@@ -199,6 +199,7 @@ Feature: CTXMENU001_Context_Menu_Setup
     Given the launch-Codex-tui.ps1 script file is read
     Then the Codex launch script should contain "ProviderPath"
 
+  @live-evidence @windows-unc
   @feature15
   Scenario: CTXMENU001_27 a UNC Codex launch uses a unique PowerShell pane without wt.exe working-directory injection
     Given pwsh is available and no stale generated Codex panes exist

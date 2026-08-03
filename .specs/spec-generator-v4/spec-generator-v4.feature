@@ -4245,13 +4245,13 @@ Scenario: SPECGEN004_667 resolveRepoRoot tolerates Cursor-like placeholder env
   When resolveRepoRoot runs
   Then it returns the cwd that contains ".specs"
 
-@feature81 @FR-81 @AC-81.1 @AC-81.4
+@live-evidence @cursor-live @feature81 @FR-81 @AC-81.1 @AC-81.4
 Scenario: SPECGEN004_668 Cursor session lists the MCP door
   Given Cursor Third-party skills are enabled and ".cursor/mcp.json" is loaded
   When the agent inspects the MCP tool catalog
   Then "dev-pomogator-specs" tools are listed
 
-@feature81 @FR-81 @AC-81.3 @AC-81.4
+@live-evidence @cursor-live @feature81 @FR-81 @AC-81.3 @AC-81.4
 Scenario: SPECGEN004_669 Cursor enforce denies raw specs write and MCP apply succeeds
   Given SPEC_ACCESS enforce is on and project ".claude/settings.json" hooks are loaded in Cursor
   When the agent attempts a raw Write under ".specs/"

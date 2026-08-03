@@ -54720,6 +54720,10 @@ var EDGE_SCHEMA = {
   "code-impl": {
     sources: ["FR", "NFR", "AC", "Scenario"],
     targets: ["File"]
+  },
+  "evidenced-by": {
+    sources: ["FR", "NFR", "AC", "Scenario"],
+    targets: ["Evidence"]
   }
 };
 function syntheticTargetMatches(rule, target) {
@@ -56261,6 +56265,7 @@ function checkConformance(graph, opts = {}) {
   const storyCovers = /* @__PURE__ */ new Set();
   const scenarioTests = /* @__PURE__ */ new Set();
   const scenarioVerifies = /* @__PURE__ */ new Set();
+  const scenarioVerifiesAc = /* @__PURE__ */ new Set();
   let resultsLoaded = false;
   for (const e of graph.edges) {
     if (e.type === "covers") {
@@ -56270,7 +56275,14 @@ function checkConformance(graph, opts = {}) {
       else acCovers.add(e.from);
     }
     if (e.type === "tested-by") scenarioTests.add(e.from);
-    if (e.type === "verifies") scenarioVerifies.add(e.to);
+    if (e.type === "verifies") {
+      const source = graph.nodes.get(e.from);
+      const currentPassing = source?.type === "Scenario" && source.lastResult === "PASSED" && source.resultStale !== true;
+      if (currentPassing) {
+        scenarioVerifies.add(e.to);
+        if (graph.nodes.get(e.to)?.type === "AC") scenarioVerifiesAc.add(e.to);
+      }
+    }
     if (e.type === "last-result") resultsLoaded = true;
   }
   for (const node of graph.nodes.values()) {
@@ -56305,6 +56317,48 @@ function checkConformance(graph, opts = {}) {
       });
     }
   }
+  if (opts.readinessOwnership) for (const node of graph.nodes.values()) {
+    if (node.type === "AC") {
+      const ownScenario = scenarioTests.has(node.id);
+      if (!ownScenario) findings.push({
+        code: "UNCOVERED_AC",
+        severity: "error",
+        location: { file: node.file, line: node.line },
+        nodeId: node.id,
+        message: `AC ${node.id} has no own tested-by Scenario; parent requirement evidence cannot complete the criterion.`,
+        suggestions: [{ action: "tag_own_scenario", reason: "Add a behavior-specific @AC tag and tested-by edge for this criterion.", confidence: "high" }]
+      });
+      else if (!scenarioVerifiesAc.has(node.id)) findings.push({
+        code: "UNVERIFIED_AC",
+        severity: "error",
+        location: { file: node.file, line: node.line },
+        nodeId: node.id,
+        message: `AC ${node.id} has own scenarios but no current passing verifies edge.`,
+        suggestions: [{ action: "run_own_scenario", reason: "Run the owning scenario and retain a current passing verifies edge.", confidence: "high" }]
+      });
+    }
+    if (node.type === "NFR") {
+      const required2 = node.metadata?.demands.some((demand) => demand.obligation === "required") ?? false;
+      if (!required2) continue;
+      const ownScenario = scenarioTests.has(node.id);
+      if (!ownScenario) findings.push({
+        code: "UNCOVERED_NFR",
+        severity: "error",
+        location: { file: node.file, line: node.line },
+        nodeId: node.id,
+        message: `Required NFR ${node.id} has no own tested-by Scenario.`,
+        suggestions: [{ action: "tag_own_scenario", reason: "Add a method-appropriate scenario or evidence path for this required NFR.", confidence: "high" }]
+      });
+      else if (!scenarioVerifies.has(node.id)) findings.push({
+        code: "UNVERIFIED_NFR",
+        severity: "error",
+        location: { file: node.file, line: node.line },
+        nodeId: node.id,
+        message: `Required NFR ${node.id} has scenarios but no current passing verifies edge.`,
+        suggestions: [{ action: "verify_nfr", reason: "Produce current passing evidence using the declared verification method.", confidence: "high" }]
+      });
+    }
+  }
   const inheritedDemands = forwardedDemands(graph);
   for (const node of graph.nodes.values()) {
     if (node.type !== "FR" && node.type !== "NFR") continue;
@@ -56314,7 +56368,7 @@ function checkConformance(graph, opts = {}) {
       location: { file: node.file, line: node.line },
       nodeId: node.id,
       message: `${issue2.path}: ${issue2.message}`,
-      suggestedFixes: ["Fix the FR-local ```yaml metadata block through the spec door."]
+      suggestions: [{ action: "fix_requirement_metadata", reason: "Fix the FR-local ```yaml metadata block through the spec door.", confidence: "high" }]
     });
     if (node.type !== "FR" || !node.metadata || (node.metadataIssues?.length ?? 0) > 0) continue;
     const delivery = evaluateDelivery(node, graph);
@@ -56324,7 +56378,7 @@ function checkConformance(graph, opts = {}) {
       location: { file: node.file, line: node.line },
       nodeId: node.id,
       message: issue2.message,
-      suggestedFixes: ["Resolve contradictory forwarded demand obligations."]
+      suggestions: [{ action: "resolve_demand_conflict", reason: "Resolve contradictory forwarded demand obligations.", confidence: "high" }]
     });
     for (const type of delivery.missing) findings.push({
       code: "FR_DEMAND_MISSING",
@@ -56332,7 +56386,7 @@ function checkConformance(graph, opts = {}) {
       location: { file: node.file, line: node.line },
       nodeId: node.id,
       message: `${node.id} requires ${type}, but its delivery evidence is missing or unjustified.`,
-      suggestedFixes: [`Attach graph-verifiable evidence for ${type}, or record a justified/audited exception.`]
+      suggestions: [{ action: "attach_delivery_evidence", reason: `Attach graph-verifiable evidence for ${type}, or record a justified/audited exception.`, confidence: "high" }]
     });
   }
   for (const node of graph.nodes.values()) {
@@ -56582,7 +56636,7 @@ function checkConformance(graph, opts = {}) {
         });
       }
     }
-    if (!hasSpecTag) {
+    if (!hasSpecTag && !scen.tags.some((tag) => tag.toLowerCase() === "@historical")) {
       findings.push({
         code: "UNTAGGED_SCENARIO",
         severity: "info",
@@ -56651,7 +56705,6 @@ function checkConformance(graph, opts = {}) {
 // tools/spec-graph/traceability.ts
 var GAP_CLASSES = /* @__PURE__ */ new Set([
   "UNCOVERED_FR",
-  "UNVERIFIED_FR",
   "TASK_UNTESTED",
   "UNTAGGED_SCENARIO"
 ]);
@@ -56675,7 +56728,6 @@ function gapsFromFindings(findings, opts = {}) {
 function summariseGaps(gaps) {
   const out = {
     UNCOVERED_FR: 0,
-    UNVERIFIED_FR: 0,
     TASK_UNTESTED: 0,
     UNTAGGED_SCENARIO: 0
   };
@@ -56764,13 +56816,16 @@ function buildReadinessInventory(graph, opts) {
   const slug = opts.spec.replace(/\\/g, "/").replace(/^\.?\/?\.specs\//, "").replace(/\/+$/, "");
   const slugTail = slug.split("/").pop().toLowerCase();
   const frNodes = [];
+  const nfrNodes = [];
   const acNodes = [];
   for (const node of graph.nodes.values()) {
     if (node.spec !== slug) continue;
     if (node.type === "FR") frNodes.push(node);
+    else if (node.type === "NFR") nfrNodes.push(node);
     else if (node.type === "AC") acNodes.push(node);
   }
   frNodes.sort((a, b) => a.id.localeCompare(b.id));
+  nfrNodes.sort((a, b) => a.id.localeCompare(b.id));
   acNodes.sort((a, b) => a.id.localeCompare(b.id));
   const specScenarios = [];
   const outsideScenarios = [];
@@ -56804,14 +56859,27 @@ function buildReadinessInventory(graph, opts) {
     bundle.record = { ...classifyEvidence(bundle.primary), scenario_key: bundle.key };
   }
   const frKeysById = /* @__PURE__ */ new Map();
+  const acKeysById = /* @__PURE__ */ new Map();
+  const acFallbackKeysById = /* @__PURE__ */ new Map();
+  const nfrKeysById = /* @__PURE__ */ new Map();
   for (const e of graph.edges) {
     if (e.type !== "tested-by") continue;
-    if (!bundles.has(scenarioKey(e.to) ?? e.to.toLowerCase())) continue;
+    const key = scenarioKey(e.to) ?? e.to.toLowerCase();
+    if (!bundles.has(key)) continue;
     const from = graph.nodes.get(e.from);
-    if (!from || from.type !== "FR" || from.spec !== slug) continue;
-    const set2 = frKeysById.get(e.from) ?? /* @__PURE__ */ new Set();
-    set2.add(scenarioKey(e.to) ?? e.to.toLowerCase());
-    frKeysById.set(e.from, set2);
+    if (!from || from.spec !== slug) continue;
+    const target = from.type === "FR" ? frKeysById : from.type === "AC" ? acKeysById : from.type === "NFR" ? nfrKeysById : null;
+    if (!target) continue;
+    const set2 = target.get(e.from) ?? /* @__PURE__ */ new Set();
+    set2.add(key);
+    target.set(e.from, set2);
+  }
+  for (const ac of acNodes) {
+    if ((acKeysById.get(ac.id)?.size ?? 0) > 0) continue;
+    const parentId = ac.parentFr.includes(":") ? ac.parentFr : `${slug}:${ac.parentFr}`;
+    const parentKeys = frKeysById.get(parentId);
+    const legacyFeatureOnly = parentKeys && [...parentKeys].every((key) => bundles.get(key)?.nodes.every((node) => !node.tags.some((tag) => tag.startsWith("@AC-"))));
+    if (parentKeys?.size && legacyFeatureOnly) acFallbackKeysById.set(ac.id, new Set(parentKeys));
   }
   const duplicates = [];
   for (const collision of graph.rawCollisions?.collisions ?? []) {
@@ -56858,7 +56926,8 @@ function buildReadinessInventory(graph, opts) {
     };
   });
   const acs = acNodes.map((ac) => {
-    const keys = ac.parentFr && frKeysById.has(ac.parentFr) ? [...frKeysById.get(ac.parentFr) ?? []].sort() : [];
+    const ownKeys = acKeysById.get(ac.id);
+    const keys = [...ownKeys ?? (acNodes.length === 1 ? acFallbackKeysById.get(ac.id) : void 0) ?? []].sort();
     const testPaths = /* @__PURE__ */ new Set();
     for (const k of keys) for (const n of bundles.get(k).nodes) testPaths.add(n.file.replace(/\\/g, "/"));
     return {
@@ -56884,8 +56953,37 @@ function buildReadinessInventory(graph, opts) {
     }
   }
   const scenarios = [...bundles.values()].sort((a, b) => a.key.localeCompare(b.key)).map((b) => b.record);
+  const passedScenarioIds = /* @__PURE__ */ new Set();
+  for (const e of graph.edges) {
+    if (e.type !== "verifies") continue;
+    const source = graph.nodes.get(e.from);
+    const target = graph.nodes.get(e.to);
+    if (source?.type === "Scenario" && target && (target.type === "FR" || target.type === "NFR" || target.type === "AC")) {
+      const scenario = source;
+      if (scenario.lastResult === "PASSED" && scenario.resultStale !== true) passedScenarioIds.add(e.to);
+    }
+  }
+  const acRequired = acNodes.length;
+  const bulkSuspectAcIds = /* @__PURE__ */ new Set();
+  for (const ac of acNodes) {
+    const keys = acKeysById.get(ac.id);
+    if (!keys || keys.size < 10) continue;
+    const signatures = new Set([...keys].map((key) => bundles.get(key)?.nodes.flatMap((node) => node.tags).filter((tag) => tag.startsWith("@AC-")).sort().join("|") ?? ""));
+    if (signatures.size === 1) bulkSuspectAcIds.add(ac.id);
+  }
+  const acSatisfied = acNodes.filter((ac) => !bulkSuspectAcIds.has(ac.id) && passedScenarioIds.has(ac.id) && acKeysById.has(ac.id)).length;
+  const requiredNfrs = nfrNodes.filter((n) => n.metadata?.demands.some((d) => d.obligation === "required"));
+  const optionalNfrs = nfrNodes.filter((n) => n.metadata?.demands.every((d) => d.obligation !== "required" && d.obligation !== "not-applicable")).map((n) => localIdOf(n.id));
+  const notApplicableNfrs = nfrNodes.filter((n) => n.metadata?.demands.some((d) => d.obligation === "not-applicable")).map((n) => localIdOf(n.id));
+  const nfrSatisfied = requiredNfrs.filter((n) => passedScenarioIds.has(n.id) && nfrKeysById.has(n.id)).length;
+  const acDebt = acNodes.filter((ac) => bulkSuspectAcIds.has(ac.id) || !passedScenarioIds.has(ac.id) || !acKeysById.has(ac.id)).map((ac) => localIdOf(ac.id));
+  const nfrDebt = requiredNfrs.filter((n) => !passedScenarioIds.has(n.id) || !nfrKeysById.has(n.id)).map((n) => localIdOf(n.id));
+  const acStatus = acRequired > 0 && acSatisfied === acRequired ? "GREEN" : "RED";
+  const nfrStatus = requiredNfrs.length === 0 || nfrSatisfied === requiredNfrs.length ? "GREEN" : "RED";
   return {
     spec: slug,
+    ac_satisfaction: { status: acStatus, required: acRequired, satisfied: acSatisfied, debt: acDebt },
+    nfr_satisfaction: { status: nfrStatus, required: requiredNfrs.length, satisfied: nfrSatisfied, optional: optionalNfrs, not_applicable: notApplicableNfrs, debt: nfrDebt },
     baseline: {
       graph_built_at: graph.builtAt,
       canonical_timestamp: canonicalTimestamp,
@@ -56909,7 +57007,9 @@ var MANDATORY_READINESS_LANES = [
   "TRACEABILITY",
   "EXECUTION",
   "TASK_TRUTH",
-  "BDD_SYNC"
+  "BDD_SYNC",
+  "AC_SATISFACTION",
+  "NFR_SATISFACTION"
 ];
 var OPTIONAL_READINESS_LANES = ["SEMANTIC", "FILTERED_PROOF"];
 var ALL_READINESS_LANES = [
@@ -56938,21 +57038,24 @@ var LANE_NEXT_ACTION = {
     return neverRun.length > 0 ? `Run the full Docker BDD suite so canonical coverage records the never-run FR(s) ${neverRun.join(", ")} and every scenario result.` : "Run the full Docker BDD suite so canonical coverage contains every scenario result.";
   },
   TASK_TRUTH: () => "Reopen/downgrade DONE-but-unverified tasks or provide canonical passed scenario evidence.",
-  BDD_SYNC: () => "Fix source/executable BDD sync drift or mark intentional EXEC_ONLY/OUT_OF_SCOPE/PENDING scenarios."
+  BDD_SYNC: () => "Fix source/executable BDD sync drift or mark intentional EXEC_ONLY/OUT_OF_SCOPE/PENDING scenarios.",
+  AC_SATISFACTION: () => "Add current passing scenario evidence owned by every required acceptance criterion.",
+  NFR_SATISFACTION: () => "Add current method-appropriate evidence owned by every required non-functional requirement."
 };
 function evaluateReadiness(candidate) {
   const execution = deriveExecutionLane(candidate.inventory);
   const lanes = {};
   for (const name of ALL_READINESS_LANES) {
-    const supplied = name === "EXECUTION" ? execution : candidate.lanes?.[name];
+    const supplied = name === "EXECUTION" ? execution : name === "AC_SATISFACTION" ? candidate.inventory.ac_satisfaction : name === "NFR_SATISFACTION" ? candidate.inventory.nfr_satisfaction : candidate.lanes?.[name];
     const status = supplied?.status ?? "NOT_EVALUATED";
     const debt = supplied?.debt ?? [];
     const blocking = MANDATORY_READINESS_LANES.includes(name) ? status !== "GREEN" : name === "SEMANTIC" ? status === "RED" || status === "DEPENDENCY_ABSENT" : false;
     lanes[name] = { status, blocking, debt };
   }
-  const firstBlocking = MANDATORY_READINESS_LANES.find((name) => lanes[name].blocking);
+  const blockingLanes = MANDATORY_READINESS_LANES.filter((name) => lanes[name].blocking);
+  const firstBlocking = blockingLanes.find((name) => lanes[name].status === "DEPENDENCY_ABSENT") ?? blockingLanes.find((name) => name !== "STRUCTURE") ?? blockingLanes[0];
   const overall = firstBlocking ? "NOT_READY" : "READY";
-  const nextAction = !firstBlocking ? "No readiness blockers detected by the shared inventory." : lanes[firstBlocking].status === "NOT_EVALUATED" ? `Evaluate the ${firstBlocking} lane \u2014 an unevaluated mandatory lane cannot certify readiness.` : lanes[firstBlocking].status === "DEPENDENCY_ABSENT" ? `The ${firstBlocking} lane could not run for absent dependencies \u2014 dependency absence is not readiness proof (FR-64 scope).` : LANE_NEXT_ACTION[firstBlocking](candidate);
+  const nextAction = !firstBlocking ? "No readiness blockers detected by the shared inventory." : lanes[firstBlocking].status === "NOT_EVALUATED" ? `Evaluate the ${firstBlocking} lane \u2014 an unevaluated mandatory lane cannot certify readiness.` : lanes[firstBlocking].status === "DEPENDENCY_ABSENT" ? `The ${firstBlocking} lane could not run for absent dependencies \u2014 dependency absence is not readiness proof (FR-64 scope).` : LANE_NEXT_ACTION[firstBlocking]?.(candidate) ?? `Resolve ${firstBlocking} readiness debt, then rerun the readiness check.`;
   return {
     overall,
     mandatory_lanes: MANDATORY_READINESS_LANES,
@@ -56996,7 +57099,9 @@ function unverifiedCompletions(findings) {
 function computeSpecVerdict(candidate, findings = []) {
   const readiness = evaluateReadiness(candidate);
   const completionDebt = unverifiedCompletions(findings);
-  const errors = findings.filter((finding) => finding.severity === "error" && finding.code !== "UNVERIFIED_COMPLETION");
+  const structuralLane = candidate.lanes.STRUCTURE;
+  const structuralIsRed = structuralLane?.status === "RED";
+  const errors = structuralIsRed ? findings.filter((finding) => finding.severity === "error" && finding.code !== "UNVERIFIED_COMPLETION") : [];
   const blocking = [...errors, ...completionDebt];
   const verdict = errors.length > 0 ? "RED" : readiness.overall === "READY" && completionDebt.length === 0 ? "GREEN" : "NOT_READY";
   return { schema: "spec-verdict@1", verdict, readiness, blocking };
@@ -60957,7 +61062,7 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
     },
     handler: async ({ spec, verification_method, safety_class, verification_method_missing, delivery }) => {
       const graph = getGraph();
-      const results = [...graph.nodes.values()].filter((node) => node.type === "FR").filter((node) => !spec || node.spec === spec).map((node) => ({ node, delivery: evaluateDelivery(node, graph) })).filter(({ node, delivery: state }) => !verification_method || node.metadata?.verificationMethod === verification_method).filter(({ node }) => !safety_class || node.metadata?.safetyClass === safety_class).filter(({ node }) => !verification_method_missing || !node.metadata?.verificationMethod).filter(({ delivery: state }) => !delivery || state.overall === delivery).map(({ node, delivery: state }) => ({ id: node.id, file: node.file, line: node.line, metadata: node.metadata ?? null, delivery: state }));
+      const results = [...graph.nodes.values()].filter((node) => node.type === "FR" || node.type === "NFR").filter((node) => !spec || node.spec === spec).map((node) => ({ node, delivery: evaluateDelivery(node, graph) })).filter(({ node, delivery: state }) => !verification_method || node.metadata?.verificationMethod === verification_method).filter(({ node }) => !safety_class || node.metadata?.safetyClass === safety_class).filter(({ node }) => !verification_method_missing || !node.metadata?.verificationMethod).filter(({ delivery: state }) => !delivery || state.overall === delivery).map(({ node, delivery: state }) => ({ id: node.id, file: node.file, line: node.line, metadata: node.metadata ?? null, delivery: state }));
       return asJsonResult({ ok: true, results, count: results.length });
     }
   });
@@ -61361,8 +61466,8 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
             debt: taskTruthDebt
           },
           BDD_SYNC: {
-            status: bddSync.debt.length > 0 ? "RED" : "GREEN",
-            debt: bddSync.debt
+            status: bddSyncDebt.length > 0 ? "RED" : "GREEN",
+            debt: bddSyncDebt
           },
           FILTERED_PROOF: {
             status: filteredProof.latest ? "GREEN" : "NONE",
@@ -61372,7 +61477,7 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
       }, specFindings);
       const readiness = canonicalVerdict.readiness;
       const readinessLanes = readiness.lanes;
-      const nextAction = bddSync.debt.length > 0 ? "Fix source/executable BDD sync drift or mark intentional exceptions." : filteredProof.latest && taskTruthDebt.length > 0 ? `Filtered run ${filteredProof.latest.runId} is useful proof but does not update canonical coverage. Run the full Docker BDD suite or attach an accepted canonical artifact.` : readiness.next_action;
+      const nextAction = bddSyncDebt.length > 0 ? "Fix source/executable BDD sync drift or resolve the combined BDD synchronization debt." : filteredProof.latest && taskTruthDebt.length > 0 ? `Filtered run ${filteredProof.latest.runId} is useful proof but does not update canonical coverage. Run the full Docker BDD suite or attach an accepted canonical artifact.` : readiness.next_action;
       const hints = {
         SPEC_ONLY: "Docs only \u2014 no scenarios written yet. Next: author the .feature (FR-38a).",
         TESTS_NOT_RUN: `${counts.scenarios} scenario(s) are SCENARIO_NOT_RUN; no canonical execution has been ingested. Next: run the suite so NDJSON lands.`,

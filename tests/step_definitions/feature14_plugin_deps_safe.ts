@@ -13,6 +13,7 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { findDepsUnsafeHooks } from '../../tools/plugin-deps-guard/check.ts';
 import { V4World } from '../hooks/before-after.ts';
+import { generatedRouteIds, loadHookDispatcherContracts, registryRouteIds } from './support/hook-dispatcher.ts';
 
 const REPO_ROOT = path.resolve(import.meta.dirname ?? __dirname, '..', '..');
 const dispatcher = path.join(REPO_ROOT, 'tools', '_shared', 'hook-runtime.sh');
@@ -136,48 +137,23 @@ Then(/^the permitted hook invocation continues fail-open despite the doctor fail
 });
 
 Then(/^plugin-installed dispatch anchors on CLAUDE_PLUGIN_ROOT and repository-dogfood dispatch anchors on CLAUDE_PROJECT_DIR, not process CWD$/, function () {
-  const canonical = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, '.claude-plugin', 'hooks.json'), 'utf8')) as { hooks: unknown };
-  const dogfood = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, '.claude', 'settings.json'), 'utf8')) as { hooks: unknown };
-  const commands = (value: unknown): string[] => {
-    const found: string[] = [];
-    const visit = (node: unknown): void => {
-      if (!node || typeof node !== 'object') return;
-      if ('command' in node && typeof (node as { command?: unknown }).command === 'string') {
-        found.push((node as { command: string }).command);
-      }
-      for (const child of Object.values(node)) visit(child);
-    };
-    visit(value);
-    return found;
-  };
-  const canonicalCommands = commands(canonical.hooks);
-  const dogfoodCommands = commands(dogfood.hooks);
-  assert.deepEqual(canonicalCommands, [
-    'node "${CLAUDE_PLUGIN_ROOT:-${CLAUDE_PROJECT_DIR:-.}}/tools/hook-service/session-bootstrap.mjs"',
-  ], 'canonical manifest must retain only the cross-CWD SessionStart bootstrap command');
-  assert.deepEqual(dogfoodCommands, canonicalCommands, 'dogfood and canonical bootstrap commands must stay identical');
-
-  const httpHooks = (value: unknown): Array<{ url: string; headers?: Record<string, string>; allowedEnvVars?: string[] }> => {
-    const found: Array<{ url: string; headers?: Record<string, string>; allowedEnvVars?: string[] }> = [];
-    const visit = (node: unknown): void => {
-      if (!node || typeof node !== 'object') return;
-      if ('type' in node && (node as { type?: unknown }).type === 'http' && 'url' in node) {
-        found.push(node as { url: string; headers?: Record<string, string>; allowedEnvVars?: string[] });
-      }
-      for (const child of Object.values(node)) visit(child);
-    };
-    visit(value);
-    return found;
-  };
-  const canonicalHttp = httpHooks(canonical.hooks);
-  const dogfoodHttp = httpHooks(dogfood.hooks);
-  assert.equal(canonicalHttp.length, 39, 'canonical manifest must expose all steady-state routes over HTTP');
-  assert.deepEqual(dogfoodHttp, canonicalHttp, 'dogfood HTTP routes must match canonical routes');
-  for (const hook of canonicalHttp) {
-    assert.match(hook.url, /^http:\/\/127\.0\.0\.1:42619\/v1\/dispatch\//);
-    assert.equal(hook.headers?.['x-dev-pomogator-token'], '${DEV_POMOGATOR_HOOK_TOKEN}');
-    assert.ok(hook.allowedEnvVars?.includes('DEV_POMOGATOR_HOOK_TOKEN'));
+  const contracts = loadHookDispatcherContracts(REPO_ROOT);
+  assert.ok(contracts.generatedEntries.length > 1, 'canonical manifest must include supervised steady-state routes');
+  assert.deepEqual(
+    contracts.generatedEntries.map((entry) => entry.command),
+    contracts.dogfoodEntries.map((entry) => entry.command),
+    'dogfood and canonical dispatcher commands must stay byte-equivalent',
+  );
+  for (const entry of [...contracts.generatedEntries, ...contracts.dogfoodEntries]) {
+    assert.match(
+      entry.command,
+      /\$\{CLAUDE_PLUGIN_ROOT:-\$\{CLAUDE_PROJECT_DIR:-\.\}\}\/tools\/hook-service\/(?:session-bootstrap|client)\.mjs/,
+    );
+    assert.doesNotMatch(entry.command, /process\.cwd\(\)|http:\/\/127\.0\.0\.1/);
   }
+  const expectedRoutes = registryRouteIds(contracts.registry, ['SessionStart']);
+  assert.deepEqual(generatedRouteIds(contracts.generatedEntries), expectedRoutes);
+  assert.deepEqual(generatedRouteIds(contracts.dogfoodEntries), expectedRoutes);
 });
 
 Then(/^unavailable Windows `node\.exe` recovers separately for two projects sharing one HOME$/, function (this: DepsWorld) {

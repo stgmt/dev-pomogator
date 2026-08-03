@@ -38,6 +38,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { V4World } from '../hooks/before-after.ts';
+import { assertRouteContract, loadHookDispatcherContracts } from './support/hook-dispatcher.ts';
 
 // ---------------------------------------------------------------------------
 // Module-level constants — never recompute these inside step functions
@@ -652,47 +653,26 @@ Then(/^marker file should be deleted$/, function (this: V4World) {
 Then(
   /^PostToolUse hook for bg-task-guard should be registered with matcher "([^"]+)"$/,
   function (this: V4World, expectedMatcher: string) {
-    const raw = JSON.parse(
-      fs.readFileSync(path.join(REPO_ROOT, '.claude-plugin', 'hooks.json'), 'utf-8'),
-    ) as Record<string, unknown>;
-    const hooks = (raw as { hooks?: Record<string, unknown> }).hooks ?? raw;
-    const postToolUseEntries = Array.isArray(hooks['PostToolUse'])
-      ? (hooks['PostToolUse'] as Array<{ matcher?: string; hooks?: Array<{ command?: string }> }>)
-      : [];
-
-    const matchingEntry = postToolUseEntries.find(
-      (entry) =>
-        entry.hooks?.some((h) => h.command?.includes('bg-task-guard/mark-bg-task.ts')),
-    );
-
-    assert.ok(
-      matchingEntry,
-      'No PostToolUse hook found for bg-task-guard/mark-bg-task.ts in .claude-plugin/hooks.json',
-    );
-    assert.equal(
-      matchingEntry.matcher,
-      expectedMatcher,
-      `Expected matcher "${expectedMatcher}", got "${matchingEntry.matcher}"`,
-    );
+    const resolved = assertRouteContract(loadHookDispatcherContracts(REPO_ROOT), {
+      target: 'tools/bg-task-guard/mark-bg-task.ts',
+      event: 'PostToolUse',
+      matcher: expectedMatcher,
+      timeout: 60,
+      args: [],
+    });
+    assert.match(resolved.entry.command, /tools\/hook-service\/client\.mjs/);
   },
 );
 
 Then(/^Stop hook for bg-task-guard should be registered$/, function (this: V4World) {
-  const raw = JSON.parse(
-    fs.readFileSync(path.join(REPO_ROOT, '.claude-plugin', 'hooks.json'), 'utf-8'),
-  ) as Record<string, unknown>;
-  const hooks = (raw as { hooks?: Record<string, unknown> }).hooks ?? raw;
-  const stopEntries = Array.isArray(hooks['Stop'])
-    ? (hooks['Stop'] as Array<{ hooks?: Array<{ command?: string }> }>)
-    : [];
-
-  const hasStopGuard = stopEntries.some((entry) =>
-    entry.hooks?.some((h) => h.command?.includes('bg-task-guard/stop-guard.sh')),
-  );
-  assert.ok(
-    hasStopGuard,
-    'No Stop hook found for bg-task-guard/stop-guard.sh in .claude-plugin/hooks.json',
-  );
+  const resolved = assertRouteContract(loadHookDispatcherContracts(REPO_ROOT), {
+    target: 'tools/bg-task-guard/stop-guard.mjs',
+    event: 'Stop',
+    matcher: '',
+    timeout: 60,
+    args: [],
+  });
+  assert.match(resolved.entry.command, /tools\/hook-service\/client\.mjs/);
 });
 
 Then(

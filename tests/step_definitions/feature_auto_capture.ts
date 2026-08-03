@@ -16,6 +16,7 @@ import fs from 'fs-extra';
 import path from 'node:path';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
+import { assertRouteContract, loadHookDispatcherContracts } from './support/hook-dispatcher.ts';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -471,50 +472,30 @@ Then<ACWorld>(/^entries should have different fingerprints$/, async function () 
 // Artifact: hook registration + file existence
 // ---------------------------------------------------------------------------
 
+function assertLearningCaptureRoute(event: 'UserPromptSubmit' | 'Stop'): void {
+  const contracts = loadHookDispatcherContracts(process.cwd());
+  const resolved = assertRouteContract(contracts, {
+    target: 'tools/learnings-capture/capture.ts',
+    event,
+    matcher: '',
+    timeout: 60,
+    args: ['--event', event],
+  });
+  assert.match(resolved.entry.command, /tools\/hook-service\/client\.mjs/);
+}
+
 Then<ACWorld>(/^\.claude\/settings\.json should contain UserPromptSubmit hook referencing learnings-capture$/, async function () {
-  const settings = await fs.readJson(appPath('.claude', 'settings.json'));
-  const hooks = settings.hooks?.UserPromptSubmit ?? [];
-  const commands = hooks.flatMap((g: Record<string, unknown>) =>
-    ((g['hooks'] as Record<string, unknown>[]) || []).map((h) => h['command'] as string),
-  );
-  assert.ok(
-    commands.some((c: string) => c.includes('learnings-capture/capture.ts')),
-    'UserPromptSubmit hook for learnings-capture not found in .claude/settings.json',
-  );
+  assertLearningCaptureRoute('UserPromptSubmit');
 });
 
 Then<ACWorld>(/^\.claude\/settings\.json should contain Stop hook referencing learnings-capture$/, async function () {
-  const settings = await fs.readJson(appPath('.claude', 'settings.json'));
-  const hooks = settings.hooks?.Stop ?? [];
-  const commands = hooks.flatMap((g: Record<string, unknown>) =>
-    ((g['hooks'] as Record<string, unknown>[]) || []).map((h) => h['command'] as string),
-  );
-  assert.ok(
-    commands.some((c: string) => c.includes('learnings-capture/capture.ts')),
-    'Stop hook for learnings-capture not found in .claude/settings.json',
-  );
+  assertLearningCaptureRoute('Stop');
 });
 
 Then<ACWorld>(/^hooks\.json should contain beforeSubmitPrompt hook referencing learnings-capture$/, async function () {
-  const hooksJson = await fs.readJson(appPath('.claude-plugin', 'hooks.json'));
-  const hooks = hooksJson.hooks?.UserPromptSubmit ?? [];
-  const commands = hooks.flatMap((g: Record<string, unknown>) =>
-    ((g['hooks'] as Record<string, unknown>[]) || []).map((h) => h['command'] as string),
-  );
-  assert.ok(
-    commands.some((c: string) => c.includes('learnings-capture/capture.ts')),
-    'UserPromptSubmit hook for learnings-capture not found in hooks.json',
-  );
+  assertLearningCaptureRoute('UserPromptSubmit');
 });
 
 Then<ACWorld>(/^hooks\.json should contain stop hook referencing learnings-capture$/, async function () {
-  const hooksJson = await fs.readJson(appPath('.claude-plugin', 'hooks.json'));
-  const hooks = hooksJson.hooks?.Stop ?? [];
-  const commands = hooks.flatMap((g: Record<string, unknown>) =>
-    ((g['hooks'] as Record<string, unknown>[]) || []).map((h) => h['command'] as string),
-  );
-  assert.ok(
-    commands.some((c: string) => c.includes('learnings-capture/capture.ts')),
-    'Stop hook for learnings-capture not found in hooks.json',
-  );
+  assertLearningCaptureRoute('Stop');
 });

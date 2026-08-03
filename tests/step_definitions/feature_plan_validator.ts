@@ -32,14 +32,14 @@ import {
 } from '../../tools/plan-pomogator/plan-gate.ts';
 import { PROMPT_FILE_PREFIX } from '../../tools/plan-pomogator/prompt-store.ts';
 import { readRuleContentForAdaptation } from '../../tools/carl/context-diet.ts';
+import { assertRouteContract, loadHookDispatcherContracts } from './support/hook-dispatcher.ts';
 
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
 
 const REPO_ROOT = process.env.APP_DIR ?? path.resolve(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (import.meta as any).dirname ?? __dirname,
+  import.meta.dirname ?? __dirname,
   '..', '..',
 );
 const FIXTURE_PATH = path.join(REPO_ROOT, 'tools', 'plan-pomogator', 'fixtures', 'valid.plan.md');
@@ -979,24 +979,14 @@ Then(/^the plan-validator rule contains banned phrases and evidence format$/, fu
 });
 
 Then(/^the plan-validator plugin registry has a plan-gate PreToolUse hook$/, function (this: PvWorld) {
-  // Drives the REAL .claude-plugin/hooks.json via pvRuleContent set in the When step.
-  const content = this.pvRuleContent ?? '';
-  const parsed = JSON.parse(content) as {
-    hooks: Record<string, Array<{ matcher: string; hooks: Array<{ command: string }> }>>;
-  };
-  const preToolUse = parsed.hooks?.PreToolUse ?? [];
-  const hasPlanGate = preToolUse.some(
-    (entry) =>
-      Array.isArray(entry.hooks) &&
-      entry.hooks.some(
-        (h) => typeof h.command === 'string' && h.command.includes('plan-gate.ts'),
-      ),
-  );
-  assert.ok(
-    hasPlanGate,
-    `No plan-gate.ts PreToolUse hook found in hooks.json. ` +
-      `PreToolUse matchers: ${JSON.stringify(preToolUse.map((e) => e.matcher))}`,
-  );
+  const resolved = assertRouteContract(loadHookDispatcherContracts(REPO_ROOT), {
+    target: 'tools/plan-pomogator/plan-gate.ts',
+    event: 'PreToolUse',
+    matcher: 'ExitPlanMode',
+    timeout: 60,
+    args: [],
+  });
+  assert.match(resolved.entry.command, /tools\/hook-service\/client\.mjs/);
 });
 
 Then(/^the plan-validator spec-test-sync rule contains key terms$/, function (this: PvWorld) {

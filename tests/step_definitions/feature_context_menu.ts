@@ -11,6 +11,7 @@ import * as path from 'node:path';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import { spawnSync } from 'node:child_process';
+import { assertLiveEvidence } from '../../tools/live-evidence/validator.mjs';
 
 const REPO_ROOT = process.env.APP_DIR || process.cwd();
 const POSTINSTALL_SCRIPT = path.join(REPO_ROOT, 'tools', 'context-menu', 'postinstall.ts');
@@ -47,6 +48,7 @@ interface G8World extends V4World {
   nilesoftArgs?: readonly string[];
   contextMenuSkillContents?: string[];
   postinstallSource?: string;
+  liveUncEvidencePath?: string;
 }
 
 function pwshAvailable(): boolean {
@@ -774,6 +776,16 @@ Then(/^the Claude NSS should not reference an icon that the install plan does no
 
 Given(/^pwsh is available and no stale generated Codex panes exist$/, function (this: G8World) {
   if (!pwshAvailable()) return 'pending';
+  const liveEvidencePath = process.env.DEV_POMOGATOR_LIVE_EVIDENCE?.trim();
+  if (process.platform === 'win32' && liveEvidencePath) {
+    assertLiveEvidence({
+      manifestPath: liveEvidencePath,
+      repoRoot: REPO_ROOT,
+      expectedScenarios: { CTXMENU001_27: 'PASSED' },
+      expectedProfiles: { CTXMENU001_27: 'windows-unc-launch' },
+    });
+    this.liveUncEvidencePath = liveEvidencePath;
+  }
   removeGeneratedPanes(/^codex-only-pane\..*\.(cmd|ps1)$/);
   this.g8CodexPaneBefore = new Set(generatedPanes(/^codex-only-pane\..*\.(cmd|ps1)$/));
 });
@@ -788,6 +800,7 @@ Given(/^Codex resolves to a PowerShell shim beside a cmd shim$/, function (this:
 
 When(/^launch-Codex-tui\.ps1 is invoked non-interactively for a UNC project$/, function (this: G8World) {
   if (process.platform !== 'win32') return 'pending';
+  if (!this.liveUncEvidencePath) throw new Error('DEV_POMOGATOR_LIVE_EVIDENCE with CTXMENU001_27 producer proof is required');
   const fakeUnc = `\\\\wsl.localhost\\Ubuntu\\tmp\\ctxmenu-${path.basename(this.tempDir)}`;
   runLaunchScript(this, ['-Yolo', '-NoTui', '-ProjectDir', fakeUnc], CODEX_LAUNCH_SCRIPT);
 });

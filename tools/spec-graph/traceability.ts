@@ -23,7 +23,7 @@
 import { checkConformance, type Finding } from './conformance.ts';
 import type { SpecGraph } from './types.ts';
 
-export type TraceabilityGapClass = 'UNCOVERED_FR' | 'UNVERIFIED_FR' | 'TASK_UNTESTED' | 'UNTAGGED_SCENARIO';
+export type TraceabilityGapClass = 'UNCOVERED_FR' | 'TASK_UNTESTED' | 'UNTAGGED_SCENARIO';
 
 export interface TraceabilityGap {
   class: TraceabilityGapClass;
@@ -37,7 +37,6 @@ export interface TraceabilityGap {
 
 const GAP_CLASSES: ReadonlySet<string> = new Set([
   'UNCOVERED_FR',
-  'UNVERIFIED_FR',
   'TASK_UNTESTED',
   'UNTAGGED_SCENARIO',
 ]);
@@ -83,7 +82,6 @@ export function checkTraceabilityCompleteness(
 export function summariseGaps(gaps: TraceabilityGap[]): Record<TraceabilityGapClass, number> {
   const out: Record<TraceabilityGapClass, number> = {
     UNCOVERED_FR: 0,
-    UNVERIFIED_FR: 0,
     TASK_UNTESTED: 0,
     UNTAGGED_SCENARIO: 0,
   };

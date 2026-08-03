@@ -35,6 +35,14 @@ import path from 'node:path';
 import os from 'node:os';
 import { pathToFileURL } from 'node:url';
 import { V4World } from '../hooks/before-after.ts';
+import {
+  absoluteRouteTarget,
+  generatedRouteIds,
+  loadHookDispatcherContracts,
+  registryRouteIds,
+  routeEntriesFromLegacy,
+  routeId,
+} from './support/hook-dispatcher.ts';
 
 // ---------------------------------------------------------------------------
 // Helpers (self-contained — do NOT import tests/e2e/helpers.ts: __dirname at
@@ -228,8 +236,12 @@ Then(
   /^directory should contain only "plugin\.json", "marketplace\.json" and "hooks\.json"$/,
   function (this: V4World) {
     const entries = JSON.parse(this.lastStdout) as string[];
-    const expected = ['hooks.json', 'marketplace.json', 'plugin.json'].sort();
-    assert.deepStrictEqual(entries, expected, `.claude-plugin/ should contain exactly plugin.json, marketplace.json, hooks.json but found: ${entries.join(', ')}`);
+    const expected = ['hooks.json', 'hooks.legacy.json', 'marketplace.json', 'plugin.json'].sort();
+    assert.deepStrictEqual(
+      entries,
+      expected,
+      `.claude-plugin/ should contain exactly the generated manifest, its canonical source, marketplace.json, and plugin.json but found: ${entries.join(', ')}`,
+    );
   },
 );
 
@@ -893,6 +905,171 @@ Then(/^stdout should contain "\/reload-plugins"$/, function (this: V4World) {
 });
 
 // ---------------------------------------------------------------------------
+// @feature7 — CANON001_101 global-only migration isolation
+//
+// This scenario deliberately keeps the project and global migration roots
+// separate. It drives the real CLI four times (success, dry-run, idempotent,
+// and fail-soft warning) while resolving a real origin/main ref in a temporary
+// Git repository. No result is copied between producers or inferred from source.
+// ---------------------------------------------------------------------------
+
+interface Canon101World extends V4World {
+  canon101Project?: string;
+  canon101Sentinels?: Map<string, Buffer>;
+  canon101Baseline?: string;
+  canon101Evidence?: Record<string, unknown>;
+}
+
+function canon101Git(cwd: string, args: string[]): string {
+  const result = spawnSync('git', args, { cwd, encoding: 'utf-8' });
+  assert.strictEqual(result.status, 0, `git ${args.join(' ')} failed in ${cwd}: ${result.stderr}`);
+  return (result.stdout ?? '').trim();
+}
+
+function canon101WriteGlobalV1(home: string, invalidSettings = false): string {
+  const devHome = path.join(home, '.dev-pomogator');
+  for (const rel of ['scripts/tsx-runner-bootstrap.cjs', 'scripts/check-update.js', 'scripts/tsx-runner.js']) {
+    const abs = path.join(devHome, rel);
+    fs.mkdirSync(path.dirname(abs), { recursive: true });
+    fs.writeFileSync(abs, `legacy-v1:${rel}\n`, 'utf-8');
+  }
+  const settings = path.join(home, '.claude', 'settings.json');
+  fs.mkdirSync(path.dirname(settings), { recursive: true });
+  fs.writeFileSync(
+    settings,
+    invalidSettings
+      ? '{ invalid global settings\n'
+      : JSON.stringify({ hooks: { Stop: [{ hooks: [
+          { command: 'node .dev-pomogator/scripts/tsx-runner-bootstrap.cjs' },
+          { command: 'keep-unrelated-global-hook' },
+        ] }] } }, null, 2) + '\n',
+    'utf-8',
+  );
+  return devHome;
+}
+
+function canon101RunGlobalOnly(project: string, home: string, extra: string[] = []): ReturnType<typeof spawnSync> {
+  const script = appPath('tools', 'migrate-v1-to-v2', 'migrate-v1-to-v2.ts');
+  return spawnSync(
+    process.execPath,
+    ['--import', TSX_ESM_LOADER, script, '--global-only', ...extra],
+    {
+      cwd: project,
+      encoding: 'utf-8',
+      timeout: 60_000,
+      env: { ...process.env, HOME: home, USERPROFILE: home },
+    },
+  );
+}
+
+Given<Canon101World>(
+  /^a project sentinel set contains byte-bearing `\.dev-pomogator` and `\.dev-pomogator-v1-overrides` directories$/,
+  function (this: Canon101World) {
+    const project = path.join(this.tempDir, 'canon101-project');
+    const remote = path.join(this.tempDir, 'canon101-origin.git');
+    fs.mkdirSync(project, { recursive: true });
+    fs.mkdirSync(remote, { recursive: true });
+    const sentinelFiles = [
+      path.join(project, '.dev-pomogator', 'project-state.bin'),
+      path.join(project, '.dev-pomogator-v1-overrides', 'backup-state.bin'),
+    ];
+    for (const file of sentinelFiles) fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(sentinelFiles[0], Buffer.from([0, 17, 34, 255, 10]));
+    fs.writeFileSync(sentinelFiles[1], Buffer.from([255, 34, 17, 0, 11]));
+    canon101Git(project, ['init', '-q']);
+    canon101Git(project, ['config', 'user.email', 'bdd@example.com']);
+    canon101Git(project, ['config', 'user.name', 'BDD']);
+    canon101Git(project, ['add', '.']);
+    canon101Git(project, ['commit', '-qm', 'sentinel baseline']);
+    canon101Git(remote, ['init', '--bare', '-q']);
+    canon101Git(project, ['remote', 'add', 'origin', remote]);
+    canon101Git(project, ['push', '-q', 'origin', 'HEAD:refs/heads/main']);
+    canon101Git(project, ['fetch', '-q', 'origin', 'main']);
+    this.canon101Project = project;
+    this.canon101Baseline = canon101Git(project, ['rev-parse', 'origin/main']);
+    this.canon101Sentinels = new Map(sentinelFiles.map((file) => [file, fs.readFileSync(file)]));
+  },
+);
+
+Given<Canon101World>(/^the migration baseline is the resolved `origin\/main` commit$/, function (this: Canon101World) {
+  assert.match(this.canon101Baseline ?? '', /^[0-9a-f]{40}$/i, 'origin/main must resolve to a full Git commit');
+  this.canon101Evidence = {
+    baseline_ref: 'origin/main',
+    baseline_commit: this.canon101Baseline,
+  };
+});
+
+When<Canon101World>(
+  /^the user runs global-only migration through success, dry-run, already-migrated, and induced-failure outcomes$/,
+  function (this: Canon101World) {
+    assert.ok(this.canon101Project, 'sentinel project must be prepared before migration');
+    const successHome = path.join(this.tempDir, 'canon101-home-success');
+    const dryRunHome = path.join(this.tempDir, 'canon101-home-dry-run');
+    const failureHome = path.join(this.tempDir, 'canon101-home-failure');
+    canon101WriteGlobalV1(successHome);
+    canon101WriteGlobalV1(dryRunHome);
+    canon101WriteGlobalV1(failureHome, true);
+
+    const success = canon101RunGlobalOnly(this.canon101Project, successHome);
+    const dryRun = canon101RunGlobalOnly(this.canon101Project, dryRunHome, ['--dry-run']);
+    const alreadyMigrated = canon101RunGlobalOnly(this.canon101Project, successHome);
+    const inducedFailure = canon101RunGlobalOnly(this.canon101Project, failureHome);
+    const outcomes = { success, dryRun, alreadyMigrated, inducedFailure };
+
+    assert.strictEqual(success.status, 0, `success migration failed: ${success.stderr}`);
+    assert.strictEqual(dryRun.status, 0, `dry-run migration failed: ${dryRun.stderr}`);
+    assert.strictEqual(alreadyMigrated.status, 0, `already-migrated migration failed: ${alreadyMigrated.stderr}`);
+    assert.strictEqual(inducedFailure.status, 0, `fail-soft migration unexpectedly exited non-zero: ${inducedFailure.stderr}`);
+    assert.match(String(dryRun.stdout ?? '') + String(dryRun.stderr ?? ''), /\[DRY RUN\] no files will be modified/);
+    assert.ok(fs.existsSync(path.join(dryRunHome, '.dev-pomogator', 'scripts', 'tsx-runner.js')), 'dry-run must preserve the v1 artifact');
+    assert.match(String(alreadyMigrated.stdout ?? '') + String(alreadyMigrated.stderr ?? ''), /no v1 global install detected/i);
+    assert.match(String(inducedFailure.stdout ?? '') + String(inducedFailure.stderr ?? ''), /Failed to parse JSON|Warnings:/i, 'induced failure must be visible as a warning');
+    assert.ok(!fs.existsSync(path.join(successHome, '.dev-pomogator', 'scripts', 'tsx-runner.js')), 'success must remove the recognized v1 runner');
+    assert.ok(!fs.existsSync(path.join(failureHome, '.dev-pomogator', 'scripts', 'tsx-runner.js')), 'fail-soft migration must still remove recognized v1 artifacts');
+
+    this.canon101Evidence = {
+      ...this.canon101Evidence,
+      outcomes: {
+        success: success.status,
+        dry_run: dryRun.status,
+        already_migrated: alreadyMigrated.status,
+        induced_failure: inducedFailure.status,
+      },
+      warnings: String(inducedFailure.stdout ?? '') + String(inducedFailure.stderr ?? ''),
+    };
+  },
+);
+
+Then<Canon101World>(/^every project sentinel remains byte-for-byte unchanged$/, function (this: Canon101World) {
+  assert.ok(this.canon101Sentinels && this.canon101Sentinels.size === 2, 'both sentinel files must be captured');
+  for (const [file, expected] of this.canon101Sentinels) {
+    assert.ok(fs.existsSync(file), `migration deleted project sentinel ${file}`);
+    assert.deepStrictEqual(fs.readFileSync(file), expected, `${file} changed byte-for-byte`);
+  }
+});
+
+Then<Canon101World>(/^the evidence records the resolved `origin\/main` commit$/, function (this: Canon101World) {
+  assert.equal(this.canon101Evidence?.baseline_ref, 'origin/main');
+  assert.equal(this.canon101Evidence?.baseline_commit, this.canon101Baseline);
+  assert.equal(canon101Git(this.canon101Project!, ['rev-parse', 'origin/main']), this.canon101Baseline);
+  assert.deepStrictEqual(this.canon101Evidence?.outcomes, {
+    success: 0,
+    dry_run: 0,
+    already_migrated: 0,
+    induced_failure: 0,
+  });
+});
+
+Then<Canon101World>(/^no collision occurs between `\.dev-pomogator` and `\.dev-pomogator-v1-overrides`$/, function (this: Canon101World) {
+  const project = this.canon101Project!;
+  const v2 = path.join(project, '.dev-pomogator', 'project-state.bin');
+  const overrides = path.join(project, '.dev-pomogator-v1-overrides', 'backup-state.bin');
+  assert.notStrictEqual(path.resolve(v2), path.resolve(overrides), 'sentinel paths must remain distinct');
+  assert.deepStrictEqual(fs.readFileSync(v2), Buffer.from([0, 17, 34, 255, 10]));
+  assert.deepStrictEqual(fs.readFileSync(overrides), Buffer.from([255, 34, 17, 0, 11]));
+});
+
+// ---------------------------------------------------------------------------
 // @feature8 — CANON001_80 is @wip (legacy CLI binary does not exist in v2)
 // (step-defs omitted — scenario is @wip and excluded from the gate)
 // ---------------------------------------------------------------------------
@@ -1000,46 +1177,86 @@ Then(
 When(
   /^I run the drift test "tests\/e2e\/canonical-plugin\.test\.ts"$/,
   function (this: V4World) {
-    // Prose says "run the drift test" but self-referentially naming the vitest twin
-    // would require spawning vitest inside cucumber — a test-within-test anti-pattern.
-    // Reconciliation: perform the identical checks in-process (what the vitest does).
-    const bootstrapOk = fs.existsSync(appPath('tools', '_shared', 'bootstrap.cjs'));
-    const hooks = readPluginHooks();
-    const missing: string[] = [];
-    let checked = 0;
-    for (const event of Object.keys(hooks)) {
-      for (const cmd of pluginHookCommands(hooks, event)) {
-        const rel = hookScriptPath(cmd);
-        if (!rel) continue;
-        checked++;
-        if (!fs.existsSync(appPath(rel))) missing.push(`${event}: ${rel}`);
+    // The generated manifests are supervised client commands. Resolve every
+    // generated route through the shipped registry, then check its exact target
+    // on disk; SessionStart is the deliberate bootstrap exception.
+    const contracts = loadHookDispatcherContracts(REPO_ROOT);
+    const generatedIds = generatedRouteIds(contracts.generatedEntries);
+    const registryIds = registryRouteIds(contracts.registry, ['SessionStart']);
+    const legacyRoutes = routeEntriesFromLegacy(contracts.legacy);
+    const missingRoutes = generatedIds.filter((id) => !contracts.registry.routes?.[id]);
+    const missingTargets: string[] = [];
+    const checked: string[] = [];
+    for (const entry of contracts.generatedEntries) {
+      const id = entry.routeId;
+      if (!id) {
+        if (entry.event !== 'SessionStart') missingRoutes.push(`${entry.event}/${entry.groupIndex}/${entry.hookIndex}`);
+        continue;
       }
+      const route = contracts.registry.routes?.[id];
+      if (!route) continue;
+      checked.push(id);
+      const targetPath = absoluteRouteTarget(REPO_ROOT, route);
+      if (!fs.existsSync(targetPath)) missingTargets.push(`${id}: ${route.target}`);
     }
-    this.lastStdout = JSON.stringify({ bootstrapOk, checked, missing, events: Object.keys(hooks) });
+    const generatedParity = generatedIds.slice().sort().join('|') === registryIds.slice().sort().join('|');
+    const legacyParity = contracts.legacyEntries.every((entry) => {
+      const id = routeId(entry);
+      return id.startsWith('SessionStart/') || legacyRoutes.has(id);
+    });
+    this.lastStdout = JSON.stringify({
+      bootstrapOk: fs.existsSync(appPath('tools', '_shared', 'bootstrap.cjs')),
+      checked: checked.length,
+      generatedIds,
+      registryIds,
+      generatedParity,
+      legacyParity,
+      missingRoutes,
+      missingTargets,
+      events: Object.keys(contracts.generated),
+    });
   },
 );
 
 Then(
   /^every hook command in \.claude-plugin\/hooks\.json should resolve to an existing script under tools\/$/,
   function (this: V4World) {
-    const { missing, checked } = JSON.parse(this.lastStdout) as {
+    const {
+      bootstrapOk,
+      checked,
+      generatedParity,
+      legacyParity,
+      missingRoutes,
+      missingTargets,
+    } = JSON.parse(this.lastStdout) as {
       bootstrapOk: boolean;
       checked: number;
-      missing: string[];
-      events: string[];
+      generatedParity: boolean;
+      legacyParity: boolean;
+      missingRoutes: string[];
+      missingTargets: string[];
     };
-    assert.ok(checked > 0, 'no bootstrap-style hook commands found to verify');
-    assert.deepStrictEqual(missing, [], `hooks.json references missing scripts:\n${missing.join('\n')}`);
+    assert.equal(bootstrapOk, true, 'bootstrap.cjs must exist for the dispatcher contract');
+    assert.ok(checked > 0, 'no generated dispatcher routes were checked');
+    assert.equal(generatedParity, true, 'generated route set must exactly match registry route set');
+    assert.equal(legacyParity, true, 'every legacy route must resolve to a deliberate registry identity');
+    assert.deepStrictEqual(missingRoutes, [], `generated hooks reference unknown registry routes: ${missingRoutes.join(', ')}`);
+    assert.deepStrictEqual(missingTargets, [], `registry routes reference missing targets: ${missingTargets.join(', ')}`);
   },
 );
 
 Then(
   /^every registered hook script under tools\/ should be present in \.claude-plugin\/hooks\.json$/,
   function (this: V4World) {
-    // Covered by the previous step's missing[] check (bidirectional drift would
-    // show up as a missing script on disk). The reverse direction (script on disk
-    // but not in hooks.json) is a separate concern not enforced by the migration
-    // script — treat as informational only.
+    const { generatedIds, registryIds } = JSON.parse(this.lastStdout) as {
+      generatedIds: string[];
+      registryIds: string[];
+    };
+    assert.deepStrictEqual(
+      generatedIds.slice().sort(),
+      registryIds.slice().sort(),
+      'generated dispatcher route ids must have exact registry parity',
+    );
   },
 );
 

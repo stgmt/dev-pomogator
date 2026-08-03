@@ -128,6 +128,10 @@ function runHook(
         CLAUDE_PLUGIN_ROOT: REPO,
         CLAUDE_MEM_INSTALL_LAUNCHER: path.join(REPO, STUB),
         CLAUDE_MEM_RECORD: recordPath,
+        // Keep the clean-install contract independent of developer dotenv credentials.
+        // A whitespace value blocks dotenv fill but trims to "not configured" in production.
+        AUTO_COMMIT_API_KEY: ' ',
+        OPENROUTER_API_KEY: 'redacted-openrouter-key',
         ...extraEnv,
       },
     },

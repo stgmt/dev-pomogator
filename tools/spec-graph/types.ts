@@ -30,7 +30,8 @@ export type NodeType =
   | 'UseCase'
   | 'Risk'
   | 'File'
-  | 'StepBinding';
+  | 'StepBinding'
+  | 'Evidence';
 
 export type EdgeType =
   | 'refs'
@@ -43,7 +44,8 @@ export type EdgeType =
   | 'last-result'
   | 'runtime-trace'
   | 'step-binding'
-  | 'code-impl';
+  | 'code-impl'
+  | 'evidenced-by';
 
 /** Shared shape every node carries. */
 interface NodeBase {
@@ -245,6 +247,27 @@ export interface StepBindingNode extends NodeBase {
   codeLine: number;
 }
 
+/** Content-addressed operational evidence manifest (FR-70/71). */
+export interface EvidenceNode extends NodeBase {
+  type: 'Evidence';
+  schemaVersion: 1;
+  path: string;
+  kind: string;
+  mediaType: string;
+  sha256: string;
+  byteSize: number;
+  producer: string;
+  runId: string;
+  finalizedAt: string;
+  subjectRevision: string;
+  state: 'PRESENT' | 'MISSING';
+  stateReason?: string;
+  reviewer?: string;
+  judgeInvocation?: string;
+  reviewedDigest?: string;
+  reviewStatus?: 'CONFIRMED' | 'DENIED' | 'INCOMPLETE' | 'UNAVAILABLE' | 'SELF_ATTESTED';
+}
+
 export type Node =
   | FrNode
   | NfrNode
@@ -256,7 +279,8 @@ export type Node =
   | UseCaseNode
   | RiskNode
   | FileNode
-  | StepBindingNode;
+  | StepBindingNode
+  | EvidenceNode;
 
 /**
  * Optional metadata attached to specific edge kinds.

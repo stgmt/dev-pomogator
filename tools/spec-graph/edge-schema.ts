@@ -55,6 +55,10 @@ export const EDGE_SCHEMA = {
     sources: ['FR', 'NFR', 'AC', 'Scenario'],
     targets: ['File'],
   },
+  'evidenced-by': {
+    sources: ['FR', 'NFR', 'AC', 'Scenario'],
+    targets: ['Evidence'],
+  },
 } as const satisfies Record<EdgeType, EndpointRule>;
 
 function syntheticTargetMatches(rule: EndpointRule, target: string): boolean {

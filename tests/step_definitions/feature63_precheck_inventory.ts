@@ -222,7 +222,7 @@ function writeInventoryFixture(root: string): void {
   const featureText = [
     'Feature: SPECGEN004_Inventory',
     '',
-    '  @feature1',
+    '  @feature1 @AC-1',
     '  Scenario: SPECGEN004_600 inventory candidate one',
     '    Given a graph-mapped scenario',
     '',
@@ -245,7 +245,7 @@ function writeInventoryFixture(root: string): void {
     [
       'Feature: Inventory demo mirror',
       '',
-      '  @feature1',
+      '  @feature1 @AC-1',
       '  Scenario: SPECGEN004_600 inventory candidate one',
       '    Given an executable mirror of the same scenario',
       '',
@@ -259,7 +259,7 @@ function writeInventoryFixture(root: string): void {
   fs.mkdirSync(dev, { recursive: true });
   // Baseline canonical full-run: 600 PASSED, 601 observed-but-UNKNOWN.
   fs.writeFileSync(path.join(dev, '.last-test-run.ndjson'), canonicalMessages([
-    { name: 'SPECGEN004_600 inventory candidate one', uri, line: line600, status: 'PASSED', seconds: INV_SECONDS.passed, tags: ['@feature1'] },
+    { name: 'SPECGEN004_600 inventory candidate one', uri, line: line600, status: 'PASSED', seconds: INV_SECONDS.passed, tags: ['@feature1', '@AC-1'] },
     { name: 'SPECGEN004_601 inventory candidate two', uri, line: line601, status: 'UNKNOWN', seconds: INV_SECONDS.unknown, tags: ['@feature2'] },
   ]));
   // Run identity: an overlay row carrying run id + source for the canonical pass.
@@ -274,7 +274,7 @@ function writeInventoryFixture(root: string): void {
     tcs: 'tcs63-inv600',
     traceFile: '.dev-pomogator/.test-history/run-555.ndjson',
     name: 'SPECGEN004_600 inventory candidate one',
-    tags: ['@feature1'],
+    tags: ['@feature1', '@AC-1'],
   }) + '\n');
 }
 
@@ -360,7 +360,7 @@ Then(
     assert.ok(ac1.test_paths.includes('tests/features/inventory-demo-mirror.feature'), JSON.stringify(ac1.test_paths));
 
     // Mandatory readiness lanes on every surface.
-    assert.deepEqual([...this.precheckResult.readiness!.mandatory_lanes], ['STRUCTURE', 'TRACEABILITY', 'EXECUTION', 'TASK_TRUTH', 'BDD_SYNC']);
+    assert.deepEqual([...this.precheckResult.readiness!.mandatory_lanes], ['STRUCTURE', 'TRACEABILITY', 'EXECUTION', 'TASK_TRUTH', 'BDD_SYNC', 'AC_SATISFACTION', 'NFR_SATISFACTION']);
     for (const lane of ['STRUCTURE', 'TRACEABILITY', 'EXECUTION', 'TASK_TRUTH', 'BDD_SYNC', 'SEMANTIC', 'FILTERED_PROOF']) {
       assert.ok(this.verdictResult.readiness.lanes[lane as keyof typeof this.verdictResult.readiness.lanes], `verdict must carry lane ${lane}`);
     }
@@ -588,11 +588,11 @@ function writeTaxonomyFixture(root: string): void {
   const featureText = [
     'Feature: SPECGEN004_Taxonomy',
     '',
-    '  @feature1',
+    '  @feature1 @AC-1',
     '  Scenario: SPECGEN004_610 passed lane evidence',
     '    Given passed evidence',
     '',
-    '  @feature2',
+    '  @feature2 @AC-2',
     '  Scenario: SPECGEN004_611 never-run lane evidence',
     '    Given never-run evidence',
     '',
@@ -630,7 +630,7 @@ function writeTaxonomyFixture(root: string): void {
   const dev = path.join(root, '.dev-pomogator');
   fs.mkdirSync(dev, { recursive: true });
   fs.writeFileSync(path.join(dev, '.last-test-run.ndjson'), canonicalMessages([
-    { name: 'SPECGEN004_610 passed lane evidence', uri: '.specs/taxonomy-demo/taxonomy-demo.feature', line: lineOf(featureText, 'SPECGEN004_610'), status: 'PASSED', seconds: TAX_SECONDS.pass610, tags: ['@feature1'] },
+    { name: 'SPECGEN004_610 passed lane evidence', uri: '.specs/taxonomy-demo/taxonomy-demo.feature', line: lineOf(featureText, 'SPECGEN004_610'), status: 'PASSED', seconds: TAX_SECONDS.pass610, tags: ['@feature1', '@AC-1'] },
     { name: 'SPECGEN004_613 canonical pass control', uri: '.specs/pass-demo/pass-demo.feature', line: lineOf(passFeature, 'SPECGEN004_613'), status: 'PASSED', seconds: TAX_SECONDS.pass613, tags: ['@feature1'] },
   ]));
   fs.writeFileSync(path.join(dev, '.scenario-results.ndjson'), overlayRow({
@@ -685,15 +685,24 @@ When('the FR-61 readiness taxonomy evaluates the candidate', function (this: F63
       TRACEABILITY: { status: 'GREEN' },
       TASK_TRUTH: { status: 'GREEN' },
       BDD_SYNC: { status: 'GREEN' },
+      AC_SATISFACTION: { status: 'GREEN' },
+      NFR_SATISFACTION: { status: 'GREEN' },
     },
   });
+  const passInventory = {
+    ...this.passInventory!,
+    ac_satisfaction: { status: 'GREEN' as const, required: 1, satisfied: 1, debt: [] },
+    nfr_satisfaction: { status: 'GREEN' as const, required: 0, satisfied: 0, optional: [], not_applicable: [], debt: [] },
+  };
   this.passControl = evaluateReadiness({
-    inventory: this.passInventory!,
+    inventory: passInventory,
     lanes: {
       STRUCTURE: { status: 'GREEN' },
       TRACEABILITY: { status: 'GREEN' },
       TASK_TRUTH: { status: 'GREEN' },
       BDD_SYNC: { status: 'GREEN' },
+      AC_SATISFACTION: { status: 'GREEN' },
+      NFR_SATISFACTION: { status: 'GREEN' },
     },
   });
 });
@@ -718,7 +727,7 @@ Then(
 
     const ev = this.evaluation!;
     assert.equal(ev.overall, 'NOT_READY');
-    assert.deepEqual([...ev.mandatory_lanes], ['STRUCTURE', 'TRACEABILITY', 'EXECUTION', 'TASK_TRUTH', 'BDD_SYNC']);
+    assert.deepEqual([...ev.mandatory_lanes], ['STRUCTURE', 'TRACEABILITY', 'EXECUTION', 'TASK_TRUTH', 'BDD_SYNC', 'AC_SATISFACTION', 'NFR_SATISFACTION']);
     for (const lane of [...ev.mandatory_lanes, 'SEMANTIC', 'FILTERED_PROOF']) {
       assert.ok(ev.lanes[lane], `lane ${lane} must be rendered`);
     }

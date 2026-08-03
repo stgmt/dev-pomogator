@@ -22,6 +22,7 @@ import { spawnSync } from 'node:child_process';
 import { V4World } from '../hooks/before-after.ts';
 import { detectJargon } from '../../tools/answer-simple/jargon_detector.ts';
 import { readRuleContentForAdaptation } from '../../tools/carl/context-diet.ts';
+import { assertRouteContract, loadHookDispatcherContracts } from './support/hook-dispatcher.ts';
 
 const APP_DIR = process.env.APP_DIR || process.cwd();
 const appPath = (rel = ''): string => path.join(APP_DIR, rel);
@@ -151,14 +152,15 @@ Given(/^репозиторий dev-pomogator после атомарной ми�
   assert.ok(fs.existsSync(appPath('.claude-plugin/hooks.json')), 'hooks.json must exist');
 });
 Then(/^Stop-хук answer-simple SHALL быть подключён в `\.claude-plugin\/hooks\.json`$/, function () {
-  const hooks = JSON.parse(fs.readFileSync(appPath('.claude-plugin/hooks.json'), 'utf-8')).hooks;
-  const stopCmds = (hooks.Stop || []).flatMap((g: { hooks?: { command?: string }[] }) =>
-    (g.hooks || []).map((h) => h.command || ''),
-  );
-  assert.ok(
-    stopCmds.some((c: string) => /tools\/answer-simple\/answer_simple_stop\.ts/.test(c)),
-    'answer-simple Stop hook must be wired in hooks.json',
-  );
+  const contracts = loadHookDispatcherContracts(APP_DIR);
+  const resolved = assertRouteContract(contracts, {
+    target: 'tools/answer-simple/answer_simple_stop.ts',
+    event: 'Stop',
+    matcher: '',
+    timeout: 60,
+    args: [],
+  });
+  assert.match(resolved.entry.command, /tools\/hook-service\/client\.mjs/);
 });
 Then(/^файл `tools\/answer-simple\/answer_simple_stop\.ts` SHALL присутствовать$/, function () {
   assert.ok(fs.existsSync(appPath('tools/answer-simple/answer_simple_stop.ts')));

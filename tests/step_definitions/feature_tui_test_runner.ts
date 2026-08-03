@@ -41,6 +41,7 @@ import { pathToFileURL } from 'node:url';
 import { runDoctor } from '../../.claude/skills/pomogator-doctor/scripts/engine/index.ts';
 import type { DoctorReport } from '../../.claude/skills/pomogator-doctor/scripts/engine/index.ts';
 import { V4World } from '../hooks/before-after.ts';
+import { assertRouteContract, loadHookDispatcherContracts } from './support/hook-dispatcher.ts';
 
 // --- Self-contained runners ---------------------------------------------------
 // NB: we do NOT import tests/e2e/helpers.ts — it touches `__dirname` at module
@@ -1931,18 +1932,14 @@ Then(/^the registry should have at least one SessionStart hook$/, function (this
 });
 
 Then(/^the registry should have a Bash PreToolUse entry for test_guard$/, function (this: TuiWorldWithGuard) {
-  const hooks = JSON.parse(fs.readFileSync(PLUGIN_HOOKS_PATH, 'utf-8')) as Record<string, unknown>;
-  const preEntries: Array<{ matcher?: string; hooks?: Array<{ command?: string }> }> =
-    ((hooks as any).hooks?.PreToolUse ?? []);
-  const testGuardEntry = preEntries.find(
-    (entry) =>
-      entry.matcher === 'Bash' &&
-      (entry.hooks ?? []).some((h) => (h.command ?? '').includes('test_guard')),
-  );
-  assert.ok(
-    testGuardEntry !== undefined,
-    `expected a Bash PreToolUse entry for test_guard; got entries: ${JSON.stringify(preEntries.map((e) => ({ matcher: e.matcher, commands: (e.hooks ?? []).map((h) => h.command) })))}`,
-  );
+  const resolved = assertRouteContract(loadHookDispatcherContracts(process.cwd()), {
+    target: 'tools/tui-test-runner/test_guard.ts',
+    event: 'PreToolUse',
+    matcher: 'Bash',
+    timeout: 30,
+    args: [],
+  });
+  assert.match(resolved.entry.command, /tools\/hook-service\/client\.mjs/);
 });
 
 // --- @feature6: regression event-count check for all adapters (in-process) -----
@@ -2358,39 +2355,38 @@ Then(
 Then(
   /^the registry should have a Bash PreToolUse entry for build_guard$/,
   function (this: TuiWorldWithBuildGuard) {
-    const hooks = JSON.parse(fs.readFileSync(PLUGIN_HOOKS_PATH, 'utf-8')) as Record<string, unknown>;
-    const preEntries: Array<{ matcher?: string; hooks?: Array<{ command?: string }> }> =
-      ((hooks as any).hooks?.PreToolUse ?? []);
-    const buildGuardEntry = preEntries.find(
-      (entry) =>
-        entry.matcher === 'Bash' &&
-        (entry.hooks ?? []).some((h) => (h.command ?? '').includes('build_guard')),
-    );
-    assert.ok(
-      buildGuardEntry !== undefined,
-      `expected a Bash PreToolUse entry for build_guard; got entries: ${JSON.stringify(preEntries.map((e) => ({ matcher: e.matcher, commands: (e.hooks ?? []).map((h) => h.command) })))}`,
-    );
+    const resolved = assertRouteContract(loadHookDispatcherContracts(process.cwd()), {
+      target: 'tools/tui-test-runner/build_guard.ts',
+      event: 'PreToolUse',
+      matcher: 'Bash',
+      timeout: 30,
+      args: [],
+    });
+    assert.match(resolved.entry.command, /tools\/hook-service\/client\.mjs/);
   },
 );
 
 Then(
   /^build_guard should appear before test_guard in the PreToolUse registry$/,
   function (this: TuiWorldWithBuildGuard) {
-    const hooks = JSON.parse(fs.readFileSync(PLUGIN_HOOKS_PATH, 'utf-8')) as Record<string, unknown>;
-    const preEntries: Array<{ matcher?: string; hooks?: Array<{ command?: string }> }> =
-      ((hooks as any).hooks?.PreToolUse ?? []);
-    let buildGuardIdx = -1;
-    let testGuardIdx = -1;
-    preEntries.forEach((entry, idx) => {
-      const cmds = (entry.hooks ?? []).map((h) => h.command ?? '').join(',');
-      if (cmds.includes('build_guard')) buildGuardIdx = idx;
-      if (cmds.includes('test_guard')) testGuardIdx = idx;
+    const contracts = loadHookDispatcherContracts(process.cwd());
+    const build = assertRouteContract(contracts, {
+      target: 'tools/tui-test-runner/build_guard.ts',
+      event: 'PreToolUse',
+      matcher: 'Bash',
+      timeout: 30,
+      args: [],
     });
-    assert.ok(buildGuardIdx >= 0, `build_guard not found in PreToolUse registry`);
-    assert.ok(testGuardIdx >= 0, `test_guard not found in PreToolUse registry`);
+    const test = assertRouteContract(contracts, {
+      target: 'tools/tui-test-runner/test_guard.ts',
+      event: 'PreToolUse',
+      matcher: 'Bash',
+      timeout: 30,
+      args: [],
+    });
     assert.ok(
-      buildGuardIdx < testGuardIdx,
-      `expected build_guard (idx ${buildGuardIdx}) before test_guard (idx ${testGuardIdx})`,
+      build.entry.groupIndex < test.entry.groupIndex,
+      `expected build_guard group ${build.entry.groupIndex} before test_guard group ${test.entry.groupIndex}`,
     );
   },
 );
