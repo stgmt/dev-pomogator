@@ -4341,3 +4341,28 @@ Scenario: SPECGEN004_681 Unrelated plan patch preserves explicit conflicts
   Given a plan has an explicit externally audited conflict
   When an unrelated valid patch commits
   Then the explicit conflict remains in the next plan state
+
+
+@feature81 @FR-81 @AC-81.7
+Scenario: SPECGEN004_682 Live evidence binds expected records to current producer artifacts
+  Given a producer-derived live evidence manifest with current checkout and workspace bindings
+  When the real live evidence validator checks missing and modified producer bindings
+  Then missing expected records and changed trace or workspace evidence are rejected by named findings
+
+@feature79 @FR-79 @AC-79.8
+Scenario: SPECGEN004_683 Invalid canonical tasks keep plans incomplete
+  Given a malformed canonical task reaches plan state construction
+  When the canonical task plan is queried and restored
+  Then the plan remains incomplete with a retained invalid-task finding
+
+@feature79 @FR-79 @AC-79.8
+Scenario: SPECGEN004_684 Storage compare-and-swap rejects the second writer
+  Given two task plan writers read the same persisted revision
+  When both writers apply different valid patches
+  Then only the first storage compare-and-swap commits and the second reports stale revision
+
+@feature80 @FR-80 @AC-80.12
+Scenario: SPECGEN004_685 Synthesis rejects unresolved sources dependencies and blank causal work
+  Given strict synthesis receives unresolved registries dependency targets and blank causal step text
+  When deterministic pre-scheduling synthesis reviews the lanes
+  Then named blocking findings reject every invalid reference and blank causal step

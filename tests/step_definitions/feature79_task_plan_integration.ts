@@ -44,6 +44,9 @@ interface TaskPlanWorld extends V4World {
   legacy?: LegacyTaskRecord[];
   rolloutReports?: ReturnType<typeof legacyPlanReport>[];
   explicitConflict?: TaskConflictRecord;
+  competingState?: TaskPlanState;
+  persistenceFile?: string;
+  secondMutation?: TaskPlanMutationResult;
 }
 
 function makeTask(
@@ -87,6 +90,14 @@ function filePersistence(file: string): PlanPersistenceAdapter {
     },
     read() {
       return fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : undefined;
+    },
+    compareAndSwap(expectedRevision, serialized) {
+      const current = this.read();
+      if (!current) return false;
+      const parsed = JSON.parse(current) as { revision?: unknown };
+      if (parsed.revision !== expectedRevision) return false;
+      fs.writeFileSync(file, serialized, 'utf8');
+      return true;
     },
   };
 }
@@ -161,14 +172,14 @@ When('dry-run and CAS apply request', function (this: TaskPlanWorld) {
   const dryRun = applyTaskPlanPatch(this.state!, { add: [invalid] }, {
     expectedRevision: 11,
     dryRun: true,
-    persist: (nextState, serialized) => persistTaskPlanState(adapter, nextState) && serialized,
+    persist: (_nextState, _serialized, expectedRevision) => adapter.compareAndSwap!(expectedRevision, _serialized, _nextState),
   });
   assert.equal(dryRun.ok, false);
   assert.equal(dryRun.committed, false);
   assert.equal(fs.readFileSync(file, 'utf8'), beforeBytes);
   this.mutation = applyTaskPlanPatch(this.state!, { add: [invalid] }, {
     expectedRevision: 11,
-    persist: (nextState) => persistTaskPlanState(adapter, nextState),
+    persist: (nextState, serialized, expectedRevision) => adapter.compareAndSwap!(expectedRevision, serialized, nextState),
   });
 });
 
@@ -342,4 +353,54 @@ Then('the explicit conflict remains in the next plan state', function (this: Tas
   assert.equal(this.mutation!.committed, true);
   assert.deepEqual(this.mutation!.state.conflicts, [this.explicitConflict]);
   assert.ok(queryTaskPlan(this.mutation!.state).graph.edges.some((edge) => edge.type === 'conflicts-with' && edge.sourceIds.includes('audit:explicit-conflict')));
+});
+
+Given('a malformed canonical task reaches plan state construction', function (this: TaskPlanWorld) {
+  const malformed = makeTask('fixture:malformed-plan', 'Malformed plan task');
+  malformed.doneWhen = [];
+  this.state = buildTaskPlanState([malformed], { revision: 71 });
+});
+
+When('the canonical task plan is queried and restored', function (this: TaskPlanWorld) {
+  this.plan = queryTaskPlan(this.state!);
+  this.restored = restorePersistedTaskPlanState({
+    write() {},
+    read: () => JSON.stringify(this.state),
+  });
+});
+
+Then('the plan remains incomplete with a retained invalid-task finding', function (this: TaskPlanWorld) {
+  assert.equal(this.plan!.complete, false);
+  assert.ok(this.plan!.diagnostics.some((item) => item.code === 'PLAN_INVALID_TASK'));
+  const restoredPlan = queryTaskPlan(this.restored!);
+  assert.equal(restoredPlan.complete, false);
+  assert.ok(restoredPlan.diagnostics.some((item) => item.code === 'PLAN_INVALID_TASK'));
+});
+
+Given('two task plan writers read the same persisted revision', function (this: TaskPlanWorld) {
+  const task = makeTask('fixture:cas-writer', 'CAS writer task');
+  this.state = buildTaskPlanState([task], { revision: 81 });
+  this.competingState = JSON.parse(JSON.stringify(this.state)) as TaskPlanState;
+  this.persistenceFile = path.join(this.tempDir, 'cas-plan.json');
+  persistTaskPlanState(filePersistence(this.persistenceFile), this.state);
+});
+
+When('both writers apply different valid patches', function (this: TaskPlanWorld) {
+  const adapter = filePersistence(this.persistenceFile!);
+  this.mutation = applyTaskPlanPatch(this.state!, { evidence: [evidence('fixture:cas-writer', 'evidence:first', 'present', 'first writer')] }, {
+    expectedRevision: 81,
+    persist: (state, serialized, revision) => adapter.compareAndSwap!(revision, serialized, state),
+  });
+  this.secondMutation = applyTaskPlanPatch(this.competingState!, { evidence: [evidence('fixture:cas-writer', 'evidence:second', 'present', 'second writer')] }, {
+    expectedRevision: 81,
+    persist: (state, serialized, revision) => adapter.compareAndSwap!(revision, serialized, state),
+  });
+});
+
+Then('only the first storage compare-and-swap commits and the second reports stale revision', function (this: TaskPlanWorld) {
+  assert.equal(this.mutation!.committed, true);
+  assert.equal(this.secondMutation!.committed, false);
+  assert.ok(this.secondMutation!.findings.some((item) => item.code === 'PLAN_STALE_REVISION'));
+  const persisted = restorePersistedTaskPlanState(filePersistence(this.persistenceFile!));
+  assert.deepEqual(persisted!.evidence.map((item) => item.sourceId), ['evidence:first']);
 });

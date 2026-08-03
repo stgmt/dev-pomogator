@@ -42,11 +42,22 @@ function sha256File(filePath) {
   return crypto.createHash('sha256').update(fs.readFileSync(filePath)).digest('hex');
 }
 
+function workspaceFile(repoRoot, relative) {
+  const normalized = relative.replace(/\\/g, '/');
+  const absolute = path.resolve(repoRoot, normalized);
+  if (!normalizeRelative(repoRoot, absolute)) {
+    throw new Error(`workspace file escapes the current workspace: ${relative}`);
+  }
+  const stat = fs.statSync(absolute);
+  if (!stat.isFile()) throw new Error(`workspace file is not a regular file: ${relative}`);
+  return { normalized, absolute };
+}
+
 function workspaceDigest(repoRoot, files) {
   const hash = crypto.createHash('sha256');
-  for (const rel of [...files].sort()) {
-    const absolute = path.resolve(repoRoot, rel);
-    hash.update(rel.replace(/\\/g, '/'));
+  for (const relative of [...files].sort()) {
+    const { normalized, absolute } = workspaceFile(repoRoot, relative);
+    hash.update(normalized);
     hash.update('\0');
     hash.update(fs.readFileSync(absolute));
     hash.update('\0');
@@ -55,14 +66,11 @@ function workspaceDigest(repoRoot, files) {
 }
 
 function currentGitSha(repoRoot) {
-  const provided = process.env.DEV_POMOGATOR_GIT_SHA?.trim().toLowerCase();
-  if (provided) {
-    if (!HEX40.test(provided)) throw new Error('DEV_POMOGATOR_GIT_SHA is not a lowercase 40-character SHA-1');
-    return provided;
-  }
-  return execFileSync('git', ['-C', repoRoot, 'rev-parse', 'HEAD'], {
+  const actual = execFileSync('git', ['-C', repoRoot, 'rev-parse', 'HEAD'], {
     encoding: 'utf8',
   }).trim().toLowerCase();
+  if (!HEX40.test(actual)) throw new Error('git rev-parse HEAD did not return a lowercase 40-character SHA-1');
+  return actual;
 }
 
 function schemaIssues(validate, value) {
@@ -78,6 +86,18 @@ function eventAssertions(profile, event) {
       : ['producer', 'powershell', 'path', 'pane', 'cleanup'];
   const missing = required.filter((key) => !event || event[key] === undefined);
   return missing.map((key) => issue('TRACE_ASSERTION_MISSING', `trace event is missing ${key}`, `/events/${key}`));
+}
+
+function stableJson(value) {
+  if (Array.isArray(value)) return `[${value.map(stableJson).join(',')}]`;
+  if (value && typeof value === 'object') {
+    return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${stableJson(value[key])}`).join(',')}}`;
+  }
+  return JSON.stringify(value);
+}
+
+export function digestTraceEvent(event) {
+  return crypto.createHash('sha256').update(stableJson(event)).digest('hex');
 }
 
 function recordIdentity(record, index) {
@@ -108,6 +128,8 @@ export function validateLiveEvidence({ manifestPath, repoRoot = process.cwd(), e
       const actualTraceHash = sha256File(tracePath);
       if (actualTraceHash !== manifest.trace.sha256) errors.push(issue('TRACE_HASH_MISMATCH', 'manifest trace.sha256 does not match trace bytes', '/trace/sha256'));
       if (trace?.producer?.marker !== PRODUCER_MARKER) errors.push(issue('PRODUCER_MARKER_MISSING', 'trace producer marker is not the live producer marker', '/producer/marker'));
+      if (trace?.producer?.name !== manifest.producer.name) errors.push(issue('PRODUCER_NAME_MISMATCH', 'trace producer name does not match manifest producer', '/producer/name'));
+      if (trace?.producer?.version !== manifest.producer.version) errors.push(issue('PRODUCER_VERSION_MISMATCH', 'trace producer version does not match manifest producer', '/producer/version'));
     }
   }
 
@@ -120,6 +142,22 @@ export function validateLiveEvidence({ manifestPath, repoRoot = process.cwd(), e
   if (actualGitSha && manifest.git_sha !== actualGitSha) errors.push(issue('GIT_SHA_MISMATCH', 'manifest git_sha is not the current checkout HEAD', '/git_sha'));
   if (!HEX40.test(manifest.git_sha)) errors.push(issue('GIT_SHA_INVALID', 'git_sha must be a lowercase 40-character SHA-1', '/git_sha'));
   if (!HEX64.test(manifest.workspace_digest)) errors.push(issue('WORKSPACE_DIGEST_INVALID', 'workspace_digest must be a lowercase SHA-256 digest', '/workspace_digest'));
+  try {
+    const actualWorkspaceDigest = workspaceDigest(repoRoot, manifest.workspace_files);
+    if (actualWorkspaceDigest !== manifest.workspace_digest) errors.push(issue('WORKSPACE_DIGEST_MISMATCH', 'manifest workspace_digest does not match the declared current workspace files', '/workspace_digest'));
+  } catch (error) {
+    errors.push(issue('WORKSPACE_DIGEST_UNAVAILABLE', `workspace digest cannot be recomputed: ${error.message}`, '/workspace_files'));
+  }
+
+  const expectedScenarioIds = new Set(Object.keys(expectedScenarios));
+  const expectedProfileIds = new Set(Object.keys(expectedProfiles));
+  for (const scenarioId of expectedScenarioIds) {
+    if (!manifest.records.some((record) => record.scenario_id === scenarioId)) errors.push(issue('EXPECTED_SCENARIO_MISSING', `manifest has no evidence record for expected scenario ${scenarioId}`, '/records'));
+  }
+  for (const scenarioId of expectedProfileIds) {
+    const expectedProfile = expectedProfiles[scenarioId];
+    if (!manifest.records.some((record) => record.scenario_id === scenarioId && record.profile === expectedProfile)) errors.push(issue('EXPECTED_PROFILE_MISSING', `manifest has no ${expectedProfile} evidence record for expected scenario ${scenarioId}`, '/records'));
+  }
 
   const seen = new Map();
   for (let index = 0; index < manifest.records.length; index += 1) {
@@ -133,6 +171,7 @@ export function validateLiveEvidence({ manifestPath, repoRoot = process.cwd(), e
     seen.set(key, record);
     if (record.git_sha !== manifest.git_sha) errors.push(issue('RECORD_GIT_SHA_MISMATCH', `record ${recordIdentity(record, index)} is not bound to manifest git_sha`, `/records/${index}/git_sha`));
     if (record.workspace_digest !== manifest.workspace_digest) errors.push(issue('RECORD_WORKSPACE_DIGEST_MISMATCH', `record ${recordIdentity(record, index)} is not bound to manifest workspace_digest`, `/records/${index}/workspace_digest`));
+    if (record.producer_name !== manifest.producer.name) errors.push(issue('PRODUCER_NAME_MISMATCH', `record ${recordIdentity(record, index)} is not bound to producer.name`, `/records/${index}/producer_name`));
     if (record.producer_version !== manifest.producer.version) errors.push(issue('PRODUCER_VERSION_MISMATCH', `record ${recordIdentity(record, index)} is not bound to producer.version`, `/records/${index}/producer_version`));
     if (record.trace_hash !== manifest.trace.sha256) errors.push(issue('RECORD_TRACE_HASH_MISMATCH', `record ${recordIdentity(record, index)} is not bound to manifest trace.sha256`, `/records/${index}/trace_hash`));
     const expectedProfile = expectedProfiles[record.scenario_id];
@@ -144,9 +183,14 @@ export function validateLiveEvidence({ manifestPath, repoRoot = process.cwd(), e
 
   if (trace && manifest.records.length) {
     for (const record of manifest.records) {
-      const matching = trace.events?.filter((event) => event?.scenario_id === record.scenario_id && event?.profile === record.profile) ?? [];
-      if (matching.length !== 1) errors.push(issue(matching.length === 0 ? 'TRACE_SCENARIO_MISSING' : 'TRACE_SCENARIO_DUPLICATE', `trace must contain exactly one event for ${record.scenario_id}/${record.profile}`, '/trace/events'));
-      if (matching.length === 1) errors.push(...eventAssertions(record.profile, matching[0]));
+      const matching = trace.events?.filter((event) => event?.event_id === record.trace_event) ?? [];
+      if (matching.length !== 1) errors.push(issue(matching.length === 0 ? 'TRACE_EVENT_MISSING' : 'TRACE_EVENT_DUPLICATE', `trace must contain exactly one event named ${record.trace_event}`, '/trace/events'));
+      if (matching.length === 1) {
+        const event = matching[0];
+        errors.push(...eventAssertions(record.profile, event));
+        if (event.scenario_id !== record.scenario_id || event.profile !== record.profile) errors.push(issue('TRACE_EVENT_MISMATCH', `trace event ${record.trace_event} is not bound to ${record.scenario_id}/${record.profile}`, '/trace/events'));
+        if (record.trace_event_sha256 !== digestTraceEvent(event)) errors.push(issue('TRACE_EVENT_DIGEST_MISMATCH', `record ${record.scenario_id}/${record.profile} is not bound to the matching trace event payload`, '/trace/events'));
+      }
     }
   }
 

@@ -12,7 +12,7 @@ The bootstrap SHALL return `install` only when claude-mem is absent, `DEV_POMOGA
 
 For `install`, the hook SHALL launch `npx -y claude-mem install --ide claude-code --provider claude --model claude-haiku-4-5-20251001 --runtime worker` detached and without a TTY, with `DO_NOT_TRACK=1`, `CI=1`, and `CLAUDE_MEM_ONLINE_OPTIN=false`; Windows SHALL invoke it through `cmd /c`. The supported package/version policy, invoked package specifier, resolved installed version, and outcome SHALL be recorded. An unresolved version SHALL be reported as unverified, never as a successful verified install.
 
-**Связанные AC:** [AC-2](ACCEPTANCE_CRITERIA.md#ac-2-fr-2-feature2)
+**Связанные AC:** [AC-2](ACCEPTANCE_CRITERIA.md#ac-2-fr-2-feature2), [AC-2.1](ACCEPTANCE_CRITERIA.md#ac-21)
 
 ## FR-3: Idempotency and backoff @feature3
 

@@ -21,3 +21,10 @@
 | `tools/codex-plugin-support/verify-whitelist.ts` | edit | [FR-5](FR.md#fr-5-real-codex-cli-verification-gate), [FR-7](FR.md#fr-7-minimal-codex-package-scope) — verify manifest scope and no hooks/rules/commands exposure |
 | `tests/step_definitions/feature_codex_init.ts` | edit | [FR-1](FR.md#fr-1-init), [FR-5](FR.md#fr-5-real-codex-cli-verification-gate) — BDD step definitions for whitelist scenarios |
 | `tools/codex-plugin-support/verify-whitelist.ts` | edit | [FR-5](FR.md#fr-5-real-codex-cli-verification-gate), [FR-6](FR.md#fr-6-stale-claim-rejection) — integration harness for Codex plugin whitelist checks |
+
+- ACCEPTANCE_CRITERIA.md: add AC-5.1 (FR-5)
+
+| `tools/codex-plugin-support/path-containment.ts` | create | [FR-5](FR.md#fr-5-real-codex-cli-verification-gate) — realpath-relative isolated CODEX_HOME containment. |
+| `tools/codex-plugin-support/verify-whitelist.ts` | edit | [FR-5](FR.md#fr-5-real-codex-cli-verification-gate) — missing real probes fail and installed paths use ancestry containment. |
+| `tests/step_definitions/feature_codex_init.ts` | edit | [FR-5](FR.md#fr-5-real-codex-cli-verification-gate) — unavailable-probe and sibling-prefix regressions for AC-5.1. |
+| `tests/fixtures/codex-plugin-support/codex-probe.cjs` | create | [FR-5](FR.md#fr-5-real-codex-cli-verification-gate) — deterministic local executable implements the real Codex plugin command sequence without network access. |

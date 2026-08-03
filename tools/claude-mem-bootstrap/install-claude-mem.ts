@@ -246,12 +246,13 @@ export function migrateInstalledClaudeMemModel(
   const aipomogatorKey = typeof env.AUTO_COMMIT_API_KEY === 'string'
     ? env.AUTO_COMMIT_API_KEY.trim()
     : '';
-  // A legacy Claude provider has no active OpenRouter route. Prefer the project's
-  // AiPomogator credential over stale inactive OpenRouter settings when both exist.
-  const useAipomogator = provider !== 'openrouter' && Boolean(aipomogatorKey);
-  const apiKey = useAipomogator
-    ? aipomogatorKey
-    : settingsKey || openRouterKey;
+  // Only a stored key on the active OpenRouter route is authoritative. Legacy
+  // Claude settings can contain stale OpenRouter fields; otherwise use the same
+  // current project precedence as a fresh install: AiPomogator before OpenRouter.
+  const activeOpenRouterKey = provider === 'openrouter' ? settingsKey : '';
+  const useAipomogator = !activeOpenRouterKey && Boolean(aipomogatorKey);
+  const apiKey = activeOpenRouterKey
+    || (useAipomogator ? aipomogatorKey : openRouterKey);
   if (!apiKey) return 'credential-required';
   const nextValues = {
     ...values,
@@ -307,6 +308,9 @@ function fireInstaller(): void {
     stdio: 'ignore',
     windowsHide: true,
     env,
+  });
+  child.once('error', (error) => {
+    log('ERROR', `detached installer failed to start: ${error.message}`);
   });
   child.unref();
 }

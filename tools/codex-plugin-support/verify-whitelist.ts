@@ -1,5 +1,6 @@
 #!/usr/bin/env npx tsx
 import { spawnSync } from 'node:child_process';
+import { isPathWithin } from './path-containment.ts';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
@@ -115,11 +116,14 @@ function parseJsonOutput<T>(stdout: string): T | null {
 }
 
 function runCodex(args: string[], env?: NodeJS.ProcessEnv) {
-  return spawnSync('codex', args, {
+  const executable = env && Object.hasOwn(env, 'DEV_POMOGATOR_CODEX_PROBE')
+    ? env.DEV_POMOGATOR_CODEX_PROBE?.trim()
+    : process.env.DEV_POMOGATOR_CODEX_PROBE?.trim();
+  return spawnSync(executable ? process.execPath : 'codex', executable ? [executable, ...args] : args, {
     cwd: repoRoot,
     encoding: 'utf8',
     env: env ? { ...process.env, ...env } : process.env,
-    shell: process.platform === 'win32',
+    shell: executable ? false : process.platform === 'win32',
     timeout: 90000,
   });
 }
@@ -128,14 +132,14 @@ function processDetail(result: ReturnType<typeof runCodex>): string {
   return stripAnsi(result.error?.message || result.stderr || result.stdout || `exit ${result.status}`).trim();
 }
 
-function addSkippedCodexInstallChecks(reason: string): void {
+function addFailedCodexInstallChecks(reason: string): void {
   for (const id of [
     'codex-cli.marketplace-add',
     'codex-cli.available-list',
     'codex-cli.plugin-add',
     'codex-cli.installed-list',
   ]) {
-    add(id, 'warn', `real Codex install check skipped: ${reason}`);
+    add(id, 'fail', `real Codex install check unavailable: ${reason}`);
   }
 }
 
@@ -350,22 +354,17 @@ if (missingEvidence.length === 0) {
   add('whitelist.evidence', 'fail', `missing evidence: ${missingEvidence.join(', ')}`);
 }
 
-const codexPluginHelp = spawnSync('codex', ['plugin', '--help'], {
-  cwd: repoRoot,
-  encoding: 'utf8',
-  shell: process.platform === 'win32',
-  timeout: 10000,
-});
+const codexPluginHelp = runCodex(['plugin', '--help']);
 if (codexPluginHelp.status === 0) {
   add('codex-cli.plugin-help', 'pass', 'codex plugin --help ran successfully');
 } else {
   const detail = codexPluginHelp.error?.message || codexPluginHelp.stderr || codexPluginHelp.stdout || `exit ${codexPluginHelp.status}`;
-  add('codex-cli.plugin-help', 'warn', `codex plugin --help unavailable in this environment: ${detail.trim()}`);
+  add('codex-cli.plugin-help', 'fail', `codex plugin --help unavailable in this environment: ${detail.trim()}`);
 }
 
 function verifyRealCodexPluginInstall(): void {
   if (codexPluginHelp.status !== 0) {
-    addSkippedCodexInstallChecks(processDetail(codexPluginHelp));
+    addFailedCodexInstallChecks(processDetail(codexPluginHelp));
     return;
   }
 
@@ -406,8 +405,8 @@ function verifyRealCodexPluginInstall(): void {
       pluginAdd.status === 0 &&
       pluginAddReport?.pluginId === 'context-menu@dev-pomogator-codex' &&
       typeof pluginAddReport.installedPath === 'string' &&
-      pluginAddReport.installedPath.startsWith(codexHome) &&
-      fs.existsSync(pluginAddReport.installedPath)
+      fs.existsSync(pluginAddReport.installedPath) &&
+      isPathWithin(codexHome, pluginAddReport.installedPath)
     ) {
       add('codex-cli.plugin-add', 'pass', 'context-menu installed into isolated CODEX_HOME plugin cache');
     } else {

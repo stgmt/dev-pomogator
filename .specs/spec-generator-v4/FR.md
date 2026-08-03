@@ -1290,7 +1290,7 @@ The spec generator SHALL classify externally observable acceptance claims and SH
 
 **MCP planning API, reports, persistence, and staged rollout:** MCP SHALL expose versioned execution-plan query returning selected typed nodes/edges, direct/transitive impact, conflicts, waves, batches, zero-predecessor frontier entries with readiness/explanations, explicit unscheduled remainder, `complete`, critical path, slack, stale reasons, diagnostics, and redacted explanations in stable JSON order. Typed task/graph-patch mutation SHALL provide dry-run and CAS/all-or-nothing apply: stale revision, validation error, or persistence failure SHALL return deterministic findings and leave state unchanged. SQLite cold/warm restoration SHALL preserve canonical records, diagnostics, plans, evidence state, and byte-equivalent query result. Installed `server.bundle.mjs` SHALL prove planning query/validation when dependencies absent, not skip behavior. Reports SHALL identify task IDs/explanations for quality, conflicts, impact, critical path, stale evidence, migration diagnostics, and redacted security findings; a non-empty unscheduled remainder SHALL be reported as incomplete and SHALL NOT be presented as complete. Observe → warn → enforce SHALL preserve source task count/queryability of invalid/legacy records; enforce SHALL reject unresolved canonicalization explicitly and never silently lose task.
 
-**Связанные AC:** AC-79.1, AC-79.2, AC-79.3, AC-79.4, AC-79.5, AC-79.6, [AC-79.7](ACCEPTANCE_CRITERIA.md#ac-797)
+**Связанные AC:** AC-79.1, AC-79.2, AC-79.3, AC-79.4, AC-79.5, AC-79.6, [AC-79.7](ACCEPTANCE_CRITERIA.md#ac-797), [AC-79.8](ACCEPTANCE_CRITERIA.md#ac-798)
 **Use Case:** [UC-31](USE_CASES.md#uc-31-create-an-execution-aware-safe-parallel-task-plan)
 **User Story:** [User Story 59](USER_STORIES.md#user-story-59-planning-api-and-rollout-priority-p1)
 
@@ -1300,7 +1300,7 @@ The spec generator SHALL classify externally observable acceptance claims and SH
 
 **Deterministic pre-scheduling task synthesis:** Before any FR-72..FR-79 scheduling, planning, conflict, impact, wave, or rollout operation, the system SHALL deterministically synthesize canonical `task/v1` records from applicable FR, acceptance criteria, DESIGN decisions, BDD scenarios, and repository reality into one stored SpecGraph. The synthesis SHALL set `domainMode` to `ddd` only when repository reality establishes a domain boundary; in `ddd` mode it SHALL record the verified boundary, aggregate, invariant, and contract, while in `none` mode it SHALL record module, adapter, and contract boundaries and SHALL NOT invent domain entities, aggregates, or invariants. It SHALL conserve every applicable acceptance lane, assign each lane to one vertical BDD slice that owns the requirement, acceptance criterion, scenario, and verification evidence, and preserve causal `RED -> GREEN -> REFACTOR` BDD-only TDD edges. An unknown implementation surface SHALL create a named `BLOCKED` investigation record, retain its owning acceptance lane, and prevent task finalization. Every generated record SHALL have measurable `doneWhen`, estimate, requirement and acceptance references, typed dependencies, and declared read, write, and exclusive surfaces. Identical inputs SHALL yield stable-key byte-equivalent output with neither silent loss nor duplication, and the resulting single SpecGraph SHALL feed FR-72..FR-79 directly without a second planning graph.
 
-**Связанные AC:** AC-80.1, AC-80.2, AC-80.3, AC-80.4, AC-80.5, AC-80.6, AC-80.7, AC-80.8, AC-80.9, AC-80.10, [AC-80.11](ACCEPTANCE_CRITERIA.md#ac-8011)
+**Связанные AC:** AC-80.1, AC-80.2, AC-80.3, AC-80.4, AC-80.5, AC-80.6, AC-80.7, AC-80.8, AC-80.9, AC-80.10, [AC-80.11](ACCEPTANCE_CRITERIA.md#ac-8011), [AC-80.12](ACCEPTANCE_CRITERIA.md#ac-8012)
 **Use Case:** UC-32
 **User Story:** [User Story 60](USER_STORIES.md#user-story-60-pre-scheduling-task-synthesis-preserves-acceptance-proof-priority-p1)
 
@@ -1328,7 +1328,7 @@ Claude Code remains the canonical install (marketplace plugin / repo dogfood: sk
 - **FR-81g (install contract):** Installing for Claude Code SHALL remain unchanged. Enabling Cursor on the same tree SHALL require at most `.cursor/mcp.json` plus Settings → Third-party skills/hooks. This repo SHALL commit the twin for dogfood. Consumer projects MAY copy the twin or run doctor warn/apply (`ensure-cursor-mcp.ts`) — not a second distribution channel.
 
 **Зависит от:** FR-4, FR-14, FR-39.
-**Связанные AC:** [AC-81.1](ACCEPTANCE_CRITERIA.md#ac-811), [AC-81.2](ACCEPTANCE_CRITERIA.md#ac-812), [AC-81.3](ACCEPTANCE_CRITERIA.md#ac-813), [AC-81.4](ACCEPTANCE_CRITERIA.md#ac-814), [AC-81.5](ACCEPTANCE_CRITERIA.md#ac-815), [AC-81.6](ACCEPTANCE_CRITERIA.md#ac-816)
+**Связанные AC:** [AC-81.1](ACCEPTANCE_CRITERIA.md#ac-811), [AC-81.2](ACCEPTANCE_CRITERIA.md#ac-812), [AC-81.3](ACCEPTANCE_CRITERIA.md#ac-813), [AC-81.4](ACCEPTANCE_CRITERIA.md#ac-814), [AC-81.5](ACCEPTANCE_CRITERIA.md#ac-815), [AC-81.6](ACCEPTANCE_CRITERIA.md#ac-816), [AC-81.7](ACCEPTANCE_CRITERIA.md#ac-817)
 **Use Case:** [UC-33](USE_CASES.md#uc-33)
 **User Story:** [User Story 61](USER_STORIES.md#user-story-61-cursor-uses-the-same-spec-door-priority-p1)
 

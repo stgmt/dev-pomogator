@@ -74,6 +74,7 @@ export interface TaskPlanState {
   evidence: TaskEvidenceRecord[];
   conflicts: TaskConflictRecord[];
   legacy: LegacyTaskRecord[];
+  diagnostics: PlanDiagnostic[];
   sourceFingerprint?: string;
 }
 
@@ -192,12 +193,21 @@ export interface TaskPlanPatch {
 export interface PlanPersistenceAdapter {
   write(serialized: string, state: TaskPlanState): void;
   read(): string | undefined;
+  compareAndSwap?(
+    expectedRevision: number,
+    serialized: string,
+    state: TaskPlanState,
+  ): boolean;
 }
 
 export interface TaskPlanMutationOptions {
   expectedRevision: number;
   dryRun?: boolean;
-  persist?: (state: TaskPlanState, serialized: string) => void;
+  persist?: (
+    state: TaskPlanState,
+    serialized: string,
+    expectedRevision: number,
+  ) => boolean;
 }
 
 export interface TaskPlanMutationResult {
@@ -233,6 +243,20 @@ function stableValue(value: unknown): unknown {
 
 function stableJson(value: unknown): string {
   return JSON.stringify(stableValue(value));
+}
+
+function diagnosticKey(value: PlanDiagnostic): string {
+  return stableJson(value);
+}
+
+function mergeDiagnostics(...groups: readonly PlanDiagnostic[][]): PlanDiagnostic[] {
+  const merged = new Map<string, PlanDiagnostic>();
+  for (const item of groups.flat()) merged.set(diagnosticKey(item), item);
+  return [...merged.values()].sort((left, right) =>
+    compareText(left.code, right.code)
+    || compareText(left.message, right.message)
+    || compareText(left.taskIds.join('\0'), right.taskIds.join('\0')),
+  );
 }
 
 function sourceIdForLegacy(record: LegacyTaskRecord): string {
@@ -449,11 +473,12 @@ function normalizeTasks(tasks: readonly CanonicalTask[]): { tasks: CanonicalTask
 
 export function buildTaskPlanState(tasks: readonly CanonicalTask[], options: PlanStateOptions = {}): TaskPlanState {
   const normalized = normalizeTasks(tasks);
-  const diagnostics = [...normalized.diagnostics, ...validateDependencies(normalized.tasks)];
-  if (diagnostics.length > 0) {
-    // State remains queryable for observe/warn and diagnostics are surfaced by the query.
-    // The mutation path is the enforcing caller and refuses these diagnostics.
-  }
+  const evidence = normalizeEvidence(options.evidence ?? []);
+  const diagnostics = mergeDiagnostics(
+    normalized.diagnostics,
+    validateDependencies(normalized.tasks),
+    validateEvidence(normalized.tasks, evidence),
+  );
   const supplied = (options.conflicts ?? []).map(normalizeConflict);
   const conflicts = new Map<string, TaskConflictRecord>();
   for (const record of [...deriveTaskConflicts(normalized.tasks), ...supplied]) conflicts.set(conflictKey(record), record);
@@ -461,9 +486,10 @@ export function buildTaskPlanState(tasks: readonly CanonicalTask[], options: Pla
     version: TASK_PLAN_VERSION,
     revision: options.revision ?? 1,
     tasks: normalized.tasks,
-    evidence: normalizeEvidence(options.evidence ?? []),
+    evidence,
     conflicts: [...conflicts.values()].sort((left, right) => compareText(conflictKey(left), conflictKey(right))),
     legacy: clone([...(options.legacy ?? [])]),
+    diagnostics,
     ...(options.sourceFingerprint ? { sourceFingerprint: options.sourceFingerprint } : {}),
   };
   return state;
@@ -507,6 +533,15 @@ export function persistTaskPlanState(adapter: PlanPersistenceAdapter, state: Tas
   const serialized = serializeTaskPlanState(state);
   adapter.write(serialized, state);
   return serialized;
+}
+
+export function compareAndSwapTaskPlanState(
+  adapter: PlanPersistenceAdapter,
+  expectedRevision: number,
+  state: TaskPlanState,
+): boolean {
+  if (!adapter.compareAndSwap) throw new Error('plan persistence adapter does not support atomic compare-and-swap');
+  return adapter.compareAndSwap(expectedRevision, serializeTaskPlanState(state), state);
 }
 
 export function restorePersistedTaskPlanState(adapter: PlanPersistenceAdapter): TaskPlanState | null {
@@ -742,11 +777,11 @@ export function queryTaskPlan(state: TaskPlanState, options: PlanSelectionOption
   const byId = taskById(state);
   const requested = options.selectedTaskIds ? options.selectedTaskIds.map(normalizedTaskId) : state.tasks.map((task) => normalizedTaskId(task.qualifiedId));
   const selected = new Set<string>();
-  const diagnostics: PlanDiagnostic[] = [];
+  const queryDiagnostics: PlanDiagnostic[] = [];
   for (const key of requested) {
     const task = byId.get(key);
     if (task) selected.add(key);
-    else diagnostics.push(finding('PLAN_UNKNOWN_TASK', `selected task ${key} does not exist`, [key], [key], 'Select an existing canonical task ID.'));
+    else queryDiagnostics.push(finding('PLAN_UNKNOWN_TASK', `selected task ${key} does not exist`, [key], [key], 'Select an existing canonical task ID.'));
   }
   const selectedTasks = state.tasks.filter((task) => selected.has(normalizedTaskId(task.qualifiedId)));
   const conflicts = conflictForSelected(state, selected);
@@ -773,15 +808,17 @@ export function queryTaskPlan(state: TaskPlanState, options: PlanSelectionOption
   }));
   const selectedEvidence = state.evidence.filter((record) => selected.has(normalizedTaskId(record.taskId)));
   const scheduleResult = schedule(selectedTasks, selected, conflicts, selectedEvidence);
-  diagnostics.push(...validateDependencies(selectedTasks).filter((item) => item.severity === 'error'));
-  diagnostics.push(...scheduleResult.unscheduled.map((entry) => finding('PLAN_SELECTED_UNSCHEDULED', entry.reason, [entry.taskId, ...entry.predecessorIds], entry.sourceIds, 'Resolve the typed predecessor or include it in the selected graph.')));
+  queryDiagnostics.push(...validateDependencies(selectedTasks).filter((item) => item.severity === 'error'));
+  queryDiagnostics.push(...validateEvidence(selectedTasks, selectedEvidence));
+  queryDiagnostics.push(...scheduleResult.unscheduled.map((entry) => finding('PLAN_SELECTED_UNSCHEDULED', entry.reason, [entry.taskId, ...entry.predecessorIds], entry.sourceIds, 'Resolve the typed predecessor or include it in the selected graph.')));
   const stale = selectedEvidence.filter((record) => record.state !== 'present').map((record) => ({ ...record, reason: redactText(record.reason) }));
-  diagnostics.push(...stale.map((record) => finding('PLAN_STALE_EVIDENCE', `evidence ${record.sourceId} for ${record.taskId} is ${record.state}`, [record.taskId], [record.sourceId], 'Refresh or replace the evidence before treating the plan as complete.')));
+  queryDiagnostics.push(...stale.map((record) => finding('PLAN_STALE_EVIDENCE', `evidence ${record.sourceId} for ${record.taskId} is ${record.state}`, [record.taskId], [record.sourceId], 'Refresh or replace the evidence before treating the plan as complete.')));
   const staleReasons = stale.map((record) => ({ taskId: record.taskId, sourceId: record.sourceId, reason: record.reason }));
   const { criticalPath, slack } = criticalMetrics(selectedTasks, selected);
   const rollout = rolloutReport(state.legacy, options.rolloutMode ?? 'observe');
   const rolloutFindings = rollout.records.flatMap((record) => record.finding ? [record.finding] : []);
-  diagnostics.push(...rolloutFindings);
+  queryDiagnostics.push(...rolloutFindings);
+  const diagnostics = mergeDiagnostics(state.diagnostics ?? [], queryDiagnostics);
   const explanations: PlanExplanation[] = [
     ...impactExplanations,
     ...conflicts.map((conflict) => ({
@@ -903,7 +940,11 @@ export function applyTaskPlanPatch(state: TaskPlanState, patch: TaskPlanPatch, o
   const nextSerialized = serializeTaskPlanState(nextState);
   if (!dryRun && options.persist) {
     try {
-      options.persist(nextState, nextSerialized);
+      const committed = options.persist(nextState, nextSerialized, options.expectedRevision);
+      if (!committed) {
+        const staleFinding = finding('PLAN_STALE_REVISION', `persisted revision changed before commit of ${options.expectedRevision}`, [], [], 'Reload the persisted plan state and retry against its current revision.');
+        return { ok: false, committed: false, dryRun, revision: state.revision, state: before, plan: queryTaskPlan(before), findings: [staleFinding] };
+      }
     } catch (error) {
       const persistenceFinding = finding('PLAN_PERSISTENCE_FAILED', `persistence failed: ${error instanceof Error ? error.message : String(error)}`, [], [], 'Leave the source unchanged, fix persistence, and retry the same CAS revision.');
       return { ok: false, committed: false, dryRun, revision: state.revision, state: before, plan: queryTaskPlan(before), findings: [persistenceFinding] };

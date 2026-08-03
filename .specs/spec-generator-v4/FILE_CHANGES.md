@@ -703,3 +703,20 @@ This table is the explicit implementation inventory for the execution-aware task
 - TASKS.md: add backlog task `p48-bounded-verification-workflow` (FR-80)
 
 - TASKS.md: add backlog task `p48-runtime-mutation-regressions` (FR-80, FR-53, FR-71, FR-77)
+
+- ACCEPTANCE_CRITERIA.md: add AC-81.7 (FR-81)
+
+- ACCEPTANCE_CRITERIA.md: add AC-79.8 (FR-79)
+
+- ACCEPTANCE_CRITERIA.md: add AC-80.12 (FR-80)
+
+| `tools/live-evidence/schema.mjs` | edit | [FR-81](FR.md#fr-81) — v2 manifest requires workspace inputs, exact producer identity, and trace-event digest binding. |
+| `tools/live-evidence/validator.mjs` | edit | [FR-81](FR.md#fr-81) — recompute checkout/workspace provenance and reject missing expected scenarios/profiles. |
+| `tools/live-evidence/validator.d.mts` | edit | [FR-81](FR.md#fr-81) — exported strict live-evidence validation contract. |
+| `tools/spec-graph/task-plan-integration.ts` | edit | [FR-79](FR.md#fr-79) — retain canonical diagnostics and require persistence-level compare-and-swap. |
+| `tools/spec-graph/task-plan-integration.bundle.mjs` | edit | [FR-79](FR.md#fr-79) — rebuilt shipped dependency-absent planning runtime. |
+| `tools/spec-graph/task-synthesis.ts` | edit | [FR-80](FR.md#fr-80) — validate registries, dependency targets, and non-blank causal work. |
+| `tests/step_definitions/feature79_task_plan_integration.ts` | edit | [FR-79](FR.md#fr-79) — real-function invalid-task and competing-writer regressions. |
+| `tests/step_definitions/feature80_task_synthesis.ts` | edit | [FR-80](FR.md#fr-80) — real strict-synthesis reference and causal-step regression. |
+| `tests/step_definitions/feature81_cursor_compat.ts` | edit | [FR-81](FR.md#fr-81) — real temporary Git/workspace/trace artifacts exercise the validator. |
+| `package.json` | edit | [FR-79](FR.md#fr-79) — deterministic task-plan bundle rebuild is part of the canonical bundle build. |

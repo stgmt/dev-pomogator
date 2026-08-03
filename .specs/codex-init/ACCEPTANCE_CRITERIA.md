@@ -41,3 +41,9 @@ IF a Codex implementation claim conflicts with verified local Codex CLI output o
 **Требование:** [FR-7](FR.md#fr-7-minimal-codex-package-scope)
 
 WHEN the Codex manifest for the whitelisted `context-menu` plugin is inspected THEN its installable surface SHALL be limited to `context-menu` support and SHALL NOT expose the full `.claude/skills` catalog, Claude hooks, Claude rules, or Claude slash commands.
+
+## AC-5.1
+
+**Требование:** [FR-5](FR.md#fr-5-real-codex-cli-verification-gate)
+
+WHEN the real Codex plugin probe is unavailable, skipped, or fails THEN verification SHALL fail rather than report Supported. WHEN an installed plugin path is returned THEN containment SHALL be determined by normalized path ancestry under isolated CODEX_HOME, not by string-prefix similarity.

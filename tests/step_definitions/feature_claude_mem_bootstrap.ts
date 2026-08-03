@@ -16,6 +16,7 @@ import path from 'node:path';
 import assert from 'node:assert/strict';
 import { V4World } from '../hooks/before-after.ts';
 import {
+  buildInstallInvocation,
   claudeMemBootstrapDecision,
   migrateInstalledClaudeMemModel,
   type BootstrapDecision,
@@ -55,6 +56,8 @@ interface CmemWorld extends V4World {
   healthHookStdout: string;
   healthHookStderr: string;
   healthHookElapsedMs: number;
+  freshMigration?: ClaudeMemModelMigration;
+  storedMigration?: ClaudeMemModelMigration;
 }
 
 After(async function (this: CmemWorld) {
@@ -259,6 +262,10 @@ Given<CmemWorld>(/^an existing claude-mem settings file with model "([^"]+)"$/, 
     CLAUDE_MEM_OPENROUTER_API_KEY: 'redacted-existing-key',
     CUSTOM_SETTING: 'preserve-me',
   }, null, 2));
+  this.modelMigrationEnv = {
+    OPENROUTER_API_KEY: 'redacted-current-openrouter-key',
+    AUTO_COMMIT_API_KEY: undefined,
+  };
 });
 
 Given<CmemWorld>(/^an existing claude-mem settings file with model "([^"]+)" and no OpenRouter credential$/, function (model: string) {
@@ -325,6 +332,56 @@ When<CmemWorld>(/^the installed-user model migration runs$/, function () {
   );
   assert.equal(fs.statSync(settingsPath).mode & 0o777, this.modelMigrationMode);
   this.modelMigrationSettings = JSON.parse(fs.readFileSync(settingsPath, 'utf8'));
+});
+
+Given('fresh install and migration each see active stored and project credentials', function (this: CmemWorld) {
+  this.modelMigrationEnv = {
+    AUTO_COMMIT_API_KEY: 'project-aipomogator-key',
+    OPENROUTER_API_KEY: 'project-openrouter-key',
+  };
+  const settingsDir = path.join(this.tempDir, '.claude-mem');
+  fs.mkdirSync(settingsDir, { recursive: true });
+  fs.writeFileSync(path.join(settingsDir, 'settings.json'), JSON.stringify({
+    CLAUDE_MEM_PROVIDER: 'openrouter',
+    CLAUDE_MEM_OPENROUTER_MODEL: 'claude-haiku-4-5-20251001',
+    CLAUDE_MEM_OPENROUTER_API_KEY: 'active-stored-key',
+  }));
+});
+
+When('installer invocation and installed-user migration resolve their route', function (this: CmemWorld) {
+  const fresh = buildInstallInvocation(process.platform, this.modelMigrationEnv, this.tempDir);
+  assert.equal(fresh.env.CLAUDE_MEM_OPENROUTER_API_KEY, 'project-aipomogator-key');
+  this.storedMigration = migrateInstalledClaudeMemModel(this.tempDir, this.modelMigrationEnv);
+  this.modelMigrationSettings = JSON.parse(fs.readFileSync(path.join(this.tempDir, '.claude-mem', 'settings.json'), 'utf8')) as Record<string, unknown>;
+});
+
+Then('both preserve the active stored route or choose the project route by the same precedence', function (this: CmemWorld) {
+  assert.equal(this.storedMigration, 'migrated');
+  assert.equal(this.modelMigrationSettings.CLAUDE_MEM_OPENROUTER_API_KEY, 'active-stored-key');
+  const fresh = buildInstallInvocation(process.platform, this.modelMigrationEnv, this.tempDir);
+  const modelIndex = fresh.args.indexOf('--model');
+  assert.ok(modelIndex >= 0, `installer args must contain --model: ${fresh.args.join(' ')}`);
+  assert.equal(fresh.args[modelIndex + 1], fresh.env.CLAUDE_MEM_OPENROUTER_MODEL);
+  assert.equal(fresh.env.CLAUDE_MEM_OPENROUTER_API_KEY, 'project-aipomogator-key');
+  assert.ok(fresh.env.CLAUDE_MEM_OPENROUTER_BASE_URL, 'AiPomogator route must set its base URL');
+});
+
+Then('a detached installer spawn error does not crash the SessionStart hook', function (this: CmemWorld) {
+  const result = spawnSync(process.execPath, ['--import', 'tsx', path.join(REPO, HOOK_REL)], {
+    cwd: REPO,
+    input: '{}',
+    encoding: 'utf8',
+    env: {
+      ...process.env,
+      HOME: this.tempDir,
+      USERPROFILE: this.tempDir,
+      PATH: path.join(this.tempDir, 'missing-bin'),
+      CLAUDE_MEM_BOOTSTRAP_RUNNER: '',
+      AUTO_COMMIT_API_KEY: 'project-aipomogator-key',
+    },
+  });
+  assert.equal(result.status, 0, result.stderr);
+  assert.doesNotMatch(result.stderr, /Unhandled 'error' event/);
 });
 
 Then<CmemWorld>(/^the migration result is "([^"]+)"$/, function (result: ClaudeMemModelMigration) {

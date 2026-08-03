@@ -9,7 +9,13 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { Given, When, Then } from '@cucumber/cucumber';
 import { resolveRepoRoot } from '../../tools/spec-mcp-server/server.ts';
-import { assertLiveEvidence } from '../../tools/live-evidence/validator.mjs';
+import {
+  assertLiveEvidence,
+  digestTraceEvent,
+  digestWorkspace,
+  validateLiveEvidence,
+  type LiveEvidenceValidationResult,
+} from '../../tools/live-evidence/validator.mjs';
 
 const REPO = process.cwd();
 const DOOR = 'dev-pomogator-specs';
@@ -23,7 +29,57 @@ type World = {
   rrCwd?: string;
   liveEvidencePath?: string;
   liveEvidenceScenarios?: string[];
+  liveEvidenceResult?: LiveEvidenceValidationResult;
+  liveEvidenceManifestPath?: string;
 };
+
+function sha256File(file: string): string {
+  return crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
+}
+
+function writeLiveEvidenceFixture(world: World): Record<string, unknown> {
+  const workspaceFile = 'workspace.txt';
+  fs.writeFileSync(path.join(world.liveEvidencePath!, workspaceFile), 'current workspace input', 'utf8');
+  const gitSha = spawnSync('git', ['rev-parse', 'HEAD'], { cwd: world.liveEvidencePath, encoding: 'utf8' }).stdout.trim();
+  const event = {
+    event_id: 'event-682',
+    scenario_id: 'SPECGEN004_682',
+    profile: 'cursor-mcp-catalog',
+    producer: true,
+    tool_catalog: ['dev-pomogator-specs'],
+    server_name: DOOR,
+  };
+  const trace = {
+    schema: 'dev-pomogator.live-evidence.trace.v2',
+    producer: { name: 'fixture-producer', version: '2.0.0', marker: 'dev-pomogator-live-evidence-producer/v2' },
+    platform: process.platform,
+    events: [event],
+  };
+  const tracePath = path.join(world.liveEvidencePath!, 'trace.json');
+  fs.writeFileSync(tracePath, JSON.stringify(trace), 'utf8');
+  const workspaceDigest = digestWorkspace(world.liveEvidencePath!, [workspaceFile]);
+  return {
+    schema: 'dev-pomogator.live-evidence.v2',
+    generated_at: new Date().toISOString(),
+    git_sha: gitSha,
+    workspace_files: [workspaceFile],
+    workspace_digest: workspaceDigest,
+    producer: { name: 'fixture-producer', version: '2.0.0', marker: 'dev-pomogator-live-evidence-producer/v2' },
+    trace: { path: 'trace.json', sha256: sha256File(tracePath) },
+    records: [{
+      scenario_id: 'SPECGEN004_682',
+      profile: 'cursor-mcp-catalog',
+      result: 'PASSED',
+      git_sha: gitSha,
+      workspace_digest: workspaceDigest,
+      producer_name: 'fixture-producer',
+      producer_version: '2.0.0',
+      trace_event: event.event_id,
+      trace_event_sha256: digestTraceEvent(event),
+      trace_hash: sha256File(tracePath),
+    }],
+  };
+}
 
 function requireLiveEvidence(world: World, scenarioId: string): void {
   const manifestPath = process.env.DEV_POMOGATOR_LIVE_EVIDENCE?.trim();
@@ -33,8 +89,9 @@ function requireLiveEvidence(world: World, scenarioId: string): void {
     repoRoot: REPO,
     expectedScenarios: { [scenarioId]: 'PASSED' },
     expectedProfiles: {
-      SPECGEN004_668: 'cursor-mcp-catalog',
-      SPECGEN004_669: 'cursor-enforce-mcp',
+      [scenarioId]: scenarioId === 'SPECGEN004_668'
+        ? 'cursor-mcp-catalog'
+        : 'cursor-enforce-mcp',
     },
   });
   world.liveEvidencePath = manifestPath;
@@ -157,4 +214,51 @@ Then('the PreToolUse guard denies the write', function (this: World) {
 
 Then('a valid MCP apply_spec_change succeeds', function (this: World) {
   assert.ok(this.liveEvidenceScenarios?.includes('SPECGEN004_669'));
+});
+
+Given('a producer-derived live evidence manifest with current checkout and workspace bindings', function (this: World) {
+  this.liveEvidencePath = fs.mkdtempSync(path.join(this.tempDir, 'live-evidence-'));
+  const init = spawnSync('git', ['init'], { cwd: this.liveEvidencePath, encoding: 'utf8' });
+  assert.equal(init.status, 0, init.stderr);
+  fs.writeFileSync(path.join(this.liveEvidencePath, 'tracked.txt'), 'tracked', 'utf8');
+  assert.equal(spawnSync('git', ['add', 'tracked.txt'], { cwd: this.liveEvidencePath }).status, 0);
+  const commit = spawnSync('git', ['-c', 'user.name=BDD', '-c', 'user.email=bdd@example.invalid', 'commit', '-m', 'fixture'], { cwd: this.liveEvidencePath, encoding: 'utf8' });
+  assert.equal(commit.status, 0, commit.stderr);
+  const manifest = writeLiveEvidenceFixture(this);
+  this.liveEvidenceManifestPath = path.join(this.liveEvidencePath, 'manifest.json');
+  fs.writeFileSync(this.liveEvidenceManifestPath, JSON.stringify(manifest), 'utf8');
+});
+
+When('the real live evidence validator checks missing and modified producer bindings', function (this: World) {
+  const missing = validateLiveEvidence({
+    manifestPath: this.liveEvidenceManifestPath!,
+    repoRoot: this.liveEvidencePath!,
+    expectedScenarios: { SPECGEN004_MISSING: 'PASSED' },
+    expectedProfiles: { SPECGEN004_MISSING: 'cursor-mcp-catalog' },
+  });
+  const manifest = JSON.parse(fs.readFileSync(this.liveEvidenceManifestPath!, 'utf8')) as { records: Array<Record<string, unknown>> };
+  manifest.records[0].trace_event = 'other-event';
+  fs.writeFileSync(this.liveEvidenceManifestPath!, JSON.stringify(manifest), 'utf8');
+  const modified = validateLiveEvidence({
+    manifestPath: this.liveEvidenceManifestPath!,
+    repoRoot: this.liveEvidencePath!,
+    expectedScenarios: { SPECGEN004_682: 'PASSED' },
+    expectedProfiles: { SPECGEN004_682: 'cursor-mcp-catalog' },
+  });
+  fs.writeFileSync(path.join(this.liveEvidencePath!, 'workspace.txt'), 'modified workspace input', 'utf8');
+  const staleWorkspace = validateLiveEvidence({
+    manifestPath: this.liveEvidenceManifestPath!,
+    repoRoot: this.liveEvidencePath!,
+    expectedScenarios: { SPECGEN004_682: 'PASSED' },
+    expectedProfiles: { SPECGEN004_682: 'cursor-mcp-catalog' },
+  });
+  this.liveEvidenceResult = { ok: false, errors: [...missing.errors, ...modified.errors, ...staleWorkspace.errors], records: [] };
+});
+
+Then('missing expected records and changed trace or workspace evidence are rejected by named findings', function (this: World) {
+  const codes = new Set(this.liveEvidenceResult!.errors.map((error) => error.code));
+  assert.ok(codes.has('EXPECTED_SCENARIO_MISSING'));
+  assert.ok(codes.has('EXPECTED_PROFILE_MISSING'));
+  assert.ok(codes.has('TRACE_EVENT_MISSING'));
+  assert.ok(codes.has('WORKSPACE_DIGEST_MISMATCH'));
 });

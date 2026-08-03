@@ -380,6 +380,34 @@ Then('a safe batch includes pairwise proof of no causal path in either direction
   assert.equal(new Set(this.plan!.batches.flatMap((batch) => batch.taskIds)).size, this.result!.tasks.length);
 });
 
+Given('strict synthesis receives unresolved registries dependency targets and blank causal step text', function (this: TaskSynthesisWorld) {
+  const invalidLane = lane(12, {
+    requirementId: 'FR-MISSING',
+    acceptanceCriterionId: 'AC-MISSING',
+    dependencies: [{ targetId: 'missing:task', relation: 'depends-on', strength: 'hard', reason: 'missing predecessor' }],
+    bddSteps: [
+      { phase: 'RED', text: ' ', estimateMinutes: 2, bddOnly: true },
+      { phase: 'GREEN', text: 'Implementation', estimateMinutes: 3, bddOnly: true },
+      { phase: 'REFACTOR', text: 'Refactor', estimateMinutes: 2, bddOnly: true },
+    ],
+  });
+  this.input = baseInput(dddReality(), [invalidLane]);
+  this.input.acceptanceCriteria = [{ id: 'AC-OTHER', requirementId: 'FR-80', text: 'other', source: invalidLane.acceptanceSource, applicable: true }];
+});
+
+When('deterministic pre-scheduling synthesis reviews the lanes', function (this: TaskSynthesisWorld) {
+  this.result = synthesizeTasks(this.input!);
+});
+
+Then('named blocking findings reject every invalid reference and blank causal step', function (this: TaskSynthesisWorld) {
+  const codes = new Set(this.result!.findings.map((item) => item.code));
+  assert.equal(this.result!.accepted, false);
+  assert.ok(codes.has('UNKNOWN_REQUIREMENT_REFERENCE'));
+  assert.ok(codes.has('UNKNOWN_ACCEPTANCE_REFERENCE'));
+  assert.ok(codes.has('UNRESOLVED_DEPENDENCY'));
+  assert.ok(codes.has('BLANK_CAUSAL_STEP_TEXT'));
+});
+
 Then('only evidence-backed `DONE` completes a task while `DONE_WITH_CONCERNS`, `NEEDS_CONTEXT`, and `BLOCKED` retain diagnostics and create follow-up proposals', function (this: TaskSynthesisWorld) {
   const task = this.result!.tasks[0];
   assert.equal(evidenceBackedDone(task, task.evidence).completes, true);

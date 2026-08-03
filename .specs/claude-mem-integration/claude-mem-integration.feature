@@ -178,3 +178,11 @@ Feature: CMEM001 claude-mem bootstrap and doctor detection
     When the installed-user model migration runs
     Then the migration result is "custom-preserved"
     And the custom model "custom/claude-model" remains unchanged
+
+
+@feature2 @FR-2 @AC-2.1
+Scenario: CMEM001_34 detached install errors fail open and credential precedence stays consistent
+  Given fresh install and migration each see active stored and project credentials
+  When installer invocation and installed-user migration resolve their route
+  Then both preserve the active stored route or choose the project route by the same precedence
+  And a detached installer spawn error does not crash the SessionStart hook

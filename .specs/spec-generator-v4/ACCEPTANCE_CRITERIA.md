@@ -1534,3 +1534,24 @@ WHEN a selected task has stale evidence THEN its frontier entry SHALL not be rea
 
 WHEN deterministic synthesis creates an acceptance-bearing implementation task THEN the canonical task SHALL include one machine-checkable verification contract containing the exact FR/AC/scenario ownership, declared real-consumer runtime target and invocation, expected observable result, at least one executable negative or adversarial case, a targeted mutation-kill or explicit self-challenge policy, required proof kinds, evidence sink, task/graph/commit fingerprints, and an independent verifier policy. IF any field is absent, placeholder-only, invented, or not bound to a declared execution surface THEN synthesis SHALL emit a named blocking finding and SHALL NOT finalize the task. WHEN execution completes THEN green CI/full BDD evidence SHALL remain necessary but SHALL NOT by itself complete the task; a fresh verifier whose identity differs from the worker SHALL re-run the declared real-consumer runtime and adversarial checks, evaluate the strength policy, and issue a digest-bound attestation. Only the integration owner SHALL derive DONE after every required proof is fresh, current, unfiltered where full proof is required, mutation/self-challenge-satisfying, and bound to the exact task, graph revision, commit, commands, observations, and artifacts. Missing, stale, filtered-only, self-attested, weak, mismatched, test-helper-only, or unavailable proof SHALL fail closed with diagnostics and follow-up proposals.
 
+
+## AC-81.7
+
+**Требование:** [FR-81](FR.md#fr-81)
+
+WHEN a live-evidence manifest is used for Cursor or host proof THEN every expected scenario/profile pair SHALL be present, producer name and version SHALL match the trace, each record SHALL bind to one exact event id and event digest, the declared workspace digest SHALL be recomputed from normalized in-root regular files, and the manifest Git SHA SHALL match the actual checkout HEAD. Missing, modified, escaped, stale, environment-substituted, or mismatched evidence SHALL fail closed with a named finding.
+
+
+## AC-79.8
+
+**Требование:** [FR-79](FR.md#fr-79)
+
+WHEN canonical task normalization or dependency validation emits an error THEN the plan state and every restored/query projection SHALL retain that diagnostic and SHALL remain incomplete. WHEN two writers mutate from the same revision THEN only the storage-level compare-and-swap winner SHALL commit; the stale writer SHALL receive PLAN_STALE_REVISION and SHALL NOT overwrite the winning state.
+
+
+## AC-80.12
+
+**Требование:** [FR-80](FR.md#fr-80)
+
+WHEN strict synthesis receives an acceptance lane THEN its requirement and acceptance criterion SHALL exist in the supplied registries, the acceptance criterion SHALL belong to that requirement and remain applicable, every dependency SHALL resolve to a synthesized canonical task, and RED/GREEN/REFACTOR step text SHALL be non-blank. Any violation SHALL emit a named blocking finding and SHALL prevent an accepted plan projection.
+

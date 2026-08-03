@@ -229,7 +229,15 @@ export type SynthesisFindingCode =
   | 'MISSING_SOURCE_CLAIM'
   | 'UNKNOWN_IMPLEMENTATION_SURFACE'
   | 'DESIGN_NOT_APPROVED'
-  | 'DESIGN_DIGEST_MISSING';
+  | 'DESIGN_DIGEST_MISSING'
+  | 'MISSING_REQUIREMENT_REGISTRY'
+  | 'MISSING_ACCEPTANCE_REGISTRY'
+  | 'UNKNOWN_REQUIREMENT_REFERENCE'
+  | 'UNKNOWN_ACCEPTANCE_REFERENCE'
+  | 'AC_REQUIREMENT_MISMATCH'
+  | 'INAPPLICABLE_ACCEPTANCE_REFERENCE'
+  | 'UNRESOLVED_DEPENDENCY'
+  | 'BLANK_CAUSAL_STEP_TEXT';
 
 export interface SynthesisFinding {
   code: SynthesisFindingCode;
@@ -687,6 +695,7 @@ function reviewTask(task: SynthesisTask): SynthesisFinding[] {
   if (task.declaredStatus !== 'BLOCKED' && exactInterfaces.length === 0) result.push(finding('MISSING_EXACT_INTERFACE', `task ${task.qualifiedId} has no exact verified interface location`, task.laneId, task.qualifiedId, taskSource));
   if (task.infeasible || task.estimateMinutes <= 0 || task.causalSteps.some((item) => item.estimateMinutes < 2 || item.estimateMinutes > 5)) result.push(finding('INFEASIBLE_WORK', `task ${task.qualifiedId} has infeasible estimate or work`, task.laneId, task.qualifiedId, taskSource));
   if (task.declaredStatus !== 'BLOCKED' && !hasAllAccesses(task.surfaces)) result.push(finding('INCOMPLETE_SURFACES', `task ${task.qualifiedId} lacks read/write/exclusive surface claims`, task.laneId, task.qualifiedId, taskSource));
+  if (task.causalSteps.some((item) => !text(item.text))) result.push(finding('BLANK_CAUSAL_STEP_TEXT', `task ${task.qualifiedId} contains blank RED/GREEN/REFACTOR work`, task.laneId, task.qualifiedId, taskSource));
   const stepById = new Map(task.causalSteps.map((item) => [item.id, item]));
   const causalEdges = task.causalEdges as Array<Partial<SynthesisCausalEdge> & { from?: string; to?: string }>;
   if (causalEdges.some((edge) => edge.type !== 'causes' || !edge.from || !edge.to || !edge.phase)) result.push(finding('UNTYPED_CAUSAL_EDGE', `task ${task.qualifiedId} contains an untyped causal edge`, task.laneId, task.qualifiedId, taskSource));
@@ -739,7 +748,13 @@ export function reviewSynthesis(input: SynthesisResult | SynthesisGraph): Synthe
     if (!graph.expectedLaneIds.some((laneId) => key(laneId) === laneKey)) findings.push(finding('UNCONSERVED_ACCEPTANCE_LANE', `unexpected acceptance lane owner ${laneKey} is not in the source lanes`, laneKey));
     if (count > 1) findings.push(finding('UNCONSERVED_ACCEPTANCE_LANE', `acceptance lane ${laneKey} has duplicate ownership`, laneKey));
   }
-  for (const task of graph.tasks) findings.push(...reviewTask(task));
+  const taskIds = new Set(graph.tasks.map((task) => key(task.qualifiedId)));
+  for (const task of graph.tasks) {
+    findings.push(...reviewTask(task));
+    for (const dependency of task.dependencies) {
+      if (!taskIds.has(key(dependency.targetId))) findings.push(finding('UNRESOLVED_DEPENDENCY', `task ${task.qualifiedId} depends on unresolved synthesized task ${dependency.targetId}`, task.laneId, task.qualifiedId, task.sourceLocations.scenario));
+    }
+  }
   return { accepted: sortedFindings(findings).every((item) => item.severity !== 'error'), findings: sortedFindings(findings) };
 }
 
@@ -750,7 +765,20 @@ export function synthesizeTasks(input: SynthesisInput): SynthesisResult {
   const findings: SynthesisFinding[] = [];
   if (input.design && !input.design.approved) findings.push(finding('DESIGN_NOT_APPROVED', 'approved design revision is required before task synthesis'));
   if (input.design && !text(input.design.digest)) findings.push(finding('DESIGN_DIGEST_MISSING', 'approved design digest is required for task synthesis'));
+  const requirementRegistry = new Map((input.requirements ?? []).map((item) => [key(item.id), item]));
+  const acceptanceRegistry = new Map((input.acceptanceCriteria ?? []).map((item) => [key(item.id), item]));
+  if (!input.requirements?.length) findings.push(finding('MISSING_REQUIREMENT_REGISTRY', 'strict task synthesis requires a non-empty requirement registry'));
+  if (!input.acceptanceCriteria?.length) findings.push(finding('MISSING_ACCEPTANCE_REGISTRY', 'strict task synthesis requires a non-empty acceptance-criteria registry'));
   const applicable = input.acceptanceLanes.filter((lane) => lane.applicable !== false);
+  for (const [index, lane] of applicable.entries()) {
+    const laneId = normalized(lane.laneId || `${lane.requirementId}:${lane.acceptanceCriterionId}` || `lane-${index + 1}`);
+    const requirement = requirementRegistry.get(key(lane.requirementId));
+    const acceptance = acceptanceRegistry.get(key(lane.acceptanceCriterionId));
+    if (!requirement) findings.push(finding('UNKNOWN_REQUIREMENT_REFERENCE', `lane ${laneId} references unknown requirement ${lane.requirementId}`, laneId, undefined, laneInputSource(lane, index, 'requirementSource')));
+    if (!acceptance) findings.push(finding('UNKNOWN_ACCEPTANCE_REFERENCE', `lane ${laneId} references unknown acceptance criterion ${lane.acceptanceCriterionId}`, laneId, undefined, laneInputSource(lane, index, 'acceptanceSource')));
+    if (acceptance && key(acceptance.requirementId) !== key(lane.requirementId)) findings.push(finding('AC_REQUIREMENT_MISMATCH', `acceptance criterion ${lane.acceptanceCriterionId} belongs to ${acceptance.requirementId}, not ${lane.requirementId}`, laneId, undefined, laneInputSource(lane, index, 'acceptanceSource')));
+    if (acceptance?.applicable === false) findings.push(finding('INAPPLICABLE_ACCEPTANCE_REFERENCE', `lane ${laneId} references inapplicable acceptance criterion ${lane.acceptanceCriterionId}`, laneId, undefined, laneInputSource(lane, index, 'acceptanceSource')));
+  }
   const expectedLaneIds: string[] = [];
   const seenLaneIds = new Set<string>();
   const tasks: SynthesisTask[] = [];
@@ -770,13 +798,34 @@ export function synthesizeTasks(input: SynthesisInput): SynthesisResult {
     edges.push({ from: task.qualifiedId, to: task.laneId, type: 'owns', laneId: task.laneId });
     for (const dependency of task.dependencies) edges.push({ from: task.qualifiedId, to: dependency.targetId, type: dependency.relation as SynthesisEdgeType, reason: dependency.reason, laneId: task.laneId });
   }
+  const taskIds = new Set(tasks.map((task) => key(task.qualifiedId)));
+  const laneTaskIds = new Map(tasks.map((task) => [key(task.laneId), task.qualifiedId]));
+  for (const task of tasks) {
+    task.dependencies = task.dependencies.map((dependency) => ({
+      ...dependency,
+      targetId: laneTaskIds.get(key(dependency.targetId)) ?? dependency.targetId,
+    }));
+    for (const dependency of task.dependencies) {
+      if (!taskIds.has(key(dependency.targetId))) findings.push(finding('UNRESOLVED_DEPENDENCY', `task ${task.qualifiedId} depends on unresolved synthesized task ${dependency.targetId}`, task.laneId, task.qualifiedId, task.sourceLocations.scenario));
+    }
+  }
+  const normalizedEdges = [
+    ...edges.filter((edge) => edge.type === 'owns'),
+    ...tasks.flatMap((task) => task.dependencies.map((dependency) => ({
+      from: task.qualifiedId,
+      to: dependency.targetId,
+      type: dependency.relation as SynthesisEdgeType,
+      reason: dependency.reason,
+      laneId: task.laneId,
+    }))),
+  ];
   const laneOwnership = tasks.map((task) => ({ laneId: task.laneId, taskId: task.qualifiedId, requirementId: task.ownership.requirementId, acceptanceCriterionId: task.ownership.acceptanceCriterionId, scenarioId: task.ownership.scenarioId }));
   const graphWithoutRevision: Omit<SynthesisGraph, 'revision'> = {
     representationVersion: TASK_SYNTHESIS_VERSION,
     authority: SYNTHESIS_AUTHORITY,
     domainMode: mode,
     tasks: [...tasks].sort((a, b) => compareText(a.qualifiedId, b.qualifiedId)),
-    edges: [...edges].sort((a, b) => compareText(a.from, b.from) || compareText(a.to, b.to) || compareText(a.type, b.type)),
+    edges: normalizedEdges.sort((a, b) => compareText(a.from, b.from) || compareText(a.to, b.to) || compareText(a.type, b.type)),
     laneOwnership: [...laneOwnership].sort((a, b) => compareText(a.laneId, b.laneId)),
     expectedLaneIds: [...expectedLaneIds],
   };
