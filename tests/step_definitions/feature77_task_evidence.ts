@@ -21,6 +21,7 @@ interface EvidenceWorld extends V4World {
   result?: ReturnType<typeof recordTaskEvidence>;
   restored?: ReturnType<typeof restoreTaskEvidence>;
   decision?: ReturnType<typeof taskCompletionDecision>;
+  forgedEvidence?: ReturnType<typeof restoreTaskEvidence>;
 }
 
 function task(id: string, dependencies: CanonicalTask['dependencies'] = [], policy: CanonicalTask['evidencePolicy']['scope'] = 'full-suite'): CanonicalTask {
@@ -153,4 +154,42 @@ Then('ownership result fingerprints and reasons agree', function (this: Evidence
   assert.equal(this.restored!.records[0].owner.id, 'validator-77');
   assert.equal(this.restored!.records[0].stale, true);
   assert.deepEqual(this.restored!.records[0].staleReasons, ['artifact changed']);
+});
+
+Given('persisted task evidence claims completion without canonical ownership bindings', function (this: EvidenceWorld) {
+  const canonicalTask = task('fixture:invalid-restored');
+  const empty = createTaskEvidenceSnapshot([canonicalTask]);
+  const invalidRecord = {
+    schemaVersion: 1,
+    taskId: canonicalTask.qualifiedId,
+    evidenceId: 'persisted-completion-claim',
+    owner: { id: '' },
+    validatedIds: [],
+    runId: '',
+    environment: {},
+    result: 'PASSED',
+    fingerprints: {},
+    inputFingerprints: {},
+    outputFingerprints: {},
+    runScope: 'full-suite',
+    recordedAt: '2026-08-03T00:00:00.000Z',
+    stale: false,
+    stalePaths: [],
+    staleReasons: [],
+    eligibleForCompletion: true,
+  };
+  const serialized = JSON.stringify({ ...JSON.parse(serializeTaskEvidence(empty)), records: [invalidRecord] });
+  this.forgedEvidence = restoreTaskEvidence(serialized);
+});
+
+When('task evidence restores and completion evaluates', function (this: EvidenceWorld) {
+  this.decision = taskCompletionDecision(this.forgedEvidence!, 'fixture:invalid-restored');
+});
+
+Then('forged completion flags are ignored and the evidence remains non-completing history', function (this: EvidenceWorld) {
+  assert.equal(this.forgedEvidence!.records.length, 1);
+  assert.equal(this.forgedEvidence!.records[0].eligibleForCompletion, false);
+  assert.equal(this.decision!.historyVisible, true);
+  assert.equal(this.decision!.complete, false);
+  assert.match(this.forgedEvidence!.records[0].eligibilityReason ?? '', /owner|validated|run|fingerprint/i);
 });

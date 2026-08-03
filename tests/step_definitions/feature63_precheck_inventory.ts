@@ -27,6 +27,7 @@ import { V4World } from '../hooks/before-after.ts';
 import { runSpecVerdict, type SpecVerdictResult } from '../../tools/specs-generator/spec-verdict.ts';
 import { parseAcIds } from '../../.claude/skills/spec-status/scripts/ac-claims.ts';
 import { buildGraphFromCwd } from '../../tools/spec-graph/builder.ts';
+import type { ScenarioNode } from '../../tools/spec-graph/types.ts';
 import { buildToolRegistry } from '../../tools/spec-mcp-server/tools.ts';
 import { precheckWithInventory, type PrecheckWithInventoryResult } from '../../.claude/skills/spec-status/scripts/precheck.ts';
 import {
@@ -57,6 +58,7 @@ interface F63World extends V4World {
   passControl?: ReadinessEvaluation;
   staleMcpPayload?: any;
   staleVerdict?: SpecVerdictResult;
+  staleScenario?: ScenarioNode;
 }
 
 // ── fixture producers (real canonical NDJSON + overlay evidence) ────────────
@@ -785,12 +787,15 @@ Given('a spec whose canonical full-run pass became stale after a source change',
   writeInventoryFixture(this.tempDir);
   this.slug = 'inventory-demo';
   const feature = path.join(this.tempDir, '.specs', this.slug, `${this.slug}.feature`);
-  const future = new Date('2099-12-31T23:59:59.000Z');
-  fs.utimesSync(feature, future, future);
+  const canonicalPass = (INV_SECONDS.passed + 1) * 1000;
+  const afterCanonicalPass = new Date(canonicalPass + 60_000);
+  fs.utimesSync(feature, afterCanonicalPass, afterCanonicalPass);
+  assert.ok(fs.statSync(feature).mtimeMs > canonicalPass, 'fixture feature mtime must be newer than canonical pass');
 });
 
 When('MCP status and spec-verdict evaluate the same graph snapshot', async function (this: F63World) {
   const graph = await withGitSha('fixture-sha', () => buildGraphFromCwd(this.tempDir));
+  this.staleScenario = [...graph.nodes.values()].find((node): node is ScenarioNode => node.type === 'Scenario' && node.title.includes('SPECGEN004_600'));
   const statusTool = buildToolRegistry(() => graph, { repoRoot: this.tempDir }).find((tool) => tool.name === 'get_spec_status');
   assert.ok(statusTool, 'get_spec_status must exist');
   const status = await statusTool.handler({ spec: this.slug, view: 'status' });
@@ -799,9 +804,20 @@ When('MCP status and spec-verdict evaluate the same graph snapshot', async funct
 });
 
 Then('both surfaces report the stale scenario as effective execution debt', function (this: F63World) {
+  assert.ok(this.staleScenario, 'canonical passing fixture scenario must exist in the real graph');
+  assert.equal(this.staleScenario.lastResult, 'PASSED');
+  assert.equal(this.staleScenario.resultStale, true, JSON.stringify({ lastRunAt: this.staleScenario.lastRunAt, file: this.staleScenario.file }));
   const mcpDebt = this.staleMcpPayload.readiness.lanes.EXECUTION.debt as string[];
   const verdictDebt = this.staleVerdict!.readiness.lanes.EXECUTION.debt;
-  assert.ok(mcpDebt.some((item) => /SCENARIO_STALE|stale/i.test(item)), JSON.stringify(mcpDebt));
+  assert.ok(mcpDebt.some((item) => /SCENARIO_STALE|stale/i.test(item)), JSON.stringify({
+    mcpDebt,
+    scenario: {
+      result: this.staleScenario.lastResult,
+      stale: this.staleScenario.resultStale,
+      lastRunAt: this.staleScenario.lastRunAt,
+      file: this.staleScenario.file,
+    },
+  }));
   assert.deepEqual(mcpDebt, verdictDebt, 'MCP and spec-verdict must consume the same effective execution lane');
 });
 

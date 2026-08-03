@@ -2710,3 +2710,48 @@ Phase 45 contains 10 planned TODO slices. All headers use the strict graph-nativ
   - [x] Focused Docker vitest passes 45/45 and filtered Docker BDD run `1785608582777` passes SPECGEN004_670..677 with real handler traces; live dogfood returns populated task and phase inventories.
   - [x] The authoritative `spec-verdict --no-semantic` is captured after evidence: FR-82 filtered proof is GREEN while the legacy whole-spec verdict honestly remains NOT_READY; FR-83 remains deferred and never-run.
 
+
+## Backlog
+
+- [ ] Incident 2026-08-03: green CI allowed completion without task-specific adversarial runtime proof — id: incident-2026-08-03-green-ci-allowed-completion-without-task — Status: TODO | Est: 120m
+  _Requirements: [FR-80](FR.md#fr-80), [FR-71](FR.md#fr-71), [FR-77](FR.md#fr-77)_
+  **Done When:**
+  - [ ] Generated task contracts distinguish suite evidence from task-specific verification evidence and require both where applicable.
+  - [ ] Every generated implementation task includes executable negative/adversarial proof, a real runtime or shipped-artifact probe, and an independent verifier contract bound to the exact commit and artifact digest.
+  - [ ] Completion fails closed when any required proof is missing, stale, filtered-only, self-attested, weak, or not bound to the current task inputs.
+  - [ ] A bounded worker-to-adversarial-verifier-to-integration-owner workflow is projected from canonical task data with explicit budgets and stop conditions.
+  - [ ] Regression scenarios reproduce the post-merge incident class: green CI/BDD while concrete validator, restoration, concurrency, or runtime bypasses remain.
+
+## Phase 48 — Verification-bearing generated tasks (2026-08-03)
+
+Источник: Post-merge manual-audit incident after PR #220
+
+
+- [ ] Canonical verification/v1 policy in generated task contracts — id: p48-verification-contract-schema — Status: TODO | Est: 240m
+  _depends: none_
+  _Requirements: [FR-80](FR.md#fr-80)_
+  **Done When:**
+  - [ ] task/v1 persists or digest-references a verification/v1 contract with exact FR/AC/scenario ownership, real-consumer runtime target and argv/runner identity, expected observations, negative cases, proof kinds, evidence sink, and task/graph/commit fingerprints.
+  - [ ] Synthesis rejects placeholder-only, missing, invented, or undeclared-surface verification contracts with stable named findings.
+  - [ ] Parser, renderer, MCP projection, persistence, and agent brief expose the same contract ID and digest without a second authority.
+- [ ] Independent verifier attestation and fail-closed DONE gate — id: p48-independent-verifier-attestation — Status: TODO | Est: 300m
+  _depends: hard:p48-verification-contract-schema_
+  _Requirements: [FR-80](FR.md#fr-80), [FR-71](FR.md#fr-71), [FR-77](FR.md#fr-77)_
+  **Done When:**
+  - [ ] Worker evidence can record implementation and suite results but cannot set completion eligibility by itself.
+  - [ ] A fresh verifier with identity distinct from the worker re-runs the declared real-consumer runtime, executable negative cases, and strength policy, then emits an attestation bound to task, graph revision, commit, commands, observations, evidence IDs, and artifact digests.
+  - [ ] Completion rejects stale, filtered-only, self-attested, weak, mismatched, unavailable, helper-only, or incomplete proof and preserves actionable diagnostics.
+- [ ] Bounded worker verifier integration-owner execution workflow — id: p48-bounded-verification-workflow — Status: TODO | Est: 240m
+  _depends: hard:p48-independent-verifier-attestation_
+  _Requirements: [FR-80](FR.md#fr-80)_
+  **Done When:**
+  - [ ] TaskPlanResult embeds explicit worker, verifier, and integration-owner roles with exact ownership paths, focused commands, read/tool/write budgets, stop conditions, and immutable task/graph fingerprints.
+  - [ ] Worker stops without DONE when any proof obligation is absent; verifier attempts to refute, not confirm, and integration owner is the only role allowed to derive completion.
+  - [ ] Safe-batch verification proves pairwise independence, caps verifier fan-out, and reports blocked or dropped scopes without retry widening.
+- [ ] Runtime, adversarial, mutation, and shipped-artifact regression proof — id: p48-runtime-mutation-regressions — Status: TODO | Est: 360m
+  _depends: hard:p48-independent-verifier-attestation, hard:p48-bounded-verification-workflow_
+  _Requirements: [FR-80](FR.md#fr-80), [FR-53](FR.md#fr-53), [FR-71](FR.md#fr-71), [FR-77](FR.md#fr-77)_
+  **Done When:**
+  - [ ] Regression scenarios reproduce green suite plus a concrete validator, restored-evidence, proposal-integrity, stale-readiness, conflict-conservation, concurrency, or runtime bypass and stay RED until the producer is fixed.
+  - [ ] Each generated implementation task proves at least one real consumer entrypoint or shipped artifact, one executable negative/adversarial case, and targeted mutation kill or explicit self-challenge; test-only helper success is insufficient.
+  - [ ] Full Docker BDD, focused mutation proof, runtime dogfood, dependency-absent shipped artifact probe where applicable, smart spec verdict, and corpus/task trace checks are captured separately; no single green rollup substitutes for another lane.

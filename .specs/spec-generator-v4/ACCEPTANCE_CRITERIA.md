@@ -1506,3 +1506,31 @@ WHEN the captured incident `wf_0315d03b-28` and a real task corpus are used for 
 **Требование:** [FR-82](FR.md#fr-82)
 WHEN the pending integration BDD scenarios execute THEN they SHALL invoke real MCP handlers and consume the captured incident/corpus artifact, and SHALL assert pagination cardinality, stable ordering, no-silent-cap behavior, bounded response size/latency, and the stale-description/test regression rather than hand-inventing a producer response shape.
 
+
+## AC-77.6
+
+**Требование:** [FR-77](FR.md#fr-77)
+
+WHEN a persisted task-evidence snapshot is restored THEN every record SHALL be canonicalized and revalidated against the restored canonical task and its current evidence policy, completion eligibility SHALL be derived again rather than trusted from persisted flags, and malformed, unowned, stale, or insufficiently bound evidence SHALL remain visible only as non-completing history.
+
+
+## AC-78.6
+
+**Требование:** [FR-78](FR.md#fr-78)
+
+WHEN any discovery proposal is dry-run or applied THEN the runtime SHALL recompute its canonical digest and derived approval state from the full proposal payload, SHALL reject any mismatch before graph mutation, and caller-modified state or approval fields SHALL NOT downgrade an approval-required proposal.
+
+
+## AC-79.7
+
+**Требование:** [FR-79](FR.md#fr-79)
+
+WHEN a selected task has stale evidence THEN its frontier entry SHALL not be ready and the plan SHALL not be complete. WHEN a successful unrelated plan patch is applied THEN explicit conflict records SHALL be preserved unless the patch explicitly and validly replaces them.
+
+
+## AC-80.11
+
+**Требование:** [FR-80](FR.md#fr-80)
+
+WHEN deterministic synthesis creates an acceptance-bearing implementation task THEN the canonical task SHALL include one machine-checkable verification contract containing the exact FR/AC/scenario ownership, declared real-consumer runtime target and invocation, expected observable result, at least one executable negative or adversarial case, a targeted mutation-kill or explicit self-challenge policy, required proof kinds, evidence sink, task/graph/commit fingerprints, and an independent verifier policy. IF any field is absent, placeholder-only, invented, or not bound to a declared execution surface THEN synthesis SHALL emit a named blocking finding and SHALL NOT finalize the task. WHEN execution completes THEN green CI/full BDD evidence SHALL remain necessary but SHALL NOT by itself complete the task; a fresh verifier whose identity differs from the worker SHALL re-run the declared real-consumer runtime and adversarial checks, evaluate the strength policy, and issue a digest-bound attestation. Only the integration owner SHALL derive DONE after every required proof is fresh, current, unfiltered where full proof is required, mutation/self-challenge-satisfying, and bound to the exact task, graph revision, commit, commands, observations, and artifacts. Missing, stale, filtered-only, self-attested, weak, mismatched, test-helper-only, or unavailable proof SHALL fail closed with diagnostics and follow-up proposals.
+

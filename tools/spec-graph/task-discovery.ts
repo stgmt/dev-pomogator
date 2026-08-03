@@ -270,6 +270,10 @@ function digestForProposal(proposal: Omit<DiscoveryProposal, 'digest' | 'replayN
   return taskDiscoveryDigest(proposalPayload(proposal));
 }
 
+export function discoveryProposalDigest(proposal: Omit<DiscoveryProposal, 'digest' | 'replayNoOp' | 'state'>): string {
+  return digestForProposal(proposal);
+}
+
 function edgeKey(edge: DiscoveryProposalEdge): string {
   return `${key(edge.from)}|${key(edge.to)}|${edge.relation}`;
 }
@@ -421,6 +425,22 @@ export function applyDiscoveryProposal(snapshot: DiscoverySnapshot, proposal: Di
   const findings: DiscoveryFinding[] = [];
   if (snapshot.schemaVersion !== TASK_DISCOVERY_VERSION || proposal.schemaVersion !== TASK_DISCOVERY_VERSION) {
     findings.push(finding('DISCOVERY_INVALID', 'discovery schema version mismatch'));
+    return { ok: false, committed: false, noOp: false, snapshot: original, findings };
+  }
+  const expectedDigest = digestForProposal(proposal);
+  if (proposal.digest !== expectedDigest) {
+    findings.push(finding('DISCOVERY_INVALID', 'discovery proposal digest does not match its payload'));
+    return { ok: false, committed: false, noOp: false, snapshot: original, findings };
+  }
+  const expectedState: DiscoveryState = proposal.noChildren
+    ? 'no_children'
+    : proposal.children.length === 0
+      ? 'rejected'
+      : proposal.approvalRequired || proposal.highImpact
+        ? 'approval-required'
+        : 'proposed';
+  if (!proposal.replayNoOp && proposal.state !== expectedState) {
+    findings.push(finding('DISCOVERY_INVALID', `discovery proposal state ${proposal.state} does not match derived state ${expectedState}`));
     return { ok: false, committed: false, noOp: false, snapshot: original, findings };
   }
   if (snapshot.acceptedDigests.includes(proposal.digest) || proposal.replayNoOp) {

@@ -671,3 +671,35 @@ This table is the explicit implementation inventory for the execution-aware task
 | EDIT | `tests/step_definitions/feature3_spec_quality_audit.ts` | FR-82; regression fixture for FR-82 completion evidence beside deferred FR-83. |
 | EDIT | `.specs/spec-phase-gate/spec-phase-gate.feature` | FR-82; PLUGIN008_35 regression for deferred-sibling false positives. |
 | EDIT | `NFR.md` | FR-82; explicit page, response-byte, latency, call-count, and no-N×M budgets. |
+
+- ACCEPTANCE_CRITERIA.md: add AC-77.6 (FR-77)
+
+- ACCEPTANCE_CRITERIA.md: add AC-78.6 (FR-78)
+
+- ACCEPTANCE_CRITERIA.md: add AC-79.7 (FR-79)
+
+| `tools/spec-graph/task-evidence.ts` | edit | FR-77 / AC-77.6: revalidate restored task evidence and derive completion eligibility |
+| `tools/spec-graph/task-discovery.ts` | edit | FR-78 / AC-78.6: recompute proposal integrity and approval state before apply |
+| `tools/spec-graph/task-plan-integration.ts` | edit | FR-79 / AC-79.7: stale evidence blocks completeness and explicit conflicts survive patches |
+| `tools/spec-graph/task-plan-integration.bundle.mjs` | edit | FR-79 / AC-79.7: ship corrected dependency-absent planning behavior |
+| `tests/step_definitions/feature77_task_evidence.ts` | edit | SPECGEN004_678 regression against invalid restored-evidence completion |
+| `tests/step_definitions/feature78_task_discovery.ts` | edit | SPECGEN004_679 regression against modified approval state |
+| `tests/step_definitions/feature79_task_plan_integration.ts` | edit | SPECGEN004_680–681 regressions for stale completion and conflict conservation |
+| `tests/step_definitions/feature63_precheck_inventory.ts` | edit | SPECGEN004_566: derive stale fixture time from canonical producer timestamp and assert the real graph evidence state |
+| `tools/spec-graph/readiness-inventory.ts` | edit | FR-63 / SPECGEN004_566: classify a stale canonical pass as execution debt while retaining canonical provenance |
+
+- TASKS.md: register incident `incident-2026-08-03-green-ci-allowed-completion-without-task` (FR-80, FR-71, FR-77)
+
+- TASKS.md: add Phase 48 — Verification-bearing generated tasks
+
+- FR.md: amend FR-80
+
+- ACCEPTANCE_CRITERIA.md: add AC-80.11 (FR-80)
+
+- TASKS.md: add backlog task `p48-verification-contract-schema` (FR-80)
+
+- TASKS.md: add backlog task `p48-independent-verifier-attestation` (FR-80, FR-71, FR-77)
+
+- TASKS.md: add backlog task `p48-bounded-verification-workflow` (FR-80)
+
+- TASKS.md: add backlog task `p48-runtime-mutation-regressions` (FR-80, FR-53, FR-71, FR-77)

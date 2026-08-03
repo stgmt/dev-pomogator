@@ -4317,3 +4317,27 @@ Scenario: SPECGEN004_677 meets bounded incident verification without an N by M c
   When one bounded task-inventory request and bounded verification are run through real MCP handlers
   Then the run stays within the declared maximum of three MCP calls, 512 KiB aggregate response bytes, and the declared page latency budget
   And the six retries, 695 calls, approximately 5.46 MB, and approximately 297 to 312k input tokens remain recorded as incident evidence rather than an eternal performance claim
+
+@feature77 @FR-77 @AC-77.6
+Scenario: SPECGEN004_678 Restored evidence is revalidated before completion
+  Given persisted task evidence claims completion without canonical ownership bindings
+  When task evidence restores and completion evaluates
+  Then forged completion flags are ignored and the evidence remains non-completing history
+
+@feature78 @FR-78 @AC-78.6
+Scenario: SPECGEN004_679 Discovery approval state cannot be tampered
+  Given a high impact discovery proposal requires approval
+  When its caller changes approval state without changing the digest
+  Then proposal integrity fails and no graph mutation commits
+
+@feature79 @FR-79 @AC-79.7
+Scenario: SPECGEN004_680 Stale evidence blocks plan completion
+  Given a selected ready task has stale evidence
+  When execution plan readiness evaluates
+  Then the task is not ready and the plan is incomplete with a stale-evidence finding
+
+@feature79 @FR-79 @AC-79.7
+Scenario: SPECGEN004_681 Unrelated plan patch preserves explicit conflicts
+  Given a plan has an explicit externally audited conflict
+  When an unrelated valid patch commits
+  Then the explicit conflict remains in the next plan state
