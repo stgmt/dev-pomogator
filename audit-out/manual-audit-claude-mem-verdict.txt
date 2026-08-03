@@ -1,0 +1,70 @@
+═══ spec-verdict (authoritative, FR-37) — .specs/claude-mem-integration ═══
+pre-filter (validate-spec, structural): 0 errors / 108 warnings — pre-filter only — a structural pass is NOT reportable as "valid/clean/done" (FR-37a)
+audit gate (audit-spec): 22 ERROR across 2 class(es) — gate FAILS:
+  [LINK_VALIDITY] ×7
+    - FR-1 in REQUIREMENTS.md is plain text, not a clickable link
+    - FR-2 in REQUIREMENTS.md is plain text, not a clickable link
+    - FR-3 in REQUIREMENTS.md is plain text, not a clickable link
+    - FR-4 in REQUIREMENTS.md is plain text, not a clickable link
+    - FR-5 in REQUIREMENTS.md is plain text, not a clickable link
+    - FR-6 in REQUIREMENTS.md is plain text, not a clickable link
+    - FR-7 in REQUIREMENTS.md is plain text, not a clickable link
+  [SCAFFOLD_INCOMPLETE] ×15
+    - FIXTURES.md:11 unfilled scaffold sentinel {Название фикстуры}
+    - FIXTURES.md:11 unfilled scaffold sentinel {static/factory/seed/snapshot/container}
+    - FIXTURES.md:11 unfilled scaffold sentinel {per-scenario/per-feature/global}
+    - FIXTURES.md:11 unfilled scaffold sentinel {step/hook который создаёт}
+    - FIXTURES.md:15 unfilled scaffold sentinel {Название фикстуры}
+    - FIXTURES.md:17 unfilled scaffold sentinel {static file / factory / seed / snapshot / container}
+    - FIXTURES.md:18 unfilled scaffold sentinel {JSON / YAML / SQL / Docker / TypeScript / Python}
+    - FIXTURES.md:19 unfilled scaffold sentinel {как создаётся — копирование, генерация, API вызов, DB insert}
+    - FIXTURES.md:20 unfilled scaffold sentinel {как очищается — удаление, API вызов, rollback, file cleanup}
+    - FIXTURES.md:21 unfilled scaffold sentinel {другие фикстуры от которых зависит, или "none"}
+    - FIXTURES.md:22 unfilled scaffold sentinel {список @featureN сценариев}
+    - FIXTURES.md:23 unfilled scaffold sentinel {что должно быть истинным чтобы фикстура работала}
+    - FIXTURES.md:27 unfilled scaffold sentinel {Какие фикстуры зависят от каких. Текстовое описание или mermaid-диаграмма.}
+    - FIXTURES.md:38 unfilled scaffold sentinel {название сценария}
+    - FIXTURES.md:38 unfilled scaffold sentinel {none / описание пробела}
+conformance (one graph, spec-scoped): 0 error / 5 warning — FR_NO_DESIGN:3, FR_NO_STORY:2, UNTAGGED_SCENARIO:6
+  fix FR_NO_DESIGN: add a `**Требование:** [FR-N]` line INSIDE a `### Decision` block in DESIGN.md
+  fix FR_NO_STORY: add a `**Требование:** [FR-N]` line INSIDE a `### User Story` block (the story→FR covers edge is built only from that line)
+  fix UNTAGGED_SCENARIO: scenario carries no `@featureN` tag — add the tag mapping it to its FR
+coverage (FR-32 honesty): effective {"passed":21,"stale":0,"pending":0,"not_run":0,"undefined":0,"ambiguous":0,"failed":0,"skipped":0}; canonical {"passed":21,"stale":0,"pending":0,"not_run":0,"undefined":0,"ambiguous":0,"failed":0,"skipped":0}
+inventory (FR-63, one graph): 7 FR / 8 AC / 21 scenario (deduplicated) — ACs with test_paths=[]: AC-1, AC-2, AC-3, AC-4, AC-5, AC-6, AC-7
+semantic (FR-8): SEMANTIC_SKIPPED — no claude binary available (or semantic disabled); unchecked content is NOT "no drift" (FR-37c)
+traceability gate (FR-37b, cell→atom): 6 gap(s) — gate FAILS (UNCOVERED_FR: 0, TASK_UNTESTED: 0, UNTAGGED_SCENARIO: 6):
+  [UNTAGGED_SCENARIO] claude-mem-integration:SCEN-cmem001-28-existing-dev-pomogator-haiku-default-migrates-to-deepseek @ .specs/claude-mem-integration/claude-mem-integration.feature:138
+  [UNTAGGED_SCENARIO] claude-mem-integration:SCEN-cmem001-29-existing-custom-claude-mem-model-is-preserved @ .specs/claude-mem-integration/claude-mem-integration.feature:145
+  [UNTAGGED_SCENARIO] claude-mem-integration:SCEN-cmem001-30-legacy-haiku-migrates-through-aipomogator-when-its-credential-is-available @ .specs/claude-mem-integration/claude-mem-integration.feature:152
+  [UNTAGGED_SCENARIO] claude-mem-integration:SCEN-cmem001-32-legacy-haiku-remains-usable-when-neither-aipomogator-nor-openrouter-has-a-credential @ .specs/claude-mem-integration/claude-mem-integration.feature:162
+  [UNTAGGED_SCENARIO] claude-mem-integration:SCEN-cmem001-33-active-openrouter-route-wins-over-a-coexisting-aipomogator-credential @ .specs/claude-mem-integration/claude-mem-integration.feature:169
+  [UNTAGGED_SCENARIO] claude-mem-integration:SCEN-cmem001-31-active-custom-model-wins-over-a-stale-provider-setting @ .specs/claude-mem-integration/claude-mem-integration.feature:176
+readiness lanes (FR-61):
+  STRUCTURE: RED (blocking) — 0 structural error(s), 22 audit error(s), 0 conformance error(s)
+    - 22 audit error(s)
+  TRACEABILITY: RED (blocking) — 6 traceability gap(s)
+    - UNTAGGED_SCENARIO: claude-mem-integration:SCEN-cmem001-28-existing-dev-pomogator-haiku-default-migrates-to-deepseek
+    - UNTAGGED_SCENARIO: claude-mem-integration:SCEN-cmem001-29-existing-custom-claude-mem-model-is-preserved
+    - UNTAGGED_SCENARIO: claude-mem-integration:SCEN-cmem001-30-legacy-haiku-migrates-through-aipomogator-when-its-credential-is-available
+    - UNTAGGED_SCENARIO: claude-mem-integration:SCEN-cmem001-32-legacy-haiku-remains-usable-when-neither-aipomogator-nor-openrouter-has-a-credential
+    - UNTAGGED_SCENARIO: claude-mem-integration:SCEN-cmem001-33-active-openrouter-route-wins-over-a-coexisting-aipomogator-credential
+    - UNTAGGED_SCENARIO: claude-mem-integration:SCEN-cmem001-31-active-custom-model-wins-over-a-stale-provider-setting
+  EXECUTION: GREEN — all effective scenario evidence is current and passing
+  TASK_TRUTH: GREEN — no DONE-but-unverified tasks
+  BDD_SYNC: RED (blocking) — 9 BDD sync or repository migration debt item(s)
+    - EXEC_ONLY_MISSING_MARKER core019_01: executable scenario has no source counterpart
+    - EXEC_ONLY_MISSING_MARKER core019_02: executable scenario has no source counterpart
+    - EXEC_ONLY_MISSING_MARKER core019_03: executable scenario has no source counterpart
+    - EXEC_ONLY_MISSING_MARKER core019_04: executable scenario has no source counterpart
+    - EXEC_ONLY_MISSING_MARKER core019_05: executable scenario has no source counterpart
+    - EXEC_ONLY_MISSING_MARKER core019_06: executable scenario has no source counterpart
+    - EXEC_ONLY_MISSING_MARKER core019_07: executable scenario has no source counterpart
+    - EXEC_ONLY_MISSING_MARKER core019_08: executable scenario has no source counterpart
+    … and 1 more
+  SEMANTIC: SKIPPED — semantic check explicitly disabled for this run
+  FILTERED_PROOF: NONE — no filtered proof needed
+notes (fail-loud, FR-37c):
+  - SEMANTIC_SKIPPED — no claude binary available (or semantic disabled); unchecked content is NOT "no drift" (FR-37c)
+VERDICT: RED — 22 blocking finding(s)
+OVERALL: NOT_READY
+NEXT: Add the missing FR/AC/task/scenario traceability links, then rerun the readiness check.

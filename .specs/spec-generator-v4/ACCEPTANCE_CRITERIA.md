@@ -1546,12 +1546,40 @@ WHEN a live-evidence manifest is used for Cursor or host proof THEN every expect
 
 **Требование:** [FR-79](FR.md#fr-79)
 
-WHEN canonical task normalization or dependency validation emits an error THEN the plan state and every restored/query projection SHALL retain that diagnostic and SHALL remain incomplete. WHEN two writers mutate from the same revision THEN only the storage-level compare-and-swap winner SHALL commit; the stale writer SHALL receive PLAN_STALE_REVISION and SHALL NOT overwrite the winning state.
+WHEN canonical task normalization or dependency validation emits an error THEN the plan state and every restored/query projection SHALL retain that diagnostic, SHALL exclude the invalid task from waves, batches, and ready frontier entries with a named unscheduled reason, and SHALL remain incomplete. IF a patch attempts to complete an invalid canonical task THEN apply SHALL return uncommitted without a revision change. WHEN two writers mutate from the same revision THEN only the storage-level compare-and-swap winner SHALL commit; the stale writer SHALL receive PLAN_STALE_REVISION and SHALL NOT overwrite the winning state. The atomicity SHALL be proven by two simultaneous writer processes behind a barrier; a double-commit or double-stale outcome SHALL fail the proof.
 
 
 ## AC-80.12
 
 **Требование:** [FR-80](FR.md#fr-80)
 
-WHEN strict synthesis receives an acceptance lane THEN its requirement and acceptance criterion SHALL exist in the supplied registries, the acceptance criterion SHALL belong to that requirement and remain applicable, every dependency SHALL resolve to a synthesized canonical task, and RED/GREEN/REFACTOR step text SHALL be non-blank. Any violation SHALL emit a named blocking finding and SHALL prevent an accepted plan projection.
+WHEN strict synthesis receives an acceptance lane THEN its requirement and acceptance criterion SHALL exist in the supplied registries, the acceptance criterion SHALL belong to that requirement and remain applicable, every dependency SHALL resolve to a synthesized canonical task, and RED/GREEN/REFACTOR step text SHALL be non-blank. Any violation SHALL emit a named blocking finding with severity error — including AC_REQUIREMENT_MISMATCH for an acceptance criterion owned by another requirement and INAPPLICABLE_ACCEPTANCE_REFERENCE for a waived criterion — and SHALL prevent an accepted synthesis result, finalization, or plan projection.
+
+
+## AC-63.4
+
+**Требование:** [FR-63](FR.md#fr-63)
+
+WHEN the readiness inventory classifies a scenario's execution ownership THEN a scenario tagged `@historical @superseded-by-<slug>` SHALL be retired ONLY when the successor spec exists in the corpus, a bare `@historical` scenario or one pointing at a missing successor SHALL remain active debt (fail-closed), `@live-evidence` scenarios SHALL be closed only by the LIVE_EVIDENCE lane (real producer manifest/trace plus independent verification of the recorded actions) and never by the canonical cucumber run, and retired scenarios SHALL keep their historical evidence records visible for audit while releasing active EXECUTION debt.
+
+
+## AC-81.8
+
+**Требование:** [FR-81](FR.md#fr-81)
+
+WHEN the live-evidence validator resolves the repository root, the trace path, or any workspace file THEN it SHALL canonicalize each path through realpath and SHALL fail closed with a named finding when the real path escapes the workspace or cannot be resolved. IF a manifest entry is a symlink or junction whose target lies outside the repository THEN validation SHALL reject it with a named containment-escape finding and SHALL NOT hash or accept the external bytes as current evidence.
+
+
+## AC-81.9
+
+**Требование:** [FR-81](FR.md#fr-81)
+
+WHEN an expectation set is supplied to live-evidence validation THEN every expected scenario/profile record SHALL be present AND every manifest record outside the expectation set SHALL be rejected with a named finding. WHEN no expectation set is supplied THEN record completeness alone SHALL NOT reject records, and result/profile constraints SHALL remain enforced.
+
+
+## AC-81.10
+
+**Требование:** [FR-81](FR.md#fr-81)
+
+WHEN deterministic suite evidence validates live-evidence artifacts THEN the proof SHALL use a captured fixture with independently precomputed digests (or a deterministic producer plus a captured artifact and recorded provenance). IF the digests are computed only by the same code under test THEN the proof SHALL be treated as self-attested and insufficient. One-byte tamper of a captured workspace or trace artifact SHALL fail validation with a named finding.
 

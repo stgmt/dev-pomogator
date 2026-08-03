@@ -1,3 +1,7 @@
+// tools/spec-graph/task-plan-integration.ts
+import fs from "node:fs";
+import path from "node:path";
+
 // tools/spec-graph/task-contract.ts
 var TASK_CONTRACT_VERSION = "task/v1";
 var STATUS_SET = /* @__PURE__ */ new Set(["TODO", "READY", "IN_PROGRESS", "DONE", "BLOCKED"]);
@@ -102,13 +106,13 @@ function normalizeArtifact(value) {
   if (typeof value === "string") {
     const normalized = normalizeTaskKey(value);
     const match = normalized.match(/^(.*?)\s+\(([^()]+)\)$/);
-    const path2 = normalizeTaskKey(match?.[1] ?? normalized);
-    return path2 ? { path: path2, ...match ? { kind: match[2].trim() } : {}, required: true } : null;
+    const path3 = normalizeTaskKey(match?.[1] ?? normalized);
+    return path3 ? { path: path3, ...match ? { kind: match[2].trim() } : {}, required: true } : null;
   }
   if (!value || typeof value !== "object") return null;
   const obj = value;
-  const path = normalizeTaskKey(text(obj.path ?? obj.locator));
-  return path ? { path, ...text(obj.kind) ? { kind: text(obj.kind) } : {}, required: obj.required !== false } : null;
+  const path2 = normalizeTaskKey(text(obj.path ?? obj.locator));
+  return path2 ? { path: path2, ...text(obj.kind) ? { kind: text(obj.kind) } : {}, required: obj.required !== false } : null;
 }
 function normalizeEvidence(value) {
   const obj = value && typeof value === "object" ? value : {};
@@ -387,12 +391,12 @@ function validateDependencies(tasks) {
   for (const task of tasks) adjacency.set(normalizedTaskId(task.qualifiedId), task.dependencies.map((dependency) => normalizedTaskId(dependency.targetId)));
   const visiting = /* @__PURE__ */ new Set();
   const visited = /* @__PURE__ */ new Set();
-  const path = [];
+  const path2 = [];
   const cycleKeys = /* @__PURE__ */ new Set();
   function visit(key) {
     if (visiting.has(key)) {
-      const start = path.indexOf(key);
-      const cycle = path.slice(start).concat(key);
+      const start = path2.indexOf(key);
+      const cycle = path2.slice(start).concat(key);
       const cycleKey = cycle.join("|");
       if (!cycleKeys.has(cycleKey)) {
         cycleKeys.add(cycleKey);
@@ -408,9 +412,9 @@ function validateDependencies(tasks) {
     }
     if (visited.has(key)) return;
     visiting.add(key);
-    path.push(key);
+    path2.push(key);
     for (const target of adjacency.get(key) ?? []) if (adjacency.has(target)) visit(target);
-    path.pop();
+    path2.pop();
     visiting.delete(key);
     visited.add(key);
   }
@@ -499,6 +503,94 @@ function compareAndSwapTaskPlanState(adapter, expectedRevision, state) {
 function restorePersistedTaskPlanState(adapter) {
   const serialized = adapter.read();
   return serialized ? restoreTaskPlanState(serialized) : null;
+}
+var CAS_LOCK_RETRY_MS = 25;
+var CAS_LOCK_TIMEOUT_MS = 15e3;
+var CAS_STALE_LOCK_MS = 6e4;
+function sleepMs(ms) {
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+}
+function atomicReplace(file, content) {
+  const temp = `${file}.${process.pid}.${Date.now()}.tmp`;
+  try {
+    fs.writeFileSync(temp, content, "utf8");
+    fs.renameSync(temp, file);
+  } finally {
+    try {
+      if (fs.existsSync(temp)) fs.unlinkSync(temp);
+    } catch {
+    }
+  }
+}
+function createFileCasAdapter(planFile) {
+  const lockFile = `${planFile}.lock`;
+  const acquireLock = () => {
+    const deadline = Date.now() + CAS_LOCK_TIMEOUT_MS;
+    for (; ; ) {
+      try {
+        const fd = fs.openSync(lockFile, "wx");
+        try {
+          fs.writeSync(fd, String(process.pid));
+        } finally {
+          fs.closeSync(fd);
+        }
+        return;
+      } catch (error) {
+        if (error.code !== "EEXIST") throw error;
+        let stale = false;
+        try {
+          stale = Date.now() - fs.statSync(lockFile).mtimeMs > CAS_STALE_LOCK_MS;
+        } catch {
+          continue;
+        }
+        if (stale) {
+          try {
+            fs.unlinkSync(lockFile);
+          } catch {
+          }
+          continue;
+        }
+        if (Date.now() > deadline) throw new Error(`timed out acquiring task plan lock ${lockFile}`);
+        sleepMs(CAS_LOCK_RETRY_MS);
+      }
+    }
+  };
+  const releaseLock = () => {
+    try {
+      fs.unlinkSync(lockFile);
+    } catch {
+    }
+  };
+  return {
+    read() {
+      try {
+        return fs.readFileSync(planFile, "utf8");
+      } catch {
+        return void 0;
+      }
+    },
+    write(serialized) {
+      fs.mkdirSync(path.dirname(planFile), { recursive: true });
+      atomicReplace(planFile, serialized);
+    },
+    compareAndSwap(expectedRevision, serialized) {
+      acquireLock();
+      try {
+        let current;
+        try {
+          current = fs.readFileSync(planFile, "utf8");
+        } catch {
+          return false;
+        }
+        const parsed = JSON.parse(current);
+        if (parsed.revision !== expectedRevision) return false;
+        atomicReplace(planFile, serialized);
+        return true;
+      } finally {
+        releaseLock();
+      }
+    }
+  };
 }
 function taskById(state) {
   return new Map(state.tasks.map((task) => [normalizedTaskId(task.qualifiedId), task]));
@@ -593,12 +685,24 @@ function transitiveDependents(tasks, selected, roots) {
   }
   return sortIds([...seen].map((key) => tasks.find((task) => normalizedTaskId(task.qualifiedId) === key)?.qualifiedId ?? key));
 }
-function schedule(tasks, selected, conflicts, evidence) {
+function schedule(tasks, selected, conflicts, evidence, invalidIds) {
   const byId = new Map(tasks.map((task) => [normalizedTaskId(task.qualifiedId), task]));
   const remaining = /* @__PURE__ */ new Set([...selected]);
   const completed = /* @__PURE__ */ new Set();
   const waves = [];
   const unscheduled = [];
+  for (const key of [...remaining].sort(compareText)) {
+    if (!invalidIds.has(key)) continue;
+    remaining.delete(key);
+    const task = byId.get(key);
+    if (!task) continue;
+    unscheduled.push({
+      taskId: task.qualifiedId,
+      reason: "task failed canonical validation and cannot be scheduled",
+      predecessorIds: [],
+      sourceIds: [task.qualifiedId]
+    });
+  }
   const maxIterations = selected.size + 1;
   for (let iteration = 0; remaining.size > 0 && iteration < maxIterations; iteration += 1) {
     const available = [...remaining].map((key) => byId.get(key)).filter((task) => Boolean(task)).filter((task) => task.dependencies.every((dependency) => !selected.has(normalizedTaskId(dependency.targetId)) || completed.has(normalizedTaskId(dependency.targetId)))).sort((left, right) => compareText(left.qualifiedId, right.qualifiedId));
@@ -643,14 +747,15 @@ function schedule(tasks, selected, conflicts, evidence) {
     return result;
   });
   const frontier = [...selected].map((key) => byId.get(key)).filter((task) => Boolean(task)).sort((left, right) => compareText(left.qualifiedId, right.qualifiedId)).map((task) => {
+    const invalid = invalidIds.has(normalizedTaskId(task.qualifiedId));
     const predecessors = task.dependencies.map((dependency) => dependency.targetId).filter((id) => selected.has(normalizedTaskId(id)) && byId.has(normalizedTaskId(id)) && byId.get(normalizedTaskId(id))?.declaredStatus !== "DONE");
     const stale = evidence.some((record) => normalizedTaskId(record.taskId) === normalizedTaskId(task.qualifiedId) && record.state !== "present");
     const blocked = task.declaredStatus === "BLOCKED" || predecessors.length > 0;
     return {
       taskId: task.qualifiedId,
-      readiness: stale ? "stale" : blocked ? "blocked" : "ready",
+      readiness: invalid ? "blocked" : stale ? "stale" : blocked ? "blocked" : "ready",
       predecessors: sortIds(predecessors),
-      explanation: stale ? "task evidence is stale or missing and must be refreshed before execution verification" : blocked ? `blocked by typed predecessors: ${predecessors.join(", ") || task.declaredStatus}` : "no incomplete typed predecessor in the selected graph"
+      explanation: invalid ? "task failed canonical validation and cannot be scheduled or completed" : stale ? "task evidence is stale or missing and must be refreshed before execution verification" : blocked ? `blocked by typed predecessors: ${predecessors.join(", ") || task.declaredStatus}` : "no incomplete typed predecessor in the selected graph"
     };
   });
   return { waves, batches, frontier, unscheduled };
@@ -724,7 +829,16 @@ function queryTaskPlan(state, options = {}) {
     action: "Review the downstream task before changing the selected task."
   }));
   const selectedEvidence = state.evidence.filter((record) => selected.has(normalizedTaskId(record.taskId)));
-  const scheduleResult = schedule(selectedTasks, selected, conflicts, selectedEvidence);
+  const invalidIds = /* @__PURE__ */ new Set();
+  for (const diagnostic2 of state.diagnostics ?? []) {
+    if (diagnostic2.code === "PLAN_INVALID_TASK") {
+      for (const taskId of diagnostic2.taskIds) invalidIds.add(normalizedTaskId(taskId));
+    }
+  }
+  for (const diagnostic2 of normalizeTasks(selectedTasks).diagnostics) {
+    for (const taskId of diagnostic2.taskIds) invalidIds.add(normalizedTaskId(taskId));
+  }
+  const scheduleResult = schedule(selectedTasks, selected, conflicts, selectedEvidence, invalidIds);
   queryDiagnostics.push(...validateDependencies(selectedTasks).filter((item) => item.severity === "error"));
   queryDiagnostics.push(...validateEvidence(selectedTasks, selectedEvidence));
   queryDiagnostics.push(...scheduleResult.unscheduled.map((entry) => finding("PLAN_SELECTED_UNSCHEDULED", entry.reason, [entry.taskId, ...entry.predecessorIds], entry.sourceIds, "Resolve the typed predecessor or include it in the selected graph.")));
@@ -888,6 +1002,7 @@ export {
   canonicalTaskPlanJson,
   compareAndSwapTaskPlanState,
   countTaskPlanRecords,
+  createFileCasAdapter,
   deriveTaskConflicts,
   executionPlanQuery,
   incrementalTaskPlanState,

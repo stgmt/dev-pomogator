@@ -12,6 +12,7 @@ import {
   deterministicPreSchedulingSynthesis,
   evidenceBackedDone,
   evaluateLifecycleOutcome,
+  finalizeSynthesis,
   projectTaskPlan,
   reviewSynthesis,
   stableSynthesisJson,
@@ -402,10 +403,42 @@ When('deterministic pre-scheduling synthesis reviews the lanes', function (this:
 Then('named blocking findings reject every invalid reference and blank causal step', function (this: TaskSynthesisWorld) {
   const codes = new Set(this.result!.findings.map((item) => item.code));
   assert.equal(this.result!.accepted, false);
+  assert.equal(this.result!.review.accepted, false);
+  assert.equal(finalizeSynthesis(this.result!).accepted, false);
+  assert.equal(projectTaskPlan(this.result!).accepted, false);
   assert.ok(codes.has('UNKNOWN_REQUIREMENT_REFERENCE'));
   assert.ok(codes.has('UNKNOWN_ACCEPTANCE_REFERENCE'));
   assert.ok(codes.has('UNRESOLVED_DEPENDENCY'));
   assert.ok(codes.has('BLANK_CAUSAL_STEP_TEXT'));
+});
+
+Given('strict synthesis receives a mismatched requirement lane and an inapplicable acceptance lane', function (this: TaskSynthesisWorld) {
+  const mismatchLane = lane(70, { laneId: 'FR-80:AC-OTHER-REQ', acceptanceCriterionId: 'AC-OTHER-REQ' });
+  const inapplicableLane = lane(71, { laneId: 'FR-80:AC-INAPPLICABLE', acceptanceCriterionId: 'AC-INAPPLICABLE' });
+  this.input = baseInput(dddReality(), [mismatchLane, inapplicableLane]);
+  this.input.acceptanceCriteria = [
+    { id: 'AC-OTHER-REQ', requirementId: 'FR-81', text: 'belongs to another requirement', source: mismatchLane.acceptanceSource, applicable: true },
+    { id: 'AC-INAPPLICABLE', requirementId: 'FR-80', text: 'waived for this revision', source: inapplicableLane.acceptanceSource, applicable: false },
+  ];
+});
+
+When('deterministic synthesis finalizes and projects the mismatched plan', function (this: TaskSynthesisWorld) {
+  this.result = synthesizeTasks(this.input!);
+  this.plan = projectTaskPlan(this.result!);
+});
+
+Then('mismatched and inapplicable lanes are rejected without an accepted projection', function (this: TaskSynthesisWorld) {
+  const mismatch = this.result!.findings.filter((item) => item.code === 'AC_REQUIREMENT_MISMATCH');
+  const inapplicable = this.result!.findings.filter((item) => item.code === 'INAPPLICABLE_ACCEPTANCE_REFERENCE');
+  assert.ok(mismatch.length >= 1, 'AC_REQUIREMENT_MISMATCH finding missing');
+  assert.ok(inapplicable.length >= 1, 'INAPPLICABLE_ACCEPTANCE_REFERENCE finding missing');
+  assert.ok([...mismatch, ...inapplicable].every((item) => item.severity === 'error'));
+  assert.equal(this.result!.accepted, false);
+  assert.equal(this.result!.review.accepted, false);
+  assert.equal(finalizeSynthesis(this.result!).accepted, false);
+  assert.equal(this.plan!.accepted, false, 'a rejected synthesis must not project an accepted plan');
+  assert.ok(this.plan!.findings.some((item) => item.code === 'AC_REQUIREMENT_MISMATCH'));
+  assert.ok(this.plan!.findings.some((item) => item.code === 'INAPPLICABLE_ACCEPTANCE_REFERENCE'));
 });
 
 Then('only evidence-backed `DONE` completes a task while `DONE_WITH_CONCERNS`, `NEEDS_CONTEXT`, and `BLOCKED` retain diagnostics and create follow-up proposals', function (this: TaskSynthesisWorld) {

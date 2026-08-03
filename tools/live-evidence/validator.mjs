@@ -38,6 +38,32 @@ function normalizeRelative(root, target) {
   return relative;
 }
 
+function canonicalRepoRoot(repoRoot) {
+  return fs.realpathSync.native(path.resolve(repoRoot));
+}
+
+/**
+ * Fail-closed symlink/junction containment: the candidate's REAL path must stay
+ * inside the canonical workspace root. Lexical checks alone accept in-root links
+ * whose targets live outside the repository.
+ */
+function containmentIssues(rootReal, absolutePath, escapeCode, unavailableCode, label, jsonPath) {
+  let targetReal;
+  try {
+    targetReal = fs.realpathSync.native(absolutePath);
+  } catch (error) {
+    return [issue(unavailableCode, `${label} cannot be resolved to a real path: ${error.message}`, jsonPath)];
+  }
+  const relative = path.relative(rootReal, targetReal);
+  const escapes = relative === '..'
+    || relative.startsWith(`..${path.sep}`)
+    || path.isAbsolute(relative);
+  if (escapes) {
+    return [issue(escapeCode, `${label} resolves outside the current workspace: ${absolutePath} -> ${targetReal}`, jsonPath)];
+  }
+  return [];
+}
+
 function sha256File(filePath) {
   return crypto.createHash('sha256').update(fs.readFileSync(filePath)).digest('hex');
 }
@@ -112,11 +138,23 @@ export function validateLiveEvidence({ manifestPath, repoRoot = process.cwd(), e
   errors.push(...schemaIssues(validateManifestShape, manifest));
   if (errors.length) return { ok: false, errors, records: [] };
 
+  let rootReal;
+  try {
+    rootReal = canonicalRepoRoot(repoRoot);
+  } catch (error) {
+    return {
+      ok: false,
+      errors: [issue('REPO_ROOT_REALPATH_UNAVAILABLE', `workspace root cannot be resolved to a real path: ${error.message}`, '/')],
+      records: [],
+    };
+  }
+
   const manifestRoot = path.dirname(path.resolve(manifestPath));
   const tracePath = path.resolve(manifestRoot, manifest.trace.path);
-  const traceRelative = normalizeRelative(repoRoot, tracePath);
+  const traceRelative = normalizeRelative(rootReal, tracePath);
   if (!traceRelative) errors.push(issue('TRACE_OUTSIDE_WORKSPACE', 'trace path must resolve inside the current workspace', '/trace/path'));
   if (!fs.existsSync(tracePath)) errors.push(issue('MISSING_TRACE', 'trace file does not exist', '/trace/path'));
+  else errors.push(...containmentIssues(rootReal, tracePath, 'TRACE_CONTAINMENT_ESCAPE', 'TRACE_REALPATH_UNAVAILABLE', 'trace file', '/trace/path'));
 
   let trace;
   if (fs.existsSync(tracePath)) {
@@ -142,6 +180,15 @@ export function validateLiveEvidence({ manifestPath, repoRoot = process.cwd(), e
   if (actualGitSha && manifest.git_sha !== actualGitSha) errors.push(issue('GIT_SHA_MISMATCH', 'manifest git_sha is not the current checkout HEAD', '/git_sha'));
   if (!HEX40.test(manifest.git_sha)) errors.push(issue('GIT_SHA_INVALID', 'git_sha must be a lowercase 40-character SHA-1', '/git_sha'));
   if (!HEX64.test(manifest.workspace_digest)) errors.push(issue('WORKSPACE_DIGEST_INVALID', 'workspace_digest must be a lowercase SHA-256 digest', '/workspace_digest'));
+  for (const relative of manifest.workspace_files) {
+    const normalized = String(relative).replace(/\\/g, '/');
+    const absolute = path.resolve(rootReal, normalized);
+    if (!normalizeRelative(rootReal, absolute)) {
+      errors.push(issue('WORKSPACE_FILE_OUTSIDE_WORKSPACE', `workspace file escapes the current workspace: ${relative}`, '/workspace_files'));
+      continue;
+    }
+    errors.push(...containmentIssues(rootReal, absolute, 'WORKSPACE_FILE_CONTAINMENT_ESCAPE', 'WORKSPACE_FILE_REALPATH_UNAVAILABLE', `workspace file ${relative}`, '/workspace_files'));
+  }
   try {
     const actualWorkspaceDigest = workspaceDigest(repoRoot, manifest.workspace_files);
     if (actualWorkspaceDigest !== manifest.workspace_digest) errors.push(issue('WORKSPACE_DIGEST_MISMATCH', 'manifest workspace_digest does not match the declared current workspace files', '/workspace_digest'));
@@ -157,6 +204,15 @@ export function validateLiveEvidence({ manifestPath, repoRoot = process.cwd(), e
   for (const scenarioId of expectedProfileIds) {
     const expectedProfile = expectedProfiles[scenarioId];
     if (!manifest.records.some((record) => record.scenario_id === scenarioId && record.profile === expectedProfile)) errors.push(issue('EXPECTED_PROFILE_MISSING', `manifest has no ${expectedProfile} evidence record for expected scenario ${scenarioId}`, '/records'));
+  }
+  const expectedRecordIds = new Set([...expectedScenarioIds, ...expectedProfileIds]);
+  if (expectedRecordIds.size > 0) {
+    for (let index = 0; index < manifest.records.length; index += 1) {
+      const record = manifest.records[index];
+      if (!expectedRecordIds.has(record.scenario_id)) {
+        errors.push(issue('UNEXPECTED_EVIDENCE_RECORD', `manifest record ${recordIdentity(record, index)} is not in the expected scenario set`, `/records/${index}`));
+      }
+    }
   }
 
   const seen = new Map();

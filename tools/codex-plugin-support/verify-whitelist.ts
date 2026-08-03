@@ -115,15 +115,18 @@ function parseJsonOutput<T>(stdout: string): T | null {
   }
 }
 
+/**
+ * Production verification always resolves the real `codex` executable via PATH.
+ * There is deliberately NO environment override here: deterministic CI substitutes
+ * live in the TEST layer only (a PATH shim in the step definitions), never in the
+ * harness itself (FR-5 / AC-5 codex-init).
+ */
 function runCodex(args: string[], env?: NodeJS.ProcessEnv) {
-  const executable = env && Object.hasOwn(env, 'DEV_POMOGATOR_CODEX_PROBE')
-    ? env.DEV_POMOGATOR_CODEX_PROBE?.trim()
-    : process.env.DEV_POMOGATOR_CODEX_PROBE?.trim();
-  return spawnSync(executable ? process.execPath : 'codex', executable ? [executable, ...args] : args, {
+  return spawnSync('codex', args, {
     cwd: repoRoot,
     encoding: 'utf8',
     env: env ? { ...process.env, ...env } : process.env,
-    shell: executable ? false : process.platform === 'win32',
+    shell: process.platform === 'win32',
     timeout: 90000,
   });
 }

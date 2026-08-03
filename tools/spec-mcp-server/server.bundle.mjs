@@ -56736,6 +56736,29 @@ function summariseGaps(gaps) {
 }
 
 // tools/spec-graph/readiness-inventory.ts
+var SUPERSEDED_TAG_RE = /^@superseded-by-([a-z0-9][a-z0-9-]*)$/i;
+function classifyScenarioScope(tags, opts = {}) {
+  const lower = tags.map((tag) => tag.toLowerCase());
+  if (lower.includes("@live-evidence")) {
+    return { scope: "external-live", superseded_by: null };
+  }
+  if (lower.includes("@historical")) {
+    let successor = null;
+    for (const tag of tags) {
+      const match = tag.match(SUPERSEDED_TAG_RE);
+      if (match) {
+        successor = match[1];
+        break;
+      }
+    }
+    const proven = successor !== null && (!opts.knownSpecs || opts.knownSpecs.has(successor));
+    return {
+      scope: proven ? "historical-retired" : "historical-unproven",
+      superseded_by: successor
+    };
+  }
+  return { scope: "active", superseded_by: null };
+}
 var OUTCOME_ENUM = /* @__PURE__ */ new Set([
   "PASSED",
   "FAILED",
@@ -56754,17 +56777,21 @@ function classifyEvidence(s) {
   const source = s.trace?.source ?? null;
   const runId = s.trace?.runId ?? null;
   const stale = s.resultStale === true;
+  const scopeDisposition = classifyScenarioScope(s.tags ?? []);
   const base = {
     scenario_key: key,
     scenario_id: s.id,
     run_id: runId,
-    recency: { stale, canonical: false }
+    recency: { stale, canonical: false },
+    scope: scopeDisposition.scope,
+    superseded_by: scopeDisposition.superseded_by
   };
   if (s.canonicalResult) {
+    const canonicalResult = s.canonicalResult.toUpperCase();
     return {
       ...base,
-      outcome: stale && s.canonicalResult.toUpperCase() === "PASSED" ? "stale" : explicitOutcome(s.canonicalResult),
-      result: s.canonicalResult.toUpperCase(),
+      outcome: canonicalResult === "PASSED" && stale ? "stale" : explicitOutcome(canonicalResult),
+      result: canonicalResult,
       source: source ?? "canonical-full-run",
       timestamp: s.canonicalRunAt ?? s.lastRunAt ?? null,
       recency: { stale, canonical: true },
@@ -56812,6 +56839,15 @@ function classifyFr(outcomes, scenarioCount) {
   if (outcomes.some((o) => NON_PASS_OUTCOMES.has(o))) return "not_passed";
   return "partial";
 }
+function frExecutionScope(scopes) {
+  if (scopes.length === 0) return "none";
+  const distinct = new Set(scopes);
+  const only = (scope) => distinct.size === 1 && distinct.has(scope);
+  if (only("historical-retired")) return "retired";
+  if (only("external-live")) return "live";
+  if ([...distinct].every((s) => s === "active" || s === "historical-unproven")) return "active";
+  return "mixed";
+}
 function buildReadinessInventory(graph, opts) {
   const slug = opts.spec.replace(/\\/g, "/").replace(/^\.?\/?\.specs\//, "").replace(/\/+$/, "");
   const slugTail = slug.split("/").pop().toLowerCase();
@@ -56852,11 +56888,22 @@ function buildReadinessInventory(graph, opts) {
     const key = scenarioKey(s.id) ?? s.id.toLowerCase();
     if (bundles.has(key) || specKeys.has(key)) addNode(s);
   }
+  const knownSpecs = /* @__PURE__ */ new Set();
+  for (const node of graph.nodes.values()) {
+    if (node.spec) knownSpecs.add(node.spec);
+  }
   for (const bundle of bundles.values()) {
     bundle.nodes.sort((a, b) => a.id.localeCompare(b.id));
     const informed = [...bundle.nodes].sort((a, b) => evidenceRank(b) - evidenceRank(a));
     bundle.primary = informed[0];
-    bundle.record = { ...classifyEvidence(bundle.primary), scenario_key: bundle.key };
+    const unionTags = [...new Set(bundle.nodes.flatMap((node) => node.tags ?? []))];
+    const scope = classifyScenarioScope(unionTags, { knownSpecs });
+    bundle.record = {
+      ...classifyEvidence(bundle.primary),
+      scenario_key: bundle.key,
+      scope: scope.scope,
+      superseded_by: scope.superseded_by
+    };
   }
   const frKeysById = /* @__PURE__ */ new Map();
   const acKeysById = /* @__PURE__ */ new Map();
@@ -56915,11 +56962,13 @@ function buildReadinessInventory(graph, opts) {
     const keys = [...frKeysById.get(fr.id) ?? []].sort();
     const outcomes = keys.map((k) => bundles.get(k).record.outcome);
     const classification = classifyFr(outcomes, keys.length);
+    const scopes = keys.map((k) => bundles.get(k).record.scope);
     return {
       id: localIdOf(fr.id),
       composite_id: fr.id,
       never_run: classification === "never_run",
       classification,
+      execution_scope: frExecutionScope(scopes),
       scenario_keys: keys,
       scenario_ids: keys.flatMap((k) => bundles.get(k).nodes.map((n) => n.id)).sort(),
       ac_ids: [...acIdsByFr.get(fr.id) ?? []].sort()
@@ -56993,8 +57042,34 @@ function buildReadinessInventory(graph, opts) {
     frs,
     acs,
     scenarios,
+    scenario_scope: scenarioScopeRollup(scenarios),
     duplicates,
     counts: { fr: frs.length, ac: acs.length, scenario: scenarios.length }
+  };
+}
+function scenarioScopeRollup(scenarios) {
+  const liveKeys = [];
+  const unprovenKeys = [];
+  const bySuccessor = {};
+  let active = 0;
+  for (const record2 of scenarios) {
+    if (record2.scope === "active") active += 1;
+    else if (record2.scope === "external-live") liveKeys.push(record2.scenario_key);
+    else if (record2.scope === "historical-unproven") unprovenKeys.push(record2.scenario_key);
+    else if (record2.scope === "historical-retired") {
+      const successor = record2.superseded_by ?? "(unknown)";
+      (bySuccessor[successor] ??= []).push(record2.scenario_key);
+    }
+  }
+  for (const keys of Object.values(bySuccessor)) keys.sort();
+  return {
+    active,
+    external_live: { count: liveKeys.length, keys: liveKeys.sort() },
+    historical_retired: {
+      count: Object.values(bySuccessor).reduce((n, keys) => n + keys.length, 0),
+      by_successor: bySuccessor
+    },
+    historical_unproven: { count: unprovenKeys.length, keys: unprovenKeys.sort() }
   };
 }
 function evidenceRank(n) {
@@ -57006,6 +57081,7 @@ var MANDATORY_READINESS_LANES = [
   "STRUCTURE",
   "TRACEABILITY",
   "EXECUTION",
+  "LIVE_EVIDENCE",
   "TASK_TRUTH",
   "BDD_SYNC",
   "AC_SATISFACTION",
@@ -57017,25 +57093,40 @@ var ALL_READINESS_LANES = [
   ...OPTIONAL_READINESS_LANES
 ];
 function deriveExecutionLane(inventory) {
-  const outcomes = inventory.scenarios.map((s) => s.outcome);
+  const activeScenarios = inventory.scenarios.filter(
+    (s) => s.scope === "active" || s.scope === "historical-unproven"
+  );
+  const outcomes = activeScenarios.map((s) => s.outcome);
   const notRecorded = outcomes.filter((o) => o === "not_recorded").length;
-  const neverRunFrs = inventory.frs.filter((fr) => fr.never_run).map((fr) => fr.id);
+  const neverRunFrs = inventory.frs.filter((fr) => fr.never_run && (fr.execution_scope === "active" || fr.execution_scope === "mixed" || fr.execution_scope === "none")).map((fr) => fr.id);
+  const unprovenKeys = activeScenarios.filter((s) => s.scope === "historical-unproven").map((s) => s.scenario_key);
   const debt = [];
   if (notRecorded > 0) debt.push(`SCENARIO_NOT_RUN:${notRecorded}`);
   if (neverRunFrs.length > 0) debt.push(`FR_NEVER_RUN:${neverRunFrs.join(",")}`);
+  if (unprovenKeys.length > 0) debt.push(`HISTORICAL_UNPROVEN:${unprovenKeys.join(",")}`);
   for (const outcome of [...new Set(outcomes)]) {
     if (outcome === "not_recorded" || outcome === "PASSED") continue;
     debt.push(`${outcomes.filter((o) => o === outcome).length} ${outcome}`);
   }
-  const status = debt.length === 0 ? "GREEN" : outcomes.length > 0 && outcomes.every((o) => o === "not_recorded") ? "NOT_RUN" : "RED";
+  const status = debt.length === 0 ? "GREEN" : unprovenKeys.length > 0 ? "RED" : outcomes.length > 0 && outcomes.every((o) => o === "not_recorded") ? "NOT_RUN" : "RED";
   return { status, debt };
+}
+function deriveLiveEvidenceLane(inventory) {
+  const live = inventory.scenarios.filter((s) => s.scope === "external-live");
+  if (live.length === 0) return { status: "NONE", debt: [] };
+  const debt = live.filter((s) => s.outcome !== "PASSED").map((s) => `${s.scenario_key}:${s.outcome}`);
+  return { status: debt.length === 0 ? "GREEN" : "RED", debt };
 }
 var LANE_NEXT_ACTION = {
   STRUCTURE: () => "Fix structural/audit/conformance errors, then rerun the readiness check.",
   TRACEABILITY: () => "Add the missing FR/AC/task/scenario traceability links, then rerun the readiness check.",
   EXECUTION: (c) => {
-    const neverRun = c.inventory.frs.filter((fr) => fr.never_run).map((fr) => fr.id);
+    const neverRun = c.inventory.frs.filter((fr) => fr.never_run && (fr.execution_scope === "active" || fr.execution_scope === "mixed" || fr.execution_scope === "none")).map((fr) => fr.id);
     return neverRun.length > 0 ? `Run the full Docker BDD suite so canonical coverage records the never-run FR(s) ${neverRun.join(", ")} and every scenario result.` : "Run the full Docker BDD suite so canonical coverage contains every scenario result.";
+  },
+  LIVE_EVIDENCE: (c) => {
+    const live = c.inventory.scenario_scope.external_live.keys;
+    return live.length > 0 ? `Produce real live-evidence proof for scenario(s) ${live.join(", ")} via the live producer (manifest + trace + readback); a canonical cucumber run cannot close them.` : "Produce real live-evidence proof for the external live scenarios via the live producer.";
   },
   TASK_TRUTH: () => "Reopen/downgrade DONE-but-unverified tasks or provide canonical passed scenario evidence.",
   BDD_SYNC: () => "Fix source/executable BDD sync drift or mark intentional EXEC_ONLY/OUT_OF_SCOPE/PENDING scenarios.",
@@ -57044,12 +57135,13 @@ var LANE_NEXT_ACTION = {
 };
 function evaluateReadiness(candidate) {
   const execution = deriveExecutionLane(candidate.inventory);
+  const liveEvidence = deriveLiveEvidenceLane(candidate.inventory);
   const lanes = {};
   for (const name of ALL_READINESS_LANES) {
-    const supplied = name === "EXECUTION" ? execution : name === "AC_SATISFACTION" ? candidate.inventory.ac_satisfaction : name === "NFR_SATISFACTION" ? candidate.inventory.nfr_satisfaction : candidate.lanes?.[name];
+    const supplied = name === "EXECUTION" ? execution : name === "LIVE_EVIDENCE" ? liveEvidence : name === "AC_SATISFACTION" ? candidate.inventory.ac_satisfaction : name === "NFR_SATISFACTION" ? candidate.inventory.nfr_satisfaction : candidate.lanes?.[name];
     const status = supplied?.status ?? "NOT_EVALUATED";
     const debt = supplied?.debt ?? [];
-    const blocking = MANDATORY_READINESS_LANES.includes(name) ? status !== "GREEN" : name === "SEMANTIC" ? status === "RED" || status === "DEPENDENCY_ABSENT" : false;
+    const blocking = MANDATORY_READINESS_LANES.includes(name) ? name === "LIVE_EVIDENCE" ? status === "RED" || status === "NOT_EVALUATED" || status === "DEPENDENCY_ABSENT" : status !== "GREEN" : name === "SEMANTIC" ? status === "RED" || status === "DEPENDENCY_ABSENT" : false;
     lanes[name] = { status, blocking, debt };
   }
   const blockingLanes = MANDATORY_READINESS_LANES.filter((name) => lanes[name].blocking);
@@ -60077,12 +60169,45 @@ ${fr.body ?? ""}`,
   if (semanticNote) notes.push(semanticNote);
   const notRun = canonicalBuckets.not_run ?? 0;
   if (notRun > 0) {
-    const byFile = [...notRunByFile.entries()].sort((a, b) => b[1] - a[1]).map(([f, n]) => `${f}:${n}`).join(", ");
-    notes.push(
-      `NOT_RUN \u2014 ${notRun} scenario(s) have no result in the last run (not_run, NOT "undefined"/unverified), by feature: ${byFile}. A count on the MAIN feature \u21D2 the last run was FILTERED (re-run the full suite). A feature absent from the test config (e.g. a legacy *.feature not in cucumber \`paths\`) is a PERSISTENT gap a full run won't close \u2014 add it to paths or retire it.`
+    const scopeByScenarioId = new Map(
+      inventory.scenarios.map((rec) => [rec.scenario_id.toLowerCase(), rec.scope])
     );
+    let notRunActive = 0;
+    let notRunLive = 0;
+    let notRunRetired = 0;
+    let notRunUnproven = 0;
+    for (const s of scenLikes) {
+      if (s.canonicalResult) continue;
+      const scope = scopeByScenarioId.get(String(s.id).toLowerCase()) ?? "active";
+      if (scope === "external-live") notRunLive += 1;
+      else if (scope === "historical-retired") notRunRetired += 1;
+      else if (scope === "historical-unproven") notRunUnproven += 1;
+      else notRunActive += 1;
+    }
+    if (notRunActive > 0) {
+      const byFile = [...notRunByFile.entries()].sort((a, b) => b[1] - a[1]).map(([f, n]) => `${f}:${n}`).join(", ");
+      notes.push(
+        `NOT_RUN \u2014 ${notRunActive} ACTIVE scenario(s) have no result in the last run (not_run, NOT "undefined"/unverified), by feature: ${byFile}. A count on the MAIN feature \u21D2 the last run was FILTERED (re-run the full suite). A feature absent from the test config (e.g. a legacy *.feature not in cucumber \`paths\`) is a PERSISTENT gap a full run won't close \u2014 add it to paths or retire it.`
+      );
+    }
+    if (notRunLive > 0) {
+      notes.push(
+        `LIVE_EVIDENCE \u2014 ${notRunLive} scenario(s) tagged @live-evidence have no canonical cucumber result BY DESIGN; they are closed only by a real live producer (manifest + trace + readback), never by the full suite.`
+      );
+    }
+    if (notRunRetired > 0) {
+      notes.push(
+        `HISTORICAL_RETIRED \u2014 ${notRunRetired} scenario(s) tagged @historical with a proven successor are excluded from canonical execution; their historical evidence is preserved and execution ownership belongs to the successor spec.`
+      );
+    }
+    if (notRunUnproven > 0) {
+      notes.push(
+        `HISTORICAL_UNPROVEN \u2014 ${notRunUnproven} scenario(s) claim @historical without a proven @superseded-by-<slug> successor present in the corpus; they remain active debt until retirement is proven or they are re-run.`
+      );
+    }
   }
   const effectiveExecution = deriveExecutionLane(inventory);
+  const liveEvidenceLane = deriveLiveEvidenceLane(inventory);
   const executionHardFailures = ["failed", "undefined", "ambiguous", "pending", "skipped"].map((key) => [key, canonicalBuckets[key] ?? 0]).filter(([, count]) => count > 0);
   const executionDebt = effectiveExecution.debt;
   const semanticDebt = [
@@ -60126,6 +60251,12 @@ ${fr.body ?? ""}`,
       blocking: effectiveExecution.status !== "GREEN",
       summary: effectiveExecution.debt?.join(", ") || "all effective scenario evidence is current and passing",
       debt: effectiveExecution.debt ?? []
+    },
+    LIVE_EVIDENCE: {
+      status: liveEvidenceLane.status,
+      blocking: liveEvidenceLane.status === "RED",
+      summary: liveEvidenceLane.status === "NONE" ? "no external live scenarios in this spec" : liveEvidenceLane.debt.length > 0 ? `${liveEvidenceLane.debt.length} live scenario(s) await real producer proof` : "all live scenarios have passing live evidence",
+      debt: liveEvidenceLane.debt ?? []
     },
     TASK_TRUTH: {
       status: taskTruthDebt.length > 0 ? "RED" : "GREEN",
@@ -60266,7 +60397,7 @@ function renderVerdict(r) {
     }
   }
   lines.push("readiness lanes (FR-61):");
-  const laneOrder = ["STRUCTURE", "TRACEABILITY", "EXECUTION", "TASK_TRUTH", "BDD_SYNC", "SEMANTIC", "FILTERED_PROOF"];
+  const laneOrder = ["STRUCTURE", "TRACEABILITY", "EXECUTION", "LIVE_EVIDENCE", "TASK_TRUTH", "BDD_SYNC", "SEMANTIC", "FILTERED_PROOF"];
   for (const name of laneOrder) {
     const lane = r.readiness.lanes[name];
     lines.push(`  ${name}: ${lane.status}${lane.blocking ? " (blocking)" : ""} \u2014 ${lane.summary}`);
@@ -61276,6 +61407,19 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
         for (const [bucket, ids] of Object.entries(buckets)) {
           for (const id of ids) scenarioBucket.set(id, bucket);
         }
+        const knownSpecs = /* @__PURE__ */ new Set();
+        for (const node of graph.nodes.values()) {
+          if (node.spec) knownSpecs.add(node.spec);
+        }
+        const scenarioScope = new Map(
+          scenarios.map((s) => [s.id, classifyScenarioScope(s.tags ?? [], { knownSpecs }).scope])
+        );
+        const activeNotRun = buckets.not_run.filter((id) => {
+          const scope = scenarioScope.get(id) ?? "active";
+          return scope === "active" || scope === "historical-unproven";
+        });
+        const liveNotRun = buckets.not_run.filter((id) => scenarioScope.get(id) === "external-live");
+        const retiredNotRun = buckets.not_run.filter((id) => scenarioScope.get(id) === "historical-retired");
         const scenarioIds = new Set(scenarios.map((s) => s.id));
         const frToScenarios = /* @__PURE__ */ new Map();
         for (const e of graph.edges) {
@@ -61288,10 +61432,17 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
           arr.push(e.to);
           frToScenarios.set(e.from, arr);
         }
-        const frIds = [...frToScenarios.entries()].filter(([, ids]) => ids.length > 0 && !ids.every((id) => scenarioBucket.get(id) === "passed")).map(([fr]) => fr).sort();
+        const frIds = [...frToScenarios.entries()].filter(([, ids]) => ids.length > 0 && !ids.every((id) => scenarioBucket.get(id) === "passed") && !ids.every((id) => {
+          const scope = scenarioScope.get(id) ?? "active";
+          return scope === "historical-retired" || scope === "external-live";
+        })).map(([fr]) => fr).sort();
         return {
-          SCENARIO_NOT_RUN: buckets.not_run.length,
-          scenario_ids: buckets.not_run,
+          SCENARIO_NOT_RUN: activeNotRun.length,
+          scenario_ids: activeNotRun,
+          LIVE_EVIDENCE_AWAITING: liveNotRun.length,
+          live_scenario_ids: liveNotRun,
+          HISTORICAL_RETIRED: retiredNotRun.length,
+          retired_scenario_ids: retiredNotRun,
           FR_NOT_EXECUTION_VERIFIED: frIds.length,
           fr_ids: frIds
         };
@@ -61445,7 +61596,7 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
       if (counts.scenarios === 0) lifecycle = "SPEC_ONLY";
       else if (!last_run) lifecycle = "TESTS_NOT_RUN";
       else if (summary.failed > 0 || summary.ambiguous > 0) lifecycle = "RED";
-      else if (summary.pending + summary.undefined + summary.skipped + summary.stale > 0 || canonicalStatusCoverage.totals.not_run > 0) lifecycle = "PARTIAL";
+      else if (summary.pending + summary.undefined + summary.skipped + summary.stale > 0 || statusExecutionGaps.SCENARIO_NOT_RUN > 0 || statusExecutionGaps.LIVE_EVIDENCE_AWAITING > 0) lifecycle = "PARTIAL";
       else lifecycle = "GREEN";
       const specFindings = checkConformance(graph).filter((finding) => inSpec(finding.location.file));
       const gaps = summariseGaps(gapsFromFindings(specFindings, { spec: slug }));
@@ -61482,7 +61633,7 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
         SPEC_ONLY: "Docs only \u2014 no scenarios written yet. Next: author the .feature (FR-38a).",
         TESTS_NOT_RUN: `${counts.scenarios} scenario(s) are SCENARIO_NOT_RUN; no canonical execution has been ingested. Next: run the suite so NDJSON lands.`,
         RED: `${summary.failed + summary.ambiguous} failing of ${summary.touched} touched. Next: get_test_result per scenario.`,
-        PARTIAL: statusExecutionGaps.SCENARIO_NOT_RUN > 0 ? `${statusExecutionGaps.SCENARIO_NOT_RUN} scenario(s) are SCENARIO_NOT_RUN after the last ingested run; NOT execution-complete.` : summary.stale > 0 ? `${summary.stale} stale passed scenario(s) need rerun after source changes; NOT execution-complete.` : `${summary.pending + summary.undefined + summary.skipped} scenario(s) undefined/pending/skipped, 0 failed \u2014 written but not implemented; NOT green.`,
+        PARTIAL: statusExecutionGaps.SCENARIO_NOT_RUN > 0 ? `${statusExecutionGaps.SCENARIO_NOT_RUN} ACTIVE scenario(s) are SCENARIO_NOT_RUN after the last ingested run; NOT execution-complete.` : statusExecutionGaps.LIVE_EVIDENCE_AWAITING > 0 ? `${statusExecutionGaps.LIVE_EVIDENCE_AWAITING} @live-evidence scenario(s) await real live-producer proof (manifest + trace + readback); a canonical cucumber run cannot close them.` : summary.stale > 0 ? `${summary.stale} stale passed scenario(s) need rerun after source changes; NOT execution-complete.` : `${summary.pending + summary.undefined + summary.skipped} scenario(s) undefined/pending/skipped, 0 failed \u2014 written but not implemented; NOT green.`,
         GREEN: `All ${summary.touched} touched scenario(s) passed at ${lastAt}.`
       };
       const progress = readProgressState(path25.join(repoRoot, ".specs", slug));

@@ -1,0 +1,2773 @@
+{
+  "path": ".specs/spec-generator-v4",
+  "timestamp": "2026-08-03T22:31:12",
+  "findings": [
+    {
+      "check": "FR_BDD_COVERAGE",
+      "category": "INCONSISTENCY",
+      "severity": "WARNING",
+      "message": "@feature1 in .feature has no matching FR/AC requirement",
+      "details": "Add @feature1 to FR.md or ACCEPTANCE_CRITERIA.md header"
+    },
+    {
+      "check": "FR_BDD_COVERAGE",
+      "category": "INCONSISTENCY",
+      "severity": "WARNING",
+      "message": "@feature2 in .feature has no matching FR/AC requirement",
+      "details": "Add @feature2 to FR.md or ACCEPTANCE_CRITERIA.md header"
+    },
+    {
+      "check": "FR_BDD_COVERAGE",
+      "category": "INCONSISTENCY",
+      "severity": "WARNING",
+      "message": "@feature3 in .feature has no matching FR/AC requirement",
+      "details": "Add @feature3 to FR.md or ACCEPTANCE_CRITERIA.md header"
+    },
+    {
+      "check": "FR_BDD_COVERAGE",
+      "category": "INCONSISTENCY",
+      "severity": "WARNING",
+      "message": "@feature4 in .feature has no matching FR/AC requirement",
+      "details": "Add @feature4 to FR.md or ACCEPTANCE_CRITERIA.md header"
+    },
+    {
+      "check": "FR_BDD_COVERAGE",
+      "category": "INCONSISTENCY",
+      "severity": "WARNING",
+      "message": "@feature5 in .feature has no matching FR/AC requirement",
+      "details": "Add @feature5 to FR.md or ACCEPTANCE_CRITERIA.md header"
+    },
+    {
+      "check": "FR_BDD_COVERAGE",
+      "category": "INCONSISTENCY",
+      "severity": "WARNING",
+      "message": "@feature6 in .feature has no matching FR/AC requirement",
+      "details": "Add @feature6 to FR.md or ACCEPTANCE_CRITERIA.md header"
+    },
+    {
+      "check": "FR_BDD_COVERAGE",
+      "category": "INCONSISTENCY",
+      "severity": "WARNING",
+      "message": "@feature28 in .feature has no matching FR/AC requirement",
+      "details": "Add @feature28 to FR.md or ACCEPTANCE_CRITERIA.md header"
+    },
+    {
+      "check": "FR_BDD_COVERAGE",
+      "category": "INCONSISTENCY",
+      "severity": "WARNING",
+      "message": "@feature7 in .feature has no matching FR/AC requirement",
+      "details": "Add @feature7 to FR.md or ACCEPTANCE_CRITERIA.md header"
+    },
+    {
+      "check": "FR_BDD_COVERAGE",
+      "category": "INCONSISTENCY",
+      "severity": "WARNING",
+      "message": "@feature8 in .feature has no matching FR/AC requirement",
+      "details": "Add @feature8 to FR.md or ACCEPTANCE_CRITERIA.md header"
+    },
+    {
+      "check": "FR_BDD_COVERAGE",
+      "category": "INCONSISTENCY",
+      "severity": "WARNING",
+      "message": "@feature9 in .feature has no matching FR/AC requirement",
+      "details": "Add @feature9 to FR.md or ACCEPTANCE_CRITERIA.md header"
+    },
+    {
+      "check": "FR_BDD_COVERAGE",
+      "category": "INCONSISTENCY",
+      "severity": "WARNING",
+      "message": "@feature10 in .feature has no matching FR/AC requirement",
+      "details": "Add @feature10 to FR.md or ACCEPTANCE_CRITERIA.md header"
+    },
+    {
+      "check": "FR_BDD_COVERAGE",
+      "category": "INCONSISTENCY",
+      "severity": "WARNING",
+      "message": "@feature11 in .feature has no matching FR/AC requirement",
+      "details": "Add @feature11 to FR.md or ACCEPTANCE_CRITERIA.md header"
+    },
+    {
+      "check": "FR_BDD_COVERAGE",
+      "category": "INCONSISTENCY",
+      "severity": "WARNING",
+      "message": "@feature12 in .feature has no matching FR/AC requirement",
+      "details": "Add @feature12 to FR.md or ACCEPTANCE_CRITERIA.md header"
+    },
+    {
+      "check": "FR_BDD_COVERAGE",
+      "category": "INCONSISTENCY",
+      "severity": "WARNING",
+      "message": "@feature13 in .feature has no matching FR/AC requirement",
+      "details": "Add @feature13 to FR.md or ACCEPTANCE_CRITERIA.md header"
+    },
+    {
+      "check": "FR_BDD_COVERAGE",
+      "category": "INCONSISTENCY",
+      "severity": "WARNING",
+      "message": "@feature14 in .feature has no matching FR/AC requirement",
+      "details": "Add @feature14 to FR.md or ACCEPTANCE_CRITERIA.md header"
+    },
+    {
+      "check": "FR_BDD_COVERAGE",
+      "category": "INCONSISTENCY",
+      "severity": "WARNING",
+      "message": "@feature15 in .feature has no matching FR/AC requirement",
+      "details": "Add @feature15 to FR.md or ACCEPTANCE_CRITERIA.md header"
+    },
+    {
+      "check": "FR_BDD_COVERAGE",
+      "category": "INCONSISTENCY",
+      "severity": "WARNING",
+      "message": "@feature16 in .feature has no matching FR/AC requirement",
+      "details": "Add @feature16 to FR.md or ACCEPTANCE_CRITERIA.md header"
+    },
+    {
+      "check": "FR_BDD_COVERAGE",
+      "category": "INCONSISTENCY",
+      "severity": "WARNING",
+      "message": "@feature17 in .feature has no matching FR/AC requirement",
+      "details": "Add @feature17 to FR.md or ACCEPTANCE_CRITERIA.md header"
+    },
+    {
+      "check": "FR_BDD_COVERAGE",
+      "category": "INCONSISTENCY",
+      "severity": "WARNING",
+      "message": "@feature18 in .feature has no matching FR/AC requirement",
+      "details": "Add @feature18 to FR.md or ACCEPTANCE_CRITERIA.md header"
+    },
+    {
+      "check": "FR_BDD_COVERAGE",
+      "category": "INCONSISTENCY",
+      "severity": "WARNING",
+      "message": "@feature22 in .feature has no matching FR/AC requirement",
+      "details": "Add @feature22 to FR.md or ACCEPTANCE_CRITERIA.md header"
+    },
+    {
+      "check": "FR_BDD_COVERAGE",
+      "category": "INCONSISTENCY",
+      "severity": "WARNING",
+      "message": "@feature25 in .feature has no matching FR/AC requirement",
+      "details": "Add @feature25 to FR.md or ACCEPTANCE_CRITERIA.md header"
+    },
+    {
+      "check": "FR_BDD_COVERAGE",
+      "category": "INCONSISTENCY",
+      "severity": "WARNING",
+      "message": "@feature26 in .feature has no matching FR/AC requirement",
+      "details": "Add @feature26 to FR.md or ACCEPTANCE_CRITERIA.md header"
+    },
+    {
+      "check": "FR_BDD_COVERAGE",
+      "category": "INCONSISTENCY",
+      "severity": "WARNING",
+      "message": "@feature27 in .feature has no matching FR/AC requirement",
+      "details": "Add @feature27 to FR.md or ACCEPTANCE_CRITERIA.md header"
+    },
+    {
+      "check": "FR_BDD_COVERAGE",
+      "category": "INCONSISTENCY",
+      "severity": "WARNING",
+      "message": "@feature29 in .feature has no matching FR/AC requirement",
+      "details": "Add @feature29 to FR.md or ACCEPTANCE_CRITERIA.md header"
+    },
+    {
+      "check": "FR_BDD_COVERAGE",
+      "category": "INCONSISTENCY",
+      "severity": "WARNING",
+      "message": "@feature30 in .feature has no matching FR/AC requirement",
+      "details": "Add @feature30 to FR.md or ACCEPTANCE_CRITERIA.md header"
+    },
+    {
+      "check": "FR_BDD_COVERAGE",
+      "category": "INCONSISTENCY",
+      "severity": "WARNING",
+      "message": "@feature31 in .feature has no matching FR/AC requirement",
+      "details": "Add @feature31 to FR.md or ACCEPTANCE_CRITERIA.md header"
+    },
+    {
+      "check": "FR_BDD_COVERAGE",
+      "category": "INCONSISTENCY",
+      "severity": "WARNING",
+      "message": "@feature32 in .feature has no matching FR/AC requirement",
+      "details": "Add @feature32 to FR.md or ACCEPTANCE_CRITERIA.md header"
+    },
+    {
+      "check": "FR_BDD_COVERAGE",
+      "category": "INCONSISTENCY",
+      "severity": "WARNING",
+      "message": "@feature33 in .feature has no matching FR/AC requirement",
+      "details": "Add @feature33 to FR.md or ACCEPTANCE_CRITERIA.md header"
+    },
+    {
+      "check": "FR_BDD_COVERAGE",
+      "category": "INCONSISTENCY",
+      "severity": "WARNING",
+      "message": "@feature34 in .feature has no matching FR/AC requirement",
+      "details": "Add @feature34 to FR.md or ACCEPTANCE_CRITERIA.md header"
+    },
+    {
+      "check": "FR_BDD_COVERAGE",
+      "category": "INCONSISTENCY",
+      "severity": "WARNING",
+      "message": "@feature36 in .feature has no matching FR/AC requirement",
+      "details": "Add @feature36 to FR.md or ACCEPTANCE_CRITERIA.md header"
+    },
+    {
+      "check": "FR_BDD_COVERAGE",
+      "category": "INCONSISTENCY",
+      "severity": "WARNING",
+      "message": "@feature37 in .feature has no matching FR/AC requirement",
+      "details": "Add @feature37 to FR.md or ACCEPTANCE_CRITERIA.md header"
+    },
+    {
+      "check": "FR_BDD_COVERAGE",
+      "category": "INCONSISTENCY",
+      "severity": "WARNING",
+      "message": "@feature38 in .feature has no matching FR/AC requirement",
+      "details": "Add @feature38 to FR.md or ACCEPTANCE_CRITERIA.md header"
+    },
+    {
+      "check": "FR_BDD_COVERAGE",
+      "category": "INCONSISTENCY",
+      "severity": "WARNING",
+      "message": "@feature21 in .feature has no matching FR/AC requirement",
+      "details": "Add @feature21 to FR.md or ACCEPTANCE_CRITERIA.md header"
+    },
+    {
+      "check": "FR_BDD_COVERAGE",
+      "category": "INCONSISTENCY",
+      "severity": "WARNING",
+      "message": "@feature24 in .feature has no matching FR/AC requirement",
+      "details": "Add @feature24 to FR.md or ACCEPTANCE_CRITERIA.md header"
+    },
+    {
+      "check": "FR_BDD_COVERAGE",
+      "category": "INCONSISTENCY",
+      "severity": "WARNING",
+      "message": "@feature20 in .feature has no matching FR/AC requirement",
+      "details": "Add @feature20 to FR.md or ACCEPTANCE_CRITERIA.md header"
+    },
+    {
+      "check": "FR_BDD_COVERAGE",
+      "category": "INCONSISTENCY",
+      "severity": "WARNING",
+      "message": "@feature49 in .feature has no matching FR/AC requirement",
+      "details": "Add @feature49 to FR.md or ACCEPTANCE_CRITERIA.md header"
+    },
+    {
+      "check": "FR_BDD_COVERAGE",
+      "category": "INCONSISTENCY",
+      "severity": "WARNING",
+      "message": "@feature46 in .feature has no matching FR/AC requirement",
+      "details": "Add @feature46 to FR.md or ACCEPTANCE_CRITERIA.md header"
+    },
+    {
+      "check": "FR_BDD_COVERAGE",
+      "category": "INCONSISTENCY",
+      "severity": "WARNING",
+      "message": "@feature47 in .feature has no matching FR/AC requirement",
+      "details": "Add @feature47 to FR.md or ACCEPTANCE_CRITERIA.md header"
+    },
+    {
+      "check": "FR_BDD_COVERAGE",
+      "category": "INCONSISTENCY",
+      "severity": "WARNING",
+      "message": "@feature48 in .feature has no matching FR/AC requirement",
+      "details": "Add @feature48 to FR.md or ACCEPTANCE_CRITERIA.md header"
+    },
+    {
+      "check": "FR_BDD_COVERAGE",
+      "category": "INCONSISTENCY",
+      "severity": "WARNING",
+      "message": "@feature50 in .feature has no matching FR/AC requirement",
+      "details": "Add @feature50 to FR.md or ACCEPTANCE_CRITERIA.md header"
+    },
+    {
+      "check": "FR_BDD_COVERAGE",
+      "category": "INCONSISTENCY",
+      "severity": "WARNING",
+      "message": "@feature51 in .feature has no matching FR/AC requirement",
+      "details": "Add @feature51 to FR.md or ACCEPTANCE_CRITERIA.md header"
+    },
+    {
+      "check": "FR_BDD_COVERAGE",
+      "category": "INCONSISTENCY",
+      "severity": "WARNING",
+      "message": "@feature40 in .feature has no matching FR/AC requirement",
+      "details": "Add @feature40 to FR.md or ACCEPTANCE_CRITERIA.md header"
+    },
+    {
+      "check": "FR_BDD_COVERAGE",
+      "category": "INCONSISTENCY",
+      "severity": "WARNING",
+      "message": "@feature39 in .feature has no matching FR/AC requirement",
+      "details": "Add @feature39 to FR.md or ACCEPTANCE_CRITERIA.md header"
+    },
+    {
+      "check": "FR_BDD_COVERAGE",
+      "category": "INCONSISTENCY",
+      "severity": "WARNING",
+      "message": "@feature52 in .feature has no matching FR/AC requirement",
+      "details": "Add @feature52 to FR.md or ACCEPTANCE_CRITERIA.md header"
+    },
+    {
+      "check": "FR_BDD_COVERAGE",
+      "category": "INCONSISTENCY",
+      "severity": "WARNING",
+      "message": "@feature45 in .feature has no matching FR/AC requirement",
+      "details": "Add @feature45 to FR.md or ACCEPTANCE_CRITERIA.md header"
+    },
+    {
+      "check": "FR_BDD_COVERAGE",
+      "category": "INCONSISTENCY",
+      "severity": "WARNING",
+      "message": "@feature42 in .feature has no matching FR/AC requirement",
+      "details": "Add @feature42 to FR.md or ACCEPTANCE_CRITERIA.md header"
+    },
+    {
+      "check": "FR_BDD_COVERAGE",
+      "category": "INCONSISTENCY",
+      "severity": "WARNING",
+      "message": "@feature41 in .feature has no matching FR/AC requirement",
+      "details": "Add @feature41 to FR.md or ACCEPTANCE_CRITERIA.md header"
+    },
+    {
+      "check": "FR_BDD_COVERAGE",
+      "category": "INCONSISTENCY",
+      "severity": "WARNING",
+      "message": "@feature44 in .feature has no matching FR/AC requirement",
+      "details": "Add @feature44 to FR.md or ACCEPTANCE_CRITERIA.md header"
+    },
+    {
+      "check": "FR_BDD_COVERAGE",
+      "category": "INCONSISTENCY",
+      "severity": "WARNING",
+      "message": "@feature53 in .feature has no matching FR/AC requirement",
+      "details": "Add @feature53 to FR.md or ACCEPTANCE_CRITERIA.md header"
+    },
+    {
+      "check": "FR_BDD_COVERAGE",
+      "category": "INCONSISTENCY",
+      "severity": "WARNING",
+      "message": "@feature23 in .feature has no matching FR/AC requirement",
+      "details": "Add @feature23 to FR.md or ACCEPTANCE_CRITERIA.md header"
+    },
+    {
+      "check": "FR_BDD_COVERAGE",
+      "category": "INCONSISTENCY",
+      "severity": "WARNING",
+      "message": "@feature59 in .feature has no matching FR/AC requirement",
+      "details": "Add @feature59 to FR.md or ACCEPTANCE_CRITERIA.md header"
+    },
+    {
+      "check": "FR_BDD_COVERAGE",
+      "category": "INCONSISTENCY",
+      "severity": "WARNING",
+      "message": "@feature60 in .feature has no matching FR/AC requirement",
+      "details": "Add @feature60 to FR.md or ACCEPTANCE_CRITERIA.md header"
+    },
+    {
+      "check": "FR_BDD_COVERAGE",
+      "category": "INCONSISTENCY",
+      "severity": "WARNING",
+      "message": "@feature61 in .feature has no matching FR/AC requirement",
+      "details": "Add @feature61 to FR.md or ACCEPTANCE_CRITERIA.md header"
+    },
+    {
+      "check": "FR_BDD_COVERAGE",
+      "category": "INCONSISTENCY",
+      "severity": "WARNING",
+      "message": "@feature62 in .feature has no matching FR/AC requirement",
+      "details": "Add @feature62 to FR.md or ACCEPTANCE_CRITERIA.md header"
+    },
+    {
+      "check": "FR_BDD_COVERAGE",
+      "category": "INCONSISTENCY",
+      "severity": "WARNING",
+      "message": "@feature63 in .feature has no matching FR/AC requirement",
+      "details": "Add @feature63 to FR.md or ACCEPTANCE_CRITERIA.md header"
+    },
+    {
+      "check": "FR_BDD_COVERAGE",
+      "category": "INCONSISTENCY",
+      "severity": "WARNING",
+      "message": "@feature64 in .feature has no matching FR/AC requirement",
+      "details": "Add @feature64 to FR.md or ACCEPTANCE_CRITERIA.md header"
+    },
+    {
+      "check": "FR_BDD_COVERAGE",
+      "category": "INCONSISTENCY",
+      "severity": "WARNING",
+      "message": "@feature65 in .feature has no matching FR/AC requirement",
+      "details": "Add @feature65 to FR.md or ACCEPTANCE_CRITERIA.md header"
+    },
+    {
+      "check": "FR_BDD_COVERAGE",
+      "category": "INCONSISTENCY",
+      "severity": "WARNING",
+      "message": "@feature66 in .feature has no matching FR/AC requirement",
+      "details": "Add @feature66 to FR.md or ACCEPTANCE_CRITERIA.md header"
+    },
+    {
+      "check": "FR_BDD_COVERAGE",
+      "category": "INCONSISTENCY",
+      "severity": "WARNING",
+      "message": "@feature67 in .feature has no matching FR/AC requirement",
+      "details": "Add @feature67 to FR.md or ACCEPTANCE_CRITERIA.md header"
+    },
+    {
+      "check": "FR_BDD_COVERAGE",
+      "category": "INCONSISTENCY",
+      "severity": "WARNING",
+      "message": "@feature68 in .feature has no matching FR/AC requirement",
+      "details": "Add @feature68 to FR.md or ACCEPTANCE_CRITERIA.md header"
+    },
+    {
+      "check": "FR_BDD_COVERAGE",
+      "category": "INCONSISTENCY",
+      "severity": "WARNING",
+      "message": "@feature69 in .feature has no matching FR/AC requirement",
+      "details": "Add @feature69 to FR.md or ACCEPTANCE_CRITERIA.md header"
+    },
+    {
+      "check": "FR_BDD_COVERAGE",
+      "category": "INCONSISTENCY",
+      "severity": "WARNING",
+      "message": "@feature70 in .feature has no matching FR/AC requirement",
+      "details": "Add @feature70 to FR.md or ACCEPTANCE_CRITERIA.md header"
+    },
+    {
+      "check": "FR_BDD_COVERAGE",
+      "category": "INCONSISTENCY",
+      "severity": "WARNING",
+      "message": "@feature71 in .feature has no matching FR/AC requirement",
+      "details": "Add @feature71 to FR.md or ACCEPTANCE_CRITERIA.md header"
+    },
+    {
+      "check": "FR_BDD_COVERAGE",
+      "category": "INCONSISTENCY",
+      "severity": "WARNING",
+      "message": "@feature72 in .feature has no matching FR/AC requirement",
+      "details": "Add @feature72 to FR.md or ACCEPTANCE_CRITERIA.md header"
+    },
+    {
+      "check": "FR_BDD_COVERAGE",
+      "category": "INCONSISTENCY",
+      "severity": "WARNING",
+      "message": "@feature73 in .feature has no matching FR/AC requirement",
+      "details": "Add @feature73 to FR.md or ACCEPTANCE_CRITERIA.md header"
+    },
+    {
+      "check": "FR_BDD_COVERAGE",
+      "category": "INCONSISTENCY",
+      "severity": "WARNING",
+      "message": "@feature74 in .feature has no matching FR/AC requirement",
+      "details": "Add @feature74 to FR.md or ACCEPTANCE_CRITERIA.md header"
+    },
+    {
+      "check": "FR_BDD_COVERAGE",
+      "category": "INCONSISTENCY",
+      "severity": "WARNING",
+      "message": "@feature75 in .feature has no matching FR/AC requirement",
+      "details": "Add @feature75 to FR.md or ACCEPTANCE_CRITERIA.md header"
+    },
+    {
+      "check": "FR_BDD_COVERAGE",
+      "category": "INCONSISTENCY",
+      "severity": "WARNING",
+      "message": "@feature76 in .feature has no matching FR/AC requirement",
+      "details": "Add @feature76 to FR.md or ACCEPTANCE_CRITERIA.md header"
+    },
+    {
+      "check": "FR_BDD_COVERAGE",
+      "category": "INCONSISTENCY",
+      "severity": "WARNING",
+      "message": "@feature77 in .feature has no matching FR/AC requirement",
+      "details": "Add @feature77 to FR.md or ACCEPTANCE_CRITERIA.md header"
+    },
+    {
+      "check": "FR_BDD_COVERAGE",
+      "category": "INCONSISTENCY",
+      "severity": "WARNING",
+      "message": "@feature78 in .feature has no matching FR/AC requirement",
+      "details": "Add @feature78 to FR.md or ACCEPTANCE_CRITERIA.md header"
+    },
+    {
+      "check": "FR_BDD_COVERAGE",
+      "category": "INCONSISTENCY",
+      "severity": "WARNING",
+      "message": "@feature79 in .feature has no matching FR/AC requirement",
+      "details": "Add @feature79 to FR.md or ACCEPTANCE_CRITERIA.md header"
+    },
+    {
+      "check": "FR_BDD_COVERAGE",
+      "category": "INCONSISTENCY",
+      "severity": "WARNING",
+      "message": "@feature80 in .feature has no matching FR/AC requirement",
+      "details": "Add @feature80 to FR.md or ACCEPTANCE_CRITERIA.md header"
+    },
+    {
+      "check": "FR_BDD_COVERAGE",
+      "category": "INCONSISTENCY",
+      "severity": "WARNING",
+      "message": "@feature81 in .feature has no matching FR/AC requirement",
+      "details": "Add @feature81 to FR.md or ACCEPTANCE_CRITERIA.md header"
+    },
+    {
+      "check": "FR_BDD_COVERAGE",
+      "category": "INCONSISTENCY",
+      "severity": "WARNING",
+      "message": "@feature82 in .feature has no matching FR/AC requirement",
+      "details": "Add @feature82 to FR.md or ACCEPTANCE_CRITERIA.md header"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature1 in .feature but not in USER_STORIES.md",
+      "details": "Add @feature1 to the relevant User Story in USER_STORIES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature1 in .feature but not in USE_CASES.md",
+      "details": "Add @feature1 to the relevant Use Case in USE_CASES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature2 in .feature but not in USER_STORIES.md",
+      "details": "Add @feature2 to the relevant User Story in USER_STORIES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature2 in .feature but not in USE_CASES.md",
+      "details": "Add @feature2 to the relevant Use Case in USE_CASES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature3 in .feature but not in USER_STORIES.md",
+      "details": "Add @feature3 to the relevant User Story in USER_STORIES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature3 in .feature but not in USE_CASES.md",
+      "details": "Add @feature3 to the relevant Use Case in USE_CASES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature4 in .feature but not in USER_STORIES.md",
+      "details": "Add @feature4 to the relevant User Story in USER_STORIES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature4 in .feature but not in USE_CASES.md",
+      "details": "Add @feature4 to the relevant Use Case in USE_CASES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature5 in .feature but not in USER_STORIES.md",
+      "details": "Add @feature5 to the relevant User Story in USER_STORIES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature5 in .feature but not in USE_CASES.md",
+      "details": "Add @feature5 to the relevant Use Case in USE_CASES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature6 in .feature but not in USE_CASES.md",
+      "details": "Add @feature6 to the relevant Use Case in USE_CASES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "WARNING",
+      "message": "@feature28 in .feature but not referenced in TASKS.md",
+      "details": "Add @feature28 to the relevant phase/task in TASKS.md for traceability"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature28 in .feature but not in USER_STORIES.md",
+      "details": "Add @feature28 to the relevant User Story in USER_STORIES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature28 in .feature but not in USE_CASES.md",
+      "details": "Add @feature28 to the relevant Use Case in USE_CASES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature7 in .feature but not in USE_CASES.md",
+      "details": "Add @feature7 to the relevant Use Case in USE_CASES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature8 in .feature but not in USER_STORIES.md",
+      "details": "Add @feature8 to the relevant User Story in USER_STORIES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature8 in .feature but not in USE_CASES.md",
+      "details": "Add @feature8 to the relevant Use Case in USE_CASES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature9 in .feature but not in USER_STORIES.md",
+      "details": "Add @feature9 to the relevant User Story in USER_STORIES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature9 in .feature but not in USE_CASES.md",
+      "details": "Add @feature9 to the relevant Use Case in USE_CASES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature10 in .feature but not in USER_STORIES.md",
+      "details": "Add @feature10 to the relevant User Story in USER_STORIES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature10 in .feature but not in USE_CASES.md",
+      "details": "Add @feature10 to the relevant Use Case in USE_CASES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature11 in .feature but not in USER_STORIES.md",
+      "details": "Add @feature11 to the relevant User Story in USER_STORIES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature11 in .feature but not in USE_CASES.md",
+      "details": "Add @feature11 to the relevant Use Case in USE_CASES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature12 in .feature but not in USER_STORIES.md",
+      "details": "Add @feature12 to the relevant User Story in USER_STORIES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature12 in .feature but not in USE_CASES.md",
+      "details": "Add @feature12 to the relevant Use Case in USE_CASES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature13 in .feature but not in USER_STORIES.md",
+      "details": "Add @feature13 to the relevant User Story in USER_STORIES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature13 in .feature but not in USE_CASES.md",
+      "details": "Add @feature13 to the relevant Use Case in USE_CASES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature14 in .feature but not in USER_STORIES.md",
+      "details": "Add @feature14 to the relevant User Story in USER_STORIES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature14 in .feature but not in USE_CASES.md",
+      "details": "Add @feature14 to the relevant Use Case in USE_CASES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature15 in .feature but not in USER_STORIES.md",
+      "details": "Add @feature15 to the relevant User Story in USER_STORIES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature15 in .feature but not in USE_CASES.md",
+      "details": "Add @feature15 to the relevant Use Case in USE_CASES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature16 in .feature but not in USER_STORIES.md",
+      "details": "Add @feature16 to the relevant User Story in USER_STORIES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature16 in .feature but not in USE_CASES.md",
+      "details": "Add @feature16 to the relevant Use Case in USE_CASES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature17 in .feature but not in USER_STORIES.md",
+      "details": "Add @feature17 to the relevant User Story in USER_STORIES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature17 in .feature but not in USE_CASES.md",
+      "details": "Add @feature17 to the relevant Use Case in USE_CASES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature18 in .feature but not in USER_STORIES.md",
+      "details": "Add @feature18 to the relevant User Story in USER_STORIES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature18 in .feature but not in USE_CASES.md",
+      "details": "Add @feature18 to the relevant Use Case in USE_CASES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature19 in .feature but not in USER_STORIES.md",
+      "details": "Add @feature19 to the relevant User Story in USER_STORIES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature19 in .feature but not in USE_CASES.md",
+      "details": "Add @feature19 to the relevant Use Case in USE_CASES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "WARNING",
+      "message": "@feature22 in .feature but not referenced in TASKS.md",
+      "details": "Add @feature22 to the relevant phase/task in TASKS.md for traceability"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature22 in .feature but not in USER_STORIES.md",
+      "details": "Add @feature22 to the relevant User Story in USER_STORIES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature22 in .feature but not in USE_CASES.md",
+      "details": "Add @feature22 to the relevant Use Case in USE_CASES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature25 in .feature but not in USER_STORIES.md",
+      "details": "Add @feature25 to the relevant User Story in USER_STORIES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature25 in .feature but not in USE_CASES.md",
+      "details": "Add @feature25 to the relevant Use Case in USE_CASES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "WARNING",
+      "message": "@feature26 in .feature but not referenced in TASKS.md",
+      "details": "Add @feature26 to the relevant phase/task in TASKS.md for traceability"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature26 in .feature but not in USER_STORIES.md",
+      "details": "Add @feature26 to the relevant User Story in USER_STORIES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature26 in .feature but not in USE_CASES.md",
+      "details": "Add @feature26 to the relevant Use Case in USE_CASES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature27 in .feature but not in USER_STORIES.md",
+      "details": "Add @feature27 to the relevant User Story in USER_STORIES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature27 in .feature but not in USE_CASES.md",
+      "details": "Add @feature27 to the relevant Use Case in USE_CASES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature29 in .feature but not in USER_STORIES.md",
+      "details": "Add @feature29 to the relevant User Story in USER_STORIES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature29 in .feature but not in USE_CASES.md",
+      "details": "Add @feature29 to the relevant Use Case in USE_CASES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature30 in .feature but not in USER_STORIES.md",
+      "details": "Add @feature30 to the relevant User Story in USER_STORIES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature30 in .feature but not in USE_CASES.md",
+      "details": "Add @feature30 to the relevant Use Case in USE_CASES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature31 in .feature but not in USER_STORIES.md",
+      "details": "Add @feature31 to the relevant User Story in USER_STORIES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature31 in .feature but not in USE_CASES.md",
+      "details": "Add @feature31 to the relevant Use Case in USE_CASES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature32 in .feature but not in USER_STORIES.md",
+      "details": "Add @feature32 to the relevant User Story in USER_STORIES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature32 in .feature but not in USE_CASES.md",
+      "details": "Add @feature32 to the relevant Use Case in USE_CASES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature33 in .feature but not in USER_STORIES.md",
+      "details": "Add @feature33 to the relevant User Story in USER_STORIES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature33 in .feature but not in USE_CASES.md",
+      "details": "Add @feature33 to the relevant Use Case in USE_CASES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature34 in .feature but not in USER_STORIES.md",
+      "details": "Add @feature34 to the relevant User Story in USER_STORIES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature34 in .feature but not in USE_CASES.md",
+      "details": "Add @feature34 to the relevant Use Case in USE_CASES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature35 in .feature but not in USER_STORIES.md",
+      "details": "Add @feature35 to the relevant User Story in USER_STORIES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature35 in .feature but not in USE_CASES.md",
+      "details": "Add @feature35 to the relevant Use Case in USE_CASES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature36 in .feature but not in USER_STORIES.md",
+      "details": "Add @feature36 to the relevant User Story in USER_STORIES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature36 in .feature but not in USE_CASES.md",
+      "details": "Add @feature36 to the relevant Use Case in USE_CASES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature37 in .feature but not in USER_STORIES.md",
+      "details": "Add @feature37 to the relevant User Story in USER_STORIES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature37 in .feature but not in USE_CASES.md",
+      "details": "Add @feature37 to the relevant Use Case in USE_CASES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature38 in .feature but not in USER_STORIES.md",
+      "details": "Add @feature38 to the relevant User Story in USER_STORIES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature38 in .feature but not in USE_CASES.md",
+      "details": "Add @feature38 to the relevant Use Case in USE_CASES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "WARNING",
+      "message": "@feature21 in .feature but not referenced in TASKS.md",
+      "details": "Add @feature21 to the relevant phase/task in TASKS.md for traceability"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature21 in .feature but not in USER_STORIES.md",
+      "details": "Add @feature21 to the relevant User Story in USER_STORIES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature21 in .feature but not in USE_CASES.md",
+      "details": "Add @feature21 to the relevant Use Case in USE_CASES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "WARNING",
+      "message": "@feature24 in .feature but not referenced in TASKS.md",
+      "details": "Add @feature24 to the relevant phase/task in TASKS.md for traceability"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature24 in .feature but not in USER_STORIES.md",
+      "details": "Add @feature24 to the relevant User Story in USER_STORIES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature24 in .feature but not in USE_CASES.md",
+      "details": "Add @feature24 to the relevant Use Case in USE_CASES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature20 in .feature but not in USER_STORIES.md",
+      "details": "Add @feature20 to the relevant User Story in USER_STORIES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature20 in .feature but not in USE_CASES.md",
+      "details": "Add @feature20 to the relevant Use Case in USE_CASES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature49 in .feature but not in USER_STORIES.md",
+      "details": "Add @feature49 to the relevant User Story in USER_STORIES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature49 in .feature but not in USE_CASES.md",
+      "details": "Add @feature49 to the relevant Use Case in USE_CASES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "WARNING",
+      "message": "@feature46 in .feature but not referenced in TASKS.md",
+      "details": "Add @feature46 to the relevant phase/task in TASKS.md for traceability"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature46 in .feature but not in USER_STORIES.md",
+      "details": "Add @feature46 to the relevant User Story in USER_STORIES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature46 in .feature but not in USE_CASES.md",
+      "details": "Add @feature46 to the relevant Use Case in USE_CASES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "WARNING",
+      "message": "@feature47 in .feature but not referenced in TASKS.md",
+      "details": "Add @feature47 to the relevant phase/task in TASKS.md for traceability"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature47 in .feature but not in USER_STORIES.md",
+      "details": "Add @feature47 to the relevant User Story in USER_STORIES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature47 in .feature but not in USE_CASES.md",
+      "details": "Add @feature47 to the relevant Use Case in USE_CASES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature48 in .feature but not in USER_STORIES.md",
+      "details": "Add @feature48 to the relevant User Story in USER_STORIES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature48 in .feature but not in USE_CASES.md",
+      "details": "Add @feature48 to the relevant Use Case in USE_CASES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature50 in .feature but not in USER_STORIES.md",
+      "details": "Add @feature50 to the relevant User Story in USER_STORIES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature50 in .feature but not in USE_CASES.md",
+      "details": "Add @feature50 to the relevant Use Case in USE_CASES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature51 in .feature but not in USER_STORIES.md",
+      "details": "Add @feature51 to the relevant User Story in USER_STORIES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature51 in .feature but not in USE_CASES.md",
+      "details": "Add @feature51 to the relevant Use Case in USE_CASES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature40 in .feature but not in USER_STORIES.md",
+      "details": "Add @feature40 to the relevant User Story in USER_STORIES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature40 in .feature but not in USE_CASES.md",
+      "details": "Add @feature40 to the relevant Use Case in USE_CASES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "WARNING",
+      "message": "@feature39 in .feature but not referenced in TASKS.md",
+      "details": "Add @feature39 to the relevant phase/task in TASKS.md for traceability"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature39 in .feature but not in USER_STORIES.md",
+      "details": "Add @feature39 to the relevant User Story in USER_STORIES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature39 in .feature but not in USE_CASES.md",
+      "details": "Add @feature39 to the relevant Use Case in USE_CASES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature52 in .feature but not in USER_STORIES.md",
+      "details": "Add @feature52 to the relevant User Story in USER_STORIES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature52 in .feature but not in USE_CASES.md",
+      "details": "Add @feature52 to the relevant Use Case in USE_CASES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "WARNING",
+      "message": "@feature45 in .feature but not referenced in TASKS.md",
+      "details": "Add @feature45 to the relevant phase/task in TASKS.md for traceability"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature45 in .feature but not in USER_STORIES.md",
+      "details": "Add @feature45 to the relevant User Story in USER_STORIES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature45 in .feature but not in USE_CASES.md",
+      "details": "Add @feature45 to the relevant Use Case in USE_CASES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "WARNING",
+      "message": "@feature42 in .feature but not referenced in TASKS.md",
+      "details": "Add @feature42 to the relevant phase/task in TASKS.md for traceability"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature42 in .feature but not in USER_STORIES.md",
+      "details": "Add @feature42 to the relevant User Story in USER_STORIES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature42 in .feature but not in USE_CASES.md",
+      "details": "Add @feature42 to the relevant Use Case in USE_CASES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "WARNING",
+      "message": "@feature41 in .feature but not referenced in TASKS.md",
+      "details": "Add @feature41 to the relevant phase/task in TASKS.md for traceability"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature41 in .feature but not in USER_STORIES.md",
+      "details": "Add @feature41 to the relevant User Story in USER_STORIES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature41 in .feature but not in USE_CASES.md",
+      "details": "Add @feature41 to the relevant Use Case in USE_CASES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "WARNING",
+      "message": "@feature58 in .feature but not referenced in TASKS.md",
+      "details": "Add @feature58 to the relevant phase/task in TASKS.md for traceability"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature58 in .feature but not in USER_STORIES.md",
+      "details": "Add @feature58 to the relevant User Story in USER_STORIES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature58 in .feature but not in USE_CASES.md",
+      "details": "Add @feature58 to the relevant Use Case in USE_CASES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "WARNING",
+      "message": "@feature44 in .feature but not referenced in TASKS.md",
+      "details": "Add @feature44 to the relevant phase/task in TASKS.md for traceability"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature44 in .feature but not in USER_STORIES.md",
+      "details": "Add @feature44 to the relevant User Story in USER_STORIES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature44 in .feature but not in USE_CASES.md",
+      "details": "Add @feature44 to the relevant Use Case in USE_CASES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "WARNING",
+      "message": "@feature53 in .feature but not referenced in TASKS.md",
+      "details": "Add @feature53 to the relevant phase/task in TASKS.md for traceability"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature53 in .feature but not in USER_STORIES.md",
+      "details": "Add @feature53 to the relevant User Story in USER_STORIES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature53 in .feature but not in USE_CASES.md",
+      "details": "Add @feature53 to the relevant Use Case in USE_CASES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "WARNING",
+      "message": "@feature54 in .feature but not referenced in TASKS.md",
+      "details": "Add @feature54 to the relevant phase/task in TASKS.md for traceability"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature54 in .feature but not in USER_STORIES.md",
+      "details": "Add @feature54 to the relevant User Story in USER_STORIES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature54 in .feature but not in USE_CASES.md",
+      "details": "Add @feature54 to the relevant Use Case in USE_CASES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "WARNING",
+      "message": "@feature55 in .feature but not referenced in TASKS.md",
+      "details": "Add @feature55 to the relevant phase/task in TASKS.md for traceability"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature55 in .feature but not in USER_STORIES.md",
+      "details": "Add @feature55 to the relevant User Story in USER_STORIES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature55 in .feature but not in USE_CASES.md",
+      "details": "Add @feature55 to the relevant Use Case in USE_CASES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "WARNING",
+      "message": "@feature23 in .feature but not referenced in TASKS.md",
+      "details": "Add @feature23 to the relevant phase/task in TASKS.md for traceability"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature23 in .feature but not in USER_STORIES.md",
+      "details": "Add @feature23 to the relevant User Story in USER_STORIES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature23 in .feature but not in USE_CASES.md",
+      "details": "Add @feature23 to the relevant Use Case in USE_CASES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature57 in .feature but not in USER_STORIES.md",
+      "details": "Add @feature57 to the relevant User Story in USER_STORIES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature57 in .feature but not in USE_CASES.md",
+      "details": "Add @feature57 to the relevant Use Case in USE_CASES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature59 in .feature but not in USER_STORIES.md",
+      "details": "Add @feature59 to the relevant User Story in USER_STORIES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature59 in .feature but not in USE_CASES.md",
+      "details": "Add @feature59 to the relevant Use Case in USE_CASES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature56 in .feature but not in USER_STORIES.md",
+      "details": "Add @feature56 to the relevant User Story in USER_STORIES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature56 in .feature but not in USE_CASES.md",
+      "details": "Add @feature56 to the relevant Use Case in USE_CASES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature60 in .feature but not in USER_STORIES.md",
+      "details": "Add @feature60 to the relevant User Story in USER_STORIES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature60 in .feature but not in USE_CASES.md",
+      "details": "Add @feature60 to the relevant Use Case in USE_CASES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature61 in .feature but not in USER_STORIES.md",
+      "details": "Add @feature61 to the relevant User Story in USER_STORIES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature61 in .feature but not in USE_CASES.md",
+      "details": "Add @feature61 to the relevant Use Case in USE_CASES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "WARNING",
+      "message": "@feature62 in .feature but not referenced in TASKS.md",
+      "details": "Add @feature62 to the relevant phase/task in TASKS.md for traceability"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature62 in .feature but not in USER_STORIES.md",
+      "details": "Add @feature62 to the relevant User Story in USER_STORIES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature62 in .feature but not in USE_CASES.md",
+      "details": "Add @feature62 to the relevant Use Case in USE_CASES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "WARNING",
+      "message": "@feature63 in .feature but not referenced in TASKS.md",
+      "details": "Add @feature63 to the relevant phase/task in TASKS.md for traceability"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature63 in .feature but not in USER_STORIES.md",
+      "details": "Add @feature63 to the relevant User Story in USER_STORIES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature63 in .feature but not in USE_CASES.md",
+      "details": "Add @feature63 to the relevant Use Case in USE_CASES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "WARNING",
+      "message": "@feature64 in .feature but not referenced in TASKS.md",
+      "details": "Add @feature64 to the relevant phase/task in TASKS.md for traceability"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature64 in .feature but not in USER_STORIES.md",
+      "details": "Add @feature64 to the relevant User Story in USER_STORIES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature64 in .feature but not in USE_CASES.md",
+      "details": "Add @feature64 to the relevant Use Case in USE_CASES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "WARNING",
+      "message": "@feature65 in .feature but not referenced in TASKS.md",
+      "details": "Add @feature65 to the relevant phase/task in TASKS.md for traceability"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature65 in .feature but not in USER_STORIES.md",
+      "details": "Add @feature65 to the relevant User Story in USER_STORIES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature65 in .feature but not in USE_CASES.md",
+      "details": "Add @feature65 to the relevant Use Case in USE_CASES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature66 in .feature but not in USE_CASES.md",
+      "details": "Add @feature66 to the relevant Use Case in USE_CASES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "WARNING",
+      "message": "@feature67 in .feature but not referenced in TASKS.md",
+      "details": "Add @feature67 to the relevant phase/task in TASKS.md for traceability"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature67 in .feature but not in USER_STORIES.md",
+      "details": "Add @feature67 to the relevant User Story in USER_STORIES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature67 in .feature but not in USE_CASES.md",
+      "details": "Add @feature67 to the relevant Use Case in USE_CASES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature68 in .feature but not in USE_CASES.md",
+      "details": "Add @feature68 to the relevant Use Case in USE_CASES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature69 in .feature but not in USE_CASES.md",
+      "details": "Add @feature69 to the relevant Use Case in USE_CASES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature70 in .feature but not in USE_CASES.md",
+      "details": "Add @feature70 to the relevant Use Case in USE_CASES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature71 in .feature but not in USE_CASES.md",
+      "details": "Add @feature71 to the relevant Use Case in USE_CASES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "WARNING",
+      "message": "@feature72 in .feature but not referenced in TASKS.md",
+      "details": "Add @feature72 to the relevant phase/task in TASKS.md for traceability"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature72 in .feature but not in USER_STORIES.md",
+      "details": "Add @feature72 to the relevant User Story in USER_STORIES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature72 in .feature but not in USE_CASES.md",
+      "details": "Add @feature72 to the relevant Use Case in USE_CASES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "WARNING",
+      "message": "@feature73 in .feature but not referenced in TASKS.md",
+      "details": "Add @feature73 to the relevant phase/task in TASKS.md for traceability"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature73 in .feature but not in USER_STORIES.md",
+      "details": "Add @feature73 to the relevant User Story in USER_STORIES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature73 in .feature but not in USE_CASES.md",
+      "details": "Add @feature73 to the relevant Use Case in USE_CASES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "WARNING",
+      "message": "@feature74 in .feature but not referenced in TASKS.md",
+      "details": "Add @feature74 to the relevant phase/task in TASKS.md for traceability"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature74 in .feature but not in USER_STORIES.md",
+      "details": "Add @feature74 to the relevant User Story in USER_STORIES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature74 in .feature but not in USE_CASES.md",
+      "details": "Add @feature74 to the relevant Use Case in USE_CASES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "WARNING",
+      "message": "@feature75 in .feature but not referenced in TASKS.md",
+      "details": "Add @feature75 to the relevant phase/task in TASKS.md for traceability"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature75 in .feature but not in USER_STORIES.md",
+      "details": "Add @feature75 to the relevant User Story in USER_STORIES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature75 in .feature but not in USE_CASES.md",
+      "details": "Add @feature75 to the relevant Use Case in USE_CASES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "WARNING",
+      "message": "@feature76 in .feature but not referenced in TASKS.md",
+      "details": "Add @feature76 to the relevant phase/task in TASKS.md for traceability"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature76 in .feature but not in USER_STORIES.md",
+      "details": "Add @feature76 to the relevant User Story in USER_STORIES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature76 in .feature but not in USE_CASES.md",
+      "details": "Add @feature76 to the relevant Use Case in USE_CASES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "WARNING",
+      "message": "@feature77 in .feature but not referenced in TASKS.md",
+      "details": "Add @feature77 to the relevant phase/task in TASKS.md for traceability"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature77 in .feature but not in USER_STORIES.md",
+      "details": "Add @feature77 to the relevant User Story in USER_STORIES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature77 in .feature but not in USE_CASES.md",
+      "details": "Add @feature77 to the relevant Use Case in USE_CASES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "WARNING",
+      "message": "@feature78 in .feature but not referenced in TASKS.md",
+      "details": "Add @feature78 to the relevant phase/task in TASKS.md for traceability"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature78 in .feature but not in USER_STORIES.md",
+      "details": "Add @feature78 to the relevant User Story in USER_STORIES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature78 in .feature but not in USE_CASES.md",
+      "details": "Add @feature78 to the relevant Use Case in USE_CASES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "WARNING",
+      "message": "@feature79 in .feature but not referenced in TASKS.md",
+      "details": "Add @feature79 to the relevant phase/task in TASKS.md for traceability"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature79 in .feature but not in USER_STORIES.md",
+      "details": "Add @feature79 to the relevant User Story in USER_STORIES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature79 in .feature but not in USE_CASES.md",
+      "details": "Add @feature79 to the relevant Use Case in USE_CASES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "WARNING",
+      "message": "@feature80 in .feature but not referenced in TASKS.md",
+      "details": "Add @feature80 to the relevant phase/task in TASKS.md for traceability"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature80 in .feature but not in USER_STORIES.md",
+      "details": "Add @feature80 to the relevant User Story in USER_STORIES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature80 in .feature but not in USE_CASES.md",
+      "details": "Add @feature80 to the relevant Use Case in USE_CASES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "WARNING",
+      "message": "@feature81 in .feature but not referenced in TASKS.md",
+      "details": "Add @feature81 to the relevant phase/task in TASKS.md for traceability"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature81 in .feature but not in USER_STORIES.md",
+      "details": "Add @feature81 to the relevant User Story in USER_STORIES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature81 in .feature but not in USE_CASES.md",
+      "details": "Add @feature81 to the relevant Use Case in USE_CASES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature82 in .feature but not in USER_STORIES.md",
+      "details": "Add @feature82 to the relevant User Story in USER_STORIES.md"
+    },
+    {
+      "check": "FEATURE_TAG_PROPAGATION",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "@feature82 in .feature but not in USE_CASES.md",
+      "details": "Add @feature82 to the relevant Use Case in USE_CASES.md"
+    },
+    {
+      "check": "TERM_CONSISTENCY",
+      "category": "INCONSISTENCY",
+      "severity": "WARNING",
+      "message": "Term variants: DoneWhen, doneWhen",
+      "details": "Found in: ACCEPTANCE_CRITERIA.md, DESIGN.md, FR.md, TASKS.md. Standardize to one form."
+    },
+    {
+      "check": "TERM_CONSISTENCY",
+      "category": "INCONSISTENCY",
+      "severity": "WARNING",
+      "message": "Term variants: testCase, TestCase",
+      "details": "Found in: ACCEPTANCE_CRITERIA.md, DESIGN.md, TASKS.md. Standardize to one form."
+    },
+    {
+      "check": "TERM_CONSISTENCY",
+      "category": "INCONSISTENCY",
+      "severity": "WARNING",
+      "message": "Term variants: BrokenAnchor, brokenAnchor",
+      "details": "Found in: TASKS.md. Standardize to one form."
+    },
+    {
+      "check": "BDD_HOOKS_COVERAGE",
+      "category": "LOGIC_GAPS",
+      "severity": "WARNING",
+      "message": "Hook 'extensions/specs-workflow/tools/spec-conformance-guard/spec-conformance-guard.ts' from DESIGN.md 'Новые hooks' not found in TASKS.md Phase 0",
+      "details": "Each hook in DESIGN.md must have a corresponding task in TASKS.md Phase 0"
+    },
+    {
+      "check": "BDD_HOOKS_COVERAGE",
+      "category": "LOGIC_GAPS",
+      "severity": "WARNING",
+      "message": "Hook 'extensions/specs-workflow/tools/spec-conformance-push/spec-conformance-push.ts' from DESIGN.md 'Новые hooks' not found in TASKS.md Phase 0",
+      "details": "Each hook in DESIGN.md must have a corresponding task in TASKS.md Phase 0"
+    },
+    {
+      "check": "BDD_HOOKS_COVERAGE",
+      "category": "LOGIC_GAPS",
+      "severity": "WARNING",
+      "message": "Hook 'extensions/specs-workflow/tools/bash-post-test-ingest/bash-post-test-ingest.ts' from DESIGN.md 'Новые hooks' not found in TASKS.md Phase 0",
+      "details": "Each hook in DESIGN.md must have a corresponding task in TASKS.md Phase 0"
+    },
+    {
+      "check": "SCOPE_GATE_CANDIDATE",
+      "category": "LOGIC_GAPS",
+      "severity": "INFO",
+      "message": "Spec FILE_CHANGES.md touches guard/policy files: tools/spec-conformance-guard/spec-conformance-guard.ts, tools/specs-validator/extension-json-meta-guard.ts, tools/specs-validator/spec-access-guard.ts",
+      "details": "Implementation phase should run /verify-generic-scope-fix before each commit touching these files (see .claude/rules/scope-gate/when-to-verify.md). Add reference to TASKS.md Phase 0 if appropriate."
+    },
+    {
+      "check": "TASK_FR_ATOMICITY",
+      "category": "LOGIC_GAPS",
+      "severity": "WARNING",
+      "message": "TASK_ATOMICITY: Task covers multiple FRs: FR-19, fr-19, FR-22",
+      "details": "Task: - [x] T-Trans.1 verify FR-19 two-tier hook failure-mode — id: verify-fr-19-failure-tiers — Status: DONE (verified 2026-06-07: `tools/spec-conformance-guard/__tests__/spec-conformance-guard.test.ts` «failure modes (FR-19/FR-22, SPECGEN004_49..51)» — _49 malformed config fail-CLOSED exit 1, _50 parser exception fail-OPEN + JSONL; soft tier PARSER_CRASH → form-guards.log asserted in `tests/e2e/spec-generator-v3.test.ts`; scenarios _49/_50 GREEN in full run) | Est: 90m"
+    },
+    {
+      "check": "TASK_FR_ATOMICITY",
+      "category": "LOGIC_GAPS",
+      "severity": "WARNING",
+      "message": "TASK_ATOMICITY: Task covers multiple FRs: FR-20, fr-20",
+      "details": "Task: - [x] T-Trans.2 verify FR-20 threshold-only summary + on-demand /spec-status — id: verify-fr-20-summary — Status: DONE (2026-06-07: the 06-05 note was OPTIMISTIC — not only were the tests missing, the FEATURE was: no ack mechanism existed, the hook emitted a v3-style 24h aggregate on every prompt after any DENY. Built for real: `conformance-summary.ts` (threshold + ack + hard-tier JSONL) + `ack-summary.ts` CLI + /spec-status skill step 6; 6/6 vitest + SPECGEN004_109 GREEN + live hook cycle proven: 13 unresolved → ack → SILENT) | Est: 60m"
+    },
+    {
+      "check": "TASK_FR_ATOMICITY",
+      "category": "LOGIC_GAPS",
+      "severity": "WARNING",
+      "message": "TASK_ATOMICITY: Task covers multiple FRs: FR-21, fr-21",
+      "details": "Task: - [x] T-Trans.3 verify FR-21 spec-status.ts task-table CLI contract — id: verify-fr-21-cli-contract — Status: DONE (2026-06-07: fixture + baseline + contract test 4/4 GREEN; BDD SPECGEN004_107 binds the same byte-contract via the real CLI) | Est: 60m"
+    },
+    {
+      "check": "TASK_FR_ATOMICITY",
+      "category": "LOGIC_GAPS",
+      "severity": "WARNING",
+      "message": "TASK_ATOMICITY: Task covers multiple FRs: FR-22, fr-22",
+      "details": "Task: - [x] T-Trans.4 verify FR-22 version gate for spec-conformance-guard — id: verify-fr-22-version-gate — Status: DONE (verified 2026-06-07: guard tests «version gate (FR-22)» — ALLOW_AFTER_MIGRATION on absent .progress.json AND on version<4; v4-active DENY path covered in «HARD findings» describe; SPECGEN004_51 GREEN in full run) | Est: 60m"
+    },
+    {
+      "check": "TASK_FR_ATOMICITY",
+      "category": "LOGIC_GAPS",
+      "severity": "WARNING",
+      "message": "TASK_ATOMICITY: Task covers multiple FRs: FR-23, fr-23, FR-20",
+      "details": "Task: - [x] T-Trans.5 verify FR-23 log-file inventory contract — id: verify-fr-23-log-inventory — Status: DONE (verified 2026-06-07; BDD SPECGEN004_122 added same day — closing the NO-SCEN class from the per-FR review; the scenario immediately caught a REAL prod bug: FR-20 hard-tier counter looked for `code` while the real envelope writes `finding_code` — real findings were never counted; fixed + test seeds now use the REAL composeEntry envelope: both sinks creatable on first write — `writer.ts` mkdirSync recursive; soft-tier → form-guards.log asserted in spec-generator-v3 e2e, hard-tier → JSONL asserted in guard test _50; DESIGN.md «(m) Log file inventory (FR-23)» table present. NOTE: tier-exclusivity is asserted per-sink (each tier's test checks its own log), not as a cross-write negative) | Est: 30m"
+    },
+    {
+      "check": "TASK_FR_ATOMICITY",
+      "category": "LOGIC_GAPS",
+      "severity": "WARNING",
+      "message": "TASK_ATOMICITY: Task covers multiple FRs: FR-24, fr-24",
+      "details": "Task: - [x] T-Trans.6 verify FR-24 meta-guard preservation + extension — id: verify-fr-24-meta-guard — Status: DONE (2026-06-07, BDD SPECGEN004_108: the 2026-06-05 note UNDERSTATED the gap — the guard was not only untested, it was DEAD: registered only in `.claude/settings.json.bak`, never fired, and guarded only settings.json — none of the v4 canonical manifests. Fixed at the root: v4 scope + LIVE registration + 6/6 tests + live launcher deny proven) | Est: 60m"
+    },
+    {
+      "check": "TASK_FR_ATOMICITY",
+      "category": "LOGIC_GAPS",
+      "severity": "WARNING",
+      "message": "TASK_ATOMICITY: Task covers multiple FRs: FR-25, fr-25",
+      "details": "Task: - [x] T-Trans.7 verify FR-25 v3 hooks survival on v4 install — id: verify-fr-25-additive-merge — Status: DONE (2026-06-07, contract TRANSLATED to v2 per FR-25's own rewrite: «there is NO install-time edit/merge of the user's plugin.json» — canonical install copies the plugin's static hooks.json and never touches user settings, so the v1 merge-e2e below is structurally impossible AND unnecessary. The live invariant = the SHIPPED manifest is the complete union, verified by the hardened SPECGEN004_52) | Est: 90m"
+    },
+    {
+      "check": "TASK_FR_ATOMICITY",
+      "category": "LOGIC_GAPS",
+      "severity": "WARNING",
+      "message": "TASK_ATOMICITY: Task covers multiple FRs: FR-26, fr-26",
+      "details": "Task: - [x] T-Trans.8 verify FR-26 LLM-as-judge content boundary — id: verify-fr-26-llm-deny-list — Status: DONE (verified 2026-06-07: `tools/spec-llm-judge/deny-list.ts` (file-name + body regex patterns) + `index.ts` SKIPPED_DENY_LIST/SKIPPED_OPT_OUT (`spec_llm_judge_deny: true`), skip observable WITHOUT `claude -p` spawn (injectable spawn = subprocess spy); `__tests__/llm-judge.test.ts`; SPECGEN004_53 GREEN in full run) | Est: 60m"
+    },
+    {
+      "check": "TASK_FR_ATOMICITY",
+      "category": "LOGIC_GAPS",
+      "severity": "WARNING",
+      "message": "TASK_ATOMICITY: Task covers multiple FRs: FR-27, fr-27",
+      "details": "Task: - [x] T-Trans.9 verify FR-27 Marksman LSP supply-chain sha verification — id: verify-fr-27-marksman-sha — Status: DONE (2026-06-07; correction: yesterday's «CLI not built — grep 0 hits» was a FALSE not-found — grep searched the planned name `update-marksman-hashes`, the shipped file is `cli-update-hashes.ts`. Live run confirmed the whole supply chain) | Est: 60m"
+    },
+    {
+      "check": "TASK_FR_ATOMICITY",
+      "category": "LOGIC_GAPS",
+      "severity": "WARNING",
+      "message": "TASK_ATOMICITY: Task covers multiple FRs: FR-28, fr-28",
+      "details": "Task: - [x] T-Trans.10 verify FR-28 PostToolUse fixed-window throttle — id: verify-fr-28-fixed-window — Status: DONE (BDD SPECGEN004_13 refreshed 2026-07-09 — fixed-window + dedup-flush + latency upper-bound pinned through the real decidePush; closes the NO-SCEN class) | Est: 45m"
+    },
+    {
+      "check": "TASK_FR_ATOMICITY",
+      "category": "LOGIC_GAPS",
+      "severity": "WARNING",
+      "message": "TASK_ATOMICITY: Task covers multiple FRs: FR-29, fr-29",
+      "details": "Task: - [x] T-Trans.14 BDD scenarios for FR-29/30/31 in `spec-generator-v4.feature` — id: bdd-scenarios-fr-29-30-31 — Status: DONE | Est: 60m"
+    },
+    {
+      "check": "TASK_FR_ATOMICITY",
+      "category": "LOGIC_GAPS",
+      "severity": "WARNING",
+      "message": "TASK_ATOMICITY: Task covers multiple FRs: fr-1, FR-1",
+      "details": "Task: - [x] All `*.md.template` cross-ref anchors fixed: `#fr-1-{название}` → `#fr-1-название` = `marksmanSlug(## FR-1: {Название})`; `[FR-N]` task stubs repointed to concrete `[FR-1]`. (`#ac-1-fr-1` already resolved `## AC-1 (FR-1)`, kept.) Empirically: all 21 templates → checkLinks 0 broken"
+    },
+    {
+      "check": "TASK_FR_ATOMICITY",
+      "category": "LOGIC_GAPS",
+      "severity": "WARNING",
+      "message": "TASK_ATOMICITY: Task covers multiple FRs: FR-36, FR-37, FR-32",
+      "details": "Task: - [x] dogfood confirms get_trace non-empty via edges — **164 tested-by ребра в Scenario-узлы (было 0** — исходный dogfood-finding); get_trace(v4:FR-36)=6/6/5, (v4:FR-37)=6/6/5, (v4:FR-32)=3/5/8 без tag-scan; локально cucumber 0 failed / 90 passed (undefined 11→10), vitest spec-graph+mcp 180/180 (md-parser пины → qualified); Docker clean-worktree прогон после коммита"
+    },
+    {
+      "check": "TASK_FR_ATOMICITY",
+      "category": "LOGIC_GAPS",
+      "severity": "WARNING",
+      "message": "TASK_ATOMICITY: Task covers multiple FRs: FR-2, FR-37",
+      "details": "Task: - [x] `tools.ts` resolves `slug:FR-2` / `{spec, node_id}` to the exact node (SPECGEN004_94); a colliding bare id returns the candidate list, not an arbitrary node (SPECGEN004_93) — `resolveNodeRef()` + uniform `AMBIGUOUS_BARE_ID` envelope во всех 4 node-ref тулзах (get_trace / get_node / get_test_result / find_refs, + optional `spec` в inputShape); live probe: composite→exact, {spec,node_id}→exact, bare `FR-2`→**49 candidates**, bare-unique `FR-37`→soft-resolved, missing→NODE_NOT_FOUND; step defs _93/_94 — 2 passed"
+    },
+    {
+      "check": "TASK_FR_ATOMICITY",
+      "category": "LOGIC_GAPS",
+      "severity": "WARNING",
+      "message": "TASK_ATOMICITY: Task covers multiple FRs: FR-36b, fr-2, FR-2",
+      "details": "Task: - [x] anchors verified still bare/file-local (SPECGEN004_91, FR-36b) — step def строит спеку с markdown-ссылкой `FR.md#fr-2`: definitions содержит bare `FR-2`/`fr-2-…`, НИ ОДНОГО composite-алиаса; node при этом composite-keyed — 1 passed. Суммарно: cucumber 0 failed / 93 passed (undefined 10→7)"
+    },
+    {
+      "check": "TASK_FR_ATOMICITY",
+      "category": "LOGIC_GAPS",
+      "severity": "WARNING",
+      "message": "TASK_ATOMICITY: Task covers multiple FRs: FR-001, FR-999, FR-05, fr-28, FR-19",
+      "details": "Task: - [x] within spec-generator-v4: **UNCOVERED_FR 9→0** (удалены 9 авто-TBD-скелетов из FR.md — мусор resolver-а, читавшего ПРИМЕРЫ из текста AC как требования: `FR-001`/`FR-999`/`FR-05`…), **TASK_UNTESTED 2→0** (extension-json-update → SPECGEN004_52, verify-fr-28-fixed-window → SPECGEN004_13 в Done-When), **UNTAGGED 129→0** (101 — честная семантика: `@featureN` С РЕЗОЛВЯЩИМСЯ FR-N = тег до требования, после P13-2 это реальное ребро; нерезолвящийся @featureN остаётся untagged; 28 legacy-v3 — реальный feature-level `@FR-19`, сам header файла называет FR-19 наследующим требованием; 0 tag-orphans). Corpus: 1557→**1305** (UNTAGGED 1498→1258, UNCOVERED_FR 49→40, TASK_UNTESTED 2→0) — заархивировано в `audit-reports/fr36-dogfood-before-after.md`"
+    },
+    {
+      "check": "TASK_FR_ATOMICITY",
+      "category": "LOGIC_GAPS",
+      "severity": "WARNING",
+      "message": "TASK_ATOMICITY: Task covers multiple FRs: FR-8, FR-36c",
+      "details": "Task: - [x] FR-8 semantic runs in the verdict path when a `claude` binary is present (SPECGEN004_99); absent → `SEMANTIC_SKIPPED`, never silent \"no drift\" (SPECGEN004_100) — пары = реальные tested-by рёбра (FR-36c), `runJudge` per pair с кэшем; binary-probe (`CLAUDE_BIN`/PATH); инжектируемый spawn для тестов; fail-loud на truncation (`SEMANTIC_TRUNCATED`) и judge-сбои (`SEMANTIC_DEGRADED`); CLI `--no-semantic`/`--max-pairs`; _99 (фейковый judge, pairsChecked≥1) и _100 (битый CLAUDE_BIN → SKIPPED-нота, 0 pairs, «NOT \"no drift\"») зелёные"
+    },
+    {
+      "check": "TASK_FR_ATOMICITY",
+      "category": "LOGIC_GAPS",
+      "severity": "WARNING",
+      "message": "TASK_ATOMICITY: Task covers multiple FRs: FR-10, FR-36",
+      "details": "Task: - [x] **DEBUGGED to fire + help, живой прогон на ЭТОМ корпусе** — первый же запуск нашёл НОВЫЙ долг вне v4: **118 graph-side stale FILE_CHANGES путей** в других спеках (worktree-setup, tui-test-runner-v2… — та же `extensions/`-болезнь, что была у v4) + **10 dangling covers-рёбер** в fix-bg-output-loss (AC ссылаются на несуществующие FR-10..14) → 🔴 RED exit 1; коллизии 0 (FR-36 починил; детектор regression-guarded planted-duplicate тестом — исторические ≈470-vs-47 / 1243 UNTAGGED были сигналами ДО Phase 13/14 фиксов и заархивированы в `audit-reports/fr36-dogfood-before-after.md`); **0 overlap** против существующих скиллов (`detect-overlap.ts --threshold 0.3`: corpus-health не флагнут)"
+    },
+    {
+      "check": "TASK_FR_ATOMICITY",
+      "category": "LOGIC_GAPS",
+      "severity": "WARNING",
+      "message": "TASK_ATOMICITY: Task covers multiple FRs: FR-40c, FR-14",
+      "details": "Task: - [x] FR-40c: в сервере граф обновляет FR-14 watcher; watcher-less embedders передают refreshGraph (новый RegistryOptions) — _115 доказывает: после записи get_node видит свежий title"
+    },
+    {
+      "check": "TASK_FR_ATOMICITY",
+      "category": "LOGIC_GAPS",
+      "severity": "WARNING",
+      "message": "TASK_ATOMICITY: Task covers multiple FRs: FR-43, FR-43c",
+      "details": "Task: - [x] @FR-43 сценарий SPECGEN004_156 биндит реальный computeLegacyTriage на temp-корпусе: SUPERSEDED по уликам, plain-not_run НЕ флагнут (anti-flood gate), и «nothing is retired automatically» (классификатор только репортит — FR-43c)"
+    },
+    {
+      "check": "TASK_FR_ATOMICITY",
+      "category": "LOGIC_GAPS",
+      "severity": "WARNING",
+      "message": "TASK_ATOMICITY: Task covers multiple FRs: FR-19, FR-7",
+      "details": "Task: - [x] P21-3: сценарная гниль — FR-19 blanket-ре-тег + FR-7 пересъёмка под нативный LSP — id: p21-scenario-rot — Status: DONE | Est: 240m"
+    },
+    {
+      "check": "TASK_FR_ATOMICITY",
+      "category": "LOGIC_GAPS",
+      "severity": "WARNING",
+      "message": "TASK_ATOMICITY: Task covers multiple FRs: FR-43, FR-37, FR-40",
+      "details": "Task: - [x] `fr-census` мини-CLI поверх графа — детерминированная per-FR перекличка `tools/spec-graph/fr-census.ts` (computeFrCensus + render + CLI, зеркало corpus-health; переиспользует computeCoverage + covers/tested-by рёбра, не пере-выводит): вердикт per FR = IMPLEMENTED / DONE_UNTESTED / IN_PROGRESS / PLANNED / UNIMPLEMENTED из task-статуса + scenario-результатов. Закрывает META-находку №0 (audit-reports/v4-deep-gap-analysis-2026-06-10.md): anti-false-green агрегация — IMPLEMENTED только если ВСЕ задачи done+verified; на ЖИВОМ корпусе FR-43 читается IN_PROGRESS (LLM-перекличка врала «IMPLEMENTED» при task=todo). NB (verify-divergent-contracts): эта способность трассируется к **FR-37** (smart-verdict honesty, «structural-pass никогда не clean»), НЕ к FR-40 (mutation door) — сценарий тегнут @feature37, не blanket @FR-40. BDD SPECGEN004_154 (@feature37) биндит реальный computeFrCensus через buildGraphFromCwd на temp-корпусе (done+todo→IN_PROGRESS, done-без-сценария→DONE_UNTESTED, conservation) + живой корпус; unit fr-census.test (5 вердиктов + инварианты). Live-смоук: 44 FR → 31 IMPLEMENTED / 13 IN_PROGRESS / 0 DONE_UNTESTED"
+    },
+    {
+      "check": "TASK_FR_ATOMICITY",
+      "category": "LOGIC_GAPS",
+      "severity": "WARNING",
+      "message": "TASK_ATOMICITY: Task covers multiple FRs: FR-47b, FR-1",
+      "details": "Task: - [x] `FR_NO_DESIGN` в conformance.ts (FR без покрывающего Decision, граф-нативно, зеркало FR_NO_RESEARCH; WARNING детект-первый, FR-47b). На живом корпусе 580 FR без дизайн-ноги подсвечены, FR-1 снят. Verified by SPECGEN004_164"
+    },
+    {
+      "check": "TASK_FR_ATOMICITY",
+      "category": "LOGIC_GAPS",
+      "severity": "WARNING",
+      "message": "TASK_ATOMICITY: Task covers multiple FRs: FR-48e, FR-48d",
+      "details": "Task: - [x] `set_entity_status` принимает ЛЮБУЮ сущность; не-Task узел → `refuseDerived` (FR → живой `computeFrCensus` вердикт + missingLegs; прочее → `STATUS_DERIVED` + указатель на fr-census/get_spec_status). FR-48e + AC-48.2 + DESIGN-решение записаны через дверь; FR-48d CAS сужен до задач; серверный бандл пересобран. Verified by SPECGEN004_175 (реальный temp-repo). spec-verdict GREEN. Коммит 3fa4db8"
+    },
+    {
+      "check": "TASK_FR_ATOMICITY",
+      "category": "LOGIC_GAPS",
+      "severity": "WARNING",
+      "message": "TASK_ATOMICITY: Task covers multiple FRs: FR-46a, FR-32",
+      "details": "Task: - [x] precision-fix (2026-06-18): own-scenario guard — флажит ТОЛЬКО задачу, чьё Done-When цитирует СВОЙ scenario-id (тот же сигнал FR-46a own-scenario), не FR-ref over-map. Без него сверщик сам выдавал 3 false-green: ws-f-remaining (backlog-umbrella), p16-form-skill-evals, p16-audit-split-doc — все мапят на @featureN своего FR через siblings, а собственный deliverable не готов. Реальный корпус 3→0 flags; unit-pin T-overmap (мапит на зелёный сценарий лишь через FR-ref → НЕ флажится). Закрывает класс «спека зелёная, задача открыта» = FR-32 over-map иллюзия, а не дрейф"
+    },
+    {
+      "check": "TASK_FR_ATOMICITY",
+      "category": "LOGIC_GAPS",
+      "severity": "WARNING",
+      "message": "TASK_ATOMICITY: Task covers multiple FRs: FR-52c, FR-34, fr-34",
+      "details": "Task: - [x] P28-3: validate_anchor — описание различает 2 смысла «якоря» + heading-slug резолв (F4/FR-52c) — id: p28-validate-anchor-clarity — Status: DONE (2026-07-09: `tools.ts` now separates `spec-graph-alias` from `marksman-heading-slug`; focused Docker vitest `tools/spec-mcp-server/__tests__/tools.test.ts` passed 1 file / 38 tests; Docker BDD `SPECGEN004_514` passed 1 scenario / 7 steps; real bundle smoke returned compact `FR-34` registered as `spec-graph-alias` and `FR.md#fr-34-marksman-v20-anchors` registered as `marksman-heading-slug`) | Est: 90m"
+    },
+    {
+      "check": "TASK_FR_ATOMICITY",
+      "category": "LOGIC_GAPS",
+      "severity": "WARNING",
+      "message": "TASK_ATOMICITY: Task covers multiple FRs: FR-32, FR-52e",
+      "details": "Task: - [x] P28-5: FR-32 join — задача verified своим сценарием, не worst-of-feature (F8/FR-52e) — id: p28-fr32-own-scenario-join — Status: DONE (2026-07-09: `mapTasksToScenarios` теперь сначала берёт явные собственные scenario-id из Done-When (`SPECGEN004_NN`/`TESTQUAL001_NN` и т.п.) и только при их отсутствии падает назад на `@featureN`/FR; `get_trace` для Task передаёт реальный `doneWhen`, а не пустую строку. Evidence: Docker vitest `coverage.test.ts` + `get-trace-own-scenario.test.ts` passed 28/28; lint passed; `npm run build:mcp` rebuilt `server.bundle.mjs`; source graph smoke показал `strong-tests:t29` → `DONE` по единственному `SCEN-testqual001-10...`, без sibling @feature7.) | Est: 120m"
+    },
+    {
+      "check": "TASK_FR_ATOMICITY",
+      "category": "LOGIC_GAPS",
+      "severity": "WARNING",
+      "message": "TASK_ATOMICITY: Task covers multiple FRs: FR-52f, FR-14",
+      "details": "Task: - [x] P28-6: стейл-сценарий vs E-A переделка двери — обновить SPECGEN004_149 + FR под short-write-lock семантику (F1/FR-52f) — id: p28-readonly-door-bdd-vs-ea — Status: DONE (2026-07-09: FR-14/AC-14.3/DESIGN/P21-1 rewritten from lifetime read-only/write-refusal to presence-reader + short `.mcp-write.lock` + CAS semantics; focused Docker BDD `SPECGEN004_149` passed 1 scenario / 6 steps; focused Docker vitest `lock-manager.test.ts` + `tools.test.ts` passed 2 files / 53 tests, proving write tools no longer refuse with `WRITE_LOCK_HELD` and stale same-doc writes fail via `CAS_MISMATCH`.) | Est: 60m"
+    },
+    {
+      "check": "TASK_FR_ATOMICITY",
+      "category": "LOGIC_GAPS",
+      "severity": "WARNING",
+      "message": "TASK_ATOMICITY: Task covers multiple FRs: FR-72, FR-79",
+      "details": "Task: - [ ] The stored canonical synthesis result is the direct input to existing SpecGraph queries, conflict derivation, and wave planning; no FR-72..FR-79 operation creates, reads, or persists a second planner, store, executor, or planning graph."
+    },
+    {
+      "check": "TASK_FR_ATOMICITY",
+      "category": "LOGIC_GAPS",
+      "severity": "WARNING",
+      "message": "TASK_ATOMICITY: Task covers multiple FRs: FR-72, FR-79",
+      "details": "Task: - [ ] Every FR-72..FR-79 acceptance criterion has the listed task-owned scenario evidence; no status is inferred from a task checkbox or a filtered run."
+    },
+    {
+      "check": "TASK_FR_ATOMICITY",
+      "category": "LOGIC_GAPS",
+      "severity": "WARNING",
+      "message": "TASK_ATOMICITY: Task covers multiple FRs: FR-82, FR-83",
+      "details": "Task: - [x] The authoritative `spec-verdict --no-semantic` is captured after evidence: FR-82 filtered proof is GREEN while the legacy whole-spec verdict honestly remains NOT_READY; FR-83 remains deferred and never-run."
+    },
+    {
+      "check": "UNVERIFIED_CONFIG",
+      "category": "FANTASIES",
+      "severity": "INFO",
+      "message": "Env var 'UNCOVERED_FR' in DESIGN.md has no verification source",
+      "details": "Add '[VERIFIED: source]' or '[UNVERIFIED]' marker near 'UNCOVERED_FR' in DESIGN.md"
+    },
+    {
+      "check": "UNVERIFIED_CONFIG",
+      "category": "FANTASIES",
+      "severity": "INFO",
+      "message": "Env var 'ORPHAN_TASK' in DESIGN.md has no verification source",
+      "details": "Add '[VERIFIED: source]' or '[UNVERIFIED]' marker near 'ORPHAN_TASK' in DESIGN.md"
+    },
+    {
+      "check": "UNVERIFIED_CONFIG",
+      "category": "FANTASIES",
+      "severity": "INFO",
+      "message": "Env var 'BROKEN_REF' in DESIGN.md has no verification source",
+      "details": "Add '[VERIFIED: source]' or '[UNVERIFIED]' marker near 'BROKEN_REF' in DESIGN.md"
+    },
+    {
+      "check": "UNVERIFIED_CONFIG",
+      "category": "FANTASIES",
+      "severity": "INFO",
+      "message": "Env var 'DUPLICATE_DEFINITION' in DESIGN.md has no verification source",
+      "details": "Add '[VERIFIED: source]' or '[UNVERIFIED]' marker near 'DUPLICATE_DEFINITION' in DESIGN.md"
+    },
+    {
+      "check": "UNVERIFIED_CONFIG",
+      "category": "FANTASIES",
+      "severity": "INFO",
+      "message": "Env var 'SCENARIO_TAG_ORPHAN' in DESIGN.md has no verification source",
+      "details": "Add '[VERIFIED: source]' or '[UNVERIFIED]' marker near 'SCENARIO_TAG_ORPHAN' in DESIGN.md"
+    },
+    {
+      "check": "UNVERIFIED_CONFIG",
+      "category": "FANTASIES",
+      "severity": "INFO",
+      "message": "Env var 'UNTAGGED_SCENARIO' in DESIGN.md has no verification source",
+      "details": "Add '[VERIFIED: source]' or '[UNVERIFIED]' marker near 'UNTAGGED_SCENARIO' in DESIGN.md"
+    },
+    {
+      "check": "UNVERIFIED_CONFIG",
+      "category": "FANTASIES",
+      "severity": "INFO",
+      "message": "Env var 'STALE_NDJSON' in DESIGN.md has no verification source",
+      "details": "Add '[VERIFIED: source]' or '[UNVERIFIED]' marker near 'STALE_NDJSON' in DESIGN.md"
+    },
+    {
+      "check": "UNVERIFIED_CONFIG",
+      "category": "FANTASIES",
+      "severity": "INFO",
+      "message": "Env var 'FR_REGRESSION' in DESIGN.md has no verification source",
+      "details": "Add '[VERIFIED: source]' or '[UNVERIFIED]' marker near 'FR_REGRESSION' in DESIGN.md"
+    },
+    {
+      "check": "UNVERIFIED_CONFIG",
+      "category": "FANTASIES",
+      "severity": "INFO",
+      "message": "Env var 'MALFORMED_FRONTMATTER' in DESIGN.md has no verification source",
+      "details": "Add '[VERIFIED: source]' or '[UNVERIFIED]' marker near 'MALFORMED_FRONTMATTER' in DESIGN.md"
+    },
+    {
+      "check": "UNVERIFIED_CONFIG",
+      "category": "FANTASIES",
+      "severity": "INFO",
+      "message": "Env var 'MALFORMED_GHERKIN' in DESIGN.md has no verification source",
+      "details": "Add '[VERIFIED: source]' or '[UNVERIFIED]' marker near 'MALFORMED_GHERKIN' in DESIGN.md"
+    },
+    {
+      "check": "UNVERIFIED_CONFIG",
+      "category": "FANTASIES",
+      "severity": "INFO",
+      "message": "Env var 'INVALID_ANCHOR_PATTERN' in DESIGN.md has no verification source",
+      "details": "Add '[VERIFIED: source]' or '[UNVERIFIED]' marker near 'INVALID_ANCHOR_PATTERN' in DESIGN.md"
+    },
+    {
+      "check": "UNVERIFIED_CONFIG",
+      "category": "FANTASIES",
+      "severity": "INFO",
+      "message": "Env var 'ACCEPTANCE_CRITERIA' in DESIGN.md has no verification source",
+      "details": "Add '[VERIFIED: source]' or '[UNVERIFIED]' marker near 'ACCEPTANCE_CRITERIA' in DESIGN.md"
+    },
+    {
+      "check": "UNVERIFIED_CONFIG",
+      "category": "FANTASIES",
+      "severity": "INFO",
+      "message": "Env var 'SELF_IMPROVE' in DESIGN.md has no verification source",
+      "details": "Add '[VERIFIED: source]' or '[UNVERIFIED]' marker near 'SELF_IMPROVE' in DESIGN.md"
+    },
+    {
+      "check": "UNVERIFIED_CONFIG",
+      "category": "FANTASIES",
+      "severity": "INFO",
+      "message": "Env var 'TASK_UNTESTED' in DESIGN.md has no verification source",
+      "details": "Add '[VERIFIED: source]' or '[UNVERIFIED]' marker near 'TASK_UNTESTED' in DESIGN.md"
+    },
+    {
+      "check": "UNVERIFIED_CONFIG",
+      "category": "FANTASIES",
+      "severity": "INFO",
+      "message": "Env var 'TEST_DATA' in DESIGN.md has no verification source",
+      "details": "Add '[VERIFIED: source]' or '[UNVERIFIED]' marker near 'TEST_DATA' in DESIGN.md"
+    },
+    {
+      "check": "UNVERIFIED_CONFIG",
+      "category": "FANTASIES",
+      "severity": "INFO",
+      "message": "Env var 'TEST_FORMAT' in DESIGN.md has no verification source",
+      "details": "Add '[VERIFIED: source]' or '[UNVERIFIED]' marker near 'TEST_FORMAT' in DESIGN.md"
+    },
+    {
+      "check": "UNVERIFIED_CONFIG",
+      "category": "FANTASIES",
+      "severity": "INFO",
+      "message": "Env var 'USER_STORIES' in DESIGN.md has no verification source",
+      "details": "Add '[VERIFIED: source]' or '[UNVERIFIED]' marker near 'USER_STORIES' in DESIGN.md"
+    },
+    {
+      "check": "UNVERIFIED_CONFIG",
+      "category": "FANTASIES",
+      "severity": "INFO",
+      "message": "Env var 'ARCHITECTURAL_DECISION_VS_REALITY' in DESIGN.md has no verification source",
+      "details": "Add '[VERIFIED: source]' or '[UNVERIFIED]' marker near 'ARCHITECTURAL_DECISION_VS_REALITY' in DESIGN.md"
+    },
+    {
+      "check": "UNVERIFIED_CONFIG",
+      "category": "FANTASIES",
+      "severity": "INFO",
+      "message": "Env var 'ALLOW_AFTER_MIGRATION' in DESIGN.md has no verification source",
+      "details": "Add '[VERIFIED: source]' or '[UNVERIFIED]' marker near 'ALLOW_AFTER_MIGRATION' in DESIGN.md"
+    },
+    {
+      "check": "UNVERIFIED_CONFIG",
+      "category": "FANTASIES",
+      "severity": "INFO",
+      "message": "Env var 'PARSER_CRASH' in DESIGN.md has no verification source",
+      "details": "Add '[VERIFIED: source]' or '[UNVERIFIED]' marker near 'PARSER_CRASH' in DESIGN.md"
+    },
+    {
+      "check": "UNVERIFIED_CONFIG",
+      "category": "FANTASIES",
+      "severity": "INFO",
+      "message": "Env var 'SPECGEN003_24' in DESIGN.md has no verification source",
+      "details": "Add '[VERIFIED: source]' or '[UNVERIFIED]' marker near 'SPECGEN003_24' in DESIGN.md"
+    },
+    {
+      "check": "UNVERIFIED_CONFIG",
+      "category": "FANTASIES",
+      "severity": "INFO",
+      "message": "Env var 'SPEC_FORM_GUARDS_DISABLE' in DESIGN.md has no verification source",
+      "details": "Add '[VERIFIED: source]' or '[UNVERIFIED]' marker near 'SPEC_FORM_GUARDS_DISABLE' in DESIGN.md"
+    },
+    {
+      "check": "UNVERIFIED_CONFIG",
+      "category": "FANTASIES",
+      "severity": "INFO",
+      "message": "Env var 'SPECGEN004_NN' in DESIGN.md has no verification source",
+      "details": "Add '[VERIFIED: source]' or '[UNVERIFIED]' marker near 'SPECGEN004_NN' in DESIGN.md"
+    },
+    {
+      "check": "UNVERIFIED_CONFIG",
+      "category": "FANTASIES",
+      "severity": "INFO",
+      "message": "Env var 'PLUGIN005_NN' in DESIGN.md has no verification source",
+      "details": "Add '[VERIFIED: source]' or '[UNVERIFIED]' marker near 'PLUGIN005_NN' in DESIGN.md"
+    },
+    {
+      "check": "UNVERIFIED_CONFIG",
+      "category": "FANTASIES",
+      "severity": "INFO",
+      "message": "Env var 'CORE024_NN' in DESIGN.md has no verification source",
+      "details": "Add '[VERIFIED: source]' or '[UNVERIFIED]' marker near 'CORE024_NN' in DESIGN.md"
+    },
+    {
+      "check": "UNVERIFIED_CONFIG",
+      "category": "FANTASIES",
+      "severity": "INFO",
+      "message": "Env var 'NOT_COVERED' in DESIGN.md has no verification source",
+      "details": "Add '[VERIFIED: source]' or '[UNVERIFIED]' marker near 'NOT_COVERED' in DESIGN.md"
+    },
+    {
+      "check": "UNVERIFIED_CONFIG",
+      "category": "FANTASIES",
+      "severity": "INFO",
+      "message": "Env var 'SEMANTIC_SKIPPED' in DESIGN.md has no verification source",
+      "details": "Add '[VERIFIED: source]' or '[UNVERIFIED]' marker near 'SEMANTIC_SKIPPED' in DESIGN.md"
+    },
+    {
+      "check": "UNVERIFIED_CONFIG",
+      "category": "FANTASIES",
+      "severity": "INFO",
+      "message": "Env var 'SPEC_ONLY' in DESIGN.md has no verification source",
+      "details": "Add '[VERIFIED: source]' or '[UNVERIFIED]' marker near 'SPEC_ONLY' in DESIGN.md"
+    },
+    {
+      "check": "UNVERIFIED_CONFIG",
+      "category": "FANTASIES",
+      "severity": "INFO",
+      "message": "Env var 'TESTS_NOT_RUN' in DESIGN.md has no verification source",
+      "details": "Add '[VERIFIED: source]' or '[UNVERIFIED]' marker near 'TESTS_NOT_RUN' in DESIGN.md"
+    },
+    {
+      "check": "UNVERIFIED_CONFIG",
+      "category": "FANTASIES",
+      "severity": "INFO",
+      "message": "Env var 'SPECGEN004_124' in DESIGN.md has no verification source",
+      "details": "Add '[VERIFIED: source]' or '[UNVERIFIED]' marker near 'SPECGEN004_124' in DESIGN.md"
+    },
+    {
+      "check": "UNVERIFIED_CONFIG",
+      "category": "FANTASIES",
+      "severity": "INFO",
+      "message": "Env var 'SAFE_SLUG_RE' in DESIGN.md has no verification source",
+      "details": "Add '[VERIFIED: source]' or '[UNVERIFIED]' marker near 'SAFE_SLUG_RE' in DESIGN.md"
+    },
+    {
+      "check": "UNVERIFIED_CONFIG",
+      "category": "FANTASIES",
+      "severity": "INFO",
+      "message": "Env var 'MUTABLE_DOC_RE' in DESIGN.md has no verification source",
+      "details": "Add '[VERIFIED: source]' or '[UNVERIFIED]' marker near 'MUTABLE_DOC_RE' in DESIGN.md"
+    },
+    {
+      "check": "UNVERIFIED_CONFIG",
+      "category": "FANTASIES",
+      "severity": "INFO",
+      "message": "Env var 'AMBIGUOUS_CHANGE' in DESIGN.md has no verification source",
+      "details": "Add '[VERIFIED: source]' or '[UNVERIFIED]' marker near 'AMBIGUOUS_CHANGE' in DESIGN.md"
+    },
+    {
+      "check": "UNVERIFIED_CONFIG",
+      "category": "FANTASIES",
+      "severity": "INFO",
+      "message": "Env var 'VALIDATION_FAILED' in DESIGN.md has no verification source",
+      "details": "Add '[VERIFIED: source]' or '[UNVERIFIED]' marker near 'VALIDATION_FAILED' in DESIGN.md"
+    },
+    {
+      "check": "UNVERIFIED_CONFIG",
+      "category": "FANTASIES",
+      "severity": "INFO",
+      "message": "Env var 'SPEC_NOT_FOUND' in DESIGN.md has no verification source",
+      "details": "Add '[VERIFIED: source]' or '[UNVERIFIED]' marker near 'SPEC_NOT_FOUND' in DESIGN.md"
+    },
+    {
+      "check": "UNVERIFIED_CONFIG",
+      "category": "FANTASIES",
+      "severity": "INFO",
+      "message": "Env var 'RESERVED_SLUG' in DESIGN.md has no verification source",
+      "details": "Add '[VERIFIED: source]' or '[UNVERIFIED]' marker near 'RESERVED_SLUG' in DESIGN.md"
+    },
+    {
+      "check": "UNVERIFIED_CONFIG",
+      "category": "FANTASIES",
+      "severity": "INFO",
+      "message": "Env var 'DEV_POMOGATOR_REPO_ROOT' in DESIGN.md has no verification source",
+      "details": "Add '[VERIFIED: source]' or '[UNVERIFIED]' marker near 'DEV_POMOGATOR_REPO_ROOT' in DESIGN.md"
+    },
+    {
+      "check": "UNVERIFIED_CONFIG",
+      "category": "FANTASIES",
+      "severity": "INFO",
+      "message": "Env var 'ENGINE_CLI' in DESIGN.md has no verification source",
+      "details": "Add '[VERIFIED: source]' or '[UNVERIFIED]' marker near 'ENGINE_CLI' in DESIGN.md"
+    },
+    {
+      "check": "UNVERIFIED_CONFIG",
+      "category": "FANTASIES",
+      "severity": "INFO",
+      "message": "Env var 'SPECGEN004_133' in DESIGN.md has no verification source",
+      "details": "Add '[VERIFIED: source]' or '[UNVERIFIED]' marker near 'SPECGEN004_133' in DESIGN.md"
+    },
+    {
+      "check": "UNVERIFIED_CONFIG",
+      "category": "FANTASIES",
+      "severity": "INFO",
+      "message": "Env var 'TOOL_CONSUMERS' in DESIGN.md has no verification source",
+      "details": "Add '[VERIFIED: source]' or '[UNVERIFIED]' marker near 'TOOL_CONSUMERS' in DESIGN.md"
+    },
+    {
+      "check": "UNVERIFIED_CONFIG",
+      "category": "FANTASIES",
+      "severity": "INFO",
+      "message": "Env var 'SPECGEN004_120' in DESIGN.md has no verification source",
+      "details": "Add '[VERIFIED: source]' or '[UNVERIFIED]' marker near 'SPECGEN004_120' in DESIGN.md"
+    },
+    {
+      "check": "UNVERIFIED_CONFIG",
+      "category": "FANTASIES",
+      "severity": "INFO",
+      "message": "Env var 'SPECGEN004_121' in DESIGN.md has no verification source",
+      "details": "Add '[VERIFIED: source]' or '[UNVERIFIED]' marker near 'SPECGEN004_121' in DESIGN.md"
+    },
+    {
+      "check": "UNVERIFIED_CONFIG",
+      "category": "FANTASIES",
+      "severity": "INFO",
+      "message": "Env var 'TASK_STATUS_UNVERIFIED' in DESIGN.md has no verification source",
+      "details": "Add '[VERIFIED: source]' or '[UNVERIFIED]' marker near 'TASK_STATUS_UNVERIFIED' in DESIGN.md"
+    },
+    {
+      "check": "UNVERIFIED_CONFIG",
+      "category": "FANTASIES",
+      "severity": "INFO",
+      "message": "Env var 'TASK_NO_REQUIREMENT' in DESIGN.md has no verification source",
+      "details": "Add '[VERIFIED: source]' or '[UNVERIFIED]' marker near 'TASK_NO_REQUIREMENT' in DESIGN.md"
+    },
+    {
+      "check": "UNVERIFIED_CONFIG",
+      "category": "FANTASIES",
+      "severity": "INFO",
+      "message": "Env var 'ORPHAN_PROJECT_TEST' in DESIGN.md has no verification source",
+      "details": "Add '[VERIFIED: source]' or '[UNVERIFIED]' marker near 'ORPHAN_PROJECT_TEST' in DESIGN.md"
+    },
+    {
+      "check": "UNVERIFIED_CONFIG",
+      "category": "FANTASIES",
+      "severity": "INFO",
+      "message": "Env var 'FR_NO_RESEARCH' in DESIGN.md has no verification source",
+      "details": "Add '[VERIFIED: source]' or '[UNVERIFIED]' marker near 'FR_NO_RESEARCH' in DESIGN.md"
+    },
+    {
+      "check": "UNVERIFIED_CONFIG",
+      "category": "FANTASIES",
+      "severity": "INFO",
+      "message": "Env var 'GAP_CLASSES' in DESIGN.md has no verification source",
+      "details": "Add '[VERIFIED: source]' or '[UNVERIFIED]' marker near 'GAP_CLASSES' in DESIGN.md"
+    },
+    {
+      "check": "UNVERIFIED_CONFIG",
+      "category": "FANTASIES",
+      "severity": "INFO",
+      "message": "Env var 'SPECGEN004_98' in DESIGN.md has no verification source",
+      "details": "Add '[VERIFIED: source]' or '[UNVERIFIED]' marker near 'SPECGEN004_98' in DESIGN.md"
+    },
+    {
+      "check": "UNVERIFIED_CONFIG",
+      "category": "FANTASIES",
+      "severity": "INFO",
+      "message": "Env var 'STATUS_DERIVED' in DESIGN.md has no verification source",
+      "details": "Add '[VERIFIED: source]' or '[UNVERIFIED]' marker near 'STATUS_DERIVED' in DESIGN.md"
+    },
+    {
+      "check": "UNVERIFIED_CONFIG",
+      "category": "FANTASIES",
+      "severity": "INFO",
+      "message": "Env var 'NOT_FOUND' in DESIGN.md has no verification source",
+      "details": "Add '[VERIFIED: source]' or '[UNVERIFIED]' marker near 'NOT_FOUND' in DESIGN.md"
+    },
+    {
+      "check": "UNVERIFIED_CONFIG",
+      "category": "FANTASIES",
+      "severity": "INFO",
+      "message": "Env var 'SELF_MARKERS' in DESIGN.md has no verification source",
+      "details": "Add '[VERIFIED: source]' or '[UNVERIFIED]' marker near 'SELF_MARKERS' in DESIGN.md"
+    },
+    {
+      "check": "UNVERIFIED_CONFIG",
+      "category": "FANTASIES",
+      "severity": "INFO",
+      "message": "Env var 'WAIVED_RE' in DESIGN.md has no verification source",
+      "details": "Add '[VERIFIED: source]' or '[UNVERIFIED]' marker near 'WAIVED_RE' in DESIGN.md"
+    },
+    {
+      "check": "UNVERIFIED_CONFIG",
+      "category": "FANTASIES",
+      "severity": "INFO",
+      "message": "Env var 'SEMANTIC_DRIFT' in DESIGN.md has no verification source",
+      "details": "Add '[VERIFIED: source]' or '[UNVERIFIED]' marker near 'SEMANTIC_DRIFT' in DESIGN.md"
+    },
+    {
+      "check": "UNVERIFIED_CONFIG",
+      "category": "FANTASIES",
+      "severity": "INFO",
+      "message": "Env var 'WRITE_LOCK_BUSY' in DESIGN.md has no verification source",
+      "details": "Add '[VERIFIED: source]' or '[UNVERIFIED]' marker near 'WRITE_LOCK_BUSY' in DESIGN.md"
+    },
+    {
+      "check": "UNVERIFIED_CONFIG",
+      "category": "FANTASIES",
+      "severity": "INFO",
+      "message": "Env var 'CAS_MISMATCH' in DESIGN.md has no verification source",
+      "details": "Add '[VERIFIED: source]' or '[UNVERIFIED]' marker near 'CAS_MISMATCH' in DESIGN.md"
+    },
+    {
+      "check": "UNVERIFIED_CONFIG",
+      "category": "FANTASIES",
+      "severity": "INFO",
+      "message": "Env var 'SPECGEN004_52' in DESIGN.md has no verification source",
+      "details": "Add '[VERIFIED: source]' or '[UNVERIFIED]' marker near 'SPECGEN004_52' in DESIGN.md"
+    },
+    {
+      "check": "UNVERIFIED_CONFIG",
+      "category": "FANTASIES",
+      "severity": "INFO",
+      "message": "Env var 'SEMANTIC_CHECK_SKIPPED_DENY_LIST' in DESIGN.md has no verification source",
+      "details": "Add '[VERIFIED: source]' or '[UNVERIFIED]' marker near 'SEMANTIC_CHECK_SKIPPED_DENY_LIST' in DESIGN.md"
+    },
+    {
+      "check": "UNVERIFIED_CONFIG",
+      "category": "FANTASIES",
+      "severity": "INFO",
+      "message": "Env var 'IN_PROGRESS' in DESIGN.md has no verification source",
+      "details": "Add '[VERIFIED: source]' or '[UNVERIFIED]' marker near 'IN_PROGRESS' in DESIGN.md"
+    },
+    {
+      "check": "UNVERIFIED_CONFIG",
+      "category": "FANTASIES",
+      "severity": "INFO",
+      "message": "Env var 'TASK_TEST_QUALITY' in DESIGN.md has no verification source",
+      "details": "Add '[VERIFIED: source]' or '[UNVERIFIED]' marker near 'TASK_TEST_QUALITY' in DESIGN.md"
+    },
+    {
+      "check": "UNVERIFIED_CONFIG",
+      "category": "FANTASIES",
+      "severity": "INFO",
+      "message": "Env var 'KEEP_FALSE_POSITIVE' in DESIGN.md has no verification source",
+      "details": "Add '[VERIFIED: source]' or '[UNVERIFIED]' marker near 'KEEP_FALSE_POSITIVE' in DESIGN.md"
+    },
+    {
+      "check": "UNVERIFIED_CONFIG",
+      "category": "FANTASIES",
+      "severity": "INFO",
+      "message": "Env var 'ALREADY_ARCHIVED' in DESIGN.md has no verification source",
+      "details": "Add '[VERIFIED: source]' or '[UNVERIFIED]' marker near 'ALREADY_ARCHIVED' in DESIGN.md"
+    },
+    {
+      "check": "UNVERIFIED_CONFIG",
+      "category": "FANTASIES",
+      "severity": "INFO",
+      "message": "Env var 'ARCHIVE_SEALED' in DESIGN.md has no verification source",
+      "details": "Add '[VERIFIED: source]' or '[UNVERIFIED]' marker near 'ARCHIVE_SEALED' in DESIGN.md"
+    },
+    {
+      "check": "UNVERIFIED_CONFIG",
+      "category": "FANTASIES",
+      "severity": "INFO",
+      "message": "Env var 'NEEDS_HUMAN' in DESIGN.md has no verification source",
+      "details": "Add '[VERIFIED: source]' or '[UNVERIFIED]' marker near 'NEEDS_HUMAN' in DESIGN.md"
+    },
+    {
+      "check": "UNVERIFIED_CONFIG",
+      "category": "FANTASIES",
+      "severity": "INFO",
+      "message": "Env var 'TASK_NO_OWN_SCENARIO' in DESIGN.md has no verification source",
+      "details": "Add '[VERIFIED: source]' or '[UNVERIFIED]' marker near 'TASK_NO_OWN_SCENARIO' in DESIGN.md"
+    },
+    {
+      "check": "UNVERIFIED_CONFIG",
+      "category": "FANTASIES",
+      "severity": "INFO",
+      "message": "Env var 'FR_NO_DESIGN' in DESIGN.md has no verification source",
+      "details": "Add '[VERIFIED: source]' or '[UNVERIFIED]' marker near 'FR_NO_DESIGN' in DESIGN.md"
+    },
+    {
+      "check": "UNVERIFIED_CONFIG",
+      "category": "FANTASIES",
+      "severity": "INFO",
+      "message": "Env var 'TASK_TRUTH' in DESIGN.md has no verification source",
+      "details": "Add '[VERIFIED: source]' or '[UNVERIFIED]' marker near 'TASK_TRUTH' in DESIGN.md"
+    },
+    {
+      "check": "UNVERIFIED_CONFIG",
+      "category": "FANTASIES",
+      "severity": "INFO",
+      "message": "Env var 'BDD_SYNC' in DESIGN.md has no verification source",
+      "details": "Add '[VERIFIED: source]' or '[UNVERIFIED]' marker near 'BDD_SYNC' in DESIGN.md"
+    },
+    {
+      "check": "UNVERIFIED_CONFIG",
+      "category": "FANTASIES",
+      "severity": "INFO",
+      "message": "Env var 'FILTERED_PROOF' in DESIGN.md has no verification source",
+      "details": "Add '[VERIFIED: source]' or '[UNVERIFIED]' marker near 'FILTERED_PROOF' in DESIGN.md"
+    },
+    {
+      "check": "UNVERIFIED_CONFIG",
+      "category": "FANTASIES",
+      "severity": "INFO",
+      "message": "Env var 'SPECS_GENERATOR_ROOT' in DESIGN.md has no verification source",
+      "details": "Add '[VERIFIED: source]' or '[UNVERIFIED]' marker near 'SPECS_GENERATOR_ROOT' in DESIGN.md"
+    },
+    {
+      "check": "UNVERIFIED_CONFIG",
+      "category": "FANTASIES",
+      "severity": "INFO",
+      "message": "Env var 'SCRIPT_DIR' in DESIGN.md has no verification source",
+      "details": "Add '[VERIFIED: source]' or '[UNVERIFIED]' marker near 'SCRIPT_DIR' in DESIGN.md"
+    },
+    {
+      "check": "UNVERIFIED_CONFIG",
+      "category": "FANTASIES",
+      "severity": "INFO",
+      "message": "Env var 'NOT_READY' in DESIGN.md has no verification source",
+      "details": "Add '[VERIFIED: source]' or '[UNVERIFIED]' marker near 'NOT_READY' in DESIGN.md"
+    },
+    {
+      "check": "UNVERIFIED_CONFIG",
+      "category": "FANTASIES",
+      "severity": "INFO",
+      "message": "Env var 'NOT_RUN' in DESIGN.md has no verification source",
+      "details": "Add '[VERIFIED: source]' or '[UNVERIFIED]' marker near 'NOT_RUN' in DESIGN.md"
+    },
+    {
+      "check": "UNVERIFIED_CONFIG",
+      "category": "FANTASIES",
+      "severity": "INFO",
+      "message": "Env var 'EDGE_SCHEMA' in DESIGN.md has no verification source",
+      "details": "Add '[VERIFIED: source]' or '[UNVERIFIED]' marker near 'EDGE_SCHEMA' in DESIGN.md"
+    },
+    {
+      "check": "UNVERIFIED_CONFIG",
+      "category": "FANTASIES",
+      "severity": "INFO",
+      "message": "Env var 'ENDPOINT_VIOLATION' in DESIGN.md has no verification source",
+      "details": "Add '[VERIFIED: source]' or '[UNVERIFIED]' marker near 'ENDPOINT_VIOLATION' in DESIGN.md"
+    },
+    {
+      "check": "UNVERIFIED_CONFIG",
+      "category": "FANTASIES",
+      "severity": "INFO",
+      "message": "Env var 'AC_SATISFACTION' in DESIGN.md has no verification source",
+      "details": "Add '[VERIFIED: source]' or '[UNVERIFIED]' marker near 'AC_SATISFACTION' in DESIGN.md"
+    },
+    {
+      "check": "UNVERIFIED_CONFIG",
+      "category": "FANTASIES",
+      "severity": "INFO",
+      "message": "Env var 'NFR_SATISFACTION' in DESIGN.md has no verification source",
+      "details": "Add '[VERIFIED: source]' or '[UNVERIFIED]' marker near 'NFR_SATISFACTION' in DESIGN.md"
+    },
+    {
+      "check": "UNVERIFIED_CONFIG",
+      "category": "FANTASIES",
+      "severity": "INFO",
+      "message": "Env var 'TAG_BULK_SUSPECT' in DESIGN.md has no verification source",
+      "details": "Add '[VERIFIED: source]' or '[UNVERIFIED]' marker near 'TAG_BULK_SUSPECT' in DESIGN.md"
+    },
+    {
+      "check": "UNVERIFIED_CONFIG",
+      "category": "FANTASIES",
+      "severity": "INFO",
+      "message": "Env var 'TASK_PLANNING_PRIOR_ART' in DESIGN.md has no verification source",
+      "details": "Add '[VERIFIED: source]' or '[UNVERIFIED]' marker near 'TASK_PLANNING_PRIOR_ART' in DESIGN.md"
+    },
+    {
+      "check": "UNVERIFIED_CONFIG",
+      "category": "FANTASIES",
+      "severity": "INFO",
+      "message": "Env var 'DONE_WITH_CONCERNS' in DESIGN.md has no verification source",
+      "details": "Add '[VERIFIED: source]' or '[UNVERIFIED]' marker near 'DONE_WITH_CONCERNS' in DESIGN.md"
+    },
+    {
+      "check": "UNVERIFIED_CONFIG",
+      "category": "FANTASIES",
+      "severity": "INFO",
+      "message": "Env var 'NEEDS_CONTEXT' in DESIGN.md has no verification source",
+      "details": "Add '[VERIFIED: source]' or '[UNVERIFIED]' marker near 'NEEDS_CONTEXT' in DESIGN.md"
+    },
+    {
+      "check": "PHANTOM_CREATE_SOURCE",
+      "category": "ERRORS",
+      "severity": "WARNING",
+      "message": "FILE_CHANGES: source \"vitest\" does not exist (action=create)",
+      "details": "Verify the source path exists or remove the migration entry"
+    },
+    {
+      "check": "PHANTOM_CREATE_SOURCE",
+      "category": "ERRORS",
+      "severity": "WARNING",
+      "message": "FILE_CHANGES: source \"existing\" does not exist (action=create)",
+      "details": "Verify the source path exists or remove the migration entry"
+    },
+    {
+      "check": "PHANTOM_CREATE_SOURCE",
+      "category": "ERRORS",
+      "severity": "WARNING",
+      "message": "FILE_CHANGES: source \"Phase\" does not exist (action=create)",
+      "details": "Verify the source path exists or remove the migration entry"
+    },
+    {
+      "check": "PHANTOM_CREATE_SOURCE",
+      "category": "ERRORS",
+      "severity": "WARNING",
+      "message": "FILE_CHANGES: source \"tampering\" does not exist (action=create)",
+      "details": "Verify the source path exists or remove the migration entry"
+    },
+    {
+      "check": "PHANTOM_CREATE_SOURCE",
+      "category": "ERRORS",
+      "severity": "WARNING",
+      "message": "FILE_CHANGES: source \"GitHub\" does not exist (action=create)",
+      "details": "Verify the source path exists or remove the migration entry"
+    },
+    {
+      "check": "PHANTOM_CREATE_SOURCE",
+      "category": "ERRORS",
+      "severity": "WARNING",
+      "message": "FILE_CHANGES: source \"session\" does not exist (action=create)",
+      "details": "Verify the source path exists or remove the migration entry"
+    },
+    {
+      "check": "COUNT_CONSISTENCY",
+      "category": "INCONSISTENCY",
+      "severity": "WARNING",
+      "message": "README.md claims \"79 FR\" but FR.md has 3 FR headings",
+      "details": "Update the count in README.md to match actual FR count (3)"
+    },
+    {
+      "check": "PROSE_COUNT_SYNC",
+      "category": "INCONSISTENCY",
+      "severity": "WARNING",
+      "message": "README.md claims \"8 phase\" but actual count is 49 phases in TASKS.md",
+      "details": "Update \"8 phase\" in README.md to 49"
+    },
+    {
+      "check": "PROSE_COUNT_SYNC",
+      "category": "INCONSISTENCY",
+      "severity": "WARNING",
+      "message": "RESEARCH.md claims \"7 phase\" but actual count is 49 phases in TASKS.md",
+      "details": "Update \"7 phase\" in RESEARCH.md to 49"
+    },
+    {
+      "check": "PROSE_COUNT_SYNC",
+      "category": "INCONSISTENCY",
+      "severity": "WARNING",
+      "message": "RESEARCH.md claims \"7 phase\" but actual count is 49 phases in TASKS.md",
+      "details": "Update \"7 phase\" in RESEARCH.md to 49"
+    },
+    {
+      "check": "SCENARIO_COUNT_SYNC",
+      "category": "INCONSISTENCY",
+      "severity": "WARNING",
+      "message": "README.md claims \"616 scenario\" but .feature has 646 Scenario: lines",
+      "details": "Update the scenario count in README.md to 646"
+    },
+    {
+      "check": "SCENARIO_COUNT_SYNC",
+      "category": "INCONSISTENCY",
+      "severity": "WARNING",
+      "message": "README.md claims \"004 scenario\" but .feature has 646 Scenario: lines",
+      "details": "Update the scenario count in README.md to 646"
+    },
+    {
+      "check": "VARIANT_COVERAGE",
+      "category": "VARIANT_COVERAGE",
+      "severity": "INFO",
+      "message": "HARD_OUT_DETECTED: FR-76 по axis 'kind' имеет polymorphic-trigger phrases (\"across all kinds\") НО hard-OUT signal в same section override-нул detection. STOP #3 не блокирован. Verify hard-OUT scope intentional (см. .claude/rules/specs-workflow/variant-matrix/when-to-build-matrix.md hard-OUT signals).",
+      "details": "FR-76 in FR.md"
+    }
+  ],
+  "summary": {
+    "total": 392,
+    "by_category": {
+      "ERRORS": 6,
+      "LOGIC_GAPS": 222,
+      "INCONSISTENCY": 83,
+      "RUDIMENTS": 0,
+      "FANTASIES": 80,
+      "VARIANT_COVERAGE": 1
+    }
+  },
+  "ai_checks_pending": [
+    "ERRORS: Verify DESIGN.md component/method/file references exist in codebase",
+    "ERRORS: Check items marked 'Need to add' or 'TODO' that may already exist",
+    "ERRORS: Verify FILE_CHANGES.md - create targets do not already exist (pre-implementation only)",
+    "INCONSISTENCY: Compare domain-specific naming across all spec files",
+    "FANTASIES: Verify API assumptions in RESEARCH.md have sources/proof",
+    "FANTASIES: Check for untested claims presented as confirmed facts",
+    "RUDIMENTS: Identify scope creep (client-side concerns in server spec, or vice versa)",
+    "RUDIMENTS: Check for open questions in RESEARCH.md that are answered elsewhere in spec",
+    "INCONSISTENCY: TABLE_ROW_COUNT — verify section headers (\"N dirs\", \"N files\") match actual table row counts below them",
+    "LOGIC_GAPS: AUDIT_REPORT_EXISTS — verify AUDIT_REPORT.md exists if spec completed Phase 3+ Audit"
+  ]
+}

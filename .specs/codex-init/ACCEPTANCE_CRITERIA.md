@@ -28,7 +28,7 @@ WHEN a Codex plugin package is defined THEN the package SHALL use `.codex-plugin
 
 **Требование:** [FR-5](FR.md#fr-5-real-codex-cli-verification-gate)
 
-WHEN a whitelist entry is marked `Supported` THEN verification SHALL prove marketplace visibility, plugin manifest validity, installed/enabled status, and relevant skills/hooks/MCP/runtime loading expectations through real Codex CLI behavior or an equivalent integration harness.
+WHEN a whitelist entry is marked `Supported` THEN verification SHALL prove marketplace visibility, plugin manifest validity, installed/enabled status, and relevant skills/hooks/MCP/runtime loading expectations through real Codex CLI behavior or an equivalent integration harness. WHEN the production verification harness runs THEN it SHALL resolve the `codex` executable through PATH only and SHALL ignore any test-only probe override; a deterministic positive proof MAY run against a PATH-shimmed executable backed by a committed probe fixture.
 
 ## AC-6 (FR-6)
 

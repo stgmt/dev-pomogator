@@ -1124,7 +1124,7 @@ System SHALL replace the current split-brain spec health experience with a singl
 - **FR-63b (MCP provenance and refusal):** Every readiness result SHALL identify the graph snapshot, runtime root, trace or test-result identity, evidence source, mandatory-lane state, and missing-evidence next action. Mock-only, source-tree-only, or stale evidence SHALL not satisfy the gate.
 - **FR-63c (release-safe ownership boundary):** The command path SHALL be dependency-safe when installed, but dependency-absent packaging, documentation, PR/tag/release control, rollback, and monitoring are release-inventory duties of FR-64.
 
-**Связанные AC:** [AC-63.1](ACCEPTANCE_CRITERIA.md#ac-631), [AC-63.2](ACCEPTANCE_CRITERIA.md#ac-632), [AC-63.3](ACCEPTANCE_CRITERIA.md#ac-633)
+**Связанные AC:** [AC-63.1](ACCEPTANCE_CRITERIA.md#ac-631), [AC-63.2](ACCEPTANCE_CRITERIA.md#ac-632), [AC-63.3](ACCEPTANCE_CRITERIA.md#ac-633), [AC-63.4](ACCEPTANCE_CRITERIA.md#ac-634)
 **Use Case:** UC-26, UC-28
 **User Story:** US-40, US-42
 
@@ -1328,11 +1328,14 @@ Claude Code remains the canonical install (marketplace plugin / repo dogfood: sk
 - **FR-81g (install contract):** Installing for Claude Code SHALL remain unchanged. Enabling Cursor on the same tree SHALL require at most `.cursor/mcp.json` plus Settings → Third-party skills/hooks. This repo SHALL commit the twin for dogfood. Consumer projects MAY copy the twin or run doctor warn/apply (`ensure-cursor-mcp.ts`) — not a second distribution channel.
 
 **Зависит от:** FR-4, FR-14, FR-39.
-**Связанные AC:** [AC-81.1](ACCEPTANCE_CRITERIA.md#ac-811), [AC-81.2](ACCEPTANCE_CRITERIA.md#ac-812), [AC-81.3](ACCEPTANCE_CRITERIA.md#ac-813), [AC-81.4](ACCEPTANCE_CRITERIA.md#ac-814), [AC-81.5](ACCEPTANCE_CRITERIA.md#ac-815), [AC-81.6](ACCEPTANCE_CRITERIA.md#ac-816), [AC-81.7](ACCEPTANCE_CRITERIA.md#ac-817)
+**Связанные AC:** [AC-81.1](ACCEPTANCE_CRITERIA.md#ac-811), [AC-81.2](ACCEPTANCE_CRITERIA.md#ac-812), [AC-81.3](ACCEPTANCE_CRITERIA.md#ac-813), [AC-81.4](ACCEPTANCE_CRITERIA.md#ac-814), [AC-81.5](ACCEPTANCE_CRITERIA.md#ac-815), [AC-81.6](ACCEPTANCE_CRITERIA.md#ac-816), [AC-81.7](ACCEPTANCE_CRITERIA.md#ac-817), [AC-81.8](ACCEPTANCE_CRITERIA.md#ac-818), [AC-81.9](ACCEPTANCE_CRITERIA.md#ac-819), [AC-81.10](ACCEPTANCE_CRITERIA.md#ac-8110)
 **Use Case:** [UC-33](USE_CASES.md#uc-33)
 **User Story:** [User Story 61](USER_STORIES.md#user-story-61-cursor-uses-the-same-spec-door-priority-p1)
 
 
+- **FR-81h (canonical containment):** The live-evidence validator SHALL canonicalize the repository root, the trace path, and every workspace file through realpath and SHALL fail closed with a named finding when a real path escapes the workspace or cannot be resolved. Symlink/junction targets outside the repository SHALL be rejected before any bytes are hashed or accepted.
+- **FR-81i (two-sided completeness):** Expected-record completeness SHALL be two-sided when an expectation set is provided: every expected scenario/profile record SHALL be present, and every manifest record outside the expectation set SHALL be rejected with a named finding. Without an expectation set, completeness alone SHALL NOT reject records.
+- **FR-81g-proof (independent ground truth):** Deterministic suite proof over live-evidence artifacts SHALL use a captured fixture with independently precomputed digests (or a deterministic producer plus captured artifact and recorded provenance). Same-code recomputation alone is self-attested and insufficient.
 ## FR-82
 
 **Bounded, truthful MCP inventory and read-side query contracts (immediate)**

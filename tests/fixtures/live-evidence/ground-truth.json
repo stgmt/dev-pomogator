@@ -1,0 +1,8 @@
+{
+  "workspace_digest": "c40fced69a4a5afdd878cee59cb2882624cefbcd8cb4d0a851c7ac7731a030d1",
+  "trace_sha256": "69ccfc5a4c104174c3deeb91938b9eeb4ef12f5848add2235d14a248e7c266a4",
+  "trace_event_sha256": "ca7870ffc69b75b9d51442479aa07a91242f65bcd6423c27d76ebc78d92ead5b",
+  "computed_with": "Python 3 hashlib + json (independent of tools/live-evidence/validator.mjs)",
+  "computed_at": "2026-08-03",
+  "notes": "git_sha is intentionally absent: it is checkout-bound by design and stamped by the BDD step at run time."
+}

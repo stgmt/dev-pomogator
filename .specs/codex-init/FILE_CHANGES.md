@@ -28,3 +28,7 @@
 | `tools/codex-plugin-support/verify-whitelist.ts` | edit | [FR-5](FR.md#fr-5-real-codex-cli-verification-gate) — missing real probes fail and installed paths use ancestry containment. |
 | `tests/step_definitions/feature_codex_init.ts` | edit | [FR-5](FR.md#fr-5-real-codex-cli-verification-gate) — unavailable-probe and sibling-prefix regressions for AC-5.1. |
 | `tests/fixtures/codex-plugin-support/codex-probe.cjs` | create | [FR-5](FR.md#fr-5-real-codex-cli-verification-gate) — deterministic local executable implements the real Codex plugin command sequence without network access. |
+
+| `tools/codex-plugin-support/verify-whitelist.ts` | EDIT | FR-5 — remove production test-only probe override; PATH-only resolution. |
+| `tests/step_definitions/feature_codex_init.ts` | EDIT | FR-5 — PATH-shim positive proof and env-override self-challenge. |
+| `.specs/codex-init/codex-init.feature` | EDIT | FR-5 — CODEXINIT001_09 production override-ignored scenario. |
