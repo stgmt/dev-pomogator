@@ -30,7 +30,7 @@
  */
 
 import { localIdOf } from './identity.ts';
-import { scenarioKey } from './coverage.ts';
+import { scenarioKey, isLiveAttestedScenario } from './coverage.ts';
 import type { AcNode, FrNode, NfrNode, ScenarioNode, SpecGraph } from './types.ts';
 
 // ── Evidence taxonomy (AC-63.2) ───────────────────────────────────────────
@@ -586,7 +586,11 @@ export function buildReadinessInventory(graph: SpecGraph, opts: { spec: string }
     const target = graph.nodes.get(e.to);
     if (source?.type === 'Scenario' && target && (target.type === 'FR' || target.type === 'NFR' || target.type === 'AC')) {
       const scenario = source as ScenarioNode;
-      if (scenario.lastResult === 'PASSED' && scenario.resultStale !== true) passedScenarioIds.add(e.to);
+      // Owner-attested live scenarios (@live-evidence @live-attested) count as
+      // passing proof for AC/NFR/FR satisfaction exactly like a PASSED result —
+      // the attestation is explicit and auditable, never an implicit waiver.
+      const attested = isLiveAttestedScenario(scenario.tags);
+      if ((scenario.lastResult === 'PASSED' && scenario.resultStale !== true) || attested) passedScenarioIds.add(e.to);
     }
   }
   const acRequired = acNodes.length;
@@ -597,12 +601,27 @@ export function buildReadinessInventory(graph: SpecGraph, opts: { spec: string }
     const signatures = new Set([...keys].map((key) => bundles.get(key)?.nodes.flatMap((node) => node.tags).filter((tag) => tag.startsWith('@AC-')).sort().join('|') ?? ''));
     if (signatures.size === 1) bulkSuspectAcIds.add(ac.id);
   }
-  const acSatisfied = acNodes.filter((ac) => !bulkSuspectAcIds.has(ac.id) && passedScenarioIds.has(ac.id) && acKeysById.has(ac.id)).length;
+  // FR-68: an AC is evaluated from its OWN tested-by evidence. The graph's
+  // `verifies` edges never target ACs by construction (EDGE_SCHEMA: FR/NFR are
+  // the only legal verifies targets), so AC satisfaction is computed from the
+  // AC's own tagged scenarios (tested-by ownership — never inherited from the
+  // parent FR) and their current outcomes: a fresh PASSED result, or an
+  // explicit owner attestation, for EVERY owned scenario.
+  const acOwnProofPasses = (acId: string): boolean => {
+    const keys = acKeysById.get(acId);
+    if (!keys || keys.size === 0) return false;
+    return [...keys].every((key) => {
+      const record = bundles.get(key)?.record;
+      if (!record) return false;
+      return record.outcome === 'PASSED' || record.live_attested;
+    });
+  };
+  const acSatisfied = acNodes.filter((ac) => !bulkSuspectAcIds.has(ac.id) && acOwnProofPasses(ac.id)).length;
   const requiredNfrs = nfrNodes.filter((n) => n.metadata?.demands.some((d) => d.obligation === 'required'));
   const optionalNfrs = nfrNodes.filter((n) => n.metadata?.demands.every((d) => d.obligation !== 'required' && d.obligation !== 'not-applicable')).map((n) => localIdOf(n.id));
   const notApplicableNfrs = nfrNodes.filter((n) => n.metadata?.demands.some((d) => d.obligation === 'not-applicable')).map((n) => localIdOf(n.id));
   const nfrSatisfied = requiredNfrs.filter((n) => passedScenarioIds.has(n.id) && nfrKeysById.has(n.id)).length;
-  const acDebt = acNodes.filter((ac) => bulkSuspectAcIds.has(ac.id) || !passedScenarioIds.has(ac.id) || !acKeysById.has(ac.id)).map((ac) => localIdOf(ac.id));
+  const acDebt = acNodes.filter((ac) => bulkSuspectAcIds.has(ac.id) || !acOwnProofPasses(ac.id)).map((ac) => localIdOf(ac.id));
   const nfrDebt = requiredNfrs.filter((n) => !passedScenarioIds.has(n.id) || !nfrKeysById.has(n.id)).map((n) => localIdOf(n.id));
   const acStatus: SurfaceLaneStatus = acRequired > 0 && acSatisfied === acRequired ? 'GREEN' : 'RED';
   const nfrStatus: SurfaceLaneStatus = requiredNfrs.length === 0 || nfrSatisfied === requiredNfrs.length ? 'GREEN' : 'RED';

@@ -912,7 +912,7 @@ function writeScopeFixture(root: string): void {
   const attestedFeature = [
     'Feature: SPECGEN004_ScopeAttested',
     '',
-    '  @feature1 @live-evidence @live-attested',
+    '  @feature1 @live-evidence @live-attested @AC-1',
     '  Scenario: SPECGEN004_620 owner-attested live scope demo',
     '    Given attested live evidence',
     '',
@@ -1080,5 +1080,11 @@ Then(
     assert.ok(entry, 'attested task must appear in the coverage report');
     assert.equal(entry!.verified_status, 'DONE', 'attested live evidence satisfies DONE task truth');
     assert.equal((entry!.truth_issues ?? []).length, 0, JSON.stringify(entry!.truth_issues));
+    // FR-68 AC satisfaction from OWN tested-by evidence: the real builder never
+    // emits verifies edges targeting ACs, so the attested @AC-1 scenario must
+    // satisfy AC-1 through tested-by ownership + attestation alone.
+    assert.equal(inventory.ac_satisfaction.required, 1, 'fixture spec owns exactly one AC');
+    assert.equal(inventory.ac_satisfaction.satisfied, 1, JSON.stringify(inventory.ac_satisfaction));
+    assert.deepEqual(inventory.ac_satisfaction.debt, []);
   },
 );

@@ -57023,7 +57023,8 @@ function buildReadinessInventory(graph, opts) {
     const target = graph.nodes.get(e.to);
     if (source?.type === "Scenario" && target && (target.type === "FR" || target.type === "NFR" || target.type === "AC")) {
       const scenario = source;
-      if (scenario.lastResult === "PASSED" && scenario.resultStale !== true) passedScenarioIds.add(e.to);
+      const attested = isLiveAttestedScenario(scenario.tags);
+      if (scenario.lastResult === "PASSED" && scenario.resultStale !== true || attested) passedScenarioIds.add(e.to);
     }
   }
   const acRequired = acNodes.length;
@@ -57034,12 +57035,21 @@ function buildReadinessInventory(graph, opts) {
     const signatures = new Set([...keys].map((key) => bundles.get(key)?.nodes.flatMap((node) => node.tags).filter((tag) => tag.startsWith("@AC-")).sort().join("|") ?? ""));
     if (signatures.size === 1) bulkSuspectAcIds.add(ac.id);
   }
-  const acSatisfied = acNodes.filter((ac) => !bulkSuspectAcIds.has(ac.id) && passedScenarioIds.has(ac.id) && acKeysById.has(ac.id)).length;
+  const acOwnProofPasses = (acId) => {
+    const keys = acKeysById.get(acId);
+    if (!keys || keys.size === 0) return false;
+    return [...keys].every((key) => {
+      const record2 = bundles.get(key)?.record;
+      if (!record2) return false;
+      return record2.outcome === "PASSED" || record2.live_attested;
+    });
+  };
+  const acSatisfied = acNodes.filter((ac) => !bulkSuspectAcIds.has(ac.id) && acOwnProofPasses(ac.id)).length;
   const requiredNfrs = nfrNodes.filter((n) => n.metadata?.demands.some((d) => d.obligation === "required"));
   const optionalNfrs = nfrNodes.filter((n) => n.metadata?.demands.every((d) => d.obligation !== "required" && d.obligation !== "not-applicable")).map((n) => localIdOf(n.id));
   const notApplicableNfrs = nfrNodes.filter((n) => n.metadata?.demands.some((d) => d.obligation === "not-applicable")).map((n) => localIdOf(n.id));
   const nfrSatisfied = requiredNfrs.filter((n) => passedScenarioIds.has(n.id) && nfrKeysById.has(n.id)).length;
-  const acDebt = acNodes.filter((ac) => bulkSuspectAcIds.has(ac.id) || !passedScenarioIds.has(ac.id) || !acKeysById.has(ac.id)).map((ac) => localIdOf(ac.id));
+  const acDebt = acNodes.filter((ac) => bulkSuspectAcIds.has(ac.id) || !acOwnProofPasses(ac.id)).map((ac) => localIdOf(ac.id));
   const nfrDebt = requiredNfrs.filter((n) => !passedScenarioIds.has(n.id) || !nfrKeysById.has(n.id)).map((n) => localIdOf(n.id));
   const acStatus = acRequired > 0 && acSatisfied === acRequired ? "GREEN" : "RED";
   const nfrStatus = requiredNfrs.length === 0 || nfrSatisfied === requiredNfrs.length ? "GREEN" : "RED";

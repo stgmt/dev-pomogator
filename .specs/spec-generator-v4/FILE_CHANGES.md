@@ -733,6 +733,8 @@ This table is the explicit implementation inventory for the execution-aware task
 | `.specs/spec-generator-v4/spec-generator-v4.feature` | edit | [FR-81](FR.md#fr-81) — SPECGEN004_668/_669 owner attestation tags + dated comments (2026-08-04). |
 | `.specs/spec-generator-v4/TASKS.md` | edit | [FR-81](FR.md#fr-81) — p46-cursor-live-dogfood closed with the attestation evidence note. |
 | `.specs/spec-generator-v4/CHANGELOG.md` | edit | 2026-08-04 readiness-debt closure + owner attestation record. |
+| `tools/spec-graph/readiness-inventory.ts` | edit | FR-68 AC_SATISFACTION producer fix — AC satisfaction computed from OWN tested-by scenarios + current outcomes (fresh PASSED or owner attestation); the graph never emits verifies edges targeting ACs, so the old verifies-only formula could structurally never satisfy the lane. |
+| `tools/spec-graph/coverage.ts` | edit | FR-68 — isLiveAttestedScenario shared helper consumed by verifiedStatus/task truth. |
 
 - ACCEPTANCE_CRITERIA.md: add AC-81.8 (FR-81)
 
