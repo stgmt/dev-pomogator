@@ -26,3 +26,8 @@
 | `tests/fixtures/claude-mem/responsive-worker.cjs` | create | Local positive-control fixture with expected health envelope. |
 | `external/upstream-claude-mem-session-init-client` | create | Upstream PR artifact: deadline, AbortSignal cleanup, and no-context fail-open for #92/#93. |
 | `external/upstream-claude-mem-session-init-tests` | create | Upstream TDD artifact: responsive, refused, non-200, black-hole, config, and leaked-handle cases. |
+
+- ACCEPTANCE_CRITERIA.md: add AC-2.1 (FR-2)
+
+| `tools/claude-mem-bootstrap/install-claude-mem.ts` | edit | [FR-2](FR.md#fr-2-non-interactive-install-command-feature2) — detached spawn errors stay fail-open and migration uses active-route credential precedence. |
+| `tests/step_definitions/feature_claude_mem_bootstrap.ts` | edit | [FR-2](FR.md#fr-2-non-interactive-install-command-feature2) — real launcher/migration and spawn-error regression for AC-2.1. |

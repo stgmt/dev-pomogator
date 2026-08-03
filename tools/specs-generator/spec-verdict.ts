@@ -38,7 +38,7 @@ import {
   type TraceabilityGapClass,
 } from '../spec-graph/traceability.ts';
 import { runJudge, type JudgeResult } from '../spec-llm-judge/index.ts';
-import { buildReadinessInventory, deriveExecutionLane, type ReadinessInventory } from '../spec-graph/readiness-inventory.ts';
+import { buildReadinessInventory, classifyScenarioScope, deriveExecutionLane, deriveLiveEvidenceLane, type ReadinessInventory } from '../spec-graph/readiness-inventory.ts';
 import { computeSpecVerdict, type SpecVerdict, type UnverifiedCompletion } from '../spec-graph/verdict.ts';
 import { oldTestReadinessDebt, type OldTestCensusReport } from '../bdd-migrator/repository-census.ts';
 import type { FrNode, ScenarioNode, TaskNode } from '../spec-graph/types.ts';
@@ -602,20 +602,59 @@ export async function runSpecVerdict(
   // was filtered (`--tags …`) or never ran some scenarios — the coverage picture
   // is partial, NOT a spec defect. Loud note so a filtered debug run can't be
   // misread as "the spec fell apart" (2026-06-08 incident).
+  // Scope-aware (FR-81a): retired-historical and external-live scenarios are
+  // not_run BY DESIGN in the canonical suite — name them separately so only
+  // ACTIVE not-run scenarios read as "re-run the full suite".
   const notRun = canonicalBuckets.not_run ?? 0;
   if (notRun > 0) {
-    const byFile = [...notRunByFile.entries()]
-      .sort((a, b) => b[1] - a[1])
-      .map(([f, n]) => `${f}:${n}`)
-      .join(', ');
-    notes.push(
-      `NOT_RUN — ${notRun} scenario(s) have no result in the last run (not_run, NOT "undefined"/unverified), by feature: ${byFile}. ` +
-        `A count on the MAIN feature ⇒ the last run was FILTERED (re-run the full suite). A feature absent from the test config ` +
-        `(e.g. a legacy *.feature not in cucumber \`paths\`) is a PERSISTENT gap a full run won't close — add it to paths or retire it.`,
+    const scopeByScenarioId = new Map(
+      inventory.scenarios.map((rec) => [rec.scenario_id.toLowerCase(), rec.scope]),
     );
+    let notRunActive = 0;
+    let notRunLive = 0;
+    let notRunRetired = 0;
+    let notRunUnproven = 0;
+    for (const s of scenLikes) {
+      if (s.canonicalResult) continue;
+      const scope = scopeByScenarioId.get(String(s.id).toLowerCase()) ?? 'active';
+      if (scope === 'external-live') notRunLive += 1;
+      else if (scope === 'historical-retired') notRunRetired += 1;
+      else if (scope === 'historical-unproven') notRunUnproven += 1;
+      else notRunActive += 1;
+    }
+    if (notRunActive > 0) {
+      const byFile = [...notRunByFile.entries()]
+        .sort((a, b) => b[1] - a[1])
+        .map(([f, n]) => `${f}:${n}`)
+        .join(', ');
+      notes.push(
+        `NOT_RUN — ${notRunActive} ACTIVE scenario(s) have no result in the last run (not_run, NOT "undefined"/unverified), by feature: ${byFile}. ` +
+          `A count on the MAIN feature ⇒ the last run was FILTERED (re-run the full suite). A feature absent from the test config ` +
+          `(e.g. a legacy *.feature not in cucumber \`paths\`) is a PERSISTENT gap a full run won't close — add it to paths or retire it.`,
+      );
+    }
+    if (notRunLive > 0) {
+      notes.push(
+        `LIVE_EVIDENCE — ${notRunLive} scenario(s) tagged @live-evidence have no canonical cucumber result BY DESIGN; ` +
+          `they are closed only by a real live producer (manifest + trace + readback), never by the full suite.`,
+      );
+    }
+    if (notRunRetired > 0) {
+      notes.push(
+        `HISTORICAL_RETIRED — ${notRunRetired} scenario(s) tagged @historical with a proven successor are excluded from canonical execution; ` +
+          `their historical evidence is preserved and execution ownership belongs to the successor spec.`,
+      );
+    }
+    if (notRunUnproven > 0) {
+      notes.push(
+        `HISTORICAL_UNPROVEN — ${notRunUnproven} scenario(s) claim @historical without a proven @superseded-by-<slug> successor present in the corpus; ` +
+          `they remain active debt until retirement is proven or they are re-run.`,
+      );
+    }
   }
 
   const effectiveExecution = deriveExecutionLane(inventory);
+  const liveEvidenceLane = deriveLiveEvidenceLane(inventory);
   const executionHardFailures = ['failed', 'undefined', 'ambiguous', 'pending', 'skipped']
     .map((key) => [key, canonicalBuckets[key] ?? 0] as const)
     .filter(([, count]) => count > 0);
@@ -663,6 +702,16 @@ export async function runSpecVerdict(
       blocking: effectiveExecution.status !== 'GREEN',
       summary: effectiveExecution.debt?.join(', ') || 'all effective scenario evidence is current and passing',
       debt: effectiveExecution.debt ?? [],
+    },
+    LIVE_EVIDENCE: {
+      status: liveEvidenceLane.status,
+      blocking: liveEvidenceLane.status === 'RED',
+      summary: liveEvidenceLane.status === 'NONE'
+        ? 'no external live scenarios in this spec'
+        : liveEvidenceLane.debt.length > 0
+          ? `${liveEvidenceLane.debt.length} live scenario(s) await real producer proof`
+          : 'all live scenarios have passing live evidence',
+      debt: liveEvidenceLane.debt ?? [],
     },
     TASK_TRUTH: {
       status: taskTruthDebt.length > 0 ? 'RED' : 'GREEN',
@@ -834,7 +883,7 @@ export function renderVerdict(r: SpecVerdictResult): string {
     }
   }
   lines.push('readiness lanes (FR-61):');
-  const laneOrder: ReadinessLaneName[] = ['STRUCTURE', 'TRACEABILITY', 'EXECUTION', 'TASK_TRUTH', 'BDD_SYNC', 'SEMANTIC', 'FILTERED_PROOF'];
+  const laneOrder: ReadinessLaneName[] = ['STRUCTURE', 'TRACEABILITY', 'EXECUTION', 'LIVE_EVIDENCE', 'TASK_TRUTH', 'BDD_SYNC', 'SEMANTIC', 'FILTERED_PROOF'];
   for (const name of laneOrder) {
     const lane = r.readiness.lanes[name];
     lines.push(`  ${name}: ${lane.status}${lane.blocking ? ' (blocking)' : ''} — ${lane.summary}`);

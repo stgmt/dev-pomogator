@@ -87,6 +87,62 @@ export interface EvidenceRecord {
   /** Recency: `stale` ⇒ a pass older than the source; `canonical` ⇒ backed by the full-run NDJSON. */
   recency: { stale: boolean; canonical: boolean };
   provenance: EvidenceProvenance;
+  /**
+   * Execution-ownership scope (FR-81a honesty): `active` runs in the canonical
+   * suite; `historical-retired` keeps its evidence but is owned by a proven
+   * successor spec; `historical-unproven` claims history without proof and
+   * stays debt; `external-live` is proved by a separate live producer, never by
+   * the canonical cucumber run.
+   */
+  scope: ScenarioScope;
+  /** Successor spec slug for `@superseded-by-<slug>` (null when absent). */
+  superseded_by: string | null;
+}
+
+/** The execution-ownership classes one canonical scenario can carry. */
+export type ScenarioScope =
+  | 'active'
+  | 'historical-retired'
+  | 'historical-unproven'
+  | 'external-live';
+
+export interface ScenarioScopeDisposition {
+  scope: ScenarioScope;
+  superseded_by: string | null;
+}
+
+const SUPERSEDED_TAG_RE = /^@superseded-by-([a-z0-9][a-z0-9-]*)$/i;
+
+/**
+ * Classify one scenario's execution-ownership scope from its tags —
+ * fail-closed: `@historical` alone is NOT retirement; a proven
+ * `@superseded-by-<slug>` successor (a spec that exists in the graph when
+ * `knownSpecs` is supplied) is required before active debt is released.
+ */
+export function classifyScenarioScope(
+  tags: readonly string[],
+  opts: { knownSpecs?: ReadonlySet<string> } = {},
+): ScenarioScopeDisposition {
+  const lower = tags.map((tag) => tag.toLowerCase());
+  if (lower.includes('@live-evidence')) {
+    return { scope: 'external-live', superseded_by: null };
+  }
+  if (lower.includes('@historical')) {
+    let successor: string | null = null;
+    for (const tag of tags) {
+      const match = tag.match(SUPERSEDED_TAG_RE);
+      if (match) {
+        successor = match[1];
+        break;
+      }
+    }
+    const proven = successor !== null && (!opts.knownSpecs || opts.knownSpecs.has(successor));
+    return {
+      scope: proven ? 'historical-retired' : 'historical-unproven',
+      superseded_by: successor,
+    };
+  }
+  return { scope: 'active', superseded_by: null };
 }
 
 /** The graph view the classifier needs (ScenarioNode satisfies this). */
@@ -98,6 +154,8 @@ export interface ScenarioEvidenceInput {
   canonicalResult?: string;
   canonicalRunAt?: string;
   trace?: { runId?: string; source?: string };
+  /** Gherkin tags — drive the execution-ownership scope classification. */
+  tags?: readonly string[];
 }
 
 const OUTCOME_ENUM = new Set<string>([
@@ -132,11 +190,14 @@ export function classifyEvidence(s: ScenarioEvidenceInput): EvidenceRecord {
   const source = s.trace?.source ?? null;
   const runId = s.trace?.runId ?? null;
   const stale = s.resultStale === true;
+  const scopeDisposition = classifyScenarioScope(s.tags ?? []);
   const base = {
     scenario_key: key,
     scenario_id: s.id,
     run_id: runId,
     recency: { stale, canonical: false },
+    scope: scopeDisposition.scope,
+    superseded_by: scopeDisposition.superseded_by,
   };
 
   // 1) Canonical full-run evidence is the authoritative baseline. Overlay
@@ -205,6 +266,8 @@ export interface FrInventoryEntry {
   /** True when NO mapped scenario carries any recorded execution evidence. */
   never_run: boolean;
   classification: FrExecutionClassification;
+  /** Which execution lane owns this FR's scenarios (scope rollup). */
+  execution_scope: FrExecutionScope;
   /** Canonical scenario keys mapped to this FR (deduplicated). */
   scenario_keys: string[];
   /** Composite scenario node ids mapped to this FR. */
@@ -259,6 +322,13 @@ export interface ReadinessInventory {
   acs: AcInventoryEntry[];
   /** One record per CANONICAL scenario key (deduplicated). */
   scenarios: EvidenceRecord[];
+  /** Execution-ownership rollup: how many scenarios are active/live/retired/unproven. */
+  scenario_scope: {
+    active: number;
+    external_live: { count: number; keys: string[] };
+    historical_retired: { count: number; by_successor: Record<string, string[]> };
+    historical_unproven: { count: number; keys: string[] };
+  };
   duplicates: InventoryDuplicate[];
   counts: { fr: number; ac: number; scenario: number };
 }
@@ -286,6 +356,19 @@ function classifyFr(outcomes: EvidenceOutcome[], scenarioCount: number): FrExecu
   if (outcomes.every((o) => o === 'PASSED')) return 'passed';
   if (outcomes.some((o) => NON_PASS_OUTCOMES.has(o))) return 'not_passed';
   return 'partial';
+}
+
+/** Which execution lane owns an FR's scenarios (scope rollup, fail-closed). */
+export type FrExecutionScope = 'active' | 'live' | 'retired' | 'mixed' | 'none';
+
+function frExecutionScope(scopes: readonly ScenarioScope[]): FrExecutionScope {
+  if (scopes.length === 0) return 'none';
+  const distinct = new Set(scopes);
+  const only = (scope: ScenarioScope): boolean => distinct.size === 1 && distinct.has(scope);
+  if (only('historical-retired')) return 'retired';
+  if (only('external-live')) return 'live';
+  if ([...distinct].every((s) => s === 'active' || s === 'historical-unproven')) return 'active';
+  return 'mixed';
 }
 
 /**
@@ -341,13 +424,29 @@ export function buildReadinessInventory(graph: SpecGraph, opts: { spec: string }
     const key = scenarioKey(s.id) ?? s.id.toLowerCase();
     if (bundles.has(key) || specKeys.has(key)) addNode(s);
   }
+  // Every spec slug present in the graph — the retirement contract only
+  // accepts a `@superseded-by-<slug>` successor that actually exists here
+  // (fail-closed: a dangling successor keeps the scenario in active debt).
+  const knownSpecs = new Set<string>();
+  for (const node of graph.nodes.values()) {
+    if (node.spec) knownSpecs.add(node.spec);
+  }
   // Retain the most-informed node as primary: canonical evidence wins, then
   // any recorded evidence, then the .specs source node (stable sort order).
   for (const bundle of bundles.values()) {
     bundle.nodes.sort((a, b) => a.id.localeCompare(b.id));
     const informed = [...bundle.nodes].sort((a, b) => evidenceRank(b) - evidenceRank(a));
     bundle.primary = informed[0];
-    bundle.record = { ...classifyEvidence(bundle.primary), scenario_key: bundle.key };
+    // Scope is classified from the UNION of every node's tags: source and
+    // executable mirrors may carry the retirement/live tags on either copy.
+    const unionTags = [...new Set(bundle.nodes.flatMap((node) => node.tags ?? []))];
+    const scope = classifyScenarioScope(unionTags, { knownSpecs });
+    bundle.record = {
+      ...classifyEvidence(bundle.primary),
+      scenario_key: bundle.key,
+      scope: scope.scope,
+      superseded_by: scope.superseded_by,
+    };
   }
 
   // ── Requirement/AC → scenario keys via REAL tested-by edges (FR-68/69) ──
@@ -421,11 +520,13 @@ export function buildReadinessInventory(graph: SpecGraph, opts: { spec: string }
     const keys = [...(frKeysById.get(fr.id) ?? [])].sort();
     const outcomes = keys.map((k) => bundles.get(k)!.record.outcome);
     const classification = classifyFr(outcomes, keys.length);
+    const scopes = keys.map((k) => bundles.get(k)!.record.scope);
     return {
       id: localIdOf(fr.id),
       composite_id: fr.id,
       never_run: classification === 'never_run',
       classification,
+      execution_scope: frExecutionScope(scopes),
       scenario_keys: keys,
       scenario_ids: keys.flatMap((k) => bundles.get(k)!.nodes.map((n) => n.id)).sort(),
       ac_ids: [...(acIdsByFr.get(fr.id) ?? [])].sort(),
@@ -508,8 +609,36 @@ export function buildReadinessInventory(graph: SpecGraph, opts: { spec: string }
     frs,
     acs,
     scenarios,
+    scenario_scope: scenarioScopeRollup(scenarios),
     duplicates,
     counts: { fr: frs.length, ac: acs.length, scenario: scenarios.length },
+  };
+}
+
+/** Roll the per-scenario scope records up into the inventory-level summary. */
+export function scenarioScopeRollup(scenarios: readonly EvidenceRecord[]): ReadinessInventory['scenario_scope'] {
+  const liveKeys: string[] = [];
+  const unprovenKeys: string[] = [];
+  const bySuccessor: Record<string, string[]> = {};
+  let active = 0;
+  for (const record of scenarios) {
+    if (record.scope === 'active') active += 1;
+    else if (record.scope === 'external-live') liveKeys.push(record.scenario_key);
+    else if (record.scope === 'historical-unproven') unprovenKeys.push(record.scenario_key);
+    else if (record.scope === 'historical-retired') {
+      const successor = record.superseded_by ?? '(unknown)';
+      (bySuccessor[successor] ??= []).push(record.scenario_key);
+    }
+  }
+  for (const keys of Object.values(bySuccessor)) keys.sort();
+  return {
+    active,
+    external_live: { count: liveKeys.length, keys: liveKeys.sort() },
+    historical_retired: {
+      count: Object.values(bySuccessor).reduce((n, keys) => n + keys.length, 0),
+      by_successor: bySuccessor,
+    },
+    historical_unproven: { count: unprovenKeys.length, keys: unprovenKeys.sort() },
   };
 }
 
@@ -526,6 +655,7 @@ export type ReadinessLaneName =
   | 'STRUCTURE'
   | 'TRACEABILITY'
   | 'EXECUTION'
+  | 'LIVE_EVIDENCE'
   | 'TASK_TRUTH'
   | 'BDD_SYNC'
   | 'AC_SATISFACTION'
@@ -536,12 +666,15 @@ export type ReadinessLaneName =
 /**
  * Lanes the AND gate REQUIRES green before readiness. SEMANTIC may be
  * explicitly skipped; FILTERED_PROOF is informational — neither can block
- * readiness alone, and neither can grant it.
+ * readiness alone, and neither can grant it. LIVE_EVIDENCE blocks only when
+ * live scenarios EXIST and lack proof (RED); a spec with none reports NONE
+ * and is not blocked by the lane.
  */
 export const MANDATORY_READINESS_LANES: readonly ReadinessLaneName[] = [
   'STRUCTURE',
   'TRACEABILITY',
   'EXECUTION',
+  'LIVE_EVIDENCE',
   'TASK_TRUTH',
   'BDD_SYNC',
   'AC_SATISFACTION',
@@ -600,12 +733,26 @@ export interface ReadinessEvaluation {
 
 /** Derive the EXECUTION lane from the inventory — the only honest source. */
 export function deriveExecutionLane(inventory: ReadinessInventory): SurfaceLane {
-  const outcomes = inventory.scenarios.map((s) => s.outcome);
+  // Scope-aware (FR-81a): proven retired scenarios keep their records for
+  // audit but are NOT active debt — the successor owns execution; live
+  // scenarios belong to the LIVE_EVIDENCE lane; `historical-unproven` stays
+  // debt (fail-closed).
+  const activeScenarios = inventory.scenarios.filter(
+    (s) => s.scope === 'active' || s.scope === 'historical-unproven',
+  );
+  const outcomes = activeScenarios.map((s) => s.outcome);
   const notRecorded = outcomes.filter((o) => o === 'not_recorded').length;
-  const neverRunFrs = inventory.frs.filter((fr) => fr.never_run).map((fr) => fr.id);
+  const neverRunFrs = inventory.frs
+    .filter((fr) => fr.never_run
+      && (fr.execution_scope === 'active' || fr.execution_scope === 'mixed' || fr.execution_scope === 'none'))
+    .map((fr) => fr.id);
+  const unprovenKeys = activeScenarios
+    .filter((s) => s.scope === 'historical-unproven')
+    .map((s) => s.scenario_key);
   const debt: string[] = [];
   if (notRecorded > 0) debt.push(`SCENARIO_NOT_RUN:${notRecorded}`);
   if (neverRunFrs.length > 0) debt.push(`FR_NEVER_RUN:${neverRunFrs.join(',')}`);
+  if (unprovenKeys.length > 0) debt.push(`HISTORICAL_UNPROVEN:${unprovenKeys.join(',')}`);
   for (const outcome of [...new Set(outcomes)]) {
     if (outcome === 'not_recorded' || outcome === 'PASSED') continue;
     debt.push(`${outcomes.filter((o) => o === outcome).length} ${outcome}`);
@@ -613,20 +760,48 @@ export function deriveExecutionLane(inventory: ReadinessInventory): SurfaceLane 
   const status: SurfaceLaneStatus =
     debt.length === 0
       ? 'GREEN'
-      : outcomes.length > 0 && outcomes.every((o) => o === 'not_recorded')
-        ? 'NOT_RUN'
-        : 'RED';
+      // An unproven retirement claim is POSITIVE debt (a falsifiable marker),
+      // not mere absence of evidence — it escalates past the never-run state.
+      : unprovenKeys.length > 0
+        ? 'RED'
+        : outcomes.length > 0 && outcomes.every((o) => o === 'not_recorded')
+          ? 'NOT_RUN'
+          : 'RED';
   return { status, debt };
+}
+
+/**
+ * Derive the LIVE_EVIDENCE lane from `external-live` scenarios: they are
+ * proved by a separate live producer (real session/manifest/trace), never by
+ * the canonical cucumber run. A spec with no live scenarios reports NONE —
+ * the lane exists but does not block. Any non-PASSED live scenario is debt.
+ */
+export function deriveLiveEvidenceLane(inventory: ReadinessInventory): SurfaceLane {
+  const live = inventory.scenarios.filter((s) => s.scope === 'external-live');
+  if (live.length === 0) return { status: 'NONE', debt: [] };
+  const debt = live
+    .filter((s) => s.outcome !== 'PASSED')
+    .map((s) => `${s.scenario_key}:${s.outcome}`);
+  return { status: debt.length === 0 ? 'GREEN' : 'RED', debt };
 }
 
 const LANE_NEXT_ACTION: Record<string, (e: ReadinessCandidate) => string> = {
   STRUCTURE: () => 'Fix structural/audit/conformance errors, then rerun the readiness check.',
   TRACEABILITY: () => 'Add the missing FR/AC/task/scenario traceability links, then rerun the readiness check.',
   EXECUTION: (c) => {
-    const neverRun = c.inventory.frs.filter((fr) => fr.never_run).map((fr) => fr.id);
+    const neverRun = c.inventory.frs
+      .filter((fr) => fr.never_run
+        && (fr.execution_scope === 'active' || fr.execution_scope === 'mixed' || fr.execution_scope === 'none'))
+      .map((fr) => fr.id);
     return neverRun.length > 0
       ? `Run the full Docker BDD suite so canonical coverage records the never-run FR(s) ${neverRun.join(', ')} and every scenario result.`
       : 'Run the full Docker BDD suite so canonical coverage contains every scenario result.';
+  },
+  LIVE_EVIDENCE: (c) => {
+    const live = c.inventory.scenario_scope.external_live.keys;
+    return live.length > 0
+      ? `Produce real live-evidence proof for scenario(s) ${live.join(', ')} via the live producer (manifest + trace + readback); a canonical cucumber run cannot close them.`
+      : 'Produce real live-evidence proof for the external live scenarios via the live producer.';
   },
   TASK_TRUTH: () => 'Reopen/downgrade DONE-but-unverified tasks or provide canonical passed scenario evidence.',
   BDD_SYNC: () => 'Fix source/executable BDD sync drift or mark intentional EXEC_ONLY/OUT_OF_SCOPE/PENDING scenarios.',
@@ -642,19 +817,26 @@ const LANE_NEXT_ACTION: Record<string, (e: ReadinessCandidate) => string> = {
  */
 export function evaluateReadiness(candidate: ReadinessCandidate): ReadinessEvaluation {
   const execution = deriveExecutionLane(candidate.inventory);
+  const liveEvidence = deriveLiveEvidenceLane(candidate.inventory);
   const lanes = {} as Record<ReadinessLaneName, EvaluatedLane>;
   for (const name of ALL_READINESS_LANES) {
     const supplied = name === 'EXECUTION'
       ? execution
-      : name === 'AC_SATISFACTION'
-        ? candidate.inventory.ac_satisfaction
-        : name === 'NFR_SATISFACTION'
-          ? candidate.inventory.nfr_satisfaction
-          : candidate.lanes?.[name];
+      : name === 'LIVE_EVIDENCE'
+        ? liveEvidence
+        : name === 'AC_SATISFACTION'
+          ? candidate.inventory.ac_satisfaction
+          : name === 'NFR_SATISFACTION'
+            ? candidate.inventory.nfr_satisfaction
+            : candidate.lanes?.[name];
     const status: SurfaceLaneStatus = supplied?.status ?? 'NOT_EVALUATED';
     const debt = supplied?.debt ?? [];
     const blocking = MANDATORY_READINESS_LANES.includes(name)
-      ? status !== 'GREEN'
+      ? name === 'LIVE_EVIDENCE'
+        // A spec WITHOUT live scenarios reports NONE — the lane is honest but
+        // must not block; existing live scenarios without proof DO block.
+        ? status === 'RED' || status === 'NOT_EVALUATED' || status === 'DEPENDENCY_ABSENT'
+        : status !== 'GREEN'
       : name === 'SEMANTIC'
         ? status === 'RED' || status === 'DEPENDENCY_ABSENT'
         : false;

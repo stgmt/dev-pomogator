@@ -54,3 +54,17 @@ Feature: CODEXINIT001_Codex plugin support whitelist
     When its Codex manifest install surface is inspected
     Then the Codex manifest should expose only the context-menu skill surface
     And the Codex manifest should not expose Claude hooks, Claude rules, or Claude commands
+
+
+@FR-5 @AC-5.1
+Scenario: CODEXINIT001_08 support fails without a real path-safe Codex probe
+  Given the Codex verification harness cannot complete its real plugin probe
+  When the whitelist verification report is finalized
+  Then Supported fails rather than converting skipped probe checks into pass
+  And a sibling path with the CODEX_HOME string prefix is rejected as outside containment
+
+  @FR-5 @AC-5
+  Scenario: CODEXINIT001_09 production harness ignores probe overrides and succeeds only via PATH shim
+    Given a whitelist entry is marked "Supported"
+    When its verification evidence is inspected
+    Then the harness succeeds only through a PATH-shimmed codex executable backed by the committed probe fixture

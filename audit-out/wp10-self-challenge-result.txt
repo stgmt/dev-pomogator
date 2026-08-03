@@ -1,0 +1,4 @@
+MUTATION containment: NOT RED — guard neutralization did not fail SPECGEN004_689
+MUTATION two-sided: NOT RED — guard neutralization did not fail SPECGEN004_690
+MUTATION invalid-task-guard: NOT RED — guard neutralization did not fail SPECGEN004_691
+RESTORE: guards restored, focused batch green

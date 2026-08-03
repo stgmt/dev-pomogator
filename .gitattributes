@@ -3,3 +3,5 @@ install        text eol=lf
 *.sh           text eol=lf
 # Extensionless shell-script fixtures (their #!/bin/bash shebang fails on Linux if CRLF)
 tests/fixtures/spec-status/mock-bin/* text eol=lf
+# Live-evidence ground-truth fixtures: digests are over EXACT bytes — never rewrite EOL.
+tests/fixtures/live-evidence/* text eol=lf

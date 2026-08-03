@@ -1,0 +1,85 @@
+[docker-wsl] docker недоступен на хосте — выполняю 'scripts/docker-bdd.sh' внутри WSL (--cd E:/repos/dev-pomogator)
+ Container devpom-bdd-05a4ea19-test-run-b83e2d72e922 Creating 
+ Container devpom-bdd-05a4ea19-test-run-b83e2d72e922 Created 
+p current step-defs + cucumber.docker.json)...
+#11 CACHED
+
+#12 [5/5] COPY --chown=testuser:testuser . .
+#12 DONE 5.4s
+
+#13 exporting to image
+#13 exporting layers
+#13 exporting layers 4.2s done
+#13 exporting manifest sha256:5cdd5aed5bc4d2de7f8218226b27e25c5adfa783db35c935c5e1109fac237f4f 0.0s done
+#13 exporting config sha256:23caaba653ef1fb4c491a64bd184f18103480a947062a1a21f6955fe86521267 0.0s done
+#13 exporting attestation manifest sha256:9dac71c9c38fec88743214309227155cc4b0923546c9fe72577403dab5b87169 0.0s done
+#13 exporting manifest list sha256:40d7971610b3263571c33650b5f4748686048a717e95c9730c9e4fc1bf172b51 0.0s done
+#13 naming to docker.io/library/dev-pomogator-test:local done
+#13 unpacking to docker.io/library/dev-pomogator-test:local
+#13 unpacking to docker.io/library/dev-pomogator-test:local 6.6s done
+#13 DONE 10.9s
+
+#14 resolving provenance for metadata file
+#14 DONE 0.0s
+ Image dev-pomogator-test:local Built 
+[docker-bdd] Running cucumber in Docker/Linux → .dev-pomogator/.docker-status/bdd-run-1785784761-2712489-31833.log
+[docker-bdd] mounted a writable .specs copy (.dev-pomogator/.tmp/specs-docker-rw-devpom-bdd-05a4ea19) — real .specs/ untouched
+ Network devpom-bdd-05a4ea19_default Creating 
+ Network devpom-bdd-05a4ea19_default Created 
+ Container devpom-bdd-05a4ea19-test-run-d6595641f738 Creating 
+ Container devpom-bdd-05a4ea19-test-run-d6595641f738 Created 
+............F.......................................................................................................................................................................................................................................................................................................
+
+Failures:
+
+1) Scenario: SPECGEN004_651 MCP query explains plan # .specs/spec-generator-v4/spec-generator-v4.feature:4126
+   ✔ Before # tests/hooks/before-after.ts:39
+   ✔ Before # tests/step_definitions/feature_create_specs_bdd_enforcement.ts:48
+   ✔ Before # tests/step_definitions/feature_pomogator_doctor.ts:69
+   ✔ Before # tests/step_definitions/feature_strong_tests.ts:47
+   ✔ Before # tests/step_definitions/feature_strong_tests.ts:984
+   ✔ Before # tests/step_definitions/feature_strong_tests.ts:1386
+   ✔ Before # tests/step_definitions/feature_strong_tests_classify.ts:62
+   ✔ Given dev-pomogator v4 is installed # tests/step_definitions/common.ts:54
+   ✔ And specs-workflow extension is enabled with MCP server registered # tests/step_definitions/common.ts:58
+   ✔ And the project has at least one spec in `.specs/` # tests/step_definitions/common.ts:63
+   ✔ Given selected graph has dependencies surfaces conflicts and stale evidence # tests/step_definitions/feature79_task_plan_integration.ts:131
+   ✔ When agent queries execution plan # tests/step_definitions/feature79_task_plan_integration.ts:158
+   ✖ Then typed graph impact conflicts waves batches path slack stale reasons and explanations return # tests/step_definitions/feature79_task_plan_integration.ts:163
+       AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+
+         makeTask('fixture:task-b', 'Prepare the schema', {
+         declaredStatus: 'DONE',
+         estimateMinutes: 5,
+         surfaces: [{ kind: 'schema', access: 'read', locator: 'billing.v2', scope: 'repository', rationale: 'read the published schema' }],
+         })
+
+           + expected - actual
+
+           -false
+           +true
+
+           at V4World.<anonymous> (/home/testuser/app/tests/step_definitions/feature79_task_plan_integration.ts:169:10)
+   ✔ After # tests/step_definitions/phase7-cross-spec.ts:61
+   ✔ After # tests/step_definitions/phase4-sqlite.ts:38
+   ✔ After # tests/step_definitions/phase2-env.ts:58
+   ✔ After # tests/step_definitions/feature_worktree_setup.ts:218
+   ✔ After # tests/step_definitions/feature_test_runner_wrapper_cjs.ts:55
+   ✔ After # tests/step_definitions/feature_strong_tests_classify.ts:67
+   ✔ After # tests/step_definitions/feature_strong_tests.ts:52
+   ✔ After # tests/step_definitions/feature_skill_listing_budget.ts:25
+   ✔ After # tests/step_definitions/feature_pomogator_doctor.ts:79
+   ✔ After # tests/step_definitions/feature_onboard_repo_phase0.ts:316
+   ✔ After # tests/step_definitions/feature_native_statusline.ts:120
+   ✔ After # tests/step_definitions/feature_create_specs_bdd_enforcement.ts:52
+   ✔ After # tests/step_definitions/feature_claude_mem_bootstrap.ts:63
+   ✔ After # tests/step_definitions/feature57_scaffold_completeness.ts:198
+   ✔ After # tests/hooks/before-after.ts:46
+
+11 scenarios (1 failed, 10 passed)
+66 steps (1 failed, 65 passed)
+0m02.090s (executing steps: 0m01.931s)
+
+[bdd-overlay] appended 11 scenario result(s)
+[docker-bdd] archived filtered run -> .dev-pomogator/.test-history/run-1785784896844-filtered.ndjson (11 scenarios, 2090ms)
+[docker-bdd] filtered run (--tags @feature79) — result in .dev-pomogator/.docker-status/bdd-run-1785784761-2712489-31833.ndjson ONLY; canonical NOT updated (clobber-safe)

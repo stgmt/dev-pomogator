@@ -43,6 +43,7 @@
   "scripts": {
     "lint": "node tools/lint-self-bootstrap/run-lint.cjs",
     "build:mcp": "esbuild tools/spec-mcp-server/server.ts --bundle --platform=node --format=esm --target=node20 --external:better-sqlite3 --banner:js=\"import { createRequire as __cr } from 'module'; const require = __cr(import.meta.url);\" --outfile=tools/spec-mcp-server/server.bundle.mjs",
+    "build:task-plan": "esbuild tools/spec-graph/task-plan-integration.ts --bundle --platform=node --format=esm --target=node20 --outfile=tools/spec-graph/task-plan-integration.bundle.mjs",
     "build:dynamic-workflow": "esbuild tools/dynamic-workflow-engineering/cli.ts --bundle --platform=node --format=esm --target=node20 --outfile=tools/dynamic-workflow-engineering/runtime.bundle.mjs",
     "build:gate": "esbuild tools/spec-graph/test_quality_gate_stop.ts --bundle --platform=node --format=esm --target=node20 --banner:js=\"import { createRequire as __cr } from 'module'; const require = __cr(import.meta.url);\" --outfile=tools/spec-graph/test_quality_gate_stop.bundle.mjs",
     "build:guard": "esbuild tools/spec-conformance-guard/spec-conformance-guard.ts --bundle --platform=node --format=esm --target=node20 --banner:js=\"import { createRequire as __cr } from 'module'; const require = __cr(import.meta.url);\" --outfile=tools/spec-conformance-guard/spec-conformance-guard.bundle.mjs",
@@ -52,7 +53,7 @@
     "build:claim-gate": "esbuild tools/claim-evidence-gate/claim_evidence_gate_stop.ts --bundle --platform=node --format=esm --target=node20 --banner:js=\"import { createRequire as __cr } from 'module'; const require = __cr(import.meta.url);\" --outfile=tools/claim-evidence-gate/claim_evidence_gate_stop.bundle.mjs",
     "build:tui-test-runner": "esbuild tools/tui-test-runner/test_runner_wrapper.ts --bundle --platform=node --format=esm --target=node20 --outfile=tools/tui-test-runner/test_runner_wrapper.bundle.mjs",
     "build:pomogator-doctor": "esbuild .claude/skills/pomogator-doctor/scripts/engine/index.ts --bundle --platform=node --format=esm --target=node20 --outfile=.claude/skills/pomogator-doctor/scripts/engine/doctor.bundle.mjs",
-    "build:bundles": "npm run build:mcp && npm run build:dynamic-workflow && npm run build:gate && npm run build:guard && npm run build:push && npm run build:ingest && npm run build:prompt-suggest && npm run build:claim-gate && npm run build:tui-test-runner && npm run build:pomogator-doctor",
+    "build:bundles": "npm run build:mcp && npm run build:task-plan && npm run build:dynamic-workflow && npm run build:gate && npm run build:guard && npm run build:push && npm run build:ingest && npm run build:prompt-suggest && npm run build:claim-gate && npm run build:tui-test-runner && npm run build:pomogator-doctor",
     "build:hook-service-registry": "node tools/hook-service/generate-registry.mjs .",
     "check:status-drift": "tsx scripts/check-status-drift.mts",
     "check:skill-health": "node tools/skill-health/check.mjs --root . --strict",

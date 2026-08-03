@@ -1,0 +1,81 @@
+[docker-wsl] docker недоступен на хосте — выполняю 'scripts/docker-bdd.sh' внутри WSL (--cd E:/repos/dev-pomogator)
+ Container devpom-bdd-05a4ea19-test-run-1061c9818619 Creating 
+ Container devpom-bdd-05a4ea19-test-run-1061c9818619 Created 
+p current step-defs + cucumber.docker.json)...
+#11 CACHED
+
+#12 [5/5] COPY --chown=testuser:testuser . .
+#12 DONE 6.0s
+
+#13 exporting to image
+#13 exporting layers
+#13 exporting layers 4.4s done
+#13 exporting manifest sha256:743e5d45379dc761b4ef40b67505ba75528cb17e1e7314a2e4885d4158b53053 0.0s done
+#13 exporting config sha256:d73d3a34fd72f94b2413c40b7920f5ee1b405c0fb0811928f7fd78348654804e 0.0s done
+#13 exporting attestation manifest sha256:68784071b9414ac8397991cfdf2873eac7477caa60122fa37fe979b3c0da5cc5 0.0s done
+#13 exporting manifest list sha256:9fd7148377edf9d98ae79c63d434de2bd7d97fe3b304696abc4c20f25143a7c7 0.0s done
+#13 naming to docker.io/library/dev-pomogator-test:local done
+#13 unpacking to docker.io/library/dev-pomogator-test:local
+#13 unpacking to docker.io/library/dev-pomogator-test:local 6.5s done
+#13 DONE 11.0s
+
+#14 resolving provenance for metadata file
+#14 DONE 0.0s
+ Image dev-pomogator-test:local Built 
+[docker-bdd] Running cucumber in Docker/Linux → .dev-pomogator/.docker-status/bdd-run-1785784622-2704803-29465.log
+[docker-bdd] mounted a writable .specs copy (.dev-pomogator/.tmp/specs-docker-rw-devpom-bdd-05a4ea19) — real .specs/ untouched
+ Network devpom-bdd-05a4ea19_default Creating 
+ Network devpom-bdd-05a4ea19_default Created 
+ Container devpom-bdd-05a4ea19-test-run-2ec9aab481d2 Creating 
+ Container devpom-bdd-05a4ea19-test-run-2ec9aab481d2 Created 
+......................................................................................................................................................................................F...............
+
+Failures:
+
+1) Scenario: SPECGEN004_690 Unexpected evidence records fail closed under an expectation set # .specs/spec-generator-v4/spec-generator-v4.feature:4397
+   ✔ Before # tests/hooks/before-after.ts:39
+   ✔ Before # tests/step_definitions/feature_create_specs_bdd_enforcement.ts:48
+   ✔ Before # tests/step_definitions/feature_pomogator_doctor.ts:69
+   ✔ Before # tests/step_definitions/feature_strong_tests.ts:47
+   ✔ Before # tests/step_definitions/feature_strong_tests.ts:984
+   ✔ Before # tests/step_definitions/feature_strong_tests.ts:1386
+   ✔ Before # tests/step_definitions/feature_strong_tests_classify.ts:62
+   ✔ Given dev-pomogator v4 is installed # tests/step_definitions/common.ts:54
+   ✔ And specs-workflow extension is enabled with MCP server registered # tests/step_definitions/common.ts:58
+   ✔ And the project has at least one spec in `.specs/` # tests/step_definitions/common.ts:63
+   ✔ Given a producer-derived manifest containing an unexpected extra evidence record # tests/step_definitions/feature81_cursor_compat.ts:346
+   ✔ When the real validator checks the manifest with and without an expectation set # tests/step_definitions/feature81_cursor_compat.ts:381
+   ✖ Then unexpected records fail closed while empty expectations stay permissive # tests/step_definitions/feature81_cursor_compat.ts:396
+       AssertionError [ERR_ASSERTION]: an unexpected record must reject the manifest
+
+       true !== false
+
+           + expected - actual
+
+           -true
+           +false
+
+           at V4World.<anonymous> (/home/testuser/app/tests/step_definitions/feature81_cursor_compat.ts:397:10)
+   ✔ After # tests/step_definitions/phase7-cross-spec.ts:61
+   ✔ After # tests/step_definitions/phase4-sqlite.ts:38
+   ✔ After # tests/step_definitions/phase2-env.ts:58
+   ✔ After # tests/step_definitions/feature_worktree_setup.ts:218
+   ✔ After # tests/step_definitions/feature_test_runner_wrapper_cjs.ts:55
+   ✔ After # tests/step_definitions/feature_strong_tests_classify.ts:67
+   ✔ After # tests/step_definitions/feature_strong_tests.ts:52
+   ✔ After # tests/step_definitions/feature_skill_listing_budget.ts:25
+   ✔ After # tests/step_definitions/feature_pomogator_doctor.ts:79
+   ✔ After # tests/step_definitions/feature_onboard_repo_phase0.ts:316
+   ✔ After # tests/step_definitions/feature_native_statusline.ts:120
+   ✔ After # tests/step_definitions/feature_create_specs_bdd_enforcement.ts:52
+   ✔ After # tests/step_definitions/feature_claude_mem_bootstrap.ts:63
+   ✔ After # tests/step_definitions/feature57_scaffold_completeness.ts:198
+   ✔ After # tests/hooks/before-after.ts:46
+
+7 scenarios (1 failed, 6 passed)
+44 steps (1 failed, 43 passed)
+0m01.664s (executing steps: 0m01.482s)
+
+[bdd-overlay] appended 7 scenario result(s)
+[docker-bdd] archived filtered run -> .dev-pomogator/.test-history/run-1785784757411-filtered.ndjson (7 scenarios, 1664ms)
+[docker-bdd] filtered run (--tags @feature81) — result in .dev-pomogator/.docker-status/bdd-run-1785784622-2704803-29465.ndjson ONLY; canonical NOT updated (clobber-safe)

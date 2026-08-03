@@ -8,7 +8,7 @@
  */
 import { Given, When, Then } from '@cucumber/cucumber';
 import assert from 'node:assert/strict';
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -17,6 +17,7 @@ import {
   applyTaskPlanPatch,
   buildTaskPlanState,
   countTaskPlanRecords,
+  createFileCasAdapter,
   legacyPlanReport,
   persistTaskPlanState,
   queryTaskPlan,
@@ -44,6 +45,30 @@ interface TaskPlanWorld extends V4World {
   legacy?: LegacyTaskRecord[];
   rolloutReports?: ReturnType<typeof legacyPlanReport>[];
   explicitConflict?: TaskConflictRecord;
+  competingState?: TaskPlanState;
+  persistenceFile?: string;
+  secondMutation?: TaskPlanMutationResult;
+  casResults?: Array<{ writerId: string; committed: boolean; findings: string[] }>;
+}
+
+interface CasWriterResult {
+  writerId: string;
+  committed: boolean;
+  findings: string[];
+}
+
+/** Cucumber runs from the repository root; child writers resolve fixtures relative to it. */
+const REPO_ROOT_FOR_CAS = process.cwd();
+
+function collectChild(child: ReturnType<typeof spawn>): Promise<{ stdout: string; stderr: string; status: number | null }> {
+  return new Promise((resolve, reject) => {
+    let stdout = '';
+    let stderr = '';
+    child.stdout!.on('data', (chunk: Buffer) => { stdout += chunk.toString(); });
+    child.stderr!.on('data', (chunk: Buffer) => { stderr += chunk.toString(); });
+    child.on('error', reject);
+    child.on('close', (status) => resolve({ stdout, stderr, status }));
+  });
 }
 
 function makeTask(
@@ -87,6 +112,14 @@ function filePersistence(file: string): PlanPersistenceAdapter {
     },
     read() {
       return fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : undefined;
+    },
+    compareAndSwap(expectedRevision, serialized) {
+      const current = this.read();
+      if (!current) return false;
+      const parsed = JSON.parse(current) as { revision?: unknown };
+      if (parsed.revision !== expectedRevision) return false;
+      fs.writeFileSync(file, serialized, 'utf8');
+      return true;
     },
   };
 }
@@ -161,14 +194,14 @@ When('dry-run and CAS apply request', function (this: TaskPlanWorld) {
   const dryRun = applyTaskPlanPatch(this.state!, { add: [invalid] }, {
     expectedRevision: 11,
     dryRun: true,
-    persist: (nextState, serialized) => persistTaskPlanState(adapter, nextState) && serialized,
+    persist: (_nextState, _serialized, expectedRevision) => adapter.compareAndSwap!(expectedRevision, _serialized, _nextState),
   });
   assert.equal(dryRun.ok, false);
   assert.equal(dryRun.committed, false);
   assert.equal(fs.readFileSync(file, 'utf8'), beforeBytes);
   this.mutation = applyTaskPlanPatch(this.state!, { add: [invalid] }, {
     expectedRevision: 11,
-    persist: (nextState) => persistTaskPlanState(adapter, nextState),
+    persist: (nextState, serialized, expectedRevision) => adapter.compareAndSwap!(expectedRevision, serialized, nextState),
   });
 });
 
@@ -342,4 +375,90 @@ Then('the explicit conflict remains in the next plan state', function (this: Tas
   assert.equal(this.mutation!.committed, true);
   assert.deepEqual(this.mutation!.state.conflicts, [this.explicitConflict]);
   assert.ok(queryTaskPlan(this.mutation!.state).graph.edges.some((edge) => edge.type === 'conflicts-with' && edge.sourceIds.includes('audit:explicit-conflict')));
+});
+
+Given('a malformed canonical task reaches plan state construction', function (this: TaskPlanWorld) {
+  const malformed = makeTask('fixture:malformed-plan', 'Malformed plan task');
+  malformed.doneWhen = [];
+  this.state = buildTaskPlanState([malformed], { revision: 71 });
+});
+
+When('the canonical task plan is queried and restored', function (this: TaskPlanWorld) {
+  this.plan = queryTaskPlan(this.state!);
+  this.restored = restorePersistedTaskPlanState({
+    write() {},
+    read: () => JSON.stringify(this.state),
+  });
+});
+
+Then('the plan remains incomplete with a retained invalid-task finding', function (this: TaskPlanWorld) {
+  assert.equal(this.plan!.complete, false);
+  assert.ok(this.plan!.diagnostics.some((item) => item.code === 'PLAN_INVALID_TASK'));
+  const restoredPlan = queryTaskPlan(this.restored!);
+  assert.equal(restoredPlan.complete, false);
+  assert.ok(restoredPlan.diagnostics.some((item) => item.code === 'PLAN_INVALID_TASK'));
+});
+
+Given('two task plan writers read the same persisted revision', function (this: TaskPlanWorld) {
+  const task = makeTask('fixture:cas-writer', 'CAS writer task');
+  this.state = buildTaskPlanState([task], { revision: 81 });
+  this.persistenceFile = path.join(this.tempDir, 'cas-plan.json');
+  persistTaskPlanState(createFileCasAdapter(this.persistenceFile), this.state);
+});
+
+When('both writers apply different valid patches', async function (this: TaskPlanWorld) {
+  const barrierDir = path.join(this.tempDir, 'cas-barrier');
+  fs.mkdirSync(barrierDir, { recursive: true });
+  const writerScript = path.resolve('tests/fixtures/task-plan-cas-writer.mjs');
+  const spawnWriter = (writerId: string, evidenceSourceId: string) => spawn(
+    process.execPath,
+    ['--import', 'tsx', writerScript, this.persistenceFile!, barrierDir, writerId, evidenceSourceId],
+    { cwd: REPO_ROOT_FOR_CAS, encoding: 'utf8', env: { ...process.env, NODE_OPTIONS: '' } },
+  );
+  const results = await Promise.all([
+    collectChild(spawnWriter('writer-1', 'evidence:first')),
+    collectChild(spawnWriter('writer-2', 'evidence:second')),
+  ]);
+  this.casResults = results.map((result, index) => {
+    assert.equal(result.status, 0, `CAS writer exited ${result.status}: ${result.stderr}`);
+    const parsed = JSON.parse(result.stdout.trim()) as CasWriterResult;
+    assert.equal(parsed.writerId, index === 0 ? 'writer-1' : 'writer-2');
+    return parsed;
+  });
+});
+
+Then('only the first storage compare-and-swap commits and the second reports stale revision', function (this: TaskPlanWorld) {
+  const committed = this.casResults!.filter((result) => result.committed);
+  const rejected = this.casResults!.filter((result) => !result.committed);
+  assert.equal(committed.length, 1, `exactly one writer may commit, got: ${JSON.stringify(this.casResults)}`);
+  assert.equal(rejected.length, 1, `double-stale means the adapter lost both writes: ${JSON.stringify(this.casResults)}`);
+  assert.ok(rejected[0].findings.includes('PLAN_STALE_REVISION'), rejected[0].findings.join(','));
+  const persisted = restorePersistedTaskPlanState(createFileCasAdapter(this.persistenceFile!));
+  assert.deepEqual(persisted!.evidence.map((item) => item.sourceId), [committed[0].writerId === 'writer-1' ? 'evidence:first' : 'evidence:second']);
+  assert.equal(persisted!.revision, 82);
+});
+
+Given('a malformed canonical task is selected for planning', function (this: TaskPlanWorld) {
+  const malformed = makeTask('fixture:invalid-plan', 'Invalid plan task');
+  malformed.doneWhen = [];
+  this.state = buildTaskPlanState([malformed], { revision: 91 });
+});
+
+When('the plan schedules and a completion patch is applied', function (this: TaskPlanWorld) {
+  this.plan = queryTaskPlan(this.state!, { selectedTaskIds: ['fixture:invalid-plan'] });
+  this.mutation = applyTaskPlanPatch(this.state!, { evidence: [evidence('fixture:invalid-plan', 'evidence:invalid-completion', 'present', 'attempt to complete an invalid task')] }, {
+    expectedRevision: 91,
+  });
+});
+
+Then('the invalid task is unscheduled, blocked, and cannot complete', function (this: TaskPlanWorld) {
+  assert.equal(this.plan!.complete, false);
+  assert.deepEqual(this.plan!.waves.flat().filter((taskId) => taskId === 'fixture:invalid-plan'), []);
+  assert.ok(this.plan!.unscheduledRemainder.some((entry) => entry.taskId === 'fixture:invalid-plan'));
+  assert.ok(this.plan!.frontier.some((entry) => entry.taskId === 'fixture:invalid-plan' && entry.readiness === 'blocked'));
+  assert.ok(this.plan!.diagnostics.some((item) => item.code === 'PLAN_INVALID_TASK'));
+  assert.equal(this.mutation!.ok, false);
+  assert.equal(this.mutation!.committed, false);
+  assert.equal(this.mutation!.state.revision, 91);
+  assert.ok(this.mutation!.findings.some((item) => item.code === 'PLAN_INVALID_TASK'));
 });

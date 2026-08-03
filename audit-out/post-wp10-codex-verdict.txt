@@ -1,0 +1,26 @@
+[spec-graph] FILE_CHANGES.md contains glob path(s); implements edges skipped (first: .specs/pomogator-doctor/*.md)
+═══ spec-verdict (authoritative, FR-37) — .specs/codex-init ═══
+pre-filter (validate-spec, structural): 0 errors / 0 warnings — pre-filter only — a structural pass is NOT reportable as "valid/clean/done" (FR-37a)
+audit gate (audit-spec): 0 ERROR findings — gate PASSES
+conformance (one graph, spec-scoped): 0 error / 9 warning — UNVERIFIED_FR:7, FR_NO_DESIGN:1, FR_NO_STORY:1
+  fix FR_NO_DESIGN: add a `**Требование:** [FR-N]` line INSIDE a `### Decision` block in DESIGN.md
+  fix FR_NO_STORY: add a `**Требование:** [FR-N]` line INSIDE a `### User Story` block (the story→FR covers edge is built only from that line)
+coverage (FR-32 honesty): effective {"passed":0,"stale":9,"pending":0,"not_run":0,"undefined":0,"ambiguous":0,"failed":0,"skipped":0}; canonical {"passed":9,"stale":0,"pending":0,"not_run":0,"undefined":0,"ambiguous":0,"failed":0,"skipped":0}
+inventory (FR-63, one graph): 7 FR / 8 AC / 9 scenario (deduplicated) — ACs with test_paths=[]: AC-1, AC-2, AC-3, AC-4, AC-6, AC-7
+semantic (FR-8): SEMANTIC_SKIPPED — no claude binary available (or semantic disabled); unchecked content is NOT "no drift" (FR-37c)
+traceability gate (FR-37b, cell→atom): 0 gaps — gate PASSES
+readiness lanes (FR-61):
+  STRUCTURE: GREEN — 0 structural error(s), 0 audit error(s), 0 conformance error(s)
+  TRACEABILITY: GREEN — 0 traceability gaps
+  EXECUTION: RED (blocking) — 9 stale
+    - 9 stale
+  LIVE_EVIDENCE: NONE — no external live scenarios in this spec
+  TASK_TRUTH: GREEN — no DONE-but-unverified tasks
+  BDD_SYNC: GREEN — no source/executable BDD sync or repository migration debt reported by the current verdict inputs
+  SEMANTIC: SKIPPED — semantic check explicitly disabled for this run
+  FILTERED_PROOF: NONE — no filtered proof needed
+notes (fail-loud, FR-37c):
+  - SEMANTIC_SKIPPED — no claude binary available (or semantic disabled); unchecked content is NOT "no drift" (FR-37c)
+VERDICT: NOT_READY — 0 blocking finding(s)
+OVERALL: NOT_READY
+NEXT: Run the full Docker BDD suite so canonical coverage contains every scenario result.

@@ -30,9 +30,9 @@ Every supported Codex whitelist entry SHALL define Codex-native packaging artifa
 
 ## FR-5: Real Codex CLI Verification Gate
 
-A whitelist entry SHALL NOT move to `Supported` until verification uses the real Codex CLI or an equivalent integration harness to prove marketplace visibility, plugin manifest validity, installed/enabled state, and runtime expectations for skills/hooks/MCP/scripts used by the entry.
+A whitelist entry SHALL NOT move to `Supported` until verification uses the real Codex CLI or an equivalent integration harness to prove marketplace visibility, plugin manifest validity, installed/enabled state, and runtime expectations for skills/hooks/MCP/scripts used by the entry. The production verification harness SHALL NOT honor any test-only executable override (environment variable or API parameter); deterministic substitutes SHALL live in the test layer only and SHALL substitute the `codex` executable through PATH resolution.
 
-**Связанные AC:** [AC-5](ACCEPTANCE_CRITERIA.md#ac-5-fr-5)
+**Связанные AC:** [AC-5](ACCEPTANCE_CRITERIA.md#ac-5-fr-5), [AC-5.1](ACCEPTANCE_CRITERIA.md#ac-51)
 **Use Case:** [UC-5](USE_CASES.md#uc-5-verify-plugin-install-and-runtime-load)
 
 ## FR-6: Stale Claim Rejection

@@ -71,3 +71,9 @@
 - WHEN the reaper reaps THEN it SHALL reset `hook-failures.json` `consecutiveFailures` to 0
 - WHEN default Docker BDD runs THEN it SHALL use recorded/local seams and make no real package network install
 - WHEN real-install BDD is selected THEN it SHALL require explicit network opt-in and isolated `HOME`/`USERPROFILE`
+
+## AC-2.1
+
+**Требование:** [FR-2](FR.md#fr-2-non-interactive-install-command-feature2)
+
+WHEN the detached installer process emits an asynchronous spawn error THEN the SessionStart hook SHALL remain fail-open without an unhandled process error. WHEN fresh install and legacy-model migration resolve active credentials THEN an active stored OpenRouter route SHALL remain authoritative, otherwise the project AiPomogator credential SHALL precede an environment OpenRouter credential consistently.

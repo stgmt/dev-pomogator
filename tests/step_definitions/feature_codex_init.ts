@@ -1,8 +1,10 @@
 import { Given, When, Then } from '@cucumber/cucumber';
 import type { V4World } from '../hooks/before-after.ts';
+import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import { isPathWithin } from '../../tools/codex-plugin-support/path-containment.ts';
 
 const REPO_ROOT = process.env.APP_DIR || process.cwd();
 const MARKETPLACE_PATH = path.join(REPO_ROOT, '.agents', 'plugins', 'marketplace.json');
@@ -48,6 +50,7 @@ interface CodexInitWorld extends V4World {
   };
   codexInitClaimDrift?: boolean;
   codexInitClaimReason?: string;
+  codexInitOutsideContained?: boolean;
 }
 
 function readJson<T>(filePath: string): T {
@@ -261,11 +264,21 @@ Given(/^a whitelist entry is marked "Supported"$/, function (this: CodexInitWorl
 });
 
 When(/^its verification evidence is inspected$/, function (this: CodexInitWorld) {
+  // Deterministic substitute lives in the TEST layer only: a PATH shim that execs
+  // the committed probe fixture. The production harness has no env override and
+  // resolves the plain `codex` executable through PATH (FR-5 codex-init).
+  const shimDir = path.join(this.tempDir, 'codex-shim');
+  fs.mkdirSync(shimDir, { recursive: true });
+  const probePath = path.join(REPO_ROOT, 'tests', 'fixtures', 'codex-plugin-support', 'codex-probe.cjs');
+  const shimPath = path.join(shimDir, 'codex');
+  fs.writeFileSync(shimPath, `#!/bin/sh\nexec node "${probePath}" "$@"\n`, { mode: 0o755 });
+  fs.chmodSync(shimPath, 0o755);
+  const delimiter = process.platform === 'win32' ? ';' : ':';
   const result = spawnSync(process.execPath, ['--import', 'tsx', VERIFY_WHITELIST], {
     cwd: REPO_ROOT,
     encoding: 'utf-8',
     timeout: 90000,
-    env: { ...process.env, FORCE_COLOR: '0' },
+    env: { ...process.env, PATH: `${shimDir}${delimiter}${process.env.PATH ?? ''}`, FORCE_COLOR: '0' },
   });
   this.lastExitCode = result.status;
   this.lastStdout = result.stdout || '';
@@ -285,6 +298,57 @@ Then(/^the evidence includes a real Codex plugin CLI run or equivalent integrati
   if (this.lastExitCode !== 0 || this.codexInitHarnessReport?.status !== 'pass') {
     throw new Error(`Expected verify-whitelist harness to pass.\nstdout:\n${this.lastStdout}\nstderr:\n${this.lastStderr}`);
   }
+});
+
+Given('the Codex verification harness cannot complete its real plugin probe', function (this: CodexInitWorld) {
+  const emptyPath = path.join(this.tempDir, 'empty-path');
+  fs.mkdirSync(emptyPath, { recursive: true });
+  const result = spawnSync(process.execPath, ['--import', 'tsx', VERIFY_WHITELIST], {
+    cwd: REPO_ROOT,
+    encoding: 'utf8',
+    // Self-challenge: the legacy test-only override is SET but must be ignored by
+    // production code — without a real `codex` on PATH the report must still fail.
+    env: {
+      ...process.env,
+      PATH: emptyPath,
+      FORCE_COLOR: '0',
+      DEV_POMOGATOR_CODEX_PROBE: path.join(REPO_ROOT, 'tests', 'fixtures', 'codex-plugin-support', 'codex-probe.cjs'),
+    },
+  });
+  this.lastExitCode = result.status;
+  this.lastStdout = result.stdout;
+  this.codexInitHarnessReport = JSON.parse(result.stdout) as CodexInitWorld['codexInitHarnessReport'];
+  const codexHome = path.join(this.tempDir, 'codex-home');
+  const sibling = `${codexHome}-escape`;
+  fs.mkdirSync(codexHome, { recursive: true });
+  fs.mkdirSync(sibling, { recursive: true });
+  this.codexInitOutsideContained = isPathWithin(codexHome, sibling);
+});
+
+When('the whitelist verification report is finalized', function (this: CodexInitWorld) {
+  if (!this.codexInitHarnessReport) throw new Error('verification report was not captured');
+});
+
+Then('the harness succeeds only through a PATH-shimmed codex executable backed by the committed probe fixture', function (this: CodexInitWorld) {
+  assert.equal(this.lastExitCode, 0, `PATH-shim verification failed.\nstdout:\n${this.lastStdout}\nstderr:\n${this.lastStderr}`);
+  assert.ok(this.codexInitHarnessReport, 'verification report was not captured');
+  const probeChecks = (this.codexInitHarnessReport?.checks ?? []).filter((check) => check.id.startsWith('codex-cli.'));
+  assert.ok(probeChecks.length >= 5, `expected real probe checks, got ${probeChecks.map((check) => check.id).join(',')}`);
+  assert.ok(probeChecks.every((check) => check.status === 'pass'), probeChecks.map((check) => `${check.id}:${check.status}`).join(','));
+});
+
+Then('Supported fails rather than converting skipped probe checks into pass', function (this: CodexInitWorld) {
+  if (this.lastExitCode === 0 || this.codexInitHarnessReport?.status === 'pass') {
+    throw new Error(`Codex verification passed without a real probe: ${this.lastStdout}`);
+  }
+  const probeChecks = (this.codexInitHarnessReport?.checks ?? []).filter((check) => check.id.startsWith('codex-cli.'));
+  if (probeChecks.length < 5 || probeChecks.some((check) => check.status !== 'fail')) {
+    throw new Error(`Expected every unavailable real probe check to fail: ${JSON.stringify(probeChecks)}`);
+  }
+});
+
+Then('a sibling path with the CODEX_HOME string prefix is rejected as outside containment', function (this: CodexInitWorld) {
+  if (this.codexInitOutsideContained !== false) throw new Error('sibling-prefix path was accepted as contained');
 });
 
 Then(/^the evidence covers marketplace visibility, manifest validity, installed state, and runtime loading expectations$/, function (this: CodexInitWorld) {
@@ -307,6 +371,10 @@ Then(/^the evidence covers marketplace visibility, manifest validity, installed 
   ]) {
     if (!checkIds.has(id)) {
       throw new Error(`Expected verify-whitelist report to include check "${id}". Report:\n${this.lastStdout}`);
+    }
+    const check = this.codexInitHarnessReport?.checks?.find((candidate) => candidate.id === id);
+    if (check?.status !== 'pass') {
+      throw new Error(`Expected verify-whitelist check "${id}" to pass, got ${check?.status ?? '<missing>'}. Report:\n${this.lastStdout}`);
     }
   }
 });

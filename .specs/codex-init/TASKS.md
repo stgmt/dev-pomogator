@@ -119,3 +119,10 @@ Tasks follow Red -> Green -> Refactor. The `.feature` scenarios define the expec
   - [ ] `npx tsx tools/specs-generator/validate-spec.ts -Path .specs/codex-init` reports 0 errors.
   - [ ] `npx tsx tools/specs-generator/audit-spec.ts -Path .specs/codex-init` reports 0 errors.
   - [ ] `npx tsx .agents/skills/spec-reality-check/scripts/verify.ts .specs/codex-init --format human` has no untriaged errors.
+
+- [ ] Remove production Codex probe override and prove via PATH shim — id: codex-probe-removal — Status: TODO | Est: 90m
+  _Requirements: [FR-5](FR.md#fr-5-real-codex-cli-verification-gate)_
+  **Done When:**
+  - [ ] `runCodex` in tools/codex-plugin-support/verify-whitelist.ts resolves the real `codex` executable via PATH only; no DEV_POMOGATOR_CODEX_PROBE branch remains in production code.
+  - [ ] CODEXINIT001_05 positive proof runs through a test-layer PATH shim executing tests/fixtures/codex-plugin-support/codex-probe.cjs.
+  - [ ] With the probe env override set but no real codex on PATH, verification still fails (override ignored).

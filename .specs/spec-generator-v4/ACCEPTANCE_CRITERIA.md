@@ -1534,3 +1534,52 @@ WHEN a selected task has stale evidence THEN its frontier entry SHALL not be rea
 
 WHEN deterministic synthesis creates an acceptance-bearing implementation task THEN the canonical task SHALL include one machine-checkable verification contract containing the exact FR/AC/scenario ownership, declared real-consumer runtime target and invocation, expected observable result, at least one executable negative or adversarial case, a targeted mutation-kill or explicit self-challenge policy, required proof kinds, evidence sink, task/graph/commit fingerprints, and an independent verifier policy. IF any field is absent, placeholder-only, invented, or not bound to a declared execution surface THEN synthesis SHALL emit a named blocking finding and SHALL NOT finalize the task. WHEN execution completes THEN green CI/full BDD evidence SHALL remain necessary but SHALL NOT by itself complete the task; a fresh verifier whose identity differs from the worker SHALL re-run the declared real-consumer runtime and adversarial checks, evaluate the strength policy, and issue a digest-bound attestation. Only the integration owner SHALL derive DONE after every required proof is fresh, current, unfiltered where full proof is required, mutation/self-challenge-satisfying, and bound to the exact task, graph revision, commit, commands, observations, and artifacts. Missing, stale, filtered-only, self-attested, weak, mismatched, test-helper-only, or unavailable proof SHALL fail closed with diagnostics and follow-up proposals.
 
+
+## AC-81.7
+
+**Требование:** [FR-81](FR.md#fr-81)
+
+WHEN a live-evidence manifest is used for Cursor or host proof THEN every expected scenario/profile pair SHALL be present, producer name and version SHALL match the trace, each record SHALL bind to one exact event id and event digest, the declared workspace digest SHALL be recomputed from normalized in-root regular files, and the manifest Git SHA SHALL match the actual checkout HEAD. Missing, modified, escaped, stale, environment-substituted, or mismatched evidence SHALL fail closed with a named finding.
+
+
+## AC-79.8
+
+**Требование:** [FR-79](FR.md#fr-79)
+
+WHEN canonical task normalization or dependency validation emits an error THEN the plan state and every restored/query projection SHALL retain that diagnostic, SHALL exclude the invalid task from waves, batches, and ready frontier entries with a named unscheduled reason, and SHALL remain incomplete. IF a patch attempts to complete an invalid canonical task THEN apply SHALL return uncommitted without a revision change. WHEN two writers mutate from the same revision THEN only the storage-level compare-and-swap winner SHALL commit; the stale writer SHALL receive PLAN_STALE_REVISION and SHALL NOT overwrite the winning state. The atomicity SHALL be proven by two simultaneous writer processes behind a barrier; a double-commit or double-stale outcome SHALL fail the proof.
+
+
+## AC-80.12
+
+**Требование:** [FR-80](FR.md#fr-80)
+
+WHEN strict synthesis receives an acceptance lane THEN its requirement and acceptance criterion SHALL exist in the supplied registries, the acceptance criterion SHALL belong to that requirement and remain applicable, every dependency SHALL resolve to a synthesized canonical task, and RED/GREEN/REFACTOR step text SHALL be non-blank. Any violation SHALL emit a named blocking finding with severity error — including AC_REQUIREMENT_MISMATCH for an acceptance criterion owned by another requirement and INAPPLICABLE_ACCEPTANCE_REFERENCE for a waived criterion — and SHALL prevent an accepted synthesis result, finalization, or plan projection.
+
+
+## AC-63.4
+
+**Требование:** [FR-63](FR.md#fr-63)
+
+WHEN the readiness inventory classifies a scenario's execution ownership THEN a scenario tagged `@historical @superseded-by-<slug>` SHALL be retired ONLY when the successor spec exists in the corpus, a bare `@historical` scenario or one pointing at a missing successor SHALL remain active debt (fail-closed), `@live-evidence` scenarios SHALL be closed only by the LIVE_EVIDENCE lane (real producer manifest/trace plus independent verification of the recorded actions) and never by the canonical cucumber run, and retired scenarios SHALL keep their historical evidence records visible for audit while releasing active EXECUTION debt.
+
+
+## AC-81.8
+
+**Требование:** [FR-81](FR.md#fr-81)
+
+WHEN the live-evidence validator resolves the repository root, the trace path, or any workspace file THEN it SHALL canonicalize each path through realpath and SHALL fail closed with a named finding when the real path escapes the workspace or cannot be resolved. IF a manifest entry is a symlink or junction whose target lies outside the repository THEN validation SHALL reject it with a named containment-escape finding and SHALL NOT hash or accept the external bytes as current evidence.
+
+
+## AC-81.9
+
+**Требование:** [FR-81](FR.md#fr-81)
+
+WHEN an expectation set is supplied to live-evidence validation THEN every expected scenario/profile record SHALL be present AND every manifest record outside the expectation set SHALL be rejected with a named finding. WHEN no expectation set is supplied THEN record completeness alone SHALL NOT reject records, and result/profile constraints SHALL remain enforced.
+
+
+## AC-81.10
+
+**Требование:** [FR-81](FR.md#fr-81)
+
+WHEN deterministic suite evidence validates live-evidence artifacts THEN the proof SHALL use a captured fixture with independently precomputed digests (or a deterministic producer plus a captured artifact and recorded provenance). IF the digests are computed only by the same code under test THEN the proof SHALL be treated as self-attested and insufficient. One-byte tamper of a captured workspace or trace artifact SHALL fail validation with a named finding.
+

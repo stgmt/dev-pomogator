@@ -32,6 +32,31 @@ LATEST_REL=".dev-pomogator/.docker-status/bdd-last-run.ndjson"
 CANONICAL=".dev-pomogator/.last-test-run.ndjson"
 GIT_SHA="${DEV_POMOGATOR_GIT_SHA:-$(git rev-parse HEAD 2>/dev/null || true)}"
 
+# Explicit cucumber profile support (FR-81 live evidence): `--profile <name>`
+# runs a named non-default profile from cucumber.json (e.g. `live-evidence`
+# for SPECGEN004_668/669 + CTXMENU001_27). Profile runs are PARTIAL/live proof:
+# they NEVER write the canonical NDJSON — results reach the overlay only.
+PROFILE="default"
+PASSTHROUGH=()
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --profile)
+      PROFILE="${2:-default}"
+      shift
+      [ "$#" -gt 0 ] && shift
+      ;;
+    --profile=*)
+      PROFILE="${1#--profile=}"
+      shift
+      ;;
+    *)
+      PASSTHROUGH+=("$1")
+      shift
+      ;;
+  esac
+done
+set -- "${PASSTHROUGH[@]}"
+
 SESSION="${TEST_STATUSLINE_SESSION:-}"
 # If no SESSION in env, read from host session.env (written by SessionStart hook).
 # Do not `source` the file: Windows paths with backslashes are shell escapes
@@ -58,21 +83,25 @@ trap cleanup EXIT INT TERM
 # → the mounted dir so the result reaches the host. Generated fresh (gitignored)
 # BEFORE the build so COPY . . includes it in the image.
 if command -v node >/dev/null 2>&1; then
-  node -e "const fs=require('fs');const c=JSON.parse(fs.readFileSync('cucumber.json','utf8'));c.default.format=['message:${OUT_REL}','progress'];c.default.publishQuiet=true;fs.writeFileSync('cucumber.docker.json',JSON.stringify(c,null,2)+'\n');console.log('[docker-bdd] generated cucumber.docker.json ('+c.default.paths.length+' paths, format -> mounted dir)');"
+  node -e "const fs=require('fs');const c=JSON.parse(fs.readFileSync('cucumber.json','utf8'));const p='${PROFILE}';if(p!=='default'&&!c[p]){console.error('[docker-bdd] ERROR: cucumber.json has no profile: '+p);process.exit(1);}const t=c[p];t.format=['message:${OUT_REL}','progress'];if(p==='default')t.publishQuiet=true;fs.writeFileSync('cucumber.docker.json',JSON.stringify(c,null,2)+'\n');console.log('[docker-bdd] generated cucumber.docker.json (profile '+p+', format -> mounted dir)');"
 elif command -v python3 >/dev/null 2>&1; then
-  OUT_REL="$OUT_REL" python3 - <<'PY'
+  OUT_REL="$OUT_REL" BDD_PROFILE="$PROFILE" python3 - <<'PY'
 import json
 import os
 out_rel = os.environ['OUT_REL']
+profile = os.environ.get('BDD_PROFILE', 'default')
 with open('cucumber.json', 'r', encoding='utf-8') as f:
     config = json.load(f)
-default = config.setdefault('default', {})
-default['format'] = [f'message:{out_rel}', 'progress']
-default['publishQuiet'] = True
+if profile != 'default' and profile not in config:
+    raise SystemExit(f'[docker-bdd] ERROR: cucumber.json has no profile: {profile}')
+target = config.setdefault(profile, {})
+target['format'] = [f'message:{out_rel}', 'progress']
+if profile == 'default':
+    target['publishQuiet'] = True
 with open('cucumber.docker.json', 'w', encoding='utf-8') as f:
     json.dump(config, f, indent=2)
     f.write('\n')
-print(f"[docker-bdd] generated cucumber.docker.json ({len(default.get('paths', []))} paths, format -> mounted dir)")
+print(f"[docker-bdd] generated cucumber.docker.json (profile {profile}, format -> mounted dir)")
 PY
 else
   echo "[docker-bdd] ERROR: need node or python3 to generate cucumber.docker.json" >&2
@@ -135,10 +164,18 @@ for ((i=0; i<${#ARGS[@]}; i++)); do
   esac
 done
 CUCUMBER_ARGS=()
+PROFILE_ARGS=()
+if [ "$PROFILE" != "default" ]; then
+  PROFILE_ARGS=(--profile "$PROFILE")
+fi
 if [ "$HAS_EXPLICIT_CONFIG" = "1" ]; then
+  if [ "$PROFILE" != "default" ]; then
+    echo "[docker-bdd] ERROR: --profile cannot be combined with an explicit -c/--config" >&2
+    exit 1
+  fi
   CUCUMBER_ARGS=("$@")
 else
-  CUCUMBER_ARGS=(-c cucumber.docker.json "$@")
+  CUCUMBER_ARGS=(-c cucumber.docker.json "${PROFILE_ARGS[@]}" "$@")
 fi
 
 RESULT_REL="$OUT_REL"
@@ -187,12 +224,17 @@ fi
 # sanctioned BDD path shares the same runtime entry and FR-52 clobber safety stays
 # centralized. docker-bdd.sh still owns the Docker-mounted output path and the final
 # full-run-only copy to the host canonical below.
+LIVE_EVIDENCE_ARGS=()
+if [ -n "${DEV_POMOGATOR_LIVE_EVIDENCE:-}" ]; then
+  LIVE_EVIDENCE_ARGS+=(-e "DEV_POMOGATOR_LIVE_EVIDENCE=$DEV_POMOGATOR_LIVE_EVIDENCE")
+fi
 docker compose -f docker-compose.test.yml run --rm -T \
   --entrypoint node \
   -e PYTHONUNBUFFERED=1 \
   -e RUN_BDD_HISTORY_EXTERNAL=1 \
   -e DEV_POMOGATOR_GIT_SHA="$GIT_SHA" \
   "${SESSION_ARGS[@]}" \
+  "${LIVE_EVIDENCE_ARGS[@]}" \
   "${CONFIG_MOUNT_ARGS[@]}" \
   -v "$(pwd)/cucumber.docker.json:/home/testuser/app/cucumber.docker.json:ro" \
   -v "$(pwd)/${SPECS_RW}:/home/testuser/app/.specs" \
@@ -354,13 +396,17 @@ JS
 # the canonical untouched — its partial/skipped ndjson must NOT poison the spec-graph
 # census. Its result still lands in $OUT_REL for inspection. No `shift` runs above, so
 # "$#" here is the original argc.
-if [ -s "$RESULT_REL" ] && [ "$RESULT_REL" != "$LATEST_REL" ]; then
+if [ -s "$RESULT_REL" ] && [ "$RESULT_REL" != "$LATEST_REL" ] && [ "$PROFILE" = "default" ]; then
   cp "$RESULT_REL" "$LATEST_REL"
 fi
 
-if [ "$#" -gt 0 ]; then
-  archive_history "$RESULT_REL" "filtered"
-  echo "[docker-bdd] filtered run ($*) — result in $RESULT_REL ONLY; canonical NOT updated (clobber-safe)"
+if [ "$#" -gt 0 ] || [ "$PROFILE" != "default" ]; then
+  KIND="filtered"
+  if [ "$PROFILE" != "default" ]; then
+    KIND="profile-$PROFILE"
+  fi
+  archive_history "$RESULT_REL" "$KIND"
+  echo "[docker-bdd] $KIND run ($*) — result in $RESULT_REL ONLY; canonical NOT updated (clobber-safe)"
 elif [ -s "$RESULT_REL" ]; then
   cp "$RESULT_REL" "$CANONICAL"
   archive_history "$CANONICAL" "full"

@@ -703,3 +703,70 @@ This table is the explicit implementation inventory for the execution-aware task
 - TASKS.md: add backlog task `p48-bounded-verification-workflow` (FR-80)
 
 - TASKS.md: add backlog task `p48-runtime-mutation-regressions` (FR-80, FR-53, FR-71, FR-77)
+
+- ACCEPTANCE_CRITERIA.md: add AC-81.7 (FR-81)
+
+- ACCEPTANCE_CRITERIA.md: add AC-79.8 (FR-79)
+
+- ACCEPTANCE_CRITERIA.md: add AC-80.12 (FR-80)
+
+| `tools/live-evidence/schema.mjs` | edit | [FR-81](FR.md#fr-81) — v2 manifest requires workspace inputs, exact producer identity, and trace-event digest binding. |
+| `tools/live-evidence/validator.mjs` | edit | [FR-81](FR.md#fr-81) — recompute checkout/workspace provenance and reject missing expected scenarios/profiles. |
+| `tools/live-evidence/validator.d.mts` | edit | [FR-81](FR.md#fr-81) — exported strict live-evidence validation contract. |
+| `tools/spec-graph/task-plan-integration.ts` | edit | [FR-79](FR.md#fr-79) — retain canonical diagnostics and require persistence-level compare-and-swap. |
+| `tools/spec-graph/task-plan-integration.bundle.mjs` | edit | [FR-79](FR.md#fr-79) — rebuilt shipped dependency-absent planning runtime. |
+| `tools/spec-graph/task-synthesis.ts` | edit | [FR-80](FR.md#fr-80) — validate registries, dependency targets, and non-blank causal work. |
+| `tests/step_definitions/feature79_task_plan_integration.ts` | edit | [FR-79](FR.md#fr-79) — real-function invalid-task and competing-writer regressions. |
+| `tests/step_definitions/feature80_task_synthesis.ts` | edit | [FR-80](FR.md#fr-80) — real strict-synthesis reference and causal-step regression. |
+| `tests/step_definitions/feature81_cursor_compat.ts` | edit | [FR-81](FR.md#fr-81) — real temporary Git/workspace/trace artifacts exercise the validator. |
+| `package.json` | edit | [FR-79](FR.md#fr-79) — deterministic task-plan bundle rebuild is part of the canonical bundle build. |
+
+- ACCEPTANCE_CRITERIA.md: add AC-63.4 (FR-63)
+
+| `tools/spec-graph/readiness-inventory.ts` | edit | [FR-63](FR.md#fr-63) AC-63.4 — scenario execution-ownership scope: proven retired-historical, fail-closed unproven debt, external-live lane, LIVE_EVIDENCE mandatory lane. |
+| `tools/specs-generator/spec-verdict.ts` | edit | [FR-63](FR.md#fr-63) AC-63.4 — LIVE_EVIDENCE lane rendering and scope-aware NOT_RUN/LIVE_EVIDENCE/HISTORICAL_RETIRED notes. |
+| `tools/spec-mcp-server/tools.ts` | edit | [FR-63](FR.md#fr-63) AC-63.4 — scope-aware execution gaps, lifecycle, and hint on the status views. |
+| `tests/step_definitions/feature63_precheck_inventory.ts` | edit | SPECGEN004_686..687 — scope classifier regressions over real readiness fixtures; mandatory-lane pins updated. |
+| `.specs/spec-generator-v4/spec-generator-v4.feature` | edit | [FR-63](FR.md#fr-63) — SPECGEN004_686..687 traceable scenarios for AC-63.4. |
+
+- ACCEPTANCE_CRITERIA.md: add AC-81.8 (FR-81)
+
+- ACCEPTANCE_CRITERIA.md: add AC-81.9 (FR-81)
+
+- ACCEPTANCE_CRITERIA.md: add AC-81.10 (FR-81)
+
+- FR.md: amend FR-81
+
+- TASKS.md: add Phase 49 — Live-evidence containment, atomic CAS proof, and strict-synthesis guards (2026-08-03)
+
+- TASKS.md: add backlog task `p49-live-evidence-containment` (FR-81)
+
+- TASKS.md: add backlog task `p49-two-sided-completeness` (FR-81)
+
+- TASKS.md: add backlog task `p49-ground-truth-fixture` (FR-81)
+
+- TASKS.md: add backlog task `p49-storage-cas-concurrency-proof` (FR-79)
+
+- TASKS.md: add backlog task `p49-invalid-task-scheduling-guard` (FR-79)
+
+- TASKS.md: add backlog task `p49-synthesis-mismatch-rejection` (FR-80)
+
+Phase 49 — Live-evidence containment, atomic CAS proof, strict-synthesis guards
+
+| Path | Action | Reason |
+|---|---|---|
+| `tools/live-evidence/validator.mjs` | EDIT | [FR-81](FR.md#fr-81) AC-81.8/AC-81.9 — canonical realpath containment and two-sided expected-record completeness. |
+| `tests/fixtures/live-evidence/manifest.json` | CREATE | [FR-81](FR.md#fr-81) AC-81.10 — captured live-evidence manifest for SPECGEN004_688. |
+| `tests/fixtures/live-evidence/trace.json` | CREATE | [FR-81](FR.md#fr-81) AC-81.10 — captured trace artifact for SPECGEN004_688. |
+| `tests/fixtures/live-evidence/workspace.txt` | CREATE | [FR-81](FR.md#fr-81) AC-81.10 — captured workspace input for SPECGEN004_688. |
+| `tests/fixtures/live-evidence/ground-truth.json` | CREATE | [FR-81](FR.md#fr-81) AC-81.10 — independently precomputed digest constants. |
+| `tests/fixtures/live-evidence/PROVENANCE.md` | CREATE | [FR-81](FR.md#fr-81) AC-81.10 — capture commands, tools, and byte-stability contract. |
+| `tests/step_definitions/feature81_cursor_compat.ts` | EDIT | [FR-81](FR.md#fr-81) AC-81.8/AC-81.9/AC-81.10 — SPECGEN004_688-690 steps and full-expectation live validation. |
+| `tools/spec-graph/task-plan-integration.ts` | EDIT | [FR-79](FR.md#fr-79) AC-79.8 — createFileCasAdapter storage-level CAS and invalid-task scheduling guard. |
+| `tools/spec-graph/task-plan-integration.bundle.mjs` | EDIT | [FR-79](FR.md#fr-79) AC-79.8 — rebuilt dependency-absent planning runtime. |
+| `tests/fixtures/task-plan-cas-writer.mjs` | CREATE | [FR-79](FR.md#fr-79) AC-79.8 — concurrent child writer for the SPECGEN004_684 barrier race. |
+| `tests/step_definitions/feature79_task_plan_integration.ts` | EDIT | [FR-79](FR.md#fr-79) AC-79.8 — real simultaneous CAS race and SPECGEN004_691 invalid-task proof. |
+| `tests/step_definitions/feature80_task_synthesis.ts` | EDIT | [FR-80](FR.md#fr-80) AC-80.12 — SPECGEN004_692 mismatched/inapplicable rejection proof. |
+| `tools/codex-plugin-support/verify-whitelist.ts` | EDIT | codex-init FR-5 — remove production test-only probe override; PATH is the only resolution path. |
+| `tests/step_definitions/feature_codex_init.ts` | EDIT | codex-init FR-5 — PATH-shim positive proof and env-override self-challenge. |
+| `.gitattributes` | EDIT | FR-81 AC-81.10 — force LF for live-evidence ground-truth fixtures so digests stay byte-stable. |

@@ -4341,3 +4341,72 @@ Scenario: SPECGEN004_681 Unrelated plan patch preserves explicit conflicts
   Given a plan has an explicit externally audited conflict
   When an unrelated valid patch commits
   Then the explicit conflict remains in the next plan state
+
+
+@feature81 @FR-81 @AC-81.7
+Scenario: SPECGEN004_682 Live evidence binds expected records to current producer artifacts
+  Given a producer-derived live evidence manifest with current checkout and workspace bindings
+  When the real live evidence validator checks missing and modified producer bindings
+  Then missing expected records and changed trace or workspace evidence are rejected by named findings
+
+@feature79 @FR-79 @AC-79.8
+Scenario: SPECGEN004_683 Invalid canonical tasks keep plans incomplete
+  Given a malformed canonical task reaches plan state construction
+  When the canonical task plan is queried and restored
+  Then the plan remains incomplete with a retained invalid-task finding
+
+@feature79 @FR-79 @AC-79.8
+Scenario: SPECGEN004_684 Storage compare-and-swap rejects the second writer
+  Given two task plan writers read the same persisted revision
+  When both writers apply different valid patches
+  Then only the first storage compare-and-swap commits and the second reports stale revision
+
+@feature80 @FR-80 @AC-80.12
+Scenario: SPECGEN004_685 Synthesis rejects unresolved sources dependencies and blank causal work
+  Given strict synthesis receives unresolved registries dependency targets and blank causal step text
+  When deterministic pre-scheduling synthesis reviews the lanes
+  Then named blocking findings reject every invalid reference and blank causal step
+
+@feature63 @FR-63 @AC-63.4
+Scenario: SPECGEN004_686 proven retired scenario keeps historical evidence but releases active execution debt
+  Given a readiness fixture with a historical scenario superseded by an existing spec and a stale overlay pass
+  When the readiness inventory classifies its scenario scopes
+  Then the scenario is classified historical-retired with its overlay record preserved
+  And the EXECUTION lane carries no debt for it while LIVE_EVIDENCE reports NONE without live scenarios
+
+@feature63 @FR-63 @AC-63.4
+Scenario: SPECGEN004_687 unproven historical and live scenarios remain honest readiness debt
+  Given a readiness fixture with a bare historical scenario a dangling superseded scenario and a pending live scenario
+  When the readiness inventory classifies its scenario scopes and evaluates readiness
+  Then both unproven scenarios stay active EXECUTION debt under HISTORICAL_UNPROVEN
+  And the live scenario blocks the LIVE_EVIDENCE lane until real producer proof arrives
+
+@feature81 @FR-81 @AC-81.10
+Scenario: SPECGEN004_688 Captured live evidence fixture validates against independent ground-truth digests
+  Given a captured live evidence fixture with independent ground-truth digests
+  When the real validator verifies the captured fixture and tampered variants
+  Then the captured fixture passes against independent digests and one-byte tamper fails closed
+
+@feature81 @FR-81 @AC-81.8
+Scenario: SPECGEN004_689 Symlinked workspace and trace files cannot escape the repository
+  Given a live evidence manifest whose workspace and trace files escape through symlinks
+  When the real live evidence validator checks canonical path containment
+  Then escaping workspace and trace evidence are rejected fail-closed by named findings
+
+@feature81 @FR-81 @AC-81.9
+Scenario: SPECGEN004_690 Unexpected evidence records fail closed under an expectation set
+  Given a producer-derived manifest containing an unexpected extra evidence record
+  When the real validator checks the manifest with and without an expectation set
+  Then unexpected records fail closed while empty expectations stay permissive
+
+@feature79 @FR-79 @AC-79.8
+Scenario: SPECGEN004_691 Invalid canonical tasks never schedule and never complete
+  Given a malformed canonical task is selected for planning
+  When the plan schedules and a completion patch is applied
+  Then the invalid task is unscheduled, blocked, and cannot complete
+
+@feature80 @FR-80 @AC-80.12
+Scenario: SPECGEN004_692 Synthesis rejects mismatched and inapplicable acceptance lanes
+  Given strict synthesis receives a mismatched requirement lane and an inapplicable acceptance lane
+  When deterministic synthesis finalizes and projects the mismatched plan
+  Then mismatched and inapplicable lanes are rejected without an accepted projection

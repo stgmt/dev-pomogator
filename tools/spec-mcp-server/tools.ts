@@ -37,7 +37,7 @@
 import { z } from 'zod';
 import { checkConformance, type Finding } from '../spec-graph/conformance.ts';
 import { gapsFromFindings, summariseGaps } from '../spec-graph/traceability.ts';
-import { buildReadinessInventory } from '../spec-graph/readiness-inventory.ts';
+import { buildReadinessInventory, classifyScenarioScope } from '../spec-graph/readiness-inventory.ts';
 import { computeSpecVerdict } from '../spec-graph/verdict.ts';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -1477,6 +1477,10 @@ export function buildToolRegistry(
       ): {
         SCENARIO_NOT_RUN: number;
         scenario_ids: string[];
+        LIVE_EVIDENCE_AWAITING: number;
+        live_scenario_ids: string[];
+        HISTORICAL_RETIRED: number;
+        retired_scenario_ids: string[];
         FR_NOT_EXECUTION_VERIFIED: number;
         fr_ids: string[];
       } => {
@@ -1484,6 +1488,24 @@ export function buildToolRegistry(
         for (const [bucket, ids] of Object.entries(buckets) as Array<[Bucket, string[]]>) {
           for (const id of ids) scenarioBucket.set(id, bucket);
         }
+        // Execution-ownership scope (FR-81a): retired-historical scenarios are
+        // not_run BY DESIGN (successor owns execution) and external-live ones
+        // are closed by the live producer — only ACTIVE not-run is canonical
+        // execution debt. Fail-closed: @historical without a proven successor
+        // stays active debt.
+        const knownSpecs = new Set<string>();
+        for (const node of graph.nodes.values()) {
+          if (node.spec) knownSpecs.add(node.spec);
+        }
+        const scenarioScope = new Map(
+          scenarios.map((s) => [s.id, classifyScenarioScope(s.tags ?? [], { knownSpecs }).scope]),
+        );
+        const activeNotRun = buckets.not_run.filter((id) => {
+          const scope = scenarioScope.get(id) ?? 'active';
+          return scope === 'active' || scope === 'historical-unproven';
+        });
+        const liveNotRun = buckets.not_run.filter((id) => scenarioScope.get(id) === 'external-live');
+        const retiredNotRun = buckets.not_run.filter((id) => scenarioScope.get(id) === 'historical-retired');
         const scenarioIds = new Set(scenarios.map((s) => s.id));
         const frToScenarios = new Map<string, string[]>();
         for (const e of graph.edges) {
@@ -1497,12 +1519,23 @@ export function buildToolRegistry(
           frToScenarios.set(e.from, arr);
         }
         const frIds = [...frToScenarios.entries()]
-          .filter(([, ids]) => ids.length > 0 && !ids.every((id) => scenarioBucket.get(id) === 'passed'))
+          .filter(([, ids]) => ids.length > 0
+            && !ids.every((id) => scenarioBucket.get(id) === 'passed')
+            // FRs whose scenarios are ALL retired or ALL live are owned by the
+            // successor spec / the live lane — not canonical execution debt.
+            && !ids.every((id) => {
+              const scope = scenarioScope.get(id) ?? 'active';
+              return scope === 'historical-retired' || scope === 'external-live';
+            }))
           .map(([fr]) => fr)
           .sort();
         return {
-          SCENARIO_NOT_RUN: buckets.not_run.length,
-          scenario_ids: buckets.not_run,
+          SCENARIO_NOT_RUN: activeNotRun.length,
+          scenario_ids: activeNotRun,
+          LIVE_EVIDENCE_AWAITING: liveNotRun.length,
+          live_scenario_ids: liveNotRun,
+          HISTORICAL_RETIRED: retiredNotRun.length,
+          retired_scenario_ids: retiredNotRun,
           FR_NOT_EXECUTION_VERIFIED: frIds.length,
           fr_ids: frIds,
         };
@@ -1688,7 +1721,8 @@ export function buildToolRegistry(
       else if (summary.failed > 0 || summary.ambiguous > 0) lifecycle = 'RED';
       else if (
         summary.pending + summary.undefined + summary.skipped + summary.stale > 0 ||
-        canonicalStatusCoverage.totals.not_run > 0
+        statusExecutionGaps.SCENARIO_NOT_RUN > 0 ||
+        statusExecutionGaps.LIVE_EVIDENCE_AWAITING > 0
       ) lifecycle = 'PARTIAL';
       else lifecycle = 'GREEN';
 
@@ -1734,10 +1768,12 @@ export function buildToolRegistry(
         RED: `${summary.failed + summary.ambiguous} failing of ${summary.touched} touched. Next: get_test_result per scenario.`,
         PARTIAL:
           statusExecutionGaps.SCENARIO_NOT_RUN > 0
-            ? `${statusExecutionGaps.SCENARIO_NOT_RUN} scenario(s) are SCENARIO_NOT_RUN after the last ingested run; NOT execution-complete.`
-            : summary.stale > 0
-              ? `${summary.stale} stale passed scenario(s) need rerun after source changes; NOT execution-complete.`
-              : `${summary.pending + summary.undefined + summary.skipped} scenario(s) undefined/pending/skipped, 0 failed — written but not implemented; NOT green.`,
+            ? `${statusExecutionGaps.SCENARIO_NOT_RUN} ACTIVE scenario(s) are SCENARIO_NOT_RUN after the last ingested run; NOT execution-complete.`
+            : statusExecutionGaps.LIVE_EVIDENCE_AWAITING > 0
+              ? `${statusExecutionGaps.LIVE_EVIDENCE_AWAITING} @live-evidence scenario(s) await real live-producer proof (manifest + trace + readback); a canonical cucumber run cannot close them.`
+              : summary.stale > 0
+                ? `${summary.stale} stale passed scenario(s) need rerun after source changes; NOT execution-complete.`
+                : `${summary.pending + summary.undefined + summary.skipped} scenario(s) undefined/pending/skipped, 0 failed — written but not implemented; NOT green.`,
         GREEN: `All ${summary.touched} touched scenario(s) passed at ${lastAt}.`,
       };
 

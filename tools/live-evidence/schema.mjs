@@ -7,9 +7,9 @@
  * that JSON Schema cannot express.
  */
 
-export const LIVE_EVIDENCE_SCHEMA_ID = 'dev-pomogator.live-evidence.v1';
-export const LIVE_TRACE_SCHEMA_ID = 'dev-pomogator.live-evidence.trace.v1';
-export const PRODUCER_MARKER = 'dev-pomogator-live-evidence-producer/v1';
+export const LIVE_EVIDENCE_SCHEMA_ID = 'dev-pomogator.live-evidence.v2';
+export const LIVE_TRACE_SCHEMA_ID = 'dev-pomogator.live-evidence.trace.v2';
+export const PRODUCER_MARKER = 'dev-pomogator-live-evidence-producer/v2';
 
 export const LIVE_EVIDENCE_SCHEMA = Object.freeze({
   $schema: 'https://json-schema.org/draft/2020-12/schema',
@@ -17,11 +17,17 @@ export const LIVE_EVIDENCE_SCHEMA = Object.freeze({
   title: 'dev-pomogator live evidence manifest',
   type: 'object',
   additionalProperties: false,
-  required: ['schema', 'generated_at', 'git_sha', 'workspace_digest', 'producer', 'trace', 'records'],
+  required: ['schema', 'generated_at', 'git_sha', 'workspace_files', 'workspace_digest', 'producer', 'trace', 'records'],
   properties: {
     schema: { const: LIVE_EVIDENCE_SCHEMA_ID },
     generated_at: { type: 'string', format: 'date-time' },
     git_sha: { type: 'string', pattern: '^[0-9a-f]{40}$' },
+    workspace_files: {
+      type: 'array',
+      minItems: 1,
+      uniqueItems: true,
+      items: { type: 'string', minLength: 1 },
+    },
     workspace_digest: { type: 'string', pattern: '^[0-9a-f]{64}$' },
     producer: {
       type: 'object',
@@ -54,7 +60,10 @@ export const LIVE_EVIDENCE_SCHEMA = Object.freeze({
           'result',
           'git_sha',
           'workspace_digest',
+          'producer_name',
           'producer_version',
+          'trace_event',
+          'trace_event_sha256',
           'trace_hash',
         ],
         properties: {
@@ -63,9 +72,11 @@ export const LIVE_EVIDENCE_SCHEMA = Object.freeze({
           result: { const: 'PASSED' },
           git_sha: { type: 'string', pattern: '^[0-9a-f]{40}$' },
           workspace_digest: { type: 'string', pattern: '^[0-9a-f]{64}$' },
+          producer_name: { type: 'string', minLength: 1 },
           producer_version: { type: 'string', minLength: 1 },
           trace_hash: { type: 'string', pattern: '^[0-9a-f]{64}$' },
           trace_event: { type: 'string', minLength: 1 },
+          trace_event_sha256: { type: 'string', pattern: '^[0-9a-f]{64}$' },
         },
       },
     },
@@ -90,6 +101,18 @@ export const LIVE_TRACE_SCHEMA = Object.freeze({
       },
     },
     platform: { type: 'string', minLength: 1 },
-    events: { type: 'array', minItems: 1 },
+    events: {
+      type: 'array',
+      minItems: 1,
+      items: {
+        type: 'object',
+        required: ['event_id', 'scenario_id', 'profile'],
+        properties: {
+          event_id: { type: 'string', minLength: 1 },
+          scenario_id: { type: 'string', minLength: 1 },
+          profile: { type: 'string', minLength: 1 },
+        },
+      },
+    },
   },
 });

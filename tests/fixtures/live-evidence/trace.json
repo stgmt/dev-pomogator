@@ -1,0 +1,1 @@
+{"schema":"dev-pomogator.live-evidence.trace.v2","producer":{"name":"captured-producer","version":"2.0.0","marker":"dev-pomogator-live-evidence-producer/v2"},"platform":"linux","events":[{"event_id":"event-ground-truth","scenario_id":"SPECGEN004_688","profile":"cursor-mcp-catalog","producer":true,"tool_catalog":["dev-pomogator-specs"],"server_name":"dev-pomogator-specs"}]}

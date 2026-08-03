@@ -1,0 +1,32 @@
+═══ corpus-health — E:\repos\dev-pomogator ═══
+graph: 6373 nodes / 10250 edges
+1) collisions (raw pre-map): 0 (5701 raw / 5701 unique)
+   normalization collisions: 0
+2) dangling edges: 2154
+   [covers] fix-bg-output-loss:FR-10 → fix-bg-output-loss:AC-10 (missing: from)
+   [covers] fix-bg-output-loss:FR-11 → fix-bg-output-loss:AC-11 (missing: from)
+   [covers] fix-bg-output-loss:FR-12 → fix-bg-output-loss:AC-12 (missing: from)
+   [covers] fix-bg-output-loss:FR-13 → fix-bg-output-loss:AC-13 (missing: from)
+   [covers] fix-bg-output-loss:FR-14 → fix-bg-output-loss:AC-14 (missing: from)
+3) untraced atoms (FR-37b): 859 — UNCOVERED_FR:22, TASK_UNTESTED:34, UNTAGGED_SCENARIO:803
+4) stale FILE_CHANGES paths (graph-side): 113
+   worktree-setup:FR-3 → src/scripts/tsx-runner.js (missing on disk)
+   worktree-setup:FR-12 → extensions/devcontainer/tools/devcontainer/templates/scripts/post-create.sh (missing on disk)
+   tui-test-runner-v2:FR-1 → extensions/tui-test-runner/tools/tui-test-runner/tui/widgets/analysis_tab.py (missing on disk)
+   tui-test-runner-v2:FR-2 → extensions/tui-test-runner/tools/tui-test-runner/tui/widgets/logs_tab.py (missing on disk)
+   tui-test-runner-v2:FR-3 → extensions/tui-test-runner/tools/tui-test-runner/tui/widgets/tests_tab.py (missing on disk)
+5) orphan project tests (FR-44/GT-1, reverse): 0 — vitest it() with no spec scenario
+6) FRs citing no RESEARCH.md (FR-44/GT-2, reverse): 737 — requirement traces to no research finding
+   answer-simple:FR-1 @ .specs/answer-simple/FR.md:3 (no RESEARCH.md citation in the FR section)
+   answer-simple:FR-2 @ .specs/answer-simple/FR.md:10 (no RESEARCH.md citation in the FR section)
+   answer-simple:FR-3 @ .specs/answer-simple/FR.md:17 (no RESEARCH.md citation in the FR section)
+   answer-simple:FR-4 @ .specs/answer-simple/FR.md:24 (no RESEARCH.md citation in the FR section)
+   answer-simple:FR-6 @ .specs/answer-simple/FR.md:31 (no RESEARCH.md citation in the FR section)
+7) upstream unlinked (FR-44/GT-4, reverse): 587 — story:175, use-case:361, decision:51 wired to no requirement
+   [story] answer-simple:User Story 1: Агент сам проверяет ответ перед отправкой (Pri @ .specs/answer-simple/USER_STORIES.md:7
+   [story] answer-simple:User Story 2: Slash-команда для аудита черновика по требован @ .specs/answer-simple/USER_STORIES.md:27
+   [story] answer-simple:User Story 3: Extension устанавливается через installer dev- @ .specs/answer-simple/USER_STORIES.md:47
+   [use-case] answer-simple:UC-3: Триггер инцидента — пользователь говорит "не понял" (e @ .specs/answer-simple/USE_CASES.md:21
+   [decision] answer-simple:Decision: Мигрировать существующий rule в extension-specific @ .specs/answer-simple/DESIGN.md:83
+VERDICT: 🔴 RED (hard: collisions+stale) | strict: 🔴 RED (any debt)
+Per-spec deep verdict (audit + semantic): tools/specs-generator/spec-verdict.ts

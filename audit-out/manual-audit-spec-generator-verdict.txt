@@ -1,0 +1,36 @@
+═══ spec-verdict (authoritative, FR-37) — .specs/spec-generator-v4 ═══
+pre-filter (validate-spec, structural): 0 errors / 49 warnings — pre-filter only — a structural pass is NOT reportable as "valid/clean/done" (FR-37a)
+audit gate (audit-spec): 0 ERROR findings — gate PASSES
+conformance (one graph, spec-scoped): 0 error / 81 warning — FR_NO_DESIGN:10, FR_NO_STORY:24, TASK_STARTED_WITHOUT_CHAIN:1, ORPHAN_TASK:1, TASK_STATUS_UNVERIFIED:45, TAG_BULK_SUSPECT:3
+  fix FR_NO_DESIGN: add a `**Требование:** [FR-N]` line INSIDE a `### Decision` block in DESIGN.md
+  fix FR_NO_STORY: add a `**Требование:** [FR-N]` line INSIDE a `### User Story` block (the story→FR covers edge is built only from that line)
+coverage (FR-32 honesty): effective {"passed":632,"stale":10,"pending":2,"not_run":0,"undefined":0,"ambiguous":0,"failed":1,"skipped":0}; canonical {"passed":632,"stale":0,"pending":0,"not_run":13,"undefined":0,"ambiguous":0,"failed":0,"skipped":0} — DONE-but-unverified: spec-generator-v4:graph-types, spec-generator-v4:md-parser-impl, spec-generator-v4:gherkin-parser-impl, spec-generator-v4:ndjson-ingester-impl, spec-generator-v4:graph-builder-impl, spec-generator-v4:incremental-rebuild, spec-generator-v4:conformance-checker, spec-generator-v4:verify-phase1-green, spec-generator-v4:mcp-tool-get-trace, spec-generator-v4:mcp-tools-rest, spec-generator-v4:pretooluse-hard-hook, spec-generator-v4:posttooluse-push-hook, spec-generator-v4:bash-post-test-hook, spec-generator-v4:marksman-installer, spec-generator-v4:file-watcher-impl, spec-generator-v4:lock-manager-impl, spec-generator-v4:semantic-drift-check, spec-generator-v4:multi-lang-extractor, spec-generator-v4:sqlite-index, spec-generator-v4:sqlite-recovery, spec-generator-v4:spec-check-log, spec-generator-v4:codespaces-detector, spec-generator-v4:devcontainer-poststartcommand, spec-generator-v4:heading-converter, spec-generator-v4:interactive-prompt, spec-generator-v4:arch-research-scripts, spec-generator-v4:impl-resolve-loop, spec-generator-v4:impl-architectural-detection, spec-generator-v4:register-skills-in-manifest, spec-generator-v4:e2e-test-reconcile-roundtrip, spec-generator-v4:verify-fr-19-failure-tiers, spec-generator-v4:verify-fr-22-version-gate, spec-generator-v4:verify-fr-23-log-inventory, spec-generator-v4:verify-fr-26-llm-deny-list, spec-generator-v4:ws-b-status-reconcile, spec-generator-v4:ws-e-install-e2e, spec-generator-v4:p17-skill-migration, spec-generator-v4:p17-enforce, spec-generator-v4:p18-legacy-classifier, spec-generator-v4:p26-waived-close-gate, spec-generator-v4:p30-sentinel-classifier, spec-generator-v4:p30-audit-category, spec-generator-v4:p30-fold-fixtures, spec-generator-v4:p30-exclusions, spec-generator-v4:p30-corpus-run
+inventory (FR-63, one graph): 82 FR / 285 AC / 642 scenario (deduplicated) — ACs with test_paths=[]: AC-1.1, AC-1.2, AC-1.3, AC-10.1, AC-10.2, AC-10.3, AC-11.1, AC-11.2, AC-12.1, AC-12.2, AC-12.3, AC-13.1, AC-13.2, AC-14.1, AC-14.2, AC-14.3, AC-15.1, AC-15.2, AC-16.1, AC-16.2, AC-17.1, AC-17.2, AC-17.3, AC-17.4, AC-17.5, AC-17.6, AC-17.7, AC-17.8, AC-18.1, AC-18.2, AC-18.3, AC-18.4, AC-18.5, AC-19.1, AC-19.2, AC-19.3, AC-2.1, AC-2.2, AC-20.1, AC-20.2, AC-21.1, AC-22.1, AC-23.1, AC-24.1, AC-25.1, AC-25.2, AC-26.1, AC-26.2, AC-27.1, AC-28.1, AC-29.1, AC-29.2, AC-29.3, AC-3.1, AC-3.2, AC-3.3, AC-30.1, AC-30.2, AC-31.1, AC-31.2, AC-32.1, AC-32.2, AC-32.3, AC-33.1, AC-33.2, AC-33.3, AC-33.4, AC-33.5, AC-34.1, AC-34.2, AC-34.3, AC-34.4, AC-34.5, AC-35.1, AC-35.2, AC-35.3, AC-35.4, AC-35.5, AC-36.1, AC-36.10, AC-36.2, AC-36.3, AC-36.4, AC-36.5, AC-36.6, AC-36.7, AC-36.8, AC-36.9, AC-37.1, AC-37.2, AC-37.3, AC-37.4, AC-37.5, AC-37.6, AC-38.1, AC-38.2, AC-38.3, AC-38.4, AC-38.5, AC-39.1, AC-39.2, AC-39.3, AC-4.1, AC-4.2, AC-40.1, AC-40.2, AC-41.1, AC-41.2, AC-42.1, AC-42.2, AC-43.1, AC-44.1, AC-45.1, AC-46.1, AC-47.1, AC-48.1, AC-48.2, AC-49.1, AC-49.2, AC-49.3, AC-49.4, AC-5.1, AC-5.2, AC-5.3, AC-50.1, AC-50.2, AC-51.1, AC-52.1, AC-53.1, AC-53.2, AC-53.3, AC-55.1, AC-56.1, AC-56.2, AC-56.3, AC-57.1, AC-57.2, AC-57.3, AC-58.1, AC-58.2, AC-58.3, AC-59.1, AC-59.2, AC-59.3, AC-6.1, AC-6.2, AC-6.3, AC-60.1, AC-60.2, AC-60.3, AC-60.4, AC-61.1, AC-61.2, AC-61.3, AC-61.4, AC-61.5, AC-62.1, AC-62.2, AC-62.3, AC-63.1, AC-63.2, AC-63.3, AC-64.1, AC-64.2, AC-64.3, AC-64.4, AC-65.1, AC-65.2, AC-65.3, AC-65.4, AC-66.1, AC-66.2, AC-66.3, AC-66.4, AC-66.5, AC-66.6, AC-7.1, AC-7.2, AC-7.3, AC-7.4, AC-7.5, AC-8.1, AC-8.2, AC-80.11, AC-81.6, AC-9.1, AC-9.2 — duplicate candidates deduplicated: Scenario:specgen004_538, Scenario:specgen004_544, Scenario:specgen004_577
+semantic (FR-8): SEMANTIC_SKIPPED — no claude binary available (or semantic disabled); unchecked content is NOT "no drift" (FR-37c)
+traceability gate (FR-37b, cell→atom): 0 gaps — gate PASSES
+readiness lanes (FR-61):
+  STRUCTURE: GREEN — 0 structural error(s), 0 audit error(s), 0 conformance error(s)
+  TRACEABILITY: GREEN — 0 traceability gaps
+  EXECUTION: RED (blocking) — 10 stale, 1 FAILED, 2 PENDING
+    - 10 stale
+    - 1 FAILED
+    - 2 PENDING
+  TASK_TRUTH: RED (blocking) — 45 DONE-but-unverified task(s), 45 DONE task(s) with unchecked Done When item(s)
+    - spec-generator-v4:graph-types: Status: DONE but Done When contains unchecked checkbox item(s)
+    - spec-generator-v4:md-parser-impl: Status: DONE but Done When contains unchecked checkbox item(s)
+    - spec-generator-v4:gherkin-parser-impl: Status: DONE but Done When contains unchecked checkbox item(s)
+    - spec-generator-v4:ndjson-ingester-impl: Status: DONE but Done When contains unchecked checkbox item(s)
+    - spec-generator-v4:graph-builder-impl: Status: DONE but Done When contains unchecked checkbox item(s)
+    - spec-generator-v4:incremental-rebuild: Status: DONE but Done When contains unchecked checkbox item(s)
+    - spec-generator-v4:conformance-checker: Status: DONE but Done When contains unchecked checkbox item(s)
+    - spec-generator-v4:verify-phase1-green: Status: DONE but Done When contains unchecked checkbox item(s)
+    … and 37 more
+  BDD_SYNC: GREEN — no source/executable BDD sync or repository migration debt reported by the current verdict inputs
+  SEMANTIC: SKIPPED — semantic check explicitly disabled for this run
+  FILTERED_PROOF: NONE — no filtered proof attached to this verdict output
+notes (fail-loud, FR-37c):
+  - SEMANTIC_SKIPPED — no claude binary available (or semantic disabled); unchecked content is NOT "no drift" (FR-37c)
+  - NOT_RUN — 13 scenario(s) have no result in the last run (not_run, NOT "undefined"/unverified), by feature: spec-generator-v4.feature:13. A count on the MAIN feature ⇒ the last run was FILTERED (re-run the full suite). A feature absent from the test config (e.g. a legacy *.feature not in cucumber `paths`) is a PERSISTENT gap a full run won't close — add it to paths or retire it.
+VERDICT: NOT_READY — 45 blocking finding(s)
+OVERALL: NOT_READY
+NEXT: Run the full Docker BDD suite so canonical coverage contains every scenario result.
