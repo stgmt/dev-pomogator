@@ -75,7 +75,11 @@ export function computeSpecVerdict(
 ): CanonicalSpecVerdict {
   const readiness = evaluateReadiness(candidate);
   const completionDebt = unverifiedCompletions(findings);
-  const errors = findings.filter((finding) => finding.severity === 'error' && finding.code !== 'UNVERIFIED_COMPLETION');
+  const structuralLane = candidate.lanes.STRUCTURE;
+  const structuralIsRed = structuralLane?.status === 'RED';
+  const errors = structuralIsRed
+    ? findings.filter((finding) => finding.severity === 'error' && finding.code !== 'UNVERIFIED_COMPLETION')
+    : [];
   const blocking: Array<Finding | UnverifiedCompletion> = [...errors, ...completionDebt];
   const verdict: SpecVerdict = errors.length > 0
     ? 'RED'

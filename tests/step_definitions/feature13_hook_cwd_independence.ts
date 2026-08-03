@@ -16,6 +16,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { V4World } from '../hooks/before-after.ts';
+import { generatedRouteIds, loadHookDispatcherContracts, registryRouteIds } from './support/hook-dispatcher.ts';
 
 const REPO_ROOT = path.resolve(import.meta.dirname ?? __dirname, '..', '..');
 
@@ -59,12 +60,16 @@ Given(/^the committed \.claude\/settings\.json$/, function (this: HookCwdWorld) 
 });
 
 Then(/^it anchors the bootstrap require on CLAUDE_PROJECT_DIR, not the process cwd$/, function (this: HookCwdWorld) {
-  assert.ok(
-    !/path'\)\.resolve\('tools\/_shared\/bootstrap\.cjs'\)/.test(this.settingsText!),
-    'settings.json must NOT use cwd-relative path.resolve for bootstrap',
+  const contracts = loadHookDispatcherContracts(REPO_ROOT);
+  assert.match(
+    this.settingsText!,
+    /\$\{CLAUDE_PLUGIN_ROOT:-\$\{CLAUDE_PROJECT_DIR:-\.\}\}\/tools\/hook-service\/(?:session-bootstrap|client)\.mjs/,
+    'settings.json must resolve the supervised hook service from plugin/project root',
   );
-  assert.ok(
-    /CLAUDE_PROJECT_DIR \|\| '\.', 'tools', '_shared', 'bootstrap\.cjs'/.test(this.settingsText!),
-    'settings.json must anchor bootstrap on CLAUDE_PROJECT_DIR',
+  assert.doesNotMatch(this.settingsText!, /process\.cwd\(\)|path\.resolve\('tools/);
+  assert.deepEqual(
+    generatedRouteIds(contracts.dogfoodEntries),
+    registryRouteIds(contracts.registry, ['SessionStart']),
+    'dogfood dispatcher routes must have exact registry parity',
   );
 });

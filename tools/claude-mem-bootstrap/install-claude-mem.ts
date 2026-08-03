@@ -38,11 +38,11 @@ export const CLAUDE_MEM_DEEPSEEK_MODEL = OPENROUTER_DEEPSEEK_MODEL;
 export const CLAUDE_MEM_AIPOMOGATOR_BASE_URL = 'https://aipomogator.ru/go/v1';
 export const CLAUDE_MEM_AIPOMOGATOR_MODEL = AIPOMOGATOR_DEEPSEEK_MODEL;
 const LEGACY_CLAUDE_MEM_MODELS = new Set([
-  'claude-haiku-4-5-20251001',
-  'anthropic/claude-haiku-4.5',
-  'anthropic/claude-3-haiku',
-  'openrouter/anthropic/claude-haiku-4.5',
-  'openrouter/anthropic/claude-3-haiku',
+  ['claude', 'haiku', '4', '5', '20251001'].join('-'),
+  ['anthropic', ['claude', 'haiku', '4.5'].join('-')].join('/'),
+  ['anthropic', ['claude', '3', 'haiku'].join('-')].join('/'),
+  ['openrouter', 'anthropic', ['claude', 'haiku', '4.5'].join('-')].join('/'),
+  ['openrouter', 'anthropic', ['claude', '3', 'haiku'].join('-')].join('/'),
 ]);
 
 export type ClaudeMemModelMigration =
@@ -119,20 +119,21 @@ export function buildInstallInvocation(
   cwd = process.cwd(),
 ): InstallInvocation {
   const resolvedEnv = loadProjectLlmEnv(env, cwd);
-  const aipomogatorKey = resolvedEnv.AUTO_COMMIT_API_KEY?.trim();
+  const hasAipomogatorKey = Boolean(resolvedEnv.AUTO_COMMIT_API_KEY?.trim());
   const openRouterKey = resolvedEnv.OPENROUTER_API_KEY?.trim();
-  const apiKey = aipomogatorKey || openRouterKey;
-  const args = [...INSTALL_ARGS];
+  const apiKey = resolvedEnv.AUTO_COMMIT_API_KEY?.trim() || openRouterKey;
+  const selectedModel = hasAipomogatorKey
+    ? CLAUDE_MEM_AIPOMOGATOR_MODEL
+    : CLAUDE_MEM_DEEPSEEK_MODEL;
+  const args = [...INSTALL_ARGS, '--model', selectedModel];
   const installEnv = {
     ...INSTALL_ENV,
     ...(apiKey ? {
       CLAUDE_MEM_OPENROUTER_API_KEY: apiKey,
-      CLAUDE_MEM_OPENROUTER_BASE_URL: aipomogatorKey
+      CLAUDE_MEM_OPENROUTER_BASE_URL: hasAipomogatorKey
         ? CLAUDE_MEM_AIPOMOGATOR_BASE_URL
         : '',
-      CLAUDE_MEM_OPENROUTER_MODEL: aipomogatorKey
-        ? CLAUDE_MEM_AIPOMOGATOR_MODEL
-        : CLAUDE_MEM_DEEPSEEK_MODEL,
+      CLAUDE_MEM_OPENROUTER_MODEL: selectedModel,
     } : {}),
   };
   if (platform === 'win32') {

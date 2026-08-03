@@ -15,6 +15,7 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { V4World } from '../hooks/before-after.ts';
 import { readRuleContentForAdaptation } from '../../tools/carl/context-diet.ts';
+import { assertRouteContract, loadHookDispatcherContracts } from './support/hook-dispatcher.ts';
 
 const REPO_ROOT = path.resolve(import.meta.dirname ?? __dirname, '..', '..');
 const GUARD_LAUNCHER = [
@@ -113,13 +114,14 @@ Then(/^deny message SHALL list both violations with their line numbers$/, functi
 
 // ── @feature6 — registration + asset presence (guard now wired, FR-13 gap fixed) ──
 Then(/^reqnroll-ce-guard is registered as a Write\|Edit PreToolUse hook in both plugin manifests$/, function () {
-  for (const rel of ['.claude-plugin/hooks.json', '.claude/settings.json']) {
-    const json = JSON.parse(fs.readFileSync(path.join(REPO_ROOT, rel), 'utf-8'));
-    const pre = json.hooks?.PreToolUse ?? [];
-    const wb = pre.find((b: { matcher?: string }) => b.matcher === 'Write|Edit');
-    assert.ok(wb, `${rel}: no Write|Edit PreToolUse block`);
-    assert.ok((wb.hooks ?? []).some((h: { command?: string }) => (h.command ?? '').includes('reqnroll-ce-guard')), `${rel}: reqnroll-ce-guard not registered`);
-  }
+  const resolved = assertRouteContract(loadHookDispatcherContracts(REPO_ROOT), {
+    target: 'tools/reqnroll-ce-guard/ce_slash_guard.ts',
+    event: 'PreToolUse',
+    matcher: 'Write|Edit',
+    timeout: 30,
+    args: [],
+  });
+  assert.match(resolved.entry.command, /tools\/hook-service\/client\.mjs/);
 });
 
 Then(/^the reqnroll-ce-guard rule file is present under `\.claude\/rules\/`$/, function () {

@@ -12,6 +12,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import '../hooks/before-after.ts';
+import { assertRouteContract, loadHookDispatcherContracts } from './support/hook-dispatcher.ts';
 
 const REPO = process.cwd();
 const TCU_SKILL = path.join(REPO, '.claude', 'skills', 'tests-create-update', 'SKILL.md');
@@ -121,15 +122,15 @@ Then(/^the file \.claude\/skills\/tests-create-update\/SKILL\.md exists$/, funct
 Then(
   /^the plugin hooks register compliance_check on PostToolUse with matcher "Write\|Edit"$/,
   function () {
-    const raw = JSON.parse(fs.readFileSync(HOOKS_JSON, 'utf-8')) as {
-      hooks: Record<string, Array<{ matcher?: string; hooks?: Array<{ command?: string }> }>>;
-    };
-    const ptuEntries = (raw.hooks ?? raw)['PostToolUse'] ?? [];
-    const entry = ptuEntries.find((e) =>
-      (e.hooks ?? []).some((h) => (h.command ?? '').includes('compliance_check')),
-    );
-    assert.ok(entry, 'PostToolUse must have an entry with compliance_check in its hooks');
-    assert.strictEqual(entry.matcher, 'Write|Edit', 'compliance_check must be registered on Write|Edit');
+    const contracts = loadHookDispatcherContracts(REPO);
+    const resolved = assertRouteContract(contracts, {
+      target: 'tools/test-quality/compliance_check.ts',
+      event: 'PostToolUse',
+      matcher: 'Write|Edit',
+      timeout: 60,
+      args: [],
+    });
+    assert.match(resolved.entry.command, /tools\/hook-service\/client\.mjs/);
   },
 );
 

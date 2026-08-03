@@ -65,6 +65,7 @@ import type {
   SpecGraph,
   Node,
   FrNode,
+  NfrNode,
   AcNode,
   DecisionNode,
   StoryNode,
@@ -1164,7 +1165,7 @@ export function buildToolRegistry(
     } as const satisfies z.ZodRawShape,
     handler: async ({ spec, verification_method, safety_class, verification_method_missing, delivery }) => {
       const graph = getGraph();
-      const results = [...graph.nodes.values()].filter((node): node is FrNode => node.type === 'FR')
+      const results = [...graph.nodes.values()].filter((node): node is FrNode | NfrNode => node.type === 'FR' || node.type === 'NFR')
         .filter((node) => !spec || node.spec === spec)
         .map((node) => ({ node, delivery: evaluateDelivery(node, graph) }))
         .filter(({ node, delivery: state }) => !verification_method || node.metadata?.verificationMethod === verification_method)
@@ -1711,8 +1712,8 @@ export function buildToolRegistry(
             debt: taskTruthDebt,
           },
           BDD_SYNC: {
-            status: bddSync.debt.length > 0 ? 'RED' : 'GREEN',
-            debt: bddSync.debt,
+            status: bddSyncDebt.length > 0 ? 'RED' : 'GREEN',
+            debt: bddSyncDebt,
           },
           FILTERED_PROOF: {
             status: filteredProof.latest ? 'GREEN' : 'NONE',
@@ -1722,8 +1723,8 @@ export function buildToolRegistry(
       }, specFindings);
       const readiness = canonicalVerdict.readiness;
       const readinessLanes = readiness.lanes;
-      const nextAction = bddSync.debt.length > 0
-        ? 'Fix source/executable BDD sync drift or mark intentional exceptions.'
+      const nextAction = bddSyncDebt.length > 0
+        ? 'Fix source/executable BDD sync drift or resolve the combined BDD synchronization debt.'
         : filteredProof.latest && taskTruthDebt.length > 0
           ? `Filtered run ${filteredProof.latest.runId} is useful proof but does not update canonical coverage. Run the full Docker BDD suite or attach an accepted canonical artifact.`
           : readiness.next_action;

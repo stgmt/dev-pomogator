@@ -90,8 +90,12 @@ function hasBatchShimExitLoggingGuard(content: string, exitLoggerName: string): 
   );
 }
 
-function hasSafeVersionProbe(content: string, unsafeProbe: string, safeProbe: string): boolean {
-  return !content.includes(unsafeProbe) && content.includes(safeProbe);
+function hasSafeVersionProbe(
+  content: string,
+  unsafeProbe: string,
+  safeProbes: string[],
+): boolean {
+  return !content.includes(unsafeProbe) && safeProbes.some((probe) => content.includes(probe));
 }
 
 function stripAnsi(value: string): string {
@@ -294,10 +298,13 @@ if (fs.existsSync(claudeLaunchPath)) {
   } else {
     add('runtime.claude-cmd-shim-exit-logging', 'fail', 'Claude launcher must CALL .cmd/.bat shims so CM_EXIT logging still runs');
   }
-  if (hasSafeVersionProbe(claudeLaunch, 'claude --version', "Get-ClaudeCommand -Arguments @('--version')")) {
-    add('runtime.claude-version-probe-cmd-shim', 'pass', 'Claude version probe also uses the batch-safe command builder');
+  if (hasSafeVersionProbe(claudeLaunch, 'claude --version', [
+    "Get-ClaudeCommand -Arguments @('--version')",
+    "& '$claudeExe' '--version'",
+  ])) {
+    add('runtime.claude-version-probe-cmd-shim', 'pass', 'Claude version probe uses the resolved executable through the active shell-safe launcher');
   } else {
-    add('runtime.claude-version-probe-cmd-shim', 'fail', 'Claude launcher must not call bare `claude --version` from a generated .cmd');
+    add('runtime.claude-version-probe-cmd-shim', 'fail', 'Claude launcher must not call bare `claude --version` from a generated launcher');
   }
 }
 
@@ -318,7 +325,7 @@ if (fs.existsSync(codexLaunchPath)) {
   } else {
     add('runtime.codex-cmd-shim-exit-logging', 'fail', 'Codex launcher must CALL .cmd/.bat shims so CM_EXIT logging still runs');
   }
-  if (hasSafeVersionProbe(codexLaunch, 'codex --version', "Get-CodexCommandWithArgs -Arguments @('--version')")) {
+  if (hasSafeVersionProbe(codexLaunch, 'codex --version', ["Get-CodexCommandWithArgs -Arguments @('--version')"])) {
     add('runtime.codex-version-probe-cmd-shim', 'pass', 'Codex version probe also uses the batch-safe command builder');
   } else {
     add('runtime.codex-version-probe-cmd-shim', 'fail', 'Codex launcher must not call bare `codex --version` from a generated .cmd');

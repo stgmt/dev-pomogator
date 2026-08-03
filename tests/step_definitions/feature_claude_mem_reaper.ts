@@ -18,6 +18,11 @@ import {
   type ProcRecord,
   type ReaperVerdict,
 } from '../../tools/claude-mem-health/health-check.ts';
+import {
+  assertLegacyTargetContract,
+  assertRouteContract,
+  loadHookDispatcherContracts,
+} from './support/hook-dispatcher.ts';
 
 const REPO = process.env.APP_DIR || process.cwd();
 const HOOK_REL = 'tools/claude-mem-health/health-check.ts';
@@ -296,24 +301,60 @@ function assertReaperPreToolUse(config: Record<string, unknown>, rootEnv: 'CLAUD
   ), `PreToolUse must register the mid-session reaper through ${rootEnv}`);
 }
 
+function assertManagedSessionStartLifecycle(): void {
+  const contracts = loadHookDispatcherContracts(REPO);
+  assert.equal(
+    contracts.generatedEntries.filter((entry) => entry.event === 'SessionStart').length,
+    1,
+    'generated manifest must expose one supervised SessionStart bootstrap',
+  );
+  assert.match(
+    contracts.generatedEntries.find((entry) => entry.event === 'SessionStart')?.command ?? '',
+    /tools\/hook-service\/session-bootstrap\.mjs/,
+  );
+  for (const [target, timeout] of [
+    ['tools/claude-mem-health/health-check.ts', 120],
+    ['tools/claude-mem-bootstrap/install-claude-mem.ts', 30],
+  ] as const) {
+    assertLegacyTargetContract(contracts, {
+      target,
+      event: 'SessionStart',
+      matcher: '',
+      timeout,
+      args: [],
+    });
+  }
+}
+
 Then('the canonical plugin manifest registers the SessionStart lifecycle hooks', function (this: ReaperWorld) {
-  assertSessionStartLifecycle(this.canonicalHooks, 'CLAUDE_PLUGIN_ROOT');
+  assertManagedSessionStartLifecycle();
 });
 
 Then('the dogfood settings register the SessionStart lifecycle hooks', function (this: ReaperWorld) {
-  assertSessionStartLifecycle(this.dogfoodHooks, 'CLAUDE_PROJECT_DIR');
+  assertManagedSessionStartLifecycle();
 });
 
 Then('the Codex hooks register the SessionStart lifecycle hooks', function (this: ReaperWorld) {
   assertSessionStartLifecycle(this.codexHooks, 'CLAUDE_PROJECT_DIR');
 });
 
+function assertManagedReaperPreToolUse(): void {
+  const resolved = assertRouteContract(loadHookDispatcherContracts(REPO), {
+    target: 'tools/claude-mem-health/health-check.ts',
+    event: 'PreToolUse',
+    matcher: '',
+    timeout: 15,
+    args: ['--mid-session'],
+  });
+  assert.match(resolved.entry.command, /tools\/hook-service\/client\.mjs/);
+}
+
 Then('the canonical plugin manifest registers the reaper on PreToolUse', function (this: ReaperWorld) {
-  assertReaperPreToolUse(this.canonicalHooks, 'CLAUDE_PLUGIN_ROOT');
+  assertManagedReaperPreToolUse();
 });
 
 Then('the dogfood settings register the reaper on PreToolUse', function (this: ReaperWorld) {
-  assertReaperPreToolUse(this.dogfoodHooks, 'CLAUDE_PROJECT_DIR');
+  assertManagedReaperPreToolUse();
 });
 
 Then('the guard emits a visible memory-not-recording warning', function (this: ReaperWorld) {

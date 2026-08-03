@@ -18,6 +18,7 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { V4World } from '../hooks/before-after.ts';
+import { assertRouteContract, loadHookDispatcherContracts } from './support/hook-dispatcher.ts';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -159,21 +160,14 @@ Then(
       fs.existsSync(HOOKS_JSON_PATH),
       `Expected .claude-plugin/hooks.json to exist at ${HOOKS_JSON_PATH}`,
     );
-    const hooksData = JSON.parse(fs.readFileSync(HOOKS_JSON_PATH, 'utf-8'));
-    // Structure: { hooks: { UserPromptSubmit: [ { hooks: [ { command: "..." } ] } ] } }
-    // Same traversal as pluginHookCommands() in tests/e2e/helpers.ts
-    const groups: Array<{ hooks?: Array<{ command?: string }> }> =
-      hooksData?.hooks?.UserPromptSubmit ?? [];
-    const allCommands = groups.flatMap(
-      (g) => (g.hooks ?? []).map((h) => h.command ?? ''),
-    );
-    const hasValidator = allCommands.some((c) =>
-      c.includes('specs-validator/validate-specs.ts'),
-    );
-    assert.ok(
-      hasValidator,
-      `UserPromptSubmit hook referencing specs-validator/validate-specs.ts not found in ${HOOKS_JSON_PATH}`,
-    );
+    const resolved = assertRouteContract(loadHookDispatcherContracts(process.cwd()), {
+      target: 'tools/specs-validator/validate-specs.ts',
+      event: 'UserPromptSubmit',
+      matcher: '',
+      timeout: 60,
+      args: [],
+    });
+    assert.match(resolved.entry.command, /tools\/hook-service\/client\.mjs/);
   },
 );
 

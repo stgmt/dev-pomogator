@@ -1,13 +1,15 @@
 /**
  * FR-81 deterministic BDD steps (SPECGEN004_665–667).
- * Live 668–669 stay pending (manual evidence).
+ * Live 668–669 run only in the explicit profile with real producer evidence.
  */
 import assert from 'node:assert/strict';
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { Given, When, Then } from '@cucumber/cucumber';
 import { resolveRepoRoot } from '../../tools/spec-mcp-server/server.ts';
+import { assertLiveEvidence } from '../../tools/live-evidence/validator.mjs';
 
 const REPO = process.cwd();
 const DOOR = 'dev-pomogator-specs';
@@ -19,7 +21,25 @@ type World = {
   rrResult?: string;
   rrEnv?: string;
   rrCwd?: string;
+  liveEvidencePath?: string;
+  liveEvidenceScenarios?: string[];
 };
+
+function requireLiveEvidence(world: World, scenarioId: string): void {
+  const manifestPath = process.env.DEV_POMOGATOR_LIVE_EVIDENCE?.trim();
+  assert.ok(manifestPath, 'DEV_POMOGATOR_LIVE_EVIDENCE must point to a real producer manifest');
+  assertLiveEvidence({
+    manifestPath,
+    repoRoot: REPO,
+    expectedScenarios: { [scenarioId]: 'PASSED' },
+    expectedProfiles: {
+      SPECGEN004_668: 'cursor-mcp-catalog',
+      SPECGEN004_669: 'cursor-enforce-mcp',
+    },
+  });
+  world.liveEvidencePath = manifestPath;
+  world.liveEvidenceScenarios = [...(world.liveEvidenceScenarios ?? []), scenarioId];
+}
 
 Given('the repository root contains {string}', function (this: World, rel: string) {
   assert.ok(fs.existsSync(path.join(REPO, rel)), `missing ${rel}`);
@@ -100,37 +120,41 @@ Then('it returns the cwd that contains {string}', function (this: World, marker:
   assert.ok(fs.existsSync(path.join(this.rrResult!, marker)));
 });
 
-// Live dogfood — honest pending until manual Cursor evidence (FR-81c / FR-32)
+// Live dogfood — only the explicit live-evidence profile may consume real producer evidence.
 Given(
   'Cursor Third-party skills are enabled and {string} is loaded',
-  function (this: World, _rel: string) {
-    return 'pending';
+  function (this: World, rel: string) {
+    assert.equal(rel, '.cursor/mcp.json');
+    requireLiveEvidence(this, 'SPECGEN004_668');
   },
 );
 
 When('the agent inspects the MCP tool catalog', function (this: World) {
-  return 'pending';
+  assert.ok(this.liveEvidencePath, 'Cursor catalog evidence was not validated');
 });
 
-Then('{string} tools are listed', function (this: World, _name: string) {
-  return 'pending';
+Then('{string} tools are listed', function (this: World, name: string) {
+  assert.equal(name, DOOR);
+  assert.ok(this.liveEvidenceScenarios?.includes('SPECGEN004_668'));
 });
 
 Given(
   'SPEC_ACCESS enforce is on and project {string} hooks are loaded in Cursor',
-  function (this: World, _rel: string) {
-    return 'pending';
+  function (this: World, rel: string) {
+    assert.equal(rel, '.claude/settings.json');
+    requireLiveEvidence(this, 'SPECGEN004_669');
   },
 );
 
-When('the agent attempts a raw Write under {string}', function (this: World, _rel: string) {
-  return 'pending';
+When('the agent attempts a raw Write under {string}', function (this: World, rel: string) {
+  assert.equal(rel, '.specs/');
+  assert.ok(this.liveEvidenceScenarios?.includes('SPECGEN004_669'));
 });
 
 Then('the PreToolUse guard denies the write', function (this: World) {
-  return 'pending';
+  assert.ok(this.liveEvidencePath, 'Cursor enforce evidence was not validated');
 });
 
 Then('a valid MCP apply_spec_change succeeds', function (this: World) {
-  return 'pending';
+  assert.ok(this.liveEvidenceScenarios?.includes('SPECGEN004_669'));
 });

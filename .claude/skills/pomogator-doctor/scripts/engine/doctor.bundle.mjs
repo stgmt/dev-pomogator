@@ -791,8 +791,8 @@ function buildReviewReport(projectRoot) {
   const userPreservationVerified = fileContains(REPO_ROOT, path6.join("tools", "carl", "install.ts"), [
     "hasConflictingUserManagedKey",
     "user-conflict",
-    "...settings",
-    "atomicWriteJson"
+    "beforeClosingBrace",
+    "atomicWriteText"
   ]);
   const doctorVerified = doctorSource.exists && fileContains(REPO_ROOT, doctorSource.path, ["checkCarlProject", "repairCarl", REQUIRED_WARNING]);
   const benchmarkVerified = benchSource.exists && fileContains(REPO_ROOT, benchSource.path, ["fixture-backed-real-artifact", "draft-no-real-artifact"]);
@@ -956,13 +956,9 @@ function parseArgs4(argv) {
 }
 function readJsonObject2(filePath) {
   if (!fs8.existsSync(filePath)) return {};
-  try {
-    const parsed = JSON.parse(fs8.readFileSync(filePath, "utf-8"));
-    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) return parsed;
-  } catch {
-    return {};
-  }
-  return {};
+  const parsed = JSON.parse(fs8.readFileSync(filePath, "utf-8"));
+  if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) return parsed;
+  throw new Error(`CARL settings must contain a JSON object: ${filePath}`);
 }
 function hasConflictingUserManagedKey(settings) {
   const existing = settings[MANAGED_SETTINGS_KEY];
@@ -979,15 +975,32 @@ function managedSettingsValue() {
     command: MANAGED_HOOK_COMMAND
   };
 }
+function atomicWriteText2(filePath, content) {
+  fs8.mkdirSync(path7.dirname(filePath), { recursive: true });
+  const tempPath = `${filePath}.tmp-${process.pid}`;
+  fs8.writeFileSync(tempPath, content, "utf-8");
+  fs8.renameSync(tempPath, filePath);
+}
 function writeSettings(projectRoot) {
   const settingsPath = path7.join(projectRoot, ".claude", "settings.json");
   const settings = readJsonObject2(settingsPath);
   if (hasConflictingUserManagedKey(settings)) return "user-conflict";
-  const nextSettings = {
-    ...settings,
-    [MANAGED_SETTINGS_KEY]: managedSettingsValue()
-  };
-  atomicWriteJson3(settingsPath, nextSettings);
+  const managedValue = managedSettingsValue();
+  if (!fs8.existsSync(settingsPath)) {
+    atomicWriteJson3(settingsPath, { [MANAGED_SETTINGS_KEY]: managedValue });
+    return "updated";
+  }
+  const original = fs8.readFileSync(settingsPath, "utf-8");
+  const closingBrace = original.lastIndexOf("}");
+  if (closingBrace < 0) {
+    throw new Error(`CARL settings parse mismatch: ${settingsPath}`);
+  }
+  const beforeClosingBrace = original.slice(0, closingBrace).replace(/[ \t\r\n]+$/u, "");
+  const hasExistingProperties = Object.keys(settings).length > 0;
+  const newline = original.includes("\r\n") ? "\r\n" : "\n";
+  const managedProperty = `  ${JSON.stringify(MANAGED_SETTINGS_KEY)}: ${JSON.stringify(managedValue, null, 2).replace(/\n/gu, `${newline}  `)}`;
+  const nextSettings = `${beforeClosingBrace}${hasExistingProperties ? "," : ""}${newline}${managedProperty}${newline}}${original.slice(closingBrace + 1)}`;
+  atomicWriteText2(settingsPath, nextSettings);
   return "updated";
 }
 function mergeManifest(existing, platform, projectRoot) {
@@ -3605,9 +3618,9 @@ var require_semver2 = __commonJS({
 });
 
 // .claude/skills/pomogator-doctor/scripts/engine/index.ts
-import fs31 from "node:fs";
+import fs32 from "node:fs";
 import os9 from "node:os";
-import path32 from "node:path";
+import path33 from "node:path";
 import { pathToFileURL as pathToFileURL7 } from "node:url";
 
 // .claude/skills/pomogator-doctor/scripts/engine/checks/_helpers.ts
@@ -5373,20 +5386,83 @@ function build3(severity, message, hint) {
   };
 }
 
-// .claude/skills/pomogator-doctor/scripts/engine/checks/mcp-parse.ts
+// .claude/skills/pomogator-doctor/scripts/engine/checks/cursor-mcp-twin.ts
 import fs23 from "node:fs";
 import path23 from "node:path";
+var DOOR = "dev-pomogator-specs";
+function readMcp(p) {
+  try {
+    return JSON.parse(fs23.readFileSync(p, "utf-8"));
+  } catch {
+    return null;
+  }
+}
+var cursorMcpTwinCheck = {
+  id: "C33",
+  fr: "FR-81",
+  name: "Cursor MCP door twin (.cursor/mcp.json)",
+  group: "self-sufficient",
+  reinstallable: true,
+  pool: "fs",
+  async run(ctx) {
+    const meta = {
+      id: "C33",
+      fr: "FR-81",
+      name: "Cursor MCP door twin (.cursor/mcp.json)",
+      group: "self-sufficient",
+      reinstallable: true
+    };
+    const rootMcp = readMcp(path23.join(ctx.projectRoot, ".mcp.json"));
+    const door = rootMcp?.mcpServers?.[DOOR];
+    if (!door) {
+      return [
+        buildResult(meta, "ok", `root .mcp.json has no ${DOOR} \u2014 Cursor twin N/A`)
+      ];
+    }
+    const cursorPath = path23.join(ctx.projectRoot, ".cursor", "mcp.json");
+    const cursorMcp = readMcp(cursorPath);
+    const twin = cursorMcp?.mcpServers?.[DOOR];
+    const applyHint = "Apply NOW: node --import tsx tools/spec-mcp-server/ensure-cursor-mcp.ts (copies/syncs dev-pomogator-specs from root .mcp.json into .cursor/mcp.json). Then enable Cursor Settings \u2192 Third-party skills/hooks and reload.";
+    if (twin === void 0) {
+      return [
+        buildResult(
+          meta,
+          "warning",
+          `root has ${DOOR} but .cursor/mcp.json is missing that entry \u2014 Cursor cannot see the door`,
+          { hint: applyHint }
+        )
+      ];
+    }
+    if (JSON.stringify(twin) !== JSON.stringify(door)) {
+      return [
+        buildResult(
+          meta,
+          "warning",
+          `.cursor/mcp.json ${DOOR} diverges from root .mcp.json`,
+          { hint: applyHint }
+        )
+      ];
+    }
+    return [
+      buildResult(meta, "ok", `.cursor/mcp.json ${DOOR} matches root door entry`)
+    ];
+  }
+};
+
+// .claude/skills/pomogator-doctor/scripts/engine/checks/mcp-parse.ts
+import fs24 from "node:fs";
+import path24 from "node:path";
 function readMcpConfigs(ctx) {
   const result2 = /* @__PURE__ */ new Map();
   const paths = [
-    path23.join(ctx.projectRoot, ".mcp.json"),
+    path24.join(ctx.projectRoot, ".mcp.json"),
     // Canonical user-global MCP config is ~/.claude.json (NOT ~/.claude/mcp.json, which
     // Claude Code never creates) — the latter made every globally-registered MCP invisible.
-    path23.join(ctx.homeDir, ".claude.json")
+    path24.join(ctx.homeDir, ".claude.json")
   ];
   for (const p of paths) {
     try {
-      const parsed = JSON.parse(fs23.readFileSync(p, "utf-8"));
+      const parsed = JSON.parse(fs24.readFileSync(p, "utf-8"));
       for (const [name, cfg] of Object.entries(parsed.mcpServers ?? {})) {
         if (!result2.has(name)) result2.set(name, { name, ...cfg });
       }
@@ -5704,7 +5780,7 @@ var mcpProbeCheck = {
 };
 
 // .claude/skills/pomogator-doctor/scripts/engine/checks/meridian.ts
-import path24 from "node:path";
+import path25 from "node:path";
 var META13 = {
   id: "C17",
   fr: "FR-49",
@@ -5716,9 +5792,9 @@ var PROBE_TIMEOUT_MS3 = 500;
 var proxyUrl = () => process.env.MERIDIAN_URL || "http://127.0.0.1:3456";
 function optedIn(ctx) {
   if ((process.env.CLAIM_GATE_JUDGE ?? "true").toLowerCase() !== "false") return { in: true };
-  const base = readDotenvFile(path24.join(ctx.projectRoot, ".env")).ANTHROPIC_BASE_URL ?? "";
+  const base = readDotenvFile(path25.join(ctx.projectRoot, ".env")).ANTHROPIC_BASE_URL ?? "";
   if (/:3456|meridian|claude-subscription/i.test(base)) return { in: true };
-  if (fileExists(path24.join(ctx.projectRoot, "tools", "claude-subscription-proxy", "docker-compose.yml"))) {
+  if (fileExists(path25.join(ctx.projectRoot, "tools", "claude-subscription-proxy", "docker-compose.yml"))) {
     return { in: true };
   }
   return {
@@ -5811,16 +5887,16 @@ var nodeVersionCheck = {
 };
 
 // .claude/skills/pomogator-doctor/scripts/engine/checks/plugin-loader.ts
-import fs24 from "node:fs";
-import path25 from "node:path";
+import fs25 from "node:fs";
+import path26 from "node:path";
 function readPluginManifest(projectRoot) {
   const candidates = [
-    path25.join(projectRoot, ".dev-pomogator", ".claude-plugin", "plugin.json"),
-    path25.join(projectRoot, ".claude-plugin", "plugin.json")
+    path26.join(projectRoot, ".dev-pomogator", ".claude-plugin", "plugin.json"),
+    path26.join(projectRoot, ".claude-plugin", "plugin.json")
   ];
   for (const p of candidates) {
     try {
-      return JSON.parse(fs24.readFileSync(p, "utf-8"));
+      return JSON.parse(fs25.readFileSync(p, "utf-8"));
     } catch {
       continue;
     }
@@ -5828,27 +5904,27 @@ function readPluginManifest(projectRoot) {
   return null;
 }
 function enumerateFromPath(rel, kind, projectRoot) {
-  const abs = path25.resolve(projectRoot, rel);
+  const abs = path26.resolve(projectRoot, rel);
   let stat;
   try {
-    stat = fs24.statSync(abs);
+    stat = fs25.statSync(abs);
   } catch {
     return [{ name: rel, kind, physicalPath: abs }];
   }
   if (stat.isFile()) {
-    const name = kind === "command" ? path25.basename(abs).replace(/\.md$/, "") : path25.basename(abs);
+    const name = kind === "command" ? path26.basename(abs).replace(/\.md$/, "") : path26.basename(abs);
     return [{ name, kind, physicalPath: abs }];
   }
   let dirents;
   try {
-    dirents = fs24.readdirSync(abs, { withFileTypes: true });
+    dirents = fs25.readdirSync(abs, { withFileTypes: true });
   } catch {
     return [{ name: rel, kind, physicalPath: abs }];
   }
   if (kind === "command") {
-    return dirents.filter((e) => e.isFile() && e.name.endsWith(".md")).map((e) => ({ name: e.name.replace(/\.md$/, ""), kind, physicalPath: path25.join(abs, e.name) }));
+    return dirents.filter((e) => e.isFile() && e.name.endsWith(".md")).map((e) => ({ name: e.name.replace(/\.md$/, ""), kind, physicalPath: path26.join(abs, e.name) }));
   }
-  return dirents.filter((e) => e.isDirectory()).map((e) => ({ name: e.name, skillMd: path25.join(abs, e.name, "SKILL.md") })).filter((d) => exists(d.skillMd)).map((d) => ({ name: d.name, kind, physicalPath: d.skillMd }));
+  return dirents.filter((e) => e.isDirectory()).map((e) => ({ name: e.name, skillMd: path26.join(abs, e.name, "SKILL.md") })).filter((d) => exists(d.skillMd)).map((d) => ({ name: d.name, kind, physicalPath: d.skillMd }));
 }
 function normalizeDeclared(manifest, projectRoot) {
   const out = [];
@@ -5869,32 +5945,32 @@ function normalizeDeclared(manifest, projectRoot) {
   return out;
 }
 function classify(declaredName, kind, projectRoot, homeDir) {
-  const projectDir = kind === "command" ? path25.join(projectRoot, ".claude", "commands") : path25.join(projectRoot, ".claude", "skills");
-  const projectPath = kind === "command" ? path25.join(projectDir, `${declaredName}.md`) : path25.join(projectDir, declaredName);
+  const projectDir = kind === "command" ? path26.join(projectRoot, ".claude", "commands") : path26.join(projectRoot, ".claude", "skills");
+  const projectPath = kind === "command" ? path26.join(projectDir, `${declaredName}.md`) : path26.join(projectDir, declaredName);
   if (exists(projectPath)) return "OK-physical";
-  const pluginRoot = path25.join(homeDir, ".claude", "plugins");
+  const pluginRoot = path26.join(homeDir, ".claude", "plugins");
   if (searchPluginRegistry(pluginRoot, declaredName, kind)) return "OK-dynamic";
   return "BROKEN-missing";
 }
 function searchPluginRegistry(pluginRoot, name, kind) {
   let entries;
   try {
-    entries = fs24.readdirSync(pluginRoot, { withFileTypes: true });
+    entries = fs25.readdirSync(pluginRoot, { withFileTypes: true });
   } catch {
     return false;
   }
   const needle = kind === "command" ? `${name}.md` : name;
   for (const entry of entries) {
     if (!entry.isDirectory()) continue;
-    const nested = path25.join(pluginRoot, entry.name);
+    const nested = path26.join(pluginRoot, entry.name);
     if (containsEntry(nested, kind, needle)) return true;
   }
   return false;
 }
 function containsEntry(root, kind, needle) {
-  const target = kind === "command" ? path25.join(root, "commands") : path25.join(root, "skills");
+  const target = kind === "command" ? path26.join(root, "commands") : path26.join(root, "skills");
   try {
-    const inside = fs24.readdirSync(target, { withFileTypes: true });
+    const inside = fs25.readdirSync(target, { withFileTypes: true });
     return inside.some((e) => e.name === needle);
   } catch {
     return false;
@@ -5902,7 +5978,7 @@ function containsEntry(root, kind, needle) {
 }
 function exists(p) {
   try {
-    fs24.accessSync(p, fs24.constants.F_OK);
+    fs25.accessSync(p, fs25.constants.F_OK);
     return true;
   } catch {
     return false;
@@ -5985,8 +6061,8 @@ var pluginLoaderCheck = {
 };
 
 // .claude/skills/pomogator-doctor/scripts/engine/checks/pomogator-home.ts
-import fs25 from "node:fs";
-import path26 from "node:path";
+import fs26 from "node:fs";
+import path27 from "node:path";
 var MAKE = (id, name, severity, message, hint) => ({
   id,
   fr: "FR-3",
@@ -6008,7 +6084,7 @@ var pomogatorHomeCheck = {
   pool: "fs",
   async run(ctx) {
     const results = [];
-    const configPath = path26.join(ctx.homeDir, ".dev-pomogator", "config.json");
+    const configPath = path27.join(ctx.homeDir, ".dev-pomogator", "config.json");
     if (ctx.configError) {
       const message = ctx.configError.message;
       if (message.includes("not found") && isCanonicalInstall(ctx.projectRoot)) {
@@ -6037,7 +6113,7 @@ var pomogatorHomeCheck = {
     results.push(
       configOk ? MAKE("C3", "~/.dev-pomogator/config.json", "ok", `config.json present at ${configPath}`) : MAKE("C3", "~/.dev-pomogator/config.json", "critical", `config.json missing: ${configPath}`)
     );
-    const bootstrapPath = path26.join(
+    const bootstrapPath = path27.join(
       ctx.homeDir,
       ".dev-pomogator",
       "scripts",
@@ -6059,8 +6135,8 @@ var pomogatorHomeCheck = {
     );
     const missingTools = [];
     for (const ext of ctx.installedExtensions) {
-      const toolDir = path26.join(ctx.homeDir, ".dev-pomogator", "tools", ext.name);
-      if (!fs25.existsSync(toolDir)) missingTools.push(ext.name);
+      const toolDir = path27.join(ctx.homeDir, ".dev-pomogator", "tools", ext.name);
+      if (!fs26.existsSync(toolDir)) missingTools.push(ext.name);
     }
     if (missingTools.length === 0 && ctx.installedExtensions.length > 0) {
       results.push(
@@ -6087,7 +6163,7 @@ var pomogatorHomeCheck = {
 };
 function fileExists2(p) {
   try {
-    fs25.accessSync(p, fs25.constants.F_OK);
+    fs26.accessSync(p, fs26.constants.F_OK);
     return true;
   } catch {
     return false;
@@ -6192,8 +6268,8 @@ var pythonCheck = {
 };
 
 // .claude/skills/pomogator-doctor/scripts/engine/checks/statusline.ts
-import fs26 from "node:fs";
-import path27 from "node:path";
+import fs27 from "node:fs";
+import path28 from "node:path";
 var OWNERSHIP_MARKER = "ccstatusline";
 var statuslineCheck = {
   id: "C-NSL",
@@ -6203,7 +6279,7 @@ var statuslineCheck = {
   reinstallable: false,
   pool: "fs",
   async run(ctx) {
-    const settingsFile = path27.join(ctx.homeDir, ".claude", "settings.json");
+    const settingsFile = path28.join(ctx.homeDir, ".claude", "settings.json");
     const base = {
       id: "C-NSL",
       fr: "FR-7",
@@ -6215,10 +6291,10 @@ var statuslineCheck = {
     let command;
     let unreadable = false;
     try {
-      const parsed = JSON.parse(fs26.readFileSync(settingsFile, "utf-8"));
+      const parsed = JSON.parse(fs27.readFileSync(settingsFile, "utf-8"));
       command = typeof parsed.statusLine?.command === "string" ? parsed.statusLine.command : void 0;
     } catch {
-      unreadable = fs26.existsSync(settingsFile);
+      unreadable = fs27.existsSync(settingsFile);
     }
     if (command && command.includes(OWNERSHIP_MARKER)) {
       return { ...base, severity: "ok", message: "native statusLine (ccstatusline) configured" };
@@ -6253,8 +6329,8 @@ var statuslineCheck = {
 };
 
 // .claude/skills/pomogator-doctor/scripts/engine/checks/statusline-widgets.ts
-import fs27 from "node:fs";
-import path28 from "node:path";
+import fs28 from "node:fs";
+import path29 from "node:path";
 var OWNERSHIP_MARKER2 = "ccstatusline";
 var REQUIRED_WIDGET_TYPES = ["git-root-dir", "current-working-dir"];
 var STOCK_DEFAULT_TYPES = /* @__PURE__ */ new Set([
@@ -6281,10 +6357,10 @@ var statuslineWidgetsCheck = {
       reinstallable: false,
       durationMs: 0
     };
-    const settingsFile = path28.join(ctx.homeDir, ".claude", "settings.json");
+    const settingsFile = path29.join(ctx.homeDir, ".claude", "settings.json");
     let command;
     try {
-      const parsed = JSON.parse(fs27.readFileSync(settingsFile, "utf-8"));
+      const parsed = JSON.parse(fs28.readFileSync(settingsFile, "utf-8"));
       command = typeof parsed.statusLine?.command === "string" ? parsed.statusLine.command : void 0;
     } catch {
       command = void 0;
@@ -6296,15 +6372,15 @@ var statuslineWidgetsCheck = {
         message: "statusLine is not ccstatusline \u2014 widget config not applicable (see C-NSL)"
       };
     }
-    const configFile = path28.join(ctx.homeDir, ".config", "ccstatusline", "settings.json");
+    const configFile = path29.join(ctx.homeDir, ".config", "ccstatusline", "settings.json");
     const fixHint = `Apply NOW: node -e "require(require('path').join(process.env.CLAUDE_PLUGIN_ROOT||'.','tools','_shared','bootstrap.cjs'))" -- "tools/native-statusline/apply-statusline.ts" (adds git-root-dir + current-working-dir widgets; custom layouts are never touched).`;
     let lines;
     let unreadable = false;
     try {
-      const parsed = JSON.parse(fs27.readFileSync(configFile, "utf-8"));
+      const parsed = JSON.parse(fs28.readFileSync(configFile, "utf-8"));
       lines = Array.isArray(parsed.lines) ? parsed.lines : void 0;
     } catch {
-      unreadable = fs27.existsSync(configFile);
+      unreadable = fs28.existsSync(configFile);
     }
     if (unreadable) {
       return {
@@ -6352,8 +6428,8 @@ var statuslineWidgetsCheck = {
 };
 
 // .claude/skills/pomogator-doctor/scripts/engine/checks/tui-test-runner.ts
-import fs28 from "node:fs";
-import path29 from "node:path";
+import fs29 from "node:fs";
+import path30 from "node:path";
 var TUI_TEST_RUNNER_DIR = "tools/tui-test-runner";
 var tuiTestRunnerCheck = {
   id: "C-TTR",
@@ -6372,9 +6448,9 @@ var tuiTestRunnerCheck = {
     if (process.env.TEST_STATUSLINE_ENABLED !== "true") {
       return [];
     }
-    const invocationProject = path29.resolve(ctx.projectRoot);
+    const invocationProject = path30.resolve(ctx.projectRoot);
     const sessionProject = process.env.TEST_STATUSLINE_PROJECT;
-    if (sessionProject && path29.resolve(sessionProject) !== invocationProject) {
+    if (sessionProject && path30.resolve(sessionProject) !== invocationProject) {
       return {
         ...base,
         severity: "warning",
@@ -6382,10 +6458,10 @@ var tuiTestRunnerCheck = {
         hint: "Start a new Claude session in this worktree so TEST_STATUSLINE_PROJECT matches the invocation CWD."
       };
     }
-    const runnerDir = path29.join(invocationProject, TUI_TEST_RUNNER_DIR);
-    const wrapper = path29.join(runnerDir, "test_runner_wrapper.ts");
-    const sessionStart = path29.join(runnerDir, "tui_session_start.ts");
-    const missing = [wrapper, sessionStart].filter((file) => !fs28.existsSync(file));
+    const runnerDir = path30.join(invocationProject, TUI_TEST_RUNNER_DIR);
+    const wrapper = path30.join(runnerDir, "test_runner_wrapper.ts");
+    const sessionStart = path30.join(runnerDir, "tui_session_start.ts");
+    const missing = [wrapper, sessionStart].filter((file) => !fs29.existsSync(file));
     if (missing.length > 0) {
       return {
         ...base,
@@ -6494,6 +6570,7 @@ var phase4Checks = [
   mcpParseCheck,
   mcpProbeCheck,
   mcpAuthCheck,
+  cursorMcpTwinCheck,
   pluginLoaderCheck,
   claudeMemPluginCheck,
   claudeMemWorkerCheck,
@@ -6506,8 +6583,8 @@ var allChecks = [
 ];
 
 // .claude/skills/pomogator-doctor/scripts/engine/lock.ts
-import fs29 from "node:fs";
-import path30 from "node:path";
+import fs30 from "node:fs";
+import path31 from "node:path";
 var LockHeldError = class extends Error {
   constructor(lockPath, holderPid) {
     super(`Another doctor run in progress (PID=${holderPid})`);
@@ -6530,25 +6607,25 @@ function isPidAlive(pid) {
   }
 }
 function acquireLock(lockPath) {
-  fs29.mkdirSync(path30.dirname(lockPath), { recursive: true });
+  fs30.mkdirSync(path31.dirname(lockPath), { recursive: true });
   const pid = process.pid;
   try {
-    fs29.writeFileSync(lockPath, String(pid), { flag: "wx" });
+    fs30.writeFileSync(lockPath, String(pid), { flag: "wx" });
     return makeHandle(lockPath, pid);
   } catch (error) {
     if (error.code !== "EEXIST") throw error;
   }
   let holderPid = Number.NaN;
   try {
-    holderPid = Number.parseInt(fs29.readFileSync(lockPath, "utf-8").trim(), 10);
+    holderPid = Number.parseInt(fs30.readFileSync(lockPath, "utf-8").trim(), 10);
   } catch {
     holderPid = Number.NaN;
   }
   if (Number.isFinite(holderPid) && isPidAlive(holderPid)) {
     throw new LockHeldError(lockPath, holderPid);
   }
-  fs29.rmSync(lockPath, { force: true });
-  fs29.writeFileSync(lockPath, String(pid), { flag: "wx" });
+  fs30.rmSync(lockPath, { force: true });
+  fs30.writeFileSync(lockPath, String(pid), { flag: "wx" });
   return makeHandle(lockPath, pid);
 }
 function makeHandle(lockPath, pid) {
@@ -6560,8 +6637,8 @@ function makeHandle(lockPath, pid) {
       if (released) return;
       released = true;
       try {
-        const written = fs29.readFileSync(lockPath, "utf-8").trim();
-        if (written === String(pid)) fs29.rmSync(lockPath, { force: true });
+        const written = fs30.readFileSync(lockPath, "utf-8").trim();
+        if (written === String(pid)) fs30.rmSync(lockPath, { force: true });
       } catch {
       }
     }
@@ -7168,9 +7245,9 @@ function exitCodeFor(report) {
 }
 
 // .claude/skills/pomogator-doctor/scripts/engine/runner.ts
-import fs30 from "node:fs";
+import fs31 from "node:fs";
 import os8 from "node:os";
-import path31 from "node:path";
+import path32 from "node:path";
 
 // node_modules/yocto-queue/index.js
 var Node = class {
@@ -7410,9 +7487,9 @@ function buildSummary(results, totalPossible) {
   };
 }
 function loadConfig(homeDir) {
-  const configPath = path31.join(homeDir, ".dev-pomogator", "config.json");
+  const configPath = path32.join(homeDir, ".dev-pomogator", "config.json");
   try {
-    const raw = fs30.readFileSync(configPath, "utf-8");
+    const raw = fs31.readFileSync(configPath, "utf-8");
     const parsed = JSON.parse(raw);
     return { config: parsed, configError: null };
   } catch (error) {
@@ -7431,10 +7508,10 @@ function loadConfig(homeDir) {
 function collectReferencedMcpServers(projectRoot, homeDir) {
   const refs = /* @__PURE__ */ new Set();
   const roots = [
-    path31.join(projectRoot, ".claude", "rules"),
-    path31.join(projectRoot, ".claude", "skills"),
-    path31.join(homeDir, ".claude", "rules"),
-    path31.join(homeDir, ".claude", "skills")
+    path32.join(projectRoot, ".claude", "rules"),
+    path32.join(projectRoot, ".claude", "skills"),
+    path32.join(homeDir, ".claude", "rules"),
+    path32.join(homeDir, ".claude", "skills")
   ];
   const pattern = /mcp__([A-Za-z0-9_-]+)__/g;
   for (const root of roots) {
@@ -7451,7 +7528,7 @@ function collectReferencedMcpServers(projectRoot, homeDir) {
 function walkMarkdown(root, onContent) {
   let entries;
   try {
-    entries = fs30.readdirSync(root, { withFileTypes: true });
+    entries = fs31.readdirSync(root, { withFileTypes: true });
   } catch (error) {
     if (error.code !== "ENOENT") {
       process.stderr.write(`[doctor] walkMarkdown failed for ${root}: ${error.message}
@@ -7460,12 +7537,12 @@ function walkMarkdown(root, onContent) {
     return;
   }
   for (const entry of entries) {
-    const full = path31.join(root, entry.name);
+    const full = path32.join(root, entry.name);
     if (entry.isDirectory()) {
       walkMarkdown(full, onContent);
     } else if (entry.isFile() && full.endsWith(".md")) {
       try {
-        onContent(fs30.readFileSync(full, "utf-8"));
+        onContent(fs31.readFileSync(full, "utf-8"));
       } catch (error) {
         if (error.code !== "ENOENT") {
           process.stderr.write(`[doctor] read failed for ${full}: ${error.message}
@@ -7477,12 +7554,12 @@ function walkMarkdown(root, onContent) {
 }
 function readPackageVersion(projectRoot) {
   const candidates = [
-    path31.join(projectRoot, "node_modules", "dev-pomogator", "package.json"),
-    path31.join(projectRoot, "package.json")
+    path32.join(projectRoot, "node_modules", "dev-pomogator", "package.json"),
+    path32.join(projectRoot, "package.json")
   ];
   for (const p of candidates) {
     try {
-      const parsed = JSON.parse(fs30.readFileSync(p, "utf-8"));
+      const parsed = JSON.parse(fs31.readFileSync(p, "utf-8"));
       if (parsed.version && parsed.name === "dev-pomogator") return parsed.version;
       if (parsed.version) return parsed.version;
     } catch {
@@ -7495,7 +7572,7 @@ function readPackageVersion(projectRoot) {
 // .claude/skills/pomogator-doctor/scripts/engine/index.ts
 async function runDoctor(options = {}, checks = allChecks) {
   const homeDir = options.homeDir ?? os9.homedir();
-  const lockPath = path32.join(homeDir, ".dev-pomogator", "doctor.lock");
+  const lockPath = path33.join(homeDir, ".dev-pomogator", "doctor.lock");
   const lock = acquireLock(lockPath);
   try {
     return await executeChecks(options, checks);
@@ -7507,7 +7584,7 @@ async function runQuiet(options = {}, checks = allChecks) {
   try {
     const report = await runDoctor({ ...options, quiet: true }, checks);
     const homeDir = options.homeDir ?? os9.homedir();
-    const installed = fs31.existsSync(path32.join(homeDir, ".dev-pomogator", "config.json"));
+    const installed = fs32.existsSync(path33.join(homeDir, ".dev-pomogator", "config.json"));
     const actionableCritical = report.results.some(
       (result2) => result2.severity === "critical" && result2.group !== "needs-external"
     );
@@ -7583,7 +7660,7 @@ ${usage6()}
 `);
   process.exitCode = exitCodeFor(report);
 }
-var invokedPath6 = process.argv[1] ? path32.resolve(process.argv[1]) : "";
+var invokedPath6 = process.argv[1] ? path33.resolve(process.argv[1]) : "";
 if (invokedPath6 && import.meta.url === pathToFileURL7(invokedPath6).href) {
   void main8().catch((error) => {
     process.stderr.write(`pomogator-doctor failed: ${error instanceof Error ? error.message : String(error)}
@@ -7592,7 +7669,7 @@ if (invokedPath6 && import.meta.url === pathToFileURL7(invokedPath6).href) {
   });
 }
 function lockPathFor(homeDir) {
-  return path32.join(homeDir, ".dev-pomogator", "doctor.lock");
+  return path33.join(homeDir, ".dev-pomogator", "doctor.lock");
 }
 function emptyReport() {
   return {

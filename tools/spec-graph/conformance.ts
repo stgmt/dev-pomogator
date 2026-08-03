@@ -37,6 +37,10 @@ import { refreshEndpointViolations } from './edge-schema.ts';
 export type FindingCode =
   | 'UNCOVERED_FR'
   | 'UNVERIFIED_FR'
+  | 'UNCOVERED_AC'
+  | 'UNVERIFIED_AC'
+  | 'UNCOVERED_NFR'
+  | 'UNVERIFIED_NFR'
   | 'ORPHAN_TASK'
   | 'SCENARIO_TAG_ORPHAN'
   | 'UNTAGGED_SCENARIO'
@@ -142,6 +146,8 @@ export function checkConformance(
     orphanPolicy?: { scenario_tag_orphan?: 'warn' | 'block' };
     /** FR-35a — per-task test-body verdict; WEAK/FAKE-POSITIVE-RISK on a green task → TASK_TEST_QUALITY. */
     testQualityByTask?: Record<string, TestQualityVerdict>;
+    /** FR-68/69 readiness-specific ownership checks are opt-in outside the readiness evaluator. */
+    readinessOwnership?: boolean;
   } = {},
 ): Finding[] {
   const findings: Finding[] = [];
@@ -162,7 +168,8 @@ export function checkConformance(
   const decisionCovers = new Set<string>(); // FR ids with a `covers` edge to a Decision node (FR-47b)
   const storyCovers = new Set<string>(); // FR ids with a `covers` edge to a Story node (FR-47)
   const scenarioTests = new Set<string>(); // FR / AC / NFR ids referenced by a `tested-by` edge
-  const scenarioVerifies = new Set<string>(); // FR / NFR ids with an inbound passing `verifies` edge (#181)
+  const scenarioVerifies = new Set<string>(); // FR / NFR / AC ids with an inbound passing `verifies` edge (#181)
+  const scenarioVerifiesAc = new Set<string>();
   let resultsLoaded = false; // a `last-result` edge means a run was applied → verifies-absence is meaningful
   for (const e of graph.edges) {
     if (e.type === 'covers') {
@@ -175,7 +182,14 @@ export function checkConformance(
       else acCovers.add(e.from);
     }
     if (e.type === 'tested-by') scenarioTests.add(e.from);
-    if (e.type === 'verifies') scenarioVerifies.add(e.to); // verifies is Scenario/AC → FR/NFR
+    if (e.type === 'verifies') {
+      const source = graph.nodes.get(e.from);
+      const currentPassing = source?.type === 'Scenario' && source.lastResult === 'PASSED' && source.resultStale !== true;
+      if (currentPassing) {
+        scenarioVerifies.add(e.to); // verifies is Scenario/AC → FR/NFR/AC
+        if (graph.nodes.get(e.to)?.type === 'AC') scenarioVerifiesAc.add(e.to);
+      }
+    }
     if (e.type === 'last-result') resultsLoaded = true;
   }
 
@@ -220,7 +234,41 @@ export function checkConformance(
     }
   }
 
-  // 1a2) Typed requirement metadata and delivery truth (FR-66).
+  // 1a2) Acceptance-criterion and NFR ownership gates (FR-68/69).
+  // Evidence is owned by the criterion/requirement: parent-FR scenarios do not
+  // satisfy an AC unless a real AC -> Scenario tested-by edge exists.
+  if (opts.readinessOwnership) for (const node of graph.nodes.values()) {
+    if (node.type === 'AC') {
+      const ownScenario = scenarioTests.has(node.id);
+      if (!ownScenario) findings.push({
+        code: 'UNCOVERED_AC', severity: 'error', location: { file: node.file, line: node.line },
+        nodeId: node.id, message: `AC ${node.id} has no own tested-by Scenario; parent requirement evidence cannot complete the criterion.`,
+        suggestions: [{ action: 'tag_own_scenario', reason: 'Add a behavior-specific @AC tag and tested-by edge for this criterion.', confidence: 'high' }],
+      });
+      else if (!scenarioVerifiesAc.has(node.id)) findings.push({
+        code: 'UNVERIFIED_AC', severity: 'error', location: { file: node.file, line: node.line },
+        nodeId: node.id, message: `AC ${node.id} has own scenarios but no current passing verifies edge.`,
+        suggestions: [{ action: 'run_own_scenario', reason: 'Run the owning scenario and retain a current passing verifies edge.', confidence: 'high' }],
+      });
+    }
+    if (node.type === 'NFR') {
+      const required = node.metadata?.demands.some((demand) => demand.obligation === 'required') ?? false;
+      if (!required) continue;
+      const ownScenario = scenarioTests.has(node.id);
+      if (!ownScenario) findings.push({
+        code: 'UNCOVERED_NFR', severity: 'error', location: { file: node.file, line: node.line },
+        nodeId: node.id, message: `Required NFR ${node.id} has no own tested-by Scenario.`,
+        suggestions: [{ action: 'tag_own_scenario', reason: 'Add a method-appropriate scenario or evidence path for this required NFR.', confidence: 'high' }],
+      });
+      else if (!scenarioVerifies.has(node.id)) findings.push({
+        code: 'UNVERIFIED_NFR', severity: 'error', location: { file: node.file, line: node.line },
+        nodeId: node.id, message: `Required NFR ${node.id} has scenarios but no current passing verifies edge.`,
+        suggestions: [{ action: 'verify_nfr', reason: 'Produce current passing evidence using the declared verification method.', confidence: 'high' }],
+      });
+    }
+  }
+
+  // 1a3) Typed requirement metadata and delivery truth (FR-66).
   const inheritedDemands = forwardedDemands(graph);
   for (const node of graph.nodes.values()) {
     if (node.type !== 'FR' && node.type !== 'NFR') continue;
@@ -230,18 +278,18 @@ export function checkConformance(
       location: { file: node.file, line: node.line },
       nodeId: node.id,
       message: `${issue.path}: ${issue.message}`,
-      suggestedFixes: ['Fix the FR-local ```yaml metadata block through the spec door.'],
+      suggestions: [{ action: 'fix_requirement_metadata', reason: 'Fix the FR-local ```yaml metadata block through the spec door.', confidence: 'high' }],
     });
     if (node.type !== 'FR' || !node.metadata || (node.metadataIssues?.length ?? 0) > 0) continue;
     const delivery = evaluateDelivery(node, graph);
     for (const issue of inheritedDemands.get(node.id)?.issues ?? []) findings.push({
       code: 'FR_DEMAND_CONFLICT', severity: 'error', location: { file: node.file, line: node.line }, nodeId: node.id,
-      message: issue.message, suggestedFixes: ['Resolve contradictory forwarded demand obligations.'],
+      message: issue.message, suggestions: [{ action: 'resolve_demand_conflict', reason: 'Resolve contradictory forwarded demand obligations.', confidence: 'high' }],
     });
     for (const type of delivery.missing) findings.push({
       code: 'FR_DEMAND_MISSING', severity: 'error', location: { file: node.file, line: node.line }, nodeId: node.id,
       message: `${node.id} requires ${type}, but its delivery evidence is missing or unjustified.`,
-      suggestedFixes: [`Attach graph-verifiable evidence for ${type}, or record a justified/audited exception.`],
+      suggestions: [{ action: 'attach_delivery_evidence', reason: `Attach graph-verifiable evidence for ${type}, or record a justified/audited exception.`, confidence: 'high' }],
     });
   }
 
@@ -565,7 +613,7 @@ export function checkConformance(
       }
     }
 
-    if (!hasSpecTag) {
+    if (!hasSpecTag && !scen.tags.some((tag) => tag.toLowerCase() === '@historical')) {
       findings.push({
         code: 'UNTAGGED_SCENARIO',
         severity: 'info',

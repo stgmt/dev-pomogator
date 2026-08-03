@@ -3410,6 +3410,7 @@ function pathExistsResolvingDetail(repoRoot, ref, implRoots) {
 }
 function findMissingFileReferences(files, repoRoot, implRoots) {
   const out = [];
+  let pathsChecked = 0;
   for (const file of files) {
     const lines = file.body.split(/\r?\n/);
     for (let i = 0; i < lines.length; i++) {
@@ -3418,6 +3419,7 @@ function findMissingFileReferences(files, repoRoot, implRoots) {
       for (const ref of matches) {
         const cleanRef = ref.replace(/`/g, "");
         if (MCP_METHOD_NAMES.has(cleanRef)) continue;
+        pathsChecked++;
         const detail = pathExistsResolvingDetail(repoRoot, ref, implRoots);
         if (detail.exists) continue;
         const hint = detail.globPrefixMissing ? "Add the implementation, OR mark the FR as OUT_OF_SCOPE, OR remove the reference. (Glob prefix dir does not exist \u2014 was the parent directory removed or renamed?)" : "Add the implementation, OR mark the FR as OUT_OF_SCOPE, OR remove the reference.";
@@ -3432,7 +3434,7 @@ function findMissingFileReferences(files, repoRoot, implRoots) {
       }
     }
   }
-  return out;
+  return { findings: out, pathsChecked };
 }
 function normalizeIdentifierKey(key) {
   return key.toLowerCase().replace(/[_-]/g, "");
@@ -4473,18 +4475,23 @@ function findTestsWithoutFR(repoRoot, slug, allFrDefs) {
   }
   return out;
 }
+function extractConceptNouns(body) {
+  const concepts = /* @__PURE__ */ new Set();
+  let m;
+  CONCEPT_NOUN_RE.lastIndex = 0;
+  while ((m = CONCEPT_NOUN_RE.exec(body)) !== null) {
+    if (CONCEPT_NOUN_STOPLIST.has(m[0])) continue;
+    concepts.add(m[0]);
+  }
+  return concepts;
+}
 function findConceptOverlap(bySlug) {
   const out = [];
   const conceptsBySlug = /* @__PURE__ */ new Map();
   for (const [slug, files] of bySlug.entries()) {
     const concepts = /* @__PURE__ */ new Set();
     for (const f of files) {
-      let m;
-      CONCEPT_NOUN_RE.lastIndex = 0;
-      while ((m = CONCEPT_NOUN_RE.exec(f.body)) !== null) {
-        if (CONCEPT_NOUN_STOPLIST.has(m[0])) continue;
-        concepts.add(m[0]);
-      }
+      for (const concept of extractConceptNouns(f.body)) concepts.add(concept);
     }
     conceptsBySlug.set(slug, concepts);
   }
@@ -4538,7 +4545,10 @@ function reconcileLight(opts) {
   for (const slug of allSlugs) {
     const files = filesBySlug.get(slug);
     const findings = [];
-    findings.push(...findMissingFileReferences(files, opts.repoRoot, opts.implRoots));
+    let implPathsChecked = 0;
+    const mff = findMissingFileReferences(files, opts.repoRoot, opts.implRoots);
+    findings.push(...mff.findings);
+    implPathsChecked += mff.pathsChecked;
     const featureTags = collectFeatureTags(opts.repoRoot, slug);
     findings.push(...findOrphanFRs(files, featureTags, opts.repoRoot));
     findings.push(...findUncoveredACs(files, featureTags, opts.repoRoot));
@@ -4582,7 +4592,9 @@ function reconcileLight(opts) {
       generatedAt: (/* @__PURE__ */ new Date()).toISOString(),
       mode: "light",
       specSlug: slug,
-      findings
+      findings,
+      specsCompared: allSlugs.length,
+      implPathsChecked
     });
   }
   return results;
