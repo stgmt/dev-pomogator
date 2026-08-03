@@ -4,6 +4,7 @@ import {
   applyDiscoveryProposal,
   createDiscoverySnapshot,
   deterministicChildTaskId,
+  discoveryProposalDigest,
   discoverTasks,
   restoreDiscoverySnapshot,
   serializeDiscoverySnapshot,
@@ -20,6 +21,7 @@ interface DiscoveryWorld extends V4World {
   snapshot?: DiscoverySnapshot;
   applied?: ReturnType<typeof applyDiscoveryProposal>;
   restored?: DiscoverySnapshot;
+  modifiedApply?: ReturnType<typeof applyDiscoveryProposal>;
 }
 
 function parent(id = 'fixture:parent'): CanonicalTask {
@@ -117,7 +119,7 @@ Given('patch has valid child and cyclic dependency', function (this: DiscoveryWo
     children: [child, cyclicChild],
     edges: [...proposal.edges, { from: cyclicChild.qualifiedId, to: child.qualifiedId, relation: 'depends-on' }, { from: child.qualifiedId, to: cyclicChild.qualifiedId, relation: 'depends-on' }],
   };
-  this.proposal = { ...this.proposal, digest: 'cycle-digest' };
+  this.proposal = { ...this.proposal, digest: discoveryProposalDigest(this.proposal) };
   this.snapshot = createDiscoverySnapshot([this.parent]);
 });
 
@@ -157,4 +159,27 @@ Then('first records no_children and second awaits approval', function (this: Dis
   assert.equal(approved.committed, true);
   const restored = restoreDiscoverySnapshot(serializeDiscoverySnapshot(approved.snapshot));
   assert.equal(restored.tasks.length, 2);
+});
+
+Given('a high impact discovery proposal requires approval', function (this: DiscoveryWorld) {
+  this.parent = parent('fixture:approval-parent');
+  this.snapshot = createDiscoverySnapshot([this.parent]);
+  this.proposal = discoverTasks({
+    parent: this.parent,
+    candidates: [{ ...candidate('approval-child'), impact: 'high' }],
+  });
+  assert.equal(this.proposal.state, 'approval-required');
+});
+
+When('its caller changes approval state without changing the digest', function (this: DiscoveryWorld) {
+  const modified = { ...this.proposal!, state: 'proposed' as const };
+  assert.equal(modified.digest, this.proposal!.digest);
+  this.modifiedApply = applyDiscoveryProposal(this.snapshot!, modified, { approve: false });
+});
+
+Then('proposal integrity fails and no graph mutation commits', function (this: DiscoveryWorld) {
+  assert.equal(this.modifiedApply!.ok, false);
+  assert.equal(this.modifiedApply!.committed, false);
+  assert.equal(this.modifiedApply!.snapshot.tasks.length, 1);
+  assert.ok(this.modifiedApply!.findings.some((finding) => finding.code === 'DISCOVERY_INVALID'));
 });

@@ -261,6 +261,7 @@ export function validateTaskEvidence(input: TaskEvidenceInput, snapshot: TaskEvi
 }
 
 function completionEligibility(task: CanonicalTask | undefined, record: Omit<TaskEvidenceRecord, 'evidenceId' | 'stale' | 'stalePaths' | 'staleReasons' | 'eligibleForCompletion' | 'eligibilityReason'>): { eligible: boolean; reason?: string } {
+  if (!task) return { eligible: false, reason: 'evidence task is not in the canonical task set' };
   const policy = policyFor(task);
   if (record.result !== 'PASSED') return { eligible: false, reason: `evidence result is ${record.result}` };
   if (policy.fullSuite && record.runScope !== 'full-suite') return { eligible: false, reason: 'full-suite evidence policy rejects filtered proof' };
@@ -443,10 +444,48 @@ export function serializeTaskEvidence(snapshot: TaskEvidenceSnapshot): string {
   return stableTaskEvidenceJson({ schemaVersion: snapshot.schemaVersion, tasks: snapshot.tasks, records: snapshot.records, revision: snapshot.revision });
 }
 
+function restoredEvidenceRecord(record: TaskEvidenceRecord, tasks: readonly CanonicalTask[]): TaskEvidenceRecord {
+  if (!record || typeof record !== 'object') throw new Error('invalid task evidence record');
+  const task = tasks.find((candidate) => normalizedId(candidate.qualifiedId) === normalizedId(text(record.taskId)));
+  const normalized = canonicalInput({
+    taskId: text(record.taskId),
+    owner: record.owner,
+    validatedIds: Array.isArray(record.validatedIds) ? record.validatedIds : [],
+    runId: text(record.runId),
+    environment: record.environment && typeof record.environment === 'object' ? record.environment : {},
+    result: record.result,
+    fingerprints: record.fingerprints && typeof record.fingerprints === 'object' ? record.fingerprints : {},
+    inputFingerprints: record.inputFingerprints && typeof record.inputFingerprints === 'object' ? record.inputFingerprints : {},
+    outputFingerprints: record.outputFingerprints && typeof record.outputFingerprints === 'object' ? record.outputFingerprints : {},
+    scope: record.runScope,
+    command: text(record.command),
+    filter: text(record.filter),
+    recordedAt: text(record.recordedAt),
+  });
+  const eligibility = completionEligibility(task, normalized);
+  const stale = record.stale === true;
+  return {
+    ...normalized,
+    taskId: task?.qualifiedId ?? normalized.taskId,
+    evidenceId: evidenceIdFor(normalized),
+    stale,
+    stalePaths: sortedUnique(Array.isArray(record.stalePaths) ? record.stalePaths : []),
+    staleReasons: sortedUnique(Array.isArray(record.staleReasons) ? record.staleReasons : []),
+    eligibleForCompletion: eligibility.eligible && !stale,
+    ...(stale
+      ? { eligibilityReason: 'stale evidence cannot complete task' }
+      : eligibility.reason
+        ? { eligibilityReason: eligibility.reason }
+        : {}),
+  };
+}
+
 export function restoreTaskEvidence(serialized: string): TaskEvidenceSnapshot {
   const parsed = JSON.parse(serialized) as Partial<TaskEvidenceSnapshot>;
   if (parsed.schemaVersion !== TASK_EVIDENCE_VERSION || !Array.isArray(parsed.tasks) || !Array.isArray(parsed.records)) throw new Error('invalid task evidence snapshot');
-  const snapshot = createTaskEvidenceSnapshot(parsed.tasks as CanonicalTask[], parsed.records as TaskEvidenceRecord[]);
+  const tasks = createTaskEvidenceSnapshot(parsed.tasks as CanonicalTask[]).tasks;
+  const records = (parsed.records as TaskEvidenceRecord[]).map((record) => restoredEvidenceRecord(record, tasks));
+  const snapshot = createTaskEvidenceSnapshot(tasks, records);
   snapshot.revision = Number.isSafeInteger(parsed.revision) ? Number(parsed.revision) : 0;
   return snapshot;
 }

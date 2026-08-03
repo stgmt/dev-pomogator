@@ -575,7 +575,7 @@ function transitiveDependents(tasks, selected, roots) {
   }
   return sortIds([...seen].map((key) => tasks.find((task) => normalizedTaskId(task.qualifiedId) === key)?.qualifiedId ?? key));
 }
-function schedule(tasks, selected, conflicts) {
+function schedule(tasks, selected, conflicts, evidence) {
   const byId = new Map(tasks.map((task) => [normalizedTaskId(task.qualifiedId), task]));
   const remaining = /* @__PURE__ */ new Set([...selected]);
   const completed = /* @__PURE__ */ new Set();
@@ -626,13 +626,13 @@ function schedule(tasks, selected, conflicts) {
   });
   const frontier = [...selected].map((key) => byId.get(key)).filter((task) => Boolean(task)).sort((left, right) => compareText(left.qualifiedId, right.qualifiedId)).map((task) => {
     const predecessors = task.dependencies.map((dependency) => dependency.targetId).filter((id) => selected.has(normalizedTaskId(id)) && byId.has(normalizedTaskId(id)) && byId.get(normalizedTaskId(id))?.declaredStatus !== "DONE");
-    const stale = false;
+    const stale = evidence.some((record) => normalizedTaskId(record.taskId) === normalizedTaskId(task.qualifiedId) && record.state !== "present");
     const blocked = task.declaredStatus === "BLOCKED" || predecessors.length > 0;
     return {
       taskId: task.qualifiedId,
       readiness: stale ? "stale" : blocked ? "blocked" : "ready",
       predecessors: sortIds(predecessors),
-      explanation: blocked ? `blocked by typed predecessors: ${predecessors.join(", ") || task.declaredStatus}` : "no incomplete typed predecessor in the selected graph"
+      explanation: stale ? "task evidence is stale or missing and must be refreshed before execution verification" : blocked ? `blocked by typed predecessors: ${predecessors.join(", ") || task.declaredStatus}` : "no incomplete typed predecessor in the selected graph"
     };
   });
   return { waves, batches, frontier, unscheduled };
@@ -705,10 +705,12 @@ function queryTaskPlan(state, options = {}) {
     message: `${taskId} consumes or depends on selected planning work`,
     action: "Review the downstream task before changing the selected task."
   }));
-  const scheduleResult = schedule(selectedTasks, selected, conflicts);
+  const selectedEvidence = state.evidence.filter((record) => selected.has(normalizedTaskId(record.taskId)));
+  const scheduleResult = schedule(selectedTasks, selected, conflicts, selectedEvidence);
   diagnostics.push(...validateDependencies(selectedTasks).filter((item) => item.severity === "error"));
   diagnostics.push(...scheduleResult.unscheduled.map((entry) => finding("PLAN_SELECTED_UNSCHEDULED", entry.reason, [entry.taskId, ...entry.predecessorIds], entry.sourceIds, "Resolve the typed predecessor or include it in the selected graph.")));
-  const stale = state.evidence.filter((record) => selected.has(normalizedTaskId(record.taskId)) && record.state !== "present").map((record) => ({ ...record, reason: redactText(record.reason) }));
+  const stale = selectedEvidence.filter((record) => record.state !== "present").map((record) => ({ ...record, reason: redactText(record.reason) }));
+  diagnostics.push(...stale.map((record) => finding("PLAN_STALE_EVIDENCE", `evidence ${record.sourceId} for ${record.taskId} is ${record.state}`, [record.taskId], [record.sourceId], "Refresh or replace the evidence before treating the plan as complete.")));
   const staleReasons = stale.map((record) => ({ taskId: record.taskId, sourceId: record.sourceId, reason: record.reason }));
   const { criticalPath, slack } = criticalMetrics(selectedTasks, selected);
   const rollout = rolloutReport(state.legacy, options.rolloutMode ?? "observe");
@@ -758,7 +760,7 @@ function queryTaskPlan(state, options = {}) {
     frontier: scheduleResult.frontier,
     unscheduledRemainder: scheduleResult.unscheduled,
     unscheduled: scheduleResult.unscheduled,
-    complete: scheduleResult.unscheduled.length === 0 && diagnostics.every((item) => item.severity !== "error"),
+    complete: scheduleResult.unscheduled.length === 0 && stale.length === 0 && diagnostics.every((item) => item.severity !== "error"),
     criticalPath,
     slack,
     stale,
@@ -820,6 +822,7 @@ function applyTaskPlanPatch(state, patch, options) {
   const nextState = buildTaskPlanState(nextTasks, {
     revision: state.revision + 1,
     evidence: patch.evidence ?? state.evidence,
+    conflicts: state.conflicts,
     legacy: state.legacy,
     sourceFingerprint: state.sourceFingerprint
   });

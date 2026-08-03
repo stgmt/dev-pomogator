@@ -23,6 +23,7 @@ import {
   restorePersistedTaskPlanState,
   taskPlanStateWithLegacy,
   type PlanPersistenceAdapter,
+  type TaskConflictRecord,
   type TaskEvidenceRecord,
   type TaskPlanMutationResult,
   type TaskPlanResult,
@@ -42,6 +43,7 @@ interface TaskPlanWorld extends V4World {
   childOutput?: string;
   legacy?: LegacyTaskRecord[];
   rolloutReports?: ReturnType<typeof legacyPlanReport>[];
+  explicitConflict?: TaskConflictRecord;
 }
 
 function makeTask(
@@ -296,4 +298,48 @@ Then('count is preserved and enforce explicitly rejects unresolved record', func
   assert.deepEqual(this.rolloutReports!.map((report) => report.rejectedCount), [0, 0, 1]);
   assert.equal(this.rolloutReports![2].records[0].status, 'rejected');
   assert.equal(this.rolloutReports![2].records[0].finding?.code, 'PLAN_LEGACY_UNRESOLVED');
+});
+
+Given('a selected ready task has stale evidence', function (this: TaskPlanWorld) {
+  const selected = makeTask('fixture:stale-selected', 'Refresh stale execution evidence');
+  this.state = buildTaskPlanState([selected], {
+    revision: 51,
+    evidence: [evidence(selected.qualifiedId, 'evidence:stale-selected', 'stale', 'input fingerprint changed')],
+  });
+});
+
+When('execution plan readiness evaluates', function (this: TaskPlanWorld) {
+  this.plan = queryTaskPlan(this.state!);
+});
+
+Then('the task is not ready and the plan is incomplete with a stale-evidence finding', function (this: TaskPlanWorld) {
+  assert.equal(this.plan!.frontier.length, 1);
+  assert.equal(this.plan!.frontier[0].taskId, 'fixture:stale-selected');
+  assert.equal(this.plan!.frontier[0].readiness, 'stale');
+  assert.equal(this.plan!.complete, false);
+  assert.ok(this.plan!.diagnostics.some((diagnostic) => diagnostic.code === 'PLAN_STALE_EVIDENCE'));
+});
+
+Given('a plan has an explicit externally audited conflict', function (this: TaskPlanWorld) {
+  const first = makeTask('fixture:explicit-a', 'Explicit conflict A');
+  const second = makeTask('fixture:explicit-b', 'Explicit conflict B');
+  this.explicitConflict = {
+    leftTaskId: first.qualifiedId,
+    rightTaskId: second.qualifiedId,
+    class: 'semantic-resource',
+    reason: 'external audit identified a shared semantic resource',
+    sourceIds: ['audit:explicit-conflict'],
+  };
+  this.state = buildTaskPlanState([first, second], { revision: 61, conflicts: [this.explicitConflict] });
+});
+
+When('an unrelated valid patch commits', function (this: TaskPlanWorld) {
+  this.mutation = applyTaskPlanPatch(this.state!, { evidence: [] }, { expectedRevision: 61 });
+});
+
+Then('the explicit conflict remains in the next plan state', function (this: TaskPlanWorld) {
+  assert.equal(this.mutation!.ok, true);
+  assert.equal(this.mutation!.committed, true);
+  assert.deepEqual(this.mutation!.state.conflicts, [this.explicitConflict]);
+  assert.ok(queryTaskPlan(this.mutation!.state).graph.edges.some((edge) => edge.type === 'conflicts-with' && edge.sourceIds.includes('audit:explicit-conflict')));
 });

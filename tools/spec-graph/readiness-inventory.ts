@@ -140,12 +140,14 @@ export function classifyEvidence(s: ScenarioEvidenceInput): EvidenceRecord {
   };
 
   // 1) Canonical full-run evidence is the authoritative baseline. Overlay
-  // freshness is retained as metadata, but cannot downgrade a newer full run.
+  // freshness is retained as metadata, but stale canonical passes remain
+  // execution debt — authority does not make evidence current again.
   if (s.canonicalResult) {
+    const canonicalResult = s.canonicalResult.toUpperCase();
     return {
       ...base,
-      outcome: explicitOutcome(s.canonicalResult),
-      result: s.canonicalResult.toUpperCase(),
+      outcome: canonicalResult === 'PASSED' && stale ? 'stale' : explicitOutcome(canonicalResult),
+      result: canonicalResult,
       source: source ?? 'canonical-full-run',
       timestamp: s.canonicalRunAt ?? s.lastRunAt ?? null,
       recency: { stale, canonical: true },

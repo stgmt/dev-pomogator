@@ -39,7 +39,8 @@ export interface PlanDiagnostic {
     | 'PLAN_PERSISTENCE_FAILED'
     | 'PLAN_LEGACY_RECORD'
     | 'PLAN_LEGACY_UNRESOLVED'
-    | 'PLAN_SELECTED_UNSCHEDULED';
+    | 'PLAN_SELECTED_UNSCHEDULED'
+    | 'PLAN_STALE_EVIDENCE';
   severity: PlanSeverity;
   message: string;
   taskIds: string[];
@@ -620,7 +621,7 @@ function transitiveDependents(tasks: readonly CanonicalTask[], selected: Set<str
   return sortIds([...seen].map((key) => tasks.find((task) => normalizedTaskId(task.qualifiedId) === key)?.qualifiedId ?? key));
 }
 
-function schedule(tasks: readonly CanonicalTask[], selected: Set<string>, conflicts: readonly TaskConflictRecord[]): {
+function schedule(tasks: readonly CanonicalTask[], selected: Set<string>, conflicts: readonly TaskConflictRecord[], evidence: readonly TaskEvidenceRecord[]): {
   waves: string[][];
   batches: string[][][];
   frontier: PlanFrontierEntry[];
@@ -685,13 +686,17 @@ function schedule(tasks: readonly CanonicalTask[], selected: Set<string>, confli
     .sort((left, right) => compareText(left.qualifiedId, right.qualifiedId))
     .map((task) => {
       const predecessors = task.dependencies.map((dependency) => dependency.targetId).filter((id) => selected.has(normalizedTaskId(id)) && byId.has(normalizedTaskId(id)) && byId.get(normalizedTaskId(id))?.declaredStatus !== 'DONE');
-      const stale = false;
+      const stale = evidence.some((record) => normalizedTaskId(record.taskId) === normalizedTaskId(task.qualifiedId) && record.state !== 'present');
       const blocked = task.declaredStatus === 'BLOCKED' || predecessors.length > 0;
       return {
         taskId: task.qualifiedId,
         readiness: stale ? 'stale' : blocked ? 'blocked' : 'ready',
         predecessors: sortIds(predecessors),
-        explanation: blocked ? `blocked by typed predecessors: ${predecessors.join(', ') || task.declaredStatus}` : 'no incomplete typed predecessor in the selected graph',
+        explanation: stale
+          ? 'task evidence is stale or missing and must be refreshed before execution verification'
+          : blocked
+            ? `blocked by typed predecessors: ${predecessors.join(', ') || task.declaredStatus}`
+            : 'no incomplete typed predecessor in the selected graph',
       };
     });
   return { waves, batches, frontier, unscheduled };
@@ -766,10 +771,12 @@ export function queryTaskPlan(state: TaskPlanState, options: PlanSelectionOption
     message: `${taskId} consumes or depends on selected planning work`,
     action: 'Review the downstream task before changing the selected task.',
   }));
-  const scheduleResult = schedule(selectedTasks, selected, conflicts);
+  const selectedEvidence = state.evidence.filter((record) => selected.has(normalizedTaskId(record.taskId)));
+  const scheduleResult = schedule(selectedTasks, selected, conflicts, selectedEvidence);
   diagnostics.push(...validateDependencies(selectedTasks).filter((item) => item.severity === 'error'));
   diagnostics.push(...scheduleResult.unscheduled.map((entry) => finding('PLAN_SELECTED_UNSCHEDULED', entry.reason, [entry.taskId, ...entry.predecessorIds], entry.sourceIds, 'Resolve the typed predecessor or include it in the selected graph.')));
-  const stale = state.evidence.filter((record) => selected.has(normalizedTaskId(record.taskId)) && record.state !== 'present').map((record) => ({ ...record, reason: redactText(record.reason) }));
+  const stale = selectedEvidence.filter((record) => record.state !== 'present').map((record) => ({ ...record, reason: redactText(record.reason) }));
+  diagnostics.push(...stale.map((record) => finding('PLAN_STALE_EVIDENCE', `evidence ${record.sourceId} for ${record.taskId} is ${record.state}`, [record.taskId], [record.sourceId], 'Refresh or replace the evidence before treating the plan as complete.')));
   const staleReasons = stale.map((record) => ({ taskId: record.taskId, sourceId: record.sourceId, reason: record.reason }));
   const { criticalPath, slack } = criticalMetrics(selectedTasks, selected);
   const rollout = rolloutReport(state.legacy, options.rolloutMode ?? 'observe');
@@ -819,7 +826,7 @@ export function queryTaskPlan(state: TaskPlanState, options: PlanSelectionOption
     frontier: scheduleResult.frontier,
     unscheduledRemainder: scheduleResult.unscheduled,
     unscheduled: scheduleResult.unscheduled,
-    complete: scheduleResult.unscheduled.length === 0 && diagnostics.every((item) => item.severity !== 'error'),
+    complete: scheduleResult.unscheduled.length === 0 && stale.length === 0 && diagnostics.every((item) => item.severity !== 'error'),
     criticalPath,
     slack,
     stale,
@@ -889,6 +896,7 @@ export function applyTaskPlanPatch(state: TaskPlanState, patch: TaskPlanPatch, o
   const nextState = buildTaskPlanState(nextTasks, {
     revision: state.revision + 1,
     evidence: patch.evidence ?? state.evidence,
+    conflicts: state.conflicts,
     legacy: state.legacy,
     sourceFingerprint: state.sourceFingerprint,
   });
