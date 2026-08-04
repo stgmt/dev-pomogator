@@ -55,16 +55,16 @@
       "reviewAfter": "2027-01-01T00:00:00.000Z",
       "outputSchema": "ac-mapping-result-v1",
       "ceilings": {
-        "logicalCalls": 12,
-        "physicalAttempts": 14,
-        "concurrency": 3,
+        "logicalCalls": 20,
+        "physicalAttempts": 24,
+        "concurrency": 4,
         "discoveryRounds": 1,
-        "toolCalls": 400,
-        "findings": 120,
+        "toolCalls": 600,
+        "findings": 150,
         "inputBytes": 262144,
-        "outputBytes": 2097152,
-        "responseTokens": 400000,
-        "wallClockMs": 5400000
+        "outputBytes": 3145728,
+        "responseTokens": 600000,
+        "wallClockMs": 7200000
       }
     }
   ]
