@@ -737,6 +737,7 @@ This table is the explicit implementation inventory for the execution-aware task
 | `tools/spec-graph/coverage.ts` | edit | FR-68 — isLiveAttestedScenario shared helper consumed by verifiedStatus/task truth. |
 | `.specs/spec-generator-v4/spec-generator-v4.feature` | edit | FR-68 AC-SATISFACTION wave 1 — 33 ACs (FR-1..FR-14) mapped to their own verifying scenarios via @AC-N.N tags; 5 ACs flagged no-candidate. |
 | `audit-reports/ac-mapping-spec-generator-v4.md` | create | Audited mapping journal (AC → scenario → quoted justification step) for all waves. |
+| `.specs/spec-generator-v4/spec-generator-v4.feature` | edit | FR-68 AC-SATISFACTION wave 2 — 29 ACs (FR-15..FR-28) mapped to their own verifying scenarios via @AC-N.N tags; 3 ACs flagged no-candidate. |
 
 - ACCEPTANCE_CRITERIA.md: add AC-81.8 (FR-81)
 
