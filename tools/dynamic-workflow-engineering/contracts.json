@@ -44,6 +44,28 @@
         "responseTokens": 200000,
         "wallClockMs": 3600000
       }
+    },
+    {
+      "consumerId": "acmap-wave",
+      "skillPath": ".claude/skills/dynamic-workflow-engineering/SKILL.md",
+      "operation": "workflow",
+      "subagentTypes": ["workflow-subagent"],
+      "owner": "dev-pomogator",
+      "version": 1,
+      "reviewAfter": "2027-01-01T00:00:00.000Z",
+      "outputSchema": "ac-mapping-result-v1",
+      "ceilings": {
+        "logicalCalls": 12,
+        "physicalAttempts": 14,
+        "concurrency": 3,
+        "discoveryRounds": 1,
+        "toolCalls": 400,
+        "findings": 120,
+        "inputBytes": 262144,
+        "outputBytes": 2097152,
+        "responseTokens": 400000,
+        "wallClockMs": 5400000
+      }
     }
   ]
 }
