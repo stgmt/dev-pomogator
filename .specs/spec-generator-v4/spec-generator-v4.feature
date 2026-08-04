@@ -515,7 +515,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     And the error message contains both hash values literally (`expected aaaa…aaaa`, `got bbbb…bbbb`)
     And the downloaded binary file is deleted before exit
 
-  @feature29
+  @feature29 @AC-29.1
   Scenario: SPECGEN004_55 FILE_CHANGES.md with 5 unique paths emits 5 File nodes + implements edges
     Given a spec at `tests/fixtures/specs/deep-multi-fr-refs-spec/` whose `FILE_CHANGES.md` contains 5 unique `Path` cells each citing at least one `FR-N` in the `Reason` column
     When the SpecGraph builder runs on that spec
@@ -523,7 +523,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     And one `implements` edge is emitted per `(FR, path)` pair derived from the `Reason` citations
     And every emitted `implements` edge has `source_section = 'FILE_CHANGES'`
 
-  @feature29
+  @feature29 @AC-29.3
   Scenario: SPECGEN004_56 Glob path in FILE_CHANGES.md is skipped with single warn-once log
     Given a spec whose `FILE_CHANGES.md` contains a `Path` cell with glob pattern `tools/spec-graph/*.ts`
     When the SpecGraph builder runs on that spec
@@ -531,7 +531,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     And the build emits exactly one warn-once log line literally containing «glob path skipped: tools/spec-graph/*.ts»
     And the builder exits without crash with non-empty graph
 
-  @feature29
+  @feature29 @AC-29.2
   Scenario: SPECGEN004_57 DESIGN.md App-код section produces implements edge with source_section=DESIGN
     Given `DESIGN.md` "App-код" section lists `src/foo.ts`
     And FR-3 body in `FR.md` cites `src/foo.ts`
@@ -556,14 +556,14 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     And the graph contains exactly one `implements` edge from `FR-1` to `File("src/foo.ts")`
     And the edge's `source_section` equals literally `'FILE_CHANGES'` (precedence over DESIGN)
 
-  @feature30
+  @feature30 @AC-30.1
   Scenario: SPECGEN004_60 get_trace on FR with 3 implements edges returns code_impl array of length 3
     Given a spec where `FR-5` has 3 `implements` edges to files `src/a.ts`, `src/b.ts`, `src/c.ts`
     When the MCP client invokes `get_trace({node_id: "FR-5"})`
     Then the response field `code_impl` is an array of length 3
     And each entry contains both `file_path` and `source_section` keys with non-empty string values
 
-  @feature30
+  @feature30 @AC-30.2
   Scenario: SPECGEN004_61 AC node inherits code_impl from parent FR
     Given a spec where `FR-5` has 2 `implements` edges to files `src/a.ts`, `src/b.ts`
     And `AC-5.1` has no direct `implements` edges
@@ -593,7 +593,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Then the response includes a top-level `warnings[]` array
     And `warnings[]` contains an entry with `code = "MALFORMED_IMPLEMENTS_EDGE"` and the offending edge's source location
 
-  @feature31
+  @feature31 @AC-31.1
   Scenario: SPECGEN004_65 Reqnroll NDJSON fixture roundtrips through detectRunner + parseNdjson + builder
     Given the fixture `tests/fixtures/reqnroll-sample/output.ndjson` exists alongside its `README.md`
     When `detectRunner` is invoked on the fixture file
@@ -632,7 +632,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     And the error message contains literally «fixture missing README.md: tests/fixtures/reqnroll-sample/»
     And the hint includes literally «document exact runner command + version»
 
-  @feature31
+  @feature31 @AC-31.2
   Scenario Outline: SPECGEN004_377 real-builder roundtrip -- buildGraph surfaces per-scenario lastResult and failingStep error for <runner> fixture
     Given the multilang roundtrip fixture directory `<fixture-dir>` with featureUri `<feature-uri>` frId `<fr-id>` frTitle `<fr-title>`
     When the multilang roundtrip materialises the fixture into a tmpdir and calls buildGraph with featureRoots override
@@ -647,21 +647,21 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
       | behave       | behave-sample   | features/checkout.feature                   | FR-2  | Checkout flow      | behave:FR-2     | SCEN-add-item-to-cart     | SCEN-apply-expired-coupon      |
       | Cucumber-JVM | jvm-sample      | src/test/resources/features/payment.feature | FR-3  | Payment processing | jvm:FR-3        | SCEN-charge-succeeds      | SCEN-insufficient-funds        |
 
-  @feature32
+  @feature32 @AC-32.2
   Scenario: SPECGEN004_70 spec-status derives DONE only when all mapped scenarios PASSED
     Given a task whose Done-When references scenarios that are all `PASSED` in the latest `.last-test-run.ndjson`
     When `spec-status -Format task-table` computes the task's status
     Then the rendered status is `DONE`
     And no `TASK_STATUS_UNVERIFIED` finding is emitted for that task
 
-  @feature32
+  @feature32 @AC-32.1
   Scenario: SPECGEN004_71 honesty gate flags hand-set DONE whose scenario is undefined
     Given a task hand-set to `Status: DONE` whose mapped scenario is `UNDEFINED` in the latest run
     When `spec-status` computes the verified status
     Then a finding `TASK_STATUS_UNVERIFIED` is emitted with the offending scenario id and bucket
     And the rendered status is capped at `IN_PROGRESS`, never `DONE`
 
-  @feature32
+  @feature32 @AC-32.3
   Scenario: SPECGEN004_72 get_spec_status (view coverage) returns per-scenario buckets matching the run
     Given a `.last-test-run.ndjson` with a mix of passed, pending, undefined and ambiguous scenarios
     When the MCP client invokes `get_spec_status(view: coverage)`
@@ -682,49 +682,49 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Then the node includes a `verified_status` field derived from coverage
     And it never reports `DONE` while a linked scenario is pending, undefined or ambiguous
 
-  @feature33
+  @feature33 @AC-33.1
   Scenario: SPECGEN004_75 orchestrator delegates to a worker instead of reimplementing it
     Given the orchestrator reaches the coverage step of the workflow
     When it computes per-scenario coverage
     Then it invokes the `get_spec_status` MCP tool (or the coverage worker skill)
     And the orchestrator skill body contains no re-implementation of the bucketing logic
 
-  @feature33
+  @feature33 @AC-33.2
   Scenario: SPECGEN004_76 friction during a run appends a pending ledger entry without touching spec or code
     Given the orchestrator detects a gap during a run
     When it records the observation
     Then a dated entry with `status = "pending"` is appended to `.specs/spec-generator-v4/SELF_IMPROVE.md`
     And no spec or code file is modified as a result of that entry
 
-  @feature33
+  @feature33 @AC-33.3
   Scenario: SPECGEN004_77 session start reminds the human of pending ledger entries
     Given `SELF_IMPROVE.md` contains at least one entry with `status = "pending"`
     When the orchestrator starts a session
     Then it surfaces a reminder containing the pending count
     And the reminder lists the top pending entries' observations
 
-  @feature33
+  @feature33 @AC-33.4
   Scenario: SPECGEN004_78 approved entry is auto-applied; pending is never auto-applied
     Given a ledger entry marked `status = "approved"` by the human
     When the orchestrator processes the ledger
     Then it may auto-apply the entry and sets its `status = "applied"` with an applied-at date
     And any entry still `status = "pending"` is left unapplied
 
-  @feature33
+  @feature33 @AC-33.5
   Scenario: SPECGEN004_79 drift guard fails when a capability is unreferenced by the feature-map
     Given a new MCP tool exists that the orchestrator feature-map does not reference
     When the drift guard runs
     Then it fails with a non-zero status
     And the message names the unreferenced capability
 
-  @feature34
+  @feature34 @AC-34.1
   Scenario: SPECGEN004_80 anchor-integrity reports same-file and cross-file broken anchors with the likely heading
     Given a heading slug changed, orphaning one same-file and one cross-file inbound anchor
     When the anchor-integrity check runs over the spec files
     Then both broken links are reported with their file, line and unresolved anchor
     And each one names the heading slug the link most likely meant
 
-  @feature34
+  @feature34 @AC-34.2
   Scenario: SPECGEN004_81 marksmanSlug matches the Marksman golden fixture and is the single shared source
     Given the captured Marksman golden slug fixture
     When marksmanSlug is computed for every id-shape in the fixture
@@ -738,48 +738,48 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Then it returns a system-reminder naming the broken link and its fix
     And the Stop-gate honours a skip-anchor-fix escape only when the reason is at least 8 characters
 
-  @feature34
+  @feature34 @AC-34.4
   Scenario: SPECGEN004_83 the deterministic fixer repairs an id-bearing link without an LLM and is idempotent
     Given a broken link whose text carries the heading id
     When the deterministic fixer runs over the spec
     Then it rewrites the anchor to the heading's current marksmanSlug without invoking any model
     And applying the fixer a second time changes nothing
 
-  @feature34
+  @feature34 @AC-34.5
   Scenario: SPECGEN004_84 an ambiguous link is dispatched to claude in the background, never guess-rewritten
     Given a broken link whose text identifies no heading id
     When the headless fallback runs with the claude binary available
     Then it dispatches a background claude process for that link without blocking
     And with the claude binary unavailable the link stays flagged and is never rewritten
 
-  @feature35
+  @feature35 @AC-35.1
   Scenario: SPECGEN004_85 a fake-positive green test cannot mark a task DONE
     Given a task whose linked scenario is GREEN but whose test body audits as FAKE-POSITIVE-RISK
     When the honesty derivation runs with the test-quality verdict
     Then verified_status is capped below DONE
     And a TASK_TEST_QUALITY finding names the task and the fake-positive verdict
 
-  @feature35
+  @feature35 @AC-35.2
   Scenario: SPECGEN004_86 a genuinely strong green test is not false-blocked
     Given a task whose linked scenario is GREEN and whose test body audits as STRONG
     When the honesty derivation runs with the test-quality verdict
     Then verified_status is DONE
 
-  @feature35
+  @feature35 @AC-35.3
   Scenario: SPECGEN004_87 the orchestrator feature-map carries an enforced test-quality stage
     Given the orchestrator feature-map
     When the drift guard evaluates it
     Then a test-quality stage exists between coverage and honesty-gate routing to strong-tests and spec-status
     And the drift guard fails when that stage is removed
 
-  @feature35
+  @feature35 @AC-35.4
   Scenario: SPECGEN004_88 the pre-DONE Stop-gate blocks a done claim on a weak test
     Given a session-touched task whose test audits as WEAK
     When the pre-DONE Stop-gate runs
     Then it blocks the done claim
     And it allows the claim only with an audited skip-test-quality escape logged to .claude/logs
 
-  @feature35
+  @feature35 @AC-35.5
   Scenario: SPECGEN004_89 a task marked DONE with zero linked scenarios is not silent
     Given a task marked DONE with no linked scenario at all
     When checkConformance runs
@@ -823,21 +823,21 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     When the upstream reverse trace runs
     Then only the unlinked story use-case and research-less decision are flagged with their kinds
 
-  @feature36
+  @feature36 @AC-36.1
   Scenario: SPECGEN004_90 two specs defining the same bare id produce two distinct nodes
     Given two specs that each define the bare id FR-2
     When the builder assembles the graph with composite keys
     Then the graph holds a node keyed slug-A:FR-2 and a node keyed slug-B:FR-2
     And neither node is collision-dropped
 
-  @feature36
+  @feature36 @AC-36.2
   Scenario: SPECGEN004_91 an intra-file anchor stays bare and file-local
     Given a markdown link FR.md#fr-2 inside one spec
     When the anchor index resolves it
     Then the anchor alias is the bare form fr-2 not the composite key
     And Marksman and anchor-fix are unaffected
 
-  @feature36
+  @feature36 @AC-36.3
   Scenario: SPECGEN004_92 get_trace returns scenarios via real edges
     Given a covers and tested-by edge built with composite keys on both ends
     And a same-spec featureN to FR-N tested-by edge
@@ -845,34 +845,34 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Then it returns those scenarios via real graph edges
     And it no longer relies on the tag-scan workaround
 
-  @feature36
+  @feature36 @AC-36.4
   Scenario: SPECGEN004_93 a colliding bare id returns the candidate list
     Given a bare id FR-2 that collides across specs
     When a tool is called with that bare id
     Then it returns the candidate list of slug:id entries
     And it does not return one arbitrary node
 
-  @feature36
+  @feature36 @AC-36.7
   Scenario: SPECGEN004_94 a qualified id resolves the exact node
     Given a graph keyed by composite ids
     When a tool is called with slug:FR-2 or with spec and node_id
     Then it resolves the exact node for that spec
 
-  @feature36
+  @feature36 @AC-36.5
   Scenario: SPECGEN004_95 the dogfood harness shows zero collisions after migration
     Given the migration phase has completed
     When the dogfood harness dumps the raw pre-map nodes
     Then there are zero id collisions
     And the FR-node count is about 470 not 47
 
-  @feature37
+  @feature37 @AC-37.1
   Scenario: SPECGEN004_96 a bare structural pass is not reportable as clean
     Given validate-spec returns zero structural errors but the smart analysis has open findings
     When spec health is reported
     Then the verdict is the smart analysis over the one graph
     And a bare validate-spec zero-errors is not reportable as valid or clean or done
 
-  @feature37
+  @feature37 @AC-37.2
   Scenario: SPECGEN004_97 a stale FILE_CHANGES path fails the verdict
     Given a FILE_CHANGES path that does not exist on disk
     When the authoritative verdict runs
@@ -885,7 +885,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Then it fails with a per-item gap list
     And within spec-generator-v4 these must be zero for a green verdict
 
-  @feature37
+  @feature37 @AC-37.3
   Scenario: SPECGEN004_99 the semantic check runs in the verdict path
     Given a claude binary is present
     When the authoritative verdict runs
@@ -898,40 +898,40 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Then it carries a SEMANTIC_SKIPPED note
     And it never reports no drift detected for unchecked content
 
-  @feature37
+  @feature37 @AC-37.4
   Scenario: SPECGEN004_101 a skill may not launder a structural pass
     Given a skill or agent reports spec health
     When it produces its verdict
     Then it surfaces the smart verdict and gap list
     And it does not state valid or clean or done off validate-spec alone
 
-  @feature38
+  @feature38 @AC-38.1
   Scenario: SPECGEN004_102 a docs-only spec reads SPEC_ONLY
     Given a spec with FR and AC docs but zero scenarios
     When get_spec_status runs for that spec
     Then the lifecycle is SPEC_ONLY and last_run is null
 
-  @feature38
+  @feature38 @AC-38.2
   Scenario: SPECGEN004_103 written-but-never-run tests read TESTS_NOT_RUN
     Given a spec whose scenarios carry no last result
     When get_spec_status runs for that spec
     Then the lifecycle is TESTS_NOT_RUN and last_run is null
 
-  @feature38
+  @feature38 @AC-38.3
   Scenario: SPECGEN004_104 a failing run reads RED with the linked summary
     Given a spec whose last run holds a failed scenario
     When get_spec_status runs for that spec
     Then the lifecycle is RED
     And the last_run summary counts the failure and identifies the run
 
-  @feature38
+  @feature38 @AC-38.4
   Scenario: SPECGEN004_105 an all-passed run reads GREEN with the linked summary
     Given a spec whose last run passed every scenario
     When get_spec_status runs for that spec
     Then the lifecycle is GREEN
     And the last_run summary counts the passes and identifies the run
 
-  @feature38
+  @feature38 @AC-38.5
   Scenario: SPECGEN004_106 undefined steps read PARTIAL never GREEN
     Given a spec whose last run has undefined scenarios and zero failures
     When get_spec_status runs for that spec
@@ -974,7 +974,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Then exactly one node carries that composite id and it is the first parsed
     And gherkin slices deduplicate through the same ingest semantics
 
-  @FR-39
+  @FR-39 @AC-39.1
   Scenario: SPECGEN004_111 agent file access to specs is denied in enforce mode and logged
     Given spec access enforcement is enabled after read and write sufficiency are proven
     When the agent calls a file tool on a path under the specs tree
@@ -988,14 +988,14 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Then the access is logged as a violation
     And the call is not blocked
 
-  @FR-39
+  @FR-39 @AC-39.2
   Scenario: SPECGEN004_113 read_spec_doc serves whole documents with an audit trail
     Given a spec document whose prose lives outside graph nodes
     When the agent calls read_spec_doc for it
     Then the full document content is returned
     And the read lands in the spec-access audit log
 
-  @FR-40
+  @FR-40 @AC-40.1
   Scenario: SPECGEN004_114 apply_spec_change rejects invalid writes before touching disk
     Given a spec change that breaks an anchor or a form contract
     When the agent applies it through the MCP mutation tool
@@ -1016,7 +1016,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     But the net-new malformed task is refused with the complete TASKS form contract and transaction recovery hint
     And USER_STORIES and DESIGN refusals expose their exact heading field and list contracts
 
-  @FR-40
+  @FR-40 @AC-40.2
   Scenario: SPECGEN004_115 a successful MCP write refreshes the graph for the next read
     Given an accepted spec change written through MCP
     When the agent reads the affected node afterwards
@@ -2579,14 +2579,14 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
 
   # ── corpus-health: corpusHealth (GREEN / collision / composite-key / untraced / stale) ──
 
-  @feature37
+  @feature37 @AC-37.6
   Scenario: SPECGEN004_361 corpusHealth returns GREEN on a fully-traced corpus with zero disease counts
     Given a corpus-health temp corpus root with no specs
     When corpusHealth is called on the temp corpus root
     Then the corpus-health report has verdict=GREEN and strictVerdict=GREEN
     And all corpus-health disease counts are zero
 
-  @feature36
+  @feature36 @AC-36.10
   Scenario: SPECGEN004_362 corpusHealth catches a planted duplicate bare id as a collision
     Given a corpus-health temp corpus root where two specs share the same bare FR id
     When corpusHealth is called on the temp corpus root
@@ -2607,7 +2607,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Then the corpus-health report has untracedAtoms.byClass.UNCOVERED_FR=1
     And the corpus-health report has verdict=GREEN and strictVerdict=RED
 
-  @feature37
+  @feature37 @AC-37.5
   Scenario: SPECGEN004_365 corpusHealth reports a stale FILE_CHANGES edit path as a hard red
     Given a corpus-health temp corpus root with a stale implements edge pointing to a missing file
     When corpusHealth is called on the temp corpus root
@@ -3558,14 +3558,14 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     When direct spec access, Git message data, and whole-tree Git mutations run with spec-access enforce on
     Then direct access and whole-tree mutations are structured denies without a runner failure reason while Git message data is allowed
 
-  @feature34 @FR-34
+  @feature34 @FR-34 @AC-34.3
   Scenario: SPECGEN004_563 parallel sessions attribute only their own staged and unstaged spec changes
     Given two sessions share a Git worktree with pre-existing dirty spec debt and independent anchor provenance baselines
     When each session touches a different dirty spec and one file has both staged and unstaged changes
     Then each anchor Stop-gate classifies only its own touched spec without mutating the Git index
     And a session without reliable baseline evidence reports provenance unknown and fails open
 
-  @feature39 @FR-39
+  @feature39 @FR-39 @AC-39.3
   Scenario: SPECGEN004_564 spec access enforcement defaults on and hook launchers resolve without plugin root
     Given the spec guard environment precedence and canonical command-hook launchers
     When enforcement signals and a launcher without CLAUDE_PLUGIN_ROOT are exercised
@@ -3652,13 +3652,13 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     When the canonical identity is formatted and parsed
     Then the exact namespace local ID and canonical ID are preserved
 
-  @FR-36 @feature36
+  @FR-36 @feature36 @AC-36.8
   Scenario: SPECGEN004_578 ambiguous local ID returns every canonical namespace candidate
     Given two namespaces that each define local ID FR-3
     When get_node receives the bare local ID FR-3
     Then the ambiguity response includes local ID and sorted canonical candidates
 
-  @FR-36 @feature36
+  @FR-36 @feature36 @AC-36.9
   Scenario: SPECGEN004_579 case-only identity variants collide inside one namespace
     Given two canonical IDs in one namespace that differ only by case
     Then the identity contract reports a CASE_NORMALIZED collision

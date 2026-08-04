@@ -89,3 +89,64 @@ Dynamic Workflow run `dwe-f2da09f7-fc69-4dde-9067-f2b3c5d01f6d` (admission allow
 - AC-20.2: no candidate scenario asserts the FR-20 summary renderer 50ms p95 latency
 - AC-26.2: no candidate scenario asserts the spec_llm_judge_deny: true per-spec opt-out (only the deny-list match path is covered)
 
+## Wave 3 — families FR-29..FR-40 (50 mapped, 1 no-candidate)
+
+Dynamic Workflow run `dwe-9d7f1e0f-a02a-41a7-a060-660d6e297c56` (admission allow + ROOT_VERIFIED).
+
+| AC | Scenario |
+|---|---|
+| AC-29.1 | specgen004_55 |
+| AC-29.2 | specgen004_57 |
+| AC-29.3 | specgen004_56 |
+| AC-30.1 | specgen004_60 |
+| AC-30.2 | specgen004_61 |
+| AC-31.1 | specgen004_65 |
+| AC-31.2 | specgen004_377 |
+| AC-32.1 | specgen004_71 |
+| AC-32.2 | specgen004_70 |
+| AC-32.3 | specgen004_72 |
+| AC-33.1 | specgen004_75 |
+| AC-33.2 | specgen004_76 |
+| AC-33.3 | specgen004_77 |
+| AC-33.4 | specgen004_78 |
+| AC-33.5 | specgen004_79 |
+| AC-34.1 | specgen004_80 |
+| AC-34.2 | specgen004_81 |
+| AC-34.3 | specgen004_563 |
+| AC-34.4 | specgen004_83 |
+| AC-34.5 | specgen004_84 |
+| AC-35.1 | specgen004_85 |
+| AC-35.2 | specgen004_86 |
+| AC-35.3 | specgen004_87 |
+| AC-35.4 | specgen004_88 |
+| AC-35.5 | specgen004_89 |
+| AC-36.1 | specgen004_90 |
+| AC-36.2 | specgen004_91 |
+| AC-36.3 | specgen004_92 |
+| AC-36.4 | specgen004_93 |
+| AC-36.5 | specgen004_95 |
+| AC-36.7 | specgen004_94 |
+| AC-36.8 | specgen004_578 |
+| AC-36.9 | specgen004_579 |
+| AC-36.10 | specgen004_362 |
+| AC-37.1 | specgen004_96 |
+| AC-37.2 | specgen004_97 |
+| AC-37.3 | specgen004_99 |
+| AC-37.4 | specgen004_101 |
+| AC-37.5 | specgen004_365 |
+| AC-37.6 | specgen004_361 |
+| AC-38.1 | specgen004_102 |
+| AC-38.2 | specgen004_103 |
+| AC-38.3 | specgen004_104 |
+| AC-38.4 | specgen004_105 |
+| AC-38.5 | specgen004_106 |
+| AC-39.1 | specgen004_111 |
+| AC-39.2 | specgen004_113 |
+| AC-39.3 | specgen004_564 |
+| AC-40.1 | specgen004_114 |
+| AC-40.2 | specgen004_115 |
+
+### No candidate (new scenario / clarify)
+
+- AC-36.6: no candidate scenario asserts the full clean-HEAD Docker suite stays green after a migration phase (a process/verification AC)
+
