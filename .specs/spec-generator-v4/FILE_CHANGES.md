@@ -735,6 +735,8 @@ This table is the explicit implementation inventory for the execution-aware task
 | `.specs/spec-generator-v4/CHANGELOG.md` | edit | 2026-08-04 readiness-debt closure + owner attestation record. |
 | `tools/spec-graph/readiness-inventory.ts` | edit | FR-68 AC_SATISFACTION producer fix — AC satisfaction computed from OWN tested-by scenarios + current outcomes (fresh PASSED or owner attestation); the graph never emits verifies edges targeting ACs, so the old verifies-only formula could structurally never satisfy the lane. |
 | `tools/spec-graph/coverage.ts` | edit | FR-68 — isLiveAttestedScenario shared helper consumed by verifiedStatus/task truth. |
+| `.specs/spec-generator-v4/spec-generator-v4.feature` | edit | FR-68 AC-SATISFACTION wave 1 — 33 ACs (FR-1..FR-14) mapped to their own verifying scenarios via @AC-N.N tags; 5 ACs flagged no-candidate. |
+| `audit-reports/ac-mapping-spec-generator-v4.md` | create | Audited mapping journal (AC → scenario → quoted justification step) for all waves. |
 
 - ACCEPTANCE_CRITERIA.md: add AC-81.8 (FR-81)
 
