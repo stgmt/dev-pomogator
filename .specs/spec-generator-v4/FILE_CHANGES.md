@@ -739,6 +739,7 @@ This table is the explicit implementation inventory for the execution-aware task
 | `audit-reports/ac-mapping-spec-generator-v4.md` | create | Audited mapping journal (AC → scenario → quoted justification step) for all waves. |
 | `.specs/spec-generator-v4/spec-generator-v4.feature` | edit | FR-68 AC-SATISFACTION wave 2 — 29 ACs (FR-15..FR-28) mapped to their own verifying scenarios via @AC-N.N tags; 3 ACs flagged no-candidate. |
 | `.specs/spec-generator-v4/spec-generator-v4.feature` | edit | FR-68 AC-SATISFACTION wave 3 — 50 ACs (FR-29..FR-40) mapped to their own verifying scenarios via @AC-N.N tags; 1 AC flagged no-candidate. |
+| `.specs/spec-generator-v4/spec-generator-v4.feature` | edit | FR-68 AC-SATISFACTION wave 4 — 18 ACs (FR-41..FR-52) mapped to their own verifying scenarios via @AC-N.N tags; 1 AC flagged no-candidate. |
 
 - ACCEPTANCE_CRITERIA.md: add AC-81.8 (FR-81)
 
