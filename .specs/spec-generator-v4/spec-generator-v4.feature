@@ -8,7 +8,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     And specs-workflow extension is enabled with MCP server registered
     And the project has at least one spec in `.specs/`
 
-  @feature1
+  @feature1 @AC-1.1
   Scenario: SPECGEN004_01 Phase 0 — cucumber-js generates canonical NDJSON output
     Given dev-pomogator package.json has `@cucumber/cucumber` and `@cucumber/messages` deps installed
     And `cucumber.json` config has `format: "message:.dev-pomogator/.last-test-run.ndjson"`
@@ -18,7 +18,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     And the file is parseable via `@cucumber/messages` package
     And the file contains `gherkinDocument`, `pickle`, `testCase`, `testCaseStarted`, `testStepFinished`, `testCaseFinished` envelopes
 
-  @feature1
+  @feature1 @AC-1.2
   Scenario: SPECGEN004_02 Phase 0 — per-spec NDJSON split after test run
     Given the master `.dev-pomogator/.last-test-run.ndjson` exists after a test run
     And the file contains pickles from `.specs/auth/*.feature` and `.specs/billing/*.feature`
@@ -27,14 +27,14 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     And `.specs/billing/.test-results.ndjson` is created containing only billing-related pickles
     And master NDJSON is preserved
 
-  @feature2
+  @feature2 @AC-2.1
   Scenario: SPECGEN004_03 SpecGraph cold start under 2 seconds for 30 specs
     Given the project contains 30 spec directories with average 10 MD files each + 3 .feature files
     When the MCP server starts cold (no SQLite cache)
     Then the SpecGraph build completes in ≤2 seconds
     And `get_trace("FR-001")` returns non-empty result immediately after
 
-  @feature2
+  @feature2 @AC-2.2
   Scenario: SPECGEN004_04 Incremental reindex under 100ms on single-file change
     Given the MCP server is running with SpecGraph populated for 30 specs
     When a single spec file `.specs/auth/FR.md` is modified
@@ -42,7 +42,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Then the affected subgraph is updated in ≤100ms p95
     And other specs' nodes are not re-parsed
 
-  @feature3
+  @feature3 @AC-3.1 @AC-3.3
   Scenario: SPECGEN004_05 Custom MD parser registers dual-anchor for new heading
     Given a spec file `.specs/auth/FR.md` contains heading `### FR-001: Login`
     When the MD parser indexes the file
@@ -51,14 +51,14 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     And wiki-link `[[FR-001]]` resolves to the heading
     And wiki-link `[[fr-001-login]]` resolves to the heading
 
-  @feature3
+  @feature3 @AC-3.2
   Scenario: SPECGEN004_06 Custom MD parser registers triple-anchor for legacy v3 heading
     Given a legacy v3 spec file `.specs/legacy/FR.md` contains `### Requirement: FR-001 Login`
     When the MD parser indexes the file with backward-compat mode
     Then anchors `FR-001`, `fr-001-login`, `requirement-fr-001-login` all resolve to the same heading
     And no migration is required for legacy spec to function
 
-  @feature4
+  @feature4 @AC-4.1
   Scenario: SPECGEN004_07 get_trace returns structured tree with natural-language explanation
     Given FR-001 exists in `.specs/auth/FR.md` with 2 ACs and 3 linked scenarios
     And SCEN-login-ok has lastResult PASSED, SCEN-login-locked has lastResult FAILED
@@ -67,13 +67,13 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     And `explanation_for_agent` field contains FR title, counts, latest test status, failing step location
     And `explanation_for_agent` length is ≤500 characters
 
-  @feature4
+  @feature4 @AC-4.2
   Scenario: SPECGEN004_08 get_trace includes failing scenario error in explanation
     Given SCEN-login-locked has lastResult FAILED with NullReferenceException at AuthService.cs:88
     When agent calls `get_trace("FR-001")`
     Then `explanation_for_agent` mentions "SCEN-login-locked FAILED — NullReferenceException at AuthService.cs:88"
 
-  @feature5
+  @feature5 @AC-5.1
   Scenario: SPECGEN004_09 PreToolUse hook denies Write with duplicate FR-N
     Given `.specs/auth/FR.md` already contains heading `### FR-001: Login`
     When the agent attempts Write to add second `### FR-001: ...` heading
@@ -82,7 +82,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     And the reason lists both heading locations
     And the Write does not occur
 
-  @feature5
+  @feature5 @AC-5.2
   Scenario: SPECGEN004_10 PreToolUse hook denies Write with malformed YAML frontmatter
     Given the agent attempts Write to `.specs/auth/FR.md` with frontmatter missing closing `---`
     When the hook runs
@@ -90,7 +90,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     And `permissionDecisionReason` contains code `MALFORMED_FRONTMATTER`
     And the reason includes the offending line number
 
-  @feature5
+  @feature5 @AC-5.3
   Scenario: SPECGEN004_11 PreToolUse hook denies Write with malformed Gherkin
     Given the agent attempts Write to `tests/Auth.feature` with invalid Gherkin syntax
     When the hook runs and @cucumber/gherkin parser throws
@@ -98,14 +98,14 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     And `permissionDecisionReason` contains code `MALFORMED_GHERKIN`
     And the reason includes the parser error message
 
-  @feature6
+  @feature6 @AC-6.1
   Scenario: SPECGEN004_12 PostToolUse hook pushes conformance findings within 3s window
     Given the agent edits `.specs/auth/FR.md` and a conformance check produces 1 finding
     When PostToolUse hook fires
     Then within 3 seconds the agent context receives a `<system-reminder>` message
     And the message contains the finding code, location, and suggested actions
 
-  @feature6 @feature28
+  @feature6 @feature28 @AC-6.2
   Scenario: SPECGEN004_13 PostToolUse hook aggregates and deduplicates findings in bulk edit
     Given the agent makes 5 sequential Edits to `.specs/auth/*.md` within 2 seconds
     When PostToolUse hook fires for each
@@ -114,7 +114,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     And only one aggregated `<system-reminder>` is pushed after the window closes
     And the push latency from the first edit is at most 3000 ms plus 100 ms tolerance
 
-  @feature6
+  @feature6 @AC-6.3
   Scenario: SPECGEN004_14 PostToolUse push silenced when frontmatter flag set
     Given a spec file frontmatter contains `_no_push_check: true`
     When the agent edits that file
@@ -122,7 +122,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Then no `<system-reminder>` is pushed for that file
     And the findings are still logged to `.dev-pomogator/.spec-check-log/`
 
-  @feature7
+  @feature7 @AC-7.3
   Scenario: SPECGEN004_15 Marksman native LSP registration is declared by the canonical plugin
     Given the canonical plugin manifest declares the Marksman native LSP server
     When the Marksman native LSP registration is inspected
@@ -138,7 +138,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     And there is no custom JS markdown-LSP fallback in the MCP tool registry
     And spec-domain graph queries still work through the MCP `find_refs` tool
 
-  @feature8
+  @feature8 @AC-8.1
   Scenario: SPECGEN004_17 LLM semantic drift check detects FR↔Scenario mismatch (opt-in Phase 3)
     Given `.spec-config.json::conformance_checks.semantic_drift.enabled = true`
     And FR-001 text says "redirect to /login page on expired session"
@@ -148,7 +148,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     And the finding explanation mentions the mismatch (FR mentions UI redirect, scenario tests API)
     And a Haiku subagent was spawned via `claude -p` subprocess
 
-  @feature8
+  @feature8 @AC-8.2
   Scenario: SPECGEN004_18 LLM semantic check is disabled by default
     Given `.spec-config.json::conformance_checks.semantic_drift.enabled = false` (default)
     When PostToolUse fires after spec edit
@@ -156,7 +156,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     And no `claude` subprocess is spawned
     And no LLM tokens are consumed
 
-  @feature9
+  @feature9 @AC-9.1
   Scenario: SPECGEN004_19 Multi-language — Reqnroll C# NDJSON ingested correctly
     Given a C# project with Reqnroll v3+ installed and dev-pomogator v4
     When `dotnet test` completes and emits `reqnroll_report.ndjson`
@@ -164,14 +164,14 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     And SpecGraph contains TestCase nodes with `step_bindings` pointing to `.cs:line`
     And `get_trace("FR-001")` returns code_impl references from C# source files
 
-  @feature9
+  @feature9 @AC-9.2
   Scenario: SPECGEN004_20 Multi-language — behave Python NDJSON ingested correctly
     Given a Python project with `behave` configured to emit Cucumber Messages format
     When BDD tests run and emit NDJSON
     Then v4 NDJSON ingester parses the file successfully
     And SpecGraph contains TestCase results with status PASSED/FAILED per scenario
 
-  @feature10
+  @feature10 @AC-10.1
   Scenario: SPECGEN004_21 SQLite cross-session: session B reuses session A's MCP server (Phase 4)
     Given `.spec-config.json::storage.sqlite_enabled = true`
     And session A starts MCP server and writes `.mcp-lock.json` with pid=A, env=host
@@ -180,7 +180,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     And session B connects to session A's MCP server (no second process started)
     And both sessions see consistent SpecGraph state
 
-  @feature10
+  @feature10 @AC-10.2
   Scenario: SPECGEN004_22 SQLite cross-session: edits from session A visible in session B immediately
     Given session A and session B share an MCP server with SQLite persistence
     When session A makes a spec edit at `.specs/auth/FR.md`
@@ -188,7 +188,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Then session B sees the latest state (post-edit)
     And SQLite single-writer (`BEGIN IMMEDIATE`) ensures no race condition
 
-  @feature10
+  @feature10 @AC-10.3
   Scenario: SPECGEN004_23 SQLite corruption: auto-fallback to in-memory rebuild
     Given `.dev-pomogator/.spec-index.sqlite` file is corrupt (PRAGMA integrity_check fails)
     When the MCP server starts and opens the SQLite index
@@ -197,7 +197,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     And MCP server falls back to in-memory rebuild
     And a warning is logged to `.dev-pomogator/logs/sqlite.log`
 
-  @feature11
+  @feature11 @AC-11.1
   Scenario: SPECGEN004_24 Migration helper — suggest-only mode prints diff without modifying
     Given an existing v3 project with `.specs/auth/FR.md` containing `### Requirement: FR-001 Login`
     When the user runs `dev-pomogator migrate-v3-to-v4 --suggest-only`
@@ -205,7 +205,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     And the file is NOT modified
     And `.progress.json::version` is NOT bumped
 
-  @feature11
+  @feature11 @AC-11.2
   Scenario: SPECGEN004_25 Migration helper — interactive mode with 30s default-skip timeout
     Given the user runs `dev-pomogator migrate-v3-to-v4` (no flag)
     And the migration encounters a spec file with ambiguous structure
@@ -224,7 +224,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     And the already-tagged scenario gets no suggestion
     And no tag is written into the `.feature` (advisory only)
 
-  @feature12
+  @feature12 @AC-12.1
   Scenario: SPECGEN004_26 architecture-research-workflow skill produces 7 stage outputs (Phase 6)
     Given the maintainer invokes `Skill("architecture-research-workflow")` with a feature description
     When the skill completes all 7 stages
@@ -232,7 +232,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     And files are committable (NOT in .gitignore)
     And final RESEARCH.md contains one Appendix per stage
 
-  @feature12
+  @feature12 @AC-12.2
   Scenario: SPECGEN004_27 architecture-research-workflow skill suggests rewind on new constraint
     Given Stage 4 has generated 4 architecture variants
     When the user reveals a new constraint in Stage 5 decision Q&A loop
@@ -240,7 +240,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     And an audit-trail entry is recorded in `5-decisions-locked.md` as `[REWIND] Stage 5 → Stage 4: <reason>`
     And a 3-rewind hard limit prevents infinite loops
 
-  @feature12
+  @feature12 @AC-12.3
   Scenario: SPECGEN004_28 create-spec uses regular research-workflow for small feature (complexity heuristic)
     Given a small feature description (single file change, no architecture decisions)
     When `create-spec` runs complexity heuristic detection
@@ -264,7 +264,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     And small prompts route to research-workflow through the real heuristic
     And the research-done recursion guard is documented before either research skill is invoked
 
-  @feature13
+  @feature13 @AC-13.1
   Scenario: SPECGEN004_29 Orphan scenario tag returns warn-severity finding by default
     Given a `.feature` file contains `@FR-999\nScenario: Some test` and FR-999 doesn't exist
     When `conformance_check` runs
@@ -273,7 +273,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     And `suggestions[]` lists existing similar IDs (top-3 by Levenshtein distance)
     And the Write of the .feature file is NOT blocked
 
-  @feature13
+  @feature13 @AC-13.2
   Scenario: SPECGEN004_30 Orphan policy escalation to block via config
     Given `.spec-config.json::orphan_policy.scenario_tag_orphan = "block"`
     And a `.feature` file contains `@FR-999` Scenario for non-existent FR
@@ -282,14 +282,14 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     And PostToolUse push or PreToolUse hook (depending on context) blocks the operation
     And the user is prompted to resolve before commit
 
-  @feature14
+  @feature14 @AC-14.1
   Scenario: SPECGEN004_31 Devcontainer — MCP returns relative paths in tool responses
     Given dev-pomogator v4 runs inside a VS Code devcontainer with bind-mounted workspace
     When agent calls `get_trace("FR-001")` from inside the container
     Then all file paths in response are relative to repo root
     And no absolute paths (`/workspace/...` or `D:\...`) appear in any field
 
-  @feature14
+  @feature14 @AC-14.2
   Scenario: SPECGEN004_32 Devcontainer — chokidar auto-polling fallback when events unreliable
     Given the workspace is bind-mounted from Docker Desktop on Windows
     When the MCP server starts and runs touch test
@@ -298,7 +298,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     And the decision is logged to `.dev-pomogator/logs/watcher.log`
     And subsequent file changes are detected via polling
 
-  @feature14
+  @feature14 @AC-14.3
   Scenario: SPECGEN004_33 Multi-env — second MCP start in different env is denied
     Given session A is running MCP server with `env: "host"` in `.mcp-lock.json`
     When session B tries to start MCP from inside a container on the same worktree
