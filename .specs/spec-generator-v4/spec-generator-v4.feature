@@ -105,7 +105,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Then within 3 seconds the agent context receives a `<system-reminder>` message
     And the message contains the finding code, location, and suggested actions
 
-  @feature6 @feature28 @AC-6.2
+  @feature6 @feature28 @AC-6.2 @AC-28.1
   Scenario: SPECGEN004_13 PostToolUse hook aggregates and deduplicates findings in bulk edit
     Given the agent makes 5 sequential Edits to `.specs/auth/*.md` within 2 seconds
     When PostToolUse hook fires for each
@@ -306,7 +306,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     And session B exits with clear message "MCP already running in env host (pid X), restart Claude Code in same env"
     And no second MCP process is spawned
 
-  @feature15
+  @feature15 @AC-15.1
   Scenario: SPECGEN004_34 Side-channel log appends JSONL entry on each finding (Phase 4)
     Given a conformance_check produces a finding `SCENARIO_TAG_ORPHAN` for SCEN-x
     When PostToolUse hook completes
@@ -314,7 +314,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     And the line contains `timestamp`, `finding_code`, `severity`, `location`, `message`, `spec_slug`
     And the JSONL line is valid JSON parseable line-by-line
 
-  @feature15
+  @feature15 @AC-15.2
   Scenario: SPECGEN004_35 Side-channel log rotates when size exceeds 10MB
     Given the current `.spec-check-log/<YYYY-MM-DD>.jsonl` file size is 9.5MB
     When the next append would exceed 10MB
@@ -322,7 +322,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     And a new file `.spec-check-log/<YYYY-MM-DD>-2.jsonl` starts for subsequent appends
     And previous files are not modified
 
-  @feature16
+  @feature16 @AC-16.1
   Scenario: SPECGEN004_36 Codespaces — MCP server auto-starts via postStartCommand
     Given a Codespaces environment with dev-pomogator v4 installed
     And `.devcontainer/devcontainer.json` contains `postStartCommand` for MCP startup
@@ -330,7 +330,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Then the MCP server is launched automatically
     And `.mcp-lock.json` is written with `env: "codespaces:<machine-id>"`
 
-  @feature16
+  @feature16 @AC-16.2
   Scenario: SPECGEN004_37 Codespaces — MCP server resumes after hibernation within 2s
     Given a Codespaces environment is hibernated after 30 minutes of inactivity
     When the user resumes the codespace
@@ -338,7 +338,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     And the SpecGraph is rebuilt from persistent `/workspaces/` files in ≤2 seconds
     And the lock file `env` tag remains `codespaces:<machine-id>`
 
-  @feature17
+  @feature17 @AC-17.1 @AC-17.5
   Scenario: SPECGEN004_38 Cross-spec reconcile light mode detects missing file
     Given a spec fixture `tests/fixtures/cross-spec-corpus/spec-c/` declares MCP tool `validate_user`
     And no file matching `src/mcp/validate_user*.ts` exists on disk
@@ -347,7 +347,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     And `findings[]` contains an entry with `code: "impl-drift/missing-file"`, `severity: "WARNING"`, `class: "uncovered"`
     And the finding includes `referenced_in`, `expected_path`, and `suggested_fix` fields
 
-  @feature17
+  @feature17 @AC-17.6
   Scenario: SPECGEN004_39 Cross-spec reconcile full mode detects runtime identifier drift
     Given fixture spec-a declares `feedback_key = "session_token"`
     And fixture spec-b declares the same concept as `sessionToken`
@@ -355,7 +355,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Then `findings[]` contains an entry with `code: "cross-spec/runtime-identifier-drift"`, `severity: "CRITICAL"`
     And the finding's `spec_a` and `spec_b` fields name the two fixture specs
 
-  @feature17
+  @feature17 @AC-17.2
   Scenario: SPECGEN004_40 CRITICAL hard-conflict subset blocks STOP via CAPS prompt
     Given a lightweight reconcile run produced one CRITICAL finding from the hard-conflict subset
     When the skill reaches step 5 of execution
@@ -363,21 +363,21 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     And the options list includes literally «Abort STOP»
     And selecting «Abort STOP» causes the skill to exit with non-zero status
 
-  @feature17
+  @feature17 @AC-17.3
   Scenario: SPECGEN004_41 Acknowledge & override writes JSONL audit entry
     Given a CRITICAL prompt is awaiting user choice
     When the user selects «Acknowledge & override» with reason text "covered by parametrized test runner"
     Then the YAML finding gets `acknowledged_by: user`, `override_reason: "covered by parametrized test runner"`, `override_timestamp: <iso>`
     And a new line is appended to `.claude/logs/cross-spec-overrides.jsonl` with the same reason and a session_id
 
-  @feature17
+  @feature17 @AC-17.8
   Scenario: SPECGEN004_42 Dry-run mode skips file writes
     Given a reconcile invocation with `--dry-run` flag
     When the skill completes its checks
     Then a summary block and the first 10 findings are printed to stdout
     And neither `consistency-report.yaml` nor `consistency-report.sarif` exists on disk afterward
 
-  @feature17
+  @feature17 @AC-17.7
   Scenario: SPECGEN004_43 SARIF secondary output written when --sarif flag passed
     Given a reconcile invocation with `--sarif` flag against the fixture corpus
     When the skill completes
@@ -410,35 +410,35 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     When cross-spec reconcile runs over the corpus and writes the consistency reports
     Then a consistency-report YAML is written carrying the planted finding codes from the corpus
 
-  @feature18
+  @feature18 @AC-18.2
   Scenario: SPECGEN004_44 Resolve emits 5-field explanation before any edit
     Given `.specs/{slug}/consistency-report.yaml` contains an `impl-drift/missing-file` finding
     When the user runs `/cross-spec-resolve`
     Then the skill emits an explanation block containing code+severity, files+lines, plain-language change, WHY-from-finding rationale, and option list
     And NO Edit or Write tool is invoked until the user confirms «Apply» via AskUserQuestion
 
-  @feature18
+  @feature18 @AC-18.5
   Scenario: SPECGEN004_45 Resolve foreign-spec edit fires additional confirm
     Given a finding's target file path begins with `.specs/spec-other/` while current resolve slug is `spec-current`
     When the resolve skill reaches the per-finding handler
     Then the explanation block includes a literal banner «⚠️ This edits foreign spec: .specs/spec-other/README.md»
     And the skill requires a second AskUserQuestion confirm distinct from the per-finding confirm
 
-  @feature18
+  @feature18 @AC-18.3
   Scenario: SPECGEN004_46 Resolve presents Path A/B/C for architectural decision
     Given a finding with `code: "impl-drift/architectural-decision-vs-reality"` and populated `path_alternatives[]`
     When resolve processes the finding
     Then AskUserQuestion is invoked with at least two Path options
     And each option's `description` field contains pros, cons, and impacted_files prose
 
-  @feature18
+  @feature18 @AC-18.1
   Scenario: SPECGEN004_47 Resolve missing report exits with hint
     Given `.specs/{slug}/consistency-report.yaml` does not exist
     When the user runs `/cross-spec-resolve`
     Then the skill exits with non-zero status
     And stdout includes literally the hint «Run /cross-spec-reconcile first»
 
-  @feature18
+  @feature18 @AC-18.4
   Scenario: SPECGEN004_48 Batch re-check updates resolution_status
     Given the resolve skill has processed all confirmed findings via Edit/Write
     When the skill reaches step 7 of execution
@@ -466,7 +466,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     When resolveCli is called with an undefined slug
     Then the exit code is 2
 
-  @feature19
+  @feature19 @AC-19.1
   Scenario: SPECGEN004_49 Hard tier startup crash exits 1 and blocks Write
     Given `spec-conformance-guard` config file is malformed YAML
     When the agent invokes Write/Edit on any `.specs/**/*.md`
@@ -474,7 +474,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     And stderr contains a non-empty actionable error message
     And the PreToolUse decision is deny
 
-  @feature19
+  @feature19 @AC-19.2
   Scenario: SPECGEN004_50 Hard tier file-parse crash logs to JSONL and allows Write
     Given `spec-conformance-guard` parses a `.feature` file that triggers a Gherkin parser exception
     When the agent invokes Write/Edit on that file
@@ -482,7 +482,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     And the latest `.dev-pomogator/.spec-check-log/<YYYY-MM-DD>.jsonl` gains a new JSON line with `{timestamp, hook_id, file_path, error_message, error_stack}`
     And the PreToolUse decision is allow
 
-  @feature22
+  @feature22 @AC-22.1
   Scenario: SPECGEN004_51 Version gate skips hard guard on legacy spec
     Given a spec at `.specs/legacy-feature/` whose `.progress.json::version` is `2`
     When the agent invokes Write on `.specs/legacy-feature/FR.md` that would otherwise violate DUPLICATE_DEFINITION
@@ -490,7 +490,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     And spec-check-log appends a JSONL entry `{kind: "ALLOW_AFTER_MIGRATION", reason: "spec_version", target: ".specs/legacy-feature/FR.md", observed_version: 2}`
     And the agent's Write proceeds
 
-  @feature25
+  @feature25 @AC-25.1 @AC-25.2
   Scenario: SPECGEN004_52 canonical plugin ships a complete static hooks.json (additive, nothing dropped)
     Given dev-pomogator v4 is distributed as a canonical plugin that ships its own static `.claude-plugin/hooks.json`
     When the plugin hook manifest is loaded
@@ -498,7 +498,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     And it retains the pre-existing protective hook entries (the static manifest is the union, never a replacement)
     And `length(hooks.PreToolUse) >= 1` and `length(hooks.PostToolUse) >= 1`
 
-  @feature26
+  @feature26 @AC-26.1
   Scenario: SPECGEN004_53 LLM-as-judge skips deny-list match with explicit finding
     Given a spec FR body containing the substring `API_KEY=sk_live_abcdef1234567890`
     When `conformance_check(scope, semantic: true)` is invoked for that FR
@@ -506,7 +506,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     And spec-check-log gains a JSON entry with `finding_code: "SEMANTIC_CHECK_SKIPPED_DENY_LIST"` and severity `INFO`
     And the caller does NOT receive a `NO_DRIFT_DETECTED` result for that FR
 
-  @feature27
+  @feature27 @AC-27.1
   Scenario: SPECGEN004_54 Marksman download sha mismatch aborts install
     Given `package.json::marksmanHashes` pins sha256 `aaaa…aaaa` for the current platform/arch/version triple
     And the actual downloaded binary's sha256 is `bbbb…bbbb`
@@ -938,21 +938,21 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Then the lifecycle is PARTIAL
     And the response carries counts gaps and an agent hint
 
-  @feature21
+  @feature21 @AC-21.1
   Scenario: SPECGEN004_107 task-table CLI output byte-matches the frozen contract baseline
     Given the frozen task-table input spec fixture
     When spec-status runs with the task-table format on it
     Then the output byte-matches the committed task-table baseline
     And a second run produces identical bytes without any MCP server
 
-  @feature24
+  @feature24 @AC-24.1
   Scenario: SPECGEN004_108 meta-guard denies removing a protected registration from a v4 manifest
     Given a canonical hooks manifest carrying the spec-conformance-guard registration
     When an agent write removes that registration
     Then the meta-guard denies the write naming spec-conformance-guard
     And removing the meta-guard own registration is denied too
 
-  @feature20
+  @feature20 @AC-20.1
   Scenario: SPECGEN004_109 conformance summary is threshold-only and acknowledged via spec-status
     Given an isolated conformance state with zero unresolved events
     Then the prompt-time summary emits nothing
@@ -1079,7 +1079,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     When each migrated skill's frontmatter is inspected
     Then every one of them declares dev-pomogator-specs door tools in allowed-tools
 
-  @FR-23
+  @FR-23 @AC-23.1
   Scenario: SPECGEN004_122 the two-tier log inventory writes each tier to its own sink
     Given a soft-tier event and a hard-tier finding
     When each is logged through its canonical writer
@@ -2412,7 +2412,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
 
   # FR-17 full-mode (LLM-judge wrapper) — runFullMode with injectable spawn
 
-  @feature17
+  @feature17 @AC-17.4
   Scenario: SPECGEN004_339 runFullMode fires cross-spec/semantic-drift when spawn returns DRIFT
     Given two specs each have a FR-1 with long matching prose in the full-mode temp repo
     When runFullMode is called with a spawn that returns DRIFT

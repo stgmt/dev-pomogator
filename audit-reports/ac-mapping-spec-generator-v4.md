@@ -47,3 +47,45 @@ Wave 1 covers families FR-1..FR-14 (spec-generator-v4). Dynamic Workflow run `dw
 - AC-7.5: no candidate scenario empirically confirms the reference form via Marksman textDocument/definition
 
 Applied 2026-08-04. Wave completeness: 33 mapped, 5 no-candidate (new scenarios in wave 6 or clarify).
+## Wave 2 — families FR-15..FR-28 (29 mapped, 3 no-candidate)
+
+Dynamic Workflow run `dwe-f2da09f7-fc69-4dde-9067-f2b3c5d01f6d` (admission allow + ROOT_VERIFIED).
+
+| AC | Scenario | Justification (quoted step) |
+|---|---|---|
+| AC-15.1 | specgen004_34 | Then a JSONL line is appended to .spec-check-log/<YYYY-MM-DD>.jsonl / And the line contains timestamp, finding_code, severity, location, message, spec_slug |
+| AC-15.2 | specgen004_35 | Then the file is rotated to .spec-check-log/<YYYY-MM-DD>-1.jsonl / And previous files are not modified |
+| AC-16.1 | specgen004_36 | Then the MCP server is launched automatically / And .mcp-lock.json is written with env: "codespaces:<machine-id>" |
+| AC-16.2 | specgen004_37 | Then the MCP server auto-restarts via postStartCommand / And the SpecGraph is rebuilt from persistent /workspaces/ files in ≤2 seconds |
+| AC-17.1 | specgen004_38 | Then .specs/spec-c/consistency-report.yaml is written within 5 seconds / And findings[] contains an entry with code "impl-drift/missing-file" |
+| AC-17.2 | specgen004_40 | Then AskUserQuestion is invoked with header "⚠️ CRIT" / And the options list includes literally «Abort STOP» / And selecting «Abort STOP» causes the skill to exit with non-zero status |
+| AC-17.3 | specgen004_41 | Then the YAML finding gets acknowledged_by: user, override_reason, override_timestamp / And a new line is appended to cross-spec-overrides.jsonl |
+| AC-17.4 | specgen004_339 | When runFullMode is called with a spawn that returns DRIFT / Then the full-mode result shows subprocess_calls=1 and drift_detected=1 / And a cross-spec/semantic-drift finding appears ... severity CRITICAL |
+| AC-17.5 | specgen004_38 | And the finding includes referenced_in, expected_path, and suggested_fix fields |
+| AC-17.6 | specgen004_39 | Then findings[] contains an entry with code "cross-spec/runtime-identifier-drift", severity "CRITICAL" |
+| AC-17.7 | specgen004_43 | Then .specs/{slug}/consistency-report.sarif exists alongside consistency-report.yaml / And the SARIF runs[0].tool.driver.rules[].id field matches finding codes |
+| AC-17.8 | specgen004_42 | Then a summary block and the first 10 findings are printed to stdout / And neither consistency-report.yaml nor .sarif exists on disk afterward |
+| AC-18.1 | specgen004_47 | Then the skill exits with non-zero status / And stdout includes literally the hint «Run /cross-spec-reconcile first» |
+| AC-18.2 | specgen004_44 | Then the skill emits an explanation block containing code+severity, files+lines, plain-language change, WHY-from-finding rationale, and option list |
+| AC-18.3 | specgen004_46 | Then AskUserQuestion is invoked with at least two Path options / And each option description contains pros, cons, and impacted_files prose |
+| AC-18.4 | specgen004_48 | Then Skill("cross-spec-reconcile", mode: "full") is invoked exactly once / And each original finding resolution_status is updated to resolved/still_present/transformed |
+| AC-18.5 | specgen004_45 | Then the explanation block includes a literal banner «⚠️ This edits foreign spec: ...» / And the skill requires a second AskUserQuestion confirm |
+| AC-19.1 | specgen004_49 | Then the guard exits with status 1 / And stderr contains a non-empty actionable error message / And the PreToolUse decision is deny |
+| AC-19.2 | specgen004_50 | Then the guard exits with status 0 / And the latest .spec-check-log JSONL gains a new JSON line / And the PreToolUse decision is allow |
+| AC-20.1 | specgen004_109 | Then the prompt-time summary is a single unresolved-DENY line / When the spec-status ack stamps the state file / Then the prompt-time summary is silent until a newer deny arrives |
+| AC-21.1 | specgen004_107 | Then the output byte-matches the committed task-table baseline / And a second run produces identical bytes without any MCP server |
+| AC-22.1 | specgen004_51 | Then spec-conformance-guard exits with status 0 / And spec-check-log appends a JSONL entry {kind: "ALLOW_AFTER_MIGRATION", reason: "spec_version", observed_version: 2} |
+| AC-23.1 | specgen004_122 | Then the soft event lands in the global form-guards log / And the hard finding lands in the repo spec-check-log JSONL created on first write |
+| AC-24.1 | specgen004_108 | Then the meta-guard denies the write naming spec-conformance-guard / And removing the meta-guard own registration is denied too |
+| AC-25.1 | specgen004_52 | Then .claude-plugin/hooks.json declares the v4 spec hooks spec-conformance-guard, spec-conformance-push and bash-post-test/ingest |
+| AC-25.2 | specgen004_52 | And length(hooks.PreToolUse) >= 1 and length(hooks.PostToolUse) >= 1 / And it retains the pre-existing protective hook entries |
+| AC-26.1 | specgen004_53 | Then no claude -p subprocess is spawned / And spec-check-log gains a JSON entry with finding_code SEMANTIC_CHECK_SKIPPED_DENY_LIST |
+| AC-27.1 | specgen004_54 | Then install exits with non-zero status / And the error message contains both hash values literally |
+| AC-28.1 | specgen004_13 | Then findings are batched in the 3-second throttle window / And only one aggregated <system-reminder> is pushed after the window closes / And the push latency is at most 3000 ms plus 100 ms |
+
+### No candidate (new scenario / clarify)
+
+- AC-19.3: no candidate scenario asserts the soft-tier form-guard exception path (PARSER_CRASH → form-guards.log)
+- AC-20.2: no candidate scenario asserts the FR-20 summary renderer 50ms p95 latency
+- AC-26.2: no candidate scenario asserts the spec_llm_judge_deny: true per-spec opt-out (only the deny-list match path is covered)
+
