@@ -150,3 +150,32 @@ Dynamic Workflow run `dwe-9d7f1e0f-a02a-41a7-a060-660d6e297c56` (admission allow
 
 - AC-36.6: no candidate scenario asserts the full clean-HEAD Docker suite stays green after a migration phase (a process/verification AC)
 
+## Wave 4 — families FR-41..FR-52 (18 mapped, 1 no-candidate)
+
+Dynamic Workflow run `dwe-c3bed036-bce4-4ecc-a208-673d664eaa9f` (admission allow + ROOT_VERIFIED).
+
+| AC | Scenario |
+|---|---|
+| AC-41.1 | specgen004_117 |
+| AC-41.2 | specgen004_119 |
+| AC-42.1 | specgen004_120 |
+| AC-42.2 | specgen004_121 |
+| AC-43.1 | specgen004_156 |
+| AC-44.1 | specgen004_141 |
+| AC-45.1 | specgen004_157 |
+| AC-46.1 | specgen004_450 |
+| AC-47.1 | specgen004_163 |
+| AC-48.1 | specgen004_172 |
+| AC-48.2 | specgen004_452 |
+| AC-49.1 | specgen004_160 |
+| AC-49.2 | specgen004_179 |
+| AC-49.3 | specgen004_526 |
+| AC-49.4 | specgen004_186 |
+| AC-50.1 | specgen004_184 |
+| AC-50.2 | specgen004_183 |
+| AC-51.1 | specgen004_518 |
+
+### No candidate (new scenario / clarify)
+
+- AC-52.1: no candidate scenario asserts the filtered cucumber run leaves the canonical .last-test-run.ndjson untouched (clobber-safety)
+

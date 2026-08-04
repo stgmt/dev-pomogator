@@ -805,7 +805,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     When checkConformance runs for reverse traceability
     Then a TASK_NO_REQUIREMENT info finding names the task
 
-  @FR-44
+  @FR-44 @AC-44.1
   Scenario: SPECGEN004_141 a project test with no spec scenario is flagged as an orphan project test
     Given a project test file with one id that has a spec scenario and one that does not
     When the project-test reverse trace runs
@@ -1040,7 +1040,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     When the agent deletes each target through the delete door
     Then the free doc is deleted and the referenced doc and the progress artifact are refused with named blockers
 
-  @FR-41
+  @FR-41 @AC-41.1
   Scenario: SPECGEN004_117 each creation phase runs in a dedicated headless agent
     Given the phase agent definitions with MCP-only allowed-tools
     When the orchestrator runs a creation phase
@@ -1054,19 +1054,19 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Then the phase returns to its agent with the gap list
     And the next phase starts only after the gate is GREEN
 
-  @FR-41
+  @FR-41 @AC-41.2
   Scenario: SPECGEN004_119 agent spawns and gate decisions are observable in the log
     Given an orchestrated spec creation run
     When phases spawn retry and pass their gates
     Then every spawn retry and gate decision is logged with agent and phase identity
 
-  @FR-42
+  @FR-42 @AC-42.1
   Scenario: SPECGEN004_120 every user-facing MCP tool has a skill consumer and the drift guard names strays
     Given the MCP tool to skill consumer table in the design
     When a new user-facing MCP tool ships without a skill consumer
     Then the extended drift guard fails naming that tool
 
-  @FR-42
+  @FR-42 @AC-42.2
   Scenario: SPECGEN004_121 the user still enters through a skill and the skill drives MCP
     Given the create-spec skill as the user entry point
     When the user asks to create a spec
@@ -1164,7 +1164,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     When a second session boots its door and exercises read + write tools
     Then every session can write — the second session's write serialises in, reads stay live, and no lifetime lock refuses it
 
-  @feature49
+  @feature49 @AC-49.1
   Scenario: SPECGEN004_160 a backlog-marked spec is excluded from the task-census the Stop-gate reads
     Given a spec corpus with two specs each carrying one open task
     When I mark spec demo-b backlog through the set_spec_status door tool
@@ -1253,7 +1253,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     When the agent renames it again with rewrite_inbound
     Then the doc is moved, the old name is gone, and the inbound links are retargeted to the new name
 
-  @FR-43
+  @FR-43 @AC-43.1
   Scenario: SPECGEN004_156 legacy-triage suspects a superseded feature without auto-retiring it
     Given a v4 spec holding an old-version feature file and a plain not-run feature
     When the legacy-triage classifier runs over the graph
@@ -1261,7 +1261,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     And the plain not-run feature is not flagged (not_run alone is not abandonment)
     And nothing is retired automatically
 
-  @FR-45
+  @FR-45 @AC-45.1
   Scenario: SPECGEN004_157 get_archival_proof keeps a spec still referenced by a live spec
     Given a graph where one spec is referenced by an edge from a live spec
     When get_archival_proof runs for the referenced spec
@@ -1279,7 +1279,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     When the door validates a write targeting that archived spec
     Then the write is refused as ARCHIVE_SEALED
 
-  @feature46
+  @feature46 @AC-46.1
   Scenario: SPECGEN004_450 conformance flags a DONE task that cites no scenario of its own
     Given a graph with a DONE task whose Done-When cites only its requirement, not its own scenario
     When conformance runs over the graph
@@ -1297,7 +1297,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     When get_trace runs for that task's requirement
     Then the task's own_scenario is surfaced with its passing result
 
-  @feature47
+  @feature47 @AC-47.1
   Scenario: SPECGEN004_163 a design Decision links to its FR only via an explicit requirement line
     Given a DESIGN doc with one Decision citing its requirement on a Требование line and one citing a requirement only in prose
     When the design markdown is parsed
@@ -1353,7 +1353,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     When a status transition is checked
     Then todo to ready to in-progress to done and the done to in-progress reopen are legal but todo straight to done is rejected
 
-  @feature48
+  @feature48 @AC-48.1
   Scenario: SPECGEN004_172 starting an impl task needs the assembled chain but a spec-authoring task does not
     Given an FR whose chain is missing its design and story legs
     When the start gate evaluates an impl task and a spec-authoring task for that FR
@@ -1377,7 +1377,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     When a status change is requested for that FR
     Then the change is refused as STATUS_DERIVED and the reply carries the FR census verdict
 
-  @feature48
+  @feature48 @AC-48.2
   Scenario: SPECGEN004_452 a phase STOP is confirmed through the door only past the ordering gate
     Given a temp spec whose Discovery STOP is not yet confirmed
     When phase status changes are requested through set_entity_status
@@ -1407,7 +1407,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     When the next-step route is selected across priority cases
     Then the route chooses agent todo before async before current spec and never a foreign backlog
 
-  @feature49
+  @feature49 @AC-49.2
   Scenario: SPECGEN004_179 the reconciler flags a stale in-progress marker but never auto-closes it
     Given an in-progress task whose mapped scenarios all passed plus a sibling in-progress task still red
     When the stale-marker reconciler scans the graph
@@ -1425,13 +1425,13 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     When a spec-change flips that waived task to DONE through the mutation door
     Then the door refuses the write with a TASK_WAIVED_CLOSED error finding
 
-  @feature50
+  @feature50 @AC-50.2
   Scenario: SPECGEN004_183 set_entity_status refuses closing a waived task with the waiver reason
     Given the set_entity_status tool and a waived task that is invisible to the graph by a non-enum status
     When a close to done is requested for that task
     Then the change is refused as WAIVED carrying the waiver reason rather than a NOT_FOUND
 
-  @feature50
+  @feature50 @AC-50.1
   Scenario: SPECGEN004_184 the parser lifts the waiver and the close-floor stays precise
     Given a graph with a waived DONE task a waived open task and a plain DONE task
     When conformance checks the waived-close floor
@@ -1443,7 +1443,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     When the gherkin parser parses that source
     Then the produced scenario node carries the inherited feature-level tag
 
-  @feature49
+  @feature49 @AC-49.4
   Scenario: SPECGEN004_186 repository backlog does not activate Pinator without session ownership
     Given a task census with open backlog but no current-session work source
     When the real hook evaluates completion prose without an authoritative source
@@ -1522,7 +1522,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     When the same continuation stop fires twice with stop_hook_active set
     Then the first fire blocks and the identical re-fire is released by the anti-loop
 
-  @feature49
+  @feature49 @AC-49.3
   Scenario: SPECGEN004_526 transcript todo replay updates by real task id rather than positional array index
     Given a captured transcript where TaskCreate and TaskUpdate events have sparse visible ids after compaction
     When the Pinator task replay reconstructs agent todos
@@ -1564,7 +1564,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     When the migrator inventories that source
     Then the helper-calling case is runtime the direct call is pure the fs case is artifact and the skipped case is manual
 
-  @feature51
+  @feature51 @AC-51.1
   Scenario: SPECGEN004_518 wire-feature promotes comment feature tags before wiring
     Given a feature text with a comment feature tag and a same-spec FR list
     When the wire-feature promotion helper prepares that feature for wiring
