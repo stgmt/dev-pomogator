@@ -811,7 +811,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     When the project-test reverse trace runs
     Then only the test id with no scenario is reported as an orphan project test
 
-  @FR-44
+  @FR-44 @AC-44.1
   Scenario: SPECGEN004_144 an FR citing no research finding is flagged only when the spec has a research file
     Given two specs where only one has a research file and each has an FR without a research citation
     When the FR-to-research reverse trace runs
@@ -1158,7 +1158,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     When git plumbing and git content commands run over the specs tree
     Then VCS plumbing commands are allowed and content-reading git commands stay violations
 
-  @feature14
+  @feature14 @AC-14.3
   Scenario: SPECGEN004_149 every session's door stays writable — a second session's write serialises in (no lifetime read-only)
     Given a spec corpus whose presence-lock is already held by another session
     When a second session boots its door and exercises read + write tools
@@ -1304,13 +1304,13 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Then a Decision node and an FR-to-Decision covers edge exist for the explicit one
     And the prose-only Decision is a node with no edge
 
-  @feature47
+  @feature47 @AC-47.1
   Scenario: SPECGEN004_164 conformance flags an FR with no covering design Decision
     Given a graph with an FR that no Decision covers
     When conformance checks the design leg of the graph
     Then an FR_NO_DESIGN warning is raised for that FR
 
-  @feature47
+  @feature47 @AC-47.1
   Scenario: SPECGEN004_165 get_trace surfaces an FR's design decisions
     Given a graph where a Decision covers an FR via an explicit requirement line
     When get_trace runs for that FR

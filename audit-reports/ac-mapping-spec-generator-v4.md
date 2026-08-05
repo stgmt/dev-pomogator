@@ -179,3 +179,25 @@ Dynamic Workflow run `dwe-c3bed036-bce4-4ecc-a208-673d664eaa9f` (admission allow
 
 - AC-52.1: no candidate scenario asserts the filtered cucumber run leaves the canonical .last-test-run.ndjson untouched (clobber-safety)
 
+## Spot-check — waves 1–4 (13 of 130 mappings, seeded sample 20260805)
+
+Deterministic sample (mulberry32, seed 20260805) of 13 AC→scenario pairs; each pair re-opened by hand: AC EARS text vs scenario steps.
+
+| AC | Scenario | Verdict |
+|---|---|---|
+| AC-1.2 | specgen004_02 | PASS — steps assert per-spec NDJSON split exactly |
+| AC-3.2 | specgen004_06 | PASS — triple-anchor registration asserted verbatim |
+| AC-10.1 | specgen004_21 | PASS — lock detection + session reuse asserted |
+| AC-14.3 | specgen004_33 | FIXED — env-mismatch clause only; sibling specgen004_149 (write serialization, no lifetime lock) added as second own scenario |
+| AC-18.3 | specgen004_46 | PASS — Path options with trade-offs in description asserted |
+| AC-18.4 | specgen004_48 | PASS — reconcile invocation + all three resolution_status values asserted |
+| AC-24.1 | specgen004_108 | PARTIAL — deny + naming asserted; tamper-log-append clause (dev-pomogator meta-guard.log) unverified by any scenario → wave-6 new-scenario list |
+| AC-29.2 | specgen004_57 | PASS — implements edge with source_section=DESIGN asserted literally |
+| AC-29.3 | specgen004_56 | PASS — glob skip + single warn-once + no crash asserted |
+| AC-34.4 | specgen004_83 | PASS — deterministic no-LLM fix + idempotency asserted |
+| AC-42.1 | specgen004_120 | PASS — drift guard names consumer-less tool asserted |
+| AC-44.1 | specgen004_141 | FIXED — orphan-project-test clause only; sibling specgen004_144 (FR_NO_RESEARCH) added as second own scenario |
+| AC-47.1 | specgen004_163 | FIXED — edge-building clauses only; siblings specgen004_164 (FR_NO_DESIGN) and specgen004_165 (get_trace decisions) added |
+
+Result: 9/13 clean; 3 repaired with sibling scenario tags (all 4 siblings PASSED in canonical run); 1 uncovered clause (AC-24.1 tamper-log-append) carried into the wave-6 new-scenario list. No mapping rolled back — every retained tag verifies at least one real clause, and multi-scenario ACs now carry all covering scenarios.
+
