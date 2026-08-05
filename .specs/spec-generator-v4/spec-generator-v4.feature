@@ -2160,7 +2160,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     When spec-status runs with the task-table format on that empty spec
     Then the CLI exits with status 1 and stderr contains "TASKS.md not found"
 
-  @feature58
+  @feature58 @AC-58.2
   Scenario: SPECGEN004_295 form-guards-dispatch routes violating TASKS.md to task-form-guard and propagates deny
     Given a v3 spec directory with a progress.json marking version 3
     When form-guards-dispatch receives a Write for a violating TASKS.md in that spec
@@ -2729,7 +2729,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
 
   # ── verify-kill: deterministic inject+restore kill-gate (FR-53) ──────────
 
-  @feature53
+  @feature53 @AC-53.1
   Scenario: SPECGEN004_384 verifyKill reports KILLED when the covering scenario fails under the mutant and restores the file
     Given a verifyKill temp source file with original "original_value" and mutant "mutant_value"
     When verifyKill is called with a sensing runner that detects "mutant_value"
@@ -2739,7 +2739,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     And the verifyKill source file still contains "original_value"
     And the verifyKill source file does not contain "mutant_value"
 
-  @feature53
+  @feature53 @AC-53.1
   Scenario: SPECGEN004_378 verifyKill reports SURVIVED when the run still passes under the mutant and restores
     Given a verifyKill temp source file with original "original_value" and mutant "mutant_value"
     When verifyKill is called with an always-passing runner
@@ -2747,7 +2747,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     And the verifyKill killed flag is false
     And the verifyKill source file still contains "original_value"
 
-  @feature53
+  @feature53 @AC-53.1
   Scenario: SPECGEN004_379 verifyKill always restores the source file even if the runner throws during the mutant phase
     Given a verifyKill temp source file with original "original_value" and mutant "mutant_value"
     When verifyKill is called with a runner that throws on the second invocation
@@ -2755,19 +2755,19 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     And the verifyKill source file still contains "original_value"
     And the verifyKill source file does not contain "mutant_value"
 
-  @feature53
+  @feature53 @AC-53.2
   Scenario: SPECGEN004_380 verifyKill throws when the original string is absent from the file
     Given a verifyKill temp source file with original "original_value" and mutant "mutant_value"
     When verifyKill is called with original "NOT_PRESENT" and an always-passing runner
     Then the verifyKill call threw an exception matching "original string not found"
 
-  @feature53
+  @feature53 @AC-53.2
   Scenario: SPECGEN004_381 verifyKill refuses when the baseline scenario is not green
     Given a verifyKill temp source file with original "original_value" and mutant "mutant_value"
     When verifyKill is called with an always-failing runner
     Then the verifyKill call threw an exception matching "baseline not green"
 
-  @feature53
+  @feature53 @AC-53.3
   Scenario: SPECGEN004_382 verifyBatch tallies killed and survived mutants across a list of specs
     Given a verifyKill temp source file with original "original_value" and mutant "mutant_value"
     When verifyBatch is called with a killable spec "killable" and a surviving spec "survives" sensing "mutant_value"
@@ -2776,14 +2776,14 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     And the verifyBatch survived count is 1
     And the verifyBatch error count is 0
 
-  @feature53
+  @feature53 @AC-53.2
   Scenario: SPECGEN004_383 verifyBatch records ERROR for a bad spec without crashing the batch
     Given a verifyKill temp source file with original "original_value" and mutant "mutant_value"
     When verifyBatch is called with a spec whose original is "NOT_PRESENT"
     Then the verifyBatch error count is 1
     And the first verifyBatch result verdict is "ERROR"
 
-  @feature58
+  @feature58 @AC-58.2
   Scenario: SPECGEN004_385 extractWriteContent user-story-form-guard Edit heading-only allows write
     Given an isolated spec directory with a fully-formed USER_STORIES.md for extractWriteContent testing
     When the user-story-form-guard receives an Edit of the user story heading only leaving body intact
@@ -3067,7 +3067,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     When denied .specs greps and a non-grep reader are mapped to door calls
     Then each grep maps to its concrete spec-door search call and the non-grep maps to nothing
 
-  @feature58
+  @feature58 @AC-58.2
   Scenario: SPECGEN003_01 user-story-form-guard denies missing Priority field
     Given a SPECGEN003 v3 spec directory is prepared
     When the SPECGEN003 user-story-form-guard is invoked via Write on USER_STORIES.md missing Priority
@@ -3157,13 +3157,13 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     When the SPECGEN003 user-story-form-guard is invoked via Read on USER_STORIES.md
     Then the SPECGEN003 guard exits with code 0
 
-  @feature55
+  @feature55 @AC-55.1
   Scenario: SPECGEN003_16 discovery-forms SKILL.md has non-auto-trigger frontmatter
     Given a SPECGEN003 v3 spec directory is prepared
     When the SPECGEN003 child phase-assistant skill SKILL.md files are read from the repository
     Then the SPECGEN003 discovery-forms SKILL.md exists without auto-trigger phrases in the first 600 characters
 
-  @feature55
+  @feature55 @AC-55.1
   Scenario: SPECGEN003_17 task-board-forms SKILL.md has non-auto-trigger frontmatter
     Given a SPECGEN003 v3 spec directory is prepared
     When the SPECGEN003 child phase-assistant skill SKILL.md files are read from the repository
@@ -3188,7 +3188,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     When spec-status.ts is invoked twice on the SPECGEN003 spec directory with -Format task-table
     Then both SPECGEN003 task-table outputs are identical
 
-  @feature55
+  @feature55 @AC-55.1
   Scenario: SPECGEN003_21 requirements-chk-matrix SKILL.md references Jira trace preservation
     Given a SPECGEN003 v3 spec directory is prepared
     When the SPECGEN003 child phase-assistant skill SKILL.md files are read from the repository
@@ -3206,7 +3206,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     When the SPECGEN003 user-story-form-guard is invoked via Write on USER_STORIES.md with pathological regex content
     Then the SPECGEN003 guard exits with code 0 or 2
 
-  @feature55
+  @feature55 @AC-55.1
   Scenario: SPECGEN003_24 all 3 child phase-assistant skills lack auto-trigger phrases in first 800 characters
     Given a SPECGEN003 v3 spec directory is prepared
     When the SPECGEN003 child phase-assistant skill SKILL.md files are read from the repository
@@ -3232,7 +3232,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     When the scaffold-sentinel classifier scans the fixture document
     Then the scaffold classifier reports exactly one finding naming that placeholder and its line
 
-  @feature57
+  @feature57 @AC-57.3
   Scenario: SPECGEN004_567 the scaffold classifier ignores lowercase single-token braces and code spans
     Given a scaffold-sentinel fixture document with lowercase single-token braces, a fenced code block, an inline code span, and an empty JSON brace
     When the scaffold-sentinel classifier scans the fixture document
@@ -3245,21 +3245,21 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Then ConfirmStop fails without recording the Requirements stop
     And the ConfirmStop error names the placeholder and broken link
 
-  @feature57
+  @feature57 @AC-57.1
   Scenario: SPECGEN004_568 audit emits SCAFFOLD_INCOMPLETE ERROR for a claims-done spec with a stub README
     Given an isolated claims-done spec fixture whose README.md is an unfilled scaffold
     When audit-spec runs on that spec fixture
     Then the audit findings contain check "SCAFFOLD_INCOMPLETE" with severity "ERROR"
     And the SCAFFOLD_INCOMPLETE finding names README.md with a line and a sentinel
 
-  @feature57
+  @feature57 @AC-57.2
   Scenario: SPECGEN004_473 a fresh scaffold spec keeps SCAFFOLD_INCOMPLETE at INFO not ERROR
     Given an isolated freshly-scaffolded spec fixture with default placeholders and no test run
     When audit-spec runs on that spec fixture
     Then every SCAFFOLD_INCOMPLETE finding has severity "INFO"
     And spec-verdict on that spec fixture does not turn RED because of SCAFFOLD_INCOMPLETE
 
-  @feature57
+  @feature57 @AC-57.1 @AC-57.2
   Scenario: SPECGEN004_474 spec-verdict flips RED then GREEN across the stub-vs-filled fixture
     Given a claims-done spec fixture with stub README, TASKS and FIXTURES prose
     When spec-verdict runs on the stub fixture
@@ -3268,7 +3268,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     When spec-verdict runs on the filled fixture
     Then the SCAFFOLD_INCOMPLETE category is absent from the gap list
 
-  @feature57
+  @feature57 @AC-57.3
   Scenario: SPECGEN004_475 one classifier is shared by validate-spec and audit and covers every template placeholder
     Given the scaffold-sentinel set is derived from the specs-generator templates directory
     When the scaffold-sentinel set is compared against the current template placeholders
@@ -3281,27 +3281,27 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     When audit-spec runs on that spec fixture
     Then the placeholder FIXTURES.md is reported exactly once and not by a separate FIXTURES_CONSISTENCY placeholder branch
 
-  @feature57
+  @feature57 @AC-57.3
   Scenario: SPECGEN004_477 templates fixtures and backlog specs are excluded from the scaffold gate
     Given a scaffold-sentinel scan over a templates file, a __fixtures__ document, and a backlog spec document
     When the scaffold-sentinel classifier evaluates those documents
     Then the templates file and the __fixtures__ document yield no findings
     And the backlog spec document yields at most an INFO finding never an ERROR
 
-  @feature58
+  @feature58 @AC-58.2
   Scenario: SPECGEN004_478 discovery-forms executable evals exercise real form contracts
     Given the discovery-forms executable eval runner
     When that form-skill eval runner executes
     Then the eval aggregate is fully green and every case exercised the real form contracts
 
-  @feature58
+  @feature58 @AC-58.2
   Scenario: SPECGEN004_479 requirements-chk-matrix executable evals pin invalid CHK IDs
     Given the requirements-chk-matrix executable eval runner
     When that form-skill eval runner executes
     Then the eval aggregate is fully green and every case exercised the real form contracts
     And the eval aggregate pins the P16-1 negative regression cases
 
-  @feature58
+  @feature58 @AC-58.2
   Scenario: SPECGEN004_570 task-board-forms executable evals pin lowercase task markers
     Given the task-board-forms executable eval runner
     When that form-skill eval runner executes
@@ -3345,7 +3345,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     And the hook output does not emit a corpus-wide unconfirmed STOP count
     And the unrelated legacy spec stays quiet unless verbose mode is enabled
 
-  @feature59
+  @feature59 @AC-59.1 @AC-59.2
   Scenario: SPECGEN004_513 PostToolUse conformance push keeps Claude reminder bounded while retaining the full log
     Given a PostToolUse push window with 3000 conformance findings
     When the spec-conformance push window flushes
@@ -3383,14 +3383,14 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
 
   # ── FR-56: scenario-result overlay freshness (P29) ───────────────────────────
 
-  @feature56
+  @feature56 @AC-56.1
   Scenario: SPECGEN004_529 every BDD run path writes append-only scenario overlay rows
     Given a Cucumber message run for a focused FR-56 scenario
     When the scenario-result overlay writer records that run
     Then the scenario overlay contains one row with result, run identity, source, and trace id
     And appending another run preserves the existing overlay row
 
-  @feature56
+  @feature56 @AC-56.3
   Scenario: SPECGEN004_534 scenario trace lookup returns the archived failing step
     Given a Cucumber message run for a failed FR-56 scenario
     When the scenario trace tool reads that archived run through the graph
@@ -3405,7 +3405,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
 
   # ── FR-60: high-level MCP authoring API (pending implementation) ─────────────
 
-  @feature60
+  @feature60 @AC-60.1
   Scenario: SPECGEN004_520 section-targeted append preserves validation and EOL style
     Given a spec document has an existing Phase heading and a known EOL style
     When an agent proposes an MCP append_to_section operation targeting that Phase heading
@@ -3413,21 +3413,21 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     And the preview preserves the document EOL style
     And the same form, anchor, and conformance checks run before any write is applied
 
-  @feature60
+  @feature60 @AC-60.1
   Scenario: SPECGEN004_521 read_for_edit returns section metadata and safe insertion tokens
     Given an agent reads a spec section for edit through the MCP door
     When the read_for_edit response is returned
     Then it includes eol_style, heading_anchor, section_sha, start_line, end_line, and append or insert tokens
     And a follow-up insert using those tokens targets the same section even when unrelated document text changes elsewhere
 
-  @feature60
+  @feature60 @AC-60.2
   Scenario: SPECGEN004_522 replacement diagnostics distinguish EOL whitespace multi-match and missing-anchor misses
     Given an MCP literal replacement fails to find old_string in a spec document
     When the server analyzes the failed replacement
     Then the response classifies the miss as EOL-only, whitespace-only, multi-match, changed body under the same anchor, or missing anchor
     And with normalize_eol true a CRLF/LF-only mismatch is accepted while the persisted file keeps its original EOL style
 
-  @feature60
+  @feature60 @AC-60.3
   Scenario: SPECGEN004_523 multi-document proposal previews graph impact and applies atomically
     Given a proposed spec change spans FR.md, ACCEPTANCE_CRITERIA.md, TASKS.md, the feature file, and FILE_CHANGES.md
     When the agent calls propose_patch and then apply_spec_transaction
@@ -3436,14 +3436,14 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     And the audit log records the transaction as one conceptual spec mutation
     And the active create-spec workflow exposes and routes cross-document bootstrap through all transaction tools
 
-  @feature60
+  @feature60 @AC-60.3
   Scenario: SPECGEN004_524 anchor-targeted CAS mismatch auto-rebases only non-conflicting changes
     Given an anchor-targeted MCP mutation was prepared from an older document sha
     When another session has changed unrelated text outside the target anchor
     Then the mutation auto-rebases and applies against the fresh document
     But when the target anchor body or preconditions changed the server refuses with fresh anchor context for the caller
 
-  @feature60
+  @feature60 @AC-60.4
   Scenario: SPECGEN004_525 domain helpers render canonical traceable markdown and enforce feature safety
     Given an agent registers incident-driven backlog or amends a requirement through a domain helper
     When the helper renders FR, AC, TASK, and optional feature changes
@@ -3453,42 +3453,42 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
 
   # ── FR-61: unified readiness UX (pending implementation) ────────────────────
 
-  @feature61
+  @feature61 @AC-61.1
   Scenario: SPECGEN004_539 spec verdict separates structural health from readiness
     Given a spec is structurally valid and traceable but has unrun scenarios and DONE-but-unverified tasks
     When spec-verdict summarizes that spec
     Then the output shows STRUCTURE, TRACEABILITY, EXECUTION, TASK_TRUTH, BDD_SYNC, SEMANTIC, and FILTERED_PROOF lanes
     And the final readiness label is OVERALL NOT_READY and the canonical verdict is NOT_READY
 
-  @feature61
+  @feature61 @AC-61.2
   Scenario: SPECGEN004_540 MCP status and verdict use aligned gap semantics
     Given an FR has traceability edges but no canonical passed execution evidence
     When get_spec_status and spec-verdict report the spec
     Then execution absence is reported as SCENARIO_NOT_RUN or FR_NOT_EXECUTION_VERIFIED
     And the same condition is not reported as UNCOVERED_FR
 
-  @feature61
+  @feature61 @AC-61.3
   Scenario: SPECGEN004_541 task DONE truth guard downgrades evidence-missing work
     Given a task is textually marked DONE with an unchecked Done When item or a mapped scenario that is not canonical PASSED
     When the status mutation door and verdict evaluate that task
     Then the DONE status is denied or downgraded to evidence-derived IN_PROGRESS
     And the missing scenario or checklist evidence is named to the agent
 
-  @feature61
+  @feature61 @AC-61.4
   Scenario: SPECGEN004_542 source and executable BDD scenarios stay synchronized
     Given a source spec feature and an executable tests/features feature disagree on scenario ids, FR tags, or scenario count prose
     When the BDD sync checker runs
     Then executable-only scenarios require EXEC_ONLY or OUT_OF_SCOPE markers
     And source-only scenarios require an explicit pending marker or executable counterpart
 
-  @feature61
+  @feature61 @AC-61.5
   Scenario: SPECGEN004_543 filtered Docker BDD proof is visible without poisoning canonical coverage
     Given a filtered Docker BDD run passes selected scenario ids for a spec
     When MCP status or spec-verdict reports coverage evidence
     Then canonical coverage remains unchanged until a full run or accepted attachment lands
     And a FILTERED_PROOF lane shows the artifact path, selected ids, pass/fail summary, timestamp, source, and next action
 
-  @feature62 @FR-62
+  @feature62 @FR-62 @AC-62.1 @AC-62.2
   Scenario: SPECGEN004_573 inherited, closed, and noninteractive stdin root handoff is deterministic
     Given a real fixture checkout has equivalent Windows and WSL roots and tracked readiness inputs
     And SPECS_GENERATOR_ROOT is supplied as an environment override while stdin is independently inherited, closed, or noninteractive
@@ -3496,7 +3496,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Then neither command waits indefinitely for stdin or reads the root from stdin
     And valid SPECS_GENERATOR_ROOT selects the same tracked artifact set as the caller project fallback
 
-  @feature62 @FR-62
+  @feature62 @FR-62 @AC-62.2 @AC-62.3
   Scenario: SPECGEN004_554 WSL-only root precheck accepts only caller or project WSL roots
     Given a WSL-only command resolves its candidate root from the caller or project WSL worktree
     When the root precheck runs through CLI and MCP
@@ -3579,7 +3579,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     And a blocking investigation remains red while the complete AC-linked plan passes
     And empty task plans exact AC identifiers alternate claim wording and analyzer outages fail closed
 
-  @feature61 @feature63
+  @feature61 @feature63 @AC-61.2
   Scenario: SPECGEN004_566 MCP status derives EXECUTION and OVERALL from the shared effective inventory
     Given a spec whose canonical full-run pass became stale after a source change
     When MCP status and spec-verdict evaluate the same graph snapshot
@@ -3588,14 +3588,14 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     And canonical coverage remains visible without overriding effective readiness
     And dotted acceptance criterion ids remain exact in the spec-status parser
 
-  @feature56 @FR-56
+  @feature56 @FR-56 @AC-56.2
   Scenario: SPECGEN004_575 overlay evidence is commit-bound and backward-compatible
     Given legacy and commit-bound scenario overlay rows for the same scenarios
     When the real overlay reader evaluates them against the current commit
     Then the matching commit pass is fresh and the legacy or mismatched pass is stale
     And the trace response exposes commit provenance and the persisted failing step
 
-  @feature56 @FR-56
+  @feature56 @FR-56 @AC-56.1
   Scenario: SPECGEN004_576 overlay compaction preserves each latest scenario result
     Given an overlay file with repeated rows for multiple scenarios
     When the real overlay compactor rewrites the file

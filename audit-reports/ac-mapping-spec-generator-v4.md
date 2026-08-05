@@ -201,3 +201,68 @@ Deterministic sample (mulberry32, seed 20260805) of 13 AC→scenario pairs; each
 
 Result: 9/13 clean; 3 repaired with sibling scenario tags (all 4 siblings PASSED in canonical run); 1 uncovered clause (AC-24.1 tamper-log-append) carried into the wave-6 new-scenario list. No mapping rolled back — every retained tag verifies at least one real clause, and multi-scenario ACs now carry all covering scenarios.
 
+## Wave 5 — families FR-53..FR-62 (25 mapped across 46 scenario tags, 3 no-candidate)
+
+Dynamic Workflow run `dwe-babba718-7bf5-4da4-8ef1-d7f078505aad` (admission allow + ROOT_VERIFIED; gates dwe-preflight + ac-satisfaction-control pending finalization).
+
+| AC | Scenario | Justification (quoted step) |
+|---|---|---|
+| AC-53.1 | specgen004_384 | Then the verifyKill verdict is "KILLED" / killed flag is true / restored flag is true / source file still contains "original_value" |
+| AC-53.1 | specgen004_378 | Then the verifyKill verdict is "SURVIVED" / killed flag is false / source file still contains "original_value" |
+| AC-53.1 | specgen004_379 | When verifyKill is called with a runner that throws on the second invocation / Then the call threw "boom" / source file still contains "original_value" |
+| AC-53.2 | specgen004_380 | Then the verifyKill call threw an exception matching "original string not found" |
+| AC-53.2 | specgen004_381 | Then the verifyKill call threw an exception matching "baseline not green" |
+| AC-53.2 | specgen004_383 | Then the verifyBatch error count is 1 / first verifyBatch result verdict is "ERROR" (batch continues) |
+| AC-53.3 | specgen004_382 | Then verifyBatch total is 2 / killed count is 1 / survived count is 1 / error count is 0 |
+| AC-55.1 | specgen003_16 | Then the discovery-forms SKILL.md exists without auto-trigger phrases in the first 600 characters |
+| AC-55.1 | specgen003_17 | Then the task-board-forms SKILL.md exists without auto-trigger phrases in the first 600 characters |
+| AC-55.1 | specgen003_21 | Then the requirements-chk-matrix SKILL.md exists and mentions Jira preservation |
+| AC-55.1 | specgen003_24 | Then all 3 child phase-assistant skills lack auto-trigger phrases in the first 800 characters |
+| AC-56.1 | specgen004_529 | Then the scenario overlay contains one row with result, run identity, source, and trace id / appending another run preserves the existing overlay row |
+| AC-56.1 | specgen004_576 | Then one latest row per scenario remains and distinct-scenario cardinality is conserved / the canonical full-run artifact remains byte-identical |
+| AC-56.2 | specgen004_575 | Then the matching commit pass is fresh and the legacy or mismatched pass is stale / the trace response exposes commit provenance and the persisted failing step |
+| AC-56.3 | specgen004_534 | Then the scenario trace response contains the failing step, error text, and run identity / an expired scenario trace returns a rerun hint instead of throwing |
+| AC-57.1 | specgen004_568 | Then the audit findings contain check "SCAFFOLD_INCOMPLETE" with severity "ERROR" / finding names README.md with a line and a sentinel |
+| AC-57.1 | specgen004_474 | Then the spec-verdict verdict is "RED" with SCAFFOLD_INCOMPLETE in the gap list |
+| AC-57.2 | specgen004_473 | Then every SCAFFOLD_INCOMPLETE finding has severity "INFO" / spec-verdict does not turn RED because of SCAFFOLD_INCOMPLETE |
+| AC-57.2 | specgen004_474 | Given the same fixture with prose filled in / Then the SCAFFOLD_INCOMPLETE category is absent from the gap list |
+| AC-57.3 | specgen004_567 | Given lowercase single-token braces, a fenced code block, an inline code span, and an empty JSON brace / Then the scaffold classifier reports zero findings |
+| AC-57.3 | specgen004_477 | Then the templates file and the __fixtures__ document yield no findings / the backlog spec document yields at most an INFO finding never an ERROR |
+| AC-57.3 | specgen004_475 | Then the scaffold-sentinel set contains every current template placeholder / validate-spec PLACEHOLDER and audit SCAFFOLD_INCOMPLETE agree that a real template sentinel is a stub |
+| AC-58.2 | specgen003_01 | When the user-story-form-guard is invoked via Write on USER_STORIES.md missing Priority / Then the guard exits with code 2 and stderr mentions "Priority" (real hook entrypoint) |
+| AC-58.2 | specgen004_295 | When form-guards-dispatch receives a Write for a violating TASKS.md / Then the dispatcher exits 2 and the stdout JSON carries permissionDecision deny mentioning task-form-guard (process execution) |
+| AC-58.2 | specgen004_385 | When the user-story-form-guard receives an Edit of the user story heading only leaving body intact / Then the guard exits 0 and allows the write (real Edit reconstruction) |
+| AC-58.2 | specgen004_478 | Then the eval aggregate is fully green and every case exercised the real form contracts (discovery-forms real eval runner) |
+| AC-58.2 | specgen004_479 | Then the eval aggregate is fully green and every case exercised the real form contracts / pins the P16-1 negative regression cases (requirements-chk-matrix) |
+| AC-58.2 | specgen004_570 | Then the eval aggregate is fully green and every case exercised the real form contracts / pins the P16-1 negative regression cases (task-board-forms) |
+| AC-59.1 | specgen004_513 | Then the emitted reminder is at most 6000 bytes / summarizes the finding count, severity counts, omitted count, and full-log pointer / shows no more than 20 sample findings |
+| AC-59.2 | specgen004_513 | Then the durable spec-check-log writer still records every synthetic finding (while the reminder is capped) |
+| AC-60.1 | specgen004_520 | Then the proposal resolves the stable heading anchor without requiring an exact old_string / preview preserves the document EOL style / same form, anchor, and conformance checks run before any write |
+| AC-60.1 | specgen004_521 | Then it includes eol_style, heading_anchor, section_sha, start_line, end_line, and append or insert tokens / a follow-up insert using those tokens targets the same section |
+| AC-60.2 | specgen004_522 | Then the response classifies the miss as EOL-only, whitespace-only, multi-match, changed body under the same anchor, or missing anchor / with normalize_eol true a CRLF/LF-only mismatch is accepted while the persisted file keeps its original EOL style |
+| AC-60.3 | specgen004_523 | Then the preview includes anchors found, a diff, affected graph nodes, conformance findings, resulting shas, and a proposal_id / applying writes all documents atomically or leaves every document unchanged |
+| AC-60.3 | specgen004_524 | Then the mutation auto-rebases and applies against the fresh document / But when the target anchor body or preconditions changed the server refuses with fresh anchor context |
+| AC-60.4 | specgen004_525 | Then the generated markdown follows the canonical form contracts and keeps FR to AC to TASK traceability links / ids are unique / executable feature scenarios are refused unless matching step-definition work is included |
+| AC-61.1 | specgen004_539 | Then the output shows STRUCTURE, TRACEABILITY, EXECUTION, TASK_TRUTH, BDD_SYNC, SEMANTIC, and FILTERED_PROOF lanes / final readiness label is OVERALL NOT_READY |
+| AC-61.2 | specgen004_540 | Then execution absence is reported as SCENARIO_NOT_RUN or FR_NOT_EXECUTION_VERIFIED / the same condition is not reported as UNCOVERED_FR |
+| AC-61.2 | specgen004_566 | Then both surfaces report the stale scenario as effective execution debt / both surfaces report EXECUTION RED and OVERALL NOT_READY |
+| AC-61.3 | specgen004_541 | Then the DONE status is denied or downgraded to evidence-derived IN_PROGRESS / the missing scenario or checklist evidence is named to the agent |
+| AC-61.4 | specgen004_542 | Then executable-only scenarios require EXEC_ONLY or OUT_OF_SCOPE markers / source-only scenarios require an explicit pending marker or executable counterpart |
+| AC-61.5 | specgen004_543 | Then canonical coverage remains unchanged until a full run or accepted attachment lands / a FILTERED_PROOF lane shows the artifact path, selected ids, pass/fail summary, timestamp, source, and next action |
+| AC-62.1 | specgen004_573 | Then neither command waits indefinitely for stdin or reads the root from stdin |
+| AC-62.2 | specgen004_573 | When spec-status and MCP resolve the root in order through validated SPECS_GENERATOR_ROOT, caller or project cwd, and findRepoRoot(SCRIPT_DIR) / Then valid SPECS_GENERATOR_ROOT selects the same tracked artifact set as the caller project fallback |
+| AC-62.2 | specgen004_554 | Then it reports NOT_READY with the observed root, unsafe artifact, and corrective action without substituting a plugin-cache, C Windows cwd, or UNC-relative root |
+| AC-62.3 | specgen004_554 | When the root precheck runs through CLI and MCP / Then each surface accepts only a validated caller or project WSL root |
+
+Multi-scenario ACs: AC-53.1/53.2 (kill-path clauses split across per-behavior scenarios), AC-55.1 (AC text itself names the four migrated scenarios), AC-56.1 (overlay rows + canonical-untouched), AC-57.1/57.2 (ERROR+RED / INFO+disappear), AC-57.3 (code-strip + exclusions + single-classifier), AC-58.2 (one representative per real-code-path category: guard entrypoint, dispatcher process, Edit reconstruction, three eval runners), AC-60.1/60.3, AC-61.2, AC-62.2/62.3.
+
+Gap check: OWN-no-scenario 57 → 32 (exactly the 25 mapped ACs).
+
+### No candidate (new scenario / clarify)
+
+- AC-58.1: no scenario asserts the retagging invariant itself (migrated form-contract scenarios carry @feature58 not @feature19, and FR-19 coverage excludes them) — the 31 migrated scenarios are the subject, not the verifier; needs a graph-query scenario
+- AC-58.3: no scenario asserts the post-cleanup coverage state (@feature58 has FR owner/AC coverage/TASKS reference and FR-19 tested_by no longer lists inherited form checks) — needs a graph-query scenario
+- AC-59.3: no scenario asserts the prompt-time banner bounds (buildConformanceSummary single line, buildTaskCensusLine ≤1500 chars, rebuilt bundle probe bounded stdout) — specgen004_513 covers only the PostToolUse flush
+
+Residual clauses noted (covered ACs, minor unasserted tails): AC-53.3 runScenario `ran === 0 → passed=false` parse rule has no dedicated assertion; AC-59.2 `_no_push_check: true` suppression branch unasserted. Both ride with the wave-6 new-scenario batch if not resolved by an existing scenario there.
+
