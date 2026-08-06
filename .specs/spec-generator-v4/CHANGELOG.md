@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-08-07 — FR-68 AC_SATISFACTION debt closure: 187 gap ACs resolved (181 evidenced, 6 documented clarify)
+
+Every acceptance criterion that lacked its own verifying scenario got an honest, individually-journaled resolution — all writes through the MCP door, no bulk tag-laundering (TAG_BULK_SUSPECT controls verified clean each wave):
+
+- **Waves 1–6** mapped 155 ACs to their own passing scenarios via per-scenario `@AC-N.N` tags (Dynamic Workflow runs dwe-30b2f9e3 / dwe-f2da09f7 / dwe-9d7f1e0f / dwe-c3bed036 / dwe-babba718 / dwe-cb45c0aa — each admission `allow` + ROOT_VERIFIED; journal `audit-reports/ac-mapping-spec-generator-v4.md`).
+- **New scenario SPECGEN004_693** (@feature58, step-defs `tests/step_definitions/feature58_retag_invariant.ts`) pins the FR-58 retag invariant for AC-58.1/AC-58.3: FR-19 covered only by the two-tier policy scenarios, migrated form-contract scenarios owned by FR-58.
+- **Spot-check** of 13/130 mappings repaired 3 with sibling-scenario tags and carried 1 uncovered clause (AC-24.1 tamper-log-append) into the follow-up list.
+- **6 ACs documented clarify** (no honest scenario possible without separate work): AC-1.3 (legacy v1 install semantics), AC-7.4 (dead-integration-guard not implemented as automation), AC-7.5 (one-time measurement protocol), AC-20.2 (perf budget + atomicity clauses), AC-26.2 (SEMANTIC_CHECK_SKIPPED_OPT_OUT finding code not implemented), AC-36.6 (migration-phase process invariant). Each has a concrete follow-up in the journal.
+- **Residual clauses** on 8 mapped ACs are tracked explicitly in the journal (never silent).
+
+Result: AC_SATISFACTION 283/289 (lane RED until the 6 clarify follow-ups land — readiness-inventory carries no waiver path by design); all other mandatory lanes GREEN; full Docker suite **1996/1996 PASSED**.
+
+
 ## 2026-08-04 — spec-generator-v4 readiness debt closed; Cursor live scenarios owner-attested
 
 - **Readiness honesty (FR-81a / AC-63.4):** execution-ownership scope classifier — proven `@historical @superseded-by-<slug>` scenarios keep their evidence but leave active debt (fail-closed when the successor is missing); mandatory LIVE_EVIDENCE lane for `@live-evidence` scenarios; scope-aware EXECUTION gaps/lifecycle/hint on every status surface. Regressions SPECGEN004_686/_687 (Docker PASSED).
