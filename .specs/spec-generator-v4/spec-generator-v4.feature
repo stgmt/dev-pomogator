@@ -122,7 +122,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Then no `<system-reminder>` is pushed for that file
     And the findings are still logged to `.dev-pomogator/.spec-check-log/`
 
-  @feature7 @AC-7.3
+  @feature7 @AC-7.3 @AC-7.1
   Scenario: SPECGEN004_15 Marksman native LSP registration is declared by the canonical plugin
     Given the canonical plugin manifest declares the Marksman native LSP server
     When the Marksman native LSP registration is inspected
@@ -130,7 +130,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     And `.lsp.json` registers server `marksman` with the launcher shim and markdown extension mapping
     And the native launcher responds to LSP `initialize` through the real Marksman binary
 
-  @feature7
+  @feature7 @AC-7.2
   Scenario: SPECGEN004_16 Missing Marksman disables only native markdown LSP, not spec-domain MCP tools
     Given no Marksman binary is available to the launcher
     When the native Marksman LSP launcher starts
@@ -952,7 +952,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Then the meta-guard denies the write naming spec-conformance-guard
     And removing the meta-guard own registration is denied too
 
-  @feature20 @AC-20.1
+  @feature20 @AC-20.1 @AC-59.3
   Scenario: SPECGEN004_109 conformance summary is threshold-only and acknowledged via spec-status
     Given an isolated conformance state with zero unresolved events
     Then the prompt-time summary emits nothing
@@ -3194,7 +3194,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     When the SPECGEN003 child phase-assistant skill SKILL.md files are read from the repository
     Then the SPECGEN003 requirements-chk-matrix SKILL.md exists and mentions Jira preservation
 
-  @feature58
+  @feature58 @AC-19.3
   Scenario: SPECGEN003_22 form guards fail-open on malformed JSON stdin
     Given a SPECGEN003 v3 spec directory is prepared
     When the SPECGEN003 user-story-form-guard is invoked with malformed JSON on stdin
@@ -3354,7 +3354,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     And the emitted reminder shows no more than 20 sample findings
     And the durable spec-check-log writer still records every synthetic finding
 
-  @feature52
+  @feature52 @AC-52.1
   Scenario: SPECGEN004_514 validate_anchor distinguishes compact aliases from Marksman heading slugs
     Given a validate_anchor tool over a spec containing a punctuation-heavy Marksman heading
     When validate_anchor checks both a compact id and DOC.md#heading-slug
@@ -3503,49 +3503,49 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Then each surface accepts only a validated caller or project WSL root
     And it reports NOT_READY with the observed root, unsafe artifact, and corrective action without substituting a plugin-cache, C Windows cwd, or UNC-relative root
 
-  @feature63 @FR-63
+  @feature63 @FR-63 @AC-63.1
   Scenario: SPECGEN004_555 precheck MCP and verdict derive one FR AC scenario inventory
     Given a real fixture has graph-mapped FRs, ACs, scenarios, baseline and run identities, and duplicate inventory candidates
     When precheck, MCP status, and spec-verdict evaluate the fixture
     Then each surface reports the same deduplicated FR, AC, and scenario inventory with mandatory readiness lanes
     And a structural-only result remains NOT_READY
 
-  @feature63 @FR-63
+  @feature63 @FR-63 @AC-63.2
   Scenario: SPECGEN004_556 full-run evidence preserves source time recency and outcome taxonomy
     Given a BDD run has source, timestamp, recency, baseline, run identity, and PASSED, UNKNOWN, not_recorded, stale, or filtered evidence states
     When the readiness evaluator serializes graph evidence
     Then each state remains explicit and no source, time, or recency field is discarded
     And filtered proof cannot replace canonical full-run execution evidence
 
-  @feature63 @FR-63
+  @feature63 @FR-63 @AC-63.3
   Scenario: SPECGEN004_557 AC readiness exposes empty test paths and never-run FR taxonomy requires every mandatory lane
     Given mapped AC ids include an AC with test_paths=[] and a never-run FR and readiness lanes have mixed pass and missing evidence
     When the FR-61 readiness taxonomy evaluates the candidate
     Then the result exposes the AC ids, test_paths=[], and explicit never-run classification while AND-gating every mandatory lane
     And it reports the next action without treating dependency-absent evidence as source-tree success or dependency-absent FR-64 evidence as FR-63 success
 
-  @feature64 @FR-64
+  @feature64 @FR-64 @AC-64.1
   Scenario: SPECGEN004_558 graph conformance classifies source spec test generated temp smoke and silent evidence
     Given a real spec fixture contains source, spec-test, generated, temporary, smoke, unclassified, and silent evidence records
     When graph conformance and release inventory run with baseline evidence sha `0b291bac`
     Then canonical records retain explicit provenance, intentional classification, traceability edges, and baseline evidence sha `0b291bac`
     And unclassified or silent inventory evidence is surfaced and cleaned rather than accepted as implementation proof
 
-  @feature64 @FR-64
+  @feature64 @FR-64 @AC-64.2
   Scenario: SPECGEN004_559 Docker-only verification records current pre and post release inventory
     Given a real Docker BDD fixture has classified and cleaned tracked before and after inventories, including temporary and untracked paths, and PASSED, FAILED, PENDING, UNDEFINED, AMBIGUOUS, and NOT_RUN units
     When /run-tests runs the Docker-only release inventory gate
     Then every tracked in-scope unit must be PASSED, every outcome remains distinct, and every in-scope unit satisfies the AND gate
     And additions, removals, duplicates, and untracked paths are explicitly classified; unclassified untracked paths violate cardinality or conservation rather than becoming release-ready
 
-  @feature64 @FR-64
+  @feature64 @FR-64 @AC-64.3
   Scenario: SPECGEN004_574 dependency-absent launcher status and MCP remain provenance-safe
     Given an installed plugin fixture has repository development dependencies absent
     When the installed launcher, status surface, and MCP execute the fixture
     Then a missing runtime import, bundle, or asset is reported with installed-runtime provenance and does not become a source-tree pass
     And a complete installed fixture records its baseline, run identity, and evidence source
 
-  @feature64 @FR-64
+  @feature64 @FR-64 @AC-64.4
   Scenario: SPECGEN004_561 release evidence controls one candidate through integration-first verification
     Given a single PR, GitHub release candidate, or tag is prepared with README, TASKS, CHANGELOG, and release notes
     When integration-first verification or post-release monitoring detects a tracked-file or dependency-absent failure after release
@@ -3571,7 +3571,7 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     When enforcement signals and a launcher without CLAUDE_PLUGIN_ROOT are exercised
     Then the first parseable signal wins, unset signals default to enforce, explicit false disables, and every launcher resolves absolutely
 
-  @feature65 @FR-65
+  @feature65 @FR-65 @AC-65.1 @AC-65.2 @AC-65.3 @AC-65.4
   Scenario: SPECGEN004_565 paid deployed API acceptance maps to implementation test and semantic evidence
     Given a synthetic paid SPA corpus with shallow, blocked-investigation, and complete acceptance task plans
     When the real acceptance delivery analyzer and audit inspect every plan
@@ -3680,37 +3680,37 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Then the collision probe reports zero normalization collisions
 
 
-  @FR-66 @feature66
+  @FR-66 @feature66 @AC-66.1
   Scenario: SPECGEN004_583 typed metadata preserves known and unknown fields
     Given an FR with valid typed requirement metadata and an extension field
     When the real graph parses and serves the requirement
     Then typed metadata and the unknown extension round-trip exactly
 
-  @FR-66 @feature66
+  @FR-66 @feature66 @AC-66.2
   Scenario: SPECGEN004_584 invalid metadata fails consistently across parser and MCP
     Given an FR with invalid safety and demand metadata
     When parser and MCP authoring validate the metadata
     Then both surfaces return the same metadata validation findings
 
-  @FR-66 @feature66
+  @FR-66 @feature66 @AC-66.3
   Scenario: SPECGEN004_585 missing required delivery blocks smart overall only
     Given an implemented FR with one required delivery artifact missing
     When the real FR census evaluates task and delivery truth
     Then task verdict stays IMPLEMENTED and delivery is INCOMPLETE
 
-  @FR-66 @feature66
+  @FR-66 @feature66 @AC-66.4
   Scenario: SPECGEN004_586 all required delivery artifacts satisfy non-empty ALL
     Given an implemented FR with every required artifact present
     When the real FR census evaluates task and delivery truth
     Then delivery is DELIVERED and optional missing artifacts do not block
 
-  @FR-66 @feature66
+  @FR-66 @feature66 @AC-66.5
   Scenario: SPECGEN004_587 forwarded delivery demands resolve precedence and conflicts
     Given linked requirements with inherited duplicate and contradictory demands
     When the delivery resolver forwards needs through the graph
     Then demands deduplicate and contradictions emit FR_DEMAND_CONFLICT
 
-  @FR-66 @feature66
+  @FR-66 @feature66 @AC-66.6
   Scenario: SPECGEN004_588 metadata migration query and SQLite restore agree
     Given legacy requirement metadata with an unknown extension
     When migration MCP query and SQLite warm restore process it
@@ -4209,14 +4209,14 @@ Scenario: SPECGEN004_662 synthesizes canonical agent work from approved design o
   And its ordered 2–5-minute BDD-only RED, GREEN, and REFACTOR steps are embedded in its brief rather than separately schedulable graph nodes
   And conditional `domainMode: ddd` retains only verified boundaries while `domainMode: none` invents no domain entities
 
-@feature80 @FR-80 @AC-80.10
+@feature80 @FR-80 @AC-80.10 @AC-80.11
 Scenario: SPECGEN004_663 rejects an incomplete synthesis before planning
   Given a synthesized task set with a placeholder, an unconserved lane, missing ownership, no exact interface location, infeasible work, an untyped causal edge, and incomplete surfaces
   When the deterministic pre-planner synthesis review runs
   Then planning is rejected with stable named findings for every violation
   And a cyclic or reordered BDD-only RED to GREEN to REFACTOR edge is rejected before batching
 
-@feature80 @FR-80 @AC-80.10
+@feature80 @FR-80 @AC-80.10 @AC-80.11
 Scenario: SPECGEN004_664 projects an evidence-safe agent brief and machine-proven parallel batch
   Given canonical tasks with exact source context, interfaces, typed dependencies, predecessor summaries, scenarios, evidence commands, blockers, and declared surfaces
   When `TaskPlanResult` is projected for an AI agent
@@ -4225,14 +4225,14 @@ Scenario: SPECGEN004_664 projects an evidence-safe agent brief and machine-prove
   And only evidence-backed `DONE` completes a task while `DONE_WITH_CONCERNS`, `NEEDS_CONTEXT`, and `BLOCKED` retain diagnostics and create follow-up proposals
 
 
-@feature81 @FR-81 @AC-81.2
+@feature81 @FR-81 @AC-81.2 @AC-81.6
 Scenario: SPECGEN004_665 Cursor mcp twin file ships the door bundle
   Given the repository root contains ".cursor/mcp.json"
   When the Cursor MCP config is loaded
   Then it names the "dev-pomogator-specs" server
   And the launch path includes "tools/spec-mcp-server/server.bundle.mjs"
 
-@feature81 @FR-81 @AC-81.5
+@feature81 @FR-81 @AC-81.5 @AC-81.6
 Scenario: SPECGEN004_666 root and Cursor door entries stay equivalent
   Given root ".mcp.json" and ".cursor/mcp.json" both declare "dev-pomogator-specs"
   When ensure-cursor-mcp runs with "--check"
@@ -4413,3 +4413,11 @@ Scenario: SPECGEN004_692 Synthesis rejects mismatched and inapplicable acceptanc
   Given strict synthesis receives a mismatched requirement lane and an inapplicable acceptance lane
   When deterministic synthesis finalizes and projects the mismatched plan
   Then mismatched and inapplicable lanes are rejected without an accepted projection
+
+@feature58 @FR-58 @AC-58.1 @AC-58.3
+Scenario: SPECGEN004_693 migrated form-contract scenarios own feature58 while FR-19 keeps only two-tier coverage
+  Given the spec-generator-v4 spec graph built from the real repository
+  When FR-19 and FR-58 tested-by coverage is read
+  Then FR-19 is tested only by the two-tier policy scenarios SPECGEN004_49 and SPECGEN004_50
+  And no scenario tagged feature58 is also tagged feature19
+  And FR-58 owns at least 15 migrated SPECGEN003 form-contract scenarios

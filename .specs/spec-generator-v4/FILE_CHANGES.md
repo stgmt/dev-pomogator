@@ -741,6 +741,7 @@ This table is the explicit implementation inventory for the execution-aware task
 | `.specs/spec-generator-v4/spec-generator-v4.feature` | edit | FR-68 AC-SATISFACTION wave 3 — 50 ACs (FR-29..FR-40) mapped to their own verifying scenarios via @AC-N.N tags; 1 AC flagged no-candidate. |
 | `.specs/spec-generator-v4/spec-generator-v4.feature` | edit | FR-68 AC-SATISFACTION wave 4 — 18 ACs (FR-41..FR-52) mapped to their own verifying scenarios via @AC-N.N tags; 1 AC flagged no-candidate. |
 | `.specs/spec-generator-v4/spec-generator-v4.feature` | edit | FR-68 AC-SATISFACTION wave 5 — 25 ACs (FR-53..FR-62) mapped to their own verifying scenarios via @AC-N.N tags (46 scenario tags); 3 ACs flagged no-candidate. |
+| `.specs/spec-generator-v4/spec-generator-v4.feature` | edit | FR-68 AC-SATISFACTION wave 6 — 24 ACs mapped (26 scenario tags) + new scenario SPECGEN004_693 covering AC-58.1/AC-58.3 retag invariant; 6 ACs documented clarify with follow-ups. |
 
 - ACCEPTANCE_CRITERIA.md: add AC-81.8 (FR-81)
 

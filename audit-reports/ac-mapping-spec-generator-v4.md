@@ -266,3 +266,69 @@ Gap check: OWN-no-scenario 57 → 32 (exactly the 25 mapped ACs).
 
 Residual clauses noted (covered ACs, minor unasserted tails): AC-53.3 runScenario `ran === 0 → passed=false` parse rule has no dedicated assertion; AC-59.2 `_no_push_check: true` suppression branch unasserted. Both ride with the wave-6 new-scenario batch if not resolved by an existing scenario there.
 
+## Wave 6 — remaining true gaps (24 mapped, 1 new scenario for 2 ACs, 6 documented clarify)
+
+Dynamic Workflow run `dwe-cb45c0aa-93b2-409f-8085-4a04873ffed3` (admission allow, 15 work packages = the 15 families still carrying true-gap ACs).
+
+### Mapped to existing scenarios
+
+| AC | Scenario | Justification (quoted step) |
+|---|---|---|
+| AC-63.1 | specgen004_555 | Then each surface reports the same deduplicated FR, AC, and scenario inventory with mandatory readiness lanes |
+| AC-63.2 | specgen004_556 | Then each state remains explicit and no source, time, or recency field is discarded / filtered proof cannot replace canonical full-run execution evidence |
+| AC-63.3 | specgen004_557 | Then the result exposes the AC ids, test_paths=[], and explicit never-run classification while AND-gating every mandatory lane / reports the next action |
+| AC-64.1 | specgen004_558 | When graph conformance and release inventory run with baseline evidence sha 0b291bac / Then unclassified or silent inventory evidence is surfaced and cleaned rather than accepted as implementation proof |
+| AC-64.2 | specgen004_559 | Then every tracked in-scope unit must be PASSED, every outcome remains distinct, and every in-scope unit satisfies the AND gate / unclassified untracked paths violate cardinality or conservation |
+| AC-64.3 | specgen004_574 | Then a missing runtime import, bundle, or asset is reported with installed-runtime provenance and does not become a source-tree pass |
+| AC-64.4 | specgen004_561 | Then the PR identity, release candidate, or tag, run identity, owner, monitoring signal, rollback action, and follow-up verification are recorded / not_recorded or never-run evidence prevents a release-ready claim |
+| AC-65.1 | specgen004_565 | Then shallow coverage names every missing public contract paid flow and semantic deploy lane |
+| AC-65.2 | specgen004_565 | Then shallow coverage names every missing public contract paid flow and semantic deploy lane / the complete AC-linked plan passes (paid-flow lane mapping) |
+| AC-65.3 | specgen004_565 | Then a blocking investigation remains red while the complete AC-linked plan passes / empty task plans ... fail closed |
+| AC-65.4 | specgen004_565 | When the real acceptance delivery analyzer and audit inspect every plan / shallow coverage names every missing lane; analyzer outages fail closed |
+| AC-66.1 | specgen004_583 | Then typed metadata and the unknown extension round-trip exactly |
+| AC-66.2 | specgen004_584 | Then both surfaces return the same metadata validation findings |
+| AC-66.3 | specgen004_585 | Then task verdict stays IMPLEMENTED and delivery is INCOMPLETE |
+| AC-66.4 | specgen004_586 | Then delivery is DELIVERED and optional missing artifacts do not block |
+| AC-66.5 | specgen004_587 | Then demands deduplicate and contradictions emit FR_DEMAND_CONFLICT |
+| AC-66.6 | specgen004_588 | Then every surface returns the same typed metadata and delivery state |
+| AC-80.11 | specgen004_663 | Then planning is rejected with stable named findings for every violation (placeholder/missing-ownership/incomplete-surface synthesis never finalizes) |
+| AC-80.11 | specgen004_664 | Then only evidence-backed DONE completes a task while DONE_WITH_CONCERNS, NEEDS_CONTEXT, and BLOCKED retain diagnostics and create follow-up proposals |
+| AC-81.6 | specgen004_665 | Then it names the dev-pomogator-specs server / the launch path includes the same door bundle (no second package) |
+| AC-81.6 | specgen004_666 | Then it exits 0 reporting the door entries match (no duplicated door) |
+| AC-7.1 | specgen004_15 | Then the native launcher responds to LSP initialize through the real Marksman binary |
+| AC-7.2 | specgen004_16 | Then the launcher exits non-zero with an actionable missing-binary message / no custom JS markdown-LSP fallback / spec-domain find_refs still works |
+| AC-19.3 | specgen003_22 | Then the guard exits with code 0 (fail-open on malformed stdin) |
+| AC-52.1 | specgen004_514 | Then the tool description separates the alias registry from Marksman heading slugs / the compact id and Marksman heading slug resolve |
+| AC-59.3 | specgen004_109 | Then the prompt-time summary is a single unresolved-DENY line (buildConformanceSummary single-line clause) |
+
+### New scenario (no honest candidate existed)
+
+| AC | Scenario |
+|---|---|
+| AC-58.1 | specgen004_693 (NEW) |
+| AC-58.3 | specgen004_693 (NEW) |
+
+SPECGEN004_693 (@feature58 @AC-58.1 @AC-58.3) drives the real buildGraph over the repository and pins: FR-19 tested-by is exactly {SPECGEN004_49, SPECGEN004_50}; no scenario carries both @feature58 and @feature19; FR-58 owns ≥15 migrated SPECGEN003 form-contract scenarios. Step-defs: tests/step_definitions/feature58_retag_invariant.ts. Invariant verified holding before authoring (FR-19 tested-by = specgen004_49, specgen004_50).
+
+### Documented clarify (no scenario possible without separate implementation/AC-amendment work)
+
+- AC-1.3: v1-era installer AC (npm install into a vitest project keeps both suites in CI). The npm-install distribution is deprecated since v2 (canonical marketplace plugin) — the AC predates current distribution. Follow-up: amend/retire the AC via amend_requirement, do not scenario-test a dead install path.
+- AC-7.4: dead-integration-guard is review discipline (.claude/rules/testing/dead-integration-guard.md), NOT an automated check — there is no implementation a scenario could drive. Follow-up: implement an automated guard first, then scenario it.
+- AC-7.5: design-decision AC: records the 2026-06-04 empirical Marksman measurement of which reference forms resolve. The measurable residue (marksmanSlug golden fixture) is pinned by specgen004_81; the measurement protocol itself is a one-time research act, not repeatable behavior. Follow-up: treat as documented decision.
+- AC-20.2: perf-budget AC (50ms p95) + atomic temp-file-rename clause. Functional ack behavior is covered by specgen004_109 under AC-20.1; the budget/atomicity clauses need a dedicated perf/atomicity scenario. Follow-up: new scenario asserting atomic ack writes + measured budget.
+- AC-26.2: AC drift: spec_llm_judge_deny frontmatter handling exists in tools/spec-llm-judge, but the promised finding code SEMANTIC_CHECK_SKIPPED_OPT_OUT is implemented NOWHERE (corpus-wide grep). Follow-up: implement the finding code, then scenario it.
+- AC-36.6: process invariant (after any migration phase the full clean-HEAD Docker suite is green + bare-id pins updated in the same phase). Enforced by workflow discipline and the final full run; not expressible as one scenario. Follow-up: keep as phase-gate discipline.
+
+### Residual clauses on mapped ACs (tracked follow-ups, never silent)
+
+- AC-7.2: install-time resilience + install-log.json unavailable-marking clauses have no scenario (launcher-side clauses covered by specgen004_16)
+- AC-19.3: PARSER_CRASH log-line format clause has no scenario (fail-open exit covered by specgen003_22)
+- AC-24.1: tamper-log-append clause (.dev-pomogator/logs/meta-guard.log) has no scenario (deny+name covered by specgen004_108) — from the waves 1-4 spot-check
+- AC-52.1: filtered-run canonical clobber-safety, enforce-compatible anchor remediation, v1-layout-drift finding, and FR-32 own-scenario clauses have no scenario (validate_anchor clause covered by specgen004_514)
+- AC-53.3: runScenario ran === 0 -> passed=false parse-rule clause has no dedicated scenario (tally covered by specgen004_382) — from wave 5
+- AC-59.2: _no_push_check: true suppression branch unasserted (persistence-under-cap covered by specgen004_513) — from wave 5
+- AC-59.3: buildTaskCensusLine ≤1500-char clause and bundle-probe clause have no scenario (single-line summary covered by specgen004_109)
+- AC-80.11: independent-verifier identity + digest-bound attestation clauses have no scenario (blocking-findings + evidence-backed-DONE covered by specgen004_663/664)
+
+Gap check: OWN-no-scenario 32 → 24 mapped + 2 new-scenario → 6 documented clarify remain as the honest residue. Lane mechanics (readiness-inventory.ts acOwnProofPasses) carry no waiver path: the AC_SATISFACTION lane can only go fully GREEN when the 6 clarify ACs get implementation/amendment work, or when every mapped AC proves PASSED in the final full run.
+
