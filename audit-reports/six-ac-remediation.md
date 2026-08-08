@@ -33,5 +33,5 @@
 - Extended tools/marksman-installer/lsp-probe.ts with one reusable LSP session, request/response correlation, initialized/didOpen notifications, and textDocument/definition handling.
 - The real-artifact e2e now creates source/target Markdown files, sends a link-position definition request to the real Marksman binary, and asserts the target URI plus heading range.
 - Added AC-7.5 ownership to SPECGEN004_15 through the MCP door; no capability-only evidence is treated as sufficient.
-- Local probe returned one target definition with the expected target URI; Docker BDD verification is running under the canonical test wrapper.
+- Local probe returned one target definition with the expected target URI; Docker BDD `SPECGEN004_15` completed successfully, with all 31 recorded steps passing.
 
