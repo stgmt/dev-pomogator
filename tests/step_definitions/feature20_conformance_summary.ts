@@ -36,8 +36,9 @@ function seedDeny(w: F20World, n: number): void {
   const lines = Array.from({ length: n }, (_, i) =>
     JSON.stringify({
       timestamp: new Date(Date.now() + i).toISOString(),
-      code: 'DUPLICATE_DEFINITION',
+      finding_code: 'DUPLICATE_DEFINITION',
       severity: 'deny',
+      source: 'bdd-real-summary-fixture',
       message: `bdd seed ${i}`,
     }),
   );
