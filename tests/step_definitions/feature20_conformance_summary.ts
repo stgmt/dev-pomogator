@@ -11,6 +11,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
+import { performance } from 'node:perf_hooks';
 import { V4World } from '../hooks/before-after.ts';
 import { buildConformanceSummary, buildTaskCensusLine } from '../../tools/specs-validator/conformance-summary.ts';
 import { runPush } from '../../tools/spec-conformance-push/spec-conformance-push.ts';
@@ -21,6 +22,7 @@ const ACK_CLI = path.join(REPO_ROOT, 'tools', 'specs-validator', 'ack-summary.ts
 interface F20World extends V4World {
   ackFile?: string;
   fr20RepoRoot?: string;
+  fr20PerfSamples?: number[];
 }
 
 function summary(w: F20World): string | null {
@@ -86,6 +88,56 @@ Then('the prompt-time summary is silent until a newer deny arrives', function (t
   const line = summary(this);
   assert.ok(line, 'a NEW deny after the ack must re-trigger');
   assert.match(line!, /1 unresolved DENY/);
+});
+
+// ── SPECGEN004_695 — AC-20.2 performance + atomic acknowledgement ──────────
+Given(
+  'a conformance state with 1000 recent deny entries and an isolated acknowledgement file',
+  function (this: F20World) {
+    this.ackFile = path.join(this.tempDir, 'state', 'last-summary-ack.json');
+    this.fr20RepoRoot = path.join(this.tempDir, 'repo');
+    fs.mkdirSync(path.dirname(this.ackFile), { recursive: true });
+    fs.mkdirSync(this.fr20RepoRoot, { recursive: true });
+    seedDeny(this, 1000);
+    this.fr20PerfSamples = [];
+  },
+);
+
+When(
+  'the real summary producer is measured over 100 samples and the ack command runs',
+  function (this: F20World) {
+    for (let i = 0; i < 100; i += 1) {
+      const started = performance.now();
+      const line = summary(this);
+      this.fr20PerfSamples!.push(performance.now() - started);
+      assert.ok(line?.includes('1000 unresolved DENY'), 'summary must consume the seeded real log');
+    }
+    const r = spawnSync(
+      process.execPath,
+      ['--import', 'tsx', ACK_CLI, '--ack-file', this.ackFile!, '--repo-root', this.fr20RepoRoot!],
+      { encoding: 'utf-8', timeout: 60_000 },
+    );
+    assert.equal(r.status, 0, r.stderr);
+  },
+);
+
+Then('the p95 summary time is at most 50 milliseconds', function (this: F20World) {
+  const samples = [...(this.fr20PerfSamples ?? [])].sort((a, b) => a - b);
+  assert.equal(samples.length, 100);
+  const p95 = samples[Math.floor(samples.length * 0.95)];
+  assert.ok(p95 <= 50, `summary p95 ${p95.toFixed(2)}ms exceeds 50ms`);
+});
+
+Then('every acknowledgement read is valid complete JSON', function (this: F20World) {
+  const raw = fs.readFileSync(this.ackFile!, 'utf8');
+  const parsed = JSON.parse(raw) as Record<string, unknown>;
+  assert.equal(typeof parsed.ack_timestamp, 'string');
+  assert.equal(typeof parsed.ack_event_count, 'number');
+});
+
+Then('no temporary acknowledgement file remains', function (this: F20World) {
+  const dir = path.dirname(this.ackFile!);
+  assert.deepEqual(fs.readdirSync(dir).filter((name) => name.includes('.tmp')), []);
 });
 
 // ── SPECGEN004_152 — P21-4 task census: producer → cache → banner end-to-end ──

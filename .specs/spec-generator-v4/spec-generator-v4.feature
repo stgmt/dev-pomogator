@@ -961,6 +961,14 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     When the spec-status ack stamps the state file
     Then the prompt-time summary is silent until a newer deny arrives
 
+  @feature20 @FR-20 @AC-20.2
+  Scenario: SPECGEN004_695 summary stays fast and ack writes remain whole JSON
+    Given a conformance state with 1000 recent deny entries and an isolated acknowledgement file
+    When the real summary producer is measured over 100 samples and the ack command runs
+    Then the p95 summary time is at most 50 milliseconds
+    And every acknowledgement read is valid complete JSON
+    And no temporary acknowledgement file remains
+
   @feature20
   Scenario: SPECGEN004_152 the task census surfaces unfinished tasks in the prompt banner
     Given a spec corpus with one open task and one done task

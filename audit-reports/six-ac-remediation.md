@@ -21,3 +21,10 @@
 
 - Filtered Docker BDD: SPECGEN004_694.
 - Full Docker BDD and authoritative verdict: only after all six remediation waves and the final commit.
+
+## Wave 2 — FR-20 speed and atomic acknowledgement BDD ownership
+
+- Added BDD owner: SPECGEN004_695 with AC-20.2.
+- The scenario drives the real summary producer over 1000 log entries, measures 100 samples, invokes the real acknowledgement CLI, validates complete JSON, and checks temporary-file cleanup.
+- The existing technical regression in tools/specs-validator/__tests__/conformance-summary.test.ts remains complementary; the acceptance path is now BDD-owned.
+
