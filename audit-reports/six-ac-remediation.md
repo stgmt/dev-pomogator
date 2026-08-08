@@ -39,5 +39,10 @@
 
 - Added `tools/dead-integration-guard/check.ts`, a machine-readable guard that triggers on installer/runtime changes, verifies consumer source truthfulness, and requires an executable real-artifact command.
 - Added three AC-7.4 BDD scenarios: missing consumer denial, false consumer declaration denial, and current Marksman positive proof. The positive path also probes the real launcher and capability response.
-- Added the three scenarios through the MCP door as SPECGEN004_696–698; focused Docker verification is running.
+- Added the three scenarios through the MCP door as SPECGEN004_696–698; SPECGEN004_696 and SPECGEN004_697 passed individually, and the positive scenario passed after a clean rerun.
+
+## Wave 5 — migration-phase completion gate
+
+- Added `scripts/migration-phase-gate.ts`, which emits bounded `ALLOW`/`DENY` JSON and independently checks clean worktree, qualified machine IDs, collision-free corpus, unfiltered Docker evidence tied to HEAD, and fresh canonical evidence.
+- Added AC-36.6 BDD owners SPECGEN004_699 and SPECGEN004_700 through the MCP door. Both passed in the focused Docker tag run (2 scenarios, 12 steps).
 
