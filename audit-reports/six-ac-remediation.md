@@ -35,3 +35,9 @@
 - Added AC-7.5 ownership to SPECGEN004_15 through the MCP door; no capability-only evidence is treated as sufficient.
 - Local probe returned one target definition with the expected target URI; Docker BDD `SPECGEN004_15` completed successfully, with all 31 recorded steps passing.
 
+## Wave 4 — installed-versus-integrated guard
+
+- Added `tools/dead-integration-guard/check.ts`, a machine-readable guard that triggers on installer/runtime changes, verifies consumer source truthfulness, and requires an executable real-artifact command.
+- Added three AC-7.4 BDD scenarios: missing consumer denial, false consumer declaration denial, and current Marksman positive proof. The positive path also probes the real launcher and capability response.
+- Added the three scenarios through the MCP door as SPECGEN004_696–698; focused Docker verification is running.
+
