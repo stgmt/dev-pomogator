@@ -203,6 +203,19 @@ function claudeBinaryPresent(): boolean {
   return probe.status === 0;
 }
 
+/** Read the owning spec's explicit semantic opt-out without widening it to prose. */
+function specSemanticJudgeOptOut(cwd: string, specPath: string): boolean {
+  const frPath = path.resolve(cwd, specPath, 'FR.md');
+  let text: string;
+  try {
+    text = fs.readFileSync(frPath, 'utf8');
+  } catch {
+    return false;
+  }
+  const frontmatter = text.match(/^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/)?.[1] ?? '';
+  return /^spec_llm_judge_deny\s*:\s*true\s*$/im.test(frontmatter);
+}
+
 function hasMarker(s: ScenarioLite, marker: string): boolean {
   const needle = marker.toUpperCase();
   const haystack = [s.id, ...s.tags, ...s.steps.map((step) => step.text)].join(' ').toUpperCase();
@@ -534,13 +547,14 @@ export async function runSpecVerdict(
 
   // FR-37c (P14-3): FR-8 semantic drift IN the verdict path — ON when a
   // claude binary is present; explicit skip otherwise. Fail-loud always.
-  const semanticWanted = opts.semantic !== false;
+  const semanticOptOut = specSemanticJudgeOptOut(cwd, specPath);
+  const semanticWanted = opts.semantic !== false && !semanticOptOut;
   const binaryPresent = opts.judgeSpawn ? true : semanticWanted && claudeBinaryPresent();
   const drifts: SpecVerdictResult['semantic']['drifts'] = [];
   let pairsChecked = 0;
   let judgeFailures = 0;
   let semanticNote: string | undefined;
-  if (semanticWanted && binaryPresent) {
+  if (semanticOptOut || (semanticWanted && binaryPresent)) {
     // Pairs = this spec's FR ↔ tested-by Scenario edges (the REAL edges, FR-36c).
     const pairs: Array<{ fr: FrNode; scen: ScenarioNode }> = [];
     for (const e of graph.edges) {
@@ -559,6 +573,7 @@ export async function runSpecVerdict(
         frText: `${fr.title}\n${fr.body ?? ''}`,
         scenarioId: scen.id,
         scenarioText: scen.steps.map((s) => `${s.keyword} ${s.text}`).join('\n'),
+        spec_llm_judge_deny: semanticOptOut,
         spawn: opts.judgeSpawn,
       });
       pairsChecked++;
@@ -573,7 +588,9 @@ export async function runSpecVerdict(
         judgeFailures++;
       }
     }
-    if (pairs.length > pairsChecked) {
+    if (semanticOptOut) {
+      semanticNote = `SEMANTIC_CHECK_SKIPPED_OPT_OUT — ${pairsChecked} semantic pair(s) skipped by spec policy; no judge subprocesses were spawned.`;
+    } else if (pairs.length > pairsChecked) {
       semanticNote = `SEMANTIC_TRUNCATED — ${pairsChecked} of ${pairs.length} FR↔Scenario pairs checked (maxPairs); the rest are UNCHECKED, not "no drift" (FR-37c)`;
     } else if (judgeFailures > 0) {
       semanticNote = `SEMANTIC_DEGRADED — ${judgeFailures} judge subprocess failure(s); those pairs are UNCHECKED, not "no drift" (FR-37c)`;

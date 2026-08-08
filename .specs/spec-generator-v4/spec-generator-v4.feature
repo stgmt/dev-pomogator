@@ -4421,3 +4421,11 @@ Scenario: SPECGEN004_693 migrated form-contract scenarios own feature58 while FR
   Then FR-19 is tested only by the two-tier policy scenarios SPECGEN004_49 and SPECGEN004_50
   And no scenario tagged feature58 is also tagged feature19
   And FR-58 owns at least 15 migrated SPECGEN003 form-contract scenarios
+
+@feature26 @FR-26 @AC-26.2
+Scenario: SPECGEN004_694 spec opt-out skips every semantic pair and records the reason
+  Given a spec frontmatter opt-out is enabled and two FR-to-scenario pairs are prepared
+  When the authoritative verdict evaluates semantic coverage
+  Then no semantic subprocess is spawned
+  And no semantic cache entry is created
+  And the spec-check log contains one opt-out event for each pair

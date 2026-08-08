@@ -13,7 +13,7 @@ WHEN the master NDJSON is generated AND post-processing splits by spec slug THEN
 ## AC-1.3
 **Требование:** [FR-1](FR.md#fr-1)
 
-IF a target TypeScript project installs dev-pomogator v4 AND existing vitest unit tests are present THEN cucumber-js BDD integration SHALL be mandatory additive (not replace), running both test suites in CI.
+**Статус:** SUPERSEDED — старый npm/v1 install-flow. Каноническая установка v4 идёт через marketplace plugin; текущий plugin contract и его BDD-доказательства владеют этим поведением. История старого требования сохранена в CHANGELOG.md и audit-reports/ac-mapping-spec-generator-v4.md.
 
 ## AC-2.1
 **Требование:** [FR-2](FR.md#fr-2)
