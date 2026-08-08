@@ -52,6 +52,37 @@ export interface InitializeResult {
   capabilities: Record<string, unknown>;
 }
 
+export interface LspPosition {
+  line: number;
+  character: number;
+}
+
+export interface LspRange {
+  start: LspPosition;
+  end: LspPosition;
+}
+
+export interface DefinitionLocation {
+  uri: string;
+  range: LspRange;
+}
+
+export interface DefinitionResult {
+  definitions: DefinitionLocation[];
+}
+
+interface LspResponse {
+  id?: number;
+  result?: unknown;
+  error?: { code?: number; message?: string };
+}
+
+interface LspSession {
+  request<T>(method: string, params: unknown, timeoutMs: number): Promise<T>;
+  notify(method: string, params: unknown): void;
+  close(): void;
+}
+
 /**
  * Create a MINIMAL, isolated Marksman workspace (a temp dir with a `.marksman.toml`
  * marker + one trivial `.md`) and return its path. The probe MUST NOT point
@@ -81,6 +112,84 @@ export function removeMarksmanWorkspace(dir: string): void {
   }
 }
 
+function spawnLspSession(opts: {
+  binaryPath: string;
+  workspaceDir: string;
+  timeoutMs: number;
+}): Promise<{ session: LspSession; initialize: InitializeResult }> {
+  const cwd = opts.workspaceDir;
+  const env = { ...process.env, DEV_POMOGATOR_MARKSMAN_BIN: opts.binaryPath, CLAUDE_PROJECT_DIR: cwd };
+  const child = spawn(process.execPath, [launcherPath(), 'server'], {
+    stdio: ['pipe', 'pipe', 'pipe'],
+    env,
+    cwd,
+  });
+  let stderr = '';
+  let nextId = 1;
+  let buf = Buffer.alloc(0);
+  let closed = false;
+  const pending = new Map<number, { resolve: (value: unknown) => void; reject: (error: Error) => void }>();
+  let rejectSession!: (error: Error) => void;
+  const sessionFailure = new Promise<never>((_, reject) => { rejectSession = reject; });
+  const send = (msg: unknown): void => {
+    const body = JSON.stringify(msg);
+    child.stdin.write(`Content-Length: ${Buffer.byteLength(body)}\r\n\r\n${body}`);
+  };
+  const close = (): void => {
+    if (closed) return;
+    closed = true;
+    const error = new Error(`Marksman session closed; stderr: ${stderr.slice(0, 2000)}`);
+    for (const waiter of pending.values()) waiter.reject(error);
+    pending.clear();
+    try { child.kill(); } catch { /* already gone */ }
+  };
+  child.stdout.on('data', (d: Buffer) => {
+    buf = Buffer.concat([buf, d]);
+    for (;;) {
+      const headerEnd = buf.indexOf('\r\n\r\n');
+      if (headerEnd === -1) break;
+      const header = buf.slice(0, headerEnd).toString('utf8');
+      const match = /Content-Length:\s*(\d+)/i.exec(header);
+      if (!match) break;
+      const len = Number(match[1]);
+      const start = headerEnd + 4;
+      if (buf.length < start + len) break;
+      const json = JSON.parse(buf.slice(start, start + len).toString('utf8')) as LspResponse;
+      buf = buf.slice(start + len);
+      if (typeof json.id !== 'number') continue;
+      const waiter = pending.get(json.id);
+      if (!waiter) continue;
+      pending.delete(json.id);
+      if (json.error) waiter.reject(new Error(`LSP ${json.error.code ?? 'error'}: ${json.error.message ?? 'request failed'}`));
+      else waiter.resolve(json.result);
+    }
+  });
+  child.stderr.on('data', (d: Buffer) => { stderr += d.toString('utf8'); });
+  child.on('error', rejectSession);
+  child.on('exit', (code) => rejectSession(new Error(`launcher exited (code ${code}); stderr: ${stderr.slice(0, 2000)}`)));
+  const request = <T>(method: string, params: unknown, timeoutMs: number): Promise<T> => {
+    const id = nextId++;
+    const response = new Promise<T>((resolve, reject) => {
+      pending.set(id, { resolve: resolve as (value: unknown) => void, reject });
+      send({ jsonrpc: '2.0', id, method, params });
+    });
+    return Promise.race([
+      response,
+      new Promise<T>((_, reject) => setTimeout(() => reject(new Error(`${method} timed out after ${timeoutMs}ms; stderr: ${stderr.slice(0, 2000)}`)), timeoutMs)),
+      sessionFailure,
+    ]);
+  };
+  const session: LspSession = { request, notify: (method, params) => send({ jsonrpc: '2.0', method, params }), close };
+  const rootUri = pathToFileURL(cwd).href;
+  return session.request<InitializeResult>('initialize', {
+    processId: process.pid,
+    clientInfo: { name: 'lsp-probe', version: '0' },
+    rootUri,
+    capabilities: { workspace: { workspaceFolders: true } },
+    workspaceFolders: [{ uri: rootUri, name: 'repo' }],
+  }, opts.timeoutMs).then((result) => ({ session, initialize: { capabilities: result.capabilities ?? {} } }));
+}
+
 /**
  * Spawn `node launch-marksman.cjs server` (the shim resolves + execs the real
  * binary), send an LSP `initialize`, and resolve with the server capabilities.
@@ -96,89 +205,45 @@ export function probeInitialize(opts: {
   env?: NodeJS.ProcessEnv;
   timeoutMs?: number;
 }): Promise<InitializeResult> {
-  const baseEnv = opts.env ?? process.env;
-  const cwd = opts.workspaceDir;
-  const env = { ...baseEnv, DEV_POMOGATOR_MARKSMAN_BIN: opts.binaryPath, CLAUDE_PROJECT_DIR: cwd };
+  return spawnLspSession({
+    binaryPath: opts.binaryPath,
+    workspaceDir: opts.workspaceDir,
+    timeoutMs: opts.timeoutMs ?? 12000,
+  }).then(({ session, initialize }) => {
+    session.close();
+    return initialize;
+  });
+}
+
+export function probeDefinition(opts: {
+  binaryPath: string;
+  workspaceDir: string;
+  documentPath: string;
+  position: LspPosition;
+  timeoutMs?: number;
+}): Promise<DefinitionResult> {
   const timeoutMs = opts.timeoutMs ?? 12000;
-
-  return new Promise<InitializeResult>((resolve, reject) => {
-    const child = spawn(process.execPath, [launcherPath(), 'server'], {
-      stdio: ['pipe', 'pipe', 'pipe'],
-      env,
-      cwd,
-    });
-
-    let settled = false;
-    let stderr = '';
-    const done = (fn: () => void): void => {
-      if (settled) return;
-      settled = true;
-      clearTimeout(timer);
-      try {
-        child.kill();
-      } catch {
-        /* already gone */
-      }
-      fn();
-    };
-
-    const timer = setTimeout(
-      () => done(() => reject(new Error(`initialize timed out after ${timeoutMs}ms; stderr: ${stderr.slice(0, 2000)}`))),
-      timeoutMs,
-    );
-
-    const send = (msg: unknown): void => {
-      const body = JSON.stringify(msg);
-      child.stdin.write(`Content-Length: ${Buffer.byteLength(body)}\r\n\r\n${body}`);
-    };
-
-    let buf = Buffer.alloc(0);
-    child.stdout.on('data', (d: Buffer) => {
-      buf = Buffer.concat([buf, d]);
-      for (;;) {
-        const headerEnd = buf.indexOf('\r\n\r\n');
-        if (headerEnd === -1) break;
-        const header = buf.slice(0, headerEnd).toString('utf8');
-        const m = /Content-Length:\s*(\d+)/i.exec(header);
-        if (!m) break;
-        const len = Number(m[1]);
-        const start = headerEnd + 4;
-        if (buf.length < start + len) break;
-        const json = JSON.parse(buf.slice(start, start + len).toString('utf8')) as {
-          id?: number;
-          result?: { capabilities?: Record<string, unknown> };
-        };
-        buf = buf.slice(start + len);
-        if (json.id === 1 && json.result) {
-          done(() => resolve({ capabilities: json.result!.capabilities ?? {} }));
-          return;
-        }
-      }
-    });
-
-    child.stderr.on('data', (d: Buffer) => {
-      stderr += d.toString('utf8');
-    });
-    child.on('error', (err) => done(() => reject(err)));
-    child.on('exit', (code) =>
-      done(() => reject(new Error(`launcher exited (code ${code}) before initialize; stderr: ${stderr.slice(0, 2000)}`))),
-    );
-
-    // Use pathToFileURL — NOT string concat. On POSIX, cwd starts with `/`, so
-    // `'file:///' + cwd` yields `file:////tmp/...` (malformed, 4 slashes) and
-    // Marksman fatal-errors; pathToFileURL produces a correct URI on every OS.
-    const rootUri = pathToFileURL(cwd).href;
-    send({
-      jsonrpc: '2.0',
-      id: 1,
-      method: 'initialize',
-      params: {
-        processId: process.pid,
-        clientInfo: { name: 'lsp-probe', version: '0' },
-        rootUri,
-        capabilities: { workspace: { workspaceFolders: true } },
-        workspaceFolders: [{ uri: rootUri, name: 'repo' }],
-      },
-    });
+  return spawnLspSession({ binaryPath: opts.binaryPath, workspaceDir: opts.workspaceDir, timeoutMs }).then(async ({ session }) => {
+    try {
+      const uri = pathToFileURL(opts.documentPath).href;
+      const text = fs.readFileSync(opts.documentPath, 'utf8');
+      session.notify('initialized', {});
+      session.notify('textDocument/didOpen', {
+        textDocument: { uri, languageId: 'markdown', version: 1, text },
+      });
+      const raw = await session.request<unknown>('textDocument/definition', {
+        textDocument: { uri },
+        position: opts.position,
+      }, timeoutMs);
+      const locations = Array.isArray(raw) ? raw : raw ? [raw] : [];
+      return {
+        definitions: locations.map((value) => {
+          const location = value as { uri?: string; targetUri?: string; range?: LspRange; targetRange?: LspRange };
+          return { uri: location.uri ?? location.targetUri ?? '', range: location.range ?? location.targetRange! };
+        }),
+      };
+    } finally {
+      session.close();
+    }
   });
 }

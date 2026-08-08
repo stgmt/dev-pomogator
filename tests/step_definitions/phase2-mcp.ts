@@ -20,10 +20,12 @@ import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { buildGraph } from '../../tools/spec-graph/builder.ts';
 import { buildToolRegistry } from '../../tools/spec-mcp-server/tools.ts';
 import { runGuard } from '../../tools/spec-conformance-guard/spec-conformance-guard.ts';
 import { runPush, decidePush } from '../../tools/spec-conformance-push/spec-conformance-push.ts';
+import { resolveMarksmanBinary } from '../../tools/marksman-installer/resolve-binary.ts';
 import type { Finding } from '../../tools/spec-graph/conformance.ts';
 import type { SpecGraph, ScenarioNode } from '../../tools/spec-graph/types.ts';
 import type { V4World } from '../hooks/before-after.ts';
@@ -467,8 +469,14 @@ Then(
 
 import { runInstall as runMarksmanInstall } from '../../tools/marksman-installer/postinstall.ts';
 import { readLog as readMarksmanLog } from '../../tools/marksman-installer/install-log.ts';
-import { resolveMarksmanBinary } from '../../tools/marksman-installer/resolve-binary.ts';
-import { createMarksmanWorkspace, decideE2e, isInDocker, probeInitialize, removeMarksmanWorkspace } from '../../tools/marksman-installer/lsp-probe.ts';
+import {
+  createMarksmanWorkspace,
+  decideE2e,
+  isInDocker,
+  probeDefinition,
+  probeInitialize,
+  removeMarksmanWorkspace,
+} from '../../tools/marksman-installer/lsp-probe.ts';
 import { createHash } from 'node:crypto';
 
 interface MarksmanRegistration {
@@ -485,6 +493,7 @@ interface MarksmanWorld extends Phase2World {
   marksmanInstallResult?: { state: { available: boolean; reason?: string; binary_path?: string } };
   marksmanRegistration?: MarksmanRegistration;
   marksmanLauncherResult?: MarksmanLauncherResult;
+  marksmanDefinition?: { uri: string; range: { start: { line: number; character: number } } };
 }
 
 function readJsonFile<T>(filePath: string): T {
@@ -548,6 +557,33 @@ Then(
     assertMarksmanLspRegistration(this.marksmanRegistration!);
   },
 );
+
+Then('the real Marksman server resolves a Markdown link to the expected target heading', { timeout: 30000 }, async function (this: MarksmanWorld) {
+  const resolved = resolveMarksmanBinary({ repoRoot: process.cwd() });
+  const decision = decideE2e({ binaryPath: resolved?.binaryPath ?? null, inDocker: isInDocker() });
+  assert.notEqual(decision, 'fail', 'inside Docker without Marksman must fail, never silently skip');
+  assert.equal(decision, 'run', 'real Marksman binary is required for AC-7.5');
+  const ws = createMarksmanWorkspace();
+  try {
+    const target = path.join(ws, 'target.md');
+    const source = path.join(ws, 'source.md');
+    fs.writeFileSync(target, '# Target Heading\n\nTarget body.\n');
+    fs.writeFileSync(source, '[Target](target.md#target-heading)\n');
+    const result = await probeDefinition({
+      binaryPath: resolved!.binaryPath,
+      workspaceDir: ws,
+      documentPath: source,
+      position: { line: 0, character: 3 },
+    });
+    assert.equal(result.definitions.length, 1, 'link position must return exactly one definition');
+    this.marksmanDefinition = result.definitions[0];
+    assert.equal(this.marksmanDefinition.uri, pathToFileURL(target).href);
+    assert.equal(this.marksmanDefinition.range.start.line, 0);
+    assert.equal(this.marksmanDefinition.range.start.character, 0);
+  } finally {
+    removeMarksmanWorkspace(ws);
+  }
+});
 
 Then('the native launcher responds to LSP `initialize` through the real Marksman binary', { timeout: 25000 }, async function () {
   // Real-artifact hop-1: resolve the REAL Marksman binary (env override → PATH →

@@ -28,3 +28,10 @@
 - The scenario drives the real summary producer over 1000 log entries, measures 100 samples, invokes the real acknowledgement CLI, validates complete JSON, and checks temporary-file cleanup.
 - The existing technical regression in tools/specs-validator/__tests__/conformance-summary.test.ts remains complementary; the acceptance path is now BDD-owned.
 
+## Wave 3 — real Marksman link-definition proof
+
+- Extended tools/marksman-installer/lsp-probe.ts with one reusable LSP session, request/response correlation, initialized/didOpen notifications, and textDocument/definition handling.
+- The real-artifact e2e now creates source/target Markdown files, sends a link-position definition request to the real Marksman binary, and asserts the target URI plus heading range.
+- Added AC-7.5 ownership to SPECGEN004_15 through the MCP door; no capability-only evidence is treated as sufficient.
+- Local probe returned one target definition with the expected target URI; Docker BDD verification is running under the canonical test wrapper.
+
