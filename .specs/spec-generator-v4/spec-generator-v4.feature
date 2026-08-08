@@ -122,13 +122,14 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Then no `<system-reminder>` is pushed for that file
     And the findings are still logged to `.dev-pomogator/.spec-check-log/`
 
-  @feature7 @AC-7.3 @AC-7.1
-  Scenario: SPECGEN004_15 Marksman native LSP registration is declared by the canonical plugin
+  @feature7 @FR-7 @AC-7.1 @AC-7.3 @AC-7.5
+  Scenario: SPECGEN004_15 Marksman native LSP registration and real link definition are verified
     Given the canonical plugin manifest declares the Marksman native LSP server
     When the Marksman native LSP registration is inspected
     Then plugin.json references `.lsp.json` through `lspServers`
     And `.lsp.json` registers server `marksman` with the launcher shim and markdown extension mapping
     And the native launcher responds to LSP `initialize` through the real Marksman binary
+    And the real Marksman server resolves a Markdown link to the expected target heading
 
   @feature7 @AC-7.2
   Scenario: SPECGEN004_16 Missing Marksman disables only native markdown LSP, not spec-domain MCP tools
@@ -297,6 +298,36 @@ Feature: SPECGEN004 Spec Generator v4 — graph + MCP + LSP + cucumber-js BDD
     Then the chokidar watcher auto-falls-back to polling mode (1s interval)
     And the decision is logged to `.dev-pomogator/logs/watcher.log`
     And subsequent file changes are detected via polling
+
+  @feature36 @FR-36 @AC-36.6
+  Scenario: SPECGEN004_699 migration phase gate allows only complete fresh evidence
+    Given a migration phase with clean qualified full evidence
+    When the migration-phase gate evaluates all completion evidence
+    Then the migration-phase gate returns ALLOW
+
+  @feature36 @FR-36 @AC-36.6
+  Scenario: SPECGEN004_700 migration phase gate denies dirty filtered or stale evidence
+    Given a migration phase has dirty or stale evidence
+    When the migration-phase gate evaluates all completion evidence
+    Then the migration-phase gate returns DENY with explicit reasons
+
+  @feature7 @FR-7 @AC-7.4
+  Scenario: SPECGEN004_696 installed-versus-integrated guard rejects dead runtime changes
+    Given an installed runtime change has no declared consumer
+    When the installed-versus-integrated guard evaluates the change
+    Then the guard denies with a missing-consumer finding and remediation
+
+  @feature7 @FR-7 @AC-7.4
+  Scenario: SPECGEN004_697 guard rejects a consumer declaration that is not truthful
+    Given a runtime change claims a consumer that does not use the installed artifact
+    When the installed-versus-integrated guard evaluates the change
+    Then the guard denies the unverifiable consumer before accepting integration
+
+  @feature7 @FR-7 @AC-7.4
+  Scenario: SPECGEN004_698 current Marksman integration passes the real-artifact guard
+    Given the current Marksman installer and launcher are changed
+    When the guard runs the real installed artifact proof
+    Then the guard allows integration only with a passing real-artifact result
 
   @feature14 @AC-14.3
   Scenario: SPECGEN004_33 Multi-env — second MCP start in different env is denied

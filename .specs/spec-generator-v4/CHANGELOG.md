@@ -39,3 +39,11 @@ Result: AC_SATISFACTION 283/289 (lane RED until the 6 clarify follow-ups land �
 - Implementation has not started.
 - `SPECGEN004_657`–`SPECGEN004_664` have not been executed; their status is `UNKNOWN`.
 
+
+
+## 2026-08-08 — six-AC remediation implementation
+
+- AC-7.5 now has a repeatable real Marksman link-definition proof: the launcher receives initialized, didOpen, and textDocument/definition messages and the test asserts target document and heading range.
+- AC-7.4 now has an executable guard that rejects missing or untruthful runtime consumers and requires a passing real-artifact command; current Marksman integration has positive Docker evidence.
+- AC-36.6 now has a machine-readable migration-phase gate that denies dirty, filtered, stale, failed, or unqualified evidence and allows only a complete fresh phase.
+- AC-20.2 and AC-26.2 were previously given AC-owned BDD evidence in this remediation wave; AC-1.3 remains explicitly superseded.

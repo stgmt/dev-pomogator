@@ -298,6 +298,34 @@ Tasks organized TDD: Red → Green → Refactor per phase. Phase 0 sets cucumber
 
 - [x] PostToolUse push hook -- @feature6 — id: posttooluse-push-hook — Status: DONE | Est: 300m
   _depends: mcp-server-skeleton_
+  **Done When:**
+  - [x] PostToolUse push hook remains registered and passes its canonical scenarios
+
+## Phase 34: Six acceptance-criteria remediation
+
+- [x] Real Marksman definition proof -- @feature7 — id: ac75-marksman-definition — Status: DONE | Est: 120m
+  _Requirements: [FR-7](FR.md#fr-7)_
+  _Acceptance: AC-7.5_
+  **Done When:**
+  - [x] Real launcher answers a link-position definition request with the expected target URI and heading range
+  - [x] @feature7 SPECGEN004_15 passes in Docker
+
+- [ ] Installed-versus-integrated guard -- @feature7 — id: ac74-dead-integration — Status: IN_PROGRESS | Est: 180m
+  _Requirements: [FR-7](FR.md#fr-7)_
+  _Acceptance: AC-7.4_
+  **Done When:**
+  - [ ] Missing and untruthful consumers are denied with remediation
+  - [ ] Current Marksman integration passes the executable real-artifact check
+  - [ ] @feature7 SPECGEN004_696, @feature7 SPECGEN004_697, and @feature7 SPECGEN004_698 pass in canonical Docker evidence
+
+- [ ] Migration-phase evidence gate -- @feature36 — id: ac36-migration-gate — Status: IN_PROGRESS | Est: 120m
+  _Requirements: [FR-36](FR.md#fr-36)_
+  _Acceptance: AC-36.6_
+  **Done When:**
+  - [ ] Gate emits machine-readable ALLOW/DENY from clean, qualified, collision-free, full-run, fresh evidence
+  - [ ] Dirty, filtered, or stale evidence is denied with explicit reasons
+  - [ ] @feature36 SPECGEN004_699 and @feature36 SPECGEN004_700 pass in canonical Docker evidence
+
   _Requirements: [FR-6](FR.md#fr-6)_
   **Done When:**
   - [x] 3-second throttle window implemented (tools/spec-conformance-push/spec-conformance-push.ts throttle journal .push-throttle-state.json)

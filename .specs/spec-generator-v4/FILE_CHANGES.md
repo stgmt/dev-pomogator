@@ -298,6 +298,18 @@ This block enumerates the spec-doc edits applied as part of the v3→v4 transiti
 | Path | Action | Reason |
 |------|--------|--------|
 | `tools/spec-graph/task-census.ts` | edit | Reconcile transcript-derived `TaskCreate` / `TaskUpdate` agent todos by real task id instead of positional array index, collapse duplicate stale subjects, and demote ambiguous clusters ([FR-49](FR.md#fr-49)) |
+
+## Phase 34 — six acceptance-criteria remediation
+
+| Path | Action | Reason |
+|------|--------|--------|
+| tools/marksman-installer/lsp-probe.ts | edit | Reusable LSP session plus real textDocument/definition request for AC-7.5 |
+| tools/marksman-installer/__tests__/launch-marksman-e2e.test.ts | edit | Real source/target Markdown definition proof for AC-7.5 |
+| tests/step_definitions/phase2-mcp.ts | edit | AC-7.5 BDD step drives the real launcher and asserts target URI/range |
+| tools/dead-integration-guard/check.ts | create | Executable installed-versus-integrated guard for AC-7.4 |
+| tests/step_definitions/feature_dead_integration_guard.ts | create | Planted-negative and current-Marksman positive BDD proof for AC-7.4 |
+| scripts/migration-phase-gate.ts | create | Machine-readable ALLOW/DENY migration completion gate for AC-36.6 |
+| tests/step_definitions/feature36_migration_phase_gate.ts | create | Deterministic dirty/full evidence policy scenarios for AC-36.6 |
 | `tools/claim-evidence-gate/claim_evidence_gate_stop.ts` | edit | Include selected next-step source, real task id, transcript location/range, selected subject, and reconciliation reason in Pinator fire logs ([FR-49](FR.md#fr-49)) |
 | `tests/step_definitions/feature49_autosurface.ts` | edit | BDD/API coverage for the captured CARL stale-agent-todo replay shape and enriched Stop-gate fire logging ([FR-49](FR.md#fr-49)) |
 | `tools/claim-evidence-gate/claim_evidence_gate_stop.bundle.mjs` | edit | Rebuilt distributed Stop-gate artifact so plugin users receive transcript todo replay reconciliation and diagnostics ([FR-49](FR.md#fr-49)) |
