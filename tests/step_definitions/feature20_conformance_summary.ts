@@ -35,7 +35,7 @@ function seedDeny(w: F20World, n: number): void {
   const file = path.join(dir, `${new Date().toISOString().slice(0, 10)}.jsonl`);
   const lines = Array.from({ length: n }, (_, i) =>
     JSON.stringify({
-      timestamp: new Date(Date.now() - (n - i) * 1000).toISOString(),
+      timestamp: new Date(Date.now() + (n - i) * 1000).toISOString(),
       finding_code: 'DUPLICATE_DEFINITION',
       severity: 'deny',
       source: 'bdd-real-summary-fixture',
