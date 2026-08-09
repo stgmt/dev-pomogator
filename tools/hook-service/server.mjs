@@ -186,7 +186,11 @@ export async function execute(entry, input, root, event, workerManager, route = 
     try {
       child = spawn(process.execPath, args, {
         cwd: process.env.CLAUDE_PROJECT_DIR || root,
-        env: { ...process.env, CLAUDE_PLUGIN_ROOT: root },
+        env: {
+          ...process.env,
+          CLAUDE_PLUGIN_ROOT: root,
+          NODE_OPTIONS: '',
+        },
         stdio: ['pipe', 'pipe', 'pipe'],
         windowsHide: true,
       });
@@ -227,7 +231,14 @@ export async function execute(entry, input, root, event, workerManager, route = 
       if (settled) return;
       try { finish(resolveRun, adaptOutput(event, stdout.value(), stderr.value(), code ?? 1)); } catch (error) { finish(reject, error); }
     });
-    child.stdin.end(JSON.stringify(input));
+    const serializedInput = JSON.stringify(input);
+    if (Buffer.byteLength(serializedInput) > MAX_BODY_BYTES) {
+      const error = new Error('hook input too large');
+      error.code = 'HOOK_INPUT_LIMIT';
+      terminate(error);
+      return;
+    }
+    child.stdin.end(serializedInput);
   });
 }
 
