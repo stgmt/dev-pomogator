@@ -254,3 +254,15 @@ my-plugin/
 - **[VERIFIED: repository step definition]** `tests/step_definitions/feature24_hook_review.ts` invokes `reviewHookManifest()` with temporary JSON inputs. Its approved registry uses `transport.type: "http"`, a loopback route, and `authentication.type: "bearer-env"` with `DEV_POMOGATOR_HOOK_TOKEN`; no token value is present.
 - **[VERIFIED: repository boundary]** `tools/hook-review/check.ts` is the review gate exercised by the BDD step definitions. The tests exercise gate contract, not a live service, so review remains deterministic and network-free.
 - **[ASSUMED: implementation ownership]** Service implementation and production manifest transition are owned by shell-free-hooks implementation work. This change specifies/tests the contract only and does not claim the uncommitted runtime is wired into `.claude-plugin/hooks.json`.
+
+## Stop hook OOM incident evidence and remediation (2026-07-23)
+
+- **Observed:** the audit report recorded thirteen Stop HTTP routes; twelve completed with HTTP 200 while Stop/9/0 returned HTTP 503. The daemon health endpoint remained available, proving that request-child failure and daemon failure are separate boundaries.
+- **Failure evidence:** Windows runs included JavaScript heap out of memory, CALL_AND_RETRY_LAST, VirtualAlloc failed, and spawn UNKNOWN. These are compatible with repeated Node/tsx bootstrap and nested child allocation under Stop fanout; they are not evidence that a two-request global limiter is the correct architecture.
+- **Selected remediation:** preserve route identity, coordinate overlapping Stop event flights by session, isolate route results, and bound incremental stdout/stderr capture. The service remains healthy after a route child fails, while the affected route receives the established 503 diagnostic contract.
+- **Explicit limitation:** this phase still uses the legacy one-shot adapter. Persistent worker reuse, framed protocol, idle eviction, and adaptive memory-pressure recycling require a route compatibility audit and are tracked separately; this change does not claim that all cold starts disappear.
+- **Safety:** the client may retry only connection-class daemon transport failures already covered by CORE024_12. It must not replay a worker/child execution after timeout, crash, OOM, protocol failure, or uncertain side effect.
+
+### Persistent-worker migration status
+
+The compatibility audit found that most current hooks are one-shot CLI programs that read stdin/argv, call process.exit, spawn nested work, or perform side effects at import/run time. They remain explicit legacy execution=child routes. Only handlers with a reviewed reusable adapter are promoted to execution=persistent; those workers load once, reuse their PID, serialize requests, evict when idle, recycle on failure, and never retry uncertain work. The audited persistent set therefore eliminates repeated Node/tsx cold starts for its compatible routes without making the unsafe legacy population a false migration claim.

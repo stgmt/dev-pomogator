@@ -16,10 +16,14 @@ async function fixture() {
   await writeFile(join(root, 'allow.mjs'), 'process.stdout.write(JSON.stringify({additionalContext:"allow"}));');
   await writeFile(join(root, 'plain.mjs'), 'process.stdout.write("context");');
   await writeFile(join(root, 'deny.mjs'), 'process.stdout.write("blocked"); process.exit(2);');
+  await writeFile(join(root, 'stop-a.mjs'), 'process.stdout.write(JSON.stringify({additionalContext:"stop-a"}));');
+  await writeFile(join(root, 'stop-b.mjs'), 'process.stdout.write(JSON.stringify({additionalContext:"stop-b"}));');
   await writeFile(join(root, 'tools', 'hook-service', 'registry.json'), JSON.stringify({ version: 1, routes: {
     'SessionStart/0/0': { target: 'plain.mjs', event: 'SessionStart', timeout: 1 },
     'PreToolUse/0/0': { target: 'deny.mjs', event: 'PreToolUse', timeout: 1 },
     'UserPromptSubmit/0/0': { target: 'allow.mjs', event: 'UserPromptSubmit', timeout: 1 },
+    'Stop/0/0': { target: 'stop-a.mjs', event: 'Stop', timeout: 1 },
+    'Stop/1/0': { target: 'stop-b.mjs', event: 'Stop', timeout: 1 },
   }}));
   return root;
 }
@@ -88,6 +92,8 @@ test('HS_05: generated manifest keeps one bootstrap and supervises every remaini
   const otherHooks = Object.entries(manifest.hooks).filter(([event]) => event !== 'SessionStart').flatMap(([, groups]) => groups.flatMap(group => group.hooks));
   assert.equal(sessionHooks.length, 16);
   assert.equal(otherHooks.length, 39);
+  assert.equal(manifest.hooks.Stop.length, 13);
+  assert.equal(manifest.hooks.Stop.every(group => group.hooks.length === 1), true);
   assert.equal(otherHooks.every(hook => hook.type === 'command' && hook.command.includes('/tools/hook-service/client.mjs') && !hook.command.includes('127.0.0.1:42619')), true);
   const generated = JSON.parse(await readFile(join(root, '.claude-plugin', 'hooks.json'), 'utf8'));
   assert.equal(generated.hooks.SessionStart.flatMap(group => group.hooks).length, 1);
@@ -158,12 +164,14 @@ test('HS_10: concurrent startup lease elects one owner and waiters observe readi
   const root = await mkdtemp(join(tmpdir(), 'hook-service-lease-'));
   const lockPath = join(root, 'startup.lock');
   let ready = false;
+  let ownerCount = 0;
   let first;
   try {
     const contenders = Array.from({ length: 8 }, async () => {
       const lease = await acquireStartupLease({ lockPath, isReady: async () => ready, waitMs: 1_000, pollMs: 10 });
       if (lease.acquired) {
         first = lease;
+        ownerCount += 1;
         await new Promise(resolveWait => setTimeout(resolveWait, 80));
         ready = true;
         await lease.release();
@@ -172,6 +180,7 @@ test('HS_10: concurrent startup lease elects one owner and waiters observe readi
     });
     const results = await Promise.all(contenders);
     assert.equal(results.filter(result => result.acquired).length, 1);
+    assert.equal(ownerCount, 1);
     assert.equal(results.filter(result => result.ready).length, 7);
     await assert.rejects(access(lockPath));
   } finally {

@@ -78,6 +78,7 @@ export async function acquireStartupLease({
   let reclaimed = false;
 
   while (Date.now() <= deadline) {
+    if (await isReady()) return { acquired: false, ready: true, reclaimed };
     let handle;
     try {
       handle = await open(lockPath, 'wx', 0o600);
@@ -100,7 +101,6 @@ export async function acquireStartupLease({
       if (error.code !== 'EEXIST') throw error;
     }
 
-    if (await isReady()) return { acquired: false, ready: true, reclaimed };
     const observed = await readLease(lockPath);
     if (await reclaimDeadLease(lockPath, observed, malformedStaleMs)) {
       reclaimed = true;

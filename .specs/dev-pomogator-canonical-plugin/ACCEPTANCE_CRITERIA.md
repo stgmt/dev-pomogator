@@ -127,4 +127,24 @@ AND a live 401, 403, 404, or 503 response SHALL be returned without restart or r
 AND a foreign process or listener SHALL never be terminated or treated as owned
 AND a second transport failure SHALL fail open and persist a sanitized client diagnostic without the credential.
 
+WHEN the host delivers overlapping Stop route requests for one session_id
+THEN the service SHALL execute the logical Stop event once in deterministic registry order, return each caller only its registered route result, and isolate a failed route from successful routes.
+
+WHEN a legacy hook emits more than 256 KiB to stdout or stderr
+THEN the service SHALL terminate that child, return the existing runtime-unavailable contract for that route, persist a bounded sanitized diagnostic, and keep /health available.
+
+The acceptance target is event-level coordination plus bounded capture; a fixed global maxInFlight=2 value is explicitly not a correctness or performance criterion.
+
 **BDD:** `CORE024_01`, `CORE024_02`, `CORE024_06`, `CORE024_07`, `CORE024_12` in `tests/features/core/CORE024_hook-review.feature`; `tests/step_definitions/feature24_hook_review.ts`.
+
+
+## AC-11 — Persistent worker migration and cold-start elimination
+
+**Требование:** [FR-13](FR.md#fr-13-plugin-hooks-use-one-authenticated-loopback-service)
+
+- WHEN a route has execution=persistent and an explicit worker capability record THEN the supervisor SHALL start its worker lazily, load the adapter exactly once, and reuse the same worker PID for repeated dispatches.
+- WHEN two requests target the same persistent route THEN the worker SHALL process them FIFO/single-flight, and response order SHALL match request order.
+- WHEN a persistent worker times out, crashes, violates the frame protocol, exceeds 256 KiB, or reports an execution failure THEN the supervisor SHALL recycle that worker and SHALL NOT automatically retry the uncertain request.
+- WHEN a route has no audited reusable adapter, uses legacy args, shell/tsx bootstrap, process.exit, stdin-driven CLI behavior, nested process spawning, or non-reentrant side effects THEN it SHALL remain execution=child and SHALL not be labeled migrated.
+- WHEN the audited persistent route set is exercised repeatedly THEN its Node/tsx worker spawn count SHALL be lower than dispatch count, demonstrating elimination of cold Node/tsx starts for that set while preserving the explicit legacy fallback boundary.
+- WHEN generated registry and manifest parity is checked THEN public route IDs, event, matcher, ordering, timeout, and fallback metadata SHALL remain one-to-one with the source legacy manifest.

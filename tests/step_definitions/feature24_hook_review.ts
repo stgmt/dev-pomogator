@@ -38,6 +38,7 @@ interface HookReviewWorld extends V4World {
   recoveryResult?: Awaited<ReturnType<typeof runManagedHook>>;
   liveErrorResult?: Awaited<ReturnType<typeof runManagedHook>>;
   repeatedFailureResult?: Awaited<ReturnType<typeof runManagedHook>>;
+  stopRouteResults?: Record<string, unknown>[];
   recoveryDiagnosticRoot?: string;
 }
 
@@ -362,4 +363,151 @@ Then(/^a repeated transport failure remains fail-open with a sanitized durable d
   assert.match(diagnostic, /"code":"hook-transport"/u);
   assert.match(diagnostic, /"route":"PreToolUse\/0\/0"/u);
   assert.doesNotMatch(diagnostic, /never-log-this-token/u, 'the persisted diagnostic must not contain credential material');
+});
+
+Given(/^an isolated HTTP hook service with two ordered Stop routes for the same session$/, async function (this: HookReviewWorld) {
+  this.hookRoot = fs.mkdtempSync(path.join(this.tempDir, 'stop-coordinator-'));
+  this.hookToken = 'stop-secret';
+  const serviceDir = path.join(this.hookRoot, 'tools', 'hook-service');
+  fs.mkdirSync(serviceDir, { recursive: true });
+  fs.writeFileSync(path.join(this.hookRoot, 'stop-a.mjs'), 'process.stdout.write(JSON.stringify({additionalContext:"stop-a"}));');
+  fs.writeFileSync(path.join(this.hookRoot, 'stop-b.mjs'), 'process.stdout.write(JSON.stringify({additionalContext:"stop-b"}));');
+  fs.writeFileSync(path.join(serviceDir, 'registry.json'), JSON.stringify({ version: 1, routes: {
+    'Stop/0/0': { target: 'stop-a.mjs', event: 'Stop', timeout: 2, execution: 'child' },
+    'Stop/1/0': { target: 'stop-b.mjs', event: 'Stop', timeout: 2, execution: 'child' },
+  }}));
+  this.hookServer = await startServer({ pluginRoot: this.hookRoot, token: this.hookToken, port: 0, stateRoot: path.join(this.hookRoot, 'state') });
+});
+
+When(/^both Stop routes are dispatched concurrently for that session$/, async function (this: HookReviewWorld) {
+  const address = this.hookServer!.address();
+  const input = JSON.stringify({ session_id: 'stop-session' });
+  const headers = { 'content-type': 'application/json', 'x-dev-pomogator-token': this.hookToken! };
+  const responses = await Promise.all(['Stop/0/0', 'Stop/1/0'].map(route => fetch(`http://127.0.0.1:${address.port}/v1/dispatch/${encodeURIComponent(route)}`, { method: 'POST', headers, body: input })));
+  this.stopRouteResults = await Promise.all(responses.map(response => response.json()));
+});
+
+Then(/^each route returns only its own recorded result$/, function (this: HookReviewWorld) {
+  assert.deepEqual(this.stopRouteResults, [{ additionalContext: 'stop-a' }, { additionalContext: 'stop-b' }]);
+});
+
+Then(/^the service executes the logical Stop event once in registry order$/, async function (this: HookReviewWorld) {
+  assert.deepEqual(this.stopRouteResults?.map(result => (result as { additionalContext: string }).additionalContext), ['stop-a', 'stop-b']);
+  await new Promise<void>(resolveClose => this.hookServer!.close(() => resolveClose()));
+});
+
+Given(/^an isolated HTTP hook service with a hook that exceeds the bounded output limit$/, async function (this: HookReviewWorld) {
+  this.hookRoot = fs.mkdtempSync(path.join(this.tempDir, 'output-limit-'));
+  this.hookToken = 'output-secret';
+  const serviceDir = path.join(this.hookRoot, 'tools', 'hook-service');
+  fs.mkdirSync(serviceDir, { recursive: true });
+  fs.writeFileSync(path.join(this.hookRoot, 'overflow.mjs'), 'process.stdout.write("x".repeat(300000));');
+  fs.writeFileSync(path.join(serviceDir, 'registry.json'), JSON.stringify({ version: 1, routes: { 'Stop/0/0': { target: 'overflow.mjs', event: 'Stop', timeout: 2 } }}));
+  this.hookServer = await startServer({ pluginRoot: this.hookRoot, token: this.hookToken, port: 0, stateRoot: path.join(this.hookRoot, 'state') });
+});
+
+When(/^I dispatch the overflowing hook$/, async function (this: HookReviewWorld) {
+  const address = this.hookServer!.address();
+  this.hookResponse = await fetch(`http://127.0.0.1:${address.port}/v1/dispatch/Stop%2F0%2F0`, { method: 'POST', headers: { 'content-type': 'application/json', 'x-dev-pomogator-token': this.hookToken! }, body: JSON.stringify({ session_id: 'overflow-session' }) });
+  this.hookResponseBody = await this.hookResponse.json();
+});
+
+Then(/^the route returns the existing runtime-unavailable response$/, function (this: HookReviewWorld) {
+  assert.equal(this.hookResponse!.status, 503);
+  assert.equal(this.hookResponseBody?.error, 'hook runtime unavailable');
+});
+
+Then(/^the hook service health endpoint remains available$/, async function (this: HookReviewWorld) {
+  const address = this.hookServer!.address();
+  const response = await fetch(`http://127.0.0.1:${address.port}/health`, { headers: { 'x-dev-pomogator-token': this.hookToken! } });
+  assert.equal(response.status, 200);
+  const body = await response.json();
+  assert.equal(body.service, 'dev-pomogator-hook-service');
+  await new Promise<void>(resolveClose => this.hookServer!.close(() => resolveClose()));
+});
+
+Given(/^an isolated audited persistent hook worker fixture$/, async function (this: HookReviewWorld) {
+  this.hookRoot = fs.mkdtempSync(path.join(this.tempDir, 'persistent-worker-'));
+  this.hookToken = 'persistent-secret';
+  const serviceDir = path.join(this.hookRoot, 'tools', 'hook-service');
+  fs.mkdirSync(path.join(serviceDir, 'worker-adapters'), { recursive: true });
+  fs.writeFileSync(path.join(serviceDir, 'worker-adapters', 'fixture.mjs'), 'let sequence = 0; export async function handle(input) { sequence += 1; return { sequence, pid: process.pid, value: input.value }; }');
+  fs.writeFileSync(path.join(serviceDir, 'registry.json'), JSON.stringify({ version: 1, routes: { 'UserPromptSubmit/0/0': { target: 'fixture.mjs', event: 'UserPromptSubmit', timeout: 2, execution: 'persistent', worker_target: 'tools/hook-service/worker-adapters/fixture.mjs', worker_protocol: 'handle' } }}));
+  this.hookServer = await startServer({ pluginRoot: this.hookRoot, token: this.hookToken, port: 0, stateRoot: path.join(this.hookRoot, 'state') });
+});
+
+When(/^I dispatch two requests to the persistent route concurrently$/, async function (this: HookReviewWorld) {
+  const address = this.hookServer!.address();
+  const headers = { 'content-type': 'application/json', 'x-dev-pomogator-token': this.hookToken! };
+  const responses = await Promise.all(['a', 'b'].map(value => fetch(`http://127.0.0.1:${address.port}/v1/dispatch/UserPromptSubmit%2F0%2F0`, { method: 'POST', headers, body: JSON.stringify({ value }) })));
+  this.stopRouteResults = await Promise.all(responses.map(response => response.json()));
+});
+
+Then(/^both responses report the same worker process and ordered sequence$/, async function (this: HookReviewWorld) {
+  assert.deepEqual(this.stopRouteResults?.map(result => (result as { sequence: number }).sequence), [1, 2]);
+  const pids = this.stopRouteResults?.map(result => (result as { pid: number }).pid) || [];
+  assert.equal(new Set(pids).size, 1);
+});
+
+Then(/^the persistent worker starts lazily with fewer spawns than dispatches$/, async function (this: HookReviewWorld) {
+  const metrics = (this.hookServer as typeof this.hookServer & { workerManager?: { getMetrics(): Record<string, { dispatches: number; spawns: number }> } }).workerManager?.getMetrics() || {};
+  const values = Object.values(metrics) as Array<{ dispatches: number; spawns: number }>;
+  assert.equal(values.length, 1);
+  assert.equal(values[0].dispatches, 2);
+  assert.equal(values[0].spawns, 1);
+  await new Promise<void>(resolveClose => this.hookServer!.close(() => resolveClose()));
+});
+
+Given(/^an isolated persistent hook worker that can hang$/, async function (this: HookReviewWorld) {
+  this.hookRoot = fs.mkdtempSync(path.join(this.tempDir, 'persistent-timeout-'));
+  this.hookToken = 'timeout-secret';
+  const serviceDir = path.join(this.hookRoot, 'tools', 'hook-service');
+  fs.mkdirSync(path.join(serviceDir, 'worker-adapters'), { recursive: true });
+  fs.writeFileSync(path.join(serviceDir, 'worker-adapters', 'fixture.mjs'), 'export async function handle(input) { if (input.hang) await new Promise(() => {}); return { pid: process.pid, ok: true }; }');
+  fs.writeFileSync(path.join(serviceDir, 'registry.json'), JSON.stringify({ version: 1, routes: { 'UserPromptSubmit/0/0': { target: 'fixture.mjs', event: 'UserPromptSubmit', timeout: 0.05, execution: 'persistent', worker_target: 'tools/hook-service/worker-adapters/fixture.mjs', worker_protocol: 'handle' } }}));
+  this.hookServer = await startServer({ pluginRoot: this.hookRoot, token: this.hookToken, port: 0, stateRoot: path.join(this.hookRoot, 'state') });
+});
+
+When(/^the persistent request times out$/, async function (this: HookReviewWorld) {
+  const address = this.hookServer!.address();
+  this.hookResponse = await fetch(`http://127.0.0.1:${address.port}/v1/dispatch/UserPromptSubmit%2F0%2F0`, { method: 'POST', headers: { 'content-type': 'application/json', 'x-dev-pomogator-token': this.hookToken! }, body: JSON.stringify({ hang: true }) });
+  this.hookResponseBody = await this.hookResponse.json();
+});
+
+Then(/^the request fails once without automatic retry$/, function (this: HookReviewWorld) {
+  assert.equal(this.hookResponse!.status, 503);
+  assert.equal(this.hookResponseBody?.error, 'hook runtime unavailable');
+});
+
+Then(/^the next request uses a replacement worker process$/, async function (this: HookReviewWorld) {
+  const address = this.hookServer!.address();
+  const response = await fetch(`http://127.0.0.1:${address.port}/v1/dispatch/UserPromptSubmit%2F0%2F0`, { method: 'POST', headers: { 'content-type': 'application/json', 'x-dev-pomogator-token': this.hookToken! }, body: JSON.stringify({ hang: false }) });
+  const body = await response.json();
+  assert.equal(response.status, 200);
+  assert.equal(body.ok, true);
+  await new Promise<void>(resolveClose => this.hookServer!.close(() => resolveClose()));
+});
+
+Given(/^an isolated unaudited legacy hook route$/, async function (this: HookReviewWorld) {
+  this.hookRoot = fs.mkdtempSync(path.join(this.tempDir, 'legacy-route-'));
+  this.hookToken = 'legacy-secret';
+  const serviceDir = path.join(this.hookRoot, 'tools', 'hook-service');
+  fs.mkdirSync(serviceDir, { recursive: true });
+  fs.writeFileSync(path.join(this.hookRoot, 'legacy.mjs'), 'process.stdout.write(JSON.stringify({ additionalContext: "legacy" }));');
+  fs.writeFileSync(path.join(serviceDir, 'registry.json'), JSON.stringify({ version: 1, routes: { 'UserPromptSubmit/0/0': { target: 'legacy.mjs', event: 'UserPromptSubmit', timeout: 2, execution: 'child' } }}));
+  this.hookServer = await startServer({ pluginRoot: this.hookRoot, token: this.hookToken, port: 0, stateRoot: path.join(this.hookRoot, 'state') });
+});
+
+When(/^I dispatch the legacy route twice$/, async function (this: HookReviewWorld) {
+  const address = this.hookServer!.address();
+  const headers = { 'content-type': 'application/json', 'x-dev-pomogator-token': this.hookToken! };
+  const responses = await Promise.all([1, 2].map(() => fetch(`http://127.0.0.1:${address.port}/v1/dispatch/UserPromptSubmit%2F0%2F0`, { method: 'POST', headers, body: JSON.stringify({}) })));
+  this.stopRouteResults = await Promise.all(responses.map(response => response.json()));
+});
+
+Then(/^each dispatch uses the legacy child boundary and no persistent capability is claimed$/, async function (this: HookReviewWorld) {
+  assert.deepEqual(this.stopRouteResults, [{ additionalContext: 'legacy' }, { additionalContext: 'legacy' }]);
+  const metrics = (this.hookServer as typeof this.hookServer & { workerManager?: { getMetrics(): Record<string, unknown> } }).workerManager?.getMetrics() || {};
+  assert.deepEqual(metrics, {});
+  await new Promise<void>(resolveClose => this.hookServer!.close(() => resolveClose()));
 });

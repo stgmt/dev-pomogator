@@ -5,6 +5,7 @@ import http from 'node:http';
 import { join, resolve, relative, isAbsolute, win32 } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { fingerprint } from './credential.mjs';
+import { WorkerManager } from './worker-manager.mjs';
 
 export const HOST = '127.0.0.1', PORT = 42619, VERSION = '1.0.0';
 export const stateDir = () => process.env.DEV_POMOGATOR_STATE_DIR || join(process.env.LOCALAPPDATA || process.env.XDG_STATE_HOME || process.env.HOME || '.', 'dev-pomogator', 'hook-service');
@@ -12,8 +13,10 @@ export const stateFile = () => join(stateDir(), 'service.json');
 export const tokenFile = () => join(stateDir(), 'token');
 export const diagnosticsFile = (root = stateDir()) => join(root, 'failures.jsonl');
 const MAX_BODY_BYTES = 2_000_000;
+const MAX_OUTPUT_BYTES = 256_000;
 const MAX_DIAGNOSTIC_BYTES = 1_000_000;
 const MAX_DETAIL_CHARS = 2_000;
+const EVENT_RESULT_TTL_MS = 30_000;
 
 const tokenMatches = (actual, expected) => {
   const candidate = Buffer.from(String(actual || ''));
@@ -75,14 +78,25 @@ export async function loadRegistry(root) {
 
 // The daemon advertises this identity so bootstrap can replace stale owned runtimes safely.
 export async function runtimeIdentity(root) {
-  const [serverSource, registrySource] = await Promise.all([
-    readFile(fileURLToPath(import.meta.url), 'utf8'),
-    readFile(join(root, 'tools', 'hook-service', 'registry.json'), 'utf8'),
-  ]);
+  const registrySource = await readFile(join(root, 'tools', 'hook-service', 'registry.json'), 'utf8');
+  const registry = JSON.parse(registrySource);
+  const adapterFiles = [...new Set(Object.values(registry.routes)
+    .map(entry => entry.worker_target)
+    .filter(Boolean)
+    .map(target => join(root, target)))];
+  const runtimeRoot = join(resolve(fileURLToPath(import.meta.url), '..'));
+  const runtimeFiles = [
+    fileURLToPath(import.meta.url),
+    join(runtimeRoot, 'worker-manager.mjs'),
+    join(runtimeRoot, 'worker-host.mjs'),
+    join(runtimeRoot, 'registry.mjs'),
+    ...adapterFiles,
+  ];
+  const runtimeSources = await Promise.all(runtimeFiles.map(file => readFile(file, 'utf8')));
   return {
     rootFingerprint: fingerprint(resolve(root)),
     registryDigest: sha256(registrySource),
-    runtimeDigest: sha256(serverSource),
+    runtimeDigest: sha256(runtimeSources.join('\n\\0\n')),
   };
 }
 
@@ -136,45 +150,140 @@ export const adaptOutput = (event, stdout, stderr, exitCode) => {
   }
 };
 
-export async function execute(entry, input, root, event) {
+function boundedCapture(maxBytes = MAX_OUTPUT_BYTES) {
+  let value = '';
+  let bytes = 0;
+  return {
+    append(chunk) {
+      const text = String(chunk);
+      const size = Buffer.byteLength(text);
+      if (bytes + size > maxBytes) {
+        const error = new Error(`hook output exceeded ${maxBytes} bytes`);
+        error.code = 'HOOK_OUTPUT_LIMIT';
+        throw error;
+      }
+      value += text;
+      bytes += size;
+    },
+    value: () => value,
+  };
+}
+
+/** Legacy executor remains the compatibility boundary for one-shot scripts. */
+export async function execute(entry, input, root, event, workerManager, route = '') {
   if (!entry || entry.event !== event || !isWithinRoot(root, entry.target)) throw new Error('invalid hook route');
+  if (workerManager?.canUse(entry)) {
+    if (!isWithinRoot(root, entry.worker_target)) throw new Error('invalid worker route');
+    return await workerManager.execute(route, entry, input, event);
+  }
+
   const target = resolve(root, entry.target);
   const args = entry.target.endsWith('.ts')
     ? ['-e', `require(${JSON.stringify(join(root, 'tools', '_shared', 'bootstrap.cjs'))})`, '--', target, ...(entry.args || [])]
     : [target, ...(entry.args || [])];
   return await new Promise((resolveRun, reject) => {
-    const child = spawn(process.execPath, args, {
-      cwd: process.env.CLAUDE_PROJECT_DIR || root,
-      env: { ...process.env, CLAUDE_PLUGIN_ROOT: root },
-      stdio: ['pipe', 'pipe', 'pipe'],
-      windowsHide: true,
-    });
-    let stdout = '', stderr = '';
-    child.stdout.on('data', chunk => { stdout += chunk; });
-    child.stderr.on('data', chunk => { stderr += chunk; });
-    const timer = setTimeout(() => {
-      child.kill();
-      const error = new Error('hook timed out');
-      error.code = 'HOOK_TIMEOUT';
-      reject(error);
-    }, Math.max(1, entry.timeout || 30) * 1000);
-    child.on('error', cause => {
-      clearTimeout(timer);
+    let child;
+    try {
+      child = spawn(process.execPath, args, {
+        cwd: process.env.CLAUDE_PROJECT_DIR || root,
+        env: { ...process.env, CLAUDE_PLUGIN_ROOT: root },
+        stdio: ['pipe', 'pipe', 'pipe'],
+        windowsHide: true,
+      });
+    } catch (cause) {
       const error = new Error(cause.message);
       error.code = 'HOOK_SPAWN';
       reject(error);
+      return;
+    }
+    const stdout = boundedCapture();
+    const stderr = boundedCapture();
+    let settled = false;
+    let timer;
+    const finish = (callback, value) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      callback(value);
+    };
+    const terminate = error => {
+      if (settled) return;
+      child.kill();
+      finish(reject, error);
+    };
+    timer = setTimeout(() => {
+      const error = new Error('hook timed out');
+      error.code = 'HOOK_TIMEOUT';
+      terminate(error);
+    }, Math.max(1, entry.timeout || 30) * 1000);
+    child.stdout.on('data', chunk => { try { stdout.append(chunk); } catch (error) { terminate(error); } });
+    child.stderr.on('data', chunk => { try { stderr.append(chunk); } catch (error) { terminate(error); } });
+    child.on('error', cause => {
+      const error = new Error(cause.message);
+      error.code = 'HOOK_SPAWN';
+      finish(reject, error);
     });
     child.on('close', code => {
-      clearTimeout(timer);
-      try { resolveRun(adaptOutput(event, stdout, stderr, code ?? 1)); } catch (error) { reject(error); }
+      if (settled) return;
+      try { finish(resolveRun, adaptOutput(event, stdout.value(), stderr.value(), code ?? 1)); } catch (error) { finish(reject, error); }
     });
     child.stdin.end(JSON.stringify(input));
   });
 }
 
+/**
+ * Execute a logical event in registry order without changing public route identity.
+ * Each route keeps its own result so Claude Code does not receive one route's
+ * context or decision repeatedly when the host sends the event fanout.
+ */
+export async function executeEvent(registry, event, input, root, workerManager) {
+  const routes = Object.entries(registry.routes)
+    .filter(([, entry]) => entry.event === event)
+    .sort(([left], [right]) => left.localeCompare(right, undefined, { numeric: true }));
+  const outputs = {};
+  const failures = [];
+  for (const [route, entry] of routes) {
+    try { outputs[route] = await execute(entry, input, root, event, workerManager, route); }
+    catch (error) { failures.push({ route, error }); }
+  }
+  return { outputs, failures };
+}
+
+const routeResult = (result, route) => {
+  const failure = result.failures.find(item => item.route === route);
+  if (failure) throw failure.error;
+  return result.outputs[route] || {};
+};
+
 export async function startServer({ pluginRoot, token, port = PORT, stateRoot = stateDir() } = {}) {
   const registry = await loadRegistry(pluginRoot);
   const { registryDigest, rootFingerprint, runtimeDigest } = await runtimeIdentity(pluginRoot);
+  const workerManager = new WorkerManager({ root: pluginRoot });
+  const eventFlights = new Map();
+  const dispatchEvent = async (event, input, route) => {
+    if (event !== 'Stop') return execute(registry.routes[route], input, pluginRoot, event, workerManager, route);
+    const sessionId = input && typeof input.session_id === 'string' ? input.session_id : '';
+    const key = sessionId ? `${event}:${sessionId}` : '';
+    if (!key) return execute(registry.routes[route], input, pluginRoot, event, workerManager, route);
+    const now = Date.now();
+    const existing = eventFlights.get(key);
+    if (existing && existing.expiresAt > now) {
+      existing.seen.add(route);
+      return existing.promise.then(result => routeResult(result, route));
+    }
+    if (existing) clearTimeout(existing.expiryTimer);
+    const expected = new Set(Object.entries(registry.routes)
+      .filter(([, entry]) => entry.event === event)
+      .map(([routeId]) => routeId));
+    const state = { seen: new Set([route]), expected, expiresAt: now + EVENT_RESULT_TTL_MS, expiryTimer: null, promise: null };
+    state.expiryTimer = setTimeout(() => {
+      if (eventFlights.get(key) === state) eventFlights.delete(key);
+    }, EVENT_RESULT_TTL_MS);
+    state.expiryTimer.unref?.();
+    state.promise = executeEvent(registry, event, input, pluginRoot, workerManager);
+    eventFlights.set(key, state);
+    return state.promise.then(result => routeResult(result, route));
+  };
   const server = http.createServer(async (request, response) => {
     let route = '';
     try {
@@ -196,7 +305,7 @@ export async function startServer({ pluginRoot, token, port = PORT, stateRoot = 
       route = decodeURIComponent(url.pathname.replace('/v1/dispatch/', ''));
       const entry = registry.routes[route];
       if (!entry || url.pathname !== `/v1/dispatch/${encodeURIComponent(route)}`) return json(response, 404, { error: 'unknown route' });
-      return json(response, 200, await execute(entry, input, pluginRoot, route.split('/')[0]));
+      return json(response, 200, await dispatchEvent(route.split('/')[0], input, route));
     } catch (error) {
       const incidentId = randomUUID();
       const detail = sanitizeDetail(error, [token]);
@@ -218,6 +327,8 @@ export async function startServer({ pluginRoot, token, port = PORT, stateRoot = 
       return json(response, 503, { error: 'hook runtime unavailable', incidentId, detail });
     }
   });
+  server.once('close', () => workerManager.close());
+  server.workerManager = workerManager;
   await new Promise((resolveListen, reject) => {
     server.once('error', reject);
     server.listen(port, HOST, () => { server.off('error', reject); resolveListen(); });

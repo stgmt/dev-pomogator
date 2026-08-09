@@ -176,3 +176,29 @@ The core migration was performed **by hand**: the three `.claude-plugin/*.json` 
   - [ ] Live 401, 403, 404, and 503 responses are returned without restart or retry.
   - [ ] A foreign listener is never terminated or treated as owned.
   - [ ] Repeated transport failure exits fail-open and appends a sanitized durable diagnostic without credential material.
+
+
+## Phase 9: Stop fanout and bounded child-output hardening — TODO
+
+- [ ] Bound legacy hook output and coalesce overlapping Stop event flights — id: t17 — Status: TODO | Est: 90m
+  _Requirements: [FR-13](FR.md#fr-13-plugin-hooks-use-one-authenticated-loopback-service), [FR-15](FR.md#fr-15-managed-hot-path-hooks-are-http-registrations), [FR-24](FR.md#fr-24-http-hook-policy-has-executable-bdd-coverage)._
+  **Done When:**
+  - [ ] The generated manifest preserves all thirteen Stop route IDs and hook-review reports no orphaned registry routes.
+  - [ ] Concurrent Stop deliveries for one session share one ordered event execution while each route receives only its own result or failure.
+  - [ ] stdout/stderr capture is bounded at 256 KiB and overflow terminates only the affected child.
+  - [ ] Focused Node and CORE024 coverage passes; no fixed global maxInFlight=2 limiter is introduced.
+
+- [ ] Audit and migrate compatible hooks to persistent workers — id: t18 — Status: TODO | Est: 240m
+  _Requirements: [FR-13](FR.md#fr-13-plugin-hooks-use-one-authenticated-loopback-service), [FR-14](FR.md#fr-14-plugin-hook-commands-are-portable-deps-absent-safe-and-fail-open)._
+  **Done When:**
+  - [ ] Worker compatibility is explicit per route and legacy shell/tsx/process-exit/nested-spawn hooks retain the adapter.
+  - [ ] Framed protocol, FIFO, recycle, idle eviction, and no-retry-after-uncertain-side-effect tests pass on Windows.
+
+
+- [ ] Complete persistent worker migration — id: t18a — Status: TODO | Est: 240m
+  _Requirements: [FR-13](FR.md#fr-13-plugin-hooks-use-one-authenticated-loopback-service), [FR-14](FR.md#fr-14-plugin-hook-commands-are-portable-deps-absent-safe-and-fail-open)._
+  **Done When:**
+  - [ ] Worker compatibility is explicit per route; only reviewed reusable adapters are persistent and legacy shell/tsx/process-exit/stdin/nested-spawn hooks retain the child adapter.
+  - [ ] The worker loads the adapter once, uses versioned bounded frames, FIFO/single-flight, lazy startup, idle eviction, timeout/crash/protocol/overflow recycle, and no retry after uncertain side effects.
+  - [ ] Repeated audited-route dispatch proves worker PID reuse and spawn count lower than dispatch count; legacy routes remain visibly execution=child.
+  - [ ] Focused/BDD scenarios cover persistent reuse, FIFO, timeout/recycle, no-retry, and legacy fallback; Windows Docker evidence is recorded or honestly marked unavailable.

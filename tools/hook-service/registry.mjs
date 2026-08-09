@@ -1,6 +1,14 @@
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
+const PERSISTENT_ADAPTERS = new Map([
+  ['tools/subagent-watchdog/subagent_watchdog.ts', {
+    workerTarget: 'tools/hook-service/worker-adapters/subagent-watchdog.mjs',
+    workerProtocol: 'handle',
+    workerLoader: 'tsx',
+  }],
+]);
+
 const targetFrom = command => {
   const direct = command.match(/--\s+"([^\"]+\.(?:ts|mjs|cjs))"((?:\s+[^\"]+)*)$/);
   if (direct) return {target:direct[1], args:direct[2].trim().split(/\s+/).filter(Boolean)};
@@ -27,13 +35,26 @@ export async function buildRegistry(pluginRoot) {
     groups.forEach((group, groupIndex) => group.hooks.forEach((hook, hookIndex) => {
       const route = targetFrom(hook.command);
       if (!route) throw new Error(`Unregistered shell-free route: ${event}/${groupIndex}/${hookIndex}`);
-      routes[`${event}/${groupIndex}/${hookIndex}`] = {...route, event, timeout:hook.timeout, matcher:group.matcher || ''};
+      const routeId = `${event}/${groupIndex}/${hookIndex}`;
+      const adapter = event !== 'SessionStart' ? PERSISTENT_ADAPTERS.get(route.target) : null;
+      routes[routeId] = {
+        ...route,
+        event,
+        timeout: hook.timeout,
+        matcher: group.matcher || '',
+        execution: adapter ? 'persistent' : 'child',
+        ...(adapter ? {
+          worker_target: adapter.workerTarget,
+          worker_protocol: adapter.workerProtocol,
+          worker_loader: adapter.workerLoader,
+        } : {}),
+      };
     }));
   }
   return {version:1, routes};
 }
 
-/** Supervised client entries retain the source manifest's event/matcher/ordering/timeout semantics. */
+/** Supervised client entries retain source event/matcher/order/timeout semantics. */
 export async function renderHttpManifest(pluginRoot) {
   const manifest = JSON.parse(await readFile(join(pluginRoot, '.claude-plugin', 'hooks.legacy.json'), 'utf8'));
   const registry = await buildRegistry(pluginRoot);

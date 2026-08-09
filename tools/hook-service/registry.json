@@ -6,28 +6,32 @@
       "args": [],
       "event": "Stop",
       "timeout": 60,
-      "matcher": ""
+      "matcher": "",
+      "execution": "child"
     },
     "Stop/1/0": {
       "target": "tools/auto-simplify/simplify_stop.ts",
       "args": [],
       "event": "Stop",
       "timeout": 60,
-      "matcher": ""
+      "matcher": "",
+      "execution": "child"
     },
     "Stop/2/0": {
       "target": "tools/plan-pomogator/test-spec-gate.ts",
       "args": [],
       "event": "Stop",
       "timeout": 60,
-      "matcher": ""
+      "matcher": "",
+      "execution": "child"
     },
     "Stop/3/0": {
       "target": "tools/prompt-suggest/prompt_suggest_stop.bundle.mjs",
       "args": [],
       "event": "Stop",
       "timeout": 60,
-      "matcher": ""
+      "matcher": "",
+      "execution": "child"
     },
     "Stop/4/0": {
       "target": "tools/learnings-capture/capture.ts",
@@ -37,14 +41,16 @@
       ],
       "event": "Stop",
       "timeout": 60,
-      "matcher": ""
+      "matcher": "",
+      "execution": "child"
     },
     "Stop/5/0": {
       "target": "tools/test-quality/dedup_stop.ts",
       "args": [],
       "event": "Stop",
       "timeout": 60,
-      "matcher": ""
+      "matcher": "",
+      "execution": "child"
     },
     "Stop/6/0": {
       "target": "tools/subagent-watchdog/subagent_watchdog.ts",
@@ -54,49 +60,59 @@
       ],
       "event": "Stop",
       "timeout": 15,
-      "matcher": ""
+      "matcher": "",
+      "execution": "persistent",
+      "worker_target": "tools/hook-service/worker-adapters/subagent-watchdog.mjs",
+      "worker_protocol": "handle",
+      "worker_loader": "tsx"
     },
     "Stop/7/0": {
       "target": "tools/bg-task-guard/stop-guard.mjs",
       "args": [],
       "event": "Stop",
       "timeout": 60,
-      "matcher": ""
+      "matcher": "",
+      "execution": "child"
     },
     "Stop/8/0": {
       "target": "tools/answer-simple/answer_simple_stop.ts",
       "args": [],
       "event": "Stop",
       "timeout": 60,
-      "matcher": ""
+      "matcher": "",
+      "execution": "child"
     },
     "Stop/9/0": {
       "target": "tools/claim-evidence-gate/claim_evidence_gate_stop.bundle.mjs",
       "args": [],
       "event": "Stop",
       "timeout": 60,
-      "matcher": ""
+      "matcher": "",
+      "execution": "child"
     },
     "Stop/10/0": {
       "target": "tools/anchor-integrity/anchor_gate_stop.ts",
       "args": [],
       "event": "Stop",
       "timeout": 30,
-      "matcher": ""
+      "matcher": "",
+      "execution": "child"
     },
     "Stop/11/0": {
       "target": "tools/spec-graph/test_quality_gate_stop.bundle.mjs",
       "args": [],
       "event": "Stop",
       "timeout": 30,
-      "matcher": ""
+      "matcher": "",
+      "execution": "child"
     },
     "Stop/12/0": {
       "target": "tools/spec-backlog/auto-ingest-hook.bundle.mjs",
       "args": [],
       "event": "Stop",
       "timeout": 60,
-      "matcher": ""
+      "matcher": "",
+      "execution": "child"
     },
     "SessionStart/0/0": {
       "target": "tools/anchor-integrity/anchor_gate_stop.ts",
@@ -105,77 +121,88 @@
       ],
       "event": "SessionStart",
       "timeout": 30,
-      "matcher": ""
+      "matcher": "",
+      "execution": "child"
     },
     "SessionStart/1/0": {
       "target": "tools/claude-subscription-proxy/ensure-up.cjs",
       "args": [],
       "event": "SessionStart",
       "timeout": 30,
-      "matcher": ""
+      "matcher": "",
+      "execution": "child"
     },
     "SessionStart/2/0": {
       "target": "tools/bun-oom-guard/patch_bun_runner.ts",
       "args": [],
       "event": "SessionStart",
       "timeout": 120,
-      "matcher": ""
+      "matcher": "",
+      "execution": "child"
     },
     "SessionStart/3/0": {
       "target": "tools/marksman-installer/ensure-marksman.ts",
       "args": [],
       "event": "SessionStart",
       "timeout": 10,
-      "matcher": ""
+      "matcher": "",
+      "execution": "child"
     },
     "SessionStart/4/0": {
       "target": "tools/forbid-root-artifacts/install-hook.ts",
       "args": [],
       "event": "SessionStart",
       "timeout": 60,
-      "matcher": ""
+      "matcher": "",
+      "execution": "child"
     },
     "SessionStart/5/0": {
       "target": "tools/claude-mem-health/health-check.ts",
       "args": [],
       "event": "SessionStart",
       "timeout": 120,
-      "matcher": ""
+      "matcher": "",
+      "execution": "child"
     },
     "SessionStart/6/0": {
       "target": "tools/claude-mem-bootstrap/install-claude-mem.ts",
       "args": [],
       "event": "SessionStart",
       "timeout": 30,
-      "matcher": ""
+      "matcher": "",
+      "execution": "child"
     },
     "SessionStart/7/0": {
       "target": "tools/context-mode-setup/setup.ts",
       "args": [],
       "event": "SessionStart",
       "timeout": 30,
-      "matcher": ""
+      "matcher": "",
+      "execution": "child"
     },
     "SessionStart/8/0": {
       "target": "tools/mcp-setup/mcp-bootstrap.ts",
       "args": [],
       "event": "SessionStart",
       "timeout": 30,
-      "matcher": ""
+      "matcher": "",
+      "execution": "child"
     },
     "SessionStart/9/0": {
       "target": "tools/test-statusline/statusline_session_start.ts",
       "args": [],
       "event": "SessionStart",
       "timeout": 120,
-      "matcher": ""
+      "matcher": "",
+      "execution": "child"
     },
     "SessionStart/10/0": {
       "target": "tools/native-statusline/install_native_statusline.ts",
       "args": [],
       "event": "SessionStart",
       "timeout": 120,
-      "matcher": ""
+      "matcher": "",
+      "execution": "child"
     },
     "SessionStart/11/0": {
       "target": ".claude/skills/pomogator-doctor/scripts/engine/doctor.bundle.mjs",
@@ -184,21 +211,24 @@
       ],
       "event": "SessionStart",
       "timeout": 10,
-      "matcher": ""
+      "matcher": "",
+      "execution": "child"
     },
     "SessionStart/12/0": {
       "target": "tools/skill-listing-budget/apply_skill_budget.ts",
       "args": [],
       "event": "SessionStart",
       "timeout": 30,
-      "matcher": ""
+      "matcher": "",
+      "execution": "child"
     },
     "SessionStart/13/0": {
       "target": "tools/spec-backlog/session-summary-hook.ts",
       "args": [],
       "event": "SessionStart",
       "timeout": 10,
-      "matcher": ""
+      "matcher": "",
+      "execution": "child"
     },
     "SessionStart/14/0": {
       "target": "tools/subagent-watchdog/subagent_watchdog.ts",
@@ -208,14 +238,16 @@
       ],
       "event": "SessionStart",
       "timeout": 15,
-      "matcher": ""
+      "matcher": "",
+      "execution": "child"
     },
     "SessionStart/15/0": {
       "target": "tools/session-pilot/autostart_hook.ts",
       "args": [],
       "event": "SessionStart",
       "timeout": 15,
-      "matcher": ""
+      "matcher": "",
+      "execution": "child"
     },
     "PreToolUse/0/0": {
       "target": "tools/claude-mem-health/health-check.ts",
@@ -224,112 +256,128 @@
       ],
       "event": "PreToolUse",
       "timeout": 15,
-      "matcher": ""
+      "matcher": "",
+      "execution": "child"
     },
     "PreToolUse/1/0": {
       "target": "tools/plan-pomogator/plan-gate.ts",
       "args": [],
       "event": "PreToolUse",
       "timeout": 60,
-      "matcher": "ExitPlanMode"
+      "matcher": "ExitPlanMode",
+      "execution": "child"
     },
     "PreToolUse/2/0": {
       "target": "tools/specs-validator/phase-gate.ts",
       "args": [],
       "event": "PreToolUse",
       "timeout": 60,
-      "matcher": "Write|Edit"
+      "matcher": "Write|Edit",
+      "execution": "child"
     },
     "PreToolUse/2/1": {
       "target": "tools/specs-validator/extension-json-meta-guard.ts",
       "args": [],
       "event": "PreToolUse",
       "timeout": 60,
-      "matcher": "Write|Edit"
+      "matcher": "Write|Edit",
+      "execution": "child"
     },
     "PreToolUse/2/2": {
       "target": "tools/specs-validator/form-guards-dispatch.ts",
       "args": [],
       "event": "PreToolUse",
       "timeout": 60,
-      "matcher": "Write|Edit"
+      "matcher": "Write|Edit",
+      "execution": "child"
     },
     "PreToolUse/2/3": {
       "target": "tools/spec-conformance-guard/spec-conformance-guard.bundle.mjs",
       "args": [],
       "event": "PreToolUse",
       "timeout": 30,
-      "matcher": "Write|Edit"
+      "matcher": "Write|Edit",
+      "execution": "child"
     },
     "PreToolUse/2/4": {
       "target": "tools/bdd-only-test-guard/guard.ts",
       "args": [],
       "event": "PreToolUse",
       "timeout": 30,
-      "matcher": "Write|Edit"
+      "matcher": "Write|Edit",
+      "execution": "child"
     },
     "PreToolUse/2/5": {
       "target": "tools/reqnroll-ce-guard/ce_slash_guard.ts",
       "args": [],
       "event": "PreToolUse",
       "timeout": 30,
-      "matcher": "Write|Edit"
+      "matcher": "Write|Edit",
+      "execution": "child"
     },
     "PreToolUse/3/0": {
       "target": "tools/tui-test-runner/build_guard.ts",
       "args": [],
       "event": "PreToolUse",
       "timeout": 30,
-      "matcher": "Bash"
+      "matcher": "Bash",
+      "execution": "child"
     },
     "PreToolUse/4/0": {
       "target": "tools/tui-test-runner/test_guard.ts",
       "args": [],
       "event": "PreToolUse",
       "timeout": 30,
-      "matcher": "Bash"
+      "matcher": "Bash",
+      "execution": "child"
     },
     "PreToolUse/5/0": {
       "target": "tools/specs-validator/spec-access-guard.ts",
       "args": [],
       "event": "PreToolUse",
       "timeout": 30,
-      "matcher": "Read|Grep|Glob|Edit|Write|Bash"
+      "matcher": "Read|Grep|Glob|Edit|Write|Bash",
+      "execution": "child"
     },
     "PreToolUse/6/0": {
       "target": "tools/spec-authoring-steer/steer.ts",
       "args": [],
       "event": "PreToolUse",
       "timeout": 30,
-      "matcher": "mcp__dev-pomogator-specs__apply_spec_change|mcp__dev-pomogator-specs__apply_spec_transaction|Write"
+      "matcher": "mcp__dev-pomogator-specs__apply_spec_change|mcp__dev-pomogator-specs__apply_spec_transaction|Write",
+      "execution": "child"
     },
     "UserPromptSubmit/0/0": {
       "target": "tools/carl/runner.ts",
       "args": [],
       "event": "UserPromptSubmit",
       "timeout": 10,
-      "matcher": ""
+      "matcher": "",
+      "execution": "child"
     },
     "UserPromptSubmit/1/0": {
       "target": "tools/plan-pomogator/prompt-capture.ts",
       "args": [],
       "event": "UserPromptSubmit",
       "timeout": 60,
-      "matcher": ""
+      "matcher": "",
+      "execution": "child"
     },
     "UserPromptSubmit/2/0": {
       "target": "tools/prompt-suggest/prompt_suggest_submit.ts",
       "args": [],
       "event": "UserPromptSubmit",
       "timeout": 60,
-      "matcher": ""
+      "matcher": "",
+      "execution": "child"
     },
     "UserPromptSubmit/3/0": {
       "target": "tools/specs-validator/validate-specs.ts",
       "args": [],
       "event": "UserPromptSubmit",
       "timeout": 60,
-      "matcher": ""
+      "matcher": "",
+      "execution": "child"
     },
     "UserPromptSubmit/4/0": {
       "target": "tools/learnings-capture/capture.ts",
@@ -339,7 +387,8 @@
       ],
       "event": "UserPromptSubmit",
       "timeout": 60,
-      "matcher": ""
+      "matcher": "",
+      "execution": "child"
     },
     "UserPromptSubmit/5/0": {
       "target": "tools/subagent-watchdog/subagent_watchdog.ts",
@@ -349,35 +398,43 @@
       ],
       "event": "UserPromptSubmit",
       "timeout": 15,
-      "matcher": ""
+      "matcher": "",
+      "execution": "persistent",
+      "worker_target": "tools/hook-service/worker-adapters/subagent-watchdog.mjs",
+      "worker_protocol": "handle",
+      "worker_loader": "tsx"
     },
     "PostToolUse/0/0": {
       "target": "tools/test-quality/compliance_check.ts",
       "args": [],
       "event": "PostToolUse",
       "timeout": 60,
-      "matcher": "Write|Edit"
+      "matcher": "Write|Edit",
+      "execution": "child"
     },
     "PostToolUse/0/1": {
       "target": "tools/spec-conformance-push/spec-conformance-push.bundle.mjs",
       "args": [],
       "event": "PostToolUse",
       "timeout": 30,
-      "matcher": "Write|Edit"
+      "matcher": "Write|Edit",
+      "execution": "child"
     },
     "PostToolUse/0/2": {
       "target": "tools/anchor-integrity/anchor_check_post.ts",
       "args": [],
       "event": "PostToolUse",
       "timeout": 30,
-      "matcher": "Write|Edit"
+      "matcher": "Write|Edit",
+      "execution": "child"
     },
     "PostToolUse/0/3": {
       "target": "tools/bdd-quality-judge/hook.ts",
       "args": [],
       "event": "PostToolUse",
       "timeout": 15,
-      "matcher": "Write|Edit"
+      "matcher": "Write|Edit",
+      "execution": "child"
     },
     "PostToolUse/1/0": {
       "target": "tools/subagent-watchdog/subagent_watchdog.ts",
@@ -387,28 +444,35 @@
       ],
       "event": "PostToolUse",
       "timeout": 15,
-      "matcher": "Agent|TaskOutput"
+      "matcher": "Agent|TaskOutput",
+      "execution": "persistent",
+      "worker_target": "tools/hook-service/worker-adapters/subagent-watchdog.mjs",
+      "worker_protocol": "handle",
+      "worker_loader": "tsx"
     },
     "PostToolUse/2/0": {
       "target": "tools/bg-task-guard/mark-bg-task.ts",
       "args": [],
       "event": "PostToolUse",
       "timeout": 60,
-      "matcher": "Bash"
+      "matcher": "Bash",
+      "execution": "child"
     },
     "PostToolUse/2/1": {
       "target": "tools/bash-post-test/ingest.ts",
       "args": [],
       "event": "PostToolUse",
       "timeout": 30,
-      "matcher": "Bash"
+      "matcher": "Bash",
+      "execution": "child"
     },
     "PostToolUse/3/0": {
       "target": "tools/research-workflow-marker-guard/research-workflow-marker-guard.ts",
       "args": [],
       "event": "PostToolUse",
       "timeout": 10,
-      "matcher": "Skill"
+      "matcher": "Skill",
+      "execution": "child"
     }
   }
 }

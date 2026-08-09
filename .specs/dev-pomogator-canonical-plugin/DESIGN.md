@@ -300,3 +300,19 @@ The client treats any received HTTP response as a live-service result and does n
 - SessionStart-only recovery was rejected because it leaves the active session broken until restart.
 - Killing the process bound to the fixed port was rejected because ownership cannot be inferred safely from a port.
 - Installing an OS-level supervisor was rejected because it adds cross-platform installation and lifecycle complexity.
+
+### Incident hardening: Stop fanout and child memory boundary (2026-07-23)
+
+The incident showed a healthy daemon alongside a failed Stop request: the daemon was only the HTTP boundary; each dispatch still created a fresh Node child, and the host exposed thirteen independent Stop registrations. The selected first-phase fix keeps all thirteen public route IDs and their matcher/order/timeout metadata, but adds a service-local event flight keyed by event plus session_id. The first request runs the complete Stop route set once in numeric registry order; later requests receive only their own route output or failure. A failure in one route therefore does not convert successful sibling routes into a false success or duplicate their side effects.
+
+The legacy adapter remains the execution boundary because current targets include shell/tsx bootstrap, process.exit, and nested cp.spawn behavior that is not safe to place in a persistent worker without an explicit protocol contract. Its stdout and stderr are incrementally bounded at 256 KiB; overflow kills only that child and is reported as a sanitized route diagnostic. This eliminates unbounded capture growth and host-level duplicate Stop execution without pretending that it eliminates every cold child start.
+
+A fixed global concurrency cap (including maxInFlight=2) is rejected: it lowers throughput, does not remove cold-start/bootstrap allocation, and cannot distinguish compatible workers from legacy side-effecting commands. Worker reuse is a separate opt-in phase with compatibility audit, framed protocol, recycle policy, and no retry after uncertain side effects.
+
+### Persistent worker migration: explicit capability boundary
+
+The first-phase Stop coordinator and bounded child capture do not by themselves remove cold runtime allocation. The second phase introduces a supervised worker host behind the existing daemon. The registry is authoritative: execution=persistent is emitted only when a reviewed capability entry names a reusable adapter, protocol, and loader; all routes default to execution=child. A persistent adapter exports handle(input, request), performs no stdin read, argv parsing, process exit, or import-time work, and returns one event-valid object. Legacy scripts are not imported opportunistically.
+
+The worker host loads the adapter once at startup and serves versioned newline-delimited JSON frames containing request_id, route, event, input, and runtime context. The manager serializes each route worker FIFO, starts it lazily, bounds frames at 256 KiB, records worker PID for diagnostics, evicts idle workers, and recycles on timeout, crash, transport/protocol failure, or output overflow. A failed request is never replayed because a side effect may already have happened. The daemon remains healthy and the existing HTTP 503/fail-open policy remains the boundary for the affected request.
+
+This migration eliminates repeated Node/tsx cold starts for every route in the audited persistent capability set. Incompatible routes retain the legacy child adapter intentionally; that fallback is explicit in registry metadata and is not counted as migrated. Adding another persistent route requires a handler audit, worker reuse/FIFO test, recycle/no-retry test, and generated-registry parity evidence.
