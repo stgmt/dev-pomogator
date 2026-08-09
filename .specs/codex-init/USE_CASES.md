@@ -39,3 +39,13 @@ A Codex plugin entry is ready for implementation review.
 - Verification runs a real Codex plugin marketplace/install/list flow or an equivalent non-interactive integration harness.
 - The check confirms installed/enabled status, manifest paths, and component loading expectations.
 - Hook/MCP entries record trust and policy requirements separately from manifest validity.
+
+## UC-6: Publish the Full Spec Generator as the Second Entry
+
+A maintainer adds the full `spec-generator-v4` Codex plugin after the context-menu-only entry.
+
+- The marketplace keeps `context-menu` first and adds `spec-generator-v4` second.
+- The second record uses its own plugin source and manifest reference instead of widening or aliasing the context-menu package.
+- This spec owns only ordering, distribution metadata, support status, and evidence gating.
+- Skills, agents, hooks, MCP wiring, project-root behavior, and Codex Desktop runtime semantics stay owned by requirement 83 of the main `spec-generator-v4` spec.
+- Until that requirement has passing installed-runtime evidence, the second entry remains `Draft` or `Blocked`.

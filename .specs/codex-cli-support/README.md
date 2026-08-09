@@ -1,4 +1,6 @@
 # Codex CLI Support
+> **Граница владения (2026-08-10).** Эта legacy-спека сохраняет только исторический контекст Codex CLI/project install. Детальный контракт Codex Desktop и runtime принадлежит `spec-generator-v4:FR-83`, а distribution gate — `codex-init:FR-8`. Не копировать и не переобъявлять их требования здесь; только ссылаться на канонических владельцев.
+
 
 Project-level поддержка `Codex CLI` в `dev-pomogator`: новая платформа `codex` с repo-local артефактами, merge-safe coexistence с пользовательскими файлами, version-aware hooks, `AGENTS.md`, `.agents/skills`, `.codex/config.toml` и честной support matrix по каждому текущему расширению.
 

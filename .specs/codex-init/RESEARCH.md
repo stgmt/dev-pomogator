@@ -16,6 +16,7 @@ This research intentionally starts with the distribution/runtime facts before wr
 | H4 | Existing Claude plugin artifacts can stay in place while Codex metadata is added separately. | LIKELY | Codex cache contains both `.claude-plugin` and `.codex-plugin` variants for some plugins; Codex also exposes a `claude-plugins-official` marketplace. Needs implementation verification in this repo. |
 | H5 | Plugin-bundled hooks require Codex trust review and cannot be assumed to run immediately after install. | VERIFIED | Official build plugins and hooks docs state plugin hooks are non-managed hooks and are skipped until reviewed/trusted. |
 | H6 | The context-menu feature is a good first whitelist entry because it already has a spec, installer, doctor drift check, and runtime artifacts. | VERIFIED | `.specs/context-menu/`, `tools/context-menu/postinstall.ts`, `.agents/skills/context-menu/SKILL.md`, and `.agents/skills/pomogator-doctor/scripts/engine/checks/context-menu.ts` exist. |
+| H7 | A second marketplace record can publish the full `spec-generator-v4` plugin without widening the context-menu-only package. | PARTIALLY VERIFIED | The verified marketplace schema exposes an ordered `plugins[]` list and the current context-menu contract is intentionally narrow. The full plugin's Codex Desktop install/runtime proof has not been run. |
 
 ## Sources
 
@@ -63,13 +64,24 @@ The context-menu feature already has:
 
 The Codex branch of that feature must use verified Codex launch flags and config/trust behavior. Earlier context-menu skill notes still contain stale Claude/Codex mixed claims such as `--dangerously-skip-permissions`; those must be corrected by implementation under the context-menu spec, not copied into this whitelist spec as truth.
 
+
+### The second entry needs a hard distribution/runtime ownership boundary
+
+The marketplace schema already supports an ordered `plugins[]` catalog, so the full `spec-generator-v4` plugin can be represented as a separate second entry after `context-menu`. It must use a distinct plugin source and manifest reference: reusing the context-menu-only manifest would either silently widen the launcher package or make two catalog entries alias the same installable surface.
+
+The repository already centralizes the reusable spec graph, MCP server, and generation pipeline under `tools/spec-graph/`, `tools/spec-mcp-server/`, and `tools/specs-generator/`. Their Codex Desktop adaptation is not a whitelist concern. Requirement 83 of the main `spec-generator-v4` spec owns skills, agents, hooks, MCP wiring, project-root behavior, generated adapters, and installed runtime verification. This spec owns only the ordered catalog record, status, and evidence gate.
+
+**Verification state (2026-08-10):** architecture and distribution boundaries were reviewed, but no full `spec-generator-v4` Codex plugin install, BDD scenario, or Codex Desktop runtime probe was run. The second entry therefore cannot be called `Supported`.
+
 ## Where Implementation Will Live
 
 - Codex marketplace: `.agents/plugins/marketplace.json`
 - Codex plugin manifest: `.codex-plugin/plugin.json`
 - Existing Claude manifests: `.Codex-plugin/plugin.json`, `.Codex-plugin/hooks.json`, `.Codex-plugin/marketplace.json`
 - First whitelisted feature: `.specs/context-menu/`, `tools/context-menu/postinstall.ts`, `scripts/launch-Codex-tui.ps1`
-- Verification scripts/tests: to be finalized in Phase 2 after requirements/design
+- Second distribution record: `spec-generator-v4` as entry 2 in `.agents/plugins/marketplace.json`, with a distinct plugin source and manifest reference
+- Full plugin implementation: owned by requirement 83 of the main `spec-generator-v4` spec, not duplicated in this spec
+- Verification scripts/tests: whitelist ordering and evidence gating here; full installed-runtime proof remains with the main spec
 
 ## Conclusions
 
@@ -78,6 +90,8 @@ The Codex branch of that feature must use verified Codex launch flags and config
 3. `context-menu` should be the first whitelisted Codex plugin because the behavior is already bounded, Windows-specific, and testable.
 4. Existing Claude Code support must remain intact and separately verifiable.
 5. Any Codex hook/MCP/skill support must be proven with the real `codex plugin` CLI and not inferred from Claude plugin behavior.
+6. `context-menu` should remain the narrow first entry, while the full `spec-generator-v4` plugin is a separately installable second entry.
+7. `codex-init` should own only distribution order/status/evidence; the main `spec-generator-v4` requirement 83 should remain the sole owner of full-plugin behavior.
 
 ## Project Context & Constraints
 
@@ -103,7 +117,7 @@ The Codex branch of that feature must use verified Codex launch flags and config
 
 ### Architectural Constraints Summary
 
-The whitelist must separate product compatibility from feature implementation. A plugin surface is not "Codex-supported" until it is listed in the Codex marketplace, has a `.codex-plugin/plugin.json`, has validation coverage, and its runtime artifacts are proven under a real Codex install/load path. Claude support remains a sibling channel.
+The whitelist must separate product compatibility from feature implementation. A plugin surface is not "Codex-supported" until it is listed in the Codex marketplace, has a `.codex-plugin/plugin.json`, has validation coverage, and its runtime artifacts are proven under a real Codex install/load path. Claude support remains a sibling channel. The second full-plugin record must not reuse the context-menu-only plugin source or duplicate the main `spec-generator-v4` runtime contract.
 
 ## Risk Assessment
 
@@ -113,3 +127,4 @@ The whitelist must separate product compatibility from feature implementation. A
 | Enabling Codex plugin support accidentally regresses existing Claude Code plugin/context-menu behavior. | Medium | High | Add cross-spec AC requiring Claude artifacts and tests to remain unchanged or explicitly updated; verify both launch channels. |
 | Plugin hooks/MCP appear installed but do not run because Codex hook trust or MCP policy is not configured. | Medium | High | Require real `codex plugin` installation/load verification plus hook trust review documentation before marking a whitelist entry supported. |
 | Context-menu implementation copies stale Codex flag names from old skill notes. | High | Medium | Require implementation to use verified `codex --help` flags and add regression checks that reject Claude-only `--dangerously-skip-permissions` in Codex launch paths. |
+| The second entry aliases or widens the context-menu package, or this spec duplicates full-plugin behavior and drifts from the main spec. | Medium | High | Require a unique second id plus a distinct source/manifest reference; keep only distribution/status/evidence here and delegate runtime semantics to main `spec-generator-v4` requirement 83. |

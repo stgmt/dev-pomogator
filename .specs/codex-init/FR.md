@@ -48,3 +48,11 @@ The `context-menu` Codex plugin package SHALL expose only the Codex-supported co
 
 **Связанные AC:** [AC-7](ACCEPTANCE_CRITERIA.md#ac-7-fr-7)
 **Use Case:** [UC-3](USE_CASES.md#uc-3-first-whitelist-entry-is-context-menu)
+
+## FR-8: Second Full spec-generator-v4 Codex Entry
+
+The whitelist SHALL contain a separately installable `spec-generator-v4` Codex plugin as its second entry after `context-menu`. The entry SHALL use a distinct plugin source and manifest reference from the context-menu-only package. This spec SHALL own only the ordered distribution record, support status, and evidence gate; skills, agents, hooks, MCP wiring, project-root behavior, generated adapters, and Codex Desktop runtime semantics SHALL remain defined by qualified requirement `spec-generator-v4:FR-83` and SHALL NOT be duplicated here. Until that contract has passing installed-runtime evidence, the second entry SHALL remain `Draft` or `Blocked` and SHALL NOT be reported as `Supported`.
+
+**Связанные AC:** [AC-8](ACCEPTANCE_CRITERIA.md#ac-8-fr-8)
+**Use Case:** [UC-6](USE_CASES.md#uc-6-publish-the-full-spec-generator-as-the-second-entry)
+**User Story:** [User Story 7](USER_STORIES.md#user-story-7-publish-the-full-spec-generator-as-the-second-codex-plugin-priority-p1)

@@ -274,3 +274,14 @@ After FR-36 the graph holds ≈470 FR nodes instead of 47 (collision-dropped); t
 
 **Pagination and read truth:** Every bounded collection response SHALL expose `total`, `returned`, `truncated`, and `next_cursor` as applicable; cursor ordering SHALL be stable for an unchanged graph revision, and concatenated pages SHALL conserve unique canonical IDs. `PHASE_NOT_FOUND` and `EMPTY_PHASE` SHALL remain distinct. Large `read_spec_doc` requests SHALL not bypass the default/max page bounds without explicit whole-document opt-in, and missing sections SHALL return nearest canonical anchors.
 
+## NFR-Performance-14 (FR-83)
+
+**No duplicate graph or hook pipeline:** A Codex host invocation SHALL create no second SpecGraph build, MCP registry, task store, or parallel guard chain solely because of the host. Hook adaptation SHALL add one bounded normalization/dispatch pass before the existing policy. Performance verification SHALL compare repo and installed variants against the same canonical corpus and report any regression explicitly; it SHALL not hide startup work in a pre-warmed checkout.
+
+## NFR-Reliability-17 (FR-83)
+
+**Deterministic adapter and package parity:** Equal canonical source bytes and generator version SHALL produce byte-equivalent Codex skills, hook manifest, agent profiles, MCP consumer map, plugin manifest inputs, and fingerprints. A missing, stale, manually divergent, or partially generated artifact SHALL fail the distribution check with source and target paths. Unsupported host spawn or semantic judge capability SHALL remain an explicit NOT_READY/SEMANTIC_SKIPPED state.
+
+## NFR-Security-11 (FR-83)
+
+**Target confinement and guard parity:** Every installed MCP operation SHALL canonicalize and remain within the selected target repository root even when the executable and cwd are in a plugin cache. Codex raw-file and shell payloads SHALL receive the same enforce decision as their Claude-equivalent intent. Cache paths, external symlink/junction targets, and unresolved roots SHALL be rejected before reading or mutation; diagnostic output SHALL not expose secrets.

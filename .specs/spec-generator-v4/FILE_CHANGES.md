@@ -796,3 +796,35 @@ Phase 49 — Live-evidence containment, atomic CAS proof, strict-synthesis guard
 | `tools/codex-plugin-support/verify-whitelist.ts` | EDIT | codex-init FR-5 — remove production test-only probe override; PATH is the only resolution path. |
 | `tests/step_definitions/feature_codex_init.ts` | EDIT | codex-init FR-5 — PATH-shim positive proof and env-override self-challenge. |
 | `.gitattributes` | EDIT | FR-81 AC-81.10 — force LF for live-evidence ground-truth fixtures so digests stay byte-stable. |
+## Phase 50 — Codex Desktop first-class host adapter (FR-83)
+
+| Action | Path | Reason |
+|---|---|---|
+| CREATE | `tools/codex-plugin-support/generate-adapters.ts` | FR-83/AC-83.6 — one deterministic generator/check for Codex projections and package inputs. |
+| CREATE | `plugins/spec-generator-v4/.codex-plugin/plugin.json` | FR-83/AC-83.1 — distinct full-workflow plugin identity. |
+| CREATE (generated) | `plugins/spec-generator-v4/.mcp.json` | FR-83/AC-83.1/83.7 — packaged canonical MCP launcher. |
+| CREATE (generated) | `plugins/spec-generator-v4/hooks/hooks.json` | FR-83/AC-83.3/83.6 — Codex channel projection from the canonical hook registry. |
+| CREATE (generated) | `plugins/spec-generator-v4/skills/**` | FR-83/AC-83.4/83.6 — portable workflow skills using built-in roles when custom agents are unavailable. |
+| EDIT | `tools/spec-graph/root-resolution.mjs` | FR-83/AC-83.2 — generalize plugin-cache detection and target confinement for Codex. |
+| EDIT | `tools/spec-graph/incremental.ts` | FR-83/AC-83.2 — preserve and re-derive every affected cross-document edge after validated mutations. |
+| EDIT | `tools/spec-mcp-server/tools.ts` | FR-83/AC-83.2 — use injected registry root in every read/write/status/create handler and serve only the refreshed graph. |
+| EDIT | `tools/spec-mcp-server/server.ts` | FR-83/AC-83.2 — keep target-root injection explicit at registry construction. |
+| CREATE | `tools/_shared/spec-host-adapter.ts` | FR-83/AC-83.4/83.5 — one Claude/Codex spawn and provenance contract shared by phases and judges. |
+| EDIT | `.claude/skills/spec-generator-orchestrator/scripts/phase-runner.ts` | FR-83/AC-83.4 — consume host adapter without duplicating gate/retry logic. |
+| EDIT | `tools/spec-llm-judge/index.ts` | FR-83/AC-83.5 — provider-aware default spawn and honest unsupported state. |
+| EDIT | `tools/spec-llm-judge/legacy-judge.ts` | FR-83/AC-83.5 — same host contract for legacy judgment. |
+| EDIT | `tools/hook-service/registry.mjs` | FR-83/AC-83.3 — channel-aware route rendering with neutral plugin-root contract. |
+| EDIT | `tools/hook-service/generate-manifest.mjs` | FR-83/AC-83.3/83.6 — generate Claude and Codex manifests from one registry. |
+| EDIT | `tools/specs-validator/spec-access-guard.ts` | FR-83/AC-83.3 — consume normalized Codex raw-file and shell payloads. |
+| EDIT | `tools/specs-validator/phase-gate.ts` | FR-83/AC-83.3 — normalize apply_patch/update_plan target extraction. |
+| EDIT | `tools/specs-validator/form-guards-dispatch.ts` | FR-83/AC-83.3 — share normalized write intent. |
+| EDIT | `tools/spec-conformance-guard/spec-conformance-guard.ts` | FR-83/AC-83.3 — apply conformance guard to Codex patch payloads. |
+| EDIT | `tools/skill-health/mirror-contract.json` | FR-83/AC-83.6 — enumerate canonical generated projections and allowed transforms. |
+| EDIT (generated) | `.agents/skills/**`, `.codex/hooks.json`, `AGENTS.md` | FR-83/AC-83.4/83.6 — required generated repo adapters/fingerprints; no manual mirror authority. |
+| EDIT (optional generated) | `.codex/agents/*.toml` | FR-83/AC-83.4/83.6 — repo-dogfood optimization only; installed portability must use built-in roles without these profiles. |
+| EDIT | `.claude/skills/pomogator-doctor/scripts/engine/**` | FR-83/AC-83.7 — Codex plugin/MCP/hook/adapter/root/spawn health checks. |
+| CREATE | `tests/fixtures/codex-host/**` | FR-83/AC-83.2/83.3/83.6/83.7 — captured payload, cache/target, drift, and package fixtures. |
+| CREATE | `tests/step_definitions/feature83_codex_desktop.ts` | FR-83 — real integration steps for SPECGEN004_701..714; live scenario 708 remains externally evidenced. |
+| EDIT | `.specs/spec-generator-v4/spec-generator-v4.feature` | FR-83 — source scenarios and complete host/distribution matrix. |
+
+> **Single-writer handoff:** Phase 50 produces the full plugin package and an immutable id/source/manifest/capability record. `codex-init:FR-8` alone edits `.agents/plugins/marketplace.json` and `tools/codex-plugin-support/verify-whitelist.ts`; those paths are intentionally absent from this phase.

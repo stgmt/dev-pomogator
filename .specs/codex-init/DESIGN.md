@@ -8,12 +8,15 @@
 - [FR-4: Codex-Native Packaging Contract](FR.md#fr-4-codex-native-packaging-contract)
 - [FR-5: Real Codex CLI Verification Gate](FR.md#fr-5-real-codex-cli-verification-gate)
 - [FR-6: Stale Claim Rejection](FR.md#fr-6-stale-claim-rejection)
+- [FR-7: Minimal Codex Package Scope](FR.md#fr-7-minimal-codex-package-scope)
+- [FR-8: Second Full spec-generator-v4 Codex Entry](FR.md#fr-8-second-full-spec-generator-v4-codex-entry)
 
 ## Components
 
 - Codex whitelist spec artifacts: this `.specs/codex-init/` directory defines the support gate.
 - Codex marketplace metadata: `.agents/plugins/marketplace.json` will list supported Codex plugin entries.
-- Codex plugin manifest: `.codex-plugin/plugin.json` will describe the dev-pomogator Codex plugin bundle.
+- Context-menu Codex manifest: `.codex-plugin/plugin.json` remains the narrow launcher-only package.
+- Second full-plugin distribution record: `spec-generator-v4` uses a distinct plugin source and manifest reference while its internals stay owned by main spec requirement 83.
 - Existing Claude plugin metadata: `.Codex-plugin/` remains a sibling channel until separately deprecated.
 - First whitelisted feature implementation: `tools/context-menu/postinstall.ts` and launch scripts under `scripts/`.
 - Verification layer: BDD scenarios plus integration checks around `codex plugin` behavior.
@@ -22,7 +25,8 @@
 
 - Whitelist spec: `.specs/codex-init/`
 - First feature spec: `.specs/context-menu/`
-- Codex plugin files: `.codex-plugin/plugin.json`, `.agents/plugins/marketplace.json`
+- Codex distribution files: `.agents/plugins/marketplace.json` plus the context-menu-only `.codex-plugin/plugin.json`
+- Full `spec-generator-v4` plugin source/manifest/runtime files: owned and named by requirement 83 of the main spec; this spec stores only their distribution reference
 - Context-menu code: `tools/context-menu/postinstall.ts`
 - Launch scripts: planned `scripts/launch-Codex-tui.ps1`, existing `scripts/launch-claude-tui.ps1`
 - Doctor checks: `.agents/skills/pomogator-doctor/scripts/engine/checks/context-menu.ts`
@@ -33,7 +37,9 @@
 2. Add a whitelist entry only when the feature has Codex manifest, marketplace, runtime, and verification evidence.
 3. Keep existing Claude Code artifacts as a separate channel.
 4. For the first entry, route feature-specific launcher details to `.specs/context-menu/`.
-5. Verify support status through real Codex CLI behavior or an integration harness that exercises the same command surface.
+5. Keep `context-menu` first; add `spec-generator-v4` second only with a unique id and distinct plugin source/manifest reference.
+6. Delegate the second entry's skills, agents, hooks, MCP, generated adapters, project-root, and Codex Desktop runtime semantics to main spec requirement 83.
+7. Verify support status through real Codex CLI behavior or an integration harness that exercises the same command surface.
 
 ## API
 
@@ -118,6 +124,19 @@ No network/API endpoint is introduced by this feature. The integration surface i
 - Treat Claude behavior as a fallback source — rejected because it would preserve the exact class of drift this feature is meant to prevent.
 - Allow unverified claims with TODO markers — rejected because TODO-backed support status would look implemented to future agents.
 
+
+### Decision: Keep second-entry distribution here and full-plugin behavior in the main spec
+
+**Требование:** [FR-8](FR.md#fr-8-second-full-spec-generator-v4-codex-entry)
+
+**Rationale:** `codex-init` is the support whitelist and evidence gate. Qualified requirement `spec-generator-v4:FR-83` is the canonical owner of the reusable graph/generator pipeline and its Codex Desktop adapters. A separate second catalog entry preserves the narrow context-menu package without forking runtime behavior into two specs.
+
+**Trade-off:** The distribution entry cannot become `Supported` from this spec alone; it must consume passing installed-runtime evidence from the main spec.
+
+**Alternatives considered:**
+- Widen the context-menu manifest into the full plugin — rejected because the first package would stop being minimal and the two entries would not be independently installable.
+- Restate full skill/agent/hook/MCP behavior here — rejected because duplicated requirements would drift from the canonical generator/runtime contract.
+
 ## BDD Test Infrastructure
 
 **Classification:** TEST_DATA_NONE
@@ -127,3 +146,7 @@ No network/API endpoint is introduced by this feature. The integration surface i
 **Install Command:** already installed
 **Evidence:** `package.json` has `"test:bdd": "node --import tsx node_modules/@cucumber/cucumber/bin/cucumber.js"` and devDependency `"@cucumber/cucumber": "^12.9.0"`.
 **Verdict:** No data hooks or fixtures are required for whitelist scenarios. Integration checks that mutate temp plugin/marketplace state must use temporary directories and must not edit user global Codex config without an explicit test harness boundary.
+
+## Verification State
+
+The FR-8 documents and BDD scenario are specification work only. The full Codex plugin install, Docker BDD scenario, and Codex Desktop runtime probe were **not run** on 2026-08-10. All FR-8 implementation and verification tasks remain `TODO`, and the second entry is not `Supported`.

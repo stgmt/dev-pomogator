@@ -4468,3 +4468,146 @@ Scenario: SPECGEN004_694 spec opt-out skips every semantic pair and records the 
   Then no semantic subprocess is spawned
   And no semantic cache entry is created
   And the spec-check log contains one opt-out event for each pair
+@feature83 @FR-83 @AC-83.1
+Scenario: SPECGEN004_701 full Codex spec plugin installs beside narrow context-menu
+  Given an isolated Codex home and distinct context-menu and spec-generator-v4 sources and manifests
+  When the real Codex plugin install and catalog verification run
+  Then the catalog contains exactly two unique plugin ids
+  And spec-generator-v4 exports the canonical required MCP skill hook and phase surfaces
+  And the context-menu manifest digest and exported surface match the pre-install baseline
+  And only codex-init writes whitelist order and support status
+
+@feature83 @FR-83 @AC-83.2
+Scenario: SPECGEN004_702 plugin-cache cwd never becomes the target spec repository
+  Given the bundled MCP registry runs from a Codex plugin-cache cwd with a separate target repository
+  When real read attachment proposal mutation transaction status and create handlers execute
+  Then every handler reports the same canonical target realpath
+  And sibling-prefix and symlink or junction escapes are rejected by realpath confinement
+  And the next live trace retains every declared AC scenario task design and story edge for the touched fixture
+  And that live trace equals a fresh cold graph build
+  And the plugin cache remains byte-identical
+
+@feature83 @FR-83 @AC-83.3
+Scenario: SPECGEN004_703 every Codex hook family reaches the existing spec-door policy
+  Given the captured Codex hook corpus contains exactly these event families
+    | family      | representative payload       | expected policy |
+    | patch       | apply_patch                  | raw deny        |
+    | shell       | shell command                | raw deny        |
+    | plan        | update_plan                  | guarded         |
+    | MCP mutation| mcp__dev_pomogator_specs__* | allow and audit |
+  When the generated Codex routes normalize and dispatch every corpus row under spec-access enforce
+  Then exactly four policy results exist and each result keeps its family identity
+  And raw spec writes are denied while the equivalent MCP mutation is allowed and audited
+
+@feature83 @FR-83 @AC-83.4
+Scenario: SPECGEN004_704 native and fallback Codex phase spawn preserve orchestration truth
+  Given the Codex phase adapter matrix contains exactly these branches
+    | branch                  |
+    | native Codex subagent   |
+    | packaged built-in role  |
+  When each branch executes a create-spec phase through the canonical gate and retry loop
+  Then exactly two branch results preserve isolation MCP-only access STOP budgets retries and final failure semantics
+  And no branch invokes claude -p implicitly
+  And an unavailable selected branch stops with a named unsupported-host failure
+
+@feature83 @FR-83 @AC-83.5
+Scenario: SPECGEN004_705 every Codex semantic judgment outcome stays provenance-honest
+  Given the semantic host corpus contains exactly these cases
+    | case                    | expected outcome             |
+    | supported path          | provenance-bearing judgment  |
+    | absent executable       | not ready                    |
+    | unsupported Desktop path| not ready                    |
+    | timeout                 | not ready                    |
+    | malformed response      | not ready                    |
+  When the shared semantic host adapter evaluates every case
+  Then exactly five independently keyed results exist
+  And the supported result binds provider host command digest and timestamp provenance
+  And no unavailable or invalid result is green
+
+@feature83 @FR-83 @AC-83.6
+Scenario: SPECGEN004_706 every generated Codex adapter drift class fails closed
+  Given the projection drift corpus contains exactly these mutations
+    | mutation      |
+    | missing output|
+    | stale output  |
+    | extra output  |
+    | hand modified |
+  When adapter check evaluates each mutation against canonical fingerprints
+  Then exactly four independent failures contain an actionable diff and source fingerprint
+  And two clean generations are byte-identical
+
+@feature83 @FR-83 @AC-83.7
+Scenario: SPECGEN004_707 dependency-absent package and doctor expose every Codex health state
+  Given a freshly packed spec-generator-v4 plugin without repository node_modules
+  And the doctor corpus contains exactly these unhealthy states
+    | state                  |
+    | missing install        |
+    | stale package          |
+    | registry mismatch      |
+    | hook mismatch          |
+    | adapter drift          |
+    | target root mismatch   |
+    | unsupported host spawn |
+    | semantic judge absent  |
+  When the real launcher loads catalog skills and hooks and doctor evaluates every state
+  Then the healthy canonical surface initializes without repository dependencies
+  And exactly eight independently keyed actionable diagnoses exist
+
+@feature83 @FR-83 @AC-83.8 @live-evidence
+Scenario: SPECGEN004_708 fresh Codex Desktop task proves the installed spec workflow
+  Given the full plugin is installed in an isolated Codex home and Codex Desktop has reloaded it
+  When a fresh Desktop task uses an external repository through MCP guards and one phase subagent
+  Then captured live evidence proves installed discovery list read mutate status raw-write deny phase execution and honest semantic status
+  And the record binds Codex and plugin versions target and cache realpaths event ids timestamps checkout and package digests and this scenario id
+
+@feature83 @FR-83 @AC-83.9
+Scenario: SPECGEN004_709 Codex Desktop repo dogfood keeps the canonical contract
+  Given the Codex Desktop host uses repo dogfood with evidence key desktop-repo
+  When project discovery MCP guards and one phase smoke drive the real spec workflow
+  Then graph registry hook policy and workflow semantics match the canonical contract
+  And the result makes no installed-cache claim
+
+@feature83 @FR-83 @AC-83.9
+Scenario: SPECGEN004_710 Codex Desktop installed plugin keeps the canonical contract
+  Given the Codex Desktop host uses an isolated installed plugin with evidence key desktop-installed
+  When package discovery MCP guards and one phase smoke drive the real spec workflow after reload
+  Then graph registry hook policy and workflow semantics match the canonical contract
+  And installed-cache identity and live Desktop provenance are retained
+
+@feature83 @FR-83 @AC-83.9
+Scenario: SPECGEN004_711 Codex CLI repo dogfood keeps the canonical contract
+  Given the Codex CLI host uses repo dogfood with evidence key cli-repo
+  When project discovery MCP guards and one phase smoke drive the real spec workflow
+  Then graph registry hook policy and workflow semantics match the canonical contract
+  And the result cannot substitute for Desktop installed evidence
+
+@feature83 @FR-83 @AC-83.9
+Scenario: SPECGEN004_712 Codex CLI installed plugin keeps the canonical contract
+  Given the Codex CLI host uses an isolated dependency-absent plugin with evidence key cli-installed
+  When package discovery MCP guards and one phase smoke drive the real spec workflow
+  Then graph registry hook policy and workflow semantics match the canonical contract
+  And the result cannot substitute for Desktop installed evidence
+
+@feature83 @FR-83 @AC-83.9
+Scenario: SPECGEN004_713 host and distribution evidence has exact four-row cardinality
+  Given the matrix expects desktop-repo desktop-installed cli-repo and cli-installed evidence keys
+  When matrix completeness is evaluated
+  Then exactly four unique row results exist
+  And no missing duplicated substituted or silently merged row can pass
+
+@feature83 @FR-83 @AC-83.10
+Scenario: SPECGEN004_714 Codex support adds no second control plane or spec engine
+  Given the forbidden dependency inventory contains exactly these classes
+    | class                                  |
+    | duplicate SpecGraph                    |
+    | duplicate MCP registry                 |
+    | duplicate task or status store         |
+    | duplicate canonical rules authority    |
+    | Codex task or thread management API    |
+    | scheduled automation                   |
+    | connector or app protocol              |
+    | context-menu behavior change           |
+    | Cursor FR-81 ownership replacement     |
+  When the FR-83 package and dependency graph are inspected
+  Then exactly nine forbidden-class checks are absent
+  And only the declared thin host and generated distribution adapters remain

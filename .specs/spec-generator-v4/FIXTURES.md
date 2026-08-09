@@ -269,3 +269,14 @@ Expected finding codes when reconcile is run against the full corpus:
 | `reqnroll-sample/{output.ndjson,README.md}` | `tests/fixtures/reqnroll-sample/` | Real Reqnroll NDJSON output + reproduction README (SCENGEN004_65, FR-31 AC-31.1) | shared |
 | `behave-sample/{output.ndjson,README.md}` | `tests/fixtures/behave-sample/` | Real behave NDJSON output + reproduction README (SCENGEN004_66, FR-31 AC-31.2) | shared |
 | `jvm-sample/{output.ndjson,README.md}` | `tests/fixtures/jvm-sample/` | Real cucumber-jvm NDJSON output + reproduction README (SCENGEN004_67) | shared |
+### Phase 50 fixtures (FR-83 Codex Desktop host adapter)
+
+| Fixture | Path | Purpose | Lifecycle |
+|---|---|---|---|
+| Codex hook payload captures | `tests/fixtures/codex-host/hooks/` | Real-shaped `apply_patch`, shell, `update_plan`, and normalized MCP events for AC-83.3 | shared, immutable capture with provenance |
+| Plugin-cache/target-root pair | `tests/fixtures/codex-host/root-split/` | Start registry from cache cwd and assert read/mutate/status/create stay in target for AC-83.2 | per-scenario temp copy |
+| Generated-adapter golden set | `tests/fixtures/codex-host/generated/` | Determinism, fingerprint, missing/extra/stale/manual-drift mutations for AC-83.6 | regenerated only by explicit fixture command |
+| Isolated package inventory | `tests/fixtures/codex-host/package/` | Semantic catalog and dependency-absent launcher/doctor expectations for AC-83.1/83.7 | shared expected manifest; runtime temp CODEX_HOME |
+| Desktop live-evidence record | `.dev-pomogator/live-evidence/codex-desktop/` | Version/root/event/digest-bound evidence for AC-83.8; never fabricated by deterministic tests | produced only by a fresh Desktop task |
+
+Every external-shaped fixture SHALL retain producer/version/capture provenance. Hand-authored payloads may test parser negatives but SHALL NOT substitute for the captured producer shape or the fresh Desktop record.

@@ -1684,3 +1684,46 @@ A `SafeBatch` contains an `independenceProof` for every member pair: graph reach
 
 dynamic-workflow-engineering owns all bounded workflow runtime, retry, partial-result, journal, replay, native-Agent capability/security, census/migration, adapters, incident regression, and distribution requirements; FR-82 remains the bounded spec-MCP query prerequisite/consumer surface; spec-generator-v4 must not implement a second runtime.
 
+### Decision: One canonical spec engine with generated Codex host adapters
+
+**Требование:** [FR-83](FR.md#fr-83)
+
+**Rationale:** The graph, MCP registry, authoring door, gate/retry loop, and evidence semantics are already client-neutral, while the verified gaps sit at distribution, cwd/root injection, hook payloads, spawn defaults, and manual mirrors. A second full Codex plugin entry preserves the installed `context-menu` identity; generated adapters keep the extra surface mechanical. This is the smallest architecture that makes an external Codex Desktop project first-class without cloning the spec system.
+
+**Trade-off:** A generated package and host adapter add release checks and one unavoidable second plugin manifest/source directory. Live Desktop verification remains a separate manual-or-captured lane because deterministic CLI tests cannot prove Desktop discovery and reload. `.claude` remains canonical during this increment, so the generator is temporarily directional rather than host-neutral source authoring.
+
+**Alternatives considered:**
+- Expand the existing context-menu plugin into the full product: rejected because it changes an installed plugin identity and violates its narrow contract.
+- Create a new Codex-specific spec engine or spec folder: rejected because it duplicates graph, requirements, tasks, and truth semantics.
+- Hand-copy `.claude` skills/rules into `.agents` and plugin folders: rejected because live inventory already demonstrates drift.
+- Require globally copied `.codex/agents/*.toml`: rejected as a portable plugin prerequisite; packaged skills plus built-in roles must work independently.
+- Treat Codex CLI smoke as Desktop support: rejected because it does not prove plugin reload, Desktop discovery, or live hook/subagent behavior.
+
+#### Responsibility map
+
+| Concern | Canonical owner | Codex projection |
+|---|---|---|
+| Spec graph, parsers, MCP tools, lifecycle | existing `tools/spec-graph` and `tools/spec-mcp-server` | same bundle/registry; no fork |
+| Spec authoring phases and gates | existing create-spec/orchestrator contracts | host spawn adapter + packaged skills |
+| Hook routes and safety policy | existing hook registry/guards | channel renderer + payload normalizer |
+| Skills, agent instructions, consumer map | canonical `.claude` sources for this increment | deterministic `.agents`/`.codex`/plugin output with fingerprints |
+| Marketplace whitelist/install status | `codex-init:FR-8` | sole writer of the second `spec-generator-v4` catalog row and status |
+| Context-menu launcher | context-menu spec/plugin | unchanged and independent |
+| Cursor second-client support | [FR-81](FR.md#fr-81) | unchanged; no replacement |
+
+#### Runtime flow
+
+1. Plugin discovery locates the generated `spec-generator-v4` package; target-project discovery is kept separate from package/cache location.
+2. One root resolver produces a canonical target root and passes it to one registry factory.
+3. Every MCP handler, status helper, attachment path, and create operation consumes that injected root; cache cwd is never an implicit target. A successful mutation refreshes the complete affected cross-document edge set before the next MCP response is served.
+4. The hook adapter maps host event/tool/payload to a neutral policy event, then dispatches the existing guard.
+5. The orchestration adapter selects Codex native spawn or built-in-role fallback and returns the same phase result shape used by gate/retry logic.
+6. The semantic adapter returns judged evidence or the existing honest skip state.
+
+#### Generated distribution boundary
+
+The generator SHALL read canonical hook routes, skill/agent sources, MCP consumer mapping, and plugin inventory; emit repo Codex projections plus `plugins/spec-generator-v4/` package inputs; stamp source/generator fingerprints; and provide `--check`. It SHALL emit an immutable package handoff for `codex-init:CODEXINIT-1-3`; it SHALL NOT write marketplace order or support status. Generated artifacts are distributable outputs, not a second editing surface. The AC-83.9 decision table is the authoritative host/distribution matrix.
+
+#### Verification boundary
+
+Deterministic Docker/integration proof owns root isolation, hook normalization, generation drift, dependency-absent startup, doctor, and CLI variants. The host/distribution aggregate consumes four distinct evidence keys (`desktop-repo`, `desktop-installed`, `cli-repo`, `cli-installed`) and fails unless their cardinality is exactly four. A captured fresh Codex Desktop task owns installed Desktop discovery, reload, hook deny, MCP mutation, phase spawn, and semantic-status evidence. These lanes are required independently; no single scenario result rolls them up.

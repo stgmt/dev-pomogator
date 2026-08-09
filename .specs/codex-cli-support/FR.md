@@ -1,5 +1,7 @@
 # Functional Requirements (FR)
 
+> **Normative supersession for the full spec workflow (2026-08-10):** for `spec-generator-v4` only, qualified requirement `spec-generator-v4:FR-83` supersedes the overlapping application of FR-4, FR-5, FR-7, FR-8, FR-9, and FR-11 below. Those requirements remain historical/generic Codex-platform context and SHALL NOT authorize a second spec runtime, hook/skill/MCP projection, package, verifier, or writer. `codex-init:FR-8` is the sole owner of marketplace order and support status. This spec has no implementation task for that feature.
+
 ## FR-1: First-Class Codex Platform @feature1
 
 Система должна поддерживать `codex` как отдельную платформу `dev-pomogator` на уровне schema, installer flow, manifests и updater logic, а не как alias существующих платформ.
@@ -157,6 +159,8 @@ Reinstall и auto-update для `Codex` должны использовать т
 Если полное поведение extension нельзя выразить через доступный hook surface текущей версии Codex, design должна явно назначать другой Codex-native parity surface: `AGENTS.md`, `.agents/skills`, `[mcp_servers]`, `codex exec`, `notify`, `tui.notifications`, app automation или GitHub Action.
 
 Система не должна silently опускать часть заявленного extension behavior и не должна маркировать такую реализацию как full parity без причины.
+
+For `spec-generator-v4`, `app automation`, Codex task/thread-management APIs, connectors, and `app://` are expressly excluded by `spec-generator-v4:FR-83j` and SHALL NOT be selected as parity routes.
 
 **Связанные AC:** [AC-12](ACCEPTANCE_CRITERIA.md#ac-12-fr-12-explicit-codex-parity-routing-feature12)
 **Use Case:** [UC-4](USE_CASES.md#uc-4-version-aware-lifecycle-parity-with-deterministic-dispatch)

@@ -3,6 +3,10 @@
 All notable changes to this feature will be documented in this file.
 
 ## [Unreleased]
+### Ownership
+
+- Зафиксировано, что детальный Codex Desktop runtime-контракт принадлежит `spec-generator-v4:FR-83`, а distribution gate — `codex-init:FR-8`; эта legacy-спека не дублирует их требования.
+
 
 ### Added
 - Version-aware Codex capability model instead of a frozen `0.114.0` snapshot.

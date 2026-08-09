@@ -1,4 +1,13 @@
 # Changelog
+## 2026-08-10 — FR-83 Codex Desktop host adapter specified (spec-only)
+
+- Added FR-83, User Story 63, UC-35, three NFRs, AC-83.1–83.10, CHK-FR83-01–10, one design decision, fixture inventory, Phase 50 file/task plan, and SPECGEN004_701–714; matrix rows now have four distinct scenario ids plus an exact-cardinality aggregate.
+- Chose one canonical SpecGraph/MCP/workflow engine with generated Codex adapters and a separate full `spec-generator-v4` plugin; kept `context-menu`, Cursor FR-81, and app control-plane APIs outside the change.
+- Split ownership: spec-generator-v4 owns runtime/skills/hooks/orchestration/doctor/live proof and emits the immutable package handoff; codex-init FR-8 is the sole marketplace/whitelist/status writer; codex-cli-support supplies no competing spec-generator writer.
+- Captured the live MCP dogfood gap where post-transaction in-memory traces can lose cross-document edges; AC-83.2 now requires live post-mutation trace equality with a fresh cold graph.
+- No implementation, plugin install, Docker BDD, or live Desktop verification is claimed. New tasks are TODO and scenarios are expected to remain not-run until implementation evidence exists.
+
+
 
 ## 2026-08-07 — FR-68 AC_SATISFACTION debt closure: 187 gap ACs resolved (181 evidenced, 6 documented clarify)
 

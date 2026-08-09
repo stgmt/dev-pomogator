@@ -1390,3 +1390,30 @@ Given a large document or a missing section is requested
 When the bounded document-read handler runs
 Then it returns a safe page or nearest canonical anchors and requires explicit opt-in for the whole document
 
+### User Story 63: Codex Desktop runs the full spec workflow (Priority: P1)
+
+**Требование:** [FR-83](FR.md#fr-83)
+
+As a developer working in Codex Desktop, I want the installed dev-pomogator spec workflow to expose the same MCP door, safety guards, phase orchestration, and honest verdicts as repository dogfood, so that I can create and maintain specs from any project without cloning dev-pomogator or depending on Claude-specific runtime commands.
+
+**Why:** The live Desktop session can currently see the MCP server only because the narrow `context-menu` plugin points at this checkout; skills, hooks, custom agents, doctor checks, and root-safe mutation are not a supported installed product.
+
+**Independent Test:** In a fresh external repository and isolated `CODEX_HOME`, install `spec-generator-v4@dev-pomogator-codex`, start a new Codex Desktop task after reload, verify the packaged catalog, operate the real MCP door while the process cwd is the plugin cache, prove raw `.specs/**` mutation is denied and MCP mutation succeeds, run one phase through a native subagent/fallback, and capture the honest semantic status. Repeat the deterministic subset for Codex CLI and repo-dogfood variants.
+
+**Acceptance Scenarios:**
+
+Given the narrow context-menu plugin is already installed
+When the full spec-generator-v4 plugin is installed
+Then both plugin identities remain distinct and only the second owns the spec workflow
+
+Given the MCP process starts from a plugin-cache directory
+When read, mutation, status, and create operations target an external repository
+Then every operation uses only the resolved external repository root
+
+Given Codex emits apply_patch and shell hook payloads
+When spec-access enforce is enabled
+Then raw spec writes are denied while the equivalent MCP authoring operation succeeds
+
+Given the deterministic install and CLI probes pass
+When release readiness is evaluated
+Then a captured fresh Codex Desktop run is still required before the feature is considered delivered

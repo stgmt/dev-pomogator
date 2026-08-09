@@ -2736,7 +2736,7 @@ Phase 45 contains 10 planned TODO slices. All headers use the strict graph-nativ
   **Done When:**
   - [x] `server.bundle.mjs` is rebuilt and its real stdio initialize/tools-list smoke exits 0 with all 41 canonical tools including the five FR-82 query surfaces.
   - [x] Focused Docker vitest passes 45/45 and filtered Docker BDD run `1785608582777` passes SPECGEN004_670..677 with real handler traces; live dogfood returns populated task and phase inventories.
-  - [x] The authoritative `spec-verdict --no-semantic` is captured after evidence: FR-82 filtered proof is GREEN while the legacy whole-spec verdict honestly remains NOT_READY; FR-83 remains deferred and never-run.
+  - [x] The authoritative `spec-verdict --no-semantic` is captured after evidence: FR-82 filtered proof is GREEN while the legacy whole-spec verdict honestly remains NOT_READY; the later Codex Desktop adapter was still deferred and never-run at this evidence point and now has separate proof.
 
 
 ## Backlog
@@ -2821,3 +2821,133 @@ Phase 45 contains 10 planned TODO slices. All headers use the strict graph-nativ
   **Done When:**
   - [ ] BDD proves AC_REQUIREMENT_MISMATCH and INAPPLICABLE_ACCEPTANCE_REFERENCE emit error findings and leave result, finalization, and projected plan acceptance false.
   - [ ] SPECGEN004_692 covers both branches alongside SPECGEN004_685.
+## Phase 50 — Codex Desktop first-class host adapter (FR-83) (2026-08-10)
+
+> Spec-only execution plan. All tasks are TODO and all SPECGEN004_701..714 evidence is pending. Each vertical slice owns BDD RED → production GREEN → refactor/mutation proof; no task may claim completion from manifest inspection or repo dogfood alone.
+
+- [ ] Produce the distinct full Codex plugin package handoff without widening context-menu -- @feature83 — id: p50-codex-plugin-distribution — Status: TODO | Est: 240m
+  _depends: none_
+  _Requirements: [FR-83](FR.md#fr-83)_
+  _Acceptance: [AC-83.1](ACCEPTANCE_CRITERIA.md#ac-831)_
+  _Own scenario: SPECGEN004_701 (@feature83, pending)_
+  **Done When:**
+  - [ ] RED proves duplicate id/source, missing full capabilities, and accidental context-menu widening through the real isolated installer.
+  - [ ] GREEN builds the distinct `spec-generator-v4` package and emits an immutable id/source/manifest/capability handoff consumed by `codex-init:CODEXINIT-1-3`; this task does not write whitelist order or support status.
+  - [ ] Refactor proof keeps context-menu byte/behavior scope unchanged and mutation kills removal of the second-entry checks.
+
+- [ ] Inject one target root into every MCP handler from plugin-cache cwd -- @feature83 — id: p50-codex-target-root — Status: TODO | Est: 300m
+  _depends: none_
+  _Requirements: [FR-83](FR.md#fr-83)_
+  _Acceptance: [AC-83.2](ACCEPTANCE_CRITERIA.md#ac-832)_
+  _Own scenario: SPECGEN004_702 (@feature83, pending)_
+  **Done When:**
+  - [ ] RED starts the real registry with cache cwd plus a separate target, catches every cwd-using read/proposal/mutation/status/create branch, and reproduces cross-document edge loss after a multi-document mutation.
+  - [ ] GREEN routes the injected root through all handlers, generalizes cache-root recognition with realpath confinement, and refreshes the complete affected edge set before the next MCP read/status/trace.
+  - [ ] Refactor/mutation proof detects one handler reverted to cwd, asserts the cache tree remains byte-identical, and compares the live post-mutation trace with a fresh cold graph.
+
+- [ ] Normalize Codex hook events before existing safety guards -- @feature83 — id: p50-codex-hook-normalization — Status: TODO | Est: 300m
+  _depends: none_
+  _Requirements: [FR-83](FR.md#fr-83)_
+  _Acceptance: [AC-83.3](ACCEPTANCE_CRITERIA.md#ac-833)_
+  _Own scenario: SPECGEN004_703 (@feature83, pending)_
+  **Done When:**
+  - [ ] RED replays captured `apply_patch`, shell, `update_plan`, and underscore-MCP payloads and proves current bypasses.
+  - [ ] GREEN renders both channels from one hook registry and maps payloads into the existing policy contract.
+  - [ ] Negative and mutation proof requires actual deny for raw writes, allow/audit for MCP mutation, and parity fingerprints.
+
+- [ ] Add one shared host spawn adapter to phase orchestration -- @feature83 — id: p50-codex-phase-orchestration — Status: TODO | Est: 300m
+  _depends: hard:p50-codex-target-root, hard:p50-codex-hook-normalization_
+  _Requirements: [FR-83](FR.md#fr-83)_
+  _Acceptance: [AC-83.4](ACCEPTANCE_CRITERIA.md#ac-834)_
+  _Own scenario: SPECGEN004_704 (@feature83, pending)_
+  **Done When:**
+  - [ ] RED proves the production phase runner would call `claude -p` under Codex and that a missing portable agent path fails explicitly.
+  - [ ] GREEN injects native Codex subagent or built-in-role spawn while reusing the exact gate/retry/STOP loop.
+  - [ ] Refactor/mutation proof preserves timeout, retry exhaustion, MCP-only instructions, and fresh-agent boundaries.
+
+- [ ] Route semantic and legacy judges through the host adapter -- @feature83 — id: p50-codex-semantic-adapter — Status: TODO | Est: 180m
+  _depends: hard:p50-codex-phase-orchestration_
+  _Requirements: [FR-83](FR.md#fr-83)_
+  _Acceptance: [AC-83.5](ACCEPTANCE_CRITERIA.md#ac-835)_
+  _Own scenario: SPECGEN004_705 (@feature83, pending)_
+  **Done When:**
+  - [ ] RED proves absent, timed-out, and malformed Codex judge paths cannot satisfy the semantic lane.
+  - [ ] GREEN shares provider-aware spawn and preserves provenance for successful judgment.
+  - [ ] Mutation proof kills any branch that converts unavailable evidence into GREEN.
+
+- [ ] Generate and drift-check Codex skills hooks agents and consumer maps -- @feature83 — id: p50-codex-generated-adapters — Status: TODO | Est: 360m
+  _depends: hard:p50-codex-hook-normalization_
+  _Requirements: [FR-83](FR.md#fr-83)_
+  _Acceptance: [AC-83.6](ACCEPTANCE_CRITERIA.md#ac-836)_
+  _Own scenario: SPECGEN004_706 (@feature83, pending)_
+  **Done When:**
+  - [ ] RED inventories real `.claude`/`.agents` drift and fails on removed, extra, stale, or hand-edited projections.
+  - [ ] GREEN uses one deterministic generator with explicit transforms, source/generator fingerprints, and `--check`.
+  - [ ] Two clean generations are byte-identical; installed skills use built-in roles when custom Codex agent profiles are unavailable.
+  - [ ] Repo `.codex/agents/*.toml` profiles are an optional generated dogfood optimization and their absence never blocks the installed workflow.
+
+- [ ] Prove dependency-absent package startup and Codex-aware doctor -- @feature83 — id: p50-codex-package-doctor — Status: TODO | Est: 300m
+  _depends: hard:p50-codex-plugin-distribution, hard:p50-codex-target-root, hard:p50-codex-generated-adapters, hard:p50-codex-semantic-adapter_
+  _Requirements: [FR-83](FR.md#fr-83)_
+  _Acceptance: [AC-83.7](ACCEPTANCE_CRITERIA.md#ac-837)_
+  _Own scenario: SPECGEN004_707 (@feature83, pending)_
+  **Done When:**
+  - [ ] RED hides repository dependencies and catches stale package, root, registry, hook, adapter, spawn, and judge states separately.
+  - [ ] GREEN starts the real packed launcher and compares its semantic catalog with the canonical registry without freezing count 41.
+  - [ ] Doctor emits one actionable diagnosis per state; dependency leak and silent skip mutations are killed.
+
+- [ ] Verify Codex Desktop repo-dogfood matrix row -- @feature83 — id: p50-variant-desktop-repo — Status: TODO | Est: 120m
+  _depends: hard:p50-codex-target-root, hard:p50-codex-hook-normalization, hard:p50-codex-phase-orchestration_
+  _Requirements: [FR-83](FR.md#fr-83)_
+  _Acceptance: [AC-83.9](ACCEPTANCE_CRITERIA.md#ac-839)_
+  _Own scenario: SPECGEN004_709 (@feature83, Desktop/repo example pending)_
+  **Done When:**
+  - [ ] Repo discovery, MCP, hook, and phase smoke uses generated project adapters and makes no installed-cache claim.
+  - [ ] The row reports its exact host/distribution identity and cannot be satisfied by another example.
+
+- [ ] Verify Codex Desktop installed-plugin matrix row -- @feature83 — id: p50-variant-desktop-installed — Status: TODO | Est: 180m
+  _depends: hard:p50-codex-package-doctor_
+  _Requirements: [FR-83](FR.md#fr-83)_
+  _Acceptance: [AC-83.9](ACCEPTANCE_CRITERIA.md#ac-839)_
+  _Own scenario: SPECGEN004_710 (@feature83, Desktop/installed evidence key pending)_
+  **Done When:**
+  - [ ] Isolated install and cache-root setup exercise the packaged surface before live UI evidence.
+  - [ ] The row remains incomplete until its own example result exists; CLI evidence cannot substitute.
+
+- [ ] Verify Codex CLI repo-dogfood matrix row -- @feature83 — id: p50-variant-cli-repo — Status: TODO | Est: 90m
+  _depends: hard:p50-codex-target-root, hard:p50-codex-hook-normalization, hard:p50-codex-phase-orchestration_
+  _Requirements: [FR-83](FR.md#fr-83)_
+  _Acceptance: [AC-83.9](ACCEPTANCE_CRITERIA.md#ac-839)_
+  _Own scenario: SPECGEN004_711 (@feature83, CLI/repo evidence key pending)_
+  **Done When:**
+  - [ ] The real CLI host adapter runs the repo contract with explicit identity and canonical parity assertions.
+  - [ ] Removing the CLI/repo example or silently merging it with Desktop fails completeness.
+
+- [ ] Verify Codex CLI installed-plugin matrix row -- @feature83 — id: p50-variant-cli-installed — Status: TODO | Est: 120m
+  _depends: hard:p50-codex-package-doctor_
+  _Requirements: [FR-83](FR.md#fr-83)_
+  _Acceptance: [AC-83.9](ACCEPTANCE_CRITERIA.md#ac-839)_
+  _Own scenario: SPECGEN004_712 (@feature83, CLI/installed evidence key pending)_
+  **Done When:**
+  - [ ] The isolated dependency-absent package runs through Codex CLI with registry/root/hook parity.
+  - [ ] The result is retained as deterministic package evidence and explicitly cannot satisfy AC-83.8.
+
+- [ ] Enforce the no-second-engine and no-app-control-plane boundary -- @feature83 — id: p50-codex-scope-boundary — Status: TODO | Est: 120m
+  _depends: hard:p50-codex-plugin-distribution, hard:p50-codex-generated-adapters_
+  _Requirements: [FR-83](FR.md#fr-83)_
+  _Acceptance: [AC-83.10](ACCEPTANCE_CRITERIA.md#ac-8310)_
+  _Own scenario: SPECGEN004_714 (@feature83, pending)_
+  **Done When:**
+  - [ ] Inventory proof rejects a second graph/MCP/task store/rules tree and any task/thread, automation, connector, or app dependency.
+  - [ ] Context-menu package and Cursor FR-81 artifacts stay unchanged except explicit shared-generator outputs.
+
+- [ ] Capture fresh installed Codex Desktop live evidence and authoritative verdict -- @feature83 — id: p50-codex-desktop-live-proof — Status: TODO | Est: 180m
+  _depends: hard:p50-variant-desktop-installed, hard:p50-variant-desktop-repo, hard:p50-variant-cli-repo, hard:p50-variant-cli-installed, hard:p50-codex-scope-boundary_
+  _Requirements: [FR-83](FR.md#fr-83)_
+  _Acceptance: [AC-83.8](ACCEPTANCE_CRITERIA.md#ac-838), [AC-83.9](ACCEPTANCE_CRITERIA.md#ac-839)_
+  _Own scenario: SPECGEN004_708 (@feature83, live-evidence pending)_
+  **Done When:**
+  - [ ] A fresh Desktop task after reload captures installed-cache discovery, MCP list/read/mutate/status, raw-write deny, phase spawn, and semantic status against an external repo.
+  - [ ] Evidence binds Codex/plugin versions, target/cache roots, event ids, timestamps, checkout/package digests, and the exact scenario; an owner note alone is insufficient.
+  - [ ] SPECGEN004_713 proves exactly four unique row evidence keys before matrix completeness can pass.
+  - [ ] Full Docker BDD, dependency-absent package proof, matrix completeness, live-evidence validation, and smart spec verdict are recorded separately; FR-83 remains NOT_READY if any lane is absent.

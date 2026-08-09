@@ -243,3 +243,14 @@ In v4 the same workflow is distributed across three skills:
 - `create-spec` — drives the 4-phase STOP-confirmed workflow (Discovery → Context → Requirements + Design → Finalization)
 - `cross-spec-reconcile` — invoked from `create-spec` Phase 2 step 4d, Phase 3 step 1c, Phase 3+ Audit
 - `cross-spec-resolve` — invoked explicitly via `/cross-spec-resolve`
+## Planned Codex Desktop support (FR-83)
+
+Status: **specified, not implemented**. The full spec-generator-v4 workflow is planned as a second Codex plugin entry named `spec-generator-v4`; the installed `context-menu` plugin remains narrow and unchanged.
+
+- One existing SpecGraph/MCP/authoring engine; no Codex fork or new spec folder.
+- Generated Codex skills, hooks, optional repo agent profiles, and package inputs with drift fingerprints.
+- Root-safe operation from plugin-cache cwd, Codex payload normalization, native phase spawn, honest semantic skip, dependency-absent package/doctor proof.
+- Mandatory fresh Codex Desktop live evidence after reload, in addition to deterministic CLI/repo checks.
+- App task/thread APIs, automations, connectors, `app://`, and context-menu changes are outside FR-83.
+
+Distribution allowlisting and install-status evidence are owned by [codex-init FR-8](../codex-init/FR.md#fr-8). The older [codex-cli-support](../codex-cli-support/README.md) spec is not a duplicate owner.
