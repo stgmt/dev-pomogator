@@ -3,7 +3,6 @@ import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 const MAX_FRAME_BYTES = 256_000;
-const MAX_OUTPUT_BYTES = 256_000;
 const target = resolve(process.argv[2] || '');
 const protocol = process.argv[3] || 'handle';
 const original = { stdin: process.stdin, stdout: process.stdout, stderr: process.stderr };
@@ -29,21 +28,21 @@ let handler;
 try {
   handler = await import(pathToFileURL(target).href);
   if (protocol === 'handle' && typeof handler.handle !== 'function') {
-    throw new Error(`worker handler ${target} must export handle(input, request)`);
+    throw Object.assign(new Error(`worker handler ${target} must export handle(input, request)`), { code: 'WORKER_LOAD' });
   }
   if (protocol === 'runHook' && typeof handler.runHook !== 'function') {
-    throw new Error(`worker handler ${target} must export runHook(rawInput, argv)`);
+    throw Object.assign(new Error(`worker handler ${target} must export runHook(rawInput, argv)`), { code: 'WORKER_LOAD' });
   }
 } catch (error) {
   original.stderr.write(`worker load failed: ${error?.message || String(error)}\n`);
   process.exit(1);
 }
 
+original.stdout.write(`${boundedFrame({ version: 1, type: 'ready', worker_pid: process.pid })}\n`);
+
 async function dispatch(request) {
   const input = request.input ?? {};
-  if (protocol === 'runHook') {
-    return normalizeOutput(await handler.runHook(JSON.stringify(input), request.args || []));
-  }
+  if (protocol === 'runHook') return normalizeOutput(await handler.runHook(JSON.stringify(input), request.args || []));
   return normalizeOutput(await handler.handle(input, request));
 }
 

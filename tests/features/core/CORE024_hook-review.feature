@@ -115,3 +115,18 @@ Feature: CORE024 Windows shell-free hook authoring gate
     Given an isolated unaudited legacy hook route
     When I dispatch the legacy route twice
     Then each dispatch uses the legacy child boundary and no persistent capability is claimed
+
+  # @feature37 @feature38
+  Scenario: CORE024_18 A persistent handler error recycles without replaying the request
+    Given an isolated persistent hook worker that records then throws
+    When the persistent handler request fails
+    Then the failed request is not retried and the worker is recycled
+    And the next persistent request uses a replacement worker process
+
+  # @feature39 @feature40
+  Scenario: CORE024_19 A persistent worker startup failure recovers on the next request
+    Given an isolated persistent hook worker with a broken initial module
+    When the broken persistent request is dispatched
+    Then the startup failure returns the existing runtime-unavailable response
+    When I repair the persistent worker module and dispatch again
+    Then the repaired request succeeds and uses a ready worker

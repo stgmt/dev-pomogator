@@ -40,6 +40,8 @@ interface HookReviewWorld extends V4World {
   repeatedFailureResult?: Awaited<ReturnType<typeof runManagedHook>>;
   stopRouteResults?: Record<string, unknown>[];
   recoveryDiagnosticRoot?: string;
+  failedWorkerPid?: number;
+  handlerErrorLog?: string;
 }
 
 function writeJson(file: string, value: object): void {
@@ -472,6 +474,11 @@ When(/^the persistent request times out$/, async function (this: HookReviewWorld
   const address = this.hookServer!.address();
   this.hookResponse = await fetch(`http://127.0.0.1:${address.port}/v1/dispatch/UserPromptSubmit%2F0%2F0`, { method: 'POST', headers: { 'content-type': 'application/json', 'x-dev-pomogator-token': this.hookToken! }, body: JSON.stringify({ hang: true }) });
   this.hookResponseBody = await this.hookResponse.json();
+  const metrics = (this.hookServer as typeof this.hookServer & { workerManager?: { getMetrics(): Record<string, { pid?: number }> } }).workerManager?.getMetrics() || {};
+  const values = Object.values(metrics) as Array<{ pid?: number }>;
+  assert.equal(values.length, 1);
+  this.failedWorkerPid = values[0].pid;
+  assert.equal(typeof this.failedWorkerPid, 'number');
 });
 
 Then(/^the request fails once without automatic retry$/, function (this: HookReviewWorld) {
@@ -485,6 +492,94 @@ Then(/^the next request uses a replacement worker process$/, async function (thi
   const body = await response.json();
   assert.equal(response.status, 200);
   assert.equal(body.ok, true);
+  assert.equal(typeof body.pid, 'number');
+  const metrics = (this.hookServer as typeof this.hookServer & { workerManager?: { getMetrics(): Record<string, { lastPid?: number; recycles: number }> } }).workerManager?.getMetrics() || {};
+  const values = Object.values(metrics) as Array<{ recycles: number }>;
+  assert.equal(values.length, 1);
+  assert.equal(values[0].recycles, 1);
+  assert.notEqual(body.pid, this.failedWorkerPid, 'timeout must replace the timed-out worker');
+  await new Promise<void>(resolveClose => this.hookServer!.close(() => resolveClose()));
+});
+
+Given(/^an isolated persistent hook worker that records then throws$/, async function (this: HookReviewWorld) {
+  this.hookRoot = fs.mkdtempSync(path.join(this.tempDir, 'persistent-handler-error-'));
+  this.hookToken = 'handler-error-secret';
+  const serviceDir = path.join(this.hookRoot, 'tools', 'hook-service');
+  fs.mkdirSync(path.join(serviceDir, 'worker-adapters'), { recursive: true });
+  this.handlerErrorLog = path.join(this.hookRoot, 'requests.log');
+  fs.writeFileSync(path.join(serviceDir, 'worker-adapters', 'fixture.mjs'), `import fs from 'node:fs';
+const log = ${JSON.stringify(this.handlerErrorLog)};
+export async function handle(input) { fs.appendFileSync(log, JSON.stringify(input) + '\\n'); if (input.fail) throw Object.assign(new Error('handler failed'), { code: 'HANDLER_FAILED' }); return { pid: process.pid, ok: true }; }`);
+  fs.writeFileSync(path.join(serviceDir, 'registry.json'), JSON.stringify({ version: 1, routes: { 'UserPromptSubmit/0/0': { target: 'fixture.mjs', event: 'UserPromptSubmit', timeout: 2, execution: 'persistent', worker_target: 'tools/hook-service/worker-adapters/fixture.mjs', worker_protocol: 'handle' } }}));
+  this.hookServer = await startServer({ pluginRoot: this.hookRoot, token: this.hookToken, port: 0, stateRoot: path.join(this.hookRoot, 'state') });
+});
+
+When(/^the persistent handler request fails$/, async function (this: HookReviewWorld) {
+  const address = this.hookServer!.address();
+  const response = await fetch(`http://127.0.0.1:${address.port}/v1/dispatch/UserPromptSubmit%2F0%2F0`, { method: 'POST', headers: { 'content-type': 'application/json', 'x-dev-pomogator-token': this.hookToken! }, body: JSON.stringify({ fail: true }) });
+  this.hookResponse = response;
+  this.hookResponseBody = await response.json();
+  assert.equal(response.status, 503);
+});
+
+Then(/^the failed request is not retried and the worker is recycled$/, function (this: HookReviewWorld) {
+  const records = fs.readFileSync(this.handlerErrorLog!, 'utf8').trim().split('\n').filter(Boolean);
+  assert.equal(records.length, 1);
+  const metrics = (this.hookServer as typeof this.hookServer & { workerManager?: { getMetrics(): Record<string, { failures: number; recycles: number }> } }).workerManager?.getMetrics() || {};
+  const values = Object.values(metrics) as Array<{ failures: number; recycles: number }>;
+  assert.equal(values.length, 1);
+  assert.equal(values[0].failures, 1);
+  assert.equal(values[0].recycles, 1);
+});
+
+Then(/^the next persistent request uses a replacement worker process$/, async function (this: HookReviewWorld) {
+  const address = this.hookServer!.address();
+  const response = await fetch(`http://127.0.0.1:${address.port}/v1/dispatch/UserPromptSubmit%2F0%2F0`, { method: 'POST', headers: { 'content-type': 'application/json', 'x-dev-pomogator-token': this.hookToken! }, body: JSON.stringify({ fail: false }) });
+  const body = await response.json();
+  assert.equal(response.status, 200);
+  assert.equal(body.ok, true);
+  assert.equal(typeof body.pid, 'number');
+  const records = fs.readFileSync(this.handlerErrorLog!, 'utf8').trim().split('\n').filter(Boolean);
+  assert.equal(records.length, 2);
+  await new Promise<void>(resolveClose => this.hookServer!.close(() => resolveClose()));
+});
+
+Given(/^an isolated persistent hook worker with a broken initial module$/, async function (this: HookReviewWorld) {
+  this.hookRoot = fs.mkdtempSync(path.join(this.tempDir, 'persistent-startup-'));
+  this.hookToken = 'startup-secret';
+  const serviceDir = path.join(this.hookRoot, 'tools', 'hook-service');
+  fs.mkdirSync(path.join(serviceDir, 'worker-adapters'), { recursive: true });
+  const fixture = path.join(serviceDir, 'worker-adapters', 'fixture.mjs');
+  fs.writeFileSync(fixture, 'export const broken = ;');
+  fs.writeFileSync(path.join(serviceDir, 'registry.json'), JSON.stringify({ version: 1, routes: { 'UserPromptSubmit/0/0': { target: 'fixture.mjs', event: 'UserPromptSubmit', timeout: 2, execution: 'persistent', worker_target: 'tools/hook-service/worker-adapters/fixture.mjs', worker_protocol: 'handle' } }}));
+  this.hookServer = await startServer({ pluginRoot: this.hookRoot, token: this.hookToken, port: 0, stateRoot: path.join(this.hookRoot, 'state') });
+});
+
+When(/^the broken persistent request is dispatched$/, async function (this: HookReviewWorld) {
+  const address = this.hookServer!.address();
+  this.hookResponse = await fetch(`http://127.0.0.1:${address.port}/v1/dispatch/UserPromptSubmit%2F0%2F0`, { method: 'POST', headers: { 'content-type': 'application/json', 'x-dev-pomogator-token': this.hookToken! }, body: JSON.stringify({}) });
+  this.hookResponseBody = await this.hookResponse.json();
+  assert.equal(this.hookResponse.status, 503);
+  assert.equal(this.hookResponseBody?.error, 'hook runtime unavailable');
+});
+
+When(/^I repair the persistent worker module and dispatch again$/, async function (this: HookReviewWorld) {
+  fs.writeFileSync(path.join(this.hookRoot!, 'tools', 'hook-service', 'worker-adapters', 'fixture.mjs'), 'export async function handle() { return { repaired: true, pid: process.pid }; }');
+  const address = this.hookServer!.address();
+  this.hookResponse = await fetch(`http://127.0.0.1:${address.port}/v1/dispatch/UserPromptSubmit%2F0%2F0`, { method: 'POST', headers: { 'content-type': 'application/json', 'x-dev-pomogator-token': this.hookToken! }, body: JSON.stringify({}) });
+  this.hookResponseBody = await this.hookResponse.json();
+});
+
+Then(/^the repaired request succeeds and uses a ready worker$/, async function (this: HookReviewWorld) {
+  assert.equal(this.hookResponse?.status, 200);
+  assert.equal(this.hookResponseBody?.repaired, true);
+  assert.equal(typeof this.hookResponseBody?.pid, 'number');
+  const metrics = (this.hookServer as typeof this.hookServer & { workerManager?: { getMetrics(): Record<string, { spawnAttempts: number; spawns: number; spawnFailures: number }> } }).workerManager?.getMetrics() || {};
+  const values = Object.values(metrics) as Array<{ spawnAttempts: number; spawns: number; spawnFailures: number }>;
+  assert.equal(values.length, 1);
+  assert.equal(values[0].spawnAttempts, 2);
+  assert.equal(values[0].spawns, 1);
+  assert.equal(values[0].spawnFailures, 1);
   await new Promise<void>(resolveClose => this.hookServer!.close(() => resolveClose()));
 });
 

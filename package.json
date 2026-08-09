@@ -53,6 +53,7 @@
     "build:claim-gate": "esbuild tools/claim-evidence-gate/claim_evidence_gate_stop.ts --bundle --platform=node --format=esm --target=node20 --banner:js=\"import { createRequire as __cr } from 'module'; const require = __cr(import.meta.url);\" --outfile=tools/claim-evidence-gate/claim_evidence_gate_stop.bundle.mjs",
     "build:tui-test-runner": "esbuild tools/tui-test-runner/test_runner_wrapper.ts --bundle --platform=node --format=esm --target=node20 --outfile=tools/tui-test-runner/test_runner_wrapper.bundle.mjs",
     "build:pomogator-doctor": "esbuild .claude/skills/pomogator-doctor/scripts/engine/index.ts --bundle --platform=node --format=esm --target=node20 --outfile=.claude/skills/pomogator-doctor/scripts/engine/doctor.bundle.mjs",
+    "build:hook-worker": "esbuild tools/hook-service/worker-adapters/subagent-watchdog.ts --bundle --platform=node --format=esm --target=node20 --outfile=tools/hook-service/worker-adapters/subagent-watchdog.mjs",
     "build:bundles": "npm run build:mcp && npm run build:task-plan && npm run build:dynamic-workflow && npm run build:gate && npm run build:guard && npm run build:push && npm run build:ingest && npm run build:prompt-suggest && npm run build:claim-gate && npm run build:tui-test-runner && npm run build:pomogator-doctor",
     "build:hook-service-registry": "node tools/hook-service/generate-registry.mjs .",
     "check:status-drift": "tsx scripts/check-status-drift.mts",

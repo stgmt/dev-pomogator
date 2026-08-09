@@ -63,8 +63,7 @@
       "matcher": "",
       "execution": "persistent",
       "worker_target": "tools/hook-service/worker-adapters/subagent-watchdog.mjs",
-      "worker_protocol": "handle",
-      "worker_loader": "tsx"
+      "worker_protocol": "handle"
     },
     "Stop/7/0": {
       "target": "tools/bg-task-guard/stop-guard.mjs",
@@ -401,8 +400,7 @@
       "matcher": "",
       "execution": "persistent",
       "worker_target": "tools/hook-service/worker-adapters/subagent-watchdog.mjs",
-      "worker_protocol": "handle",
-      "worker_loader": "tsx"
+      "worker_protocol": "handle"
     },
     "PostToolUse/0/0": {
       "target": "tools/test-quality/compliance_check.ts",
@@ -447,8 +445,7 @@
       "matcher": "Agent|TaskOutput",
       "execution": "persistent",
       "worker_target": "tools/hook-service/worker-adapters/subagent-watchdog.mjs",
-      "worker_protocol": "handle",
-      "worker_loader": "tsx"
+      "worker_protocol": "handle"
     },
     "PostToolUse/2/0": {
       "target": "tools/bg-task-guard/mark-bg-task.ts",

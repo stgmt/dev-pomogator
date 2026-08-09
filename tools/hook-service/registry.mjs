@@ -5,7 +5,6 @@ const PERSISTENT_ADAPTERS = new Map([
   ['tools/subagent-watchdog/subagent_watchdog.ts', {
     workerTarget: 'tools/hook-service/worker-adapters/subagent-watchdog.mjs',
     workerProtocol: 'handle',
-    workerLoader: 'tsx',
   }],
 ]);
 
@@ -46,7 +45,6 @@ export async function buildRegistry(pluginRoot) {
         ...(adapter ? {
           worker_target: adapter.workerTarget,
           worker_protocol: adapter.workerProtocol,
-          worker_loader: adapter.workerLoader,
         } : {}),
       };
     }));
