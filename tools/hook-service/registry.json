@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "routes": {
     "Stop/0/0": {
       "target": "tools/auto-commit/auto_commit_stop.ts",
@@ -471,5 +471,22 @@
       "matcher": "Skill",
       "execution": "child"
     }
+  },
+  "groups": {
+    "Stop/all": [
+      "Stop/0/0",
+      "Stop/1/0",
+      "Stop/2/0",
+      "Stop/3/0",
+      "Stop/4/0",
+      "Stop/5/0",
+      "Stop/6/0",
+      "Stop/7/0",
+      "Stop/8/0",
+      "Stop/9/0",
+      "Stop/10/0",
+      "Stop/11/0",
+      "Stop/12/0"
+    ]
   }
 }

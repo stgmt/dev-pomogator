@@ -558,3 +558,26 @@ A feature request claims a public catalog/policy surface and an authenticated pa
 
 **Linked stories:** [User Story 62](USER_STORIES.md#user-story-62-bounded-task-inventory-and-truthful-read-contracts-priority-p1)
 
+
+## UC-35
+
+**Run installed conformance hooks without cross-root state or unbounded disk growth**
+
+**Goal:** Process a conformance hook for the current repository while plugin executable files remain in a separate installed cache.
+
+**Trigger:** The hook-service receives a request containing the current hook payload and request-scoped environment.
+
+**Main flow:**
+
+1. Validate and normalize the request project identity without consulting plugin root or daemon startup CWD.
+2. Load hook code from `pluginRoot`; read `.specs` and write project state only under `projectRoot`.
+3. If `.specs` is absent, return fail-open/no-op without creating the journal.
+4. Under the maintenance lock, rotate at 10 MiB, remove expired/oldest closed shards to satisfy 30 days and 64 MiB, and preserve the active shard.
+5. If the projected write violates the 1 GiB reserve, prune eligible closed shards; if still unsafe, skip the write and emit a bounded non-recursive diagnostic.
+
+**Failure paths:** Invalid project identity, lock contention, disk probe failure, prune failure, or append failure stays fail-open and never falls back to plugin-cache state or broad deletion.
+
+**Outcome:** The caller project receives bounded, isolated conformance state and the installed cache remains immutable runtime code.
+
+**Linked stories:** [User Story 63](USER_STORIES.md#user-story-63-installed-hooks-keep-project-state-bounded-and-isolated-priority-p1)
+

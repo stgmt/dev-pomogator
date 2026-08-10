@@ -399,3 +399,24 @@ Feature: CANON001 Canonical Claude Code Marketplace Plugin
     Given an isolated unaudited legacy hook route
     When I dispatch the legacy route twice
     Then each dispatch uses the legacy child boundary and no persistent capability is claimed
+
+  @feature13 @AC-12
+  Scenario: CORE024_20 Installed hook execution separates plugin code from every caller project
+    Given one installed plugin service receives interleaved Stop requests for two different projects
+    When logical routes children workers and conformance tools execute
+    Then each request uses only its own normalized project cwd environment flight and state
+    And plugin cache and the other project receive no project owned writes
+
+  @feature13 @AC-13
+  Scenario: CORE024_21 One Stop dispatcher preserves the legacy thirteen route result
+    Given a black box baseline for legacy Stop approval blocking context failure order and loop cases
+    When the generated manifest dispatches the same cases through one DevPomogator Stop command
+    Then logical routes execute in registry order and every host observable result matches the baseline
+    And legacy child fallback runs at most one child at a time with bounded input and output
+
+  @feature13 @AC-12 @AC-13
+  Scenario: CORE024_22 Multi project Stop flights stay isolated and self heal after daemon loss
+    Given independent project requests share one service and the owned daemon dies during the session
+    When the next Stop requests are interleaved through the builtins client
+    Then the service is recovered once and each project retains independent FIFO results and state
+    And live service errors and uncertain route work are not retried

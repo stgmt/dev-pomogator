@@ -4413,3 +4413,49 @@ Scenario: SPECGEN004_692 Synthesis rejects mismatched and inapplicable acceptanc
   Given strict synthesis receives a mismatched requirement lane and an inapplicable acceptance lane
   When deterministic synthesis finalizes and projects the mismatched plan
   Then mismatched and inapplicable lanes are rejected without an accepted projection
+
+@feature83 @FR-83 @AC-83.1
+Scenario: SPECGEN004_693 Installed conformance hook separates plugin code from caller project state
+  Given an installed plugin cache and a different caller project with specs
+  When the real hook request path resolves code and data roots
+  Then executable resources come from the plugin cache and all spec reads and state writes stay in the caller project
+  And daemon startup cwd and plugin root never become project identity
+
+@feature83 @FR-83 @AC-83.2
+Scenario: SPECGEN004_694 Project without specs performs a state free conformance no-op
+  Given an installed hook request for a project without a specs directory
+  When spec conformance push and guard run
+  Then both return fail open without creating a spec check journal in the project or plugin cache
+
+@feature83 @FR-83 @AC-83.3
+Scenario: SPECGEN004_695 Journal rotation and aggregate retention bound every project
+  Given a project journal with an active shard and enough closed shards to exceed its limits
+  When append and retention maintenance complete
+  Then the active shard rotates at ten MiB and total retained journal bytes are at most sixty four MiB
+  And oldest closed shards are removed before the active shard is ever considered
+
+@feature83 @FR-83 @AC-83.4
+Scenario: SPECGEN004_696 Thirty day retention expires only closed shards
+  Given active and closed journal shards on both sides of the thirty day boundary
+  When retention maintenance runs
+  Then expired closed shards are removed and nonexpired shards remain subject to the aggregate cap
+  And the active shard is preserved regardless of timestamp
+
+@feature83 @FR-83 @AC-83.5
+Scenario: SPECGEN004_697 Low disk reserve prunes then skips without recursive logging
+  Given a projected journal append would leave less than one GiB free
+  When low disk maintenance cannot restore the reserve by pruning eligible closed shards
+  Then the append is skipped fail open with one bounded rate limited diagnostic outside the journal
+
+@feature83 @FR-83 @AC-83.6
+Scenario: SPECGEN004_698 Concurrent retention is locked and deletion is path confined
+  Given concurrent journal writers and active unrelated traversal and escaped shard candidates
+  When rotation and retention race
+  Then maintenance is serialized and only recognized closed shards inside the project journal can be deleted
+
+@feature83 @FR-83 @AC-83.7
+Scenario: SPECGEN004_699 Installed layout regression leaves plugin cache immutable
+  Given a dependency absent installed cache and a separate real project containing specs
+  When the client service and conformance chain processes the project request
+  Then every observed read write and delete path is project scoped
+  And no dev pomogator state exists below the installed cache

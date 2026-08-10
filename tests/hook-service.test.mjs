@@ -91,9 +91,10 @@ test('HS_05: generated manifest keeps one bootstrap and supervises every remaini
   const sessionHooks = manifest.hooks.SessionStart.flatMap(group => group.hooks);
   const otherHooks = Object.entries(manifest.hooks).filter(([event]) => event !== 'SessionStart').flatMap(([, groups]) => groups.flatMap(group => group.hooks));
   assert.equal(sessionHooks.length, 16);
-  assert.equal(otherHooks.length, 39);
-  assert.equal(manifest.hooks.Stop.length, 13);
-  assert.equal(manifest.hooks.Stop.every(group => group.hooks.length === 1), true);
+  assert.equal(otherHooks.length, 27);
+  assert.equal(manifest.hooks.Stop.length, 1);
+  assert.equal(manifest.hooks.Stop[0].hooks.length, 1);
+  assert.equal(manifest.hooks.Stop[0].hooks[0].command.includes('Stop/all'), true);
   assert.equal(otherHooks.every(hook => hook.type === 'command' && hook.command.includes('/tools/hook-service/client.mjs') && !hook.command.includes('127.0.0.1:42619')), true);
   const generated = JSON.parse(await readFile(join(root, '.claude-plugin', 'hooks.json'), 'utf8'));
   assert.equal(generated.hooks.SessionStart.flatMap(group => group.hooks).length, 1);

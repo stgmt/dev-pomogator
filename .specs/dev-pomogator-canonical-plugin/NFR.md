@@ -47,3 +47,9 @@
 - **NFR-H2**: Bearer tokens are never persisted in manifests, registry fixtures, test output, or findings; only an environment-variable identifier is permitted.
 - **NFR-H3**: Managed HTTP registrations require no per-event `bash`, `sh`, `.sh`, or `node -e` launch on Windows. The documented SessionStart bootstrap is narrow exception.
 - **NFR-H4**: Findings name the failing contract so maintainers can correct a manifest or registry entry without inspecting gate internals.
+
+## Stop dispatcher and project isolation
+
+- **NFR-P5**: A Claude Code Stop event SHALL launch at most one DevPomogator host-visible client process. Inside one logical event flight, legacy child fallback SHALL have concurrency at most one and retain the existing 256 KiB input/output bounds; persistent workers SHALL be bounded by audited route capability and recycled by the existing lifecycle policy.
+- **NFR-R10**: A long-lived service SHALL isolate event flights, CWD, forwarded environment, workers, and state by normalized request project identity. No startup CWD, plugin cache, previous request, or other repository may supply project identity implicitly.
+- **NFR-R11**: Stop consolidation SHALL be behavior-preserving against a captured black-box legacy oracle. Self-heal after daemon loss, no retry of uncertain work, fail-open transport behavior, route order, approval/blocking, context, diagnostics, and stop-loop handling SHALL remain equivalent.

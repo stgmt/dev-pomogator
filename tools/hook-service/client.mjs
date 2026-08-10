@@ -6,11 +6,15 @@ import { randomUUID } from 'node:crypto';
 import { ensureUp } from './ensure-up.mjs';
 import { diagnosticsFile, stateDir } from './server.mjs';
 import { fingerprint } from './credential.mjs';
+import { encodeProjectRootHeader, resolveHookProjectRoot } from '../_shared/hook-project-root.mjs';
 
 const MAX_BODY_BYTES = 2_000_000;
 const MAX_DIAGNOSTIC_BYTES = 1_000_000;
 const CONNECT_TIMEOUT_MS = 3_000;
-const CONNECTION_CODES = new Set(['ECONNREFUSED', 'ECONNRESET', 'EPIPE', 'ETIMEDOUT', 'UND_ERR_CONNECT_TIMEOUT', 'UND_ERR_SOCKET']);
+// Retry only failures known to happen before the request reaches a listener.
+// Reset/closed-socket/EPIPE failures are delivery-uncertain and must not replay
+// Stop work that may already have completed in the daemon.
+const CONNECTION_CODES = new Set(['ECONNREFUSED', 'ENETUNREACH', 'EHOSTUNREACH', 'UND_ERR_CONNECT_TIMEOUT']);
 
 const readInput = () => new Promise((resolveInput, reject) => {
   let value = '';
@@ -25,7 +29,7 @@ const readInput = () => new Promise((resolveInput, reject) => {
 
 const errorCode = error => error?.code || error?.cause?.code || '';
 export const connectionFailure = error => CONNECTION_CODES.has(errorCode(error))
-  || /fetch failed|connect timeout|socket.*closed/i.test(error instanceof Error ? error.message : String(error));
+  || /connect (?:timeout|ECONNREFUSED)|connection refused/i.test(error instanceof Error ? error.message : String(error));
 
 const sanitizedDetail = error => {
   const code = errorCode(error);
@@ -47,12 +51,14 @@ async function appendClientDiagnostic({ route, error, token = '', root = stateDi
   })}\n`, { encoding: 'utf8', mode: 0o600 });
 }
 
-async function dispatch({ route, input, service, fetchImpl }) {
+async function dispatch({ route, input, service, fetchImpl, projectRoot }) {
+  const projectHeader = encodeProjectRootHeader(projectRoot);
   return fetchImpl(`http://127.0.0.1:${service.port}/v1/dispatch/${encodeURIComponent(route)}`, {
     method: 'POST',
     headers: {
       'content-type': 'application/json',
       'x-dev-pomogator-token': service.token,
+      ...(projectHeader ? { 'x-dev-pomogator-project-root': projectHeader } : {}),
     },
     body: input,
     signal: AbortSignal.timeout(CONNECT_TIMEOUT_MS),
@@ -62,24 +68,27 @@ async function dispatch({ route, input, service, fetchImpl }) {
 export async function runManagedHook({
   route,
   input,
-  pluginRoot = process.env.CLAUDE_PLUGIN_ROOT || process.env.CLAUDE_PROJECT_DIR || process.cwd(),
+  pluginRoot = process.env.CLAUDE_PLUGIN_ROOT || fileURLToPath(new URL('../..', import.meta.url)),
   ensureUpImpl = ensureUp,
   fetchImpl = fetch,
   diagnosticRoot = stateDir(),
 } = {}) {
   if (!route) return { delivered: false, failOpen: true, reason: 'missing-route' };
+  let parsedInput = {};
+  try { parsedInput = JSON.parse(input || '{}'); } catch { /* server returns the canonical invalid JSON response */ }
+  const projectRoot = resolveHookProjectRoot({ input: parsedInput });
   let service;
   try {
     service = await ensureUpImpl(pluginRoot);
     if (!service.ready) throw Object.assign(new Error(service.reason || 'hook service unavailable'), { code: 'SERVICE_NOT_READY' });
     let response;
     try {
-      response = await dispatch({ route, input, service, fetchImpl });
+      response = await dispatch({ route, input, service, fetchImpl, projectRoot });
     } catch (error) {
       if (!connectionFailure(error)) throw error;
       service = await ensureUpImpl(pluginRoot);
       if (!service.ready) throw Object.assign(new Error(service.reason || 'hook service recovery failed'), { code: 'SERVICE_NOT_READY' });
-      response = await dispatch({ route, input, service, fetchImpl });
+      response = await dispatch({ route, input, service, fetchImpl, projectRoot });
     }
     const body = await response.text();
     return { delivered: true, status: response.status, body };

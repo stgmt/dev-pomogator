@@ -94,3 +94,13 @@
 - **EC-8 POSIX/Windows Node selection**: POSIX launcher resolution may invoke `node`; Windows resolution must also support `node.exe`. A launcher must treat a non-runnable candidate equivalently to a missing runtime, preserve command arguments, and avoid assuming the current working directory is the plugin root.
 - **EC-9 One recovery per session and project CWD**: recovery state is keyed by both Claude Code session identity and the normalized project CWD. Different projects in the same session may recover independently; a second hook in the same project/session observes the completed or attempted state and does not duplicate the recovery work.
 - **EC-10 Legacy state migration**: when a prior unscoped recovery marker is found, the launcher migrates or retires it safely without executing it as code, preserving any non-managed state and allowing the CWD-scoped state model to take over.
+
+## UC-8: Dispatch Stop once through a shared multi-project service
+
+- Claude Code invokes the one generated DevPomogator Stop command; registrations from other plugins remain unchanged.
+- The builtins-only client forwards the exact hook payload plus request-scoped project identity and self-heals the owned daemon once on a connection-class failure.
+- The service keys the event flight by session, normalized project root, and event name; it executes the existing logical routes in registry order.
+- Compatible workers receive explicit project context; legacy children run one at a time with bounded input/output and no retry of uncertain work.
+- The service returns the same host-observable result as the captured legacy 13-registration oracle.
+- Spec-conformance routes read/write only the current project and apply the FR-83 bounded journal policy; a project without `.specs` is a state-free no-op.
+- Interleaved requests for another repository use a different flight/state scope and cannot inherit the first repository's CWD, environment, worker state, or journal.

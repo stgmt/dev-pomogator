@@ -24,8 +24,8 @@ export function reviewHookManifest(manifestFile, registryFile, root = process.cw
   const manifest = readJson(manifestFile);
   const registry = readJson(registryFile);
   const findings = [];
-  if (registry.version !== 1 || !registry.routes || typeof registry.routes !== 'object') {
-    findings.push(finding(registryFile, undefined, 'hook-service registry must be version 1 with routes'));
+  if (![1, 2].includes(registry.version) || !registry.routes || typeof registry.routes !== 'object') {
+    findings.push(finding(registryFile, undefined, 'hook-service registry must be version 1 or 2 with routes'));
   }
   const bootstrap = path.join(root, 'tools/hook-service/session-bootstrap.mjs');
   if (!fs.existsSync(bootstrap)) findings.push(finding(bootstrap, undefined, 'required SessionStart bootstrap source is missing'));
@@ -46,25 +46,36 @@ export function reviewHookManifest(manifestFile, registryFile, root = process.cw
           findings.push(finding(manifestFile, event, 'managed hot-path hooks must not use a shell or inline Node launcher'));
           continue;
         }
-        const supervisedClient = hook.type === 'command'
-          && /tools\/hook-service\/client\.mjs(?:["'\s]|$)/.test(command)
-          && command.includes(`"${id}"`);
+        const supervisedRoute = command.match(/tools\/hook-service\/client\.mjs["']?\s+["']([^"']+)["']/)?.[1] || '';
+        const supervisedClient = hook.type === 'command' && Boolean(supervisedRoute);
         const url = typeof hook.url === 'string' ? hook.url : '';
         const legacyHttp = hook.type === 'http' && SERVICE_URL.test(url) && url === expectedUrl(id);
         if (!supervisedClient && !legacyHttp) {
           findings.push(finding(manifestFile, event, 'managed hot-path hooks must use the approved supervised hook-service client for their route'));
           continue;
         }
-        manifestRouteIds.add(id);
         if (legacyHttp && (hook.headers?.['x-dev-pomogator-token'] !== '${DEV_POMOGATOR_HOOK_TOKEN}' ||
             !Array.isArray(hook.allowedEnvVars) || hook.allowedEnvVars.length !== 1 ||
             hook.allowedEnvVars[0] !== 'DEV_POMOGATOR_HOOK_TOKEN')) {
           findings.push(finding(manifestFile, event, 'managed HTTP hooks must use only the DEV_POMOGATOR_HOOK_TOKEN environment bearer'));
         }
+        const groupRoutes = supervisedClient ? registry.groups?.[supervisedRoute] : null;
+        if (Array.isArray(groupRoutes)) {
+          const entries = groupRoutes.map(route => registry.routes?.[route]).filter(Boolean);
+          const timeout = entries.reduce((sum, entry) => sum + Math.max(1, entry.timeout || 30), 0);
+          const valid = event === supervisedRoute.split('/')[0]
+            && entries.length === groupRoutes.length
+            && entries.every(entry => entry.event === event && (entry.matcher || '') === matcher)
+            && timeout === hook.timeout;
+          if (!valid) findings.push(finding(manifestFile, event, 'hook group is missing from the approved registry (registry drift)'));
+          for (const route of groupRoutes) manifestRouteIds.add(route);
+          continue;
+        }
         const registered = registry.routes?.[id];
-        if (!registered || registered.matcher !== matcher || registered.timeout !== hook.timeout) {
+        if ((supervisedClient && supervisedRoute !== id) || !registered || registered.matcher !== matcher || registered.timeout !== hook.timeout) {
           findings.push(finding(manifestFile, event, 'hook route is missing from the approved registry (registry drift)'));
         }
+        manifestRouteIds.add(id);
       }
     }
   }

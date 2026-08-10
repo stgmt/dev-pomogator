@@ -2793,3 +2793,44 @@ Phase 45 contains 10 planned TODO slices. All headers use the strict graph-nativ
   **Done When:**
   - [ ] BDD proves AC_REQUIREMENT_MISMATCH and INAPPLICABLE_ACCEPTANCE_REFERENCE emit error findings and leave result, finalization, and projected plan acceptance false.
   - [ ] SPECGEN004_692 covers both branches alongside SPECGEN004_685.
+
+## Phase 50 — Installed hook root isolation and bounded journal (2026-08-11)
+
+Источник: incident 2026-08-10; PR #227 follow-up contract; FR-83.
+
+- [ ] Build the installed-layout and journal-boundary BDD fixture — id: p50-root-fixture — Status: TODO | Est: 120m
+  _depends: none_
+  _Requirements: [FR-83](FR.md#fr-83)_
+  **Done When:**
+  - [ ] Fixture provides different absolute plugin/project roots, request/session identity, projects with/without `.specs`, injected time/free-space probes, recognized/unsafe shard candidates, and an I/O path ledger.
+  - [ ] SPECGEN004_693–SPECGEN004_699 are executable BDD contracts and initially reproduce the legacy cache-root/retention failures.
+- [ ] Separate executable plugin root from request-scoped project root — id: p50-project-identity — Status: TODO | Est: 180m
+  _depends: hard:p50-root-fixture_
+  _Requirements: [FR-83](FR.md#fr-83)_
+  **Done When:**
+  - [ ] Client, hook service, worker boundary, and both conformance tools carry explicit `pluginRoot`/`projectRoot`; daemon startup CWD and `CLAUDE_PLUGIN_ROOT` cannot become project data roots.
+  - [ ] Missing `.specs` is a state-free no-op and cross-project interleaving cannot leak CWD/environment/journal paths.
+- [ ] Add 10 MiB rotation, 64 MiB cap, and 30-day retention — id: p50-log-retention — Status: TODO | Est: 180m
+  _depends: hard:p50-project-identity_
+  _Requirements: [FR-83](FR.md#fr-83)_
+  **Done When:**
+  - [ ] Closed shards are pruned expired-first/oldest-first under a maintenance lock while the active shard remains protected.
+  - [ ] Real-path confinement and recognized shard names prevent deletion outside the current project's journal.
+- [ ] Enforce the 1 GiB reserve with non-recursive fail-open diagnostics — id: p50-low-disk — Status: TODO | Est: 120m
+  _depends: hard:p50-log-retention_
+  _Requirements: [FR-83](FR.md#fr-83)_
+  **Done When:**
+  - [ ] Projected low-disk writes prune eligible closed shards and then skip the append if the reserve remains unsatisfied.
+  - [ ] Diagnostic output is bounded/rate-limited, does not append to the protected journal, and cannot trigger recursive hook execution.
+- [ ] Prove dependency-absent installed hook behavior — id: p50-installed-hook-proof — Status: TODO | Est: 180m
+  _depends: hard:p50-project-identity, hard:p50-low-disk_
+  _Requirements: [FR-83](FR.md#fr-83)_
+  **Done When:**
+  - [ ] The real client/service/conformance path runs from an installed-cache fixture against a different real project and leaves the cache free of `.dev-pomogator` state.
+  - [ ] Windows path/case plus POSIX path fixtures cover normalization and confinement without host-side raw BDD execution.
+- [ ] Run release verification and record authoritative evidence — id: p50-release-verification — Status: TODO | Est: 180m
+  _depends: hard:p50-installed-hook-proof_
+  _Requirements: [FR-83](FR.md#fr-83)_
+  **Done When:**
+  - [ ] Focused integration, Docker/WSL BDD, hook-service regression, spec validation/audit/verdict, installed-cache smoke, and disk-boundary evidence pass on the exact commit.
+  - [ ] Local cache synchronization and PR #227 update occur only after the spec contract is approved and every required proof is current.

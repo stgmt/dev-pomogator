@@ -56,14 +56,15 @@ export class WorkerManager {
     return metric;
   }
 
-  async execute(route, entry, input, event) {
+  async execute(route, entry, input, event, context = {}) {
     if (!this.canUse(entry)) return null;
-    const key = `${route}:${entry.worker_target}`;
+    const projectRoot = context.projectRoot || '';
+    const key = `${projectRoot}:${route}:${entry.worker_target}`;
     let worker = this.workers.get(key);
     if (!worker || worker.state === 'dead' || worker.state === 'recycling') {
       let startup = this.starting.get(key);
       if (!startup) {
-        startup = this.start(key, entry)
+        startup = this.start(key, entry, context)
           .then(started => {
             this.workers.set(key, started);
             return started;
@@ -89,7 +90,7 @@ export class WorkerManager {
       queued: worker.queue.length,
     });
     try {
-      const result = await worker.request({ route, event, input, args: entry.worker_args || [] });
+      const result = await worker.request({ route, event, input, projectRoot, args: entry.worker_args || [] });
       this.updateMetric(key, worker, {
         successes: metric.successes + 1,
         queued: worker.queue.length,
@@ -111,7 +112,7 @@ export class WorkerManager {
     }
   }
 
-  async start(key, entry) {
+  async start(key, entry, context = {}) {
     const target = resolve(this.root, entry.worker_target);
     const host = fileURLToPath(new URL('./worker-host.mjs', import.meta.url));
     const childArgs = [host, target, entry.worker_protocol || 'handle'];
@@ -119,8 +120,12 @@ export class WorkerManager {
     this.updateMetric(key, null, { spawnAttempts: this.metricFor(key).spawnAttempts + 1, state: 'starting' });
     try {
       child = this.spawnProcess(process.execPath, childArgs, {
-        cwd: process.env.CLAUDE_PROJECT_DIR || this.root,
-        env: { ...process.env, CLAUDE_PLUGIN_ROOT: this.root },
+        cwd: context.projectRoot || undefined,
+        env: {
+          ...process.env,
+          CLAUDE_PLUGIN_ROOT: this.root,
+          ...(context.projectRoot ? { CLAUDE_PROJECT_DIR: context.projectRoot } : {}),
+        },
         stdio: ['pipe', 'pipe', 'pipe'],
         windowsHide: true,
       });

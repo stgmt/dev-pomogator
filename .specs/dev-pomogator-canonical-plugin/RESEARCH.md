@@ -266,3 +266,24 @@ my-plugin/
 ### Persistent-worker migration status
 
 The compatibility audit found that most current hooks are one-shot CLI programs that read stdin/argv, call process.exit, spawn nested work, or perform side effects at import/run time. They remain explicit legacy execution=child routes. Only handlers with a reviewed reusable adapter are promoted to execution=persistent; those workers load once, reuse their PID, serialize requests, evict when idle, recycle on failure, and never retry uncertain work. The audited persistent set therefore eliminates repeated Node/tsx cold starts for its compatible routes without making the unsafe legacy population a false migration claim.
+
+## Stop-hook resource incident and PR #227 gap analysis (2026-08-10/11)
+
+### Verified current state
+
+- PR #227 (`fix/hook-service-oom-architecture`) coalesces overlapping service deliveries, caps child stdin/stdout/stderr at 256 KiB, and introduces persistent worker infrastructure with recycle/no-uncertain-retry behavior.
+- The active installed cache 2.0.6 runtime files match the PR branch implementation even though installed metadata still records an older source SHA. The PR is open and its branch is the current worktree.
+- Only Stop route 6 currently declares persistent capability; 12 of 13 DevPomogator Stop routes still use child execution, and the manifest still exposes 13 separate `node client.mjs` Stop commands. PR #227 therefore reduces duplicate logical work but does not eliminate host-visible Node fanout.
+- The incident machine had 15 Stop hooks total: 13 DevPomogator registrations plus context-mode and claude-mem. With C: at zero free bytes and low RAM, Node emitted CSPRNG assertion, heap OOM, and `VirtualAlloc` failures; claude-mem subsequently reported an unreachable worker.
+- A cache-local conformance journal in inactive plugin version 2.0.5 had 443 shards totaling 4,560,343,121 bytes. The root cause is conflating installed `CLAUDE_PLUGIN_ROOT` with caller project root plus rotation without aggregate/age retention; the spec-generator-v4 FR-83 package owns that writer contract.
+
+### Options considered
+
+1. Root fix plus retention only: fixes the disk leak but leaves 13 host-visible Stop clients.
+2. Add per-request project identity: also prevents cross-project CWD/environment/worker state bleed, but leaves manifest fanout.
+3. Selected: option 2 plus one DevPomogator Stop dispatcher, registry-order internal routes, legacy semantic parity oracle, sequential bounded child fallback, and persistent workers where audited.
+4. Native HTTP-only hooks: rejected because a dead daemon would bypass PR #227's same-session self-heal client.
+
+### Verification gap
+
+The existing PR evidence does not include a full Claude host lifecycle smoke or a completed Docker/WSL BDD run for this addendum. Completion claims SHALL remain pending until CORE024_20–22, the executable feature mirror, installed-cache smoke, focused service tests, and full required BDD all pass on the exact commit.

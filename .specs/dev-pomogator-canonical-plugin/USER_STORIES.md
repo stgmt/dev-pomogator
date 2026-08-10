@@ -215,3 +215,31 @@ When the new preflight processes it
 Then it does not source or execute marker contents
 And it preserves non-managed state
 And `/pomogator-doctor` reports an actionable recovery diagnosis.
+
+---
+
+### User Story 11: One bounded Stop lifecycle without lost behavior (Priority: P1)
+
+**Требование:** [FR-13]
+
+As a Claude Code user with DevPomogator enabled, I want one plugin-owned Stop dispatcher instead of thirteen host-visible Node clients so that Stop processing does not amplify memory pressure while every existing approval, block, context, failure, order, and self-heal behavior stays the same.
+
+**Why:** The incident combined 13 DevPomogator Stop clients with exhausted disk and low RAM; coalescing service work alone does not remove host-visible process fanout.
+
+**Independent Test:** Compare the single-dispatch result against a captured 13-route black-box oracle and assert one manifest command, registry-order execution, one-at-a-time legacy child fallback, 256 KiB bounds, and same-session daemon recovery.
+
+**Acceptance Scenarios:** CORE024_21 and CORE024_22.
+
+---
+
+### User Story 12: Shared service never mixes repositories (Priority: P1)
+
+**Требование:** [FR-13], [FR-14]
+
+As a developer working in multiple repositories through one global plugin service, I want project identity, CWD, environment, event flights, workers, and conformance state bound to each current request so that one repository cannot read, write, block, or fill storage on behalf of another or the installed cache.
+
+**Why:** A daemon-start environment and plugin-root fallback are global process state, but the service handles requests for independently owned repositories.
+
+**Independent Test:** Interleave Stop requests for two projects and one non-spec project through an installed-cache fixture, then assert independent FIFO/results and project-confined bounded state.
+
+**Acceptance Scenarios:** CORE024_20 and CORE024_22.

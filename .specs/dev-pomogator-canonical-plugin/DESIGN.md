@@ -316,3 +316,26 @@ The first-phase Stop coordinator and bounded child capture do not by themselves 
 The worker host loads the adapter once at startup and serves versioned newline-delimited JSON frames containing request_id, route, event, input, and runtime context. The manager serializes each route worker FIFO, starts it lazily, bounds frames at 256 KiB, records worker PID for diagnostics, evicts idle workers, and recycles on timeout, crash, transport/protocol failure, or output overflow. A failed request is never replayed because a side effect may already have happened. The daemon remains healthy and the existing HTTP 503/fail-open policy remains the boundary for the affected request.
 
 This migration eliminates repeated Node/tsx cold starts for every route in the audited persistent capability set. Incompatible routes retain the legacy child adapter intentionally; that fallback is explicit in registry metadata and is not counted as migrated. Adding another persistent route requires a handler audit, worker reuse/FIFO test, recycle/no-retry test, and generated-registry parity evidence.
+
+### Decision: one self-healing Stop dispatcher with request-scoped project execution
+
+**Требование:** [FR-13], [AC-12], [AC-13]
+
+**Rationale:** One self-healing client preserves PR #227 daemon recovery while removing 13 host-visible launches. Explicit per-request project identity is required because a global daemon and persistent workers outlive any one repository.
+
+**Trade-off:** The service owns an aggregation oracle, project-aware flight keys, and serialized legacy fallback, increasing routing complexity. In return, peak Stop fanout is bounded and route behavior remains testably equivalent.
+
+**Alternatives considered:**
+- Keep 13 manifest commands and rely only on event coalescing — rejected because the host still launches 13 Node clients under memory pressure.
+- Register native HTTP Stop hooks directly — rejected because a dead daemon would bypass the builtins client's same-session self-heal path.
+- Disable individual routes or external plugins — rejected because it changes product behavior and does not repair project identity.
+
+**Manifest boundary:** `generate-manifest.mjs` emits one DevPomogator Stop client command targeting a logical Stop group route. The command remains builtins-only and owns ensure-up/retry-on-connection-loss exactly as PR #227 specifies. No code mutates registrations owned by context-mode, claude-mem, or any other plugin.
+
+**Service boundary:** The request envelope carries `{sessionId, projectRoot, eventName, payload}`. A flight key includes the normalized project root, preventing cross-repository coalescing. The Stop group executes logical registry routes in canonical order. Compatible workers are either keyed by project or proven stateless with explicit per-request context; legacy child routes are queued one at a time and retain 256 KiB input/output caps.
+
+**Semantic aggregation boundary:** Before replacing the manifest, an integration fixture captures the Claude-host-observable legacy result matrix for approval, blocking, reason/system message, `additionalContext`, nonzero/invalid output, timeouts, route order, and active stop-loop cases. The dispatcher aggregator is defined by differential equivalence to that oracle, not by an invented merge rule. Any matrix mismatch blocks migration.
+
+**Project/data boundary:** `pluginRoot` locates code only. The current request supplies `projectRoot`; the service forwards it as child CWD and explicit worker context. Startup environment is never authority for later requests. Spec-conformance routes delegate retention and no-spec behavior to spec-generator-v4 FR-83.
+
+**Failure boundary:** A connection-class failure self-heals and retries the request once; a live HTTP error or uncertain worker/child result is never retried. A route failure follows the captured legacy fail-open/block semantics. Service health and unrelated project flights remain available after bounded route failure.

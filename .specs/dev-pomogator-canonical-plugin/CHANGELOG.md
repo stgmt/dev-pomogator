@@ -96,3 +96,10 @@ b. **Manual cleanup** (если предпочитаете контроль):
 
 - Added FR-15–FR-24 and AC-10 for registry-approved, bearer-environment-authenticated HTTP managed hooks, the SessionStart exception, Windows shell-free policy, offline review, actionable findings, and executable BDD coverage.
 - Documented the implementation boundary: hook-review/service/runtime and manifest changes are separately owned; this change reconciles specification with existing CORE024 BDD evidence.
+
+## Unreleased — PR #227 Stop incident hardening specified (2026-08-11)
+
+- Specify one host-visible DevPomogator Stop dispatcher while preserving the builtins self-heal client and all legacy host-observable route semantics through a differential oracle.
+- Bind event flights, CWD, environment, workers, and state to each request's normalized project root; plugin root remains code-only.
+- Cross-link spec-generator-v4 FR-83 for no-spec no-op and bounded conformance journal retention (10 MiB shard, 64 MiB total, 30 days, 1 GiB reserve).
+- Add AC-12/AC-13, CORE024_20–22, NFR-P5/R10/R11, and Phase 10 tasks. These contracts are pending implementation and execution; no hook/plugin is disabled.

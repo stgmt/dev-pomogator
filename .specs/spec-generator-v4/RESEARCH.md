@@ -1672,3 +1672,25 @@ Full mechanism table, commit-pinned sources, gap matrix and adoption verdict: [T
 - Independent behavior checks: [`prime-radiant-inc/superpowers-evals@11ffd99`](https://github.com/prime-radiant-inc/superpowers-evals/tree/11ffd999c9bc16e4b757b84482b5b65358d11599/scenarios).
 - Community gap evidence: [`obra/superpowers#374`](https://github.com/obra/superpowers/issues/374), [`obra/superpowers#1917`](https://github.com/obra/superpowers/issues/1917).
 
+
+## Incident research — installed conformance journal exhausted C: (2026-08-10/11)
+
+### Verified observations
+
+- The failed Claude Code stop cycle reported 15 Stop hooks, Node `ncrypto::CSPRNG` assertion failures, V8 heap OOM/`VirtualAlloc failed`, and a claude-mem worker unreachable for 188 seconds. At capture time C: had zero free bytes; 38 Node processes held about 2.15 GB private memory on a 4.05 GB machine.
+- The 15-hook fanout consisted of 13 DevPomogator Stop registrations plus context-mode and claude-mem. The claude-mem message was a downstream liveness symptom, not evidence that disabling claude-mem fixes the resource leak.
+- In inactive installed cache version 2.0.5, `.dev-pomogator/.spec-check-log` contained 443 JSONL shards totaling 4,560,343,121 bytes (about 4.247 GiB), written from 2026-07-23 through 2026-08-10. Deleting only that inactive journal restored 4,548,526,080 bytes (about 4.236 GiB). Active cache version 2.0.6 was not removed.
+- `spec-conformance-push.ts` and `spec-conformance-guard.ts` choose `CLAUDE_PLUGIN_ROOT` before `DEV_POMOGATOR_REPO_ROOT`/CWD. In installed mode this points at the plugin cache, so the hooks analyze DevPomogator's own `.specs` and write project state below the cache.
+- `spec-check-log/writer.ts` rotates individual shards at 10 MiB but has no age or aggregate retention. Rotation therefore bounds a file, not the journal.
+- The hook service launches work with plugin-root environment and a daemon/process-scoped project fallback. A global long-lived service serving several repositories cannot safely treat startup environment as request identity.
+
+### Rejected remedies
+
+- Disabling DevPomogator, claude-mem, context-mode, or individual Stop hooks: rejected because it removes behavior without repairing identity, retention, or fanout.
+- Native HTTP-only registrations without the builtins client: rejected because PR #227 requires same-session self-heal after daemon loss.
+- Rotation-only or age-only retention: rejected because neither guarantees bounded total disk usage under sustained activity.
+
+### Selected boundary
+
+Implement strict plugin/project root separation, request-scoped project identity, and per-project journal limits of 10 MiB active-shard rotation, 64 MiB total, 30 days, and 1 GiB free reserve. The canonical-plugin spec separately owns consolidation of the 13 visible DevPomogator Stop registrations into one semantics-preserving dispatcher.
+

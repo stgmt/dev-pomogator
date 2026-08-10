@@ -1684,3 +1684,33 @@ A `SafeBatch` contains an `independenceProof` for every member pair: graph reach
 
 dynamic-workflow-engineering owns all bounded workflow runtime, retry, partial-result, journal, replay, native-Agent capability/security, census/migration, adapters, incident regression, and distribution requirements; FR-82 remains the bounded spec-MCP query prerequisite/consumer surface; spec-generator-v4 must not implement a second runtime.
 
+
+### Decision: Request-scoped project roots and bounded spec-check journal
+
+**Требование:** [FR-83]
+
+**Rationale:** Installed plugin location is executable identity, while the hook payload identifies the repository whose specs and state are being processed. The two authorities must be explicit and independent on every request; aggregate and age retention are both required because shard rotation alone does not bound disk usage.
+
+**Trade-off:** Each append performs a bounded project-local shard inventory and disk-space probe, and persistent workers must receive or key on project context. This adds small deterministic I/O and state plumbing in exchange for eliminating cross-root data access and unbounded disk growth.
+
+**Alternatives considered:**
+- Keep `CLAUDE_PLUGIN_ROOT` precedence and only delete old cache data manually — rejected because every installed request can recreate the leak and analyze the wrong specs.
+- Disable conformance hooks or external plugins — rejected because it removes behavior and leaves the root/retention defect intact.
+- Use rotation without aggregate, age, or free-space policy — rejected because it bounds one file but not the journal or disk reserve.
+
+### Root model
+
+Introduce an explicit context passed through client → hook service → route/worker → conformance tool: `{ pluginRoot, projectRoot, sessionId }`. `pluginRoot` is immutable service code identity. `projectRoot` is normalized independently for every request from the current payload/session binding, with request-scoped `CLAUDE_PROJECT_DIR` as the only fallback. The resolver returns `null` rather than falling back to plugin root or daemon CWD. Persistent worker reuse must be keyed or rebound so requests for one project cannot inherit another project's CWD/environment/state.
+
+### Journal algorithm
+
+The writer confines the journal directory under `projectRoot`, acquires the existing/new maintenance lock, inventories only recognized shard names, and identifies the active shard separately. Before append it removes expired closed shards, then oldest closed shards until projected retained bytes are at most 64 MiB. It rotates the active shard at 10 MiB. Before writing, it checks projected free space against the 1 GiB reserve; a failed reserve after pruning skips the write. The active shard is never a deletion candidate. Every deletion target must pass real-path confinement and shard-name validation.
+
+### Failure and diagnostic model
+
+Conformance remains fail-open. Invalid roots, missing `.specs`, lock contention, disk probe failure, prune failure, and append failure return structured bounded outcomes. Low-disk diagnostics are rate-limited and emitted outside `.spec-check-log` so reporting cannot recursively consume the resource it is protecting. No failure branch may retry against the plugin cache.
+
+### Verification architecture
+
+BDD fixtures SHALL inject filesystem/free-space/time adapters and run the real installed-layout request path with distinct roots. Assertions cover path provenance, no-spec no-op, byte and age retention, active-shard protection, concurrent maintenance, unsafe path rejection, low-disk skip, and dependency-absent execution. The test oracle records every read/write/delete path so cache-local state is a hard failure.
+

@@ -26,3 +26,10 @@
 - Implementation has not started.
 - `SPECGEN004_657`–`SPECGEN004_664` have not been executed; their status is `UNKNOWN`.
 
+
+## 2026-08-11 — FR-83 installed hook root isolation and bounded journal specified
+
+- Incident evidence records the 4.247 GiB cache-local `.spec-check-log`, zero-free-space failure, Stop fanout, and the incorrect `CLAUDE_PLUGIN_ROOT` project-root precedence.
+- Approved contract separates `pluginRoot` from per-request `projectRoot`, makes non-spec projects state-free no-ops, and sets 10 MiB rotation / 64 MiB total / 30 days / 1 GiB reserve with locked confined pruning.
+- SPECGEN004_693–SPECGEN004_699 and Phase 50 tasks are specified but not yet implemented or executed. Runtime changes remain blocked on explicit spec approval.
+

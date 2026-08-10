@@ -1583,3 +1583,32 @@ WHEN an expectation set is supplied to live-evidence validation THEN every expec
 
 WHEN deterministic suite evidence validates live-evidence artifacts THEN the proof SHALL use a captured fixture with independently precomputed digests (or a deterministic producer plus a captured artifact and recorded provenance). IF the digests are computed only by the same code under test THEN the proof SHALL be treated as self-attested and insufficient. One-byte tamper of a captured workspace or trace artifact SHALL fail validation with a named finding.
 
+
+## AC-83.1
+
+Given an installed plugin root and a different caller project root, when a conformance hook is dispatched, then executable resources resolve from `pluginRoot`, project data resolves only from the validated request-scoped `projectRoot`, and neither `CLAUDE_PLUGIN_ROOT` nor daemon CWD can become the project root.
+
+## AC-83.2
+
+Given a valid caller project without `.specs`, when spec-conformance push or guard runs, then it exits fail-open/no-op and creates no `.spec-check-log` in the project or installed cache.
+
+## AC-83.3
+
+Given enough conformance entries to cross retention boundaries, when journal maintenance completes, then the active shard rotates at 10 MiB, total retained bytes are at most 64 MiB per project, and oldest closed shards are deleted first without deleting or truncating the active shard.
+
+## AC-83.4
+
+Given closed shards older and newer than 30 days, when maintenance runs, then every eligible expired closed shard is removed, newer shards remain subject to the 64 MiB cap, and the active shard remains protected regardless of timestamp.
+
+## AC-83.5
+
+Given a projected journal write that would reduce free space below 1 GiB, when maintenance runs, then eligible closed shards are pruned oldest-first; if the reserve remains unsatisfied the write is skipped fail-open and exactly one bounded non-recursive diagnostic path is used.
+
+## AC-83.6
+
+Given concurrent writers plus traversal, symlink/junction, unrelated-file, and active-shard candidates, when rotation/retention runs, then a maintenance lock serializes mutation and only confined closed journal shards can be deleted.
+
+## AC-83.7
+
+Given a dependency-absent installed-cache fixture whose plugin root differs from a real project containing `.specs`, when the real hook client/service/conformance path runs, then all reads and writes are project-scoped, no cache-local state appears, and the legacy cache-root regression fails the scenario.
+

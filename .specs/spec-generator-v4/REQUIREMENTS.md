@@ -363,3 +363,16 @@
 | CHK-FR82-08 | Incident-driven bounded inventory meets declared call/byte/latency budgets | FR-82, AC-82.8, @feature82, UC-34 | Integration test | Draft | Incident measurements are evidence, not eternal performance claims |
 | CHK-FR82-09 | Executable pending scenarios use real handlers and real producer artifact | FR-82, AC-82.9, @feature82, UC-34 | Integration test | Draft | No hand-invented producer response shape |
 
+
+## Verification Matrix — FR-83 installed hook identity and bounded journal
+
+| CHK-ID | Requirement | Traces To | Verification Method | Status | Notes |
+|---|---|---|---|---|---|
+| CHK-FR83-01 | Plugin code root and caller project data root are distinct on every request | FR-83, AC-83.1, @feature83, UC-35 | BDD scenario | Draft | SPECGEN004_693; installed cache root must differ from project root |
+| CHK-FR83-02 | Projects without `.specs` perform a state-free no-op | FR-83, AC-83.2, @feature83, UC-35 | BDD scenario | Draft | SPECGEN004_694 |
+| CHK-FR83-03 | 10 MiB rotation and 64 MiB total cap protect the active shard | FR-83, AC-83.3, @feature83, UC-35 | BDD scenario | Draft | SPECGEN004_695 |
+| CHK-FR83-04 | Closed shards expire after 30 days | FR-83, AC-83.4, @feature83, UC-35 | BDD scenario | Draft | SPECGEN004_696 |
+| CHK-FR83-05 | 1 GiB reserve prunes then skips fail-open without recursive logging | FR-83, AC-83.5, @feature83, UC-35 | BDD scenario | Draft | SPECGEN004_697 |
+| CHK-FR83-06 | Locking and real-path confinement prevent unsafe deletion | FR-83, AC-83.6, @feature83, UC-35 | BDD scenario | Draft | SPECGEN004_698 |
+| CHK-FR83-07 | Dependency-absent installed layout proves project-only reads and writes | FR-83, AC-83.7, @feature83, UC-35 | BDD scenario | Draft | SPECGEN004_699 |
+

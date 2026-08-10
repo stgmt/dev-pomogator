@@ -148,3 +148,11 @@ The acceptance target is event-level coordination plus bounded capture; a fixed 
 - WHEN a route has no audited reusable adapter, uses legacy args, shell/tsx bootstrap, process.exit, stdin-driven CLI behavior, nested process spawning, or non-reentrant side effects THEN it SHALL remain execution=child and SHALL not be labeled migrated.
 - WHEN the audited persistent route set is exercised repeatedly THEN its Node/tsx worker spawn count SHALL be lower than dispatch count, demonstrating elimination of cold Node/tsx starts for that set while preserving the explicit legacy fallback boundary.
 - WHEN generated registry and manifest parity is checked THEN public route IDs, event, matcher, ordering, timeout, and fallback metadata SHALL remain one-to-one with the source legacy manifest.
+
+## AC-12 — Installed hook project isolation and bounded conformance state
+
+Given one global hook-service handles interleaved requests from installed plugin code and two different caller projects, when Stop routes and spec-conformance work execute, then every request uses its own normalized project CWD/environment/state, coalescing never crosses `(sessionId, projectRoot, eventName)`, plugin cache remains free of project state, non-spec projects create no journal, and the journal satisfies 10 MiB / 64 MiB / 30 days / 1 GiB retention without unsafe deletion.
+
+## AC-13 — One host-visible DevPomogator Stop dispatcher with semantic parity
+
+Given the current 13-registration Stop behavior captured as a black-box baseline for approve, block, context, failure, ordering, and stop-loop cases, when the manifest is regenerated, then it contains exactly one DevPomogator Stop command using the self-healing client, other plugins are unchanged, the service executes logical routes in registry order, the observable result matches the baseline, and peak legacy child concurrency is at most one per event flight.

@@ -1,6 +1,8 @@
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
+export const STOP_DISPATCH_ROUTE = 'Stop/all';
+
 const PERSISTENT_ADAPTERS = new Map([
   ['tools/subagent-watchdog/subagent_watchdog.ts', {
     workerTarget: 'tools/hook-service/worker-adapters/subagent-watchdog.mjs',
@@ -49,21 +51,37 @@ export async function buildRegistry(pluginRoot) {
       };
     }));
   }
-  return {version:1, routes};
+  const stopRoutes = Object.keys(routes).filter(route => routes[route].event === 'Stop');
+  return {version:2, routes, groups: stopRoutes.length ? { [STOP_DISPATCH_ROUTE]: stopRoutes } : {}};
 }
 
 /** Supervised client entries retain source event/matcher/order/timeout semantics. */
 export async function renderHttpManifest(pluginRoot) {
   const manifest = JSON.parse(await readFile(join(pluginRoot, '.claude-plugin', 'hooks.legacy.json'), 'utf8'));
-  const registry = await buildRegistry(pluginRoot);
   const hooks = {};
-  for (const [event, groups] of Object.entries(manifest.hooks)) hooks[event] = groups.map((group, groupIndex) => ({
-    ...group,
-    hooks: group.hooks.map((hook, hookIndex) => ({
-      type: 'command',
-      command: `node "${'${CLAUDE_PLUGIN_ROOT:-${CLAUDE_PROJECT_DIR:-.}}'}/tools/hook-service/client.mjs" "${event}/${groupIndex}/${hookIndex}"`,
-      timeout: hook.timeout,
-    })),
-  }));
+  for (const [event, groups] of Object.entries(manifest.hooks)) {
+    if (event === 'Stop') {
+      const matchers = new Set(groups.map(group => group.matcher || ''));
+      if (matchers.size > 1) throw new Error('Stop groups with different matchers cannot share one dispatcher');
+      const timeout = groups.flatMap(group => group.hooks).reduce((sum, hook) => sum + Math.max(1, hook.timeout || 30), 0);
+      hooks[event] = [{
+        ...(groups[0]?.matcher ? { matcher: groups[0].matcher } : {}),
+        hooks: [{
+          type: 'command',
+          command: `node "${'${CLAUDE_PLUGIN_ROOT:-${CLAUDE_PROJECT_DIR:-.}}'}/tools/hook-service/client.mjs" "${STOP_DISPATCH_ROUTE}"`,
+          timeout,
+        }],
+      }];
+      continue;
+    }
+    hooks[event] = groups.map((group, groupIndex) => ({
+      ...group,
+      hooks: group.hooks.map((hook, hookIndex) => ({
+        type: 'command',
+        command: `node "${'${CLAUDE_PLUGIN_ROOT:-${CLAUDE_PROJECT_DIR:-.}}'}/tools/hook-service/client.mjs" "${event}/${groupIndex}/${hookIndex}"`,
+        timeout: hook.timeout,
+      })),
+    }));
+  }
   return {hooks};
 }

@@ -6,6 +6,7 @@ import { join, resolve, relative, isAbsolute, win32 } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { fingerprint } from './credential.mjs';
 import { WorkerManager } from './worker-manager.mjs';
+import { decodeProjectRootHeader, resolveHookProjectRoot } from '../_shared/hook-project-root.mjs';
 
 export const HOST = '127.0.0.1', PORT = 42619, VERSION = '1.0.0';
 export const stateDir = () => process.env.DEV_POMOGATOR_STATE_DIR || join(process.env.LOCALAPPDATA || process.env.XDG_STATE_HOME || process.env.HOME || '.', 'dev-pomogator', 'hook-service');
@@ -170,11 +171,11 @@ function boundedCapture(maxBytes = MAX_OUTPUT_BYTES) {
 }
 
 /** Legacy executor remains the compatibility boundary for one-shot scripts. */
-export async function execute(entry, input, root, event, workerManager, route = '') {
+export async function execute(entry, input, root, event, workerManager, route = '', context = {}) {
   if (!entry || entry.event !== event || !isWithinRoot(root, entry.target)) throw new Error('invalid hook route');
   if (workerManager?.canUse(entry)) {
     if (!isWithinRoot(root, entry.worker_target)) throw new Error('invalid worker route');
-    return await workerManager.execute(route, entry, input, event);
+    return await workerManager.execute(route, entry, input, event, context);
   }
 
   const target = resolve(root, entry.target);
@@ -185,10 +186,11 @@ export async function execute(entry, input, root, event, workerManager, route = 
     let child;
     try {
       child = spawn(process.execPath, args, {
-        cwd: process.env.CLAUDE_PROJECT_DIR || root,
+        cwd: context.projectRoot || undefined,
         env: {
           ...process.env,
           CLAUDE_PLUGIN_ROOT: root,
+          ...(context.projectRoot ? { CLAUDE_PROJECT_DIR: context.projectRoot } : {}),
           NODE_OPTIONS: '',
         },
         stdio: ['pipe', 'pipe', 'pipe'],
@@ -247,14 +249,16 @@ export async function execute(entry, input, root, event, workerManager, route = 
  * Each route keeps its own result so Claude Code does not receive one route's
  * context or decision repeatedly when the host sends the event fanout.
  */
-export async function executeEvent(registry, event, input, root, workerManager) {
+export async function executeEvent(registry, event, input, root, workerManager, context = {}, routeIds = null) {
+  const selected = routeIds ? new Set(routeIds) : null;
   const routes = Object.entries(registry.routes)
     .filter(([, entry]) => entry.event === event)
+    .filter(([route]) => !selected || selected.has(route))
     .sort(([left], [right]) => left.localeCompare(right, undefined, { numeric: true }));
   const outputs = {};
   const failures = [];
   for (const [route, entry] of routes) {
-    try { outputs[route] = await execute(entry, input, root, event, workerManager, route); }
+    try { outputs[route] = await execute(entry, input, root, event, workerManager, route, context); }
     catch (error) { failures.push({ route, error }); }
   }
   return { outputs, failures };
@@ -266,21 +270,64 @@ const routeResult = (result, route) => {
   return result.outputs[route] || {};
 };
 
+const combineText = (left, right) => [left, right].filter(value => typeof value === 'string' && value.length > 0).join('\n');
+
+/**
+ * Collapse the ordered legacy fanout into the single JSON object accepted by
+ * Claude Code. Blocking dominates approval, false continuation dominates true,
+ * and user-visible text is retained in registry order.
+ */
+export function aggregateHookOutputs(outputs) {
+  const merged = {};
+  for (const output of outputs) {
+    if (!output || typeof output !== 'object' || Array.isArray(output)) continue;
+    for (const [key, value] of Object.entries(output)) {
+      if (key === '__proto__' || key === 'prototype' || key === 'constructor') continue;
+      if (value === undefined || ['decision', 'continue', 'suppressOutput'].includes(key)) continue;
+      if (['reason', 'systemMessage', 'additionalContext', 'stopReason'].includes(key)) {
+        merged[key] = combineText(merged[key], value);
+      } else if (key === 'hookSpecificOutput' && value && typeof value === 'object' && !Array.isArray(value)) {
+        merged[key] = { ...(merged[key] || {}), ...value };
+      } else {
+        merged[key] = value;
+      }
+    }
+    if (output.decision === 'block') merged.decision = 'block';
+    else if (output.decision === 'approve' && merged.decision !== 'block') merged.decision = 'approve';
+    if (output.continue === false) merged.continue = false;
+    else if (output.continue === true && merged.continue === undefined) merged.continue = true;
+    if (output.suppressOutput === true) merged.suppressOutput = true;
+    else if (output.suppressOutput === false && merged.suppressOutput === undefined) merged.suppressOutput = false;
+  }
+  return merged;
+}
+
+const groupResult = (result, routeIds) => {
+  const successful = routeIds.filter(route => Object.hasOwn(result.outputs, route));
+  if (successful.length === 0 && result.failures.length > 0) throw result.failures[0].error;
+  return aggregateHookOutputs(successful.map(route => result.outputs[route]));
+};
+
 export async function startServer({ pluginRoot, token, port = PORT, stateRoot = stateDir() } = {}) {
   const registry = await loadRegistry(pluginRoot);
   const { registryDigest, rootFingerprint, runtimeDigest } = await runtimeIdentity(pluginRoot);
   const workerManager = new WorkerManager({ root: pluginRoot });
   const eventFlights = new Map();
-  const dispatchEvent = async (event, input, route) => {
-    if (event !== 'Stop') return execute(registry.routes[route], input, pluginRoot, event, workerManager, route);
+  const dispatchEvent = async (event, input, route, projectRoot) => {
+    const context = { projectRoot };
+    const groupedRoutes = registry.groups?.[route] || null;
+    if (event !== 'Stop') return execute(registry.routes[route], input, pluginRoot, event, workerManager, route, context);
     const sessionId = input && typeof input.session_id === 'string' ? input.session_id : '';
-    const key = sessionId ? `${event}:${sessionId}` : '';
-    if (!key) return execute(registry.routes[route], input, pluginRoot, event, workerManager, route);
+    const key = sessionId && projectRoot ? `${event}:${projectRoot}:${sessionId}` : '';
+    if (!key) {
+      if (groupedRoutes) return groupResult(await executeEvent(registry, event, input, pluginRoot, workerManager, context, groupedRoutes), groupedRoutes);
+      return execute(registry.routes[route], input, pluginRoot, event, workerManager, route, context);
+    }
     const now = Date.now();
     const existing = eventFlights.get(key);
     if (existing && existing.expiresAt > now) {
       existing.seen.add(route);
-      return existing.promise.then(result => routeResult(result, route));
+      return existing.promise.then(result => groupedRoutes ? groupResult(result, groupedRoutes) : routeResult(result, route));
     }
     if (existing) clearTimeout(existing.expiryTimer);
     const expected = new Set(Object.entries(registry.routes)
@@ -291,9 +338,22 @@ export async function startServer({ pluginRoot, token, port = PORT, stateRoot = 
       if (eventFlights.get(key) === state) eventFlights.delete(key);
     }, EVENT_RESULT_TTL_MS);
     state.expiryTimer.unref?.();
-    state.promise = executeEvent(registry, event, input, pluginRoot, workerManager);
+    const routeIds = groupedRoutes || [...expected];
+    state.promise = executeEvent(registry, event, input, pluginRoot, workerManager, context, routeIds);
     eventFlights.set(key, state);
-    return state.promise.then(result => routeResult(result, route));
+    if (groupedRoutes) {
+      // One host-visible dispatcher has no late sibling routes to serve from a
+      // completed cache. Drop it as soon as the overlapping flight settles so
+      // a Stop re-entry (stop_hook_active=true) executes the loop guards again.
+      state.promise.then(() => {
+        if (eventFlights.get(key) === state) eventFlights.delete(key);
+        clearTimeout(state.expiryTimer);
+      }, () => {
+        if (eventFlights.get(key) === state) eventFlights.delete(key);
+        clearTimeout(state.expiryTimer);
+      });
+    }
+    return state.promise.then(result => groupedRoutes ? groupResult(result, groupedRoutes) : routeResult(result, route));
   };
   const server = http.createServer(async (request, response) => {
     let route = '';
@@ -315,8 +375,12 @@ export async function startServer({ pluginRoot, token, port = PORT, stateRoot = 
       if (url.pathname === '/v1/register') return json(response, 200, { registered: Boolean(input.session_id) });
       route = decodeURIComponent(url.pathname.replace('/v1/dispatch/', ''));
       const entry = registry.routes[route];
-      if (!entry || url.pathname !== `/v1/dispatch/${encodeURIComponent(route)}`) return json(response, 404, { error: 'unknown route' });
-      return json(response, 200, await dispatchEvent(route.split('/')[0], input, route));
+      const groupedRoutes = registry.groups?.[route];
+      if ((!entry && !groupedRoutes) || url.pathname !== `/v1/dispatch/${encodeURIComponent(route)}`) return json(response, 404, { error: 'unknown route' });
+      const headerRoot = decodeProjectRootHeader(request.headers['x-dev-pomogator-project-root']);
+      const projectRoot = resolveHookProjectRoot({ input, requestProjectRoot: headerRoot, env: {} });
+      if (!projectRoot && registry.version >= 2) return json(response, 200, {});
+      return json(response, 200, await dispatchEvent(route.split('/')[0], input, route, projectRoot || pluginRoot));
     } catch (error) {
       const incidentId = randomUUID();
       const detail = sanitizeDetail(error, [token]);
@@ -354,7 +418,7 @@ async function atomicState(path, content) {
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  const pluginRoot = process.env.DEV_POMOGATOR_PLUGIN_ROOT || process.cwd();
+  const pluginRoot = process.env.DEV_POMOGATOR_PLUGIN_ROOT || fileURLToPath(new URL('../..', import.meta.url));
   const token = (await readFile(tokenFile(), 'utf8')).trim();
   await mkdir(stateDir(), { recursive: true, mode: 0o700 });
   const identity = await runtimeIdentity(pluginRoot);

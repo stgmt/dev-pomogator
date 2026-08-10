@@ -34,11 +34,14 @@ import { checkConformance, type Finding } from '../spec-graph/conformance.ts';
 import { appendFindings } from '../spec-check-log/writer.ts';
 import { computeTaskCensus, writeTaskCensusCache } from '../spec-graph/task-census.ts';
 import { backlogSpecs } from '../spec-graph/spec-status-store.ts';
+import { projectHasSpecs, resolveHookProjectRoot, resolveProjectPath } from '../_shared/hook-project-root.mjs';
 
 interface HookInput {
   tool_name?: string;
   tool_input?: { file_path?: string };
   session_id?: string;
+  cwd?: string;
+  project_dir?: string;
 }
 
 const WINDOW_MS = 3_000;
@@ -85,8 +88,8 @@ function clearState(repoRoot: string): void {
 }
 
 function isOptedOut(filePath: string, repoRoot: string): boolean {
-  const abs = path.isAbsolute(filePath) ? filePath : path.join(repoRoot, filePath);
-  if (!fs.existsSync(abs)) return false;
+  const abs = resolveProjectPath(repoRoot, filePath);
+  if (!abs || !fs.existsSync(abs)) return false;
   try {
     const head = fs.readFileSync(abs, 'utf8').slice(0, 512);
     if (/^_no_push_check:\s*true/m.test(head)) return true;
@@ -287,8 +290,9 @@ export function runPush(
 }
 
 async function main(): Promise<void> {
-  const repoRoot = process.env.CLAUDE_PLUGIN_ROOT ?? process.env.DEV_POMOGATOR_REPO_ROOT ?? process.cwd();
   const input = await readStdinJson<HookInput>();
+  const repoRoot = resolveHookProjectRoot({ input });
+  if (!repoRoot || !projectHasSpecs(repoRoot)) return;
   const fp = input.tool_input?.file_path ?? null;
   const out = runPush(repoRoot, fp, Date.now(), { sessionId: input.session_id });
   if (out) process.stdout.write(out);
