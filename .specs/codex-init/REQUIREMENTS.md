@@ -11,6 +11,7 @@
 | [FR-5](FR.md#fr-5-real-codex-cli-verification-gate) | Real Codex CLI verification gate | [AC-5](ACCEPTANCE_CRITERIA.md#ac-5-fr-5) | @feature5 | Draft |
 | [FR-6](FR.md#fr-6-stale-claim-rejection) | Stale claim rejection | [AC-6](ACCEPTANCE_CRITERIA.md#ac-6-fr-6) | @feature6 | Draft |
 | [FR-7](FR.md#fr-7-minimal-codex-package-scope) | Minimal Codex package scope | [AC-7](ACCEPTANCE_CRITERIA.md#ac-7-fr-7) | @feature7 | Draft |
+| [FR-8](FR.md#fr-8-second-full-spec-generator-v4-codex-entry) | Second full spec-generator-v4 Codex entry | [AC-8](ACCEPTANCE_CRITERIA.md#ac-8-fr-8) | @feature8 | Draft |
 
 ## Functional Requirements
 
@@ -21,6 +22,7 @@
 - [FR-5: Real Codex CLI Verification Gate](FR.md#fr-5-real-codex-cli-verification-gate)
 - [FR-6: Stale Claim Rejection](FR.md#fr-6-stale-claim-rejection)
 - [FR-7: Minimal Codex Package Scope](FR.md#fr-7-minimal-codex-package-scope)
+- [FR-8: Second Full spec-generator-v4 Codex Entry](FR.md#fr-8-second-full-spec-generator-v4-codex-entry)
 
 ## Non-Functional Requirements
 
@@ -38,6 +40,7 @@
 - [AC-5 (FR-5): Real Codex CLI verification gate](ACCEPTANCE_CRITERIA.md#ac-5-fr-5)
 - [AC-6 (FR-6): Stale claim rejection](ACCEPTANCE_CRITERIA.md#ac-6-fr-6)
 - [AC-7 (FR-7): Minimal Codex package scope](ACCEPTANCE_CRITERIA.md#ac-7-fr-7)
+- [AC-8 (FR-8): Second full spec-generator-v4 Codex entry](ACCEPTANCE_CRITERIA.md#ac-8-fr-8)
 
 ## Verification Matrix (CHK)
 
@@ -50,6 +53,7 @@
 | CHK-FR5-01 | Real Codex CLI verification is required | FR-5, AC-5, @feature5 | Integration test | Draft | Use real `codex plugin` commands or harness. |
 | CHK-FR6-01 | Stale claims are rejected | FR-6, AC-6, @feature6 | BDD scenario | Draft | Reject stale Codex flags/commands copied from Claude. |
 | CHK-FR7-01 | Codex package exposes only context-menu scope | FR-7, AC-7, @feature7 | BDD scenario | Draft | CODEXINIT001_07 verifies minimal skills and no hooks/rules/commands. |
+| CHK-FR8-01 | Full spec generator is a distinct evidence-gated second entry | FR-8, AC-8, @feature8, UC-6 | Integration test | Draft | CODEXINIT001_10 verifies ordering, distinct distribution identity, ownership boundary, and non-Supported status without runtime evidence. |
 
 ## Verification Process
 
@@ -71,8 +75,8 @@
 
 ## Summary Counts
 
-- Total CHKs: 7
+- Total CHKs: 8
 - Verified: 0
 - In Progress: 0
-- Draft: 7
+- Draft: 8
 - Blocked: 0

@@ -13,7 +13,7 @@ WHEN the master NDJSON is generated AND post-processing splits by spec slug THEN
 ## AC-1.3
 **Требование:** [FR-1](FR.md#fr-1)
 
-IF a target TypeScript project installs dev-pomogator v4 AND existing vitest unit tests are present THEN cucumber-js BDD integration SHALL be mandatory additive (not replace), running both test suites in CI.
+**Статус:** SUPERSEDED — старый npm/v1 install-flow. Каноническая установка v4 идёт через marketplace plugin; текущий plugin contract и его BDD-доказательства владеют этим поведением. История старого требования сохранена в CHANGELOG.md и audit-reports/ac-mapping-spec-generator-v4.md.
 
 ## AC-2.1
 **Требование:** [FR-2](FR.md#fr-2)
@@ -1612,3 +1612,51 @@ Given concurrent writers plus traversal, symlink/junction, unrelated-file, and a
 
 Given a dependency-absent installed-cache fixture whose plugin root differs from a real project containing `.specs`, when the real hook client/service/conformance path runs, then all reads and writes are project-scoped, no cache-local state appears, and the legacy cache-root regression fails the scenario.
 
+## AC-83.1
+**Требование:** [FR-83](FR.md#fr-83)
+WHEN an isolated Codex home installs `spec-generator-v4@dev-pomogator-codex` beside `context-menu@dev-pomogator-codex` THEN the marketplace SHALL resolve exactly two unique plugin ids with distinct sources and manifests, the full plugin SHALL expose the canonical required skills, hooks, MCP, and phase surfaces, and the context-menu package SHALL retain its baseline manifest digest and behavior. The full-package producer SHALL emit an immutable handoff; only `codex-init:FR-8` SHALL write catalog order and support status.
+
+## AC-83.2
+**Требование:** [FR-83](FR.md#fr-83)
+WHEN the bundled MCP server starts with process cwd inside a Codex plugin-cache directory and a different target repository is selected THEN `read_spec_doc`, attachment read, proposal, mutation, transaction, status, and `create_spec` SHALL operate only under the target root, SHALL leave the cache byte-identical, and SHALL reject a realpath escape. After a successful cross-document mutation, the next live trace SHALL retain every declared AC, scenario, task, design, and story edge for the touched fixture and SHALL equal a fresh cold graph build.
+
+## AC-83.3
+**Требование:** [FR-83](FR.md#fr-83)
+WHEN Codex emits `apply_patch`, shell, `update_plan`, and underscore-normalized MCP tool events THEN one generated hook route SHALL normalize them before the existing guards; under enforce a raw `.specs/**` patch or shell write SHALL be denied with an MCP-door next action, while the corresponding `mcp__dev_pomogator_specs__*` mutation SHALL be allowed and audited.
+
+## AC-83.4
+**Требование:** [FR-83](FR.md#fr-83)
+WHEN the create-spec phase loop runs in Codex Desktop THEN a host spawn adapter SHALL invoke a native Codex subagent or packaged built-in-role fallback, preserve fresh-agent isolation, MCP-only spec access, STOP confirmation, timeout, retry budget, and gate verdicts, and SHALL stop with a named failure instead of invoking `claude -p` implicitly. Verification SHALL exercise native and fallback branches separately and require exactly one result for each.
+
+## AC-83.5
+**Требование:** [FR-83](FR.md#fr-83)
+WHEN semantic judgment is requested under Codex THEN the shared host adapter SHALL either return a provenance-bearing judgment through a supported path or emit the explicit semantic-skip/not-ready result; an absent executable, unsupported Desktop capability, timeout, or malformed response SHALL NOT become GREEN. Verification SHALL retain one independently asserted result for the supported, absent, unsupported, timeout, and malformed cases.
+
+## AC-83.6
+**Требование:** [FR-83](FR.md#fr-83)
+WHEN canonical skill, hook, agent, or MCP-consumer input changes THEN the adapter generator SHALL update every declared Codex projection deterministically and `--check` SHALL fail independently on each missing, stale, extra, or hand-modified output with a source fingerprint and actionable diff. Two clean generations SHALL be byte-identical. No manually maintained broad Codex rules/skills tree SHALL be required.
+
+## AC-83.7
+**Требование:** [FR-83](FR.md#fr-83)
+WHEN the packaged full plugin is executed with repository `node_modules` absent THEN the real launcher SHALL initialize, its catalog SHALL match the canonical required MCP registry, packaged skills/hooks SHALL load, and doctor SHALL distinguish missing install, stale package, root mismatch, adapter drift, unsupported host spawn, and semantic-judge unavailability with actionable next steps.
+
+## AC-83.8
+**Требование:** [FR-83](FR.md#fr-83)
+WHEN release readiness for FR-83 is evaluated THEN a captured fresh Codex Desktop task after plugin reload/restart SHALL prove installed-cache discovery, MCP list/read/mutate/status, raw-write deny, one phase-agent execution, and honest semantic status against an external repo. Repo dogfood, a Codex CLI PATH shim, deterministic manifest tests, or an uncaptured owner statement SHALL leave the LIVE_EVIDENCE lane incomplete.
+
+## AC-83.9
+**Требование:** [FR-83](FR.md#fr-83)
+WHEN the declared host/distribution matrix is verified THEN all four rows SHALL use the same canonical graph, MCP tool registry, hook policy, and workflow semantics; only discovery, package location, and host-spawn adapter MAY differ. Each row SHALL have its own scenario id and evidence key, and the aggregate SHALL require exactly four unique keys. A skipped, duplicated, substituted, or silently merged row SHALL fail matrix completeness.
+
+### Host and distribution decision table for FR-83
+
+| Host | Distribution | Required proof | Expected distinction |
+|---|---|---|---|
+| Codex Desktop | repo dogfood | project discovery + MCP/guard/phase smoke | generated repo adapters; no installed-cache claim |
+| Codex Desktop | installed plugin | isolated install + fresh Desktop live record | mandatory installed-cache and reload proof |
+| Codex CLI | repo dogfood | deterministic integration smoke | same policies through CLI host adapter |
+| Codex CLI | installed plugin | isolated dependency-absent package smoke | package/catalog/root parity; not a substitute for Desktop live evidence |
+
+## AC-83.10
+**Требование:** [FR-83](FR.md#fr-83)
+WHEN the FR-83 package and dependency graph are inspected THEN they SHALL contain no new task/thread-management, scheduled-automation, connector, or `app://` dependency; SHALL NOT change context-menu behavior or Cursor FR-81 ownership; and SHALL NOT introduce a second SpecGraph, MCP registry, task store, or canonical rules tree.

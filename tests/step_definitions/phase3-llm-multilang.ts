@@ -16,6 +16,7 @@
 import { Given, When, Then } from '@cucumber/cucumber';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { runJudge, emitDenyListSkipFinding } from '../../tools/spec-llm-judge/index.ts';
 import {
@@ -43,6 +44,9 @@ interface Phase3World extends V4World {
   ndjsonSource?: string;
   ndjsonPatch?: { language: string; patch: { byLocation: Map<string, { lastResult: string }> } };
   reqnrollBinding?: RunnerStepBinding;
+  semanticOptOut?: boolean;
+  optOutPairCount?: number;
+  optOutResults?: Array<{ result: string }>;
 }
 
 /** Minimal SpecGraph: FR ──tested-by──▶ Scenario ──step-binding──▶ StepBinding. */
@@ -380,3 +384,57 @@ Then(
     assert.notEqual(this.judgeResult?.result, 'NO_DRIFT_DETECTED');
   },
 );
+
+// ─── SPECGEN004_694 — per-spec semantic opt-out ────────────────────────────
+
+Given(
+  'a spec frontmatter opt-out is enabled and two FR-to-scenario pairs are prepared',
+  function (this: Phase3World) {
+    this.judgeFrText = 'FR-026: semantic checks are disabled for this spec';
+    this.judgeScenarioText = 'Scenario: SCEN-optout-a — policy is explicit';
+    this.semanticOptOut = true;
+    this.optOutPairCount = 2;
+    this.judgeSpawnCalled = false;
+    this.tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'spec-llm-optout-'));
+  },
+);
+
+When(
+  'the authoritative verdict evaluates semantic coverage',
+  async function (this: Phase3World) {
+    this.optOutResults = [];
+    for (let i = 0; i < (this.optOutPairCount ?? 0); i += 1) {
+      const result = await runJudge({
+        repoRoot: this.tempDir,
+        frId: `spec-generator-v4:FR-26-${i + 1}`,
+        frText: this.judgeFrText ?? '',
+        scenarioId: `spec-generator-v4:SCEN-optout-${i + 1}`,
+        scenarioText: this.judgeScenarioText ?? '',
+        spec_llm_judge_deny: this.semanticOptOut,
+        spawn: async () => {
+          this.judgeSpawnCalled = true;
+          return JSON.stringify({ result: 'NO_DRIFT_DETECTED' });
+        },
+      });
+      this.optOutResults.push(result);
+    }
+  },
+);
+
+Then('no semantic subprocess is spawned', function (this: Phase3World) {
+  assert.equal(this.judgeSpawnCalled, false, 'opt-out must short-circuit every pair before spawn');
+  assert.ok(this.optOutResults?.every((result) => result.result === 'SKIPPED_OPT_OUT'));
+});
+
+Then('no semantic cache entry is created', function (this: Phase3World) {
+  const cacheDir = path.join(this.tempDir, '.dev-pomogator', '.spec-llm-cache');
+  assert.ok(!fs.existsSync(cacheDir) || fs.readdirSync(cacheDir).length === 0, 'opt-out must not write semantic cache entries');
+});
+
+Then('the spec-check log contains one opt-out event for each pair', function (this: Phase3World) {
+  const log = readLatestSpecCheckLog(this.tempDir);
+  const entries = log.split('\n').filter(Boolean).map((line) => JSON.parse(line) as Record<string, unknown>);
+  const optOuts = entries.filter((entry) => entry.finding_code === 'SEMANTIC_CHECK_SKIPPED_OPT_OUT');
+  assert.equal(optOuts.length, this.optOutPairCount);
+  assert.ok(optOuts.every((entry) => String(entry.severity).toLowerCase() === 'info'));
+});

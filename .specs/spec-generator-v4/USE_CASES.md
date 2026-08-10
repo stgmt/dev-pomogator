@@ -581,3 +581,26 @@ A feature request claims a public catalog/policy surface and an authenticated pa
 
 **Linked stories:** [User Story 63](USER_STORIES.md#user-story-63-installed-hooks-keep-project-state-bounded-and-isolated-priority-p1)
 
+## UC-35
+
+**Install and operate spec-generator-v4 from Codex Desktop**
+
+**Goal:** Run the complete existing spec workflow in Codex Desktop against an arbitrary target repository without a second spec engine or manually maintained Codex copy.
+
+**Trigger:** A developer installs the full `spec-generator-v4` marketplace entry and opens a project containing or creating `.specs/`.
+
+**Main flow:**
+
+1. Install `spec-generator-v4@dev-pomogator-codex` into an isolated or normal Codex home; keep `context-menu` independently installable.
+2. Reload plugins or start a fresh Desktop task and verify that packaged skills, hooks, and the `dev-pomogator-specs` MCP catalog match the canonical registries.
+3. Resolve the target repository independently of the plugin-cache cwd and initialize the shared SpecGraph once.
+4. Use MCP reads and mutations for discovery, requirements, finalization, status, and audit; verify every handler remains confined to the target root.
+5. Normalize Codex hook payloads and prove the enforce guard denies a raw `.specs/**` patch or shell write while allowing the MCP mutation path.
+6. Run a workflow phase through the host adapter using a native Codex subagent or built-in fallback, retaining the existing gate/retry/STOP semantics.
+7. Run doctor and dependency-absent package checks, then capture a fresh Desktop live-evidence record for the installed path.
+
+**Failure paths:** Plugin catalog drift, generated adapter drift, cache/target root mismatch, unsupported hook event, absent host spawn path, missing judge path, dependency leak, or missing live evidence leaves the feature NOT_READY with a named next action. None is converted into a successful fallback silently.
+
+**Outcome:** The developer gets one canonical spec system through a Codex host adapter; repository and installed modes differ only at the distribution/root boundary.
+
+**Linked stories:** [User Story 63](USER_STORIES.md#user-story-63-codex-desktop-runs-the-full-spec-workflow-priority-p1)

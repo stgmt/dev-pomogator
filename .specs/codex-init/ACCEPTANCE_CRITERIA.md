@@ -47,3 +47,9 @@ WHEN the Codex manifest for the whitelisted `context-menu` plugin is inspected T
 **Требование:** [FR-5](FR.md#fr-5-real-codex-cli-verification-gate)
 
 WHEN the real Codex plugin probe is unavailable, skipped, or fails THEN verification SHALL fail rather than report Supported. WHEN an installed plugin path is returned THEN containment SHALL be determined by normalized path ancestry under isolated CODEX_HOME, not by string-prefix similarity.
+
+## AC-8 (FR-8)
+
+**Требование:** [FR-8](FR.md#fr-8-second-full-spec-generator-v4-codex-entry)
+
+WHEN the Codex whitelist entries are ordered THEN `context-menu` SHALL remain first and the separately installable `spec-generator-v4` plugin SHALL be second, with a unique id and a plugin source and manifest reference distinct from the context-menu-only package. WHEN ownership is inspected THEN this spec SHALL contain only the distribution record, support status, and evidence gate, while full-plugin behavior SHALL remain owned by requirement 83 of the main `spec-generator-v4` spec. IF passing installed-runtime evidence for that contract is absent THEN the second entry SHALL remain `Draft` or `Blocked` and SHALL NOT be reported as `Supported`.

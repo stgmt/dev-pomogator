@@ -68,3 +68,15 @@ Scenario: CODEXINIT001_08 support fails without a real path-safe Codex probe
     Given a whitelist entry is marked "Supported"
     When its verification evidence is inspected
     Then the harness succeeds only through a PATH-shimmed codex executable backed by the committed probe fixture
+
+@FR-8 @AC-8
+  Scenario: CODEXINIT001_10 full spec generator is the distinct second plugin entry
+    Given the Codex plugin support whitelist exists
+    When the whitelist entries are ordered
+    Then the first entry is "context-menu"
+    And the second entry is "spec-generator-v4"
+    And the second entry has its own plugin source and manifest reference
+    And codex-init is the only writer of whitelist order and support status
+    And the entry consumes the package handoff from "spec-generator-v4" task "p50-codex-plugin-distribution"
+    And full plugin behavior is delegated to "spec-generator-v4" requirement 83
+    And the second entry is not reported as Supported without installed-runtime evidence

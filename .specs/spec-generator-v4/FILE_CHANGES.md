@@ -298,6 +298,18 @@ This block enumerates the spec-doc edits applied as part of the v3→v4 transiti
 | Path | Action | Reason |
 |------|--------|--------|
 | `tools/spec-graph/task-census.ts` | edit | Reconcile transcript-derived `TaskCreate` / `TaskUpdate` agent todos by real task id instead of positional array index, collapse duplicate stale subjects, and demote ambiguous clusters ([FR-49](FR.md#fr-49)) |
+
+## Phase 34 — six acceptance-criteria remediation
+
+| Path | Action | Reason |
+|------|--------|--------|
+| tools/marksman-installer/lsp-probe.ts | edit | Reusable LSP session plus real textDocument/definition request for AC-7.5 |
+| tools/marksman-installer/__tests__/launch-marksman-e2e.test.ts | edit | Real source/target Markdown definition proof for AC-7.5 |
+| tests/step_definitions/phase2-mcp.ts | edit | AC-7.5 BDD step drives the real launcher and asserts target URI/range |
+| tools/dead-integration-guard/check.ts | create | Executable installed-versus-integrated guard for AC-7.4 |
+| tests/step_definitions/feature_dead_integration_guard.ts | create | Planted-negative and current-Marksman positive BDD proof for AC-7.4 |
+| scripts/migration-phase-gate.ts | create | Machine-readable ALLOW/DENY migration completion gate for AC-36.6 |
+| tests/step_definitions/feature36_migration_phase_gate.ts | create | Deterministic dirty/full evidence policy scenarios for AC-36.6 |
 | `tools/claim-evidence-gate/claim_evidence_gate_stop.ts` | edit | Include selected next-step source, real task id, transcript location/range, selected subject, and reconciliation reason in Pinator fire logs ([FR-49](FR.md#fr-49)) |
 | `tests/step_definitions/feature49_autosurface.ts` | edit | BDD/API coverage for the captured CARL stale-agent-todo replay shape and enriched Stop-gate fire logging ([FR-49](FR.md#fr-49)) |
 | `tools/claim-evidence-gate/claim_evidence_gate_stop.bundle.mjs` | edit | Rebuilt distributed Stop-gate artifact so plugin users receive transcript todo replay reconciliation and diagnostics ([FR-49](FR.md#fr-49)) |
@@ -735,6 +747,13 @@ This table is the explicit implementation inventory for the execution-aware task
 | `.specs/spec-generator-v4/CHANGELOG.md` | edit | 2026-08-04 readiness-debt closure + owner attestation record. |
 | `tools/spec-graph/readiness-inventory.ts` | edit | FR-68 AC_SATISFACTION producer fix — AC satisfaction computed from OWN tested-by scenarios + current outcomes (fresh PASSED or owner attestation); the graph never emits verifies edges targeting ACs, so the old verifies-only formula could structurally never satisfy the lane. |
 | `tools/spec-graph/coverage.ts` | edit | FR-68 — isLiveAttestedScenario shared helper consumed by verifiedStatus/task truth. |
+| `.specs/spec-generator-v4/spec-generator-v4.feature` | edit | FR-68 AC-SATISFACTION wave 1 — 33 ACs (FR-1..FR-14) mapped to their own verifying scenarios via @AC-N.N tags; 5 ACs flagged no-candidate. |
+| `audit-reports/ac-mapping-spec-generator-v4.md` | create | Audited mapping journal (AC → scenario → quoted justification step) for all waves. |
+| `.specs/spec-generator-v4/spec-generator-v4.feature` | edit | FR-68 AC-SATISFACTION wave 2 — 29 ACs (FR-15..FR-28) mapped to their own verifying scenarios via @AC-N.N tags; 3 ACs flagged no-candidate. |
+| `.specs/spec-generator-v4/spec-generator-v4.feature` | edit | FR-68 AC-SATISFACTION wave 3 — 50 ACs (FR-29..FR-40) mapped to their own verifying scenarios via @AC-N.N tags; 1 AC flagged no-candidate. |
+| `.specs/spec-generator-v4/spec-generator-v4.feature` | edit | FR-68 AC-SATISFACTION wave 4 — 18 ACs (FR-41..FR-52) mapped to their own verifying scenarios via @AC-N.N tags; 1 AC flagged no-candidate. |
+| `.specs/spec-generator-v4/spec-generator-v4.feature` | edit | FR-68 AC-SATISFACTION wave 5 — 25 ACs (FR-53..FR-62) mapped to their own verifying scenarios via @AC-N.N tags (46 scenario tags); 3 ACs flagged no-candidate. |
+| `.specs/spec-generator-v4/spec-generator-v4.feature` | edit | FR-68 AC-SATISFACTION wave 6 — 24 ACs mapped (26 scenario tags) + new scenario SPECGEN004_693 covering AC-58.1/AC-58.3 retag invariant; 6 ACs documented clarify with follow-ups. |
 
 - ACCEPTANCE_CRITERIA.md: add AC-81.8 (FR-81)
 
@@ -786,7 +805,7 @@ Phase 49 — Live-evidence containment, atomic CAS proof, strict-synthesis guard
 | `tools/spec-conformance-guard/spec-conformance-guard.ts` | edit | Apply the same root contract and state-free no-spec behavior. |
 | `tools/spec-check-log/writer.ts` | edit | Add locked 10 MiB rotation, 64 MiB aggregate cap, 30-day closed-shard expiry, 1 GiB reserve, active-shard protection, and confined deletion. |
 | `tools/hook-service/client.mjs`, `tools/hook-service/server.mjs`, `tools/hook-service/worker-manager.mjs` | edit | Carry request/session project identity across the persistent service instead of daemon-start environment. |
-| `tests/step_definitions/feature83_installed_hook_journal.ts` | create | Implement SPECGEN004_693–SPECGEN004_699 with installed-layout and deterministic filesystem/time/free-space fixtures. |
+| `tests/step_definitions/feature83_installed_hook_journal.ts` | create | Implement SPECGEN004_715–SPECGEN004_721 with installed-layout and deterministic filesystem/time/free-space fixtures. |
 | `tests/fixtures/spec-check-log/` | create | Captured shard boundary, unsafe path, cross-project, and low-disk fixtures with independent expected paths/bytes. |
 | `.specs/spec-generator-v4/FR.md` | edit | Define FR-83 root and retention requirements. |
 | `.specs/spec-generator-v4/ACCEPTANCE_CRITERIA.md` | edit | Define AC-83.1–AC-83.7. |
@@ -799,4 +818,36 @@ Phase 49 — Live-evidence containment, atomic CAS proof, strict-synthesis guard
 | `.specs/spec-generator-v4/TASKS.md` | edit | Add Phase 50 implementation tasks. |
 | `.specs/spec-generator-v4/FILE_CHANGES.md` | edit | Declare explicit implementation and spec paths. |
 | `.specs/spec-generator-v4/CHANGELOG.md` | edit | Record the spec-only incident package. |
-| `.specs/spec-generator-v4/spec-generator-v4.feature` | edit | Add SPECGEN004_693–SPECGEN004_699. |
+| `.specs/spec-generator-v4/spec-generator-v4.feature` | edit | Add SPECGEN004_715–SPECGEN004_721. |
+## Phase 50 — Codex Desktop first-class host adapter (FR-83)
+
+| Action | Path | Reason |
+|---|---|---|
+| CREATE | `tools/codex-plugin-support/generate-adapters.ts` | FR-83/AC-83.6 — one deterministic generator/check for Codex projections and package inputs. |
+| CREATE | `plugins/spec-generator-v4/.codex-plugin/plugin.json` | FR-83/AC-83.1 — distinct full-workflow plugin identity. |
+| CREATE (generated) | `plugins/spec-generator-v4/.mcp.json` | FR-83/AC-83.1/83.7 — packaged canonical MCP launcher. |
+| CREATE (generated) | `plugins/spec-generator-v4/hooks/hooks.json` | FR-83/AC-83.3/83.6 — Codex channel projection from the canonical hook registry. |
+| CREATE (generated) | `plugins/spec-generator-v4/skills/**` | FR-83/AC-83.4/83.6 — portable workflow skills using built-in roles when custom agents are unavailable. |
+| EDIT | `tools/spec-graph/root-resolution.mjs` | FR-83/AC-83.2 — generalize plugin-cache detection and target confinement for Codex. |
+| EDIT | `tools/spec-graph/incremental.ts` | FR-83/AC-83.2 — preserve and re-derive every affected cross-document edge after validated mutations. |
+| EDIT | `tools/spec-mcp-server/tools.ts` | FR-83/AC-83.2 — use injected registry root in every read/write/status/create handler and serve only the refreshed graph. |
+| EDIT | `tools/spec-mcp-server/server.ts` | FR-83/AC-83.2 — keep target-root injection explicit at registry construction. |
+| CREATE | `tools/_shared/spec-host-adapter.ts` | FR-83/AC-83.4/83.5 — one Claude/Codex spawn and provenance contract shared by phases and judges. |
+| EDIT | `.claude/skills/spec-generator-orchestrator/scripts/phase-runner.ts` | FR-83/AC-83.4 — consume host adapter without duplicating gate/retry logic. |
+| EDIT | `tools/spec-llm-judge/index.ts` | FR-83/AC-83.5 — provider-aware default spawn and honest unsupported state. |
+| EDIT | `tools/spec-llm-judge/legacy-judge.ts` | FR-83/AC-83.5 — same host contract for legacy judgment. |
+| EDIT | `tools/hook-service/registry.mjs` | FR-83/AC-83.3 — channel-aware route rendering with neutral plugin-root contract. |
+| EDIT | `tools/hook-service/generate-manifest.mjs` | FR-83/AC-83.3/83.6 — generate Claude and Codex manifests from one registry. |
+| EDIT | `tools/specs-validator/spec-access-guard.ts` | FR-83/AC-83.3 — consume normalized Codex raw-file and shell payloads. |
+| EDIT | `tools/specs-validator/phase-gate.ts` | FR-83/AC-83.3 — normalize apply_patch/update_plan target extraction. |
+| EDIT | `tools/specs-validator/form-guards-dispatch.ts` | FR-83/AC-83.3 — share normalized write intent. |
+| EDIT | `tools/spec-conformance-guard/spec-conformance-guard.ts` | FR-83/AC-83.3 — apply conformance guard to Codex patch payloads. |
+| EDIT | `tools/skill-health/mirror-contract.json` | FR-83/AC-83.6 — enumerate canonical generated projections and allowed transforms. |
+| EDIT (generated) | `.agents/skills/**`, `.codex/hooks.json`, `AGENTS.md` | FR-83/AC-83.4/83.6 — required generated repo adapters/fingerprints; no manual mirror authority. |
+| EDIT (optional generated) | `.codex/agents/*.toml` | FR-83/AC-83.4/83.6 — repo-dogfood optimization only; installed portability must use built-in roles without these profiles. |
+| EDIT | `.claude/skills/pomogator-doctor/scripts/engine/**` | FR-83/AC-83.7 — Codex plugin/MCP/hook/adapter/root/spawn health checks. |
+| CREATE | `tests/fixtures/codex-host/**` | FR-83/AC-83.2/83.3/83.6/83.7 — captured payload, cache/target, drift, and package fixtures. |
+| CREATE | `tests/step_definitions/feature83_codex_desktop.ts` | FR-83 — real integration steps for SPECGEN004_701..714; live scenario 708 remains externally evidenced. |
+| EDIT | `.specs/spec-generator-v4/spec-generator-v4.feature` | FR-83 — source scenarios and complete host/distribution matrix. |
+
+> **Single-writer handoff:** Phase 50 produces the full plugin package and an immutable id/source/manifest/capability record. `codex-init:FR-8` alone edits `.agents/plugins/marketplace.json` and `tools/codex-plugin-support/verify-whitelist.ts`; those paths are intentionally absent from this phase.

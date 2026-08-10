@@ -10,7 +10,9 @@
 | CODEXINIT-1-2 | Add context-menu whitelist entry | TODO | CODEXINIT-1-1 | Phase 1 | 45m |
 | CODEXINIT-2-1 | Add Codex CLI verification harness | TODO | CODEXINIT-1-2 | Phase 2 | 60m |
 | CODEXINIT-2-2 | Add stale-claim guard for Codex plugin/context-menu claims | TODO | CODEXINIT-2-1 | Phase 2 | 45m |
-| CODEXINIT-3-1 | Run final spec and integration verification | TODO | CODEXINIT-2-2 | Phase 3 | 30m |
+| CODEXINIT-1-3 | Add distinct spec-generator-v4 distribution entry | TODO | CODEXINIT-1-2 | Phase 1 | 60m |
+| CODEXINIT-2-3 | Verify second-entry boundary and runtime evidence gate | TODO | CODEXINIT-1-3 | Phase 2 | 45m |
+| CODEXINIT-3-1 | Run final spec and integration verification | TODO | CODEXINIT-2-2, CODEXINIT-2-3 | Phase 3 | 30m |
 <!-- end auto-generated -->
 
 > Regenerate via `Skill("task-board-forms")` or `npx tsx tools/specs-generator/spec-status.ts -Path .specs/codex-init -Format task-table` and splice between markers.
@@ -30,8 +32,8 @@ Tasks follow Red -> Green -> Refactor. The `.feature` scenarios define the expec
 
 (BDD foundation already in place, verified in DESIGN.md Evidence: `package.json` `test:bdd` + `@cucumber/cucumber`.)
 
-- [ ] Finalize `.specs/codex-init/codex-init.feature` -- @feature1 @feature2 @feature3 @feature4 @feature5 @feature6 — Status: TODO | Est: 30m
-  _Requirements: [FR-1](FR.md#fr-1-init), [FR-2](FR.md#fr-2-parallel-claude-code-and-codex-channels), [FR-3](FR.md#fr-3-context-menu-as-first-whitelisted-codex-plugin-surface), [FR-4](FR.md#fr-4-codex-native-packaging-contract), [FR-5](FR.md#fr-5-real-codex-cli-verification-gate), [FR-6](FR.md#fr-6-stale-claim-rejection)_
+- [ ] Finalize `.specs/codex-init/codex-init.feature` -- @feature1 @feature2 @feature3 @feature4 @feature5 @feature6 @feature7 @feature8 — Status: TODO | Est: 30m
+  _Requirements: [FR-1](FR.md#fr-1-init), [FR-2](FR.md#fr-2-parallel-claude-code-and-codex-channels), [FR-3](FR.md#fr-3-context-menu-as-first-whitelisted-codex-plugin-surface), [FR-4](FR.md#fr-4-codex-native-packaging-contract), [FR-5](FR.md#fr-5-real-codex-cli-verification-gate), [FR-6](FR.md#fr-6-stale-claim-rejection), [FR-7](FR.md#fr-7-minimal-codex-package-scope), [FR-8](FR.md#fr-8-second-full-spec-generator-v4-codex-entry)_
   **Done When:**
   - [ ] Each scenario has a concrete scenario id and one `@FR-N` tag.
   - [ ] Scenarios fail before implementation if step definitions are wired.
@@ -66,6 +68,17 @@ Tasks follow Red -> Green -> Refactor. The `.feature` scenarios define the expec
   - [ ] Script uses verified Codex launch flags.
   - [ ] Context-menu invocation uses `-NoTui`; Codex+TUI is not implied by this whitelist entry.
   - [ ] Script does not use Claude-only `--dangerously-skip-permissions`.
+
+
+- [ ] Add distinct `spec-generator-v4` distribution entry -- @feature8 — id: CODEXINIT-1-3 — Status: TODO | Est: 60m
+  _Requirements: [FR-8](FR.md#fr-8-second-full-spec-generator-v4-codex-entry)_
+  _Acceptance: [AC-8](ACCEPTANCE_CRITERIA.md#ac-8-fr-8)_
+  **Done When:**
+  - [ ] This task is the sole writer of `.agents/plugins/marketplace.json`; it keeps `context-menu` first and adds `spec-generator-v4` second.
+  - [ ] The second entry has a unique id and a plugin source and manifest reference distinct from the context-menu-only package.
+  - [ ] The entry consumes the immutable package handoff from `spec-generator-v4:p50-codex-plugin-distribution`; that producer does not write whitelist order or status.
+  - [ ] The record stores only distribution/status/evidence metadata and names main spec requirement 83 as the full runtime owner.
+  - [ ] The entry remains `Draft` or `Blocked` until installed-runtime evidence passes.
 
 ## Phase 2: Verification Gates (Green)
 
@@ -112,9 +125,19 @@ Tasks follow Red -> Green -> Refactor. The `.feature` scenarios define the expec
   - [ ] Existing Claude plugin/context-menu artifacts remain present.
   - [ ] Codex verification does not overwrite Claude verification evidence.
 
+
+- [ ] Verify the second-entry distribution boundary -- @feature8 — id: CODEXINIT-2-3 — Status: TODO | Est: 45m
+  _Requirements: [FR-8](FR.md#fr-8-second-full-spec-generator-v4-codex-entry)_
+  _Acceptance: [AC-8](ACCEPTANCE_CRITERIA.md#ac-8-fr-8)_
+  **Done When:**
+  - [ ] `tests/step_definitions/feature_codex_init.ts` binds `CODEXINIT001_10` to the real whitelist verifier.
+  - [ ] Verification asserts entry order, unique identity, distinct source/manifest reference, and the non-`Supported` evidence gate.
+  - [ ] Verification consumes installed-runtime evidence from main spec requirement 83 and does not duplicate assertions for its skills, agents, hooks, MCP, adapters, or root behavior.
+  - [ ] Docker BDD and the real Codex install/runtime probe pass before any status is promoted.
+
 ## Phase 3: Refactor & Polish
 
-- [ ] Final verification -- @feature1 @feature2 @feature3 @feature4 @feature5 @feature6 — Status: TODO | Est: 30m
+- [ ] Final verification -- @feature1 @feature2 @feature3 @feature4 @feature5 @feature6 @feature7 @feature8 — Status: TODO | Est: 30m
   **Done When:**
   - [ ] `npx tsx tools/specs-generator/validate-spec.ts -Path .specs/codex-init` reports 0 errors.
   - [ ] `npx tsx tools/specs-generator/audit-spec.ts -Path .specs/codex-init` reports 0 errors.

@@ -5,8 +5,18 @@
 // present ⇒ run; absent inside Docker ⇒ hard FAIL; absent on a dev host ⇒ skip.
 
 import { describe, it, expect } from 'vitest';
+import fs from 'node:fs';
+import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { resolveMarksmanBinary } from '../resolve-binary.ts';
-import { createMarksmanWorkspace, decideE2e, isInDocker, probeInitialize, removeMarksmanWorkspace } from '../lsp-probe.ts';
+import {
+  createMarksmanWorkspace,
+  decideE2e,
+  isInDocker,
+  probeDefinition,
+  probeInitialize,
+  removeMarksmanWorkspace,
+} from '../lsp-probe.ts';
 
 const resolved = resolveMarksmanBinary({ repoRoot: process.cwd() });
 const decision = decideE2e({ binaryPath: resolved?.binaryPath ?? null, inDocker: isInDocker() });
@@ -42,6 +52,22 @@ describe('launch-marksman e2e — real binary answers LSP initialize (FR-7 hop-1
         expect(capabilities.referencesProvider).toBeTruthy();
         expect(capabilities.renameProvider).toBeTruthy();
         expect(capabilities.documentSymbolProvider).toBeTruthy();
+
+        const target = path.join(ws, 'target.md');
+        const source = path.join(ws, 'source.md');
+        fs.writeFileSync(target, '# Target Heading\n\nTarget body.\n');
+        const sourceText = '[Target](target.md#target-heading)\n';
+        fs.writeFileSync(source, sourceText);
+        const definitions = await probeDefinition({
+          binaryPath: resolved!.binaryPath,
+          workspaceDir: ws,
+          documentPath: source,
+          position: { line: 0, character: 3 },
+        });
+        expect(definitions.definitions).toHaveLength(1);
+        expect(definitions.definitions[0].uri).toBe(pathToFileURL(target).href);
+        expect(definitions.definitions[0].range.start.line).toBe(0);
+        expect(definitions.definitions[0].range.start.character).toBe(0);
       } finally {
         removeMarksmanWorkspace(ws);
       }

@@ -283,3 +283,14 @@ Journal maintenance SHALL be linear in the number of retained shards, SHALL insp
 
 A malformed project identity, unavailable disk-space probe, maintenance-lock conflict, prune failure, or journal write failure SHALL preserve hook fail-open behavior without falling back to the plugin cache, recursively logging the failure, deleting the active shard, or damaging unrelated project files. Retention invariants are 10 MiB per active shard, 64 MiB total per project, 30 days for closed shards, and a 1 GiB free-space reserve.
 
+## NFR-Performance-14 (FR-83)
+
+**No duplicate graph or hook pipeline:** A Codex host invocation SHALL create no second SpecGraph build, MCP registry, task store, or parallel guard chain solely because of the host. Hook adaptation SHALL add one bounded normalization/dispatch pass before the existing policy. Performance verification SHALL compare repo and installed variants against the same canonical corpus and report any regression explicitly; it SHALL not hide startup work in a pre-warmed checkout.
+
+## NFR-Reliability-17 (FR-83)
+
+**Deterministic adapter and package parity:** Equal canonical source bytes and generator version SHALL produce byte-equivalent Codex skills, hook manifest, agent profiles, MCP consumer map, plugin manifest inputs, and fingerprints. A missing, stale, manually divergent, or partially generated artifact SHALL fail the distribution check with source and target paths. Unsupported host spawn or semantic judge capability SHALL remain an explicit NOT_READY/SEMANTIC_SKIPPED state.
+
+## NFR-Security-11 (FR-83)
+
+**Target confinement and guard parity:** Every installed MCP operation SHALL canonicalize and remain within the selected target repository root even when the executable and cwd are in a plugin cache. Codex raw-file and shell payloads SHALL receive the same enforce decision as their Claude-equivalent intent. Cache paths, external symlink/junction targets, and unresolved roots SHALL be rejected before reading or mutation; diagnostic output SHALL not expose secrets.

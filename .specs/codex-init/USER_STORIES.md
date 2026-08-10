@@ -122,3 +122,25 @@ As a maintainer, I want stale Claude-only assumptions to be rejected before they
 Given a Codex implementation claim uses Claude-only behavior
 When official Codex docs or local Codex output contradict it
 Then the claim is rejected until corrected
+
+---
+
+### User Story 7: Publish the Full Spec Generator as the Second Codex Plugin (Priority: P1)
+
+**Требование:** [FR-8](FR.md#fr-8-second-full-spec-generator-v4-codex-entry)
+
+As a dev-pomogator maintainer, I want the full `spec-generator-v4` Codex plugin to be a separate second whitelist entry, so that users can install the full spec workflow without widening the context-menu-only package.
+
+**Why:** The launcher-only package and the full spec engine have different runtime surfaces. A separate entry preserves the minimal first package and keeps the full Codex Desktop behavior owned by the main `spec-generator-v4` contract.
+
+**Independent Test:** `@FR-8` verifies the ordered second entry, its distinct plugin source and manifest reference, its ownership boundary, and its evidence-gated support status.
+
+**Acceptance Scenarios:**
+
+Given the Codex plugin support whitelist exists
+When its plugin entries are ordered
+Then `context-menu` remains first and `spec-generator-v4` is the separately installable second entry
+
+Given the second entry has no passing installed-runtime evidence for requirement 83 of the main `spec-generator-v4` spec
+When its support status is evaluated
+Then it remains `Draft` or `Blocked` rather than `Supported`

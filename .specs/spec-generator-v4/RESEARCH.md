@@ -1694,3 +1694,40 @@ Full mechanism table, commit-pinned sources, gap matrix and adoption verdict: [T
 
 Implement strict plugin/project root separation, request-scoped project identity, and per-project journal limits of 10 MiB active-shard rotation, 64 MiB total, 30 days, and 1 GiB free reserve. The canonical-plugin spec separately owns consolidation of the 13 visible DevPomogator Stop registrations into one semantics-preserving dispatcher.
 
+## Codex Desktop host and distribution audit — 2026-08-10
+
+**Требование:** [FR-83](FR.md#fr-83)
+
+### Verified current state
+
+- **[VERIFIED]** Codex plugins may package skills, hooks, and MCP configuration, and a marketplace may expose multiple plugin entries. This supports a second full `spec-generator-v4` entry without changing the existing `context-menu` id. [src:https://developers.openai.com/plugins/build/plugins]
+- **[VERIFIED]** Codex Desktop and Codex CLI share project MCP configuration, while project `.codex/config.toml` is trusted only after the project is trusted; plugin-provided MCP is a supported distribution surface. [src:https://learn.chatgpt.com/docs/extend/mcp]
+- **[VERIFIED]** Codex custom agents are loaded from project `.codex/agents/*.toml` or user `~/.codex/agents/*.toml`, and native subagents work in Desktop. The documented plugin package surface does not make custom-agent files a portable plugin dependency, so the installed workflow must remain usable through packaged skills plus built-in roles. [src:https://learn.chatgpt.com/docs/agent-configuration/subagents] [src:https://developers.openai.com/plugins/build/plugins]
+- **[VERIFIED]** Codex skills and hooks have native documented formats; host-specific event and payload normalization therefore belongs at the adapter boundary rather than in each guard. [src:https://learn.chatgpt.com/docs/build-skills] [src:https://learn.chatgpt.com/docs/hooks]
+- **[VERIFIED — live machine]** `codex-cli 0.144.6` reports only `context-menu@dev-pomogator-codex` version `0.1.0`, sourced from this repository; the live `dev-pomogator-specs` catalog contains 41 tools. [cmd:codex --version; codex plugin list --json; live MCP tool catalog, 2026-08-09]
+- **[VERIFIED — repository]** The installed path is currently accidental and incomplete: `.codex-plugin/plugin.json` declares only the context-menu skill, `.agents/plugins/marketplace.json` has one entry, and `.codex/config.toml` has no server stanza; root `.mcp.json` is auto-discovered because the installed plugin source is the repository root. [ref:.codex-plugin/plugin.json:2-8] [ref:.agents/plugins/marketplace.json:6-25] [ref:.codex/config.toml:1] [ref:.mcp.json:3-12]
+- **[VERIFIED — live MCP dogfood, 2026-08-10]** After validated multi-document transactions, the current in-process `get_trace` temporarily lost cross-document AC/design/story/scenario edges, while a fresh `buildGraphFromCwd` reconstructed FR-83 as 10 AC + 14 scenarios + 13 tasks + 1 design + 1 story and FR-8 as 1 + 1 + 2 + 1 + 1. The installed workflow therefore needs an explicit post-mutation live-vs-cold graph equality invariant; a structurally correct disk spec alone is insufficient. [cmd:npx tsx -e buildGraphFromCwd trace counts]
+- **[VERIFIED — runtime]** The active MCP process runs `E:\repos\dev-pomogator\tools\spec-mcp-server\server.bundle.mjs`, while a stale plugin-cache bundle also exists. Repo dogfood therefore does not prove a fresh external installed package. [cmd:live node process command line and SHA-256 comparison, 2026-08-09]
+
+### Verified reuse seams and defects
+
+- **[VERIFIED]** The MCP server already computes a target root and passes it into `buildToolRegistry`, but several handlers still use `process.cwd()` for attachment reads, mutations, transactions, status, and spec creation. Existing BDD masks the defect with `process.chdir(tempDir)`. [ref:tools/spec-mcp-server/server.ts:65-67] [ref:tools/spec-mcp-server/tools.ts:2038-2053] [ref:tools/spec-mcp-server/tools.ts:2124-2184] [ref:tools/spec-mcp-server/tools.ts:2462-2536] [ref:tools/spec-mcp-server/tools.ts:2772-2802] [ref:tools/spec-mcp-server/tools.ts:3063-3083] [ref:tests/step_definitions/feature39_mcp_rails.ts:44-50]
+- **[VERIFIED]** Plugin-cache root detection names only Claude cache layouts. Codex cache support is a generalization of the existing resolver, not a second resolver. [ref:tools/spec-graph/root-resolution.mjs:15-35]
+- **[VERIFIED]** Codex can route `apply_patch` through an Edit/Write matcher while preserving `tool_name=apply_patch` and placing patch text in `tool_input.command`; current guards branch on Claude names and file-path fields. The repo Codex manifest also uses hyphenated MCP matcher names while the live tools are underscore-normalized. [src:https://learn.chatgpt.com/docs/hooks] [ref:tools/specs-validator/spec-access-guard.ts:325-358] [ref:tools/specs-validator/phase-gate.ts:74-78] [ref:tools/specs-validator/form-guards-dispatch.ts:50-55] [ref:tools/spec-conformance-guard/spec-conformance-guard.ts:127-138] [ref:.codex/hooks.json:80]
+- **[VERIFIED]** Phase orchestration and semantic judgment already expose injectable spawn seams; only their production defaults are hard-coded to `claude -p`. This permits one shared host adapter without duplicating gate/retry or judge logic. [ref:.claude/skills/spec-generator-orchestrator/scripts/phase-runner.ts:37-39] [ref:.claude/skills/spec-generator-orchestrator/scripts/phase-runner.ts:57-84] [ref:tools/spec-llm-judge/index.ts:38-46] [ref:tools/spec-llm-judge/index.ts:238-248]
+- **[VERIFIED]** Manual Codex mirrors have drifted: `.claude/skills` and `.agents/skills` have different inventories and the current mirror contract covers only two files. Deterministic generation plus source fingerprints is the smallest stable correction. [ref:tools/skill-health/mirror-contract.json:3-22] [ref:tools/skill-health/check.mjs:215-254]
+
+### Adopted boundary
+
+The implementation increment SHALL keep one SpecGraph/MCP engine, preserve Claude and Cursor contracts, add one generated Codex distribution entry, normalize host differences at the outer boundary, and make live Desktop evidence mandatory. `codex-init` owns allowlist/install status only; `codex-cli-support` remains historical/general and points here instead of copying the contract.
+
+## Risk Assessment — Codex Desktop adapter (2026-08-10)
+
+| Risk | Impact | Mitigation / decision boundary |
+|---|---|---|
+| Plugin-cache cwd is treated as the target repo | Reads and mutations split across two trees or corrupt cached package data | Inject one resolved target root into every registry handler; prove read/mutate/status/create against cache cwd and assert the cache stays byte-identical |
+| Codex hook payload bypasses Claude-shaped guards | Raw `.specs/**` writes evade the MCP door | Normalize events/tool names/payloads before policy; prove actual deny output for `apply_patch` and shell plus MCP allow |
+| Generated Codex adapters become another manual source | Skills, hooks, agents, and consumer maps silently diverge | One generator/check with fingerprints; stale or hand-edited output blocks package verification |
+| Plugin schema cannot carry custom agents | Installed phase orchestration disappears outside this checkout | Package skills that invoke native built-in roles; treat `.codex/agents` as generated repo/user optimization, never required plugin state |
+| CLI smoke is mistaken for Desktop delivery | A green PATH shim or manifest test hides broken Desktop discovery/reload | Separate mandatory live Desktop evidence lane in a fresh task after reload; deterministic tests cannot satisfy it |
+| Feature scope expands into app APIs/connectors | Large unrelated blast radius and duplicate control plane | Explicitly exclude task/thread APIs, automations, connectors, and `app://`; only native subagent execution inside the spec workflow is in scope |

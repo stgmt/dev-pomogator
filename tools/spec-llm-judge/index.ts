@@ -103,8 +103,11 @@ function parseSubprocessOutput(stdout: string): Verdict | null {
 export async function runJudge(opts: JudgeOptions): Promise<JudgeResult> {
   const key = cacheKey(opts.frText, opts.scenarioText);
 
-  // 1. Opt-out.
+  // 1. Opt-out. Keep this before cache lookup and prompt construction: an
+  // explicit spec policy must skip every semantic pair, never spawn, and
+  // never read or mutate the semantic cache.
   if (opts.spec_llm_judge_deny === true) {
+    emitOptOutSkipFinding({ repoRoot: opts.repoRoot, frId: opts.frId, scenarioId: opts.scenarioId });
     return { result: 'SKIPPED_OPT_OUT', cache_key: key, from_cache: false };
   }
 
@@ -203,6 +206,29 @@ export function emitDenyListSkipFinding(opts: {
       message:
         `Semantic drift check skipped for ${opts.frId}: deny-list pattern ` +
         `"${opts.deny_pattern ?? 'matched'}" present; no claude -p subprocess spawned.`,
+    },
+    { repoRoot: opts.repoRoot, now: opts.now },
+  );
+}
+
+/**
+ * Emit the canonical per-spec opt-out event. It deliberately records only
+ * node identities and policy metadata, never FR/scenario prose.
+ */
+export function emitOptOutSkipFinding(opts: {
+  repoRoot: string;
+  frId: string;
+  scenarioId: string;
+  now?: Date;
+}): string {
+  return appendRawEntry(
+    {
+      finding_code: 'SEMANTIC_CHECK_SKIPPED_OPT_OUT',
+      severity: 'info',
+      source: 'spec-llm-judge',
+      node_id: opts.frId,
+      scenario_id: opts.scenarioId,
+      message: `Semantic drift check skipped by spec opt-out for ${opts.frId} ↔ ${opts.scenarioId}; no claude -p subprocess spawned.`,
     },
     { repoRoot: opts.repoRoot, now: opts.now },
   );

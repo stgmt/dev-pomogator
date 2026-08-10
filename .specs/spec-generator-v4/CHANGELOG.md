@@ -1,4 +1,26 @@
 # Changelog
+## 2026-08-10 — FR-83 Codex Desktop host adapter specified (spec-only)
+
+- Added FR-83, User Story 63, UC-35, three NFRs, AC-83.1–83.10, CHK-FR83-01–10, one design decision, fixture inventory, Phase 50 file/task plan, and SPECGEN004_701–714; matrix rows now have four distinct scenario ids plus an exact-cardinality aggregate.
+- Chose one canonical SpecGraph/MCP/workflow engine with generated Codex adapters and a separate full `spec-generator-v4` plugin; kept `context-menu`, Cursor FR-81, and app control-plane APIs outside the change.
+- Split ownership: spec-generator-v4 owns runtime/skills/hooks/orchestration/doctor/live proof and emits the immutable package handoff; codex-init FR-8 is the sole marketplace/whitelist/status writer; codex-cli-support supplies no competing spec-generator writer.
+- Captured the live MCP dogfood gap where post-transaction in-memory traces can lose cross-document edges; AC-83.2 now requires live post-mutation trace equality with a fresh cold graph.
+- No implementation, plugin install, Docker BDD, or live Desktop verification is claimed. New tasks are TODO and scenarios are expected to remain not-run until implementation evidence exists.
+
+
+
+## 2026-08-07 — FR-68 AC_SATISFACTION debt closure: 187 gap ACs resolved (181 evidenced, 6 documented clarify)
+
+Every acceptance criterion that lacked its own verifying scenario got an honest, individually-journaled resolution — all writes through the MCP door, no bulk tag-laundering (TAG_BULK_SUSPECT controls verified clean each wave):
+
+- **Waves 1–6** mapped 155 ACs to their own passing scenarios via per-scenario `@AC-N.N` tags (Dynamic Workflow runs dwe-30b2f9e3 / dwe-f2da09f7 / dwe-9d7f1e0f / dwe-c3bed036 / dwe-babba718 / dwe-cb45c0aa — each admission `allow` + ROOT_VERIFIED; journal `audit-reports/ac-mapping-spec-generator-v4.md`).
+- **New scenario SPECGEN004_693** (@feature58, step-defs `tests/step_definitions/feature58_retag_invariant.ts`) pins the FR-58 retag invariant for AC-58.1/AC-58.3: FR-19 covered only by the two-tier policy scenarios, migrated form-contract scenarios owned by FR-58.
+- **Spot-check** of 13/130 mappings repaired 3 with sibling-scenario tags and carried 1 uncovered clause (AC-24.1 tamper-log-append) into the follow-up list.
+- **6 ACs documented clarify** (no honest scenario possible without separate work): AC-1.3 (legacy v1 install semantics), AC-7.4 (dead-integration-guard not implemented as automation), AC-7.5 (one-time measurement protocol), AC-20.2 (perf budget + atomicity clauses), AC-26.2 (SEMANTIC_CHECK_SKIPPED_OPT_OUT finding code not implemented), AC-36.6 (migration-phase process invariant). Each has a concrete follow-up in the journal.
+- **Residual clauses** on 8 mapped ACs are tracked explicitly in the journal (never silent).
+
+Result: AC_SATISFACTION 283/289 (lane RED until the 6 clarify follow-ups land — readiness-inventory carries no waiver path by design); all other mandatory lanes GREEN; full Docker suite **1996/1996 PASSED**.
+
 
 ## 2026-08-04 — spec-generator-v4 readiness debt closed; Cursor live scenarios owner-attested
 
@@ -31,5 +53,12 @@
 
 - Incident evidence records the 4.247 GiB cache-local `.spec-check-log`, zero-free-space failure, Stop fanout, and the incorrect `CLAUDE_PLUGIN_ROOT` project-root precedence.
 - Approved contract separates `pluginRoot` from per-request `projectRoot`, makes non-spec projects state-free no-ops, and sets 10 MiB rotation / 64 MiB total / 30 days / 1 GiB reserve with locked confined pruning.
-- SPECGEN004_693–SPECGEN004_699 and Phase 50 tasks are specified but not yet implemented or executed. Runtime changes remain blocked on explicit spec approval.
+- SPECGEN004_715–SPECGEN004_721 and Phase 50 tasks are specified but not yet implemented or executed. Runtime changes remain blocked on explicit spec approval.
 
+
+## 2026-08-08 — six-AC remediation implementation
+
+- AC-7.5 now has a repeatable real Marksman link-definition proof: the launcher receives initialized, didOpen, and textDocument/definition messages and the test asserts target document and heading range.
+- AC-7.4 now has an executable guard that rejects missing or untruthful runtime consumers and requires a passing real-artifact command; current Marksman integration has positive Docker evidence.
+- AC-36.6 now has a machine-readable migration-phase gate that denies dirty, filtered, stale, failed, or unqualified evidence and allows only a complete fresh phase.
+- AC-20.2 and AC-26.2 were previously given AC-owned BDD evidence in this remediation wave; AC-1.3 remains explicitly superseded.
