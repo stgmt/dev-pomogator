@@ -24,6 +24,7 @@ export class WorkerManager {
     this.onRecycle = onRecycle;
     this.workers = new Map();
     this.starting = new Map();
+    this.startingWorkers = new Map();
     this.metrics = new Map();
   }
 
@@ -123,6 +124,7 @@ export class WorkerManager {
         cwd: context.projectRoot || undefined,
         env: {
           ...process.env,
+          NODE_OPTIONS: '',
           CLAUDE_PLUGIN_ROOT: this.root,
           ...(context.projectRoot ? { CLAUDE_PROJECT_DIR: context.projectRoot } : {}),
         },
@@ -145,23 +147,38 @@ export class WorkerManager {
       state: 'starting',
       writing: false,
       idleTimer: null,
+      startupTimer: null,
       inFlight: 0,
       request: null,
+      fail: null,
       metricKey: key,
+      terminated: false,
     };
-    const fail = error => {
-      if (worker.state === 'dead') return;
-      worker.state = 'dead';
+    this.startingWorkers.set(key, worker);
+    const terminate = (error, state = 'dead') => {
+      if (worker.terminated) return;
+      worker.terminated = true;
+      worker.state = state;
+      if (this.workers.get(key) === worker) this.workers.delete(key);
+      if (this.startingWorkers.get(key) === worker) this.startingWorkers.delete(key);
+      clearTimeout(worker.startupTimer);
       clearTimeout(worker.idleTimer);
-      if (worker.pending.size === 0 && worker.queue.length === 0) readyReject?.(error);
+      try { worker.child.stdin.end(); } catch { /* already closed */ }
+      try { worker.child.kill(); } catch { /* already exited */ }
       for (const item of pending.values()) {
         clearTimeout(item.timer);
         item.reject(error);
       }
       pending.clear();
       while (queue.length) queue.shift().reject(error);
+    };
+    const fail = error => {
+      if (worker.terminated) return;
+      readyReject?.(error);
+      terminate(error);
       this.updateMetric(key, worker, { state: 'dead', lastErrorCode: error?.code || 'WORKER_EXIT' });
     };
+    worker.fail = fail;
     const failProtocol = message => fail(errorWithCode(message, 'WORKER_PROTOCOL'));
     child.once('error', error => { const normalized = errorWithCode(error.message, error.code || 'HOOK_SPAWN'); readyReject?.(normalized); fail(normalized); });
     child.once('close', code => {
@@ -193,6 +210,8 @@ export class WorkerManager {
       try { frame = JSON.parse(line); } catch { return failProtocol('worker sent malformed frame'); }
       if (frame.type === 'ready') {
         if (worker.state !== 'starting' || frame.version !== 1 || !Number.isInteger(frame.worker_pid)) return failProtocol('worker ready frame invalid');
+        clearTimeout(worker.startupTimer);
+        if (this.startingWorkers.get(key) === worker) this.startingWorkers.delete(key);
         worker.state = 'ready';
         this.updateMetric(key, worker, {
           spawns: this.metricFor(key, worker).spawns + 1,
@@ -241,22 +260,28 @@ export class WorkerManager {
       this.updateMetric(key, worker, { queued: queue.length });
       pump();
     });
+    const startupTimeout = Math.max(1, entry.timeout || DEFAULT_TIMEOUT_MS / 1000) * 1000;
+    worker.startupTimer = setTimeout(() => fail(errorWithCode('worker startup timed out', 'WORKER_STARTUP_TIMEOUT')), startupTimeout);
+    worker.startupTimer.unref?.();
     try {
       await ready;
       return worker;
     } catch (error) {
-      this.recycle(key, worker, error?.code || 'WORKER_STARTUP');
+      if (!worker.terminated) fail(error);
       throw error;
     }
   }
 
   recycle(key, worker, reason) {
-    if (worker.state === 'dead' || worker.state === 'recycling') return;
+    if (worker.terminated || worker.state === 'recycling') return;
     if (this.workers.get(key) === worker) this.workers.delete(key);
+    if (this.startingWorkers.get(key) === worker) this.startingWorkers.delete(key);
     worker.state = 'recycling';
+    worker.terminated = true;
+    clearTimeout(worker.startupTimer);
     clearTimeout(worker.idleTimer);
-    worker.child.stdin.end();
-    worker.child.kill();
+    try { worker.child.stdin.end(); } catch { /* already closed */ }
+    try { worker.child.kill(); } catch { /* already exited */ }
     const error = errorWithCode(`worker recycled: ${reason}`, 'WORKER_RECYCLED');
     for (const item of worker.pending.values()) {
       clearTimeout(item.timer);
@@ -276,7 +301,9 @@ export class WorkerManager {
 
   close() {
     for (const [key, worker] of this.workers) this.recycle(key, worker, 'shutdown');
+    for (const worker of this.startingWorkers.values()) worker.fail(errorWithCode('worker closed during startup', 'WORKER_RECYCLED'));
     for (const startup of this.starting.values()) startup.catch(() => {});
+    this.startingWorkers.clear();
     this.starting.clear();
   }
 }

@@ -161,3 +161,7 @@
 | CHK-FR13-24 | Same-session daemon loss still self-heals through one builtins client | [FR-13](FR.md#fr-13-plugin-hooks-use-one-authenticated-loopback-service), [AC-13](ACCEPTANCE_CRITERIA.md#ac-13-one-host-visible-devpomogator-stop-dispatcher-with-semantic-parity), CORE024_22 | BDD scenario | Draft | No native-HTTP-only regression |
 | CHK-FR13-25 | Legacy child fallback is sequential and bounded at 256 KiB | [FR-13](FR.md#fr-13-plugin-hooks-use-one-authenticated-loopback-service), [AC-13](ACCEPTANCE_CRITERIA.md#ac-13-one-host-visible-devpomogator-stop-dispatcher-with-semantic-parity), CORE024_21 | BDD scenario | Draft | No retry of uncertain work |
 | CHK-FR13-26 | Missing-state authenticated listener is safely replaced | [FR-13](FR.md#fr-13-plugin-hooks-use-one-authenticated-loopback-service), [AC-14](ACCEPTANCE_CRITERIA.md#ac-14-credential-proven-orphan-hook-service-recovery), CORE024_23 | BDD scenario | Draft | Stable double health plus double OS listener-PID proof; foreign listeners survive |
+
+## PR #227 review-hardening requirements (2026-08-11)
+
+The canonical plugin must keep long-running valid hooks eligible, reject oversized stdin during streaming, reap every failed or starting worker, retain successful Stop semantics while recording partial failures, prove confinement before state creation, restart when imported runtime dependencies change, and require current repeated listener ownership evidence before termination. Hook or plugin disablement is not a remediation.

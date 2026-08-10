@@ -291,3 +291,7 @@ The existing PR evidence does not include a full Claude host lifecycle smoke or 
 ### Follow-up evidence — orphan authenticated listener (2026-08-11)
 
 After syncing the approved runtime, `ensureUp` failed because `127.0.0.1:42619` was owned by Node PID 8820 while `service.json` was absent. The listener returned HTTP 200 with `service=dev-pomogator-hook-service`, version 1.0.0, and the fingerprint of the current per-user token. Starting the same installed runtime on an ephemeral free port succeeded, proving a migration/ownership-discovery defect rather than a runtime import defect. Stable token/OS proof identified PID 8820, but both Node SIGTERM and exact `taskkill /PID 8820 /T /F` were denied across the Windows session boundary; therefore safe completion requires published alternate-port recovery, not wider process termination.
+
+## PR #227 review evidence (2026-08-11)
+
+Reproductions confirmed premature three-second abort, continued consumption of a 32 MiB stream after a 2 MiB nominal cap, leaked pre-ready workers on hang/protocol output, invisible mixed-success route failures, external descendant creation through a junction before confinement rejection, and a state-only PID termination path. The repair therefore tightens boundaries without disabling any hook or plugin.

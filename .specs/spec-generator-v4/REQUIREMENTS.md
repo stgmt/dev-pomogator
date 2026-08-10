@@ -390,3 +390,10 @@
 | CHK-FR84-06 | Locking and real-path confinement prevent unsafe deletion | FR-84, AC-84.6, @feature84, UC-36 | BDD scenario | Draft | SPECGEN004_720 |
 | CHK-FR84-07 | Dependency-absent installed layout proves project-only reads and writes | FR-84, AC-84.7, @feature84, UC-36 | BDD scenario | Draft | SPECGEN004_721 |
 | CHK-FR84-08 | Authenticated orphan service recovery replaces only the stable listener owner | FR-84, AC-84.8, @feature84, UC-36 | BDD scenario | Draft | SPECGEN004_722; double health plus double PID proof and published alternate-port fallback |
+
+## PR #227 review-hardening requirements (2026-08-11)
+
+- The hook client must use logical-route execution budgets, enforce its input ceiling during streaming, and remain fail-open without unbounded buffering.
+- A worker that never becomes ready or violates the protocol must settle and die; a closing manager must also terminate starting children and clear inherited Node preload options.
+- Mixed-success Stop groups must retain completed semantics and produce durable per-route failure evidence.
+- Managed project state must be confined before creation, service identity must cover imported runtime dependencies, and process termination must require fresh repeated listener ownership proof.

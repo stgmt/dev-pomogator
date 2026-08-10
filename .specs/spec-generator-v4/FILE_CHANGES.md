@@ -853,3 +853,11 @@ Phase 49 — Live-evidence containment, atomic CAS proof, strict-synthesis guard
 | `.specs/spec-generator-v4/FILE_CHANGES.md` | edit | Declare explicit implementation and spec paths. |
 | `.specs/spec-generator-v4/CHANGELOG.md` | edit | Record the spec-only incident package. |
 | `.specs/spec-generator-v4/spec-generator-v4.feature` | edit | Add SPECGEN004_715–SPECGEN004_721. |
+
+## PR #227 review-hardening file plan (2026-08-11)
+
+- `tools/hook-service/client.mjs`: route-aware request budget and streaming input ceiling.
+- `tools/hook-service/worker-manager.mjs`: startup timer, tracked starting children, idempotent termination, clean Node environment.
+- `tools/hook-service/server.mjs` and `tools/hook-service/ensure-up.mjs`: mixed-success route diagnostics, dependency-complete runtime identity, and proof-only PID termination.
+- `tools/spec-check-log/writer.ts` plus conformance state writers: pre-create real-path confinement and canonical append paths.
+- BDD features/steps, focused regressions, generated hook bundles, and installed cache: executable proof and release synchronization.

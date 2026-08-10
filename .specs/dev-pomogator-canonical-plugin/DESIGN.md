@@ -343,3 +343,7 @@ This migration eliminates repeated Node/tsx cold starts for every route in the a
 ### Missing-state daemon recovery
 
 The configured loopback listener may outlive or predate `service.json`. The launcher treats the per-user token-authenticated service signature as necessary but not sufficient process evidence: it resolves the OS listener PID, repeats authenticated health, resolves again, and may terminate only one unchanged PID that agrees with any PID advertised by health. Every ambiguity or change is a refusal. If termination is denied or the owner is foreign/unverifiable, no process is killed; the current child listens on OS-assigned loopback port `0`, atomically publishes its actual port and identity, and clients discover it through the startup lease.
+
+## PR #227 review-hardening design (2026-08-11)
+
+The generated registry is the authority for client event budgets. Stdin byte accounting precedes concatenation and detaches the source on overflow. Worker startup and ready workers share one idempotent termination path and the manager tracks both sets. Group execution persists individual failures before returning the aggregate of completed routes. Directory creation proceeds component by component after link and canonical-root checks. The service digest includes imported shared modules, and every owned-listener termination passes through the same double-health/double-OS-PID verifier.

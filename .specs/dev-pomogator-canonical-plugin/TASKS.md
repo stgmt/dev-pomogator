@@ -230,3 +230,36 @@ The core migration was performed **by hand**: the three `.claude-plugin/*.json` 
   **Done When:**
   - [ ] Authenticated health exposes PID and legacy recovery requires stable double health plus double loopback listener-PID proof; access denial falls back to an atomically published OS-assigned port.
   - [ ] Missing, ambiguous, changing, denied, unauthenticated, or unverifiable ownership never triggers process termination; current runtime still starts on a published loopback port and focused/BDD regressions pass.
+
+## Phase 11: PR #227 review hardening — TODO
+
+- [ ] Add executable review regressions — id: t23 — Status: TODO | Est: 120m
+  _Requirements: FR-13; AC-15–AC-19; CORE024_24–CORE024_28._
+  _depends: hard:t19_
+  **Done When:**
+  - [ ] The seven reproduced boundary defects fail before implementation and are expressed in the canonical BDD mirror.
+- [ ] Harden client and worker lifecycle — id: t24 — Status: TODO | Est: 180m
+  _Requirements: FR-13; AC-15; AC-16._
+  _depends: hard:t23_
+  **Done When:**
+  - [ ] Route budgets, streaming byte limits, startup timers, starting-child tracking, termination, recycling, and clean worker environment pass.
+- [ ] Preserve partial results with diagnostics — id: t25 — Status: TODO | Est: 90m
+  _Requirements: FR-13; AC-17._
+  _depends: hard:t23_
+  **Done When:**
+  - [ ] Mixed-success Stop aggregation retains completed semantics and persists a bounded diagnostic for each failed route.
+- [ ] Close confinement identity and PID proof — id: t26 — Status: TODO | Est: 180m
+  _Requirements: FR-13; AC-18; AC-19._
+  _depends: hard:t23_
+  **Done When:**
+  - [ ] Pre-create link escape writes nothing, canonical paths are retained, shared dependencies affect service identity, and state-only PIDs cannot authorize termination.
+- [ ] Rebuild and synchronize runtime artifacts — id: t27 — Status: TODO | Est: 120m
+  _Requirements: FR-13; AC-15–AC-19._
+  _depends: hard:t24, hard:t25, hard:t26_
+  **Done When:**
+  - [ ] Generated bundles and active installed cache exactly match the reviewed source implementation.
+- [ ] Verify and update PR #227 — id: t28 — Status: TODO | Est: 180m
+  _Requirements: FR-13; AC-15–AC-19; CORE024_24–CORE024_28._
+  _depends: hard:t27_
+  **Done When:**
+  - [ ] Focused tests, available container BDD, spec validation, cache smoke, push, and exact-commit CI pass without disabling any hook or plugin.

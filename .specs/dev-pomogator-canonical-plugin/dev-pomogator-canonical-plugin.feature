@@ -427,3 +427,38 @@ Feature: CANON001 Canonical Claude Code Marketplace Plugin
     When the current installed client performs startup recovery
     Then it verifies the listener twice by service token and loopback owner PID before replacement or alternate port recovery
     And it starts the current runtime on a published loopback port and never terminates an unauthenticated or unverifiable listener
+
+  @feature13 @AC-15
+  Scenario: CORE024_24 Installed client enforces route aware deadlines and a hard stdin ceiling
+    Given an installed hook route with a budget above three seconds and an oversized streamed payload
+    When the one shot client dispatches each boundary case
+    Then the valid slow route is not aborted at three seconds
+    And oversized stdin stops being consumed as soon as the byte ceiling is crossed
+
+  @feature13 @AC-16
+  Scenario: CORE024_25 Starting workers terminate on timeout and protocol faults
+    Given persistent workers that hang before ready or contaminate the startup protocol
+    When startup reaches its budget or receives the invalid frame
+    Then each pending startup settles and its child is terminated
+    And the worker receives no inherited NODE_OPTIONS
+
+  @feature13 @AC-17
+  Scenario: CORE024_26 Partial Stop failures preserve results and durable diagnostics
+    Given one successful and one failing logical route in the same Stop group
+    When the service aggregates the group
+    Then the successful route result is preserved
+    And the failing route has a bounded durable diagnostic
+
+  @feature13 @AC-18
+  Scenario: CORE024_27 Managed paths and runtime identity are closed over dependencies
+    Given an escaped managed directory and a changed shared service dependency
+    When journal state and service runtime identity are evaluated
+    Then no descendant is created through the escaped directory
+    And the shared dependency change invalidates runtime identity
+
+  @feature13 @AC-19
+  Scenario: CORE024_28 State only PID evidence cannot authorize termination
+    Given authenticated health omits PID while stale state names an unrelated live process
+    When orphan service recovery runs
+    Then the unrelated process remains alive
+    And termination requires two matching health and listener PID proofs

@@ -1,11 +1,15 @@
 import { Given, When, Then } from '@cucumber/cucumber';
 import assert from 'node:assert/strict';
+import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+import { PassThrough } from 'node:stream';
 import { V4World } from '../hooks/before-after.ts';
-import { runManagedHook } from '../../tools/hook-service/client.mjs';
+import { readInput, routeRequestTimeoutMs, runManagedHook } from '../../tools/hook-service/client.mjs';
 import { buildRegistry, renderHttpManifest, STOP_DISPATCH_ROUTE } from '../../tools/hook-service/registry.mjs';
 import { aggregateHookOutputs, executeEvent, startServer } from '../../tools/hook-service/server.mjs';
+import { WorkerManager } from '../../tools/hook-service/worker-manager.mjs';
+import { processExists } from '../../tools/hook-service/ensure-up.mjs';
 import { decodeProjectRootHeader } from '../../tools/_shared/hook-project-root.mjs';
 import { appendRawEntry } from '../../tools/spec-check-log/writer.ts';
 
@@ -25,6 +29,15 @@ interface ProjectStopWorld extends V4World {
   recoveryResults?: Array<Awaited<ReturnType<typeof runManagedHook>>>;
   liveErrorFetches?: number;
   uncertainFetches?: number;
+  clientBudget?: number;
+  inputStopped?: boolean;
+  inputError?: unknown;
+  workerCodes?: string[];
+  workerPids?: number[];
+  workerEnv?: string;
+  partialStateRoot?: string;
+  partialResponse?: Record<string, unknown>;
+  partialDiagnostics?: Array<Record<string, unknown>>;
 }
 
 const writeJson = (file: string, value: object) => {
@@ -213,4 +226,123 @@ Then(/^the service is recovered once and each project retains independent FIFO r
 Then(/^live service errors and uncertain route work are not retried$/, function (this: ProjectStopWorld) {
   assert.equal(this.liveErrorFetches, 1);
   assert.equal(this.uncertainFetches, 1);
+});
+
+Given(/^an installed hook route with a budget above three seconds and an oversized streamed payload$/, function (this: ProjectStopWorld) {
+  this.pluginRoot = path.join(this.tempDir, 'client-boundary-plugin');
+  writeJson(path.join(this.pluginRoot, 'tools', 'hook-service', 'registry.json'), {
+    version: 2,
+    routes: { 'Stop/0/0': { target: 'unused.mjs', event: 'Stop', timeout: 4 } },
+    groups: { [STOP_DISPATCH_ROUTE]: ['Stop/0/0'] },
+  });
+});
+
+When(/^the one shot client dispatches each boundary case$/, async function (this: ProjectStopWorld) {
+  this.clientBudget = await routeRequestTimeoutMs(this.pluginRoot!, STOP_DISPATCH_ROUTE);
+  const stream = new PassThrough();
+  const reading = readInput(stream, { maxBytes: 5 });
+  reading.catch(() => {});
+  stream.write('1234');
+  stream.write('5678');
+  try { await reading; } catch (error) { this.inputError = error; }
+  this.inputStopped = stream.destroyed;
+});
+
+Then(/^the valid slow route is not aborted at three seconds$/, function (this: ProjectStopWorld) {
+  assert.ok(this.clientBudget! >= 9_000);
+});
+
+Then(/^oversized stdin stops being consumed as soon as the byte ceiling is crossed$/, function (this: ProjectStopWorld) {
+  assert.match(String((this.inputError as Error)?.message), /too large/u);
+  assert.equal(this.inputStopped, true);
+});
+
+Given(/^persistent workers that hang before ready or contaminate the startup protocol$/, function (this: ProjectStopWorld) {
+  this.pluginRoot = path.join(this.tempDir, 'worker-boundary-plugin');
+  fs.mkdirSync(this.pluginRoot, { recursive: true });
+  fs.writeFileSync(path.join(this.pluginRoot, 'noisy.mjs'), 'console.log("module banner"); export async function handle(){ return {}; }');
+  fs.writeFileSync(path.join(this.pluginRoot, 'hanging.mjs'), 'setInterval(() => {}, 1000); await new Promise(() => {}); export async function handle(){ return {}; }');
+  fs.writeFileSync(path.join(this.pluginRoot, 'env.mjs'), 'export async function handle(){ return {additionalContext: process.env.NODE_OPTIONS === "" ? "clean" : String(process.env.NODE_OPTIONS)}; }');
+  this.workerCodes = [];
+  this.workerPids = [];
+});
+
+When(/^startup reaches its budget or receives the invalid frame$/, async function (this: ProjectStopWorld) {
+  let child: ReturnType<typeof spawn> | undefined;
+  const spawnProcess = (...args: Parameters<typeof spawn>) => {
+    child = spawn(...args);
+    this.workerPids!.push(child.pid!);
+    return child;
+  };
+  for (const [route, target] of [['Stop/0/0', 'noisy.mjs'], ['Stop/1/0', 'hanging.mjs']]) {
+    const manager = new WorkerManager({ root: this.pluginRoot!, spawnProcess });
+    try {
+      await manager.execute(route, { execution: 'persistent', worker_target: target, timeout: 1 }, {}, 'Stop');
+    } catch (error) {
+      this.workerCodes!.push((error as { code?: string }).code || '');
+    } finally {
+      manager.close();
+    }
+  }
+  const previous = process.env.NODE_OPTIONS;
+  process.env.NODE_OPTIONS = '--trace-warnings';
+  try {
+    const manager = new WorkerManager({ root: this.pluginRoot! });
+    const output = await manager.execute('Stop/2/0', { execution: 'persistent', worker_target: 'env.mjs', timeout: 2 }, {}, 'Stop');
+    this.workerEnv = output.additionalContext;
+    manager.close();
+  } finally {
+    if (previous === undefined) delete process.env.NODE_OPTIONS;
+    else process.env.NODE_OPTIONS = previous;
+  }
+});
+
+Then(/^each pending startup settles and its child is terminated$/, async function (this: ProjectStopWorld) {
+  assert.deepEqual(this.workerCodes, ['WORKER_PROTOCOL', 'WORKER_STARTUP_TIMEOUT']);
+  for (const pid of this.workerPids!) {
+    for (let index = 0; index < 50 && processExists(pid); index += 1) await new Promise(resolveWait => setTimeout(resolveWait, 20));
+    assert.equal(processExists(pid), false);
+  }
+});
+
+Then(/^the worker receives no inherited NODE_OPTIONS$/, function (this: ProjectStopWorld) {
+  assert.equal(this.workerEnv, 'clean');
+});
+
+Given(/^one successful and one failing logical route in the same Stop group$/, function (this: ProjectStopWorld) {
+  this.pluginRoot = path.join(this.tempDir, 'partial-group-plugin');
+  this.partialStateRoot = path.join(this.tempDir, 'partial-group-state');
+  fs.mkdirSync(this.pluginRoot, { recursive: true });
+  fs.writeFileSync(path.join(this.pluginRoot, 'success.mjs'), 'process.stdout.write(JSON.stringify({additionalContext:"kept"}));');
+  fs.writeFileSync(path.join(this.pluginRoot, 'failure.mjs'), 'process.stderr.write("route failed"); process.exit(1);');
+  writeJson(path.join(this.pluginRoot, 'tools', 'hook-service', 'registry.json'), {
+    version: 2,
+    routes: {
+      'Stop/0/0': { target: 'success.mjs', event: 'Stop', timeout: 2, execution: 'child' },
+      'Stop/1/0': { target: 'failure.mjs', event: 'Stop', timeout: 2, execution: 'child' },
+    },
+    groups: { [STOP_DISPATCH_ROUTE]: ['Stop/0/0', 'Stop/1/0'] },
+  });
+});
+
+When(/^the service aggregates the group$/, async function (this: ProjectStopWorld) {
+  this.service = await startServer({ pluginRoot: this.pluginRoot!, token: 'partial-secret', port: 0, stateRoot: this.partialStateRoot });
+  const address = this.service.address();
+  const response = await fetch(`http://127.0.0.1:${address.port}/v1/dispatch/${encodeURIComponent(STOP_DISPATCH_ROUTE)}`, {
+    method: 'POST', headers: { 'content-type': 'application/json', 'x-dev-pomogator-token': 'partial-secret' },
+    body: JSON.stringify({ cwd: this.tempDir, session_id: 'partial' }),
+  });
+  assert.equal(response.status, 200);
+  this.partialResponse = await response.json();
+  this.partialDiagnostics = fs.readFileSync(path.join(this.partialStateRoot!, 'failures.jsonl'), 'utf8').trim().split('\n').map(line => JSON.parse(line));
+});
+
+Then(/^the successful route result is preserved$/, function (this: ProjectStopWorld) {
+  assert.deepEqual(this.partialResponse, { additionalContext: 'kept' });
+});
+
+Then(/^the failing route has a bounded durable diagnostic$/, async function (this: ProjectStopWorld) {
+  assert.equal(this.partialDiagnostics!.some(item => item.route === 'Stop/1/0' && item.dispatcherRoute === STOP_DISPATCH_ROUTE), true);
+  assert.ok(fs.statSync(path.join(this.partialStateRoot!, 'failures.jsonl')).size <= 1_000_000);
+  await new Promise<void>(resolve => this.service!.close(() => resolve()));
 });

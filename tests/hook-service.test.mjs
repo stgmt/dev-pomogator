@@ -2,13 +2,15 @@ import assert from 'node:assert/strict';
 import { mkdtemp, mkdir, writeFile, rm, readFile, access } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
+import { PassThrough } from 'node:stream';
 import test from 'node:test';
-import { isWithinRoot, startServer } from '../tools/hook-service/server.mjs';
+import { isWithinRoot, runtimeFilePaths, startServer } from '../tools/hook-service/server.mjs';
 import { renderHttpManifest } from '../tools/hook-service/registry.mjs';
 import { HookMigrationCollisionError, migrateManagedHooks, recoverManagedHooks } from '../tools/hook-service/migrate-managed-hooks.mjs';
 import { acquireStartupLease, authenticatedListenerPid, ensureUp, listenerPidsFromNetstat, processExists } from '../tools/hook-service/ensure-up.mjs';
-import { spawnSync } from 'node:child_process';
-import { runManagedHook } from '../tools/hook-service/client.mjs';
+import { spawn, spawnSync } from 'node:child_process';
+import { readInput, routeRequestTimeoutMs, runManagedHook } from '../tools/hook-service/client.mjs';
+import { WorkerManager } from '../tools/hook-service/worker-manager.mjs';
 
 async function fixture() {
   const root = await mkdtemp(join(tmpdir(), 'hook-service-'));
@@ -24,7 +26,7 @@ async function fixture() {
     'UserPromptSubmit/0/0': { target: 'allow.mjs', event: 'UserPromptSubmit', timeout: 1 },
     'Stop/0/0': { target: 'stop-a.mjs', event: 'Stop', timeout: 1 },
     'Stop/1/0': { target: 'stop-b.mjs', event: 'Stop', timeout: 1 },
-  }}));
+  }, groups: { 'Stop/all': ['Stop/0/0', 'Stop/1/0'] } }));
   return root;
 }
 
@@ -289,5 +291,89 @@ test('HS_15: startup publishes and reuses an OS-assigned loopback port through s
     if (previousStateRoot === undefined) delete process.env.DEV_POMOGATOR_STATE_DIR;
     else process.env.DEV_POMOGATOR_STATE_DIR = previousStateRoot;
     await rm(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('HS_16: client derives a route-aware request budget and destroys oversized stdin', async () => {
+  const root = await fixture();
+  try {
+    assert.ok(await routeRequestTimeoutMs(root, 'Stop/all') > 3_000);
+    const input = new PassThrough();
+    const reading = readInput(input, { maxBytes: 5 });
+    input.write('1234');
+    input.write('5678');
+    await assert.rejects(reading, /hook input too large/u);
+    assert.equal(input.destroyed, true);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test('HS_17: mixed-success Stop groups preserve output and persist the failed route', async () => {
+  const root = await fixture();
+  const stateRoot = await mkdtemp(join(tmpdir(), 'hook-partial-state-'));
+  await writeFile(join(root, 'stop-b.mjs'), 'process.stderr.write("partial boom"); process.exit(1);');
+  const server = await startServer({ pluginRoot: root, token: 'secret', port: 0, stateRoot });
+  try {
+    const base = `http://127.0.0.1:${server.address().port}`;
+    const response = await post(`${base}/v1/dispatch/Stop%2Fall`, { session_id: 'partial' }, { 'x-dev-pomogator-token': 'secret' });
+    assert.equal(response.status, 200);
+    assert.deepEqual(await response.json(), { additionalContext: 'stop-a' });
+    const diagnostics = (await readFile(join(stateRoot, 'failures.jsonl'), 'utf8')).trim().split('\n').map(JSON.parse);
+    assert.equal(diagnostics.some(item => item.route === 'Stop/1/0' && item.dispatcherRoute === 'Stop/all'), true);
+  } finally {
+    await new Promise(resolveClose => server.close(resolveClose));
+    await rm(root, { recursive: true, force: true });
+    await rm(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('HS_18: worker startup faults and manager close settle and reap starting children', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'hook-worker-startup-'));
+  let child;
+  const spawnProcess = (...args) => {
+    child = spawn(...args);
+    return child;
+  };
+  try {
+    await writeFile(join(root, 'noisy.mjs'), 'console.log("module banner"); export async function handle(){ return {}; }');
+    const noisy = new WorkerManager({ root, spawnProcess });
+    await assert.rejects(noisy.execute('Stop/0/0', { execution: 'persistent', worker_target: 'noisy.mjs', timeout: 1 }, {}, 'Stop'), error => error?.code === 'WORKER_PROTOCOL');
+    for (let index = 0; index < 50 && processExists(child.pid); index += 1) await new Promise(resolveWait => setTimeout(resolveWait, 20));
+    assert.equal(processExists(child.pid), false);
+    noisy.close();
+
+    await writeFile(join(root, 'hanging.mjs'), 'setInterval(() => {}, 1000); await new Promise(() => {}); export async function handle(){ return {}; }');
+    const hanging = new WorkerManager({ root, spawnProcess });
+    const pending = hanging.execute('Stop/1/0', { execution: 'persistent', worker_target: 'hanging.mjs', timeout: 5 }, {}, 'Stop');
+    pending.catch(() => {});
+    await new Promise(resolveWait => setTimeout(resolveWait, 100));
+    const hangingPid = child.pid;
+    hanging.close();
+    await assert.rejects(pending, error => error?.code === 'WORKER_RECYCLED');
+    for (let index = 0; index < 50 && processExists(hangingPid); index += 1) await new Promise(resolveWait => setTimeout(resolveWait, 20));
+    assert.equal(processExists(hangingPid), false);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test('HS_19: persistent workers clear NODE_OPTIONS and runtime identity covers shared imports', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'hook-worker-env-'));
+  const previous = process.env.NODE_OPTIONS;
+  try {
+    process.env.NODE_OPTIONS = '--trace-warnings';
+    await writeFile(join(root, 'env.mjs'), 'export async function handle(){ return {additionalContext: process.env.NODE_OPTIONS === "" ? "clean" : String(process.env.NODE_OPTIONS)}; }');
+    const manager = new WorkerManager({ root });
+    const output = await manager.execute('Stop/0/0', { execution: 'persistent', worker_target: 'env.mjs', timeout: 2 }, {}, 'Stop');
+    assert.deepEqual(output, { additionalContext: 'clean' });
+    manager.close();
+    const runtimeFiles = runtimeFilePaths(root, { routes: {} }).map(file => file.replaceAll('\\', '/'));
+    assert.equal(runtimeFiles.some(file => file.endsWith('/hook-service/credential.mjs')), true);
+    assert.equal(runtimeFiles.some(file => file.endsWith('/_shared/hook-project-root.mjs')), true);
+  } finally {
+    if (previous === undefined) delete process.env.NODE_OPTIONS;
+    else process.env.NODE_OPTIONS = previous;
+    await rm(root, { recursive: true, force: true });
   }
 });

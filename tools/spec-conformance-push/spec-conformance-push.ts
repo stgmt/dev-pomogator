@@ -55,13 +55,13 @@ interface ThrottleState {
   pending: Finding[];
 }
 
-function statePath(repoRoot: string): string {
-  return path.join(repoRoot, STATE_PATH_REL);
+function statePath(repoRoot: string): string | null {
+  return resolveProjectPath(repoRoot, STATE_PATH_REL, { mustExist: false });
 }
 
 function readState(repoRoot: string): ThrottleState | null {
   const p = statePath(repoRoot);
-  if (!fs.existsSync(p)) return null;
+  if (!p || !fs.existsSync(p)) return null;
   try {
     return JSON.parse(fs.readFileSync(p, 'utf8')) as ThrottleState;
   } catch {
@@ -71,6 +71,7 @@ function readState(repoRoot: string): ThrottleState | null {
 
 function writeState(repoRoot: string, state: ThrottleState): void {
   const p = statePath(repoRoot);
+  if (!p) return;
   fs.mkdirSync(path.dirname(p), { recursive: true });
   // Atomic write: temp file + rename per `atomic-config-save` rule.
   const tmp = `${p}.tmp.${process.pid}`;
@@ -80,6 +81,7 @@ function writeState(repoRoot: string, state: ThrottleState): void {
 
 function clearState(repoRoot: string): void {
   const p = statePath(repoRoot);
+  if (!p) return;
   try {
     fs.unlinkSync(p);
   } catch {

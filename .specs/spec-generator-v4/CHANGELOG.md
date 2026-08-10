@@ -62,3 +62,7 @@ Result: AC_SATISFACTION 283/289 (lane RED until the 6 clarify follow-ups land â€
 - AC-7.4 now has an executable guard that rejects missing or untruthful runtime consumers and requires a passing real-artifact command; current Marksman integration has positive Docker evidence.
 - AC-36.6 now has a machine-readable migration-phase gate that denies dirty, filtered, stale, failed, or unqualified evidence and allows only a complete fresh phase.
 - AC-20.2 and AC-26.2 were previously given AC-owned BDD evidence in this remediation wave; AC-1.3 remains explicitly superseded.
+
+## 2026-08-11 â€” PR #227 review-hardening contract
+
+Specified route-aware client deadlines, a hard streaming stdin ceiling, bounded and reaped worker startup, durable diagnostics for partial Stop failures, pre-create symlink/junction confinement, dependency-complete runtime identity, and mandatory repeated OS PID proof before service termination.

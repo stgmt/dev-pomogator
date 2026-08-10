@@ -23159,11 +23159,25 @@ function confinedJournal(repoRoot, opts) {
   } catch {
     skip(opts, "unsafe-root", "project root cannot be resolved");
   }
-  const dir = path6.join(repo, DIR_REL);
-  fs10.mkdirSync(dir, { recursive: true });
-  const realDir = fs10.realpathSync.native(dir);
-  if (!isWithin(repo, realDir)) skip(opts, "unsafe-journal", "journal escapes project root");
-  return { repo, dir: realDir };
+  let parent = repo;
+  for (const name of DIR_REL.split("/")) {
+    const candidate = path6.join(parent, name);
+    try {
+      if (fs10.existsSync(candidate)) {
+        const lst = fs10.lstatSync(candidate);
+        if (!lst.isDirectory() || lst.isSymbolicLink()) skip(opts, "unsafe-journal", `${name} is not a project-owned directory`);
+      } else {
+        fs10.mkdirSync(candidate, { mode: 448 });
+      }
+      const canonical = fs10.realpathSync.native(candidate);
+      if (!isWithin(repo, canonical) || path6.dirname(canonical) !== parent) skip(opts, "unsafe-journal", `${name} escapes project root`);
+      parent = canonical;
+    } catch (error) {
+      if (error instanceof JournalSkipError) throw error;
+      skip(opts, "unsafe-journal", `${name} cannot be safely resolved`);
+    }
+  }
+  return { repo, dir: parent };
 }
 function safeShards(dir, opts) {
   const result = [];
@@ -23193,8 +23207,7 @@ function suffixFor(name, dateStamp) {
   const match = name.match(new RegExp(`^${dateStamp}-(\\d+)\\.jsonl$`));
   return match ? Number.parseInt(match[1], 10) : null;
 }
-function activeShardPath(repoRoot, dateStamp) {
-  const dir = path6.join(repoRoot, DIR_REL);
+function activeShardInDir(dir, dateStamp) {
   const base = path6.join(dir, `${dateStamp}.jsonl`);
   if (!fs10.existsSync(dir)) return base;
   let bestName = null;
@@ -23242,7 +23255,7 @@ function selectShardAndMaintain(repo, dir, dateStamp, entryBytes, opts) {
   const retention = opts.retentionMs ?? RETENTION_MS;
   const minFree = opts.minFreeBytes ?? MIN_FREE_BYTES;
   if (entryBytes > rotationAt) skip(opts, "entry-limit", "one journal entry exceeds the shard limit");
-  let active = activeShardPath(repo, dateStamp);
+  let active = activeShardInDir(dir, dateStamp);
   const activeSize = fs10.existsSync(active) ? fs10.statSync(active).size : 0;
   if (activeSize > 0 && activeSize + entryBytes > rotationAt) active = nextShard(active, dateStamp);
   let shards = safeShards(dir, opts);
@@ -23276,6 +23289,28 @@ function selectShardAndMaintain(repo, dir, dateStamp, entryBytes, opts) {
   if (free - entryBytes < minFree) skip(opts, "low-disk", "append would violate the 1 GiB reserve");
   return active;
 }
+function appendConfined(shard, dir, line, opts) {
+  let fd = null;
+  try {
+    if (fs10.realpathSync.native(path6.dirname(shard)) !== dir) skip(opts, "unsafe-append", "journal parent changed before append");
+    if (fs10.existsSync(shard)) {
+      const lst = fs10.lstatSync(shard);
+      if (!lst.isFile() || lst.isSymbolicLink()) skip(opts, "unsafe-append", "active shard is not a regular file");
+    }
+    const flags = fs10.constants.O_APPEND | fs10.constants.O_CREAT | fs10.constants.O_WRONLY | (fs10.constants.O_NOFOLLOW ?? 0);
+    fd = fs10.openSync(shard, flags, 384);
+    if (!fs10.fstatSync(fd).isFile()) skip(opts, "unsafe-append", "active shard is not a file");
+    fs10.appendFileSync(fd, line, { encoding: "utf8" });
+  } catch (error) {
+    if (error instanceof JournalSkipError) throw error;
+    skip(opts, "unsafe-append", "active shard cannot be safely appended");
+  } finally {
+    if (fd !== null) try {
+      fs10.closeSync(fd);
+    } catch {
+    }
+  }
+}
 function composeEntry(finding, opts, now) {
   const entry = {
     timestamp: now.toISOString(),
@@ -23301,7 +23336,7 @@ function appendSerializedBatch(serializedEntries, opts) {
       const line = `${serialized}
 `;
       const shard = selectShardAndMaintain(repo, dir, utcDateStamp(now), Buffer.byteLength(line), opts);
-      fs10.appendFileSync(shard, line, { encoding: "utf8", flag: "a" });
+      appendConfined(shard, dir, line, opts);
       return shard;
     });
   } finally {
@@ -23511,11 +23546,11 @@ var REMINDER_BUDGET_BYTES = 6e3;
 var MAX_REMINDER_SAMPLES = 20;
 var ELLIPSIS = "\u2026";
 function statePath(repoRoot) {
-  return path10.join(repoRoot, STATE_PATH_REL);
+  return resolveProjectPath(repoRoot, STATE_PATH_REL, { mustExist: false });
 }
 function readState(repoRoot) {
   const p = statePath(repoRoot);
-  if (!fs14.existsSync(p)) return null;
+  if (!p || !fs14.existsSync(p)) return null;
   try {
     return JSON.parse(fs14.readFileSync(p, "utf8"));
   } catch {
@@ -23524,6 +23559,7 @@ function readState(repoRoot) {
 }
 function writeState(repoRoot, state) {
   const p = statePath(repoRoot);
+  if (!p) return;
   fs14.mkdirSync(path10.dirname(p), { recursive: true });
   const tmp = `${p}.tmp.${process.pid}`;
   fs14.writeFileSync(tmp, JSON.stringify(state, null, 2));
@@ -23531,6 +23567,7 @@ function writeState(repoRoot, state) {
 }
 function clearState(repoRoot) {
   const p = statePath(repoRoot);
+  if (!p) return;
   try {
     fs14.unlinkSync(p);
   } catch {

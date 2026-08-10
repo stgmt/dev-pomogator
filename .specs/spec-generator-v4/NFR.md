@@ -293,3 +293,7 @@ Journal maintenance SHALL be linear in the number of retained shards, SHALL insp
 ## NFR-Reliability-18 (FR-84)
 
 A malformed project identity, unavailable disk-space probe, maintenance-lock conflict, prune failure, or journal write failure SHALL preserve hook fail-open behavior without falling back to the plugin cache, recursively logging the failure, deleting the active shard, or damaging unrelated project files. Retention invariants are 10 MiB per active shard, 64 MiB total per project, 30 days for closed shards, and a 1 GiB free-space reserve. Authenticated daemon recovery SHALL require stable repeated service and listener-owner evidence and SHALL fail closed with respect to process termination. Denied or unverifiable termination SHALL leave the listener alive and use the atomically published OS-assigned loopback endpoint; only failure to start that endpoint may return a bounded fail-open diagnostic.
+
+
+
+Client input memory is bounded by the accepted byte ceiling, every worker startup settles within its declared budget, and every failed child is reaped. A mixed-success group has durable route-level failure evidence. No managed path operation may create a descendant before symlink/junction confinement is proven, and no process termination may rely on state-only PID evidence.

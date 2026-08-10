@@ -18,6 +18,7 @@ import path from 'node:path';
 import os from 'node:os';
 import { randomUUID } from 'node:crypto';
 import {
+  JournalSkipError,
   appendFinding,
   appendRawEntry,
   composeEntry,
@@ -186,5 +187,17 @@ describe('appendRawEntry — arbitrary non-finding entries (FR-19 / FR-22)', () 
       rotationBytes: 32,
     });
     expect(path.basename(shard2)).toBe('2026-06-03-1.jsonl');
+  });
+
+  it('rejects a linked managed parent before creating an external journal descendant', () => {
+    const external = path.join(os.tmpdir(), `raw-external-${randomUUID()}`);
+    fs.mkdirSync(external, { recursive: true });
+    fs.symlinkSync(external, path.join(root, '.dev-pomogator'), process.platform === 'win32' ? 'junction' : 'dir');
+    try {
+      expect(() => appendRawEntry({ escaped: true }, { repoRoot: root, minFreeBytes: 0 })).toThrow(JournalSkipError);
+      expect(fs.existsSync(path.join(external, '.spec-check-log'))).toBe(false);
+    } finally {
+      fs.rmSync(external, { recursive: true, force: true });
+    }
   });
 });

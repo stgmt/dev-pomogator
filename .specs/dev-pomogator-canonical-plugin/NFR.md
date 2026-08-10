@@ -55,3 +55,9 @@
 - **NFR-R11**: Stop consolidation SHALL be behavior-preserving against a captured black-box legacy oracle. Self-heal after daemon loss, no retry of uncertain work, fail-open transport behavior, route order, approval/blocking, context, diagnostics, and stop-loop handling SHALL remain equivalent.
 
 Credential-proven daemon recovery SHALL fail closed for process termination: incomplete, ambiguous, changing, or access-denied ownership evidence MUST leave the listener alive and use an atomically published OS-assigned loopback endpoint; only failure to start that endpoint returns a bounded actionable fail-open result.
+
+## PR #227 review-hardening qualities
+
+- **NFR-P9**: Client request time is bounded by the selected route/group execution budget plus fixed transport overhead; input memory never grows beyond the accepted stdin ceiling.
+- **NFR-S8**: Managed state creation is denied before any descendant write when a parent is a symlink, junction, or canonical escape; process termination requires current repeated authenticated listener ownership proof and never state-only PID evidence.
+- **NFR-R10**: Every worker startup settles within budget and every failed/starting child is reaped; mixed-success Stop groups preserve completed semantics and durable route-level failure evidence; imported runtime dependency drift triggers service replacement.

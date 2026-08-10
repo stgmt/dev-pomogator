@@ -81,3 +81,7 @@ Hook-service scope: `tools/hook-service/` owns the shared authenticated loopback
 | `.specs/dev-pomogator-canonical-plugin/dev-pomogator-canonical-plugin.feature` | edit | Add CORE024_20–CORE024_22. |
 | `tools/hook-service/server.mjs`, `tools/hook-service/ensure-up.mjs` | edit | Expose PID only through authenticated health and recover a missing-state owned listener with stable double proof. |
 | `tests/hook-service.test.mjs`, `tests/step_definitions/feature24_hook_review.ts` | edit | Cover stable authenticated recovery and foreign/ambiguous refusal for CORE024_23. |
+
+## PR #227 review-hardening file plan (2026-08-11)
+
+Update hook-service client, worker manager, server, startup recovery, journal/state confinement, BDD mirrors and steps, focused regressions, generated bundles, and the installed plugin cache. Preserve all registered hooks and existing Stop aggregation semantics.

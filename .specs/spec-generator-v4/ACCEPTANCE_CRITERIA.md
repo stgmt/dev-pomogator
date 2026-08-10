@@ -1679,3 +1679,33 @@ Given a dependency-absent installed-cache fixture whose plugin root differs from
 **Требование:** [FR-84](FR.md#fr-84)
 
 Given a stale or legacy per-user-credential-proven DevPomogator hook-service owns the configured loopback port while `service.json` is missing or unusable, when current startup recovery runs, then it resolves the listener PID from the operating system twice around a second credential-proven health probe and may stop only the unchanged verified owner; if termination is denied or ownership is credential-rejected, ambiguous, changed, or unverifiable, that listener remains alive and current runtime starts on an operating-system-assigned loopback port atomically published for every client.
+
+## AC-84.9
+
+**Требование:** [FR-84](FR.md#fr-84)
+
+Given a logical hook route whose declared execution budget exceeds three seconds or an input stream exceeds the client ceiling, when the installed client dispatches it, then the request remains eligible through the route-aware budget while stdin is rejected and consumption stops as soon as the byte ceiling is crossed.
+
+## AC-84.10
+
+**Требование:** [FR-84](FR.md#fr-84)
+
+Given a persistent worker that hangs before ready, writes non-protocol output, exits, or is closed while starting, when its lifecycle boundary handles the fault, then every pending operation settles within the configured startup budget, the child is terminated, the slot is recyclable, and caller `NODE_OPTIONS` is absent from the worker environment.
+
+## AC-84.11
+
+**Требование:** [FR-84](FR.md#fr-84)
+
+Given a grouped Stop dispatch in which at least one logical route succeeds and at least one fails, when aggregation completes, then successful blocking or context semantics are preserved and every failed route produces a bounded durable route-level diagnostic.
+
+## AC-84.12
+
+**Требование:** [FR-84](FR.md#fr-84)
+
+Given a project whose managed parent is a symlink or junction outside the repository, or a service dependency changes without the entry module changing, when journal/state creation or runtime identity is evaluated, then no external descendant is created or written and the dependency change invalidates the running service identity.
+
+## AC-84.13
+
+**Требование:** [FR-84](FR.md#fr-84)
+
+Given credential-proven health without a positive PID or stale state naming a live unrelated PID, when orphan recovery evaluates termination, then it does not stop that PID and may terminate only an owner proven unchanged by two credential-proven health probes and two operating-system listener-PID resolutions.

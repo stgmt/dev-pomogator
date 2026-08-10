@@ -150,11 +150,25 @@ function confinedJournal(repoRoot: string, opts: RawAppendOptions | AppendOption
   } catch {
     skip(opts, 'unsafe-root', 'project root cannot be resolved');
   }
-  const dir = path.join(repo, DIR_REL);
-  fs.mkdirSync(dir, { recursive: true });
-  const realDir = fs.realpathSync.native(dir);
-  if (!isWithin(repo, realDir)) skip(opts, 'unsafe-journal', 'journal escapes project root');
-  return { repo, dir: realDir };
+  let parent = repo;
+  for (const name of DIR_REL.split('/')) {
+    const candidate = path.join(parent, name);
+    try {
+      if (fs.existsSync(candidate)) {
+        const lst = fs.lstatSync(candidate);
+        if (!lst.isDirectory() || lst.isSymbolicLink()) skip(opts, 'unsafe-journal', `${name} is not a project-owned directory`);
+      } else {
+        fs.mkdirSync(candidate, { mode: 0o700 });
+      }
+      const canonical = fs.realpathSync.native(candidate);
+      if (!isWithin(repo, canonical) || path.dirname(canonical) !== parent) skip(opts, 'unsafe-journal', `${name} escapes project root`);
+      parent = canonical;
+    } catch (error) {
+      if (error instanceof JournalSkipError) throw error;
+      skip(opts, 'unsafe-journal', `${name} cannot be safely resolved`);
+    }
+  }
+  return { repo, dir: parent };
 }
 
 function safeShards(dir: string, opts: RawAppendOptions | AppendOptions): SafeShard[] {
@@ -189,9 +203,7 @@ function suffixFor(name: string, dateStamp: string): number | null {
   return match ? Number.parseInt(match[1], 10) : null;
 }
 
-/** Highest numbered safe shard for the current UTC day. */
-export function activeShardPath(repoRoot: string, dateStamp: string): string {
-  const dir = path.join(repoRoot, DIR_REL);
+function activeShardInDir(dir: string, dateStamp: string): string {
   const base = path.join(dir, `${dateStamp}.jsonl`);
   if (!fs.existsSync(dir)) return base;
   let bestName: string | null = null;
@@ -210,6 +222,11 @@ export function activeShardPath(repoRoot: string, dateStamp: string): string {
     }
   }
   return bestName ? path.join(dir, bestName) : base;
+}
+
+/** Highest numbered safe shard for the current UTC day. */
+export function activeShardPath(repoRoot: string, dateStamp: string): string {
+  return activeShardInDir(path.join(repoRoot, DIR_REL), dateStamp);
 }
 
 function nextShard(current: string, dateStamp: string): string {
@@ -247,7 +264,7 @@ function selectShardAndMaintain(
   const retention = opts.retentionMs ?? RETENTION_MS;
   const minFree = opts.minFreeBytes ?? MIN_FREE_BYTES;
   if (entryBytes > rotationAt) skip(opts, 'entry-limit', 'one journal entry exceeds the shard limit');
-  let active = activeShardPath(repo, dateStamp);
+  let active = activeShardInDir(dir, dateStamp);
   const activeSize = fs.existsSync(active) ? fs.statSync(active).size : 0;
   if (activeSize > 0 && activeSize + entryBytes > rotationAt) active = nextShard(active, dateStamp);
 
@@ -285,6 +302,26 @@ function selectShardAndMaintain(
   return active;
 }
 
+function appendConfined(shard: string, dir: string, line: string, opts: RawAppendOptions | AppendOptions): void {
+  let fd: number | null = null;
+  try {
+    if (fs.realpathSync.native(path.dirname(shard)) !== dir) skip(opts, 'unsafe-append', 'journal parent changed before append');
+    if (fs.existsSync(shard)) {
+      const lst = fs.lstatSync(shard);
+      if (!lst.isFile() || lst.isSymbolicLink()) skip(opts, 'unsafe-append', 'active shard is not a regular file');
+    }
+    const flags = fs.constants.O_APPEND | fs.constants.O_CREAT | fs.constants.O_WRONLY | (fs.constants.O_NOFOLLOW ?? 0);
+    fd = fs.openSync(shard, flags, 0o600);
+    if (!fs.fstatSync(fd).isFile()) skip(opts, 'unsafe-append', 'active shard is not a file');
+    fs.appendFileSync(fd, line, { encoding: 'utf8' });
+  } catch (error) {
+    if (error instanceof JournalSkipError) throw error;
+    skip(opts, 'unsafe-append', 'active shard cannot be safely appended');
+  } finally {
+    if (fd !== null) try { fs.closeSync(fd); } catch { /* best effort */ }
+  }
+}
+
 export function composeEntry(finding: Finding, opts: AppendOptions, now: Date): LogEntry {
   const entry: LogEntry = {
     timestamp: now.toISOString(),
@@ -310,7 +347,7 @@ function appendSerializedBatch(serializedEntries: string[], opts: RawAppendOptio
     return serializedEntries.map(serialized => {
       const line = `${serialized}\n`;
       const shard = selectShardAndMaintain(repo, dir, utcDateStamp(now), Buffer.byteLength(line), opts);
-      fs.appendFileSync(shard, line, { encoding: 'utf8', flag: 'a' });
+      appendConfined(shard, dir, line, opts);
       return shard;
     });
   } finally {

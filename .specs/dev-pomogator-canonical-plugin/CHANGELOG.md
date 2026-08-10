@@ -104,3 +104,7 @@ b. **Manual cleanup** (если предпочитаете контроль):
 - Cross-link spec-generator-v4 FR-84 for no-spec no-op and bounded conformance journal retention (10 MiB shard, 64 MiB total, 30 days, 1 GiB reserve).
 - AC-12/AC-13, CORE024_20–22, NFR-P5/R10/R11, and the Phase 10 implementation are present. Focused checks pass locally; exact-commit Docker BDD and release verification remain pending CI evidence. No hook or plugin is disabled.
 - Added AC-14 / CORE024_23 for safe recovery of a token-authenticated hook-service that owns the loopback port without usable state metadata; foreign or unverifiable listeners are never terminated.
+
+## 2026-08-11 — PR #227 review-hardening contract
+
+Added canonical contracts for route-aware client timeouts, a hard streaming input ceiling, bounded worker startup and teardown, durable partial-failure diagnostics, pre-create link confinement, dependency-complete runtime identity, and proof-only process termination.

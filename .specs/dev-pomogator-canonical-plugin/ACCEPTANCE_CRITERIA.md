@@ -160,3 +160,23 @@ Given the current 13-registration Stop behavior captured as a black-box baseline
 ## AC-14 — Credential-proven orphan hook-service recovery
 
 Given a stale or legacy per-user-credential-proven DevPomogator hook-service owns the configured loopback port while `service.json` is missing or unusable, when current startup recovery runs, then it resolves the listener PID twice around a second credential-proven health probe and may stop only the unchanged verified owner; denied termination or credential-rejected, ambiguous, changed, or unverifiable ownership leaves that listener alive while current runtime starts on an atomically published operating-system-assigned loopback port.
+
+## AC-15 — Route-aware client deadline and hard stdin ceiling
+
+Given a logical route whose declared budget exceeds three seconds or an input stream exceeds the client ceiling, when the installed client dispatches it, then valid slow work remains eligible through its route budget while oversized input is rejected and no longer consumed as soon as the byte ceiling is crossed.
+
+## AC-16 — Worker startup and teardown are bounded
+
+Given a worker that hangs before ready, contaminates its protocol, exits, or is closed while starting, when the lifecycle boundary handles the event, then pending work settles within the startup budget, the child is terminated, the slot is recyclable, and caller `NODE_OPTIONS` is absent.
+
+## AC-17 — Partial Stop failures remain observable
+
+Given one successful and one failing route in a Stop group, when aggregation completes, then successful semantics remain intact and a bounded durable diagnostic identifies every failed route.
+
+## AC-18 — Managed paths and runtime identity are closed
+
+Given an escaped managed directory or a changed imported service dependency, when state creation or service identity is evaluated, then no external descendant is created or written and the dependency change invalidates the current runtime identity.
+
+## AC-19 — State-only PID evidence cannot terminate
+
+Given credential-proven health without a positive PID or stale state naming an unrelated live PID, when recovery runs, then the unrelated process remains alive and only two matching credential-proven health proofs plus two matching OS listener-PID resolutions can authorize termination.

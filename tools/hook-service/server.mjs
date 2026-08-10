@@ -78,22 +78,28 @@ export async function loadRegistry(root) {
   return JSON.parse(await readFile(join(root, 'tools', 'hook-service', 'registry.json'), 'utf8'));
 }
 
-// The daemon advertises this identity so bootstrap can replace stale owned runtimes safely.
-export async function runtimeIdentity(root) {
-  const registrySource = await readFile(join(root, 'tools', 'hook-service', 'registry.json'), 'utf8');
-  const registry = JSON.parse(registrySource);
+export function runtimeFilePaths(root, registry) {
   const adapterFiles = [...new Set(Object.values(registry.routes)
     .map(entry => entry.worker_target)
     .filter(Boolean)
     .map(target => join(root, target)))];
   const runtimeRoot = join(resolve(fileURLToPath(import.meta.url), '..'));
-  const runtimeFiles = [
+  return [
     fileURLToPath(import.meta.url),
+    join(runtimeRoot, 'credential.mjs'),
     join(runtimeRoot, 'worker-manager.mjs'),
     join(runtimeRoot, 'worker-host.mjs'),
     join(runtimeRoot, 'registry.mjs'),
+    join(runtimeRoot, '..', '_shared', 'hook-project-root.mjs'),
     ...adapterFiles,
   ];
+}
+
+// The daemon advertises this identity so bootstrap can replace stale owned runtimes safely.
+export async function runtimeIdentity(root) {
+  const registrySource = await readFile(join(root, 'tools', 'hook-service', 'registry.json'), 'utf8');
+  const registry = JSON.parse(registrySource);
+  const runtimeFiles = runtimeFilePaths(root, registry);
   const runtimeSources = await Promise.all(runtimeFiles.map(file => readFile(file, 'utf8')));
   return {
     rootFingerprint: fingerprint(resolve(root)),
@@ -314,6 +320,27 @@ export async function startServer({ pluginRoot, token, port = PORT, stateRoot = 
   const { registryDigest, rootFingerprint, runtimeDigest } = await runtimeIdentity(pluginRoot);
   const workerManager = new WorkerManager({ root: pluginRoot });
   const eventFlights = new Map();
+  const groupedResult = async (result, dispatcherRoute, routeIds) => {
+    for (const failure of result.failures) {
+      const incidentId = randomUUID();
+      await appendDiagnostic(stateRoot, {
+        schema: 1,
+        incidentId,
+        timestamp: new Date().toISOString(),
+        route: failure.route,
+        dispatcherRoute,
+        code: classifyError(failure.error),
+        detail: sanitizeDetail(failure.error, [token]),
+        exitCode: Number.isInteger(failure.error?.exitCode) ? failure.error.exitCode : null,
+        pid: process.pid,
+        tokenFingerprint: fingerprint(token),
+        rootFingerprint,
+        registryDigest,
+        runtimeDigest,
+      }).catch(() => {});
+    }
+    return groupResult(result, routeIds);
+  };
   const dispatchEvent = async (event, input, route, projectRoot) => {
     const context = { projectRoot };
     const groupedRoutes = registry.groups?.[route] || null;
@@ -321,32 +348,33 @@ export async function startServer({ pluginRoot, token, port = PORT, stateRoot = 
     const sessionId = input && typeof input.session_id === 'string' ? input.session_id : '';
     const key = sessionId && projectRoot ? `${event}:${projectRoot}:${sessionId}` : '';
     if (!key) {
-      if (groupedRoutes) return groupResult(await executeEvent(registry, event, input, pluginRoot, workerManager, context, groupedRoutes), groupedRoutes);
+      if (groupedRoutes) return groupedResult(await executeEvent(registry, event, input, pluginRoot, workerManager, context, groupedRoutes), route, groupedRoutes);
       return execute(registry.routes[route], input, pluginRoot, event, workerManager, route, context);
     }
     const now = Date.now();
     const existing = eventFlights.get(key);
     if (existing && existing.expiresAt > now) {
       existing.seen.add(route);
-      return existing.promise.then(result => groupedRoutes ? groupResult(result, groupedRoutes) : routeResult(result, route));
+      return groupedRoutes ? existing.groupedPromise : existing.promise.then(result => routeResult(result, route));
     }
     if (existing) clearTimeout(existing.expiryTimer);
     const expected = new Set(Object.entries(registry.routes)
       .filter(([, entry]) => entry.event === event)
       .map(([routeId]) => routeId));
-    const state = { seen: new Set([route]), expected, expiresAt: now + EVENT_RESULT_TTL_MS, expiryTimer: null, promise: null };
+    const state = { seen: new Set([route]), expected, expiresAt: now + EVENT_RESULT_TTL_MS, expiryTimer: null, promise: null, groupedPromise: null };
     state.expiryTimer = setTimeout(() => {
       if (eventFlights.get(key) === state) eventFlights.delete(key);
     }, EVENT_RESULT_TTL_MS);
     state.expiryTimer.unref?.();
     const routeIds = groupedRoutes || [...expected];
     state.promise = executeEvent(registry, event, input, pluginRoot, workerManager, context, routeIds);
+    state.groupedPromise = groupedRoutes ? state.promise.then(result => groupedResult(result, route, groupedRoutes)) : null;
     eventFlights.set(key, state);
     if (groupedRoutes) {
       // One host-visible dispatcher has no late sibling routes to serve from a
       // completed cache. Drop it as soon as the overlapping flight settles so
       // a Stop re-entry (stop_hook_active=true) executes the loop guards again.
-      state.promise.then(() => {
+      state.groupedPromise.then(() => {
         if (eventFlights.get(key) === state) eventFlights.delete(key);
         clearTimeout(state.expiryTimer);
       }, () => {
@@ -354,7 +382,7 @@ export async function startServer({ pluginRoot, token, port = PORT, stateRoot = 
         clearTimeout(state.expiryTimer);
       });
     }
-    return state.promise.then(result => groupedRoutes ? groupResult(result, groupedRoutes) : routeResult(result, route));
+    return groupedRoutes ? state.groupedPromise : state.promise.then(result => routeResult(result, route));
   };
   const server = http.createServer(async (request, response) => {
     let route = '';

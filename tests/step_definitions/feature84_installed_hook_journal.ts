@@ -14,6 +14,7 @@ import {
 } from '../../tools/spec-check-log/writer.ts';
 import { projectHasSpecs, resolveHookProjectRoot } from '../../tools/_shared/hook-project-root.mjs';
 import { authenticatedListenerPid } from '../../tools/hook-service/ensure-up.mjs';
+import { runtimeFilePaths } from '../../tools/hook-service/server.mjs';
 
 interface JournalWorld extends V4World {
   pluginRoot?: string;
@@ -32,6 +33,12 @@ interface JournalWorld extends V4World {
   recoveryStarted?: boolean;
   recoveryPort?: number;
   foreignRecoveryPid?: number | null;
+  escapedManagedRoot?: string;
+  escapedManagedExternal?: string;
+  escapedManagedError?: unknown;
+  serviceRuntimeFiles?: string[];
+  staleStatePid?: number;
+  provenListenerPid?: number | null;
 }
 
 const fixedNow = new Date('2026-08-11T12:00:00.000Z');
@@ -270,4 +277,60 @@ Then(/^it starts the current runtime on a published loopback port and never term
   assert.equal(this.recoveryStarted, true);
   assert.equal(this.recoveryPort, 51234);
   assert.equal(this.foreignRecoveryPid, null);
+});
+
+Given(/^an escaped managed directory and a changed shared service dependency$/, function (this: JournalWorld) {
+  this.projectRoot = makeProject(path.join(this.tempDir, 'escaped-managed-project'));
+  this.escapedManagedExternal = path.join(this.tempDir, 'escaped-managed-external');
+  fs.mkdirSync(this.escapedManagedExternal, { recursive: true });
+  this.escapedManagedRoot = path.join(this.projectRoot, '.dev-pomogator');
+  fs.symlinkSync(this.escapedManagedExternal, this.escapedManagedRoot, process.platform === 'win32' ? 'junction' : 'dir');
+});
+
+When(/^journal state and service runtime identity are evaluated$/, function (this: JournalWorld) {
+  try {
+    appendRawEntry({ escaped: true }, { repoRoot: this.projectRoot!, now: fixedNow, minFreeBytes: 0 });
+  } catch (error) {
+    this.escapedManagedError = error;
+  }
+  this.serviceRuntimeFiles = runtimeFilePaths(this.projectRoot!, { routes: {} }).map(file => file.replaceAll('\\', '/'));
+});
+
+Then(/^no descendant is created through the escaped directory$/, function (this: JournalWorld) {
+  assert.equal(this.escapedManagedError instanceof JournalSkipError, true);
+  assert.equal(fs.existsSync(path.join(this.escapedManagedExternal!, '.spec-check-log')), false);
+});
+
+Then(/^the shared dependency change invalidates runtime identity$/, function (this: JournalWorld) {
+  assert.equal(this.serviceRuntimeFiles!.some(file => file.endsWith('/hook-service/credential.mjs')), true);
+  assert.equal(this.serviceRuntimeFiles!.some(file => file.endsWith('/_shared/hook-project-root.mjs')), true);
+});
+
+Given(/^authenticated health omits PID while stale state names an unrelated live process$/, function (this: JournalWorld) {
+  this.staleStatePid = 9900;
+  this.recoveryProofCalls = [];
+});
+
+When(/^orphan service recovery runs$/, async function (this: JournalWorld) {
+  const listenerPids = [8820, 8820];
+  this.provenListenerPid = await authenticatedListenerPid({
+    observed: { owned: true, current: false },
+    probe: async () => {
+      this.recoveryProofCalls!.push('health');
+      return { owned: true, current: false };
+    },
+    resolveListenerPid: async () => {
+      this.recoveryProofCalls!.push('pid');
+      return listenerPids.shift() ?? null;
+    },
+  });
+});
+
+Then(/^the unrelated process remains alive$/, function (this: JournalWorld) {
+  assert.notEqual(this.provenListenerPid, this.staleStatePid);
+});
+
+Then(/^termination requires two matching health and listener PID proofs$/, function (this: JournalWorld) {
+  assert.equal(this.provenListenerPid, 8820);
+  assert.deepEqual(this.recoveryProofCalls, ['pid', 'health', 'pid']);
 });

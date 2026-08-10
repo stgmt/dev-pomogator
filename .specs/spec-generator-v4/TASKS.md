@@ -2999,3 +2999,33 @@ Phase 45 contains 10 planned TODO slices. All headers use the strict graph-nativ
   **Done When:**
   - [ ] Focused integration, Docker/WSL BDD, hook-service regression, spec validation/audit/verdict, installed-cache smoke, and disk-boundary evidence pass on the exact commit.
   - [ ] Local cache synchronization and PR #227 update occur only after the spec contract is approved and every required proof is current.
+
+## Phase 52 — PR #227 review hardening (2026-08-11)
+
+Источник: PR #227 review; FR-84; AC-84.9–AC-84.13; @feature84.
+
+- [ ] Add review regression fixtures — id: p52-review-fixtures — Status: TODO | Est: 120m
+  _depends: hard:p51-root-fixture_
+  _Requirements: [FR-84](FR.md#fr-84)_
+  **Done When:**
+  - [ ] SPECGEN004_723–SPECGEN004_727 reproduce route timeout, streaming overflow, worker leak, partial-failure invisibility, path escape, runtime digest drift, and state-only PID authorization.
+- [ ] Harden client and worker boundaries — id: p52-client-worker — Status: TODO | Est: 180m
+  _depends: hard:p52-review-fixtures_
+  _Requirements: [FR-84](FR.md#fr-84)_
+  **Done When:**
+  - [ ] Client deadlines derive from registry budgets, input consumption stops at the byte ceiling, worker startup is bounded, every failed/starting child is terminated, and `NODE_OPTIONS` is cleared.
+- [ ] Preserve grouped results with durable route diagnostics — id: p52-partial-failure — Status: TODO | Est: 90m
+  _depends: hard:p52-review-fixtures_
+  _Requirements: [FR-84](FR.md#fr-84)_
+  **Done When:**
+  - [ ] Mixed-success Stop groups preserve successful aggregation and append bounded diagnostics naming each failed route.
+- [ ] Close path, runtime, and PID proof boundaries — id: p52-confinement-identity — Status: TODO | Est: 180m
+  _depends: hard:p52-review-fixtures_
+  _Requirements: [FR-84](FR.md#fr-84)_
+  **Done When:**
+  - [ ] Pre-create symlink/junction escapes write nothing, canonical directories remain the append target, imported service dependencies affect runtime identity, and every termination uses double health plus double OS PID proof.
+- [ ] Verify and publish the same PR — id: p52-release — Status: TODO | Est: 180m
+  _depends: hard:p52-client-worker, hard:p52-partial-failure, hard:p52-confinement-identity_
+  _Requirements: [FR-84](FR.md#fr-84)_
+  **Done When:**
+  - [ ] Focused regressions, generated bundles, spec trace/validation, available container checks, installed-cache smoke, exact-commit CI, and PR #227 evidence pass without disabling any hook or plugin.

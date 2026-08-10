@@ -1731,3 +1731,7 @@ The implementation increment SHALL keep one SpecGraph/MCP engine, preserve Claud
 ### Selected boundary
 
 Implement strict plugin/project root separation, request-scoped project identity, and per-project journal limits of 10 MiB active-shard rotation, 64 MiB total, 30 days, and 1 GiB free reserve. The canonical-plugin spec separately owns consolidation of the 13 visible DevPomogator Stop registrations into one semantics-preserving dispatcher.
+
+## PR #227 review evidence (2026-08-11)
+
+Controlled reproductions showed a valid 3.5-second response aborted by the fixed 3-second client signal, a 32 MiB stream fully consumed after the nominal 2 MiB rejection, pre-ready worker hangs and protocol contamination leaving children alive, mixed-success Stop groups returning success with no failure evidence, a junction causing an external journal descendant to be created before rejection, and stale state being eligible for termination when authenticated health omitted PID. These are boundary/lifecycle defects, not justification to disable hooks.

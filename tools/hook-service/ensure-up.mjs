@@ -244,10 +244,7 @@ export async function ensureUp(pluginRoot = process.env.CLAUDE_PLUGIN_ROOT || pr
     const observedPort = priorPort || PORT;
     const observed = await probeHealth(token, expected, observedPort);
     const restarted = Boolean(observed.owned || positivePid(prior.pid));
-    if (observed.owned && prior.pid && ownProcess(prior.pid) && ownedIdentity(prior, expected)
-      && (!positivePid(observed.pid) || observed.pid === prior.pid)) {
-      await stopOwned(prior.pid);
-    } else if (observed.owned) {
+    if (observed.owned) {
       const authenticatedPid = await authenticatedListenerPid({
         observed,
         probe: () => probeHealth(token, expected, observedPort),
