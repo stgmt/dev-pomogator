@@ -102,5 +102,5 @@
 - The service keys the event flight by session, normalized project root, and event name; it executes the existing logical routes in registry order.
 - Compatible workers receive explicit project context; legacy children run one at a time with bounded input/output and no retry of uncertain work.
 - The service returns the same host-observable result as the captured legacy 13-registration oracle.
-- Spec-conformance routes read/write only the current project and apply the FR-83 bounded journal policy; a project without `.specs` is a state-free no-op.
+- Spec-conformance routes read/write only the current project and apply the FR-84 bounded journal policy; a project without `.specs` is a state-free no-op.
 - Interleaved requests for another repository use a different flight/state scope and cannot inherit the first repository's CWD, environment, worker state, or journal.

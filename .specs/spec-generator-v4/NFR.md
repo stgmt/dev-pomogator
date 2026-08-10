@@ -274,15 +274,6 @@ After FR-36 the graph holds ≈470 FR nodes instead of 47 (collision-dropped); t
 
 **Pagination and read truth:** Every bounded collection response SHALL expose `total`, `returned`, `truncated`, and `next_cursor` as applicable; cursor ordering SHALL be stable for an unchanged graph revision, and concatenated pages SHALL conserve unique canonical IDs. `PHASE_NOT_FOUND` and `EMPTY_PHASE` SHALL remain distinct. Large `read_spec_doc` requests SHALL not bypass the default/max page bounds without explicit whole-document opt-in, and missing sections SHALL return nearest canonical anchors.
 
-
-## NFR-Performance-14 (FR-83)
-
-Journal maintenance SHALL be linear in the number of retained shards, SHALL inspect only the resolved project's journal directory, and SHALL perform no repository-wide or plugin-cache-wide scan. A steady-state append below all thresholds SHALL require no more than one bounded directory inventory and one append.
-
-## NFR-Reliability-17 (FR-83)
-
-A malformed project identity, unavailable disk-space probe, maintenance-lock conflict, prune failure, or journal write failure SHALL preserve hook fail-open behavior without falling back to the plugin cache, recursively logging the failure, deleting the active shard, or damaging unrelated project files. Retention invariants are 10 MiB per active shard, 64 MiB total per project, 30 days for closed shards, and a 1 GiB free-space reserve.
-
 ## NFR-Performance-14 (FR-83)
 
 **No duplicate graph or hook pipeline:** A Codex host invocation SHALL create no second SpecGraph build, MCP registry, task store, or parallel guard chain solely because of the host. Hook adaptation SHALL add one bounded normalization/dispatch pass before the existing policy. Performance verification SHALL compare repo and installed variants against the same canonical corpus and report any regression explicitly; it SHALL not hide startup work in a pre-warmed checkout.
@@ -294,3 +285,11 @@ A malformed project identity, unavailable disk-space probe, maintenance-lock con
 ## NFR-Security-11 (FR-83)
 
 **Target confinement and guard parity:** Every installed MCP operation SHALL canonicalize and remain within the selected target repository root even when the executable and cwd are in a plugin cache. Codex raw-file and shell payloads SHALL receive the same enforce decision as their Claude-equivalent intent. Cache paths, external symlink/junction targets, and unresolved roots SHALL be rejected before reading or mutation; diagnostic output SHALL not expose secrets.
+
+## NFR-Performance-15 (FR-84)
+
+Journal maintenance SHALL be linear in the number of retained shards, SHALL inspect only the resolved project's journal directory, and SHALL perform no repository-wide or plugin-cache-wide scan. A steady-state append below all thresholds SHALL require no more than one bounded directory inventory and one append.
+
+## NFR-Reliability-18 (FR-84)
+
+A malformed project identity, unavailable disk-space probe, maintenance-lock conflict, prune failure, or journal write failure SHALL preserve hook fail-open behavior without falling back to the plugin cache, recursively logging the failure, deleting the active shard, or damaging unrelated project files. Retention invariants are 10 MiB per active shard, 64 MiB total per project, 30 days for closed shards, and a 1 GiB free-space reserve. Authenticated daemon recovery SHALL require stable repeated service and listener-owner evidence and SHALL fail closed with respect to process termination. Denied or unverifiable termination SHALL leave the listener alive and use the atomically published OS-assigned loopback endpoint; only failure to start that endpoint may return a bounded fail-open diagnostic.

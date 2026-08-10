@@ -6,7 +6,7 @@ import test from 'node:test';
 import { isWithinRoot, startServer } from '../tools/hook-service/server.mjs';
 import { renderHttpManifest } from '../tools/hook-service/registry.mjs';
 import { HookMigrationCollisionError, migrateManagedHooks, recoverManagedHooks } from '../tools/hook-service/migrate-managed-hooks.mjs';
-import { acquireStartupLease } from '../tools/hook-service/ensure-up.mjs';
+import { acquireStartupLease, authenticatedListenerPid, ensureUp, listenerPidsFromNetstat, processExists } from '../tools/hook-service/ensure-up.mjs';
 import { spawnSync } from 'node:child_process';
 import { runManagedHook } from '../tools/hook-service/client.mjs';
 
@@ -46,6 +46,7 @@ test('HS_01: health and registration require the token', async () => {
     const body = await health.json();
     assert.equal(body.service, 'dev-pomogator-hook-service');
     assert.equal(body.version, '1.0.0');
+    assert.equal(body.pid, process.pid);
     assert.equal(body.tokenFingerprint, '2bb80d537b1d');
     assert.match(body.rootFingerprint, /^[a-f0-9]{12}$/);
     assert.match(body.registryDigest, /^[a-f0-9]{64}$/);
@@ -219,4 +220,74 @@ test('HS_09: recovery refuses a journal whose settings were changed after interr
     await writeFile(settingsPath, '{"hooks":{"PreToolUse":[{"hooks":[{"command":"post-interruption-user"}]}]}}\n');
     await assert.rejects(recoverManagedHooks({ settingsPath, fix: true }), HookMigrationCollisionError);
   } finally { await rm(root, { recursive: true, force: true }); }
+});
+
+test('HS_12: authenticated orphan recovery requires stable health and listener PID proof', async () => {
+  const pids = [8820, 8820];
+  let probes = 0;
+  const recovered = await authenticatedListenerPid({
+    observed: { owned: true, current: false },
+    probe: async () => { probes += 1; return { owned: true, current: false }; },
+    resolveListenerPid: async () => pids.shift() ?? null,
+  });
+  assert.equal(recovered, 8820);
+  assert.equal(probes, 1);
+
+  assert.equal(await authenticatedListenerPid({
+    observed: { owned: false, current: false },
+    probe: async () => ({ owned: true, current: false }),
+    resolveListenerPid: async () => 8820,
+  }), null);
+  assert.equal(await authenticatedListenerPid({
+    observed: { owned: true, current: false },
+    probe: async () => ({ owned: true, current: false }),
+    resolveListenerPid: (() => { const changed = [8820, 9900]; return async () => changed.shift() ?? null; })(),
+  }), null);
+  assert.equal(await authenticatedListenerPid({
+    observed: { owned: true, current: false, pid: 7000 },
+    probe: async () => ({ owned: true, current: false, pid: 7000 }),
+    resolveListenerPid: async () => 8820,
+  }), null);
+});
+
+test('HS_13: Windows netstat parser returns only the unique configured loopback owner', () => {
+  const output = [
+    '  TCP    127.0.0.1:42619      0.0.0.0:0      LISTENING       8820',
+    '  TCP    127.0.0.1:42619      127.0.0.1:53122 ESTABLISHED     8820',
+    '  TCP    127.0.0.1:53122      127.0.0.1:42619 ESTABLISHED     7777',
+    '  TCP    127.0.0.1:42620      0.0.0.0:0      LISTENING       9900',
+  ].join('\r\n');
+  assert.deepEqual(listenerPidsFromNetstat(output, '127.0.0.1', 42619), [8820]);
+  assert.deepEqual(listenerPidsFromNetstat(`${output}\r\n  TCP 127.0.0.1:42619 0.0.0.0:0 LISTENING 9900`, '127.0.0.1', 42619), [8820, 9900]);
+});
+
+test('HS_14: an EPERM ownership probe means the PID is alive, not absent', () => {
+  assert.equal(processExists(8820, () => { const error = new Error('denied'); error.code = 'EPERM'; throw error; }), true);
+  assert.equal(processExists(8820, () => { const error = new Error('missing'); error.code = 'ESRCH'; throw error; }), false);
+});
+
+test('HS_15: startup publishes and reuses an OS-assigned loopback port through service state', async () => {
+  const stateRoot = await mkdtemp(join(tmpdir(), 'hook-service-dynamic-state-'));
+  const previousStateRoot = process.env.DEV_POMOGATOR_STATE_DIR;
+  let state;
+  try {
+    process.env.DEV_POMOGATOR_STATE_DIR = stateRoot;
+    await writeFile(join(stateRoot, 'service.json'), '{malformed');
+    const pluginRoot = resolve(import.meta.dirname, '..');
+    const first = await ensureUp(pluginRoot);
+    assert.equal(first.ready, true);
+    assert.equal(Number.isInteger(first.port) && first.port > 0, true);
+    state = JSON.parse(await readFile(join(stateRoot, 'service.json'), 'utf8'));
+    assert.equal(state.port, first.port);
+    const second = await ensureUp(pluginRoot);
+    assert.deepEqual({ ready: second.ready, port: second.port, restarted: second.restarted }, { ready: true, port: first.port, restarted: false });
+  } finally {
+    if (state?.pid) {
+      try { process.kill(state.pid, 'SIGTERM'); } catch { /* already gone */ }
+      for (let index = 0; index < 50 && processExists(state.pid); index += 1) await new Promise(resolveWait => setTimeout(resolveWait, 20));
+    }
+    if (previousStateRoot === undefined) delete process.env.DEV_POMOGATOR_STATE_DIR;
+    else process.env.DEV_POMOGATOR_STATE_DIR = previousStateRoot;
+    await rm(stateRoot, { recursive: true, force: true });
+  }
 });

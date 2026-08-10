@@ -336,6 +336,10 @@ This migration eliminates repeated Node/tsx cold starts for every route in the a
 
 **Semantic aggregation boundary:** Before replacing the manifest, an integration fixture captures the Claude-host-observable legacy result matrix for approval, blocking, reason/system message, `additionalContext`, nonzero/invalid output, timeouts, route order, and active stop-loop cases. The dispatcher aggregator is defined by differential equivalence to that oracle, not by an invented merge rule. Any matrix mismatch blocks migration.
 
-**Project/data boundary:** `pluginRoot` locates code only. The current request supplies `projectRoot`; the service forwards it as child CWD and explicit worker context. Startup environment is never authority for later requests. Spec-conformance routes delegate retention and no-spec behavior to spec-generator-v4 FR-83.
+**Project/data boundary:** `pluginRoot` locates code only. The current request supplies `projectRoot`; the service forwards it as child CWD and explicit worker context. Startup environment is never authority for later requests. Spec-conformance routes delegate retention and no-spec behavior to spec-generator-v4 FR-84.
 
 **Failure boundary:** A connection-class failure self-heals and retries the request once; a live HTTP error or uncertain worker/child result is never retried. A route failure follows the captured legacy fail-open/block semantics. Service health and unrelated project flights remain available after bounded route failure.
+
+### Missing-state daemon recovery
+
+The configured loopback listener may outlive or predate `service.json`. The launcher treats the per-user token-authenticated service signature as necessary but not sufficient process evidence: it resolves the OS listener PID, repeats authenticated health, resolves again, and may terminate only one unchanged PID that agrees with any PID advertised by health. Every ambiguity or change is a refusal. If termination is denied or the owner is foreign/unverifiable, no process is killed; the current child listens on OS-assigned loopback port `0`, atomically publishes its actual port and identity, and clients discover it through the startup lease.

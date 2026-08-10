@@ -420,3 +420,10 @@ Feature: CANON001 Canonical Claude Code Marketplace Plugin
     When the next Stop requests are interleaved through the builtins client
     Then the service is recovered once and each project retains independent FIFO results and state
     And live service errors and uncertain route work are not retried
+
+  @feature13 @AC-14
+  Scenario: CORE024_23 Authenticated orphan hook service is safely recovered
+    Given a stale authenticated DevPomogator hook service owns the loopback port but its service state file is missing
+    When the current installed client performs startup recovery
+    Then it verifies the listener twice by service token and loopback owner PID before replacement or alternate port recovery
+    And it starts the current runtime on a published loopback port and never terminates an unauthenticated or unverifiable listener

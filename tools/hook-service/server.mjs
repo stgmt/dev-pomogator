@@ -8,7 +8,8 @@ import { fingerprint } from './credential.mjs';
 import { WorkerManager } from './worker-manager.mjs';
 import { decodeProjectRootHeader, resolveHookProjectRoot } from '../_shared/hook-project-root.mjs';
 
-export const HOST = '127.0.0.1', PORT = 42619, VERSION = '1.0.0';
+const requestedPort = Number(process.env.DEV_POMOGATOR_HOOK_PORT ?? 42619);
+export const HOST = '127.0.0.1', PORT = Number.isInteger(requestedPort) && requestedPort >= 0 && requestedPort <= 65_535 ? requestedPort : 42619, VERSION = '1.0.0';
 export const stateDir = () => process.env.DEV_POMOGATOR_STATE_DIR || join(process.env.LOCALAPPDATA || process.env.XDG_STATE_HOME || process.env.HOME || '.', 'dev-pomogator', 'hook-service');
 export const stateFile = () => join(stateDir(), 'service.json');
 export const tokenFile = () => join(stateDir(), 'token');
@@ -364,6 +365,7 @@ export async function startServer({ pluginRoot, token, port = PORT, stateRoot = 
       if (url.pathname === '/health') return json(response, 200, {
         service: 'dev-pomogator-hook-service',
         version: VERSION,
+        pid: process.pid,
         tokenFingerprint: fingerprint(token),
         rootFingerprint,
         registryDigest,
@@ -423,9 +425,10 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   await mkdir(stateDir(), { recursive: true, mode: 0o700 });
   const identity = await runtimeIdentity(pluginRoot);
   const server = await startServer({ pluginRoot, token });
+  const actualPort = server.address()?.port;
   await atomicState(stateFile(), `${JSON.stringify({
     pid: process.pid,
-    port: PORT,
+    port: actualPort,
     version: VERSION,
     startedAt: new Date().toISOString(),
     ...identity,

@@ -1390,19 +1390,6 @@ Given a large document or a missing section is requested
 When the bounded document-read handler runs
 Then it returns a safe page or nearest canonical anchors and requires explicit opt-in for the whole document
 
-
-### User Story 63: Installed hooks keep project state bounded and isolated (Priority: P1)
-
-**Требование:** [FR-83]
-
-As a developer using the globally installed plugin across several repositories, I want every conformance hook to use the current caller project for `.specs` and `.dev-pomogator` state while keeping its journal bounded, so that one cache install cannot inspect itself, leak state across projects, fill the system disk, or crash Claude Code.
-
-**Why:** The verified incident filled C: with a 4.247 GiB cache-local journal and converted normal Stop processing into Node allocation and worker-liveness failures.
-
-**Independent Test:** Run the installed-layout BDD fixture with different plugin/project roots, projects with and without `.specs`, aged and oversized shard sets, low-disk probes, and concurrent maintenance. Assert project-only I/O, 10 MiB rotation, 64 MiB total retention, 30-day expiry, 1 GiB reserve behavior, and no installed-cache state.
-
-**Acceptance Scenarios:** SPECGEN004_715–SPECGEN004_721.
-
 ### User Story 63: Codex Desktop runs the full spec workflow (Priority: P1)
 
 **Требование:** [FR-83](FR.md#fr-83)
@@ -1430,3 +1417,17 @@ Then raw spec writes are denied while the equivalent MCP authoring operation suc
 Given the deterministic install and CLI probes pass
 When release readiness is evaluated
 Then a captured fresh Codex Desktop run is still required before the feature is considered delivered
+
+### User Story 64: Installed hooks keep project state bounded and isolated (Priority: P1)
+
+**Требование:** [FR-84]
+
+@feature84
+
+As a developer using the globally installed plugin across several repositories, I want every conformance hook to use the current caller project for `.specs` and `.dev-pomogator` state while keeping its journal bounded, so that one cache install cannot inspect itself, leak state across projects, fill the system disk, or crash Claude Code.
+
+**Why:** The verified incident filled C: with a 4.247 GiB cache-local journal and converted normal Stop processing into Node allocation and worker-liveness failures.
+
+**Independent Test:** Run the installed-layout BDD fixture with different plugin/project roots, projects with and without `.specs`, aged and oversized shard sets, low-disk probes, and concurrent maintenance. Assert project-only I/O, 10 MiB rotation, 64 MiB total retention, 30-day expiry, 1 GiB reserve behavior, and no installed-cache state.
+
+**Acceptance Scenarios:** SPECGEN004_715–SPECGEN004_722.

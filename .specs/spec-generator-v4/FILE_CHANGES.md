@@ -797,28 +797,6 @@ Phase 49 — Live-evidence containment, atomic CAS proof, strict-synthesis guard
 | `tests/step_definitions/feature_codex_init.ts` | EDIT | codex-init FR-5 — PATH-shim positive proof and env-override self-challenge. |
 | `.gitattributes` | EDIT | FR-81 AC-81.10 — force LF for live-evidence ground-truth fixtures so digests stay byte-stable. |
 
-## FR-83 planned file changes — installed root isolation and retention
-
-| Path | Action | Reason |
-|---|---|---|
-| `tools/spec-conformance-push/spec-conformance-push.ts` | edit | Resolve `.specs` and project state from explicit request `projectRoot`, never `CLAUDE_PLUGIN_ROOT`. |
-| `tools/spec-conformance-guard/spec-conformance-guard.ts` | edit | Apply the same root contract and state-free no-spec behavior. |
-| `tools/spec-check-log/writer.ts` | edit | Add locked 10 MiB rotation, 64 MiB aggregate cap, 30-day closed-shard expiry, 1 GiB reserve, active-shard protection, and confined deletion. |
-| `tools/hook-service/client.mjs`, `tools/hook-service/server.mjs`, `tools/hook-service/worker-manager.mjs` | edit | Carry request/session project identity across the persistent service instead of daemon-start environment. |
-| `tests/step_definitions/feature83_installed_hook_journal.ts` | create | Implement SPECGEN004_715–SPECGEN004_721 with installed-layout and deterministic filesystem/time/free-space fixtures. |
-| `tests/fixtures/spec-check-log/` | create | Captured shard boundary, unsafe path, cross-project, and low-disk fixtures with independent expected paths/bytes. |
-| `.specs/spec-generator-v4/FR.md` | edit | Define FR-83 root and retention requirements. |
-| `.specs/spec-generator-v4/ACCEPTANCE_CRITERIA.md` | edit | Define AC-83.1–AC-83.7. |
-| `.specs/spec-generator-v4/NFR.md` | edit | Define performance and reliability bounds. |
-| `.specs/spec-generator-v4/REQUIREMENTS.md` | edit | Add FR-83 verification traceability. |
-| `.specs/spec-generator-v4/USER_STORIES.md` | edit | Add User Story 63. |
-| `.specs/spec-generator-v4/USE_CASES.md` | edit | Add UC-35. |
-| `.specs/spec-generator-v4/RESEARCH.md` | edit | Record incident evidence and rejected remedies. |
-| `.specs/spec-generator-v4/DESIGN.md` | edit | Record the selected root and journal algorithm. |
-| `.specs/spec-generator-v4/TASKS.md` | edit | Add Phase 50 implementation tasks. |
-| `.specs/spec-generator-v4/FILE_CHANGES.md` | edit | Declare explicit implementation and spec paths. |
-| `.specs/spec-generator-v4/CHANGELOG.md` | edit | Record the spec-only incident package. |
-| `.specs/spec-generator-v4/spec-generator-v4.feature` | edit | Add SPECGEN004_715–SPECGEN004_721. |
 ## Phase 50 — Codex Desktop first-class host adapter (FR-83)
 
 | Action | Path | Reason |
@@ -851,3 +829,27 @@ Phase 49 — Live-evidence containment, atomic CAS proof, strict-synthesis guard
 | EDIT | `.specs/spec-generator-v4/spec-generator-v4.feature` | FR-83 — source scenarios and complete host/distribution matrix. |
 
 > **Single-writer handoff:** Phase 50 produces the full plugin package and an immutable id/source/manifest/capability record. `codex-init:FR-8` alone edits `.agents/plugins/marketplace.json` and `tools/codex-plugin-support/verify-whitelist.ts`; those paths are intentionally absent from this phase.
+
+## FR-84 planned file changes — installed root isolation and retention
+
+| Path | Action | Reason |
+|---|---|---|
+| `tools/spec-conformance-push/spec-conformance-push.ts` | edit | Resolve `.specs` and project state from explicit request `projectRoot`, never `CLAUDE_PLUGIN_ROOT`. |
+| `tools/spec-conformance-guard/spec-conformance-guard.ts` | edit | Apply the same root contract and state-free no-spec behavior. |
+| `tools/spec-check-log/writer.ts` | edit | Add locked 10 MiB rotation, 64 MiB aggregate cap, 30-day closed-shard expiry, 1 GiB reserve, active-shard protection, and confined deletion. |
+| `tools/hook-service/client.mjs`, `tools/hook-service/server.mjs`, `tools/hook-service/worker-manager.mjs` | edit | Carry request/session project identity across the persistent service instead of daemon-start environment. |
+| `tests/step_definitions/feature84_installed_hook_journal.ts` | create | Implement SPECGEN004_715–SPECGEN004_722 with installed-layout, deterministic filesystem/time/free-space fixtures, and authenticated orphan recovery. |
+| `tools/hook-service/server.mjs`, `tools/hook-service/ensure-up.mjs` | edit | Expose authenticated PID health and recover a missing-state owned listener only with stable double proof. |
+| `tests/fixtures/spec-check-log/` | create | Captured shard boundary, unsafe path, cross-project, and low-disk fixtures with independent expected paths/bytes. |
+| `.specs/spec-generator-v4/FR.md` | edit | Define FR-84 root and retention requirements. |
+| `.specs/spec-generator-v4/ACCEPTANCE_CRITERIA.md` | edit | Define AC-84.1–AC-84.7. |
+| `.specs/spec-generator-v4/NFR.md` | edit | Define performance and reliability bounds. |
+| `.specs/spec-generator-v4/REQUIREMENTS.md` | edit | Add FR-84 verification traceability. |
+| `.specs/spec-generator-v4/USER_STORIES.md` | edit | Add User Story 64. |
+| `.specs/spec-generator-v4/USE_CASES.md` | edit | Add UC-36. |
+| `.specs/spec-generator-v4/RESEARCH.md` | edit | Record incident evidence and rejected remedies. |
+| `.specs/spec-generator-v4/DESIGN.md` | edit | Record the selected root and journal algorithm. |
+| `.specs/spec-generator-v4/TASKS.md` | edit | Add Phase 51 implementation tasks. |
+| `.specs/spec-generator-v4/FILE_CHANGES.md` | edit | Declare explicit implementation and spec paths. |
+| `.specs/spec-generator-v4/CHANGELOG.md` | edit | Record the spec-only incident package. |
+| `.specs/spec-generator-v4/spec-generator-v4.feature` | edit | Add SPECGEN004_715–SPECGEN004_721. |

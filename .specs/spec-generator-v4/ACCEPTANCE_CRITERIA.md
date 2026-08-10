@@ -1583,35 +1583,6 @@ WHEN an expectation set is supplied to live-evidence validation THEN every expec
 
 WHEN deterministic suite evidence validates live-evidence artifacts THEN the proof SHALL use a captured fixture with independently precomputed digests (or a deterministic producer plus a captured artifact and recorded provenance). IF the digests are computed only by the same code under test THEN the proof SHALL be treated as self-attested and insufficient. One-byte tamper of a captured workspace or trace artifact SHALL fail validation with a named finding.
 
-
-## AC-83.1
-
-Given an installed plugin root and a different caller project root, when a conformance hook is dispatched, then executable resources resolve from `pluginRoot`, project data resolves only from the validated request-scoped `projectRoot`, and neither `CLAUDE_PLUGIN_ROOT` nor daemon CWD can become the project root.
-
-## AC-83.2
-
-Given a valid caller project without `.specs`, when spec-conformance push or guard runs, then it exits fail-open/no-op and creates no `.spec-check-log` in the project or installed cache.
-
-## AC-83.3
-
-Given enough conformance entries to cross retention boundaries, when journal maintenance completes, then the active shard rotates at 10 MiB, total retained bytes are at most 64 MiB per project, and oldest closed shards are deleted first without deleting or truncating the active shard.
-
-## AC-83.4
-
-Given closed shards older and newer than 30 days, when maintenance runs, then every eligible expired closed shard is removed, newer shards remain subject to the 64 MiB cap, and the active shard remains protected regardless of timestamp.
-
-## AC-83.5
-
-Given a projected journal write that would reduce free space below 1 GiB, when maintenance runs, then eligible closed shards are pruned oldest-first; if the reserve remains unsatisfied the write is skipped fail-open and exactly one bounded non-recursive diagnostic path is used.
-
-## AC-83.6
-
-Given concurrent writers plus traversal, symlink/junction, unrelated-file, and active-shard candidates, when rotation/retention runs, then a maintenance lock serializes mutation and only confined closed journal shards can be deleted.
-
-## AC-83.7
-
-Given a dependency-absent installed-cache fixture whose plugin root differs from a real project containing `.specs`, when the real hook client/service/conformance path runs, then all reads and writes are project-scoped, no cache-local state appears, and the legacy cache-root regression fails the scenario.
-
 ## AC-83.1
 **Требование:** [FR-83](FR.md#fr-83)
 WHEN an isolated Codex home installs `spec-generator-v4@dev-pomogator-codex` beside `context-menu@dev-pomogator-codex` THEN the marketplace SHALL resolve exactly two unique plugin ids with distinct sources and manifests, the full plugin SHALL expose the canonical required skills, hooks, MCP, and phase surfaces, and the context-menu package SHALL retain its baseline manifest digest and behavior. The full-package producer SHALL emit an immutable handoff; only `codex-init:FR-8` SHALL write catalog order and support status.
@@ -1660,3 +1631,51 @@ WHEN the declared host/distribution matrix is verified THEN all four rows SHALL 
 ## AC-83.10
 **Требование:** [FR-83](FR.md#fr-83)
 WHEN the FR-83 package and dependency graph are inspected THEN they SHALL contain no new task/thread-management, scheduled-automation, connector, or `app://` dependency; SHALL NOT change context-menu behavior or Cursor FR-81 ownership; and SHALL NOT introduce a second SpecGraph, MCP registry, task store, or canonical rules tree.
+
+## AC-84.1
+
+**Требование:** [FR-84](FR.md#fr-84)
+
+Given an installed plugin root and a different caller project root, when a conformance hook is dispatched, then executable resources resolve from `pluginRoot`, project data resolves only from the validated request-scoped `projectRoot`, and neither `CLAUDE_PLUGIN_ROOT` nor daemon CWD can become the project root.
+
+## AC-84.2
+
+**Требование:** [FR-84](FR.md#fr-84)
+
+Given a valid caller project without `.specs`, when spec-conformance push or guard runs, then it exits fail-open/no-op and creates no `.spec-check-log` in the project or installed cache.
+
+## AC-84.3
+
+**Требование:** [FR-84](FR.md#fr-84)
+
+Given enough conformance entries to cross retention boundaries, when journal maintenance completes, then the active shard rotates at 10 MiB, total retained bytes are at most 64 MiB per project, and oldest closed shards are deleted first without deleting or truncating the active shard.
+
+## AC-84.4
+
+**Требование:** [FR-84](FR.md#fr-84)
+
+Given closed shards older and newer than 30 days, when maintenance runs, then every eligible expired closed shard is removed, newer shards remain subject to the 64 MiB cap, and the active shard remains protected regardless of timestamp.
+
+## AC-84.5
+
+**Требование:** [FR-84](FR.md#fr-84)
+
+Given a projected journal write that would reduce free space below 1 GiB, when maintenance runs, then eligible closed shards are pruned oldest-first; if the reserve remains unsatisfied the write is skipped fail-open and exactly one bounded non-recursive diagnostic path is used.
+
+## AC-84.6
+
+**Требование:** [FR-84](FR.md#fr-84)
+
+Given concurrent writers plus traversal, symlink/junction, unrelated-file, and active-shard candidates, when rotation/retention runs, then a maintenance lock serializes mutation and only confined closed journal shards can be deleted.
+
+## AC-84.7
+
+**Требование:** [FR-84](FR.md#fr-84)
+
+Given a dependency-absent installed-cache fixture whose plugin root differs from a real project containing `.specs`, when the real hook client/service/conformance path runs, then all reads and writes are project-scoped, no cache-local state appears, and the legacy cache-root regression fails the scenario.
+
+## AC-84.8
+
+**Требование:** [FR-84](FR.md#fr-84)
+
+Given a stale or legacy per-user-credential-proven DevPomogator hook-service owns the configured loopback port while `service.json` is missing or unusable, when current startup recovery runs, then it resolves the listener PID from the operating system twice around a second credential-proven health probe and may stop only the unchanged verified owner; if termination is denied or ownership is credential-rejected, ambiguous, changed, or unverifiable, that listener remains alive and current runtime starts on an operating-system-assigned loopback port atomically published for every client.

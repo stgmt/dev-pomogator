@@ -212,11 +212,11 @@ The core migration was performed **by hand**: the three `.claude-plugin/*.json` 
   - [ ] Black-box fixtures cover approve/block/context/failure/order/stop-loop semantics for the former 13 registrations and interleaved installed requests for two project roots.
   - [ ] CORE024_20–22 fail for the legacy cache-root, manifest-fanout, or cross-project behavior before runtime code changes.
 - [ ] Propagate request project identity and bound project-owned conformance state — id: t20 — Status: TODO | Est: 240m
-  _Requirements: FR-13; AC-12; spec-generator-v4 FR-83._
+  _Requirements: FR-13; AC-12; spec-generator-v4 FR-84._
   _depends: hard:t19_
   **Done When:**
   - [ ] Client, server, event-flight key, children, and persistent workers use explicit request project identity; startup CWD/plugin root cannot leak across projects.
-  - [ ] Conformance state is project-confined, no-spec is state-free, and 10 MiB / 64 MiB / 30 days / 1 GiB retention passes the shared FR-83 scenarios.
+  - [ ] Conformance state is project-confined, no-spec is state-free, and 10 MiB / 64 MiB / 30 days / 1 GiB retention passes the shared FR-84 scenarios.
 - [ ] Generate one semantics-preserving DevPomogator Stop dispatcher and verify release lifecycle — id: t21 — Status: TODO | Est: 300m
   _Requirements: FR-13; AC-13; CORE024_21–CORE024_22._
   _depends: hard:t19, hard:t20, hard:t18a_
@@ -224,3 +224,9 @@ The core migration was performed **by hand**: the three `.claude-plugin/*.json` 
   - [ ] Plugin and dogfood manifests expose one DevPomogator Stop client command; logical routes retain registry order and differential semantic parity; other plugins remain untouched.
   - [ ] Legacy children run one at a time with 256 KiB bounds, audited persistent workers retain FIFO/recycle/no-uncertain-retry behavior, and daemon death still self-heals once.
   - [ ] Focused tests, executable CORE024 mirror, Docker/WSL BDD, full required regression, dependency-absent installed-cache smoke, and exact-commit PR #227 evidence pass before cache sync/push.
+- [ ] Recover a missing-state authenticated daemon without killing foreign listeners — id: t22 — Status: TODO | Est: 120m
+  _Requirements: FR-13; AC-14; CORE024_23; spec-generator-v4 FR-84._
+  _depends: hard:t19, hard:t20_
+  **Done When:**
+  - [ ] Authenticated health exposes PID and legacy recovery requires stable double health plus double loopback listener-PID proof; access denial falls back to an atomically published OS-assigned port.
+  - [ ] Missing, ambiguous, changing, denied, unauthenticated, or unverifiable ownership never triggers process termination; current runtime still starts on a published loopback port and focused/BDD regressions pass.

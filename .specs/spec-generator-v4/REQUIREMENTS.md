@@ -363,19 +363,6 @@
 | CHK-FR82-08 | Incident-driven bounded inventory meets declared call/byte/latency budgets | FR-82, AC-82.8, @feature82, UC-34 | Integration test | Draft | Incident measurements are evidence, not eternal performance claims |
 | CHK-FR82-09 | Executable pending scenarios use real handlers and real producer artifact | FR-82, AC-82.9, @feature82, UC-34 | Integration test | Draft | No hand-invented producer response shape |
 
-
-## Verification Matrix — FR-83 installed hook identity and bounded journal
-
-| CHK-ID | Requirement | Traces To | Verification Method | Status | Notes |
-|---|---|---|---|---|---|
-| CHK-FR83-01 | Plugin code root and caller project data root are distinct on every request | FR-83, AC-83.1, @feature83, UC-35 | BDD scenario | Draft | SPECGEN004_715; installed cache root must differ from project root |
-| CHK-FR83-02 | Projects without `.specs` perform a state-free no-op | FR-83, AC-83.2, @feature83, UC-35 | BDD scenario | Draft | SPECGEN004_716 |
-| CHK-FR83-03 | 10 MiB rotation and 64 MiB total cap protect the active shard | FR-83, AC-83.3, @feature83, UC-35 | BDD scenario | Draft | SPECGEN004_717 |
-| CHK-FR83-04 | Closed shards expire after 30 days | FR-83, AC-83.4, @feature83, UC-35 | BDD scenario | Draft | SPECGEN004_718 |
-| CHK-FR83-05 | 1 GiB reserve prunes then skips fail-open without recursive logging | FR-83, AC-83.5, @feature83, UC-35 | BDD scenario | Draft | SPECGEN004_719 |
-| CHK-FR83-06 | Locking and real-path confinement prevent unsafe deletion | FR-83, AC-83.6, @feature83, UC-35 | BDD scenario | Draft | SPECGEN004_720 |
-| CHK-FR83-07 | Dependency-absent installed layout proves project-only reads and writes | FR-83, AC-83.7, @feature83, UC-35 | BDD scenario | Draft | SPECGEN004_721 |
-
 ## Verification Matrix — FR-83 Codex Desktop host adapter
 
 | CHK-ID | Requirement | Traces To | Verification Method | Status | Notes |
@@ -390,3 +377,16 @@
 | CHK-FR83-08 | Fresh Codex Desktop live record proves the installed workflow | FR-83, AC-83.8, @feature83, UC-35 | Manual review | Draft | Digest-bound live evidence; CLI/repo/manifests cannot satisfy this lane |
 | CHK-FR83-09 | Desktop/CLI × repo/installed matrix is complete | FR-83, AC-83.9, @feature83, UC-35 | BDD scenario | Draft | SPECGEN004_709–713: four row ids plus exact-cardinality aggregate; four unique evidence keys required |
 | CHK-FR83-10 | Scope contains no app control plane or duplicate spec engine | FR-83, AC-83.10, @feature83, UC-35 | Integration test | Draft | Static dependency/inventory assertion; context-menu and Cursor unchanged |
+
+## Verification Matrix — FR-84 installed hook identity and bounded journal
+
+| CHK-ID | Requirement | Traces To | Verification Method | Status | Notes |
+|---|---|---|---|---|---|
+| CHK-FR84-01 | Plugin code root and caller project data root are distinct on every request | FR-84, AC-84.1, @feature84, UC-36 | BDD scenario | Draft | SPECGEN004_715; installed cache root must differ from project root |
+| CHK-FR84-02 | Projects without `.specs` perform a state-free no-op | FR-84, AC-84.2, @feature84, UC-36 | BDD scenario | Draft | SPECGEN004_716 |
+| CHK-FR84-03 | 10 MiB rotation and 64 MiB total cap protect the active shard | FR-84, AC-84.3, @feature84, UC-36 | BDD scenario | Draft | SPECGEN004_717 |
+| CHK-FR84-04 | Closed shards expire after 30 days | FR-84, AC-84.4, @feature84, UC-36 | BDD scenario | Draft | SPECGEN004_718 |
+| CHK-FR84-05 | 1 GiB reserve prunes then skips fail-open without recursive logging | FR-84, AC-84.5, @feature84, UC-36 | BDD scenario | Draft | SPECGEN004_719 |
+| CHK-FR84-06 | Locking and real-path confinement prevent unsafe deletion | FR-84, AC-84.6, @feature84, UC-36 | BDD scenario | Draft | SPECGEN004_720 |
+| CHK-FR84-07 | Dependency-absent installed layout proves project-only reads and writes | FR-84, AC-84.7, @feature84, UC-36 | BDD scenario | Draft | SPECGEN004_721 |
+| CHK-FR84-08 | Authenticated orphan service recovery replaces only the stable listener owner | FR-84, AC-84.8, @feature84, UC-36 | BDD scenario | Draft | SPECGEN004_722; double health plus double PID proof and published alternate-port fallback |

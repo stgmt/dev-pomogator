@@ -101,5 +101,6 @@ b. **Manual cleanup** (если предпочитаете контроль):
 
 - Specify one host-visible DevPomogator Stop dispatcher while preserving the builtins self-heal client and all legacy host-observable route semantics through a differential oracle.
 - Bind event flights, CWD, environment, workers, and state to each request's normalized project root; plugin root remains code-only.
-- Cross-link spec-generator-v4 FR-83 for no-spec no-op and bounded conformance journal retention (10 MiB shard, 64 MiB total, 30 days, 1 GiB reserve).
-- Add AC-12/AC-13, CORE024_20–22, NFR-P5/R10/R11, and Phase 10 tasks. These contracts are pending implementation and execution; no hook/plugin is disabled.
+- Cross-link spec-generator-v4 FR-84 for no-spec no-op and bounded conformance journal retention (10 MiB shard, 64 MiB total, 30 days, 1 GiB reserve).
+- AC-12/AC-13, CORE024_20–22, NFR-P5/R10/R11, and the Phase 10 implementation are present. Focused checks pass locally; exact-commit Docker BDD and release verification remain pending CI evidence. No hook or plugin is disabled.
+- Added AC-14 / CORE024_23 for safe recovery of a token-authenticated hook-service that owns the loopback port without usable state metadata; foreign or unverifiable listeners are never terminated.

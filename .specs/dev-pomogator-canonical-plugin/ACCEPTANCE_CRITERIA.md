@@ -156,3 +156,7 @@ Given one global hook-service handles interleaved requests from installed plugin
 ## AC-13 — One host-visible DevPomogator Stop dispatcher with semantic parity
 
 Given the current 13-registration Stop behavior captured as a black-box baseline for approve, block, context, failure, ordering, and stop-loop cases, when the manifest is regenerated, then it contains exactly one DevPomogator Stop command using the self-healing client, other plugins are unchanged, the service executes logical routes in registry order, the observable result matches the baseline, and peak legacy child concurrency is at most one per event flight.
+
+## AC-14 — Credential-proven orphan hook-service recovery
+
+Given a stale or legacy per-user-credential-proven DevPomogator hook-service owns the configured loopback port while `service.json` is missing or unusable, when current startup recovery runs, then it resolves the listener PID twice around a second credential-proven health probe and may stop only the unchanged verified owner; denied termination or credential-rejected, ambiguous, changed, or unverifiable ownership leaves that listener alive while current runtime starts on an atomically published operating-system-assigned loopback port.

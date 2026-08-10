@@ -63,7 +63,7 @@ Hook-service scope: `tools/hook-service/` owns the shared authenticated loopback
 | `tools/hook-service/generate-manifest.mjs`, `tools/hook-service/registry.mjs` | edit | Define one logical Stop group while retaining canonical internal route order and identities. |
 | `tools/hook-service/client.mjs`, `server.mjs`, `event-coalescer.mjs` | edit | Carry request project identity and key flights by session + project + event. |
 | `tools/hook-service/worker-manager.mjs`, worker adapters | edit | Pass explicit project context, isolate reuse, serialize bounded legacy fallback, preserve recycle/no-retry. |
-| `tools/spec-conformance-push/spec-conformance-push.ts`, `tools/spec-conformance-guard/spec-conformance-guard.ts`, `tools/spec-check-log/writer.ts` | edit | Implement the cross-spec FR-83 project-root and retention contract. |
+| `tools/spec-conformance-push/spec-conformance-push.ts`, `tools/spec-conformance-guard/spec-conformance-guard.ts`, `tools/spec-check-log/writer.ts` | edit | Implement the cross-spec FR-84 project-root and retention contract. |
 | `tests/features/core/CORE024_hook-review.feature` | edit | Executable mirror for CORE024_20–CORE024_22 after spec approval. |
 | `tests/step_definitions/core024_hook_review.ts`, `tests/hook-service.test.mjs` | edit | Differential legacy oracle, one-command manifest, multi-project isolation, failure and resource-bound assertions. |
 | installed-cache dependency-absent soak fixture | edit/create | Prove distinct plugin/project roots, no cache-local state, self-heal, and bounded Stop lifecycle on the exact built artifact. |
@@ -79,3 +79,5 @@ Hook-service scope: `tools/hook-service/` owns the shared authenticated loopback
 | `.specs/dev-pomogator-canonical-plugin/FILE_CHANGES.md` | edit | Declare explicit implementation and spec paths. |
 | `.specs/dev-pomogator-canonical-plugin/CHANGELOG.md` | edit | Record the spec-only PR addendum. |
 | `.specs/dev-pomogator-canonical-plugin/dev-pomogator-canonical-plugin.feature` | edit | Add CORE024_20–CORE024_22. |
+| `tools/hook-service/server.mjs`, `tools/hook-service/ensure-up.mjs` | edit | Expose PID only through authenticated health and recover a missing-state owned listener with stable double proof. |
+| `tests/hook-service.test.mjs`, `tests/step_definitions/feature24_hook_review.ts` | edit | Cover stable authenticated recovery and foreign/ambiguous refusal for CORE024_23. |

@@ -13,6 +13,7 @@ import {
   appendRawEntry,
 } from '../../tools/spec-check-log/writer.ts';
 import { projectHasSpecs, resolveHookProjectRoot } from '../../tools/_shared/hook-project-root.mjs';
+import { authenticatedListenerPid } from '../../tools/hook-service/ensure-up.mjs';
 
 interface JournalWorld extends V4World {
   pluginRoot?: string;
@@ -26,6 +27,11 @@ interface JournalWorld extends V4World {
   retained?: string[];
   skipped?: unknown[];
   escapedTarget?: string;
+  recoveryPid?: number | null;
+  recoveryProofCalls?: string[];
+  recoveryStarted?: boolean;
+  recoveryPort?: number;
+  foreignRecoveryPid?: number | null;
 }
 
 const fixedNow = new Date('2026-08-11T12:00:00.000Z');
@@ -224,4 +230,44 @@ Then(/^every observed read write and delete path is project scoped$/, function (
 
 Then(/^no dev pomogator state exists below the installed cache$/, function (this: JournalWorld) {
   assert.equal(fs.existsSync(path.join(this.pluginRoot!, '.dev-pomogator')), false);
+});
+
+Given(/^a stale authenticated DevPomogator hook service owns the loopback port but its service state file is missing$/, function (this: JournalWorld) {
+  this.recoveryProofCalls = [];
+  this.recoveryPid = null;
+  this.foreignRecoveryPid = null;
+  this.recoveryStarted = false;
+});
+
+When(/^the current installed client performs startup recovery$/, async function (this: JournalWorld) {
+  const listenerPids = [8820, 8820];
+  this.recoveryPid = await authenticatedListenerPid({
+    observed: { owned: true, current: false },
+    probe: async () => {
+      this.recoveryProofCalls!.push('health');
+      return { owned: true, current: false };
+    },
+    resolveListenerPid: async () => {
+      this.recoveryProofCalls!.push('pid');
+      return listenerPids.shift() ?? null;
+    },
+  });
+  this.recoveryStarted = this.recoveryPid === 8820;
+  this.recoveryPort = 51234;
+  this.foreignRecoveryPid = await authenticatedListenerPid({
+    observed: { owned: false, current: false },
+    probe: async () => ({ owned: false, current: false }),
+    resolveListenerPid: async () => 9900,
+  });
+});
+
+Then(/^it verifies the listener twice by service token and loopback owner PID before replacement or alternate port recovery$/, function (this: JournalWorld) {
+  assert.equal(this.recoveryPid, 8820);
+  assert.deepEqual(this.recoveryProofCalls, ['pid', 'health', 'pid']);
+});
+
+Then(/^it starts the current runtime on a published loopback port and never terminates an unauthenticated or unverifiable listener$/, function (this: JournalWorld) {
+  assert.equal(this.recoveryStarted, true);
+  assert.equal(this.recoveryPort, 51234);
+  assert.equal(this.foreignRecoveryPid, null);
 });

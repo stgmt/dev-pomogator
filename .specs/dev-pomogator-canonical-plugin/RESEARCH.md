@@ -275,7 +275,7 @@ The compatibility audit found that most current hooks are one-shot CLI programs 
 - The active installed cache 2.0.6 runtime files match the PR branch implementation even though installed metadata still records an older source SHA. The PR is open and its branch is the current worktree.
 - Only Stop route 6 currently declares persistent capability; 12 of 13 DevPomogator Stop routes still use child execution, and the manifest still exposes 13 separate `node client.mjs` Stop commands. PR #227 therefore reduces duplicate logical work but does not eliminate host-visible Node fanout.
 - The incident machine had 15 Stop hooks total: 13 DevPomogator registrations plus context-mode and claude-mem. With C: at zero free bytes and low RAM, Node emitted CSPRNG assertion, heap OOM, and `VirtualAlloc` failures; claude-mem subsequently reported an unreachable worker.
-- A cache-local conformance journal in inactive plugin version 2.0.5 had 443 shards totaling 4,560,343,121 bytes. The root cause is conflating installed `CLAUDE_PLUGIN_ROOT` with caller project root plus rotation without aggregate/age retention; the spec-generator-v4 FR-83 package owns that writer contract.
+- A cache-local conformance journal in inactive plugin version 2.0.5 had 443 shards totaling 4,560,343,121 bytes. The root cause is conflating installed `CLAUDE_PLUGIN_ROOT` with caller project root plus rotation without aggregate/age retention; the spec-generator-v4 FR-84 package owns that writer contract.
 
 ### Options considered
 
@@ -287,3 +287,7 @@ The compatibility audit found that most current hooks are one-shot CLI programs 
 ### Verification gap
 
 The existing PR evidence does not include a full Claude host lifecycle smoke or a completed Docker/WSL BDD run for this addendum. Completion claims SHALL remain pending until CORE024_20–22, the executable feature mirror, installed-cache smoke, focused service tests, and full required BDD all pass on the exact commit.
+
+### Follow-up evidence — orphan authenticated listener (2026-08-11)
+
+After syncing the approved runtime, `ensureUp` failed because `127.0.0.1:42619` was owned by Node PID 8820 while `service.json` was absent. The listener returned HTTP 200 with `service=dev-pomogator-hook-service`, version 1.0.0, and the fingerprint of the current per-user token. Starting the same installed runtime on an ephemeral free port succeeded, proving a migration/ownership-discovery defect rather than a runtime import defect. Stable token/OS proof identified PID 8820, but both Node SIGTERM and exact `taskkill /PID 8820 /T /F` were denied across the Windows session boundary; therefore safe completion requires published alternate-port recovery, not wider process termination.
