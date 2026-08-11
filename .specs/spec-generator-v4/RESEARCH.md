@@ -1709,3 +1709,34 @@ The implementation increment SHALL keep one SpecGraph/MCP engine, preserve Claud
 | Plugin schema cannot carry custom agents | Installed phase orchestration disappears outside this checkout | Package skills that invoke native built-in roles; treat `.codex/agents` as generated repo/user optimization, never required plugin state |
 | CLI smoke is mistaken for Desktop delivery | A green PATH shim or manifest test hides broken Desktop discovery/reload | Separate mandatory live Desktop evidence lane in a fresh task after reload; deterministic tests cannot satisfy it |
 | Feature scope expands into app APIs/connectors | Large unrelated blast radius and duplicate control plane | Explicitly exclude task/thread APIs, automations, connectors, and `app://`; only native subagent execution inside the spec workflow is in scope |
+
+## Incident research — installed conformance journal exhausted C: (2026-08-10/11)
+
+### Verified observations
+
+- The failed Claude Code stop cycle reported 15 Stop hooks, Node `ncrypto::CSPRNG` assertion failures, V8 heap OOM/`VirtualAlloc failed`, and a claude-mem worker unreachable for 188 seconds. At capture time C: had zero free bytes; 38 Node processes held about 2.15 GB private memory on a 4.05 GB machine.
+- The 15-hook fanout consisted of 13 DevPomogator Stop registrations plus context-mode and claude-mem. The claude-mem message was a downstream liveness symptom, not evidence that disabling claude-mem fixes the resource leak.
+- In inactive installed cache version 2.0.5, `.dev-pomogator/.spec-check-log` contained 443 JSONL shards totaling 4,560,343,121 bytes (about 4.247 GiB), written from 2026-07-23 through 2026-08-10. Deleting only that inactive journal restored 4,548,526,080 bytes (about 4.236 GiB). Active cache version 2.0.6 was not removed.
+- `spec-conformance-push.ts` and `spec-conformance-guard.ts` choose `CLAUDE_PLUGIN_ROOT` before `DEV_POMOGATOR_REPO_ROOT`/CWD. In installed mode this points at the plugin cache, so the hooks analyze DevPomogator's own `.specs` and write project state below the cache.
+- `spec-check-log/writer.ts` rotates individual shards at 10 MiB but has no age or aggregate retention. Rotation therefore bounds a file, not the journal.
+- The hook service launches work with plugin-root environment and a daemon/process-scoped project fallback. A global long-lived service serving several repositories cannot safely treat startup environment as request identity.
+- After approved synchronization, startup exposed a second migration defect: PID 8820 still answered the token-authenticated DevPomogator `/health` endpoint on `127.0.0.1:42619`, but `service.json` was absent, so the current launcher could neither verify a PID nor bind the port. A free-port foreground start proved the new runtime itself healthy.
+
+### Rejected remedies
+
+- Disabling DevPomogator, claude-mem, context-mode, or individual Stop hooks: rejected because it removes behavior without repairing identity, retention, or fanout.
+- Native HTTP-only registrations without the builtins client: rejected because PR #227 requires same-session self-heal after daemon loss.
+- Rotation-only or age-only retention: rejected because neither guarantees bounded total disk usage under sustained activity.
+
+### Selected boundary
+
+Implement strict plugin/project root separation, request-scoped project identity, and per-project journal limits of 10 MiB active-shard rotation, 64 MiB total, 30 days, and 1 GiB free reserve. The canonical-plugin spec separately owns consolidation of the 13 visible DevPomogator Stop registrations into one semantics-preserving dispatcher.
+
+## PR #227 review evidence (2026-08-11)
+
+Controlled reproductions showed a valid 3.5-second response aborted by the fixed 3-second client signal, a 32 MiB stream fully consumed after the nominal 2 MiB rejection, pre-ready worker hangs and protocol contamination leaving children alive, mixed-success Stop groups returning success with no failure evidence, a junction causing an external journal descendant to be created before rejection, and stale state being eligible for termination when authenticated health omitted PID. These are boundary/lifecycle defects, not justification to disable hooks.
+
+
+## Incident-derived constraint: process metadata can be blank
+
+Live Windows evidence showed a stale listener reported under a dead PID while its inherited-handle tree had blank command lines. Command-line-only matching is therefore insufficient evidence; the model requires image identity, a dead parent, the dead-owner wedge signature, and explicit foreign-process exclusion.

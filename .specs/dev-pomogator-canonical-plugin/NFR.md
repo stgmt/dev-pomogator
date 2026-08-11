@@ -47,3 +47,22 @@
 - **NFR-H2**: Bearer tokens are never persisted in manifests, registry fixtures, test output, or findings; only an environment-variable identifier is permitted.
 - **NFR-H3**: Managed HTTP registrations require no per-event `bash`, `sh`, `.sh`, or `node -e` launch on Windows. The documented SessionStart bootstrap is narrow exception.
 - **NFR-H4**: Findings name the failing contract so maintainers can correct a manifest or registry entry without inspecting gate internals.
+
+## Stop dispatcher and project isolation
+
+- **NFR-P5**: A Claude Code Stop event SHALL launch at most one DevPomogator host-visible client process. Inside one logical event flight, legacy child fallback SHALL have concurrency at most one and retain the existing 256 KiB input/output bounds; persistent workers SHALL be bounded by audited route capability and recycled by the existing lifecycle policy.
+- **NFR-R10**: A long-lived service SHALL isolate event flights, CWD, forwarded environment, workers, and state by normalized request project identity. No startup CWD, plugin cache, previous request, or other repository may supply project identity implicitly.
+- **NFR-R11**: Stop consolidation SHALL be behavior-preserving against a captured black-box legacy oracle. Self-heal after daemon loss, no retry of uncertain work, fail-open transport behavior, route order, approval/blocking, context, diagnostics, and stop-loop handling SHALL remain equivalent.
+
+Credential-proven daemon recovery SHALL fail closed for process termination: incomplete, ambiguous, changing, or access-denied ownership evidence MUST leave the listener alive and use an atomically published OS-assigned loopback endpoint; only failure to start that endpoint returns a bounded actionable fail-open result.
+
+## PR #227 review-hardening qualities
+
+- **NFR-P9**: Client request time is bounded by the selected route/group execution budget plus fixed transport overhead; input memory never grows beyond the accepted stdin ceiling.
+- **NFR-S8**: Managed state creation is denied before any descendant write when a parent is a symlink, junction, or canonical escape; process termination requires current repeated authenticated listener ownership proof and never state-only PID evidence.
+- **NFR-R10**: Every worker startup settles within budget and every failed/starting child is reaped; mixed-success Stop groups preserve completed semantics and durable route-level failure evidence; imported runtime dependency drift triggers service replacement.
+
+
+## NFR-CMEM-Autoheal
+
+Recovery SHALL remain fail-open, bounded, and least-privilege: it may kill only a positively classified claude-mem orphan root, never a generic Python process; it shall never change the configured port; and it must distinguish an attempted repair from a verified release. Any privilege escalation requires explicit OS consent and carries no arbitrary PID argument.

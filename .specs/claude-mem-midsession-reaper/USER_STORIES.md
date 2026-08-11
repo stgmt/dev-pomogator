@@ -56,3 +56,68 @@ Then it returns skip-healthy without taking the OS snapshot
 Given the guard already ran a full check within the debounce window
 When another tool call fires
 Then it skips the expensive snapshot to avoid adding latency
+
+
+### User Story 2: Recover a protected blank-metadata chroma tree (Priority: P1)
+
+**Требование:** [FR-7](FR.md#fr-7-classify-an-unreadable-claude-mem-chroma-root-without-touching-foreign-processes)
+
+As a developer whose Windows process metadata is unreadable, I want the correct claude-mem orphan tree identified, so that unrelated processes stay untouched.
+
+**Why:** Elevated process metadata can hide CommandLine while retaining the inherited socket; relying on a command line alone misses the real holder.
+
+**Independent Test:** Run the real hook against synthetic blank-root snapshots and assert the exact root selection and foreign-process exclusion.
+
+**Acceptance Scenarios:**
+
+Given a blank chroma root with a dead parent and direct Python child under a dead-owner port wedge
+When the reaper runs
+Then it selects only that root
+
+### User Story 3: Prove recovery on the configured port (Priority: P1)
+
+**Требование:** [FR-8](FR.md#fr-8-treat-port-release-as-the-recovery-proof)
+
+As a developer with a wedged memory worker, I want the failure state cleared only after its configured port is actually free, so that a failed cleanup is never presented as a repair.
+
+**Why:** Process exit status does not prove that an inherited listener has been released.
+
+**Independent Test:** Run released and unverified synthetic snapshots through the real hook and assert the counter transition in each case.
+
+**Acceptance Scenarios:**
+
+Given a selected chroma tree and an unverified port release
+When the reaper finishes its attempt
+Then it keeps the failure counter unchanged and returns continue
+
+### User Story 4: Request privilege only when Windows requires it (Priority: P1)
+
+**Требование:** [FR-9](FR.md#fr-9-cross-the-windows-elevation-boundary-explicitly-and-narrowly)
+
+As a developer facing a protected orphan tree, I want an explicit, rate-limited UAC recovery request after Access Denied, so that the hook can heal the real issue without silently gaining broad privilege.
+
+**Why:** The normal hook process must remain unprivileged and fail-open, but Windows may prevent it from terminating the inherited-handle tree.
+
+**Independent Test:** Simulate Access Denied and prove one fixed-helper request is recorded while the counter remains unchanged until release is observed.
+
+**Acceptance Scenarios:**
+
+Given the constrained root cannot be killed without elevation
+When taskkill reports Access Denied
+Then the guard requests the fixed helper once and does not claim successful recovery
+
+### User Story 5: Heal before the next blocked prompt (Priority: P1)
+
+**Требование:** [FR-10](FR.md#fr-10-heal-before-a-blocked-prompt-reaches-claude-mem)
+
+As a developer with an already-active Claude Code session, I want the recovery guard to run before UserPromptSubmit reaches claude-mem, so that a new prompt does not wait for a later tool call or a port workaround.
+
+**Why:** PreToolUse cannot protect a prompt hook that is already trying to reach an unavailable worker.
+
+**Independent Test:** Inspect the generated managed manifest and registry for the first prompt route, then run the hook with the actual UserPromptSubmit event seam.
+
+**Acceptance Scenarios:**
+
+Given the worker wedges after SessionStart
+When a user submits a prompt
+Then the guarded route runs before later prompt hooks on the unchanged configured port.

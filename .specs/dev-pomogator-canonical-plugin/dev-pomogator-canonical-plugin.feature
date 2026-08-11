@@ -363,3 +363,102 @@ Feature: CANON001 Canonical Claude Code Marketplace Plugin
     And the original registered hook response is returned without user action
     And live HTTP errors are not retried and a foreign listener is never terminated
     And a repeated transport failure remains fail-open with a sanitized durable diagnostic
+
+
+  @feature26 @feature27 @feature28
+  Scenario: CORE024_13 Overlapping Stop route deliveries share one ordered event flight without changing route identity
+    Given an isolated HTTP hook service with two ordered Stop routes for the same session
+    When both Stop routes are dispatched concurrently for that session
+    Then each route returns only its own recorded result
+    And the service executes the logical Stop event once in registry order
+
+  @feature29 @feature30
+  Scenario: CORE024_14 A legacy hook output burst is bounded and does not take down health
+    Given an isolated HTTP hook service with a hook that exceeds the bounded output limit
+    When I dispatch the overflowing hook
+    Then the route returns the existing runtime-unavailable response
+    And the hook service health endpoint remains available
+
+
+  # @feature31 @feature32 @feature33
+  Scenario: CORE024_15 An audited route reuses one persistent worker and preserves FIFO
+    Given an isolated audited persistent hook worker fixture
+    When I dispatch two requests to the persistent route concurrently
+    Then both responses report the same worker process and ordered sequence
+    And the persistent worker starts lazily with fewer spawns than dispatches
+
+  # @feature34 @feature35
+  Scenario: CORE024_16 A persistent worker failure recycles without retrying uncertain work
+    Given an isolated persistent hook worker that can hang
+    When the persistent request times out
+    Then the request fails once without automatic retry
+    And the next request uses a replacement worker process
+
+  # @feature36
+  Scenario: CORE024_17 An unaudited legacy route remains behind the child adapter
+    Given an isolated unaudited legacy hook route
+    When I dispatch the legacy route twice
+    Then each dispatch uses the legacy child boundary and no persistent capability is claimed
+
+  @feature13 @AC-12
+  Scenario: CORE024_20 Installed hook execution separates plugin code from every caller project
+    Given one installed plugin service receives interleaved Stop requests for two different projects
+    When logical routes children workers and conformance tools execute
+    Then each request uses only its own normalized project cwd environment flight and state
+    And plugin cache and the other project receive no project owned writes
+
+  @feature13 @AC-13
+  Scenario: CORE024_21 One Stop dispatcher preserves the legacy thirteen route result
+    Given a black box baseline for legacy Stop approval blocking context failure order and loop cases
+    When the generated manifest dispatches the same cases through one DevPomogator Stop command
+    Then logical routes execute in registry order and every host observable result matches the baseline
+    And legacy child fallback runs at most one child at a time with bounded input and output
+
+  @feature13 @AC-12 @AC-13
+  Scenario: CORE024_22 Multi project Stop flights stay isolated and self heal after daemon loss
+    Given independent project requests share one service and the owned daemon dies during the session
+    When the next Stop requests are interleaved through the builtins client
+    Then the service is recovered once and each project retains independent FIFO results and state
+    And live service errors and uncertain route work are not retried
+
+  @feature13 @AC-14
+  Scenario: CORE024_23 Authenticated orphan hook service is safely recovered
+    Given a stale authenticated DevPomogator hook service owns the loopback port but its service state file is missing
+    When the current installed client performs startup recovery
+    Then it verifies the listener twice by service token and loopback owner PID before replacement or alternate port recovery
+    And it starts the current runtime on a published loopback port and never terminates an unauthenticated or unverifiable listener
+
+  @feature13 @AC-15
+  Scenario: CORE024_24 Installed client enforces route aware deadlines and a hard stdin ceiling
+    Given an installed hook route with a budget above three seconds and an oversized streamed payload
+    When the one shot client dispatches each boundary case
+    Then the valid slow route is not aborted at three seconds
+    And oversized stdin stops being consumed as soon as the byte ceiling is crossed
+
+  @feature13 @AC-16
+  Scenario: CORE024_25 Starting workers terminate on timeout and protocol faults
+    Given persistent workers that hang before ready or contaminate the startup protocol
+    When startup reaches its budget or receives the invalid frame
+    Then each pending startup settles and its child is terminated
+    And the worker receives no inherited NODE_OPTIONS
+
+  @feature13 @AC-17
+  Scenario: CORE024_26 Partial Stop failures preserve results and durable diagnostics
+    Given one successful and one failing logical route in the same Stop group
+    When the service aggregates the group
+    Then the successful route result is preserved
+    And the failing route has a bounded durable diagnostic
+
+  @feature13 @AC-18
+  Scenario: CORE024_27 Managed paths and runtime identity are closed over dependencies
+    Given an escaped managed directory and a changed shared service dependency
+    When journal state and service runtime identity are evaluated
+    Then no descendant is created through the escaped directory
+    And the shared dependency change invalidates runtime identity
+
+  @feature13 @AC-19
+  Scenario: CORE024_28 State only PID evidence cannot authorize termination
+    Given authenticated health omits PID while stale state names an unrelated live process
+    When orphan service recovery runs
+    Then the unrelated process remains alive
+    And termination requires two matching health and listener PID proofs

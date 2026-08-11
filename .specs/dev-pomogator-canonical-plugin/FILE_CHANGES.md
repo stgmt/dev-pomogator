@@ -43,3 +43,64 @@ Hook-service scope: `tools/hook-service/` owns the shared authenticated loopback
 | `.claude-plugin/hooks.json`, `.claude/settings.json` | Switch every non-SessionStart managed route from a bare HTTP registration to the supervised command client without changing route order, timeout, matcher, request, or response semantics. | [FR-13](FR.md#fr-13-plugin-hooks-use-one-authenticated-loopback-service), AC-10 |
 | `tests/features/core/CORE024_hook-review.feature`, `tests/step_definitions/feature24_hook_review.ts`, `tests/hook-service.test.mjs` | Execute hook-review and `CORE024_12` recovery BDD against the real client lifecycle: owned-daemon death, single-flight restart, exact one retry, live-error no-retry, foreign-listener safety, and repeated-failure fail-open. | [FR-13](FR.md#fr-13-plugin-hooks-use-one-authenticated-loopback-service), [FR-24](FR.md#fr-24-http-hook-policy-has-executable-bdd-coverage), [AC-10](ACCEPTANCE_CRITERIA.md#ac-10-fr-15-fr-24) |
 | `.specs/dev-pomogator-canonical-plugin/*` | Specify the HTTP policy, evidence boundary, contract, verification, and ownership for issue #123. | [FR-15](FR.md#fr-15-managed-hot-path-hooks-are-http-registrations)–[FR-24](FR.md#fr-24-http-hook-policy-has-executable-bdd-coverage) |
+
+
+| tools/hook-service/server.mjs | edit | Bounded stdout/stderr capture, route-local failure isolation, and session-keyed Stop event coordination for the 2026-07-23 OOM incident. | FR-13 |
+| tests/hook-service.test.mjs | edit | Focused regression coverage for Stop route identity and bounded legacy execution. | FR-24 |
+| tools/hook-service/ensure-up.mjs | edit | Readiness-before-lock check for concurrent startup waiters. | FR-13 |
+| tools/hook-service/registry.mjs | edit | Preserve one-to-one generated Stop route entries; coordination remains service-local. | FR-15, FR-23 |
+
+| tools/hook-service/worker-host.mjs | create | Load one explicit reusable adapter once and serve bounded versioned request/response frames. | FR-13, FR-14 |
+| tools/hook-service/worker-manager.mjs | create | Lazy route-local worker lifecycle, FIFO serialization, idle eviction, recycle and no-retry boundary. | FR-13, FR-14 |
+| tools/hook-service/worker-adapters/subagent-watchdog.mjs | create | Explicit persistent adapter for the audited re-entrant watchdog API; legacy CLI remains unchanged. | FR-13 |
+| tools/hook-service/registry.mjs | edit | Emit persistent execution metadata only from the explicit audited capability map; default all other routes to child. | FR-13, FR-15 |
+
+## PR #227 incident-hardening planned files
+
+| Path | Action | Reason |
+|---|---|---|
+| `.claude-plugin/hooks.json`, `.claude/settings.json` | edit/generated | Replace 13 DevPomogator Stop registrations with one self-healing Stop dispatcher; preserve unrelated plugin ownership. |
+| `tools/hook-service/generate-manifest.mjs`, `tools/hook-service/registry.mjs` | edit | Define one logical Stop group while retaining canonical internal route order and identities. |
+| `tools/hook-service/client.mjs`, `server.mjs`, `event-coalescer.mjs` | edit | Carry request project identity and key flights by session + project + event. |
+| `tools/hook-service/worker-manager.mjs`, worker adapters | edit | Pass explicit project context, isolate reuse, serialize bounded legacy fallback, preserve recycle/no-retry. |
+| `tools/spec-conformance-push/spec-conformance-push.ts`, `tools/spec-conformance-guard/spec-conformance-guard.ts`, `tools/spec-check-log/writer.ts` | edit | Implement the cross-spec FR-84 project-root and retention contract. |
+| `tests/features/core/CORE024_hook-review.feature` | edit | Executable mirror for CORE024_20–CORE024_22 after spec approval. |
+| `tests/step_definitions/core024_hook_review.ts`, `tests/hook-service.test.mjs` | edit | Differential legacy oracle, one-command manifest, multi-project isolation, failure and resource-bound assertions. |
+| installed-cache dependency-absent soak fixture | edit/create | Prove distinct plugin/project roots, no cache-local state, self-heal, and bounded Stop lifecycle on the exact built artifact. |
+| `.specs/dev-pomogator-canonical-plugin/FR.md` | edit | Extend FR-13 with dispatcher and request identity. |
+| `.specs/dev-pomogator-canonical-plugin/ACCEPTANCE_CRITERIA.md` | edit | Add AC-12 and AC-13. |
+| `.specs/dev-pomogator-canonical-plugin/NFR.md` | edit | Add NFR-P5, NFR-R10, and NFR-R11. |
+| `.specs/dev-pomogator-canonical-plugin/REQUIREMENTS.md` | edit | Add PR #227 incident traceability. |
+| `.specs/dev-pomogator-canonical-plugin/USER_STORIES.md` | edit | Add User Stories 11 and 12. |
+| `.specs/dev-pomogator-canonical-plugin/USE_CASES.md` | edit | Add UC-8. |
+| `.specs/dev-pomogator-canonical-plugin/RESEARCH.md` | edit | Record incident and PR gap analysis. |
+| `.specs/dev-pomogator-canonical-plugin/DESIGN.md` | edit | Record the one-dispatcher decision. |
+| `.specs/dev-pomogator-canonical-plugin/TASKS.md` | edit | Add Phase 10 tasks. |
+| `.specs/dev-pomogator-canonical-plugin/FILE_CHANGES.md` | edit | Declare explicit implementation and spec paths. |
+| `.specs/dev-pomogator-canonical-plugin/CHANGELOG.md` | edit | Record the spec-only PR addendum. |
+| `.specs/dev-pomogator-canonical-plugin/dev-pomogator-canonical-plugin.feature` | edit | Add CORE024_20–CORE024_22. |
+| `tools/hook-service/server.mjs`, `tools/hook-service/ensure-up.mjs` | edit | Expose PID only through authenticated health and recover a missing-state owned listener with stable double proof. |
+| `tests/hook-service.test.mjs`, `tests/step_definitions/feature24_hook_review.ts` | edit | Cover stable authenticated recovery and foreign/ambiguous refusal for CORE024_23. |
+
+## PR #227 review-hardening file plan (2026-08-11)
+
+Update hook-service client, worker manager, server, startup recovery, journal/state confinement, BDD mirrors and steps, focused regressions, generated bundles, and the installed plugin cache. Preserve all registered hooks and existing Stop aggregation semantics.
+
+
+## CMEM auto-heal completion
+
+- `tools/claude-mem-health/health-check.ts` — classify blank-command-line chroma roots safely, verify recovery, and support prompt preflight.
+- `.claude-plugin/hooks.legacy.json` — register the prompt preflight source route.
+- `.claude-plugin/hooks.json`, `tools/hook-service/registry.json` — regenerated managed route metadata.
+- `.specs/claude-mem-midsession-reaper/claude-mem-midsession-reaper.feature`, `tests/step_definitions/feature_claude_mem_reaper.ts` — executable BDD coverage.
+
+
+## CMEM elevation boundary
+
+- `tools/claude-mem-health/elevated-reaper.ps1` — fixed UAC helper that independently validates the same-port dead-owner chroma tree; it accepts no PID and never relocates a port or disables a hook.
+
+
+## CMEM generated-route parity
+
+- `.claude-plugin/hooks.json`, `.claude/settings.json` — regenerated supervised manifests carrying the UserPromptSubmit preflight client route.
+- `tests/hook-service.test.mjs` — supervise every generated non-SessionStart route, including the prompt preflight.

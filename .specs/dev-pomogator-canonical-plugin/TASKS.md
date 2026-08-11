@@ -176,3 +176,109 @@ The core migration was performed **by hand**: the three `.claude-plugin/*.json` 
   - [ ] Live 401, 403, 404, and 503 responses are returned without restart or retry.
   - [ ] A foreign listener is never terminated or treated as owned.
   - [ ] Repeated transport failure exits fail-open and appends a sanitized durable diagnostic without credential material.
+
+
+## Phase 9: Stop fanout and bounded child-output hardening — TODO
+
+- [ ] Bound legacy hook output and coalesce overlapping Stop event flights — id: t17 — Status: TODO | Est: 90m
+  _Requirements: [FR-13](FR.md#fr-13-plugin-hooks-use-one-authenticated-loopback-service), [FR-15](FR.md#fr-15-managed-hot-path-hooks-are-http-registrations), [FR-24](FR.md#fr-24-http-hook-policy-has-executable-bdd-coverage)._
+  **Done When:**
+  - [ ] The generated manifest preserves all thirteen Stop route IDs and hook-review reports no orphaned registry routes.
+  - [ ] Concurrent Stop deliveries for one session share one ordered event execution while each route receives only its own result or failure.
+  - [ ] stdout/stderr capture is bounded at 256 KiB and overflow terminates only the affected child.
+  - [ ] Focused Node and CORE024 coverage passes; no fixed global maxInFlight=2 limiter is introduced.
+
+- [ ] Audit and migrate compatible hooks to persistent workers — id: t18 — Status: TODO | Est: 240m
+  _Requirements: [FR-13](FR.md#fr-13-plugin-hooks-use-one-authenticated-loopback-service), [FR-14](FR.md#fr-14-plugin-hook-commands-are-portable-deps-absent-safe-and-fail-open)._
+  **Done When:**
+  - [ ] Worker compatibility is explicit per route and legacy shell/tsx/process-exit/nested-spawn hooks retain the adapter.
+  - [ ] Framed protocol, FIFO, recycle, idle eviction, and no-retry-after-uncertain-side-effect tests pass on Windows.
+
+
+- [ ] Complete persistent worker migration — id: t18a — Status: TODO | Est: 240m
+  _Requirements: [FR-13](FR.md#fr-13-plugin-hooks-use-one-authenticated-loopback-service), [FR-14](FR.md#fr-14-plugin-hook-commands-are-portable-deps-absent-safe-and-fail-open)._
+  **Done When:**
+  - [ ] Worker compatibility is explicit per route; only reviewed reusable adapters are persistent and legacy shell/tsx/process-exit/stdin/nested-spawn hooks retain the child adapter.
+  - [ ] The worker loads the adapter once, uses versioned bounded frames, FIFO/single-flight, lazy startup, idle eviction, timeout/crash/protocol/overflow recycle, and no retry after uncertain side effects.
+  - [ ] Repeated audited-route dispatch proves worker PID reuse and spawn count lower than dispatch count; legacy routes remain visibly execution=child.
+  - [ ] Focused/BDD scenarios cover persistent reuse, FIFO, timeout/recycle, no-retry, and legacy fallback; Windows Docker evidence is recorded or honestly marked unavailable.
+
+## Phase 10: Incident hardening — project isolation and one Stop dispatcher — TODO
+
+- [ ] Capture the legacy Stop oracle and installed multi-project RED fixtures — id: t19 — Status: TODO | Est: 180m
+  _Requirements: FR-13; AC-12; AC-13; CORE024_20–CORE024_22._
+  _Ownership: `.specs/dev-pomogator-canonical-plugin/`, `tests/features/core/CORE024_hook-review.feature`, focused step definitions/fixtures._
+  **Done When:**
+  - [ ] Black-box fixtures cover approve/block/context/failure/order/stop-loop semantics for the former 13 registrations and interleaved installed requests for two project roots.
+  - [ ] CORE024_20–22 fail for the legacy cache-root, manifest-fanout, or cross-project behavior before runtime code changes.
+- [ ] Propagate request project identity and bound project-owned conformance state — id: t20 — Status: TODO | Est: 240m
+  _Requirements: FR-13; AC-12; spec-generator-v4 FR-84._
+  _depends: hard:t19_
+  **Done When:**
+  - [ ] Client, server, event-flight key, children, and persistent workers use explicit request project identity; startup CWD/plugin root cannot leak across projects.
+  - [ ] Conformance state is project-confined, no-spec is state-free, and 10 MiB / 64 MiB / 30 days / 1 GiB retention passes the shared FR-84 scenarios.
+- [ ] Generate one semantics-preserving DevPomogator Stop dispatcher and verify release lifecycle — id: t21 — Status: TODO | Est: 300m
+  _Requirements: FR-13; AC-13; CORE024_21–CORE024_22._
+  _depends: hard:t19, hard:t20, hard:t18a_
+  **Done When:**
+  - [ ] Plugin and dogfood manifests expose one DevPomogator Stop client command; logical routes retain registry order and differential semantic parity; other plugins remain untouched.
+  - [ ] Legacy children run one at a time with 256 KiB bounds, audited persistent workers retain FIFO/recycle/no-uncertain-retry behavior, and daemon death still self-heals once.
+  - [ ] Focused tests, executable CORE024 mirror, Docker/WSL BDD, full required regression, dependency-absent installed-cache smoke, and exact-commit PR #227 evidence pass before cache sync/push.
+- [ ] Recover a missing-state authenticated daemon without killing foreign listeners — id: t22 — Status: TODO | Est: 120m
+  _Requirements: FR-13; AC-14; CORE024_23; spec-generator-v4 FR-84._
+  _depends: hard:t19, hard:t20_
+  **Done When:**
+  - [ ] Authenticated health exposes PID and legacy recovery requires stable double health plus double loopback listener-PID proof; access denial falls back to an atomically published OS-assigned port.
+  - [ ] Missing, ambiguous, changing, denied, unauthenticated, or unverifiable ownership never triggers process termination; current runtime still starts on a published loopback port and focused/BDD regressions pass.
+
+## Phase 11: PR #227 review hardening — TODO
+
+- [ ] Add executable review regressions — id: t23 — Status: TODO | Est: 120m
+  _Requirements: FR-13; AC-15–AC-19; CORE024_24–CORE024_28._
+  _depends: hard:t19_
+  **Done When:**
+  - [ ] The seven reproduced boundary defects fail before implementation and are expressed in the canonical BDD mirror.
+- [ ] Harden client and worker lifecycle — id: t24 — Status: TODO | Est: 180m
+  _Requirements: FR-13; AC-15; AC-16._
+  _depends: hard:t23_
+  **Done When:**
+  - [ ] Route budgets, streaming byte limits, startup timers, starting-child tracking, termination, recycling, and clean worker environment pass.
+- [ ] Preserve partial results with diagnostics — id: t25 — Status: TODO | Est: 90m
+  _Requirements: FR-13; AC-17._
+  _depends: hard:t23_
+  **Done When:**
+  - [ ] Mixed-success Stop aggregation retains completed semantics and persists a bounded diagnostic for each failed route.
+- [ ] Close confinement identity and PID proof — id: t26 — Status: TODO | Est: 180m
+  _Requirements: FR-13; AC-18; AC-19._
+  _depends: hard:t23_
+  **Done When:**
+  - [ ] Pre-create link escape writes nothing, canonical paths are retained, shared dependencies affect service identity, and state-only PIDs cannot authorize termination.
+- [ ] Rebuild and synchronize runtime artifacts — id: t27 — Status: TODO | Est: 120m
+  _Requirements: FR-13; AC-15–AC-19._
+  _depends: hard:t24, hard:t25, hard:t26_
+  **Done When:**
+  - [ ] Generated bundles and active installed cache exactly match the reviewed source implementation.
+- [ ] Verify and update PR #227 — id: t28 — Status: TODO | Est: 180m
+  _Requirements: FR-13; AC-15–AC-19; CORE024_24–CORE024_28._
+  _depends: hard:t27_
+  **Done When:**
+  - [ ] Focused tests, available container BDD, spec validation, cache smoke, push, and exact-commit CI pass without disabling any hook or plugin.
+
+
+### Phase 12 — Windows claude-mem auto-heal completion
+
+- [ ] Extend reaper snapshots and the pure classifier for dead-parent `chroma-mcp.exe` roots with unreadable command lines. — id: t29 — Status: TODO — Est: 45m
+  **Done When:**
+  - [ ] The classifier selects only an evidenced orphan root and excludes foreign blank-command-line processes.
+- [ ] Verify post-kill port release before resetting hook-failures; expose denied/unreleased outcomes truthfully. — id: t30 — Status: TODO — Est: 45m
+  **Done When:**
+  - [ ] Counter reset occurs only after same-port release is observed.
+- [ ] Register a bounded UserPromptSubmit preflight and regenerate the hook-service registry/manifest. — id: t31 — Status: TODO — Est: 30m
+  **Done When:**
+  - [ ] Generated and legacy manifests contain the preflight route.
+- [ ] Add BDD coverage for blank-command-line root selection, unrelated-process exclusion, counter preservation, and UserPrompt route parity. — id: t32 — Status: TODO — Est: 60m
+  **Done When:**
+  - [ ] Docker BDD scenarios prove the governed behavior.
+- [ ] Exercise the installed cache against a real worker health endpoint on the unchanged configured port. — id: t33 — Status: TODO — Est: 30m
+  **Done When:**
+  - [ ] The active cache answers health checks on its configured port.

@@ -285,3 +285,20 @@ After FR-36 the graph holds ≈470 FR nodes instead of 47 (collision-dropped); t
 ## NFR-Security-11 (FR-83)
 
 **Target confinement and guard parity:** Every installed MCP operation SHALL canonicalize and remain within the selected target repository root even when the executable and cwd are in a plugin cache. Codex raw-file and shell payloads SHALL receive the same enforce decision as their Claude-equivalent intent. Cache paths, external symlink/junction targets, and unresolved roots SHALL be rejected before reading or mutation; diagnostic output SHALL not expose secrets.
+
+## NFR-Performance-15 (FR-84)
+
+Journal maintenance SHALL be linear in the number of retained shards, SHALL inspect only the resolved project's journal directory, and SHALL perform no repository-wide or plugin-cache-wide scan. A steady-state append below all thresholds SHALL require no more than one bounded directory inventory and one append.
+
+## NFR-Reliability-18 (FR-84)
+
+A malformed project identity, unavailable disk-space probe, maintenance-lock conflict, prune failure, or journal write failure SHALL preserve hook fail-open behavior without falling back to the plugin cache, recursively logging the failure, deleting the active shard, or damaging unrelated project files. Retention invariants are 10 MiB per active shard, 64 MiB total per project, 30 days for closed shards, and a 1 GiB free-space reserve. Authenticated daemon recovery SHALL require stable repeated service and listener-owner evidence and SHALL fail closed with respect to process termination. Denied or unverifiable termination SHALL leave the listener alive and use the atomically published OS-assigned loopback endpoint; only failure to start that endpoint may return a bounded fail-open diagnostic.
+
+
+
+Client input memory is bounded by the accepted byte ceiling, every worker startup settles within its declared budget, and every failed child is reaped. A mixed-success group has durable route-level failure evidence. No managed path operation may create a descendant before symlink/junction confinement is proven, and no process termination may rely on state-only PID evidence.
+
+
+## NFR-84.m Safety and truthfulness
+
+The generated recovery contract SHALL be least-privilege and honest: never kill generic interpreters, never call a port move a fix, and never reset an error counter until release is observed. Elevation is an explicit OS-consent boundary, not a silent workaround.

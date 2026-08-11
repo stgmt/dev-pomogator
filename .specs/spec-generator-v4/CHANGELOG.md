@@ -49,6 +49,12 @@ Result: AC_SATISFACTION 283/289 (lane RED until the 6 clarify follow-ups land �
 - `SPECGEN004_657`–`SPECGEN004_664` have not been executed; their status is `UNKNOWN`.
 
 
+## 2026-08-11 — FR-84 installed hook root isolation and bounded journal specified
+
+- Incident evidence records the 4.247 GiB cache-local `.spec-check-log`, zero-free-space failure, Stop fanout, and the incorrect `CLAUDE_PLUGIN_ROOT` project-root precedence.
+- Approved contract separates `pluginRoot` from per-request `projectRoot`, makes non-spec projects state-free no-ops, and sets 10 MiB rotation / 64 MiB total / 30 days / 1 GiB reserve with locked confined pruning, plus authenticated orphan-daemon recovery with stable listener-PID proof.
+- SPECGEN004_715–SPECGEN004_722 and the Phase 51 implementation are present. Focused hook-service tests, lint, hook review, step-definition bundling, and structural validation pass locally; exact-commit Docker BDD and release verification remain pending CI evidence.
+
 
 ## 2026-08-08 — six-AC remediation implementation
 
@@ -56,3 +62,12 @@ Result: AC_SATISFACTION 283/289 (lane RED until the 6 clarify follow-ups land �
 - AC-7.4 now has an executable guard that rejects missing or untruthful runtime consumers and requires a passing real-artifact command; current Marksman integration has positive Docker evidence.
 - AC-36.6 now has a machine-readable migration-phase gate that denies dirty, filtered, stale, failed, or unqualified evidence and allows only a complete fresh phase.
 - AC-20.2 and AC-26.2 were previously given AC-owned BDD evidence in this remediation wave; AC-1.3 remains explicitly superseded.
+
+## 2026-08-11 — PR #227 review-hardening contract
+
+Specified route-aware client deadlines, a hard streaming stdin ceiling, bounded and reaped worker startup, durable diagnostics for partial Stop failures, pre-create symlink/junction confinement, dependency-complete runtime identity, and mandatory repeated OS PID proof before service termination.
+
+
+## Unreleased — FR-84.m claude-mem auto-heal trace
+
+Added governed requirements for inherited-socket recovery under blank process metadata, prompt-time preflight, and verified same-port healing.

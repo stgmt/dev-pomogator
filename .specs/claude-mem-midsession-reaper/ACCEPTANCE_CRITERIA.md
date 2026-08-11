@@ -35,3 +35,32 @@ IF the platform is non-Windows OR `DEV_POMOGATOR_CLAUDE_MEM_REAP=off` THEN the g
 **Требование:** [FR-6](FR.md)
 
 WHEN the guard observes the claude-mem worker unavailable across consecutive checks spanning longer than the visibility threshold (default ~5 minutes) AND the reap did not restore it THEN the guard SHALL surface a VISIBLE, NON-BLOCKING notice that memory has not been recording for N minutes, emit that notice at most once per threshold crossing, still return `continue:true`, and clear the down-since marker once the worker is healthy again.
+
+
+## AC-7 (FR-7)
+
+**Требование:** [FR-7](FR.md#fr-7-classify-an-unreadable-claude-mem-chroma-root-without-touching-foreign-processes)
+
+WHEN a Windows wedge snapshot contains a blank-command-line `chroma-mcp.exe` root with a dead parent and a direct Python child
+THEN the reaper SHALL select that root once and SHALL exclude a foreign blank chroma root and unrelated Python processes.
+
+## AC-8 (FR-8)
+
+**Требование:** [FR-8](FR.md#fr-8-treat-port-release-as-the-recovery-proof)
+
+WHEN a selected root cannot be terminated or the configured port cannot be verified free
+THEN the failure counter SHALL remain unchanged and the hook SHALL still return a continue payload.
+
+## AC-9 (FR-9)
+
+**Требование:** [FR-9](FR.md#fr-9-cross-the-windows-elevation-boundary-explicitly-and-narrowly)
+
+WHEN unprivileged termination returns Access Denied for the classified root
+THEN the guard SHALL request only the fixed UAC helper, rate-limit repeat requests, and SHALL not claim recovery before same-port verification.
+
+## AC-10 (FR-10)
+
+**Требование:** [FR-10](FR.md#fr-10-heal-before-a-blocked-prompt-reaches-claude-mem)
+
+WHEN claude-mem wedges after SessionStart and before a tool call
+THEN the generated UserPromptSubmit route SHALL invoke the prompt preflight before subsequent prompt hooks, with `--prompt-preflight`, without moving the worker port or disabling a hook.

@@ -300,3 +300,55 @@ The client treats any received HTTP response as a live-service result and does n
 - SessionStart-only recovery was rejected because it leaves the active session broken until restart.
 - Killing the process bound to the fixed port was rejected because ownership cannot be inferred safely from a port.
 - Installing an OS-level supervisor was rejected because it adds cross-platform installation and lifecycle complexity.
+
+### Incident hardening: Stop fanout and child memory boundary (2026-07-23)
+
+The incident showed a healthy daemon alongside a failed Stop request: the daemon was only the HTTP boundary; each dispatch still created a fresh Node child, and the host exposed thirteen independent Stop registrations. The selected first-phase fix keeps all thirteen public route IDs and their matcher/order/timeout metadata, but adds a service-local event flight keyed by event plus session_id. The first request runs the complete Stop route set once in numeric registry order; later requests receive only their own route output or failure. A failure in one route therefore does not convert successful sibling routes into a false success or duplicate their side effects.
+
+The legacy adapter remains the execution boundary because current targets include shell/tsx bootstrap, process.exit, and nested cp.spawn behavior that is not safe to place in a persistent worker without an explicit protocol contract. Its stdout and stderr are incrementally bounded at 256 KiB; overflow kills only that child and is reported as a sanitized route diagnostic. This eliminates unbounded capture growth and host-level duplicate Stop execution without pretending that it eliminates every cold child start.
+
+A fixed global concurrency cap (including maxInFlight=2) is rejected: it lowers throughput, does not remove cold-start/bootstrap allocation, and cannot distinguish compatible workers from legacy side-effecting commands. Worker reuse is a separate opt-in phase with compatibility audit, framed protocol, recycle policy, and no retry after uncertain side effects.
+
+### Persistent worker migration: explicit capability boundary
+
+The first-phase Stop coordinator and bounded child capture do not by themselves remove cold runtime allocation. The second phase introduces a supervised worker host behind the existing daemon. The registry is authoritative: execution=persistent is emitted only when a reviewed capability entry names a reusable adapter, protocol, and loader; all routes default to execution=child. A persistent adapter exports handle(input, request), performs no stdin read, argv parsing, process exit, or import-time work, and returns one event-valid object. Legacy scripts are not imported opportunistically.
+
+The worker host loads the adapter once at startup and serves versioned newline-delimited JSON frames containing request_id, route, event, input, and runtime context. The manager serializes each route worker FIFO, starts it lazily, bounds frames at 256 KiB, records worker PID for diagnostics, evicts idle workers, and recycles on timeout, crash, transport/protocol failure, or output overflow. A failed request is never replayed because a side effect may already have happened. The daemon remains healthy and the existing HTTP 503/fail-open policy remains the boundary for the affected request.
+
+This migration eliminates repeated Node/tsx cold starts for every route in the audited persistent capability set. Incompatible routes retain the legacy child adapter intentionally; that fallback is explicit in registry metadata and is not counted as migrated. Adding another persistent route requires a handler audit, worker reuse/FIFO test, recycle/no-retry test, and generated-registry parity evidence.
+
+### Decision: one self-healing Stop dispatcher with request-scoped project execution
+
+**Требование:** [FR-13], [AC-12], [AC-13]
+
+**Rationale:** One self-healing client preserves PR #227 daemon recovery while removing 13 host-visible launches. Explicit per-request project identity is required because a global daemon and persistent workers outlive any one repository.
+
+**Trade-off:** The service owns an aggregation oracle, project-aware flight keys, and serialized legacy fallback, increasing routing complexity. In return, peak Stop fanout is bounded and route behavior remains testably equivalent.
+
+**Alternatives considered:**
+- Keep 13 manifest commands and rely only on event coalescing — rejected because the host still launches 13 Node clients under memory pressure.
+- Register native HTTP Stop hooks directly — rejected because a dead daemon would bypass the builtins client's same-session self-heal path.
+- Disable individual routes or external plugins — rejected because it changes product behavior and does not repair project identity.
+
+**Manifest boundary:** `generate-manifest.mjs` emits one DevPomogator Stop client command targeting a logical Stop group route. The command remains builtins-only and owns ensure-up/retry-on-connection-loss exactly as PR #227 specifies. No code mutates registrations owned by context-mode, claude-mem, or any other plugin.
+
+**Service boundary:** The request envelope carries `{sessionId, projectRoot, eventName, payload}`. A flight key includes the normalized project root, preventing cross-repository coalescing. The Stop group executes logical registry routes in canonical order. Compatible workers are either keyed by project or proven stateless with explicit per-request context; legacy child routes are queued one at a time and retain 256 KiB input/output caps.
+
+**Semantic aggregation boundary:** Before replacing the manifest, an integration fixture captures the Claude-host-observable legacy result matrix for approval, blocking, reason/system message, `additionalContext`, nonzero/invalid output, timeouts, route order, and active stop-loop cases. The dispatcher aggregator is defined by differential equivalence to that oracle, not by an invented merge rule. Any matrix mismatch blocks migration.
+
+**Project/data boundary:** `pluginRoot` locates code only. The current request supplies `projectRoot`; the service forwards it as child CWD and explicit worker context. Startup environment is never authority for later requests. Spec-conformance routes delegate retention and no-spec behavior to spec-generator-v4 FR-84.
+
+**Failure boundary:** A connection-class failure self-heals and retries the request once; a live HTTP error or uncertain worker/child result is never retried. A route failure follows the captured legacy fail-open/block semantics. Service health and unrelated project flights remain available after bounded route failure.
+
+### Missing-state daemon recovery
+
+The configured loopback listener may outlive or predate `service.json`. The launcher treats the per-user token-authenticated service signature as necessary but not sufficient process evidence: it resolves the OS listener PID, repeats authenticated health, resolves again, and may terminate only one unchanged PID that agrees with any PID advertised by health. Every ambiguity or change is a refusal. If termination is denied or the owner is foreign/unverifiable, no process is killed; the current child listens on OS-assigned loopback port `0`, atomically publishes its actual port and identity, and clients discover it through the startup lease.
+
+## PR #227 review-hardening design (2026-08-11)
+
+The generated registry is the authority for client event budgets. Stdin byte accounting precedes concatenation and detaches the source on overflow. Worker startup and ready workers share one idempotent termination path and the manager tracks both sets. Group execution persists individual failures before returning the aggregate of completed routes. Directory creation proceeds component by component after link and canonical-root checks. The service digest includes imported shared modules, and every owned-listener termination passes through the same double-health/double-OS-PID verifier.
+
+
+## Inherited-socket recovery design
+
+The Windows snapshot returns listener ownership plus candidate process PID, PPID, parent liveness, command line, and image name. The pure decision function accepts a blank-command-line root only for `chroma-mcp.exe` with a dead parent under the dead-owner wedge signature; descendants are left to `taskkill /T`. The action path records termination result, re-observes the same configured port, and clears failure state only after release. The same bounded guard is registered on UserPromptSubmit so a mid-session outage is repaired before the next prompt reaches claude-mem.

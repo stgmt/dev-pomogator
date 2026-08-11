@@ -40,6 +40,27 @@ const FOREIGN_ORPHAN: ProcRecord = {
   parentAlive: false,
   cmdline: 'C:/Users/stigm/AppData/Local/uv/cache/xx/Scripts/python.exe unrelated_tool.py',
 };
+const BLANK_CHROMA_ROOT: ProcRecord = {
+  pid: 27201,
+  ppid: 36925,
+  parentAlive: false,
+  cmdline: '',
+  name: 'chroma-mcp.exe',
+};
+const BLANK_CHROMA_PYTHON_CHILD: ProcRecord = {
+  pid: 27202,
+  ppid: BLANK_CHROMA_ROOT.pid,
+  parentAlive: true,
+  cmdline: '',
+  name: 'python.exe',
+};
+const FOREIGN_BLANK_CHROMA: ProcRecord = {
+  pid: 27203,
+  ppid: 36926,
+  parentAlive: false,
+  cmdline: '',
+  name: 'chroma-mcp.exe',
+};
 
 function procsForName(name: string): ProcRecord[] {
   switch (name) {
@@ -49,6 +70,10 @@ function procsForName(name: string): ProcRecord[] {
       return [FOREIGN_ORPHAN];
     case 'chroma+foreign':
       return [CHROMA_ORPHAN, FOREIGN_ORPHAN];
+    case 'blank-chroma+child':
+      return [BLANK_CHROMA_ROOT, BLANK_CHROMA_PYTHON_CHILD];
+    case 'foreign-blank-chroma':
+      return [FOREIGN_BLANK_CHROMA];
     case 'none':
       return [];
     default:
@@ -65,6 +90,7 @@ interface ReaperWorld extends V4World {
   reaperHome: string;
   reaperExtraEnv: Record<string, string>;
   reaperProbeRecord: string;
+  reaperElevationRecord: string;
   canonicalHooks: Record<string, unknown>;
   dogfoodHooks: Record<string, unknown>;
   codexHooks: Record<string, unknown>;
@@ -164,6 +190,29 @@ Given('a simulated Windows wedge snapshot with an orphaned chroma-mcp and an unr
   };
 });
 
+Given('a simulated Windows wedge snapshot with a blank-command-line chroma-mcp root and its Python child', function (this: ReaperWorld) {
+  this.reaperSnapshot = {
+    platform: 'win32',
+    healthOk: false,
+    portListening: true,
+    portOwnerPid: 19340,
+    portOwnerAlive: false,
+    portReleasedAfterKill: true,
+    procs: [BLANK_CHROMA_ROOT, BLANK_CHROMA_PYTHON_CHILD, FOREIGN_ORPHAN],
+  };
+});
+
+Given('a simulated Windows wedge snapshot with a foreign blank chroma-mcp root', function (this: ReaperWorld) {
+  this.reaperSnapshot = {
+    platform: 'win32',
+    healthOk: false,
+    portListening: true,
+    portOwnerPid: 19340,
+    portOwnerAlive: false,
+    procs: [FOREIGN_BLANK_CHROMA, FOREIGN_ORPHAN],
+  };
+});
+
 Given('a simulated healthy worker snapshot', function (this: ReaperWorld) {
   this.reaperSnapshot = {
     platform: 'win32',
@@ -202,6 +251,13 @@ Given('claude-mem reaping is disabled by environment', function (this: ReaperWor
   ensureExtraEnv(this).CLAUDE_MEM_REAPER_MID_SESSION = '1';
 });
 
+Given('the simulated reaper receives access denied and cannot verify port release', function (this: ReaperWorld) {
+  this.reaperSnapshot.portReleasedAfterKill = false;
+  this.reaperElevationRecord = path.join(this.tempDir, 'elevation-requests.json');
+  ensureExtraEnv(this).CLAUDE_MEM_REAPER_KILL_RESULT = 'access-denied';
+  ensureExtraEnv(this).CLAUDE_MEM_REAPER_ELEVATION_RECORD = this.reaperElevationRecord;
+});
+
 Given('a simulated unavailable claude-mem worker has been down longer than the visibility threshold', function (this: ReaperWorld) {
   this.reaperSnapshot = {
     platform: 'win32',
@@ -233,8 +289,16 @@ When('the claude-mem mid-session guard runs before a tool call', function (this:
   runReaperHook(this, { CLAUDE_MEM_REAPER_MID_SESSION: '1' });
 });
 
+When('the claude-mem prompt preflight runs', function (this: ReaperWorld) {
+  runReaperHook(this, { CLAUDE_HOOK_EVENT_NAME: 'UserPromptSubmit' });
+});
+
 Then('the recorded kills are exactly the chroma-mcp pid', function (this: ReaperWorld) {
   assert.deepEqual(this.reaperKills, [CHROMA_ORPHAN.pid]);
+});
+
+Then('the recorded kills are exactly the blank chroma-mcp root pid', function (this: ReaperWorld) {
+  assert.deepEqual(this.reaperKills, [BLANK_CHROMA_ROOT.pid]);
 });
 
 Then('no kills are recorded', function (this: ReaperWorld) {
@@ -245,6 +309,19 @@ Then('the reaper hook-failures counter is reset to 0', function (this: ReaperWor
   const p = path.join(this.reaperHome, '.claude-mem', 'state', 'hook-failures.json');
   const data = JSON.parse(fs.readFileSync(p, 'utf-8')) as { consecutiveFailures: number };
   assert.equal(data.consecutiveFailures, 0);
+});
+
+Then(/^the reaper hook-failures counter remains (\d+)$/, function (this: ReaperWorld, expected: string) {
+  const p = path.join(this.reaperHome, '.claude-mem', 'state', 'hook-failures.json');
+  const data = JSON.parse(fs.readFileSync(p, 'utf-8')) as { consecutiveFailures: number };
+  assert.equal(data.consecutiveFailures, Number(expected));
+});
+
+Then('an elevated recovery request is recorded', function (this: ReaperWorld) {
+  const requests = this.reaperElevationRecord && fs.existsSync(this.reaperElevationRecord)
+    ? (JSON.parse(fs.readFileSync(this.reaperElevationRecord, 'utf-8')) as Array<{ port: number }>)
+    : [];
+  assert.deepEqual(requests, [{ port: 37777 }]);
 });
 
 Then('the reaper hook exits 0 with a continue payload', function (this: ReaperWorld) {
@@ -349,12 +426,27 @@ function assertManagedReaperPreToolUse(): void {
   assert.match(resolved.entry.command, /tools\/hook-service\/client\.mjs/);
 }
 
+function assertManagedReaperUserPromptSubmit(): void {
+  const resolved = assertRouteContract(loadHookDispatcherContracts(REPO), {
+    target: 'tools/claude-mem-health/health-check.ts',
+    event: 'UserPromptSubmit',
+    matcher: '',
+    timeout: 15,
+    args: ['--mid-session', '--prompt-preflight'],
+  });
+  assert.match(resolved.entry.command, /tools\/hook-service\/client\.mjs/);
+}
+
 Then('the canonical plugin manifest registers the reaper on PreToolUse', function (this: ReaperWorld) {
   assertManagedReaperPreToolUse();
 });
 
 Then('the dogfood settings register the reaper on PreToolUse', function (this: ReaperWorld) {
   assertManagedReaperPreToolUse();
+});
+
+Then('the canonical plugin manifest registers the reaper on UserPromptSubmit', function (this: ReaperWorld) {
+  assertManagedReaperUserPromptSubmit();
 });
 
 Then('the guard emits a visible memory-not-recording warning', function (this: ReaperWorld) {

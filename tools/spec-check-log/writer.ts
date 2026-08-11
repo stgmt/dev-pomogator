@@ -1,28 +1,30 @@
 /**
- * Append-only JSONL writer for the side-channel conformance log (FR-15).
+ * Bounded append-only JSONL writer for conformance findings.
  *
- * Each invocation appends one JSON entry to
- * `<repoRoot>/.dev-pomogator/.spec-check-log/<YYYY-MM-DD>.jsonl`, switching
- * to `<YYYY-MM-DD>-1.jsonl`, `<YYYY-MM-DD>-2.jsonl`, … when the active file
- * crosses 10 MB. Writes use `fs.appendFileSync` (O_APPEND), so concurrent
- * processes don't shred each other's lines.
- *
- * Each finding produced by `checkConformance` becomes one entry; the
- * envelope adds `timestamp`, `session_id`, `source`, and `spec_slug` so the
- * CLI reader can answer «who emitted this and from where» without joining
- * an extra index.
- *
- * @see ./cli.ts (reader CLI)
- * @see .specs/spec-generator-v4/FR.md FR-15
- * @see .specs/spec-generator-v4/NFR.md NFR-Reliability-5
+ * Project state is kept below `<repoRoot>/.dev-pomogator/.spec-check-log`.
+ * Rotation, age retention, aggregate retention, and the disk reserve are
+ * maintained while holding a short cross-process lock. Only recognized,
+ * regular, realpath-confined closed shards are ever removed; the active shard
+ * is immutable to maintenance.
  */
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { randomUUID } from 'node:crypto';
 import type { Finding } from '../spec-graph/conformance.ts';
 
 export const ROTATION_BYTES = 10 * 1024 * 1024;
+export const MAX_TOTAL_BYTES = 64 * 1024 * 1024;
+export const RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
+export const MIN_FREE_BYTES = 1024 * 1024 * 1024;
 const DIR_REL = '.dev-pomogator/.spec-check-log';
+const LOCK_NAME = '.maintenance.lock';
+const LOCK_WAIT_MS = 500;
+const LOCK_STALE_MS = 30_000;
+const DIAGNOSTIC_INTERVAL_MS = 60_000;
+const MAX_DIAGNOSTIC_BYTES = 512;
+const SHARD_RE = /^\d{4}-\d{2}-\d{2}(?:-\d+)?\.jsonl$/;
+const diagnostics = new Map<string, number>();
 
 export interface LogEntry {
   timestamp: string;
@@ -40,66 +42,286 @@ export interface LogEntry {
 export interface AppendOptions {
   repoRoot: string;
   sessionId?: string;
-  /** Identifies which hook / tool produced the entry (e.g. `spec-conformance-push`). */
   source: string;
-  /** Date stamp override for tests; defaults to `today` in UTC. */
   now?: Date;
-  /** Rotation threshold override for tests; defaults to 10 MB. */
   rotationBytes?: number;
+  maxTotalBytes?: number;
+  retentionMs?: number;
+  minFreeBytes?: number;
+  lockWaitMs?: number;
+  freeBytes?: (repoRoot: string) => number;
+  onDiagnostic?: (message: string) => void;
+}
+
+type RawAppendOptions = Omit<AppendOptions, 'source' | 'sessionId'>;
+
+export class JournalSkipError extends Error {
+  code = 'SPEC_CHECK_LOG_SKIPPED';
+  constructor(message: string) {
+    super(message);
+    this.name = 'JournalSkipError';
+  }
 }
 
 function utcDateStamp(d: Date): string {
-  // YYYY-MM-DD in UTC — stable across timezones; matches the spec text.
   return d.toISOString().slice(0, 10);
 }
 
-/** `slug` from a `.specs/<slug>/...` path; empty string for anything else. */
 function specSlugOf(filePath: string): string | undefined {
   const m = filePath.replace(/\\/g, '/').match(/(?:^|\/)\.specs\/([^/]+)\//);
   return m ? m[1] : undefined;
 }
 
-/**
- * Resolve the active log file path — the highest-numbered shard for the day.
- *
- * Suffix order: base file (`<date>.jsonl`) is treated as suffix 0; `-N` is
- * suffix N. We can't sort the filenames lexicographically because `-` < `.`
- * in ASCII would put `-1.jsonl` BEFORE `.jsonl`, inverting the intent.
- */
-export function activeShardPath(repoRoot: string, dateStamp: string): string {
-  const dir = path.join(repoRoot, DIR_REL);
+function isWithin(parent: string, candidate: string): boolean {
+  const relative = path.relative(parent, candidate);
+  return relative === '' || (!relative.startsWith(`..${path.sep}`) && relative !== '..' && !path.isAbsolute(relative));
+}
+
+function emitDiagnostic(opts: RawAppendOptions | AppendOptions, code: string, detail: string): void {
+  const now = (opts.now ?? new Date()).getTime();
+  const key = `${path.resolve(opts.repoRoot)}:${code}`;
+  if (now - (diagnostics.get(key) ?? 0) < DIAGNOSTIC_INTERVAL_MS) return;
+  diagnostics.set(key, now);
+  const message = `[spec-check-log] ${code}: ${detail}`.slice(0, MAX_DIAGNOSTIC_BYTES);
+  if (opts.onDiagnostic) opts.onDiagnostic(message);
+  else process.stderr.write(`${message}\n`);
+}
+
+function skip(opts: RawAppendOptions | AppendOptions, code: string, detail: string): never {
+  emitDiagnostic(opts, code, detail);
+  throw new JournalSkipError(`${code}: ${detail}`);
+}
+
+function sleepSync(ms: number): void {
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+}
+
+function acquireLock(dir: string, opts: RawAppendOptions | AppendOptions): () => void {
+  const lock = path.join(dir, LOCK_NAME);
+  const deadline = Date.now() + (opts.lockWaitMs ?? LOCK_WAIT_MS);
+  for (;;) {
+    try {
+      const fd = fs.openSync(lock, 'wx', 0o600);
+      const owner = JSON.stringify({ pid: process.pid, createdAt: Date.now(), token: randomUUID() });
+      fs.writeFileSync(fd, owner);
+      return () => {
+        try { fs.closeSync(fd); } catch { /* already closed */ }
+        try {
+          if (fs.readFileSync(lock, 'utf8') === owner) fs.unlinkSync(lock);
+        } catch { /* best effort; never unlink a replacement owner's lock */ }
+      };
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'EEXIST') skip(opts, 'lock-error', 'maintenance lock unavailable');
+      try {
+        const age = Date.now() - fs.statSync(lock).mtimeMs;
+        if (age > LOCK_STALE_MS) {
+          let ownerPid = 0;
+          try { ownerPid = Number(JSON.parse(fs.readFileSync(lock, 'utf8')).pid) || 0; } catch { /* malformed stale lock */ }
+          let alive = false;
+          if (ownerPid > 0) {
+            try { process.kill(ownerPid, 0); alive = true; }
+            catch (probeError) { alive = (probeError as NodeJS.ErrnoException).code === 'EPERM'; }
+          }
+          if (!alive) {
+            fs.unlinkSync(lock);
+            continue;
+          }
+        }
+      } catch { /* another writer released it */ }
+      if (Date.now() >= deadline) skip(opts, 'lock-timeout', 'maintenance lock is busy');
+      sleepSync(5);
+    }
+  }
+}
+
+interface SafeShard {
+  name: string;
+  file: string;
+  real: string;
+  size: number;
+  mtimeMs: number;
+}
+
+function confinedJournal(repoRoot: string, opts: RawAppendOptions | AppendOptions): { repo: string; dir: string } {
+  let repo: string;
+  try {
+    repo = fs.realpathSync.native(repoRoot);
+    if (!fs.statSync(repo).isDirectory()) skip(opts, 'unsafe-root', 'project root is not a directory');
+  } catch {
+    skip(opts, 'unsafe-root', 'project root cannot be resolved');
+  }
+  let parent = repo;
+  for (const name of DIR_REL.split('/')) {
+    const candidate = path.join(parent, name);
+    try {
+      if (fs.existsSync(candidate)) {
+        const lst = fs.lstatSync(candidate);
+        if (!lst.isDirectory() || lst.isSymbolicLink()) skip(opts, 'unsafe-journal', `${name} is not a project-owned directory`);
+      } else {
+        fs.mkdirSync(candidate, { mode: 0o700 });
+      }
+      const canonical = fs.realpathSync.native(candidate);
+      if (!isWithin(repo, canonical) || path.dirname(canonical) !== parent) skip(opts, 'unsafe-journal', `${name} escapes project root`);
+      parent = canonical;
+    } catch (error) {
+      if (error instanceof JournalSkipError) throw error;
+      skip(opts, 'unsafe-journal', `${name} cannot be safely resolved`);
+    }
+  }
+  return { repo, dir: parent };
+}
+
+function safeShards(dir: string, opts: RawAppendOptions | AppendOptions): SafeShard[] {
+  const result: SafeShard[] = [];
+  for (const name of fs.readdirSync(dir)) {
+    if (!SHARD_RE.test(name)) continue;
+    const file = path.join(dir, name);
+    try {
+      const lst = fs.lstatSync(file);
+      if (!lst.isFile() || lst.isSymbolicLink()) {
+        emitDiagnostic(opts, 'unsafe-shard', `ignored non-regular shard ${name}`);
+        continue;
+      }
+      const real = fs.realpathSync.native(file);
+      if (!isWithin(dir, real)) {
+        emitDiagnostic(opts, 'unsafe-shard', `ignored escaped shard ${name}`);
+        continue;
+      }
+      const stat = fs.statSync(real);
+      result.push({ name, file, real, size: stat.size, mtimeMs: stat.mtimeMs });
+    } catch {
+      // A concurrent observer may remove an entry, but this writer only mutates
+      // while locked and can safely ignore an entry that disappeared.
+    }
+  }
+  return result;
+}
+
+function suffixFor(name: string, dateStamp: string): number | null {
+  if (name === `${dateStamp}.jsonl`) return 0;
+  const match = name.match(new RegExp(`^${dateStamp}-(\\d+)\\.jsonl$`));
+  return match ? Number.parseInt(match[1], 10) : null;
+}
+
+function activeShardInDir(dir: string, dateStamp: string): string {
   const base = path.join(dir, `${dateStamp}.jsonl`);
   if (!fs.existsSync(dir)) return base;
-  const suffixOf = (name: string): number | null => {
-    if (name === `${dateStamp}.jsonl`) return 0;
-    const m = name.match(new RegExp(`^${dateStamp}-(\\d+)\\.jsonl$`));
-    return m ? parseInt(m[1], 10) : null;
-  };
   let bestName: string | null = null;
   let bestSuffix = -1;
   for (const name of fs.readdirSync(dir)) {
-    const s = suffixOf(name);
-    if (s === null) continue;
-    if (s > bestSuffix) {
-      bestSuffix = s;
+    const suffix = suffixFor(name, dateStamp);
+    if (suffix === null) continue;
+    const file = path.join(dir, name);
+    try {
+      const lst = fs.lstatSync(file);
+      if (!lst.isFile() || lst.isSymbolicLink()) continue;
+    } catch { continue; }
+    if (suffix > bestSuffix) {
+      bestSuffix = suffix;
       bestName = name;
     }
   }
   return bestName ? path.join(dir, bestName) : base;
 }
 
-/** `<YYYY-MM-DD>.jsonl` → `<YYYY-MM-DD>-1.jsonl`; `-N.jsonl` → `-N+1.jsonl`. */
-function nextShard(current: string, dateStamp: string): string {
-  const dir = path.dirname(current);
-  const base = path.basename(current, '.jsonl');
-  if (base === dateStamp) return path.join(dir, `${dateStamp}-1.jsonl`);
-  const m = base.match(/-(\d+)$/);
-  if (!m) return path.join(dir, `${dateStamp}-1.jsonl`);
-  const n = parseInt(m[1], 10) + 1;
-  return path.join(dir, `${dateStamp}-${n}.jsonl`);
+/** Highest numbered safe shard for the current UTC day. */
+export function activeShardPath(repoRoot: string, dateStamp: string): string {
+  return activeShardInDir(path.join(repoRoot, DIR_REL), dateStamp);
 }
 
-/** Compose the JSONL envelope for a finding + emit-time metadata. */
+function nextShard(current: string, dateStamp: string): string {
+  const dir = path.dirname(current);
+  const suffix = suffixFor(path.basename(current), dateStamp) ?? 0;
+  return path.join(dir, `${dateStamp}-${suffix + 1}.jsonl`);
+}
+
+function availableBytes(repoRoot: string, opts: RawAppendOptions | AppendOptions): number {
+  if (opts.freeBytes) return opts.freeBytes(repoRoot);
+  const stat = fs.statfsSync(repoRoot);
+  return Number(stat.bavail) * Number(stat.bsize);
+}
+
+function removeClosed(shard: SafeShard, dir: string, opts: RawAppendOptions | AppendOptions): number {
+  const currentReal = fs.realpathSync.native(shard.file);
+  if (currentReal !== shard.real || !isWithin(dir, currentReal)) skip(opts, 'unsafe-delete', 'shard changed before deletion');
+  const lst = fs.lstatSync(shard.file);
+  if (!lst.isFile() || lst.isSymbolicLink() || !SHARD_RE.test(path.basename(shard.file))) {
+    skip(opts, 'unsafe-delete', 'candidate is not a confined regular shard');
+  }
+  fs.unlinkSync(shard.file);
+  return shard.size;
+}
+
+function selectShardAndMaintain(
+  repo: string,
+  dir: string,
+  dateStamp: string,
+  entryBytes: number,
+  opts: RawAppendOptions | AppendOptions,
+): string {
+  const rotationAt = opts.rotationBytes ?? ROTATION_BYTES;
+  const maxTotal = opts.maxTotalBytes ?? MAX_TOTAL_BYTES;
+  const retention = opts.retentionMs ?? RETENTION_MS;
+  const minFree = opts.minFreeBytes ?? MIN_FREE_BYTES;
+  if (entryBytes > rotationAt) skip(opts, 'entry-limit', 'one journal entry exceeds the shard limit');
+  let active = activeShardInDir(dir, dateStamp);
+  const activeSize = fs.existsSync(active) ? fs.statSync(active).size : 0;
+  if (activeSize > 0 && activeSize + entryBytes > rotationAt) active = nextShard(active, dateStamp);
+
+  let shards = safeShards(dir, opts);
+  const activeName = path.basename(active);
+  const oldestFirst = () => shards
+    .filter(shard => shard.name !== activeName)
+    .sort((left, right) => left.mtimeMs - right.mtimeMs || left.name.localeCompare(right.name, undefined, { numeric: true }));
+
+  const cutoff = (opts.now ?? new Date()).getTime() - retention;
+  for (const shard of oldestFirst().filter(item => item.mtimeMs < cutoff)) {
+    removeClosed(shard, dir, opts);
+    shards = shards.filter(item => item.name !== shard.name);
+  }
+
+  let total = shards.reduce((sum, shard) => sum + shard.size, 0);
+  for (const shard of oldestFirst()) {
+    if (total + entryBytes <= maxTotal) break;
+    total -= removeClosed(shard, dir, opts);
+    shards = shards.filter(item => item.name !== shard.name);
+  }
+  if (total + entryBytes > maxTotal) skip(opts, 'aggregate-limit', 'active shard leaves no room for append');
+
+  let free: number;
+  try { free = availableBytes(repo, opts); }
+  catch { skip(opts, 'disk-probe', 'free disk space cannot be determined'); }
+  for (const shard of oldestFirst()) {
+    if (free - entryBytes >= minFree) break;
+    const reclaimed = removeClosed(shard, dir, opts);
+    free += reclaimed;
+    total -= reclaimed;
+    shards = shards.filter(item => item.name !== shard.name);
+  }
+  if (free - entryBytes < minFree) skip(opts, 'low-disk', 'append would violate the 1 GiB reserve');
+  return active;
+}
+
+function appendConfined(shard: string, dir: string, line: string, opts: RawAppendOptions | AppendOptions): void {
+  let fd: number | null = null;
+  try {
+    if (fs.realpathSync.native(path.dirname(shard)) !== dir) skip(opts, 'unsafe-append', 'journal parent changed before append');
+    if (fs.existsSync(shard)) {
+      const lst = fs.lstatSync(shard);
+      if (!lst.isFile() || lst.isSymbolicLink()) skip(opts, 'unsafe-append', 'active shard is not a regular file');
+    }
+    const flags = fs.constants.O_APPEND | fs.constants.O_CREAT | fs.constants.O_WRONLY | (fs.constants.O_NOFOLLOW ?? 0);
+    fd = fs.openSync(shard, flags, 0o600);
+    if (!fs.fstatSync(fd).isFile()) skip(opts, 'unsafe-append', 'active shard is not a file');
+    fs.appendFileSync(fd, line, { encoding: 'utf8' });
+  } catch (error) {
+    if (error instanceof JournalSkipError) throw error;
+    skip(opts, 'unsafe-append', 'active shard cannot be safely appended');
+  } finally {
+    if (fd !== null) try { fs.closeSync(fd); } catch { /* best effort */ }
+  }
+}
+
 export function composeEntry(finding: Finding, opts: AppendOptions, now: Date): LogEntry {
   const entry: LogEntry = {
     timestamp: now.toISOString(),
@@ -117,54 +339,35 @@ export function composeEntry(finding: Finding, opts: AppendOptions, now: Date): 
   return entry;
 }
 
-/**
- * Append one finding. Returns the absolute path of the shard that received
- * the write (may be a freshly-rolled-over shard if the active one crossed
- * the rotation threshold).
- */
+function appendSerializedBatch(serializedEntries: string[], opts: RawAppendOptions | AppendOptions): string[] {
+  const now = opts.now ?? new Date();
+  const { repo, dir } = confinedJournal(opts.repoRoot, opts);
+  const release = acquireLock(dir, opts);
+  try {
+    return serializedEntries.map(serialized => {
+      const line = `${serialized}\n`;
+      const shard = selectShardAndMaintain(repo, dir, utcDateStamp(now), Buffer.byteLength(line), opts);
+      appendConfined(shard, dir, line, opts);
+      return shard;
+    });
+  } finally {
+    release();
+  }
+}
+
 export function appendFinding(finding: Finding, opts: AppendOptions): string {
   const now = opts.now ?? new Date();
-  const dateStamp = utcDateStamp(now);
-  const rotationAt = opts.rotationBytes ?? ROTATION_BYTES;
-  const dir = path.join(opts.repoRoot, DIR_REL);
-  fs.mkdirSync(dir, { recursive: true });
-
-  let shard = activeShardPath(opts.repoRoot, dateStamp);
-  if (fs.existsSync(shard) && fs.statSync(shard).size >= rotationAt) {
-    shard = nextShard(shard, dateStamp);
-  }
-  const entry = composeEntry(finding, opts, now);
-  fs.appendFileSync(shard, JSON.stringify(entry) + '\n');
-  return shard;
+  return appendSerializedBatch([JSON.stringify(composeEntry(finding, opts, now))], { ...opts, now })[0];
 }
 
-/** Append every finding from a batch (one call per finding). */
+/** A batch shares one timestamp and one maintenance lock. */
 export function appendFindings(findings: Finding[], opts: AppendOptions): string[] {
-  return findings.map((f) => appendFinding(f, opts));
+  if (findings.length === 0) return [];
+  const now = opts.now ?? new Date();
+  return appendSerializedBatch(findings.map(finding => JSON.stringify(composeEntry(finding, opts, now))), { ...opts, now });
 }
 
-/**
- * Append an arbitrary JSON entry to the active shard — same path resolution +
- * 10 MB rotation as findings. Used by the spec-conformance-guard for
- * NON-finding events: per-file parse crashes (FR-19, SPECGEN004_50) and
- * ALLOW_AFTER_MIGRATION decisions (FR-22, SPECGEN004_51). A `timestamp` is
- * stamped automatically if the caller didn't supply one. Returns the shard path.
- */
-export function appendRawEntry(
-  entry: Record<string, unknown>,
-  opts: Pick<AppendOptions, 'repoRoot' | 'now' | 'rotationBytes'>,
-): string {
+export function appendRawEntry(entry: Record<string, unknown>, opts: RawAppendOptions): string {
   const now = opts.now ?? new Date();
-  const dateStamp = utcDateStamp(now);
-  const rotationAt = opts.rotationBytes ?? ROTATION_BYTES;
-  const dir = path.join(opts.repoRoot, DIR_REL);
-  fs.mkdirSync(dir, { recursive: true });
-
-  let shard = activeShardPath(opts.repoRoot, dateStamp);
-  if (fs.existsSync(shard) && fs.statSync(shard).size >= rotationAt) {
-    shard = nextShard(shard, dateStamp);
-  }
-  const withTs = { timestamp: entry.timestamp ?? now.toISOString(), ...entry };
-  fs.appendFileSync(shard, `${JSON.stringify(withTs)}\n`);
-  return shard;
+  return appendSerializedBatch([JSON.stringify({ timestamp: entry.timestamp ?? now.toISOString(), ...entry })], { ...opts, now })[0];
 }

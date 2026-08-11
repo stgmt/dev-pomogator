@@ -81,3 +81,52 @@ Feature: CORE024 Windows shell-free hook authoring gate
     And the original registered hook response is returned without user action
     And live HTTP errors are not retried and a foreign listener is never terminated
     And a repeated transport failure remains fail-open with a sanitized durable diagnostic
+
+  # @feature26 @feature27 @feature28
+  Scenario: CORE024_13 Overlapping Stop route deliveries share one ordered event flight without changing route identity
+    Given an isolated HTTP hook service with two ordered Stop routes for the same session
+    When both Stop routes are dispatched concurrently for that session
+    Then each route returns only its own recorded result
+    And the service executes the logical Stop event once in registry order
+
+  # @feature29 @feature30
+  Scenario: CORE024_14 A legacy hook output burst is bounded and does not take down health
+    Given an isolated HTTP hook service with a hook that exceeds the bounded output limit
+    When I dispatch the overflowing hook
+    Then the route returns the existing runtime-unavailable response
+    And the hook service health endpoint remains available
+
+  # @feature31 @feature32 @feature33
+  Scenario: CORE024_15 An audited route reuses one persistent worker and preserves FIFO
+    Given an isolated audited persistent hook worker fixture
+    When I dispatch two requests to the persistent route concurrently
+    Then both responses report the same worker process and ordered sequence
+    And the persistent worker starts lazily with fewer spawns than dispatches
+
+  # @feature34 @feature35
+  Scenario: CORE024_16 A persistent worker failure recycles without retrying uncertain work
+    Given an isolated persistent hook worker that can hang
+    When the persistent request times out
+    Then the request fails once without automatic retry
+    And the next request uses a replacement worker process
+
+  # @feature36
+  Scenario: CORE024_17 An unaudited legacy route remains behind the child adapter
+    Given an isolated unaudited legacy hook route
+    When I dispatch the legacy route twice
+    Then each dispatch uses the legacy child boundary and no persistent capability is claimed
+
+  # @feature37 @feature38
+  Scenario: CORE024_18 A persistent handler error recycles without replaying the request
+    Given an isolated persistent hook worker that records then throws
+    When the persistent handler request fails
+    Then the failed request is not retried and the worker is recycled
+    And the next persistent request uses a replacement worker process
+
+  # @feature39 @feature40
+  Scenario: CORE024_19 A persistent worker startup failure recovers on the next request
+    Given an isolated persistent hook worker with a broken initial module
+    When the broken persistent request is dispatched
+    Then the startup failure returns the existing runtime-unavailable response
+    When I repair the persistent worker module and dispatch again
+    Then the repaired request succeeds and uses a ready worker

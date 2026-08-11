@@ -2821,6 +2821,7 @@ Phase 45 contains 10 planned TODO slices. All headers use the strict graph-nativ
   **Done When:**
   - [ ] BDD proves AC_REQUIREMENT_MISMATCH and INAPPLICABLE_ACCEPTANCE_REFERENCE emit error findings and leave result, finalization, and projected plan acceptance false.
   - [ ] SPECGEN004_692 covers both branches alongside SPECGEN004_685.
+
 ## Phase 50 — Codex Desktop first-class host adapter (FR-83) (2026-08-10)
 
 > Spec-only execution plan. All tasks are TODO and all SPECGEN004_701..714 evidence is pending. Each vertical slice owns BDD RED → production GREEN → refactor/mutation proof; no task may claim completion from manifest inspection or repo dogfood alone.
@@ -2951,3 +2952,96 @@ Phase 45 contains 10 planned TODO slices. All headers use the strict graph-nativ
   - [ ] Evidence binds Codex/plugin versions, target/cache roots, event ids, timestamps, checkout/package digests, and the exact scenario; an owner note alone is insufficient.
   - [ ] SPECGEN004_713 proves exactly four unique row evidence keys before matrix completeness can pass.
   - [ ] Full Docker BDD, dependency-absent package proof, matrix completeness, live-evidence validation, and smart spec verdict are recorded separately; FR-83 remains NOT_READY if any lane is absent.
+
+## Phase 51 — Installed hook root isolation and bounded journal (2026-08-11)
+
+Источник: incident 2026-08-10; PR #227 follow-up contract; FR-84; @feature84.
+
+- [ ] Build the installed-layout and journal-boundary BDD fixture — id: p51-root-fixture — Status: TODO | Est: 120m
+  _depends: none_
+  _Requirements: [FR-84](FR.md#fr-84)_
+  **Done When:**
+  - [ ] Fixture provides different absolute plugin/project roots, request/session identity, projects with/without `.specs`, injected time/free-space probes, recognized/unsafe shard candidates, and an I/O path ledger.
+  - [ ] SPECGEN004_715–SPECGEN004_721 are executable BDD contracts and initially reproduce the legacy cache-root/retention failures.
+- [ ] Separate executable plugin root from request-scoped project root — id: p51-project-identity — Status: TODO | Est: 180m
+  _depends: hard:p51-root-fixture_
+  _Requirements: [FR-84](FR.md#fr-84)_
+  **Done When:**
+  - [ ] Client, hook service, worker boundary, and both conformance tools carry explicit `pluginRoot`/`projectRoot`; daemon startup CWD and `CLAUDE_PLUGIN_ROOT` cannot become project data roots.
+  - [ ] Missing `.specs` is a state-free no-op and cross-project interleaving cannot leak CWD/environment/journal paths.
+- [ ] Add 10 MiB rotation, 64 MiB cap, and 30-day retention — id: p51-log-retention — Status: TODO | Est: 180m
+  _depends: hard:p51-project-identity_
+  _Requirements: [FR-84](FR.md#fr-84)_
+  **Done When:**
+  - [ ] Closed shards are pruned expired-first/oldest-first under a maintenance lock while the active shard remains protected.
+  - [ ] Real-path confinement and recognized shard names prevent deletion outside the current project's journal.
+- [ ] Enforce the 1 GiB reserve with non-recursive fail-open diagnostics — id: p51-low-disk — Status: TODO | Est: 120m
+  _depends: hard:p51-log-retention_
+  _Requirements: [FR-84](FR.md#fr-84)_
+  **Done When:**
+  - [ ] Projected low-disk writes prune eligible closed shards and then skip the append if the reserve remains unsatisfied.
+  - [ ] Diagnostic output is bounded/rate-limited, does not append to the protected journal, and cannot trigger recursive hook execution.
+- [ ] Prove dependency-absent installed hook behavior — id: p51-installed-hook-proof — Status: TODO | Est: 180m
+  _depends: hard:p51-project-identity, hard:p51-low-disk_
+  _Requirements: [FR-84](FR.md#fr-84)_
+  **Done When:**
+  - [ ] The real client/service/conformance path runs from an installed-cache fixture against a different real project and leaves the cache free of `.dev-pomogator` state.
+  - [ ] Windows path/case plus POSIX path fixtures cover normalization and confinement without host-side raw BDD execution.
+- [ ] Recover an authenticated orphan hook-service without killing foreign listeners — id: p51-orphan-service-recovery — Status: TODO | Est: 120m
+  _depends: hard:p51-root-fixture_
+  _Requirements: [FR-84](FR.md#fr-84)_
+  **Done When:**
+  - [ ] Authenticated health exposes PID; missing-state legacy recovery requires stable double health and double listener-PID proof, and denied termination publishes an OS-assigned alternate loopback port.
+  - [ ] Unauthenticated, ambiguous, changed, denied, or unverifiable listeners remain alive while the current runtime becomes discoverable through atomic service state; SPECGEN004_722 and CORE024_23 pass.
+- [ ] Run release verification and record authoritative evidence — id: p51-release-verification — Status: TODO | Est: 180m
+  _depends: hard:p51-installed-hook-proof, hard:p51-orphan-service-recovery_
+  _Requirements: [FR-84](FR.md#fr-84)_
+  **Done When:**
+  - [ ] Focused integration, Docker/WSL BDD, hook-service regression, spec validation/audit/verdict, installed-cache smoke, and disk-boundary evidence pass on the exact commit.
+  - [ ] Local cache synchronization and PR #227 update occur only after the spec contract is approved and every required proof is current.
+
+## Phase 52 — PR #227 review hardening (2026-08-11)
+
+Источник: PR #227 review; FR-84; AC-84.9–AC-84.13; @feature84.
+
+- [ ] Add review regression fixtures — id: p52-review-fixtures — Status: TODO | Est: 120m
+  _depends: hard:p51-root-fixture_
+  _Requirements: [FR-84](FR.md#fr-84)_
+  **Done When:**
+  - [ ] SPECGEN004_723–SPECGEN004_727 reproduce route timeout, streaming overflow, worker leak, partial-failure invisibility, path escape, runtime digest drift, and state-only PID authorization.
+- [ ] Harden client and worker boundaries — id: p52-client-worker — Status: TODO | Est: 180m
+  _depends: hard:p52-review-fixtures_
+  _Requirements: [FR-84](FR.md#fr-84)_
+  **Done When:**
+  - [ ] Client deadlines derive from registry budgets, input consumption stops at the byte ceiling, worker startup is bounded, every failed/starting child is terminated, and `NODE_OPTIONS` is cleared.
+- [ ] Preserve grouped results with durable route diagnostics — id: p52-partial-failure — Status: TODO | Est: 90m
+  _depends: hard:p52-review-fixtures_
+  _Requirements: [FR-84](FR.md#fr-84)_
+  **Done When:**
+  - [ ] Mixed-success Stop groups preserve successful aggregation and append bounded diagnostics naming each failed route.
+- [ ] Close path, runtime, and PID proof boundaries — id: p52-confinement-identity — Status: TODO | Est: 180m
+  _depends: hard:p52-review-fixtures_
+  _Requirements: [FR-84](FR.md#fr-84)_
+  **Done When:**
+  - [ ] Pre-create symlink/junction escapes write nothing, canonical directories remain the append target, imported service dependencies affect runtime identity, and every termination uses double health plus double OS PID proof.
+- [ ] Verify and publish the same PR — id: p52-release — Status: TODO | Est: 180m
+  _depends: hard:p52-client-worker, hard:p52-partial-failure, hard:p52-confinement-identity_
+  _Requirements: [FR-84](FR.md#fr-84)_
+  **Done When:**
+  - [ ] Focused regressions, generated bundles, spec trace/validation, available container checks, installed-cache smoke, exact-commit CI, and PR #227 evidence pass without disabling any hook or plugin.
+
+
+### Phase 53 — claude-mem inherited-socket auto-heal trace
+
+- [ ] Add FR-84.m and AC-84.14–84.18 to the graph. — id: t94 — Status: TODO — Est: 30m
+  **Done When:**
+  - [ ] The governed requirement and acceptance nodes are generated.
+- [ ] Link the change to CMEMMID007–CMEMMID010 BDD scenarios. — id: t95 — Status: TODO — Est: 30m
+  **Done When:**
+  - [ ] Scenario identifiers trace to each acceptance path.
+- [ ] Require generated registry parity for UserPromptSubmit. — id: t96 — Status: TODO — Est: 20m
+  **Done When:**
+  - [ ] Both manifest sources contain the prompt route.
+- [ ] Validate denied/unreleased, classified, and foreign-process branches without moving ports. — id: t97 — Status: TODO — Est: 30m
+  **Done When:**
+  - [ ] Test evidence shows unchanged-port recovery and truthful failure retention.

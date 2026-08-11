@@ -254,3 +254,49 @@ my-plugin/
 - **[VERIFIED: repository step definition]** `tests/step_definitions/feature24_hook_review.ts` invokes `reviewHookManifest()` with temporary JSON inputs. Its approved registry uses `transport.type: "http"`, a loopback route, and `authentication.type: "bearer-env"` with `DEV_POMOGATOR_HOOK_TOKEN`; no token value is present.
 - **[VERIFIED: repository boundary]** `tools/hook-review/check.ts` is the review gate exercised by the BDD step definitions. The tests exercise gate contract, not a live service, so review remains deterministic and network-free.
 - **[ASSUMED: implementation ownership]** Service implementation and production manifest transition are owned by shell-free-hooks implementation work. This change specifies/tests the contract only and does not claim the uncommitted runtime is wired into `.claude-plugin/hooks.json`.
+
+## Stop hook OOM incident evidence and remediation (2026-07-23)
+
+- **Observed:** the audit report recorded thirteen Stop HTTP routes; twelve completed with HTTP 200 while Stop/9/0 returned HTTP 503. The daemon health endpoint remained available, proving that request-child failure and daemon failure are separate boundaries.
+- **Failure evidence:** Windows runs included JavaScript heap out of memory, CALL_AND_RETRY_LAST, VirtualAlloc failed, and spawn UNKNOWN. These are compatible with repeated Node/tsx bootstrap and nested child allocation under Stop fanout; they are not evidence that a two-request global limiter is the correct architecture.
+- **Selected remediation:** preserve route identity, coordinate overlapping Stop event flights by session, isolate route results, and bound incremental stdout/stderr capture. The service remains healthy after a route child fails, while the affected route receives the established 503 diagnostic contract.
+- **Explicit limitation:** this phase still uses the legacy one-shot adapter. Persistent worker reuse, framed protocol, idle eviction, and adaptive memory-pressure recycling require a route compatibility audit and are tracked separately; this change does not claim that all cold starts disappear.
+- **Safety:** the client may retry only connection-class daemon transport failures already covered by CORE024_12. It must not replay a worker/child execution after timeout, crash, OOM, protocol failure, or uncertain side effect.
+
+### Persistent-worker migration status
+
+The compatibility audit found that most current hooks are one-shot CLI programs that read stdin/argv, call process.exit, spawn nested work, or perform side effects at import/run time. They remain explicit legacy execution=child routes. Only handlers with a reviewed reusable adapter are promoted to execution=persistent; those workers load once, reuse their PID, serialize requests, evict when idle, recycle on failure, and never retry uncertain work. The audited persistent set therefore eliminates repeated Node/tsx cold starts for its compatible routes without making the unsafe legacy population a false migration claim.
+
+## Stop-hook resource incident and PR #227 gap analysis (2026-08-10/11)
+
+### Verified current state
+
+- PR #227 (`fix/hook-service-oom-architecture`) coalesces overlapping service deliveries, caps child stdin/stdout/stderr at 256 KiB, and introduces persistent worker infrastructure with recycle/no-uncertain-retry behavior.
+- The active installed cache 2.0.6 runtime files match the PR branch implementation even though installed metadata still records an older source SHA. The PR is open and its branch is the current worktree.
+- Only Stop route 6 currently declares persistent capability; 12 of 13 DevPomogator Stop routes still use child execution, and the manifest still exposes 13 separate `node client.mjs` Stop commands. PR #227 therefore reduces duplicate logical work but does not eliminate host-visible Node fanout.
+- The incident machine had 15 Stop hooks total: 13 DevPomogator registrations plus context-mode and claude-mem. With C: at zero free bytes and low RAM, Node emitted CSPRNG assertion, heap OOM, and `VirtualAlloc` failures; claude-mem subsequently reported an unreachable worker.
+- A cache-local conformance journal in inactive plugin version 2.0.5 had 443 shards totaling 4,560,343,121 bytes. The root cause is conflating installed `CLAUDE_PLUGIN_ROOT` with caller project root plus rotation without aggregate/age retention; the spec-generator-v4 FR-84 package owns that writer contract.
+
+### Options considered
+
+1. Root fix plus retention only: fixes the disk leak but leaves 13 host-visible Stop clients.
+2. Add per-request project identity: also prevents cross-project CWD/environment/worker state bleed, but leaves manifest fanout.
+3. Selected: option 2 plus one DevPomogator Stop dispatcher, registry-order internal routes, legacy semantic parity oracle, sequential bounded child fallback, and persistent workers where audited.
+4. Native HTTP-only hooks: rejected because a dead daemon would bypass PR #227's same-session self-heal client.
+
+### Verification gap
+
+The existing PR evidence does not include a full Claude host lifecycle smoke or a completed Docker/WSL BDD run for this addendum. Completion claims SHALL remain pending until CORE024_20–22, the executable feature mirror, installed-cache smoke, focused service tests, and full required BDD all pass on the exact commit.
+
+### Follow-up evidence — orphan authenticated listener (2026-08-11)
+
+After syncing the approved runtime, `ensureUp` failed because `127.0.0.1:42619` was owned by Node PID 8820 while `service.json` was absent. The listener returned HTTP 200 with `service=dev-pomogator-hook-service`, version 1.0.0, and the fingerprint of the current per-user token. Starting the same installed runtime on an ephemeral free port succeeded, proving a migration/ownership-discovery defect rather than a runtime import defect. Stable token/OS proof identified PID 8820, but both Node SIGTERM and exact `taskkill /PID 8820 /T /F` were denied across the Windows session boundary; therefore safe completion requires published alternate-port recovery, not wider process termination.
+
+## PR #227 review evidence (2026-08-11)
+
+Reproductions confirmed premature three-second abort, continued consumption of a 32 MiB stream after a 2 MiB nominal cap, leaked pre-ready workers on hang/protocol output, invisible mixed-success route failures, external descendant creation through a junction before confinement rejection, and a state-only PID termination path. The repair therefore tightens boundaries without disabling any hook or plugin.
+
+
+## 2026-08-11 live evidence — inherited handle under unreadable process metadata
+
+On Windows, `Get-NetTCPConnection` reported dead PID 19340 for listening port 37777 while the actual holders were an orphaned `chroma-mcp.exe → python.exe → python.exe` tree with a dead parent and blank command lines. Standard non-elevated taskkill returned access denied; an elevated, identity-checked tree kill released the same port. The old command-line-only matcher therefore missed the real holder and reset state too optimistically.

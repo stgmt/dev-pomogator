@@ -96,3 +96,21 @@ b. **Manual cleanup** (если предпочитаете контроль):
 
 - Added FR-15–FR-24 and AC-10 for registry-approved, bearer-environment-authenticated HTTP managed hooks, the SessionStart exception, Windows shell-free policy, offline review, actionable findings, and executable BDD coverage.
 - Documented the implementation boundary: hook-review/service/runtime and manifest changes are separately owned; this change reconciles specification with existing CORE024 BDD evidence.
+
+## Unreleased — PR #227 Stop incident hardening specified (2026-08-11)
+
+- Specify one host-visible DevPomogator Stop dispatcher while preserving the builtins self-heal client and all legacy host-observable route semantics through a differential oracle.
+- Bind event flights, CWD, environment, workers, and state to each request's normalized project root; plugin root remains code-only.
+- Cross-link spec-generator-v4 FR-84 for no-spec no-op and bounded conformance journal retention (10 MiB shard, 64 MiB total, 30 days, 1 GiB reserve).
+- AC-12/AC-13, CORE024_20–22, NFR-P5/R10/R11, and the Phase 10 implementation are present. Focused checks pass locally; exact-commit Docker BDD and release verification remain pending CI evidence. No hook or plugin is disabled.
+- Added AC-14 / CORE024_23 for safe recovery of a token-authenticated hook-service that owns the loopback port without usable state metadata; foreign or unverifiable listeners are never terminated.
+
+## 2026-08-11 — PR #227 review-hardening contract
+
+Added canonical contracts for route-aware client timeouts, a hard streaming input ceiling, bounded worker startup and teardown, durable partial-failure diagnostics, pre-create link confinement, dependency-complete runtime identity, and proof-only process termination.
+
+
+## Unreleased — Windows claude-mem inherited-socket auto-heal
+
+- Hardened claude-mem recovery for dead-owner sockets held by blank-command-line `chroma-mcp.exe` trees; no port relocation or hook disabling.
+- Added prompt-time preflight and verified-release semantics for the fail-loud counter.

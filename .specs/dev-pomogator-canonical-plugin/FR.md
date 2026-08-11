@@ -183,6 +183,21 @@ The plugin's hook commands SHALL resolve their bootstrap loader and target scrip
 
 **Связанные AC:** [AC-1](ACCEPTANCE_CRITERIA.md#ac-1-fr-1-fr-9)
 
+
+**Incident hardening and persistent-worker migration (2026-07-23):** the Stop fanout remains route-addressable in the generated manifest, but the service SHALL coalesce overlapping deliveries with the same session_id into one deterministic registry-order execution and return only the requested route result or failure. The legacy child boundary SHALL capture stdout and stderr with a bounded 256 KiB limit and terminate only the affected child on overflow. The execution supervisor SHALL use an explicit per-route capability record: audited routes with a reusable handler SHALL run in one lazy, isolated, framed worker process that is loaded once and reused; every other route SHALL remain behind the legacy child adapter. The audited persistent route set SHALL eliminate repeated Node/tsx cold starts for those routes, while the registry SHALL make any remaining legacy fallback visible rather than claiming full migration. Timeout, crash, protocol violation, output overflow, OOM, VirtualAlloc failure, and spawn UNKNOWN SHALL recycle only the affected worker/path and SHALL NOT replay a request whose side effect may be uncertain. This is an event-level coordination and persistent-worker architecture, not a fixed global maxInFlight=2 limiter.
+
+
+### Incident hardening addendum — Stop dispatch and project identity (2026-08-10/11)
+
+The generated plugin manifest SHALL expose exactly one DevPomogator `Stop` command, while leaving Stop registrations owned by other plugins untouched. That command SHALL retain the builtins-only self-healing client introduced by PR #227 and dispatch one logical Stop event to the service. The service SHALL execute the existing logical DevPomogator Stop routes in canonical registry order and SHALL preserve the Claude-host-observable legacy result for approval/blocking, reasons/messages, `additionalContext`, exit/failure handling, and stop-loop behavior. Consolidation is invalid unless a black-box baseline matrix proves parity with the former 13 registrations.
+
+Every request SHALL carry a normalized caller-project identity distinct from `pluginRoot`. Event coalescing and FIFO scope SHALL include `(sessionId, projectRoot, eventName)` so requests from different repositories never share a flight. Child and persistent-worker execution SHALL receive request-scoped project CWD/environment; daemon startup environment and `CLAUDE_PLUGIN_ROOT` SHALL not become project state. Compatible routes may use persistent workers; legacy child fallback SHALL remain bounded to one child at a time per event flight with the existing 256 KiB input/output caps and no retry of uncertain work.
+
+Spec-conformance routes SHALL additionally satisfy [spec-generator-v4 FR-84](../spec-generator-v4/FR.md#fr-84): no-spec projects are state-free no-ops and the per-project journal uses 10 MiB rotation, 64 MiB total retention, 30-day closed-shard expiry, and a 1 GiB free-space reserve. Startup recovery SHALL identify a stale token-authenticated DevPomogator listener whose state record is absent only after two matching authenticated health probes and two matching operating-system listener-PID resolutions. It MAY terminate only that unchanged owner. If termination is denied, or the listener is unauthenticated, ambiguous, changed, or unverifiable, the listener SHALL remain alive and current runtime SHALL start on an operating-system-assigned loopback port atomically published for every client.
+
+
+
+PR #227 review hardening further requires route-budget-aware client deadlines, byte-counted streaming input rejection, bounded and fully reaped worker startup with cleared `NODE_OPTIONS`, durable route-level evidence for mixed-success Stop groups, pre-create project-state confinement, runtime identity closed over imported service modules, and repeated authenticated health plus repeated operating-system listener-PID proof for every termination; state-only PID evidence is advisory and never sufficient.
 ## FR-14: Plugin hook commands are portable, deps-absent-safe, and fail-open
 
 The plugin install ships NO `node_modules`, so every `.claude-plugin/hooks.json` command SHALL be deps-absent-safe: it either launches a bundled `*.bundle.mjs` (npm deps inlined by esbuild) or a script whose transitive import chain is node-builtins-only. A raw `.ts`/`.cjs` hook that (transitively) imports a real npm package crashes `ERR_MODULE_NOT_FOUND` for plugin users — `tools/plugin-deps-guard/check.ts::findDepsUnsafeHooks` SHALL detect such hooks (returning the `script -> packages` offenders; `[]` when clean) so the dead-integration never ships silently (the dogfood repo has `node_modules` and hides it).
@@ -252,3 +267,10 @@ The approved local registry SHALL define accepted HTTP route, event, matcher, an
 Executable BDD SHALL cover a negative shell/inline-Node/unapproved-transport/registry-drift scenario and a positive approved-HTTP-plus-SessionStart-bootstrap scenario using the real review gate.
 
 **AC:** [AC-10](ACCEPTANCE_CRITERIA.md#ac-10-fr-15-fr-24)
+
+
+### FR-13.m — claude-mem inherited-socket auto-heal
+
+When the configured claude-mem worker port is listening but its recorded owner PID is dead and health is unavailable, the plugin SHALL identify only an orphaned claude-mem process tree. A root with an unreadable/blank command line is eligible only when it is named `chroma-mcp.exe`, has a dead parent, and has no conflicting live owner. The plugin SHALL not relocate the worker port or disable any hook.
+
+The recovery guard SHALL run before `UserPromptSubmit` as well as at SessionStart and PreToolUse. It SHALL reset claude-mem's fail-loud counter only after port release is confirmed; an access-denied or unconfirmed kill SHALL remain visible as a fail-open diagnostic rather than be claimed as repaired.

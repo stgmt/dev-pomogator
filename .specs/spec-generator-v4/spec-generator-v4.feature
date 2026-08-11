@@ -4611,3 +4611,91 @@ Scenario: SPECGEN004_714 Codex support adds no second control plane or spec engi
   When the FR-83 package and dependency graph are inspected
   Then exactly nine forbidden-class checks are absent
   And only the declared thin host and generated distribution adapters remain
+
+@feature84 @FR-84 @AC-84.1
+Scenario: SPECGEN004_715 Installed conformance hook separates plugin code from caller project state
+  Given an installed plugin cache and a different caller project with specs
+  When the real hook request path resolves code and data roots
+  Then executable resources come from the plugin cache and all spec reads and state writes stay in the caller project
+  And daemon startup cwd and plugin root never become project identity
+
+@feature84 @FR-84 @AC-84.2
+Scenario: SPECGEN004_716 Project without specs performs a state free conformance no-op
+  Given an installed hook request for a project without a specs directory
+  When spec conformance push and guard run
+  Then both return fail open without creating a spec check journal in the project or plugin cache
+
+@feature84 @FR-84 @AC-84.3
+Scenario: SPECGEN004_717 Journal rotation and aggregate retention bound every project
+  Given a project journal with an active shard and enough closed shards to exceed its limits
+  When append and retention maintenance complete
+  Then the active shard rotates at ten MiB and total retained journal bytes are at most sixty four MiB
+  And oldest closed shards are removed before the active shard is ever considered
+
+@feature84 @FR-84 @AC-84.4
+Scenario: SPECGEN004_718 Thirty day retention expires only closed shards
+  Given active and closed journal shards on both sides of the thirty day boundary
+  When retention maintenance runs
+  Then expired closed shards are removed and nonexpired shards remain subject to the aggregate cap
+  And the active shard is preserved regardless of timestamp
+
+@feature84 @FR-84 @AC-84.5
+Scenario: SPECGEN004_719 Low disk reserve prunes then skips without recursive logging
+  Given a projected journal append would leave less than one GiB free
+  When low disk maintenance cannot restore the reserve by pruning eligible closed shards
+  Then the append is skipped fail open with one bounded rate limited diagnostic outside the journal
+
+@feature84 @FR-84 @AC-84.6
+Scenario: SPECGEN004_720 Concurrent retention is locked and deletion is path confined
+  Given concurrent journal writers and active unrelated traversal and escaped shard candidates
+  When rotation and retention race
+  Then maintenance is serialized and only recognized closed shards inside the project journal can be deleted
+
+@feature84 @FR-84 @AC-84.7
+Scenario: SPECGEN004_721 Installed layout regression leaves plugin cache immutable
+  Given a dependency absent installed cache and a separate real project containing specs
+  When the client service and conformance chain processes the project request
+  Then every observed read write and delete path is project scoped
+  And no dev pomogator state exists below the installed cache
+
+@feature84 @FR-84 @AC-84.8
+Scenario: SPECGEN004_722 Authenticated orphan hook service is safely recovered
+  Given a stale authenticated DevPomogator hook service owns the loopback port but its service state file is missing
+  When the current installed client performs startup recovery
+  Then it verifies the listener twice by service token and loopback owner PID before replacement or alternate port recovery
+  And it starts the current runtime on a published loopback port and never terminates an unauthenticated or unverifiable listener
+
+@feature84 @FR-84 @AC-84.9
+Scenario: SPECGEN004_723 Installed client enforces route aware deadlines and a hard stdin ceiling
+  Given an installed hook route with a budget above three seconds and an oversized streamed payload
+  When the one shot client dispatches each boundary case
+  Then the valid slow route is not aborted at three seconds
+  And oversized stdin stops being consumed as soon as the byte ceiling is crossed
+
+@feature84 @FR-84 @AC-84.10
+Scenario: SPECGEN004_724 Starting workers terminate on timeout and protocol faults
+  Given persistent workers that hang before ready or contaminate the startup protocol
+  When startup reaches its budget or receives the invalid frame
+  Then each pending startup settles and its child is terminated
+  And the worker receives no inherited NODE_OPTIONS
+
+@feature84 @FR-84 @AC-84.11
+Scenario: SPECGEN004_725 Partial Stop failures preserve results and durable diagnostics
+  Given one successful and one failing logical route in the same Stop group
+  When the service aggregates the group
+  Then the successful route result is preserved
+  And the failing route has a bounded durable diagnostic
+
+@feature84 @FR-84 @AC-84.12
+Scenario: SPECGEN004_726 Managed paths and runtime identity are closed over dependencies
+  Given an escaped managed directory and a changed shared service dependency
+  When journal state and service runtime identity are evaluated
+  Then no descendant is created through the escaped directory
+  And the shared dependency change invalidates runtime identity
+
+@feature84 @FR-84 @AC-84.13
+Scenario: SPECGEN004_727 State only PID evidence cannot authorize termination
+  Given authenticated health omits PID while stale state names an unrelated live process
+  When orphan service recovery runs
+  Then the unrelated process remains alive
+  And termination requires two matching health and listener PID proofs

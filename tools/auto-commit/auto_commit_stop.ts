@@ -92,12 +92,23 @@ function buildSmartCommitMessage(jiraKey: string, command: string, summary: stri
 // Main
 // ============================================================================
 
+const MAX_INPUT_BYTES = 1_000_000;
+
 async function main(): Promise<void> {
-  // Read input from stdin
-  let inputRaw = "";
+  // Read input from stdin with a bounded hook payload.
+  const chunks: Buffer[] = [];
+  let inputBytes = 0;
   for await (const chunk of process.stdin) {
-    inputRaw += chunk;
+    const value = Buffer.isBuffer(chunk) ? chunk : Buffer.from(String(chunk));
+    inputBytes += value.byteLength;
+    if (inputBytes > MAX_INPUT_BYTES) {
+      log("ERROR", `Stop hook input exceeds ${MAX_INPUT_BYTES} bytes`);
+      writeOutput({});
+      return;
+    }
+    chunks.push(value);
   }
+  const inputRaw = Buffer.concat(chunks).toString("utf8");
 
   let input: StopHookInput;
   try {

@@ -1631,3 +1631,107 @@ WHEN the declared host/distribution matrix is verified THEN all four rows SHALL 
 ## AC-83.10
 **Требование:** [FR-83](FR.md#fr-83)
 WHEN the FR-83 package and dependency graph are inspected THEN they SHALL contain no new task/thread-management, scheduled-automation, connector, or `app://` dependency; SHALL NOT change context-menu behavior or Cursor FR-81 ownership; and SHALL NOT introduce a second SpecGraph, MCP registry, task store, or canonical rules tree.
+
+## AC-84.1
+
+**Требование:** [FR-84](FR.md#fr-84)
+
+Given an installed plugin root and a different caller project root, when a conformance hook is dispatched, then executable resources resolve from `pluginRoot`, project data resolves only from the validated request-scoped `projectRoot`, and neither `CLAUDE_PLUGIN_ROOT` nor daemon CWD can become the project root.
+
+## AC-84.2
+
+**Требование:** [FR-84](FR.md#fr-84)
+
+Given a valid caller project without `.specs`, when spec-conformance push or guard runs, then it exits fail-open/no-op and creates no `.spec-check-log` in the project or installed cache.
+
+## AC-84.3
+
+**Требование:** [FR-84](FR.md#fr-84)
+
+Given enough conformance entries to cross retention boundaries, when journal maintenance completes, then the active shard rotates at 10 MiB, total retained bytes are at most 64 MiB per project, and oldest closed shards are deleted first without deleting or truncating the active shard.
+
+## AC-84.4
+
+**Требование:** [FR-84](FR.md#fr-84)
+
+Given closed shards older and newer than 30 days, when maintenance runs, then every eligible expired closed shard is removed, newer shards remain subject to the 64 MiB cap, and the active shard remains protected regardless of timestamp.
+
+## AC-84.5
+
+**Требование:** [FR-84](FR.md#fr-84)
+
+Given a projected journal write that would reduce free space below 1 GiB, when maintenance runs, then eligible closed shards are pruned oldest-first; if the reserve remains unsatisfied the write is skipped fail-open and exactly one bounded non-recursive diagnostic path is used.
+
+## AC-84.6
+
+**Требование:** [FR-84](FR.md#fr-84)
+
+Given concurrent writers plus traversal, symlink/junction, unrelated-file, and active-shard candidates, when rotation/retention runs, then a maintenance lock serializes mutation and only confined closed journal shards can be deleted.
+
+## AC-84.7
+
+**Требование:** [FR-84](FR.md#fr-84)
+
+Given a dependency-absent installed-cache fixture whose plugin root differs from a real project containing `.specs`, when the real hook client/service/conformance path runs, then all reads and writes are project-scoped, no cache-local state appears, and the legacy cache-root regression fails the scenario.
+
+## AC-84.8
+
+**Требование:** [FR-84](FR.md#fr-84)
+
+Given a stale or legacy per-user-credential-proven DevPomogator hook-service owns the configured loopback port while `service.json` is missing or unusable, when current startup recovery runs, then it resolves the listener PID from the operating system twice around a second credential-proven health probe and may stop only the unchanged verified owner; if termination is denied or ownership is credential-rejected, ambiguous, changed, or unverifiable, that listener remains alive and current runtime starts on an operating-system-assigned loopback port atomically published for every client.
+
+## AC-84.9
+
+**Требование:** [FR-84](FR.md#fr-84)
+
+Given a logical hook route whose declared execution budget exceeds three seconds or an input stream exceeds the client ceiling, when the installed client dispatches it, then the request remains eligible through the route-aware budget while stdin is rejected and consumption stops as soon as the byte ceiling is crossed.
+
+## AC-84.10
+
+**Требование:** [FR-84](FR.md#fr-84)
+
+Given a persistent worker that hangs before ready, writes non-protocol output, exits, or is closed while starting, when its lifecycle boundary handles the fault, then every pending operation settles within the configured startup budget, the child is terminated, the slot is recyclable, and caller `NODE_OPTIONS` is absent from the worker environment.
+
+## AC-84.11
+
+**Требование:** [FR-84](FR.md#fr-84)
+
+Given a grouped Stop dispatch in which at least one logical route succeeds and at least one fails, when aggregation completes, then successful blocking or context semantics are preserved and every failed route produces a bounded durable route-level diagnostic.
+
+## AC-84.12
+
+**Требование:** [FR-84](FR.md#fr-84)
+
+Given a project whose managed parent is a symlink or junction outside the repository, or a service dependency changes without the entry module changing, when journal/state creation or runtime identity is evaluated, then no external descendant is created or written and the dependency change invalidates the running service identity.
+
+## AC-84.13
+
+**Требование:** [FR-84](FR.md#fr-84)
+
+Given credential-proven health without a positive PID or stale state naming a live unrelated PID, when orphan recovery evaluates termination, then it does not stop that PID and may terminate only an owner proven unchanged by two credential-proven health probes and two operating-system listener-PID resolutions.
+
+
+## AC-84.14
+
+WHEN the spec graph covers a Windows claude-mem socket whose reported owner PID is dead and whose live orphan root has a blank command line
+THEN it SHALL require image-name plus dead-parent evidence for `chroma-mcp.exe` and SHALL exclude unrelated Python or console processes.
+
+## AC-84.15
+
+WHEN the recovery design is traced to executable behavior
+THEN it SHALL show a UserPromptSubmit preflight in addition to SessionStart/PreToolUse and SHALL prohibit port relocation as a repair.
+
+## AC-84.16
+
+WHEN a kill attempt returns access denied or the original port remains listening
+THEN the traced behavior SHALL preserve the stale-failure state and report a fail-open non-success outcome.
+
+## AC-84.17
+
+WHEN a classified orphan tree is killed and re-observation shows the original port free
+THEN the traced behavior SHALL reset hook-failures and prove a normal worker can bind and answer health on that same port.
+
+## AC-84.18
+
+WHEN the implementation or manifest changes this recovery route
+THEN BDD scenarios SHALL cover blank-command-line classification, foreign-process non-selection, prompt-route parity, and verified-release counter handling.

@@ -149,3 +149,27 @@
 | CHK-FR22-01 | Findings identify violation; clean input yields none | FR-22, AC-10, @feature22 | BDD scenario | Draft | CORE024_01/02 |
 | CHK-FR23-01 | Registry owns route/event/matcher/auth metadata | FR-23, AC-10, @feature23 | BDD scenario | Draft | CORE024 registry fixture |
 | CHK-FR24-01 | Positive and negative BDD calls real gate | FR-24, AC-10, @feature24 | BDD scenario | Draft | CORE024_01/02 |
+
+## PR #227 incident-hardening traceability
+
+| CHK-ID | Requirement | Traces To (FR+SC) | Verification Method | Status | Notes |
+|---|---|---|---|---|---|
+| CHK-FR13-20 | Installed requests separate plugin code root from caller project root | [FR-13](FR.md#fr-13-plugin-hooks-use-one-authenticated-loopback-service), [AC-12](ACCEPTANCE_CRITERIA.md#ac-12-installed-hook-project-isolation-and-bounded-conformance-state), CORE024_20 | BDD scenario | Draft | Cross-links spec-generator-v4 FR-84 / SPECGEN004_715–721 |
+| CHK-FR13-21 | Generated manifest exposes one DevPomogator Stop dispatcher | [FR-13](FR.md#fr-13-plugin-hooks-use-one-authenticated-loopback-service), [AC-13](ACCEPTANCE_CRITERIA.md#ac-13-one-host-visible-devpomogator-stop-dispatcher-with-semantic-parity), CORE024_21 | BDD scenario | Draft | Other plugin registrations are out of mutation scope |
+| CHK-FR13-22 | Consolidated Stop response matches the captured legacy 13-route oracle | [FR-13](FR.md#fr-13-plugin-hooks-use-one-authenticated-loopback-service), [AC-13](ACCEPTANCE_CRITERIA.md#ac-13-one-host-visible-devpomogator-stop-dispatcher-with-semantic-parity), CORE024_21 | BDD scenario | Draft | approve/block/context/failure/order/loop matrix |
+| CHK-FR13-23 | Interleaved repositories retain independent FIFO flights, workers, and state | [FR-13](FR.md#fr-13-plugin-hooks-use-one-authenticated-loopback-service), [AC-12](ACCEPTANCE_CRITERIA.md#ac-12-installed-hook-project-isolation-and-bounded-conformance-state), CORE024_22 | BDD scenario | Draft | key includes session, normalized project, event |
+| CHK-FR13-24 | Same-session daemon loss still self-heals through one builtins client | [FR-13](FR.md#fr-13-plugin-hooks-use-one-authenticated-loopback-service), [AC-13](ACCEPTANCE_CRITERIA.md#ac-13-one-host-visible-devpomogator-stop-dispatcher-with-semantic-parity), CORE024_22 | BDD scenario | Draft | No native-HTTP-only regression |
+| CHK-FR13-25 | Legacy child fallback is sequential and bounded at 256 KiB | [FR-13](FR.md#fr-13-plugin-hooks-use-one-authenticated-loopback-service), [AC-13](ACCEPTANCE_CRITERIA.md#ac-13-one-host-visible-devpomogator-stop-dispatcher-with-semantic-parity), CORE024_21 | BDD scenario | Draft | No retry of uncertain work |
+| CHK-FR13-26 | Missing-state authenticated listener is safely replaced | [FR-13](FR.md#fr-13-plugin-hooks-use-one-authenticated-loopback-service), [AC-14](ACCEPTANCE_CRITERIA.md#ac-14-credential-proven-orphan-hook-service-recovery), CORE024_23 | BDD scenario | Draft | Stable double health plus double OS listener-PID proof; foreign listeners survive |
+
+## PR #227 review-hardening requirements (2026-08-11)
+
+The canonical plugin must keep long-running valid hooks eligible, reject oversized stdin during streaming, reap every failed or starting worker, retain successful Stop semantics while recording partial failures, prove confinement before state creation, restart when imported runtime dependencies change, and require current repeated listener ownership evidence before termination. Hook or plugin disablement is not a remediation.
+
+
+## CMEM auto-heal completion
+
+- Treat `port listening + owner PID dead + health unavailable` as a recovery candidate, not a reason to move ports.
+- Extend the candidate model with process image name and parent liveness; blank command lines alone never authorize a kill.
+- Run a fail-open preflight on UserPromptSubmit and preserve the existing SessionStart/PreToolUse checks.
+- Verify port release before clearing claude-mem's persistent consecutive-failure state; surface denied privilege as remediation, not success.

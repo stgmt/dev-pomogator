@@ -2,13 +2,15 @@ import assert from 'node:assert/strict';
 import { mkdtemp, mkdir, writeFile, rm, readFile, access } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
+import { PassThrough } from 'node:stream';
 import test from 'node:test';
-import { isWithinRoot, startServer } from '../tools/hook-service/server.mjs';
+import { isWithinRoot, runtimeFilePaths, startServer } from '../tools/hook-service/server.mjs';
 import { renderHttpManifest } from '../tools/hook-service/registry.mjs';
 import { HookMigrationCollisionError, migrateManagedHooks, recoverManagedHooks } from '../tools/hook-service/migrate-managed-hooks.mjs';
-import { acquireStartupLease } from '../tools/hook-service/ensure-up.mjs';
-import { spawnSync } from 'node:child_process';
-import { runManagedHook } from '../tools/hook-service/client.mjs';
+import { acquireStartupLease, authenticatedListenerPid, ensureUp, listenerPidsFromNetstat, processExists } from '../tools/hook-service/ensure-up.mjs';
+import { spawn, spawnSync } from 'node:child_process';
+import { readInput, routeRequestTimeoutMs, runManagedHook } from '../tools/hook-service/client.mjs';
+import { WorkerManager } from '../tools/hook-service/worker-manager.mjs';
 
 async function fixture() {
   const root = await mkdtemp(join(tmpdir(), 'hook-service-'));
@@ -16,11 +18,15 @@ async function fixture() {
   await writeFile(join(root, 'allow.mjs'), 'process.stdout.write(JSON.stringify({additionalContext:"allow"}));');
   await writeFile(join(root, 'plain.mjs'), 'process.stdout.write("context");');
   await writeFile(join(root, 'deny.mjs'), 'process.stdout.write("blocked"); process.exit(2);');
+  await writeFile(join(root, 'stop-a.mjs'), 'process.stdout.write(JSON.stringify({additionalContext:"stop-a"}));');
+  await writeFile(join(root, 'stop-b.mjs'), 'process.stdout.write(JSON.stringify({additionalContext:"stop-b"}));');
   await writeFile(join(root, 'tools', 'hook-service', 'registry.json'), JSON.stringify({ version: 1, routes: {
     'SessionStart/0/0': { target: 'plain.mjs', event: 'SessionStart', timeout: 1 },
     'PreToolUse/0/0': { target: 'deny.mjs', event: 'PreToolUse', timeout: 1 },
     'UserPromptSubmit/0/0': { target: 'allow.mjs', event: 'UserPromptSubmit', timeout: 1 },
-  }}));
+    'Stop/0/0': { target: 'stop-a.mjs', event: 'Stop', timeout: 1 },
+    'Stop/1/0': { target: 'stop-b.mjs', event: 'Stop', timeout: 1 },
+  }, groups: { 'Stop/all': ['Stop/0/0', 'Stop/1/0'] } }));
   return root;
 }
 
@@ -42,6 +48,7 @@ test('HS_01: health and registration require the token', async () => {
     const body = await health.json();
     assert.equal(body.service, 'dev-pomogator-hook-service');
     assert.equal(body.version, '1.0.0');
+    assert.equal(body.pid, process.pid);
     assert.equal(body.tokenFingerprint, '2bb80d537b1d');
     assert.match(body.rootFingerprint, /^[a-f0-9]{12}$/);
     assert.match(body.registryDigest, /^[a-f0-9]{64}$/);
@@ -87,7 +94,10 @@ test('HS_05: generated manifest keeps one bootstrap and supervises every remaini
   const sessionHooks = manifest.hooks.SessionStart.flatMap(group => group.hooks);
   const otherHooks = Object.entries(manifest.hooks).filter(([event]) => event !== 'SessionStart').flatMap(([, groups]) => groups.flatMap(group => group.hooks));
   assert.equal(sessionHooks.length, 16);
-  assert.equal(otherHooks.length, 39);
+  assert.equal(otherHooks.length, 28);
+  assert.equal(manifest.hooks.Stop.length, 1);
+  assert.equal(manifest.hooks.Stop[0].hooks.length, 1);
+  assert.equal(manifest.hooks.Stop[0].hooks[0].command.includes('Stop/all'), true);
   assert.equal(otherHooks.every(hook => hook.type === 'command' && hook.command.includes('/tools/hook-service/client.mjs') && !hook.command.includes('127.0.0.1:42619')), true);
   const generated = JSON.parse(await readFile(join(root, '.claude-plugin', 'hooks.json'), 'utf8'));
   assert.equal(generated.hooks.SessionStart.flatMap(group => group.hooks).length, 1);
@@ -158,12 +168,14 @@ test('HS_10: concurrent startup lease elects one owner and waiters observe readi
   const root = await mkdtemp(join(tmpdir(), 'hook-service-lease-'));
   const lockPath = join(root, 'startup.lock');
   let ready = false;
+  let ownerCount = 0;
   let first;
   try {
     const contenders = Array.from({ length: 8 }, async () => {
       const lease = await acquireStartupLease({ lockPath, isReady: async () => ready, waitMs: 1_000, pollMs: 10 });
       if (lease.acquired) {
         first = lease;
+        ownerCount += 1;
         await new Promise(resolveWait => setTimeout(resolveWait, 80));
         ready = true;
         await lease.release();
@@ -172,6 +184,7 @@ test('HS_10: concurrent startup lease elects one owner and waiters observe readi
     });
     const results = await Promise.all(contenders);
     assert.equal(results.filter(result => result.acquired).length, 1);
+    assert.equal(ownerCount, 1);
     assert.equal(results.filter(result => result.ready).length, 7);
     await assert.rejects(access(lockPath));
   } finally {
@@ -209,4 +222,158 @@ test('HS_09: recovery refuses a journal whose settings were changed after interr
     await writeFile(settingsPath, '{"hooks":{"PreToolUse":[{"hooks":[{"command":"post-interruption-user"}]}]}}\n');
     await assert.rejects(recoverManagedHooks({ settingsPath, fix: true }), HookMigrationCollisionError);
   } finally { await rm(root, { recursive: true, force: true }); }
+});
+
+test('HS_12: authenticated orphan recovery requires stable health and listener PID proof', async () => {
+  const pids = [8820, 8820];
+  let probes = 0;
+  const recovered = await authenticatedListenerPid({
+    observed: { owned: true, current: false },
+    probe: async () => { probes += 1; return { owned: true, current: false }; },
+    resolveListenerPid: async () => pids.shift() ?? null,
+  });
+  assert.equal(recovered, 8820);
+  assert.equal(probes, 1);
+
+  assert.equal(await authenticatedListenerPid({
+    observed: { owned: false, current: false },
+    probe: async () => ({ owned: true, current: false }),
+    resolveListenerPid: async () => 8820,
+  }), null);
+  assert.equal(await authenticatedListenerPid({
+    observed: { owned: true, current: false },
+    probe: async () => ({ owned: true, current: false }),
+    resolveListenerPid: (() => { const changed = [8820, 9900]; return async () => changed.shift() ?? null; })(),
+  }), null);
+  assert.equal(await authenticatedListenerPid({
+    observed: { owned: true, current: false, pid: 7000 },
+    probe: async () => ({ owned: true, current: false, pid: 7000 }),
+    resolveListenerPid: async () => 8820,
+  }), null);
+});
+
+test('HS_13: Windows netstat parser returns only the unique configured loopback owner', () => {
+  const output = [
+    '  TCP    127.0.0.1:42619      0.0.0.0:0      LISTENING       8820',
+    '  TCP    127.0.0.1:42619      127.0.0.1:53122 ESTABLISHED     8820',
+    '  TCP    127.0.0.1:53122      127.0.0.1:42619 ESTABLISHED     7777',
+    '  TCP    127.0.0.1:42620      0.0.0.0:0      LISTENING       9900',
+  ].join('\r\n');
+  assert.deepEqual(listenerPidsFromNetstat(output, '127.0.0.1', 42619), [8820]);
+  assert.deepEqual(listenerPidsFromNetstat(`${output}\r\n  TCP 127.0.0.1:42619 0.0.0.0:0 LISTENING 9900`, '127.0.0.1', 42619), [8820, 9900]);
+});
+
+test('HS_14: an EPERM ownership probe means the PID is alive, not absent', () => {
+  assert.equal(processExists(8820, () => { const error = new Error('denied'); error.code = 'EPERM'; throw error; }), true);
+  assert.equal(processExists(8820, () => { const error = new Error('missing'); error.code = 'ESRCH'; throw error; }), false);
+});
+
+test('HS_15: startup publishes and reuses an OS-assigned loopback port through service state', async () => {
+  const stateRoot = await mkdtemp(join(tmpdir(), 'hook-service-dynamic-state-'));
+  const previousStateRoot = process.env.DEV_POMOGATOR_STATE_DIR;
+  let state;
+  try {
+    process.env.DEV_POMOGATOR_STATE_DIR = stateRoot;
+    await writeFile(join(stateRoot, 'service.json'), '{malformed');
+    const pluginRoot = resolve(import.meta.dirname, '..');
+    const first = await ensureUp(pluginRoot);
+    assert.equal(first.ready, true);
+    assert.equal(Number.isInteger(first.port) && first.port > 0, true);
+    state = JSON.parse(await readFile(join(stateRoot, 'service.json'), 'utf8'));
+    assert.equal(state.port, first.port);
+    const second = await ensureUp(pluginRoot);
+    assert.deepEqual({ ready: second.ready, port: second.port, restarted: second.restarted }, { ready: true, port: first.port, restarted: false });
+  } finally {
+    if (state?.pid) {
+      try { process.kill(state.pid, 'SIGTERM'); } catch { /* already gone */ }
+      for (let index = 0; index < 50 && processExists(state.pid); index += 1) await new Promise(resolveWait => setTimeout(resolveWait, 20));
+    }
+    if (previousStateRoot === undefined) delete process.env.DEV_POMOGATOR_STATE_DIR;
+    else process.env.DEV_POMOGATOR_STATE_DIR = previousStateRoot;
+    await rm(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('HS_16: client derives a route-aware request budget and destroys oversized stdin', async () => {
+  const root = await fixture();
+  try {
+    assert.ok(await routeRequestTimeoutMs(root, 'Stop/all') > 3_000);
+    const input = new PassThrough();
+    const reading = readInput(input, { maxBytes: 5 });
+    input.write('1234');
+    input.write('5678');
+    await assert.rejects(reading, /hook input too large/u);
+    assert.equal(input.destroyed, true);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test('HS_17: mixed-success Stop groups preserve output and persist the failed route', async () => {
+  const root = await fixture();
+  const stateRoot = await mkdtemp(join(tmpdir(), 'hook-partial-state-'));
+  await writeFile(join(root, 'stop-b.mjs'), 'process.stderr.write("partial boom"); process.exit(1);');
+  const server = await startServer({ pluginRoot: root, token: 'secret', port: 0, stateRoot });
+  try {
+    const base = `http://127.0.0.1:${server.address().port}`;
+    const response = await post(`${base}/v1/dispatch/Stop%2Fall`, { session_id: 'partial' }, { 'x-dev-pomogator-token': 'secret' });
+    assert.equal(response.status, 200);
+    assert.deepEqual(await response.json(), { additionalContext: 'stop-a' });
+    const diagnostics = (await readFile(join(stateRoot, 'failures.jsonl'), 'utf8')).trim().split('\n').map(JSON.parse);
+    assert.equal(diagnostics.some(item => item.route === 'Stop/1/0' && item.dispatcherRoute === 'Stop/all'), true);
+  } finally {
+    await new Promise(resolveClose => server.close(resolveClose));
+    await rm(root, { recursive: true, force: true });
+    await rm(stateRoot, { recursive: true, force: true });
+  }
+});
+
+test('HS_18: worker startup faults and manager close settle and reap starting children', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'hook-worker-startup-'));
+  let child;
+  const spawnProcess = (...args) => {
+    child = spawn(...args);
+    return child;
+  };
+  try {
+    await writeFile(join(root, 'noisy.mjs'), 'console.log("module banner"); export async function handle(){ return {}; }');
+    const noisy = new WorkerManager({ root, spawnProcess });
+    await assert.rejects(noisy.execute('Stop/0/0', { execution: 'persistent', worker_target: 'noisy.mjs', timeout: 1 }, {}, 'Stop'), error => error?.code === 'WORKER_PROTOCOL');
+    for (let index = 0; index < 50 && processExists(child.pid); index += 1) await new Promise(resolveWait => setTimeout(resolveWait, 20));
+    assert.equal(processExists(child.pid), false);
+    noisy.close();
+
+    await writeFile(join(root, 'hanging.mjs'), 'setInterval(() => {}, 1000); await new Promise(() => {}); export async function handle(){ return {}; }');
+    const hanging = new WorkerManager({ root, spawnProcess });
+    const pending = hanging.execute('Stop/1/0', { execution: 'persistent', worker_target: 'hanging.mjs', timeout: 5 }, {}, 'Stop');
+    pending.catch(() => {});
+    await new Promise(resolveWait => setTimeout(resolveWait, 100));
+    const hangingPid = child.pid;
+    hanging.close();
+    await assert.rejects(pending, error => error?.code === 'WORKER_RECYCLED');
+    for (let index = 0; index < 50 && processExists(hangingPid); index += 1) await new Promise(resolveWait => setTimeout(resolveWait, 20));
+    assert.equal(processExists(hangingPid), false);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test('HS_19: persistent workers clear NODE_OPTIONS and runtime identity covers shared imports', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'hook-worker-env-'));
+  const previous = process.env.NODE_OPTIONS;
+  try {
+    process.env.NODE_OPTIONS = '--trace-warnings';
+    await writeFile(join(root, 'env.mjs'), 'export async function handle(){ return {additionalContext: process.env.NODE_OPTIONS === "" ? "clean" : String(process.env.NODE_OPTIONS)}; }');
+    const manager = new WorkerManager({ root });
+    const output = await manager.execute('Stop/0/0', { execution: 'persistent', worker_target: 'env.mjs', timeout: 2 }, {}, 'Stop');
+    assert.deepEqual(output, { additionalContext: 'clean' });
+    manager.close();
+    const runtimeFiles = runtimeFilePaths(root, { routes: {} }).map(file => file.replaceAll('\\', '/'));
+    assert.equal(runtimeFiles.some(file => file.endsWith('/hook-service/credential.mjs')), true);
+    assert.equal(runtimeFiles.some(file => file.endsWith('/_shared/hook-project-root.mjs')), true);
+  } finally {
+    if (previous === undefined) delete process.env.NODE_OPTIONS;
+    else process.env.NODE_OPTIONS = previous;
+    await rm(root, { recursive: true, force: true });
+  }
 });

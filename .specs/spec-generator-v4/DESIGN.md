@@ -1727,3 +1727,45 @@ The generator SHALL read canonical hook routes, skill/agent sources, MCP consume
 #### Verification boundary
 
 Deterministic Docker/integration proof owns root isolation, hook normalization, generation drift, dependency-absent startup, doctor, and CLI variants. The host/distribution aggregate consumes four distinct evidence keys (`desktop-repo`, `desktop-installed`, `cli-repo`, `cli-installed`) and fails unless their cardinality is exactly four. A captured fresh Codex Desktop task owns installed Desktop discovery, reload, hook deny, MCP mutation, phase spawn, and semantic-status evidence. These lanes are required independently; no single scenario result rolls them up.
+
+### Decision: Request-scoped project roots and bounded spec-check journal
+
+**Требование:** [FR-84]
+
+**Rationale:** Installed plugin location is executable identity, while the hook payload identifies the repository whose specs and state are being processed. The two authorities must be explicit and independent on every request; aggregate and age retention are both required because shard rotation alone does not bound disk usage.
+
+**Trade-off:** Each append performs a bounded project-local shard inventory and disk-space probe, and persistent workers must receive or key on project context. This adds small deterministic I/O and state plumbing in exchange for eliminating cross-root data access and unbounded disk growth.
+
+**Alternatives considered:**
+- Keep `CLAUDE_PLUGIN_ROOT` precedence and only delete old cache data manually — rejected because every installed request can recreate the leak and analyze the wrong specs.
+- Disable conformance hooks or external plugins — rejected because it removes behavior and leaves the root/retention defect intact.
+- Use rotation without aggregate, age, or free-space policy — rejected because it bounds one file but not the journal or disk reserve.
+
+### Root model
+
+Introduce an explicit context passed through client → hook service → route/worker → conformance tool: `{ pluginRoot, projectRoot, sessionId }`. `pluginRoot` is immutable service code identity. `projectRoot` is normalized independently for every request from the current payload/session binding, with request-scoped `CLAUDE_PROJECT_DIR` as the only fallback. The resolver returns `null` rather than falling back to plugin root or daemon CWD. Persistent worker reuse must be keyed or rebound so requests for one project cannot inherit another project's CWD/environment/state.
+
+### Journal algorithm
+
+The writer confines the journal directory under `projectRoot`, acquires the existing/new maintenance lock, inventories only recognized shard names, and identifies the active shard separately. Before append it removes expired closed shards, then oldest closed shards until projected retained bytes are at most 64 MiB. It rotates the active shard at 10 MiB. Before writing, it checks projected free space against the 1 GiB reserve; a failed reserve after pruning skips the write. The active shard is never a deletion candidate. Every deletion target must pass real-path confinement and shard-name validation.
+
+### Failure and diagnostic model
+
+Conformance remains fail-open. Invalid roots, missing `.specs`, lock contention, disk probe failure, prune failure, and append failure return structured bounded outcomes. Low-disk diagnostics are rate-limited and emitted outside `.spec-check-log` so reporting cannot recursively consume the resource it is protecting. No failure branch may retry against the plugin cache.
+
+### Verification architecture
+
+BDD fixtures SHALL inject filesystem/free-space/time adapters and run the real installed-layout request path with distinct roots. Assertions cover path provenance, no-spec no-op, byte and age retention, active-shard protection, concurrent maintenance, unsafe path rejection, low-disk skip, and dependency-absent execution. The test oracle records every read/write/delete path so cache-local state is a hard failure.
+
+### Authenticated daemon recovery
+
+Authenticated `/health` includes the service PID. When state metadata is absent, startup resolves the operating-system PID that owns the configured loopback listener, repeats authenticated health, resolves the owner again, and accepts ownership only when both PID observations are identical and agree with any health PID present. The token-authenticated service signature proves DevPomogator ownership; the repeated OS binding closes stale-record and listener-change races. Only that PID is eligible for termination. Failed proof, access denial, a foreign listener, or a changing PID leaves the process alive; the launcher starts current runtime with port `0`, the OS chooses a free loopback port, the child atomically writes the actual port plus runtime identity to `service.json`, and all clients discover and authenticate that published endpoint under the existing startup lease.
+
+## PR #227 review-hardening design (2026-08-11)
+
+The client reads the generated route registry to calculate an event budget as the sum of ordered route timeouts plus bounded transport overhead; the byte counter is updated before concatenation and detaches or pauses stdin at overflow. Worker startup is represented by a tracked child with a timer and one idempotent termination path shared by timeout, protocol failure, exit, recycle, and manager close. Group dispatch returns successful aggregation while the server appends bounded diagnostics for each failed route. Managed directories are created one component at a time only after `lstat` and canonical-parent confinement checks. Runtime hashing includes imported shared modules. Orphan recovery always routes through repeated authenticated health and repeated OS listener-PID proof; state alone is advisory.
+
+
+## FR-84.m delivery graph
+
+The auto-heal change is modeled as one recovery transaction: dead-owner listener evidence → constrained orphan-root classifier → tree termination attempt → same-port re-observation → failure-state transition. UserPromptSubmit route generation is a first-class edge because PreToolUse cannot run when the prompt hook itself is blocked.

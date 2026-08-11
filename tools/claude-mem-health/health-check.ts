@@ -1,4 +1,4 @@
-// SessionStart + PreToolUse hook: claude-mem worker REAPER (heals a wedged worker on Windows).
+// SessionStart + PreToolUse + UserPromptSubmit hook: claude-mem worker REAPER (heals a wedged worker on Windows).
 //
 // Why this exists (root cause, proven live 2026-07):
 //   claude-mem injects memory via hooks that call a background worker on a fixed Windows port
@@ -16,10 +16,11 @@
 //   1. Probe the worker's /api/health. Healthy → do nothing (NEVER touch a live worker).
 //   2. Unhealthy → snapshot the port owner + claude-mem process table (PowerShell).
 //   3. If the port is bound by a DEAD PID (the wedge signature) → kill only the orphaned
-//      processes whose command line carries a claude-mem signature AND whose parent is dead.
-//      Reset the hook-failures counter so the exit(2) block clears at once.
-//   4. In PreToolUse mode, debounce full checks and emit a visible, non-blocking warning if memory
-//      stays down across checks.
+//      processes whose command line carries a claude-mem signature AND whose parent is dead, or
+//      the proven blank-command-line chroma root with a direct Python child. Reset the
+//      hook-failures counter only after the SAME configured port is observed free.
+//   4. In PreToolUse/UserPromptSubmit mode, debounce normal full checks, force a bounded prompt
+//      preflight, and emit a visible, non-blocking warning if memory stays down across checks.
 //
 // Contract: FAST, NON-BLOCKING, FAIL-OPEN (any error → {continue:true}, never throws/blocks),
 // builtins-only (ships in the plugin, runs with no node_modules — dead-integration-guard),
@@ -33,7 +34,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import http from 'node:http';
-import { pathToFileURL } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { log as logShared } from '../_shared/hook-utils.ts';
 
 const LOG_PREFIX = 'claude-mem-reaper';
@@ -43,6 +44,8 @@ const HEALTH_TIMEOUT_MS = 1500;
 const PS_TIMEOUT_MS = 8000;
 const DEFAULT_MID_SESSION_DEBOUNCE_MS = 10_000;
 const DEFAULT_DOWN_VISIBILITY_MS = 5 * 60_000;
+const DEFAULT_ELEVATION_COOLDOWN_MS = 2 * 60_000;
+const ELEVATED_REAPER_HELPER = path.join(path.dirname(fileURLToPath(import.meta.url)), 'elevated-reaper.ps1');
 
 function log(level: 'INFO' | 'DEBUG' | 'WARN' | 'ERROR', msg: string): void {
   if (level !== 'ERROR' && !VERBOSE) return;
@@ -62,6 +65,8 @@ export interface ProcRecord {
   ppid: number;
   parentAlive: boolean;
   cmdline: string;
+  /** Process image name. Present even when Windows denies CommandLine inspection. */
+  name?: string;
 }
 
 export interface ReaperInput {
@@ -84,6 +89,8 @@ export interface ReaperVerdict {
   action: ReaperAction;
   killPids: number[];
   reason: string;
+  /** Recovery is true only after the originally configured port is observed free. */
+  recovery?: 'verified' | 'unverified' | 'elevation-requested';
 }
 
 export type MidSessionAction =
@@ -115,6 +122,19 @@ export function matchesClaudeMemSignature(cmdline: string): boolean {
 }
 
 /**
+ * Windows can hide CommandLine for an elevated process. The observed claude-mem failure shape is
+ * still specific enough to recover safely: an orphaned `chroma-mcp.exe` root plus its direct
+ * Python worker child, while the configured listener reports a dead owner. Do not select a bare
+ * chroma binary, generic Python, console host, or any process with an alive parent.
+ */
+function isBlankCommandLineChromaRoot(proc: ProcRecord, procs: ProcRecord[]): boolean {
+  return proc.parentAlive === false
+    && proc.cmdline.trim() === ''
+    && proc.name?.toLowerCase() === 'chroma-mcp.exe'
+    && procs.some((child) => child.ppid === proc.pid && /^python(?:w)?\.exe$/i.test(child.name ?? ''));
+}
+
+/**
  * Decide what to reap from an already-observed OS snapshot. Pure — safe to unit/BDD-test with
  * synthetic process tables; it never touches the OS and never signals a process.
  */
@@ -132,9 +152,11 @@ export function reaperDecision(input: ReaperInput): ReaperVerdict {
     return { action: 'skip-owner-alive', killPids: [], reason: 'port owner alive (may be booting) — not killing' };
   }
   // Wedge signature: port is LISTENING but its owning PID is DEAD → the socket is held by an
-  // inherited handle in a live orphan. Kill orphaned processes carrying a claude-mem signature.
+  // inherited handle in a live orphan. Command-line signature is preferred; a deliberately narrow
+  // image-name + dead-parent + Python-child predicate handles unreadable elevated command lines.
   const killPids = input.procs
-    .filter((p) => p.parentAlive === false && matchesClaudeMemSignature(p.cmdline))
+    .filter((p) => p.parentAlive === false
+      && (matchesClaudeMemSignature(p.cmdline) || isBlankCommandLineChromaRoot(p, input.procs)))
     .map((p) => p.pid);
   return {
     action: 'reap',
@@ -163,6 +185,8 @@ interface Snapshot {
 interface SnapshotFixture extends Snapshot {
   platform?: NodeJS.Platform;
   healthOk?: boolean;
+  /** Test-only post-action observation; production always re-observes the socket. */
+  portReleasedAfterKill?: boolean;
 }
 
 const EMPTY_SNAPSHOT: Snapshot = { portListening: false, portOwnerPid: null, portOwnerAlive: false, procs: [] };
@@ -216,9 +240,11 @@ function findWindowsPowerShell(): string {
 }
 
 function snapshotPowerShell(port: number): string {
-  // Emits one JSON line: { portListening, portOwnerPid, portOwnerAlive, procs:[{pid,ppid,parentAlive,cmdline}] }.
-  // The proc list is PRE-filtered broadly here for perf/size; the authoritative kill filter is
-  // matchesClaudeMemSignature() in JS. -Compress + a forced array keep the shape stable.
+  // Emits one JSON line: { portListening, portOwnerPid, portOwnerAlive,
+  // procs:[{pid,ppid,parentAlive,cmdline,name}] }. The list remains bounded: known claude-mem
+  // command-line candidates, every chroma-mcp root (including unreadable command lines), and only
+  // direct Python children of those roots. Image name is intentionally retained because an elevated
+  // process may expose no CommandLine to a normal user.
   return [
     `$ErrorActionPreference='SilentlyContinue';`,
     `$port=${port};`,
@@ -226,12 +252,19 @@ function snapshotPowerShell(port: number): string {
     `$ownerPid=if($c){[int]$c.OwningProcess}else{$null};`,
     `$listening=[bool]$c;`,
     `$ownerAlive=if($ownerPid){[bool](Get-Process -Id $ownerPid -ErrorAction SilentlyContinue)}else{$false};`,
-    `$procs=@();`,
-    `foreach($p in Get-CimInstance Win32_Process -ErrorAction SilentlyContinue){`,
-    `  $cl="$($p.CommandLine)";`,
-    `  if($cl -match 'claude-mem|chroma-mcp|worker-service\\.cjs'){`,
+    `$procs=@();$seen=@{};$all=@(Get-CimInstance Win32_Process -ErrorAction SilentlyContinue);$rootIds=@();`,
+    `foreach($p in $all){`,
+    `  $cl="$($p.CommandLine)";$name="$($p.Name)";`,
+    `  if($cl -match 'claude-mem|chroma-mcp|worker-service\\.cjs' -or $name -ieq 'chroma-mcp.exe'){`,
     `    $pa=[bool](Get-Process -Id $p.ParentProcessId -ErrorAction SilentlyContinue);`,
-    `    $procs+=[pscustomobject]@{pid=[int]$p.ProcessId;ppid=[int]$p.ParentProcessId;parentAlive=$pa;cmdline=$cl}`,
+    `    $procs+=[pscustomobject]@{pid=[int]$p.ProcessId;ppid=[int]$p.ParentProcessId;parentAlive=$pa;cmdline=$cl;name=$name};`,
+    `    $seen[[string]$p.ProcessId]=$true;$rootIds+=[int]$p.ProcessId`,
+    `  }`,
+    `};`,
+    `foreach($p in $all){`,
+    `  $name="$($p.Name)";if($rootIds -contains [int]$p.ParentProcessId -and $name -match '^python(?:w)?\\.exe$' -and -not $seen.ContainsKey([string]$p.ProcessId)){`,
+    `    $cl="$($p.CommandLine)";$pa=[bool](Get-Process -Id $p.ParentProcessId -ErrorAction SilentlyContinue);`,
+    `    $procs+=[pscustomobject]@{pid=[int]$p.ProcessId;ppid=[int]$p.ParentProcessId;parentAlive=$pa;cmdline=$cl;name=$name}`,
     `  }`,
     `};`,
     `[pscustomobject]@{portListening=$listening;portOwnerPid=$ownerPid;portOwnerAlive=$ownerAlive;procs=@($procs)} | ConvertTo-Json -Depth 4 -Compress`,
@@ -248,6 +281,7 @@ function normalizeProcs(procs: unknown): ProcRecord[] {
         ppid: Number(r.ppid),
         parentAlive: Boolean(r.parentAlive),
         cmdline: String(r.cmdline ?? ''),
+        name: String(r.name ?? ''),
       };
     })
     .filter((p) => Number.isFinite(p.pid) && p.pid > 0);
@@ -272,24 +306,93 @@ function gatherSnapshot(port: number): Snapshot {
   }
 }
 
-function killTree(pid: number): void {
-  // Action seam: tests record the intended kill instead of signalling a real process.
-  const record = process.env.CLAUDE_MEM_REAPER_KILL_RECORD;
-  if (record) {
-    try {
-      const prev = fs.existsSync(record) ? (JSON.parse(fs.readFileSync(record, 'utf-8')) as number[]) : [];
-      prev.push(pid);
-      fs.writeFileSync(record, JSON.stringify(prev));
-    } catch {
-      /* best-effort */
-    }
-    return;
-  }
+interface KillResult {
+  pid: number;
+  succeeded: boolean;
+  accessDenied: boolean;
+}
+
+function appendRecord(record: string, value: unknown): void {
   try {
-    spawnSync('taskkill', ['/PID', String(pid), '/T', '/F'], { windowsHide: true, timeout: 5000 });
+    const prev = fs.existsSync(record) ? (JSON.parse(fs.readFileSync(record, 'utf-8')) as unknown[]) : [];
+    prev.push(value);
+    fs.writeFileSync(record, JSON.stringify(prev));
   } catch {
     /* best-effort */
   }
+}
+
+function killTree(pid: number): KillResult {
+  // Action seam: tests record the intended kill instead of signalling a real process.
+  const record = process.env.CLAUDE_MEM_REAPER_KILL_RECORD;
+  if (record) {
+    appendRecord(record, pid);
+    const denied = process.env.CLAUDE_MEM_REAPER_KILL_RESULT === 'access-denied';
+    return { pid, succeeded: !denied, accessDenied: denied };
+  }
+  try {
+    const result = spawnSync('taskkill', ['/PID', String(pid), '/T', '/F'], {
+      windowsHide: true,
+      timeout: 5000,
+      encoding: 'utf-8',
+    });
+    const output = `${result.stdout ?? ''}\n${result.stderr ?? ''}`;
+    const accessDenied = /access\s+is\s+denied|access\s+denied/i.test(output) || result.error?.code === 'EPERM';
+    return { pid, succeeded: result.status === 0, accessDenied };
+  } catch {
+    return { pid, succeeded: false, accessDenied: false };
+  }
+}
+
+function psQuote(value: string): string {
+  return `'${value.replace(/'/g, "''")}'`;
+}
+
+/**
+ * The normal hook deliberately stays unprivileged. If Windows refuses the constrained tree kill,
+ * request a one-time UAC launch of a fixed, self-validating helper. It receives no PID: the helper
+ * independently verifies the same-port dead-owner wedge and only then kills a chroma root.
+ */
+function requestElevatedReap(homeDir: string, port: number): boolean {
+  if ((process.env.DEV_POMOGATOR_CLAUDE_MEM_REAP_ELEVATION ?? '').toLowerCase() === 'off') return false;
+
+  const state = readMidSessionState(homeDir);
+  const now = nowMs();
+  const cooldown = readNumberEnv('CLAUDE_MEM_REAPER_ELEVATION_COOLDOWN_MS', DEFAULT_ELEVATION_COOLDOWN_MS);
+  if (typeof state.lastElevationRequestAt === 'number' && now - state.lastElevationRequestAt >= 0
+    && now - state.lastElevationRequestAt < cooldown) return false;
+  const record = process.env.CLAUDE_MEM_REAPER_ELEVATION_RECORD;
+  if (record) {
+    appendRecord(record, { port });
+    writeMidSessionState(homeDir, { ...state, lastElevationRequestAt: now });
+    return true;
+  }
+  if (!fs.existsSync(ELEVATED_REAPER_HELPER)) return false;
+
+  try {
+    const ps = findWindowsPowerShell();
+    const helperArgs = ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', ELEVATED_REAPER_HELPER,
+      '-HomeDir', homeDir, '-Port', String(port)].map(psQuote).join(' ');
+    const command = `Start-Process -FilePath ${psQuote(ps)} -ArgumentList ${psQuote(helperArgs)} -Verb RunAs`;
+    const result = spawnSync(ps, ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command', command], {
+      windowsHide: true,
+      timeout: 3000,
+      encoding: 'utf-8',
+    });
+    if (result.status !== 0 || result.error) return false;
+    writeMidSessionState(homeDir, { ...state, lastElevationRequestAt: now });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function portReleasedAfterReap(port: number, fixture?: SnapshotFixture): boolean {
+  if (typeof fixture?.portReleasedAfterKill === 'boolean') return fixture.portReleasedAfterKill;
+  // Test kill records stand in for an already-completed successful tree kill. Production always
+  // re-queries the port on Windows; it never trusts taskkill's exit status alone.
+  if (process.env.CLAUDE_MEM_REAPER_KILL_RECORD) return true;
+  return !gatherSnapshot(port).portListening;
 }
 
 /** FR-7a: clear the fail-loud counter so the exit(2) block lifts immediately. Atomic write. */
@@ -338,6 +441,7 @@ interface MidSessionState {
   lastCheckAt?: number;
   downSince?: number;
   lastNoticeAt?: number;
+  lastElevationRequestAt?: number;
 }
 
 function readMidSessionState(homeDir: string): MidSessionState {
@@ -422,9 +526,11 @@ export async function reapWedgedWorker(homeDir?: string): Promise<ReaperVerdict>
     }
   }
   const home = resolveHome(homeDir);
+  const port = readWorkerPort(home);
   let platform: NodeJS.Platform = process.platform;
   let healthOk: boolean;
   let snap: Snapshot;
+  let fixture: SnapshotFixture | undefined;
 
   const fixturePath = process.env.CLAUDE_MEM_REAPER_SNAPSHOT;
   if (fixturePath) {
@@ -435,17 +541,17 @@ export async function reapWedgedWorker(homeDir?: string): Promise<ReaperVerdict>
     } catch {
       f = { ...EMPTY_SNAPSHOT };
     }
+    fixture = f;
     platform = f.platform ?? 'win32';
     // A snapshot models Windows-only process inspection in cross-platform BDD.
     // Omitting healthOk deliberately preserves the real HTTP probe, so the fixture
     // cannot fake a refused, non-200, or stalled worker into a green health result.
-    healthOk = typeof f.healthOk === 'boolean' ? f.healthOk : await probeHealth(readWorkerPort(home));
+    healthOk = typeof f.healthOk === 'boolean' ? f.healthOk : await probeHealth(port);
     snap = { ...EMPTY_SNAPSHOT, ...f, procs: normalizeProcs(f.procs) };
   } else {
     if (platform !== 'win32') {
       return reaperDecision({ platform, healthOk: true, portListening: false, portOwnerAlive: false, procs: [] });
     }
-    const port = readWorkerPort(home);
     healthOk = await probeHealth(port);
     snap = healthOk ? EMPTY_SNAPSHOT : gatherSnapshot(port); // skip PowerShell when the worker is fine
   }
@@ -458,13 +564,30 @@ export async function reapWedgedWorker(homeDir?: string): Promise<ReaperVerdict>
     procs: snap.procs,
   });
   if (verdict.action === 'reap') {
-    for (const pid of verdict.killPids) killTree(pid);
-    resetHookFailures(home);
+    const results = verdict.killPids.map((pid) => killTree(pid));
+    const released = results.length > 0 && portReleasedAfterReap(port, fixture);
+    if (released) {
+      resetHookFailures(home);
+      return {
+        ...verdict,
+        recovery: 'verified',
+        reason: `${verdict.reason}; configured port ${port} released and failure counter reset`,
+      };
+    }
+    const elevationRequested = results.some((result) => result.accessDenied) && requestElevatedReap(home, port);
+    const failed = results.filter((result) => !result.succeeded).map((result) => result.pid);
+    return {
+      ...verdict,
+      recovery: elevationRequested ? 'elevation-requested' : 'unverified',
+      reason: elevationRequested
+        ? `${verdict.reason}; taskkill denied for ${failed.join(',') || 'selected root'}; requested UAC recovery, port not yet verified free`
+        : `${verdict.reason}; port ${port} still occupied or release unverified; failure counter preserved`,
+    };
   }
   return verdict;
 }
 
-export async function runMidSessionGuard(homeDir?: string): Promise<MidSessionVerdict> {
+export async function runMidSessionGuard(homeDir?: string, options: { force?: boolean } = {}): Promise<MidSessionVerdict> {
   const home = resolveHome(homeDir);
   const now = nowMs();
   const state = readMidSessionState(home);
@@ -476,7 +599,7 @@ export async function runMidSessionGuard(homeDir?: string): Promise<MidSessionVe
   if (process.platform !== 'win32' && !process.env.CLAUDE_MEM_REAPER_SNAPSHOT) {
     return { action: 'skip-not-windows', reason: 'not Windows' };
   }
-  if (shouldDebounce(state, now, debounceMs)) {
+  if (!options.force && shouldDebounce(state, now, debounceMs)) {
     return { action: 'skip-debounce', reason: 'debounce window' };
   }
 
@@ -486,7 +609,9 @@ export async function runMidSessionGuard(homeDir?: string): Promise<MidSessionVe
   // Only a successful health probe clears the outage marker. A reap is a repair attempt, not proof
   // that memory is recording again; the next debounced check will observe the healed worker.
   const workerHealthy = reaper.action === 'skip-healthy';
-  const notice = updateDownNotice(home, checkedState, now, workerHealthy).notice;
+  // reapWedgedWorker may persist an elevation cooldown; re-read rather than overwriting it with
+  // the pre-action snapshot, otherwise every blocked prompt could trigger another UAC request.
+  const notice = updateDownNotice(home, readMidSessionState(home), now, workerHealthy).notice;
   return { action: 'checked', reaper, notice, reason: reaper.reason };
 }
 
@@ -504,9 +629,11 @@ async function main(): Promise<void> {
   }
 
   const hookEvent = process.env.CLAUDE_HOOK_EVENT_NAME || process.env.CLAUDE_CODE_HOOK_EVENT_NAME;
-  const midSession = hookEvent === 'PreToolUse' || process.env.CLAUDE_MEM_REAPER_MID_SESSION === '1' || process.argv.includes('--mid-session');
+  const promptPreflight = hookEvent === 'UserPromptSubmit' || process.argv.includes('--prompt-preflight');
+  const midSession = promptPreflight || hookEvent === 'PreToolUse'
+    || process.env.CLAUDE_MEM_REAPER_MID_SESSION === '1' || process.argv.includes('--mid-session');
   if (midSession) {
-    const verdict = await runMidSessionGuard();
+    const verdict = await runMidSessionGuard(undefined, { force: promptPreflight });
     if (verdict.reaper?.action === 'reap') {
       log('INFO', `${verdict.reaper.reason}; pids=${verdict.reaper.killPids.join(',') || '(none)'}`);
     } else {

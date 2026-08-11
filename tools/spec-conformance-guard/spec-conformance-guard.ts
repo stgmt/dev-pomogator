@@ -35,10 +35,13 @@ import { pathToFileURL } from 'node:url';
 import { parseMarkdown } from '../spec-graph/parsers/md.ts';
 import { parseGherkin } from '../spec-graph/parsers/gherkin.ts';
 import { appendRawEntry } from '../spec-check-log/writer.ts';
+import { projectHasSpecs, resolveHookProjectRoot, resolveProjectPath } from '../_shared/hook-project-root.mjs';
 
 interface HookInput {
   tool_name?: string;
   tool_input?: { file_path?: string; content?: string; new_string?: string; old_string?: string };
+  cwd?: string;
+  project_dir?: string;
 }
 
 interface HookOutput {
@@ -131,8 +134,8 @@ function postEditContent(input: HookInput, repoRoot: string): string | null {
     return input.tool_input?.content ?? null;
   }
   if (tool === 'Edit') {
-    const absPath = path.isAbsolute(fp) ? fp : path.join(repoRoot, fp);
-    if (!fs.existsSync(absPath)) return null;
+    const absPath = resolveProjectPath(repoRoot, fp);
+    if (!absPath || !fs.existsSync(absPath)) return null;
     const current = fs.readFileSync(absPath, 'utf8');
     const oldS = input.tool_input?.old_string ?? '';
     const newS = input.tool_input?.new_string ?? '';
@@ -238,6 +241,7 @@ export interface RunGuardOptions extends DetectOptions {
 export function runGuard(input: HookInput, repoRoot: string, opts: RunGuardOptions = {}): HookOutput {
   const fp = input.tool_input?.file_path;
   if (!fp) return makeAllow('no file_path');
+  if (!resolveProjectPath(repoRoot, fp, { mustExist: input.tool_name !== 'Write' })) return makeAllow('file path is outside project root');
 
   // FR-22 / SPECGEN004_51: per-spec version gate. v3 (or absent) →
   // ALLOW_AFTER_MIGRATION. A PRESENT-but-malformed .progress.json throws here
@@ -297,8 +301,12 @@ export function runGuard(input: HookInput, repoRoot: string, opts: RunGuardOptio
 }
 
 async function main(): Promise<void> {
-  const repoRoot = process.env.CLAUDE_PLUGIN_ROOT ?? process.env.DEV_POMOGATOR_REPO_ROOT ?? process.cwd();
   const input = await readStdinJson<HookInput>();
+  const repoRoot = resolveHookProjectRoot({ input });
+  if (!repoRoot || !projectHasSpecs(repoRoot)) {
+    process.stdout.write(JSON.stringify(makeAllow('project has no .specs directory')));
+    return;
+  }
   const out = runGuard(input, repoRoot);
   process.stdout.write(JSON.stringify(out));
 }

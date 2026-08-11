@@ -1360,6 +1360,7 @@ Claude Code remains the canonical install (marketplace plugin / repo dogfood: sk
 ## Cross-spec dependency: Dynamic Workflow Engineering
 
 dynamic-workflow-engineering owns all bounded workflow runtime, retry, partial-result, journal, replay, native-Agent capability/security, census/migration, adapters, incident regression, and distribution requirements; FR-82 remains the bounded spec-MCP query prerequisite/consumer surface; spec-generator-v4 must not implement a second runtime.
+
 ## FR-83
 
 **Codex Desktop first-class host adapter and distributable spec workflow**
@@ -1383,3 +1384,34 @@ dynamic-workflow-engineering owns all bounded workflow runtime, retry, partial-r
 **User Story:** [User Story 63](USER_STORIES.md#user-story-63-codex-desktop-runs-the-full-spec-workflow-priority-p1)
 
 ---
+
+## FR-84
+
+@feature84
+
+**Installed hook project identity and bounded conformance journal (incident 2026-08-10)**
+
+**Delivery status:** Immediate bug-fix package for PR #227. The spec-conformance hooks and the hook service SHALL separate executable plugin identity from target-project identity and SHALL bound the persistent conformance journal. Disabling hooks or plugins is not an accepted remediation.
+
+- **FR-84a (two roots, two responsibilities):** `pluginRoot` SHALL resolve executable/plugin resources only. `projectRoot` SHALL resolve the caller repository's `.specs` and every project-owned `.dev-pomogator` artifact. `CLAUDE_PLUGIN_ROOT`, an installed plugin-cache path, and the daemon process CWD SHALL never be used as an implicit project root.
+- **FR-84b (request-scoped project identity):** Each hook request SHALL carry or derive its own normalized project identity. Resolution order is: a validated absolute project path from the current hook payload/session binding; then a validated request-scoped `CLAUDE_PROJECT_DIR` forwarded by the client. There is no plugin-root or process-CWD fallback. A long-lived daemon SHALL NOT retain one startup project root for requests from other repositories.
+- **FR-84c (non-spec no-op):** If the resolved project root has no `.specs` directory, spec-conformance push/guard SHALL return the existing fail-open/no-op result and SHALL NOT create `.dev-pomogator/.spec-check-log` in either the project or plugin cache.
+- **FR-84d (bounded journal):** The project journal SHALL remain append-only JSONL with 10 MiB active-shard rotation, while total journal storage is capped at 64 MiB per project and closed shards older than 30 days are removed. The active shard is never selected for retention deletion or truncation.
+- **FR-84e (low-disk reserve):** Before a write that would leave less than 1 GiB free, maintenance SHALL prune eligible closed shards oldest-first. If the reserve still cannot be met, the journal write SHALL be skipped fail-open and a bounded, rate-limited, non-recursive diagnostic SHALL be returned/emitted outside the same journal.
+- **FR-84f (safe concurrent maintenance):** Rotation and retention SHALL run under the journal maintenance lock. Deletion SHALL be confined by real path to closed shard files under `<projectRoot>/.dev-pomogator/.spec-check-log`; traversal, symlink/junction escape, unrelated files, and the active shard are forbidden targets.
+- **FR-84g (installed-layout proof):** Acceptance SHALL exercise different absolute plugin and project roots through the real hook-service request path, prove that `.specs` reads and journal writes stay in the project, and prove that no `.dev-pomogator` state is created below the installed cache.
+- **FR-84h (authenticated orphan recovery):** If a token-authenticated DevPomogator hook-service owns the configured loopback listener but its lease/state record is missing, corrupt, or stale, startup SHALL identify it only after two matching health proofs and two matching operating-system listener-PID resolutions. A PID remembered only in state or omitted from health is never termination authority. The service SHALL expose its PID in authenticated health for future recovery. Startup MAY stop only that unchanged verified owner. If termination is denied, or if a listener is foreign, unauthenticated, ambiguous, changed, or unverifiable, it SHALL remain alive and current runtime SHALL start on an operating-system-assigned loopback port atomically published in service state for every client.
+- **FR-84i (bounded client transport):** The one-shot client SHALL enforce a byte-counted stdin ceiling while data arrives and SHALL stop consuming input immediately at the ceiling. Its authenticated request deadline SHALL cover the selected logical route or Stop group budget plus bounded transport overhead rather than a fixed three-second whole-request timeout.
+- **FR-84j (worker lifecycle closure):** Persistent-worker startup SHALL have a finite timeout. Startup timeout, pre-ready exit, protocol contamination, crash, or close SHALL reject pending work and terminate the affected child, including children still starting. Worker children SHALL not inherit caller `NODE_OPTIONS`.
+- **FR-84k (partial group diagnostics):** A grouped Stop dispatch with both completed routes and failed routes SHALL preserve aggregation of completed results while durably recording a bounded diagnostic for every failed logical route; a partial failure SHALL never disappear behind HTTP 200 without route-level evidence.
+- **FR-84l (pre-write confinement and runtime closure):** Journal and conformance-state directories SHALL be proven non-symlink/non-junction and real-path-confined before any descendant is created or appended. Runtime identity SHALL include every executable module imported by the service whose change requires restart, including shared project-root and credential modules.
+
+**Зависит от:** [FR-15](FR.md#fr-15), [FR-23](FR.md#fr-23), [FR-62](FR.md#fr-62).
+**Связанные AC:** [AC-84.1](ACCEPTANCE_CRITERIA.md#ac-841), [AC-84.2](ACCEPTANCE_CRITERIA.md#ac-842), [AC-84.3](ACCEPTANCE_CRITERIA.md#ac-843), [AC-84.4](ACCEPTANCE_CRITERIA.md#ac-844), [AC-84.5](ACCEPTANCE_CRITERIA.md#ac-845), [AC-84.6](ACCEPTANCE_CRITERIA.md#ac-846), [AC-84.7](ACCEPTANCE_CRITERIA.md#ac-847), [AC-84.8](ACCEPTANCE_CRITERIA.md#ac-848)
+**Use Case:** [UC-36](USE_CASES.md#uc-36)
+**User Story:** [User Story 64](USER_STORIES.md#user-story-64-installed-hooks-keep-project-state-bounded-and-isolated-priority-p1)
+
+
+### FR-84.m — governed Windows claude-mem auto-heal
+
+The plugin delivery graph SHALL specify and verify a no-port-relocation recovery for a claude-mem inherited listener: classify only a dead-parent `chroma-mcp.exe` root when health is unavailable and the listener owner is dead; dispatch a bounded UserPromptSubmit preflight; and clear persistent hook-failure state only after the original configured port is observed free.

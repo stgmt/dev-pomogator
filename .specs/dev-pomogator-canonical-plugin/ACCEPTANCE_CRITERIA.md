@@ -127,4 +127,77 @@ AND a live 401, 403, 404, or 503 response SHALL be returned without restart or r
 AND a foreign process or listener SHALL never be terminated or treated as owned
 AND a second transport failure SHALL fail open and persist a sanitized client diagnostic without the credential.
 
+WHEN the host delivers overlapping Stop route requests for one session_id
+THEN the service SHALL execute the logical Stop event once in deterministic registry order, return each caller only its registered route result, and isolate a failed route from successful routes.
+
+WHEN a legacy hook emits more than 256 KiB to stdout or stderr
+THEN the service SHALL terminate that child, return the existing runtime-unavailable contract for that route, persist a bounded sanitized diagnostic, and keep /health available.
+
+The acceptance target is event-level coordination plus bounded capture; a fixed global maxInFlight=2 value is explicitly not a correctness or performance criterion.
+
 **BDD:** `CORE024_01`, `CORE024_02`, `CORE024_06`, `CORE024_07`, `CORE024_12` in `tests/features/core/CORE024_hook-review.feature`; `tests/step_definitions/feature24_hook_review.ts`.
+
+
+## AC-11 — Persistent worker migration and cold-start elimination
+
+**Требование:** [FR-13](FR.md#fr-13-plugin-hooks-use-one-authenticated-loopback-service)
+
+- WHEN a route has execution=persistent and an explicit worker capability record THEN the supervisor SHALL start its worker lazily, load the adapter exactly once, and reuse the same worker PID for repeated dispatches.
+- WHEN two requests target the same persistent route THEN the worker SHALL process them FIFO/single-flight, and response order SHALL match request order.
+- WHEN a persistent worker times out, crashes, violates the frame protocol, exceeds 256 KiB, or reports an execution failure THEN the supervisor SHALL recycle that worker and SHALL NOT automatically retry the uncertain request.
+- WHEN a route has no audited reusable adapter, uses legacy args, shell/tsx bootstrap, process.exit, stdin-driven CLI behavior, nested process spawning, or non-reentrant side effects THEN it SHALL remain execution=child and SHALL not be labeled migrated.
+- WHEN the audited persistent route set is exercised repeatedly THEN its Node/tsx worker spawn count SHALL be lower than dispatch count, demonstrating elimination of cold Node/tsx starts for that set while preserving the explicit legacy fallback boundary.
+- WHEN generated registry and manifest parity is checked THEN public route IDs, event, matcher, ordering, timeout, and fallback metadata SHALL remain one-to-one with the source legacy manifest.
+
+## AC-12 — Installed hook project isolation and bounded conformance state
+
+Given one global hook-service handles interleaved requests from installed plugin code and two different caller projects, when Stop routes and spec-conformance work execute, then every request uses its own normalized project CWD/environment/state, coalescing never crosses `(sessionId, projectRoot, eventName)`, plugin cache remains free of project state, non-spec projects create no journal, and the journal satisfies 10 MiB / 64 MiB / 30 days / 1 GiB retention without unsafe deletion.
+
+## AC-13 — One host-visible DevPomogator Stop dispatcher with semantic parity
+
+Given the current 13-registration Stop behavior captured as a black-box baseline for approve, block, context, failure, ordering, and stop-loop cases, when the manifest is regenerated, then it contains exactly one DevPomogator Stop command using the self-healing client, other plugins are unchanged, the service executes logical routes in registry order, the observable result matches the baseline, and peak legacy child concurrency is at most one per event flight.
+
+## AC-14 — Credential-proven orphan hook-service recovery
+
+Given a stale or legacy per-user-credential-proven DevPomogator hook-service owns the configured loopback port while `service.json` is missing or unusable, when current startup recovery runs, then it resolves the listener PID twice around a second credential-proven health probe and may stop only the unchanged verified owner; denied termination or credential-rejected, ambiguous, changed, or unverifiable ownership leaves that listener alive while current runtime starts on an atomically published operating-system-assigned loopback port.
+
+## AC-15 — Route-aware client deadline and hard stdin ceiling
+
+Given a logical route whose declared budget exceeds three seconds or an input stream exceeds the client ceiling, when the installed client dispatches it, then valid slow work remains eligible through its route budget while oversized input is rejected and no longer consumed as soon as the byte ceiling is crossed.
+
+## AC-16 — Worker startup and teardown are bounded
+
+Given a worker that hangs before ready, contaminates its protocol, exits, or is closed while starting, when the lifecycle boundary handles the event, then pending work settles within the startup budget, the child is terminated, the slot is recyclable, and caller `NODE_OPTIONS` is absent.
+
+## AC-17 — Partial Stop failures remain observable
+
+Given one successful and one failing route in a Stop group, when aggregation completes, then successful semantics remain intact and a bounded durable diagnostic identifies every failed route.
+
+## AC-18 — Managed paths and runtime identity are closed
+
+Given an escaped managed directory or a changed imported service dependency, when state creation or service identity is evaluated, then no external descendant is created or written and the dependency change invalidates the current runtime identity.
+
+## AC-19 — State-only PID evidence cannot terminate
+
+Given credential-proven health without a positive PID or stale state naming an unrelated live PID, when recovery runs, then the unrelated process remains alive and only two matching credential-proven health proofs plus two matching OS listener-PID resolutions can authorize termination.
+
+
+## AC-20 (FR-13)
+
+WHEN a Windows snapshot reports an unhealthy claude-mem port with a dead recorded owner and an orphaned `chroma-mcp.exe` root whose command line is blank
+THEN the reaper SHALL select that root exactly once, use a tree kill so its Python descendants are removed, and SHALL not select unrelated blank-command-line processes.
+
+## AC-21 (FR-13)
+
+WHEN claude-mem becomes wedged after SessionStart and before a tool call
+THEN the generated canonical UserPromptSubmit route SHALL run the reaper preflight without changing `CLAUDE_MEM_WORKER_PORT` or disabling a hook.
+
+## AC-22 (FR-13)
+
+WHEN reaping cannot be completed because process termination is denied or the port remains occupied
+THEN the guard SHALL preserve the fail-loud counter, emit a bounded fail-open diagnostic, and SHALL not report successful auto-healing.
+
+## AC-23 (FR-13)
+
+WHEN the selected orphan tree is terminated and the configured port is observed free
+THEN the guard SHALL reset the stale failure counter and the next normal claude-mem worker start SHALL bind the same configured port and answer health checks.
