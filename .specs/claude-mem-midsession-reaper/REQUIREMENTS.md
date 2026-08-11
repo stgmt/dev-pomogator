@@ -72,3 +72,13 @@
 - In Progress: 0
 - Draft: 6
 - Blocked: 0
+
+
+## Auto-heal trace extension
+
+| Requirement | Purpose | Acceptance | Scenario tag | Status |
+|---|---|---|---|---|
+| [FR-7](FR.md#fr-7-classify-an-unreadable-claude-mem-chroma-root-without-touching-foreign-processes) | Constrained blank metadata classifier | [AC-7](ACCEPTANCE_CRITERIA.md#ac-7-fr-7) | @FR-7 | In Progress |
+| [FR-8](FR.md#fr-8-treat-port-release-as-the-recovery-proof) | Same-port verified counter reset | [AC-8](ACCEPTANCE_CRITERIA.md#ac-8-fr-8) | @FR-8 | In Progress |
+| [FR-9](FR.md#fr-9-cross-the-windows-elevation-boundary-explicitly-and-narrowly) | Explicit limited UAC recovery | [AC-9](ACCEPTANCE_CRITERIA.md#ac-9-fr-9) | @FR-9 | In Progress |
+| [FR-10](FR.md#fr-10-heal-before-a-blocked-prompt-reaches-claude-mem) | Prompt-time preflight route | [AC-10](ACCEPTANCE_CRITERIA.md#ac-10-fr-10) | @FR-10 | In Progress |

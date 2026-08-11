@@ -76,3 +76,60 @@ Reuse: `tests/step_definitions/feature_claude_mem_reaper.ts` — existing reaper
 **Alternatives considered:**
 - Reintroduce the fail-loud block — rejected because it blocked every tool call (the original incident).
 - Stay fully silent (pure fail-open) — rejected because a genuine death then goes unnoticed for hours (the owner's concern).
+
+
+### Decision: Constrain unreadable process metadata
+
+**Требование:** [FR-7](FR.md#fr-7-classify-an-unreadable-claude-mem-chroma-root-without-touching-foreign-processes)
+
+**Decision:** A blank command line is non-authoritative unless image name, dead-parent status, and a direct Python child prove the chroma root shape under an already dead-owner port wedge.
+
+**Rationale:** This recovers the observed protected-process case while excluding generic Python, consoles, and unrelated chroma processes.
+
+**Trade-off:** The extra child check can skip a not-yet-spawned chroma worker, which is safer than terminating an insufficiently identified process.
+
+**Alternatives considered:**
+- Match every blank `chroma-mcp.exe`; rejected because it could affect unrelated work.
+- Match generic Python descendants; rejected because a Python interpreter is not claude-mem identity.
+
+### Decision: Make port release the only recovery transition
+
+**Требование:** [FR-8](FR.md#fr-8-treat-port-release-as-the-recovery-proof)
+
+**Decision:** Record termination results, then re-observe the configured port before clearing hook-failures.
+
+**Rationale:** `taskkill` success or an attempted kill alone is not proof that the inherited listener is gone.
+
+**Trade-off:** Re-observation adds a bounded Windows query after the tree action.
+
+**Alternatives considered:**
+- Reset on taskkill exit status; rejected because Access Denied and stale handles can look repaired.
+- Reset on any reap decision; rejected because no process may have been selected.
+
+### Decision: Keep elevation explicit and self-validating
+
+**Требование:** [FR-9](FR.md#fr-9-cross-the-windows-elevation-boundary-explicitly-and-narrowly)
+
+**Decision:** Use a fixed no-PID helper only after Access Denied, with a persisted cooldown and independent same-port validation inside the elevated process.
+
+**Rationale:** UAC is necessary for protected trees but must not turn an ordinary hook into arbitrary privileged process control.
+
+**Trade-off:** The user may need to accept one UAC prompt before the next guard verifies recovery.
+
+**Alternatives considered:**
+- Install a silent persistent elevated service; rejected because it expands privilege and attack surface.
+- Pass a PID to an elevated taskkill command; rejected because the helper must independently constrain its target.
+
+### Decision: Preflight every user prompt without port fallback
+
+**Требование:** [FR-10](FR.md#fr-10-heal-before-a-blocked-prompt-reaches-claude-mem)
+
+**Decision:** Register the reaper as the first generated UserPromptSubmit route and force that guard past the normal tool-call debounce.
+
+**Rationale:** A prompt can be blocked before another PreToolUse event exists; health recovery must run at that boundary on the same configured port.
+
+**Trade-off:** A prompt preflight performs a bounded health check even immediately after a tool guard.
+
+**Alternatives considered:**
+- Wait for the next PreToolUse hook; rejected because the blocked prompt may never reach it.
+- Move to a fresh port; rejected because it leaves the inherited holder alive and changes user configuration.

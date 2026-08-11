@@ -297,3 +297,8 @@ A malformed project identity, unavailable disk-space probe, maintenance-lock con
 
 
 Client input memory is bounded by the accepted byte ceiling, every worker startup settles within its declared budget, and every failed child is reaped. A mixed-success group has durable route-level failure evidence. No managed path operation may create a descendant before symlink/junction confinement is proven, and no process termination may rely on state-only PID evidence.
+
+
+## NFR-84.m Safety and truthfulness
+
+The generated recovery contract SHALL be least-privilege and honest: never kill generic interpreters, never call a port move a fix, and never reset an error counter until release is observed. Elevation is an explicit OS-consent boundary, not a silent workaround.

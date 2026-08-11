@@ -1709,3 +1709,29 @@ Given a project whose managed parent is a symlink or junction outside the reposi
 **Требование:** [FR-84](FR.md#fr-84)
 
 Given credential-proven health without a positive PID or stale state naming a live unrelated PID, when orphan recovery evaluates termination, then it does not stop that PID and may terminate only an owner proven unchanged by two credential-proven health probes and two operating-system listener-PID resolutions.
+
+
+## AC-84.14
+
+WHEN the spec graph covers a Windows claude-mem socket whose reported owner PID is dead and whose live orphan root has a blank command line
+THEN it SHALL require image-name plus dead-parent evidence for `chroma-mcp.exe` and SHALL exclude unrelated Python or console processes.
+
+## AC-84.15
+
+WHEN the recovery design is traced to executable behavior
+THEN it SHALL show a UserPromptSubmit preflight in addition to SessionStart/PreToolUse and SHALL prohibit port relocation as a repair.
+
+## AC-84.16
+
+WHEN a kill attempt returns access denied or the original port remains listening
+THEN the traced behavior SHALL preserve the stale-failure state and report a fail-open non-success outcome.
+
+## AC-84.17
+
+WHEN a classified orphan tree is killed and re-observation shows the original port free
+THEN the traced behavior SHALL reset hook-failures and prove a normal worker can bind and answer health on that same port.
+
+## AC-84.18
+
+WHEN the implementation or manifest changes this recovery route
+THEN BDD scenarios SHALL cover blank-command-line classification, foreign-process non-selection, prompt-route parity, and verified-release counter handling.

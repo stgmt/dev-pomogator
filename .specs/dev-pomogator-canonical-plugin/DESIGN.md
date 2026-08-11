@@ -347,3 +347,8 @@ The configured loopback listener may outlive or predate `service.json`. The laun
 ## PR #227 review-hardening design (2026-08-11)
 
 The generated registry is the authority for client event budgets. Stdin byte accounting precedes concatenation and detaches the source on overflow. Worker startup and ready workers share one idempotent termination path and the manager tracks both sets. Group execution persists individual failures before returning the aggregate of completed routes. Directory creation proceeds component by component after link and canonical-root checks. The service digest includes imported shared modules, and every owned-listener termination passes through the same double-health/double-OS-PID verifier.
+
+
+## Inherited-socket recovery design
+
+The Windows snapshot returns listener ownership plus candidate process PID, PPID, parent liveness, command line, and image name. The pure decision function accepts a blank-command-line root only for `chroma-mcp.exe` with a dead parent under the dead-owner wedge signature; descendants are left to `taskkill /T`. The action path records termination result, re-observes the same configured port, and clears failure state only after release. The same bounded guard is registered on UserPromptSubmit so a mid-session outage is repaired before the next prompt reaches claude-mem.

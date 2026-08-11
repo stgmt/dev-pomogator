@@ -1735,3 +1735,8 @@ Implement strict plugin/project root separation, request-scoped project identity
 ## PR #227 review evidence (2026-08-11)
 
 Controlled reproductions showed a valid 3.5-second response aborted by the fixed 3-second client signal, a 32 MiB stream fully consumed after the nominal 2 MiB rejection, pre-ready worker hangs and protocol contamination leaving children alive, mixed-success Stop groups returning success with no failure evidence, a junction causing an external journal descendant to be created before rejection, and stale state being eligible for termination when authenticated health omitted PID. These are boundary/lifecycle defects, not justification to disable hooks.
+
+
+## Incident-derived constraint: process metadata can be blank
+
+Live Windows evidence showed a stale listener reported under a dead PID while its inherited-handle tree had blank command lines. Command-line-only matching is therefore insufficient evidence; the model requires image identity, a dead parent, the dead-owner wedge signature, and explicit foreign-process exclusion.

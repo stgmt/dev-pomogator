@@ -85,3 +85,22 @@ Hook-service scope: `tools/hook-service/` owns the shared authenticated loopback
 ## PR #227 review-hardening file plan (2026-08-11)
 
 Update hook-service client, worker manager, server, startup recovery, journal/state confinement, BDD mirrors and steps, focused regressions, generated bundles, and the installed plugin cache. Preserve all registered hooks and existing Stop aggregation semantics.
+
+
+## CMEM auto-heal completion
+
+- `tools/claude-mem-health/health-check.ts` — classify blank-command-line chroma roots safely, verify recovery, and support prompt preflight.
+- `.claude-plugin/hooks.legacy.json` — register the prompt preflight source route.
+- `.claude-plugin/hooks.json`, `tools/hook-service/registry.json` — regenerated managed route metadata.
+- `.specs/claude-mem-midsession-reaper/claude-mem-midsession-reaper.feature`, `tests/step_definitions/feature_claude_mem_reaper.ts` — executable BDD coverage.
+
+
+## CMEM elevation boundary
+
+- `tools/claude-mem-health/elevated-reaper.ps1` — fixed UAC helper that independently validates the same-port dead-owner chroma tree; it accepts no PID and never relocates a port or disables a hook.
+
+
+## CMEM generated-route parity
+
+- `.claude-plugin/hooks.json`, `.claude/settings.json` — regenerated supervised manifests carrying the UserPromptSubmit preflight client route.
+- `tests/hook-service.test.mjs` — supervise every generated non-SessionStart route, including the prompt preflight.

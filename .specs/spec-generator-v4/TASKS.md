@@ -3029,3 +3029,19 @@ Phase 45 contains 10 planned TODO slices. All headers use the strict graph-nativ
   _Requirements: [FR-84](FR.md#fr-84)_
   **Done When:**
   - [ ] Focused regressions, generated bundles, spec trace/validation, available container checks, installed-cache smoke, exact-commit CI, and PR #227 evidence pass without disabling any hook or plugin.
+
+
+### Phase 53 — claude-mem inherited-socket auto-heal trace
+
+- [ ] Add FR-84.m and AC-84.14–84.18 to the graph. — id: t94 — Status: TODO — Est: 30m
+  **Done When:**
+  - [ ] The governed requirement and acceptance nodes are generated.
+- [ ] Link the change to CMEMMID007–CMEMMID010 BDD scenarios. — id: t95 — Status: TODO — Est: 30m
+  **Done When:**
+  - [ ] Scenario identifiers trace to each acceptance path.
+- [ ] Require generated registry parity for UserPromptSubmit. — id: t96 — Status: TODO — Est: 20m
+  **Done When:**
+  - [ ] Both manifest sources contain the prompt route.
+- [ ] Validate denied/unreleased, classified, and foreign-process branches without moving ports. — id: t97 — Status: TODO — Est: 30m
+  **Done When:**
+  - [ ] Test evidence shows unchanged-port recovery and truthful failure retention.

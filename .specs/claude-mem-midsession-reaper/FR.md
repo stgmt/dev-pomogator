@@ -41,3 +41,28 @@ If the guard observes that claude-mem remains unavailable across consecutive che
 
 **Связанные AC:** [AC-6](ACCEPTANCE_CRITERIA.md#ac-6-fr-6)
 **Use Case:** [UC-2](USE_CASES.md), [UC-3](USE_CASES.md)
+
+
+## FR-7: Classify an unreadable claude-mem chroma root without touching foreign processes
+
+When a configured worker port is listening, its reported owner PID is dead, and health is unavailable, the guard SHALL classify a blank-command-line process only if it is named `chroma-mcp.exe`, has a dead parent, and has a direct `python.exe` or `pythonw.exe` child. Generic Python, console, and chroma processes that do not meet all of those conditions SHALL not be selected.
+
+**Связанные AC:** [AC-7](ACCEPTANCE_CRITERIA.md#ac-7-fr-7)
+
+## FR-8: Treat port release as the recovery proof
+
+The guard SHALL clear claude-mem's persistent hook-failure counter only after a selected tree has been terminated and the originally configured worker port is re-observed free. A failed kill, denied kill, or occupied/unobservable port SHALL preserve the counter and report a fail-open diagnostic rather than a successful repair.
+
+**Связанные AC:** [AC-8](ACCEPTANCE_CRITERIA.md#ac-8-fr-8)
+
+## FR-9: Cross the Windows elevation boundary explicitly and narrowly
+
+When unprivileged `taskkill /T` is denied for an already-classified root, the guard SHALL request a rate-limited UAC launch of a fixed helper. That helper SHALL receive no process PID and independently revalidate health, the same configured port, dead listener ownership, a dead-parent `chroma-mcp.exe` root, and a direct Python child before it terminates anything.
+
+**Связанные AC:** [AC-9](ACCEPTANCE_CRITERIA.md#ac-9-fr-9)
+
+## FR-10: Heal before a blocked prompt reaches claude-mem
+
+The generated canonical UserPromptSubmit route SHALL run the reaper preflight ahead of other prompt routes and bypass the normal PreToolUse debounce. It SHALL use the existing configured port, remain fail-open, and neither disable hooks nor relocate the worker port.
+
+**Связанные AC:** [AC-10](ACCEPTANCE_CRITERIA.md#ac-10-fr-10)

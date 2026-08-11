@@ -267,3 +267,10 @@ The approved local registry SHALL define accepted HTTP route, event, matcher, an
 Executable BDD SHALL cover a negative shell/inline-Node/unapproved-transport/registry-drift scenario and a positive approved-HTTP-plus-SessionStart-bootstrap scenario using the real review gate.
 
 **AC:** [AC-10](ACCEPTANCE_CRITERIA.md#ac-10-fr-15-fr-24)
+
+
+### FR-13.m — claude-mem inherited-socket auto-heal
+
+When the configured claude-mem worker port is listening but its recorded owner PID is dead and health is unavailable, the plugin SHALL identify only an orphaned claude-mem process tree. A root with an unreadable/blank command line is eligible only when it is named `chroma-mcp.exe`, has a dead parent, and has no conflicting live owner. The plugin SHALL not relocate the worker port or disable any hook.
+
+The recovery guard SHALL run before `UserPromptSubmit` as well as at SessionStart and PreToolUse. It SHALL reset claude-mem's fail-loud counter only after port release is confirmed; an access-denied or unconfirmed kill SHALL remain visible as a fail-open diagnostic rather than be claimed as repaired.

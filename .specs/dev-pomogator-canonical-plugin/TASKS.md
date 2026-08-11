@@ -263,3 +263,22 @@ The core migration was performed **by hand**: the three `.claude-plugin/*.json` 
   _depends: hard:t27_
   **Done When:**
   - [ ] Focused tests, available container BDD, spec validation, cache smoke, push, and exact-commit CI pass without disabling any hook or plugin.
+
+
+### Phase 12 — Windows claude-mem auto-heal completion
+
+- [ ] Extend reaper snapshots and the pure classifier for dead-parent `chroma-mcp.exe` roots with unreadable command lines. — id: t29 — Status: TODO — Est: 45m
+  **Done When:**
+  - [ ] The classifier selects only an evidenced orphan root and excludes foreign blank-command-line processes.
+- [ ] Verify post-kill port release before resetting hook-failures; expose denied/unreleased outcomes truthfully. — id: t30 — Status: TODO — Est: 45m
+  **Done When:**
+  - [ ] Counter reset occurs only after same-port release is observed.
+- [ ] Register a bounded UserPromptSubmit preflight and regenerate the hook-service registry/manifest. — id: t31 — Status: TODO — Est: 30m
+  **Done When:**
+  - [ ] Generated and legacy manifests contain the preflight route.
+- [ ] Add BDD coverage for blank-command-line root selection, unrelated-process exclusion, counter preservation, and UserPrompt route parity. — id: t32 — Status: TODO — Est: 60m
+  **Done When:**
+  - [ ] Docker BDD scenarios prove the governed behavior.
+- [ ] Exercise the installed cache against a real worker health endpoint on the unchanged configured port. — id: t33 — Status: TODO — Est: 30m
+  **Done When:**
+  - [ ] The active cache answers health checks on its configured port.

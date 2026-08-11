@@ -165,3 +165,11 @@
 ## PR #227 review-hardening requirements (2026-08-11)
 
 The canonical plugin must keep long-running valid hooks eligible, reject oversized stdin during streaming, reap every failed or starting worker, retain successful Stop semantics while recording partial failures, prove confinement before state creation, restart when imported runtime dependencies change, and require current repeated listener ownership evidence before termination. Hook or plugin disablement is not a remediation.
+
+
+## CMEM auto-heal completion
+
+- Treat `port listening + owner PID dead + health unavailable` as a recovery candidate, not a reason to move ports.
+- Extend the candidate model with process image name and parent liveness; blank command lines alone never authorize a kill.
+- Run a fail-open preflight on UserPromptSubmit and preserve the existing SessionStart/PreToolUse checks.
+- Verify port release before clearing claude-mem's persistent consecutive-failure state; surface denied privilege as remediation, not success.

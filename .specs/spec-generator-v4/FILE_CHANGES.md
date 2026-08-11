@@ -861,3 +861,25 @@ Phase 49 — Live-evidence containment, atomic CAS proof, strict-synthesis guard
 - `tools/hook-service/server.mjs` and `tools/hook-service/ensure-up.mjs`: mixed-success route diagnostics, dependency-complete runtime identity, and proof-only PID termination.
 - `tools/spec-check-log/writer.ts` plus conformance state writers: pre-create real-path confinement and canonical append paths.
 - BDD features/steps, focused regressions, generated hook bundles, and installed cache: executable proof and release synchronization.
+
+
+## Auto-heal trace files
+
+- `tools/claude-mem-health/health-check.ts`
+- `.claude-plugin/hooks.legacy.json`
+- `.claude-plugin/hooks.json`
+- `tools/hook-service/registry.json`
+- `.specs/claude-mem-midsession-reaper/claude-mem-midsession-reaper.feature`
+- `tests/step_definitions/feature_claude_mem_reaper.ts`
+
+
+## Elevated recovery trace
+
+- `tools/claude-mem-health/elevated-reaper.ps1` — explicit OS-consent boundary for the verified same-port recovery path.
+
+
+## Prompt preflight generated files
+
+- `.claude-plugin/hooks.json`
+- `.claude/settings.json`
+- `tests/hook-service.test.mjs

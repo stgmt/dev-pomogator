@@ -180,3 +180,24 @@ Given an escaped managed directory or a changed imported service dependency, whe
 ## AC-19 — State-only PID evidence cannot terminate
 
 Given credential-proven health without a positive PID or stale state naming an unrelated live PID, when recovery runs, then the unrelated process remains alive and only two matching credential-proven health proofs plus two matching OS listener-PID resolutions can authorize termination.
+
+
+## AC-20 (FR-13)
+
+WHEN a Windows snapshot reports an unhealthy claude-mem port with a dead recorded owner and an orphaned `chroma-mcp.exe` root whose command line is blank
+THEN the reaper SHALL select that root exactly once, use a tree kill so its Python descendants are removed, and SHALL not select unrelated blank-command-line processes.
+
+## AC-21 (FR-13)
+
+WHEN claude-mem becomes wedged after SessionStart and before a tool call
+THEN the generated canonical UserPromptSubmit route SHALL run the reaper preflight without changing `CLAUDE_MEM_WORKER_PORT` or disabling a hook.
+
+## AC-22 (FR-13)
+
+WHEN reaping cannot be completed because process termination is denied or the port remains occupied
+THEN the guard SHALL preserve the fail-loud counter, emit a bounded fail-open diagnostic, and SHALL not report successful auto-healing.
+
+## AC-23 (FR-13)
+
+WHEN the selected orphan tree is terminated and the configured port is observed free
+THEN the guard SHALL reset the stale failure counter and the next normal claude-mem worker start SHALL bind the same configured port and answer health checks.

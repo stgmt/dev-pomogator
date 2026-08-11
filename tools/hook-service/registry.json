@@ -347,6 +347,17 @@
       "execution": "child"
     },
     "UserPromptSubmit/0/0": {
+      "target": "tools/claude-mem-health/health-check.ts",
+      "args": [
+        "--mid-session",
+        "--prompt-preflight"
+      ],
+      "event": "UserPromptSubmit",
+      "timeout": 15,
+      "matcher": "",
+      "execution": "child"
+    },
+    "UserPromptSubmit/1/0": {
       "target": "tools/carl/runner.ts",
       "args": [],
       "event": "UserPromptSubmit",
@@ -354,7 +365,7 @@
       "matcher": "",
       "execution": "child"
     },
-    "UserPromptSubmit/1/0": {
+    "UserPromptSubmit/2/0": {
       "target": "tools/plan-pomogator/prompt-capture.ts",
       "args": [],
       "event": "UserPromptSubmit",
@@ -362,7 +373,7 @@
       "matcher": "",
       "execution": "child"
     },
-    "UserPromptSubmit/2/0": {
+    "UserPromptSubmit/3/0": {
       "target": "tools/prompt-suggest/prompt_suggest_submit.ts",
       "args": [],
       "event": "UserPromptSubmit",
@@ -370,7 +381,7 @@
       "matcher": "",
       "execution": "child"
     },
-    "UserPromptSubmit/3/0": {
+    "UserPromptSubmit/4/0": {
       "target": "tools/specs-validator/validate-specs.ts",
       "args": [],
       "event": "UserPromptSubmit",
@@ -378,7 +389,7 @@
       "matcher": "",
       "execution": "child"
     },
-    "UserPromptSubmit/4/0": {
+    "UserPromptSubmit/5/0": {
       "target": "tools/learnings-capture/capture.ts",
       "args": [
         "--event",
@@ -389,7 +400,7 @@
       "matcher": "",
       "execution": "child"
     },
-    "UserPromptSubmit/5/0": {
+    "UserPromptSubmit/6/0": {
       "target": "tools/subagent-watchdog/subagent_watchdog.ts",
       "args": [
         "--event",

@@ -61,3 +61,8 @@ Credential-proven daemon recovery SHALL fail closed for process termination: inc
 - **NFR-P9**: Client request time is bounded by the selected route/group execution budget plus fixed transport overhead; input memory never grows beyond the accepted stdin ceiling.
 - **NFR-S8**: Managed state creation is denied before any descendant write when a parent is a symlink, junction, or canonical escape; process termination requires current repeated authenticated listener ownership proof and never state-only PID evidence.
 - **NFR-R10**: Every worker startup settles within budget and every failed/starting child is reaped; mixed-success Stop groups preserve completed semantics and durable route-level failure evidence; imported runtime dependency drift triggers service replacement.
+
+
+## NFR-CMEM-Autoheal
+
+Recovery SHALL remain fail-open, bounded, and least-privilege: it may kill only a positively classified claude-mem orphan root, never a generic Python process; it shall never change the configured port; and it must distinguish an attempted repair from a verified release. Any privilege escalation requires explicit OS consent and carries no arbitrary PID argument.

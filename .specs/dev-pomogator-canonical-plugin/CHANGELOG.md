@@ -108,3 +108,9 @@ b. **Manual cleanup** (если предпочитаете контроль):
 ## 2026-08-11 — PR #227 review-hardening contract
 
 Added canonical contracts for route-aware client timeouts, a hard streaming input ceiling, bounded worker startup and teardown, durable partial-failure diagnostics, pre-create link confinement, dependency-complete runtime identity, and proof-only process termination.
+
+
+## Unreleased — Windows claude-mem inherited-socket auto-heal
+
+- Hardened claude-mem recovery for dead-owner sockets held by blank-command-line `chroma-mcp.exe` trees; no port relocation or hook disabling.
+- Added prompt-time preflight and verified-release semantics for the fail-loud counter.

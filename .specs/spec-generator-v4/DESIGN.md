@@ -1764,3 +1764,8 @@ Authenticated `/health` includes the service PID. When state metadata is absent,
 ## PR #227 review-hardening design (2026-08-11)
 
 The client reads the generated route registry to calculate an event budget as the sum of ordered route timeouts plus bounded transport overhead; the byte counter is updated before concatenation and detaches or pauses stdin at overflow. Worker startup is represented by a tracked child with a timer and one idempotent termination path shared by timeout, protocol failure, exit, recycle, and manager close. Group dispatch returns successful aggregation while the server appends bounded diagnostics for each failed route. Managed directories are created one component at a time only after `lstat` and canonical-parent confinement checks. Runtime hashing includes imported shared modules. Orphan recovery always routes through repeated authenticated health and repeated OS listener-PID proof; state alone is advisory.
+
+
+## FR-84.m delivery graph
+
+The auto-heal change is modeled as one recovery transaction: dead-owner listener evidence → constrained orphan-root classifier → tree termination attempt → same-port re-observation → failure-state transition. UserPromptSubmit route generation is a first-class edge because PreToolUse cannot run when the prompt hook itself is blocked.

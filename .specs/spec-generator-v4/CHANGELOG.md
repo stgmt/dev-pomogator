@@ -66,3 +66,8 @@ Result: AC_SATISFACTION 283/289 (lane RED until the 6 clarify follow-ups land �
 ## 2026-08-11 — PR #227 review-hardening contract
 
 Specified route-aware client deadlines, a hard streaming stdin ceiling, bounded and reaped worker startup, durable diagnostics for partial Stop failures, pre-create symlink/junction confinement, dependency-complete runtime identity, and mandatory repeated OS PID proof before service termination.
+
+
+## Unreleased — FR-84.m claude-mem auto-heal trace
+
+Added governed requirements for inherited-socket recovery under blank process metadata, prompt-time preflight, and verified same-port healing.

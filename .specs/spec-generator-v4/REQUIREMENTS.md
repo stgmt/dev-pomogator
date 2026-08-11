@@ -397,3 +397,8 @@
 - A worker that never becomes ready or violates the protocol must settle and die; a closing manager must also terminate starting children and clear inherited Node preload options.
 - Mixed-success Stop groups must retain completed semantics and produce durable per-route failure evidence.
 - Managed project state must be confined before creation, service identity must cover imported runtime dependencies, and process termination must require fresh repeated listener ownership proof.
+
+
+## Auto-heal traceability extension
+
+The spec graph must retain explicit requirement-to-acceptance-to-BDD evidence for a claude-mem recovery that is safe under unreadable process metadata. The delivery contract is recovery on the configured port, not a fallback port or disabled hook.

@@ -295,3 +295,8 @@ After syncing the approved runtime, `ensureUp` failed because `127.0.0.1:42619` 
 ## PR #227 review evidence (2026-08-11)
 
 Reproductions confirmed premature three-second abort, continued consumption of a 32 MiB stream after a 2 MiB nominal cap, leaked pre-ready workers on hang/protocol output, invisible mixed-success route failures, external descendant creation through a junction before confinement rejection, and a state-only PID termination path. The repair therefore tightens boundaries without disabling any hook or plugin.
+
+
+## 2026-08-11 live evidence — inherited handle under unreadable process metadata
+
+On Windows, `Get-NetTCPConnection` reported dead PID 19340 for listening port 37777 while the actual holders were an orphaned `chroma-mcp.exe → python.exe → python.exe` tree with a dead parent and blank command lines. Standard non-elevated taskkill returned access denied; an elevated, identity-checked tree kill released the same port. The old command-line-only matcher therefore missed the real holder and reset state too optimistically.

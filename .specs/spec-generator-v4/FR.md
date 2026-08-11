@@ -1410,3 +1410,8 @@ dynamic-workflow-engineering owns all bounded workflow runtime, retry, partial-r
 **Связанные AC:** [AC-84.1](ACCEPTANCE_CRITERIA.md#ac-841), [AC-84.2](ACCEPTANCE_CRITERIA.md#ac-842), [AC-84.3](ACCEPTANCE_CRITERIA.md#ac-843), [AC-84.4](ACCEPTANCE_CRITERIA.md#ac-844), [AC-84.5](ACCEPTANCE_CRITERIA.md#ac-845), [AC-84.6](ACCEPTANCE_CRITERIA.md#ac-846), [AC-84.7](ACCEPTANCE_CRITERIA.md#ac-847), [AC-84.8](ACCEPTANCE_CRITERIA.md#ac-848)
 **Use Case:** [UC-36](USE_CASES.md#uc-36)
 **User Story:** [User Story 64](USER_STORIES.md#user-story-64-installed-hooks-keep-project-state-bounded-and-isolated-priority-p1)
+
+
+### FR-84.m — governed Windows claude-mem auto-heal
+
+The plugin delivery graph SHALL specify and verify a no-port-relocation recovery for a claude-mem inherited listener: classify only a dead-parent `chroma-mcp.exe` root when health is unavailable and the listener owner is dead; dispatch a bounded UserPromptSubmit preflight; and clear persistent hook-failure state only after the original configured port is observed free.

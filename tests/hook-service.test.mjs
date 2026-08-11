@@ -94,7 +94,7 @@ test('HS_05: generated manifest keeps one bootstrap and supervises every remaini
   const sessionHooks = manifest.hooks.SessionStart.flatMap(group => group.hooks);
   const otherHooks = Object.entries(manifest.hooks).filter(([event]) => event !== 'SessionStart').flatMap(([, groups]) => groups.flatMap(group => group.hooks));
   assert.equal(sessionHooks.length, 16);
-  assert.equal(otherHooks.length, 27);
+  assert.equal(otherHooks.length, 28);
   assert.equal(manifest.hooks.Stop.length, 1);
   assert.equal(manifest.hooks.Stop[0].hooks.length, 1);
   assert.equal(manifest.hooks.Stop[0].hooks[0].command.includes('Stop/all'), true);
