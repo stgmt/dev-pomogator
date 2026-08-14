@@ -1383,3 +1383,27 @@ dynamic-workflow-engineering owns all bounded workflow runtime, retry, partial-r
 **User Story:** [User Story 63](USER_STORIES.md#user-story-63-codex-desktop-runs-the-full-spec-workflow-priority-p1)
 
 ---
+
+
+## FR-84
+
+**Multilayer validator and bounded MCP autorepair workflow**
+
+**Delivery status:** Requirements and execution plan only. This FR defines a canonical discovery, repair, and verdict contract; it does not claim implementation, runtime proof, or completed dashboard dogfood.
+
+- **FR-84a (one canonical workflow and one snapshot):** One remediation workflow SHALL collect structural, audit, conformance, traceability, readiness, coverage, evidence, reality, BDD-sync, provider-delivery, and semantic findings from one immutable graph/document snapshot and one bounded evaluation context. It SHALL normalize findings before repair selection; independent layers SHALL not each rediscover or overwrite the same snapshot.
+- **FR-84b (normalized finding contract):** Every normalized finding SHALL contain a stable fingerprint; severity and layer; document, node, location, and owner; evidence references; repairability and repair class; affected document/node hashes; dependencies; attempt count; and lifecycle state. Stable fingerprints SHALL be deterministic for the same finding inputs and SHALL survive ordering changes.
+- **FR-84c (repair classes and authority):** Repair selection SHALL use exactly `SAFE_MCP_PATCH`, `SANCTIONED_FORM`, `PROPOSAL_ONLY`, `DECISION_REQUIRED`, or `NONE`. SAFE_MCP_PATCH and SANCTIONED_FORM SHALL be eligible only when the contract proves a deterministic, bounded, owner-preserving edit. PROPOSAL_ONLY SHALL emit an unapplied MCP proposal. DECISION_REQUIRED SHALL emit a structured product/semantic decision item. NONE SHALL remain a finding without an edit. No prose-only semantic choice may be auto-applied.
+- **FR-84d (MCP-only writes and engine-owned progress):** All spec writes SHALL go through the existing MCP `propose_patch`, `apply_proposed_patch`, or `apply_spec_transaction` contracts, with CAS and atomicity preserved. The remediation workflow SHALL never write spec files directly. `.progress.json` remains engine-owned and is not a remediation target.
+- **FR-84e (bounded convergence and no-progress):** The default remediation loop SHALL run at most three rounds. Each round SHALL use a fresh snapshot after accepted writes, record attempted fingerprints and affected hashes, and stop with `NO_PROGRESS` when the same finding fingerprints and affected hashes recur without a state-changing result. A refusal, stale CAS, rollback, or dependency block SHALL remain explicit and SHALL not be treated as convergence.
+- **FR-84f (mandatory honest final verdict):** After repair rounds, the workflow SHALL run one final smart `spec-verdict` pass over the resulting snapshot. Structural validity SHALL never be represented as READY, GREEN, or completion. The final result SHALL distinguish repaired, still-blocking, deferred, decision-required, unavailable-provider, stale, and no-progress findings with evidence and next actions.
+- **FR-84g (semantic/product decisions):** Semantic, product, ownership, and scope choices SHALL be structured decision findings with alternatives, rationale required, affected nodes/documents, and an explicit decision owner. The workflow SHALL not silently infer or apply such choices from prose, partial evidence, or an unavailable semantic provider.
+- **FR-84h (spec-dashboard dogfood regression):** Dogfood SHALL use a committed damaged dashboard fixture copied to a temporary workspace; the mutable canonical `.specs/spec-dashboard/` SHALL never be modified. One run SHALL prove one-snapshot discovery, safe repair, non-guessing, stale CAS refusal, transaction rollback, bounded convergence, and a second run with zero writes on the repaired fixture.
+- **FR-84i (dashboard delivery evidence):** The dashboard regression SHALL cover task cards and list_tasks inventory; `find_refs` versus `get_trace` behavior; unavailable history; a real browser journey and proof; and performance, accessibility, security, and dependency-absent delivery evidence. These are evidence lanes, not implementation claims.
+- **FR-84j (planned surface and boundaries):** Planned implementation paths are enumerated in FILE_CHANGES.md. The feature SHALL add no direct spec-file writer, no `.progress.json` mutation, no mutable canonical dashboard fixture, and no runtime proof claim in requirements authoring.
+
+**Зависит от:** [FR-37](FR.md#fr-37), [FR-39](FR.md#fr-39), [FR-40](FR.md#fr-40), [FR-60](FR.md#fr-60), [FR-61](FR.md#fr-61), [FR-63](FR.md#fr-63), [FR-68](FR.md#fr-68), [FR-70](FR.md#fr-70), [FR-71](FR.md#fr-71), [FR-82](FR.md#fr-82).
+**Связанные AC:** [AC-84.1](ACCEPTANCE_CRITERIA.md#ac-841), [AC-84.2](ACCEPTANCE_CRITERIA.md#ac-842), [AC-84.3](ACCEPTANCE_CRITERIA.md#ac-843), [AC-84.4](ACCEPTANCE_CRITERIA.md#ac-844), [AC-84.5](ACCEPTANCE_CRITERIA.md#ac-845), [AC-84.6](ACCEPTANCE_CRITERIA.md#ac-846), [AC-84.7](ACCEPTANCE_CRITERIA.md#ac-847), [AC-84.8](ACCEPTANCE_CRITERIA.md#ac-848), [AC-84.9](ACCEPTANCE_CRITERIA.md#ac-849), [AC-84.10](ACCEPTANCE_CRITERIA.md#ac-8410)
+**User Story:** [User Story 64](USER_STORIES.md#user-story-64-multilayer-validator-keeps-repairs-bounded-and-honest-priority-p1)
+
+---

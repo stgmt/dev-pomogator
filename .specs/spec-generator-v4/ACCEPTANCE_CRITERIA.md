@@ -1631,3 +1631,44 @@ WHEN the declared host/distribution matrix is verified THEN all four rows SHALL 
 ## AC-83.10
 **Требование:** [FR-83](FR.md#fr-83)
 WHEN the FR-83 package and dependency graph are inspected THEN they SHALL contain no new task/thread-management, scheduled-automation, connector, or `app://` dependency; SHALL NOT change context-menu behavior or Cursor FR-81 ownership; and SHALL NOT introduce a second SpecGraph, MCP registry, task store, or canonical rules tree.
+
+## AC-84.1
+**Требование:** [FR-84](FR.md#fr-84)
+WHEN the remediation workflow starts THEN structural, audit, conformance, traceability, readiness, coverage, evidence, reality, BDD-sync, provider-delivery, and semantic layers SHALL consume one immutable graph/document snapshot and one bounded evaluation context, and the consolidated result SHALL identify that snapshot.
+
+## AC-84.2
+**Требование:** [FR-84](FR.md#fr-84)
+WHEN a layer emits a finding THEN normalization SHALL preserve a deterministic fingerprint; severity; layer; document, node, location, and owner; evidence references; repairability and repair class; affected document/node hashes; dependencies; attempt count; and lifecycle state, with the same fingerprint for the same inputs regardless of finding order.
+
+## AC-84.3
+**Требование:** [FR-84](FR.md#fr-84)
+WHEN repair selection evaluates normalized findings THEN the only repair classes SHALL be SAFE_MCP_PATCH, SANCTIONED_FORM, PROPOSAL_ONLY, DECISION_REQUIRED, and NONE; deterministic safe edits SHALL retain the finding owner and boundaries, proposals SHALL remain unapplied until explicitly applied, and semantic/product choices SHALL never be guessed into a patch.
+
+## AC-84.4
+**Требование:** [FR-84](FR.md#fr-84)
+WHEN a repair writes a spec document THEN the write SHALL use propose_patch, apply_proposed_patch, or apply_spec_transaction through the existing MCP door with CAS and atomicity, direct filesystem writes SHALL be rejected by the workflow contract, and .progress.json SHALL remain untouched and engine-owned.
+
+## AC-84.5
+**Требование:** [FR-84](FR.md#fr-84)
+WHEN the bounded remediation loop runs with default settings THEN it SHALL execute no more than three rounds, refresh the snapshot after an accepted write, record fingerprints and affected hashes per attempt, and emit NO_PROGRESS when the same fingerprints and hashes recur without a state change; stale CAS, refusal, rollback, and dependency blocks SHALL remain explicit outcomes.
+
+## AC-84.6
+**Требование:** [FR-84](FR.md#fr-84)
+WHEN repair rounds finish THEN exactly one final smart spec-verdict pass SHALL evaluate the resulting snapshot; structural validity SHALL not map to READY, GREEN, or completion, and the result SHALL separate repaired, blocking, deferred, decision-required, unavailable-provider, stale, and no-progress findings with evidence and next actions.
+
+## AC-84.7
+**Требование:** [FR-84](FR.md#fr-84)
+WHEN a finding requires semantic, product, ownership, or scope judgment THEN the result SHALL contain a structured decision item with alternatives, rationale requirement, affected nodes/documents, and an explicit decision owner, and no prose-only or provider-unavailable path SHALL auto-apply the choice.
+
+## AC-84.8
+**Требование:** [FR-84](FR.md#fr-84)
+WHEN the dashboard dogfood regression runs THEN it SHALL copy a committed damaged fixture to a temporary workspace and never mutate canonical .specs/spec-dashboard/; one run SHALL exercise one-snapshot discovery, safe repair, non-guessing, stale CAS refusal, transaction rollback, bounded convergence, and a second run SHALL produce zero writes.
+
+## AC-84.9
+**Требование:** [FR-84](FR.md#fr-84)
+WHEN the dashboard delivery evidence is assembled THEN it SHALL include task cards and list_tasks inventory, find_refs versus get_trace behavior, unavailable history, a real browser journey and proof, and separate performance, accessibility, security, and dependency-absent evidence lanes; absence of any lane SHALL remain visible and blocking rather than inferred complete.
+
+## AC-84.10
+**Требование:** [FR-84](FR.md#fr-84)
+WHEN the planned implementation surface is reviewed THEN it SHALL name the exact remediation contract/engine, verdict and MCP edits, regenerated bundle, spec-review/create-spec documentation, committed remediation fixtures, real BDD step definitions, and PLUGIN006 feature edits in FILE_CHANGES.md, while making no implementation or runtime-proof claim during requirements authoring.
+

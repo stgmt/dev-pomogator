@@ -2,6 +2,8 @@
 
 Каждая категория ниже содержит: **trigger** (когда применять), **method** (Read/Grep/WebFetch/Bash recipe), **severity rule** (когда P0/P1/P2/P3), **finding format** для REVIEW_NOTES.md, **remediation hint**.
 
+> Category 17 (product surface / provider capability / full UX journey) вынесена в [`category-17-product-journey.md`](category-17-product-journey.md). Она использует FR-84 structured envelope и никогда не применяет product/UX prose автоматически.
+
 > **MCP-rails (FR-39) — read the rules below as recipes, not literal shell.** Every
 > `grep …/Read … .specs/{slug}/<doc>` snippet in this cookbook is SHORTHAND for:
 > `read_spec_doc({ spec: "{slug}", doc: "<doc>" })` (use `list_spec_docs({ spec })`

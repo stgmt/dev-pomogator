@@ -106,6 +106,11 @@ export const REFERENCED_CAPABILITIES: readonly string[] = [
   'set_spec_status', // explicit SPEC-level backlog marker (excluded from census/pinator) — consumed by task-status
   'get_archival_proof', // FR-45a archival safety proof (graph + prose inbound refs)
   'archive_spec', // FR-45b gated whole-spec move into archive/ — consumed by spec-archive
+  // FR-84 multilayer remediation: create-spec drives the bounded check/propose/apply
+  // sequence before each STOP; writes still delegate to the canonical mutation core.
+  'validate_spec',
+  'propose_spec_repairs',
+  'apply_spec_repairs',
   // worker skills
   'create-spec',
   'architecture-research-workflow',
@@ -186,6 +191,9 @@ export const TOOL_CONSUMERS: Readonly<Record<string, readonly string[]>> = {
   set_spec_status: ['task-status'], // explicit SPEC-level backlog marker — same status-lifecycle skill (spec sibling of set_entity_status)
   get_archival_proof: ['spec-archive'], // FR-45a — the archival agent drives the proof
   archive_spec: ['spec-archive'], // FR-45b — the archival agent drives the gated move
+  validate_spec: ['create-spec'], // FR-84 read-only multilayer check before every STOP
+  propose_spec_repairs: ['create-spec'], // FR-84 bounded dry-run repair planning
+  apply_spec_repairs: ['create-spec'], // FR-84 safe proposal apply through the mutation door
 };
 
 export interface ConsumerDriftResult {

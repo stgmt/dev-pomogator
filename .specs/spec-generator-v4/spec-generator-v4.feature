@@ -4611,3 +4611,23 @@ Scenario: SPECGEN004_714 Codex support adds no second control plane or spec engi
   When the FR-83 package and dependency graph are inspected
   Then exactly nine forbidden-class checks are absent
   And only the declared thin host and generated distribution adapters remain
+
+
+# Source contract; executable mirror: tests/features/plugins/specs-workflow/PLUGIN006_specs-generator.feature.
+# Tagged @historical so the default Docker profile executes only the mirror with real step definitions.
+@historical @FR-84 @AC-84.1 @AC-84.2 @AC-84.3 @AC-84.4 @AC-84.5 @AC-84.6 @AC-84.7 @AC-84.8 @AC-84.9 @AC-84.10
+Scenario: SPECGEN004_715 canonical remediation discovers once repairs only through MCP and ends with an honest verdict
+  Given a committed damaged spec-dashboard fixture is copied to a temporary workspace
+  And the mutable canonical ".specs/spec-dashboard/" is excluded from the workspace and remains byte-identical
+  And one immutable graph and document snapshot contains structural audit conformance traceability readiness coverage evidence reality BDD-sync provider-delivery and semantic inputs
+  And the snapshot includes task cards and list_tasks inventory, find_refs and get_trace distinctions, unavailable history, real browser journey proof, performance accessibility security and dependency-absent delivery evidence
+  When the bounded remediation workflow normalizes the consolidated findings and evaluates at most three repair rounds
+  Then every normalized finding has a stable fingerprint severity layer document node location owner evidence repairability repair class affected hashes dependencies attempts and state
+  And the only repair classes are SAFE_MCP_PATCH SANCTIONED_FORM PROPOSAL_ONLY DECISION_REQUIRED and NONE
+  And safe and sanctioned repairs use only propose_patch apply_proposed_patch or apply_spec_transaction with CAS and atomicity
+  And proposal-only findings remain unapplied, decision-required findings contain alternatives rationale requirement affected nodes or documents and an explicit owner, and no semantic or product choice is guessed
+  And direct spec writes and ".progress.json" writes are not performed
+  And stale CAS refusal transaction rollback dependency blocks and repeated fingerprints with unchanged affected hashes remain explicit outcomes rather than convergence
+  And one mandatory final smart spec-verdict pass distinguishes structural pass from READY and reports repaired blocking deferred decision-required unavailable-provider stale and NO_PROGRESS states with next actions
+  And a second run against the repaired temporary fixture performs zero writes
+

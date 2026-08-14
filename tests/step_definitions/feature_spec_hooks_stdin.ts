@@ -104,15 +104,15 @@ Then(/^the spec-check-log records an UNCOVERED_FR finding from spec-conformance-
 // ── MCP server bundle over raw stdin (FR-4 / FR-48) ──────────────────────────
 const EXPECTED_TOOLS = [
   'add_acceptance_criterion', 'add_backlog_task', 'add_phase', 'amend_requirement',
-  'append_to_section', 'apply_proposed_patch', 'apply_spec_change', 'apply_spec_transaction',
+  'append_to_section', 'apply_proposed_patch', 'apply_spec_change', 'apply_spec_repairs', 'apply_spec_transaction',
   'archive_spec', 'conformance_check', 'create_spec', 'delete_spec_doc',
   'find_by_tags', 'find_orphans', 'find_refs', 'get_archival_proof',
   'get_node', 'get_scenario_trace', 'get_spec_status', 'get_test_result',
   'get_trace', 'insert_after_heading', 'insert_at_eof', 'list_phase_tasks', 'list_tasks',
-  'list_spec_docs', 'list_specs', 'propose_patch', 'propose_spec_change',
+  'list_spec_docs', 'list_specs', 'propose_patch', 'propose_spec_change', 'propose_spec_repairs',
   'read_attachment', 'read_spec_doc', 'register_incident_backlog', 'rename_spec_doc',
   'replace_in_section', 'search', 'set_entity_status', 'set_requirement_metadata', 'set_spec_status',
-  'policy_query_requirements', 'validate_anchor', 'validate_requirement_metadata',
+  'policy_query_requirements', 'validate_anchor', 'validate_requirement_metadata', 'validate_spec',
 ].sort();
 
 function runBundle(w: HookStdinWorld, input: string, cwd?: string) {

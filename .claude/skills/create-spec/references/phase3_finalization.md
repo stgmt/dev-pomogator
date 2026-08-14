@@ -85,6 +85,14 @@
 
 ## STOP #3
 
+### FR-84 multilayer gate
+
+1. Вызвать `validate_spec({spec})` и `spec-review` structured envelope.
+2. Прогнать `propose_spec_repairs`; `task-board-forms` обслуживает только `SANCTIONED_FORM`, а semantic/product findings не auto-apply.
+3. Применить fresh `SAFE_MCP_PATCH` только через `apply_spec_repairs`, затем rerun affected layers и обязательный final `validate_spec`.
+4. Отдельно проверить scenario→executable mirror→step binding→Docker evidence→task ownership, full browser journey и delivery evidence. Source-only scenarios, TESTS_NOT_RUN, unavailable provider или structural-only green не разрешают implementation-ready claim.
+5. Не вызывать `ConfirmStop Finalization` при decision/no-progress/CAS/rollback/provider failure, missing/degraded required semantic output или non-GREEN/non-READY authoritative result.
+
 Финальный отчёт со summary (Executive Summary с key decisions Phase 3).
 
 После подтверждения:

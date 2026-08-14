@@ -1417,3 +1417,33 @@ Then raw spec writes are denied while the equivalent MCP authoring operation suc
 Given the deterministic install and CLI probes pass
 When release readiness is evaluated
 Then a captured fresh Codex Desktop run is still required before the feature is considered delivered
+
+
+
+### User Story 64: Multilayer validator keeps repairs bounded and honest (Priority: P1)
+
+**Требование:** [FR-84](FR.md)
+
+As a spec maintainer, I want one validator and autorepair workflow to consolidate all evidence layers, apply only deterministic MCP-authorized repairs, and surface structured semantic decisions, so that fixing a damaged spec cannot create stale advice, silent product choices, or a false-ready verdict.
+
+**Why:** Independent validators can observe different revisions and produce conflicting repairs; direct edits and structural-only passes can hide unresolved readiness, provider, browser, or delivery evidence gaps. A bounded, snapshot-based workflow makes repair authority and remaining uncertainty explicit.
+
+**Independent Test:** Run the remediation workflow against a committed damaged spec-dashboard fixture copied to a temporary workspace. Verify one snapshot feeds all layers, normalized findings retain fingerprints and ownership/evidence fields, only the five declared repair classes appear, MCP proposal/transaction paths own every write, the default loop stops within three rounds, and the final smart verdict remains non-ready when mandatory evidence or decisions are unresolved.
+
+**Acceptance Scenarios:**
+
+Given the remediation workflow receives a damaged dashboard fixture
+When all validator layers inspect the bounded snapshot
+Then one consolidated normalized finding set contains stable fingerprints, affected hashes, repair classes, attempts, and states
+
+Given a finding requires product or semantic judgment
+When repair selection evaluates it
+Then a structured decision item with alternatives, rationale requirement, affected nodes/documents, and an explicit owner is emitted without an automatic prose patch
+
+Given the workflow has safe repairs, stale CAS, rollback, and repeated no-progress findings
+When it performs bounded remediation and the final verdict pass
+Then only MCP-authorized writes occur, no more than three rounds run, and structural validity never becomes READY or GREEN
+
+Given the repaired temporary fixture is evaluated a second time
+When the workflow collects and normalizes findings again
+Then it performs zero writes and retains any unavailable, blocking, deferred, decision-required, stale, or no-progress state honestly

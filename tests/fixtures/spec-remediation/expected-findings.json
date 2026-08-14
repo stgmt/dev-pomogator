@@ -1,0 +1,19 @@
+{
+  "schema": "spec-remediation-dogfood@1",
+  "required_codes": [
+    "PRODUCT_SURFACE_UNRESOLVED",
+    "DISPLAY_ENTITY_SOURCE_MISSING",
+    "AUTHORED_DERIVED_STATE_CONFLATED",
+    "PROVIDER_CAPABILITY_FABRICATED",
+    "UX_JOURNEY_LEG_MISSING",
+    "BROWSER_PROOF_MISSING",
+    "DELIVERY_EVIDENCE_MISSING"
+  ],
+  "invariants": {
+    "semantic_repairs_are_not_auto_applied": true,
+    "canonical_dashboard_unchanged": true,
+    "second_check_has_same_snapshot": true,
+    "check_write_count": 0,
+    "structural_pass_does_not_imply_ready": true
+  }
+}

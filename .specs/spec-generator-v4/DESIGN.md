@@ -1727,3 +1727,35 @@ The generator SHALL read canonical hook routes, skill/agent sources, MCP consume
 #### Verification boundary
 
 Deterministic Docker/integration proof owns root isolation, hook normalization, generation drift, dependency-absent startup, doctor, and CLI variants. The host/distribution aggregate consumes four distinct evidence keys (`desktop-repo`, `desktop-installed`, `cli-repo`, `cli-installed`) and fails unless their cardinality is exactly four. A captured fresh Codex Desktop task owns installed Desktop discovery, reload, hook deny, MCP mutation, phase spawn, and semantic-status evidence. These lanes are required independently; no single scenario result rolls them up.
+
+
+### Decision: one canonical multilayer remediation workflow with MCP-authoritative repairs
+
+**Требование:** [FR-84](FR.md#fr-84)
+
+**Rationale:** The existing graph, MCP authoring door, form automation, and smart verdict already own distinct evidence layers. The approved feature must compose them without letting each checker read a different document revision or invent a second write authority. A single immutable snapshot produces one consolidated finding set; repair classes then make the boundary between deterministic authoring, proposal-only changes, and human decisions explicit.
+
+**Trade-off:** Snapshot capture, normalized finding metadata, CAS-aware attempts, and a final verdict add orchestration state and schema surface. That cost is accepted to prevent stale cross-layer advice, hidden semantic edits, and false GREEN after a structural-only pass. Three rounds is deliberately finite; an unresolved finding remains visible rather than being retried indefinitely.
+
+**Alternatives considered:**
+- Run every validator independently and merge prose afterward: rejected because layers can observe different revisions and duplicate or lose ownership/evidence.
+- Let an LLM rewrite documents directly: rejected because semantic/product choices require an explicit decision owner and MCP-door auditability.
+- Treat a successful structural patch as readiness: rejected because structural validity is only one mandatory lane and the final smart verdict must remain authoritative.
+
+#### Canonical workflow
+
+1. Capture one immutable graph/document snapshot and a bounded evaluation context, including provider and delivery-evidence availability. Run all declared layers against that snapshot: structural, audit, conformance, traceability, readiness, coverage, evidence, reality, BDD-sync, provider-delivery, and semantic.
+2. Normalize and stable-sort findings by deterministic fingerprint. The normalized record carries severity/layer, document/node/location/owner, evidence, repairability/class, affected hashes, dependencies, attempt history, and state. A layer may add evidence but may not mutate another layer's finding or recapture the source snapshot.
+3. Classify each finding into exactly one of SAFE_MCP_PATCH, SANCTIONED_FORM, PROPOSAL_ONLY, DECISION_REQUIRED, or NONE. Only deterministic, owner-preserving repairs may enter the first two classes. A proposal is a reviewable MCP object, not a write; a decision item records alternatives and owner without silently choosing.
+4. Apply accepted safe/form repairs only through propose_patch, apply_proposed_patch, or apply_spec_transaction with document CAS. `.progress.json` is excluded from the target set and remains engine-owned. Any refusal, stale CAS, dependency block, or rollback becomes an explicit attempt outcome.
+5. Start a fresh bounded round after a state-changing accepted write. Stop at three rounds or earlier when no-progress detects the same finding fingerprints together with the same affected hashes and no state change. The detector does not call a repeated refusal convergence.
+6. Run one mandatory final smart spec-verdict pass over the resulting snapshot. Render structural pass, repaired findings, remaining blockers, deferred/decision-required items, unavailable provider, stale evidence, and NO_PROGRESS distinctly; never render structural pass as READY or GREEN.
+
+#### Normalized finding and decision records
+
+The planned contract is a serializable, versioned record with stable `fingerprint`, `severity`, `layer`, `document`, `node`, `location`, `owner`, `evidence[]`, `repairability`, `repairClass`, `affectedHashes`, `dependencies[]`, `attempts[]`, and `state`. An attempt records the round, selected action, CAS/base hashes, result, and next action. A `DECISION_REQUIRED` item additionally records the decision kind, alternatives, rationale requirement, affected nodes/documents, and decision owner. Provider absence is represented as unavailable/not-ready evidence, never as a semantic pass.
+
+#### Spec-dashboard dogfood boundary
+
+The committed damaged dashboard fixture is copied into a temporary workspace before the real workflow runs. The canonical `.specs/spec-dashboard/` is immutable for the test. The fixture deliberately exercises task cards and `list_tasks`, `find_refs` versus `get_trace`, unavailable history, a real browser journey/proof, performance, accessibility, security, and dependency-absent delivery evidence. The regression checks one-snapshot collection, safe non-guessing repair, stale CAS refusal, transaction rollback, three-round convergence/no-progress, and a second invocation with zero writes. It does not claim that the runtime or implementation already satisfies those lanes.
+

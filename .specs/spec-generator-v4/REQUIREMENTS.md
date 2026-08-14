@@ -377,3 +377,20 @@
 | CHK-FR83-08 | Fresh Codex Desktop live record proves the installed workflow | FR-83, AC-83.8, @feature83, UC-35 | Manual review | Draft | Digest-bound live evidence; CLI/repo/manifests cannot satisfy this lane |
 | CHK-FR83-09 | Desktop/CLI × repo/installed matrix is complete | FR-83, AC-83.9, @feature83, UC-35 | BDD scenario | Draft | SPECGEN004_709–713: four row ids plus exact-cardinality aggregate; four unique evidence keys required |
 | CHK-FR83-10 | Scope contains no app control plane or duplicate spec engine | FR-83, AC-83.10, @feature83, UC-35 | Integration test | Draft | Static dependency/inventory assertion; context-menu and Cursor unchanged |
+
+
+## Verification Matrix — FR-84 multilayer validator and bounded MCP autorepair
+
+| CHK-ID | Requirement | Traces To | Verification Method | Status | Notes |
+|---|---|---|---|---|---|
+| CHK-FR84-01 | One canonical workflow collects all declared layers from one snapshot | FR-84, AC-84.1, @feature84, SPECGEN004_715 | BDD scenario | Draft | Snapshot identity and layer census are asserted together |
+| CHK-FR84-02 | Normalized findings retain stable identity and complete ownership/evidence fields | FR-84, AC-84.2, @feature84, SPECGEN004_715 | BDD scenario | Draft | Fingerprint stability is order-independent |
+| CHK-FR84-03 | Repair class contract separates safe/form/proposal/decision/none | FR-84, AC-84.3, @feature84, SPECGEN004_715 | BDD scenario | Draft | Semantic choices are never prose auto-applied |
+| CHK-FR84-04 | MCP-only writes preserve CAS/atomicity and exclude progress state | FR-84, AC-84.4, @feature84, SPECGEN004_715 | BDD scenario | Draft | Existing MCP door remains the only write authority |
+| CHK-FR84-05 | Three-round bound and fingerprint/hash no-progress detection are explicit | FR-84, AC-84.5, @feature84, SPECGEN004_715 | BDD scenario | Draft | Refusal, stale CAS, rollback, and dependency blocks stay visible |
+| CHK-FR84-06 | Final smart verdict is mandatory and structural pass is not READY | FR-84, AC-84.6, @feature84, SPECGEN004_715 | BDD scenario | Draft | No implementation or runtime proof claim here |
+| CHK-FR84-07 | Semantic/product decisions are structured and owner-bound | FR-84, AC-84.7, @feature84, SPECGEN004_715 | BDD scenario | Draft | Provider-unavailable remains not-ready |
+| CHK-FR84-08 | Dashboard fixture dogfood is isolated, safe, bounded, and idempotent | FR-84, AC-84.8, @feature84, SPECGEN004_715 | BDD scenario | Draft | Canonical spec-dashboard is never mutable test input |
+| CHK-FR84-09 | Dashboard delivery evidence covers read, browser, quality, and dependency-absent lanes | FR-84, AC-84.9, @feature84, SPECGEN004_715 | BDD scenario | Draft | Missing evidence is a visible blocker |
+| CHK-FR84-10 | Exact planned implementation paths and authoring boundaries are recorded | FR-84, AC-84.10, @feature84, SPECGEN004_715 | Manual review | Draft | FILE_CHANGES is the path authority |
+

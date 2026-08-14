@@ -501,3 +501,25 @@ Feature: PLUGIN006 Specs Generator Scripts
     Given a spec with FR-3, FR-3a, FR-3b (language adapter split) and unsplit FR-2, FR-4
     When I run audit-spec.ts on the spec
     Then findings should NOT contain check "FR_SPLIT_CONSISTENCY"
+
+  @feature84 @FR-84 @AC-84.1 @AC-84.6 @AC-84.7 @AC-84.8 @AC-84.9 @AC-84.10
+  Scenario: SPECGEN004_715_MIRROR Canonical remediation discovers once and refuses guessed product decisions
+    Given the damaged spec-dashboard dogfood fixture is copied to a throwaway remediation workspace
+    When the canonical multilayer validator analyzes the dogfood fixture once
+    Then every dogfood defect class is returned in one normalized report
+    And the semantic dashboard decisions are not auto-applicable
+    And structural cleanliness cannot make the dogfood fixture implementation-ready
+    When the validator repeats a read-only full pass on the unchanged fixture
+    Then the second pass has stable hashes and performs zero writes
+    When the remediation loop runs without a safe candidate
+    Then the loop stops for a decision without guessing prose
+    When a semantic source submits a safe MCP patch candidate
+    Then the semantic patch is refused before the MCP proposal store
+    When a mechanical safe patch is proposed and applied through remediation
+    Then the safe patch is applied once and a second analysis keeps the repaired hash
+    When a stale remediation proposal is applied after its document changes
+    Then the stale proposal is refused and its replacement text is absent
+    When an unissued remediation proposal id is applied
+    Then the remediation apply boundary reports proposal not found and writes nothing
+    And the real MCP registry exposes the bounded remediation surfaces
+    And the canonical spec-dashboard directory remains byte-identical

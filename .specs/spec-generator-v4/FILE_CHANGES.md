@@ -828,3 +828,23 @@ Phase 49 — Live-evidence containment, atomic CAS proof, strict-synthesis guard
 | EDIT | `.specs/spec-generator-v4/spec-generator-v4.feature` | FR-83 — source scenarios and complete host/distribution matrix. |
 
 > **Single-writer handoff:** Phase 50 produces the full plugin package and an immutable id/source/manifest/capability record. `codex-init:FR-8` alone edits `.agents/plugins/marketplace.json` and `tools/codex-plugin-support/verify-whitelist.ts`; those paths are intentionally absent from this phase.
+
+
+## Phase 51 — FR-84 multilayer validator and bounded MCP autorepair
+
+| Action | Path | Reason |
+|---|---|---|
+| CREATE | `tools/specs-generator/spec-remediation-contract.ts` | FR-84/AC-84.1–84.7 — versioned normalized finding, repair-class, attempt, decision-item, snapshot, and final-result contracts. |
+| CREATE | `tools/specs-generator/spec-remediation.ts` | FR-84/AC-84.1–84.8 — one-snapshot layer collection, normalization, bounded three-round repair loop, no-progress detection, MCP-only dispatch, and final smart-verdict orchestration. |
+| EDIT | `tools/specs-generator/spec-verdict.ts` | FR-84/AC-84.6/84.9 — consume remediation outcomes and preserve the distinction between structural pass, READY, provider unavailable, stale, deferred, decision-required, and NO_PROGRESS. |
+| EDIT | `tools/spec-mcp-server/tools.ts` | FR-84/AC-84.3–84.5 — expose the existing proposal/transaction-only repair path with CAS, atomic rollback, and bounded remediation result readback; no direct filesystem writer. |
+| REGENERATE | `tools/spec-mcp-server/server.bundle.mjs` | FR-84/AC-84.4/84.8 — shipped dependency-absent MCP bundle after the source tools contract changes. |
+| EDIT | `.claude/skills/spec-review/SKILL.md` | FR-84/AC-84.1/84.6/84.7 — route review through one consolidated snapshot and structured semantic decision findings. |
+| EDIT | `.claude/skills/create-spec/SKILL.md` | FR-84/AC-84.1/84.4/84.5 — invoke bounded remediation through the MCP door without direct spec or `.progress.json` writes. |
+| CREATE | `tests/fixtures/spec-remediation/**` | FR-84/AC-84.8/84.9 — committed damaged spec-dashboard fixture, copied temporary workspace, producer-shaped task/trace/history/browser/delivery evidence, stale-CAS and rollback variants, and independent expected outcomes. |
+| CREATE | `tests/step_definitions/feature_spec_remediation.ts` | FR-84/AC-84.1–84.9 — real BDD steps for one-snapshot discovery, normalized findings, repair classes, MCP-only writes, convergence/no-progress, structured decisions, final verdict, and isolated dashboard dogfood. |
+| EDIT | `tests/features/plugins/specs-workflow/PLUGIN006_specs-generator.feature` | FR-84/AC-84.1–84.10 — plugin-level executable source scenario and traceability registration for SPECGEN004_715. |
+| EDIT | `.specs/spec-generator-v4/spec-generator-v4.feature` | FR-84/AC-84.1–84.10 — canonical source scenario SPECGEN004_715 and its complete trace tags. |
+
+> Requirements phase boundary: these are planned paths only. No implementation, runtime proof, test result, `.progress.json` mutation, TASKS.md edit, README/CHANGELOG edit, or mutation of canonical `.specs/spec-dashboard/` is claimed.
+

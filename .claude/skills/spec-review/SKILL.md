@@ -10,6 +10,8 @@ allowed-tools:
   - "mcp__dev-pomogator-specs__get_node"
   - "mcp__dev-pomogator-specs__search"
   - "mcp__dev-pomogator-specs__apply_spec_change"
+  - "mcp__dev-pomogator-specs__validate_spec"
+  - "mcp__dev-pomogator-specs__propose_spec_repairs"
   - "Read"
   - "Grep"
   - "Glob"
@@ -26,7 +28,37 @@ allowed-tools:
 
 Дополняет (не заменяет) `audit-spec.ts` структурный аудит: ловит семантические ошибки, которые валидатор пропускает. Запускается перед каждым `ConfirmStop` в `create-spec` workflow и после каждой implementation phase.
 
-**16 категорий**: существующие 15 проверок + категория 16 — deterministic acceptance-to-delivery coverage. Каждая категория имеет фиксированный severity (P0..P3), grep patterns и remediation. Детали — в `references/categories.md`.
+**17 категорий**: существующие 16 проверок + категория 17 — product surface / provider capability / full UX journey readiness, появившаяся из dogfood `spec-dashboard`. Каждая категория имеет фиксированный severity (P0..P3), evidence и repair class. Детали — в `references/categories.md`.
+
+## FR-84: structured finding envelope (обязательный output)
+
+Human-readable `REVIEW_NOTES.md` остаётся обзором, но НЕ является machine input для автоисправления. Каждый запуск дополнительно возвращает JSON-совместимый envelope:
+
+```json
+{
+  "schema": "spec-review-findings@1",
+  "spec": "<slug>",
+  "phase": "Discovery | Context | Requirements | Finalization | post-impl",
+  "findings": [
+    {
+      "layer": "semantic",
+      "code": "UX_JOURNEY_LEG_MISSING",
+      "severity": "error",
+      "doc": "USE_CASES.md",
+      "nodeId": "<optional canonical id>",
+      "location": { "file": ".specs/<slug>/USE_CASES.md", "line": 1 },
+      "message": "<one bounded claim>",
+      "details": "<evidence and missing leg>",
+      "repairClass": "DECISION_REQUIRED",
+      "source": "spec-review/category-17",
+      "evidence": [{ "source": "<MCP/code/docs proof>", "detail": "<quote or result>" }],
+      "owner": { "kind": "human", "required": true }
+    }
+  ]
+}
+```
+
+Allowed semantic repair classes are only `PROPOSAL_ONLY`, `DECISION_REQUIRED`, and `NONE`. A semantic reviewer MUST NOT emit `SAFE_MCP_PATCH` or `SANCTIONED_FORM`, apply a free-form patch, or claim an absent/degraded review is clean. An exact prose proposal remains preview-only until the canonical remediation engine validates a separately supplied mechanical/sanctioned candidate.
 
 ## Когда запускается
 
@@ -44,7 +76,7 @@ Skip когда:
 - `.progress.json.currentPhase` отсутствует или `null` → exit
 - Пользователь явно сказал "не надо ревью" в текущей сессии
 
-## 16 категорий (severity matrix)
+## 17 категорий (severity matrix)
 
 | # | Category | Severity | Method | Phase scope |
 |---|----------|----------|--------|-------------|
@@ -64,6 +96,7 @@ Skip когда:
 | 14 | Memory-constraint compliance (dynamic) | P0/P1 | scan `~/.claude/projects/{encoded-cwd}/memory/feedback_*.md` → extract forbidden-literal patterns → grep spec body | any |
 | 15 | Reality drift (spec ↔ repo state) | P0/P1/P2 | invoke `Skill("spec-reality-check")` → aggregate findings, map ERROR→P0 / WARNING→P1 / INFO→P2 | any phase + post-impl |
 | 16 | Acceptance delivery coverage | P0 | run shared `acceptance-task-coverage.mjs`; consume `ACCEPTANCE_DELIVERY_COVERAGE` audit errors | Finalization + post-impl |
+| 17 | Product surface / provider capability / full UX journey | P0/P1 | explicit surface + producer matrix + launch→primary action→detail→evidence→return/recovery browser-proof chain | Phase 1+ for interactive/browser-facing specs |
 
 Подробные patterns + grep recipes — в [`references/categories.md`](references/categories.md). Antipattern triggers (категория #3) — в [`references/antipattern-triggers.md`](references/antipattern-triggers.md). Lessons learned (15 case studies) — в [`references/lessons-learned.md`](references/lessons-learned.md). Memory-constraint extraction protocol — в [`references/category-14-memory-constraints.md`](references/category-14-memory-constraints.md). Reality-drift category-15 protocol — в [`references/category-15-reality-drift.md`](references/category-15-reality-drift.md).
 
@@ -154,6 +187,19 @@ Post-implementation review (+ категории 11-13): дополнитель�
 - 9 (BDD Test Infrastructure) — read DESIGN.md classification → check TASKS Phase 0 hooks
 - 10 (Hallucination/fluff smell) — paragraph length / vague metrics scan
 - 11, 12, 13 (post-impl) — git-diff aware grep
+
+### Step 3.5: Category 17 — product/provider/full-journey proof
+
+Run when the spec exposes a browser/TUI/mobile/desktop interaction or an API/provider-backed user surface.
+
+1. **Product surface:** name the actual shipped surface (`web`, `CLI`, report, TUI, plugin UI). A generic “dashboard/report/tool” without a chosen surface is `PRODUCT_SURFACE_UNRESOLVED` (P0, `DECISION_REQUIRED`).
+2. **Displayed entity and producer:** every primary card/row/node and field must map to a real bounded producer. For task kanban this means Task identity, authored status and evidence-derived status remain separate. An entity without inventory is `DISPLAY_ENTITY_SOURCE_MISSING` (P0).
+3. **Provider capability:** compare the claimed data to actual provider/MCP tools. Do not infer complete directed edges/history/evidence from a summary API. Unsupported collections must be explicitly `unavailable`; invented capabilities are `PROVIDER_CAPABILITY_FABRICATED` (P0).
+4. **Full journey chain:** verify executable ownership for launch → selection → loading/empty/error → search/filter/sort/pagination → primary action → detail drilldown → evidence/file/graph → back/context preservation → retry/recovery → deep-link/copy-ID where applicable. Missing required legs are `UX_JOURNEY_LEG_MISSING` (P0/P1 depending on whether the happy path is broken).
+5. **Browser-visible proof:** API-only scenarios do not prove a browser experience. Require DOM/keyboard/focus/loading/error/retry evidence plus separate performance, accessibility, security, bundle/launcher and dependency-absent runtime obligations. Missing proof is `BROWSER_PROOF_MISSING` or `DELIVERY_EVIDENCE_MISSING`.
+6. Emit only evidence-backed structured findings. Do not choose a product/provider/UX alternative silently; `repairClass` is `DECISION_REQUIRED` or `PROPOSAL_ONLY`.
+
+Dogfood minimums from `spec-dashboard`: kanban cards are canonical `Task`; inventory uses bounded `list_tasks`; full incoming/outgoing relations use bounded `find_refs` rather than treating `get_trace.related_nodes` as complete; history is `unavailable` until a provider owns it; launch→board→detail→evidence→graph→back→retry has browser-visible BDD; speed/accessibility/security/deps-absent launch have distinct proof.
 
 ### Step 4: Collect REVIEW_NOTES.md
 

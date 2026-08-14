@@ -227,6 +227,13 @@ Format Jira trace в FR/AC/BDD/Tasks — см. [`jira-mode.md`](jira-mode.md).
 
 ## STOP #2
 
+### FR-84 multilayer gate
+
+1. Вызвать `validate_spec({spec})` для one-snapshot structural/audit/traceability/readiness/reality/BDD/provider report.
+2. Запустить `spec-review` и получить `spec-review-findings@1`; category 17 обязана сверить displayed entities/fields с реальными bounded provider surfaces, отличить authored lifecycle от evidence-derived readiness и проверить полный UX journey + browser-visible proof.
+3. Передать envelope в `propose_spec_repairs`. Form findings исправлять только `requirements-chk-matrix`/другим sanctioned skill; product/provider/UX findings остаются proposal/decision-only. Fresh safe proposal применяет только `apply_spec_repairs`.
+4. После affected reruns выполнить `validate_spec` full pass. Не подтверждать STOP при decision/no-progress/CAS/rollback/provider failure, absent/degraded required semantic output или non-GREEN/non-READY authoritative result.
+
 Показать Requirements + Design (Executive Summary с key decisions), спросить подтверждение.
 
 После подтверждения:

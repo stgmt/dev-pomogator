@@ -92,6 +92,11 @@ import { readVerdicts } from '../spec-graph/test-quality-gate.ts';
 import { oldTestReadinessDebt } from '../bdd-migrator/repository-census.ts';
 import { marksmanSlug } from '../anchor-integrity/marksman-slug.mjs';
 import { compareBddSync, latestFilteredProof, type ScenarioLite } from '../specs-generator/spec-verdict.ts';
+import {
+  analyzeRemediation,
+  proposeSpecRepairs,
+  applySpecRepairs,
+} from '../specs-generator/spec-remediation.ts';
 
 /**
  * FR-36d (P13-3): resolve a tool-supplied node reference against the
@@ -3210,6 +3215,123 @@ export function buildToolRegistry(
       registryOpts.refreshGraph?.();
       logSpecAccess('archive_spec', { slug: s }, 'ok');
       return asJsonResult({ ok: true, slug: s, from: `.specs/${s}/`, to: `.specs/archive/${s}/`, hint: 'moved out of the live graph; commit the move with git' });
+    },
+  });
+
+  // ─── FR-84) consolidated validation + bounded remediation ───────────────
+  // These wrappers delegate to the canonical spec-verdict/reality analysis and
+  // existing proposal store. They do not introduce another writer or verdict.
+  const SEMANTIC_FINDING_SHAPE = z.object({
+    layer: z.string().optional(),
+    code: z.string().min(1),
+    severity: z.enum(['error', 'warning', 'info', 'ERROR', 'WARNING', 'INFO']).optional(),
+    spec: z.string().optional(),
+    doc: z.string().optional(),
+    node: z.string().optional(),
+    nodeId: z.string().optional(),
+    relatedId: z.string().optional(),
+    location: z.object({ file: z.string().optional(), line: z.number().int().min(1).optional(), column: z.number().int().min(1).optional() }).optional(),
+    message: z.string().min(1),
+    details: z.string().optional(),
+    repairClass: z.enum(['PROPOSAL_ONLY', 'DECISION_REQUIRED', 'NONE']).optional(),
+    source: z.string().optional(),
+  });
+  const PATCH_EDIT_INPUT_SHAPE = z.object({
+    spec: z.string(),
+    doc: z.string(),
+    section: z.object({
+      kind: z.enum(['append_to_section', 'insert_after_heading', 'insert_at_eof']),
+      heading: z.string().optional(),
+      text: z.string(),
+    }).optional(),
+    replace: z.object({
+      heading: z.string(),
+      old_string: z.string(),
+      new_string: z.string(),
+      replace_all: z.boolean().optional(),
+      normalize_eol: z.boolean().optional(),
+      expected_section_sha: z.string().optional(),
+    }).optional(),
+    content: z.string().optional(),
+    expected_sha: z.string().optional(),
+  });
+  const REPAIR_CANDIDATE_SHAPE = z.object({
+    id: z.string().optional(),
+    source: z.enum(['mechanical', 'sanctioned-form', 'semantic']),
+    repairClass: z.enum(['SAFE_MCP_PATCH', 'SANCTIONED_FORM', 'PROPOSAL_ONLY', 'DECISION_REQUIRED', 'NONE']),
+    spec: z.string(),
+    findingFingerprints: z.array(z.string()).optional(),
+    findingCodes: z.array(z.string()).optional(),
+    dependencies: z.array(z.string()).optional(),
+    reason: z.string().optional(),
+    edits: z.array(PATCH_EDIT_INPUT_SHAPE).max(50),
+  });
+  const remediationRoot = (): string => path.resolve(registryOpts.repoRoot ?? process.cwd());
+
+  tools.push({
+    name: 'validate_spec',
+    description: 'FR-84: run the consolidated read-only multilayer validation for one spec and return stable findings, snapshot hashes, and the authoritative smart verdict. Writes nothing.',
+    inputShape: {
+      spec: z.string(),
+      semantic_findings: z.array(SEMANTIC_FINDING_SHAPE).max(200).optional(),
+      semantic_required: z.boolean().optional(),
+    } as const satisfies z.ZodRawShape,
+    handler: async (args) => {
+      const result = await analyzeRemediation({
+        repoRoot: remediationRoot(),
+        spec: String(args.spec),
+        semanticFindings: args.semantic_findings,
+        semanticRequired: args.semantic_required === true,
+      });
+      logSpecAccess('validate_spec', { spec: result.spec, findings: result.findings.length }, 'ok');
+      return asJsonResult({ ok: true, ...result });
+    },
+  });
+
+  tools.push({
+    name: 'propose_spec_repairs',
+    description: 'FR-84: validate and DRY-RUN bounded deterministic spec repairs. Only mechanical/sanctioned-form candidates may become a proposal; semantic choices are refused. Writes nothing.',
+    inputShape: {
+      spec: z.string(),
+      semantic_findings: z.array(SEMANTIC_FINDING_SHAPE).max(200).optional(),
+      semantic_required: z.boolean().optional(),
+      repair_candidates: z.array(REPAIR_CANDIDATE_SHAPE).max(50),
+    } as const satisfies z.ZodRawShape,
+    handler: async (args) => {
+      const result = await proposeSpecRepairs({
+        repoRoot: remediationRoot(),
+        spec: String(args.spec),
+        semanticFindings: args.semantic_findings,
+        semanticRequired: args.semantic_required === true,
+        repairCandidates: args.repair_candidates,
+      });
+      logSpecAccess('propose_spec_repairs', { spec: result.spec, proposal_id: result.proposalId ?? null }, result.ok ? 'ok' : 'denied');
+      return asJsonResult({ ...result, dry_run: true });
+    },
+  });
+
+  tools.push({
+    name: 'apply_spec_repairs',
+    description: 'FR-84: apply a proposal minted by propose_spec_repairs only. Reuses fresh MCP proposal validation, CAS, all-or-nothing writes, rollback, and mandatory final multilayer validation.',
+    inputShape: {
+      proposal_id: z.string().min(1),
+      reason: z.string().min(1),
+    } as const satisfies z.ZodRawShape,
+    handler: async (args) => {
+      try {
+        const result = await applySpecRepairs(remediationRoot(), String(args.proposal_id));
+        if (result.ok) registryOpts.refreshGraph?.();
+        logSpecAccess('apply_spec_repairs', { proposal_id: args.proposal_id, reason: args.reason }, result.ok ? 'ok' : 'denied');
+        return asJsonResult(result);
+      } catch (error) {
+        logSpecAccess('apply_spec_repairs', { proposal_id: args.proposal_id, reason: args.reason }, 'denied');
+        return asJsonResult({
+          ok: false,
+          error: error instanceof Error && error.message.startsWith('PROPOSAL_NOT_FOUND') ? 'PROPOSAL_NOT_FOUND' : 'REMEDIATION_FAILED',
+          proposal_id: args.proposal_id,
+          hint: error instanceof Error ? error.message : String(error),
+        });
+      }
     },
   });
 

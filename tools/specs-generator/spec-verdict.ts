@@ -23,6 +23,7 @@
  * @see audit-reports/v4-smart-verdict-and-organism-traceability.md
  */
 
+import { createHash } from 'node:crypto';
 import { execFileSync, spawnSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
@@ -41,7 +42,7 @@ import { runJudge, type JudgeResult } from '../spec-llm-judge/index.ts';
 import { buildReadinessInventory, classifyScenarioScope, deriveExecutionLane, deriveLiveEvidenceLane, type ReadinessInventory } from '../spec-graph/readiness-inventory.ts';
 import { computeSpecVerdict, type SpecVerdict, type UnverifiedCompletion } from '../spec-graph/verdict.ts';
 import { oldTestReadinessDebt, type OldTestCensusReport } from '../bdd-migrator/repository-census.ts';
-import type { FrNode, ScenarioNode, TaskNode } from '../spec-graph/types.ts';
+import type { Edge, FrNode, ScenarioNode, SpecGraph, TaskNode } from '../spec-graph/types.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const corePath = path.join(__dirname, 'specs-generator-core.mjs');
@@ -58,8 +59,12 @@ export type ReadinessLaneName =
   | 'STRUCTURE'
   | 'TRACEABILITY'
   | 'EXECUTION'
+  | 'LIVE_EVIDENCE'
   | 'TASK_TRUTH'
   | 'BDD_SYNC'
+  | 'AC_SATISFACTION'
+  | 'NFR_SATISFACTION'
+  | 'MULTILAYER'
   | 'SEMANTIC'
   | 'FILTERED_PROOF';
 
@@ -98,6 +103,12 @@ export interface ReadinessLane {
 
 export interface SpecVerdictResult {
   specPath: string;
+  /** Stable graph/document snapshot used for CAS, no-progress, and remediation evidence. */
+  snapshot: {
+    spec: string;
+    graphSha: string;
+    documentShas: Record<string, string>;
+  };
   /** Canonical graph verdict. GREEN is emitted only when every mandatory readiness lane passes. */
   verdict: SpecVerdict;
   /** Stable machine-readable blockers; includes explicit UNVERIFIED_COMPLETION findings. */
@@ -184,8 +195,22 @@ export interface SpecVerdictResult {
   };
 }
 
-interface RunCoreOptions {
+export interface ExternalVerdictFinding {
+  /** Stable machine code supplied by an external layer (reality/semantic/etc.). */
+  code: string;
+  severity: 'error' | 'warning' | 'info';
+  message: string;
+  location: { file: string; line: number; column?: number };
+  nodeId?: string;
+  relatedId?: string;
+  layer?: string;
+  spec?: string;
+}
+
+export interface RunCoreOptions {
   cwd?: string;
+  /** Additional findings from an external verifier; additive, never a second verdict. */
+  externalFindings?: ExternalVerdictFinding[];
   /**
    * FR-8 semantic layer controls (P14-3). `judgeSpawn` injects the
    * subprocess for tests; `semantic: false` forces an explicit skip;
@@ -428,7 +453,7 @@ function runCoreJson(command: string, specPath: string, opts: RunCoreOptions): a
  * @param specPath  e.g. ".specs/spec-generator-v4" (relative to opts.cwd)
  * @param opts.cwd  repo root the spec (and its FILE_CHANGES paths) resolve against
  */
-export async function runSpecVerdict(
+export async function analyzeSpec(
   specPath: string,
   opts: RunCoreOptions = {},
 ): Promise<SpecVerdictResult> {
@@ -753,6 +778,18 @@ export async function runSpecVerdict(
       summary: bddSyncDebt.length > 0 ? `${bddSyncDebt.length} BDD sync or repository migration debt item(s)` : 'no source/executable BDD sync or repository migration debt reported by the current verdict inputs',
       debt: bddSyncDebt,
     },
+    AC_SATISFACTION: {
+      status: inventory.ac_satisfaction.status,
+      blocking: inventory.ac_satisfaction.status !== 'GREEN',
+      summary: inventory.ac_satisfaction.debt.length > 0 ? inventory.ac_satisfaction.debt.join(', ') : 'all acceptance criteria have current execution evidence',
+      debt: inventory.ac_satisfaction.debt,
+    },
+    NFR_SATISFACTION: {
+      status: inventory.nfr_satisfaction.status,
+      blocking: inventory.nfr_satisfaction.status !== 'GREEN',
+      summary: inventory.nfr_satisfaction.debt.length > 0 ? inventory.nfr_satisfaction.debt.join(', ') : 'all non-functional requirements have method-appropriate evidence',
+      debt: inventory.nfr_satisfaction.debt,
+    },
     SEMANTIC: {
       status: !semanticWanted ? 'SKIPPED' : semanticDebt.length > 0 ? 'SKIPPED' : 'GREEN',
       blocking: semanticWanted && semanticDebt.length > 0,
@@ -770,27 +807,86 @@ export async function runSpecVerdict(
       debt: [],
     },
   };
+  const externalFindings = opts.externalFindings ?? [];
+  const externalErrors = externalFindings.filter((finding) => finding.severity === 'error');
+  const externalDebt = externalFindings.map((finding) => `${finding.code}: ${finding.message}`);
+  lanes.MULTILAYER = externalFindings.length > 0
+    ? {
+        status: externalErrors.length > 0 ? 'RED' : 'GREEN',
+        blocking: externalErrors.length > 0,
+        summary: `${externalFindings.length} external finding(s) supplied by remediation`,
+        debt: externalDebt,
+      }
+    : {
+        status: 'NONE',
+        blocking: false,
+        summary: 'no external remediation findings supplied',
+        debt: [],
+      };
   const canonical = computeSpecVerdict({
     inventory,
-    lanes: Object.fromEntries(Object.entries(lanes).map(([name, lane]) => [name, {
+    lanes: Object.fromEntries(Object.entries(lanes).filter(([name]) => name !== 'MULTILAYER').map(([name, lane]) => [name, {
       status: lane.status,
       debt: lane.debt,
     }])),
   }, [...specFindings, ...auditBlocking]);
+  if (externalErrors.length > 0) {
+    canonical.verdict = 'RED';
+    canonical.blocking = [
+      ...canonical.blocking,
+      ...externalErrors.map((finding) => ({
+        code: 'UPSTREAM_UNLINKED' as const,
+        severity: 'error' as const,
+        nodeId: finding.nodeId ?? `${finding.layer ?? 'MULTILAYER'}:${finding.code}`,
+        relatedId: finding.relatedId,
+        message: `[${finding.layer ?? 'MULTILAYER'}:${finding.code}] ${finding.message}`,
+        location: finding.location,
+      })),
+    ];
+    canonical.readiness.overall = 'NOT_READY';
+    canonical.readiness.next_action = 'Resolve the blocking multilayer findings, then rerun the authoritative verdict.';
+  }
   const canonicalLanes = Object.fromEntries(Object.entries(canonical.readiness.lanes).map(([name, lane]) => [name, {
     status: lane.status,
     blocking: lane.blocking,
     summary: lanes[name as ReadinessLaneName]?.summary ?? (lane.debt.join(', ') || `${name} ${lane.status}`),
     debt: lane.debt,
   }])) as Record<ReadinessLaneName, ReadinessLane>;
+  canonicalLanes.MULTILAYER = lanes.MULTILAYER;
   const readiness = {
     lanes: canonicalLanes,
     overall: canonical.readiness.overall,
     nextAction: canonical.readiness.next_action,
   };
 
+  const documentShas: Record<string, string> = {};
+  const specDir = path.resolve(cwd, '.specs', slug);
+  if (fs.existsSync(specDir)) {
+    const walkDocs = (dir: string): void => {
+      for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+        const abs = path.join(dir, entry.name);
+        if (entry.isDirectory()) walkDocs(abs);
+        else if (entry.isFile() && /\.(md|feature)$/i.test(entry.name)) {
+          const rel = path.relative(specDir, abs).replace(/\\/g, '/');
+          documentShas[rel] = createHash('sha256').update(fs.readFileSync(abs)).digest('hex');
+        }
+      }
+    };
+    walkDocs(specDir);
+  }
+  const stableNodes = [...graph.nodes.values()]
+    .filter((node) => inSpec(node.file))
+    .map((node) => ({ id: node.id, type: node.type, file: node.file, line: node.line, spec: node.spec ?? null }))
+    .sort((a, b) => a.id.localeCompare(b.id) || a.file.localeCompare(b.file) || a.line - b.line);
+  const stableEdges = graph.edges
+    .filter((edge) => stableNodes.some((node) => node.id === edge.from || node.id === edge.to))
+    .map((edge) => ({ from: edge.from, to: edge.to, type: edge.type, metadata: edge.metadata ?? null }))
+    .sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)));
+  const graphSha = createHash('sha256').update(JSON.stringify({ nodes: stableNodes, edges: stableEdges })).digest('hex');
+
   return {
     specPath,
+    snapshot: { spec: slug, graphSha, documentShas },
     verdict: canonical.verdict,
     blocking: canonical.blocking,
     prefilter: {
@@ -820,6 +916,14 @@ export async function runSpecVerdict(
     notes,
     readiness,
   };
+}
+
+/** Preserve the long-standing public entrypoint as a thin analyzeSpec wrapper. */
+export async function runSpecVerdict(
+  specPath: string,
+  opts: RunCoreOptions = {},
+): Promise<SpecVerdictResult> {
+  return analyzeSpec(specPath, opts);
 }
 
 /**
@@ -909,7 +1013,7 @@ export function renderVerdict(r: SpecVerdictResult): string {
     }
   }
   lines.push('readiness lanes (FR-61):');
-  const laneOrder: ReadinessLaneName[] = ['STRUCTURE', 'TRACEABILITY', 'EXECUTION', 'LIVE_EVIDENCE', 'TASK_TRUTH', 'BDD_SYNC', 'SEMANTIC', 'FILTERED_PROOF'];
+  const laneOrder: ReadinessLaneName[] = ['STRUCTURE', 'TRACEABILITY', 'EXECUTION', 'LIVE_EVIDENCE', 'TASK_TRUTH', 'BDD_SYNC', 'AC_SATISFACTION', 'NFR_SATISFACTION', 'MULTILAYER', 'SEMANTIC', 'FILTERED_PROOF'];
   for (const name of laneOrder) {
     const lane = r.readiness.lanes[name];
     lines.push(`  ${name}: ${lane.status}${lane.blocking ? ' (blocking)' : ''} — ${lane.summary}`);
@@ -918,7 +1022,7 @@ export function renderVerdict(r: SpecVerdictResult): string {
   }
   lines.push('notes (fail-loud, FR-37c):');
   for (const n of r.notes) lines.push(`  - ${n}`);
-  const everyLaneGreen = Object.values(r.readiness.lanes).every((lane) => lane.status === 'GREEN');
+  const everyLaneGreen = Object.values(r.readiness.lanes).every((lane) => lane.status === 'GREEN' || lane.status === 'NONE' || lane.status === 'SKIPPED');
   if (r.verdict === 'RED') {
     lines.push(`VERDICT: RED — ${r.blocking.length} blocking finding(s)`);
   } else if (r.verdict === 'GREEN' && everyLaneGreen) {

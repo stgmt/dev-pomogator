@@ -1,0 +1,79 @@
+{
+  "schema": "spec-review-findings@1",
+  "spec": "spec-dashboard-damaged",
+  "phase": "Finalization",
+  "findings": [
+    {
+      "layer": "semantic",
+      "code": "PRODUCT_SURFACE_UNRESOLVED",
+      "severity": "error",
+      "doc": "USE_CASES.md",
+      "location": { "file": ".specs/spec-dashboard-damaged/USE_CASES.md", "line": 7 },
+      "message": "The shipped surface alternates between dashboard, report, browser, CLI and TUI.",
+      "repairClass": "DECISION_REQUIRED",
+      "source": "spec-review/category-17",
+      "owner": { "kind": "human", "required": true }
+    },
+    {
+      "layer": "semantic",
+      "code": "DISPLAY_ENTITY_SOURCE_MISSING",
+      "severity": "error",
+      "doc": "FR.md",
+      "location": { "file": ".specs/spec-dashboard-damaged/FR.md", "line": 3 },
+      "message": "Primary cards have no canonical Task identity or bounded list_tasks inventory.",
+      "repairClass": "DECISION_REQUIRED",
+      "source": "spec-review/category-17",
+      "owner": { "kind": "human", "required": true }
+    },
+    {
+      "layer": "semantic",
+      "code": "AUTHORED_DERIVED_STATE_CONFLATED",
+      "severity": "error",
+      "doc": "FR.md",
+      "location": { "file": ".specs/spec-dashboard-damaged/FR.md", "line": 3 },
+      "message": "One status field conflates authored Task lifecycle and evidence-derived verified_status/readiness.",
+      "repairClass": "DECISION_REQUIRED",
+      "source": "spec-review/category-17"
+    },
+    {
+      "layer": "semantic",
+      "code": "PROVIDER_CAPABILITY_FABRICATED",
+      "severity": "error",
+      "doc": "DESIGN.md",
+      "location": { "file": ".specs/spec-dashboard-damaged/DESIGN.md", "line": 3 },
+      "message": "get_trace is treated as a bounded inventory, complete directed find_refs surface and history provider.",
+      "repairClass": "DECISION_REQUIRED",
+      "source": "spec-review/category-17"
+    },
+    {
+      "layer": "semantic",
+      "code": "UX_JOURNEY_LEG_MISSING",
+      "severity": "error",
+      "doc": "USE_CASES.md",
+      "location": { "file": ".specs/spec-dashboard-damaged/USE_CASES.md", "line": 5 },
+      "message": "Launch, spec selection, loading/empty/error, filtering/sorting/pagination, detail-to-evidence/graph, back/context, retry/recovery and deep-link legs are missing.",
+      "repairClass": "DECISION_REQUIRED",
+      "source": "spec-review/category-17"
+    },
+    {
+      "layer": "semantic",
+      "code": "BROWSER_PROOF_MISSING",
+      "severity": "error",
+      "doc": "spec-dashboard.feature",
+      "location": { "file": ".specs/spec-dashboard-damaged/spec-dashboard.feature", "line": 3 },
+      "message": "HTTP-only assertions do not prove the claimed browser experience.",
+      "repairClass": "DECISION_REQUIRED",
+      "source": "spec-review/category-17"
+    },
+    {
+      "layer": "semantic",
+      "code": "DELIVERY_EVIDENCE_MISSING",
+      "severity": "error",
+      "doc": "FILE_CHANGES.md",
+      "location": { "file": ".specs/spec-dashboard-damaged/FILE_CHANGES.md", "line": 3 },
+      "message": "Performance, accessibility, security/cleanup, browser/server bundles, launcher and dependency-absent live-provider proof are absent.",
+      "repairClass": "DECISION_REQUIRED",
+      "source": "spec-review/category-17"
+    }
+  ]
+}

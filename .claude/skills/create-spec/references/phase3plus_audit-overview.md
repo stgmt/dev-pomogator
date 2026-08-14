@@ -2,6 +2,8 @@
 
 **Когда запускается:** Автоматически после финализации (СТОП #3 подтверждён), ПЕРЕД объявлением спеки готовой. **НЕ STOP-точка.** Пользователь уже дал подтверждение на СТОП #3.
 
+> **FR-84 consolidated audit:** Phase 3+ завершает тот же canonical workflow: `validate_spec` snapshot → structured `spec-review-findings@1` → `propose_spec_repairs` → sanctioned form dispatch / fresh safe `apply_spec_repairs` → affected reruns → mandatory final `validate_spec`. Категорийные отчёты ниже являются producers/evidence этого report, а не независимыми основаниями назвать spec clean. Decision/no-progress/CAS/rollback/provider failure, missing/degraded required semantic result или non-GREEN/non-READY smart verdict блокируют readiness claim.
+
 **Файл:** AUDIT_REPORT.md (опциональный, не входит в 13 обязательных)
 
 ## Step 0 (Jira-mode)
@@ -98,6 +100,6 @@ Skill("spec-reality-check")
 «Все findings закрыты в AUDIT_REPORT.md» — это НЕ вердикт (FR-37d, правило `no-structural-valid.md`). После Step 6 — ДВА условия одновременно:
 
 1. все findings закрыты или explicitly accepted в AUDIT_REPORT.md как false positives;
-2. **смарт-вердикт GREEN**: `npx tsx tools/specs-generator/spec-verdict.ts -Path .specs/{slug} --no-semantic` — audit + traceability (UNCOVERED_FR / TASK_UNTESTED / UNTAGGED_SCENARIO) + conformance над одним графом. RED ⇒ цитировать gap list и закрывать его, не «accepted».
+2. **FR-84 consolidated verdict GREEN/READY**: `validate_spec({spec: "{slug}", semantic_findings: <spec-review-findings@1>, semantic_required: true})` — structural/audit/traceability/readiness/reality/BDD/provider + semantic blockers над canonical snapshot. Для CLI диагностики `npx tsx tools/specs-generator/spec-verdict.ts -Path .specs/{slug}` остаётся authoritative verdict, но `--no-semantic` означает явный skipped/degraded слой и не доказывает full readiness. RED/NOT_READY ⇒ цитировать normalized gap list и закрывать его, не «accepted».
 
 Только тогда verdict «Spec is ready for implementation». Для агентского потребления тот же статус доступен через MCP `get_spec_status({spec})` (lifecycle SPEC_ONLY / TESTS_NOT_RUN / RED / PARTIAL / GREEN + linked last_run).

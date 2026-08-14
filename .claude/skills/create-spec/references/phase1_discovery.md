@@ -70,6 +70,15 @@ ls ~/.claude/projects/${encoded}/memory/feedback_*.md 2>/dev/null
 
 ## STOP #1
 
+### FR-84 multilayer gate
+
+Перед Executive Summary:
+
+1. Вызвать `validate_spec({spec})` (read-only snapshot).
+2. Запустить `spec-review` с обязательным `spec-review-findings@1` envelope; для interactive/browser features category 17 уже на Discovery фиксирует shipped surface и skeleton полного launch→primary action→detail→return/recovery journey.
+3. Передать semantic envelope в `propose_spec_repairs`. `DECISION_REQUIRED` не угадывать; `SANCTIONED_FORM` dispatch только через `discovery-forms`; safe proposal применять только `apply_spec_repairs`.
+4. Повторить `validate_spec` full pass. Не вызывать `ConfirmStop Discovery`, пока semantic result отсутствует/degraded, remediation остановилась с decision/no-progress/CAS/rollback/provider failure, или authoritative verdict/readiness не допускает STOP.
+
 Перед STOP-точкой вывести Executive Summary в чат:
 
 ```markdown
