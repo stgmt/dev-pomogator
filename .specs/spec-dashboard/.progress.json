@@ -1,0 +1,28 @@
+{
+  "version": 4,
+  "featureSlug": "spec-dashboard",
+  "createdAt": "2026-08-13T19:08:30.956Z",
+  "currentPhase": "Complete",
+  "phases": {
+    "Discovery": {
+      "completedAt": "2026-08-13T20:36:54.342Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-08-13T20:36:54.341Z"
+    },
+    "Context": {
+      "completedAt": "2026-08-13T20:49:35.594Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-08-13T20:49:35.593Z"
+    },
+    "Requirements": {
+      "completedAt": "2026-08-13T23:21:45.218Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-08-13T23:21:45.217Z"
+    },
+    "Finalization": {
+      "completedAt": "2026-08-14T00:01:12.997Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-08-14T00:01:12.997Z"
+    }
+  }
+}

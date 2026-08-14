@@ -1,0 +1,62 @@
+# Requirements Traceability — spec-dashboard
+
+## Functional Requirements
+
+- [FR-1: Status-first kanban](FR.md#fr-1-название)
+- [FR-2: Complete trace](FR.md#fr-2-название)
+- [FR-3: Analysis views](FR.md#fr-3-название)
+- [FR-4: Honest semantics](FR.md#fr-4-название)
+- [FR-5: Secure read-only adapter](FR.md#fr-5-название)
+
+## Verification Matrix
+
+| CHK-ID | Requirement | Traces To | Verification Method | Status | Notes |
+|---|---|---|---|---|---|
+| CHK-FR1-01 | Task cards use bounded inventory and separate authored from verified state | FR-1, AC-1, @feature1, UC-1 | Integration test | Draft | SPECDASH001_01 real browser + list_tasks |
+| CHK-FR1-02 | The fixed 1,000-task corpus remains bounded and within p95 budgets | FR-1, AC-1, @feature1, UC-1 | Integration test | Draft | SPECDASH001_07; NFR-Perf-1/NFR-Scale-1 |
+| CHK-FR2-01 | Task detail composes only provider-supported typed trace surfaces | FR-2, AC-2, @feature2, UC-2 | Integration test | Draft | SPECDASH001_02; history unavailable until provider support |
+| CHK-FR3-01 | Readiness, gaps, impact and evidence use bounded real routes | FR-3, AC-3, @feature3, UC-3 | Integration test | Draft | SPECDASH001_03; find_refs direction |
+| CHK-FR4-01 | Provider statuses remain honest | FR-4, AC-4, @feature4, UC-4 | Integration test | Draft | SPECDASH001_04; not-run outside result enum |
+| CHK-FR5-01 | Loopback adapter is allowlisted, read-only and redacted | FR-5, AC-5, @feature5, UC-5 | Integration test | Draft | SPECDASH001_05 and SPECDASH001_09 |
+| CHK-FR5-02 | Provider/transport/local runtime failures remain typed | FR-5, AC-5, @feature5, UC-6 | Integration test | Draft | SPECDASH001_06; safe diagnostic IDs |
+| CHK-FR5-03 | Shipped bundles start with project dependencies absent | FR-5, AC-5, @feature5, UC-7 | Integration test | Draft | SPECDASH001_08; Node 20 launcher |
+| CHK-FR5-04 | Real browser keyboard, focus, reduced-motion, security and cleanup contracts hold | FR-5, AC-5, @feature5, UC-5 | Integration test | Draft | SPECDASH001_01 and SPECDASH001_09; NFR-Use-1/NFR-Sec-1 |
+
+## Route → Provider → Scenario Matrix
+
+| Browser route or operation | Existing provider composition | Scenario |
+|---|---|---|
+| `GET /api/specs` | `list_specs` | SPECDASH001_01 |
+| `GET /api/specs/:spec/tasks?status=&cursor=&limit=` | bounded `list_tasks` for all authored statuses | SPECDASH001_01, SPECDASH001_07 |
+| `GET /api/specs/:spec/status` | `get_spec_status(view=status)` | SPECDASH001_01, SPECDASH001_04 |
+| `GET /api/specs/:spec/coverage` | `get_spec_status(view=coverage)` | SPECDASH001_03 |
+| `GET /api/specs/:spec/trace/:nodeId` | task `get_node`; requirement `get_trace`; bounded `find_refs`; scenario `get_scenario_trace` | SPECDASH001_02 |
+| `GET /api/specs/:spec/scenarios/:scenarioId/trace` | `get_scenario_trace` | SPECDASH001_03, SPECDASH001_04 |
+| `GET /api/specs/:spec/impact/:nodeId` | bounded `find_refs` with incoming/outgoing direction | SPECDASH001_03 |
+| `GET /api/specs/:spec/evidence` | coverage + trace + scenario trace + `evidenced-by`/EvidenceNode fields from `get_node` | SPECDASH001_03, SPECDASH001_04 |
+| browser DOM/keyboard/accessibility | headless Chromium over the real loopback server | SPECDASH001_01, SPECDASH001_09 |
+| built bundle with hidden `node_modules` | Node 20 launcher + static assets | SPECDASH001_08 |
+| non-allowlisted, mutation, cross-origin, or traversal operation | rejected before MCP dispatch | SPECDASH001_05, SPECDASH001_09 |
+| unavailable/transport/runtime/not-found result | typed adapter or browser error mapping | SPECDASH001_06 |
+
+## Verification Process
+
+### How CHKs are verified
+1. Every CHK is attached to an AC and real Cucumber scenario.
+2. Status changes only after the Docker integration scenario passes against the real adapter/MCP boundary.
+
+### Status lifecycle
+`Draft → In Progress → Verified → Blocked` (regression takes `Verified → Blocked` with an issue link in Notes).
+
+### Review cadence
+- Phase 2 STOP: all CHKs are `Draft`.
+- Phase 3 STOP: implementation tasks exist for every CHK.
+- Implementation end: 100% are `Verified` or `Blocked` with an issue link.
+
+## Summary Counts
+
+- Total CHKs: 9
+- Verified: 0
+- In Progress: 0
+- Draft: 9
+- Blocked: 0

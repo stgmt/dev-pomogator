@@ -1,0 +1,28 @@
+{
+  "version": 4,
+  "featureSlug": "out-session-advisor",
+  "createdAt": "2026-08-14T05:37:37.400Z",
+  "currentPhase": "Complete",
+  "phases": {
+    "Discovery": {
+      "completedAt": "2026-08-14T05:44:50.864Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-08-14T07:39:14.356Z"
+    },
+    "Context": {
+      "completedAt": "2026-08-14T05:44:50.865Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-08-14T07:39:15.537Z"
+    },
+    "Requirements": {
+      "completedAt": "2026-08-14T07:39:17.489Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-08-14T07:39:17.488Z"
+    },
+    "Finalization": {
+      "completedAt": "2026-08-14T07:39:17.489Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-08-14T07:39:24.406Z"
+    }
+  }
+}
