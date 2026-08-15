@@ -2,7 +2,9 @@
 
 **BDD trace tags:** @feature1 @feature2 @feature3 @feature4 @feature5
 
-The dashboard is a read-only consumer of the spec-generator-v4 MCP surface. It presents provider results and never edits specification files, graph state, test results, or credentials.
+The dashboard is a read-only consumer of the spec-generator-v4 MCP surface. The canonical SpecGraph/MCP is the sole data authority for graph structure, lifecycle, task status, scenario evidence, freshness, provenance, and verification. The dashboard presents provider results and never edits specification files, graph state, test results, or credentials.
+
+The browser journey uses a vendored and adapted `makeplane/plane` `v1.4.1` fork at commit `5662b761062b0b2f9d42a6578b55481b5b069792`. The fork retains the Plane board, UI, design-system, and runtime shell, but Plane backend, authentication, workspace, and project domain are replaced or bypassed in favor of the read-only dashboard adapter and canonical SpecGraph/MCP. AGPL-3.0-only provenance/notices and corresponding-source access ship with the fork; upstream synchronization is manual, and the build contract is Node `>=22.18` with pnpm `11.3`. This changes the implementation shell, not the UC-1 through UC-7 user journey or its existing FR/AC traceability.
 
 ## UC-1: Review specification status at a glance
 

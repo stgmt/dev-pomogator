@@ -36,12 +36,13 @@ A dashboard for specification health is useful only if it exposes the evidence t
 | `get_scenario_trace` | Failure detail and runtime provenance | `[VERIFIED][ref:tools/spec-mcp-server/tools.ts:1331-1351]` exposes run/time/source plus failing step/error and trace status, with `SCENARIO_NOT_FOUND` as an explicit error. | Define retention, expired-chunk copy, and treatment of stale passes. |
 | Coverage/evidence concepts | Honest labels, not a second status engine | `[VERIFIED][ref:tools/spec-graph/types.ts:157-180,251-268]` supplies scenario results, staleness, runtime trace references, evidence presence, and evidence verdict vocabulary. | Confirm whether these fields arrive through the three surfaces above; do not assume a separate `get_evidence` endpoint. |
 
-## Plane preview evidence and reuse boundary
+## Approved Plane fork and adaptation boundary
 
-- `[VERIFIED][source: orchestrator-provided][ref:LICENSE.txt]` identifies the Plane preview as AGPL-3.0. This is a licensing fact for the preview, not permission to copy code without a compatibility decision.
-- `[VERIFIED][source: orchestrator-provided][ref:apps/web/core/components/issues/issue-layouts/kanban/default.tsx]` is an exact preview file reference for a kanban issue layout.
-- `[VERIFIED][source: orchestrator-provided][ref:apps/web/core/components/issues/issue-detail/root.tsx]` is an exact preview file reference for an issue-detail root.
-- These references support only the narrow claim that the named preview files are candidate UI references. They do not establish reusable routing, workspace models, authentication, design-system packages, localization, build configuration, or runtime integration. Reuse remains pending.
+- `[VERIFIED][source: orchestrator-provided][ref:makeplane/plane@5662b761062b0b2f9d42a6578b55481b5b069792]` The dashboard vendors and adapts `makeplane/plane` `v1.4.1` at commit `5662b761062b0b2f9d42a6578b55481b5b069792`; Plane is an approved implementation source for the retained shell and local adaptations.
+- The fork retains and adapts the Plane board interaction, UI, design-system, and runtime shell for the dashboard's read-only journey. Plane backend, authentication, workspace domain, and project domain are replaced or bypassed; Plane services and Plane data are not runtime authorities.
+- `[VERIFIED][source: orchestrator-provided][ref:LICENSE.txt]` The vendored/adapted Plane material is distributed under the `AGPL-3.0-only` boundary with required provenance and notices, corresponding-source access, and local attribution. The shipped provenance identifies the pinned commit and local adaptations.
+- Upstream synchronization is manual: fetch the upstream commit, review and record local adaptations, update the pin/provenance and notices, rebuild, and rerun the full BDD journey. Runtime auto-sync is prohibited.
+- The fork build contract is Node `>=22.18` with pnpm `11.3`; frozen lockfile and packaged-runtime checks are required before implementation is accepted.
 
 ## Provider and boundary decision matrix
 
@@ -54,20 +55,21 @@ A dashboard for specification health is useful only if it exposes the evidence t
 | Timeout and retry | RESOLVED | DESIGN API/DTO contract and FR-5. | Apply the five-second request timeout and at most one retry for a transient idempotent transport failure. |
 | Redaction and path safety | RESOLVED | FR-5, NFR-Sec-1, NFR-Sec-2. | Validate root-contained POSIX paths and omit credentials, commands, raw paths, and sensitive provider details. |
 | Error and freshness semantics | RESOLVED | FR-4, NFR-Rel-1, and the typed DTO contract. | Preserve provider, transport, browser-runtime, authentication, CORS, not-found, stale, partial, and unavailable states without false green. |
-| Clean-room boundary | RESOLVED | Plane preview evidence and NFR-Legal-1. | Copy no Plane source; treat the preview as interaction research only unless the deferred legal gate is approved. |
+| Plane fork provenance and licensing | RESOLVED | Pinned `makeplane/plane` commit, AGPL-3.0-only notices, corresponding-source package, and local adaptation manifest. | Ship provenance/notices/source access with the vendored fork; keep all Plane-derived changes within the AGPL boundary. |
+| Plane adaptation boundary | RESOLVED | Approved explicit fork decision. | Retain board/UI/design-system/runtime shell; replace or bypass Plane backend, auth, workspace, and project domain in favor of the read-only dashboard adapter and SpecGraph MCP. |
+| Upstream synchronization | RESOLVED | Approved manual synchronization policy. | Sync only through a reviewed pin/provenance update; rebuild and rerun BDD after each upstream sync. |
+| Build/runtime contract | RESOLVED | Approved Node/pnpm compatibility decision. | Require Node `>=22.18`, pnpm `11.3`, frozen lockfile, and a dependency-absent packaged-runtime check. |
 | Exact provider compatibility | DEFERRED IMPLEMENTATION GATE | Provider contract inventory above. | Pin the supported spec-generator-v4 MCP payload version and define compatibility behavior before implementation. |
-| Browser/runtime and authentication session | DEFERRED IMPLEMENTATION GATE | UC-6 open decisions. | Name supported browsers/runtime packaging, browser/proxy boundary, authentication mechanism, session lifetime, logout, and least privilege before implementation. |
-| Future Plane reuse | DEFERRED IMPLEMENTATION GATE | LICENSE.txt and candidate preview references above. | Obtain legal/compatibility approval and dependency-closure evidence before any future source reuse; initial scope remains clean-room. |
+| Browser/runtime session | DEFERRED IMPLEMENTATION GATE | UC-6 open decisions. | Name supported browsers/runtime packaging, browser/proxy boundary, authentication mechanism, session lifetime, logout, and least privilege. |
 
 ## Deferred implementation gates
 
-The following decisions are closed by the Requirements and Design contracts and are not open authoring questions: provider authority, read-only route composition, lifecycle/result enums, bounded collections and continuation semantics, timeout/retry policy, path/redaction rules, typed error/freshness semantics, and the clean-room default.
+The following decisions are closed by the Requirements and Design contracts and are not open authoring questions: provider authority, read-only route composition, lifecycle/result enums, bounded collections and continuation semantics, timeout/retry policy, path/redaction rules, typed error/freshness semantics, the vendored Plane fork boundary, AGPL-3.0-only provenance/notices/corresponding-source obligations, manual upstream synchronization, and the Node `>=22.18`/pnpm `11.3` build contract.
 
 The remaining gates are intentionally deferred until implementation planning:
 
 1. Pin the exact versioned MCP payload compatibility policy at implementation time; the required current surfaces are bounded `list_tasks`, bounded `find_refs`, `list_specs`, `get_spec_status`, `get_trace`, `get_scenario_trace`, and `get_node`.
-2. Any future remote or multi-user deployment must separately define authentication, authorization, proxy/CORS, session lifetime, logout, credential storage, least-privilege scope, and audit behavior. The initial MVP is resolved as Node 20, loopback-only, no browser-held provider credential, with server-side MCP process/session state and pinned headless Chromium only for Docker BDD.
-3. Obtain legal/compatibility approval for any future Plane source reuse under the exact AGPL-3.0 boundary; no reuse is permitted in the initial implementation.
+2. Any future remote or multi-user deployment must separately define authentication, authorization, proxy/CORS, session lifetime, logout, credential storage, least-privilege scope, and audit behavior. The initial MVP remains loopback-only, with no browser-held provider credential, server-side MCP process/session state, and pinned headless Chromium only for Docker BDD.
 
 These deferred gates do not authorize a second parser, graph, lifecycle, status, evidence, or credential store.
 
@@ -76,7 +78,7 @@ These deferred gates do not authorize a second parser, graph, lifecycle, status,
 - `[ASSUMED]` The dashboard consumes the existing spec-generator-v4 read-only MCP surface; it is not a replacement for the graph builder, result ingester, or status engine.
 - `[PROPOSED]` Every status or evidence panel should show source, freshness, and provider state.
 - `[PROPOSED]` Missing, stale, partial, unavailable, and failed states remain inspectable and are never silently coalesced into success.
-- `[OUT_OF_SCOPE]` Editing specifications, changing graph edges, rerunning tests, storing credentials in spec artifacts, and claiming Plane as an integrated dependency are outside Discovery.
+- `[OUT_OF_SCOPE]` Editing specifications, changing graph edges, rerunning tests, storing credentials in spec artifacts, and treating Plane backend, authentication, workspace, or project data as dashboard authorities are outside Discovery.
 
 ## Risk Assessment
 
@@ -85,5 +87,5 @@ These deferred gates do not authorize a second parser, graph, lifecycle, status,
 | The UI maps a stale, partial, pending, or unavailable provider result to green | Medium | High | Render lifecycle and freshness separately; add fixtures for every non-green state and reject success when evidence is absent or stale. |
 | Browser, runtime, CORS/proxy, or authentication failures are mistaken for specification failures | Medium | High | Define typed boundary errors, a safe error boundary, retry behavior, diagnostic IDs, and explicit auth/transport labels before implementation. |
 | The dashboard invents graph neighbors or treats malformed endpoints as valid impact | Medium | High | Consume only returned semantic edges, distinguish empty from unavailable, surface endpoint violations, and show relation/direction. |
-| Plane preview code is copied without satisfying AGPL-3.0 or without compatible runtime dependency closure | Low | High | Keep preview references non-binding; complete legal and dependency review before reuse, or implement an original compatible surface. |
+| Vendored Plane adaptations omit AGPL-3.0-only provenance, notices, corresponding source, or compatible runtime dependency closure | Low | High | Ship the pinned commit and local adaptation manifest with notices and corresponding-source access; manually review upstream syncs, rebuild with Node `>=22.18`/pnpm `11.3`, and run dependency-absent BDD checks. |
 | Credentials or sensitive provider details leak through URLs, rendered errors, logs, or spec artifacts | Medium | High | Keep the client read-only, prohibit secret persistence, redact provider errors, and verify URL/log/spec outputs with negative tests. |

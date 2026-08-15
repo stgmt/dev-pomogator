@@ -289,7 +289,7 @@
   - [ ] Lifecycle/result and authored/verified task meaning plus empty/unavailable/provider-error distinctions are expressed in text or accessible labels, not color alone; reduced-motion is emulated and observed
   - [ ] SPECDASH001_01 and SPECDASH001_09 fail if DOM focus, keyboard navigation, labels, reduced-motion, or browser cleanup regress; no source inspection substitutes for interaction
 
-- [ ] T22: Verify security controls and close the Plane clean-room/legal gate across the adapter, DTOs, UI documentation, and logs -- @feature4 @feature5 — id: T22 — Status: TODO | Est: 60m
+- [ ] T22: Verify security controls and close the Plane fork/license gate across the adapter, DTOs, UI documentation, and logs -- @feature4 @feature5 — id: T22 — Status: TODO | Est: 60m
   _Requirements: [FR-4](FR.md#fr-4-название), [FR-5](FR.md#fr-5-название), [NFR-Sec-1](NFR.md#nfr-sec-1-read-only-boundary-and-redaction), [NFR-Sec-2](NFR.md#nfr-sec-2-same-origin-and-transport-safety), [NFR-Legal-1](NFR.md#nfr-legal-1-plane-inspired-clean-room-strategy)_
   _Acceptance: AC-4, AC-5_
   _Scenarios: SPECDASH001_05, SPECDASH001_06, SPECDASH001_09, SPECDASH001_10, SPECDASH001_11, SPECDASH001_12, SPECDASH001_13_
