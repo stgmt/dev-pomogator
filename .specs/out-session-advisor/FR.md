@@ -5,20 +5,36 @@
 ## FR-1: Tail главного транскрипта + живых subagents (снятие слепоты)
 
 Хвостит не только `~/.claude/projects/<proj>/<sid>.jsonl`, но и все открытые/живые
-`subagents/agent-*.jsonl` того же каталога. Читает незакрытые файлы до последней строки
-(не ждёт EOF), помечает закрытые, дедуплицирует уже показанные строки.
+`subagents/agent-*.jsonl` того же каталога, **включая вложенный layout
+`subagents/workflows/<runId>/agent-<id>.jsonl`** (standard CC ≥2.1.2, рекурсивный обход с
+лимитом глубины ≤8). Читает незакрытые файлы до последней строки (не ждёт EOF), помечает
+закрытые, дедуплицирует уже показанные строки.
 [VERIFIED: `6126f730.../subagents/agent-*.jsonl` существуют в каталоге сессии.]
+[VERIFIED: формат вложенных субагентов подтверждён сторонним парсером
+`Guiziweb/claude-code-data` `src/data/parser/session.ts` `readSubagentTurns`.]
 
 **Связанные AC:** [AC-1](ACCEPTANCE_CRITERIA.md#ac-1-fr-1)
 **Use Case:** [UC-1](USE_CASES.md#uc-1-адвизор-берёт-управление-живой-воркер-сессией-feature2-feature3), [UC-2](USE_CASES.md#uc-2-адвизор-видит-субагентов-воркера-feature1-feature3)
 
-## FR-2: ConPTY-управление воркером через ctl/rsp
+## FR-2: Управление воркером — stream-json (primary) + ConPTY fallback
 
-Параметризованный `pty_daemon` (cwd/session-id/model/флаги как аргументы, не хардкод):
-`PtyProcess.spawn([claude, --resume <sid>, --model <m>, --dangerously-skip-permissions])`;
-протокол `claude-ctl.json` (`action: send|read|exit, prompt, wait`) → `claude-rsp.json`
-(`out` snapshot, `pid`). Многострочный UTF-8 промпт передаётся через файл; запуск воркера
-поддерживает `--dangerously-skip-permissions` (нет permission-диалогов).
+Первичный драйвер воркера — **stream-json мост** (паттерн `claw-army/claude-node`,
+`[VERIFIED: github.com/claw-army/claude-node docs/04-protocol.md]`):
+`claude --input-format stream-json --output-format stream-json [--resume <sid> --model <m>]`,
+синхронизация по `type=result`, structured события (`system/init` с session_id, `assistant`,
+`user/tool_result`, `result`). Управление через единый Python-контроллер (send/send_nowait/
+wait_for_result/wait_for_tool_use/get_messages). Запуск воркера с `--dangerously-skip-permissions`.
+
+ConPTY (`pty_daemon.py`, ctl/rsp-файлы) остаётся **fallback** для случая, когда нужен живой
+TUI (handoff) или stream-json-флаг недоступен: `PtyProcess.spawn([claude, --resume <sid>, ...])`,
+протокол `claude-ctl.json` → `claude-rsp.json`, многострочный UTF-8 промпт через ctl-файл.
+
+**AskUserQuestion / интерактивные вопросы** — вариант A: воркеру в system-prompt предписывается
+писать вопросы владельцу обычным текстом (не `AskUserQuestion`); адвизор видит такой вопрос в
+`result` и отвечает `send`. Проверено live: в stream-json `AskUserQuestion` не эмитится как
+пауза (нет в `system/init` tools), разрешительные диалоги превращаются в `tool_result
+is_error + permission_denials`, модель возвращает вопрос текстом. Permission-диалоги гасятся
+`--dangerously-skip-permissions`; если нужен перехват живого TUI-диалога — ConPTY fallback (вариант B).
 
 **Связанные AC:** [AC-2](ACCEPTANCE_CRITERIA.md#ac-2-fr-2)
 **Use Case:** [UC-1](USE_CASES.md#uc-1-адвизор-берёт-управление-живой-воркер-сессией-feature2-feature3)

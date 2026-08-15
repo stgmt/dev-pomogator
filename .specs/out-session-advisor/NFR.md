@@ -38,7 +38,7 @@
   Read/Write/Edit/Bash/Glob/Grep + верификационные вызовы).
 - **NFR-US-2:** Команды/доклады адвизора — краткие саммари с evidence-путями, без пасты всего
   транскрипта; сводка диагностики человекочитаема (`repo | pid | вердикт | причина`).
-- **NFR-US-3:** Winpty-путь определять автоматически (нет хардкода `%TEMP%`/`E:/repos/sales`);
-  CLI-инструменты доступны и без dashboard (запуск одной командой).
+- **NFR-US-3:** PRIMARY драйвер — stream-json (без pywinpty); ConPTY fallback использует winpty-путь
+  автоматически (нет хардкода `%TEMP%`/`E:/repos/sales`); CLI-инструменты доступны и без dashboard.
 - **NFR-US-4:** Правила `no-git-add-all-shared-tree`/`atomic-update-lock` остаются каноном —
   инструмент реализует их runtime-слоем, не дублирует разночтения.

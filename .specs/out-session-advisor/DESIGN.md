@@ -5,7 +5,7 @@
 ### Часть A — Адвизор
 
 - [FR-1: Tail главного транскрипта + живых subagents](FR.md#fr-1-tail-главного-транскрипта-живых-subagents-снятие-слепоты)
-- [FR-2: ConPTY-управление воркером через ctl/rsp](FR.md#fr-2-conpty-управление-воркером-через-ctlrsp)
+- [FR-2: Управление воркером — stream-json (primary) + ConPTY fallback](FR.md#fr-2-управление-воркером-stream-json-primary-conpty-fallback)
 - [FR-3: Факт-проверка отчётов воркера на «пиздёж» (verify_claims)](FR.md#fr-3-факт-проверка-отчётов-воркера-verifyclaims)
 - [FR-4: Цикл мониторинга не «встаёт»](FR.md#fr-4-цикл-мониторинга-не-встаёт-живость-процесса-интервальные-снапшоты)
 - [FR-5: Канонический SKILL.md + зеркало + доменные истины](FR.md#fr-5-канонический-skillmd-зеркало-доменные-истины)
@@ -22,13 +22,21 @@
 
 ### Часть A — Адвизор
 
-- `tail_session.py` — аггрегатор транскрипта: главный `<sid>.jsonl` + живые `subagents/agent-*.jsonl`;
-  читает незакрытые файлы по смещению, помечает закрытые, дедуплицирует строки.
-- `strip_ansi.py` — очистка ANSI-последовательностей из снапшотов PTY.
-- `pty_daemon.py` — долгоживущий ConPTY-процесс воркера; протокол `claude-ctl.json`/`claude-rsp.json`;
-  принимает `cwd`, `--resume <sid>`, `--model <m>`, `--dangerously-skip-permissions` как аргументы.
+- `tail_session.py` — аггрегатор транскрипта: главный `<sid>.jsonl` + живые `subagents/agent-*.jsonl`
+  (включая вложенный `subagents/workflows/<runId>/`, depth≤8). Путь-логика по образцу
+  `Guiziweb/claude-code-data.readSubagentTurns`. Читает незакрытые файлы по смещению, помечает
+  закрытые, дедуплицирует строки.
+- `strip_ansi.py` — очистка ANSI-последовательностей из снапшотов PTY (для ConPTY fallback).
+- `worker_driver.py` — **PRIMARY драйвер воркера**: stream-json мост к `claude` CLI по образцу
+  `claw-army/claude-node` (`--input-format stream-json --output-format stream-json`);
+  `send`/`send_nowait`/`wait_for_result`/`wait_for_tool_use`/`get_messages`; launch с
+  `--dangerously-skip-permissions`; вопросы воркера текст-в-`result` → ответ через `send`.
+- `pty_daemon.py` — FALLBACK: долгоживущий ConPTY-процесс воркера; протокол `claude-ctl.json`/
+  `claude-rsp.json`; принимает `cwd`, `--resume <sid>`, `--model <m>`,
+  `--dangerously-skip-permissions` как аргументы. Нужен только для handoff в живой TUI.
 - `verify_claims.ts` — CLI факт-проверки: `CONFIRMED`/`GAP` с evidence-путями; live-проверка
-  цепочки `307→403→200` (финальный document) и `run_external_blockers` `source`.
+  цепочки `307→403→200` (финальный document) и `run_external_blockers` `source`; verify/repair
+  транскрипта по образцу `@recensa/claude-session`.
 
 ### Часть B — Параллельная безопасность
 
@@ -64,12 +72,14 @@
 ## Алгоритм
 
 1. Адвизор получает session-id и каталог `~/.claude/projects/<proj>/<sid>/`.
-2. `tail_session.py` собирает хвост главного файла + живых `subagents/agent-*.jsonl` (по offset,
-   не дожидаясь EOF); `strip_ansi.py` чистит снапшоты PTY.
+2. `tail_session.py` собирает хвост главного файла + живых `subagents/agent-*.jsonl` (в т.ч.
+   `workflows/<runId>/`, depth≤8; путь-логика по образцу `claude-code-data.readSubagentTurns`);
+   `strip_ansi.py` чистит снапшоты PTY (fallback-путь).
 3. Перед правкой — `parallel-session-diag --who-wrote <path>` (FR-9): не порвать single-writer.
 4. Диагноз: `verify_claims.ts` сверяет claims воркера с диском/БД/live-проверкой.
-5. Промпт/стоп вору воркеру через `claude-ctl.json` (`send`), вывод через `claude-rsp.json`.
-6. Интервальный мониторинг (SN+1 обязателен): снапшот и/или проверка живости процесса.
+5. Промпт/стоп вору воркеру через **`worker_driver.py` (stream-json)**: `send_nowait()` + `wait_for_result()`;
+   вопросы воркера из `result` → ответ тем же `send`. Fallback: `claude-ctl.json`/`claude-rsp.json` (ConPTY).
+6. Интервальный мониторинг (SN+1 обязателен): новое `result`/снапшот и/или проверка живости процесса.
 7. При коммите — `git-guard` (FR-6): не захватить чужое; локалы — `parallel-lock` (FR-7).
 8. По завершении цикла — саммари владельцу с evidence-путями; CONTINUE до закрытия задачи.
 
@@ -78,9 +88,16 @@
 ### tail_session.py (CLI)
 
 - Usage: `python tail_session.py --session <sid> --project-dir <proj> [--tail-bytes 8388608]`
-- Output: объединённый текст последних событий главного файла + живых subagents, с временнЫми штампы.
+- Output: объединённый текст последних событий главного файла + живых subagents (nested до depth 8), с временнЫми штампы.
 
-### pty_daemon.py (протокол)
+### worker_driver.py (PRIMARY, stream-json)
+
+- Launch: `python worker_driver.py --cwd <dir> [--resume <sid>] [--model <m>] [--skip-permissions]`
+- Методы: `send(text)`, `send_nowait(text)`, `wait_for_result(timeout)`, `wait_for_tool_use(name, timeout)`, `get_messages()`
+- Синхронизация: ждать `type=result` перед следующим `send`; `system/init` даёт `session_id`.
+- Вопросы воркера — текст в `result`; адвизор отвечает `send`.
+
+### pty_daemon.py (FALLBACK протокол)
 
 - Control: `claude-ctl.json` = `{"action":"send|read|exit","prompt":"<utf8>","wait":N}`
 - Response: `claude-rsp.json` = `{"out":"<ansi snapshot>","pid":N,"sent":true}`
@@ -121,19 +138,39 @@
 - Резать по первому document-403 — rejected: даёт ложные блокеры (реальная ситуация g65/g69).
 - Принимать любой 200 финального хопа без сверки url — rejected: маскирует редирект на другую страницу.
 
-### Decision: ConPTY через pywinpty + ctl/rsp-файлы вместо `claude -p`/RC
+### Decision: stream-json мост — PRIMARY управление воркером; ConPTY — fallback
 
-**Требование:** [FR-2](FR.md#fr-2-conpty-управление-воркером-через-ctlrsp)
+**Требование:** [FR-2](FR.md#fr-2-управление-воркером-stream-json-primary-conpty-fallback)
 
-**Rationale:** `claude -p --resume` не может «нажимать клавиши» в живом окне и permission-диалоги
-не обрабатываются; RC отключён на не-anthropic транспортe. ConPTY даёт настоящий интерактивный
-терминал и управление stdin (подтверждено в эксперименте pid 8580/123944).
+**Rationale:** live-тест (2026-08-15) показал: `claude --input-format stream-json
+--output-format stream-json` даёт structured события, синхронизацию по `type=result`,
+session_id и cost; `AskUserQuestion` отсутствует в tools (вопрос приходит текстом), а разрешительные
+диалоги материализуются как `tool_result is_error` + `permission_denials` при
+`--dangerously-skip-permissions` отсутствуют вовсе. Готовый Python-мост — `claw-army/claude-node`
+(MIT). ConPTY не нужен для основного цикла.
 
-**Trade-off:** один python daemon на воркера + зависимость от pywinpty; stdin-диалоги вручную ловить сложнее.
+**Trade-off:** stream-json не даёт живой TUI (handoff владельцу невозможен через него);
+чужие потоки вывода MCP-тулов приходят как текст и могут быть большими.
 
 **Alternatives considered:**
-- `claude --remote-control` — rejected: доками отключён при не-`api.anthropic.com` (gpt-5.6-luna через гейтвей).
-- tmux/WSL — rejected: Windows-native окружение владельца, ConPTY проще.
+- `claude --remote-control` — rejected: доками отключён при не-`api.anthropic.com`.
+- ConPTY (pywinpty) primary — rejected: хрупкий ANSI-парсинг; теперь fallback для handoff/живого TUI.
+- tmux/WSL — rejected: Windows-native окружение, ConPTY уже локальный.
+
+### Decision: вопросы воркера — текстом в `result`, не AskUserQuestion
+
+**Требование:** [FR-2](FR.md#fr-2-управление-воркером-stream-json-primary-conpty-fallback)
+
+**Rationale:** live-тест подтвердил: в stream-json `AskUserQuestion` не эмитится как пауза
+(нет в tools списка), модель отвечает текстом; адвизору достаточно прочитать `result` и ответить
+через `send` — без какого-либо перехвата диалогов.
+
+**Trade-off:** воркер должен соблюдать правило «вопросы — текстом» (system-prompt дисциплина);
+если воркер всё же откроет интерактивный диалог в чужом TUI — ConPTY fallback для перехвата.
+
+**Alternatives considered:**
+- HITL-мост (MCP tool «ask») — rejected: избыточно, если текст-в-`result` работает (проверено).
+- Сырой PreToolUse перехват AskUserQuestion — rejected: в stream-json этого тула нет.
 
 ### Decision: allowed-tools скила — минимум на чтение + Bash + верификация
 
@@ -150,7 +187,7 @@
 
 ### Decision: Skill НЕ владеет тем же файлом, что воркер (single-writer)
 
-**Требование:** [FR-2](FR.md#fr-2-conpty-управление-воркером-через-ctlrsp)
+**Требование:** [FR-2](FR.md#fr-2-управление-воркером-stream-json-primary-conpty-fallback)
 
 **Rationale:** второй писатель в активный JSONL = коррупция (правило no-unverified-blocker + память про один писатель).
 

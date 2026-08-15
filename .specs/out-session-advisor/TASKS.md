@@ -11,7 +11,7 @@
 | T0-04 | Создать fixture: `session-A.jsonl` + `session-B.jsonl` + `git-fixture/` | TODO | — | Phase 0: BDD Foundation (Red) | 20m |
 | T1-05 | tail_session.py | TODO | — | Phase 1: Мониторинг и ConPTY (Green, Часть A) | 45m |
 | T1-06 | strip_ansi.py параметризованный | TODO | — | Phase 1: Мониторинг и ConPTY (Green, Часть A) | 15m |
-| T1-07 | pty_daemon.py параметризованный + протокол ctl/rsp | TODO | — | Phase 1: Мониторинг и ConPTY (Green, Часть A) | 60m |
+| T1-07 | worker_driver.py + pty_daemon.py (stream-json + fallback) | TODO | — | Phase 1: Мониторинг и ConPTY (Green, Часть A) | 75m |
 | T1-08 | Verify: сценарии @feature1..@feature2 переходят из Red в Green | TODO | — | Phase 1: Мониторинг и ConPTY (Green, Часть A) | 15m |
 | T2-09 | verify_claims.ts | TODO | — | Phase 2: Верификация, скил и параллельная безопасность (Green) | 60m |
 | T2-10 | Цикл мониторинга «не встаёт» (живость + интервальные снапшоты) | TODO | — | Phase 2: Верификация, скил и параллельная безопасность (Green) | 45m |
@@ -40,7 +40,7 @@
 - [ ] Создать `.feature` + step definitions (заглушки Pending) — @feature1..@feature10 — Status: TODO | Est: 60m
   _Requirements: [FR-1](FR.md#fr-1-tail-главного-транскрипта-живых-subagents-снятие-слепоты) .. [FR-10](FR.md#fr-10-сводная-диагностика-параллельности-okdirtyconflict)_
   **Done When:**
-  - [ ] `tests/features/plugins/out-session-advisor/OUTSESS001_out-session-advisor.feature` существует с 16 сценариями
+  - [ ] `tests/features/plugins/out-session-advisor/OUTSESS001_out-session-advisor.feature` существует с 17 сценариями
   - [ ] `tests/step_definitions/out-session-advisor.ts` с PendingStepException заглушками
   - [ ] все сценарии FAIL (Red)
 
@@ -62,22 +62,23 @@
 
 ## Phase 1: Мониторинг и ConPTY (Green, Часть A)
 
-- [ ] tail_session.py — главный jsonl + живые `subagents/agent-*.jsonl` — @feature1 — Status: TODO | Est: 45m
+- [x] tail_session.py — главный jsonl + живые `subagents/agent-*.jsonl` — @feature1 — Status: DONE | Est: 45m
   _Requirements: [FR-1](FR.md#fr-1-tail-главного-транскрипта-живых-subagents-снятие-слепоты)_
   **Done When:**
   - [ ] `tools/out-session-advisor/tail_session.py` существует, принимает `--session/--project-dir/--tail-bytes`
   - [ ] сценарии OUTSESS001_01 (живые субагенты видны) и _02 (закрытый не повторяется) переходят из Red в Green
 
-- [ ] strip_ansi.py параметризованный — @feature1 — Status: TODO | Est: 15m
+- [x] strip_ansi.py параметризованный — @feature1 — Status: DONE | Est: 15m
   **Done When:**
   - [ ] `tools/out-session-advisor/strip_ansi.py` существует, чистит ANSI из снапшотов
   - [ ] снапшот в OUTSESS001_06 без ANSI-мусора
 
-- [ ] pty_daemon.py параметризованный + протокол ctl/rsp — @feature2 — Status: TODO | Est: 60m
-  _Requirements: [FR-2](FR.md#fr-2-conpty-управление-воркером-через-ctlrsp)_
+- [x] worker_driver.py — stream-json мост (PRIMARY) + pty_daemon.py (fallback ctl/rsp) — @feature2 — Status: DONE | Est: 75m
+  _Requirements: [FR-2](FR.md#fr-2-управление-воркером-stream-json-primary-conpty-fallback)_
   **Done When:**
-  - [ ] `tools/out-session-advisor/pty_daemon.py` существует, принимает cwd/--resume/--model/--dangerously-skip-permissions
-  - [ ] сценарий OUTSESS001_06 (промпт доставляется, rsp.out) переходит из Red в Green
+  - [ ] `tools/out-session-advisor/worker_driver.py` существует: send/send_nowait/wait_for_result/wait_for_tool_use, синхронизация по result, `--skip-permissions`
+  - [ ] `tools/out-session-advisor/pty_daemon.py` существует как fallback (cwd/--resume/--model/--dangerously-skip-permissions)
+  - [ ] сценарий OUTSESS001_06 (промпт доставляется, result/out) переходит из Red в Green
 
 - [ ] Verify: сценарии @feature1..@feature2 переходят из Red в Green — Status: TODO | Est: 15m
   **Done When:**
@@ -85,42 +86,42 @@
 
 ## Phase 2: Верификация, скил и параллельная безопасность (Green)
 
-- [ ] verify_claims.ts — CONFIRMED/GAP + live-цепочка 307→403→200 — @feature3 — Status: TODO | Est: 60m
+- [x] verify_claims.ts — CONFIRMED/GAP + live-цепочка 307→403→200 — @feature3 — Status: DONE | Est: 60m
   _Requirements: [FR-3](FR.md#fr-3-факт-проверка-отчётов-воркера-verifyclaims)_
   **Done When:**
   - [ ] `tools/out-session-advisor/verify_claims.ts` существует, CLI `--claim/--paths`
   - [ ] OUTSESS001_03 (CONFIRMED), _04 (GAP), _05 (промежуточный 403 ≠ блокер) переходят из Red в Green
 
-- [ ] Цикл мониторинга «не встаёт» (живость + интервальные снапшоты) — @feature4 — Status: TODO | Est: 45m
+- [x] Цикл мониторинга «не встаёт» (живость + интервальные снапшоты) — @feature4 — Status: DONE | Est: 45m
   _Requirements: [FR-4](FR.md#fr-4-цикл-мониторинга-не-встаёт-живость-процесса-интервальные-снапшоты)_
   **Done When:**
   - [ ] OUTSESS001_07 (долгий думающий ход → следующий ход + «думает») переходит из Red в Green
 
-- [ ] SKILL.md out-session-advisor (канон + зеркало) + доменные истины — @feature5 — Status: TODO | Est: 45m
+- [x] SKILL.md out-session-advisor (канон + зеркало) + доменные истины — @feature5 — Status: DONE | Est: 45m
   _Requirements: [FR-5](FR.md#fr-5-канонический-skillmd-зеркало-доменные-истины)_
   **Done When:**
   - [ ] `.claude/skills/out-session-advisor/SKILL.md` и `.agents/skills/out-session-advisor/SKILL.md` идентичны
   - [ ] OUTSESS001_08 (parity) переходит из Red в Green
 
-- [ ] lock.ts — атомарный лок `flag:'wx'` + владелец + stale-восстановление — @feature7 — Status: TODO | Est: 45m
+- [x] lock.ts — атомарный лок `flag:'wx'` + владелец + stale-восстановление — @feature7 — Status: DONE | Est: 45m
   _Requirements: [FR-7](FR.md#fr-7-атомарный-лок-сервис-с-владельцем-и-stale-восстановлением)_
   **Done When:**
   - [ ] `tools/out-session-advisor/lock.ts` существует (acquire/release/status/recover-stale)
   - [ ] сценарии OUTSESS001_11 (EEXIST не перезаписывает) и _12 (stale атомарно) переходят из Red в Green
 
-- [ ] git-guard.ts — `git add -A`/`.` гейт + чужие staged-пути — @feature6 — Status: TODO | Est: 60m
+- [x] git-guard.ts — `git add -A`/`.` гейт + чужие staged-пути — @feature6 — Status: DONE | Est: 60m
   _Requirements: [FR-6](FR.md#fr-6-git-гейт-против-add-a-и-чужих-staged-runtime-слой-no-git-add-all-shared-tree)_
   **Done When:**
   - [ ] `tools/out-session-advisor/git-guard.ts` существует, распознаёт `-A`/`.` и сверяет staged с транскриптами
   - [ ] сценарии OUTSESS001_09 (add -A warn/block) и _10 (чужой path conflict) переходят из Red в Green
 
-- [ ] inventory.ts — инвентаризация сессий/процессов по репо (standalone) — @feature8 — Status: TODO | Est: 60m
+- [x] inventory.ts — инвентаризация сессий/процессов по репо (standalone) — @feature8 — Status: DONE | Est: 60m
   _Requirements: [FR-8](FR.md#fr-8-инвентаризация-сессий-по-нескольким-репо)_
   **Done When:**
   - [ ] `tools/out-session-advisor/inventory.ts` существует CLI `--repos`
   - [ ] сценарий OUTSESS001_13 (инвентаризация standalone, repo/unknown) переходит из Red в Green
 
-- [ ] diag.ts — «кто писал <файл>» + сводка ok/dirty/conflict — @feature9 @feature10 — Status: TODO | Est: 60m
+- [x] diag.ts — «кто писал <файл>» + сводка ok/dirty/conflict — @feature9 @feature10 — Status: DONE | Est: 60m
   _Requirements: [FR-9](FR.md#fr-9-диагностика-кто-писал-файл-single-writer-для-адвизора), [FR-10](FR.md#fr-10-сводная-диагностика-параллельности-okdirtyconflict)_
   **Done When:**
   - [ ] `tools/out-session-advisor/diag.ts` существует (`--who-wrote <path>`, сводка)
@@ -137,9 +138,11 @@
   - [ ] все сценарии @feature1..@feature10 GREEN
   - [ ] jscpd ≤ baseline; нет дублирования helpers между step-defs
 
-- [ ] Final verification — Status: TODO | Est: 15m
+- [ ] Final verification — Status: BLOCKED | Est: 15m
   **Done When:**
-  - [ ] `validate-spec.ts -Path .specs/out-session-advisor` → 0 errors
-  - [ ] `spec-verdict.ts` → GREEN
-  - [ ] `audit-spec.ts` → 0 findings
-  - [ ] `check:skill-health` после создания SKILL
+  - [x] `validate-spec.ts -Path .specs/out-session-advisor` → 0 errors
+  - [x] `audit-spec.ts` → 0 findings (ERROR)
+  - [x] `check:skill-health` → 0 blocking
+  - [ ] `spec-verdict.ts` → GREEN (требует Docker BDD gate)
+  > BLOCKED: Docker BDD run — environmental_blocker (WSL/docker buildx hang на длинном сьюте;
+  > см. REVIEW_NOTES). Live-проверки FR-1..10 выполнены (RESEARCH).

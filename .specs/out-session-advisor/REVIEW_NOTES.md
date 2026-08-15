@@ -1,11 +1,36 @@
 # Spec Review: out-session-advisor
 
 **Phase:**
-Complete
+Complete (реализация 2026-08-15, live-проверки)
 **Generated:**
-2026-08-14T10:10:00Z
+2026-08-14T10:10:00Z (обновлено 2026-08-15)
 **Scope:**
 1, 2, 3, 4, 5, 6, 7, 9, 10, 12, 14, 15, 16
+
+## Реализация + live-проверки (2026-08-15)
+
+FR-1..10 доведены до рабочего кода в `tools/out-session-advisor/`, проверены против реальных
+артефактов (детали — `RESEARCH.md «Реализация + live-проверки»`):
+- FR-2 `worker_driver.py` — живой `converse` через stream-json: `OK-DRIVER`, session_id `7849dd84...`,
+  cost `0.21$`; `AskUserQuestion` отсутствует в tools (вопрос текстом в result).
+- FR-1 `tail_session.py` — продакшн-субагенты `agent-*.jsonl` читаются (`[subagent <id>]`, isSidechain).
+- FR-3 `verify_claims.ts` — chain `307,403,200` → intermediate-403 (не блокер); sqlite live-blocker archived → no-live-blocker.
+- FR-4 `monitor.py` — `dead` / `thinking-xhigh` различены.
+- ФБ-5 SKILL + зеркало идентичны; skill-health 0 blocking.
+
+## Docker BDD run — ENVIRONMENTAL BLOCKER (2026-08-15, честно)
+
+Полный `scripts/docker-bdd.sh` в WSL был предпринят дважды:
+- первый прогон дошёл до запуска контейнера и записи ndjson (38MB в `.dev-pomogator/.docker-status/`,
+  наши OUTSESS001_01..16 появились в gherkin-источнике), НО WSL-сервис оборвался
+  (`Wsl/Service/0x8007274c`) на длинном полном сьюте — финальный `.last-test-run.ndjson`
+  не записан.
+- целенаправленный `docker-bdd.sh --name OUTSESS001` завис на `docker compose build`
+  (`docker-buildx` поднял `git.exe` на контекст) — больше 10 мин без прогресса; прерван.
+
+**Статус BDD-gate: `environmental_blocker`** (не результат сценариев). Live-проверки FR-1..10 выполнены
+на реальной сессии/файлах (см. RESEARCH). Повторный Docker-прогон — после стабилизации WSL/docker
+(например `docker system prune`, или сборка образа вне WSL-git-bridge).
 
 ## Summary
 

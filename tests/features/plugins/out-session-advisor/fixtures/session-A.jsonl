@@ -1,0 +1,3 @@
+{"type": "assistant", "message": {"role": "assistant", "content": [{"type": "tool_use", "name": "Edit", "input": {"file_path": "src/foo.py", "newString": "x"}}]}, "timestamp": "2026-08-15T16:43:06.000Z"}
+{"type": "user", "message": {"role": "user", "content": [{"type": "tool_result", "content": "ok", "is_error": false}]}, "timestamp": "2026-08-15T16:43:06.000Z"}
+{"type": "assistant", "message": {"role": "assistant", "content": [{"type": "tool_use", "name": "Write", "input": {"file_path": "src/bar.py"}}]}, "timestamp": "2026-08-15T16:43:06.000Z"}

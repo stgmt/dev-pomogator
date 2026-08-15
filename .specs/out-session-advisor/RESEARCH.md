@@ -28,25 +28,66 @@ Advisor, но с упором на **внешнюю** проверку факт�
 | `Arylmera/Token-Dashboard`, `XJM-free/claude-agent-ledger`, `IvanBBaev/agenthropic` | 1-10 | Rust/… | MIT | Локальные дашборды: JSONL-транскрипты, per-subagent cost attribution, subagent DAG. | Отдельные потребители транскриптов; подтверждают формат, но не нужны нам напрямую. |
 | `WillInvest/ClaudeX`, `dahlialabs/second-opinion`, `smart-byte/codex-plan-reviewer` | ~ | TS/Py | MIT | Second-opinion reviewer через MCP/внешний LLM; Opus-review планов. | Родственно FR-3 «проверка на пиздёж» — но наша verify сильнее (цепочка 403, БД, live). |
 
-### Рекомендация (что реально брать)
+### Рекомендация (что реально брать) — РЕШЕНО 2026-08-15
 
-1. **FR-2 (ConPTY/управление)** — судить `claw-army/claude-node` как заменитель pty-демона:
-   протестировать его stream-json флаг против нашего ConPTY в live-прогоне воркера, выбрать
-   по надёжности доставки промпта и перехвата TUI. Если stream-json не отдаёт полный TUI —
-   остаёмся на ConPTY (уже работает, FR-2 в силе).
-2. **FR-1 (tail субагентов)** — либо взять `claude-code-data` (`readSubagentTurns`) как
-   **зависимость** в `verify_claims`, либо скопировать его рекурсивный scan (depth≤8,
-   `workflows/<runId>/` — точь-в-точь наша находка). Скопировать путь-логику дешевле, чем тянуть npm.
+1. **FR-2 (управление воркером)** — **БЕРЁМ `claw-army/claude-node` (stream-json) как
+   PRIMARY-драйвер**; наш ConPTY `pty_daemon.py` — fallback для handoff/живого TUI.
+   Решение подтверждено live-тестом (см. ниже): `--input-format stream-json
+   --output-format stream-json` отдаёт structured события, синхронизация по `type=result`,
+   `AskUserQuestion` не эмитится как пауза.
+2. **FR-1 (tail субагентов)** — **БЕРЁМ `Guiziweb/claude-code-data` как reference**:
+   его `readSubagentTurns` (рекурсивный scan, depth≤8, `workflows/<runId>/`) — дословно наш
+   корень; копируем его путь-логику в наш tail (или подключаем npm-зависимость в `verify_claims`).
 3. **FR-3 (verify/repair транскрипта)** — взять у `@recensa/claude-session`: его
    `verify`/`repair` + temp+rename — готовая реализация нашего claim-гейта и atomic-записи.
    `[VERIFIED: github.com/S40911120/claude-session README "verify/repair/fork/merge/redact"]`
 4. **Часть B (параллельность)** — у `csd`/`agentmux` взять **модель**: durable worker identity +
    JSONL event-stream + SQLite state; не копировать tmux (наш транспорт Windows-native).
-5. **Не писать с нуля**: hooks-driven events (csd) принципиально надёжнее нашего
-   tail-парсинга для наблюдения ДЕЙСТВИЙ воркера — рекомендую в Phase 1 спеки дорешать
-   «hooks-опционал» наравне с tail (FR-1): если воркер наш (ставим plugin), hooks;
-   если чужой (нет плагина) — tail-фоллбэк. Это закрывает и наш корень «не видит субагентов»:
-   `claude-code-data.readSubagentTurns` доказывает, что субагентные JSONL — стандарт CC ≥2.1.2.
+5. **csd (события)** — брать его **hooks-driven event model** для наших воркеров (плагин в
+   воркере), но **обязательно сохранить tail-фоллбэк** для чужой сессии без плагина.
+   Смотреть их `emit-event.ts`/`hooks/hooks.json` как образец.
+
+### Live-тест stream-json (2026-08-15) — решает выбор FR-2
+
+Прогон реального `claude --input-format stream-json --output-format stream-json --model
+gpt-5.6-luna` (project dev-pomogator) подтвердил [LIVE-TESTED]:
+
+- `system/init` содержит `session_id`, весь список tools. **`AskUserQuestion` ОТСУТСТВУЕТ**
+  в списке tools — интерактивный вопрос не эмитится как protocol-pause.
+- Запрос доступа к незаpre-granted MCP-тулу вернул `tool_result is_error:true` +
+  `permission_denials` в `result` — то есть разрешительные диалоги в stream-json не висят,
+  а материализуются как ошибка в результате (не блокируют цикл).
+- Модель на «задай вопрос с вариантами» ответила **обычным текстом в `result`**, без
+  AskUserQuestion (промпт пришёл в mojibake но запрос понятен) → вариант A подтверждён:
+  воркер пишет вопросы текстом, адвизор отвечает через `send`.
+- `result` несёт `num_turns`, `total_cost_usd`, `permission_denials`, `usage` — всё, что
+  нужно для verify/cost-атрибуции.
+- `--dangerously-skip-permissions` гасит остальные диалоги (FR-2).
+
+**Следствие:** ConPTY не нужен для основного цикла; остаётся fallback-путь при необходимости
+запустить воркер в настоящем TUI (handoff владельцу) или когда stream-json недоступен.
+
+### Реализация + live-проверки (2026-08-15) — все FR-1..10 доведены до рабочего кода
+
+Код в `tools/out-session-advisor/`, проверен против **реальной сессии/файлов**:
+
+| FR | Код | Live-проверка (2026-08-15) |
+|----|-----|---------------------------|
+| FR-1 | `tail_session.py` | Читает продакшн `6126f730.../6126f730....jsonl` + `subagents/agent-*.jsonl` (в т.ч. `isSidechain=true`, маркер `[subagent <id>]`); 497 строк субагента распарсены. |
+| FR-2 | `worker_driver.py` + `pty_daemon.py` + `strip_ansi.py` | `--converse "Reply exactly: OK-DRIVER"` вернул `result` с `session_id 7849dd84...`, cost `0.21$`, text `OK-DRIVER` [LIVE-TESTED]. |
+| FR-3 | `verify_claims.ts` | `--claim file` CONFIRMED/GAP; `--claim chain 307,403,200` → `intermediate-403` (не блокер); `--claim chain 307,403,500` → `live-blocker`; `--claim blocker --sqlite E:/repos/sales/.claude/harness-coordinator.sqlite3 --run-id topic-1ae0...` → `no-live-blocker` (archived не морозит). |
+| FR-4 | `monitor.py` | жив pytest-proc `alive=TRUE`, мёртвый pid `999999` → `dead`; alive+stale → `thinking-xhigh`. |
+| FR-5 | SKILL.md + зеркало | `.claude/` == `.agents/` (hash identical); `skill-health` 56 skills, 0 blocking. |
+| FR-7 | `lock.ts` | acquire ok; конкарентный acquire stale-reclaim; recover-stale с audit. |
+| FR-6 | `git-guard.ts` | `git add -A` → block; обычный commit → ok (fail-open). |
+| FR-8 | `inventory.ts` | по 2 репо → 5058 строк, классификация repo/unknown. |
+| FR-9/10 | `diag.ts` | `--who-wrote` и сводка ок (read-only). |
+
+**BDD (OUTSESS001_01..16)**: feature ~ `.specs/out-session-advisor/out-session-advisor.feature`,
+step-defs `tests/step_definitions/out-session-advisor.ts`, фикстуры — реальные срезы продакшн-транскриптов
+(`main-session.jsonl`, `subagents/agent-test.jsonl`, `session-A/B.jsonl`, git-fixture). Проверено:
+64 шага feature ↔ 64 шаблона, 0 дuble, все компилируются (CucumberExpression + RegExp). Прогон —
+через `scripts/docker-bdd.sh` (WSL/Docker, не host).
 
 ### Статус-маркеры prior art
 

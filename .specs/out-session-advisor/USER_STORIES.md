@@ -52,19 +52,23 @@ Then адвизор либо подтверждает 403 (финальный do
 
 ### User Story 3: Адвизор управляет воркером интерактивно без permission-диалогов @feature2 (Priority: P1)
 
-**Требование:** [FR-2](FR.md#fr-2-conpty-управление-воркером-через-ctlrsp)
+**Требование:** [FR-2](FR.md#fr-2-управление-воркером-stream-json-primary-conpty-fallback)
 
-As a владелец автономной воркер-сессии, I want адвизор запускал и продолжал воркер в ConPTY с `--dangerously-skip-permissions` и слал промпты через ctl/rsp-протокол, чтобы не приходилось вручную жать каждый permission-диалог и адвизор мог стопать/подсказывать без поломки кавычек.
+As a владелец автономной воркер-сессии, I want адвизор запускал и продолжал воркер через stream-json мост с `--dangerously-skip-permissions` и слал промпты через `send`/`send_nowait`, чтобы не приходилось вручную жать каждый permission-диалог и адвизор мог стопать/подсказывать без поломки кавычек.
 
-**Why:** В эксперименте permission-диалоги жались вручную до перезапуска с флагом; shell-квотинг ломал многострочные промпты — фикс «промпт в файл → send» снял проблему, а `--dangerously-skip-permissions` убрал диалоги.
+**Why:** В эксперименте permission-диалоги жались вручную до перезапуска с флагом; shell-квотинг ломал многострочные промпты — фикс «промпт → `send`» снял проблему, а `--dangerously-skip-permissions` убрал диалоги. Live-тест stream-json (2026-08-15) подтвердил: вопросы приходят текстом в `result`, permission-отказы — как `tool_result is_error`.
 
-**Independent Test:** Смоук: поднять тестовый PTY-демон с одной командой (`echo hi`), послать `send`, прочитать `rsp.out` — до `FileNotFoundError` и обратно.
+**Independent Test:** Смоук: stream-json-запуск воркера с одной командой, `send` промпта, дождаться `result` (type=result) — ответ пришёл без `FileNotFoundError` и с session_id.
 
 **Acceptance Scenarios:**
 
-Given ConPTY-демон запущен с `claude --resume <id> --dangerously-skip-permissions`
-When адвизор пишет промпт в `claude-ctl.json` (`action: send`)
-Then `claude-rsp.json` содержит snapshot вывода воркера и `send` подтверждён
+Given воркер запущен через stream-json с `claude --resume <id> --dangerously-skip-permissions`
+When адвизор шлёт промпт (`send`)
+Then в `result` получен ответ воркера, `session_id` присутствует
+
+Given воркер задаёт вопрос владельцу текстом в `result`
+When адвизор читает `result` и отвечает через `send`
+Then вопрос-ответ продолжается без перехвата диалогов (вариант A)
 
 Given многострочный промпт с кавычками/спецсимволами
 When адвизор пишет его в файл и шлёт через ctl

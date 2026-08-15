@@ -5,7 +5,7 @@
 | ID | Name | Linked AC | @featureN | Status |
 |----|------|-----------|-----------|--------|
 | [FR-1](FR.md#fr-1-tail-главного-транскрипта-живых-subagents-снятие-слепоты) | Tail транскрипта + живые subagents | [AC-1](ACCEPTANCE_CRITERIA.md#ac-1-fr-1) | @feature1 | Draft |
-| [FR-2](FR.md#fr-2-conpty-управление-воркером-через-ctlrsp) | ConPTY ctl/rsp + skip-permissions | [AC-2](ACCEPTANCE_CRITERIA.md#ac-2-fr-2) | @feature2 | Draft |
+| [FR-2](FR.md#fr-2-управление-воркером-stream-json-primary-conpty-fallback) | stream-json + skip-permissions + ConPTY fallback | [AC-2](ACCEPTANCE_CRITERIA.md#ac-2-fr-2) | @feature2 | Draft |
 | [FR-3](FR.md#fr-3-факт-проверка-отчётов-воркера-verifyclaims) | verify_claims (CONFIRMED/GAP + 403-цепочка) | [AC-3](ACCEPTANCE_CRITERIA.md#ac-3-fr-3) | @feature3 | Draft |
 | [FR-4](FR.md#fr-4-цикл-мониторинга-не-встаёт-живость-процесса-интервальные-снапшоты) | Не «встаёт» + живость | [AC-4](ACCEPTANCE_CRITERIA.md#ac-4-fr-4) | @feature4 | Draft |
 | [FR-5](FR.md#fr-5-канонический-skillmd-зеркало-доменные-истины) | SKILL.md + зеркало + домены | [AC-5](ACCEPTANCE_CRITERIA.md#ac-5-fr-5) | @feature5 | Draft |
@@ -20,7 +20,7 @@
 ### Часть A — Адвизор
 
 - [FR-1: Tail главного транскрипта + живых subagents](FR.md#fr-1-tail-главного-транскрипта-живых-subagents-снятие-слепоты)
-- [FR-2: ConPTY-управление воркером через ctl/rsp](FR.md#fr-2-conpty-управление-воркером-через-ctlrsp)
+- [FR-2: Управление воркером — stream-json (primary) + ConPTY fallback](FR.md#fr-2-управление-воркером-stream-json-primary-conpty-fallback)
 - [FR-3: Факт-проверка отчётов воркера на «пиздёж» (verify_claims)](FR.md#fr-3-факт-проверка-отчётов-воркера-verifyclaims)
 - [FR-4: Цикл мониторинга не «встаёт»](FR.md#fr-4-цикл-мониторинга-не-встаёт-живость-процесса-интервальные-снапшоты)
 - [FR-5: Канонический SKILL.md + зеркало + доменные истины](FR.md#fr-5-канонический-skillmd-зеркало-доменные-истины)
@@ -48,7 +48,7 @@
 ## Acceptance Criteria
 
 - [AC-1 (FR-1): Tail + живые subagents](ACCEPTANCE_CRITERIA.md#ac-1-fr-1)
-- [AC-2 (FR-2): ConPTY ctl/rsp](ACCEPTANCE_CRITERIA.md#ac-2-fr-2)
+- [AC-2 (FR-2): stream-json + вопросы текстом](ACCEPTANCE_CRITERIA.md#ac-2-fr-2)
 - [AC-3 (FR-3): verify_claims](ACCEPTANCE_CRITERIA.md#ac-3-fr-3)
 - [AC-4 (FR-4): Не «встаёт»](ACCEPTANCE_CRITERIA.md#ac-4-fr-4)
 - [AC-5 (FR-5): SKILL + зеркало](ACCEPTANCE_CRITERIA.md#ac-5-fr-5)
@@ -68,7 +68,7 @@
 | CHK-ID | Requirement | Traces To (FR+SC) | Verification Method | Status | Notes |
 |--------|-------------|-------------------|---------------------|--------|-------|
 | CHK-FR1-01 | Tail видит живые subagents | FR-1, AC-1, @feature1 | BDD scenario | Draft | — |
-| CHK-FR2-01 | ctl/rsp доставка без искажений | FR-2, AC-2, @feature2 | BDD scenario | Draft | — |
+| CHK-FR2-01 | stream-json доставка без искажений; вопросы текстом | FR-2, AC-2, @feature2 | BDD scenario | Draft | — |
 | CHK-FR3-01 | verify_claims CONFIRMED/GAP | FR-3, AC-3, @feature3 | BDD scenario | Draft | — |
 | CHK-FR4-01 | цикл продолжается; живость | FR-4, AC-4, @feature4 | BDD scenario | Draft | — |
 | CHK-FR5-01 | SKILL зеркало + parity | FR-5, AC-5, @feature5 | BDD scenario | Draft | — |

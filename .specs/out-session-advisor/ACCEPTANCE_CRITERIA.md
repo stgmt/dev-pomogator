@@ -6,17 +6,21 @@
 
 **Требование:** [FR-1](FR.md#fr-1-tail-главного-транскрипта-живых-subagents-снятие-слепоты)
 
-WHEN адвизор снимает хвост транскрипта воркера AND в каталоге сессии открыты `subagents/agent-*.jsonl` THEN система SHALL включить в вывод текстовые и tool-события каждого живого субагентного файла с временным штампом.
+WHEN адвизор снимает хвост транскрипта воркера AND в каталоге сессии открыты `subagents/agent-*.jsonl` (в т.ч. вложенные `subagents/workflows/<runId>/`) THEN система SHALL включить в вывод текстовые и tool-события каждого живого субагентного файла с временным штампом.
 
 WHEN субагентный файл больше не растёт (субагент завершён) THEN система SHALL пометить его блок закрытым AND SHALL NOT повторять уже показанные строки при следующем хвосте.
 
 ## AC-2 (FR-2)
 
-**Требование:** [FR-2](FR.md#fr-2-conpty-управление-воркером-через-ctlrsp)
+**Требование:** [FR-2](FR.md#fr-2-управление-воркером-stream-json-primary-conpty-fallback)
 
-WHEN адвизор отправляет `send` с промптом через `claude-ctl.json` THEN система SHALL доставить промпт в поле ввода воркера без искажения (UTF-8) AND записать `claude-rsp.json` со snapshot вывода И `pid` воркера.
+WHEN адвизор запускает воркера через stream-json мост THEN система SHALL получить `system/init` с session_id, слать промпты через `send` и синхронизироваться по `type=result` (send_nowait + wait_for_result) без искажения UTF-8.
 
-WHEN воркер запущен из ConPTY-демона с `--dangerously-skip-permissions` THEN система SHALL NOT порождать permission-диалогов, требующих ручного ответа.
+WHEN воркер запущен с `--dangerously-skip-permissions` THEN система SHALL NOT порождать permission-диалогов, требующих ручного ответа (единичные `tool_result is_error` + `permission_denials` НЕ блокируют цикл).
+
+WHEN воркеру нужен ответ владельца THEN адвизор SHALL обработать текстовый вопрос из `result` (вариант A: вопросы воркера — обычным текстом, не `AskUserQuestion`) и ответить через `send`.
+
+WHEN stream-json недоступен или нужен живой TUI-перехват THEN ConPTY fallback (`claude-ctl.json` → `claude-rsp.json`, send/snapshot/pid) SHALL выполнять доставку промпта.
 
 ## AC-3 (FR-3)
 
