@@ -76,3 +76,37 @@ Feature: SPECDASH001_Read-only specification evidence workspace
     Then the adapter rejects unsafe requests before MCP dispatch with safe typed diagnostics
     And browser, adapter, and MCP child handles are closed by a guaranteed After hook
     And DTOs, URLs, browser text, errors, and logs contain no secret or absolute storage path
+
+  @feature5 @FR-5 @AC-5
+  Scenario: SPECDASH001_10 clean fork provenance and runtime boundary are verified
+    Given the vendored Plane tree is present with vendor/plane/PROVENANCE.json
+    When the clean-fork integration check inspects the retained shell, bypassed services, manifests, and runtime imports
+    Then the upstream is makeplane/plane at v1.4.1 commit 5662b761062b0b2f9d42a6578b55481b5b069792
+    And board, UI, design-system, and runtime portions are retained while backend, domain, auth, workspace, and project data paths are bypassed
+    And the loopback spec-generator-v4 MCP adapter is the only dashboard data provider and no Plane service is contacted
+    And the provenance file records the plane-upstream remote, exact commit, retained and bypassed areas, local patches, and manual sync policy
+
+  @feature5 @FR-5 @AC-5
+  Scenario: SPECDASH001_11 AGPL notices and corresponding source are distributable
+    Given the pinned vendored Plane fork is packaged for distribution
+    When the browser requests "/licenses/plane" and "/source/plane" without browser-held credentials
+    Then the license response identifies AGPL-3.0-only, v1.4.1, commit 5662b761062b0b2f9d42a6578b55481b5b069792, and COPYRIGHT.txt
+    And the source response provides corresponding source for the exact fork plus declared local patches
+    And the package and generated asset manifest contain no proprietary component, closed-source bundle, credentialed service, or unreviewed binary
+
+  @feature5 @FR-5 @AC-5
+  Scenario: SPECDASH001_12 upstream synchronization is pinned and reviewable
+    Given the vendored fork has an upstream remote and local patch manifest
+    When the upstream-sync integration check compares the tree, lockfile, provenance, and declared boundary
+    Then the remote is named plane-upstream and points to https://github.com/makeplane/plane.git
+    And the pinned commit, frozen lockfile, notices, retained or bypassed areas, and local patches agree with provenance
+    And undeclared drift, an unreviewed commit change, or missing provenance update fails the check
+    And synchronization remains a manual fetch, review, update, rebuild, and BDD verification action with no runtime auto-sync
+
+  @feature5 @FR-5 @AC-5
+  Scenario: SPECDASH001_13 Node 22 fork build and dependency-absent distribution are real
+    Given Node >=22.18, pnpm 11.3.0, and the vendored frozen lockfile are available
+    When the fork build creates the server and browser bundles and project node_modules is hidden
+    Then the canonical launcher starts the bundled dashboard with the loopback adapter and static retained shell assets
+    And the browser can load a real provider result or a safe typed provider error without a silent skip or Plane-service fallback
+    And provenance, AGPL notices, corresponding-source metadata, and source digests identify the same pinned fork and local patches

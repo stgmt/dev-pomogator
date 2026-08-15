@@ -5,20 +5,13 @@ All notable changes to this feature will be documented in this file.
 ## [Unreleased]
 
 ### Added
-- Defined a kanban-first, read-only dashboard over the canonical spec-generator-v4 MCP graph.
-- Added a Phase 3 task board covering Docker BDD foundation, producer-shaped fixtures, typed DTOs, allowlisted stdio adapter, same-origin routes, browser views, runtime evidence, accessibility, security, performance, and final verification.
-- Recorded implementation targets under `tools/spec-dashboard/` and BDD integration targets under `tests/features/spec-dashboard/` and `tests/step_definitions/`.
+- Defined the browser shell as a forked, vendored, and adapted `makeplane/plane` `v1.4.1` tree at commit `5662b761062b0b2f9d42a6578b55481b5b069792`, retaining the board, UI, design-system, and runtime boundary rather than merely referencing Plane.
+- Replaced or bypassed Plane backend, domain, authentication, workspace, and project data with the read-only spec-generator-v4 SpecGraph MCP provider and documented the runtime no-Plane-service boundary.
+- Added finalization tasks for vendor import and provenance, retained-shell/adaptation boundaries, manual upstream synchronization and conflict review, AGPL notices, unauthenticated corresponding-source links, proprietary-component exclusion, Node `>=22.18`/pnpm `11.3.0` fork builds, packaged runtime and dependency-absent proof, and executable SPECDASH001_10 through SPECDASH001_13 checks.
 
 ### Changed
-- Defined the kanban cards as canonical Task nodes from bounded `list_tasks`, with authored status separate from evidence-derived verification/readiness.
-- Added bounded `find_refs` for complete incoming/outgoing relationships; history is explicitly unavailable until the provider exposes it.
-- Specified Node 20 `server.bundle.mjs`, browser `app.bundle.js`, loopback launcher, package-lock and Docker Playwright/Chromium wiring, and deps-absent distribution proof.
-- Expanded BDD from six API-oriented scenarios to nine API/browser scenarios with dedicated performance, deps-absent startup, and browser security/cleanup proof.
-- Assigned guaranteed browser/adapter/MCP cleanup to the existing `tests/hooks/before-after.ts` `After` hook and preserved the clean-room Plane policy.
-
-### Fixed
-- Removed placeholder task, README, and changelog content from the Phase 3 finalization artifacts.
-- Made lifecycle, scenario-result, freshness, availability, redaction, allowlist, path, and provider-error semantics explicit in the implementation checklist.
+- Preserved the prior full UX scope: kanban-first status review, typed trace, coverage gaps, directed impact, evidence and freshness, keyboard/focus, reduced motion, lazy loading, bounded 1,000-task performance, read-only security, typed failures, cleanup, and Docker BDD evidence.
+- Updated README and final verification planning to require real fork, source, license, upstream-sync, build, runtime, and deps-absent artifacts; synthetic assertions and silent skips do not satisfy these checks.
 
 ## [0.1.0] - TBD
 

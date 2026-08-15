@@ -26,3 +26,24 @@
 | DO NOT MODIFY | `tools/specs-generator/**` | No second parser/status engine | FR-4 |
 
 All new behavior is BDD-first and exercised only through the centralized Docker runner. No new non-BDD test file is planned.
+
+
+## Vendored Plane fork and corresponding-source changes
+
+| Change | Path | Contract |
+|---|---|---|
+| CREATE | `vendor/plane/PROVENANCE.json` | Upstream, version, exact commit, `plane-upstream`, AGPL notice, retained/bypassed areas, local patches, manual sync policy |
+| CREATE/RETAIN | `vendor/plane/COPYRIGHT.txt` | Exact upstream `AGPL-3.0-only` notice |
+| CREATE | `vendor/plane/source/` or equivalent source archive metadata | Network-accessible corresponding source for the exact pinned fork plus local patches |
+| RETAIN | `vendor/plane/board/**`, `vendor/plane/ui/**`, `vendor/plane/design-system/**`, `vendor/plane/runtime/**` | Plane board/UI/design-system/runtime shell portions |
+| BYPASS | Plane backend, domain, auth, workspace, project, database, external-service paths | No Plane domain data or Plane service dependency at runtime |
+| EDIT | `tools/spec-dashboard/server.ts`, `tools/spec-dashboard/mcp-adapter.ts`, `tools/spec-dashboard/dto.ts` | Loopback same-origin adapter, seven-tool read allowlist, typed errors, redaction, bounded stdio lifecycle |
+| EDIT/CREATE | `tools/spec-dashboard/server.bundle.mjs`, `tools/spec-dashboard/ui/app.bundle.js`, static UI assets | Node >=22.18 distributable, retained shell, provider-error and license/source routes |
+| EDIT | `tools/spec-dashboard/README.md`, `tools/spec-dashboard/spec-dashboard_SCHEMA.md` | Fork provenance, launcher, distribution, DTO, license, corresponding-source contracts |
+| EDIT | `package.json`, `package-lock.json`, vendored lockfile, build metadata | Node 22 and pnpm 11.3.0 frozen inputs; declared browser-test dependencies |
+| EDIT | `Dockerfile.test.base`, `cucumber.json`, `tests/hooks/before-after.ts` | Docker-only BDD, real-artifact checks, non-root runtime, guaranteed cleanup |
+| EDIT/CREATE | `tests/features/spec-dashboard/SPECDASH001_spec_dashboard.feature`, `tests/step_definitions/spec-dashboard.steps.ts`, fork/license fixtures | Clean-fork, license, upstream-sync, Node 22 build, deps-absent, browser, performance, accessibility, security, provider-boundary scenarios |
+| DO NOT MODIFY | `tools/spec-graph/**`, `tools/spec-mcp-server/**`, `tools/specs-generator/**` | spec-generator-v4 graph, MCP provider, parser, lifecycle, status remain authoritative |
+
+All provenance, notices, source metadata, and build changes SHALL be committed atomically. Runtime upstream fetching, Plane service calls, proprietary components, and unreviewed binaries are forbidden.
+

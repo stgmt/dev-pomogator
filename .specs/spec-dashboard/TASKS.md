@@ -31,64 +31,74 @@
 | T22 | Verify security and Plane clean-room legal gate | TODO | T10,T15,T17 | Phase 3 | 60m |
 | T23 | Refactor after Green without changing provider semantics | TODO | T18,T19,T20,T21,T22 | Phase 4 | 45m |
 | T24 | Final Docker verification and MCP self-check | TODO | T23 | Phase 4 | 45m |
+| T27 | Import and adapt the pinned Plane fork with provenance | TODO | T15,T16 | Phase 3 | 90m |
+| T28 | Enforce the retained shell and SpecGraph MCP data boundary | TODO | T27,T08,T09,T10 | Phase 3 | 90m |
+| T29 | Add AGPL notices and corresponding-source delivery | TODO | T27 | Phase 3 | 60m |
+| T30 | Build and package the Node 22 fork with deps-absent proof | TODO | T27,T29,T16,T19 | Phase 3 | 90m |
+| T31 | Implement manual upstream sync and conflict review | TODO | T27,T28,T29 | Phase 3 | 75m |
+| T32 | Exclude proprietary components and unreviewed runtime assets | TODO | T27,T28,T29 | Phase 3 | 45m |
+| T33 | Execute fork provenance, legal, sync, and distribution scenarios | TODO | T27,T28,T29,T30,T31,T32 | Phase 4 | 90m |
+
 <!-- end auto-generated -->
 
 ## TDD Workflow
 
-> Tasks are ordered Red → Green → Refactor. Phase 0 establishes executable BDD, step definitions, reusable hooks, and producer-shaped fixtures before implementation. Phase 1 implements the provider boundary, Phase 2 implements the browser surface, Phase 3 supplies regression and runtime evidence, and Phase 4 performs final refactor and verification.
->
-> Every BDD run is Docker-only through the centralized runner. No host Cucumber command is permitted. The spec-generator-v4 MCP remains the sole source of graph, lifecycle, result, freshness, and evidence semantics.
+- Phase 0 BDD (Red): author and mirror the executable SPECDASH001_01 through SPECDASH001_13 contract, create real API/browser bindings, capture producer-shaped fixtures, and run the Docker-only Red baseline before implementation.
+- Phase 1 Provider Boundary (Green): implement typed DTOs, the seven-tool read allowlist, bounded stdio lifecycle, route composition, directed impact, evidence semantics, redaction, and typed errors.
+- Phase 2 Browser Surface (Green): implement the accessible kanban-first UI, card trace navigation, readiness/coverage/impact/evidence views, canonical lifecycle/result rendering, and startup/privacy documentation while retaining the full prior UX scope.
+- Phase 3 Integration and Fork Runtime (Green): build the loopback server and browser bundle, import and adapt the pinned `makeplane/plane` `v1.4.1` commit `5662b761062b0b2f9d42a6578b55481b5b069792`, preserve board/UI/design-system/runtime shell portions, replace or bypass Plane backend/domain/auth/workspace/project data with SpecGraph MCP, add provenance/legal/source controls, prove Node/pnpm packaged runtime with dependencies absent, and verify routes, live MCP semantics, performance, accessibility, security, cleanup, and exclusion controls.
+- Phase 4 Refactor and Final Verification: refactor without changing provider semantics, then execute all thirteen scenarios, including SPECDASH001_10 through SPECDASH001_13, and run the MCP-backed status/conformance self-check.
 
 ## Phase 0: BDD Foundation (Red)
 
-- [ ] T01: Mirror the nine current scenarios into `tests/features/spec-dashboard/SPECDASH001_spec_dashboard.feature` without changing their tags, IDs, routes, browser assertions, or task-specific proof -- @feature1 @feature2 @feature3 @feature4 @feature5 — id: T01 — Status: TODO | Est: 30m
+- [ ] T01: Mirror the thirteen current scenarios into `tests/features/spec-dashboard/SPECDASH001_spec_dashboard.feature` without changing their tags, IDs, routes, browser assertions, or task-specific proof -- @feature1 @feature2 @feature3 @feature4 @feature5 — id: T01 — Status: TODO | Est: 30m
   _Requirements: [FR-1](FR.md#fr-1-название), [FR-2](FR.md#fr-2-название), [FR-3](FR.md#fr-3-название), [FR-4](FR.md#fr-4-название), [FR-5](FR.md#fr-5-название)_
   _Acceptance: AC-1, AC-2, AC-3, AC-4, AC-5_
-  _Scenarios: SPECDASH001_01 through SPECDASH001_09_
+  _Scenarios: SPECDASH001_01 through SPECDASH001_13_
   **Done When:**
-  - [ ] `tests/features/spec-dashboard/SPECDASH001_spec_dashboard.feature` contains exactly SPECDASH001_01 through SPECDASH001_09 and their current `@feature1` through `@feature5` tags
-  - [ ] The mirror preserves SPECDASH001_07 performance, SPECDASH001_08 deps-absent startup, and SPECDASH001_09 browser-security/cleanup as separate proof instead of folding them into broad scenarios
+  - [ ] `tests/features/spec-dashboard/SPECDASH001_spec_dashboard.feature` contains exactly SPECDASH001_01 through SPECDASH001_13 and their current `@feature1` through `@feature5` tags
+  - [ ] The mirror preserves SPECDASH001_07 performance, SPECDASH001_08 deps-absent startup, SPECDASH001_09 browser-security/cleanup, and SPECDASH001_10 through SPECDASH001_13 fork/legal/sync/distribution proof as separate executable scenarios instead of folding them into broad scenarios
 
 - [ ] T02: Create pending API and headless-Chromium step definitions for the real loopback HTTP adapter and stdio MCP boundary at `tests/step_definitions/spec-dashboard.steps.ts` -- @feature1 @feature2 @feature3 @feature4 @feature5 — id: T02 — Status: TODO | Est: 90m
   _Requirements: [FR-1](FR.md#fr-1-название), [FR-2](FR.md#fr-2-название), [FR-3](FR.md#fr-3-название), [FR-4](FR.md#fr-4-название), [FR-5](FR.md#fr-5-название)_
   _Acceptance: AC-1, AC-2, AC-3, AC-4, AC-5_
-  _Scenarios: SPECDASH001_01 through SPECDASH001_09_
+  _Scenarios: SPECDASH001_01 through SPECDASH001_13_
   _Depends: T01_
   **Done When:**
-  - [ ] `tests/step_definitions/spec-dashboard.steps.ts` binds every Given/When/Then sentence in all nine scenarios and starts with explicit pending/red assertions
-  - [ ] Browser steps navigate the real loopback UI with headless Chromium and prove DOM, keyboard/focus, lazy loading, degraded states, performance, deps-absent startup, security, and cleanup rather than mapper mocks
-  - [ ] API steps still cross the real HTTP adapter and stdio MCP boundary, and broad tags do not replace SPECDASH001_07, SPECDASH001_08, or SPECDASH001_09 proof
+  - [ ] `tests/step_definitions/spec-dashboard.steps.ts` binds every Given/When/Then sentence in all thirteen scenarios and starts with explicit pending/red assertions
+  - [ ] Browser steps navigate the real loopback UI with headless Chromium and prove DOM, keyboard/focus, lazy loading, degraded states, performance, deps-absent startup, fork provenance, license/source delivery, upstream sync, proprietary exclusion, and cleanup rather than mapper mocks
+  - [ ] API steps still cross the real HTTP adapter and stdio MCP boundary, and broad tags do not replace the task-specific proof in SPECDASH001_07 through SPECDASH001_13
 
 - [ ] T03: Extend `tests/hooks/before-after.ts` for guaranteed browser, adapter, and MCP-child cleanup without creating a duplicate hook file -- @feature1 @feature2 @feature3 @feature4 @feature5 — id: T03 — Status: TODO | Est: 45m
   _Requirements: [FR-5](FR.md#fr-5-название), [NFR-Rel-2](NFR.md#nfr-rel-2-process-and-resource-isolation)_
   _Acceptance: AC-5_
-  _Scenarios: SPECDASH001_01, SPECDASH001_02, SPECDASH001_05, SPECDASH001_08, SPECDASH001_09_
+  _Scenarios: SPECDASH001_01, SPECDASH001_02, SPECDASH001_05, SPECDASH001_08, SPECDASH001_09, SPECDASH001_13_
   _Depends: T02_
   _Reuse: edit the existing `tests/hooks/before-after.ts`; no duplicate hook path._
   **Done When:**
   - [ ] `V4World` stores page/browser, adapter, and stdio MCP child handles registered by dashboard steps
   - [ ] The guaranteed `After` closes page/browser first and then bounded graceful-to-force adapter/MCP processes before removing the temp workspace, including when a step throws
-  - [ ] SPECDASH001_09 observes no surviving browser, adapter, MCP child, port, or temporary fixture after the forced failure path
+  - [ ] SPECDASH001_09 and SPECDASH001_13 observe no surviving browser, adapter, MCP child, port, or temporary fixture after the forced failure and dependency-absent paths
 
-- [ ] T04: Create `tests/features/spec-dashboard/fixtures/status-and-trace.json` from producer-shaped captures covering `list_tasks`, coverage, trace, `find_refs`, scenario trace, evidence, typed errors, redaction, fixed 1,000-task corpus, and deps-absent package cases -- @feature1 @feature2 @feature3 @feature4 @feature5 — id: T04 — Status: TODO | Est: 60m
+- [ ] T04: Create `tests/features/spec-dashboard/fixtures/status-and-trace.json` from producer-shaped captures covering `list_tasks`, coverage, trace, `find_refs`, scenario trace, evidence, typed errors, redaction, fixed 1,000-task corpus, pinned fork metadata, AGPL/source metadata, and deps-absent package cases -- @feature1 @feature2 @feature3 @feature4 @feature5 — id: T04 — Status: TODO | Est: 60m
   _Requirements: [FR-1](FR.md#fr-1-название), [FR-2](FR.md#fr-2-название), [FR-3](FR.md#fr-3-название), [FR-4](FR.md#fr-4-название), [FR-5](FR.md#fr-5-название)_
   _Acceptance: AC-1, AC-2, AC-3, AC-4, AC-5_
-  _Scenarios: SPECDASH001_01 through SPECDASH001_09_
+  _Scenarios: SPECDASH001_01 through SPECDASH001_13_
   _Depends: T02_
   _Source: FIXTURES.md inventory; real producer capture and independent ground-truth are required._
   **Done When:**
   - [ ] The fixture records `producer`, `capturedAt`, `sourceRef`, and `groundTruth` for each captured envelope, including all five authored task statuses and coverage-derived verification joined by canonical task ID
   - [ ] `find_refs` captures preserve incoming/outgoing direction; history is marked unavailable; fixture payloads contain canonical provider fields and no invented browser-only fields or secrets
-  - [ ] The fixture includes empty and unavailable collections, stale evidence, retryable transport error, redaction corpus, fixed 1,000-task digest, and deps-absent package ground truth
+  - [ ] The fixture includes empty and unavailable collections, stale evidence, retryable transport error, redaction corpus, fixed 1,000-task digest, exact Plane commit/provenance, AGPL/source metadata, local-patch manifest, and deps-absent package ground truth
 
-- [ ] T05: Run all nine scenarios through the centralized Docker BDD runner and record the complete Red baseline before production implementation -- @feature1 @feature2 @feature3 @feature4 @feature5 — id: T05 — Status: TODO | Est: 30m
+- [ ] T05: Run all thirteen scenarios through the centralized Docker BDD runner and record the complete Red baseline before production implementation -- @feature1 @feature2 @feature3 @feature4 @feature5 — id: T05 — Status: TODO | Est: 30m
   _Requirements: [FR-1](FR.md#fr-1-название), [FR-2](FR.md#fr-2-название), [FR-3](FR.md#fr-3-название), [FR-4](FR.md#fr-4-название), [FR-5](FR.md#fr-5-название)_
   _Acceptance: AC-1, AC-2, AC-3, AC-4, AC-5_
-  _Scenarios: SPECDASH001_01 through SPECDASH001_09_
+  _Scenarios: SPECDASH001_01 through SPECDASH001_13_
   _Depends: T01, T02, T03, T04_
   **Done When:**
-  - [ ] The Docker-only run discovers exactly SPECDASH001_01 through SPECDASH001_09 under their current feature tags
-  - [ ] API, browser, performance, deps-absent, and security/cleanup scenarios are Red or pending at their unimplemented boundary with no false pass
+  - [ ] The Docker-only run discovers exactly SPECDASH001_01 through SPECDASH001_13 under their current feature tags
+  - [ ] API, browser, performance, deps-absent, fork, legal/source, upstream-sync, exclusion, and security/cleanup scenarios are Red or pending at their unimplemented boundary with no false pass
   - [ ] No host BDD command is used and the result source is retained for the later evidence gate
 
 ## Phase 1: Provider Boundary and DTOs (Green)
@@ -119,7 +129,7 @@
   _Scenarios: SPECDASH001_01, SPECDASH001_02, SPECDASH001_03, SPECDASH001_05, SPECDASH001_06_
   _Depends: T06, T07_
   **Done When:**
-  - [ ] The eight documented read routes, including bounded `GET /api/specs/:spec/tasks`, return mutually exclusive `{schemaVersion, requestId, data}` or `{schemaVersion, requestId, error}` envelopes
+  - [ ] The documented read routes, including bounded `GET /api/specs/:spec/tasks`, return mutually exclusive `{schemaVersion, requestId, data}` or `{schemaVersion, requestId, error}` envelopes
   - [ ] The server binds `127.0.0.1` by default, accepts port `0`, validates same-origin requests, and rejects mutation/unknown operations before MCP dispatch
   - [ ] Task detail composes `get_node`, requirement `get_trace`, bounded `find_refs`, and scenario trace; provider process/session state remains server-side with no direct browser-to-stdio transport
 
@@ -149,7 +159,7 @@
   _Scenarios: SPECDASH001_02, SPECDASH001_03, SPECDASH001_04, SPECDASH001_05, SPECDASH001_06_
   _Depends: T05, T06, T07, T08, T09, T10_
   **Done When:**
-  - [ ] The DTO, seven-tool allowlist, bounded task/reference queries, timeout/retry, redaction, path, and typed provider-error contracts are verified against SPECDASH001_01 through SPECDASH001_09.
+  - [ ] The DTO, seven-tool allowlist, bounded task/reference queries, timeout/retry, redaction, path, and typed provider-error contracts are verified against SPECDASH001_01 through SPECDASH001_13.
   - [ ] Provider failures remain distinct from empty collections and no mutation or unknown tool reaches MCP dispatch.
   - [ ] The phase verification result records the Docker BDD source/run metadata; no implementation completion is claimed by this task alone.
 
@@ -195,15 +205,15 @@
   - [ ] `PASSED`, `FAILED`, `SKIPPED`, `PENDING`, `UNDEFINED`, `AMBIGUOUS`, and `UNKNOWN` render unchanged, while `executed` or availability represents not-run outside the result enum
   - [ ] No empty, stale, partial, unavailable, provider-error, pending, undefined, ambiguous, unknown, or not-run state renders as `GREEN` or `PASSED`
 
-- [ ] T15: Document local startup, privacy, read-only operation, runtime expectations, and Plane clean-room scope in `tools/spec-dashboard/README.md` -- @feature5 @feature1 — id: T15 — Status: TODO | Est: 30m
+- [ ] T15: Document local startup, privacy, read-only operation, runtime expectations, and Plane fork boundary in `tools/spec-dashboard/README.md` -- @feature5 @feature1 — id: T15 — Status: TODO | Est: 30m
   _Requirements: [FR-1](FR.md#fr-1-название), [FR-5](FR.md#fr-5-название), [NFR-Compat-1](NFR.md#nfr-compat-1-runtime-support), [NFR-Legal-1](NFR.md#nfr-legal-1-plane-inspired-clean-room-strategy)_
   _Acceptance: AC-1, AC-5_
-  _Scenarios: SPECDASH001_01, SPECDASH001_05, SPECDASH001_06_
+  _Scenarios: SPECDASH001_01, SPECDASH001_05, SPECDASH001_06, SPECDASH001_10, SPECDASH001_11, SPECDASH001_12, SPECDASH001_13_
   _Depends: T08, T10, T11_
   **Done When:**
   - [ ] `tools/spec-dashboard/README.md` documents the package build/start entrypoint, same-origin route boundary, read-only MCP allowlist, and server-side credential rule
-  - [ ] The document explains Docker-only BDD verification, safe degraded states, redaction expectations, and repository-relative path policy
-  - [ ] The document states that Plane is interaction research only, no Plane source is copied, and any future reuse requires legal approval
+  - [ ] The document explains Docker-only BDD verification, safe degraded states, redaction expectations, repository-relative path policy, and Node `>=22.18`/pnpm `11.3.0` fork-build expectations
+  - [ ] The document explicitly says the shell is forked/vendored/adapted from `makeplane/plane` `v1.4.1` commit `5662b761062b0b2f9d42a6578b55481b5b069792`, retains board/UI/design-system/runtime portions, replaces or bypasses Plane backend/domain/auth/workspace/project data with SpecGraph MCP, and requires legal/source/provenance controls
 
 - [ ] T26: Verify the Phase 2 browser surface and honest-state contract -- @feature1 @feature2 @feature3 @feature4 @feature5 — id: T26 — Status: TODO | Est: 30m
   _Requirements: [FR-1](FR.md#fr-1-название), [FR-2](FR.md#fr-2-название), [FR-3](FR.md#fr-3-название), [FR-4](FR.md#fr-4-название), [FR-5](FR.md#fr-5-название)_
@@ -211,30 +221,30 @@
   _Scenarios: SPECDASH001_01, SPECDASH001_02, SPECDASH001_03, SPECDASH001_04, SPECDASH001_05, SPECDASH001_06_
   _Depends: T11, T12, T13, T14, T15_
   **Done When:**
-  - [ ] Headless Chromium verifies the task kanban, composed trace, readiness, impact, evidence, keyboard/focus, reduced-motion, and degraded-state views against the applicable nine source scenarios.
+  - [ ] Headless Chromium verifies the task kanban, composed trace, readiness, impact, evidence, keyboard/focus, reduced-motion, and degraded-state views against the applicable source scenarios.
   - [ ] Lifecycle/result values and not-run, stale, partial, unavailable, and provider-error states remain distinct and never become false green.
   - [ ] The phase verification result records the Docker BDD source/run metadata; no implementation completion is claimed by this task alone.
 
 ## Phase 3: Integration, Runtime, and Evidence (Green)
 
-- [ ] T16: Wire `package.json`, `package-lock.json`, `Dockerfile.test.base`, and `cucumber.json` for self-contained dashboard bundles, the Node 20 loopback launcher, Playwright Chromium, and centralized Docker BDD -- @feature1 @feature2 @feature3 @feature4 @feature5 — id: T16 — Status: TODO | Est: 90m
+- [ ] T16: Wire `package.json`, `pnpm-lock.yaml`, `Dockerfile.test.base`, and `cucumber.json` for self-contained dashboard bundles, the Node `>=22.18` loopback launcher, Playwright Chromium, and centralized Docker BDD -- @feature1 @feature2 @feature3 @feature4 @feature5 — id: T16 — Status: TODO | Est: 90m
   _Requirements: [FR-1](FR.md#fr-1-название), [FR-2](FR.md#fr-2-название), [FR-3](FR.md#fr-3-название), [FR-4](FR.md#fr-4-название), [FR-5](FR.md#fr-5-название), [NFR-Compat-1](NFR.md#nfr-compat-1-runtime-support)_
   _Acceptance: AC-1, AC-2, AC-3, AC-4, AC-5_
-  _Scenarios: SPECDASH001_01, SPECDASH001_02, SPECDASH001_03, SPECDASH001_04, SPECDASH001_05, SPECDASH001_06_
+  _Scenarios: SPECDASH001_01, SPECDASH001_02, SPECDASH001_03, SPECDASH001_04, SPECDASH001_05, SPECDASH001_06, SPECDASH001_07, SPECDASH001_08, SPECDASH001_09_
   _Depends: T05, T08, T11_
   **Done When:**
-  - [ ] `npm run build:dashboard` emits self-contained `tools/spec-dashboard/server.bundle.mjs` and browser `tools/spec-dashboard/ui/app.bundle.js`; `npm run start:dashboard` launches Node 20 on `127.0.0.1` with port 0 support
-  - [ ] `package.json`/`package-lock.json` pin the Playwright library and `Dockerfile.test.base` installs accessible headless Chromium plus Linux dependencies for non-root `testuser`
-  - [ ] `cucumber.json` discovers the nine-scenario mirror, dashboard steps, and edited existing hooks in Docker; no host BDD path or unrecorded web framework is introduced
+  - [ ] The frozen pnpm `11.3.0` build emits self-contained `tools/spec-dashboard/server.bundle.mjs` and browser `tools/spec-dashboard/ui/app.bundle.js`; the canonical launcher starts Node `>=22.18` on `127.0.0.1` with port 0 support
+  - [ ] `package.json` pins the fork build/runtime contract and `Dockerfile.test.base` installs accessible headless Chromium plus Linux dependencies for non-root `testuser`
+  - [ ] `cucumber.json` discovers the thirteen-scenario mirror, dashboard steps, and edited existing hooks in Docker; no host BDD path or unrecorded web framework is introduced
 
 - [ ] T17: Add integration contract regression coverage for every route, DTO collection, error class, allowlist rule, and no-dispatch mutation rejection -- @feature1 @feature2 @feature3 @feature4 @feature5 — id: T17 — Status: TODO | Est: 90m
   _Requirements: [FR-1](FR.md#fr-1-название), [FR-2](FR.md#fr-2-название), [FR-3](FR.md#fr-3-название), [FR-4](FR.md#fr-4-название), [FR-5](FR.md#fr-5-название)_
   _Acceptance: AC-1, AC-2, AC-3, AC-4, AC-5_
-  _Scenarios: SPECDASH001_01, SPECDASH001_02, SPECDASH001_03, SPECDASH001_04, SPECDASH001_05, SPECDASH001_06_
+  _Scenarios: SPECDASH001_01, SPECDASH001_02, SPECDASH001_03, SPECDASH001_04, SPECDASH001_05, SPECDASH001_06, SPECDASH001_09_
   _Depends: T09, T10, T13, T14, T16_
   **Done When:**
   - [ ] SPECDASH001_01 through SPECDASH001_09 pass against the real loopback server, stdio adapter, producer-shaped fixture boundary, and headless Chromium where browser-visible
-  - [ ] Assertions cover all eight routes, bounded task pages, authored/verified task-state separation, supported trace collections, unavailable history, directed `find_refs`, canonical enums, and safe errors
+  - [ ] Assertions cover all documented routes, bounded task pages, authored/verified task-state separation, supported trace collections, unavailable history, directed `find_refs`, canonical enums, and safe errors
   - [ ] Mutation, traversal, and cross-origin attempts fail before MCP dispatch; SPECDASH001_09 proves failure-path cleanup and no successful empty collection masks the failure
 
 - [ ] T18: Verify live semantic evidence against the real spec-generator-v4 MCP outputs rather than mocks or a dashboard-owned graph -- @feature1 @feature2 @feature3 @feature4 @feature5 — id: T18 — Status: TODO | Est: 90m
@@ -250,12 +260,12 @@
 - [ ] T19: Prove the dashboard runtime with dependencies absent by hiding `node_modules` and launching through the real repository launcher -- @feature4 @feature5 — id: T19 — Status: TODO | Est: 45m
   _Requirements: [FR-4](FR.md#fr-4-название), [FR-5](FR.md#fr-5-название), [NFR-Compat-1](NFR.md#nfr-compat-1-runtime-support), [NFR-Rel-2](NFR.md#nfr-rel-2-process-and-resource-isolation)_
   _Acceptance: AC-4, AC-5_
-  _Scenarios: SPECDASH001_08_
+  _Scenarios: SPECDASH001_08, SPECDASH001_13_
   _Depends: T16, T17_
   **Done When:**
-  - [ ] With project `node_modules` hidden, `node tools/spec-dashboard/server.bundle.mjs --host 127.0.0.1 --port 0` serves `ui/app.bundle.js` under Node 20 without source TypeScript or `tsx`
-  - [ ] Headless Chromium loads the task kanban through the real bundled adapter or receives `PROVIDER_UNAVAILABLE`/`TRANSPORT_ERROR` without leaking dependency paths or command arguments
-  - [ ] SPECDASH001_08 proves browser/server/MCP child cleanup and no mutation during the deps-absent check
+  - [ ] With project `node_modules` hidden, `node tools/spec-dashboard/server.bundle.mjs --host 127.0.0.1 --port 0` serves the retained shell and `ui/app.bundle.js` under Node `>=22.18` without source TypeScript or `tsx`
+  - [ ] Headless Chromium loads the task kanban through the real bundled SpecGraph MCP adapter or receives `PROVIDER_UNAVAILABLE`/`TRANSPORT_ERROR` without leaking dependency paths or command arguments and never falls back to Plane services
+  - [ ] SPECDASH001_08 and SPECDASH001_13 prove browser/server/MCP child cleanup and no mutation during the dependency-absent checks
 
 - [ ] T20: Verify warm-provider performance, pagination, lazy loading, and the bounded 1,000-task-card corpus -- @feature1 @feature2 @feature3 — id: T20 — Status: TODO | Est: 60m
   _Requirements: [FR-1](FR.md#fr-1-название), [FR-2](FR.md#fr-2-название), [FR-3](FR.md#fr-3-название), [NFR-Perf-1](NFR.md#nfr-perf-1-response-and-rendering-performance), [NFR-Scale-1](NFR.md#nfr-scale-1-corpus-and-graph-scale)_
@@ -263,7 +273,7 @@
   _Scenarios: SPECDASH001_07_
   _Depends: T13, T16_
   **Done When:**
-  - [ ] SPECDASH001_07 records Node 20 and pinned Chromium versions, the fixed producer-shaped 1,000-task corpus identity and digest, concurrency 1, and a monotonic clock.
+  - [ ] SPECDASH001_07 records Node `>=22.18`, pinned Chromium, the fixed producer-shaped 1,000-task corpus identity and digest, concurrency 1, and a monotonic clock.
   - [ ] Each endpoint/view has at least 5 warm-up samples and at least 30 measured samples; p95 uses nearest-rank, and any failed or partial sample fails the check rather than disappearing from the denominator.
   - [ ] Warm status completes within 300 ms p95 and warm trace within 500 ms p95 under the bounded local-provider measurement.
   - [ ] The first 20 task cards render within 1 second p95 and the 1,000-task corpus uses pagination/virtualization with visible truncation or continuation metadata.
@@ -282,11 +292,12 @@
 - [ ] T22: Verify security controls and close the Plane clean-room/legal gate across the adapter, DTOs, UI documentation, and logs -- @feature4 @feature5 — id: T22 — Status: TODO | Est: 60m
   _Requirements: [FR-4](FR.md#fr-4-название), [FR-5](FR.md#fr-5-название), [NFR-Sec-1](NFR.md#nfr-sec-1-read-only-boundary-and-redaction), [NFR-Sec-2](NFR.md#nfr-sec-2-same-origin-and-transport-safety), [NFR-Legal-1](NFR.md#nfr-legal-1-plane-inspired-clean-room-strategy)_
   _Acceptance: AC-4, AC-5_
-  _Scenarios: SPECDASH001_05, SPECDASH001_06, SPECDASH001_09_
+  _Scenarios: SPECDASH001_05, SPECDASH001_06, SPECDASH001_09, SPECDASH001_10, SPECDASH001_11, SPECDASH001_12, SPECDASH001_13_
   _Depends: T10, T15, T17_
   **Done When:**
   - [ ] SPECDASH001_09 proves loopback/same-origin enforcement, traversal rejection, allowlist denial before dispatch, and absence of credentials, raw paths, commands, stacks, and storage locations in DTOs, URLs, browser text, errors, and logs
-  - [ ] The audit record identifies Plane references as clean-room interaction research only, contains no copied Plane source, and records legal approval as required before future reuse
+  - [ ] SPECDASH001_10 and SPECDASH001_11 prove the exact pinned fork, retained/bypassed boundary, notices, corresponding-source delivery, local patches, and no proprietary or unreviewed component
+  - [ ] The audit record identifies the fork as vendored/adapted implementation, records AGPL obligations and manual upstream review, and never treats Plane as a mere reference or allows runtime auto-sync
   - [ ] Security failures remain typed and non-retryable where specified, and the thrown-step path leaves no browser, adapter, MCP child, port, or temporary state
 
 ## Phase 4: Refactor and Final Verification
@@ -294,20 +305,93 @@
 - [ ] T23: Refactor the dashboard implementation for reuse, bounded resource handling, and readable state mapping without changing canonical provider semantics -- @feature1 @feature2 @feature3 @feature4 @feature5 — id: T23 — Status: TODO | Est: 45m
   _Requirements: [FR-1](FR.md#fr-1-название), [FR-2](FR.md#fr-2-название), [FR-3](FR.md#fr-3-название), [FR-4](FR.md#fr-4-название), [FR-5](FR.md#fr-5-название)_
   _Acceptance: AC-1, AC-2, AC-3, AC-4, AC-5_
-  _Scenarios: SPECDASH001_01, SPECDASH001_02, SPECDASH001_03, SPECDASH001_04, SPECDASH001_05, SPECDASH001_06_
-  _Depends: T18, T19, T20, T21, T22_
+  _Scenarios: SPECDASH001_01, SPECDASH001_02, SPECDASH001_03, SPECDASH001_04, SPECDASH001_05, SPECDASH001_06, SPECDASH001_07, SPECDASH001_08, SPECDASH001_09, SPECDASH001_10, SPECDASH001_11, SPECDASH001_12, SPECDASH001_13_
+  _Depends: T18, T19, T20, T21, T22, T27, T28, T29, T30, T31, T32_
   **Done When:**
-  - [ ] Shared DTO, error, redaction, and state-rendering logic has no avoidable duplicate implementation across server, adapter, and UI paths
-  - [ ] All bounded process, response, collection, and browser resources have explicit cleanup or truncation behavior
-  - [ ] The nine-scenario contract remains unchanged and the real MCP remains the sole semantic authority after refactoring
+  - [ ] Shared DTO, error, redaction, provenance, license/source, fork-boundary, and state-rendering logic has no avoidable duplicate implementation across server, adapter, UI, and vendor-validation paths
+  - [ ] All bounded process, response, collection, browser, and vendor-sync resources have explicit cleanup or truncation behavior
+  - [ ] The thirteen-scenario contract remains unchanged and the real MCP remains the sole semantic authority after refactoring
 
 - [ ] T24: Run final Docker verification and MCP-backed self-check for the finalized spec-dashboard board -- @feature1 @feature2 @feature3 @feature4 @feature5 — id: T24 — Status: TODO | Est: 45m
   _Requirements: [FR-1](FR.md#fr-1-название), [FR-2](FR.md#fr-2-название), [FR-3](FR.md#fr-3-название), [FR-4](FR.md#fr-4-название), [FR-5](FR.md#fr-5-название)_
   _Acceptance: AC-1, AC-2, AC-3, AC-4, AC-5_
-  _Scenarios: SPECDASH001_01, SPECDASH001_02, SPECDASH001_03, SPECDASH001_04, SPECDASH001_05, SPECDASH001_06_
+  _Scenarios: SPECDASH001_01, SPECDASH001_02, SPECDASH001_03, SPECDASH001_04, SPECDASH001_05, SPECDASH001_06, SPECDASH001_07, SPECDASH001_08, SPECDASH001_09, SPECDASH001_10, SPECDASH001_11, SPECDASH001_12, SPECDASH001_13_
   _Depends: T23_
   **Done When:**
-  - [ ] Performance evidence uses the fixed producer-shaped 1,000-card corpus identity and digest, supported runtime/browser versions, concurrency 1, monotonic clock, at least 5 warmups, at least 30 measured samples, nearest-rank p95, and fails on any failed or partial sample.
-  - [ ] SPECDASH001_01 through SPECDASH001_09 pass in the centralized Docker BDD runner, including focused performance, deps-absent startup, and browser-security/cleanup proof, with no host BDD execution
-  - [ ] Build, lint, task-form validation, acceptance-task coverage, conformance, and the spec status self-check complete without error-severity findings or placeholders
-  - [ ] Final status evidence records every AC, every `@feature1` through `@feature5` scenario, runtime/deps-absent evidence, performance, accessibility, security, and clean-room/legal results
+  - [ ] Performance evidence uses the fixed producer-shaped 1,000-task corpus identity and digest, supported Node/browser versions, concurrency 1, monotonic clock, at least 5 warmups, at least 30 measured samples, nearest-rank p95, and fails on any failed or partial sample.
+  - [ ] SPECDASH001_01 through SPECDASH001_13 pass in the centralized Docker BDD runner, including focused performance, deps-absent startup, browser-security/cleanup, clean-fork, AGPL/source, upstream-sync, proprietary-exclusion, and Node 22 distribution proof, with no host BDD execution
+  - [ ] Build, frozen-lockfile validation, lint, task-form validation, acceptance-task coverage, conformance, provenance/legal/source checks, upstream-sync check, and the spec status self-check complete without error-severity findings or placeholders
+  - [ ] Final status evidence records every AC, every `@feature1` through `@feature5` scenario, runtime/deps-absent evidence, performance, accessibility, security, fork boundary, AGPL/source, upstream synchronization, proprietary exclusion, and legal results
+
+## Phase 3 Finalization Implementation Tasks
+
+- [ ] T27: Import and adapt the pinned Plane fork with provenance -- @feature5 — id: T27 — Status: TODO | Est: 90m
+  _Requirements: [FR-5](FR.md#fr-5-название), [NFR-Compat-1](NFR.md#nfr-compat-1-runtime-support), [NFR-Legal-1](NFR.md#nfr-legal-1-plane-inspired-clean-room-strategy)_
+  _Acceptance: AC-5_
+  _Scenarios: SPECDASH001_10, SPECDASH001_11, SPECDASH001_12, SPECDASH001_13_
+  _Depends: T15, T16_
+  **Done When:**
+  - [ ] Import the `makeplane/plane` source at exactly `v1.4.1`, commit `5662b761062b0b2f9d42a6578b55481b5b069792`, into the declared vendor boundary and adapt it as implementation input; documentation and links alone do not satisfy this task
+  - [ ] `vendor/plane/PROVENANCE.json` records upstream repository, version, exact commit, `plane-upstream` remote, license, notice, retained/bypassed areas, local-patch manifest, source digest, and manual sync policy
+  - [ ] The import is reproducible from the pinned commit and excludes proprietary components, closed-source bundles, credentialed services, and unreviewed binaries
+
+- [ ] T28: Enforce the retained Plane shell and SpecGraph MCP data boundary -- @feature5 — id: T28 — Status: TODO | Est: 90m
+  _Requirements: [FR-5](FR.md#fr-5-название), [NFR-Sec-1](NFR.md#nfr-sec-1-read-only-boundary-and-redaction)_
+  _Acceptance: AC-5_
+  _Scenarios: SPECDASH001_05, SPECDASH001_09, SPECDASH001_10, SPECDASH001_13_
+  _Depends: T27, T08, T09, T10_
+  **Done When:**
+  - [ ] Retain and adapt Plane board, UI, design-system, and runtime shell portions while replacing or bypassing Plane backend, domain, authentication, workspace, and project data portions
+  - [ ] Route every dashboard data read through the loopback server's seven-tool spec-generator-v4 MCP allowlist; no Plane service, Plane authentication, workspace/project store, or Plane backend/domain call is reachable or required at runtime
+  - [ ] SPECDASH001_05, SPECDASH001_09, SPECDASH001_10, and SPECDASH001_13 prove the runtime boundary, no-dispatch mutation behavior, typed failures, and no Plane-service fallback against real artifacts
+
+- [ ] T29: Add AGPL notices and corresponding-source delivery -- @feature5 — id: T29 — Status: TODO | Est: 60m
+  _Requirements: [FR-5](FR.md#fr-5-название), [NFR-Compat-1](NFR.md#nfr-compat-1-runtime-support), [NFR-Legal-1](NFR.md#nfr-legal-1-plane-inspired-clean-room-strategy)_
+  _Acceptance: AC-5_
+  _Scenarios: SPECDASH001_11, SPECDASH001_12, SPECDASH001_13_
+  _Depends: T27_
+  **Done When:**
+  - [ ] Ship `vendor/plane/COPYRIGHT.txt` identifying `AGPL-3.0-only`, the pinned version/commit, retained and adapted areas, and local patches
+  - [ ] Expose unauthenticated same-origin `/licenses/plane` and `/source/plane` responses that identify the exact fork, source digest, local-patch manifest, and a stable network-accessible corresponding-source URL or archive
+  - [ ] Browser text, DTOs, logs, and generated asset manifests contain no credentials, absolute paths, proprietary component, closed-source bundle, credentialed service, or unreviewed binary
+
+- [ ] T30: Build and package the Node 22 fork with dependency-absent proof -- @feature5 — id: T30 — Status: TODO | Est: 90m
+  _Requirements: [FR-5](FR.md#fr-5-название), [NFR-Compat-1](NFR.md#nfr-compat-1-runtime-support), [NFR-Rel-2](NFR.md#nfr-rel-2-process-and-resource-isolation)_
+  _Acceptance: AC-5_
+  _Scenarios: SPECDASH001_08, SPECDASH001_13_
+  _Depends: T27, T29, T16, T19_
+  **Done When:**
+  - [ ] Build with Node `>=22.18`, pnpm `11.3.0`, and the frozen fork lockfile to produce `tools/spec-dashboard/server.bundle.mjs` and `tools/spec-dashboard/ui/app.bundle.js`
+  - [ ] Hide project `node_modules` and launch the real packaged entrypoint; the bundled runtime starts on loopback, serves retained shell assets, and uses SpecGraph MCP or returns a safe typed provider error without Plane-service fallback
+  - [ ] SPECDASH001_08 and SPECDASH001_13 prove dependency-absent browser/server/MCP cleanup, source digests, provenance, notices, and corresponding-source metadata against the built artifact, with no silent skip
+
+- [ ] T31: Implement manual upstream sync and conflict review -- @feature5 — id: T31 — Status: TODO | Est: 75m
+  _Requirements: [FR-5](FR.md#fr-5-название), [NFR-Legal-1](NFR.md#nfr-legal-1-plane-inspired-clean-room-strategy)_
+  _Acceptance: AC-5_
+  _Scenarios: SPECDASH001_10, SPECDASH001_11, SPECDASH001_12, SPECDASH001_13_
+  _Depends: T27, T28, T29_
+  **Done When:**
+  - [ ] `plane-upstream` points to `https://github.com/makeplane/plane.git`; synchronization is a manual fetch, review, conflict-resolution, pinned-commit update, local-patch/provenance update, rebuild, and BDD verification workflow
+  - [ ] Conflict review checks retained/bypassed boundaries, frozen lockfile, AGPL notices, corresponding-source link, source digests, and proprietary/exclusion manifest before acceptance
+  - [ ] Runtime never fetches, auto-syncs, or silently changes the upstream commit; an undeclared commit or provenance mismatch fails the integration check
+
+- [ ] T32: Exclude proprietary components and unreviewed runtime assets -- @feature5 — id: T32 — Status: TODO | Est: 45m
+  _Requirements: [FR-5](FR.md#fr-5-название), [NFR-Sec-1](NFR.md#nfr-sec-1-read-only-boundary-and-redaction), [NFR-Legal-1](NFR.md#nfr-legal-1-plane-inspired-clean-room-strategy)_
+  _Acceptance: AC-5_
+  _Scenarios: SPECDASH001_11, SPECDASH001_12, SPECDASH001_13_
+  _Depends: T27, T28, T29_
+  **Done When:**
+  - [ ] The vendor manifest and generated asset manifest enumerate shipped source/assets and prove no proprietary component, closed-source bundle, credentialed external service, or unreviewed binary is included
+  - [ ] Exclusion checks cover the retained Plane shell and adapted SpecGraph integration without weakening read-only, same-origin, redaction, cleanup, or accessibility contracts
+  - [ ] SPECDASH001_11 through SPECDASH001_13 fail closed on an undeclared asset, missing notice/source link, digest mismatch, or Plane-service dependency
+
+- [ ] T33: Execute fork provenance, legal, sync, and distribution scenarios -- @feature5 — id: T33 — Status: TODO | Est: 90m
+  _Requirements: [FR-5](FR.md#fr-5-название), [NFR-Compat-1](NFR.md#nfr-compat-1-runtime-support), [NFR-Legal-1](NFR.md#nfr-legal-1-plane-inspired-clean-room-strategy)_
+  _Acceptance: AC-5_
+  _Scenarios: SPECDASH001_10, SPECDASH001_11, SPECDASH001_12, SPECDASH001_13_
+  _Depends: T27, T28, T29, T30, T31, T32_
+  **Done When:**
+  - [ ] SPECDASH001_10 proves exact commit provenance, retained UI/design-system/runtime shell, bypassed Plane data paths, SpecGraph-only provider, local patches, and manual sync policy
+  - [ ] SPECDASH001_11 proves AGPL notice, unauthenticated network corresponding-source access, exact fork/source digest, and proprietary-component exclusion
+  - [ ] SPECDASH001_12 proves reviewable upstream sync/conflict handling with no runtime auto-sync, and SPECDASH001_13 proves the Node/pnpm fork build and packaged dependencies-absent runtime
+  - [ ] All four scenarios run as executable Docker BDD checks against real vendor, build, package, network, and runtime artifacts; fixture-only or silently skipped assertions do not count

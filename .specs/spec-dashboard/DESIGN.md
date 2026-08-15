@@ -164,17 +164,19 @@ A composed route such as coverage, impact, or evidence returns a `partial` route
 - Make the graph the home screen — rejected because it does not provide a compact status-first work queue.
 - Use a table-only requirement list — rejected because it loses the visual lifecycle grouping and card-oriented detail affordance.
 
-### Decision: Adopt a clean-room Plane-inspired interaction model
+### Decision: Adopt a vendored Plane shell with a replacement domain boundary
 
 **Требование:** [FR-5](FR.md#fr-5-название)
 
-**Rationale:** Verified Plane previews demonstrate useful kanban and issue-detail interaction patterns, but the initial implementation must avoid unapproved AGPL code reuse while preserving independent product requirements.
+**Decision:** Treat the dashboard as a vendored fork of `makeplane/plane` `v1.4.1` at commit `5662b761062b0b2f9d42a6578b55481b5b069792`. Retain the Plane board, UI, design-system, and runtime shell portions needed for the Jira-like browser experience. Replace or bypass Plane backend, domain, authentication, workspace, project, database, and external-service paths. Route all dashboard data through the loopback same-origin adapter to the seven-tool read-only spec-generator-v4 MCP allowlist.
 
-**Trade-off:** The team must build and maintain the UI primitives rather than reuse mature Plane components, and some visual behavior may differ from the reference.
+**Rationale:** Vendoring preserves the requested Plane board/UI/design-system/runtime fidelity while making the upstream base, local patches, and legal source obligations explicit. Keeping the loopback adapter as the only data boundary preserves spec-generator-v4 as the graph, lifecycle, evidence, and status authority.
+
+**Trade-off:** The fork gains UI fidelity and avoids a second dashboard domain model, but it adds AGPL notice/source duties and a manual upstream review burden; bypassing Plane domain services excludes Plane-native workspace, project, and authentication behavior.
 
 **Alternatives considered:**
-- Reuse Plane AGPL components immediately — rejected because legal review and compatibility approval are not yet complete.
-- Avoid all external interaction research — rejected because it would discard verified usability evidence and increase design uncertainty.
+- A clean-room reimplementation is rejected because it would not satisfy the requested vendored-fork strategy.
+- A live Plane backend or automatic runtime synchronization is rejected because it would violate the loopback-only, pinned, read-only, reviewable boundary.
 
 ### Decision: Preserve typed distinctions for empty, not-run, stale, partial, unavailable, and provider-error states
 
