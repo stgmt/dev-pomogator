@@ -20,17 +20,28 @@ FR-1..10 доведены до рабочего кода в `tools/out-session-a
 
 ## Docker BDD run — ENVIRONMENTAL BLOCKER (2026-08-15, честно)
 
-Полный `scripts/docker-bdd.sh` в WSL был предпринят дважды:
-- первый прогон дошёл до запуска контейнера и записи ndjson (38MB в `.dev-pomogator/.docker-status/`,
-  наши OUTSESS001_01..16 появились в gherkin-источнике), НО WSL-сервис оборвался
-  (`Wsl/Service/0x8007274c`) на длинном полном сьюте — финальный `.last-test-run.ndjson`
-  не записан.
-- целенаправленный `docker-bdd.sh --name OUTSESS001` завис на `docker compose build`
-  (`docker-buildx` поднял `git.exe` на контекст) — больше 10 мин без прогресса; прерван.
+Полный/целевой `scripts/docker-bdd.sh` не дошёл до выполнения сценариев из-за **рекуррентных
+hang-ов самого Docker-билда** (не из-за кода спеки). Последовательность и попытки фикса:
 
-**Статус BDD-gate: `environmental_blocker`** (не результат сценариев). Live-проверки FR-1..10 выполнены
-на реальной сессии/файлах (см. RESEARCH). Повторный Docker-прогон — после стабилизации WSL/docker
-(например `docker system prune`, или сборка образа вне WSL-git-bridge).
+1. Полный прогон оборвался на WSL (`Wsl/Service/0x8007274c`) на длинном сьюте.
+2. Целевой `--name OUTSESS001` упёрся в `CucumberExpressionError` в **чужом** untracked
+   step-def `tests/step_definitions/feature_inner_advisor.ts:208` (незаэскейпленный `/` →
+   «Alternative may not be empty»), который ломал загрузку ВСЕХ step-defs. **Починил**
+   (` / ` → ` \\/ `); локальная проверка: 1321 string-шаг, 0 битых.
+3. `docker-bdd` buildx завис на чтении build-контекста с Windows-mount `/mnt/e` (0.1% CPU,
+   ~1 сек за 16 мин — hung). Фиксы: `docker system prune` (−26GB), `docker buildx prune -a`
+   (−10GB), `wsl --shutdown`+refresh, kill зависших buildx, повтор.
+4. Legacy-билдер (`DOCKER_BUILDKIT=0`) дошёл до шагов, но завис на сетевой загрузке `marksman`
+   (`curl || wget` в Dockerfile.test) — сетевой hang внутри билда.
+
+**Итог:** сценарии OUTSESS001 физически не выполнились — билд-окружение не даёт дойти до
+cucumber. Это **environmental_blocker** после исчерпывающих попыток фикса (см. правило
+`.carl/rules/pomogator/env-blocker-is-not-a-stop.md` — чинил окружение, не клеймил сразу).
+
+**Что НЕ является блокером и готово:** весь код FR-1..10 live-проверен на реальной сессии/файлах
+(см. RESEARCH «Реализация + live-проверки»); BDD-связность 64 шагов ↔ 64 шаблона, 0 дублей,
+BDD_SYNC GREEN; реальный код-баг чужого step-def исправлен. Для зелёного BDD-гейта нужен
+рабочий Docker-билд (починить marksman-download/сеть в образе или билдить на нативном FS, не /mnt/e).
 
 ## Summary
 
