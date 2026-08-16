@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @feature57 step definitions — Scaffold-completeness audit (FR-57).
  *
  * Drives the REAL classifier `tools/specs-generator/scaffold-sentinels.mjs` in-process and the
@@ -34,31 +34,24 @@ const STUB_SENTINEL = '{Краткое описание фичи}';
 const MOVED_TEMPLATE_OWNERS = new Map<string, string[]>([
   ['JIRA_SOURCE.md.template', [
     '.claude/skills/create-spec/references/templates/JIRA_SOURCE.md.template',
-    '.agents/skills/create-spec/references/templates/JIRA_SOURCE.md.template',
   ]],
   ['ATTACHMENTS.md.template', [
     '.claude/skills/create-spec/references/templates/ATTACHMENTS.md.template',
-    '.agents/skills/create-spec/references/templates/ATTACHMENTS.md.template',
   ]],
   ['AUDIT_REPORT.md.template', [
     '.claude/skills/create-spec/references/templates/AUDIT_REPORT.md.template',
-    '.agents/skills/create-spec/references/templates/AUDIT_REPORT.md.template',
   ]],
   ['ARCHITECTURE_AXIS.md.template', [
     '.claude/skills/architecture-decision-builder/references/templates/ARCHITECTURE_AXIS.md.template',
-    '.agents/skills/architecture-decision-builder/references/templates/ARCHITECTURE_AXIS.md.template',
   ]],
   ['ARCHITECTURE_INDEX.md.template', [
     '.claude/skills/architecture-decision-builder/references/templates/ARCHITECTURE_INDEX.md.template',
-    '.agents/skills/architecture-decision-builder/references/templates/ARCHITECTURE_INDEX.md.template',
   ]],
   ['COMPLETENESS.md.template', [
     '.claude/skills/architecture-decision-builder/references/templates/COMPLETENESS.md.template',
-    '.agents/skills/architecture-decision-builder/references/templates/COMPLETENESS.md.template',
   ]],
   ['SYNTHESIS.md.template', [
     '.claude/skills/architecture-decision-builder/references/templates/SYNTHESIS.md.template',
-    '.agents/skills/architecture-decision-builder/references/templates/SYNTHESIS.md.template',
   ]],
 ]);
 

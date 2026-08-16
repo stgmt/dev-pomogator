@@ -1,12 +1,12 @@
 # AGENTS.md
 
-This file provides guidance to Codex (Codex.ai/code) when working with code in this repository.
+This file provides guidance to coding agents (Claude Code and compatible) when working with code in this repository.
 
 ## Commands
 
 | Command | Description |
 |---------|-------------|
-| `npm run lint` | ESLint on `.Codex/` and `tools/` |
+| `npm run lint` | ESLint on `.claude/`, `.agents/` and `tools/` |
 | `npm test` | E2E tests via Docker — **WSL-only**: авто-уход в WSL через `scripts/_docker-wsl.sh` (Docker Desktop не нужен; запуск на хосте невозможен, `tests/setup/ensure-docker.ts`) |
 | `npm run test:all` | E2E + TUI tests via Docker (WSL-only, см. `scripts/_docker-wsl.sh`) |
 | `npx tsx tools/plan-pomogator/validate-plan.ts <path>` | Validate plan structure |
@@ -17,35 +17,35 @@ This file provides guidance to Codex (Codex.ai/code) when working with code in t
 | `npx tsx tools/specs-generator/analyze-features.ts -Format text` | Analyze .feature file patterns |
 | `npx tsx tools/migrate-v1-to-v2/migrate-v1-to-v2.ts --global` | Migration v1 → v2 cleanup (project + global v1 artifacts) |
 | `/reflect` | Просмотр и управление очередью автозахваченных сигналов |
-| `/simplify` | Стоковый Codex review (код + спеки + тесты через правило simplify-extended, auto-trigger на Stop) |
+| `/simplify` | Стоковый Claude review (код + спеки + тесты через правило simplify-extended, auto-trigger на Stop) |
 | `/pomogator-doctor` | Диагностика окружения: 18 проверок в 🟢🟡🔴 группах (canonical skill, не deprecated CLI) |
 | `/worktree <slug> [--pr=draft] [--skip-build] [--devcontainer]` | Создать готовый git worktree: ветка + bootstrap + env-sync + build + doctor + опц. draft PR / devcontainer (skill `worktree-setup`, спека `.specs/worktree-setup/`) |
 
 ## Distribution (v2.0 canonical)
 
-dev-pomogator distributed как canonical Codex marketplace plugin (per Anthropic plugin spec, plugins-reference.md + plugin-marketplaces.md). User install flow:
+dev-pomogator distributed как canonical Claude Code marketplace plugin (per Anthropic plugin spec, plugins-reference.md + plugin-marketplaces.md). User install flow:
 
 ```
 /plugin marketplace add stgmt/dev-pomogator
 /plugin install dev-pomogator@stgmt
-/reload-plugins   (CLI) or restart Codex Desktop
+/reload-plugins   (CLI) or restart Claude Code
 ```
 
 `npm install -g dev-pomogator` flow deprecated (v1 only). Existing v1 users — run `npx tsx tools/migrate-v1-to-v2/migrate-v1-to-v2.ts --global` для cleanup перед canonical install.
 
 ## Architecture
 
-**Canonical Codex marketplace plugin** for team coding standards, workflows, и tools.
+**Canonical Claude Code marketplace plugin** for team coding standards, workflows, и tools.
 
-- **Source of truth**: `.Codex/skills/` для skills, `.Codex/commands/` для commands, `.carl/rules/` для rules, `tools/<tool>/<script>.ts` для hook scripts. Single canonical layout (no `extensions/` middleware after v2.0).
-- **Plugin manifests**: `.Codex-plugin/plugin.json` (canonical Anthropic schema) + `.Codex-plugin/marketplace.json` (single-plugin marketplace catalog) + `.Codex-plugin/hooks.json` (aggregated hook declarations).
+- **Source of truth**: `.claude/skills/` для skills, `.claude/commands/` для commands, `.carl/rules/` для rules, `tools/<tool>/<script>.ts` для hook scripts. Single canonical layout (no `extensions/` middleware after v2.0). `.agents/skills/` — retired mirror: только тонкие стабы-указатели на `.claude/skills/`, payload не дублируется.
+- **Plugin manifests**: `.claude-plugin/plugin.json` (canonical Anthropic schema) + `.claude-plugin/marketplace.json` (single-plugin marketplace catalog) + `.claude-plugin/hooks.json` (aggregated hook declarations).
 - **Bootstrap**: `tools/_shared/bootstrap.cjs` + `tools/_shared/tsx-runner.js` — fail-soft TypeScript loader с multi-strategy fallback (Node 22.6+ native strip-types → local tsx → home tsx → global tsx → npx tsx с repair). Co-located в plugin tree, distributed внутри plugin для canonical install (no v1 install dependency).
-- **Hooks**: project `.Codex/settings.json` (repo dogfooding) + plugin's `.Codex-plugin/hooks.json` (canonical distribution к users). Hook commands resolve script paths via `process.env.CLAUDE_PLUGIN_ROOT` (canonical context) или relative к CWD (dogfood).
-- **Skills**: 19 skills в `.Codex/skills/` (create-spec, run-tests, plan-pomogator-related, pomogator-doctor, research-workflow, etc.). Plugin distribution через `.Codex-plugin/plugin.json` field override `"skills": ".Codex/skills"`.
-- **pomogator-doctor**: canonical skill (.Codex/skills/pomogator-doctor/) с self-contained engine в scripts/engine/ (24 files); SessionStart hook в scripts/doctor-hook.ts.
+- **Hooks**: project `.claude/settings.json` (repo dogfooding) + plugin's `.claude-plugin/hooks.json` (canonical distribution к users). Hook commands resolve script paths via `process.env.CLAUDE_PLUGIN_ROOT` (canonical context) или relative к CWD (dogfood).
+- **Skills**: 58 skills в `.claude/skills/` (create-spec, run-tests, pomogator-doctor, research-workflow, etc.). Plugin distribution через `.claude-plugin/plugin.json` field override `"skills": ["./.claude/skills"]`.
+- **pomogator-doctor**: canonical skill (.claude/skills/pomogator-doctor/) с self-contained engine в scripts/engine/ (24 files); SessionStart hook в scripts/doctor-hook.ts.
 - **Migration**: `tools/migrate-v1-to-v2/migrate-v1-to-v2.ts` — standalone cleanup script для existing v1 users (--project / --global / both flags).
 
-> **🧭 Discipline index — start here for «как репо держит спеки/тесты честными?»:** [`.Codex/spec-generator-discipline.md`](.Codex/spec-generator-discipline.md) — единая карта, связывающая каждый принцип (трассируемость через спек-граф · статус из улик / анти-фейк-грин · детерминированные гейты через MCP-дверь · свежий агент на фазу · мутационная стойкость · честный стоп · BDD-миграция) с его FR + правилом + инструментом. Каноническое здоровье спеки = `spec-verdict.ts` (смарт-вердикт, не голый структурный pass).
+> **🧭 Discipline index — start here for «как репо держит спеки/тесты честными?»:** [`.claude/spec-generator-discipline.md`](.claude/spec-generator-discipline.md) — единая карта, связывающая каждый принцип (трассируемость через спек-граф · статус из улик / анти-фейк-грин · детерминированные гейты через MCP-дверь · свежий агент на фазу · мутационная стойкость · честный стоп · BDD-миграция) с его FR + правилом + инструментом. Каноническое здоровье спеки = `spec-verdict.ts` (смарт-вердикт, не голый структурный pass).
 
 ## Rules
 
@@ -99,9 +99,9 @@ dev-pomogator distributed как canonical Codex marketplace plugin (per Anthrop
 | onboarding-artifact-ai-centric | `.specs/.onboarding.json` — AI-first artifact: обязательны rules_index/skills_registry/hooks_registry/mcp_servers/boundaries/gotchas/glossary/verification. Generic project metadata без AI-specific секций — violation | `.carl/rules/onboard-repo/onboarding-artifact-ai-centric.md` |
 | commands-via-skill-reference | `.onboarding.json.commands.*` обязаны ссылаться на skill-обёртку через `via_skill` если она существует; `forbidden_if_skill_present=true + via_skill set` требует non-empty `raw_pattern_to_block` (AJV custom keyword) | `.carl/rules/onboard-repo/commands-via-skill-reference.md` |
 | scope-gate/when-to-verify | Триггер map для `/verify-generic-scope-fix` skill: когда invoke (guard/policy файлы + enum/switch expansion) + hard-OUT signals (prevent H1 over-application) | `.carl/rules/scope-gate/when-to-verify.md` |
-| scope-gate/escape-hatch-audit | Audit workflow + anti-gaming guidance для `[skip-scope-verify:]` escape hatch через `.Codex/logs/scope-gate-escapes.jsonl` | `.carl/rules/scope-gate/escape-hatch-audit.md` |
+| scope-gate/escape-hatch-audit | Audit workflow + anti-gaming guidance для `[skip-scope-verify:]` escape hatch через `.claude/logs/scope-gate-escapes.jsonl` | `.carl/rules/scope-gate/escape-hatch-audit.md` |
 | architecture-decision/when-to-build | Триггер map для `architecture-decision-builder` skill (greenfield stack choice): invoke когда нет build-manifest + greenfield triggers; hard-OUT brownfield/locked stack (prevent H1) | `.carl/rules/specs-workflow/architecture-decision/when-to-build-architecture.md` |
-| architecture-decision/escape-hatch-audit | Audit + anti-gaming для `[skip-architecture-axis:]` escape hatch через `.Codex/logs/spec-architecture-escapes.jsonl` | `.carl/rules/specs-workflow/architecture-decision/escape-hatch-audit.md` |
+| architecture-decision/escape-hatch-audit | Audit + anti-gaming для `[skip-architecture-axis:]` escape hatch через `.claude/logs/spec-architecture-escapes.jsonl` | `.carl/rules/specs-workflow/architecture-decision/escape-hatch-audit.md` |
 | spec-reality-check/maintain-evals-on-edit | При изменении `spec-reality-check` skill — ОБЯЗАТЕЛЬНО прогнать `run-evals.ts` + `bulk-run.ts` + `bench-synthetic.ts`. Bulk-run на 45 real specs поймал 4 false-positive bugs за 1 проход; isolated evals их не видят | `.carl/rules/spec-reality-check/maintain-evals-on-edit.md` |
 | session-pilot/action-button-injection | POST /api/launch decision tree: existing session → focus-pane-id + write-chars; new session → KDL layout + `zellij -s NAME -n FILE` (NOT `-l`); 5s idempotency lock; path whitelist; UUID regex | `.carl/rules/session-pilot/action-button-injection.md` |
 | session-pilot/Codex-projects-encoding | Codex пишет JSONL в разные encoded dirs от same logical path: WSL `/mnt/d/repos/foo` → `-mnt-d-repos-foo`, Windows `D:\\repos\\foo` → `D--repos-foo`. `encode_path_for_claude()` возвращает ALL variants; обе `~/.Codex/projects` (WSL) и `/mnt/c/Users/.../.Codex/projects` (Windows mount) сканируются | `.carl/rules/session-pilot/Codex-projects-encoding.md` |
@@ -114,4 +114,4 @@ dev-pomogator distributed как canonical Codex marketplace plugin (per Anthrop
 |------|---------|------|
 | centralized-test-runner | Запуск тестов — только через `/run-tests`; прямые `npm test`/`pytest`/`dotnet test` блокируются hook-ом | `.carl/rules/tui-test-runner/centralized-test-runner.md` |
 
-> **Note:** specs management workflow перенесён из rules в Codex skill `create-spec` (см. `.Codex/skills/create-spec/SKILL.md`). Стандалоне skill `research-workflow` (`.Codex/skills/research-workflow/SKILL.md`) триггерится на "исследуй / найди / погугли / ресерч". Skills грузятся on-demand через метаданные — не индексируются в этой таблице per `Codex-md-glossary` rule.
+> **Note:** specs management workflow перенесён из rules в skill `create-spec` (см. `.claude/skills/create-spec/SKILL.md`). Стандалоне skill `research-workflow` (`.claude/skills/research-workflow/SKILL.md`) триггерится на "исследуй / найди / погугли / ресерч". Skills грузятся on-demand через метаданные — не индексируются в этой таблице per `Codex-md-glossary` rule.

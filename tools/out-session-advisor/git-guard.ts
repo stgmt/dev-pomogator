@@ -16,7 +16,7 @@
  *     `.dev-pomogator/git-guard-escapes.jsonl`; block = exit 2 + stderr; fail-open = exit 0)
  */
 import { execSync } from 'node:child_process';
-import { existsSync, readdirSync, readFileSync, statSync, mkdirSync, appendFileSync } from 'node:fs';
+import { existsSync, readdirSync, statSync, mkdirSync, appendFileSync, openSync, fstatSync, readSync, closeSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 
 export interface GitGuardResult {
@@ -31,6 +31,20 @@ const SKIP_MARKER_RE = /\[skip-git-guard:\s*([^\]]+)\]/;
 
 export function classifyCommand(command: string): { warnsAddAll: boolean } {
   return { warnsAddAll: ADD_ALL_RE.test(command) };
+}
+
+/** Читает только последние n байт файла (bounded — транскрипты бывают ГБ-ными). */
+export function tailBytes(file: string, n: number): string {
+  const fd = openSync(file, 'r');
+  try {
+    const size = fstatSync(fd).size;
+    const start = Math.max(0, size - n);
+    const buf = Buffer.alloc(size - start);
+    readSync(fd, buf, 0, buf.length, start);
+    return buf.toString('utf8');
+  } finally {
+    closeSync(fd);
+  }
 }
 
 /** Извлечь file_path из tool_use/Edit/Write в транскрипте (последний N времени). */
@@ -48,7 +62,8 @@ export function collectForeignPaths(
       const path = join(base, file);
       const age = Date.now() - statSync(path).mtimeMs;
       if (windowMs > 0 && age > windowMs) continue;
-      const text = readFileSync(path, 'utf8');
+      // bounded: свежие правки — хвост транскрипта, не весь файл
+      const text = tailBytes(path, 512 * 1024);
       const re = /"file_path"\s*:\s*"([^"]+)"/g;
       let m;
       while ((m = re.exec(text)) !== null) {
@@ -200,4 +215,4 @@ export function main() {
 
 if (process.argv[1] && /git-guard\.ts$/.test(process.argv[1])) main();
 
-export const __test = { checkGitAdd, classifyCommand, collectForeignPaths, logEscape, hookMain };
+export const __test = { checkGitAdd, classifyCommand, collectForeignPaths, logEscape, hookMain, tailBytes };

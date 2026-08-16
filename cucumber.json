@@ -1,6 +1,7 @@
 {
   "default": {
     "paths": [
+      ".specs/inner-advisor/inner-advisor.feature",
       ".specs/spec-generator-v4/spec-generator-v4.feature",
       ".specs/dynamic-workflow-engineering/dynamic-workflow-engineering.feature",
       ".specs/answer-simple/answer-simple.feature",
@@ -31,7 +32,6 @@
       ".specs/fix-bg-output-loss/fix-bg-output-loss.feature",
       ".specs/spec-phase-gate/spec-phase-gate.feature",
       ".specs/context-menu/context-menu.feature",
-      ".specs/codex-init/codex-init.feature",
       ".specs/claude-mem-midsession-reaper/claude-mem-midsession-reaper.feature",
       ".specs/claude-mem-integration/claude-mem-integration.feature",
       ".specs/context-mode-integration/context-mode-integration.feature",

@@ -142,7 +142,6 @@ When(/^the Nilesoft winget arguments are generated$/, async function (this: G8Wo
 When(/^the context-menu skill files are read$/, function (this: G8World) {
   this.contextMenuSkillContents = [
     fs.readFileSync(path.join(REPO_ROOT, '.claude', 'skills', 'context-menu', 'SKILL.md'), 'utf-8'),
-    fs.readFileSync(path.join(REPO_ROOT, '.agents', 'skills', 'context-menu', 'SKILL.md'), 'utf-8'),
   ];
 });
 
@@ -737,8 +736,8 @@ Then(/^both context-menu skills should resolve bootstrap from CLAUDE_PLUGIN_ROOT
   const expected = 'process.env.CLAUDE_PLUGIN_ROOT || process.cwd()';
   const invalid = (this.contextMenuSkillContents ?? []).filter((content) =>
     !content.includes(expected) || content.includes("join(process.cwd(),'tools','_shared','bootstrap.cjs')"));
-  if ((this.contextMenuSkillContents?.length ?? 0) !== 2 || invalid.length !== 0) {
-    throw new Error(`Expected both distributed context-menu skills to use plugin-root-first resolution; invalid=${invalid.length}`);
+  if ((this.contextMenuSkillContents?.length ?? 0) !== 1 || invalid.length !== 0) {
+    throw new Error(`Expected the distributed context-menu skill to use plugin-root-first resolution; invalid=${invalid.length}`);
   }
 });
 

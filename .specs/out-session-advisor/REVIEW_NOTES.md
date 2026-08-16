@@ -108,7 +108,30 @@ BDD_SYNC GREEN, 0 blocking; EXECUTION RED только за счёт OOS FR-11/1
   критерии и назвал корректный хэш). Advis-цикл «задача → живой поток → честный отчёт →
   независимая сверка с диском» отработал на новой сессии без единого ручного вмешательства.
 
+## Бенчмарки адвизора (2026-08-16) — `tools/out-session-advisor/bench/`
+
+Сьют из 10 сценариев (runner + fixtures-gen + measure с пиковым RSS; артефакт
+`.dev-pomogator/.advisor-bench.json`): масштаб (80МБ транскрипт, корпус 40×10МБ),
+конкуренция (50-гонка лока, 20-гонка recover), мусор (BOM/обрыв/гигантская строка/
+бинарный), точность (матрица вердиктов diag, матрица verify_claims), хук-латентность,
+eventlog 50k. **Итог: 10/10 PASS (≈32s).**
+
+**Слабые места, найденные и закрытые бенчем:**
+1. `git-guard.collectForeignPaths` читал ВЕСЬ транскрипт (неограниченная память на
+   ГБ-файлах; 400МБ корпус = 1.5s/441MB peak) → bounded tail-read 512KB: **275ms**.
+2. `diag.whoWrote` — то же → **177ms** на 400МБ.
+3. **Фантомные живые pid (реальный баг):** `livePids`/`inventory` звали
+   `execSync(строка)` → cmd.exe-обёртка матчила СВОЙ cmdline с паттерном → ложный
+   single-writer conflict и мусорная строка в инвентаре → `execFileSync` (shell:false)
+   + `$PID`-исключение.
+4. Lock-гонки: атомарность `wx` и recover+audit подтверждены под 50/20 параллельными
+   процессами (ровно 1 держащий, ровно 1 audit-строка).
+
+Прогнать: `node tools/out-session-advisor/bench/bench-runner.mjs [--only id]`.
+
 ## P1 known → closed (2026-08-16, «FR-6/7/10 честный довод»)
+
+
 
 
 1. **git-guard заwire-чен**: `PreToolUse/7/0` (matcher Bash) в `.claude-plugin/hooks.legacy.json` → registry.json/hooks.json/.claude/settings.json перегенерированы; hook-режим `--hook` (stdin JSON): `git add -A`/`.` → block (exit 2 + stderr), override через `[skip-git-guard: <причина>]`/`GIT_GUARD_SKIP=1` → escape-audit `.dev-pomogator/git-guard-escapes.jsonl`, fail-open по умолчанию.

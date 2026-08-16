@@ -8,7 +8,7 @@
  *
  * CLI: inventory.ts --repos a,b [--projects-root ~/.claude/projects]
  */
-import { execSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 import { existsSync, readdirSync, statSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
@@ -56,7 +56,14 @@ export function discoverActiveProcesses(repos: string[]): InvRow[] {
   const rows: InvRow[] = [];
   let ps: string;
   try {
-    ps = execSync('powershell -NoProfile -Command "Get-CimInstance Win32_Process | Where-Object { $_.Name -match \'claude|node\' -and $_.CommandLine -match \'resume|session\' } | Select-Object ProcessId,CommandLine | ConvertTo-Json -Compress"', { encoding: 'utf8', timeout: 20000 });
+    // массив аргументов (shell:false): без cmd-обёртки, чей cmdline сам матчит паттерн
+    // (self-match → фантомная строка cmd.exe в инвентаре); $PID исключает сам запрос
+    ps = execFileSync(
+      'powershell',
+      ['-NoProfile', '-Command',
+        "Get-CimInstance Win32_Process | Where-Object { $_.Name -match 'claude|node' -and $_.CommandLine -match 'resume|session' -and $_.ProcessId -ne $PID } | Select-Object ProcessId,CommandLine | ConvertTo-Json -Compress"],
+      { encoding: 'utf8', timeout: 20000 },
+    );
   } catch (e) {
     if ((e as any).stdout) ps = String((e as any).stdout);
     else ps = '';

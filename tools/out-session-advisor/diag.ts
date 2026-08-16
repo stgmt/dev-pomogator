@@ -8,11 +8,25 @@
  * <path> сейчас (свежая правка + живой процесс сессии) → помечается conflict single-writer
  * (адвизор не перезапишет).
  */
-import { readdirSync, readFileSync, statSync, existsSync } from 'node:fs';
+import { readdirSync, readFileSync, statSync, existsSync, openSync, fstatSync, readSync, closeSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
-import { execSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 import { listLocks, pidAlive, type LockPayload } from './lock.ts';
+
+/** Читает только последние n байт файла (bounded read — транскрипт может быть ГБ-ным). */
+export function tailBytes(file: string, n: number): string {
+  const fd = openSync(file, 'r');
+  try {
+    const size = fstatSync(fd).size;
+    const start = Math.max(0, size - n);
+    const buf = Buffer.alloc(size - start);
+    readSync(fd, buf, 0, buf.length, start);
+    return buf.toString('utf8');
+  } finally {
+    closeSync(fd);
+  }
+}
 
 export interface WriterHit {
   session: string;
@@ -55,8 +69,14 @@ export function livePids(sidSubstr: string): number[] {
   if (!sidSubstr) return [];
   try {
     if (process.platform === 'win32') {
-      const out = execSync(
-        `powershell -NoProfile -Command "Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -like '*${sidSubstr}*' } | Select-Object -ExpandProperty ProcessId"`,
+      // self-match-защита: execSync(string) оборачивается cmd.exe, чей cmdline содержит
+      // паттерн → фантомный pid. Спавним powershell напрямую (массив аргументов, shell:false)
+      // и исключаем сам запрос через $PID.
+      const safe = sidSubstr.replace(/[\\'"]/g, '');
+      const out = execFileSync(
+        'powershell',
+        ['-NoProfile', '-Command',
+          `Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -like '*${safe}*' -and $_.ProcessId -ne $PID } | Select-Object -ExpandProperty ProcessId`],
         { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] },
       );
       return out.split(/\r?\n/).map((s) => Number(s.trim())).filter((n) => Number.isInteger(n) && n > 0);
@@ -100,9 +120,8 @@ export function whoWrote(path: string, projectsRoot: string): { rows: WriterHit[
         const full = join(d, sub.name);
         if (sub.isDirectory()) walk(full);
         else if (sub.isFile() && sub.name.endsWith('.jsonl')) {
-          const text = readFileSync(full, 'utf8');
-          // только новейшие 512KB — bounded
-          const tail = text.slice(-512 * 1024);
+          // bounded: только последние 512KB (пишущий воркер — это хвост транскрипта)
+          const tail = tailBytes(full, 512 * 1024);
           if (tail.includes(`"file_path": "${target}`) || tail.includes(`"file_path":"${target}`)) {
             const ts = statSync(full).mtimeMs;
             rows.push({ session: `${dir}/${sub.name}`, repo: dir, sid: sub.name, lastWriteMs: ts, file: target });
@@ -191,4 +210,4 @@ function main() {
 
 if (process.argv[1] && /diag\.ts$/.test(process.argv[1])) main();
 
-export const __test = { whoWrote, summarize, livePids };
+export const __test = { whoWrote, summarize, livePids, tailBytes };
