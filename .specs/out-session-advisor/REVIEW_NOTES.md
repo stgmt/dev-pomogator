@@ -36,6 +36,11 @@ FR-1..10 доведены до рабочего кода в `tools/out-session-a
 работает end-to-end на реальной сессии. BDD: **18/18 scenarios, 119/119 steps** (добавлен
 OUTSESS001_17 event-log).
 
+**Полный канонический сьют (2026-08-16):** `docker-bdd.sh` (все 50 features) — OUTSESS001
+**18/18 passed** в каноне `.dev-pomogator/.last-test-run.ndjson`; 3 failed + 14 undefined —
+все в чужом `spec-generator-v4` (SPECGEN004_*), наших нет. Verdict: STRUCTURE/TRACEABILITY/
+BDD_SYNC GREEN, 0 blocking; EXECUTION RED только за счёт OOS FR-11/12 (корректно never-run).
+
 
 
 После череды фиксов (см. ниже) целевой прогон `docker-bdd.sh --name OUTSESS001` дал:
