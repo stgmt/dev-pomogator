@@ -43,7 +43,7 @@
   **Комментарий:** Реализация + live-проверки готовы; DONE-гейт двери требует канонического full-suite PASSED, а полный docker-bdd 2026-08-16 шесть раз не добирался до сценариев этого спека (WSL-краши + параллельные docker-прогоны соседней сессии). Filtered 19/19 green — довести до DONE после спокойного полного прогона.
   _Requirements: [FR-1](FR.md#fr-1-tail-главного-транскрипта-живых-subagents-снятие-слепоты) .. [FR-10](FR.md#fr-10-сводная-диагностика-параллельности-okdirtyconflict)_
   **Done When:**
-  - [x] `tests/features/plugins/out-session-advisor/OUTSESS001_out-session-advisor.feature` существует с 19 сценариями
+  - [x] `.specs/out-session-advisor/out-session-advisor.feature` существует с 19 сценариями (заwire-чен в cucumber.json; tests/features-путь из плана не материализовался — сценарии исполняются из spec-level файла)
   - [x] `tests/step_definitions/out-session-advisor.ts` существует (реальные step-defs, заглушки заменены)
   - [x] все 19 сценариев GREEN (фильтрованный docker-bdd 2026-08-16)
 
@@ -53,7 +53,7 @@
   _Requirements: [FR-1](FR.md#fr-1-tail-главного-транскрипта-живых-subagents-снятие-слепоты)_
   _Source: DESIGN.md "BDD Test Infrastructure" > "Новые hooks"_
   **Done When:**
-  - [x] hook создаёт temp-workdir с фикстурами транскриптов и git fixture-репо, AfterScenario удаляет (работает во всех сценариях — OUTSESS001_01, _09, _13)
+  - [x] фикстур-сетап (temp-workdir + git fixture-репо + cleanup) реализован inline в step-defs Background/After (hooks-файл `tests/support/out-session-advisor-hooks.ts` из плана не создавался; работает во всех сценариях — OUTSESS001_01, _09, _13)
 
 - [x] Создать fixture: `main-session.jsonl` + `subagents/agent-test.jsonl` — главный транскрипт + живой субагент (per-scenario) — id: T0-03 — Status: IN_PROGRESS | Est: 15m
 

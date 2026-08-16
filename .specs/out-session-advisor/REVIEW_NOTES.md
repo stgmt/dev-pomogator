@@ -51,6 +51,32 @@ BDD_SYNC GREEN, 0 blocking; EXECUTION RED только за счёт OOS FR-11/1
 
 ## Task-status sync (2026-08-16) — дрейф TASKS.md закрыт
 
+## Spec Review: post-implementation (2026-08-16)
+
+**Phase:** Complete (post-impl review, категории 2/6/11/12/14/15/16)
+**Verdict:** READY_WITH_WARNINGS — P0 устранён на месте, P1 задокументированы ниже.
+
+| # | Category | Location | Issue | Sev |
+|---|----------|----------|-------|-----|
+| 1 | 11 spec↔code | TASKS T0-01 / FILE_CHANGES:26 | Чекбокс указывал `tests/features/.../OUTSESS001_*.feature` — файла нет; сценарии исполняются из `.specs/.../out-session-advisor.feature` (cucumber.json). **Исправлено в этой же сессии.** | P0→fixed |
+| 2 | 11 spec↔code | TASKS T0-02 / FILE_CHANGES:28 | `tests/support/out-session-advisor-hooks.ts` не создан — фикстур-сетап inline в step-defs. **Исправлено в этой же сессии.** | P1→fixed |
+| 3 | 11 spec↔code | FILE_CHANGES:9-21 | `monitor.py` (FR-4) реализован, но не числился в FILE_CHANGES. **Исправлено.** | P1→fixed |
+| 4 | 11 spec↔code | FR.md:89 / hooks.json / settings.json | git-guard не зарегистрирован ни в одном hooks-реестре — FR-6 «runtime-слой» не заwire-чен; git-guard вызывается только вручную/из step-defs. Хуки-инфра — зона параллельной сессии; wire — отдельная задача. | P1 known |
+| 5 | 11 spec↔code | diag.ts:58-71 vs FR.md:129-131 | FR-10 сводка: `locks: 0` захардкожен, вердикт `ok` не эмитится, нет repo/sid/pid; BDD-шаги OUTSESS001_15/16 почти ничего не проверяют. | P1 known |
+| 6 | 11 spec↔code | git-guard.ts:21,90-96 / FR.md:91-94 | FR-6 «require override + audit» не реализованы (`warn`-ветка мёртвая, override-флага нет); Then-шаг про escape-audit — no-op. | P1 known |
+| 7 | 11 spec↔code | step-defs :330,380,412,440 | 4 no-op Then-шага (`() => void 0`): escape-audit, lock-audit, single-writer, сводка-парс. Тест-качество: шаги не проверяют заявленное. | P1 known |
+| 8 | 11 spec↔code | lock.ts:117-124 / FR.md:102-103 | recover-stale без аудита (FR-7 «с аудитом»). | P2 |
+| 9 | 11 spec↔code | diag.ts:61-67 / FR.md:118-122 | single-writer — mtime<60s прокси, не live-проверка процесса. | P2 |
+| 10 | 11 spec↔code | worker_driver.py:256 / FR.md:31 / SKILL.md | `get_messages` в спеке/скиле — в коде `snapshot()`; `converse` — CLI-флаг, не метод. | P2 |
+| 11 | 11 spec↔code | worker_driver.py:329 / pty_daemon.py:55 | Флаг в коде `--no-skip-permissions` (skip по умолчанию), спека/скил пишут `--skip-permissions`. | P2 |
+| 12 | 11 spec↔code | monitor.py:37-38 / FR.md:70 | FR-4 «Get-CimInstance» — код использует `Get-Process -Id`; докстринг monitor.py тоже врёт. | P2 |
+| 13 | 11 spec↔code | inventory.ts:11-13 / FR.md:112-113 | FR-8 «session-pilot discovery + process-tree.ts» — inventory переизобрёл discovery inline; `tools/_shared/process-tree.ts` не используется. | P2 |
+| 14 | 11 spec↔code | diag.ts:2-7 | Шапка-комментарий дважды перекодирована (mojibake). | P2 |
+
+**Чистые категории:** 2 (нет реальных дублей; consult.mjs честно реюзает `tools/advisor/transcript-packet.mjs`), 12 (коллизий нет), 14 (memory feedback-файлов нет), 16 (acceptance-task-coverage: `ok, claims: []`), FR-1/3/5/7-ядро/8-CLI/9-who-wrote — без дрейфа; SKILL-зеркало идентично (fc.exe), allowed-tools покрывают workflow.
+
+**Рекомендация по P1 known (4/5/6/7):** единым заходом «FR-6/7/10 честный довод»: заwire-чить git-guard в hooks (после параллельной сессии), доделать сводку diag до заявленной, и заменить 4 no-op Then-шага на реальные проверки (strong-tests: тест не должен проходить впустую).
+
 1. Блоки задач не несли `id:` → граф/дверь не видели НИ одну задачу спеки (NODE_NOT_FOUND).
    Проставлены id по позиционной схеме генератора task-table (T0-01..T3-19).
 2. 7 задач проведены через дверь `set_entity_status` по машине todo→ready→in-progress;

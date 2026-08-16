@@ -23,9 +23,10 @@
 | `.agents/skills/out-session-advisor/SKILL.md` | edit | [FR-5](FR.md#fr-5-канонический-skillmd-зеркало-доменные-истины) (зеркало) |
 | `.claude-plugin/hooks.json` | edit | FR-6 git-guard hook registration (существует) |
 | `.claude/settings.json` | edit | FR-6 dogfood hook (существует) |
-| `tests/features/plugins/out-session-advisor/OUTSESS001_out-session-advisor.feature` | create | FR-1..10 BDD |
-| `tests/step_definitions/out-session-advisor.ts` | edit | FR-1..10 step-defs |
-| `tests/support/out-session-advisor-hooks.ts` | create | TEST_DATA lifecycle |
+| `.specs/out-session-advisor/out-session-advisor.feature` | edit | FR-1..10 BDD (19 сценариев; канонический исполняемый файл — заwire-чен в cucumber.json) |
+| `cucumber.json` | edit | FR-1..10 BDD — `.specs/out-session-advisor/out-session-advisor.feature` в default paths |
+| `tools/out-session-advisor/monitor.py` | create | [FR-4](FR.md#fr-4-цикл-мониторинга-не-встаёт-живость-процесса-интервальные-снапшоты) (живость + интервальные снапшоты) |
+| `tests/step_definitions/out-session-advisor.ts` | edit | FR-1..10 step-defs (фикстур-сетап inline в Background — hooks-файла нет) |
 | `tests/features/plugins/out-session-advisor/fixtures/E--main-session/main-session.jsonl` | edit | FR-1 (фикстура реального транскрипта) |
 | `tests/features/plugins/out-session-advisor/fixtures/E--main-session/main-session/subagents/agent-test.jsonl` | edit | FR-1 (фикстура живого субагента) |
 | `tests/features/plugins/out-session-advisor/fixtures/events.jsonl` | edit | FR-1/FR-2 (фикстура событийного лога stream-json, реальный формат) |
