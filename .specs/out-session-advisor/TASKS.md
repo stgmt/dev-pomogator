@@ -91,8 +91,15 @@
 - [x] verify_claims.ts — CONFIRMED/GAP + live-цепочка 307→403→200 — @feature3 — Status: DONE | Est: 60m
   _Requirements: [FR-3](FR.md#fr-3-факт-проверка-отчётов-воркера-verifyclaims)_
   **Done When:**
-  - [ ] `tools/out-session-advisor/verify_claims.ts` существует, CLI `--claim/--paths`
-  - [ ] OUTSESS001_03 (CONFIRMED), _04 (GAP), _05 (промежуточный 403 ≠ блокер) переходят из Red в Green
+  - [x] `tools/out-session-advisor/verify_claims.ts` существует, CLI `--claim/--paths`
+  - [x] OUTSESS001_03 (CONFIRMED), _04 (GAP), _05 (промежуточный 403 ≠ блокер) переходят из Red в Green
+
+- [x] consult.mjs — модель-консультация (ADVISOR_MODEL, модель-пара) — @feature3 — Status: DONE | Est: 30m
+  _Requirements: [FR-3](FR.md#fr-3-факт-проверка-отчётов-воркера-verifyclaims)_
+  **Done When:**
+  - [x] `tools/out-session-advisor/consult.mjs` существует: `--session/--project-dir/--event-log/--point`
+  - [x] fail-open без ANTHROPIC_BASE_URL/транскрипта
+  - [x] LIVE: gpt-5.6-sol вернул предметный совет по сессии e98178b8 (проверить diff 56↔56, rg exit 1 штатный)
 
 - [x] Цикл мониторинга «не встаёт» (живость + интервальные снапшоты) — @feature4 — Status: DONE | Est: 45m
   _Requirements: [FR-4](FR.md#fr-4-цикл-мониторинга-не-встаёт-живость-процесса-интервальные-снапшоты)_

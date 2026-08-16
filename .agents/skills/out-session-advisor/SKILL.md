@@ -65,6 +65,12 @@ allowed-tools: Read, Write, Edit, Glob, Grep, Bash, AskUserQuestion
   archived cleared не морозит свежий run; live — стоп до clear_run_external_blocker
 - Каждое заявление сессии — минимум 3 способа: транскрипт, файлы, БД/процессы.
 
+**Модель-консультация (модель-пара, опционально):** на ключевых точках (перед «готово»,
+повторяющаяся ошибка, смена подхода) — `node consult.mjs --session <sid> --project-dir <enc>
+[--event-log <path>] [--point done|recurring|plan]` → совет `ADVISOR_MODEL`
+(default `gpt-5.6-sol`, сильнее воркера). Fail-open: без env/транскрипта — пропуск.
+Совет НЕ заменяет детерминированный `verify_claims` — сначала факты, потом мнение.
+
 ## Доменные истины (проверено на Ozon-harness sales)
 
 - **Бренд/артикул НЕ обязан быть в URL.** Реальный источник identity — страница карточки

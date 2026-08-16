@@ -13,6 +13,7 @@
 | `tools/out-session-advisor/pty_daemon.py` | edit | [FR-2](FR.md#fr-2-управление-воркером-stream-json-primary-conpty-fallback) (fallback) |
 | `tools/out-session-advisor/worker_driver.py` | edit | [FR-2](FR.md#fr-2-управление-воркером-stream-json-primary-conpty-fallback) (PRIMARY, stream-json) |
 | `tools/out-session-advisor/verify_claims.ts` | edit | [FR-3](FR.md#fr-3-факт-проверка-отчётов-воркера-verifyclaims) |
+| `tools/out-session-advisor/consult.mjs` | create | [FR-3](FR.md#fr-3-факт-проверка-отчётов-воркера-verifyclaims) (модель-консультация, модель-пара) |
 | `tools/out-session-advisor/lock.ts` | edit | [FR-7](FR.md#fr-7-атомарный-лок-сервис-с-владельцем-и-stale-восстановлением) |
 | `tools/out-session-advisor/git-guard.ts` | edit | [FR-6](FR.md#fr-6-git-гейт-против-add-a-и-чужих-staged-runtime-слой-no-git-add-all-shared-tree) |
 | `tools/out-session-advisor/inventory.ts` | edit | [FR-8](FR.md#fr-8-инвентаризация-сессий-по-нескольким-репо) |

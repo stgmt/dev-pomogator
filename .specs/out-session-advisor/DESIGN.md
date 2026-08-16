@@ -41,6 +41,11 @@
 - `verify_claims.ts` — CLI факт-проверки: `CONFIRMED`/`GAP` с evidence-путями; live-проверка
   цепочки `307→403→200` (финальный document) и `run_external_blockers` `source`; verify/repair
   транскрипта по образцу `@recensa/claude-session`.
+- `consult.mjs` — **модель-консультация (модель-пара, опционально)**: на ключевых точках
+  (done/recurring/plan) зовёт `ADVISOR_MODEL` (default `gpt-5.6-sol`) через
+  `ANTHROPIC_BASE_URL/v1/messages` с пакетом транскрипта (главный+субагенты+event-log,
+  переиспользует `tools/advisor/transcript-packet.mjs`); fail-open; совет не заменяет
+  детерминированный `verify_claims`.
 
 ### Часть B — Параллельная безопасность
 

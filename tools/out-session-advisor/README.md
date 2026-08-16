@@ -12,6 +12,7 @@ Advisor: отдельная сессия наблюдает, проверяет 
 | `pty_daemon.py` | FR-2 | **FALLBACK** ConPTY: протокол `claude-ctl.json`/`claude-rsp.json` для handoff в живой TUI. |
 | `strip_ansi.py` | FR-2 | Очистка ANSI/OSC из снапшотов PTY. |
 | `verify_claims.ts` | FR-3 | Факт-проверка: `--claim file|chain|blocker` → CONFIRMED/GAP (файл/hash/size, 403-цепочка, run_external_blockers live|archived). |
+| `consult.mjs` | FR-3 | Модель-консультация (модель-пара): `--session/--project-dir/--event-log/--point` → совет `ADVISOR_MODEL` (default gpt-5.6-sol) по транскрипту; fail-open. |
 | `monitor.py` | FR-4 | Живость воркера: `idle | thinking-xhigh | dead`; «думает» ≠ «повис». |
 | `lock.ts` | FR-7 | Атомарный лок `flag:'wx'` + владелец + stale-восстановление (аудит). |
 | `git-guard.ts` | FR-6 | Гейт: `git add -A`/`.` → block; чужие staged (по транскриптам) → conflict. |
