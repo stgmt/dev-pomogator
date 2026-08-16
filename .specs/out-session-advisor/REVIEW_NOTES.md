@@ -43,9 +43,31 @@ BDD_SYNC GREEN, 0 blocking; EXECUTION RED только за счёт OOS FR-11/1
 
 **OUTSESS001_18 (consult fail-open) — 19/19:** фильтрованный `docker-bdd --name OUTSESS001`
 после добавления сценария — **19 scenarios (19 passed), 125 steps (125 passed)**. Полный
-канонический прогон для 19 сценариев трижды обрывался крашем WSL (`0x8007274c`) на длинном
-сьюте — канон остаётся 18/18 + сценарий 18 верифицирован фильтрованным прогоном
-(environmental, правило `env-blocker-is-not-a-stop`).
+канонический прогон для 19 сценариев обрывался крашем WSL (`0x8007274c`) на длинном
+сьюте + конкуренцией параллельных docker-прогонов соседней сессии (общий compose-проект
+`devpom-bdd-<session>`: чужие `down --remove-orphans` сносили мои контейнеры; 6 попыток
+2026-08-16). Канон остаётся без наших 19 сценариев — TASK_TRUTH/AC_SATISFACTION вердикта
+честно RED до спокойного полного прогона.
+
+## Task-status sync (2026-08-16) — дрейф TASKS.md закрыт
+
+1. Блоки задач не несли `id:` → граф/дверь не видели НИ одну задачу спеки (NODE_NOT_FOUND).
+   Проставлены id по позиционной схеме генератора task-table (T0-01..T3-19).
+2. 7 задач проведены через дверь `set_entity_status` по машине todo→ready→in-progress;
+   DONE-гейт двери честно отказал: mapped-сценарии не канонически PASSED (см. выше).
+   Задачи остаются IN_PROGRESS с **Комментарий:** (не fake-DONE, не блокер-отмазка).
+3. Done When чекбоксы синхронизированы с фактом; 2 устаревшие формулировки переписаны
+   («заглушки Pending»/«FAIL Red» → реальные step-defs / GREEN 19/19).
+4. `_Requirements` refs добавлены в 6 задач без них (T0-02/03, T1-08, T2-17, T3-18, T3-19).
+5. Ноги FR-11/FR-12 (OUT OF SCOPE) достроены: Decision ×2 (DESIGN.md), Story ×2
+   (USER_STORIES.md) — FR_NO_DESIGN/FR_NO_STORY закрыты.
+6. Summary Table перегенерирована `spec-status.ts -Format task-table`.
+
+Вердикт после синка: STRUCTURE/TRACEABILITY/BDD_SYNC GREEN; conformance 0 error / 22 warning —
+остаток (UNVERIFIED_FR:10, TASK_STATUS_UNVERIFIED:12) целиком производный от канона
+(19 сценариев не в полном прогоне). Довести до полного GREEN = один спокойный полный
+`docker-bdd.sh` (без параллельных прогонов соседа), затем через дверь закрыть 7 IN_PROGRESS.
+
 
 
 
@@ -90,7 +112,7 @@ BDD_SYNC GREEN, 0 blocking; EXECUTION RED только за счёт OOS FR-11/1
 |---|----------|----------|------|
 | 1 | 6 FEATURE_TAG | USE_CASES.md | UC-1..UC-5 (Часть A) не несут `@feature5` для FR-5 (скил); тег @feature5 есть в USER_STORIES/feature — цепочка не рвётся, но use-case для скила не помечен тегом. Рекомендация: добавить @feature5 в UC-5 или на будущее держать 1:1. |
 | 2 | 15 REALITY_DRIFT | DESIGN.md narrative `out-session-advisor/SKILL.md` | Путь — планируемый (FILE_CHANGES create + TASKS T2-11); WARNING легитимен до реализации. |
-| 3 | 15 REALITY_DRIFT | TASKS↔FILE_CHANGES (8×INFO) | README.md, `.claude-plugin/hooks.json`, `.claude/settings.json`, фикстуры не упомянуты отдельными задачами в TASKS; покрыты неявно (Phase 0 hook/fixture группы + T3-18). INFO, не блокирует. |
+| 3 | 15 REALITY_DRIFT | TASKS↔FILE_CHANGES (8×INFO) | README.md, `.claude-plugin/hooks.json`, `.claude/settings.json`, фикстуры не упомянуты отдельными задачами в TASKS; покрыты неявно (Phase 0 hook/fixture группы + T3-19). INFO, не блокирует. |
 
 ## Auto-fix patches
 

@@ -354,3 +354,27 @@ Windows-native инструмент — Get-CimInstance (подтверждён 
 | `transcriptDir` | path | BeforeScenario hook | все steps | пути к temp транскриптам |
 | `fixtureRepo` | path | BeforeScenario hook | git-guard steps | путь к git fixture |
 | `locksDir` | path | BeforeScenario hook | lock steps | temp-каталог локалов |
+
+### Decision: FR-11 (pywinpty-стойкость) — осознанно вне скоупа итерации
+
+**Требование:** [FR-11](FR.md#fr-11-стойкий-запуск-на-pywinpty-fallback-без-pty-out-of-scope)
+
+**Rationale:** ConPTY-fallback ctl/rsp существует и работает; стресс-стойкость установки pywinpty под
+Windows (user-site/ENABLE_USER_SITE) — отдельный харденинг, не блокирующий v1 адвизора.
+
+**Trade-off:** без fallback-без-PTY адвизор зависит от ConPTY на Windows; при реальной боли — вернуть в скоуп.
+
+**Alternatives considered:**
+- Делать сейчас — rejected: раздувает скоуп v1 без живых симптомов.
+
+### Decision: FR-12 (мульти-воркер) — осознанно вне скоупа итерации
+
+**Требование:** [FR-12](FR.md#fr-12-множественные-воркеры-параллельно-в-одном-адвизоре-out-of-scope)
+
+**Rationale:** v1 адвизор управляет одним воркером; параллельный роевой адвизор — эволюция на базе
+уже реализованных FR-8/FR-9 (inventory/diag).
+
+**Trade-off:** один воркер на адвизор; роевая модель отложена до реальной потребности.
+
+**Alternatives considered:**
+- Делать сейчас — rejected: усложняет состояние v1 без подтверждённой нужды.

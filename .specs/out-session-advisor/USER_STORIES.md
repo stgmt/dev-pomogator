@@ -229,3 +229,39 @@ Then в сводке указаны: каждая сессия (repo/sid/pid), �
 Given нет активных чужих сессий
 When вызывается диагностика
 Then сводка короткая (`0 active, 0 locks, 0 conflicts`) и не спамит
+
+---
+
+### User Story 11: v1 осознанно не обещает pywinpty-стойкость @feature1 (Priority: P3)
+
+**Требование:** [FR-11](FR.md#fr-11-стойкий-запуск-на-pywinpty-fallback-без-pty-out-of-scope)
+
+As a владелец, I want явную фиксацию «это вне скоупа v1» для pywinpty-харденинга, чтобы не считать его незакрытым обязательством и не тратить на него усилия до реальной нужды.
+
+**Why:** AC-11 существует как OUT-OF-SCOPE маркер; ноги Story/Decision фиксируют это решение в графе (не «забыто», а «осознанно отложено»).
+
+**Independent Test:** census-проверка `FR-11` несёт verdict по OUT-OF-SCOPE AC-11; ноги Decision/Story собраны — FR больше не числится в `FR_NO_DESIGN`/`FR_NO_STORY`.
+
+**Acceptance Scenarios:**
+
+Given FR-11 помечен OUT OF SCOPE
+When собирается spec-graph
+Then для FR-11 существуют ноги Decision и User Story, а статус остаётся вычислимым без тестовых сценариев
+
+---
+
+### User Story 12: v1 осознанно не обещает мульти-воркер-рой @feature8 (Priority: P3)
+
+**Требование:** [FR-12](FR.md#fr-12-множественные-воркеры-параллельно-в-одном-адвизоре-out-of-scope)
+
+As a владелец, I want явную фиксацию «мульти-воркер вне скоупа v1» для роевого адвизора, чтобы не считать его незакрытым обязательством до реальной потребности.
+
+**Why:** AC-12 существует как OUT-OF-SCOPE маркер; ноги Story/Decision фиксируют это решение в графе.
+
+**Independent Test:** census-проверка `FR-12` несёт verdict по OUT-OF-SCOPE AC-12; ноги Decision/Story собраны — FR больше не числится в `FR_NO_DESIGN`/`FR_NO_STORY`.
+
+**Acceptance Scenarios:**
+
+Given FR-12 помечен OUT OF SCOPE
+When собирается spec-graph
+Then для FR-12 существуют ноги Decision и User Story, а статус остаётся вычислимым без тестовых сценариев
