@@ -1,0 +1,7 @@
+{"event": "send", "ts": "2026-08-16T02:52:59.000Z", "prompt": "Ответь ровно одним словом: OK"}
+{"event": "session_start", "ts": "2026-08-16T02:53:00.000Z", "sid": "672f2a45-0578-4b59-863c-ec34455a9113"}
+{"event": "thinking_tokens", "ts": "2026-08-16T02:56:53.000Z", "estimated_tokens": 7}
+{"event": "tool_use", "ts": "2026-08-16T02:56:53.000Z", "tool": "Read", "tool_input": {"file_path": "AGENTS.md"}}
+{"event": "tool_result", "ts": "2026-08-16T02:56:54.000Z", "is_error": false}
+{"event": "assistant_text", "ts": "2026-08-16T02:56:54.000Z", "text": "OK"}
+{"event": "result", "ts": "2026-08-16T02:56:55.000Z", "sid": "672f2a45-0578-4b59-863c-ec34455a9113", "is_error": false, "text": "OK", "cost_usd": 0.21267}

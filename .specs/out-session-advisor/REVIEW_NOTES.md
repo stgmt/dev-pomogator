@@ -18,7 +18,25 @@ FR-1..10 доведены до рабочего кода в `tools/out-session-a
 - FR-4 `monitor.py` — `dead` / `thinking-xhigh` различены.
 - ФБ-5 SKILL + зеркало идентичны; skill-health 0 blocking.
 
-## Docker BDD run — ЗЕЛЁНЫЙ (2026-08-15, итог)
+## Live end-to-end цикл (2026-08-16) — стык tail↔stream-json закрыт
+
+Сквозной прогон «адвизор управляет живым воркером» на реальной задаче (дрейф путей AGENTS.md):
+
+1. `worker_driver.py --event-log` поднял реальный воркер (claude pid 50264, `gpt-5.6-luna`,
+   sid `e98178b8`). **Event-log ловил живой поток**: `send → session_start → thinking_tokens(11,22,30)
+   → tool_use Read → tool_result → tool_use Edit → tool_use Bash → assistant_text → result`.
+   Ранее (без event-log) файл `~/.claude/projects` в stream-json режиме писался лениво —
+   адвизор был слеп. Теперь `tail_session --event-log` показывает всё в реальном времени.
+2. Воркер починил реальный дрейф: **56 путей `.Codex/rules/` → `.carl/rules/` в AGENTS.md**.
+3. Адвизор-проверка на диске: `rg -c '\.Codex/rules' AGENTS.md` = **0**, `.carl/rules` = **56** —
+   отчёт воркера правдив (совпадает с фактом, diff 56↔56 только пути).
+4. `monitor.py` в процессе верно показал `thinking-xhigh` (жив, думает) — не dead.
+
+**Вывод:** цикл «запуск → живое наблюдение (thinking/tool) → факт-проверка отчёта против диска»
+работает end-to-end на реальной сессии. BDD: **18/18 scenarios, 119/119 steps** (добавлен
+OUTSESS001_17 event-log).
+
+
 
 После череды фиксов (см. ниже) целевой прогон `docker-bdd.sh --name OUTSESS001` дал:
 **17 scenarios (17 passed), 112 steps (112 passed)** — все сценарии OUTSESS001_01..16(+06b) зелёные.

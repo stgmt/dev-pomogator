@@ -29,6 +29,23 @@
 { "out": "<ansi snapshot, до 12000 chars>", "pid": 4242, "sent": true }
 ```
 
+## Событийный лог worker_driver (JSONL, `--event-log`)
+
+Одна строка = одно событие (нормализовано из stream-json stdout, формат в стиле csd events.ts):
+
+```json
+{"event": "send", "ts": "2026-08-16T02:52:59.000Z", "prompt": "..."}
+{"event": "session_start", "ts": "...", "sid": "672f2a45-..."}
+{"event": "thinking_tokens", "ts": "...", "estimated_tokens": 7}
+{"event": "tool_use", "ts": "...", "tool": "Read", "tool_input": {"file_path": "AGENTS.md"}}
+{"event": "tool_result", "ts": "...", "is_error": false}
+{"event": "assistant_text", "ts": "...", "text": "OK"}
+{"event": "result", "ts": "...", "sid": "...", "is_error": false, "text": "OK", "cost_usd": 0.21267}
+```
+
+- `event` ∈ {send, session_start, thinking_tokens, tool_use, tool_result, assistant_text, result}.
+- tail_session `--event-log <path>` объединяет эти строки с файловым транскриптом (маркер `[live]`).
+
 ## verify_claims вердикт
 
 ```json

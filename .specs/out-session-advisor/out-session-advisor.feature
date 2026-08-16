@@ -27,6 +27,13 @@ Feature: OUTSESS001_session_advisor_and_parallel_safety
     Then блок субагента помечен как закрытый
     And ранее показанные строки не повторяются
 
+  @feature1 @FR-1 @AC-1
+  Scenario: OUTSESS001_17 tail видит live-события stream-json воркера из event-log
+    Given событийный лог "events.jsonl" содержит send, session_start, tool_use и result
+    When адвизор снимает хвост с event-log "events.jsonl"
+    Then в выводе видны live-события tool_use и result
+    And live-событие SEND не дублирует файловый транскрипт
+
   @feature3 @FR-3 @AC-3
   Scenario: OUTSESS001_03 verify_claims возвращает CONFIRMED с evidence
     When адвизор запускает verify_claims с путями реальных файлов из отчёта воркера

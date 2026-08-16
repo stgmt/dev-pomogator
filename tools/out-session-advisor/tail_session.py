@@ -43,6 +43,8 @@ def parse_args(argv=None):
     p.add_argument("--max-depth", type=int, default=DEFAULT_MAX_DEPTH)
     p.add_argument("--state-dir", dest="state_dir", default=None,
                    help="dir for offsets state; default <projects_root>/.advisor-state")
+    p.add_argument("--event-log", dest="event_log", default=None,
+                   help="JSONL событийного лога worker_driver (session_start/send/thinking_tokens/tool_use/tool_result/result) — объединяется с файловым транскриптом")
     p.add_argument("--compact", action="store_true", help="compact output (no box drawing, terse markers)")
     return p.parse_args(argv)
 
@@ -173,6 +175,34 @@ def is_closed(path, last_size, offsets):
     return prev is not None and last_size == prev
 
 
+def render_event_log_line(j):
+    """Рендер события из event-log worker_driver (формат: {event, ts, ...}) в текстовую строку."""
+    ev = j.get("event", "")
+    ts = (j.get("ts") or "")[11:19]
+    if ev == "session_start":
+        return f"{ts} [live] [SESSION_START sid={j.get('sid', '')[:12]}]"
+    if ev == "send":
+        p = (j.get("prompt") or "").replace("\n", " ")
+        return f"{ts} [live] [SEND {p[:200]}]"
+    if ev == "thinking_tokens":
+        return f"{ts} [live] [THINKING +{j.get('estimated_tokens', '?')} tok]"
+    if ev == "tool_use":
+        inp = j.get("tool_input") or {}
+        fpath = inp.get("file_path", "") if isinstance(inp, dict) else ""
+        cmd = ""
+        if isinstance(inp, dict) and inp.get("command"):
+            cmd = " | " + str(inp["command"])[:110]
+        return f"{ts} [live] [TOOL {j.get('tool', '')} {fpath}{cmd}]"
+    if ev == "tool_result":
+        return f"{ts} [live] [TOOL_RESULT{' ERROR' if j.get('is_error') else ''}]"
+    if ev == "assistant_text":
+        return f"{ts} [live] [TEXT {(j.get('text') or '')[:220]}]"
+    if ev == "result":
+        cost = j.get("cost_usd")
+        return f"{ts} [live] [RESULT{' ERR' if j.get('is_error') else ''}{' cost=' + str(cost) if cost else ''}] {(j.get('text') or '')[:200]}"
+    return None
+
+
 def collect(args):
     projects_root = args.projects_root
     proj_dir = encoded_project_dir(args.project_dir)
@@ -212,6 +242,14 @@ def collect(args):
             snapshot.append(f"[subagent {agent_id}] [closed]")
         for j in iter_json_lines(raw2.decode("utf-8", errors="replace")):
             row = render_event(j, agent_id=agent_id)
+            if row:
+                snapshot.append(row)
+
+    # event-log от worker_driver (живые события stream-json: файл пишется лениво, лог — сразу)
+    if args.event_log and os.path.exists(args.event_log):
+        el_raw = read_tail_bytes(args.event_log, args.tail_bytes)
+        for j in iter_json_lines(el_raw.decode("utf-8", errors="replace")):
+            row = render_event_log_line(j)
             if row:
                 snapshot.append(row)
 

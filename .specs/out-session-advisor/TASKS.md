@@ -40,7 +40,7 @@
 - [ ] Создать `.feature` + step definitions (заглушки Pending) — @feature1..@feature10 — Status: TODO | Est: 60m
   _Requirements: [FR-1](FR.md#fr-1-tail-главного-транскрипта-живых-subagents-снятие-слепоты) .. [FR-10](FR.md#fr-10-сводная-диагностика-параллельности-okdirtyconflict)_
   **Done When:**
-  - [ ] `tests/features/plugins/out-session-advisor/OUTSESS001_out-session-advisor.feature` существует с 17 сценариями
+  - [x] `tests/features/plugins/out-session-advisor/OUTSESS001_out-session-advisor.feature` существует с 18 сценариями
   - [ ] `tests/step_definitions/out-session-advisor.ts` с PendingStepException заглушками
   - [ ] все сценарии FAIL (Red)
 
@@ -65,8 +65,9 @@
 - [x] tail_session.py — главный jsonl + живые `subagents/agent-*.jsonl` — @feature1 — Status: DONE | Est: 45m
   _Requirements: [FR-1](FR.md#fr-1-tail-главного-транскрипта-живых-subagents-снятие-слепоты)_
   **Done When:**
-  - [ ] `tools/out-session-advisor/tail_session.py` существует, принимает `--session/--project-dir/--tail-bytes`
-  - [ ] сценарии OUTSESS001_01 (живые субагенты видны) и _02 (закрытый не повторяется) переходят из Red в Green
+  - [x] `tools/out-session-advisor/tail_session.py` существует, принимает `--session/--project-dir/--tail-bytes`
+  - [x] `--event-log <path>` объединяет живые события stream-json ([live], dedup)
+  - [x] сценарии OUTSESS001_01 (живые субагенты видны), _02 (закрытый не повторяется), _17 (event-log) переходят из Red в Green
 
 - [x] strip_ansi.py параметризованный — @feature1 — Status: DONE | Est: 15m
   **Done When:**
@@ -76,9 +77,10 @@
 - [x] worker_driver.py — stream-json мост (PRIMARY) + pty_daemon.py (fallback ctl/rsp) — @feature2 — Status: DONE | Est: 75m
   _Requirements: [FR-2](FR.md#fr-2-управление-воркером-stream-json-primary-conpty-fallback)_
   **Done When:**
-  - [ ] `tools/out-session-advisor/worker_driver.py` существует: send/send_nowait/wait_for_result/wait_for_tool_use, синхронизация по result, `--skip-permissions`
-  - [ ] `tools/out-session-advisor/pty_daemon.py` существует как fallback (cwd/--resume/--model/--dangerously-skip-permissions)
-  - [ ] сценарий OUTSESS001_06 (промпт доставляется, result/out) переходит из Red в Green
+  - [x] `tools/out-session-advisor/worker_driver.py` существует: send/send_nowait/wait_for_result/wait_for_tool_use, синхронизация по result, `--skip-permissions`
+  - [x] `--event-log <path>` пишет send/session_start/thinking_tokens/tool_use/tool_result/assistant_text/result; `--transcript` дублирует raw stdout
+  - [x] `tools/out-session-advisor/pty_daemon.py` существует как fallback (cwd/--resume/--model/--dangerously-skip-permissions)
+  - [x] сценарий OUTSESS001_06 (промпт доставляется, result/out) переходит из Red в Green
 
 - [ ] Verify: сценарии @feature1..@feature2 переходят из Red в Green — Status: TODO | Est: 15m
   **Done When:**

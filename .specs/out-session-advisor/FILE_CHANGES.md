@@ -27,6 +27,7 @@
 | `tests/support/out-session-advisor-hooks.ts` | create | TEST_DATA lifecycle |
 | `tests/features/plugins/out-session-advisor/fixtures/E--main-session/main-session.jsonl` | edit | FR-1 (фикстура реального транскрипта) |
 | `tests/features/plugins/out-session-advisor/fixtures/E--main-session/main-session/subagents/agent-test.jsonl` | edit | FR-1 (фикстура живого субагента) |
+| `tests/features/plugins/out-session-advisor/fixtures/events.jsonl` | edit | FR-1/FR-2 (фикстура событийного лога stream-json, реальный формат) |
 | `tests/features/plugins/out-session-advisor/fixtures/E--session-a/session-A.jsonl` | edit | FR-9 (транскрипт сессии A) |
 | `tests/features/plugins/out-session-advisor/fixtures/E--session-b/session-B.jsonl` | edit | FR-9 (транскрипт сессии B) |
 | `tests/features/plugins/out-session-advisor/fixtures/git-fixture/` | edit | FR-6 (git-репо со staged-путями) |

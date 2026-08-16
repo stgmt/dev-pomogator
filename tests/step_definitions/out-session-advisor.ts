@@ -144,6 +144,30 @@ Then('ранее показанные строки не повторяются',
   if (new Set(lines).size !== lines.length) throw new Error('дубли в снапшоте');
 });
 
+/* ---------- FR-1 event-log (живые события stream-json) ---------- */
+
+Given('событийный лог {string} содержит send, session_start, tool_use и result', (_f: string) => {
+  const raw = fs.readFileSync(path.join(FIXTURES, 'events.jsonl'), 'utf8');
+  for (const ev of ['"event": "send"', '"event": "session_start"', '"event": "tool_use"', '"event": "result"'])
+    if (!raw.includes(ev)) throw new Error(`events.jsonl без ${ev}`);
+});
+
+When('адвизор снимает хвост с event-log {string}', (_f: string) => {
+  py('tail_session.py', ['--session', 'main-session', '--project-dir', 'E--fixture', '--projects-root', state.tempDir,
+    '--event-log', path.join(FIXTURES, 'events.jsonl'),
+    '--state-dir', path.join(state.tempDir, '.state'), '--max-lines', '60']);
+});
+
+Then('в выводе видны live-события tool_use и result', () => {
+  if (!state.out.includes('[live] [TOOL Read')) throw new Error(`live tool_use не найден: ${state.out.slice(0, 300)}`);
+  if (!state.out.includes('[live] [RESULT')) throw new Error('live result не найден');
+});
+
+Then('live-событие SEND не дублирует файловый транскрипт', () => {
+  const sends = state.out.split('\n').filter((l) => l.includes('[SEND'));
+  if (sends.length !== 1) throw new Error(`ожидался 1 SEND, получили ${sends.length}`);
+});
+
 /* ---------- FR-3 verify_claims ---------- */
 
 When('адвизор запускает verify_claims с путями реальных файлов из отчёта воркера', () => {

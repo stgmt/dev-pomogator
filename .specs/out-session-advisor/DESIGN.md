@@ -25,12 +25,16 @@
 - `tail_session.py` — аггрегатор транскрипта: главный `<sid>.jsonl` + живые `subagents/agent-*.jsonl`
   (включая вложенный `subagents/workflows/<runId>/`, depth≤8). Путь-логика по образцу
   `Guiziweb/claude-code-data.readSubagentTurns`. Читает незакрытые файлы по смещению, помечает
-  закрытые, дедуплицирует строки.
+  закрытые, дедуплицирует строки. **`--event-log <path>`** объединяет живые события stream-json
+  воркера (файловый транскрипт Claude Code пишет лениво) с маркером `[live]`.
 - `strip_ansi.py` — очистка ANSI-последовательностей из снапшотов PTY (для ConPTY fallback).
 - `worker_driver.py` — **PRIMARY драйвер воркера**: stream-json мост к `claude` CLI по образцу
   `claw-army/claude-node` (`--input-format stream-json --output-format stream-json`);
   `send`/`send_nowait`/`wait_for_result`/`wait_for_tool_use`/`get_messages`; launch с
   `--dangerously-skip-permissions`; вопросы воркера текст-в-`result` → ответ через `send`.
+  **`--event-log <path>`** пишет нормализованные события JSONL сразу из stdout reader-потока
+  (send/session_start/thinking_tokens/tool_use/tool_result/assistant_text/result);
+  `--transcript <path>` дублирует raw stdout.
 - `pty_daemon.py` — FALLBACK: долгоживущий ConPTY-процесс воркера; протокол `claude-ctl.json`/
   `claude-rsp.json`; принимает `cwd`, `--resume <sid>`, `--model <m>`,
   `--dangerously-skip-permissions` как аргументы. Нужен только для handoff в живой TUI.
@@ -73,7 +77,8 @@
 
 1. Адвизор получает session-id и каталог `~/.claude/projects/<proj>/<sid>/`.
 2. `tail_session.py` собирает хвост главного файла + живых `subagents/agent-*.jsonl` (в т.ч.
-   `workflows/<runId>/`, depth≤8; путь-логика по образцу `claude-code-data.readSubagentTurns`);
+   `workflows/<runId>/`, depth≤8; путь-логика по образцу `claude-code-data.readSubagentTurns`)
+   **+ `--event-log` живые события stream-json воркера** (файловый транскрипт пишется лениво);
    `strip_ansi.py` чистит снапшоты PTY (fallback-путь).
 3. Перед правкой — `parallel-session-diag --who-wrote <path>` (FR-9): не порвать single-writer.
 4. Диагноз: `verify_claims.ts` сверяет claims воркера с диском/БД/live-проверкой.

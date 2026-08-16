@@ -9,9 +9,14 @@
 `subagents/workflows/<runId>/agent-<id>.jsonl`** (standard CC ≥2.1.2, рекурсивный обход с
 лимитом глубины ≤8). Читает незакрытые файлы до последней строки (не ждёт EOF), помечает
 закрытые, дедуплицирует уже показанные строки.
+**Stream-json воркеры (FR-2):** файловый транскрипт Claude Code пишет лениво, поэтому tail
+также читает **событийный лог** `worker_driver --event-log` (`session_start/send/thinking_tokens/
+tool_use/tool_result/assistant_text/result`) и объединяет с файлом (маркер `[live]`, dedup).
 [VERIFIED: `6126f730.../subagents/agent-*.jsonl` существуют в каталоге сессии.]
 [VERIFIED: формат вложенных субагентов подтверждён сторонним парсером
 `Guiziweb/claude-code-data` `src/data/parser/session.ts` `readSubagentTurns`.]
+[VERIFIED: live-прогон 2026-08-16 — event-log поймал `send→session_start→thinking_tokens→
+assistant_text→result`, файл в это время не рос.]
 
 **Связанные AC:** [AC-1](ACCEPTANCE_CRITERIA.md#ac-1-fr-1)
 **Use Case:** [UC-1](USE_CASES.md#uc-1-адвизор-берёт-управление-живой-воркер-сессией-feature2-feature3), [UC-2](USE_CASES.md#uc-2-адвизор-видит-субагентов-воркера-feature1-feature3)
@@ -24,6 +29,10 @@
 синхронизация по `type=result`, structured события (`system/init` с session_id, `assistant`,
 `user/tool_result`, `result`). Управление через единый Python-контроллер (send/send_nowait/
 wait_for_result/wait_for_tool_use/get_messages). Запуск воркера с `--dangerously-skip-permissions`.
+**Событийный лог:** `worker_driver --event-log <path>` пишет нормализованные события
+(`session_start/send/thinking_tokens/tool_use/tool_result/assistant_text/result`, формат в стиле
+`csd` events.ts) в JSONL сразу при получении из stdout — потому что файловый транскрипт
+Claude Code в stream-json режиме пишется лениво; `--transcript <path>` дублирует raw stdout.
 
 ConPTY (`pty_daemon.py`, ctl/rsp-файлы) остаётся **fallback** для случая, когда нужен живой
 TUI (handoff) или stream-json-флаг недоступен: `PtyProcess.spawn([claude, --resume <sid>, ...])`,
