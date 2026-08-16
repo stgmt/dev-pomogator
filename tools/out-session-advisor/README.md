@@ -19,6 +19,10 @@ Advisor: отдельная сессия наблюдает, проверяет 
 | `inventory.ts` | FR-8 | Инвентаризация сессий/процессов по репо (standalone). |
 | `diag.ts` | FR-9/10 | «кто писал <файл>» (read-only) + сводка `ok/dirty/conflict`. |
 
+## git-guard hook
+
+Хук зарегистрирован как `PreToolUse` на Bash (`PreToolUse/7/0`) и блокирует `git add -A`, `git add .` и `--all`. Осознанный обход: маркер `[skip-git-guard: <причина>]` в тексте команды или env `GIT_GUARD_SKIP=1`; каждый обход пишется в audit `.dev-pomogator/git-guard-escapes.jsonl`. Режим fail-open: любая ошибка хука не блокирует команду.
+
 ## Протокол worker_driver (stream-json)
 
 ```

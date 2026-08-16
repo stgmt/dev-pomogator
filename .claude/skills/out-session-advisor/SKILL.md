@@ -42,10 +42,10 @@ allowed-tools: Read, Write, Edit, Glob, Grep, Bash, AskUserQuestion
   `claude --input-format stream-json --output-format stream-json [--resume <sid> --model <m>]
   --dangerously-skip-permissions`, синхронизация по `type=result`.
   Методы: `converse`, `send`, `send_nowait`, `wait_for_result`, `wait_for_tool_use`,
-  `get_messages`. Вопросы воркера приходят текстом в `result` (вариант A) — отвечаю через `send`.
+  `snapshot()`. Вопросы воркера приходят текстом в `result` (вариант A) — отвечаю через `send`.
 - **FALLBACK ConPTY** — `pty_daemon.py`, протокол `claude-ctl.json`/`claude-rsp.json`
   (для handoff в живой TUI / когда stream-json недоступен). Вывод чистить `strip_ansi.py`.
-- Явный флаг `--skip-permissions` по умолчанию: разрешительные диалоги не висят.
+- Флаг `--no-skip-permissions` отключает обход разрешений; по умолчанию обход включён, чтобы разрешительные диалоги не висели.
 
 ## Мониторинг (FR-1/FR-4)
 

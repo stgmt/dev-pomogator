@@ -1,9 +1,0 @@
-{
-  "name": "context-menu",
-  "version": "0.1.0",
-  "description": "dev-pomogator Windows context-menu launcher support for Codex.",
-  "interface": {
-    "displayName": "Context Menu"
-  },
-  "skills": "./.codex-plugin/skills"
-}

@@ -4,7 +4,7 @@ monitor.py — FR-4: цикл мониторинга воркера «не вс�
 
 Различает «долгий думающий ход (xhigh)» от «процесс умер»:
   - живость: проверка привязанного процесса (cp `worker.pid`); по умолчанию Windows
-    Get-CimInstance, fallback `ps`.
+    Get-Process -Id <pid>, fallback `ps`.
   - interval: снимать tail_snapshot + liveness каждые N сек (default 120–180).
   - timeout: если процесс жив, но транскрипт не рос дольше `alive_but_stale_s` — вердикт
     «думает (xhigh)», НЕ «повис».
