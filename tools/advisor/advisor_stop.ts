@@ -30,6 +30,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { parseTranscriptEvents, type TranscriptEvent } from '../claim-evidence-gate/transcript_events.ts';
 import { log } from '../_shared/hook-utils.ts';
 // @ts-expect-error — plain JS module (session-summary.mjs), typed loosely for hook use.
@@ -314,15 +315,18 @@ async function main(): Promise<void> {
     try {
       const lock = tryLock(repoRoot, sessionId);
       if (lock) {
-        const up = await maybeUpdateSummary({
-          transcriptPath: input.transcript_path,
-          repoRoot,
-          sessionId,
-          force: (process.env.ADVISOR_SUMMARY_FORCE ?? '0') === '1',
-        });
-        lock();
-        if (up?.updated) log('INFO', LOG_PREFIX, `session summary updated (extract #${up.state?.extraction_count ?? '?'})`);
-        else if (up && !up.ok) log('WARN', LOG_PREFIX, `session summary update skipped: ${up.reason ?? '?'}`);
+        try {
+          const up = await maybeUpdateSummary({
+            transcriptPath: input.transcript_path,
+            repoRoot,
+            sessionId,
+            force: (process.env.ADVISOR_SUMMARY_FORCE ?? '0') === '1',
+          });
+          if (up?.updated) log('INFO', LOG_PREFIX, `session summary updated (extract #${up.state?.extraction_count ?? '?'})`);
+          else if (up && !up.ok) log('WARN', LOG_PREFIX, `session summary update skipped: ${up.reason ?? '?'}`);
+        } finally {
+          lock();
+        }
       }
     } catch (e) {
       log('WARN', LOG_PREFIX, `session summary update failed: ${String(e)}`);
@@ -355,7 +359,7 @@ async function main(): Promise<void> {
 
 // Entry only when executed directly (not when unit/bench imports the pure functions).
 const entryUrl = process.argv[1] ? path.resolve(process.argv[1]).replace(/\\/g, '/') : '';
-const thisUrl = import.meta.url.replace('file:///', '').replace(/\\/g, '/');
+const thisUrl = fileURLToPath(import.meta.url).replace(/\\/g, '/');
 const isDirect = !entryUrl || thisUrl.endsWith(entryUrl);
 if (isDirect) {
   main().catch(() => process.stdout.write('{}'));

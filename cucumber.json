@@ -49,7 +49,8 @@
       "tests/features/plugins/devcontainer/PLUGIN012_devcontainer.feature",
       "tests/features/plugins/claim-evidence-gate/CEGATE001_pinator.feature",
       ".specs/out-session-advisor/out-session-advisor.feature",
-      ".specs/haiku-to-deepseek-migration/haiku-to-deepseek-migration.feature"
+      ".specs/haiku-to-deepseek-migration/haiku-to-deepseek-migration.feature",
+      ".specs/inner-advisor/inner-advisor.feature"
     ],
     "import": [
       "tests/step_definitions/**/*.ts",

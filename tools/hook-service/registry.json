@@ -98,6 +98,13 @@
       "timeout": 60,
       "matcher": ""
     },
+    "Stop/13/0": {
+      "target": "tools/advisor/advisor_stop.bundle.mjs",
+      "args": [],
+      "event": "Stop",
+      "timeout": 60,
+      "matcher": ""
+    },
     "SessionStart/0/0": {
       "target": "tools/anchor-integrity/anchor_gate_stop.ts",
       "args": [

@@ -251,11 +251,12 @@ export function flattenDelta(entries) {
 export function buildUpdatePrompt(currentSummary, deltaText) {
   return (
     `Update the session notes below based ONLY on the NEW conversation delta. ` +
-    `Structure must stay identical: keep every '#' header and every '_italic description_' line ` +
-    `unchanged; only rewrite content below them. Keep each section ≤ ~${MAX_SECTION_TOKENS} tokens, ` +
-    `total ≤ ${MAX_TOTAL_TOKENS}; if over, condense older sections and prioritise 'Current State' ` +
-    `and 'Errors & Corrections'. Do not add new sections, do not reference this task, no filler. ` +
-    `Return the FULL updated notes (whole file), no commentary.\n\n` +
+    `Structure must keep every '#' section header unchanged; the _italic description_ lines are ` +
+    `section carriers — you MAY replace their placeholder text with a real description, but never ` +
+    `delete a header. Keep each section concise, total ≤ ~${MAX_TOTAL_TOKENS} tokens; if over, ` +
+    `condense older sections and prioritise 'Current State' and 'Errors & Corrections'. Do not add ` +
+    `new sections, do not reference this task, no filler. Return the FULL updated notes (whole ` +
+    `file), no commentary.\n\n` +
     `## CURRENT SESSION NOTES\n${currentSummary}\n\n` +
     `## NEW CONVERSATION DELTA\n${deltaText}`
   );
@@ -290,17 +291,14 @@ export async function updateSummaryViaModel(currentSummary, deltaText, { model =
   }
 }
 
-/** Verify the model output keeps all section headers (structure preservation). */
+/** Verify the model output keeps all # section headers (structure preservation).
+ *  The italic _descriptions_ are CARRIERS, not anchors: the model may reword them while updating
+ *  content, so we only hard-require the `#` headers themselves. */
 export function verifyStructure(text) {
   const need = [...DEFAULT_TEMPLATE.matchAll(SECTION_RE)].map((m) => m[1].trim());
   const have = [...String(text ?? '').matchAll(SECTION_RE)].map((m) => m[1].trim());
   const missing = need.filter((h) => !have.includes(h));
-  if (missing.length) return { ok: false, missing };
-  // keep italic descriptions
-  const itNeed = [...DEFAULT_TEMPLATE.matchAll(/^_.*_$/gm)].map((m) => m[0]);
-  const itHave = [...String(text ?? '').matchAll(/^_.*_$/gm)].map((m) => m[0]);
-  const itMissing = itNeed.filter((l) => !itHave.includes(l));
-  return { ok: itMissing.length === 0, missing: itMissing };
+  return { ok: missing.length === 0, missing };
 }
 
 /* ---------------- full driver (gate + delta + write) ---------------- */
@@ -333,8 +331,11 @@ export async function maybeUpdateSummary({ transcriptPath, repoRoot, sessionId, 
   if (!delta.length && !force) return { ok: true, updated: false, state, summary: readOrCreateSummary(repoRoot, sessionId).summary, gate, delta, growth, toolCallsSince };
 
   const { summary, path: summaryPath } = readOrCreateSummary(repoRoot, sessionId);
-  const flat = flattenDelta(delta);
-  const updateRes = await updateSummaryViaModel(summary, flat.join('\n'), { callModel });
+  // bound the delta: only the most recent MAX_DELTA events (a huge full-first-parse would blow the
+  //  prompt and time out the cheap model — mirrors ccjr Mode B/truncate-messages-to-fit).
+  const MAX_DELTA_EVENTS = 40;
+  const flat = flattenDelta(delta.slice(-MAX_DELTA_EVENTS)).join('\n');
+  const updateRes = await updateSummaryViaModel(summary, flat, { callModel });
   if (!updateRes.ok) {
     state.consecutive_failures = (state.consecutive_failures ?? 0) + 1;
     writeStateAtomic(repoRoot, sessionId, state);

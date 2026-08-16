@@ -47,10 +47,14 @@
       "mcp__plugin_context-mode_context-mode__ctx_execute_file",
       "mcp__tokensave__tokensave_context",
       "Bash(rtk git *)",
-      "Bash(rtk grep *)"
+      "Bash(rtk grep *)",
+      "mcp__dev-pomogator-advisor__advisor",
+      "mcp__plugin_context-mode_context-mode__ctx_search"
     ]
   },
+  "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [
-    "dev-pomogator-specs"
+    "dev-pomogator-specs",
+    "dev-pomogator-advisor"
   ]
 }

@@ -36,6 +36,7 @@ import {
   readOrCreateSummary, summaryFilePath, stateFilePath, parseTranscript, sliceDelta as sliceSummaryDelta,
   flattenDelta, DEFAULT_TEMPLATE,
 } from './session-summary.mjs';
+import { getMindlasStats, renderMindlasStats } from './mindlas-stats.mjs';
 
 export const RECENT_DETAIL_EVENTS = 14;      // events kept in full detail (asymmetric head)
 export const MAX_OLD_EVENTS = 40;            // older events collapsed to one-liners
@@ -604,6 +605,17 @@ export async function buildSummaryPacket({ transcriptPath, repoRoot, sessionId, 
     if (fast.recurring?.length) parts.push(`## RECURRING / ERROR SIGNALS\n${fast.recurring.map((s) => `- ${s}`).join('\n')}`);
     if (fast.files?.length) parts.push(`## FILES TOUCHED\n${fast.files.map((f) => `- ${f}`).join('\n')}`);
     if (fast.commands?.length) parts.push(`## COMMANDS\n${fast.commands.map((c) => `- ${c}`).join('\n')}`);
+
+    // MINDLAS deterministic metrics (fail-open; omitted when mindlas unavailable)
+    let mindlasStats = null;
+    try { mindlasStats = await getMindlasStats(); } catch { mindlasStats = null; }
+    if (mindlasStats) {
+      parts.push(renderMindlasStats(mindlasStats.parsed));
+      metaBase.mindlas = true;
+    } else {
+      metaBase.mindlas = false;
+    }
+
     const packet = parts.join('\n\n');
     metaBase.packetChars = packet.length;
     metaBase.mode = 'summary';
@@ -617,5 +629,14 @@ export async function buildSummaryPacket({ transcriptPath, repoRoot, sessionId, 
   const rendered = renderDigestPrioritized(d, {}).text;
   metaBase.mode = 'digest';
   metaBase.packetChars = rendered.length;
+
+  // MINDLAS metrics appended to the fallback digest too
+  let mindlasStats2 = null;
+  try { mindlasStats2 = await getMindlasStats(); } catch { mindlasStats2 = null; }
+  if (mindlasStats2) {
+    const md = renderMindlasStats(mindlasStats2.parsed);
+    if (md) { metaBase.mindlas = true; return { packet: `${rendered}\n\n${md}`, meta: metaBase }; }
+  }
+  metaBase.mindlas = false;
   return { packet: rendered, meta: metaBase };
 }

@@ -1,5 +1,13 @@
 {
   "mcpServers": {
+    "dev-pomogator-advisor": {
+      "type": "stdio",
+      "command": "node",
+      "args": [
+        "-e",
+        "const p=require('node:path'),cp=require('node:child_process');const root=process.env.CLAUDE_PLUGIN_ROOT||process.cwd();const b=p.join(root,'tools','advisor','mcp-server.mjs');const c=cp.spawn(process.execPath,[b],{stdio:'inherit'});c.on('exit',x=>process.exit(x??0));c.on('error',e=>{process.stderr.write('[dev-pomogator-advisor] launch failed: '+e.message+'\\n');process.exit(1);});"
+      ]
+    },
     "dev-pomogator-specs": {
       "type": "stdio",
       "command": "node",

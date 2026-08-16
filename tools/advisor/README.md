@@ -80,6 +80,8 @@ claude -p --settings overlay-settings.json --permission-mode bypassPermissions \
 | `ADVISOR_TWOPASS` | `1` | `0` — один вызов по digest вместо двух |
 | `ADVISOR_SKEPTIC` | `balanced` | `balanced` (новый дефолт — «не done» только при реальной причине: нет улики/дрейф/нарушение правила/ошибки) / `strict` (старый, шаблонный «двойная проверка перед done») |
 | `ADVISOR_SESSION_SUMMARY` | `0` | `1` включить Rolling Session Summary: Stop-hook ведёт 10-секционный `summary.md`, MCP-консультация читает summary+delta вместо полного транскрипта |
+| `ADVISOR_MINDLAS` | `1` | `0` выключить чтение MINDLAS метрик в консультацию (fail-open при отсутствии mindlas) |
+| `MINDLAS_BIN` | — | путь к бинарю MINDLAS (venv `...\Scripts\mindlas.exe` или bare name на PATH) |
 | `ADVISOR_SUMMARY_FORCE` | `0` | `1` — обновлять summary сразу (аналог `--force` ccjr), минуя гейт (для тестов/демо) |
 | `ADVISOR_DIGEST_MAX_TOKENS` | `3000` | бюджет digest (приоритет+compact, см. выше) |
 | `ADVISOR_TIMEOUT_MS` | `45000` | таймаут вызова модели |
@@ -102,6 +104,16 @@ claude -p --settings overlay-settings.json --permission-mode bypassPermissions \
   (**~48× меньше**). Если summary ещё нет — честный фолбэк на полный digest.
 - Структура summary сохраняется жёстко (`verifyStructure` проверяет все 10 заголовков + italic
   описания; при потере — предыдущая версия не перезаписывается).
+
+## Интеграция MINDLAS (детерминированная метрика → совет)
+
+Опционально: если в сессии доступен `mindlas` (Evolutionairy-AI/MINDLAS, `pip install mindlas` +
+`mindlas install-hooks`), адвизор читает `mindlas scorecard --json` и вкладывает в консультацию
+секцию `## MINDLAS METRICS` (context_rot / verification_debt / change_blast_radius /
+tool_failure_loop). sol-адвизор интерпретирует: высокий ROT → «сделай context repair», VERIFY →
+«прогони verify gate», BLAST → «разбей patch», LOOP → «останови retry». Fail-open: mindlas нет /
+таймаут / без JSON → секция пропускается, консультация не ломается. Включение: `ADVISOR_MINDLAS=1`
+(дефолт), `MINDLAS_BIN` — путь к бинарю (win venv `...\Scripts\mindlas.exe`).
 
 ## Проверка
 
