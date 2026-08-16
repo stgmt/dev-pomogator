@@ -41,6 +41,12 @@ OUTSESS001_17 event-log).
 все в чужом `spec-generator-v4` (SPECGEN004_*), наших нет. Verdict: STRUCTURE/TRACEABILITY/
 BDD_SYNC GREEN, 0 blocking; EXECUTION RED только за счёт OOS FR-11/12 (корректно never-run).
 
+**OUTSESS001_18 (consult fail-open) — 19/19:** фильтрованный `docker-bdd --name OUTSESS001`
+после добавления сценария — **19 scenarios (19 passed), 125 steps (125 passed)**. Полный
+канонический прогон для 19 сценариев трижды обрывался крашем WSL (`0x8007274c`) на длинном
+сьюте — канон остаётся 18/18 + сценарий 18 верифицирован фильтрованным прогоном
+(environmental, правило `env-blocker-is-not-a-stop`).
+
 
 
 После череды фиксов (см. ниже) целевой прогон `docker-bdd.sh --name OUTSESS001` дал:
