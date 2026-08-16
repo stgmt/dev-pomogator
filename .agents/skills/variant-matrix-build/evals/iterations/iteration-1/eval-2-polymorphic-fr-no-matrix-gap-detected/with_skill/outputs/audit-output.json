@@ -1,0 +1,1 @@
+{"findings":[{"category":"VARIANT_COVERAGE","code":"AC_DECISION_TABLE_MISSING","severity":"WARNING","message":"FR-1 помечен polymorphic (4 triggers) но AC Decision Table отсутствует или incomplete. Build matrix через Skill(\"variant-matrix-build\") или add escape hatch [skip-variant-matrix: <reason>].","frId":"FR-1","file":"ACCEPTANCE_CRITERIA.md"}]}

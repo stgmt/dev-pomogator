@@ -1,15 +1,24 @@
 {
-  "version": 2,
+  "version": 1,
   "entries": [
     {
       "canonical": ".claude/skills/research-workflow/SKILL.md",
-      "mode": "canonical-only",
-      "reason": "The Codex-era .agents mirror tree was retired (2026-08-16): dev-pomogator is a Claude Code plugin; .agents is no longer a distributed surface."
+      "mirror": ".agents/skills/research-workflow/SKILL.md",
+      "mode": "legacy",
+      "reason": "The Codex-era .agents tree has independent adaptations and stale .Codex paths; it is audited in the migration report but is not an active Claude plugin mirror."
     },
     {
       "canonical": ".claude/skills/meridian-model-call/SKILL.md",
-      "mode": "canonical-only",
-      "reason": "The Codex-era .agents mirror tree was retired (2026-08-16); no mirror surface remains."
+      "mirror": ".agents/skills/meridian-model-call/SKILL.md",
+      "mode": "adapted",
+      "optional": true,
+      "transforms": [
+        {
+          "from": ".claude/skills/meridian-model-call",
+          "to": ".agents/skills/meridian-model-call"
+        }
+      ],
+      "reason": "Cross-agent repository mirror; optional in the canonical Claude plugin package, but checked when the mirror surface is present."
     }
   ]
 }

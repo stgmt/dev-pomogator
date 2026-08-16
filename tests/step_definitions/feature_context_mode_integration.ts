@@ -188,6 +188,12 @@ Then(/^the shipped SessionStart runtime registers the context-mode setup hook$/,
     .filter((route) => route.event === 'SessionStart')
     .map((route) => route.target ?? '');
 
+  const codexHooksPath = path.join(REPO_ROOT, '.Codex', 'hooks.json');
+  if (fs.existsSync(codexHooksPath)) {
+    const codexHooks = readJson<{ hooks?: { SessionStart?: Array<{ hooks?: Array<{ command?: string }> }> } }>(codexHooksPath);
+    const codexCommands = codexHooks.hooks?.SessionStart?.flatMap((group) => group.hooks?.map((hook) => hook.command ?? '') ?? []) ?? [];
+    assert.ok(codexCommands.some((command) => command.includes(CONTEXT_MODE_SETUP_TARGET)), '.Codex/hooks.json must dogfood the context-mode setup hook');
+  }
   assert.ok(
     legacyCommands.some((command) => command.includes(CONTEXT_MODE_SETUP_TARGET)),
     '.claude-plugin/hooks.legacy.json must ship the context-mode setup hook',

@@ -1,0 +1,15 @@
+{
+  "eval_id": 2,
+  "eval_name": "mixed-english-jargon-with-internal-refs",
+  "prompt": "/answer-simple \"After deploying v0.2.5 (see Wave 14 in foo-bar spec), migrate Adapter X to new FR-8 semantics — this depends on FR-3 from baz-quux\"",
+  "assertions": [
+    {"text": "Output contains 'Переформулировано:' header"},
+    {"text": "Output contains 'Найдено проблем:' header"},
+    {"text": "Output identifies 'Wave 14' as internal code"},
+    {"text": "Output identifies 'FR-8' as internal code"},
+    {"text": "Output identifies 'FR-3' as internal code"},
+    {"text": "Output identifies 'foo-bar' as internal spec reference"},
+    {"text": "Output identifies 'baz-quux' as internal spec reference"},
+    {"text": "BYTE-FAITHFUL: does NOT invent 'Adapter X связывает с внешним API' or 'FR-3 описывает контракт' or 'v0.2.5 большая работа инфраструктуры' (Правило 1)"}
+  ]
+}

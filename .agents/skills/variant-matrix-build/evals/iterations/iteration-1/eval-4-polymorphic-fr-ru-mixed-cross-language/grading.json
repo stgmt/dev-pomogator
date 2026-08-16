@@ -1,0 +1,14 @@
+{
+  "expectations": [
+    {
+      "text": "Finding count matches expected (1)",
+      "passed": true,
+      "evidence": "actual=1, expected=1"
+    },
+    {
+      "text": "Finding codes match expected (AC_DECISION_TABLE_MISSING)",
+      "passed": true,
+      "evidence": "actual=AC_DECISION_TABLE_MISSING, expected=AC_DECISION_TABLE_MISSING"
+    }
+  ]
+}

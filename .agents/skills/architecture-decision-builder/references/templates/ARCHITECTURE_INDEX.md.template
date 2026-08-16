@@ -1,0 +1,9 @@
+<!-- AUTOGEN:ARCH-INDEX START -->
+# Architecture decisions — {slug}
+
+| Axis | Status | Chosen |
+|------|--------|--------|
+| {axis-name} | {pending|accepted|deferred|rejected} | {chosen-variant|—} |
+<!-- AUTOGEN:ARCH-INDEX END -->
+
+<!-- User notes outside the AUTOGEN markers are preserved by compile-index (idempotent). -->

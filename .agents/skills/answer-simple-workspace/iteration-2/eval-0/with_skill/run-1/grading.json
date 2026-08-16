@@ -1,0 +1,12 @@
+{
+  "expectations": [
+    {"text": "Output contains 'Переформулировано:' header", "passed": true, "evidence": "Line 1: 'Переформулировано: У нас две большие фичи...'"},
+    {"text": "Output contains 'Найдено проблем:' header", "passed": true, "evidence": "Line 4: 'Найдено проблем:'"},
+    {"text": "Output identifies 'Wave 14' as undefined internal code", "passed": true, "evidence": "Line 5: 'Внутренний код Wave 14 без расшифровки'"},
+    {"text": "Output identifies 'Wave 11' as undefined internal code", "passed": true, "evidence": "Line 6: 'Внутренний код Wave 11 без расшифровки'"},
+    {"text": "Output identifies multi-select with 3+ options as exceeding threshold of 2", "passed": true, "evidence": "Line 9: 'Multi-select с 3 опциями (Keep / Swap / Parallel) — превышение порога 2'"},
+    {"text": "Reformulation is question-style with <=2 options (per Правило 2)", "passed": true, "evidence": "Line 1: 'Что делать первым — Wave 14 или Wave 11?' — 2 options exactly, question form"},
+    {"text": "BYTE-FAITHFUL: does NOT invent meanings for Wave 14/11/gates/OpenRouter (Правило 1)", "passed": true, "evidence": "Wave 14/11 kept as 'в проекте называют' without inventing what they are; gates/OpenRouter flagged as unexplained without inventing meanings"}
+  ],
+  "summary": {"passed": 7, "failed": 0, "total": 7, "pass_rate": 1.0}
+}

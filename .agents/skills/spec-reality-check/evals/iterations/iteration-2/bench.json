@@ -1,0 +1,138 @@
+{
+  "ran_at": "2026-06-18T23:41:55.193Z",
+  "platform": "win32",
+  "node_version": "v20.19.6",
+  "skill_root": ".claude/skills/spec-reality-check",
+  "runs_per_size": 5,
+  "method": "runChecks() called directly in-process via import; no npx spawn",
+  "nfr_performance_bound_seconds": 30,
+  "results": [
+    {
+      "rows": 10,
+      "runs": 5,
+      "runs_ms": [
+        3.7773,
+        1.4177,
+        1.1148,
+        1.0027,
+        1.4831
+      ],
+      "mean_ms": 1.76,
+      "p50_ms": 1.42,
+      "p95_ms": 3.32,
+      "min_ms": 1,
+      "max_ms": 3.78,
+      "findings_count": 13
+    },
+    {
+      "rows": 100,
+      "runs": 5,
+      "runs_ms": [
+        4.3525,
+        4.3291,
+        3.7108,
+        4.0651,
+        4.0144
+      ],
+      "mean_ms": 4.09,
+      "p50_ms": 4.07,
+      "p95_ms": 4.35,
+      "min_ms": 3.71,
+      "max_ms": 4.35,
+      "findings_count": 150
+    },
+    {
+      "rows": 500,
+      "runs": 5,
+      "runs_ms": [
+        16.9554,
+        17.3433,
+        21.1821,
+        15.2482,
+        17.5574
+      ],
+      "mean_ms": 17.66,
+      "p50_ms": 17.34,
+      "p95_ms": 20.46,
+      "min_ms": 15.25,
+      "max_ms": 21.18,
+      "findings_count": 817
+    },
+    {
+      "rows": 1000,
+      "runs": 5,
+      "runs_ms": [
+        33.1681,
+        30.6808,
+        27.016,
+        24.9698,
+        24.7577
+      ],
+      "mean_ms": 28.12,
+      "p50_ms": 27.02,
+      "p95_ms": 32.67,
+      "min_ms": 24.76,
+      "max_ms": 33.17,
+      "findings_count": 1650
+    },
+    {
+      "rows": 2000,
+      "runs": 5,
+      "runs_ms": [
+        53.7488,
+        49.3846,
+        65.8996,
+        58.2105,
+        56.7485
+      ],
+      "mean_ms": 56.8,
+      "p50_ms": 56.75,
+      "p95_ms": 64.36,
+      "min_ms": 49.38,
+      "max_ms": 65.9,
+      "findings_count": 3317
+    }
+  ],
+  "scaling_analysis": [
+    {
+      "rows": 10,
+      "mean_ms": 1.76,
+      "vs_prev": "baseline"
+    },
+    {
+      "rows": 100,
+      "mean_ms": 4.09,
+      "rows_x_vs_prev": 10,
+      "time_x_vs_prev": 2.32,
+      "verdict": "linear-or-better"
+    },
+    {
+      "rows": 500,
+      "mean_ms": 17.66,
+      "rows_x_vs_prev": 5,
+      "time_x_vs_prev": 4.32,
+      "verdict": "linear-or-better"
+    },
+    {
+      "rows": 1000,
+      "mean_ms": 28.12,
+      "rows_x_vs_prev": 2,
+      "time_x_vs_prev": 1.59,
+      "verdict": "linear-or-better"
+    },
+    {
+      "rows": 2000,
+      "mean_ms": 56.8,
+      "rows_x_vs_prev": 2,
+      "time_x_vs_prev": 2.02,
+      "verdict": "linear-or-better"
+    }
+  ],
+  "nfr_verdict": {
+    "largest_size": 2000,
+    "largest_mean_ms": 56.8,
+    "nfr_bound_ms": 30000,
+    "headroom_x": 528.17,
+    "passes_nfr": true
+  }
+}

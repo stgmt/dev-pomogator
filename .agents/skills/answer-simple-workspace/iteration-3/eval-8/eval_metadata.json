@@ -1,0 +1,13 @@
+{
+  "eval_id": 8,
+  "eval_name": "draft-with-code-block",
+  "prompt": "/answer-simple \"<draft with TypeScript code block + file paths>\"",
+  "assertions": [
+    {"text": "Output contains 'Переформулировано:' header"},
+    {"text": "Output contains 'Найдено проблем:' header"},
+    {"text": "Skill does NOT flag identifiers INSIDE code block (validateConfig, ConfigSchema, ValidationResult, ajv, schemaV2, cfg) as internal codes"},
+    {"text": "Skill does NOT flag file paths (src/config/loader.ts, config-validation.test.ts) as internal codes"},
+    {"text": "Skill may legitimately flag AJV as needing context for non-technical readers"},
+    {"text": "Reformulation preserves code block content intact (BYTE-FAITHFUL)"}
+  ]
+}

@@ -1,0 +1,321 @@
+{
+  "iteration": 1,
+  "ran_at": "2026-05-24T00:42:32.044Z",
+  "skill_name": "spec-reality-check",
+  "verify_script": ".claude/skills/spec-reality-check/scripts/verify.ts",
+  "hook_script": ".claude/skills/spec-reality-check/scripts/verify-hook.ts",
+  "total": 14,
+  "passed": 14,
+  "failed": 0,
+  "pass_rate_pct": 100,
+  "duration_total_ms": 24756,
+  "by_category": {
+    "fc-checks": {
+      "total": 2,
+      "passed": 2,
+      "failed": 0
+    },
+    "narrative-check": {
+      "total": 1,
+      "passed": 1,
+      "failed": 0
+    },
+    "code-drift": {
+      "total": 2,
+      "passed": 2,
+      "failed": 0
+    },
+    "tasks-fc-check": {
+      "total": 1,
+      "passed": 1,
+      "failed": 0
+    },
+    "output-format": {
+      "total": 3,
+      "passed": 3,
+      "failed": 0
+    },
+    "regression-baseline": {
+      "total": 2,
+      "passed": 2,
+      "failed": 0
+    },
+    "hook": {
+      "total": 3,
+      "passed": 3,
+      "failed": 0
+    }
+  },
+  "details": [
+    {
+      "id": 1,
+      "name": "fc-create-exists-stale-create",
+      "category": "fc-checks",
+      "passed": 6,
+      "total": 6,
+      "duration_ms": 1602,
+      "actual_codes": [
+        "FC_CREATE_EXISTS",
+        "CODE_DRIFT_SKIPPED"
+      ],
+      "expected_codes": [
+        "FC_CREATE_EXISTS"
+      ],
+      "error_count": 1,
+      "warning_count": 0,
+      "info_count": 1,
+      "total_findings": 2,
+      "failures": []
+    },
+    {
+      "id": 2,
+      "name": "fc-edit-and-delete-missing",
+      "category": "fc-checks",
+      "passed": 6,
+      "total": 6,
+      "duration_ms": 1555,
+      "actual_codes": [
+        "FC_EDIT_MISSING",
+        "FC_DELETE_MISSING",
+        "CODE_DRIFT_SKIPPED"
+      ],
+      "expected_codes": [
+        "FC_EDIT_MISSING",
+        "FC_DELETE_MISSING"
+      ],
+      "error_count": 2,
+      "warning_count": 0,
+      "info_count": 1,
+      "total_findings": 3,
+      "failures": []
+    },
+    {
+      "id": 3,
+      "name": "narrative-path-missing",
+      "category": "narrative-check",
+      "passed": 6,
+      "total": 6,
+      "duration_ms": 1560,
+      "actual_codes": [
+        "NARRATIVE_PATH_MISSING",
+        "CODE_DRIFT_SKIPPED"
+      ],
+      "expected_codes": [
+        "NARRATIVE_PATH_MISSING"
+      ],
+      "error_count": 0,
+      "warning_count": 1,
+      "info_count": 1,
+      "total_findings": 2,
+      "failures": []
+    },
+    {
+      "id": 4,
+      "name": "code-drift-positive-git-commits-present",
+      "category": "code-drift",
+      "passed": 6,
+      "total": 6,
+      "duration_ms": 1797,
+      "actual_codes": [
+        "CODE_DRIFT_FR_ALREADY_DONE"
+      ],
+      "expected_codes": [
+        "CODE_DRIFT_FR_ALREADY_DONE"
+      ],
+      "error_count": 0,
+      "warning_count": 1,
+      "info_count": 0,
+      "total_findings": 1,
+      "failures": []
+    },
+    {
+      "id": 5,
+      "name": "code-drift-skipped-no-git",
+      "category": "code-drift",
+      "passed": 6,
+      "total": 6,
+      "duration_ms": 1606,
+      "actual_codes": [
+        "FC_EDIT_MISSING",
+        "CODE_DRIFT_SKIPPED"
+      ],
+      "expected_codes": [
+        "CODE_DRIFT_SKIPPED"
+      ],
+      "error_count": 1,
+      "warning_count": 0,
+      "info_count": 1,
+      "total_findings": 2,
+      "failures": []
+    },
+    {
+      "id": 6,
+      "name": "tasks-fc-orphan-warning",
+      "category": "tasks-fc-check",
+      "passed": 6,
+      "total": 6,
+      "duration_ms": 1622,
+      "actual_codes": [
+        "FC_EDIT_MISSING",
+        "NARRATIVE_PATH_MISSING",
+        "TASKS_FC_CONSISTENCY",
+        "CODE_DRIFT_SKIPPED"
+      ],
+      "expected_codes": [
+        "TASKS_FC_CONSISTENCY"
+      ],
+      "error_count": 1,
+      "warning_count": 3,
+      "info_count": 1,
+      "total_findings": 5,
+      "failures": []
+    },
+    {
+      "id": 7,
+      "name": "format-json-valid-output",
+      "category": "output-format",
+      "passed": 6,
+      "total": 6,
+      "duration_ms": 1573,
+      "actual_codes": [
+        "FC_EDIT_MISSING",
+        "FC_DELETE_MISSING",
+        "CODE_DRIFT_SKIPPED"
+      ],
+      "expected_codes": [
+        "FC_EDIT_MISSING"
+      ],
+      "error_count": 2,
+      "warning_count": 0,
+      "info_count": 1,
+      "total_findings": 3,
+      "failures": []
+    },
+    {
+      "id": 8,
+      "name": "format-human-readable-output",
+      "category": "output-format",
+      "passed": 6,
+      "total": 6,
+      "duration_ms": 3128,
+      "actual_codes": [
+        "FC_EDIT_MISSING",
+        "FC_DELETE_MISSING",
+        "CODE_DRIFT_SKIPPED"
+      ],
+      "expected_codes": [
+        "FC_EDIT_MISSING"
+      ],
+      "error_count": 2,
+      "warning_count": 0,
+      "info_count": 1,
+      "total_findings": 3,
+      "failures": []
+    },
+    {
+      "id": 9,
+      "name": "format-markdown-valid-table",
+      "category": "output-format",
+      "passed": 6,
+      "total": 6,
+      "duration_ms": 3202,
+      "actual_codes": [
+        "FC_EDIT_MISSING",
+        "FC_DELETE_MISSING",
+        "CODE_DRIFT_SKIPPED"
+      ],
+      "expected_codes": [
+        "FC_EDIT_MISSING"
+      ],
+      "error_count": 2,
+      "warning_count": 0,
+      "info_count": 1,
+      "total_findings": 3,
+      "failures": []
+    },
+    {
+      "id": 10,
+      "name": "baseline-clean-shipped-spec-zero-errors",
+      "category": "regression-baseline",
+      "passed": 6,
+      "total": 6,
+      "duration_ms": 1205,
+      "actual_codes": [
+        "NARRATIVE_PATH_MISSING",
+        "CODE_DRIFT_FR_ALREADY_DONE",
+        "FC_PARSE_UNPARSEABLE",
+        "TASKS_FC_CONSISTENCY"
+      ],
+      "expected_codes": [],
+      "error_count": 0,
+      "warning_count": 4,
+      "info_count": 34,
+      "total_findings": 38,
+      "failures": []
+    },
+    {
+      "id": 11,
+      "name": "baseline-canonical-plugin-after-cleanup-zero-errors",
+      "category": "regression-baseline",
+      "passed": 6,
+      "total": 6,
+      "duration_ms": 1304,
+      "actual_codes": [
+        "NARRATIVE_PATH_MISSING",
+        "CODE_DRIFT_FR_ALREADY_DONE",
+        "TASKS_FC_CONSISTENCY"
+      ],
+      "expected_codes": [],
+      "error_count": 0,
+      "warning_count": 90,
+      "info_count": 11,
+      "total_findings": 101,
+      "failures": []
+    },
+    {
+      "id": 12,
+      "name": "hook-deny-on-spec-with-errors",
+      "category": "hook",
+      "passed": 3,
+      "total": 3,
+      "duration_ms": 3107,
+      "actual_codes": [],
+      "expected_codes": [],
+      "error_count": 0,
+      "warning_count": 0,
+      "info_count": 0,
+      "total_findings": 0,
+      "failures": []
+    },
+    {
+      "id": 13,
+      "name": "hook-permit-on-clean-plan",
+      "category": "hook",
+      "passed": 2,
+      "total": 2,
+      "duration_ms": 755,
+      "actual_codes": [],
+      "expected_codes": [],
+      "error_count": 0,
+      "warning_count": 0,
+      "info_count": 0,
+      "total_findings": 0,
+      "failures": []
+    },
+    {
+      "id": 14,
+      "name": "hook-failopen-on-invalid-stdin",
+      "category": "hook",
+      "passed": 2,
+      "total": 2,
+      "duration_ms": 740,
+      "actual_codes": [],
+      "expected_codes": [],
+      "error_count": 0,
+      "warning_count": 0,
+      "info_count": 0,
+      "total_findings": 0,
+      "failures": []
+    }
+  ]
+}

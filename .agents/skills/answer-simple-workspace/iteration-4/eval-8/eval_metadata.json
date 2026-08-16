@@ -1,0 +1,14 @@
+{
+  "eval_id": 8,
+  "eval_name": "draft-with-code-block",
+  "prompt": "/answer-simple \"<draft with TypeScript code block + file paths>\"",
+  "assertions": [
+    {"text": "Output contains 'Переформулировано:' header"},
+    {"text": "Output contains 'Найдено проблем:' header"},
+    {"text": "✨NEW Правило 1: file path 'src/config/loader.ts' preserved byte-as-is (NOT translated to 'файл загрузчика конфига')"},
+    {"text": "✨NEW Правило 1: verb 'добавить' NOT shifted to 'добавлю' (verb form preserved)"},
+    {"text": "✨NEW Правило 4: AJV consistency — if decoded inline, NOT flagged as 'без расшифровки' in findings"},
+    {"text": "Identifiers inside code block (validateConfig, ConfigSchema, ValidationResult, ajv, schemaV2, cfg) NOT flagged"},
+    {"text": "✨NEW Правило 5: 'JSON schema validation' should NOT be flagged as needing explanation (basic engineering vocab)"}
+  ]
+}

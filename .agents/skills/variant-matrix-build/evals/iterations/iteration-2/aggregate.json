@@ -1,0 +1,99 @@
+{
+  "total": 36,
+  "passed": 36,
+  "failed": 0,
+  "details": [
+    {
+      "id": 1,
+      "name": "polymorphic-fr-complete-positive",
+      "passed": 6,
+      "total": 6,
+      "duration_ms": 1225,
+      "actual_codes": [
+        "MATRIX_COMPLETE"
+      ],
+      "expected_codes": [
+        "MATRIX_COMPLETE"
+      ],
+      "warning_count": 0,
+      "info_count": 1
+    },
+    {
+      "id": 2,
+      "name": "polymorphic-fr-no-matrix-gap-detected",
+      "passed": 6,
+      "total": 6,
+      "duration_ms": 1158,
+      "actual_codes": [
+        "AC_DECISION_TABLE_MISSING"
+      ],
+      "expected_codes": [
+        "AC_DECISION_TABLE_MISSING"
+      ],
+      "warning_count": 1,
+      "info_count": 0
+    },
+    {
+      "id": 3,
+      "name": "polymorphic-fr-hard-out-h1-regression",
+      "passed": 6,
+      "total": 6,
+      "duration_ms": 1181,
+      "actual_codes": [
+        "HARD_OUT_DETECTED"
+      ],
+      "expected_codes": [
+        "HARD_OUT_DETECTED"
+      ],
+      "warning_count": 0,
+      "info_count": 1
+    },
+    {
+      "id": 4,
+      "name": "polymorphic-fr-ru-mixed-cross-language",
+      "passed": 6,
+      "total": 6,
+      "duration_ms": 1244,
+      "actual_codes": [
+        "AC_DECISION_TABLE_MISSING"
+      ],
+      "expected_codes": [
+        "AC_DECISION_TABLE_MISSING"
+      ],
+      "warning_count": 1,
+      "info_count": 0
+    },
+    {
+      "id": 5,
+      "name": "escape-hatch-short-reason-info",
+      "passed": 6,
+      "total": 6,
+      "duration_ms": 1173,
+      "actual_codes": [
+        "AC_DECISION_TABLE_MISSING",
+        "WARNING_REASON_TOO_SHORT"
+      ],
+      "expected_codes": [
+        "AC_DECISION_TABLE_MISSING",
+        "WARNING_REASON_TOO_SHORT"
+      ],
+      "warning_count": 1,
+      "info_count": 1
+    },
+    {
+      "id": 6,
+      "name": "escape-hatch-boundary-8-chars",
+      "passed": 6,
+      "total": 6,
+      "duration_ms": 1168,
+      "actual_codes": [
+        "ESCAPE_HATCH_USED"
+      ],
+      "expected_codes": [
+        "ESCAPE_HATCH_USED"
+      ],
+      "warning_count": 0,
+      "info_count": 1
+    }
+  ]
+}

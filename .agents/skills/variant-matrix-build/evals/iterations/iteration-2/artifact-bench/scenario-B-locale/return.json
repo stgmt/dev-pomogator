@@ -1,0 +1,29 @@
+{
+  "frs_with_matrix": 1,
+  "ac_rows": 6,
+  "examples_rows": 6,
+  "tasks_emitted": 6,
+  "escape_hatches": 0,
+  "files_touched": [
+    ".specs/{slug}/ACCEPTANCE_CRITERIA.md",
+    ".specs/{slug}/{slug}.feature",
+    ".specs/{slug}/TASKS.md"
+  ],
+  "_meta": {
+    "scenario": "B-locale",
+    "fr_id": "FR-2",
+    "axis": "locale",
+    "variants": ["en-US", "en-GB", "ru-RU", "ja-JP (Gregorian)", "ja-JP (Imperial era)", "ar-SA"],
+    "shared_codepath": "formatLocalized(value, locale, type)",
+    "locale_specific_quirks": {
+      "en-US": "MDY date format, $ prefix",
+      "en-GB": "DMY date format, £ prefix (vs en-US ambiguity)",
+      "ru-RU": "currency SUFFIX placement (₽ after number with NBSP), DMY with dot separator, comma decimal",
+      "ja-JP-gregorian": "YMD with kanji separators, JPY no decimals",
+      "ja-JP-imperial": "Imperial era opt-in via user.useImperialEra setting, era table lookup with boundary handling (平成→令和 at 2019-05-01)",
+      "ar-SA": "RTL direction, Arabic-Indic digits, bidi isolation (U+2068 FSI / U+2069 PDI) required around numeric runs"
+    },
+    "highest_risk_rows": [6, 5],
+    "notes": "ja-JP split into 2 rows because useImperialEra setting is documented as variant axis sub-divider, not orthogonal. ar-SA carries 2 scenarios (Outline + dedicated bidi-edge) because RTL handling is the primary regression risk and Outline parametrization can't capture mixed-direction paragraph assertion cleanly."
+  }
+}

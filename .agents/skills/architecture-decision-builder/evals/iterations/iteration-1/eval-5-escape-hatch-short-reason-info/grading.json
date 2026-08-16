@@ -1,0 +1,19 @@
+{
+  "expectations": [
+    {
+      "text": "codes == ['AXIS_PENDING', 'WARNING_REASON_TOO_SHORT']",
+      "passed": true,
+      "evidence": "actual=['AXIS_PENDING', 'WARNING_REASON_TOO_SHORT']"
+    },
+    {
+      "text": "WARNING == 1",
+      "passed": true,
+      "evidence": "actual=1"
+    },
+    {
+      "text": "INFO == 1",
+      "passed": true,
+      "evidence": "actual=1"
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "expectations": [
+    {"text": "Output contains 'Переформулировано:' header", "passed": false, "evidence": "Output: 'I don't have enough context to act on this request yet' — no header"},
+    {"text": "Output contains 'Найдено проблем:' header", "passed": false, "evidence": "No audit block; baseline numbers 4 clarifying questions"},
+    {"text": "Output identifies 'Wave 14' as internal code", "passed": false, "evidence": "Wave 14 treated as real reference: 'no Wave 14 deployment notes for v0.2.5'"},
+    {"text": "Output identifies 'FR-8' as internal code", "passed": false, "evidence": "FR-8 in dependency chain mention without flagging"},
+    {"text": "Output identifies 'FR-3' as internal code", "passed": false, "evidence": "FR-3 treated as real artifact in dependency chain explanation"},
+    {"text": "Output identifies 'foo-bar' as internal spec reference", "passed": false, "evidence": "Baseline DOES note 'no specs called foo-bar' but doesn't flag as audit category, treats as factual missing reference"},
+    {"text": "Output identifies 'baz-quux' as internal spec reference", "passed": false, "evidence": "Same as foo-bar — noted as missing but not flagged as internal code per skill criteria"},
+    {"text": "BYTE-FAITHFUL: does NOT invent 'Adapter X связывает с внешним API' or 'FR-3 описывает контракт' or 'v0.2.5 большая работа инфраструктуры' (Правило 1)", "passed": true, "evidence": "Baseline asks for context rather than inventing; technically doesn't invent because it doesn't reformulate. Trivially passes."}
+  ],
+  "summary": {"passed": 1, "failed": 7, "total": 8, "pass_rate": 0.125}
+}

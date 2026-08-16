@@ -1,0 +1,11 @@
+{
+  "expectations": [
+    {"text": "Output contains 'Переформулировано:' header", "passed": true, "evidence": "Line 1: 'Переформулировано: Готово — добавил вспомогательную функцию для проверки конфига...'"},
+    {"text": "Output contains 'Найдено проблем:' header", "passed": true, "evidence": "Line 3: 'Найдено проблем:' with 3 bullets"},
+    {"text": "Skill does NOT flag identifiers INSIDE code block (validateConfig, ConfigSchema, ValidationResult, ajv, schemaV2, cfg) as internal codes", "passed": true, "evidence": "None of those identifiers appear in 'Найдено проблем:' bullets. Skill correctly treated code-block content as code not jargon."},
+    {"text": "Skill does NOT flag file paths (src/config/loader.ts, config-validation.test.ts) as internal codes", "passed": true, "evidence": "File paths preserved in reformulation, not flagged in problems list"},
+    {"text": "Skill may legitimately flag AJV as needing context for non-technical readers", "passed": true, "evidence": "Line 4: 'Внутренний термин AJV без расшифровки — читатель не знает что это за библиотека (нужно одно пояснение, например AJV — валидатор JSON-схем)'"},
+    {"text": "Reformulation preserves code block content intact (BYTE-FAITHFUL)", "passed": true, "evidence": "Reformulation is faithful summary; explicitly references file path src/config/loader.ts строка 42 and test name config-validation.test.ts as in source. No invented function behaviors."}
+  ],
+  "summary": {"passed": 6, "failed": 0, "total": 6, "pass_rate": 1.0}
+}

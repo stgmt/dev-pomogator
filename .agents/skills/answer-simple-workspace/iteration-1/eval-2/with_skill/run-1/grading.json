@@ -1,0 +1,13 @@
+{
+  "expectations": [
+    {"text": "Output contains 'Переформулировано:' header", "passed": true, "evidence": "Line 1: 'Переформулировано: Мы только что выкатили новую версию системы...'"},
+    {"text": "Output contains 'Найдено проблем:' header", "passed": true, "evidence": "Line 3: 'Найдено проблем:' with 10 bullets"},
+    {"text": "Output identifies 'Wave 14' as internal code", "passed": true, "evidence": "Line 5: 'Внутренний код \"Wave 14\" без расшифровки — внутреннее название этапа, незнакомое внешнему читателю'"},
+    {"text": "Output identifies 'FR-8' as internal code", "passed": true, "evidence": "Line 7: 'Внутренний код \"FR-8\" без расшифровки — функциональное требование без указания, что оно описывает'"},
+    {"text": "Output identifies 'FR-3' as internal code", "passed": true, "evidence": "Line 8: 'Внутренний код \"FR-3\" без расшифровки — то же самое'"},
+    {"text": "Output identifies 'foo-bar' as internal spec reference", "passed": true, "evidence": "Line 6: 'Внутренний код \"foo-bar spec\" без расшифровки'"},
+    {"text": "Output identifies 'baz-quux' as internal spec reference", "passed": true, "evidence": "Line 9: 'Внутренний код \"baz-quux\" без расшифровки — название соседней спеки без контекста'"},
+    {"text": "Output identifies missing micro-story structure", "passed": true, "evidence": "Line 12: 'Отсутствует структура микроистории (нет \"откуда пришли\", нет \"где сейчас после деплоя\", нет \"что дальше\")'"}
+  ],
+  "summary": {"passed": 8, "failed": 0, "total": 8, "pass_rate": 1.0}
+}

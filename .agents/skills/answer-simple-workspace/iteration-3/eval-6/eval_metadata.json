@@ -1,0 +1,13 @@
+{
+  "eval_id": 6,
+  "eval_name": "long-draft-with-multiple-services",
+  "prompt": "/answer-simple \"<long draft с 12 микросервисами, gates, QPS, SRE>\"",
+  "assertions": [
+    {"text": "Output contains 'Переформулировано:' header"},
+    {"text": "Output contains 'Найдено проблем:' header"},
+    {"text": "Skill does NOT flag service names (payments, billing, invoicing, analytics, reports, dashboards) as internal codes — they are domain words, not jargon"},
+    {"text": "Skill flags v0.2.5 / gates / QPS / SRE as needing explanation"},
+    {"text": "BYTE-FAITHFUL: reformulation does not invent context not present in source"},
+    {"text": "Reformulation preserves the micro-story structure already present in source (откуда → подготовил → дальше)"}
+  ]
+}

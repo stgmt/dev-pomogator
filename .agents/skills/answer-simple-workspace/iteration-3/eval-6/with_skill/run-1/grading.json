@@ -1,0 +1,11 @@
+{
+  "expectations": [
+    {"text": "Output contains 'Переформулировано:' header", "passed": true, "evidence": "Line 1: 'Переформулировано: После релиза версии v0.2.5...'"},
+    {"text": "Output contains 'Найдено проблем:' header", "passed": true, "evidence": "Line 3: 'Найдено проблем:' with 5 bullets"},
+    {"text": "Skill does NOT flag service names (payments, billing, invoicing, analytics, reports, dashboards) as internal codes", "passed": true, "evidence": "None of payments/billing/invoicing/analytics/reports/dashboards appear in 'Найдено проблем:' bullets. Correctly treated as domain names not jargon."},
+    {"text": "Skill flags v0.2.5 / gates / QPS / SRE as needing explanation", "passed": true, "evidence": "Lines 4-7: 'Внутренний код v0.2.5', 'Термин gates без расшифровки', 'аббревиатура QPS', 'аббревиатура SRE'"},
+    {"text": "BYTE-FAITHFUL: reformulation does not invent context not present in source", "passed": true, "evidence": "Reformulation paraphrases faithfully. 'gates → новая система проверок перед слиянием' uses the in-source parenthetical ('блокирует merge при отсутствии review approvals'). SRE expansion (Site Reliability Engineering) is general-knowledge abbreviation, arguably borderline but does not invent project-specific context."},
+    {"text": "Reformulation preserves the micro-story structure already present in source (откуда → подготовил → дальше)", "passed": true, "evidence": "Reformulation has: 'После релиза' (откуда), 'я подготовил план' (что сделал), 'волнами 1-3' (где), 'Дальше — согласовать с SRE' (что дальше)"}
+  ],
+  "summary": {"passed": 6, "failed": 0, "total": 6, "pass_rate": 1.0}
+}

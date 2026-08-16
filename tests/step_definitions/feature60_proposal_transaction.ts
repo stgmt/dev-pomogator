@@ -286,7 +286,7 @@ Then(
     const required = ['propose_patch', 'apply_proposed_patch', 'apply_spec_transaction'];
     for (const name of required) assert.ok(registryNames.has(name), `${name} must be exposed by the real MCP registry`);
 
-    const skill = fs.readFileSync(path.resolve('.claude/skills/create-spec/SKILL.md'), 'utf-8');
+    const skill = fs.readFileSync(path.resolve('.agents/skills/create-spec/SKILL.md'), 'utf-8');
     const frontmatter = skill.match(/^---\r?\n([\s\S]*?)\r?\n---/)?.[1] ?? '';
     for (const name of required) {
       assert.match(frontmatter, new RegExp(`mcp__dev-pomogator-specs__${name}\\b`), `${name} must be callable by the active create-spec skill`);

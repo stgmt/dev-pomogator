@@ -1,0 +1,15 @@
+{
+  "eval_id": 6,
+  "eval_name": "long-draft-with-multiple-services",
+  "prompt": "/answer-simple \"<long draft с 12 микросервисами, gates, QPS, SRE>\"",
+  "assertions": [
+    {"text": "Output contains 'Переформулировано:' header"},
+    {"text": "Output contains 'Найдено проблем:' header"},
+    {"text": "Service names (payments, billing, invoicing, analytics, reports, dashboards) NOT flagged as internal codes"},
+    {"text": "v0.2.5 and gates flagged as project-specific codes"},
+    {"text": "✨NEW Правило 5: general engineering vocab (staging, prod, QPS, SRE, planned downtime, rollback playbook) NOT flagged"},
+    {"text": "✨NEW Правило 1 strict: exact numbers preserved (30 минут, 12 сервисов, 2 недели, 24 часа) — no 'примерно' added"},
+    {"text": "✨NEW Правило 1 strict: no implicit predicates added (no 'появилась', 'возникла' etc.)"},
+    {"text": "✨NEW Правило 4: consistency — if term decoded inline, finding phrased differently (not 'без расшифровки')"}
+  ]
+}

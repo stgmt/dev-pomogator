@@ -1,0 +1,19 @@
+{
+  "expectations": [
+    {
+      "text": "axes_detected >= 4",
+      "passed": true,
+      "evidence": "actual=6"
+    },
+    {
+      "text": "axes include category 'Networking'",
+      "passed": true,
+      "evidence": "actual_categories=['Hardware', 'Infra-Deployment', 'Networking', 'Other']"
+    },
+    {
+      "text": "axes include category 'Hardware'",
+      "passed": true,
+      "evidence": "actual_categories=['Hardware', 'Infra-Deployment', 'Networking', 'Other']"
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "expectations": [
+    {"text": "Output contains 'Переформулировано:' header", "passed": true, "evidence": "Line 1: 'Переформулировано: После выкладки версии v0.3.1...'"},
+    {"text": "Output contains 'Найдено проблем:' header", "passed": true, "evidence": "Line 3: 'Найдено проблем:' with 9 bullets"},
+    {"text": "Skill identifies v0.3.1 / v0.2 / tenant as needing context", "passed": true, "evidence": "Line 4: 'Внутренний код v0.3.1 и v0.2 без расшифровки', Line 6: 'Технический термин tenant без объяснения'"},
+    {"text": "Skill flags mixed RU+EN code-switching as readability problem", "passed": true, "evidence": "Line 10: 'Mixed RU+EN code-switching по всему тексту: должен handle edge case где, deploy в prod batch by batch, Risk: что если — затрудняет чтение, лучше выбрать один язык'"},
+    {"text": "BYTE-FAITHFUL: skill does NOT invent what legacy config / edge case mean", "passed": true, "evidence": "Line 1: '(до версии v0.2 — в источнике он называется legacy config, что именно в нём — в черновике не уточнено)' — explicitly notes lack of context instead of inventing. Same for edge case (line 9)."},
+    {"text": "Skill correctly identifies 2-option dilemma (rollback/skip) as within threshold (not flagged as multi-select violation)", "passed": true, "evidence": "Line 12: 'Вопрос в конце (rollback или skip?) — формально 2 опции (в пределах порога 2)' — explicitly notes within threshold, only flags term ambiguity not count violation"}
+  ],
+  "summary": {"passed": 6, "failed": 0, "total": 6, "pass_rate": 1.0}
+}

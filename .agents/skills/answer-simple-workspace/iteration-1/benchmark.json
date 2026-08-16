@@ -1,0 +1,487 @@
+{
+  "metadata": {
+    "skill_name": "answer-simple",
+    "skill_path": "D:/repos/dev-pomogator/.claude/skills/answer-simple",
+    "executor_model": "<model-name>",
+    "analyzer_model": "<model-name>",
+    "timestamp": "2026-05-24T00:18:46Z",
+    "evals_run": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "runs_per_configuration": 3
+  },
+  "runs": [
+    {
+      "eval_id": 0,
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 6,
+        "failed": 0,
+        "total": 6,
+        "time_seconds": 21.151,
+        "tokens": 88232,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Output contains '\u041f\u0435\u0440\u0435\u0444\u043e\u0440\u043c\u0443\u043b\u0438\u0440\u043e\u0432\u0430\u043d\u043e:' header",
+          "passed": true,
+          "evidence": "Line 1: '\u041f\u0435\u0440\u0435\u0444\u043e\u0440\u043c\u0443\u043b\u0438\u0440\u043e\u0432\u0430\u043d\u043e: \u0423 \u043d\u0430\u0441 \u0434\u0432\u0430 \u0431\u043e\u043b\u044c\u0448\u0438\u0445 \u043a\u0443\u0441\u043a\u0430 \u0440\u0430\u0431\u043e\u0442\u044b \u2014 \u043e\u0434\u0438\u043d \u043f\u0440\u043e \u0434\u0435\u0448\u0451\u0432\u044b\u0439 LLM...'"
+        },
+        {
+          "text": "Output contains '\u041d\u0430\u0439\u0434\u0435\u043d\u043e \u043f\u0440\u043e\u0431\u043b\u0435\u043c:' header",
+          "passed": true,
+          "evidence": "Line 3: '\u041d\u0430\u0439\u0434\u0435\u043d\u043e \u043f\u0440\u043e\u0431\u043b\u0435\u043c:' followed by 7 bullet items"
+        },
+        {
+          "text": "Output identifies 'Wave 14' as undefined internal code",
+          "passed": true,
+          "evidence": "Line 4: '\u0412\u043d\u0443\u0442\u0440\u0435\u043d\u043d\u0438\u0439 \u043a\u043e\u0434 \"Wave 14\" \u0431\u0435\u0437 \u0440\u0430\u0441\u0448\u0438\u0444\u0440\u043e\u0432\u043a\u0438 \u2014 \u0447\u0438\u0442\u0430\u0442\u0435\u043b\u044c \u043d\u0435 \u0437\u043d\u0430\u0435\u0442 \u0447\u0442\u043e \u044d\u0442\u043e \u0437\u0430 \u044d\u0442\u0430\u043f'"
+        },
+        {
+          "text": "Output identifies 'Wave 11' as undefined internal code",
+          "passed": true,
+          "evidence": "Line 5: '\u0412\u043d\u0443\u0442\u0440\u0435\u043d\u043d\u0438\u0439 \u043a\u043e\u0434 \"Wave 11\" \u0431\u0435\u0437 \u0440\u0430\u0441\u0448\u0438\u0444\u0440\u043e\u0432\u043a\u0438'"
+        },
+        {
+          "text": "Output identifies multi-select with 3+ options as exceeding threshold of 2",
+          "passed": true,
+          "evidence": "Line 8: 'Multi-select \u0441 3 \u043e\u043f\u0446\u0438\u044f\u043c\u0438 (Keep / Swap / Parallel) \u2014 \u043f\u0440\u0435\u0432\u044b\u0448\u0435\u043d\u0438\u0435 \u043f\u043e\u0440\u043e\u0433\u0430 2'"
+        },
+        {
+          "text": "Output identifies missing micro-story structure (no 5 anchor points)",
+          "passed": true,
+          "evidence": "Line 9: '\u041e\u0442\u0441\u0443\u0442\u0441\u0442\u0432\u0443\u0435\u0442 \u0441\u0442\u0440\u0443\u043a\u0442\u0443\u0440\u0430 \u043c\u0438\u043a\u0440\u043e\u0438\u0441\u0442\u043e\u0440\u0438\u0438 (\u043d\u0435\u0442 \"\u043e\u0442\u043a\u0443\u0434\u0430 \u043f\u0440\u0438\u0448\u043b\u0438\" / \"\u0447\u0442\u043e \u043f\u0440\u043e\u0438\u0437\u043e\u0448\u043b\u043e\" / \"\u0433\u0434\u0435 \u0441\u0435\u0439\u0447\u0430\u0441\" / \"\u0434\u0430\u043b\u044c\u0448\u0435\")'"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 1,
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 5,
+        "failed": 0,
+        "total": 5,
+        "time_seconds": 23.817,
+        "tokens": 88327,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Output contains '\u041f\u0435\u0440\u0435\u0444\u043e\u0440\u043c\u0443\u043b\u0438\u0440\u043e\u0432\u0430\u043d\u043e:' header",
+          "passed": true,
+          "evidence": "Line 1: '\u041f\u0435\u0440\u0435\u0444\u043e\u0440\u043c\u0443\u043b\u0438\u0440\u043e\u0432\u0430\u043d\u043e: \u0422\u044b \u043f\u0440\u043e\u0441\u0438\u043b \u0434\u043e\u0440\u0430\u0431\u043e\u0442\u0430\u0442\u044c \u0442\u0440\u0435\u0431\u043e\u0432\u0430\u043d\u0438\u0435 \u043a \u043f\u043e\u043a\u0440\u044b\u0442\u0438\u044e \u0432\u0430\u0440\u0438\u0430\u043d\u0442\u043e\u0432...'"
+        },
+        {
+          "text": "Output contains '\u041d\u0430\u0439\u0434\u0435\u043d\u043e \u043f\u0440\u043e\u0431\u043b\u0435\u043c:' header",
+          "passed": true,
+          "evidence": "Line 3: '\u041d\u0430\u0439\u0434\u0435\u043d\u043e \u043f\u0440\u043e\u0431\u043b\u0435\u043c:' with 4 bullets"
+        },
+        {
+          "text": "Output identifies 'FR-12' as undefined internal code",
+          "passed": true,
+          "evidence": "Line 4: '\u0412\u043d\u0443\u0442\u0440\u0435\u043d\u043d\u0438\u0439 \u043a\u043e\u0434 \"FR-12\" \u0431\u0435\u0437 \u0440\u0430\u0441\u0448\u0438\u0444\u0440\u043e\u0432\u043a\u0438 \u2014 \u0447\u0438\u0442\u0430\u0442\u0435\u043b\u044c \u043d\u0435 \u0437\u043d\u0430\u0435\u0442 \u0447\u0442\u043e \u044d\u0442\u043e \u0437\u0430 \u0442\u0440\u0435\u0431\u043e\u0432\u0430\u043d\u0438\u0435'"
+        },
+        {
+          "text": "Output identifies 'VARIANT_COVERAGE' as undefined internal code",
+          "passed": true,
+          "evidence": "Line 5: '\u0412\u043d\u0443\u0442\u0440\u0435\u043d\u043d\u0438\u0439 \u043a\u043e\u0434 \"VARIANT_COVERAGE category\" \u0431\u0435\u0437 \u0440\u0430\u0441\u0448\u0438\u0444\u0440\u043e\u0432\u043a\u0438 \u2014 \u043d\u0435\u043f\u043e\u043d\u044f\u0442\u043d\u043e \u0447\u0442\u043e \u044d\u0442\u043e audit-\u043a\u0430\u0442\u0435\u0433\u043e\u0440\u0438\u044f'"
+        },
+        {
+          "text": "Output identifies missing micro-story structure or missing causal links",
+          "passed": true,
+          "evidence": "Lines 6-7: identifies missing micro-story AND missing causal links"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 2,
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 8,
+        "failed": 0,
+        "total": 8,
+        "time_seconds": 31.281,
+        "tokens": 88749,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Output contains '\u041f\u0435\u0440\u0435\u0444\u043e\u0440\u043c\u0443\u043b\u0438\u0440\u043e\u0432\u0430\u043d\u043e:' header",
+          "passed": true,
+          "evidence": "Line 1: '\u041f\u0435\u0440\u0435\u0444\u043e\u0440\u043c\u0443\u043b\u0438\u0440\u043e\u0432\u0430\u043d\u043e: \u041c\u044b \u0442\u043e\u043b\u044c\u043a\u043e \u0447\u0442\u043e \u0432\u044b\u043a\u0430\u0442\u0438\u043b\u0438 \u043d\u043e\u0432\u0443\u044e \u0432\u0435\u0440\u0441\u0438\u044e \u0441\u0438\u0441\u0442\u0435\u043c\u044b...'"
+        },
+        {
+          "text": "Output contains '\u041d\u0430\u0439\u0434\u0435\u043d\u043e \u043f\u0440\u043e\u0431\u043b\u0435\u043c:' header",
+          "passed": true,
+          "evidence": "Line 3: '\u041d\u0430\u0439\u0434\u0435\u043d\u043e \u043f\u0440\u043e\u0431\u043b\u0435\u043c:' with 10 bullets"
+        },
+        {
+          "text": "Output identifies 'Wave 14' as internal code",
+          "passed": true,
+          "evidence": "Line 5: '\u0412\u043d\u0443\u0442\u0440\u0435\u043d\u043d\u0438\u0439 \u043a\u043e\u0434 \"Wave 14\" \u0431\u0435\u0437 \u0440\u0430\u0441\u0448\u0438\u0444\u0440\u043e\u0432\u043a\u0438 \u2014 \u0432\u043d\u0443\u0442\u0440\u0435\u043d\u043d\u0435\u0435 \u043d\u0430\u0437\u0432\u0430\u043d\u0438\u0435 \u044d\u0442\u0430\u043f\u0430, \u043d\u0435\u0437\u043d\u0430\u043a\u043e\u043c\u043e\u0435 \u0432\u043d\u0435\u0448\u043d\u0435\u043c\u0443 \u0447\u0438\u0442\u0430\u0442\u0435\u043b\u044e'"
+        },
+        {
+          "text": "Output identifies 'FR-8' as internal code",
+          "passed": true,
+          "evidence": "Line 7: '\u0412\u043d\u0443\u0442\u0440\u0435\u043d\u043d\u0438\u0439 \u043a\u043e\u0434 \"FR-8\" \u0431\u0435\u0437 \u0440\u0430\u0441\u0448\u0438\u0444\u0440\u043e\u0432\u043a\u0438 \u2014 \u0444\u0443\u043d\u043a\u0446\u0438\u043e\u043d\u0430\u043b\u044c\u043d\u043e\u0435 \u0442\u0440\u0435\u0431\u043e\u0432\u0430\u043d\u0438\u0435 \u0431\u0435\u0437 \u0443\u043a\u0430\u0437\u0430\u043d\u0438\u044f, \u0447\u0442\u043e \u043e\u043d\u043e \u043e\u043f\u0438\u0441\u044b\u0432\u0430\u0435\u0442'"
+        },
+        {
+          "text": "Output identifies 'FR-3' as internal code",
+          "passed": true,
+          "evidence": "Line 8: '\u0412\u043d\u0443\u0442\u0440\u0435\u043d\u043d\u0438\u0439 \u043a\u043e\u0434 \"FR-3\" \u0431\u0435\u0437 \u0440\u0430\u0441\u0448\u0438\u0444\u0440\u043e\u0432\u043a\u0438 \u2014 \u0442\u043e \u0436\u0435 \u0441\u0430\u043c\u043e\u0435'"
+        },
+        {
+          "text": "Output identifies 'foo-bar' as internal spec reference",
+          "passed": true,
+          "evidence": "Line 6: '\u0412\u043d\u0443\u0442\u0440\u0435\u043d\u043d\u0438\u0439 \u043a\u043e\u0434 \"foo-bar spec\" \u0431\u0435\u0437 \u0440\u0430\u0441\u0448\u0438\u0444\u0440\u043e\u0432\u043a\u0438'"
+        },
+        {
+          "text": "Output identifies 'baz-quux' as internal spec reference",
+          "passed": true,
+          "evidence": "Line 9: '\u0412\u043d\u0443\u0442\u0440\u0435\u043d\u043d\u0438\u0439 \u043a\u043e\u0434 \"baz-quux\" \u0431\u0435\u0437 \u0440\u0430\u0441\u0448\u0438\u0444\u0440\u043e\u0432\u043a\u0438 \u2014 \u043d\u0430\u0437\u0432\u0430\u043d\u0438\u0435 \u0441\u043e\u0441\u0435\u0434\u043d\u0435\u0439 \u0441\u043f\u0435\u043a\u0438 \u0431\u0435\u0437 \u043a\u043e\u043d\u0442\u0435\u043a\u0441\u0442\u0430'"
+        },
+        {
+          "text": "Output identifies missing micro-story structure",
+          "passed": true,
+          "evidence": "Line 12: '\u041e\u0442\u0441\u0443\u0442\u0441\u0442\u0432\u0443\u0435\u0442 \u0441\u0442\u0440\u0443\u043a\u0442\u0443\u0440\u0430 \u043c\u0438\u043a\u0440\u043e\u0438\u0441\u0442\u043e\u0440\u0438\u0438 (\u043d\u0435\u0442 \"\u043e\u0442\u043a\u0443\u0434\u0430 \u043f\u0440\u0438\u0448\u043b\u0438\", \u043d\u0435\u0442 \"\u0433\u0434\u0435 \u0441\u0435\u0439\u0447\u0430\u0441 \u043f\u043e\u0441\u043b\u0435 \u0434\u0435\u043f\u043b\u043e\u044f\", \u043d\u0435\u0442 \"\u0447\u0442\u043e \u0434\u0430\u043b\u044c\u0448\u0435\")'"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 3,
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 3,
+        "failed": 0,
+        "total": 3,
+        "time_seconds": 18.351,
+        "tokens": 0,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Output contains '\u041f\u0440\u043e\u0431\u043b\u0435\u043c \u043d\u0435 \u043d\u0430\u0439\u0434\u0435\u043d\u043e' verdict",
+          "passed": true,
+          "evidence": "Line 1: '\u041f\u0440\u043e\u0431\u043b\u0435\u043c \u043d\u0435 \u043d\u0430\u0439\u0434\u0435\u043d\u043e'"
+        },
+        {
+          "text": "Output does NOT fabricate fake problems on clean draft",
+          "passed": true,
+          "evidence": "No '\u041d\u0430\u0439\u0434\u0435\u043d\u043e \u043f\u0440\u043e\u0431\u043b\u0435\u043c:' block. Output is concise \u2014 only verdict + passed criteria list, no fabricated issues"
+        },
+        {
+          "text": "Output lists passed criteria (5 anchor points / no jargon / causal link present)",
+          "passed": true,
+          "evidence": "Lines 3-7: '\u041f\u0440\u043e\u0439\u0434\u0435\u043d\u043d\u044b\u0435 \u043a\u0440\u0438\u0442\u0435\u0440\u0438\u0438: \u041c\u0438\u043a\u0440\u043e\u0438\u0441\u0442\u043e\u0440\u0438\u044f \u0441 5 \u043e\u043f\u043e\u0440\u043d\u044b\u043c\u0438 \u0442\u043e\u0447\u043a\u0430\u043c\u0438 \u043f\u0440\u0438\u0441\u0443\u0442\u0441\u0442\u0432\u0443\u0435\u0442... \u041d\u0435\u0442 \u0432\u043d\u0443\u0442\u0440\u0435\u043d\u043d\u0438\u0445 \u043a\u043e\u0434\u043e\u0432... Multi-select \u043e\u0442\u0441\u0443\u0442\u0441\u0442\u0432\u0443\u0435\u0442... \u041f\u0440\u0438\u0447\u0438\u043d\u043d\u043e-\u0441\u043b\u0435\u0434\u0441\u0442\u0432\u0435\u043d\u043d\u0430\u044f \u0441\u0432\u044f\u0437\u043a\u0430 \u041f\u043e\u0441\u043b\u0435 \u0442\u043e\u0433\u043e \u043a\u0430\u043a... \u043f\u0440\u0438\u0441\u0443\u0442\u0441\u0442\u0432\u0443\u0435\u0442'"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 4,
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 2,
+        "failed": 0,
+        "total": 2,
+        "time_seconds": 19.965,
+        "tokens": 88085,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Output handles trivial 1-word input gracefully (does not generate 10 problems)",
+          "passed": true,
+          "evidence": "Output returns '\u041f\u0440\u043e\u0431\u043b\u0435\u043c \u043d\u0435 \u043d\u0430\u0439\u0434\u0435\u043d\u043e' + note about minimal text. No fabricated problems list"
+        },
+        {
+          "text": "Output either returns usage hint OR notes that criteria are not applicable for 1-word text",
+          "passed": true,
+          "evidence": "Line 4-7: '\u0422\u0435\u043a\u0441\u0442 \u0441\u043b\u0438\u0448\u043a\u043e\u043c \u043a\u043e\u0440\u043e\u0442\u043a\u0438\u0439 (1 \u0441\u043b\u043e\u0432\u043e) \u0434\u043b\u044f \u043e\u0446\u0435\u043d\u043a\u0438 \u0441\u0442\u0440\u0443\u043a\u0442\u0443\u0440\u044b \u043c\u0438\u043a\u0440\u043e\u0438\u0441\u0442\u043e\u0440\u0438\u0438 \u2014 \u043a\u0440\u0438\u0442\u0435\u0440\u0438\u0439 \u043d\u0435\u043f\u0440\u0438\u043c\u0435\u043d\u0438\u043c'; line 9: '\u041f\u0440\u0438\u043c\u0435\u0447\u0430\u043d\u0438\u0435: \u0447\u0435\u0440\u043d\u043e\u0432\u0438\u043a \u0413\u043e\u0442\u043e\u0432\u043e \u043f\u0440\u0435\u0434\u0441\u0442\u0430\u0432\u043b\u044f\u0435\u0442 \u0441\u043e\u0431\u043e\u0439 \u043c\u0438\u043d\u0438\u043c\u0430\u043b\u044c\u043d\u043e\u0435 \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u0438\u0435 \u0437\u0430\u0432\u0435\u0440\u0448\u0435\u043d\u0438\u044f \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u044f'"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 0,
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 0.0,
+        "passed": 0,
+        "failed": 6,
+        "total": 6,
+        "time_seconds": 23.576,
+        "tokens": 84254,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Output contains '\u041f\u0435\u0440\u0435\u0444\u043e\u0440\u043c\u0443\u043b\u0438\u0440\u043e\u0432\u0430\u043d\u043e:' header",
+          "passed": false,
+          "evidence": "No '\u041f\u0435\u0440\u0435\u0444\u043e\u0440\u043c\u0443\u043b\u0438\u0440\u043e\u0432\u0430\u043d\u043e:' in output. Output starts with 'I don't recognize /answer-simple as a built-in slash command'"
+        },
+        {
+          "text": "Output contains '\u041d\u0430\u0439\u0434\u0435\u043d\u043e \u043f\u0440\u043e\u0431\u043b\u0435\u043c:' header",
+          "passed": false,
+          "evidence": "No '\u041d\u0430\u0439\u0434\u0435\u043d\u043e \u043f\u0440\u043e\u0431\u043b\u0435\u043c:' in output. Baseline asks clarifying questions instead of auditing"
+        },
+        {
+          "text": "Output identifies 'Wave 14' as undefined internal code",
+          "passed": false,
+          "evidence": "Wave 14 treated as roadmap topic ('Wave 14 which bundles gates + OpenRouter integration'), not flagged as internal jargon"
+        },
+        {
+          "text": "Output identifies 'Wave 11' as undefined internal code",
+          "passed": false,
+          "evidence": "Wave 11 not flagged; question 'What's in Wave 11?' asked instead"
+        },
+        {
+          "text": "Output identifies multi-select with 3+ options as exceeding threshold of 2",
+          "passed": false,
+          "evidence": "Multi-select 3 options not flagged at all"
+        },
+        {
+          "text": "Output identifies missing micro-story structure (no 5 anchor points)",
+          "passed": false,
+          "evidence": "Micro-story concept not mentioned"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 1,
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 0.0,
+        "passed": 0,
+        "failed": 5,
+        "total": 5,
+        "time_seconds": 26.565,
+        "tokens": 84119,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Output contains '\u041f\u0435\u0440\u0435\u0444\u043e\u0440\u043c\u0443\u043b\u0438\u0440\u043e\u0432\u0430\u043d\u043e:' header",
+          "passed": false,
+          "evidence": "Output starts with '\u041e\u0442\u043b\u0438\u0447\u043d\u043e, \u0441\u043f\u0430\u0441\u0438\u0431\u043e \u0437\u0430 \u0430\u043f\u0434\u0435\u0439\u0442!' \u2014 no audit headers"
+        },
+        {
+          "text": "Output contains '\u041d\u0430\u0439\u0434\u0435\u043d\u043e \u043f\u0440\u043e\u0431\u043b\u0435\u043c:' header",
+          "passed": false,
+          "evidence": "No problem-list block, baseline asks clarifying questions about spec slug"
+        },
+        {
+          "text": "Output identifies 'FR-12' as undefined internal code",
+          "passed": false,
+          "evidence": "FR-12 treated as known reference ('\u043a\u0430\u043a\u043e\u0439 \u0438\u043c\u0435\u043d\u043d\u043e spec?'), not flagged as undefined code"
+        },
+        {
+          "text": "Output identifies 'VARIANT_COVERAGE' as undefined internal code",
+          "passed": false,
+          "evidence": "VARIANT_COVERAGE acknowledged as 'audit category for Phase 3+' \u2014 used as known term, not flagged"
+        },
+        {
+          "text": "Output identifies missing micro-story structure or missing causal links",
+          "passed": false,
+          "evidence": "Micro-story not mentioned"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 2,
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 0.0,
+        "passed": 0,
+        "failed": 8,
+        "total": 8,
+        "time_seconds": 37.529,
+        "tokens": 84361,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Output contains '\u041f\u0435\u0440\u0435\u0444\u043e\u0440\u043c\u0443\u043b\u0438\u0440\u043e\u0432\u0430\u043d\u043e:' header",
+          "passed": false,
+          "evidence": "Output starts with 'I can help with this migration task, but I need to clarify a few things' \u2014 no audit headers"
+        },
+        {
+          "text": "Output contains '\u041d\u0430\u0439\u0434\u0435\u043d\u043e \u043f\u0440\u043e\u0431\u043b\u0435\u043c:' header",
+          "passed": false,
+          "evidence": "Baseline uses 'What I understand / What I need to clarify / Proposed next steps' \u2014 not audit format"
+        },
+        {
+          "text": "Output identifies 'Wave 14' as internal code",
+          "passed": false,
+          "evidence": "Wave 14 treated as roadmap reference ('what does v0.2.5 actually deliver') without flagging as jargon"
+        },
+        {
+          "text": "Output identifies 'FR-8' as internal code",
+          "passed": false,
+          "evidence": "FR-8 referenced as known artifact, not flagged"
+        },
+        {
+          "text": "Output identifies 'FR-3' as internal code",
+          "passed": false,
+          "evidence": "FR-3 referenced as 'dependency on FR-3 from baz-quux spec', not flagged"
+        },
+        {
+          "text": "Output identifies 'foo-bar' as internal spec reference",
+          "passed": false,
+          "evidence": "foo-bar treated as real spec name, baseline plans to read `.specs/foo-bar/`"
+        },
+        {
+          "text": "Output identifies 'baz-quux' as internal spec reference",
+          "passed": false,
+          "evidence": "baz-quux treated as real spec, baseline plans to read `.specs/baz-quux/FR.md`"
+        },
+        {
+          "text": "Output identifies missing micro-story structure",
+          "passed": false,
+          "evidence": "Micro-story not mentioned"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 3,
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 0.3333,
+        "passed": 1,
+        "failed": 2,
+        "total": 3,
+        "time_seconds": 32.224,
+        "tokens": 84246,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Output contains '\u041f\u0440\u043e\u0431\u043b\u0435\u043c \u043d\u0435 \u043d\u0430\u0439\u0434\u0435\u043d\u043e' verdict",
+          "passed": false,
+          "evidence": "Output starts with '\u0417\u0432\u0443\u0447\u0438\u0442 \u043a\u0430\u043a \u0445\u043e\u0440\u043e\u0448\u0438\u0439 \u0448\u0430\u0433 \u2014 \u043f\u0440\u0435\u0432\u0440\u0430\u0442\u0438\u0442\u044c \u043f\u0440\u0430\u0432\u0438\u043b\u043e \u0432 \u0447\u0435\u043a-\u043b\u0438\u0441\u0442 \u0441\u0430\u043c\u043e\u043f\u0440\u043e\u0432\u0435\u0440\u043a\u0438'. Gives advice on content, no audit verdict"
+        },
+        {
+          "text": "Output does NOT fabricate fake problems on clean draft",
+          "passed": true,
+          "evidence": "Baseline didn't audit at all, so technically didn't fabricate problems \u2014 gave advice instead. Trivially passes the negative assertion"
+        },
+        {
+          "text": "Output lists passed criteria (5 anchor points / no jargon / causal link present)",
+          "passed": false,
+          "evidence": "No criteria checklist; baseline gives 4 suggestions on improving the workflow"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 4,
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 0.5,
+        "passed": 1,
+        "failed": 1,
+        "total": 2,
+        "time_seconds": 19.126,
+        "tokens": 83675,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Output handles trivial 1-word input gracefully (does not generate 10 problems)",
+          "passed": true,
+          "evidence": "Baseline: '\u041f\u0440\u0438\u043d\u044f\u0442\u043e. \u0415\u0441\u043b\u0438 \u043d\u0443\u0436\u043d\u0430 \u0434\u0430\u043b\u044c\u043d\u0435\u0439\u0448\u0430\u044f \u043f\u043e\u043c\u043e\u0449\u044c \u2014 \u0434\u0430\u0439 \u0437\u043d\u0430\u0442\u044c'. 1 line, no fabricated problems"
+        },
+        {
+          "text": "Output either returns usage hint OR notes that criteria are not applicable for 1-word text",
+          "passed": false,
+          "evidence": "Baseline gives generic acknowledgment, doesn't explain why criteria N/A for 1-word; treats /answer-simple as just chat input"
+        }
+      ],
+      "notes": []
+    }
+  ],
+  "run_summary": {
+    "with_skill": {
+      "pass_rate": {
+        "mean": 1.0,
+        "stddev": 0.0,
+        "min": 1.0,
+        "max": 1.0
+      },
+      "time_seconds": {
+        "mean": 22.913,
+        "stddev": 5.0855,
+        "min": 18.351,
+        "max": 31.281
+      },
+      "tokens": {
+        "mean": 70678.6,
+        "stddev": 39511.3101,
+        "min": 0,
+        "max": 88749
+      }
+    },
+    "without_skill": {
+      "pass_rate": {
+        "mean": 0.1667,
+        "stddev": 0.2357,
+        "min": 0.0,
+        "max": 0.5
+      },
+      "time_seconds": {
+        "mean": 27.804,
+        "stddev": 7.2255,
+        "min": 19.126,
+        "max": 37.529
+      },
+      "tokens": {
+        "mean": 84131.0,
+        "stddev": 268.9489,
+        "min": 83675,
+        "max": 84361
+      }
+    },
+    "delta": {
+      "pass_rate": "+0.83",
+      "time_seconds": "-4.9",
+      "tokens": "-13452"
+    }
+  },
+  "notes": []
+}
