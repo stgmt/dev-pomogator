@@ -75,7 +75,25 @@ BDD_SYNC GREEN, 0 blocking; EXECUTION RED только за счёт OOS FR-11/1
 
 **Чистые категории:** 2 (нет реальных дублей; consult.mjs честно реюзает `tools/advisor/transcript-packet.mjs`), 12 (коллизий нет), 14 (memory feedback-файлов нет), 16 (acceptance-task-coverage: `ok, claims: []`), FR-1/3/5/7-ядро/8-CLI/9-who-wrote — без дрейфа; SKILL-зеркало идентично (fc.exe), allowed-tools покрывают workflow.
 
+## Dogfood-анализ сессий (2026-08-16)
+
+Сканирование `~/.claude/projects/E--repos-dev-pomogator/*.jsonl` (47 сессий) на реальные запуски инструментов:
+
+1. **e98178b8 (06:08)** — воркер, которого адвизор вёл в live e2e (единственный полный цикл
+   «запуск → наблюдение → факт-проверка»; задокументирован выше).
+2. **b419882c (параллельная сессия)** — пассивный пользователь: 79 запусков git-guard hook
+   (PreToolUse/7/0) с 10:20, все exit=0, 0 ложных блоков, 0 override-записей в escape-audit;
+   чтение нашей спеки через MCP-дверь в 03:00 (их FR-7 изоляции). Инструменты адвизора
+   (tail/worker_driver/consult) сама не запускала.
+3. Остальные ~30 совпадений «inventory.ts»/«lock.ts» — другие одноимённые файлы
+   (bdd-migrator/inventory.ts, doctor lock.ts), не наши.
+
+Вывод: живых полных dogfood-циклов пока 1 (наш собственный); блок-путь git-guard ещё ни
+разу не срабатывал на живом юзере (escape-audit пуст). Для честного UX-вывода нужен ещё
+один заход на реальной чужой задаче.
+
 ## P1 known → closed (2026-08-16, «FR-6/7/10 честный довод»)
+
 
 1. **git-guard заwire-чен**: `PreToolUse/7/0` (matcher Bash) в `.claude-plugin/hooks.legacy.json` → registry.json/hooks.json/.claude/settings.json перегенерированы; hook-режим `--hook` (stdin JSON): `git add -A`/`.` → block (exit 2 + stderr), override через `[skip-git-guard: <причина>]`/`GIT_GUARD_SKIP=1` → escape-audit `.dev-pomogator/git-guard-escapes.jsonl`, fail-open по умолчанию.
 2. **lock.ts**: `recoverStale` пишет audit-строку в `<locksDir>/audit.jsonl` (old/new owner).
