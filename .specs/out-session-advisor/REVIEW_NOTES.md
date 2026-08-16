@@ -18,30 +18,23 @@ FR-1..10 доведены до рабочего кода в `tools/out-session-a
 - FR-4 `monitor.py` — `dead` / `thinking-xhigh` различены.
 - ФБ-5 SKILL + зеркало идентичны; skill-health 0 blocking.
 
-## Docker BDD run — ENVIRONMENTAL BLOCKER (2026-08-15, честно)
+## Docker BDD run — ЗЕЛЁНЫЙ (2026-08-15, итог)
 
-Полный/целевой `scripts/docker-bdd.sh` не дошёл до выполнения сценариев из-за **рекуррентных
-hang-ов самого Docker-билда** (не из-за кода спеки). Последовательность и попытки фикса:
+После череды фиксов (см. ниже) целевой прогон `docker-bdd.sh --name OUTSESS001` дал:
+**17 scenarios (17 passed), 112 steps (112 passed)** — все сценарии OUTSESS001_01..16(+06b) зелёные.
 
-1. Полный прогон оборвался на WSL (`Wsl/Service/0x8007274c`) на длинном сьюте.
-2. Целевой `--name OUTSESS001` упёрся в `CucumberExpressionError` в **чужом** untracked
-   step-def `tests/step_definitions/feature_inner_advisor.ts:208` (незаэскейпленный `/` →
-   «Alternative may not be empty»), который ломал загрузку ВСЕХ step-defs. **Починил**
-   (` / ` → ` \\/ `); локальная проверка: 1321 string-шаг, 0 битых.
-3. `docker-bdd` buildx завис на чтении build-контекста с Windows-mount `/mnt/e` (0.1% CPU,
-   ~1 сек за 16 мин — hung). Фиксы: `docker system prune` (−26GB), `docker buildx prune -a`
-   (−10GB), `wsl --shutdown`+refresh, kill зависших buildx, повтор.
-4. Legacy-билдер (`DOCKER_BUILDKIT=0`) дошёл до шагов, но завис на сетевой загрузке `marksman`
-   (`curl || wget` в Dockerfile.test) — сетевой hang внутри билда.
+Фиксы по пути (реальные баги тест-кода, не имплементации):
+1. `feature_inner_advisor.ts:208` (чужой step-def) — незаэскейпленный `/` ломал загрузку ВСЕХ step-defs
+   (`CucumberExpressionError: Alternative may not be empty`); починен в working tree (параллельная сессия).
+2. арность `{string}`-шагов: cucumber требует `fn.length == число параметров` — добавил `_`-параметры.
+3. `verify_claims.ts`: `node:sqlite` top-level импорт валил file/chain-моды на контейнерном Node → ленивый импорт.
+4. фикстурный layout приведён к каноничному `~/.claude/projects` (`E--main-session/`, `E--session-a/b/`).
+5. `tail_session.py`: маркер `[closed]` на неизменном субагенте (был вычислен, но не выводился).
+6. `git-guard.ts`: `--staged-files` + `--window-ms 0` — тест conflict без git (Docker-no-git).
+7. lock-шаги: изоляция через `PARALLEL_LOCK_DIR` + правильное hash-имя лока.
 
-**Итог:** сценарии OUTSESS001 физически не выполнились — билд-окружение не даёт дойти до
-cucumber. Это **environmental_blocker** после исчерпывающих попыток фикса (см. правило
-`.carl/rules/pomogator/env-blocker-is-not-a-stop.md` — чинил окружение, не клеймил сразу).
-
-**Что НЕ является блокером и готово:** весь код FR-1..10 live-проверен на реальной сессии/файлах
-(см. RESEARCH «Реализация + live-проверки»); BDD-связность 64 шагов ↔ 64 шаблона, 0 дублей,
-BDD_SYNC GREEN; реальный код-баг чужого step-def исправлен. Для зелёного BDD-гейта нужен
-рабочий Docker-билд (починить marksman-download/сеть в образе или билдить на нативном FS, не /mnt/e).
+**Статус BDD-gate: GREEN.** Docker-билд не виснет — просто медленный (большой контекст с /mnt/e + загрузка marksman);
+нужно терпеливо ждать, не убивать преждевременно (см. `.carl/rules/pomogator/env-blocker-is-not-a-stop.md`).
 
 ## Summary
 
