@@ -1,24 +1,93 @@
 /**
- * diag.ts â€” FR-9/FR-10: Ð´Ð¸Ð°Ð³Ð½Ð¾ÑÑ‚Ð¸ÐºÐ° Ð¿Ð°Ñ€Ð°Ð»Ð»ÐµÐ»ÑŒÐ½Ð¾ÑÑ‚Ð¸.
- *  - `--who-wrote <path>`: ÑÐµÑÑÐ¸Ð¸ Ñ Ð½ÐµÐ´Ð°Ð²Ð½Ð¸Ð¼Ð¸ Edit/Write Ð¿Ð¾ Ð¿ÑƒÑ‚Ð¸ (Ð¸Ð· Ñ‚Ñ€Ð°Ð½ÑÐºÑ€Ð¸Ð¿Ñ‚Ð¾Ð²), Ð¿Ð¾ÑÐ»ÐµÐ´Ð½Ð¸Ð¹ Ð¿Ð¸ÑÐ°Ñ‚ÐµÐ»ÑŒ.
- *  - `diag` (ÑÐ²Ð¾Ð´ÐºÐ°): Ð°ÐºÑ‚Ð¸Ð²Ð½Ñ‹Ðµ ÑÐµÑÑÐ¸Ð¸ + Ð»Ð¾ÐºÐ°Ð»Ð¸ + Ð¿Ð¸ÑÐ°Ñ‚ÐµÐ»Ð¸ ÑÐ¿Ð¾Ñ€Ð½Ñ‹Ñ… Ñ„Ð°Ð¹Ð»Ð¾Ð² â†’ ok/dirty/conflict.
+ * diag.ts — FR-9/FR-10: диагностика параллельности.
+ *  - `--who-wrote <path>`: сессии с недавними Edit/Write по пути (из транскриптов), последний писатель.
+ *  - `diag <path>` (сводка): активные сессии (repo/sid/pid) + локалы с владельцем +
+ *    писатели спорного файла → вердикт ok/dirty/conflict по каждому.
  *
- * Read-only Ð´Ð»Ñ Ð°Ð´Ð²Ð¸Ð·Ð¾Ñ€Ð°: ÐÐ• Ð¼ÑƒÑ‚Ð¸Ñ€ÑƒÐµÑ‚ Ñ„Ð°Ð¹Ð»Ñ‹/ÑÐ¾ÑÑ‚Ð¾ÑÐ½Ð¸Ðµ Ð²Ð¾Ñ€ÐºÐµÑ€Ð°. Ð•ÑÐ»Ð¸ Ð°ÐºÑ‚Ð¸Ð²Ð½Ñ‹Ð¹ Ð²Ð¾Ñ€ÐºÐµÑ€ Ð¿Ð¸ÑˆÐµÑ‚
- * <path> ÑÐµÐ¹Ñ‡Ð°Ñ â†’ Ð¿Ð¾Ð¼ÐµÑ‡Ð°ÐµÑ‚ÑÑ conflict single-writer (Ð°Ð´Ð²Ð¸Ð·Ð¾Ñ€ Ð½Ðµ Ð¿ÐµÑ€ÐµÐ·Ð°Ð¿Ð¸ÑˆÐµÑ‚).
+ * Read-only для адвизора: НЕ мутирует файлы/состояние воркера. Если активный воркер пишет
+ * <path> сейчас (свежая правка + живой процесс сессии) → помечается conflict single-writer
+ * (адвизор не перезапишет).
  */
 import { readdirSync, readFileSync, statSync, existsSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
+import { execSync } from 'node:child_process';
+import { listLocks, pidAlive, type LockPayload } from './lock.ts';
 
 export interface WriterHit {
   session: string;
+  repo: string;
+  sid: string;
   lastWriteMs: number;
   file: string;
 }
 
-export const WRITER_WINDOW_MS = 24 * 3600 * 1000;
+export interface LockRow {
+  path: string;
+  owner_pid: number;
+  owner_cmd: string;
+  status: 'held' | 'stale';
+}
 
-/** Ð¡ÐµÑÑÐ¸Ð¸, Ñ‡ÐµÐ¹ Ð½ÐµÐ´Ð°Ð²Ð½Ð¸Ð¹ Edit/Write Ð·Ð°Ñ‚Ñ€Ð°Ð³Ð¸Ð²Ð°ÐµÑ‚ `path` (Ð¿Ð¾ Ð²ÑÐµÐ¼ Ñ‚Ñ€Ð°Ð½ÑÐºÑ€Ð¸Ð¿Ñ‚Ð°Ð¼ projects). */
+export interface SummaryRow {
+  verdict: 'ok' | 'dirty' | 'conflict';
+  reason: string;
+  session: string;
+  repo: string;
+  sid: string;
+  pid: number | null;
+  file: string;
+}
+
+export interface DiagSummary {
+  activeSessions: number;
+  locks: LockRow[];
+  conflicts: SummaryRow[];
+  rows: SummaryRow[];
+  summary: string;
+}
+
+export const WRITER_WINDOW_MS = 24 * 3600 * 1000;
+export const LIVE_WRITE_WINDOW_MS = 60 * 1000;
+
+/** Живые pid'ы, чей cmdline содержит `sidSubstr` (win32: Get-CimInstance; POSIX: /proc, fallback ps). */
+export function livePids(sidSubstr: string): number[] {
+  if (!sidSubstr) return [];
+  try {
+    if (process.platform === 'win32') {
+      const out = execSync(
+        `powershell -NoProfile -Command "Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -like '*${sidSubstr}*' } | Select-Object -ExpandProperty ProcessId"`,
+        { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] },
+      );
+      return out.split(/\r?\n/).map((s) => Number(s.trim())).filter((n) => Number.isInteger(n) && n > 0);
+    }
+    if (existsSync('/proc')) {
+      const pids: number[] = [];
+      for (const d of readdirSync('/proc')) {
+        if (!/^\d+$/.test(d)) continue;
+        try {
+          const cmd = readFileSync(join('/proc', d, 'cmdline'), 'utf8').replace(/\0/g, ' ');
+          if (cmd.includes(sidSubstr)) pids.push(Number(d));
+        } catch {
+          /* процесс исчез между readdir и readFile */
+        }
+      }
+      return pids;
+    }
+    const out = execSync(`ps -eo pid=,args=`, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] });
+    const pids: number[] = [];
+    for (const line of out.split(/\r?\n/)) {
+      if (!line.includes(sidSubstr)) continue;
+      const m = line.trim().match(/^(\d+)/);
+      if (m) pids.push(Number(m[1]));
+    }
+    return pids;
+  } catch {
+    return [];
+  }
+}
+
+/** Сессии, чей недавний Edit/Write затрагивает `path` (по всем транскриптам projects). */
 export function whoWrote(path: string, projectsRoot: string): { rows: WriterHit[]; last?: WriterHit } {
   const rows: WriterHit[] = [];
   const target = path.replace(/\\/g, '/');
@@ -32,11 +101,11 @@ export function whoWrote(path: string, projectsRoot: string): { rows: WriterHit[
         if (sub.isDirectory()) walk(full);
         else if (sub.isFile() && sub.name.endsWith('.jsonl')) {
           const text = readFileSync(full, 'utf8');
-          // Ñ‚Ð¾Ð»ÑŒÐºÐ¾ Ð½Ð¾Ð²ÐµÐ¹ÑˆÐ¸Ðµ 512KB â€” bounded
+          // только новейшие 512KB — bounded
           const tail = text.slice(-512 * 1024);
           if (tail.includes(`"file_path": "${target}`) || tail.includes(`"file_path":"${target}`)) {
             const ts = statSync(full).mtimeMs;
-            rows.push({ session: `${dir}/${sub.name}`, lastWriteMs: ts, file: target });
+            rows.push({ session: `${dir}/${sub.name}`, repo: dir, sid: sub.name, lastWriteMs: ts, file: target });
           }
         }
       }
@@ -47,27 +116,49 @@ export function whoWrote(path: string, projectsRoot: string): { rows: WriterHit[
   return { rows, last: rows[0] };
 }
 
-export interface DiagSummary {
-  activeSessions: number;
-  locks: number;
-  conflicts: WriterHit[];
-  rows: Array<{ verdict: 'ok' | 'dirty' | 'conflict'; reason: string }>;
-}
-
-/** Ð¡Ð²Ð¾Ð´ÐºÐ° ok/dirty/conflict. ÐŸÑ€Ð¸ Ð¾Ñ‚ÑÑƒÑ‚ÑÑ‚Ð²Ð¸Ð¸ Ñ‡ÑƒÐ¶Ð¸Ñ… ÑÐµÑÑÐ¸Ð¹ â€” ÐºÐ¾Ñ€Ð¾Ñ‚ÐºÐ°Ñ. */
-export function summarize(rows: WriterHit[]): DiagSummary {
+/** Сводка ok/dirty/conflict. Пустая — короткая «0 active, 0 locks, 0 conflicts». */
+export function summarize(
+  rows: WriterHit[],
+  locks: LockPayload[] = [],
+  now = Date.now(),
+): DiagSummary {
   const distinct = new Map<string, WriterHit>();
   for (const r of rows) distinct.set(r.session, r);
-  const conflicts = [...distinct.values()].filter((r) => Date.now() - r.lastWriteMs < 60 * 1000);
-  return {
-    activeSessions: distinct.size,
-    locks: 0,
-    conflicts,
-    rows: rows.map((r) => ({
-      verdict: Date.now() - r.lastWriteMs < 60 * 1000 ? 'conflict' : 'dirty',
-      reason: `${r.session} (last ${(Date.now() - r.lastWriteMs) / 1000 | 0}s ago)`,
-    })),
-  };
+  const lockRows: LockRow[] = locks.map((l) => ({
+    path: l.path,
+    owner_pid: l.owner_pid,
+    owner_cmd: l.owner_cmd,
+    status: pidAlive(l.owner_pid) ? ('held' as const) : ('stale' as const),
+  }));
+  const summaryRows: SummaryRow[] = [...distinct.values()].map((r) => {
+    const writingNow = now - r.lastWriteMs < LIVE_WRITE_WINDOW_MS;
+    const pids = writingNow ? livePids(r.sid) : [];
+    if (pids.length > 0) {
+      return {
+        verdict: 'conflict' as const,
+        reason: `сессия ${r.session} пишет сейчас (живой pid ${pids[0]}) — single-writer, read-only для адвизора`,
+        session: r.session, repo: r.repo, sid: r.sid, pid: pids[0], file: r.file,
+      };
+    }
+    if (writingNow) {
+      return {
+        verdict: 'dirty' as const,
+        reason: `сессия ${r.session} недавно писала (last ${(now - r.lastWriteMs) / 1000 | 0}s ago), живой процесс не найден`,
+        session: r.session, repo: r.repo, sid: r.sid, pid: null, file: r.file,
+      };
+    }
+    return {
+      verdict: 'ok' as const,
+      reason: `сессия ${r.session} писала ${(now - r.lastWriteMs) / 3600000 | 0}h назад — не конфликт`,
+      session: r.session, repo: r.repo, sid: r.sid, pid: null, file: r.file,
+    };
+  });
+  const conflicts = summaryRows.filter((r) => r.verdict === 'conflict');
+  const activeSessions = distinct.size;
+  const summary = activeSessions === 0 && lockRows.length === 0 && conflicts.length === 0
+    ? '0 active, 0 locks, 0 conflicts'
+    : `${activeSessions} active, ${lockRows.length} locks, ${conflicts.length} conflicts`;
+  return { activeSessions, locks: lockRows, conflicts, rows: summaryRows, summary };
 }
 
 function main() {
@@ -75,6 +166,10 @@ function main() {
   const projectsRoot = (() => {
     const i = args.indexOf('--projects-root');
     return i >= 0 ? args[i + 1] : join(homedir(), '.claude', 'projects');
+  })();
+  const locksDir = (() => {
+    const i = args.indexOf('--locks-dir');
+    return i >= 0 ? args[i + 1] : undefined;
   })();
   const whoIdx = args.indexOf('--who-wrote');
   if (whoIdx >= 0) {
@@ -85,14 +180,15 @@ function main() {
   }
   const target = args[0];
   if (!target) {
-    console.error('usage: diag.ts <path> | diag.ts --who-wrote <path> [--projects-root <dir>]');
+    console.error('usage: diag.ts <path> | diag.ts --who-wrote <path> [--projects-root <dir>] [--locks-dir <dir>]');
     process.exitCode = 2;
     return;
   }
   const { rows } = whoWrote(target, projectsRoot);
-  console.log(JSON.stringify(summarize(rows), null, 2));
+  const locks = locksDir ? listLocks(locksDir).map((l) => l.lock).filter((l): l is LockPayload => l !== null) : [];
+  console.log(JSON.stringify(summarize(rows, locks), null, 2));
 }
 
 if (process.argv[1] && /diag\.ts$/.test(process.argv[1])) main();
 
-export const __test = { whoWrote, summarize };
+export const __test = { whoWrote, summarize, livePids };

@@ -6,11 +6,12 @@
  *    без порчи первого;
  *  - stale = owner_pid не жив -> recover_stale: удалить и пересоздать атомарно + audit;
  *  - каждый лок хранит {owner_pid, owner_cmd, path, created}.
+ *  - audit: каждый recover-stale пишет строку в `<locksDir>/audit.jsonl`
+ *    {ts, event, path, old_owner_pid, new_owner_pid} (fail-open при ошибке записи).
  *
  * CLI: lock.ts acquire|release|status|recover-stale <path> [--locks-dir <dir>] [--owner-cmd ".."]
  */
-import { hasOwn } from 'node:os';
-import { existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync, readdirSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync, readdirSync, appendFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { join } from 'node:path';
 
@@ -27,6 +28,23 @@ export const DEFAULT_LOCK_DIR = '.dev-pomogator/parallel-locks';
 export function lockFileForPath(path: string, locksDir = DEFAULT_LOCK_DIR): string {
   const hash = createHash('sha256').update(path.replace(/\\/g, '/')).digest('hex').slice(0, 16);
   return join(locksDir, `${hash}.lock`);
+}
+
+/** Append аудит-строки recover-stale (fail-open). */
+export function auditRecover(
+  locksDir: string,
+  row: { event: string; path: string; old_owner_pid: number | null; new_owner_pid: number | null },
+): void {
+  try {
+    mkdirSync(locksDir, { recursive: true });
+    appendFileSync(
+      join(locksDir, 'audit.jsonl'),
+      `${JSON.stringify({ ts: new Date().toISOString(), ...row })}\n`,
+      'utf8',
+    );
+  } catch {
+    /* fail-open */
+  }
 }
 
 export function pidAlive(pid: number): boolean {
@@ -117,8 +135,16 @@ export function status(path: string, locksDir = DEFAULT_LOCK_DIR) {
 export function recoverStale(path: string, ownerCmd: string, locksDir = DEFAULT_LOCK_DIR) {
   const st = status(path, locksDir);
   if (st.status === 'stale' && st.lock) {
+    const oldPid = st.lock.owner_pid;
     unlinkSync(st.lock.file!);
-    return { ...acquire(path, { ownerCmd, locksDir }), recovered: true };
+    const res = acquire(path, { ownerCmd, locksDir });
+    auditRecover(locksDir, {
+      event: 'recover-stale',
+      path,
+      old_owner_pid: oldPid,
+      new_owner_pid: res.lock ? res.lock.owner_pid : null,
+    });
+    return { ...res, recovered: true };
   }
   return { ...acquire(path, { ownerCmd, locksDir }), recovered: false };
 }
@@ -158,4 +184,4 @@ function main() {
 
 if (process.argv[1] && /lock\.ts$/.test(process.argv[1])) main();
 
-export const __test = { acquire, release, status, recoverStale, lockFileForPath, readLock, pidAlive, listLocks };
+export const __test = { acquire, release, status, recoverStale, lockFileForPath, readLock, pidAlive, listLocks, auditRecover };

@@ -248,6 +248,16 @@
             "timeout": 30
           }
         ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT:-${CLAUDE_PROJECT_DIR:-.}}/tools/hook-service/client.mjs\" \"PreToolUse/7/0\"",
+            "timeout": 30
+          }
+        ]
       }
     ],
     "UserPromptSubmit": [

@@ -310,6 +310,15 @@
       "timeout": 30,
       "matcher": "mcp__dev-pomogator-specs__apply_spec_change|mcp__dev-pomogator-specs__apply_spec_transaction|Write"
     },
+    "PreToolUse/7/0": {
+      "target": "tools/out-session-advisor/git-guard.ts",
+      "args": [
+        "--hook"
+      ],
+      "event": "PreToolUse",
+      "timeout": 30,
+      "matcher": "Bash"
+    },
     "UserPromptSubmit/0/0": {
       "target": "tools/carl/runner.ts",
       "args": [],

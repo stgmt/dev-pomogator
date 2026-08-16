@@ -75,7 +75,13 @@ BDD_SYNC GREEN, 0 blocking; EXECUTION RED только за счёт OOS FR-11/1
 
 **Чистые категории:** 2 (нет реальных дублей; consult.mjs честно реюзает `tools/advisor/transcript-packet.mjs`), 12 (коллизий нет), 14 (memory feedback-файлов нет), 16 (acceptance-task-coverage: `ok, claims: []`), FR-1/3/5/7-ядро/8-CLI/9-who-wrote — без дрейфа; SKILL-зеркало идентично (fc.exe), allowed-tools покрывают workflow.
 
-**Рекомендация по P1 known (4/5/6/7):** единым заходом «FR-6/7/10 честный довод»: заwire-чить git-guard в hooks (после параллельной сессии), доделать сводку diag до заявленной, и заменить 4 no-op Then-шага на реальные проверки (strong-tests: тест не должен проходить впустую).
+## P1 known → closed (2026-08-16, «FR-6/7/10 честный довод»)
+
+1. **git-guard заwire-чен**: `PreToolUse/7/0` (matcher Bash) в `.claude-plugin/hooks.legacy.json` → registry.json/hooks.json/.claude/settings.json перегенерированы; hook-режим `--hook` (stdin JSON): `git add -A`/`.` → block (exit 2 + stderr), override через `[skip-git-guard: <причина>]`/`GIT_GUARD_SKIP=1` → escape-audit `.dev-pomogator/git-guard-escapes.jsonl`, fail-open по умолчанию.
+2. **lock.ts**: `recoverStale` пишет audit-строку в `<locksDir>/audit.jsonl` (old/new owner).
+3. **diag.ts**: сводка по FR-10 — сессии (repo/sid/pid), локалы с владельцем (held/stale по живому pid), вердикты ok/dirty/conflict, single-writer conflict по живому процессу сессии (/proc + Get-CimInstance), пустая сводка «0 active, 0 locks, 0 conflicts» (`summary`-поле), `--locks-dir` CLI; mojibake-шапка исправлена.
+4. **4 no-op Then-шага заменены реальными проверками** (escape-audit строка, lock-audit строка, single-writer conflict с живым pid, структура сводки). OUTSESS001_12 When теперь реально зовёт `recover-stale` (было `status`).
+5. Фильтрованный BDD после довода: **19/19, 125/125 passed**.
 
 1. Блоки задач не несли `id:` → граф/дверь не видели НИ одну задачу спеки (NODE_NOT_FOUND).
    Проставлены id по позиционной схеме генератора task-table (T0-01..T3-19).

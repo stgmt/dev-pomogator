@@ -399,6 +399,16 @@
             "timeout": 30
           }
         ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh \"${CLAUDE_PLUGIN_ROOT:-${CLAUDE_PROJECT_DIR:-.}}/tools/_shared/hook-runtime.sh\" -e \"require(require('path').resolve(process.env.CLAUDE_PLUGIN_ROOT || '.', 'tools', '_shared', 'bootstrap.cjs'))\" -- \"tools/out-session-advisor/git-guard.ts\" --hook",
+            "timeout": 30
+          }
+        ]
       }
     ],
     "UserPromptSubmit": [

@@ -13,7 +13,7 @@
  * @see .specs/out-session-advisor/out-session-advisor.feature OUTSESS001_01..16
  */
 import { Given, When, Then } from '@cucumber/cucumber';
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -327,7 +327,17 @@ Then('вердикт содержит decision warn или block', () => {
   if (!['warn', 'block'].includes(j.decision)) throw new Error(`decision: ${state.out}`);
 });
 
-Then('запрос override логируется в escape-audit', () => void 0);
+Then('запрос override логируется в escape-audit', () => {
+  const audit = path.join(state.tempDir, 'escape-audit.jsonl');
+  tsx('git-guard.ts', ['check', '--command', 'git add -A', '--transcripts-dir', FIXTURES, '--override', '--escape-audit', audit]);
+  const j = parseJson(state.out);
+  if (j.decision !== 'ok' || j.conflicts.length === 0) throw new Error(`override не сработал: ${state.out}`);
+  if (!fs.existsSync(audit)) throw new Error('escape-audit файл не создан');
+  const rows = fs.readFileSync(audit, 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l));
+  if (!rows.some((r) => r.event === 'git-add-all-override' && /git add -A/.test(r.command))) {
+    throw new Error('нет audit-строки override');
+  }
+});
 
 When('сессия B пытается закоммитить staged, включающий foo.py', () => {
   tsx('git-guard.ts', ['check', '--command', 'git commit -m x', '--transcripts-dir', FIXTURES, '--staged-files', 'src/foo.py', '--window-ms', '0']);
@@ -369,15 +379,25 @@ When('сервис обнаруживает stale-лок', () => {
   const hash = createHash('sha256').update('x').digest('hex').slice(0, 16);
   const lf = path.join(d, `${hash}.lock`);
   fs.writeFileSync(lf, JSON.stringify({ owner_pid: 424242, owner_cmd: 'dead', path: 'x', created: '2020-01-01' }));
-  tsx('lock.ts', ['status', 'x']);
+  tsx('lock.ts', ['recover-stale', 'x', '--owner-cmd', 'owner-B']);
 });
 
 Then('лок удаляется и пересоздаётся атомарно с новым владельцем', () => {
   const j = parseJson(state.out);
-  if (j.status !== 'stale') throw new Error(`не stale: ${state.out}`);
+  if (j.recovered !== true) throw new Error(`recovered != true: ${state.out}`);
+  if (j.status !== 'ok') throw new Error(`не ok: ${state.out}`);
+  if (j.lock?.owner_cmd !== 'owner-B') throw new Error(`новый владелец не owner-B: ${state.out}`);
 });
 
-Then('факт восстановления логируется в audit', () => void 0);
+Then('факт восстановления логируется в audit', () => {
+  const audit = path.join(state.tempDir, 'locks', 'audit.jsonl');
+  if (!fs.existsSync(audit)) throw new Error('audit.jsonl не создан');
+  const rows = fs.readFileSync(audit, 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l));
+  const row = rows.find((r) => r.event === 'recover-stale' && r.path === 'x');
+  if (!row || row.old_owner_pid !== 424242 || typeof row.new_owner_pid !== 'number') {
+    throw new Error('нет audit-строки recover-stale с корректными владельцами');
+  }
+});
 
 /* ---------- FR-8 inventory ---------- */
 
@@ -409,7 +429,27 @@ Then(/^ответ содержит сессию A с временем после
   if (!Array.isArray(j.rows)) throw new Error('кто-писал не массив');
 });
 
-Then('если сессия A пишет сейчас, то помечается конфликт single-writer \\(read-only\\)', () => void 0);
+Then(/^если сессия A пишет сейчас, то помечается конфликт single-writer \(read-only\)$/, () => {
+  const sessionFile = path.join(FIXTURES, 'E--session-a', 'session-A.jsonl');
+  const now = new Date();
+  fs.utimesSync(sessionFile, now, now);
+  const proc = spawn(process.execPath, ['-e', 'setTimeout(() => {}, 120000)', 'session-A.jsonl'], {
+    detached: true,
+    stdio: 'ignore',
+  });
+  proc.unref();
+  try {
+    tsx('diag.ts', ['src/foo.py', '--projects-root', FIXTURES]);
+    const j = parseJson(state.out);
+    const hit = j.conflicts.find((c: any) => c.verdict === 'conflict' && c.file === 'src/foo.py');
+    if (!hit || !/single-writer/.test(hit.reason)) {
+      throw new Error(`нет single-writer conflict: ${state.out.slice(0, 500)}`);
+    }
+    if (typeof hit.pid !== 'number') throw new Error('нет живого pid в conflict-строке');
+  } finally {
+    try { process.kill(proc.pid); } catch { /* уже мёртв */ }
+  }
+});
 
 /* ---------- FR-10 diag сводка ---------- */
 
@@ -420,17 +460,33 @@ Given('запущены параллельные сессии с одним сп
 When('запускается parallel-session-diag', () => {
   const root = state.emptyRoot ?? FIXTURES;
   const target = state.emptyRoot !== undefined ? 'src/unknown-target.py' : 'src/foo.py';
-  tsx('diag.ts', [target, '--projects-root', root]);
+  const args = [target, '--projects-root', root];
+  if (state.emptyRoot === undefined) {
+    const d = lockDir();
+    tsx('lock.ts', ['acquire', 'src/foo.py', '--owner-cmd', 'owner-A']);
+    args.push('--locks-dir', d);
+  }
+  tsx('diag.ts', args);
 });
 
 Then(/^вывод содержит сессии \(repo\/sid\/pid\), локалы с владельцем, писателей foo\.py$/, () => {
   const j = parseJson(state.out);
-  if (j.rows && j.rows.length > 0 && j.rows[0].verdict === undefined) throw new Error('вердикты отсутствуют');
+  if (!Array.isArray(j.rows) || j.rows.length === 0) throw new Error('нет rows');
+  const r = j.rows[0];
+  for (const k of ['repo', 'sid', 'pid', 'session', 'verdict']) {
+    if (r[k] === undefined) throw new Error(`в rows нет ${k}: ${state.out.slice(0, 300)}`);
+  }
+  if (!Array.isArray(j.locks) || j.locks.length === 0) throw new Error('нет локалов с владельцем');
+  if (j.locks[0].owner_pid === undefined || typeof j.locks[0].owner_cmd !== 'string') throw new Error('локал без владельца');
+  if (!j.rows.some((x: any) => x.file === 'src/foo.py')) throw new Error('нет писателей foo.py');
 });
 
 Then('вердикт по конфликту содержит причину', () => {
   const j = parseJson(state.out);
-  if (j.conflicts === undefined) throw new Error('нет conflicts поля');
+  if (!Array.isArray(j.conflicts)) throw new Error('нет conflicts поля');
+  for (const c of j.conflicts) {
+    if (typeof c.reason !== 'string' || c.reason.length === 0) throw new Error('conflict без причины');
+  }
 });
 
 Given('нет активных чужих сессий', () => {
@@ -439,6 +495,6 @@ Given('нет активных чужих сессий', () => {
 
 Then('выводится короткая сводка "0 active, 0 locks, 0 conflicts"', () => {
   const j = parseJson(state.out);
-  const text = JSON.stringify(j);
-  void text;
+  if (j.summary !== '0 active, 0 locks, 0 conflicts') throw new Error(`не пустая сводка: ${j.summary}`);
+  if (j.activeSessions !== 0 || j.locks.length !== 0 || j.conflicts.length !== 0) throw new Error(`не нули: ${state.out.slice(0, 200)}`);
 });
