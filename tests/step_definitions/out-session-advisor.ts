@@ -168,6 +168,27 @@ Then('live-событие SEND не дублирует файловый тран
   if (sends.length !== 1) throw new Error(`ожидался 1 SEND, получили ${sends.length}`);
 });
 
+/* ---------- FR-3 consult (модель-пара, fail-open) ---------- */
+
+Given('переменные ANTHROPIC_BASE_URL и ANTHROPIC_AUTH_TOKEN не заданы', () => {
+  delete process.env.ANTHROPIC_BASE_URL;
+  delete process.env.ANTHROPIC_AUTH_TOKEN;
+  delete process.env.ANTHROPIC_API_KEY;
+});
+
+When('адвизор запускает consult на отсутствующем транскрипте', () => {
+  const bin = path.resolve(__dirname, '../../', 'node_modules', '.bin', process.platform === 'win32' ? 'tsx.cmd' : 'tsx');
+  const r = spawnSync(bin, [path.join(TOOLS, 'consult.mjs'), '--session', 'no-such-session', '--project-dir', 'E--no-such-dir'], { encoding: 'utf8', timeout: 60_000, env: { ...process.env } });
+  state.out = r.stdout ?? '';
+  state.err = r.stderr ?? '';
+  state.status = r.status;
+});
+
+Then('consult выводит честный fail-open текст и завершается с кодом 0', () => {
+  if (state.status !== 0) throw new Error(`ожидался exit 0: ${state.status}, err=${state.err.slice(0, 200)}`);
+  if (!/\[consult\]/.test(state.out)) throw new Error(`нет fail-open текста: ${state.out.slice(0, 200)}`);
+});
+
 /* ---------- FR-3 verify_claims ---------- */
 
 When('адвизор запускает verify_claims с путями реальных файлов из отчёта воркера', () => {

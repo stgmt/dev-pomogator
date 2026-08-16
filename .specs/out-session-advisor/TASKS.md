@@ -40,7 +40,7 @@
 - [ ] Создать `.feature` + step definitions (заглушки Pending) — @feature1..@feature10 — Status: TODO | Est: 60m
   _Requirements: [FR-1](FR.md#fr-1-tail-главного-транскрипта-живых-subagents-снятие-слепоты) .. [FR-10](FR.md#fr-10-сводная-диагностика-параллельности-okdirtyconflict)_
   **Done When:**
-  - [x] `tests/features/plugins/out-session-advisor/OUTSESS001_out-session-advisor.feature` существует с 18 сценариями
+  - [x] `tests/features/plugins/out-session-advisor/OUTSESS001_out-session-advisor.feature` существует с 19 сценариями
   - [ ] `tests/step_definitions/out-session-advisor.ts` с PendingStepException заглушками
   - [ ] все сценарии FAIL (Red)
 
@@ -98,7 +98,7 @@
   _Requirements: [FR-3](FR.md#fr-3-факт-проверка-отчётов-воркера-verifyclaims)_
   **Done When:**
   - [x] `tools/out-session-advisor/consult.mjs` существует: `--session/--project-dir/--event-log/--point`
-  - [x] fail-open без ANTHROPIC_BASE_URL/транскрипта
+  - [x] fail-open без ANTHROPIC_BASE_URL/транскрипта (OUTSESS001_18)
   - [x] LIVE: gpt-5.6-sol вернул предметный совет по сессии e98178b8 (проверить diff 56↔56, rg exit 1 штатный)
 
 - [x] Цикл мониторинга «не встаёт» (живость + интервальные снапшоты) — @feature4 — Status: DONE | Est: 45m

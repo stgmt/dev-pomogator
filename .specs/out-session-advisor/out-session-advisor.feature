@@ -35,6 +35,12 @@ Feature: OUTSESS001_session_advisor_and_parallel_safety
     And live-событие SEND не дублирует файловый транскрипт
 
   @feature3 @FR-3 @AC-3
+  Scenario: OUTSESS001_18 consult fail-open без ANTHROPIC creds
+    Given переменные ANTHROPIC_BASE_URL и ANTHROPIC_AUTH_TOKEN не заданы
+    When адвизор запускает consult на отсутствующем транскрипте
+    Then consult выводит честный fail-open текст и завершается с кодом 0
+
+  @feature3 @FR-3 @AC-3
   Scenario: OUTSESS001_03 verify_claims возвращает CONFIRMED с evidence
     When адвизор запускает verify_claims с путями реальных файлов из отчёта воркера
     Then вердикт содержит status CONFIRMED
