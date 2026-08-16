@@ -13,7 +13,6 @@
  */
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, statSync } from 'node:fs';
-import { DatabaseSync } from 'node:sqlite';
 
 export type ClaimVerdict = {
   status: 'CONFIRMED' | 'GAP';
@@ -111,9 +110,12 @@ export function verifyFile(
 /* ---------- run_external_blockers ---------- */
 
 /** Проверка live/archived блокера в SQLite координаторе (sales-харнесс). */
-export function verifyBlockers(sqlitePath: string, runId: string): ClaimVerdict {
+export async function verifyBlockers(sqlitePath: string, runId: string): Promise<ClaimVerdict> {
   let rows;
   try {
+    // node:sqlite доступен только на новых Node — ленивый импорт, чтобы file/chain-моды
+    // работали и на старых рантаймах (контейнер).
+    const { DatabaseSync } = await import('node:sqlite');
     const db = new DatabaseSync(sqlitePath, { readOnly: true });
     rows = db.prepare(
       `SELECT source, url, http_status, reason, cleared_at FROM run_external_blockers WHERE run_id = ?`,
@@ -166,7 +168,7 @@ function parseArgs(argv: string[]) {
   return args;
 }
 
-function main(): number {
+async function main(): Promise<number> {
   const args = parseArgs(process.argv.slice(2));
   let verdict: ClaimVerdict;
   if (args.claim === 'file') {
@@ -178,7 +180,7 @@ function main(): number {
       console.error('--claim blocker требует --sqlite <db> --run-id <R>');
       return 2;
     }
-    verdict = verifyBlockers(args.sqlite, args.runId);
+    verdict = await verifyBlockers(args.sqlite, args.runId);
   } else {
     console.error('usage: verify_claims.ts --claim file|chain|blocker ...');
     return 2;
@@ -188,7 +190,7 @@ function main(): number {
 }
 
 if (process.argv[1] && /verify_claims/.test(process.argv[1])) {
-  process.exitCode = main();
+  main().then((c) => { process.exitCode = c; });
 }
 
 export const __test = { verifyFile, evaluateChain, verifyBlockers };

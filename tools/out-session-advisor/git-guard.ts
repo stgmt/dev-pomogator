@@ -42,7 +42,7 @@ export function collectForeignPaths(
       if (!file.endsWith('.jsonl') || file.startsWith('agent-')) continue;
       const path = join(base, file);
       const age = Date.now() - statSync(path).mtimeMs;
-      if (age > windowMs) continue;
+      if (windowMs > 0 && age > windowMs) continue;
       const text = readFileSync(path, 'utf8');
       const re = /"file_path"\s*:\s*"([^"]+)"/g;
       let m;
@@ -68,6 +68,8 @@ export function checkGitAdd(options: {
   allowList?: string[];
   transcriptsDir?: string;
   cwd?: string;
+  stagedFilesOverride?: string[];
+  windowMs?: number;
 }): GitGuardResult {
   const detects = classifyCommand(options.command);
   const conflicts: string[] = [];
@@ -77,8 +79,9 @@ export function checkGitAdd(options: {
     conflicts.push('git add -A / .');
   } else {
     // сверка staged с транскриптами других сессий
-    const foreign = options.transcriptsDir ? collectForeignPaths(options.transcriptsDir) : new Map();
-    for (const p of stagedFiles(options.cwd ?? process.cwd())) {
+    const foreign = options.transcriptsDir ? collectForeignPaths(options.transcriptsDir, options.windowMs) : new Map();
+    const staged = options.stagedFilesOverride ?? stagedFiles(options.cwd ?? process.cwd());
+    for (const p of staged) {
       if (allow.has(p)) continue;
       if (foreign.has(p)) conflicts.push(p);
     }
@@ -115,6 +118,8 @@ export function main() {
       allowList: (read('--allow-list') ?? '').split(',').filter(Boolean),
       transcriptsDir: read('--transcripts-dir'),
       cwd: read('--cwd'),
+      stagedFilesOverride: (read('--staged-files') ?? '').split(',').map((s) => s.trim()).filter(Boolean),
+      windowMs: read('--window-ms') !== undefined ? Number(read('--window-ms')) : undefined,
     });
     console.log(JSON.stringify(result, null, 2));
     process.exitCode = result.ok ? 0 : 1;

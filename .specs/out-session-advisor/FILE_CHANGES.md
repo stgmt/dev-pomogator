@@ -25,8 +25,8 @@
 | `tests/features/plugins/out-session-advisor/OUTSESS001_out-session-advisor.feature` | create | FR-1..10 BDD |
 | `tests/step_definitions/out-session-advisor.ts` | edit | FR-1..10 step-defs |
 | `tests/support/out-session-advisor-hooks.ts` | create | TEST_DATA lifecycle |
-| `tests/features/plugins/out-session-advisor/fixtures/main-session.jsonl` | edit | FR-1 (фикстура реального транскрипта) |
-| `tests/features/plugins/out-session-advisor/fixtures/subagents/agent-test.jsonl` | edit | FR-1 (фикстура живого субагента) |
-| `tests/features/plugins/out-session-advisor/fixtures/session-A.jsonl` | edit | FR-9 (транскрипт сессии A) |
-| `tests/features/plugins/out-session-advisor/fixtures/session-B.jsonl` | edit | FR-9 (транскрипт сессии B) |
+| `tests/features/plugins/out-session-advisor/fixtures/E--main-session/main-session.jsonl` | edit | FR-1 (фикстура реального транскрипта) |
+| `tests/features/plugins/out-session-advisor/fixtures/E--main-session/main-session/subagents/agent-test.jsonl` | edit | FR-1 (фикстура живого субагента) |
+| `tests/features/plugins/out-session-advisor/fixtures/E--session-a/session-A.jsonl` | edit | FR-9 (транскрипт сессии A) |
+| `tests/features/plugins/out-session-advisor/fixtures/E--session-b/session-B.jsonl` | edit | FR-9 (транскрипт сессии B) |
 | `tests/features/plugins/out-session-advisor/fixtures/git-fixture/` | edit | FR-6 (git-репо со staged-путями) |

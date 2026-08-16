@@ -208,7 +208,8 @@ def collect(args):
     for path, agent_id in sub_list:
         raw2 = read_tail_bytes(path, args.tail_bytes)
         closed = is_closed(path, os.path.getsize(path) if os.path.exists(path) else 0, offsets)
-        marker = " [closed]" if closed else ""
+        if closed:
+            snapshot.append(f"[subagent {agent_id}] [closed]")
         for j in iter_json_lines(raw2.decode("utf-8", errors="replace")):
             row = render_event(j, agent_id=agent_id)
             if row:

@@ -267,7 +267,12 @@ def main(argv=None):
         skip_permissions=not args.no_skip_permissions,
         transcript_path=args.transcript,
     )
-    ok = driver.start(wait_init_timeout=60.0)
+    try:
+        ok = driver.start(wait_init_timeout=60.0)
+    except Exception as e:
+        # claude binary отсутствует / недоступен (напр. в Docker без creds) — fail-open
+        print(json.dumps({"ok": False, "error": "worker start failed", "detail": str(e), "skipped": True}, ensure_ascii=False))
+        return 3
     if not ok:
         print(json.dumps({"ok": False, "error": "init timeout"}, ensure_ascii=False))
         return 2
