@@ -42,7 +42,7 @@ WHEN воркер в долгом думающем ходе (нет записе
 
 **Требование:** [FR-5](FR.md#fr-5-канонический-skillmd-зеркало-доменные-истины)
 
-WHEN создаётся skill `out-session-advisor` в `.claude/skills/` THEN зеркальная копия в `.agents/skills/` SHALL быть идентична, И discovery/parity-чекер скилов SHALL проходить.
+WHEN создаётся skill `out-session-advisor` в `.claude/skills/` THEN канонический SKILL.md SHALL существовать и проходить discovery/skill-health (ретир зеркала `.agents/skills/` — single-copy skill).
 
 WHEN воркер заявляет факт, противоречащий доменной истине (например «бренд определяется из URL-slug») THEN адвизор SHALL пометить его как дефектный и направить на проверку со страницы после открытия (h1/«Бренд»/«Артикул»).
 

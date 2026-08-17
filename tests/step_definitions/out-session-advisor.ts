@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @FR-1..10 step definitions — OUTSESS001_01..16 (+06b) (out-session-advisor).
  *
  * Integration-first: каждый шаг реально исполняет инструменты
@@ -306,10 +306,14 @@ When(/^проверяются discovery\/parity-чекеры скилов$/, () 
   state.out = 'parity-ok';
 });
 
-Then(/^\.claude\/skills\/out-session-advisor\/SKILL\.md и \.agents\/skills\/out-session-advisor\/SKILL\.md идентичны$/, () => {
-  const a = fs.readFileSync(path.resolve(process.cwd(), '.claude', 'skills', 'out-session-advisor', 'SKILL.md'), 'utf8');
-  const b = fs.readFileSync(path.resolve(process.cwd(), '.agents', 'skills', 'out-session-advisor', 'SKILL.md'), 'utf8');
-  if (a !== b) throw new Error('зеркала не идентичны');
+Then(/^канонический \.claude\/skills\/out-session-advisor\/SKILL\.md существует$/, () => {
+  // Retired mirror invariant: the .agents duplicate no longer exists — the
+  // .claude copy is the single distributed source (no drift to keep in sync).
+  const a = path.resolve(process.cwd(), '.claude', 'skills', 'out-session-advisor', 'SKILL.md');
+  if (!fs.existsSync(a)) throw new Error('canonical SKILL.md not found');
+  const mirror = path.resolve(process.cwd(), '.agents', 'skills', 'out-session-advisor', 'SKILL.md');
+  if (fs.existsSync(mirror)) throw new Error('retired .agents mirror must not exist');
+  if (!fs.readFileSync(a, 'utf8').includes('out-session-advisor')) throw new Error('canonical SKILL.md is empty');
 });
 
 Then('parity-чек завершается без ошибок', () => {

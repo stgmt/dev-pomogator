@@ -82,9 +82,9 @@ Feature: OUTSESS001_session_advisor_and_parallel_safety
     And помечает состояние «думает», а не «повис»
 
   @feature5 @FR-5 @AC-5
-  Scenario: OUTSESS001_08 SKILL и зеркало идентичны и проходят parity
+  Scenario: OUTSESS001_08 канонический SKILL.md существует и проходит parity (ретир зеркала)
     When проверяются discovery/parity-чекеры скилов
-    Then .claude/skills/out-session-advisor/SKILL.md и .agents/skills/out-session-advisor/SKILL.md идентичны
+    Then канонический .claude/skills/out-session-advisor/SKILL.md существует
     And parity-чек завершается без ошибок
 
 # Часть B — Параллельная безопасность

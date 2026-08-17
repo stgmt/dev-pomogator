@@ -19,10 +19,12 @@
 | `tools/out-session-advisor/inventory.ts` | edit | [FR-8](FR.md#fr-8-инвентаризация-сессий-по-нескольким-репо) |
 | `tools/out-session-advisor/diag.ts` | edit | [FR-9](FR.md#fr-9-диагностика-кто-писал-файл-single-writer-для-адвизора), [FR-10](FR.md#fr-10-сводная-диагностика-параллельности-okdirtyconflict) |
 | `tools/out-session-advisor/README.md` | edit | NFR-US-1..4 |
-| `.claude/skills/out-session-advisor/SKILL.md` | edit | [FR-5](FR.md#fr-5-канонический-skillmd-зеркало-доменные-истины) |
-| `.agents/skills/out-session-advisor/SKILL.md` | edit | [FR-5](FR.md#fr-5-канонический-skillmd-зеркало-доменные-истины) (зеркало) |
-| `.claude-plugin/hooks.json` | edit | FR-6 git-guard hook registration (существует) |
+| `.claude/skills/out-session-advisor/SKILL.md` | edit | [FR-5](FR.md#fr-5-канонический-skillmd-зеркало-доменные-истины) (single-copy; зеркало `.agents/` ретировано canonical-plugin миграцией) |
+| `.claude-plugin/hooks.legacy.json` | edit | FR-6 git-guard hook registration (canonical manifest; PreToolUse/7/0 Bash) |
+| `.claude-plugin/hooks.json` | edit | FR-6 git-guard hook registration (существует; генерится из legacy) |
+| `tools/hook-service/registry.json` | edit | FR-6 git-guard hook route (существует; генерится из legacy) |
 | `.claude/settings.json` | edit | FR-6 dogfood hook (существует) |
+| `tools/out-session-advisor/bench/` | create | NFR-PERF — бенч-сьют 10 сценариев (runner/fixtures-gen/measure/scenarios; масштаб, гонки, мусор, точность, латентность) |
 | `.specs/out-session-advisor/out-session-advisor.feature` | edit | FR-1..10 BDD (19 сценариев; канонический исполняемый файл — заwire-чен в cucumber.json) |
 | `cucumber.json` | edit | FR-1..10 BDD — `.specs/out-session-advisor/out-session-advisor.feature` в default paths |
 | `tools/out-session-advisor/monitor.py` | create | [FR-4](FR.md#fr-4-цикл-мониторинга-не-встаёт-живость-процесса-интервальные-снапшоты) (живость + интервальные снапшоты) |

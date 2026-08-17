@@ -30,7 +30,7 @@
 - `strip_ansi.py` — очистка ANSI-последовательностей из снапшотов PTY (для ConPTY fallback).
 - `worker_driver.py` — **PRIMARY драйвер воркера**: stream-json мост к `claude` CLI по образцу
   `claw-army/claude-node` (`--input-format stream-json --output-format stream-json`);
-  `send`/`send_nowait`/`wait_for_result`/`wait_for_tool_use`/`get_messages`; launch с
+  `send`/`send_nowait`/`wait_for_result`/`wait_for_tool_use`/`snapshot`; launch с
   `--dangerously-skip-permissions`; вопросы воркера текст-в-`result` → ответ через `send`.
   **`--event-log <path>`** пишет нормализованные события JSONL сразу из stdout reader-потока
   (send/session_start/thinking_tokens/tool_use/tool_result/assistant_text/result);
@@ -102,8 +102,8 @@
 
 ### worker_driver.py (PRIMARY, stream-json)
 
-- Launch: `python worker_driver.py --cwd <dir> [--resume <sid>] [--model <m>] [--skip-permissions]`
-- Методы: `send(text)`, `send_nowait(text)`, `wait_for_result(timeout)`, `wait_for_tool_use(name, timeout)`, `get_messages()`
+- Launch: `python worker_driver.py --cwd <dir> [--resume <sid>] [--model <m>] [--no-skip-permissions]`
+- Методы: `send(text)`, `send_nowait(text)`, `wait_for_result(timeout)`, `wait_for_tool_use(name, timeout)`, `snapshot()`
 - Синхронизация: ждать `type=result` перед следующим `send`; `system/init` даёт `session_id`.
 - Вопросы воркера — текст в `result`; адвизор отвечает `send`.
 
@@ -259,12 +259,13 @@ session_id и cost; `AskUserQuestion` отсутствует в tools (вопр�
 - Ждать EOF — rejected: субагент пишет часами, ход мысли исчезает.
 - Читать файл целиком каждый раз — rejected: дедупликация дорога и рискованна на больших файлах.
 
-### Decision: живость процесса через Get-CimInstance по cmdline/session-id
+### Decision: живость процесса через Get-Process -Id <pid> (+ ps fallback)
 
 **Требование:** [FR-4](FR.md#fr-4-цикл-мониторинга-не-встаёт-живость-процесса-интервальные-снапшоты)
 
 **Rationale:** долгий xhigh-ход ≠ остановка; только проверка живого процесса отделяет «думает» от «умер».
-Windows-native инструмент — Get-CimInstance (подтверждён в эксперименте).
+Реализация: `Get-Process -Id <pid>` (Windows) с fallback `ps`/`/proc` (POSIX); self-match-ловушка
+cmd-обёртки закрыта `execFileSync` (см. REVIEW_NOTES «Бенчмарки»).
 
 **Trade-off:** на не-Windows нужен аналог (ps/pgrep), ветвление платформы.
 

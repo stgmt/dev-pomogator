@@ -28,7 +28,7 @@ assistant_text→result`, файл в это время не рос.]
 `claude --input-format stream-json --output-format stream-json [--resume <sid> --model <m>]`,
 синхронизация по `type=result`, structured события (`system/init` с session_id, `assistant`,
 `user/tool_result`, `result`). Управление через единый Python-контроллер (send/send_nowait/
-wait_for_result/wait_for_tool_use/get_messages). Запуск воркера с `--dangerously-skip-permissions`.
+wait_for_result/wait_for_tool_use/snapshot). Запуск воркера с `--dangerously-skip-permissions`.
 **Событийный лог:** `worker_driver --event-log <path>` пишет нормализованные события
 (`session_start/send/thinking_tokens/tool_use/tool_result/assistant_text/result`, формат в стиле
 `csd` events.ts) в JSONL сразу при получении из stdout — потому что файловый транскрипт
@@ -67,17 +67,21 @@ is_error + permission_denials`, модель возвращает вопрос �
 ## FR-4: Цикл мониторинга не «встаёт» — живость процесса + интервальные снапшоты
 
 После каждого шага адвизора следует следующий ход: интервальный снапшот транскрипта
-и/или проверка живости воркера (Get-CimInstance по cmdline/session-id). Долгие думающие
+и/или проверка живости воркера (`Get-Process -Id <pid>` на Windows, `ps`/`/proc` на POSIX —
+monitor.py). Долгие думающие
 ходы (нет записей ≥N мин, но процесс жив) помечаются «думает», а не «повис»; при смерти
 процесса — адвизор явно сообщает и предлагает перезапуск.
 
 **Связанные AC:** [AC-4](ACCEPTANCE_CRITERIA.md#ac-4-fr-4)
 **Use Case:** [UC-5](USE_CASES.md#uc-5-адвизор-отдаёт-саммари-и-продолжает-мониторинг-feature4)
 
-## FR-5: Канонический SKILL.md + зеркало + доменные истины
+## FR-5: Канонический SKILL.md + доменные истины
 
-Skill `out-session-advisor` создаётся в `.claude/skills/out-session-advisor/SKILL.md` (канон, уезжает
-с плагином) и зеркале `.agents/skills/out-session-advisor/`; фиксирует принципы («не вставать»,
+Skill `out-session-advisor` распространяется ОДНИМ каноническим файлом
+`.claude/skills/out-session-advisor/SKILL.md` (уезжает с плагином); зеркало
+`.agents/skills/out-session-advisor/` ретировано в рамках canonical-plugin миграции
+(2026-08-16: `.agents/skills/` удалён из репо — single-copy skill, устаревшие пути
+закрыты). Skill фиксирует принципы («не вставать»,
 «один писатель», «факты на диске»), доменные истины (промежуточный 403 ≠ блокер; бренд/артикул
 со страницы после открытия, не из slug; live vs archived; техсбой ≠ 403), протокол ctl/rsp.
 
@@ -109,8 +113,9 @@ Skill `out-session-advisor` создаётся в `.claude/skills/out-session-ad
 
 `parallel-session-inventory` сканирует живые процессы/сессии/ворктри и относит каждый к репо
 (по пути/session-id) или `unknown`; результат — детерминированный список `{repo, pid, session, ts}`.
-Работает и без активного dashboard-сервера (standalone). Использует session-pilot discovery +
-`process-tree.ts`.
+Работает и без активного dashboard-сервера (standalone). Discovery реализован собственным
+сканером (`Get-CimInstance` на Windows); `tools/_shared/process-tree.ts` не используется
+(P2, задокументировано в REVIEW_NOTES).
 
 **Связанные AC:** [AC-8](ACCEPTANCE_CRITERIA.md#ac-8-fr-8)
 **Use Case:** [UC-8](USE_CASES.md#uc-8-инвентаризация-по-нескольким-репо-feature8)
