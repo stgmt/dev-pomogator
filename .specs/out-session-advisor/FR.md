@@ -19,7 +19,7 @@ tool_use/tool_result/assistant_text/result`) и объединяет с файл
 assistant_text→result`, файл в это время не рос.]
 
 **Связанные AC:** [AC-1](ACCEPTANCE_CRITERIA.md#ac-1-fr-1)
-**Use Case:** [UC-1](USE_CASES.md#uc-1-адвизор-берёт-управление-живой-воркер-сессией-feature2-feature3), [UC-2](USE_CASES.md#uc-2-адвизор-видит-субагентов-воркера-feature1-feature3)
+**Use Case:** [UC-1](USE_CASES.md#uc-1-адвизор-берёт-управление-живой-воркер-сессией), [UC-2](USE_CASES.md#uc-2-адвизор-видит-субагентов-воркера)
 
 ## FR-2: Управление воркером — stream-json (primary) + ConPTY fallback
 
@@ -46,7 +46,7 @@ is_error + permission_denials`, модель возвращает вопрос �
 `--dangerously-skip-permissions`; если нужен перехват живого TUI-диалога — ConPTY fallback (вариант B).
 
 **Связанные AC:** [AC-2](ACCEPTANCE_CRITERIA.md#ac-2-fr-2)
-**Use Case:** [UC-1](USE_CASES.md#uc-1-адвизор-берёт-управление-живой-воркер-сессией-feature2-feature3)
+**Use Case:** [UC-1](USE_CASES.md#uc-1-адвизор-берёт-управление-живой-воркер-сессией)
 
 ## FR-3: Факт-проверка отчётов воркера (verify_claims)
 
@@ -62,7 +62,7 @@ is_error + permission_denials`, модель возвращает вопрос �
 обязательным — совет модели не заменяет факт-проверку.
 
 **Связанные AC:** [AC-3](ACCEPTANCE_CRITERIA.md#ac-3-fr-3)
-**Use Case:** [UC-3](USE_CASES.md#uc-3-адвизор-ловит-ложный-отчёт-воркера-на-пиздёж-feature3)
+**Use Case:** [UC-3](USE_CASES.md#uc-3-адвизор-ловит-ложный-отчёт-воркера-на-пиздёж)
 
 ## FR-4: Цикл мониторинга не «встаёт» — живость процесса + интервальные снапшоты
 
@@ -73,7 +73,7 @@ monitor.py). Долгие думающие
 процесса — адвизор явно сообщает и предлагает перезапуск.
 
 **Связанные AC:** [AC-4](ACCEPTANCE_CRITERIA.md#ac-4-fr-4)
-**Use Case:** [UC-5](USE_CASES.md#uc-5-адвизор-отдаёт-саммари-и-продолжает-мониторинг-feature4)
+**Use Case:** [UC-5](USE_CASES.md#uc-5-адвизор-отдаёт-саммари-и-продолжает-мониторинг)
 
 ## FR-5: Канонический SKILL.md + доменные истины
 
@@ -86,7 +86,7 @@ Skill `out-session-advisor` распространяется ОДНИМ кано
 со страницы после открытия, не из slug; live vs archived; техсбой ≠ 403), протокол ctl/rsp.
 
 **Связанные AC:** [AC-5](ACCEPTANCE_CRITERIA.md#ac-5-fr-5)
-**Use Case:** [UC-4](USE_CASES.md#uc-4-адвизор-стопает-и-перезапускает-воркер-при-техне403-инциденте-feature2-feature3)
+**Use Case:** [UC-4](USE_CASES.md#uc-4-адвизор-стопает-и-перезапускает-воркер-при-техне403-инциденте)
 
 # Часть B — Параллельная безопасность (неконфликтность множественных сессий в одном/нескольких репо)
 
@@ -98,7 +98,7 @@ Skill `out-session-advisor` распространяется ОДНИМ кано
 владельца. Ground-truth «мои файлы» — File Changes / явный список сессии.
 
 **Связанные AC:** [AC-6](ACCEPTANCE_CRITERIA.md#ac-6-fr-6)
-**Use Case:** [UC-6](USE_CASES.md#uc-6-две-сессии-в-одном-репо-коммит-без-захвата-чужого-feature6)
+**Use Case:** [UC-6](USE_CASES.md#uc-6-две-сессии-в-одном-репо-коммит-без-захвата-чужого)
 
 ## FR-7: Атомарный лок-сервис с владельцем и stale-восстановлением
 
@@ -107,7 +107,7 @@ Skill `out-session-advisor` распространяется ОДНИМ кано
 аудитом; каждый лок хранит `{owner: pid+cmdline, path, created}` для диагностики «кто держит».
 
 **Связанные AC:** [AC-7](ACCEPTANCE_CRITERIA.md#ac-7-fr-7)
-**Use Case:** [UC-7](USE_CASES.md#uc-7-два-процесса-борются-за-лок-атомарность-спасает-feature7)
+**Use Case:** [UC-7](USE_CASES.md#uc-7-два-процесса-борются-за-лок-атомарность-спасает)
 
 ## FR-8: Инвентаризация сессий по нескольким репо
 
@@ -118,7 +118,7 @@ Skill `out-session-advisor` распространяется ОДНИМ кано
 (P2, задокументировано в REVIEW_NOTES).
 
 **Связанные AC:** [AC-8](ACCEPTANCE_CRITERIA.md#ac-8-fr-8)
-**Use Case:** [UC-8](USE_CASES.md#uc-8-инвентаризация-по-нескольким-репо-feature8)
+**Use Case:** [UC-8](USE_CASES.md#uc-8-инвентаризация-по-нескольким-репо)
 
 ## FR-9: Диагностика «кто писал <файл>» (single-writer для адвизора)
 
@@ -127,7 +127,7 @@ Skill `out-session-advisor` распространяется ОДНИМ кано
 конфликт single-writer (read-only для адвизора, никогда не перезапишет).
 
 **Связанные AC:** [AC-9](ACCEPTANCE_CRITERIA.md#ac-9-fr-9)
-**Use Case:** [UC-9](USE_CASES.md#uc-9-адвизор-определяет-кто-пишет-файл-feature9)
+**Use Case:** [UC-9](USE_CASES.md#uc-9-адвизор-определяет-кто-пишет-файл)
 
 ## FR-10: Сводная диагностика параллельности ok/dirty/conflict
 
@@ -136,7 +136,7 @@ Skill `out-session-advisor` распространяется ОДНИМ кано
 активных чужих сессий — короткая сводка `0 active, 0 locks, 0 conflicts`.
 
 **Связанные AC:** [AC-10](ACCEPTANCE_CRITERIA.md#ac-10-fr-10)
-**Use Case:** [UC-10](USE_CASES.md#uc-10-диагностика-параллельности-feature10)
+**Use Case:** [UC-10](USE_CASES.md#uc-10-диагностика-параллельности)
 
 # Вне объёма
 

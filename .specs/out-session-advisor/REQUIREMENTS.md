@@ -8,7 +8,7 @@
 | [FR-2](FR.md#fr-2-управление-воркером-stream-json-primary-conpty-fallback) | stream-json + skip-permissions + ConPTY fallback | [AC-2](ACCEPTANCE_CRITERIA.md#ac-2-fr-2) | @feature2 | Draft |
 | [FR-3](FR.md#fr-3-факт-проверка-отчётов-воркера-verifyclaims) | verify_claims (CONFIRMED/GAP + 403-цепочка) | [AC-3](ACCEPTANCE_CRITERIA.md#ac-3-fr-3) | @feature3 | Draft |
 | [FR-4](FR.md#fr-4-цикл-мониторинга-не-встаёт-живость-процесса-интервальные-снапшоты) | Не «встаёт» + живость | [AC-4](ACCEPTANCE_CRITERIA.md#ac-4-fr-4) | @feature4 | Draft |
-| [FR-5](FR.md#fr-5-канонический-skillmd-зеркало-доменные-истины) | SKILL.md + зеркало + домены | [AC-5](ACCEPTANCE_CRITERIA.md#ac-5-fr-5) | @feature5 | Draft |
+| [FR-5](FR.md#fr-5-канонический-skillmd-доменные-истины) | SKILL.md + зеркало + домены | [AC-5](ACCEPTANCE_CRITERIA.md#ac-5-fr-5) | @feature5 | Draft |
 | [FR-6](FR.md#fr-6-git-гейт-против-add-a-и-чужих-staged-runtime-слой-no-git-add-all-shared-tree) | Git-гейт shared-tree | [AC-6](ACCEPTANCE_CRITERIA.md#ac-6-fr-6) | @feature6 | Draft |
 | [FR-7](FR.md#fr-7-атомарный-лок-сервис-с-владельцем-и-stale-восстановлением) | Атомарный лок+владелец | [AC-7](ACCEPTANCE_CRITERIA.md#ac-7-fr-7) | @feature7 | Draft |
 | [FR-8](FR.md#fr-8-инвентаризация-сессий-по-нескольким-репо) | Инвентаризация репо | [AC-8](ACCEPTANCE_CRITERIA.md#ac-8-fr-8) | @feature8 | Draft |
@@ -23,7 +23,7 @@
 - [FR-2: Управление воркером — stream-json (primary) + ConPTY fallback](FR.md#fr-2-управление-воркером-stream-json-primary-conpty-fallback)
 - [FR-3: Факт-проверка отчётов воркера на «пиздёж» (verify_claims)](FR.md#fr-3-факт-проверка-отчётов-воркера-verifyclaims)
 - [FR-4: Цикл мониторинга не «встаёт»](FR.md#fr-4-цикл-мониторинга-не-встаёт-живость-процесса-интервальные-снапшоты)
-- [FR-5: Канонический SKILL.md + зеркало + доменные истины](FR.md#fr-5-канонический-skillmd-зеркало-доменные-истины)
+- [FR-5: Канонический SKILL.md + зеркало + доменные истины](FR.md#fr-5-канонический-skillmd-доменные-истины)
 
 ### Часть B — Параллельная безопасность
 

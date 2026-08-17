@@ -121,7 +121,7 @@
   - [x] OUTSESS001_07 (долгий думающий ход → следующий ход + «думает») переходит из Red в Green
 
 - [x] SKILL.md out-session-advisor (канон + зеркало) + доменные истины — @feature5 — id: T2-12 — Status: DONE | Est: 45m
-  _Requirements: [FR-5](FR.md#fr-5-канонический-skillmd-зеркало-доменные-истины)_
+  _Requirements: [FR-5](FR.md#fr-5-канонический-skillmd-доменные-истины)_
   **Done When:**
   - [x] `.claude/skills/out-session-advisor/SKILL.md` существует (single-copy; зеркало `.agents/` ретировано)
   - [x] OUTSESS001_08 (parity) переходит из Red в Green

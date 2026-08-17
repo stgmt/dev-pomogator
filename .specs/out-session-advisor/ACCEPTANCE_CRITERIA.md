@@ -40,7 +40,7 @@ WHEN воркер в долгом думающем ходе (нет записе
 
 ## AC-5 (FR-5)
 
-**Требование:** [FR-5](FR.md#fr-5-канонический-skillmd-зеркало-доменные-истины)
+**Требование:** [FR-5](FR.md#fr-5-канонический-skillmd-доменные-истины)
 
 WHEN создаётся skill `out-session-advisor` в `.claude/skills/` THEN канонический SKILL.md SHALL существовать и проходить discovery/skill-health (ретир зеркала `.agents/skills/` — single-copy skill).
 
