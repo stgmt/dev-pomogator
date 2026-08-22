@@ -1,0 +1,28 @@
+{
+  "version": 4,
+  "featureSlug": "migrate-to-omp",
+  "createdAt": "2026-08-20T10:27:12.027Z",
+  "currentPhase": "Complete",
+  "phases": {
+    "Discovery": {
+      "completedAt": "2026-08-20T10:39:51.752Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-08-22T19:54:52.174Z"
+    },
+    "Context": {
+      "completedAt": "2026-08-20T10:39:51.752Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-08-22T19:55:24.985Z"
+    },
+    "Requirements": {
+      "completedAt": "2026-08-20T10:48:27.263Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-08-22T19:55:42.675Z"
+    },
+    "Finalization": {
+      "completedAt": "2026-08-20T10:48:27.263Z",
+      "stopConfirmed": true,
+      "stopConfirmedAt": "2026-08-22T19:56:01.588Z"
+    }
+  }
+}
