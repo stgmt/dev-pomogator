@@ -500,27 +500,60 @@ function readJsonFile<T>(filePath: string): T {
   return JSON.parse(fs.readFileSync(filePath, 'utf8')) as T;
 }
 
+const LSP_LAUNCHER_BOOTSTRAP =
+  "require(require('node:path').resolve(process.env.CLAUDE_PLUGIN_ROOT || process.cwd(), 'tools', 'marksman-installer', 'launch-marksman.cjs')).main(['server'])";
+
 function assertMarksmanLspRegistration(registration: MarksmanRegistration): void {
   assert.equal(registration.plugin.lspServers, './.lsp.json', 'plugin.json must point Claude Code at .lsp.json');
   assert.deepEqual(registration.lsp, {
     marksman: {
       command: 'node',
-      args: ['${CLAUDE_PLUGIN_ROOT}/tools/marksman-installer/launch-marksman.cjs', 'server'],
+      args: ['-e', LSP_LAUNCHER_BOOTSTRAP],
       extensionToLanguage: { '.md': 'markdown' },
       startupTimeout: 15000,
     },
   });
 }
 
+function assertNavigationCapabilities(capabilities: Record<string, unknown>): void {
+  assert.equal(capabilities.definitionProvider, true);
+  assert.equal(capabilities.referencesProvider, true);
+  assert.equal(capabilities.renameProvider, true);
+  assert.equal(capabilities.documentSymbolProvider, true);
+}
+
+async function assertConfiguredMarksmanInitialize(
+  binaryPath: string,
+  pluginRoot: string | null,
+): Promise<void> {
+  const ws = createMarksmanWorkspace();
+  try {
+    const { capabilities } = await probeInitialize({
+      binaryPath,
+      workspaceDir: ws,
+      launch: 'configured',
+      launchCwd: pluginRoot === null ? REPO_ROOT : ws,
+      pluginRoot,
+    });
+    assertNavigationCapabilities(capabilities);
+  } finally {
+    removeMarksmanWorkspace(ws);
+  }
+}
+
 function runNativeLauncherWithoutMarksman(repoRoot: string): MarksmanLauncherResult {
-  const launcher = path.join(REPO_ROOT, 'tools/marksman-installer/launch-marksman.cjs');
-  const emptyPath = path.delimiter;
-  const result = spawnSync(process.execPath, [launcher, 'server'], {
+  const lsp = readJsonFile<{ marksman: { command: string; args: string[] } }>(
+    path.join(REPO_ROOT, '.lsp.json'),
+  );
+  const nodePath = path.dirname(process.execPath);
+  const result = spawnSync(lsp.marksman.command, lsp.marksman.args, {
+    // A real plugin can run from the user's project rather than its cache root.
     cwd: repoRoot,
     env: {
       ...process.env,
-      PATH: emptyPath,
-      Path: emptyPath,
+      CLAUDE_PLUGIN_ROOT: REPO_ROOT,
+      PATH: nodePath,
+      Path: nodePath,
       DEV_POMOGATOR_MARKSMAN_BIN: '',
       DEV_POMOGATOR_REPO_ROOT: repoRoot,
       CLAUDE_PROJECT_DIR: repoRoot,
@@ -586,26 +619,17 @@ Then('the real Marksman server resolves a Markdown link to the expected target h
 });
 
 Then('the native launcher responds to LSP `initialize` through the real Marksman binary', { timeout: 25000 }, async function () {
-  // Real-artifact hop-1: resolve the REAL Marksman binary (env override → PATH →
-  // managed), drive the native-LSP launcher shim `launch-marksman.cjs server`,
-  // and assert a real `initialize` returns nav capabilities. skip-policy
-  // semantic: absent inside Docker ⇒ hard FAIL; absent on a dev host ⇒ skip.
+  // Drive the shipped .lsp.json rather than the shim directly: both the
+  // dogfood-CWD fallback and canonical installed-plugin root must reach the
+  // real binary and preserve the native navigation surface.
   const resolved = resolveMarksmanBinary({ repoRoot: process.cwd() });
   const decision = decideE2e({ binaryPath: resolved?.binaryPath ?? null, inDocker: isInDocker() });
   if (decision === 'fail') {
     throw new Error('inside Docker but no Marksman binary resolved — silent-skip = fake-green');
   }
   if (decision === 'skip') return 'skipped';
-  const ws = createMarksmanWorkspace();
-  try {
-    const { capabilities } = await probeInitialize({ binaryPath: resolved!.binaryPath, workspaceDir: ws });
-    assert.equal(capabilities.definitionProvider, true);
-    assert.equal(capabilities.referencesProvider, true);
-    assert.equal(capabilities.renameProvider, true);
-    assert.equal(capabilities.documentSymbolProvider, true);
-  } finally {
-    removeMarksmanWorkspace(ws);
-  }
+  await assertConfiguredMarksmanInitialize(resolved!.binaryPath, null);
+  await assertConfiguredMarksmanInitialize(resolved!.binaryPath, REPO_ROOT);
 });
 
 Given('no Marksman binary is available to the launcher', function (this: MarksmanWorld) {

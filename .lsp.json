@@ -1,7 +1,10 @@
 {
   "marksman": {
     "command": "node",
-    "args": ["${CLAUDE_PLUGIN_ROOT}/tools/marksman-installer/launch-marksman.cjs", "server"],
+    "args": [
+      "-e",
+      "require(require('node:path').resolve(process.env.CLAUDE_PLUGIN_ROOT || process.cwd(), 'tools', 'marksman-installer', 'launch-marksman.cjs')).main(['server'])"
+    ],
     "extensionToLanguage": {
       ".md": "markdown"
     },

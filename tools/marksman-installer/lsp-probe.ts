@@ -48,6 +48,28 @@ export function launcherPath(): string {
   return path.join(path.dirname(fileURLToPath(import.meta.url)), 'launch-marksman.cjs');
 }
 
+interface LspLauncherCommand {
+  command: string;
+  args: string[];
+}
+
+/** Parse the shipped configuration rather than recreating its argv in a test. */
+function configuredLspLauncherCommand(): LspLauncherCommand {
+  const pluginRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
+  const config = JSON.parse(fs.readFileSync(path.join(pluginRoot, '.lsp.json'), 'utf8')) as {
+    marksman?: { command?: unknown; args?: unknown };
+  };
+  const marksman = config.marksman;
+  if (
+    typeof marksman?.command !== 'string' ||
+    !Array.isArray(marksman.args) ||
+    !marksman.args.every((arg): arg is string => typeof arg === 'string')
+  ) {
+    throw new Error('.lsp.json marksman configuration must contain a string command and args');
+  }
+  return { command: marksman.command, args: marksman.args };
+}
+
 export interface InitializeResult {
   capabilities: Record<string, unknown>;
 }
@@ -116,10 +138,25 @@ function spawnLspSession(opts: {
   binaryPath: string;
   workspaceDir: string;
   timeoutMs: number;
+  launch?: 'direct' | 'configured';
+  launchCwd?: string;
+  pluginRoot?: string | null;
+  env?: NodeJS.ProcessEnv;
 }): Promise<{ session: LspSession; initialize: InitializeResult }> {
-  const cwd = opts.workspaceDir;
-  const env = { ...process.env, DEV_POMOGATOR_MARKSMAN_BIN: opts.binaryPath, CLAUDE_PROJECT_DIR: cwd };
-  const child = spawn(process.execPath, [launcherPath(), 'server'], {
+  const workspaceDir = opts.workspaceDir;
+  const cwd = opts.launchCwd ?? workspaceDir;
+  const env: NodeJS.ProcessEnv = {
+    ...process.env,
+    ...opts.env,
+    DEV_POMOGATOR_MARKSMAN_BIN: opts.binaryPath,
+    CLAUDE_PROJECT_DIR: workspaceDir,
+  };
+  if (opts.pluginRoot === null) delete env.CLAUDE_PLUGIN_ROOT;
+  else if (opts.pluginRoot !== undefined) env.CLAUDE_PLUGIN_ROOT = opts.pluginRoot;
+  const launcher = opts.launch === 'configured'
+    ? configuredLspLauncherCommand()
+    : { command: process.execPath, args: [launcherPath(), 'server'] };
+  const child = spawn(launcher.command, launcher.args, {
     stdio: ['pipe', 'pipe', 'pipe'],
     env,
     cwd,
@@ -180,7 +217,7 @@ function spawnLspSession(opts: {
     ]);
   };
   const session: LspSession = { request, notify: (method, params) => send({ jsonrpc: '2.0', method, params }), close };
-  const rootUri = pathToFileURL(cwd).href;
+  const rootUri = pathToFileURL(workspaceDir).href;
   return session.request<InitializeResult>('initialize', {
     processId: process.pid,
     clientInfo: { name: 'lsp-probe', version: '0' },
@@ -191,23 +228,28 @@ function spawnLspSession(opts: {
 }
 
 /**
- * Spawn `node launch-marksman.cjs server` (the shim resolves + execs the real
- * binary), send an LSP `initialize`, and resolve with the server capabilities.
- * Rejects on spawn error / launcher exit / timeout.
+ * Launch the direct shim or the shipped `.lsp.json` command, send an LSP
+ * `initialize`, and resolve with the server capabilities.
  *
- * `binaryPath` is passed to the shim via `DEV_POMOGATOR_MARKSMAN_BIN` so it
- * resolves the real binary REGARDLESS of `workspaceDir` (separating "which binary"
- * from "which workspace"). `workspaceDir` is the small fixture Marksman indexes.
+ * `binaryPath` is passed via `DEV_POMOGATOR_MARKSMAN_BIN` so it resolves the
+ * real binary independently of the tiny workspace Marksman indexes.
  */
 export function probeInitialize(opts: {
   binaryPath: string;
   workspaceDir: string;
+  launch?: 'direct' | 'configured';
+  launchCwd?: string;
+  pluginRoot?: string | null;
   env?: NodeJS.ProcessEnv;
   timeoutMs?: number;
 }): Promise<InitializeResult> {
   return spawnLspSession({
     binaryPath: opts.binaryPath,
     workspaceDir: opts.workspaceDir,
+    launch: opts.launch,
+    launchCwd: opts.launchCwd,
+    pluginRoot: opts.pluginRoot,
+    env: opts.env,
     timeoutMs: opts.timeoutMs ?? 12000,
   }).then(({ session, initialize }) => {
     session.close();

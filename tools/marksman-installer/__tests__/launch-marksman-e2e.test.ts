@@ -7,7 +7,7 @@
 import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { resolveMarksmanBinary } from '../resolve-binary.ts';
 import {
   createMarksmanWorkspace,
@@ -20,6 +20,15 @@ import {
 
 const resolved = resolveMarksmanBinary({ repoRoot: process.cwd() });
 const decision = decideE2e({ binaryPath: resolved?.binaryPath ?? null, inDocker: isInDocker() });
+
+const pluginRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
+
+function expectNavigationCapabilities(capabilities: Record<string, unknown>): void {
+  expect(capabilities.definitionProvider).toBeTruthy();
+  expect(capabilities.referencesProvider).toBeTruthy();
+  expect(capabilities.renameProvider).toBeTruthy();
+  expect(capabilities.documentSymbolProvider).toBeTruthy();
+}
 
 describe('launch-marksman e2e — real binary answers LSP initialize (FR-7 hop-1)', () => {
   if (decision === 'fail') {
@@ -48,10 +57,7 @@ describe('launch-marksman e2e — real binary answers LSP initialize (FR-7 hop-1
           workspaceDir: ws,
         });
         // The exact nav/edit primitives FR-7b assigns to the native LSP.
-        expect(capabilities.definitionProvider).toBeTruthy();
-        expect(capabilities.referencesProvider).toBeTruthy();
-        expect(capabilities.renameProvider).toBeTruthy();
-        expect(capabilities.documentSymbolProvider).toBeTruthy();
+        expectNavigationCapabilities(capabilities);
 
         const target = path.join(ws, 'target.md');
         const source = path.join(ws, 'source.md');
@@ -68,6 +74,46 @@ describe('launch-marksman e2e — real binary answers LSP initialize (FR-7 hop-1
         expect(definitions.definitions[0].uri).toBe(pathToFileURL(target).href);
         expect(definitions.definitions[0].range.start.line).toBe(0);
         expect(definitions.definitions[0].range.start.character).toBe(0);
+      } finally {
+        removeMarksmanWorkspace(ws);
+      }
+    },
+    25000,
+  );
+
+  it(
+    'parsed .lsp.json starts the real server from dogfood cwd without CLAUDE_PLUGIN_ROOT',
+    async () => {
+      const ws = createMarksmanWorkspace();
+      try {
+        const { capabilities } = await probeInitialize({
+          binaryPath: resolved!.binaryPath,
+          workspaceDir: ws,
+          launch: 'configured',
+          launchCwd: pluginRoot,
+          pluginRoot: null,
+        });
+        expectNavigationCapabilities(capabilities);
+      } finally {
+        removeMarksmanWorkspace(ws);
+      }
+    },
+    25000,
+  );
+
+  it(
+    'parsed .lsp.json starts the real server from an installed-plugin root',
+    async () => {
+      const ws = createMarksmanWorkspace();
+      try {
+        const { capabilities } = await probeInitialize({
+          binaryPath: resolved!.binaryPath,
+          workspaceDir: ws,
+          launch: 'configured',
+          launchCwd: ws,
+          pluginRoot,
+        });
+        expectNavigationCapabilities(capabilities);
       } finally {
         removeMarksmanWorkspace(ws);
       }

@@ -83,7 +83,7 @@ function repoRootFromEnv(env) {
   return env.CLAUDE_PROJECT_DIR || env.DEV_POMOGATOR_REPO_ROOT || process.cwd();
 }
 
-function main() {
+function main(args = process.argv.slice(2)) {
   const env = process.env;
   const repoRoot = repoRootFromEnv(env);
   const resolved = resolveMarksmanBinary({ repoRoot, env });
@@ -101,8 +101,9 @@ function main() {
     process.exit(1);
   }
 
-  // Forward whatever args .lsp.json supplied (normally ["server"]) verbatim.
-  const args = process.argv.slice(2);
+  // The static LSP config may invoke this through `node -e`, where regular
+  // process.argv forwarding is unreliable. Direct invocations keep the legacy
+  // argv-derived default; the bootstrap supplies `['server']` explicitly.
   // NOTE: do NOT use stdio:'inherit'. When this launcher is itself spawned with
   // node-created pipes (the common case), those pipes are O_NONBLOCK; handing them
   // raw to Marksman via 'inherit' makes its blocking reads fail — fatal on Linux
@@ -110,7 +111,10 @@ function main() {
   // the pipes and forward bytes both ways — the standard transparent-proxy shape,
   // negligible overhead for LSP traffic. stderr is inherited (Marksman logs pass
   // straight to our stderr).
-  const child = spawn(resolved.binaryPath, args, { stdio: ['pipe', 'pipe', 'inherit'] });
+  const child = spawn(resolved.binaryPath, args, {
+    cwd: repoRoot,
+    stdio: ['pipe', 'pipe', 'inherit'],
+  });
   const ignoreEpipe = (s) =>
     s.on('error', (e) => {
       if (e && e.code !== 'EPIPE') throw e; // EPIPE just means the other side closed first
@@ -129,7 +133,7 @@ function main() {
   });
 }
 
-module.exports = { whichOnPath, managedBinaryPath, resolveMarksmanBinary, repoRootFromEnv };
+module.exports = { whichOnPath, managedBinaryPath, resolveMarksmanBinary, repoRootFromEnv, main };
 
 // Run only when invoked directly (not when required by the unit test).
 if (require.main === module) main();
