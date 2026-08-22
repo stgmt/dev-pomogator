@@ -38,10 +38,10 @@ Feature: PLUGIN007_44_PlanPomogatorPlainLanguage
 
   # @feature5 @feature6 — links to FR-5 (rule plan-pomogator.md) + FR-6 (canonical requirements.md, оба про docs)
   Scenario: PLUGIN007_44_05 Rule plan-pomogator.md contains Two-Stage Plan Presentation Workflow
-    Given the file `.claude/rules/plan-pomogator/plan-pomogator.md`
+    Given the file `.carl/rules/plan-pomogator/plan-pomogator.md`
     When the file content is read
     Then the file contains a top-level section `## Two-Stage Plan Presentation Workflow`
-    And the section contains exactly 4 numbered Steps (Step 1: вывести в чат, Step 2: дождаться подтверждения, Step 3: написать план-файл, Step 4: ExitPlanMode)
+    And the section contains exactly 4 numbered Steps (Step 1: вывести summary, Step 2: принять явную директиву как подтверждение либо ждать при неоднозначности, Step 3: написать план-файл, Step 4: ExitPlanMode)
     And the section contains an explicit prohibition mentioning "ЗАПРЕЩЕНО" and "ExitPlanMode" and "Step 1"
     And the Pre-flight Checklist mentions `## 💬 Простыми словами` and chat output
 
@@ -51,3 +51,9 @@ Feature: PLUGIN007_44_PlanPomogatorPlainLanguage
     When the file is parsed as JSON
     Then the field `version` equals `"2.0.0"`
     And the field `description` mentions "Two-Stage Presentation" or "chat summary" or "Простыми словами"
+
+  # @feature5 — explicit owner directive is already confirmation
+  Scenario: PLUGIN007_53 explicit plan directive bypasses redundant confirmation
+    When the plan-validator checks the canonical plan workflow rule
+    Then the plan-validator rule treats "делай план" as confirmation
+    And the canonical plan docs share the explicit-directive bypass

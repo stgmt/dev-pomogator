@@ -541,3 +541,13 @@ Feature: PLUGIN007 plan-validator — core validation engine
     When the plan-validator checks the spec-test-sync rule
     Then the plan-validator rule contains "File Changes"
     And the plan-validator spec-test-sync rule contains key terms
+
+  # ---------------------------------------------------------------------------
+  # Artifact: explicit plan directive is already confirmation (PLUGIN007_53)
+  # ---------------------------------------------------------------------------
+
+  @feature5
+  Scenario: PLUGIN007_53 explicit plan directive bypasses redundant confirmation
+    When the plan-validator checks the canonical plan workflow rule
+    Then the plan-validator rule treats "делай план" as confirmation
+    And the canonical plan docs share the explicit-directive bypass

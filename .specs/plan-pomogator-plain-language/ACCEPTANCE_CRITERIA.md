@@ -40,7 +40,7 @@ IF fixture файл прочитан THEN он SHALL содержать `## 💬
 
 **Требование:** [FR-5](FR.md#fr-5-правило-plan-pomogatormd-содержит-two-stage-workflow-секцию-feature5)
 
-WHEN правило `.claude/rules/plan-pomogator/plan-pomogator.md` прочитано THEN оно SHALL содержать top-level секцию `## Two-Stage Plan Presentation Workflow` И эта секция SHALL содержать ровно 4 нумерованных Step (Step 1: вывести в чат, Step 2: дождаться, Step 3: написать план-файл, Step 4: ExitPlanMode) И SHALL содержать явный запрет "ЗАПРЕЩЕНО вызывать ExitPlanMode без выполненного Step 1".
+WHEN каноническое правило `.carl/rules/plan-pomogator/plan-pomogator.md` прочитано THEN оно SHALL содержать ровно 4 нумерованных Step, SHALL считать `делай план` и эквивалентную сильную директиву уже полученным подтверждением, SHALL запрещать повторный confirmation turn после такой директивы И SHALL немедленно переходить к написанию и валидации plan-файла.
 
 WHEN секция "Обязательная структура плана (шаблон)" в правиле прочитана THEN она SHALL упоминать `## 💬 Простыми словами` ПЕРВОЙ в порядке обязательных секций.
 
@@ -52,7 +52,7 @@ WHEN Pre-flight Checklist в правиле прочитан THEN он SHALL с�
 
 WHEN canonical spec `extensions/plan-pomogator/tools/plan-pomogator/requirements.md` прочитан THEN он SHALL содержать `## 💬 Простыми словами` упомянутую как ПЕРВУЮ обязательную секцию (или новый пункт 0, или модифицированный пункт 1) в секции "Обязательная структура (порядок секций)".
 
-IF requirements.md содержит секцию "Two-Stage Plan Presentation" THEN секция SHALL описывать workflow (chat → confirmation → file → ExitPlanMode) И SHALL обосновать почему секция первая (для visibility в шапке).
+IF requirements.md содержит секцию "Two-Stage Plan Presentation" THEN секция SHALL описывать workflow (chat → explicit-directive-or-one-confirmation → file → ExitPlanMode), SHALL считать сильную команду продолжать уже полученным подтверждением И SHALL обосновать почему human summary остаётся первой секцией.
 
 ## AC-7 (FR-7) @feature7
 

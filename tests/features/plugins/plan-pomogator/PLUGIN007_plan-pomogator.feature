@@ -374,10 +374,10 @@ Feature: PLUGIN007 Plan-pomogator Extension
 
   # @feature44 — links to FR-5 (rule plan-pomogator.md) + FR-6 (canonical requirements.md)
   Scenario: PLUGIN007_44_05 Rule plan-pomogator.md contains Two-Stage Plan Presentation Workflow
-    Given the file `.claude/rules/plan-pomogator/plan-pomogator.md`
+    Given the file `.carl/rules/plan-pomogator/plan-pomogator.md`
     When the file content is read
     Then the file contains a top-level section `## Two-Stage Plan Presentation Workflow`
-    And the section contains exactly 4 numbered Steps (Step 1: вывести в чат, Step 2: дождаться подтверждения, Step 3: написать план-файл, Step 4: ExitPlanMode)
+    And the section contains exactly 4 numbered Steps (Step 1: вывести summary, Step 2: принять явную директиву как подтверждение либо ждать при неоднозначности, Step 3: написать план-файл, Step 4: ExitPlanMode)
     And the section contains an explicit prohibition mentioning "ЗАПРЕЩЕНО" and "ExitPlanMode" and "Step 1"
     And the Pre-flight Checklist mentions `## 💬 Простыми словами` and chat output
 

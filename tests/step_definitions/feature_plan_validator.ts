@@ -946,6 +946,11 @@ When(/^the plan-validator checks the plugin hook registry$/, function (this: PvW
   this.pvRuleContent = fs.readFileSync(hooksPath, 'utf-8');
 });
 
+When(/^the plan-validator checks the canonical plan workflow rule$/, function (this: PvWorld) {
+  const rulePath = path.join(REPO_ROOT, '.carl', 'rules', 'plan-pomogator', 'plan-pomogator.md');
+  this.pvRuleContent = fs.readFileSync(rulePath, 'utf-8');
+});
+
 // ---------------------------------------------------------------------------
 // THEN — artifact assertions (PLUGIN007_36, _42, PLUGIN015_09)
 // ---------------------------------------------------------------------------
@@ -976,6 +981,21 @@ Then(/^the plan-validator rule contains banned phrases and evidence format$/, fu
   assert.ok(content.includes('Посмотреть?'), 'Rule missing "Посмотреть?" banned phrase');
   assert.ok(content.includes('Evidence'), 'Rule missing Evidence section');
   assert.ok(content.includes('UNVERIFIED'), 'Rule missing [UNVERIFIED] marker');
+});
+
+Then(/^the plan-validator rule treats "делай план" as confirmation$/, function (this: PvWorld) {
+  const content = this.pvRuleContent ?? '';
+  assert.ok(content.includes('### Explicit-directive confirmation bypass'), 'Rule missing bypass contract');
+  assert.ok(content.includes('`делай план`'), 'Rule missing explicit directive example');
+  assert.ok(content.includes('НЕ ЖДИ повторного подтверждения'), 'Rule still permits a redundant confirmation turn');
+  assert.ok(content.includes('переходи к Step 3'), 'Rule does not require immediate plan authoring');
+});
+
+Then(/^the canonical plan docs share the explicit-directive bypass$/, function () {
+  const requirements = fs.readFileSync(path.join(REPO_ROOT, 'tools', 'plan-pomogator', 'requirements.md'), 'utf-8');
+  const template = fs.readFileSync(path.join(REPO_ROOT, 'tools', 'plan-pomogator', 'template.md'), 'utf-8');
+  assert.ok(requirements.includes('### Explicit-directive confirmation bypass'), 'Requirements drift from rule');
+  assert.ok(template.includes('явная команда продолжать уже считается подтверждением'), 'Template drift from rule');
 });
 
 Then(/^the plan-validator plugin registry has a plan-gate PreToolUse hook$/, function (this: PvWorld) {
