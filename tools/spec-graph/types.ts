@@ -72,6 +72,8 @@ export interface FrNode extends NodeBase {
   type: 'FR';
   /** Heading title after `### FR-N:`, e.g. `Login`. */
   title: string;
+  /** Explicit non-FR feature aliases declared by the FR heading or requirements matrix. */
+  featureAliases?: string[];
   /** Typed FR-local metadata declaration (FR-66). */
   metadata?: RequirementMetadata;
   /** Validation issues retained so conformance can fail loud. */
@@ -154,6 +156,45 @@ export interface ScenarioTraceRef {
   gitSha?: string;
 }
 
+/**
+ * The ingestion truth for one execution artifact. It is deliberately
+ * artifact-level rather than a synthetic scenario result: a missing or
+ * malformed canonical report is NOT the same as a valid report that simply
+ * joined zero authored scenarios.
+ */
+export type ArtifactIngestionState = 'INGESTED' | 'NOT_INGESTED' | 'SKIPPED';
+
+export type ArtifactIngestionReason =
+  | 'ARTIFACT_ABSENT'
+  | 'MALFORMED_ARTIFACT'
+  | 'MISSING_SCENARIO_RESULTS'
+  | 'INGESTION_SKIPPED';
+
+export type ExecutionArtifactKind =
+  | 'cucumber-messages-ndjson'
+  | 'pytest-bdd-cucumber-json'
+  | 'scenario-result-overlay';
+
+export interface ExecutionArtifactIngestion {
+  kind: ExecutionArtifactKind;
+  canonical: boolean;
+  state: ArtifactIngestionState;
+  reason: ArtifactIngestionReason | null;
+  provenance: string;
+  path: string;
+  run_id: string | null;
+  timestamp: string | null;
+  counts: {
+    /** Valid scenario results emitted by the producer, before graph joins. */
+    parsed: number;
+    /** Scenario nodes joined by this build (may include source/executable mirrors). */
+    matched: number;
+    /** Valid producer results with no authored scenario join. */
+    unmatched: number;
+    malformed: number;
+  };
+}
+
 export interface ScenarioNode extends NodeBase {
   type: 'Scenario';
   /**
@@ -170,12 +211,20 @@ export interface ScenarioNode extends NodeBase {
   lastResult?: 'PASSED' | 'FAILED' | 'SKIPPED' | 'PENDING' | 'UNDEFINED' | 'AMBIGUOUS' | 'UNKNOWN';
   /** ISO 8601 timestamp of the most recent run that produced `lastResult`. */
   lastRunAt?: string;
+  /** Producer provenance of `lastResult`, retained even when no runtime trace exists. */
+  lastResultSource?: string;
+  /** Producer run identity of `lastResult`, retained even when no runtime trace exists. */
+  lastResultRunId?: string;
   /** True when a once-passing overlay result is older than the scenario/step-def source. */
   resultStale?: boolean;
   /** Canonical full-run result retained separately from the newest overlay result. */
   canonicalResult?: ScenarioNode['lastResult'];
   /** Canonical full-run timestamp retained separately from the newest overlay result. */
   canonicalRunAt?: string;
+  /** Canonical run identity retained separately from the effective filtered trace. */
+  canonicalRunId?: string;
+  /** Canonical producer retained separately from the effective filtered trace. */
+  canonicalSource?: string;
   /** Runtime trace pointer for the effective result (FR-56f). */
   trace?: ScenarioTraceRef;
   durationMs?: number;
@@ -297,6 +346,10 @@ export interface EdgeMetadata {
   file_path?: string;
   /** Which section of the spec established the linkage. */
   source_section?: 'FILE_CHANGES' | 'DESIGN';
+  /** Source document that emitted this individual edge. */
+  source_file?: string;
+  /** Source row/section line that emitted this individual edge. */
+  source_line?: number;
   /** FILE_CHANGES action verb when sourced from a FILE_CHANGES row. */
   action?: 'create' | 'edit' | 'delete' | 'rename' | 'move' | 'replace';
   /** Evidence producer for verifies/runtime edges. */
@@ -369,6 +422,12 @@ export interface SpecGraph {
     collisions: Array<{ id: string; firstFile: string; secondFile: string }>;
     normalizationCollisions?: IdentityCollision[];
   };
+  /**
+   * Per-artifact execution-ingestion truth from the current graph build.
+   * Optional for hand-built graphs and legacy callers; never inferred from
+   * scenario buckets, because NOT_INGESTED and NOT_RUN are different facts.
+   */
+  executionArtifacts?: ExecutionArtifactIngestion[];
   /** Graph-wide endpoint diagnostics, refreshed after full/incremental build and restore. */
   endpointViolations?: EndpointViolation[];
 }

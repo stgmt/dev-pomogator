@@ -10,7 +10,8 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
-import { resolveRepoRoot } from '../server.ts';
+import { boot, resolveRepoRoot } from '../server.ts';
+import { ROOT_WORKTREE_MISMATCH } from '../path-containment.ts';
 
 describe('resolveRepoRoot — robust against an unresolved ${CLAUDE_PROJECT_DIR}', () => {
   let repo: string;
@@ -44,5 +45,19 @@ describe('resolveRepoRoot — robust against an unresolved ${CLAUDE_PROJECT_DIR}
   it('falls back to cwd when env is undefined or empty', () => {
     expect(resolveRepoRoot(undefined, cwd)).toBe(cwd);
     expect(resolveRepoRoot('', cwd)).toBe(cwd);
+  });
+});
+
+describe('boot worktree admission (FR-86d)', () => {
+  it('rejects a mismatched declared root before lifecycle creates lock or cache state', async () => {
+    const repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'srr-boot-root-'));
+    const declaredWorktree = fs.mkdtempSync(path.join(os.tmpdir(), 'srr-boot-declared-'));
+    try {
+      await expect(boot({ repoRoot, declaredWorktree })).rejects.toThrow(ROOT_WORKTREE_MISMATCH);
+      expect(fs.existsSync(path.join(repoRoot, '.dev-pomogator'))).toBe(false);
+    } finally {
+      fs.rmSync(repoRoot, { recursive: true, force: true });
+      fs.rmSync(declaredWorktree, { recursive: true, force: true });
+    }
   });
 });

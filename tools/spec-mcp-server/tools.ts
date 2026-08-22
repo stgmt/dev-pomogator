@@ -36,24 +36,36 @@
 
 import { z } from 'zod';
 import { checkConformance, type Finding } from '../spec-graph/conformance.ts';
-import { gapsFromFindings, summariseGaps } from '../spec-graph/traceability.ts';
 import { buildReadinessInventory, classifyScenarioScope } from '../spec-graph/readiness-inventory.ts';
-import { computeSpecVerdict } from '../spec-graph/verdict.ts';
 import fs from 'node:fs';
 import path from 'node:path';
 import { logSpecAccess } from './spec-access-log.ts';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { validateSpecChange, writeDocAtomic, isSafeSlug, resolveSpecDoc, docSha, casCheck, validateTarget, findInboundLinks, rewriteInboundLinks, isArchivedSlug, type SpecChange } from './mutations.ts';
-import { applySectionChange, applyReplaceChange, readForEdit, proposePatch, applyProposedPatch, applySpecTransactionCore, type SectionOpKind, type PatchEdit, type PatchEditPreview } from './section-ops.ts';
+import { checkDeclaredWorktree, ROOT_WORKTREE_MISMATCH } from './path-containment.ts';
+import type { DependencyReadiness } from './lifecycle.ts';
 import {
   addBacklogTask,
   addPhase,
   amendRequirement,
   addAcceptanceCriterion,
   registerIncidentBacklog,
+  proposeRequirementContract,
   type DomainAuthoringResult,
 } from './domain-authoring.ts';
+import {
+  commitPreparedPatch,
+  preparePatch,
+  prepareProposedPatch,
+  commitProposedPatch,
+  proposePatch,
+  proposeSectionChange,
+  readForEdit,
+  type PatchEdit,
+  type PatchEditPreview,
+  type SectionOpKind,
+} from './section-ops.ts';
 import { writeSpecStatus, readSpecStatus } from '../spec-graph/spec-status-store.ts';
 import { withWriteLock, type WriteLockBusyError } from './lock-manager.ts';
 import { setEntityStatus } from './set-status.ts';
@@ -89,9 +101,8 @@ import {
   type TaskLike,
 } from '../spec-graph/coverage.ts';
 import { readVerdicts } from '../spec-graph/test-quality-gate.ts';
-import { oldTestReadinessDebt } from '../bdd-migrator/repository-census.ts';
 import { marksmanSlug } from '../anchor-integrity/marksman-slug.mjs';
-import { compareBddSync, latestFilteredProof, type ScenarioLite } from '../specs-generator/spec-verdict.ts';
+import { analyzeGraphSnapshot, compareBddSync, latestFilteredProof, type ScenarioLite } from '../specs-generator/spec-verdict.ts';
 import {
   analyzeRemediation,
   proposeSpecRepairs,
@@ -874,9 +885,21 @@ function markdownLinkLocation(graph: SpecGraph, anchor: string, spec?: string): 
   return null;
 }
 
+export interface RegistryPreflight {
+  lockMode: 'owner' | 'presence_reader';
+  writeMode: 'short_lock_cas';
+  dependencies: DependencyReadiness;
+  mcpVersion: string;
+  pluginVersion: string;
+}
+
 export interface RegistryOptions {
   /** Repository root used for disk-backed status evidence. Defaults to process.cwd(). */
   repoRoot?: string;
+  /** Process-declared worktree; all mutation routes fail closed if it differs from repoRoot. */
+  declaredWorktree?: string;
+  /** Live boot facts supplied by server.ts without a second state store. */
+  preflight?: () => RegistryPreflight;
   /**
    * FR-40c graph freshness after a mutation. Inside the running MCP server the
    * FR-14 watcher patches the graph on the disk write — leave unset there.
@@ -897,6 +920,14 @@ export function buildToolRegistry(
   getGraph: () => SpecGraph,
   registryOpts: RegistryOptions = {},
 ): ToolDefinition<z.ZodRawShape>[] {
+  const repoRoot = path.resolve(registryOpts.repoRoot ?? process.cwd());
+  // Keep every audit side effect inside the registry's explicit repository root,
+  // including when an embedded caller's process cwd is a different worktree.
+  const logAccess = (
+    toolName: string,
+    args: unknown,
+    decision: Parameters<typeof logSpecAccess>[2],
+  ): void => logSpecAccess(toolName, args, decision, repoRoot);
   const tools: ToolDefinition<z.ZodRawShape>[] = [];
 
   // P21-1: when the door is read-only (a sibling session owns the write-lock),
@@ -910,6 +941,61 @@ export function buildToolRegistry(
   // (lifetime) is replaced by a transient WRITE_LOCK_BUSY raised only DURING another session's
   // in-flight write. (Set TEST_QUALITY... no — controlled solely by the lock now.)
   const readOnlyRefusal = (_tool: string, _args: unknown): ToolResult | null => null;
+
+  // FR-86d: this guard runs before a mutation reaches a read, validation, lock,
+  // audit record, or writer. A caller rooted in another worktree must never
+  // cause even a lock/audit artifact in this repository.
+  const mutationRootRefusal = (): ToolResult | null => {
+    const check = checkDeclaredWorktree(repoRoot, registryOpts.declaredWorktree);
+    if (check.ok) return null;
+    return asJsonResult({
+      ok: false,
+      error: ROOT_WORKTREE_MISMATCH,
+      actual_worktree: check.actual,
+      declared_worktree: check.declared,
+      hint: 'This MCP server is bound to a different resolved worktree. Reconnect from the declared project or launch a server for that worktree; no mutation was attempted.',
+    });
+  };
+
+  // ─── 0) mcp_preflight — root/worktree admission facts (FR-86d) ───────────
+  tools.push({
+    name: 'mcp_preflight',
+    description:
+      'FR-86d read-only MCP admission snapshot: redacted resolved-root/worktree identities, lock and short-write mode, MCP/plugin versions, and dependency readiness. An optional declared_worktree is compared without writing.',
+    inputShape: { declared_worktree: z.string().optional() } as const satisfies z.ZodRawShape,
+    handler: async ({ declared_worktree }) => {
+      const declared = typeof declared_worktree === 'string'
+        ? declared_worktree
+        : registryOpts.declaredWorktree;
+      const root = checkDeclaredWorktree(repoRoot, declared);
+      const state = registryOpts.preflight?.() ?? {
+        lockMode: 'owner' as const,
+        writeMode: 'short_lock_cas' as const,
+        dependencies: {
+          graph: 'ready' as const,
+          watcher: 'ready' as const,
+          lock: 'owner' as const,
+          sqlite: 'disabled' as const,
+        },
+        mcpVersion: 'unknown',
+        pluginVersion: 'unknown',
+      };
+      return asJsonResult({
+        ok: true,
+        resolved_root: root.actual,
+        worktree: {
+          actual: root.actual,
+          declared: root.declared,
+          matches_resolved_root: root.ok,
+        },
+        lock_mode: state.lockMode,
+        write_mode: state.writeMode,
+        versions: { mcp: state.mcpVersion, plugin: state.pluginVersion },
+        dependencies: state.dependencies,
+        mutation_ready: root.ok,
+      });
+    },
+  });
 
   // ─── 1) get_trace ───────────────────────────────────────────────────────
   tools.push({
@@ -1063,16 +1149,21 @@ export function buildToolRegistry(
   tools.push({
     name: 'conformance_check',
     description:
-      'Run the Phase-1 conformance ruleset over the in-memory graph and ' +
-      'return Finding[] (UNCOVERED_FR / ORPHAN_TASK / SCENARIO_TAG_ORPHAN / UNTAGGED_SCENARIO).',
+      'Run the Phase-1 conformance ruleset over the in-memory graph and return Finding[] ' +
+      '(traceability, task, scenario-tag, and FR-85 contract findings). Pass strict_contracts=true ' +
+      'and spec=<slug> to make missing or invalid FR contract cards blocking for one spec.',
     inputShape: {
       scope: z.array(z.string()).optional(),
       severity: z.enum(['error', 'warning', 'info']).optional(),
+      strict_contracts: z.boolean().optional(),
+      spec: z.string().optional(),
     } as const satisfies z.ZodRawShape,
     handler: async (args) => {
       const scope = (args as { scope?: string[] }).scope;
       const severity = (args as { severity?: 'error' | 'warning' | 'info' }).severity;
-      let findings: Finding[] = checkConformance(getGraph());
+      const strictContracts = Boolean((args as { strict_contracts?: boolean }).strict_contracts);
+      const strictContractSpec = (args as { spec?: string }).spec;
+      let findings: Finding[] = checkConformance(getGraph(), { strictContracts, strictContractSpec });
       if (scope?.length) {
         const ids = new Set(scope);
         findings = findings.filter((f) => (f.nodeId && ids.has(f.nodeId)) || (f.relatedId && ids.has(f.relatedId)));
@@ -1199,6 +1290,65 @@ export function buildToolRegistry(
       const checked = validateRequirementMetadata(metadata);
       if (!checked.metadata) return asJsonResult({ ok: false, error: 'FR_METADATA_INVALID', findings: checked.issues });
       return asJsonResult({ ok: true, node_id: resolved.node.id, local_id: localIdOf(resolved.node.id), metadata: checked.metadata, yaml: renderRequirementMetadata(checked.metadata), hint: 'Apply this rendered block through apply_spec_change/apply_spec_transaction with CAS.' });
+    },
+  });
+
+  // ─── FR-86e guided requirement-contract proposal ─────────────────────────
+  tools.push({
+    name: 'propose_requirement_contract',
+    description:
+      'FR-86e: read-only guided FR contract proposal. Scans parser-backed evidence, returns ranked kind candidates, required/missing fields and field-level schema findings, then mints an existing CAS-bound patch proposal only for a valid card. Nothing is written; apply only with apply_proposed_patch.',
+    inputShape: {
+      spec: z.string(),
+      requirement: z.string(),
+      contract: z.record(z.string(), z.unknown()),
+      expected_sha: z.string().optional(),
+    } as const satisfies z.ZodRawShape,
+    handler: async (args) => {
+      const rootRefusal = mutationRootRefusal();
+      if (rootRefusal) return rootRefusal;
+      const draft = proposeRequirementContract(repoRoot, {
+        spec: args.spec as string,
+        requirement: args.requirement as string,
+        contract: args.contract as Record<string, unknown>,
+        expectedSha: typeof args.expected_sha === 'string' ? args.expected_sha : undefined,
+      });
+      if (!draft.ok || !draft.edits) {
+        logAccess('propose_requirement_contract', { spec: args.spec, requirement: args.requirement }, 'denied');
+        return asJsonResult({ ...draft, dry_run: true, written: false });
+      }
+
+      // Do not mint a generic proposal for a card that the shared patch/form gate rejects.
+      // The contract validator above ran first; this is the existing transaction validation,
+      // not a second writer or a weaker metadata-only path.
+      const prepared = preparePatch(repoRoot, draft.edits);
+      if (!prepared.ok) {
+        logAccess('propose_requirement_contract', { spec: args.spec, requirement: args.requirement }, 'denied');
+        return asJsonResult({
+          ...draft,
+          ok: false,
+          error: 'VALIDATION_FAILED',
+          dry_run: true,
+          written: false,
+          transaction_findings: prepared.findings,
+          edits: prepared.edits.map(publicEditPreview),
+          hint: 'The card is metadata-valid, but the full document fails the existing form/anchor/conformance gate. Nothing was written or stored; fix the findings and re-propose.',
+        });
+      }
+
+      const proposal = proposePatch(repoRoot, draft.edits);
+      logAccess('propose_requirement_contract', { spec: args.spec, requirement: args.requirement, proposal_id: proposal.proposal_id }, 'ok');
+      return asJsonResult({
+        ...draft,
+        dry_run: true,
+        written: false,
+        proposal_id: proposal.proposal_id,
+        transaction: {
+          findings: proposal.findings,
+          edits: proposal.edits.map(publicEditPreview),
+        },
+        hint: 'No bytes were written. apply_proposed_patch({proposal_id, reason}) re-checks the root-bound CAS tokens and atomically writes only if the proposal remains fresh.',
+      });
     },
   });
 
@@ -1426,11 +1576,6 @@ export function buildToolRegistry(
     },
   });
 
-  // ─── 12) find_refs — spec-domain graph reference-finder (FR-7b) ──────────
-  // "Find all references" over the graph's SEMANTIC cross-links: incoming /
-  // outgoing edges (covers / tested-by / implements …) plus the task→FR refs the
-  // edge set doesn't carry. This is the spec-DOMAIN surface the Markdown LSP has
-  // no concept of (an LSP knows text wiki-links, not `tested-by` semantics).
   // Markdown wiki-link navigation itself is owned by Marksman's native LSP
   // (`.lsp.json`), exposed via Claude Code's `LSP` tool — NOT reimplemented here.
   tools.push({
@@ -1464,8 +1609,9 @@ export function buildToolRegistry(
     description:
       'How is a spec doing — ONE tool, three VIEWS (merged: was get_spec_status + get_coverage + ' +
       'get_coverage_summary). `view`: ' +
-      '"status" (default, needs `spec`) → lifecycle SPEC_ONLY/TESTS_NOT_RUN/RED/PARTIAL/GREEN ' +
-      '+ last-run summary + node counts + FR-37b gaps + phases + hint (FR-38). ' +
+      '"status" (default, needs `spec`) → legacy execution-only lifecycle (never authoritative) ' +
+      '+ canonical verdict/readiness + last-run summary + node counts + FR-37b gaps + phases + canonical `readiness.action_center` ' +
+      '(every blocking lane with affected-node count/reasons/remediation; `next_action` remains its first-group projection) + hint (FR-38). ' +
       '"summary" (needs `spec`) → compact lifecycle/count/gap summary for bounded inventory; no per-task or per-scenario payload. ' +
       '"counts" → structural FR/AC/Scenario/Task tallies: with `spec` that one spec, without `spec` ' +
       'the per-spec table across the corpus. ' +
@@ -1675,8 +1821,8 @@ export function buildToolRegistry(
         });
       }
 
-      // FR-38b: the linked last-run summary — ONLY from ingested NDJSON data
-      // (lastResult/lastRunAt stamped by the FR-1 pipeline). Never fabricated.
+      // FR-38b: linked canonical execution summary from ingested Cucumber NDJSON
+      // or pytest-bdd per-scenario evidence. Never inferred from a suite receipt.
       const summary = { passed: 0, failed: 0, pending: 0, undefined: 0, ambiguous: 0, skipped: 0, stale: 0, touched: 0 };
       let lastAt: string | null = null;
       for (const s of scens) {
@@ -1692,9 +1838,19 @@ export function buildToolRegistry(
         else if (r === 'SKIPPED') summary.skipped++;
         if (s.canonicalRunAt && (!lastAt || s.canonicalRunAt > lastAt)) lastAt = s.canonicalRunAt;
       }
+      const canonicalSources = [...new Set(scens
+        .filter((scenario) => scenario.canonicalResult && scenario.canonicalSource)
+        .map((scenario) => scenario.canonicalSource!))].sort();
       const last_run =
         summary.touched > 0
-          ? { at: lastAt, source: '.dev-pomogator/.last-test-run.ndjson', summary }
+          ? {
+              at: lastAt,
+              source: canonicalSources.length === 1 ? canonicalSources[0] : canonicalSources,
+              run_ids: [...new Set(scens
+                .filter((scenario) => scenario.canonicalResult && scenario.canonicalRunId)
+                .map((scenario) => scenario.canonicalRunId!))].sort(),
+              summary,
+            }
           : null;
       const statusCoverage = computeCoverage(statusTasks, statusScenarios, readVerdicts(repoRoot));
       const canonicalStatusScenarios = statusScenarios.map((scenario) => ({
@@ -1705,23 +1861,16 @@ export function buildToolRegistry(
       }));
       const canonicalStatusCoverage = computeCoverage(statusTasks, canonicalStatusScenarios, readVerdicts(repoRoot));
       const statusExecutionGaps = executionGaps(slug, canonicalStatusScenarios, canonicalStatusCoverage.buckets);
-      const sourceScenarios = scens.filter((scenario) => specOf(scenario.file) === slug) as ScenarioLite[];
-      const executableScenarios: ScenarioLite[] = [];
-      const slugTail = slug.split('/').pop()!.toLowerCase();
-      for (const node of graph.nodes.values()) {
-        if (node.type !== 'Scenario') continue;
-        const scenario = node as ScenarioNode;
-        const file = String(scenario.file).replace(/\\/g, '/');
-        if (file.includes('/.tmp/') || file.includes('/archive/')) continue;
-        const outsideSpec = !file.startsWith('.specs/');
-        if (outsideSpec && file.toLowerCase().includes(slugTail)) executableScenarios.push(scenario);
-      }
-      const bddSync = compareBddSync(repoRoot, slug, sourceScenarios, executableScenarios);
-      const oldTestCensus = oldTestReadinessDebt(repoRoot, slug);
-      const bddSyncDebt = [...bddSync.debt, ...oldTestCensus.debt];
-      const filteredProof = latestFilteredProof(repoRoot, sourceScenarios);
-      const taskTruthDebt = Object.entries(canonicalStatusCoverage.tasks)
-        .flatMap(([taskId, task]) => (task.truth_issues ?? []).map((issue) => `${taskId}: ${issue.message}`));
+      // Reuse the caller-owned graph snapshot for rich canonical analysis. MCP
+      // never rebuilds source here; the analyzer still obtains authoritative
+      // structural/audit inputs instead of replacing those gates with empties.
+      const canonicalVerdict = await analyzeGraphSnapshot(`.specs/${slug}`, graph, {
+        cwd: repoRoot,
+        semantic: false,
+      });
+      const bddSyncDebt = canonicalVerdict.readiness.lanes.BDD_SYNC.debt;
+      const filteredProof = canonicalVerdict.evidence.filteredProof;
+      const taskTruthDebt = canonicalVerdict.readiness.lanes.TASK_TRUTH.debt;
 
       // FR-38a/FR-61: lifecycle is execution-honest. A filtered run with all
       // touched scenarios passed is still PARTIAL while any authored scenario is
@@ -1737,45 +1886,17 @@ export function buildToolRegistry(
       ) lifecycle = 'PARTIAL';
       else lifecycle = 'GREEN';
 
-      // FR-38c: the FR-37b gap counts for this cell + the shared canonical verdict.
-      const specFindings = checkConformance(graph).filter((finding) => inSpec(finding.location.file));
-      const gaps = summariseGaps(gapsFromFindings(specFindings, { spec: slug }));
-      const inventory = buildReadinessInventory(graph, { spec: slug });
-      const canonicalVerdict = computeSpecVerdict({
-        inventory,
-        lanes: {
-          STRUCTURE: {
-            status: specFindings.some((finding) => finding.severity === 'error') ? 'RED' : 'GREEN',
-            debt: specFindings.filter((finding) => finding.severity === 'error').map((finding) => `${finding.code}:${finding.nodeId ?? finding.location.file}`),
-          },
-          TRACEABILITY: {
-            status: Object.values(gaps).some((count) => count > 0) ? 'RED' : 'GREEN',
-            debt: Object.entries(gaps).filter(([, count]) => count > 0).map(([code, count]) => `${code}:${count}`),
-          },
-          TASK_TRUTH: {
-            status: taskTruthDebt.length > 0 ? 'RED' : 'GREEN',
-            debt: taskTruthDebt,
-          },
-          BDD_SYNC: {
-            status: bddSyncDebt.length > 0 ? 'RED' : 'GREEN',
-            debt: bddSyncDebt,
-          },
-          FILTERED_PROOF: {
-            status: filteredProof.latest ? 'GREEN' : 'NONE',
-            debt: [],
-          },
-        },
-      }, specFindings);
+      const progress = readProgressState(path.join(repoRoot, '.specs', slug));
+      const gaps = canonicalVerdict.traceabilityGate.byClass;
+      const inventory = buildReadinessInventory(graph, {
+        spec: slug,
+        testQualityByTask: readVerdicts(repoRoot),
+      });
       const readiness = canonicalVerdict.readiness;
-      const readinessLanes = readiness.lanes;
-      const nextAction = bddSyncDebt.length > 0
-        ? 'Fix source/executable BDD sync drift or resolve the combined BDD synchronization debt.'
-        : filteredProof.latest && taskTruthDebt.length > 0
-          ? `Filtered run ${filteredProof.latest.runId} is useful proof but does not update canonical coverage. Run the full Docker BDD suite or attach an accepted canonical artifact.`
-          : readiness.next_action;
+      const nextAction = readiness.action_center[0]?.action.message ?? readiness.nextAction;
       const hints: Record<typeof lifecycle, string> = {
         SPEC_ONLY: 'Docs only — no scenarios written yet. Next: author the .feature (FR-38a).',
-        TESTS_NOT_RUN: `${counts.scenarios} scenario(s) are SCENARIO_NOT_RUN; no canonical execution has been ingested. Next: run the suite so NDJSON lands.`,
+        TESTS_NOT_RUN: `${counts.scenarios} scenario(s): no canonical per-scenario result evidence found. Next: run Cucumber so .dev-pomogator/.last-test-run.ndjson lands, or pytest-bdd with --cucumber-json .dev-pomogator/pytest-bdd-report.json.`,
         RED: `${summary.failed + summary.ambiguous} failing of ${summary.touched} touched. Next: get_test_result per scenario.`,
         PARTIAL:
           statusExecutionGaps.SCENARIO_NOT_RUN > 0
@@ -1792,7 +1913,6 @@ export function buildToolRegistry(
       // settable handle (`<slug>:phase:<Phase>`) + authored state HERE — the only
       // place the agent learns the id to pass to set_entity_status (else the phase
       // authored-path is unusable, violating FR-48c).
-      const progress = readProgressState(path.join(repoRoot, '.specs', slug));
       const phases = PHASE_ORDER.map((name) => ({
         id: `${slug}:phase:${name}`,
         name,
@@ -1808,6 +1928,10 @@ export function buildToolRegistry(
           spec: slug,
           spec_status: readSpecStatus(repoRoot, slug),
           lifecycle,
+          // Compatibility-only execution projection. `verdict`/`readiness` below
+          // are the sole authoritative spec status and must be used for readiness.
+          lifecycle_scope: 'execution-only',
+          lifecycle_authoritative: false,
           verdict: canonicalVerdict.verdict,
           blocking: canonicalVerdict.blocking,
           counts,
@@ -1817,6 +1941,7 @@ export function buildToolRegistry(
           readiness: {
             overall: readiness.overall,
             next_action: nextAction,
+            action_center: readiness.action_center,
           },
           hint: hints[lifecycle],
         });
@@ -1830,6 +1955,10 @@ export function buildToolRegistry(
         // Stop-gate open-work count — its open tasks are parked by intent, not counted as work due now.
         spec_status: readSpecStatus(repoRoot, slug),
         lifecycle,
+        // Compatibility-only execution projection. `verdict`/`readiness` below
+        // are the sole authoritative spec status and must be used for readiness.
+        lifecycle_scope: 'execution-only',
+        lifecycle_authoritative: false,
         verdict: canonicalVerdict.verdict,
         blocking: canonicalVerdict.blocking,
         counts,
@@ -1873,13 +2002,13 @@ export function buildToolRegistry(
       const args = { spec };
       const slug = String(spec).replace(/\\/g, '/').replace(/^\.?\/?\.specs\//, '').replace(/\/+$/, '');
       if (!isSafeSlug(slug)) {
-        logSpecAccess('list_spec_docs', args, 'denied');
+        logAccess('list_spec_docs', args, 'denied');
         return asJsonResult({ ok: false, error: 'UNSAFE_SPEC', spec: slug, hint: 'slug must stay within .specs/ (no traversal)' });
       }
       const repoRoot = registryOpts.repoRoot ?? process.cwd();
       const dir = path.join(repoRoot, '.specs', slug);
       if (!fs.existsSync(dir) || !fs.statSync(dir).isDirectory()) {
-        logSpecAccess('list_spec_docs', args, 'not_found');
+        logAccess('list_spec_docs', args, 'not_found');
         return asJsonResult({ ok: false, error: 'SPEC_NOT_FOUND', spec: slug });
       }
       // P19-6: recurse into SUBDIRECTORIES (ARCHITECTURE/, attachments/,
@@ -1903,7 +2032,7 @@ export function buildToolRegistry(
       walk(dir, '');
       docs.sort();
       attachments.sort();
-      logSpecAccess('list_spec_docs', args, 'ok');
+      logAccess('list_spec_docs', args, 'ok');
       return asJsonResult({ ok: true, spec: slug, docs, count: docs.length, attachments });
     },
   });
@@ -1934,21 +2063,21 @@ export function buildToolRegistry(
       const repoRoot = registryOpts.repoRoot ?? process.cwd();
       const slug = String(spec).replace(/\\/g, '/').replace(/^\.?\/?\.specs\//, '').replace(/\/+$/, '');
       if (!isSafeSlug(slug)) {
-        logSpecAccess('read_spec_doc', args, 'denied');
+        logAccess('read_spec_doc', args, 'denied');
         return asJsonResult({ ok: false, error: 'UNSAFE_SPEC', spec: slug, hint: 'slug must stay within .specs/ (no traversal)' });
       }
       // P19-6: accept a SUBPATH (ARCHITECTURE/AXIS-1.md) — containment-checked,
       // not basename-flattened. Traversal/abs/drive → TRAVERSAL (denied), never served.
       const resolved = resolveSpecDoc(repoRoot, slug, String(doc));
       if (!resolved.ok) {
-        logSpecAccess('read_spec_doc', args, 'denied');
+        logAccess('read_spec_doc', args, 'denied');
         return asJsonResult({ ok: false, error: resolved.reason === 'TRAVERSAL' ? 'DOC_TRAVERSAL' : 'UNSAFE_SPEC', spec: slug, doc: String(doc), hint: 'doc must stay within .specs/<spec>/ (no traversal/abs path)' });
       }
       const rel = resolved.rel;
       const base = path.basename(rel);
       const okName = /\.(md|feature)$/.test(base) || base === '.progress.json' || base === '.jira-cache.json';
       if (!okName || !fs.existsSync(resolved.abs) || !fs.statSync(resolved.abs).isFile()) {
-        logSpecAccess('read_spec_doc', args, 'not_found');
+        logAccess('read_spec_doc', args, 'not_found');
         return asJsonResult({
           ok: false,
           error: 'DOC_NOT_FOUND',
@@ -1971,10 +2100,10 @@ export function buildToolRegistry(
       if (read_for_edit === true) {
         const meta = readForEdit(repoRoot, slug, rel, section !== undefined ? String(section) : undefined);
         if (!meta.ok) {
-          logSpecAccess('read_spec_doc', args, 'not_found');
+          logAccess('read_spec_doc', args, 'not_found');
           return asJsonResult({ ok: false, error: meta.error === 'DOC_NOT_FOUND' ? 'DOC_NOT_FOUND' : 'UNSAFE_SPEC', spec: slug, doc: rel, hint: meta.hint });
         }
-        logSpecAccess('read_spec_doc', args, 'ok');
+        logAccess('read_spec_doc', args, 'ok');
         return asJsonResult({ ok: true, spec: slug, doc: rel, mode: 'read_for_edit', ...meta });
       }
 
@@ -1982,7 +2111,7 @@ export function buildToolRegistry(
       if (section !== undefined) {
         const sel = sliceSection(lines, String(section));
         if (!sel) {
-          logSpecAccess('read_spec_doc', args, 'not_found');
+          logAccess('read_spec_doc', args, 'not_found');
           return asJsonResult({
             ok: false, error: 'SECTION_NOT_FOUND', spec: slug, doc: rel, section,
             total_lines: totalLines, total_bytes: totalBytes,
@@ -1991,7 +2120,7 @@ export function buildToolRegistry(
           });
         }
         const content = sel.lines.join('\n');
-        logSpecAccess('read_spec_doc', args, 'ok');
+        logAccess('read_spec_doc', args, 'ok');
         return asJsonResult({
           ok: true, spec: slug, doc: rel, section: sel.heading,
           start_line: sel.startLine, end_line: sel.endLine, lines: sel.lines.length,
@@ -2003,7 +2132,7 @@ export function buildToolRegistry(
       if (offset !== undefined || limit !== undefined) {
         const startIdx = (offset ?? 1) - 1;
         if (startIdx >= totalLines) {
-          logSpecAccess('read_spec_doc', args, 'ok');
+          logAccess('read_spec_doc', args, 'ok');
           return asJsonResult({
             ok: true, spec: slug, doc: rel, start_line: startIdx + 1, end_line: startIdx + 1,
             lines: 0, total_lines: totalLines, total_bytes: totalBytes, truncated: false,
@@ -2014,7 +2143,7 @@ export function buildToolRegistry(
         const slice = lines.slice(startIdx, endIdx);
         const truncated = endIdx < totalLines;
         const content = slice.join('\n');
-        logSpecAccess('read_spec_doc', args, 'ok');
+        logAccess('read_spec_doc', args, 'ok');
         return asJsonResult({
           ok: true, spec: slug, doc: rel, start_line: startIdx + 1, end_line: endIdx,
           lines: slice.length, total_lines: totalLines, total_bytes: totalBytes,
@@ -2026,7 +2155,7 @@ export function buildToolRegistry(
       if (totalBytes > WHOLE_DOC_SAFE_BYTES && whole_document !== true) {
         const endIdx = Math.min(DEFAULT_DOC_PAGE_LINES, totalLines);
         const content = lines.slice(0, endIdx).join('\n');
-        logSpecAccess('read_spec_doc', args, 'ok');
+        logAccess('read_spec_doc', args, 'ok');
         return asJsonResult({
           ok: true, spec: slug, doc: rel, start_line: 1, end_line: endIdx,
           lines: endIdx, total_lines: totalLines, total_bytes: totalBytes,
@@ -2035,7 +2164,7 @@ export function buildToolRegistry(
           note: 'Large document safely paged. Continue with next_offset, select a section, or pass whole_document:true explicitly.',
         });
       }
-      logSpecAccess('read_spec_doc', args, 'ok');
+      logAccess('read_spec_doc', args, 'ok');
       return asJsonResult({ ok: true, spec: slug, doc: rel, bytes: totalBytes, total_lines: totalLines, total_bytes: totalBytes, sha, content: full });
     },
   });
@@ -2054,7 +2183,7 @@ export function buildToolRegistry(
       const slug = String(spec).replace(/\\/g, '/').replace(/^\.?\/?\.specs\//, '').replace(/\/+$/, '');
       const resolved = resolveSpecDoc(process.cwd(), slug, String(docPath));
       if (!resolved.ok) {
-        logSpecAccess('read_attachment', args, 'denied');
+        logAccess('read_attachment', args, 'denied');
         return asJsonResult({ ok: false, error: resolved.reason === 'TRAVERSAL' ? 'DOC_TRAVERSAL' : 'UNSAFE_SPEC', spec: slug, path: String(docPath), hint: 'path must stay within .specs/<spec>/ (no traversal/abs path)' });
       }
       const rel = resolved.rel;
@@ -2065,11 +2194,11 @@ export function buildToolRegistry(
       };
       const mime = MIME[ext];
       if (!mime || !fs.existsSync(resolved.abs) || !fs.statSync(resolved.abs).isFile()) {
-        logSpecAccess('read_attachment', args, 'not_found');
+        logAccess('read_attachment', args, 'not_found');
         return asJsonResult({ ok: false, error: 'ATTACHMENT_NOT_FOUND', spec: slug, path: rel, hint: 'Call list_spec_docs({spec}).attachments for the valid inventory.' });
       }
       const buf = fs.readFileSync(resolved.abs);
-      logSpecAccess('read_attachment', args, 'ok');
+      logAccess('read_attachment', args, 'ok');
       return asJsonResult({ ok: true, spec: slug, path: rel, mime, bytes: buf.length, base64: buf.toString('base64') });
     },
   });
@@ -2115,19 +2244,22 @@ export function buildToolRegistry(
       '{old_string, new_string, replace_all?} (Edit-tool semantics).',
     inputShape: CHANGE_SHAPE,
     handler: async (args) => {
+      const rootRefusal = mutationRootRefusal();
+      if (rootRefusal) return rootRefusal;
+
       const slug = slugOf(args.spec);
       const doc = docOf(args.doc);
       const change = toChange(args as Record<string, unknown>);
       if (change === 'ambiguous') {
-        logSpecAccess('propose_spec_change', args, 'error');
+        logAccess('propose_spec_change', args, 'error');
         return asJsonResult({ ok: false, error: 'AMBIGUOUS_CHANGE', hint: 'Pass EITHER {content} OR {old_string,new_string}, not both.' });
       }
       if (!change) {
-        logSpecAccess('propose_spec_change', args, 'error');
+        logAccess('propose_spec_change', args, 'error');
         return asJsonResult({ ok: false, error: 'BAD_CHANGE', hint: 'Pass {content} or {old_string,new_string}.' });
       }
-      const r = validateSpecChange(process.cwd(), slug, doc, change);
-      logSpecAccess('propose_spec_change', args, r.ok ? 'ok' : 'denied');
+      const r = validateSpecChange(repoRoot, slug, doc, change);
+      logAccess('propose_spec_change', args, r.ok ? 'ok' : 'denied');
       return asJsonResult({ ok: r.ok, spec: slug, doc, dry_run: true, findings: r.findings });
     },
   });
@@ -2145,55 +2277,59 @@ export function buildToolRegistry(
       'if another session changed the doc; the reply returns the new sha for chaining edits.',
     inputShape: CHANGE_SHAPE,
     handler: async (args) => {
+      const rootRefusal = mutationRootRefusal();
+      if (rootRefusal) return rootRefusal;
       const slug = slugOf(args.spec);
       const doc = docOf(args.doc);
       const change = toChange(args as Record<string, unknown>);
       if (change === 'ambiguous') {
-        logSpecAccess('apply_spec_change', args, 'error');
+        logAccess('apply_spec_change', args, 'error');
         return asJsonResult({ ok: false, error: 'AMBIGUOUS_CHANGE', hint: 'Pass EITHER {content} OR {old_string,new_string}, not both.' });
       }
       if (!change) {
-        logSpecAccess('apply_spec_change', args, 'error');
+        logAccess('apply_spec_change', args, 'error');
         return asJsonResult({ ok: false, error: 'BAD_CHANGE', hint: 'Pass {content} or {old_string,new_string}.' });
       }
       const expectedSha = typeof args.expected_sha === 'string' ? args.expected_sha : null;
-      // E-A: hold the short write-lock around casCheck→validate→write so the CAS sha-check and the
-      // write are atomic versus another session's concurrent write (different specs interleave; the
-      // lock is held only for this critical section). writeDocAtomic re-enters the lock as a no-op.
+      // Prepare and run the expensive validator before taking the short write lock. The source sha
+      // is re-checked inside the lock so a concurrent edit cannot receive prepared content.
+      const source = readForEdit(repoRoot, slug, doc);
+      const baseSha = source.sha;
+      if (expectedSha !== null && baseSha !== undefined && baseSha !== expectedSha) {
+        logAccess('apply_spec_change', args, 'denied');
+        return asJsonResult({
+          ok: false, error: 'CAS_MISMATCH', spec: slug, doc, expected_sha: expectedSha, actual_sha: baseSha,
+          hint: 'The doc changed since you read it (another session?). Re-read with read_spec_doc for the fresh sha, rebase your change, and retry.',
+        });
+      }
+      const r = validateSpecChange(repoRoot, slug, doc, change);
+      if (!r.ok) {
+        logAccess('apply_spec_change', args, 'denied');
+        return asJsonResult({
+          ok: false, error: 'VALIDATION_FAILED', spec: slug, doc, findings: r.findings,
+          hint: 'Fix the findings and retry; propose_spec_change is the single-document dry-run. For fresh bootstrap or mutually-dependent FR/Story/Design/AC edits, use propose_patch then apply_proposed_patch, or apply_spec_transaction for one-shot all-or-nothing validation after every document is staged.',
+        });
+      }
       try {
-        return withWriteLock(process.cwd(), () => {
-          // P21-5 optimistic CAS — refuse a write against a stale read (another session changed the
-          // doc since `expected_sha` was taken). Opt-in: omitted → unconditional.
-          if (expectedSha !== null) {
-            const cas = casCheck(process.cwd(), slug, doc, expectedSha);
+        return withWriteLock(repoRoot, () => {
+          if (baseSha !== undefined) {
+            const cas = casCheck(repoRoot, slug, doc, baseSha);
             if (!cas.ok) {
-              logSpecAccess('apply_spec_change', args, 'denied');
+              logAccess('apply_spec_change', args, 'denied');
               return asJsonResult({
-                ok: false, error: 'CAS_MISMATCH', spec: slug, doc, expected_sha: expectedSha, actual_sha: cas.actualSha,
-                hint: 'The doc changed since you read it (another session?). Re-read with read_spec_doc for the fresh sha, rebase your change, and retry.',
+                ok: false, error: 'CAS_MISMATCH', spec: slug, doc, expected_sha: expectedSha ?? baseSha, actual_sha: cas.actualSha,
+                hint: 'The doc changed while the mutation was being prepared. Re-read with read_spec_doc and retry.',
               });
             }
           }
-          const r = validateSpecChange(process.cwd(), slug, doc, change);
-          if (!r.ok) {
-            logSpecAccess('apply_spec_change', args, 'denied');
-            return asJsonResult({
-              ok: false,
-              error: 'VALIDATION_FAILED',
-              spec: slug,
-              doc,
-              findings: r.findings,
-              hint: 'Fix the findings and retry; propose_spec_change is the single-document dry-run. For fresh bootstrap or mutually-dependent FR/Story/Design/AC edits, use propose_patch then apply_proposed_patch, or apply_spec_transaction for one-shot all-or-nothing validation after every document is staged.',
-            });
-          }
-          const abs = writeDocAtomic(process.cwd(), slug, doc, r.next!);
+          const abs = writeDocAtomic(repoRoot, slug, doc, r.next!);
           registryOpts.refreshGraph?.();
-          logSpecAccess('apply_spec_change', args, 'ok');
+          logAccess('apply_spec_change', args, 'ok');
           return asJsonResult({ ok: true, spec: slug, doc, path: abs, bytes: r.next!.length, sha: docSha(r.next!), findings: [] });
         });
       } catch (e) {
         if ((e as WriteLockBusyError).code === 'WRITE_LOCK_BUSY') {
-          logSpecAccess('apply_spec_change', args, 'denied');
+          logAccess('apply_spec_change', args, 'denied');
           const h = (e as WriteLockBusyError).holder;
           return asJsonResult({
             ok: false, error: 'WRITE_LOCK_BUSY', spec: slug, doc, held_by: h ?? null,
@@ -2211,6 +2347,8 @@ export function buildToolRegistry(
   // path apply_spec_change runs (form + anchors + conformance) via applySectionChange.
   // A clean result is written atomically; a non-clean one leaves the doc untouched.
   const runSectionOp = (toolName: string, kind: SectionOpKind, args: Record<string, unknown>): ToolResult => {
+    const rootRefusal = mutationRootRefusal();
+    if (rootRefusal) return rootRefusal;
     const slug = slugOf(args.spec);
     const doc = docOf(args.doc);
     const op = {
@@ -2219,42 +2357,51 @@ export function buildToolRegistry(
       text: typeof args.text === 'string' ? (args.text as string) : '',
     };
     const expectedSha = typeof args.expected_sha === 'string' ? (args.expected_sha as string) : null;
+    const source = readForEdit(repoRoot, slug, doc);
+    const baseSha = source.sha;
+    if (expectedSha !== null && baseSha !== undefined && baseSha !== expectedSha) {
+      logAccess(toolName, args, 'denied');
+      return asJsonResult({
+        ok: false, error: 'CAS_MISMATCH', spec: slug, doc, expected_sha: expectedSha, actual_sha: baseSha,
+        hint: 'The doc changed since you read it. Re-read (read_spec_doc read_for_edit:true) for the fresh sha/tokens and retry.',
+      });
+    }
+    const r = proposeSectionChange(repoRoot, slug, doc, op);
+    if (!r.ok || r.preview === undefined) {
+      logAccess(toolName, args, 'denied');
+      return asJsonResult({
+        ok: false, error: r.error ?? 'SECTION_OP_FAILED', spec: slug, doc,
+        eol_style: r.eol_style, resolved: r.resolved, heading_anchor: r.heading_anchor, findings: r.findings,
+        hint: r.error === 'HEADING_NOT_FOUND'
+          ? 'No heading matched — pass the heading text or its Marksman anchor (read_spec_doc read_for_edit:true lists anchors).'
+          : 'Fix the findings and retry; the document was left unchanged.',
+      });
+    }
     try {
-      return withWriteLock(process.cwd(), () => {
-        // P21-5 optimistic CAS — refuse a write against a stale read (opt-in).
-        if (expectedSha !== null) {
-          const cas = casCheck(process.cwd(), slug, doc, expectedSha);
+      return withWriteLock(repoRoot, () => {
+        if (baseSha !== undefined) {
+          const cas = casCheck(repoRoot, slug, doc, baseSha);
           if (!cas.ok) {
-            logSpecAccess(toolName, args, 'denied');
+            logAccess(toolName, args, 'denied');
             return asJsonResult({
-              ok: false, error: 'CAS_MISMATCH', spec: slug, doc, expected_sha: expectedSha, actual_sha: cas.actualSha,
-              hint: 'The doc changed since you read it. Re-read (read_spec_doc read_for_edit:true) for the fresh sha/tokens and retry.',
+              ok: false, error: 'CAS_MISMATCH', spec: slug, doc, expected_sha: expectedSha ?? baseSha, actual_sha: cas.actualSha,
+              hint: 'The doc changed while the mutation was being prepared. Re-read and retry.',
             });
           }
         }
-        const r = applySectionChange(process.cwd(), slug, doc, op);
-        if (!r.ok) {
-          logSpecAccess(toolName, args, 'denied');
-          return asJsonResult({
-            ok: false, error: r.error ?? 'SECTION_OP_FAILED', spec: slug, doc,
-            eol_style: r.eol_style, resolved: r.resolved, heading_anchor: r.heading_anchor, findings: r.findings,
-            hint: r.error === 'HEADING_NOT_FOUND'
-              ? 'No heading matched — pass the heading text or its Marksman anchor (read_spec_doc read_for_edit:true lists anchors).'
-              : 'Fix the findings and retry; the document was left unchanged.',
-          });
-        }
+        writeDocAtomic(repoRoot, slug, doc, r.preview);
         registryOpts.refreshGraph?.();
-        logSpecAccess(toolName, args, 'ok');
+        logAccess(toolName, args, 'ok');
         return asJsonResult({
           ok: true, spec: slug, doc, kind, eol_style: r.eol_style, resolved: r.resolved,
           heading_anchor: r.heading_anchor, start_line: r.start_line, end_line: r.end_line,
-          section_sha: r.section_sha, sha: r.sha, bytes: r.bytes, written: r.written === true,
+          section_sha: r.section_sha, sha: docSha(r.preview), bytes: r.preview.length, written: true,
           preview: r.preview, findings: [],
         });
       });
     } catch (e) {
       if ((e as WriteLockBusyError).code === 'WRITE_LOCK_BUSY') {
-        logSpecAccess(toolName, args, 'denied');
+        logAccess(toolName, args, 'denied');
         const h = (e as WriteLockBusyError).holder;
         return asJsonResult({ ok: false, error: 'WRITE_LOCK_BUSY', spec: slug, doc, held_by: h ?? null, hint: 'Another session is writing a spec RIGHT NOW — retry in a moment.' });
       }
@@ -2338,6 +2485,8 @@ export function buildToolRegistry(
       'with CAS_CONFLICT + fresh anchor context. Pass expected_section_sha (from read_for_edit) as a precondition.',
     inputShape: REPLACE_SHAPE,
     handler: async (args) => {
+      const rootRefusal = mutationRootRefusal();
+      if (rootRefusal) return rootRefusal;
       const slug = slugOf(args.spec);
       const doc = docOf(args.doc);
       const op = {
@@ -2349,35 +2498,43 @@ export function buildToolRegistry(
         expected_section_sha: typeof args.expected_section_sha === 'string' ? (args.expected_section_sha as string) : undefined,
       };
       const expectedSha = typeof args.expected_sha === 'string' ? (args.expected_sha as string) : undefined;
+      let prepared = prepareReplaceChange(repoRoot, slug, doc, op, expectedSha);
       try {
-        return withWriteLock(process.cwd(), () => {
-          const r = applyReplaceChange(process.cwd(), slug, doc, op, expectedSha);
-          if (!r.ok) {
-            logSpecAccess('replace_in_section', args, 'denied');
-            return asJsonResult({
-              ok: false, error: r.error ?? 'REPLACE_FAILED', spec: slug, doc,
-              eol_style: r.eol_style, resolved: r.resolved, rebased: r.rebased === true,
-              heading_anchor: r.heading_anchor, start_line: r.start_line, end_line: r.end_line,
-              section_sha: r.section_sha, sha: r.sha,
-              diagnostic: r.diagnostic, available_anchors: r.available_anchors, findings: r.findings,
-              hint: r.diagnostic?.hint ?? (r.error === 'CAS_CONFLICT'
-                ? 'The doc changed AND the target section conflicts. Re-read (read_spec_doc read_for_edit:true) for the fresh sha/section_sha/anchors, rebase your change, and retry.'
-                : 'The replacement was not applied; the document was left unchanged. Act on the diagnostic hint and retry.'),
-            });
-          }
-          registryOpts.refreshGraph?.();
-          logSpecAccess('replace_in_section', args, 'ok');
+        let r = withWriteLock(repoRoot, () => commitPreparedReplaceChange(repoRoot, slug, doc, prepared));
+        if (r.error === 'CAS_CONFLICT' && expectedSha !== undefined) {
+          // Preserve P33-2's documented non-conflicting auto-rebase without
+          // running validation while the write lock is held. One fresh prepare
+          // is allowed; a second race remains an explicit CAS_CONFLICT.
+          prepared = prepareReplaceChange(repoRoot, slug, doc, op, expectedSha);
+          r = prepared.outcome.ok
+            ? withWriteLock(repoRoot, () => commitPreparedReplaceChange(repoRoot, slug, doc, prepared))
+            : prepared.outcome;
+        }
+        if (!r.ok) {
+          logAccess('replace_in_section', args, 'denied');
           return asJsonResult({
-            ok: true, spec: slug, doc, eol_style: r.eol_style, resolved: r.resolved,
-            rebased: r.rebased === true, normalized: r.normalized === true,
+            ok: false, error: r.error ?? 'REPLACE_FAILED', spec: slug, doc,
+            eol_style: r.eol_style, resolved: r.resolved, rebased: r.rebased === true,
             heading_anchor: r.heading_anchor, start_line: r.start_line, end_line: r.end_line,
-            section_sha: r.section_sha, sha: r.sha, bytes: r.bytes, written: r.written === true,
-            preview: r.preview, findings: [],
+            section_sha: r.section_sha, sha: r.sha,
+            diagnostic: r.diagnostic, available_anchors: r.available_anchors, findings: r.findings,
+            hint: r.diagnostic?.hint ?? (r.error === 'CAS_CONFLICT'
+              ? 'The doc changed after preparation. Re-read (read_spec_doc read_for_edit:true) for the fresh sha/section_sha/anchors, rebase your change, and retry.'
+              : 'The replacement was not applied; the document was left unchanged. Act on the diagnostic hint and retry.'),
           });
+        }
+        registryOpts.refreshGraph?.();
+        logAccess('replace_in_section', args, 'ok');
+        return asJsonResult({
+          ok: true, spec: slug, doc, eol_style: r.eol_style, resolved: r.resolved,
+          rebased: r.rebased === true, normalized: r.normalized === true,
+          heading_anchor: r.heading_anchor, start_line: r.start_line, end_line: r.end_line,
+          section_sha: r.section_sha, sha: r.sha, bytes: r.bytes, written: r.written === true,
+          preview: r.preview, findings: [],
         });
       } catch (e) {
         if ((e as WriteLockBusyError).code === 'WRITE_LOCK_BUSY') {
-          logSpecAccess('replace_in_section', args, 'denied');
+          logAccess('replace_in_section', args, 'denied');
           const h = (e as WriteLockBusyError).holder;
           return asJsonResult({ ok: false, error: 'WRITE_LOCK_BUSY', spec: slug, doc, held_by: h ?? null, hint: 'Another session is writing a spec RIGHT NOW — retry in a moment.' });
         }
@@ -2436,7 +2593,7 @@ export function buildToolRegistry(
   const publicEditPreview = (p: PatchEditPreview): Record<string, unknown> => ({
     spec: p.spec, doc: p.doc, ok: p.ok, eol_style: p.eol_style,
     heading_anchor: p.heading_anchor, start_line: p.start_line, end_line: p.end_line,
-    section_sha: p.section_sha, sha: p.sha, append_token: p.append_token, insert_token: p.insert_token,
+    section_sha: p.section_sha, base_sha: p.base_sha, sha: p.sha, append_token: p.append_token, insert_token: p.insert_token,
     diff: p.diff, findings: p.findings, diagnostic: p.diagnostic, error: p.error,
   });
 
@@ -2463,9 +2620,12 @@ export function buildToolRegistry(
       'it if still valid, or call apply_spec_transaction with the same edits for a one-shot all-or-nothing write.',
     inputShape: PATCH_SHAPE,
     handler: async (args) => {
+      const rootRefusal = mutationRootRefusal();
+      if (rootRefusal) return rootRefusal;
+
       const edits = toPatchEdits(args.edits);
-      const preview = proposePatch(process.cwd(), edits);
-      logSpecAccess('propose_patch', { edits: edits.length, reason: args.reason }, preview.ok ? 'ok' : 'denied');
+      const preview = proposePatch(repoRoot, edits);
+      logAccess('propose_patch', { edits: edits.length, reason: args.reason }, preview.ok ? 'ok' : 'denied');
       return asJsonResult({
         ok: preview.ok, dry_run: true, proposal_id: preview.proposal_id,
         affected_nodes: affectedNodes(edits),
@@ -2487,11 +2647,16 @@ export function buildToolRegistry(
       'its findings — never applied stale. Consumed on success.',
     inputShape: { proposal_id: z.string(), reason: z.string() } as const satisfies z.ZodRawShape,
     handler: async (args) => {
+      const rootRefusal = mutationRootRefusal();
+      if (rootRefusal) return rootRefusal;
+      const root = repoRoot;
+      const proposalId = String(args.proposal_id);
+      const prepared = prepareProposedPatch(root, proposalId);
       try {
-        return withWriteLock(process.cwd(), () => {
-          const r = applyProposedPatch(process.cwd(), String(args.proposal_id));
+        return withWriteLock(root, () => {
+          const r = commitProposedPatch(root, prepared);
           if (!r.ok) {
-            logSpecAccess('apply_proposed_patch', { proposal_id: args.proposal_id, reason: args.reason }, 'denied');
+            logAccess('apply_proposed_patch', { proposal_id: args.proposal_id, reason: args.reason }, 'denied');
             return asJsonResult({
               ok: false, error: r.error ?? 'VALIDATION_FAILED', proposal_id: r.proposal_id,
               findings: r.findings, edits: r.edits.map(publicEditPreview),
@@ -2506,7 +2671,7 @@ export function buildToolRegistry(
             });
           }
           registryOpts.refreshGraph?.();
-          logSpecAccess('apply_proposed_patch', { proposal_id: args.proposal_id, edits: r.edits.length, reason: args.reason }, 'ok');
+          logAccess('apply_proposed_patch', { proposal_id: args.proposal_id, edits: r.edits.length, reason: args.reason }, 'ok');
           return asJsonResult({
             ok: true, written: true, proposal_id: r.proposal_id, shas: r.shas,
             edits: r.edits.map(publicEditPreview), findings: [],
@@ -2514,7 +2679,7 @@ export function buildToolRegistry(
         });
       } catch (e) {
         if ((e as WriteLockBusyError).code === 'WRITE_LOCK_BUSY') {
-          logSpecAccess('apply_proposed_patch', { proposal_id: args.proposal_id }, 'denied');
+          logAccess('apply_proposed_patch', { proposal_id: args.proposal_id }, 'denied');
           const h = (e as WriteLockBusyError).holder;
           return asJsonResult({ ok: false, error: 'WRITE_LOCK_BUSY', proposal_id: args.proposal_id, held_by: h ?? null, hint: 'Another session is writing a spec RIGHT NOW — retry in a moment.' });
         }
@@ -2535,25 +2700,30 @@ export function buildToolRegistry(
       'audit event; returns the resulting sha per doc + the affected graph nodes. (propose_patch is the free dry-run.)',
     inputShape: PATCH_SHAPE,
     handler: async (args) => {
+      const rootRefusal = mutationRootRefusal();
+      if (rootRefusal) return rootRefusal;
       const edits = toPatchEdits(args.edits);
+      const prepared = preparePatch(repoRoot, edits);
       try {
-        return withWriteLock(process.cwd(), () => {
-          const r = applySpecTransactionCore(process.cwd(), edits);
+        return withWriteLock(repoRoot, () => {
+          const r = commitPreparedPatch(repoRoot, prepared);
           if (!r.ok) {
-            logSpecAccess('apply_spec_transaction', { edits: edits.length, reason: args.reason }, 'denied');
+            logAccess('apply_spec_transaction', { edits: edits.length, reason: args.reason }, 'denied');
             return asJsonResult({
               ok: false, error: r.error ?? 'VALIDATION_FAILED',
               findings: r.findings, edits: r.edits.map(publicEditPreview),
               write_error: r.write_error, rollback_failures: r.rollback_failures,
-              hint: r.error === 'WRITE_FAILED'
-                ? 'A document write failed; every earlier write was restored. Inspect write_error and retry.'
-                : r.error === 'ROLLBACK_FAILED'
-                  ? 'CRITICAL: a document write failed and rollback was incomplete. Inspect rollback_failures before any retry.'
-                  : 'At least one edit failed validation — NOTHING was written; every document is unchanged. Fix the flagged edits (see per-edit findings) and retry.',
+              hint: r.error === 'CAS_MISMATCH'
+                ? 'A document changed after preparation — NOTHING was written. Re-read and retry.'
+                : r.error === 'WRITE_FAILED'
+                  ? 'A document write failed; every earlier write was restored. Inspect write_error and retry.'
+                  : r.error === 'ROLLBACK_FAILED'
+                    ? 'CRITICAL: a document write failed and rollback was incomplete. Inspect rollback_failures before any retry.'
+                    : 'At least one edit failed validation — NOTHING was written; every document is unchanged. Fix the flagged edits (see per-edit findings) and retry.',
             });
           }
           registryOpts.refreshGraph?.();
-          logSpecAccess('apply_spec_transaction', { edits: edits.length, docs: edits.map((e) => `${slugOf(e.spec)}/${docOf(e.doc)}`), reason: args.reason }, 'ok');
+          logAccess('apply_spec_transaction', { edits: edits.length, docs: edits.map((e) => `${slugOf(e.spec)}/${docOf(e.doc)}`), reason: args.reason }, 'ok');
           return asJsonResult({
             ok: true, written: true, shas: r.shas, affected_nodes: affectedNodes(edits),
             edits: r.edits.map(publicEditPreview), findings: [],
@@ -2561,7 +2731,7 @@ export function buildToolRegistry(
         });
       } catch (e) {
         if ((e as WriteLockBusyError).code === 'WRITE_LOCK_BUSY') {
-          logSpecAccess('apply_spec_transaction', { edits: edits.length }, 'denied');
+          logAccess('apply_spec_transaction', { edits: edits.length }, 'denied');
           const h = (e as WriteLockBusyError).holder;
           return asJsonResult({ ok: false, error: 'WRITE_LOCK_BUSY', held_by: h ?? null, hint: 'Another session is writing a spec RIGHT NOW — retry in a moment.' });
         }
@@ -2587,17 +2757,20 @@ export function buildToolRegistry(
 
   // Shared reply mapper — the domain result IS the MCP reply body (plus spec echo).
   const domainReply = (toolName: string, spec: string, r: DomainAuthoringResult): ToolResult => {
-    logSpecAccess(toolName, { spec }, r.ok ? 'ok' : 'denied');
+    logAccess(toolName, { spec }, r.ok ? 'ok' : 'denied');
     if (r.ok) registryOpts.refreshGraph?.();
     return asJsonResult({ ...r, spec: slugOf(spec) });
   };
 
   const runDomainLocked = (toolName: string, args: Record<string, unknown>, fn: () => DomainAuthoringResult): ToolResult => {
+    const rootRefusal = mutationRootRefusal();
+    if (rootRefusal) return rootRefusal;
     try {
-      return withWriteLock(process.cwd(), () => domainReply(toolName, String(args.spec), fn()));
+      // domain-authoring prepares/validates outside its own short commit lock.
+      return domainReply(toolName, String(args.spec), fn());
     } catch (e) {
       if ((e as WriteLockBusyError).code === 'WRITE_LOCK_BUSY') {
-        logSpecAccess(toolName, args, 'denied');
+        logAccess(toolName, args, 'denied');
         const h = (e as WriteLockBusyError).holder;
         return asJsonResult({ ok: false, error: 'WRITE_LOCK_BUSY', held_by: h ?? null, hint: 'Another session is writing a spec RIGHT NOW — retry in a moment.' });
       }
@@ -2635,7 +2808,7 @@ export function buildToolRegistry(
     } as const satisfies z.ZodRawShape,
     handler: async (args) =>
       runDomainLocked('add_backlog_task', args as Record<string, unknown>, () =>
-        addBacklogTask(process.cwd(), {
+        addBacklogTask(repoRoot, {
           spec: String(args.spec), phase: String(args.phase), title: String(args.title),
           id: typeof args.id === 'string' ? (args.id as string) : undefined,
           estMinutes: typeof args.est_minutes === 'number' ? (args.est_minutes as number) : undefined,
@@ -2663,7 +2836,7 @@ export function buildToolRegistry(
     } as const satisfies z.ZodRawShape,
     handler: async (args) =>
       runDomainLocked('add_phase', args as Record<string, unknown>, () =>
-        addPhase(process.cwd(), {
+        addPhase(repoRoot, {
           spec: String(args.spec), title: String(args.title),
           number: typeof args.number === 'number' ? (args.number as number) : undefined,
           source: typeof args.source === 'string' ? (args.source as string) : undefined,
@@ -2687,7 +2860,7 @@ export function buildToolRegistry(
     } as const satisfies z.ZodRawShape,
     handler: async (args) =>
       runDomainLocked('amend_requirement', args as Record<string, unknown>, () =>
-        amendRequirement(process.cwd(), {
+        amendRequirement(repoRoot, {
           spec: String(args.spec), fr: String(args.fr),
           text: typeof args.text === 'string' ? (args.text as string) : undefined,
           relatedAcIds: Array.isArray(args.related_ac_ids) ? (args.related_ac_ids as unknown[]).map(String) : undefined,
@@ -2713,7 +2886,7 @@ export function buildToolRegistry(
     } as const satisfies z.ZodRawShape,
     handler: async (args) =>
       runDomainLocked('add_acceptance_criterion', args as Record<string, unknown>, () =>
-        addAcceptanceCriterion(process.cwd(), {
+        addAcceptanceCriterion(repoRoot, {
           spec: String(args.spec), fr: String(args.fr), title: String(args.title),
           body: typeof args.body === 'string' ? (args.body as string) : undefined,
           id: typeof args.id === 'string' ? (args.id as string) : undefined,
@@ -2742,7 +2915,7 @@ export function buildToolRegistry(
     } as const satisfies z.ZodRawShape,
     handler: async (args) =>
       runDomainLocked('register_incident_backlog', args as Record<string, unknown>, () =>
-        registerIncidentBacklog(process.cwd(), {
+        registerIncidentBacklog(repoRoot, {
           spec: String(args.spec), summary: String(args.summary),
           date: typeof args.date === 'string' ? (args.date as string) : undefined,
           requirements: Array.isArray(args.requirements) ? (args.requirements as unknown[]).map(String) : undefined,
@@ -2768,19 +2941,21 @@ export function buildToolRegistry(
       status: z.enum(['active', 'backlog']),
     } as const satisfies z.ZodRawShape,
     handler: async (args) => {
+      const rootRefusal = mutationRootRefusal();
+      if (rootRefusal) return rootRefusal;
       const slug = slugOf(args.spec);
       if (!isSafeSlug(slug)) {
-        logSpecAccess('set_spec_status', args, 'error');
+        logAccess('set_spec_status', args, 'error');
         return asJsonResult({ ok: false, error: 'UNSAFE_SPEC', spec: slug, hint: 'slug must stay within .specs/ (no traversal)' });
       }
       try {
-        writeSpecStatus(process.cwd(), slug, args.status);
+        writeSpecStatus(repoRoot, slug, args.status);
       } catch (e) {
-        logSpecAccess('set_spec_status', args, 'error');
+        logAccess('set_spec_status', args, 'error');
         return asJsonResult({ ok: false, error: 'SPEC_NOT_FOUND', spec: slug, hint: String((e as Error).message) });
       }
       registryOpts.refreshGraph?.();
-      logSpecAccess('set_spec_status', args, 'ok');
+      logAccess('set_spec_status', args, 'ok');
       return asJsonResult({ ok: true, spec: slug, status: args.status });
     },
   });
@@ -2802,16 +2977,18 @@ export function buildToolRegistry(
       expected_sha: z.string().optional(),
     } as const satisfies z.ZodRawShape,
     handler: async (args) => {
+      const rootRefusal = mutationRootRefusal();
+      if (rootRefusal) return rootRefusal;
       const ro = readOnlyRefusal('set_entity_status', args);
       if (ro) return ro;
-      const res = setEntityStatus(getGraph(), process.cwd(), {
+      const res = setEntityStatus(getGraph(), repoRoot, {
         id: args.id as string,
         spec: typeof args.spec === 'string' ? args.spec : undefined,
         to: args.to as 'todo' | 'ready' | 'in-progress' | 'done' | 'blocked',
         expectedSha: typeof args.expected_sha === 'string' ? args.expected_sha : undefined,
       });
       if (!res.ok) {
-        logSpecAccess('set_entity_status', args, 'denied');
+        logAccess('set_entity_status', args, 'denied');
         return asJsonResult({
           ok: false,
           error: res.error,
@@ -2828,7 +3005,7 @@ export function buildToolRegistry(
         });
       }
       registryOpts.refreshGraph?.();
-      logSpecAccess('set_entity_status', args, 'ok');
+      logAccess('set_entity_status', args, 'ok');
       return asJsonResult({ ok: true, id: args.id, from: res.from, to: res.to });
     },
   });
@@ -2853,16 +3030,18 @@ export function buildToolRegistry(
     } as const satisfies z.ZodRawShape,
     handler: async ({ spec, doc, reason }) => {
       const args = { spec, doc, reason };
+      const rootRefusal = mutationRootRefusal();
+      if (rootRefusal) return rootRefusal;
       const ro = readOnlyRefusal('delete_spec_doc', args);
       if (ro) return ro;
       const slug = slugOf(spec);
       if (!isSafeSlug(slug)) {
-        logSpecAccess('delete_spec_doc', args, 'denied');
+        logAccess('delete_spec_doc', args, 'denied');
         return asJsonResult({ ok: false, error: 'UNSAFE_SPEC', spec: slug });
       }
-      const resolved = resolveSpecDoc(process.cwd(), slug, String(doc));
+      const resolved = resolveSpecDoc(repoRoot, slug, String(doc));
       if (!resolved.ok) {
-        logSpecAccess('delete_spec_doc', args, 'denied');
+        logAccess('delete_spec_doc', args, 'denied');
         return asJsonResult({ ok: false, error: resolved.reason === 'TRAVERSAL' ? 'DOC_TRAVERSAL' : 'UNSAFE_SPEC', spec: slug, doc: String(doc) });
       }
       const rel = resolved.rel;
@@ -2871,11 +3050,11 @@ export function buildToolRegistry(
       // artifacts (.progress.json — spec-status owns it; .jira-cache.json — jira-intake).
       const deletable = /\.(md|feature|png|jpe?g|gif|webp|bmp|pdf|svg)$/i.test(base);
       if (!deletable) {
-        logSpecAccess('delete_spec_doc', args, 'denied');
+        logAccess('delete_spec_doc', args, 'denied');
         return asJsonResult({ ok: false, error: 'NOT_DELETABLE', spec: slug, doc: rel, hint: 'Only *.md/*.feature and binary attachments are agent-deletable; .progress.json/.jira-cache.json are single-writer artifacts.' });
       }
       if (!fs.existsSync(resolved.abs) || !fs.statSync(resolved.abs).isFile()) {
-        logSpecAccess('delete_spec_doc', args, 'not_found');
+        logAccess('delete_spec_doc', args, 'not_found');
         return asJsonResult({ ok: false, error: 'DOC_NOT_FOUND', spec: slug, doc: rel });
       }
       // Inbound-edge gate: nodes defined in THIS doc referenced by a REAL node
@@ -2900,7 +3079,7 @@ export function buildToolRegistry(
         else break;
       }
       if (blockers.length > 0) {
-        logSpecAccess('delete_spec_doc', args, 'denied');
+        logAccess('delete_spec_doc', args, 'denied');
         return asJsonResult({
           ok: false,
           error: 'LIVE_INBOUND_EDGES',
@@ -2913,7 +3092,7 @@ export function buildToolRegistry(
       const bytes = fs.statSync(resolved.abs).size;
       fs.unlinkSync(resolved.abs);
       registryOpts.refreshGraph?.();
-      logSpecAccess('delete_spec_doc', args, 'ok');
+      logAccess('delete_spec_doc', args, 'ok');
       return asJsonResult({ ok: true, spec: slug, doc: rel, deleted: true, bytes });
     },
   });
@@ -2944,9 +3123,11 @@ export function buildToolRegistry(
       rewrite_inbound: z.boolean().optional(),
     } as const satisfies z.ZodRawShape,
     handler: async (args) => {
+      const rootRefusal = mutationRootRefusal();
+      if (rootRefusal) return rootRefusal;
       const ro = readOnlyRefusal('rename_spec_doc', args);
       if (ro) return ro;
-      const cwd = process.cwd();
+      const cwd = repoRoot;
       const slug = slugOf(args.spec);
       const toSlug = args.to_spec != null ? slugOf(args.to_spec) : slug;
       const doc = docOf(args.doc);
@@ -2956,30 +3137,30 @@ export function buildToolRegistry(
       // target gates (safe slug + mutable *.md/*.feature) on BOTH ends.
       const srcBad = validateTarget(slug, doc);
       if (srcBad) {
-        logSpecAccess('rename_spec_doc', args, 'denied');
+        logAccess('rename_spec_doc', args, 'denied');
         return asJsonResult({ ok: false, error: 'INVALID_SOURCE', spec: slug, doc, finding: srcBad });
       }
       const dstBad = validateTarget(toSlug, toDoc);
       if (dstBad) {
-        logSpecAccess('rename_spec_doc', args, 'denied');
+        logAccess('rename_spec_doc', args, 'denied');
         return asJsonResult({ ok: false, error: 'INVALID_DEST', spec: toSlug, doc: toDoc, finding: dstBad });
       }
       const src = resolveSpecDoc(cwd, slug, doc);
       const dst = resolveSpecDoc(cwd, toSlug, toDoc);
       if (!src.ok || !dst.ok) {
-        logSpecAccess('rename_spec_doc', args, 'denied');
+        logAccess('rename_spec_doc', args, 'denied');
         return asJsonResult({ ok: false, error: 'DOC_TRAVERSAL', spec: slug, doc });
       }
       if (src.abs === dst.abs) {
-        logSpecAccess('rename_spec_doc', args, 'error');
+        logAccess('rename_spec_doc', args, 'error');
         return asJsonResult({ ok: false, error: 'NOOP_RENAME', hint: 'source and destination resolve to the same path' });
       }
       if (!fs.existsSync(src.abs) || !fs.statSync(src.abs).isFile()) {
-        logSpecAccess('rename_spec_doc', args, 'not_found');
+        logAccess('rename_spec_doc', args, 'not_found');
         return asJsonResult({ ok: false, error: 'DOC_NOT_FOUND', spec: slug, doc: src.rel });
       }
       if (fs.existsSync(dst.abs)) {
-        logSpecAccess('rename_spec_doc', args, 'denied');
+        logAccess('rename_spec_doc', args, 'denied');
         return asJsonResult({ ok: false, error: 'DEST_EXISTS', spec: toSlug, doc: dst.rel, hint: 'destination already exists — pick a free name or delete it first (no silent clobber)' });
       }
 
@@ -2988,7 +3169,7 @@ export function buildToolRegistry(
       if (expectedSha !== null) {
         const cas = casCheck(cwd, slug, src.rel, expectedSha);
         if (!cas.ok) {
-          logSpecAccess('rename_spec_doc', args, 'denied');
+          logAccess('rename_spec_doc', args, 'denied');
           return asJsonResult({ ok: false, error: 'CAS_MISMATCH', spec: slug, doc: src.rel, expected_sha: expectedSha, actual_sha: cas.actualSha, hint: 'source changed since you read it (another session?) — re-read for the fresh sha and retry' });
         }
       }
@@ -3001,7 +3182,7 @@ export function buildToolRegistry(
       // docs would strand on the rename. Default = refuse with a Decision block.
       const inbound = findInboundLinks(cwd, srcRelFile);
       if (inbound.length > 0 && !rewriteInbound) {
-        logSpecAccess('rename_spec_doc', args, 'denied');
+        logAccess('rename_spec_doc', args, 'denied');
         return asJsonResult({
           ok: false,
           error: 'INBOUND_LINKS_PRESENT',
@@ -3018,11 +3199,11 @@ export function buildToolRegistry(
       // filename carries parser semantics (FR.md→TASKS.md mis-parses).
       const v = validateSpecChange(cwd, toSlug, dst.rel, { content });
       if (v.specMissing) {
-        logSpecAccess('rename_spec_doc', args, 'denied');
+        logAccess('rename_spec_doc', args, 'denied');
         return asJsonResult({ ok: false, error: 'DEST_SPEC_MISSING', spec: toSlug, hint: 'destination spec does not exist — create_spec first' });
       }
       if (!v.ok) {
-        logSpecAccess('rename_spec_doc', args, 'denied');
+        logAccess('rename_spec_doc', args, 'denied');
         return asJsonResult({ ok: false, error: 'VALIDATION_FAILED', spec: toSlug, doc: dst.rel, findings: v.findings, hint: 'the doc does not validate at its new name/location — fix or pick another target' });
       }
 
@@ -3039,7 +3220,7 @@ export function buildToolRegistry(
       }
       fs.unlinkSync(src.abs);
       registryOpts.refreshGraph?.();
-      logSpecAccess('rename_spec_doc', args, 'ok');
+      logAccess('rename_spec_doc', args, 'ok');
       return asJsonResult({ ok: true, spec: slug, from: src.rel, to_spec: toSlug, to: dst.rel, sha: docSha(content), inbound_count: inbound.length, rewrote_inbound_files: rewroteFiles, findings: [] });
     },
   });
@@ -3052,40 +3233,42 @@ export function buildToolRegistry(
       '(templates are born verdict-GREEN). kebab-case slug; refuses an existing spec.',
     inputShape: { slug: z.string() } as const satisfies z.ZodRawShape,
     handler: async ({ slug }) => {
+      const rootRefusal = mutationRootRefusal();
+      if (rootRefusal) return rootRefusal;
       const ro = readOnlyRefusal('create_spec', { slug });
       if (ro) return ro;
       const name = String(slug);
       if (!/^[a-z0-9][a-z0-9-]*$/.test(name)) {
-        logSpecAccess('create_spec', { slug: name }, 'error');
+        logAccess('create_spec', { slug: name }, 'error');
         return asJsonResult({ ok: false, error: 'BAD_SLUG', hint: 'kebab-case: [a-z0-9-]' });
       }
       // Windows reserved device names collide with real files even with an
       // extension — refuse as a spec slug (review #10).
       if (/^(con|prn|aux|nul|com[1-9]|lpt[1-9])$/i.test(name)) {
-        logSpecAccess('create_spec', { slug: name }, 'error');
+        logAccess('create_spec', { slug: name }, 'error');
         return asJsonResult({ ok: false, error: 'RESERVED_SLUG', hint: 'slug collides with a Windows reserved device name' });
       }
-      if (fs.existsSync(path.join(process.cwd(), '.specs', name))) {
-        logSpecAccess('create_spec', { slug: name }, 'denied');
+      if (fs.existsSync(path.join(repoRoot, '.specs', name))) {
+        logAccess('create_spec', { slug: name }, 'denied');
         return asJsonResult({ ok: false, error: 'SPEC_EXISTS', spec: name });
       }
       const core = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'specs-generator', 'specs-generator-core.mjs');
       const r = spawnSync(process.execPath, [core, 'scaffold-spec', '-Name', name], {
-        cwd: process.cwd(),
+        cwd: repoRoot,
         encoding: 'utf-8',
         timeout: 60_000,
         // Without this the core resolves repoRoot from its SCRIPT location and
         // scaffolds into the ENGINE repo, not the server's corpus (caught by
         // the live probe: newborn-mcp landed in the real .specs/).
-        env: { ...process.env, SPECS_GENERATOR_ROOT: process.cwd() },
+        env: { ...process.env, SPECS_GENERATOR_ROOT: repoRoot },
       });
       if (r.status !== 0) {
-        logSpecAccess('create_spec', { slug: name }, 'error');
+        logAccess('create_spec', { slug: name }, 'error');
         return asJsonResult({ ok: false, error: 'SCAFFOLD_FAILED', stderr: (r.stderr ?? '').slice(0, 500) });
       }
       registryOpts.refreshGraph?.();
-      logSpecAccess('create_spec', { slug: name }, 'ok');
-      const docs = fs.readdirSync(path.join(process.cwd(), '.specs', name)).sort();
+      logAccess('create_spec', { slug: name }, 'ok');
+      const docs = fs.readdirSync(path.join(repoRoot, '.specs', name)).sort();
       return asJsonResult({ ok: true, spec: name, docs, hint: 'Born verdict-GREEN; fill via apply_spec_change.' });
     },
   });
@@ -3117,7 +3300,7 @@ export function buildToolRegistry(
       add(e.from, e.to, String(e.type));
     }
     // (2) markdown/path links from OTHER live specs into .specs/<slug>/
-    const specsDir = path.join(process.cwd(), '.specs');
+    const specsDir = path.join(repoRoot, '.specs');
     if (fs.existsSync(specsDir)) {
       // Match only live SPEC links (`.specs/<slug>/`, `../<slug>/`, markdown `](...<slug>/`).
       // Do NOT match bare `/<slug>/` — that false-positives on runtime dirs like `tools/claim-evidence-gate/`.
@@ -3182,27 +3365,29 @@ export function buildToolRegistry(
       'back via git history (the archive is then SEALED against the mutation door).',
     inputShape: { slug: z.string(), reason: z.string() } as const satisfies z.ZodRawShape,
     handler: async ({ slug, reason }) => {
+      const rootRefusal = mutationRootRefusal();
+      if (rootRefusal) return rootRefusal;
       const ro = readOnlyRefusal('archive_spec', { slug, reason });
       if (ro) return ro;
-      const cwd = process.cwd();
+      const cwd = repoRoot;
       const s = normalizeSlug(String(slug));
       if (!isSafeSlug(s) || isArchivedSlug(s)) {
-        logSpecAccess('archive_spec', { slug: s }, 'denied');
+        logAccess('archive_spec', { slug: s }, 'denied');
         return asJsonResult({ ok: false, error: 'INVALID_SLUG', slug: s, hint: 'a safe, non-archived slug' });
       }
       const refs = liveInboundRefs(getGraph(), s);
       if (refs.length > 0) {
-        logSpecAccess('archive_spec', { slug: s }, 'denied');
+        logAccess('archive_spec', { slug: s }, 'denied');
         return asJsonResult({ ok: false, error: 'ARCHIVE_BLOCKED', slug: s, live_inbound_count: refs.length, live_inbound_refs: refs.slice(0, 50), hint: 'live specs still reference this — redirect those refs first, or it is a KEEP false positive' });
       }
       const srcAbs = path.join(cwd, '.specs', s);
       const dstAbs = path.join(cwd, '.specs', 'archive', s);
       if (!fs.existsSync(srcAbs) || !fs.statSync(srcAbs).isDirectory()) {
-        logSpecAccess('archive_spec', { slug: s }, 'not_found');
+        logAccess('archive_spec', { slug: s }, 'not_found');
         return asJsonResult({ ok: false, error: 'SPEC_NOT_FOUND', slug: s });
       }
       if (fs.existsSync(dstAbs)) {
-        logSpecAccess('archive_spec', { slug: s }, 'denied');
+        logAccess('archive_spec', { slug: s }, 'denied');
         return asJsonResult({ ok: false, error: 'DEST_EXISTS', slug: s, hint: 'already archived (no clobber)' });
       }
       fs.mkdirSync(path.dirname(dstAbs), { recursive: true });
@@ -3213,7 +3398,7 @@ export function buildToolRegistry(
         fs.appendFileSync(ledger, JSON.stringify({ ts: new Date().toISOString(), slug: s, reason: String(reason ?? ''), from: `.specs/${s}/`, to: `.specs/archive/${s}/` }) + '\n');
       } catch { /* best-effort */ }
       registryOpts.refreshGraph?.();
-      logSpecAccess('archive_spec', { slug: s }, 'ok');
+      logAccess('archive_spec', { slug: s }, 'ok');
       return asJsonResult({ ok: true, slug: s, from: `.specs/${s}/`, to: `.specs/archive/${s}/`, hint: 'moved out of the live graph; commit the move with git' });
     },
   });
@@ -3283,7 +3468,7 @@ export function buildToolRegistry(
         semanticFindings: args.semantic_findings,
         semanticRequired: args.semantic_required === true,
       });
-      logSpecAccess('validate_spec', { spec: result.spec, findings: result.findings.length }, 'ok');
+      logAccess('validate_spec', { spec: result.spec, findings: result.findings.length }, 'ok');
       return asJsonResult({ ok: true, ...result });
     },
   });
@@ -3298,6 +3483,9 @@ export function buildToolRegistry(
       repair_candidates: z.array(REPAIR_CANDIDATE_SHAPE).max(50),
     } as const satisfies z.ZodRawShape,
     handler: async (args) => {
+      const rootRefusal = mutationRootRefusal();
+      if (rootRefusal) return rootRefusal;
+
       const result = await proposeSpecRepairs({
         repoRoot: remediationRoot(),
         spec: String(args.spec),
@@ -3305,7 +3493,7 @@ export function buildToolRegistry(
         semanticRequired: args.semantic_required === true,
         repairCandidates: args.repair_candidates,
       });
-      logSpecAccess('propose_spec_repairs', { spec: result.spec, proposal_id: result.proposalId ?? null }, result.ok ? 'ok' : 'denied');
+      logAccess('propose_spec_repairs', { spec: result.spec, proposal_id: result.proposalId ?? null }, result.ok ? 'ok' : 'denied');
       return asJsonResult({ ...result, dry_run: true });
     },
   });
@@ -3318,13 +3506,15 @@ export function buildToolRegistry(
       reason: z.string().min(1),
     } as const satisfies z.ZodRawShape,
     handler: async (args) => {
+      const rootRefusal = mutationRootRefusal();
+      if (rootRefusal) return rootRefusal;
       try {
         const result = await applySpecRepairs(remediationRoot(), String(args.proposal_id));
         if (result.ok) registryOpts.refreshGraph?.();
-        logSpecAccess('apply_spec_repairs', { proposal_id: args.proposal_id, reason: args.reason }, result.ok ? 'ok' : 'denied');
+        logAccess('apply_spec_repairs', { proposal_id: args.proposal_id, reason: args.reason }, result.ok ? 'ok' : 'denied');
         return asJsonResult(result);
       } catch (error) {
-        logSpecAccess('apply_spec_repairs', { proposal_id: args.proposal_id, reason: args.reason }, 'denied');
+        logAccess('apply_spec_repairs', { proposal_id: args.proposal_id, reason: args.reason }, 'denied');
         return asJsonResult({
           ok: false,
           error: error instanceof Error && error.message.startsWith('PROPOSAL_NOT_FOUND') ? 'PROPOSAL_NOT_FOUND' : 'REMEDIATION_FAILED',

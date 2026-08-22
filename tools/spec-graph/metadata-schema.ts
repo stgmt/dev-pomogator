@@ -1,5 +1,7 @@
 /** Typed FR/NFR metadata schema shared by parser, MCP and migration (FR-66). */
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
+import type { RequirementContract } from './requirement-contract.ts';
+import { validateRequirementContract } from './requirement-contract.ts';
 
 export const VERIFICATION_METHODS = ['test', 'analysis', 'review', 'inspection', 'demonstration'] as const;
 export const SAFETY_CLASSES = ['critical', 'major', 'minor'] as const;
@@ -38,11 +40,23 @@ export interface RequirementMetadata {
   rationale?: string;
   risks: RequirementRisk[];
   demands: DeliveryDemand[];
+  contract?: RequirementContract;
   _unknown: Record<string, unknown>;
 }
 
 export interface MetadataIssue {
-  code: 'FR_METADATA_INVALID' | 'FR_DEMAND_CONFLICT';
+  code:
+    | 'FR_METADATA_INVALID'
+    | 'FR_DEMAND_CONFLICT'
+    | 'FR_CONTRACT_MISSING'
+    | 'FR_CONTRACT_VERSION_UNSUPPORTED'
+    | 'FR_CONTRACT_KIND_INVALID'
+    | 'FR_CONTRACT_SUBJECT_MISSING'
+    | 'FR_CONTRACT_OBSERVABLE_MISSING'
+    | 'FR_CONTRACT_NEGATIVE_CASE_MISSING'
+    | 'FR_CONTRACT_VERIFICATION_INVALID'
+    | 'FR_CONTRACT_KIND_FIELDS_MISSING'
+    | 'FR_CONTRACT_DISPOSITION_INVALID';
   path: string;
   message: string;
 }
@@ -51,6 +65,7 @@ export interface MetadataParseResult {
   metadata?: RequirementMetadata;
   issues: MetadataIssue[];
 }
+
 
 const enumValue = <T extends readonly string[]>(value: unknown, values: T): T[number] | undefined =>
   typeof value === 'string' && (values as readonly string[]).includes(value) ? value as T[number] : undefined;
@@ -110,10 +125,26 @@ export function validateRequirementMetadata(value: unknown): MetadataParseResult
     demands.push({ type, obligation, ...(state ? { state } : {}), ...(rationale ? { rationale } : {}), ...(actor ? { actor } : {}), ...(auditRef ? { auditRef } : {}), ...(strings(demand.evidenceRefs) ? { evidenceRefs: strings(demand.evidenceRefs) } : {}), ...(strings(demand.forwardTo) ? { forwardTo: strings(demand.forwardTo) } : {}) });
   }
 
-  const known = new Set(['schemaVersion', 'verificationMethod', 'safetyClass', 'rationale', 'risks', 'demands']);
+  const contractResult = raw.contract === undefined
+    ? { contract: undefined, issues: [] }
+    : validateRequirementContract(raw.contract);
+  for (const issue of contractResult.issues) {
+    issues.push({
+      code: issue.code,
+      path: `contract.${issue.path}`,
+      message: issue.message,
+    });
+  }
+
+  if (contractResult.issues.length > 0) {
+    return { issues };
+  }
+
+  const contract = contractResult.contract;
+  const known = new Set(['schemaVersion', 'verificationMethod', 'safetyClass', 'rationale', 'risks', 'demands', 'contract']);
   const unknown = Object.fromEntries(Object.entries(raw).filter(([key]) => !known.has(key)));
   return {
-    ...(issues.length === 0 ? { metadata: { schemaVersion: 1, ...(verificationMethod ? { verificationMethod } : {}), ...(safetyClass ? { safetyClass } : {}), ...(nonEmpty(raw.rationale) ? { rationale: nonEmpty(raw.rationale) } : {}), risks, demands, _unknown: unknown } } : {}),
+    ...(issues.length === 0 ? { metadata: { schemaVersion: 1, ...(verificationMethod ? { verificationMethod } : {}), ...(safetyClass ? { safetyClass } : {}), ...(nonEmpty(raw.rationale) ? { rationale: nonEmpty(raw.rationale) } : {}), risks, demands, ...(contract ? { contract } : {}), _unknown: unknown } } : {}),
     issues,
   };
 }

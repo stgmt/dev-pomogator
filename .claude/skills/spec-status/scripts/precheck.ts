@@ -31,8 +31,11 @@ import {
   buildReadinessInventory,
   evaluateReadiness,
   MANDATORY_READINESS_LANES,
+  type ReadinessActionGroup,
   type ReadinessInventory,
 } from '../../../../tools/spec-graph/readiness-inventory.ts';
+import { readVerdicts } from '../../../../tools/spec-graph/test-quality-gate.ts';
+import { readProgressState } from '../../../../tools/specs-validator/phase-constants.ts';
 
 export interface ContextBundle {
   spec_slug: string;
@@ -196,7 +199,9 @@ export function precheck(argv: string[], repoRoot: string = process.cwd()): Prec
 export interface PrecheckReadiness {
   overall: 'READY' | 'NOT_READY';
   mandatory_lanes: readonly string[];
+  /** Compatibility projection of `action_center[0].action.message`. */
   next_action: string;
+  action_center: ReadinessActionGroup[];
   lanes: Record<string, { status: string; blocking: boolean; debt: string[] }>;
 }
 
@@ -218,12 +223,14 @@ function toPrecheckReadiness(evaluation: {
   overall: 'READY' | 'NOT_READY';
   mandatory_lanes: readonly string[];
   next_action: string;
+  action_center: ReadinessActionGroup[];
   lanes: Record<string, { status: string; blocking: boolean; debt: string[] }>;
 }): PrecheckReadiness {
   return {
     overall: evaluation.overall,
     mandatory_lanes: evaluation.mandatory_lanes,
     next_action: evaluation.next_action,
+    action_center: evaluation.action_center,
     lanes: evaluation.lanes,
   };
 }
@@ -248,6 +255,11 @@ export async function precheckWithInventory(
     return { ...base, inventory: null, inventory_error: null, readiness: null };
   }
   const slug = base.bundle.spec_slug;
+  const progress = readProgressState(path.join(repoRoot, '.specs', slug));
+  const strictContracts = progress?.contractPolicy === 'strict-v1';
+  const mandatoryLanes = strictContracts
+    ? MANDATORY_READINESS_LANES
+    : MANDATORY_READINESS_LANES.filter((lane) => lane !== 'CONTRACT');
   let buildGraphFromCwd: (cwd: string) => import('../../../../tools/spec-graph/types.ts').SpecGraph;
   try {
     ({ buildGraphFromCwd } = await import('../../../../tools/spec-graph/builder.ts'));
@@ -255,18 +267,29 @@ export async function precheckWithInventory(
     const code = (err as NodeJS.ErrnoException)?.code ?? '';
     const dependencyAbsent =
       code === 'ERR_MODULE_NOT_FOUND' || code === 'MODULE_NOT_FOUND' || code === 'ERR_UNSUPPORTED_NODE_IMPORT_FLAG';
+    const unavailableMessage = dependencyAbsent
+      ? 'The spec graph cannot be built here (runtime dependencies absent) — dependency absence is NOT readiness proof; run inside the repository with dependencies installed (packaging is FR-64 scope).'
+      : `The spec graph failed to build (${(err as Error)?.message ?? err}) — unreadable evidence is NOT readiness proof.`;
     return {
       ...base,
       inventory: null,
       inventory_error: dependencyAbsent ? 'DEPENDENCY_ABSENT' : 'GRAPH_UNAVAILABLE',
       readiness: {
         overall: 'NOT_READY',
-        mandatory_lanes: MANDATORY_READINESS_LANES,
-        next_action: dependencyAbsent
-          ? 'The spec graph cannot be built here (runtime dependencies absent) — dependency absence is NOT readiness proof; run inside the repository with dependencies installed (packaging is FR-64 scope).'
-          : `The spec graph failed to build (${(err as Error)?.message ?? err}) — unreadable evidence is NOT readiness proof.`,
+        mandatory_lanes: mandatoryLanes,
+        next_action: unavailableMessage,
+        action_center: [{
+          lane: 'EXECUTION',
+          status: dependencyAbsent ? 'DEPENDENCY_ABSENT' : 'NOT_EVALUATED',
+          count: 1,
+          reasons: [dependencyAbsent ? 'EXECUTION:DEPENDENCY_ABSENT' : 'EXECUTION:NOT_EVALUATED'],
+          action: {
+            code: dependencyAbsent ? 'RESTORE_DEPENDENCY' : 'EVALUATE_LANE',
+            message: unavailableMessage,
+          },
+        }],
         lanes: Object.fromEntries(
-          MANDATORY_READINESS_LANES.map((lane) => [
+          mandatoryLanes.map((lane) => [
             lane,
             lane === 'EXECUTION'
               ? { status: dependencyAbsent ? 'DEPENDENCY_ABSENT' : 'NOT_EVALUATED', blocking: true, debt: [] }
@@ -277,8 +300,8 @@ export async function precheckWithInventory(
     };
   }
   const graph = buildGraphFromCwd(repoRoot);
-  const inventory = buildReadinessInventory(graph, { spec: slug });
-  const evaluation = evaluateReadiness({ inventory });
+  const inventory = buildReadinessInventory(graph, { spec: slug, testQualityByTask: readVerdicts(repoRoot) });
+  const evaluation = evaluateReadiness({ inventory, mandatoryLanes });
   return {
     ...base,
     inventory,

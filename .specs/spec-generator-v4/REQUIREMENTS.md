@@ -394,3 +394,37 @@
 | CHK-FR84-09 | Dashboard delivery evidence covers read, browser, quality, and dependency-absent lanes | FR-84, AC-84.9, @feature84, SPECGEN004_715 | BDD scenario | Draft | Missing evidence is a visible blocker |
 | CHK-FR84-10 | Exact planned implementation paths and authoring boundaries are recorded | FR-84, AC-84.10, @feature84, SPECGEN004_715 | Manual review | Draft | FILE_CHANGES is the path authority |
 
+## Verification Matrix — FR-85 strict per-requirement contract cards
+
+| CHK-ID | Requirement | Traces To | Verification Method | Status | Notes |
+|---|---|---|---|---|---|
+| CHK-FR85-01 | Every non-superseded FR owns exactly one typed contract card | FR-85, AC-85.1, @feature85, UC-36 | BDD scenario | Draft | Qualified FR identity and disposition handling |
+| CHK-FR85-02 | Common card fields, verification children, and closed kind registry are enforced | FR-85, AC-85.2, @feature85, UC-36 | BDD scenario | Draft | Unknown kind/version, prose-only cards, and missing verification children fail |
+| CHK-FR85-03 | CLI/API/schema/filesystem kind-specific fields are validated | FR-85, AC-85.3, @feature85, UC-36 | BDD scenario | Draft | One real example per kind; field-level findings |
+| CHK-FR85-04 | Event/state/behavior/disposition kind-specific fields are validated | FR-85, AC-85.4, @feature85, UC-36 | BDD scenario | Draft | Policy/UX remains typed behavior; disposition inherits the common card |
+| CHK-FR85-05 | Negative cases and invariants prevent happy-path-only cards | FR-85, AC-85.5, @feature85, UC-36 | BDD scenario | Draft | Mutation removes negative case |
+| CHK-FR85-06 | Parser, render, graph, warm store, and MCP preserve card semantics | FR-85, AC-85.6, @feature85, UC-36 | BDD scenario | Draft | Cold/warm canonical JSON equality |
+| CHK-FR85-07 | Contract findings are stable, located, and actionable | FR-85, AC-85.7, @feature85, UC-36 | BDD scenario | Draft | Missing/invalid/unsupported/incomplete/duplicate/unresolved corpus |
+| CHK-FR85-08 | CONTRACT verdict lane blocks structural-only GREEN | FR-85, AC-85.8, @feature85, UC-36 | BDD scenario | Draft | Structural pass cannot launder contract debt |
+| CHK-FR85-09 | MCP authoring validates before write and preserves CAS/atomicity | FR-85, AC-85.9, @feature85, UC-36 | BDD scenario | Draft | Raw-write deny plus MCP success |
+| CHK-FR85-10 | Suggest-only migration never invents or writes contract values | FR-85, AC-85.10, @feature85, UC-36 | BDD scenario | Draft | Real legacy corpus and byte-identical dry run |
+| CHK-FR85-11 | New strict mode and legacy migration policy are explicit | FR-85, AC-85.11, @feature85, UC-36 | Manual review | Draft | Engine-owned policy; no agent downgrade |
+| CHK-FR85-12 | Traceability and mutation corpus cover the full contract lane | FR-85, AC-85.12, @feature85, UC-36 | BDD scenario | Draft | AC/BDD/task/evidence links and kill cases |
+
+
+## Verification Matrix — FR-86 core non-dashboard agent UX
+
+| CHK-ID | Requirement | Traces To | Verification Method | Status | Notes |
+|---|---|---|---|---|---|
+| CHK-FR86-01 | Canonical verdict projections agree | [FR-86](FR.md#fr-86-core-agent-ux-feature86), AC-86.1, UC-37 | BDD scenario | Draft | SPECGEN004_864–867 production scenarios |
+| CHK-FR86-02 | Mandatory lane prevents a ready result | [FR-86](FR.md#fr-86-core-agent-ux-feature86), AC-86.2, UC-37 | BDD scenario | Draft | SPECGEN004_864–867 production scenarios |
+| CHK-FR86-03 | No requirement evidence yields untagged | [FR-86](FR.md#fr-86-core-agent-ux-feature86), AC-86.3, UC-37 | BDD scenario | Draft | SPECGEN004_864–867 production scenarios |
+| CHK-FR86-04 | Implementation without fresh proof is not verified | [FR-86](FR.md#fr-86-core-agent-ux-feature86), AC-86.4, UC-37 | BDD scenario | Draft | SPECGEN004_864–867 production scenarios |
+| CHK-FR86-05 | Stale or weak proof is demoted | [FR-86](FR.md#fr-86-core-agent-ux-feature86), AC-86.5, UC-37 | BDD scenario | Draft | SPECGEN004_864–867 production scenarios |
+| CHK-FR86-06 | Suite-only receipt is NOT_INGESTED | [FR-86](FR.md#fr-86-core-agent-ux-feature86), AC-86.6, UC-37 | BDD scenario | Draft | SPECGEN004_864–867 production scenarios |
+| CHK-FR86-07 | Executed receipts retain provenance | [FR-86](FR.md#fr-86-core-agent-ux-feature86), AC-86.7, UC-37 | BDD scenario | Draft | SPECGEN004_864–867 production scenarios |
+| CHK-FR86-08 | Root mismatch rejects mutation before I/O | [FR-86](FR.md#fr-86-core-agent-ux-feature86), AC-86.8, UC-37 | BDD scenario | Draft | SPECGEN004_864–867 production scenarios |
+| CHK-FR86-09 | Card proposal shows evidence, fields, and preview | [FR-86](FR.md#fr-86-core-agent-ux-feature86), AC-86.9, UC-37 | BDD scenario | Draft | SPECGEN004_864–867 production scenarios |
+| CHK-FR86-10 | Invalid or stale card apply is atomic | [FR-86](FR.md#fr-86-core-agent-ux-feature86), AC-86.10, UC-37 | BDD scenario | Draft | SPECGEN004_864–867 production scenarios |
+| CHK-FR86-11 | Action center returns every blocker | [FR-86](FR.md#fr-86-core-agent-ux-feature86), AC-86.11, UC-37 | BDD scenario | Draft | SPECGEN004_864–867 production scenarios |
+| CHK-FR86-12 | No-dashboard stable-contract scope remains enforced | [FR-86](FR.md#fr-86-core-agent-ux-feature86), AC-86.12, UC-37 | BDD scenario | Draft | SPECGEN004_864–867 production scenarios |

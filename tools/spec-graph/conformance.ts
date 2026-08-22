@@ -27,7 +27,7 @@
  * @see ./types.ts (SpecGraph)
  */
 
-import type { SpecGraph, Edge, ScenarioNode, TaskNode } from './types.ts';
+import type { SpecGraph, Edge, FrNode, ScenarioNode, TaskNode } from './types.ts';
 import { computeCoverage, scenarioKey, specOf, type Bucket, type ScenarioLike, type TaskLike, type TestQualityVerdict } from './coverage.ts';
 import { WORKING_STATUSES, canEnterWorkingStatus } from './task-lifecycle.ts';
 import { localIdOf } from './identity.ts';
@@ -59,6 +59,15 @@ export type FindingCode =
   | 'FR_NO_DESIGN'
   | 'FR_NO_STORY'
   | 'FR_METADATA_INVALID'
+  | 'FR_CONTRACT_MISSING'
+  | 'FR_CONTRACT_VERSION_UNSUPPORTED'
+  | 'FR_CONTRACT_KIND_INVALID'
+  | 'FR_CONTRACT_SUBJECT_MISSING'
+  | 'FR_CONTRACT_OBSERVABLE_MISSING'
+  | 'FR_CONTRACT_NEGATIVE_CASE_MISSING'
+  | 'FR_CONTRACT_VERIFICATION_INVALID'
+  | 'FR_CONTRACT_KIND_FIELDS_MISSING'
+  | 'FR_CONTRACT_DISPOSITION_INVALID'
   | 'FR_DEMAND_MISSING'
   | 'FR_DEMAND_CONFLICT'
   | 'TOOTHLESS_DECISION'
@@ -89,22 +98,29 @@ export interface Finding {
 const SPEC_TAG_RE = /^@((?:FR|NFR|AC)[A-Za-z0-9._-]+)$/;
 
 /**
- * FR-36a: resolve a BARE tag reference (`@FR-2`) against composite-keyed
- * nodes. Tags stay bare in `.feature` files (same-spec convention):
- *   1. scenario's own spec defines it → `<spec>:<ref>`;
- *   2. bare node with that id exists (hand-built graphs, non-.specs files);
- *   3. spec-less scenario (tests/features) → satisfied if ANY spec defines
- *      the local id (cross-spec ambiguity tolerated at warning level).
+ * FR-36a: resolve a requirement tag against composite-keyed nodes.
+ * A slug-less executable feature is NOT allowed to borrow a local FR from an
+ * arbitrary spec. It must carry an explicit owner (which the builder expresses
+ * as a qualified tested-by edge) or remain an untraced external scenario.
  */
 function tagResolves(
   graph: SpecGraph,
   scenSpec: string | undefined,
   ref: string,
-  specLocalIds: ReadonlySet<string>,
 ): boolean {
+  if (scenSpec && /^FR-\d+[a-z]?$/i.test(ref)) {
+    const feature = `feature${ref.slice(3)}`;
+    let matches = 0;
+    for (const node of graph.nodes.values()) {
+      if (node.type !== 'FR' || node.spec !== scenSpec) continue;
+      const fr = node as FrNode;
+      if (fr.featureAliases?.includes(feature)) matches += 1;
+    }
+    if (matches > 1) return false;
+    if (matches === 1) return true;
+  }
   if (scenSpec && graph.nodes.has(`${scenSpec}:${ref}`)) return true;
-  if (graph.nodes.has(ref)) return true;
-  return !scenSpec && specLocalIds.has(ref);
+  return graph.nodes.has(ref);
 }
 
 /** Classic Levenshtein edit distance (iterative, O(m·n) time, O(n) space). */
@@ -148,6 +164,9 @@ export function checkConformance(
     testQualityByTask?: Record<string, TestQualityVerdict>;
     /** FR-68/69 readiness-specific ownership checks are opt-in outside the readiness evaluator. */
     readinessOwnership?: boolean;
+    /** FR-85 — require a valid contract card on every FR in one selected spec. */
+    strictContracts?: boolean;
+    strictContractSpec?: string;
   } = {},
 ): Finding[] {
   const findings: Finding[] = [];
@@ -168,9 +187,10 @@ export function checkConformance(
   const decisionCovers = new Set<string>(); // FR ids with a `covers` edge to a Decision node (FR-47b)
   const storyCovers = new Set<string>(); // FR ids with a `covers` edge to a Story node (FR-47)
   const scenarioTests = new Set<string>(); // FR / AC / NFR ids referenced by a `tested-by` edge
-  const scenarioVerifies = new Set<string>(); // FR / NFR / AC ids with an inbound passing `verifies` edge (#181)
+  const scenarioVerifies = new Set<string>(); // FR / NFR / AC ids with an inbound passing `verifies` edge
   const scenarioVerifiesAc = new Set<string>();
-  let resultsLoaded = false; // a `last-result` edge means a run was applied → verifies-absence is meaningful
+  const scenarioRequirementEdges = new Set<string>(); // explicit ownership edges, including BDD layout declarations
+  let resultsLoaded = false;
   for (const e of graph.edges) {
     if (e.type === 'covers') {
       // `covers` carries FR→AC AND FR→Decision AND FR→Story — split by target type so a
@@ -180,6 +200,13 @@ export function checkConformance(
       if (toType === 'Decision') decisionCovers.add(e.from);
       else if (toType === 'Story') storyCovers.add(e.from);
       else acCovers.add(e.from);
+    }
+    if (
+      e.type === 'tested-by'
+      && graph.nodes.get(e.to)?.type === 'Scenario'
+      && ['FR', 'NFR', 'AC'].includes(graph.nodes.get(e.from)?.type ?? '')
+    ) {
+      scenarioRequirementEdges.add(e.to);
     }
     if (e.type === 'tested-by') scenarioTests.add(e.from);
     if (e.type === 'verifies') {
@@ -192,10 +219,21 @@ export function checkConformance(
     }
     if (e.type === 'last-result') resultsLoaded = true;
   }
+  // Explicit lifecycle markers in the FR heading/body remove a requirement
+  // from the active coverage rollup; prose mentions alone never do.
+  const inactiveRequirement = (node: FrNode): boolean => {
+    const title = node.title.trim();
+    const body = node.body ?? '';
+    return /^\[TBD title\]$/i.test(title)
+      || /\bOUT OF SCOPE\b/i.test(title)
+      || /\bDEPRECATED\b/i.test(title)
+      || /\bInvestigation result\b[\s\S]{0,300}\bNOT APPLICABLE\b/i.test(body);
+  };
 
   // 1) UNCOVERED_FR — FR with no AC + no tested-by Scenario.
   for (const node of graph.nodes.values()) {
     if (node.type !== 'FR') continue;
+    if (inactiveRequirement(node)) continue;
     if (acCovers.has(node.id)) continue;
     if (scenarioTests.has(node.id)) continue;
     // Tag hints speak the author's bare-tag language (`@FR-2`), not the
@@ -280,6 +318,32 @@ export function checkConformance(
       message: `${issue.path}: ${issue.message}`,
       suggestions: [{ action: 'fix_requirement_metadata', reason: 'Fix the FR-local ```yaml metadata block through the spec door.', confidence: 'high' }],
     });
+    const hasContractIssue = (node.metadataIssues ?? []).some((issue) => issue.code.startsWith('FR_CONTRACT_'));
+    const contractScope = opts.strictContracts
+      && node.type === 'FR'
+      && (!opts.strictContractSpec || node.spec === opts.strictContractSpec);
+    if (contractScope && !node.metadata?.contract && !hasContractIssue) findings.push({
+      code: 'FR_CONTRACT_MISSING',
+      severity: 'error',
+      location: { file: node.file, line: node.line },
+      nodeId: node.id,
+      message: `${node.id} has no FR-85 contract card.`,
+      suggestions: [{ action: 'add_requirement_contract', reason: 'Add a canonical FR-local contract card with observables, negative_cases, verification, and kind-specific fields.', confidence: 'high' }],
+    });
+    if (contractScope && node.metadata?.contract) {
+      const retired = inactiveRequirement(node) || /\bSUPERSEDED\b/i.test(node.title);
+      const disposition = node.metadata.contract.kind === 'disposition';
+      if (retired !== disposition) findings.push({
+        code: 'FR_CONTRACT_DISPOSITION_INVALID',
+        severity: 'error',
+        location: { file: node.file, line: node.line },
+        nodeId: node.id,
+        message: retired
+          ? `${node.id} is explicitly retired/out of scope and requires a disposition contract card.`
+          : `${node.id} is active and must not use a disposition contract card.`,
+        suggestions: [{ action: retired ? 'add_disposition_contract' : 'choose_active_contract_kind', reason: retired ? 'Record status, rationale, owner, and exactly one successor or boundary.' : 'Use cli/api/schema/filesystem/event/state/behavior for an active requirement.', confidence: 'high' }],
+      });
+    }
     if (node.type !== 'FR' || !node.metadata || (node.metadataIssues?.length ?? 0) > 0) continue;
     const delivery = evaluateDelivery(node, graph);
     for (const issue of inheritedDemands.get(node.id)?.issues ?? []) findings.push({
@@ -441,7 +505,7 @@ export function checkConformance(
     if (node.type !== 'Task') continue;
     const task = node as TaskNode;
     if (task.refs.length > 0) continue;
-    if (/\bFR-\d+|SPECGEN\d+_\d+|@feature\d+/i.test(task.doneWhen ?? '')) continue;
+    if (/\bFR-\d+[a-z]?|SPECGEN\d+_\d+|@feature\d+[a-z]?/i.test(task.doneWhen ?? '')) continue;
     findings.push({
       code: 'TASK_NO_REQUIREMENT',
       severity: 'info',
@@ -581,8 +645,8 @@ export function checkConformance(
       // edge since P13-2 — when its FR-N actually exists, the scenario IS
       // tagged up to a requirement. A non-resolving @featureN (no FR-N in
       // this spec) stays untagged — a dangling convention is not coverage.
-      const f = tag.match(/^@feature(\d+)$/i);
-      if (f && tagResolves(graph, scenSpec, `FR-${f[1]}`, specLocalIds)) {
+      const f = tag.match(/^@feature(\d+)([a-z]?)$/i);
+      if (f && tagResolves(graph, scenSpec, `FR-${f[1]}${f[2] ?? ''}`)) {
         hasSpecTag = true;
         continue;
       }
@@ -590,7 +654,7 @@ export function checkConformance(
       if (!m) continue;
       hasSpecTag = true;
       const referenced = m[1];
-      if (!tagResolves(graph, scenSpec, referenced, specLocalIds)) {
+      if (!tagResolves(graph, scenSpec, referenced)) {
         const similar = topSimilarIds(referenced, [...specLocalIds], 3);
         findings.push({
           code: 'SCENARIO_TAG_ORPHAN',
@@ -613,7 +677,7 @@ export function checkConformance(
       }
     }
 
-    if (!hasSpecTag && !scen.tags.some((tag) => tag.toLowerCase() === '@historical')) {
+    if (!hasSpecTag && !scenarioRequirementEdges.has(scen.id) && !scen.tags.some((tag) => tag.toLowerCase() === '@historical')) {
       findings.push({
         code: 'UNTAGGED_SCENARIO',
         severity: 'info',

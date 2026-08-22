@@ -9,12 +9,13 @@
  * assertions.
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { buildToolRegistry, sliceSection } from '../tools.ts';
-import { configuredFeatureRoots } from '../../specs-generator/spec-verdict.ts';
+import { prepareProposedPatch, proposePatch } from '../section-ops.ts';
+import { analyzeGraphSnapshot, configuredFeatureRoots } from '../../specs-generator/spec-verdict.ts';
 import type {
   SpecGraph,
   FrNode,
@@ -70,6 +71,7 @@ function parseResult(r: { content: Array<{ type: string; text: string }> }): unk
 }
 
 const registry = buildToolRegistry(() => makeGraph());
+const names = registry.map(({ name }) => name).sort();
 const tool = (name: string) => {
   const t = registry.find((x) => x.name === name);
   if (!t) throw new Error(`tool ${name} not registered`);
@@ -92,9 +94,7 @@ describe('tool registry — shape', () => {
     }
   });
 
-  it('registers exactly 41 tools with canonical names', () => {
-    expect(registry).toHaveLength(41);
-    const names = registry.map((t) => t.name).sort();
+  it('registers the canonical tools with stable names', () => {
     expect(names).toEqual(
       [
         'add_acceptance_criterion',
@@ -104,6 +104,7 @@ describe('tool registry — shape', () => {
         'append_to_section',
         'apply_proposed_patch',
         'apply_spec_change', // FR-40 validated atomic write (P17-2)
+        'apply_spec_repairs', // FR-84 bounded repair application
         'apply_spec_transaction',
         'archive_spec', // FR-45b gated whole-spec move into archive/
         'conformance_check',
@@ -124,9 +125,12 @@ describe('tool registry — shape', () => {
         'list_tasks', // FR-82 bounded task inventory
         'list_spec_docs', // FR-39a read inventory (P17-1)
         'list_specs',
+        'mcp_preflight', // FR-86d root/worktree admission snapshot
         'policy_query_requirements',
         'propose_patch',
+        'propose_requirement_contract', // FR-86e guided, CAS-bound FR-85 card proposal
         'propose_spec_change', // FR-40 dry-run (P17-2)
+        'propose_spec_repairs', // FR-84 bounded repair proposal
         'read_attachment', // FR-39a/P19-6 binary attachment read (base64)
         'read_spec_doc', // FR-39a whole-doc read + audit log (P17-1)
         'register_incident_backlog',
@@ -138,8 +142,229 @@ describe('tool registry — shape', () => {
         'set_spec_status', // explicit spec-level backlog marker (excluded from census/Stop-gate)
         'validate_anchor',
         'validate_requirement_metadata',
+        'validate_spec', // FR-84 consolidated multilayer validation
       ].sort(),
     );
+  });
+});
+
+describe('FR-86d MCP preflight and worktree admission', () => {
+  it('returns a redacted resolved-root snapshot with live boot facts', async () => {
+    const reg = buildToolRegistry(() => makeGraph(), {
+      repoRoot: process.cwd(),
+      declaredWorktree: process.cwd(),
+      preflight: () => ({
+        lockMode: 'presence_reader',
+        writeMode: 'short_lock_cas',
+        dependencies: { graph: 'ready', watcher: 'ready', lock: 'presence_reader', sqlite: 'warm' },
+        mcpVersion: '0.1.0-test',
+        pluginVersion: '2.0.6-test',
+      }),
+    });
+    const response = parseResult(await reg.find((entry) => entry.name === 'mcp_preflight')!.handler({})) as {
+      ok: boolean;
+      resolved_root: { id: string };
+      worktree: { matches_resolved_root: boolean };
+      lock_mode: string;
+      write_mode: string;
+      versions: { mcp: string; plugin: string };
+      dependencies: { sqlite: string };
+    };
+
+    expect(response).toMatchObject({
+      ok: true,
+      worktree: { matches_resolved_root: true },
+      lock_mode: 'presence_reader',
+      write_mode: 'short_lock_cas',
+      versions: { mcp: '0.1.0-test', plugin: '2.0.6-test' },
+      dependencies: { sqlite: 'warm' },
+    });
+    expect(response.resolved_root.id).toMatch(/^[a-f0-9]{16}$/);
+    expect(JSON.stringify(response)).not.toContain(path.resolve(process.cwd()));
+  });
+
+  it('fails closed before a mismatched worktree can create a lock or mutate a document', async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mcp-root-'));
+    const declared = fs.mkdtempSync(path.join(os.tmpdir(), 'mcp-declared-'));
+    try {
+      const doc = path.join(root, '.specs', 'demo', 'FR.md');
+      fs.mkdirSync(path.dirname(doc), { recursive: true });
+      fs.writeFileSync(doc, '## FR-1: Original\n', 'utf8');
+      const reg = buildToolRegistry(() => makeGraph(), { repoRoot: root, declaredWorktree: declared });
+      const body = parseResult(await reg.find((entry) => entry.name === 'apply_spec_change')!.handler({
+        spec: 'demo',
+        doc: 'FR.md',
+        content: '## FR-1: Changed\n',
+        reason: 'verify root admission',
+      })) as { ok: boolean; error: string };
+
+      expect(body).toEqual(expect.objectContaining({ ok: false, error: 'ROOT_WORKTREE_MISMATCH' }));
+      expect(fs.readFileSync(doc, 'utf8')).toBe('## FR-1: Original\n');
+      expect(fs.existsSync(path.join(root, '.dev-pomogator'))).toBe(false);
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+      fs.rmSync(declared, { recursive: true, force: true });
+    }
+  });
+
+  it('refuses every proposal route before reads, audit logs, or retained proposal state for a mismatched worktree', async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mcp-proposal-root-'));
+    const declared = fs.mkdtempSync(path.join(os.tmpdir(), 'mcp-proposal-declared-'));
+    try {
+      const mismatchRegistry = buildToolRegistry(() => makeGraph(), { repoRoot: root, declaredWorktree: declared });
+      const refusalCases = [
+        ['propose_spec_change', { spec: 'demo', doc: 'FR.md', content: '# blocked\n', reason: 'root mismatch' }],
+        ['propose_patch', { edits: [{ spec: 'demo', doc: 'FR.md', content: '# blocked\n' }], reason: 'root mismatch' }],
+        ['propose_spec_repairs', { spec: 'demo', repair_candidates: [] }],
+      ] as const;
+
+      for (const [name, args] of refusalCases) {
+        const candidate = mismatchRegistry.find((entry) => entry.name === name);
+        if (!candidate) throw new Error(`${name} must be registered`);
+        const body = parseResult(await candidate.handler(args as never)) as { ok: boolean; error: string };
+        expect(body).toEqual(expect.objectContaining({ ok: false, error: 'ROOT_WORKTREE_MISMATCH' }));
+      }
+      expect(fs.existsSync(path.join(root, '.dev-pomogator'))).toBe(false);
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+      fs.rmSync(declared, { recursive: true, force: true });
+    }
+  });
+
+  it('expires an unapplied patch proposal rather than retaining caller edit payloads indefinitely', async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mcp-proposal-expiry-'));
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date('2026-08-22T00:00:00.000Z'));
+      const expiryRegistry = buildToolRegistry(() => makeGraph(), { repoRoot: root });
+      const proposed = parseResult(await expiryRegistry.find((entry) => entry.name === 'propose_patch')!.handler({
+        edits: [{ spec: 'demo', doc: 'FR.md', content: '# preview only\n' }],
+        reason: 'verify proposal expiry',
+      })) as { proposal_id: string };
+
+      vi.advanceTimersByTime(10 * 60 * 1000);
+      const applied = parseResult(await expiryRegistry.find((entry) => entry.name === 'apply_proposed_patch')!.handler({
+        proposal_id: proposed.proposal_id,
+        reason: 'expired proposal must not apply',
+      })) as { ok: boolean; error: string };
+
+      expect(applied).toEqual(expect.objectContaining({ ok: false, error: 'PROPOSAL_NOT_FOUND' }));
+    } finally {
+      vi.useRealTimers();
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('evicts the oldest patch proposal at the bounded replay-store capacity', () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mcp-proposal-capacity-'));
+    try {
+      const proposalIds = Array.from({ length: 129 }, () => proposePatch(root, []).proposal_id);
+      expect(prepareProposedPatch(root, proposalIds[0]!)).toMatchObject({ error: 'PROPOSAL_NOT_FOUND' });
+      expect(prepareProposedPatch(root, proposalIds[128]!)).toMatchObject({ ok: true });
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('FR-86e guided requirement-contract proposal', () => {
+  const validCliContract = {
+    version: 1,
+    kind: 'cli',
+    subject: 'demo contract proposal command',
+    observables: [{ when: 'the command receives a valid request', then: 'it reports the proposed contract' }],
+    negative_cases: [{ when: 'the contract is stale', then: 'it refuses without writing' }],
+    verification: {
+      method: 'integration',
+      required_evidence: ['integration'],
+      scenario: { pending: true, reason: 'scenario will be authored with implementation' },
+      implementation_surface: { unknown: true, reason: 'implementation has not been selected' },
+      evidence_policy: { source: 'planned', freshness: 'pending', independent: false },
+    },
+    command: { executable: 'dev-pomogator', args: ['propose-contract'] },
+    input: [{ name: 'requirement', type: 'string', required: true }],
+    output: { proposal_id: 'CAS-bound proposal identifier' },
+    exit_codes: { '0': 'proposal created', '1': 'proposal refused' },
+    errors: [{ code: 'CAS_MISMATCH', observable: 'no bytes are written' }],
+  };
+
+  it('returns field findings and writes zero bytes for an invalid FR-85 card', async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'contract-proposal-invalid-'));
+    const frPath = path.join(root, '.specs', 'demo', 'FR.md');
+    const source = '## FR-1: Guided proposal\n\nThe CLI proposes a contract.\n';
+    try {
+      fs.mkdirSync(path.dirname(frPath), { recursive: true });
+      fs.writeFileSync(frPath, source, 'utf8');
+      const reg = buildToolRegistry(() => makeGraph(), { repoRoot: root, declaredWorktree: root });
+      const body = parseResult(await reg.find((entry) => entry.name === 'propose_requirement_contract')!.handler({
+        spec: 'demo', requirement: 'FR-1', contract: { kind: 'cli' },
+      })) as { ok: boolean; error: string; findings: Array<{ path: string }>; proposal_id?: string };
+
+      expect(body.ok).toBe(false);
+      expect(body.error).toBe('FR_METADATA_INVALID');
+      expect(body.findings.map((finding) => finding.path)).toContain('contract.version');
+      expect(body.proposal_id).toBeUndefined();
+      expect(fs.readFileSync(frPath, 'utf8')).toBe(source);
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('mints a root- and SHA-bound proposal and applies it through the existing atomic proposal door', async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'contract-proposal-apply-'));
+    const frPath = path.join(root, '.specs', 'demo', 'FR.md');
+    try {
+      fs.mkdirSync(path.dirname(frPath), { recursive: true });
+      fs.writeFileSync(frPath, '## FR-1: Guided proposal\n\nThe CLI proposes a contract.\n', 'utf8');
+      const reg = buildToolRegistry(() => makeGraph(), { repoRoot: root, declaredWorktree: root });
+      const propose = reg.find((entry) => entry.name === 'propose_requirement_contract')!;
+      const proposal = parseResult(await propose.handler({
+        spec: 'demo', requirement: 'FR-1', contract: validCliContract,
+      })) as { ok: boolean; proposal_id: string; provenance: { document_sha: string }; preview: { metadata_block: string } };
+
+      expect(proposal.ok).toBe(true);
+      expect(proposal.proposal_id).toMatch(/^[0-9a-f-]{36}$/);
+      expect(proposal.provenance.document_sha).toMatch(/^[a-f0-9]{64}$/);
+      expect(proposal.preview.metadata_block).toContain('```yaml metadata');
+
+      const applied = parseResult(await reg.find((entry) => entry.name === 'apply_proposed_patch')!.handler({
+        proposal_id: proposal.proposal_id, reason: 'apply valid guided contract',
+      })) as { ok: boolean; written: boolean };
+      expect(applied).toMatchObject({ ok: true, written: true });
+      expect(fs.readFileSync(frPath, 'utf8')).toContain('contract:\n');
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('section operation handlers', () => {
+  it('insert_at_eof delegates to proposal validation and atomically writes its preview', async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mcp-insert-at-eof-'));
+    const doc = path.join(root, '.specs', 'demo', '.architecture-research', 'notes.md');
+    try {
+      fs.mkdirSync(path.dirname(doc), { recursive: true });
+      fs.writeFileSync(doc, '# Research\nBaseline finding.\n', 'utf8');
+      const reg = buildToolRegistry(() => makeGraph(), { repoRoot: root, declaredWorktree: root });
+      const insertAtEof = reg.find((entry) => entry.name === 'insert_at_eof');
+      if (!insertAtEof) throw new Error('insert_at_eof must be registered');
+
+      const body = parseResult(await insertAtEof.handler({
+        spec: 'demo',
+        doc: '.architecture-research/notes.md',
+        text: 'Follow-up finding.',
+      })) as { ok: boolean; kind: string; written: boolean; preview: string };
+
+      expect(body).toMatchObject({
+        ok: true,
+        kind: 'insert_at_eof',
+        written: true,
+        preview: '# Research\nBaseline finding.\nFollow-up finding.\n',
+      });
+      expect(fs.readFileSync(doc, 'utf8')).toBe(body.preview);
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
   });
 });
 
@@ -601,6 +826,133 @@ describe('find_orphans + get_test_result + get_spec_status (view=counts) + list_
     expect(auth.task).toBe(2);
   });
 
+  it('get_spec_status reports missing canonical per-scenario evidence without a confident all-never-run claim', async () => {
+    const body = parseResult(await tool('get_spec_status').handler({ spec: 'auth', view: 'status' })) as {
+      lifecycle: string;
+      hint: string;
+    };
+
+    expect(body.lifecycle).toBe('TESTS_NOT_RUN');
+    expect(body.hint).toContain('no canonical per-scenario result evidence found');
+    expect(body.hint).toContain('--cucumber-json .dev-pomogator/pytest-bdd-report.json');
+    expect(body.hint).not.toContain('never_run');
+  });
+
+  it('FR86B_04: get_spec_status projects artifact absence separately from scenario not_run', async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'status-artifact-ingestion-'));
+    try {
+      const graph = makeGraph();
+      for (const node of graph.nodes.values()) node.spec = 'auth';
+      graph.executionArtifacts = [
+        {
+          kind: 'cucumber-messages-ndjson',
+          canonical: true,
+          state: 'NOT_INGESTED',
+          reason: 'ARTIFACT_ABSENT',
+          provenance: 'cucumber-messages-ndjson',
+          path: '.dev-pomogator/.last-test-run.ndjson',
+          run_id: null,
+          timestamp: null,
+          counts: { parsed: 0, matched: 0, unmatched: 0, malformed: 0 },
+        },
+        {
+          kind: 'pytest-bdd-cucumber-json',
+          canonical: true,
+          state: 'NOT_INGESTED',
+          reason: 'ARTIFACT_ABSENT',
+          provenance: 'pytest-bdd:cucumber-json',
+          path: '.dev-pomogator/pytest-bdd-report.json',
+          run_id: null,
+          timestamp: null,
+          counts: { parsed: 0, matched: 0, unmatched: 0, malformed: 0 },
+        },
+      ];
+      const registry = buildToolRegistry(() => graph, { repoRoot: root });
+      const status = registry.find((candidate) => candidate.name === 'get_spec_status')!;
+      const body = parseResult(await status.handler({ spec: 'auth', view: 'status' })) as {
+        inventory: {
+          artifacts: Array<{ kind: string; state: string; reason: string | null }>;
+          frs: Array<{ id: string; evidence_state: string; canonical_evidence_state: string; evidence_demotion_reasons: string[] }>;
+        };
+      };
+
+      expect(body.inventory.artifacts.map((artifact) => ({
+        kind: artifact.kind,
+        state: artifact.state,
+        reason: artifact.reason,
+      }))).toEqual([
+        { kind: 'cucumber-messages-ndjson', state: 'NOT_INGESTED', reason: 'ARTIFACT_ABSENT' },
+        { kind: 'pytest-bdd-cucumber-json', state: 'NOT_INGESTED', reason: 'ARTIFACT_ABSENT' },
+      ]);
+      expect(body.inventory.frs.find((fr) => fr.id === 'FR-1')).toEqual(expect.objectContaining({
+        evidence_state: 'exercised',
+        canonical_evidence_state: 'NOT_INGESTED',
+        evidence_demotion_reasons: ['CANONICAL_ARTIFACT_NOT_INGESTED', 'SCENARIO_NOT_RUN'],
+      }));
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('projects every canonical action-center blocker from the same graph snapshot as the CLI analyzer', async () => {
+    const root = fs.mkdtempSync(path.join(os.tmpdir(), 'status-action-center-'));
+    try {
+      const graph = makeGraph();
+      const rich = await analyzeGraphSnapshot('.specs/auth', graph, { cwd: root, semantic: false });
+      expect(rich.prefilter.structuralErrors).toBe(1);
+      expect(rich.verdict).not.toBe('GREEN');
+      const registry = buildToolRegistry(() => graph, { repoRoot: root });
+      const status = registry.find((candidate) => candidate.name === 'get_spec_status')!;
+      const body = parseResult(await status.handler({ spec: 'auth', view: 'status' })) as {
+        lifecycle_scope: string;
+        lifecycle_authoritative: boolean;
+        readiness: {
+          next_action: string;
+          action_center: Array<{
+            lane: string;
+            count: number;
+            reasons: string[];
+            action: { code: string; message: string };
+          }>;
+        };
+      };
+
+      expect(body.lifecycle_scope).toBe('execution-only');
+      expect(body.lifecycle_authoritative).toBe(false);
+
+      expect(body.readiness.action_center.length).toBeGreaterThan(1);
+      expect(body.readiness.action_center).toEqual(rich.readiness.action_center);
+      expect(body.readiness.next_action).toBe(body.readiness.action_center[0].action.message);
+      for (const group of body.readiness.action_center) {
+        expect(group.count).toBeGreaterThan(0);
+        expect(group.reasons.length).toBeGreaterThan(0);
+        expect(group.action.code).toMatch(/EVALUATE_LANE|RESTORE_DEPENDENCY|RESOLVE_LANE_DEBT/);
+      }
+    } finally {
+      fs.rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('keeps warning-only remediation outside the blocking action center', async () => {
+    const graph = makeGraph();
+    const result = await analyzeGraphSnapshot('.specs/auth', graph, {
+      cwd: process.cwd(),
+      semantic: false,
+      coreResults: {
+        validation: { errors: [], warnings: [] },
+        audit: { findings: [] },
+      },
+      externalFindings: [
+        { code: 'WARN_ONLY', severity: 'warning', message: 'non-blocking', location: { file: 'x', line: 1 } },
+        { code: 'BLOCKING', severity: 'error', message: 'must fix', location: { file: 'x', line: 2 } },
+      ],
+    });
+
+    const multilayer = result.readiness.action_center.find((group) => group.lane === 'MULTILAYER')!;
+    expect(multilayer.count).toBe(1);
+    expect(multilayer.reasons).toEqual(['BLOCKING: must fix']);
+  });
+
   it('get_spec_status refreshes full status but keeps summary on the unchanged graph snapshot', async () => {
     let refreshes = 0;
     const reg = buildToolRegistry(() => makeGraph(), { refreshGraph: () => { refreshes++; } });
@@ -653,7 +1005,12 @@ describe('find_orphans + get_test_result + get_spec_status (view=counts) + list_
         lifecycle: string;
         canonical_coverage: { totals: Record<string, number> };
         filtered_proof: { runId: string; artifact: string; selectedScenarioIds: string[]; passed: number; nonPassed: number; timestamp: string; source: string; canonicalCoverageUnchanged: boolean; acceptedAttachment: boolean };
-        readiness: { overall: string; next_action: string; lanes: { TASK_TRUTH: { status: string; debt: string[] } } };
+        readiness: {
+          overall: string;
+          next_action: string;
+          action_center: Array<{ action: { message: string } }>;
+          lanes: { TASK_TRUTH: { status: string; debt: string[] } };
+        };
       };
 
       expect(body.lifecycle).toBe('TESTS_NOT_RUN');
@@ -675,7 +1032,7 @@ describe('find_orphans + get_test_result + get_spec_status (view=counts) + list_
       expect(body.readiness.lanes.TASK_TRUTH.debt).toEqual([
         expect.stringMatching(/auth:TASK-filtered-proof.*canonical PASSED.*not_run/i),
       ]);
-      expect(body.readiness.next_action).toMatch(/filtered-auth-1|full Docker BDD|attach/i);
+      expect(body.readiness.next_action).toBe(body.readiness.action_center[0].action.message);
 
       const coverage = parseResult(await status.handler({ spec: 'auth', view: 'coverage' })) as {
         execution_gaps: { SCENARIO_NOT_RUN: number };

@@ -1672,3 +1672,163 @@ WHEN the dashboard delivery evidence is assembled THEN it SHALL include task car
 **Требование:** [FR-84](FR.md#fr-84)
 WHEN the planned implementation surface is reviewed THEN it SHALL name the exact remediation contract/engine, verdict and MCP edits, regenerated bundle, spec-review/create-spec documentation, committed remediation fixtures, real BDD step definitions, and PLUGIN006 feature edits in FILE_CHANGES.md, while making no implementation or runtime-proof claim during requirements authoring.
 
+
+## AC-85.1
+**Feature:** @feature85
+**Требование:** [FR-85](FR.md#fr-85)
+
+WHEN the canonical graph parses a non-superseded FR THEN exactly one FR-local contract card SHALL be present on its qualified node, and a superseded or OUT OF SCOPE FR SHALL carry an explicit disposition card.
+
+
+The disposition card SHALL contain `status`, `rationale`, `owner`, and exactly one of `successor` or `boundary`; the card is invalid when any of these fields is absent or contradictory.
+
+The disposition kind inherits `observables`, `negative_cases`, and `verification` unchanged; removing any inherited field is invalid even when all lifecycle fields are present.
+## AC-85.2
+**Требование:** [FR-85](FR.md#fr-85)
+
+WHEN a contract card is validated THEN it SHALL contain `version: 1`, one supported `kind`, a non-empty `subject`, at least one observable, at least one negative case, and a verification block; prose without the structured block SHALL produce a blocking finding.
+
+
+The `verification` object SHALL contain a supported nested `method`, a non-empty `required_evidence[]` from the published vocabulary, `scenario.refs[]` OR `scenario.pending:true` plus reason, `implementation_surface.refs[]` OR `implementation_surface.unknown:true` plus reason, and `evidence_policy.source/freshness/independent`; the nested method vocabulary SHALL remain distinct from root `metadata.verificationMethod`.
+## AC-85.3
+**Требование:** [FR-85](FR.md#fr-85)
+
+WHEN a `cli`, `api`, `schema`, or `filesystem` card is validated THEN its kind-specific required fields SHALL be present, typed, and internally consistent: executable/request route, input/output/error shape, schema fields, confined artifact paths, ownership, and atomicity; it SHALL match the exact kind-specific field table in `spec-generator-v4_SCHEMA.md`; generic or omitted boundary fields SHALL be invalid.
+
+
+The required fields SHALL match the schema exactly: CLI requires executable/args/input/output/exit_codes/errors; API requires method-or-tool/request/response/authority/errors; schema requires fields with required/optional/type/enum/forbidden declarations; filesystem requires confined artifact path/action/owner/resulting state/atomicity/rollback.
+## AC-85.4
+**Требование:** [FR-85](FR.md#fr-85)
+
+WHEN an `event`, `state`, `behavior`, or `disposition` card is validated THEN it SHALL declare the producer/consumer payload boundary, state transitions/guards, or actor/trigger/precondition/observable/forbidden result required by its kind; an unbounded narrative SHALL be rejected.
+
+
+The required fields SHALL match the schema exactly: event requires name/producer/payload/consumers/ordering/retry-duplicate semantics; state requires states/transitions/guards/terminal outcomes; behavior requires actor/trigger/preconditions/observable outcomes/forbidden outcomes.
+
+Disposition cards use the `disposition` kind and require status, rationale, owner, and exactly one of successor or boundary.
+
+The disposition kind inherits the common `observables`, `negative_cases`, and `verification` fields; lifecycle fields do not replace the universal card contract.
+## AC-85.5
+**Требование:** [FR-85](FR.md#fr-85)
+
+WHEN a card has only a happy-path observable and no adversarial or negative outcome THEN validation SHALL return `FR_CONTRACT_NEGATIVE_CASE_MISSING` and SHALL not classify the FR as contract-ready.
+
+## AC-85.6
+**Требование:** [FR-85](FR.md#fr-85)
+
+WHEN a valid card is parsed, rendered, persisted to the graph, restored from the warm store, and read through MCP THEN its version, kind, subject, typed fields, invariants, negative cases, and forward-compatible unknown fields SHALL round-trip without semantic loss.
+
+
+The round-trip SHALL also preserve canonical field ordering and produce byte-equivalent canonical rendering for semantically equal cards.
+## AC-85.7
+**Требование:** [FR-85](FR.md#fr-85)
+
+WHEN a card is missing, malformed, unsupported, incomplete, duplicated, or attached to an unresolved FR identity THEN conformance SHALL emit a stable finding code with file/line, qualified node id, severity, and an actionable remediation suggestion.
+
+## AC-85.8
+**Требование:** [FR-85](FR.md#fr-85)
+
+WHEN `spec-verdict` evaluates a spec with a missing or invalid card THEN the `CONTRACT` lane SHALL be NOT_READY and the overall verdict SHALL not be GREEN/READY, even when structural validation returns zero errors.
+
+
+When the card itself is valid but implementation, BDD, or evidence is absent THEN CONTRACT SHALL be green while the corresponding implementation, execution, or evidence lane SHALL remain NOT_READY; a valid card is not completion proof.
+## AC-85.9
+**Требование:** [FR-85](FR.md#fr-85)
+
+WHEN an agent creates or changes a contract card through the spec authoring workflow THEN the mutation SHALL use the existing MCP door, validate the proposed card before disk access, preserve CAS/atomicity/audit behavior, and reject a direct filesystem authoring path under enforce.
+
+## AC-85.10
+**Требование:** [FR-85](FR.md#fr-85)
+
+WHEN the contract migration report runs in `--suggest-only` mode THEN it SHALL inspect every FR and produce suggested kinds, missing fields, source locations, and `[NEEDS_CLARIFICATION]` markers without writing any spec document or inventing contract values.
+
+## AC-85.11
+**Требование:** [FR-85](FR.md#fr-85)
+
+WHEN a new spec is scaffolded THEN strict contract mode SHALL be engine-owned and enabled by default; WHEN an existing legacy spec is read THEN it SHALL remain readable, but its missing-card debt SHALL be visible and the spec SHALL not become strict without an explicit engine-owned migration transition.
+
+## AC-85.12
+**Требование:** [FR-85](FR.md#fr-85)
+
+WHEN a contract-card regression corpus removes a required field, negative case, kind-specific field, FR/AC/scenario link, or verdict lane THEN the corresponding contract test/BDD scenario SHALL fail; when the complete corpus is restored, the contract lane SHALL pass independently of structural, execution, and semantic lanes.
+
+
+The mutation corpus SHALL also remove and restore a task-own-scenario edge and the verification evidence/implementation-surface trace; both mutations SHALL independently keep the relevant readiness lane NOT_READY.
+## AC-56.5
+
+**Требование:** [FR-56](FR.md#fr-56)
+
+WHEN a project runs selected pytest-bdd scenarios through the centralized pytest runner THEN every executed scenario SHALL append a location-addressed row to `.dev-pomogator/.scenario-results.ndjson`, and SpecGraph SHALL classify passed/failed results from those rows while retaining genuinely unselected scenarios as `not_run`.
+
+
+## AC-86.1
+**Feature:** @feature86
+**Требование:** [FR-86](FR.md#fr-86-core-agent-ux-feature86)
+
+WHEN any status surface queries a spec THEN it SHALL consume the same `SpecVerdictResult` schema and agree on `verdict`, `blocking`, and `readiness.overall`.
+
+## AC-86.2
+**Feature:** @feature86
+**Требование:** [FR-86](FR.md#fr-86-core-agent-ux-feature86)
+
+WHEN a mandatory lane is not green THEN the result SHALL be `NOT_READY` and SHALL include at least one lane-specific blocker and next action.
+
+## AC-86.3
+**Feature:** @feature86
+**Требование:** [FR-86](FR.md#fr-86-core-agent-ux-feature86)
+
+WHEN an FR has no traceable requirement evidence THEN `evidence_state` SHALL be `untagged`.
+
+## AC-86.4
+**Feature:** @feature86
+**Требование:** [FR-86](FR.md#fr-86-core-agent-ux-feature86)
+
+WHEN an FR has implementation but no fresh passing evidence THEN `evidence_state` SHALL be `impl-only` or `exercised`, never `verified`.
+
+## AC-86.5
+**Feature:** @feature86
+**Требование:** [FR-86](FR.md#fr-86-core-agent-ux-feature86)
+
+WHEN a passed result is stale or weak THEN the state SHALL include the demotion reason and SHALL not remain `verified`.
+
+## AC-86.6
+**Feature:** @feature86
+**Требование:** [FR-86](FR.md#fr-86-core-agent-ux-feature86)
+
+WHEN a runner produces a suite receipt without location-addressed scenario evidence THEN status SHALL report `NOT_INGESTED`, not confident `NOT_RUN` for every scenario.
+
+## AC-86.7
+**Feature:** @feature86
+**Требование:** [FR-86](FR.md#fr-86-core-agent-ux-feature86)
+
+WHEN a supported producer emits executed scenario rows THEN the graph SHALL preserve producer, run ID, source, timestamp, URI/line identity, and canonical-versus-filtered provenance.
+
+## AC-86.8
+**Feature:** @feature86
+**Требование:** [FR-86](FR.md#fr-86-core-agent-ux-feature86)
+
+WHEN MCP resolved root differs from the declared or requested worktree THEN the write path SHALL refuse with a stable root-mismatch code and zero file mutations.
+
+## AC-86.9
+**Feature:** @feature86
+**Требование:** [FR-86](FR.md#fr-86-core-agent-ux-feature86)
+
+WHEN a contract kind is selected THEN the proposal SHALL list evidence used, required fields, missing fields, and the exact preview before apply.
+
+## AC-86.10
+**Feature:** @feature86
+**Требование:** [FR-86](FR.md#fr-86-core-agent-ux-feature86)
+
+WHEN a contract proposal is invalid or stale under CAS THEN the door SHALL return field-level findings, SHALL write zero target spec document bytes, and SHALL create no proposal or state mutation; the mandated append-only spec-access audit entry remains permitted and required.
+
+## AC-86.11
+**Feature:** @feature86
+**Требование:** [FR-86](FR.md#fr-86-core-agent-ux-feature86)
+
+WHEN readiness has multiple blockers THEN the action center SHALL return all grouped blockers, affected node counts, and ordered next actions; it SHALL not hide all but the first blocker.
+
+## AC-86.12
+**Feature:** @feature86
+**Требование:** [FR-86](FR.md#fr-86-core-agent-ux-feature86)
+
+WHEN a dashboard is requested THEN this scope SHALL expose stable JSON/MCP contracts only and SHALL not add browser UI or Plane vendor code.

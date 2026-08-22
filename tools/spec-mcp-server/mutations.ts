@@ -12,7 +12,9 @@
  *                         the live form-guards run);
  *   2. anchors          — anchor-integrity `checkLinks` over the spec's md
  *                         files with the changed doc swapped in-memory;
- *   3. conformance      — `checkConformance` over a graph built from a TEMP
+ *   3. FR metadata      — the shared graph parser's metadataIssues delta for
+ *                         patched FR.md cards, including FR-85 field diagnostics;
+ *   4. conformance      — `checkConformance` over a graph built from a TEMP
  *                         CLONE of the spec dir; errors/staged warnings are
  *                         delta-gated, and TASKS writes also gate new truth
  *                         violations. The real tree stays untouched until pass.
@@ -29,6 +31,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { checkLinks } from '../anchor-integrity/check.mjs';
 import { buildGraph } from '../spec-graph/builder.ts';
+import { parseNdjsonFile, applyTestResults } from '../spec-graph/parsers/ndjson.ts';
 import { checkConformance, type Finding } from '../spec-graph/conformance.ts';
 import { featureStrengthFindings } from '../spec-graph/feature-strength.ts';
 import { computeCoverage, specOf, type ScenarioLike, type TaskLike } from '../spec-graph/coverage.ts';
@@ -339,19 +342,71 @@ function anchorFindings(repoRoot: string, slug: string, doc: string, next: strin
 }
 
 /** Layer 3 — conformance over a TEMP CLONE with the change applied. */
-function buildMutationGraph(repoRoot: string, evidenceRoot: string, slug: string, doc: string, next: string): SpecGraph {
+function buildMutationGraph(repoRoot: string, slug: string, doc: string, next: string): SpecGraph {
   const specDir = path.join(repoRoot, '.specs', slug);
   if (!fs.existsSync(specDir)) throw new Error(`spec ${slug} does not exist`);
   fs.mkdirSync(path.dirname(path.join(specDir, doc)), { recursive: true });
   fs.writeFileSync(path.join(specDir, doc), next);
   return buildGraph({
     repoRoot,
-    // Truth validation needs canonical execution evidence, but not filtered overlay rows:
-    // apply_spec_change must not let a filtered debug pass launder a DONE task.
-    ndjsonPath: path.join(evidenceRoot, '.dev-pomogator', '.last-test-run.ndjson'),
-    scenarioOverlayPath: path.join(repoRoot, '.dev-pomogator', '.scenario-results.ndjson'),
+    skipNdjson: true,
+    mdRoots: [path.join('.specs', slug)],
+    featureRoots: [path.join('.specs', slug)],
   });
 }
+/**
+ * FR-85 authoring gate: when an FR document is staged through the mutation door,
+ * inspect the patched graph's FR-local metadata with the shared parser and return
+ * field-level contract findings before any disk write. This is deliberately a
+ * parser reuse, not a second contract schema.
+ */
+function frMetadataContractFindings(
+  repoRoot: string,
+  slug: string,
+  doc: string,
+  next: string,
+): MutationFinding[] {
+  if (path.basename(doc).toLowerCase() !== 'fr.md') return [];
+  const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'spec-metadata-mutate-'));
+  try {
+    const srcDir = path.join(repoRoot, '.specs', slug);
+    const dstDir = path.join(tmpRoot, '.specs', slug);
+    fs.cpSync(srcDir, dstDir, { recursive: true });
+    const beforeGraph = buildGraph({
+      repoRoot: tmpRoot,
+      skipNdjson: true,
+      mdRoots: [path.join('.specs', slug)],
+      featureRoots: [path.join('.specs', slug)],
+    });
+    const graph = buildMutationGraph(tmpRoot, slug, doc, next);
+    const targetFile = path.posix.join('.specs', slug, doc.replace(/\\/g, '/'));
+    const issueKey = (node: { id: string }, issue: { code: string; path: string; message: string }) =>
+      `${node.id}|${issue.code}|${issue.path}|${issue.message}`;
+    const beforeIssues = new Set(
+      [...beforeGraph.nodes.values()].flatMap((node) => (node.type === 'FR' && node.file.replace(/\\/g, '/') === targetFile)
+        ? (node.metadataIssues ?? []).map((issue) => issueKey(node, issue))
+        : []),
+    );
+    const findings: MutationFinding[] = [];
+    for (const node of graph.nodes.values()) {
+      if (node.type !== 'FR' || node.file.replace(/\\/g, '/') !== targetFile) continue;
+      for (const issue of node.metadataIssues ?? []) {
+        if (beforeIssues.has(issueKey(node, issue))) continue;
+        findings.push({
+          layer: 'conformance',
+          line: node.line,
+          message: `${issue.code}: ${issue.path}: ${issue.message}`,
+        });
+      }
+    }
+    return findings;
+  } catch (error) {
+    return [{ layer: 'conformance', message: `FR metadata validation failed: ${error instanceof Error ? error.message : error}` }];
+  } finally {
+    fs.rmSync(tmpRoot, { recursive: true, force: true });
+  }
+}
+
 
 /**
  * Exported for FR-67 (SPECGEN004_592): the BDD scenario drives this SAME delta
@@ -427,6 +482,28 @@ function taskTruthFindings(graph: SpecGraph, targetSpec: string): TaskTruthFindi
     }));
 }
 
+type CanonicalEvidencePatch = ReturnType<typeof parseNdjsonFile>;
+
+/**
+ * Task truth needs canonical full-run results, but ordinary structural
+ * conformance must not rebuild the graph from live evidence. Apply the one
+ * canonical patch to already-staged graphs only for the TASKS truth gate.
+ */
+function applyCanonicalEvidenceForTaskTruth(
+  graph: SpecGraph,
+  patch: CanonicalEvidencePatch,
+): void {
+  const scenarios = [...graph.nodes.values()].filter(
+    (node): node is ScenarioNode => node.type === 'Scenario',
+  );
+  applyTestResults(scenarios, patch);
+  for (const scenario of scenarios) {
+    if (!scenario.lastResult) continue;
+    scenario.canonicalResult = scenario.lastResult;
+    scenario.canonicalRunAt = scenario.lastRunAt;
+  }
+}
+
 function conformanceFindings(repoRoot: string, slug: string, doc: string, next: string): MutationFinding[] {
   const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'spec-mutate-'));
   try {
@@ -435,12 +512,32 @@ function conformanceFindings(repoRoot: string, slug: string, doc: string, next: 
     fs.cpSync(srcDir, dstDir, { recursive: true });
     const beforeGraph = buildGraph({
       repoRoot: tmpRoot,
-      ndjsonPath: path.join(repoRoot, '.dev-pomogator', '.last-test-run.ndjson'),
-      scenarioOverlayPath: path.join(tmpRoot, '.dev-pomogator', '.scenario-results.ndjson'),
+      skipNdjson: true,
+      mdRoots: [path.join('.specs', slug)],
+      featureRoots: [path.join('.specs', slug)],
     });
-    const graph = buildMutationGraph(tmpRoot, repoRoot, slug, doc, next);
-    const before = checkConformance(beforeGraph);
-    const after = checkConformance(graph);
+    const graph = buildMutationGraph(tmpRoot, slug, doc, next);
+    const isTaskMutation = path.basename(doc).toLowerCase() === 'tasks.md';
+    let beforeTruthGraph = beforeGraph;
+    let afterTruthGraph = graph;
+    if (isTaskMutation) {
+      // Keep canonical evidence for the task-truth gate, but parse it once and
+      // apply it to the already-staged structural graphs. Ordinary conformance
+      // never pays the live-evidence cost.
+      const evidencePatch = parseNdjsonFile(
+        path.join(repoRoot, '.dev-pomogator', '.last-test-run.ndjson'),
+      );
+      applyCanonicalEvidenceForTaskTruth(beforeTruthGraph, evidencePatch);
+      applyCanonicalEvidenceForTaskTruth(afterTruthGraph, evidencePatch);
+    }
+    const progressPath = path.join(repoRoot, '.specs', slug, '.progress.json');
+    let strictContracts = false;
+    try {
+      strictContracts = JSON.parse(fs.readFileSync(progressPath, 'utf8')).contractPolicy === 'strict-v1';
+    } catch {}
+    const conformanceOptions = strictContracts ? { strictContracts: true, strictContractSpec: slug } : {};
+    const before = checkConformance(beforeGraph, conformanceOptions);
+    const after = checkConformance(graph, conformanceOptions);
     const newErrors = deltaByKey(
       before.filter((f) => f.severity === 'error'),
       after.filter((f) => f.severity === 'error'),
@@ -450,10 +547,10 @@ function conformanceFindings(repoRoot: string, slug: string, doc: string, next: 
     // graph document creates a bootstrap deadlock: adding a new .feature scenario is
     // necessarily NOT_RUN until after the write, so the door would refuse the very
     // scenario needed to establish canonical evidence.
-    const newTruthFindings = path.basename(doc).toLowerCase() === 'tasks.md'
+    const newTruthFindings = isTaskMutation
       ? deltaByKey(
-          taskTruthFindings(beforeGraph, slug),
-          taskTruthFindings(graph, slug),
+          taskTruthFindings(beforeTruthGraph, slug),
+          taskTruthFindings(afterTruthGraph, slug),
           (finding) => `${finding.code}|${finding.taskId}`,
         )
       : [];
@@ -531,12 +628,17 @@ export function validateSpecPatch(repoRoot: string, inputs: SpecPatchValidationI
       const srcDir = path.join(repoRoot, '.specs', slug);
       const dstDir = path.join(tmpRoot, '.specs', slug);
       fs.cpSync(srcDir, dstDir, { recursive: true });
-
       const beforeAnchors = checkLinks(specMdFiles(tmpRoot, slug)) as BrokenAnchor[];
+
+      // This is a structural delta check, not an evidence refresh. Never ingest
+      // canonical NDJSON, pytest reports, or overlays while building either
+      // temporary graph: live evidence is unrelated to the proposed text diff
+      // and can be multi-megabyte.
       const beforeGraph = buildGraph({
         repoRoot: tmpRoot,
-        ndjsonPath: path.join(repoRoot, '.dev-pomogator', '.last-test-run.ndjson'),
-        scenarioOverlayPath: path.join(tmpRoot, '.dev-pomogator', '.scenario-results.ndjson'),
+        skipNdjson: true,
+        mdRoots: [path.join('.specs', slug)],
+        featureRoots: [path.join('.specs', slug)],
       });
 
       for (const change of changes) {
@@ -577,8 +679,9 @@ export function validateSpecPatch(repoRoot: string, inputs: SpecPatchValidationI
 
       const afterGraph = buildGraph({
         repoRoot: tmpRoot,
-        ndjsonPath: path.join(repoRoot, '.dev-pomogator', '.last-test-run.ndjson'),
-        scenarioOverlayPath: path.join(tmpRoot, '.dev-pomogator', '.scenario-results.ndjson'),
+        skipNdjson: true,
+        mdRoots: [path.join('.specs', slug)],
+        featureRoots: [path.join('.specs', slug)],
       });
       const before = checkConformance(beforeGraph);
       const after = checkConformance(afterGraph);
@@ -599,6 +702,11 @@ export function validateSpecPatch(repoRoot: string, inputs: SpecPatchValidationI
       }
 
       if (changes.some((change) => path.basename(change.doc).toLowerCase() === 'tasks.md')) {
+        const evidencePatch = parseNdjsonFile(
+          path.join(repoRoot, '.dev-pomogator', '.last-test-run.ndjson'),
+        );
+        applyCanonicalEvidenceForTaskTruth(beforeGraph, evidencePatch);
+        applyCanonicalEvidenceForTaskTruth(afterGraph, evidencePatch);
         const newTruth = deltaByKey(
           taskTruthFindings(beforeGraph, slug),
           taskTruthFindings(afterGraph, slug),
@@ -658,7 +766,7 @@ export function validateSpecChange(
   const isFeature = ext.endsWith('.feature');
 
   const applied = applyChange(current, change);
-  if (!applied.ok) return { ok: false, findings: [applied.finding] };
+  if ('finding' in applied) return { ok: false, findings: [applied.finding] };
   const next = applied.next;
   // Empty full-replace silently destroys a doc — refuse (the review's #9).
   if (next.trim() === '' && current !== null && current.trim() !== '') {
@@ -684,10 +792,10 @@ export function validateSpecChange(
     return { ok: true, next, findings: [] };
   }
   const findings = [
+    ...(isMd && base === 'fr.md' ? frMetadataContractFindings(repoRoot, slug, doc, next) : []),
     ...formDeltaFindings(doc, current ?? '', next),
     ...(isMd ? anchorFindings(repoRoot, slug, doc, next) : []),
     ...(isMd || isFeature ? conformanceFindings(repoRoot, slug, doc, next) : []),
-    // V2 hard-gate: refuse a .feature write that ADDS a placeholder/[TBD] skeleton
     // scenario (net-new, doc-scoped — legacy skeletons don't block unrelated edits).
     ...(isFeature
       ? featureStrengthFindings(current, next).map((f) => ({ layer: 'strength' as const, line: f.line, message: f.message }))

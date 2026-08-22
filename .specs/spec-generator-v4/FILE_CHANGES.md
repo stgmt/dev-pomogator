@@ -848,3 +848,56 @@ Phase 49 — Live-evidence containment, atomic CAS proof, strict-synthesis guard
 
 > Requirements phase boundary: these are planned paths only. No implementation, runtime proof, test result, `.progress.json` mutation, TASKS.md edit, README/CHANGELOG edit, or mutation of canonical `.specs/spec-dashboard/` is claimed.
 
+
+- TASKS.md: add backlog task `task-ship-pytest-bdd-scenario-evidence-producer` (FR-56)
+
+- ACCEPTANCE_CRITERIA.md: add AC-56.5 (FR-56)
+## Phase 52 — FR-85 strict per-requirement contract cards
+
+| Action | Path | Reason |
+|---|---|---|
+| CREATE | `tools/spec-graph/requirement-contract.ts` | FR-85/AC-85.1–85.7/85.12 — single versioned contract-card model, closed kinds, canonicalization, kind-specific validation, diagnostics, and round-trip helpers. |
+| EDIT | `tools/spec-graph/metadata-schema.ts` | FR-85/AC-85.1/85.6 — add typed `RequirementMetadata.contract` without changing the existing root `verificationMethod` vocabulary. |
+| EDIT | `tools/spec-graph/parsers/md.ts` | FR-85/AC-85.1/85.6 — retain and expose contract-card metadata on qualified FR nodes. |
+| EDIT | `tools/spec-graph/types.ts` | FR-85/AC-85.6 — preserve typed contract metadata through the canonical graph type. |
+| EDIT | `tools/spec-graph/conformance.ts` | FR-85/AC-85.5/85.7 — emit stable contract findings and actionable suggestions. |
+| EDIT | `tools/specs-generator/spec-verdict.ts` | FR-85/AC-85.8/85.12 — add the independent CONTRACT readiness lane and prevent structural-only GREEN. |
+| EDIT | `tools/spec-mcp-server/tools.ts` | FR-85/AC-85.6/85.9 — validate/set contract metadata through the existing MCP door and return field-level diagnostics. |
+| EDIT | `tools/spec-mcp-server/mutations.ts` | FR-85/AC-85.9 — reject invalid patched FR metadata before write while preserving CAS, atomic, and audit semantics. |
+| REGENERATE | `tools/spec-mcp-server/server.bundle.mjs` | FR-85/AC-85.9 — ship the updated metadata/contract MCP surface to installed users. |
+| CREATE | `tools/specs-generator/requirement-contract-migration.ts` | FR-85/AC-85.10/85.11 — evidence-backed suggest-only migration report and explicit apply boundary through MCP. |
+| EDIT | `tools/specs-generator/templates/FR.md.template` | FR-85/AC-85.1/85.2 — new FRs are scaffolded with a contract-card section and no prose-only placeholder. |
+| EDIT | `.claude/skills/create-spec/references/phase2_requirements-and-design.md` | FR-85/AC-85.1/85.9/85.11 — require contract-card authoring, verified boundary inputs, migration handling, and strict-mode policy. |
+| EDIT | `.claude/skills/requirements-chk-matrix/SKILL.md` | FR-85/AC-85.1/85.12 — sanctioned form automation preserves FR contract blocks and maps cards to CHK/AC/scenario evidence. |
+| CREATE | `tests/fixtures/specgen004-contract-cards/*` | FR-85/AC-85.3–85.7/85.10/85.12 — valid per-kind cards, invalid/missing/legacy cards, and evidence-backed migration inputs. |
+| CREATE | `tests/step_definitions/feature85_requirement_contracts.ts` | FR-85/AC-85.1–85.12 — real parser/conformance/MCP/verdict/migration BDD steps; no hand-shaped result side channel. |
+| EDIT | `tests/features/plugins/specs-workflow/PLUGIN006_specs-generator.feature` | FR-85/AC-85.1–85.12 — executable mirror for the contract-card scenarios once step definitions exist. |
+| EDIT | `.specs/spec-generator-v4/spec-generator-v4.feature` | FR-85/AC-85.1–85.12 — canonical source scenarios SPECGEN004_850–862. |
+| EDIT | `tools/spec-graph/corpus-health.ts` | FR-85/AC-85.7/85.12 — include missing/unresolved contract trace edges in organism health once graph edges are available. |
+| EDIT | `.claude/skills/spec-status/SKILL.md` | FR-85/AC-85.8/85.12 — expose contract debt and next action without laundering it through structural status. |
+
+
+## Phase 53 — FR-86 core non-dashboard agent UX
+
+| Action | Path | Reason |
+|---|---|---|
+| EDIT | `tools/spec-graph/verdict.ts` | FR-86a/AC-86.1–86.2 — one canonical SpecVerdictResult with non-contradictory readiness, grouped blockers, ordered actions, and human summary. |
+| CREATE | `tools/spec-graph/evidence.ts` | FR-86b/AC-86.3–86.5 — derive one per-FR evidence_state with freshness and quality demotion reasons. |
+| EDIT | `tools/spec-graph/readiness-inventory.ts` | FR-86a/86b/86f/AC-86.2–86.5/86.11 — project canonical lanes, evidence state, grouped blockers, node counts, and deterministic remediation. |
+| EDIT | `tools/spec-graph/parsers/scenario-overlay.ts` | FR-86c/AC-86.6–86.7 — preserve producer receipt identity and explicit NOT_INGESTED diagnostics. |
+| EDIT | `tools/spec-graph/coverage.ts` | FR-86b/86c/AC-86.3–86.7 — produce canonical evidence-state inputs from supported receipts while preserving NOT_INGESTED and provenance. |
+| EDIT | `tools/spec-graph/parsers/pytest-bdd.ts` | FR-86c/AC-86.6–86.7 — normalize supported location-addressed pytest-bdd rows into the production graph path. |
+| EDIT | `tools/spec-graph/builder.ts` | FR-86b/86c — retain evidence-state and producer provenance without a side-channel rollup. |
+| EDIT | `tools/spec-mcp-server/tools.ts` | FR-86a/86c/86e/86f — expose canonical status, preflight, contract proposal, and action-center projections. |
+| EDIT | `tools/spec-mcp-server/server.ts` | FR-86d/AC-86.8 — enforce declared-worktree and resolved-root mismatch before disk access. |
+| EDIT | `tools/spec-mcp-server/lifecycle.ts` | FR-86d/AC-86.8 — surface lock/write mode, plugin/MCP version, and dependency readiness for preflight. |
+| EDIT | `tools/spec-mcp-server/domain-authoring.ts` | FR-86d/86e/AC-86.8–86.10 — reuse the transaction door for preflight and evidence-backed contract proposal/apply. |
+| EDIT | `tools/specs-generator/spec-verdict.ts` | FR-86a/86b/86f — consume the canonical result without a duplicate verdict rollup. |
+| EDIT | `tools/specs-generator/specs-generator-core.mjs` | FR-86a — make legacy status output a compatibility projection of the canonical result. |
+| EDIT | `tools/specs-generator/requirement-contract-migration.ts` | FR-86e/AC-86.9–86.10 — reuse inspected migration evidence for guided contract fields. |
+| REGENERATE | `tools/spec-mcp-server/server.bundle.mjs` | FR-86a/86d–86f — ship the real MCP runtime after source changes. |
+| REGENERATE | `tools/spec-graph/test_quality_gate_stop.bundle.mjs` | FR-86b/86f — synchronize the distributed graph-quality gate after source changes. |
+| REGENERATE | `tools/spec-conformance-guard/spec-conformance-guard.bundle.mjs` | FR-86d/86e — synchronize the installed authoring guard after source changes. |
+| REGENERATE | `tools/spec-conformance-push/spec-conformance-push.bundle.mjs` | FR-86a/86f — synchronize the installed readiness/conformance push after source changes. |
+
+> No dashboard, browser UI, Plane vendor path, source `@feature86` scenario, executable mirror, or step-definition entry is listed: production bindings for those BDD artifacts do not yet exist.

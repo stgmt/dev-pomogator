@@ -204,6 +204,35 @@ describe('incremental — applyChange / applyUnlink / dropFileSlice', () => {
     expect(after, 'a second Scenario must be spliced in').toBeGreaterThan(before);
     expect(delta.nodesDelta).toBeGreaterThan(0);
   });
+  it('drops an external mirror on incremental add just like cold build', () => {
+    fs.mkdirSync(path.join(root, '.specs', 'auth'), { recursive: true });
+    fs.mkdirSync(path.join(root, 'tests', 'features'), { recursive: true });
+    const feature = 'Feature: Auth\n  Scenario: Mirror me\n    Given x\n';
+    fs.writeFileSync(path.join(root, '.specs/auth/auth.feature'), feature);
+    const graph = buildGraph({ repoRoot: root, skipNdjson: true });
+    expect(graph.nodes.has('auth:SCEN-mirror-me')).toBe(true);
+
+    fs.writeFileSync(path.join(root, 'tests/features/auth.feature'), feature);
+    applyChange(graph, root, 'tests/features/auth.feature');
+
+    expect(graph.nodes.has('SCEN-mirror-me')).toBe(false);
+    expect(graph.nodes.has('auth:SCEN-mirror-me')).toBe(true);
+  });
+  it('recomputes custom feature aliases when REQUIREMENTS.md changes', () => {
+    fs.writeFileSync(path.join(root, '.specs/auth/FR.md'), '## FR-1: Owner\n## FR-3: Direct\n');
+    fs.writeFileSync(path.join(root, '.specs/auth/REQUIREMENTS.md'), 'FR-1 @feature3\n');
+    const graph = buildGraph({ repoRoot: root, skipNdjson: true });
+    fs.writeFileSync(
+      path.join(root, '.specs/auth/auth.feature'),
+      '@feature3\nFeature: Auth\n  Scenario: custom alias\n    Given x\n',
+    );
+    applyChange(graph, root, '.specs/auth/auth.feature');
+    expect(graph.edges).toContainEqual(expect.objectContaining({ from: 'auth:FR-1', type: 'tested-by' }));
+    fs.writeFileSync(path.join(root, '.specs/auth/REQUIREMENTS.md'), 'FR-1\n');
+    applyChange(graph, root, '.specs/auth/REQUIREMENTS.md');
+    expect(graph.edges).not.toContainEqual(expect.objectContaining({ from: 'auth:FR-1', type: 'tested-by' }));
+    expect(graph.edges).toContainEqual(expect.objectContaining({ from: 'auth:FR-3', type: 'tested-by' }));
+  });
 
   it('applyChange on an overlay file refreshes effective results and last-result edges', () => {
     fs.mkdirSync(path.join(root, 'tests/features'), { recursive: true });
@@ -240,6 +269,45 @@ describe('incremental — applyChange / applyUnlink / dropFileSlice', () => {
     expect(scen.trace).toMatchObject({ traceId: '.dev-pomogator/.test-history/run-531.ndjson#tcs-531' });
     expect(graph.edges).toContainEqual({ from: 'SCEN-one-specgen004-531', to: 'RESULT-SCEN-one-specgen004-531-PASSED', type: 'last-result' });
     expect(graph.edges).toContainEqual({ from: 'SCEN-one-specgen004-531', to: 'TRACE-.dev-pomogator/.test-history/run-531.ndjson#tcs-531', type: 'runtime-trace' });
+  });
+
+  it('ISSUE230_03: incrementally ingests a newly written pytest-bdd report', () => {
+    const fixtureRoot = path.resolve('tests/fixtures/pytest-bdd-sample');
+    fs.mkdirSync(path.join(root, '.specs/issue-230'), { recursive: true });
+    fs.mkdirSync(path.join(root, '.dev-pomogator'), { recursive: true });
+    fs.copyFileSync(path.join(fixtureRoot, 'features/issue_230.feature'), path.join(root, '.specs/issue-230/issue-230.feature'));
+    fs.writeFileSync(path.join(root, '.specs/issue-230/FR.md'), '# FR-1: pytest-bdd execution\n');
+
+    const graph = buildGraph({ repoRoot: root, featureRoots: ['.specs/issue-230'] });
+    const scenarios = (): ScenarioNode[] => [...graph.nodes.values()].filter((node): node is ScenarioNode => node.type === 'Scenario');
+    expect(scenarios().filter((scenario) => scenario.lastResult === 'PASSED')).toHaveLength(0);
+
+    fs.copyFileSync(path.join(fixtureRoot, 'cucumber-report.json'), path.join(root, '.dev-pomogator/pytest-bdd-report.json'));
+    const reportTime = new Date(Date.now() + 60_000);
+    fs.utimesSync(path.join(root, '.dev-pomogator/pytest-bdd-report.json'), reportTime, reportTime);
+    applyChange(graph, root, '.dev-pomogator/pytest-bdd-report.json');
+
+    expect(scenarios()).toHaveLength(22);
+    expect(scenarios().filter((scenario) => scenario.lastResult === 'PASSED')).toHaveLength(11);
+    expect(scenarios().filter((scenario) => scenario.lastResult === undefined)).toHaveLength(11);
+    const executed = scenarios().find((scenario) => scenario.id === 'issue-230:SCEN-executed-scenario-01')!;
+    expect(executed.canonicalResult).toBe('PASSED');
+    expect(executed.canonicalRunId).toMatch(/^pytest-bdd-/);
+    expect(executed.canonicalSource).toBe('pytest-bdd:cucumber-json');
+    expect(graph.executionArtifacts).toEqual([
+      expect.objectContaining({
+        kind: 'cucumber-messages-ndjson',
+        state: 'NOT_INGESTED',
+        reason: 'ARTIFACT_ABSENT',
+      }),
+      expect.objectContaining({
+        kind: 'pytest-bdd-cucumber-json',
+        state: 'INGESTED',
+        reason: null,
+        provenance: 'pytest-bdd:cucumber-json',
+        counts: { parsed: 11, matched: 11, unmatched: 0, malformed: 0 },
+      }),
+    ]);
   });
 
   it('result-file refresh clears scenarios absent from the replacement run (MCP freshness regression)', () => {

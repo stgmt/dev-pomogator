@@ -39,13 +39,33 @@ import {
   type TraceabilityGapClass,
 } from '../spec-graph/traceability.ts';
 import { runJudge, type JudgeResult } from '../spec-llm-judge/index.ts';
-import { buildReadinessInventory, classifyScenarioScope, deriveExecutionLane, deriveLiveEvidenceLane, type ReadinessInventory } from '../spec-graph/readiness-inventory.ts';
+import {
+  MANDATORY_READINESS_LANES,
+  buildReadinessInventory,
+  classifyScenarioScope,
+  deriveExecutionLane,
+  deriveLiveEvidenceLane,
+  type ReadinessActionGroup,
+  type ReadinessInventory,
+} from '../spec-graph/readiness-inventory.ts';
+import { readProgressState } from '../specs-validator/phase-constants.ts';
 import { computeSpecVerdict, type SpecVerdict, type UnverifiedCompletion } from '../spec-graph/verdict.ts';
 import { oldTestReadinessDebt, type OldTestCensusReport } from '../bdd-migrator/repository-census.ts';
 import type { Edge, FrNode, ScenarioNode, SpecGraph, TaskNode } from '../spec-graph/types.ts';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const corePath = path.join(__dirname, 'specs-generator-core.mjs');
+
+/**
+ * The source module lives beside the core, while the bundled MCP server embeds
+ * this module under tools/spec-mcp-server/. Keep both launch layouts working:
+ * source/CLI, and the shipped server.bundle.mjs.
+ */
+const coreCandidates = [
+  path.join(__dirname, 'specs-generator-core.mjs'),
+  path.join(__dirname, '..', 'specs-generator', 'specs-generator-core.mjs'),
+  path.join(process.cwd(), 'tools', 'specs-generator', 'specs-generator-core.mjs'),
+];
+const corePath = coreCandidates.find((candidate) => fs.existsSync(candidate)) ?? coreCandidates[0];
 
 export interface AuditFinding {
   check: string;
@@ -57,6 +77,7 @@ export interface AuditFinding {
 
 export type ReadinessLaneName =
   | 'STRUCTURE'
+  | 'CONTRACT'
   | 'TRACEABILITY'
   | 'EXECUTION'
   | 'LIVE_EVIDENCE'
@@ -99,6 +120,8 @@ export interface ReadinessLane {
   blocking: boolean;
   summary: string;
   debt: string[];
+  /** Affected atoms, not the potentially-coarser number of reason strings. */
+  affected_count?: number;
 }
 
 export interface SpecVerdictResult {
@@ -187,11 +210,14 @@ export interface SpecVerdictResult {
   gapList: string[];
   /** Explicit fail-loud notes (FR-37c discipline). */
   notes: string[];
-  /** FR-61: product-readiness lanes; OVERALL is NOT_READY when any lane blocks readiness. */
+  /** FR-61/86 canonical readiness projection shared by CLI and MCP. */
   readiness: {
     lanes: Record<ReadinessLaneName, ReadinessLane>;
     overall: 'READY' | 'NOT_READY';
+    /** Legacy camel-case compatibility projection of action_center[0]. */
     nextAction: string;
+    /** Every deterministic readiness blocker with affected-node count, reasons, and remediation metadata. */
+    action_center: ReadinessActionGroup[];
   };
 }
 
@@ -219,6 +245,16 @@ export interface RunCoreOptions {
   semantic?: boolean;
   judgeSpawn?: (prompt: string) => Promise<string>;
   maxPairs?: number;
+  /**
+   * Internal graph-snapshot seam: lets the MCP reuse its in-memory graph
+   * rather than rebuild it or shell out through the CLI entrypoint.
+   */
+  graphSnapshot?: SpecGraph;
+  /** Optional CLI prefilter/audit outputs already obtained by the caller. */
+  coreResults?: {
+    validation: { errors?: unknown[]; warnings?: unknown[] };
+    audit: { findings?: AuditFinding[] };
+  };
 }
 
 /** Is a `claude` binary reachable (CLAUDE_BIN or PATH)? Probe, don't assume. */
@@ -457,8 +493,8 @@ export async function analyzeSpec(
   specPath: string,
   opts: RunCoreOptions = {},
 ): Promise<SpecVerdictResult> {
-  const validation = runCoreJson('validate-spec', specPath, opts);
-  const audit = runCoreJson('audit-spec', specPath, opts);
+  const validation = opts.coreResults?.validation ?? runCoreJson('validate-spec', specPath, opts);
+  const audit = opts.coreResults?.audit ?? runCoreJson('audit-spec', specPath, opts);
 
   const structuralErrors: number = Array.isArray(validation.errors) ? validation.errors.length : 0;
   const warnings: number = Array.isArray(validation.warnings) ? validation.warnings.length : 0;
@@ -483,19 +519,27 @@ export async function analyzeSpec(
     .replace(/\\/g, '/')
     .replace(/^\.?\/?\.specs\//, '')
     .replace(/\/+$/, '');
-  const graph = buildGraphFromCwd(cwd, { featureRoots: configuredFeatureRoots(cwd) });
+  const graph = opts.graphSnapshot ?? buildGraphFromCwd(cwd, { featureRoots: configuredFeatureRoots(cwd) });
+  // FR-35a: the per-task test-quality side-channel caps a green-but-weak DONE task
+  // to IN_PROGRESS on every readiness surface (absent file → {} → no change).
+  const testQualityByTask = readVerdicts(cwd);
   // FR-63 (foundation): the shared graph-derived readiness inventory — the SAME
   // projection precheck + MCP status report (AC-63.1). Derived from the one
   // graph above; never assembled from a second source of truth.
-  const inventory = buildReadinessInventory(graph, { spec: slug });
-  // FR-35a: the per-task test-quality side-channel caps a green-but-weak DONE task
-  // to IN_PROGRESS on this surface too (absent file → {} → no change). Same reader
-  // as the Stop-gate and get_coverage — one source of truth.
-  const testQualityByTask = readVerdicts(cwd);
-  const allFindings = checkConformance(graph, { testQualityByTask });
+  const inventory = buildReadinessInventory(graph, { spec: slug, testQualityByTask });
+  const progress = readProgressState(path.join(cwd, '.specs', slug));
+  const strictContracts = progress?.contractPolicy === 'strict-v1';
+  const allFindings = checkConformance(graph, {
+    testQualityByTask,
+    strictContracts,
+    strictContractSpec: strictContracts ? slug : undefined,
+  });
   const inSpec = (file: string): boolean =>
     String(file).replace(/\\/g, '/').includes(`.specs/${slug}/`);
   const specFindings = allFindings.filter((f) => inSpec(f.location.file));
+  const contractFindings = strictContracts
+    ? specFindings.filter((finding) => finding.code.startsWith('FR_CONTRACT_'))
+    : [];
 
   // FR-37b (P14-2): the cell→atom traceability HARD gate.
   const gaps = gapsFromFindings(specFindings, {});
@@ -741,18 +785,32 @@ export async function analyzeSpec(
         ...(errorFindings.length > 0 ? [`${errorFindings.length} audit error(s)`] : []),
         ...(confErrors.length > 0 ? [`${confErrors.length} conformance error(s)`] : []),
       ],
+      affected_count: structuralErrors + errorFindings.length + confErrors.length,
+    },
+    CONTRACT: {
+      status: !strictContracts ? 'NONE' : contractFindings.length > 0 ? 'RED' : 'GREEN',
+      blocking: strictContracts && contractFindings.length > 0,
+      summary: !strictContracts
+        ? 'legacy contract policy; strict FR-85 rollout has not been enabled for this spec'
+        : contractFindings.length > 0
+          ? `${contractFindings.length} FR contract card finding(s)`
+          : 'every FR has a valid contract card',
+      debt: contractFindings.map((finding) => `${finding.code}:${finding.nodeId ?? finding.location.file}`),
+      affected_count: contractFindings.length,
     },
     TRACEABILITY: {
       status: gaps.length > 0 ? 'RED' : 'GREEN',
       blocking: gaps.length > 0,
       summary: gaps.length > 0 ? `${gaps.length} traceability gap(s)` : '0 traceability gaps',
       debt: gaps.map((g) => `${g.class}: ${g.nodeId}`),
+      affected_count: gaps.length,
     },
     EXECUTION: {
       status: effectiveExecution.status,
       blocking: effectiveExecution.status !== 'GREEN',
       summary: effectiveExecution.debt?.join(', ') || 'all effective scenario evidence is current and passing',
       debt: effectiveExecution.debt ?? [],
+      affected_count: effectiveExecution.affected_count,
     },
     LIVE_EVIDENCE: {
       status: liveEvidenceLane.status,
@@ -763,6 +821,7 @@ export async function analyzeSpec(
           ? `${liveEvidenceLane.debt.length} live scenario(s) await real producer proof`
           : 'all live scenarios have passing live evidence',
       debt: liveEvidenceLane.debt ?? [],
+      affected_count: liveEvidenceLane.affected_count,
     },
     TASK_TRUTH: {
       status: taskTruthDebt.length > 0 ? 'RED' : 'GREEN',
@@ -771,24 +830,34 @@ export async function analyzeSpec(
         ? `${unverifiedDoneTasks.length} DONE-but-unverified task(s), ${uncheckedDoneWhenTasks.length} DONE task(s) with unchecked Done When item(s)`
         : 'no DONE-but-unverified tasks',
       debt: taskTruthDebt,
+      affected_count: taskTruthDebt.length,
     },
     BDD_SYNC: {
       status: bddSyncDebt.length > 0 ? 'RED' : 'GREEN',
       blocking: bddSyncDebt.length > 0,
       summary: bddSyncDebt.length > 0 ? `${bddSyncDebt.length} BDD sync or repository migration debt item(s)` : 'no source/executable BDD sync or repository migration debt reported by the current verdict inputs',
       debt: bddSyncDebt,
+      affected_count: bddSyncDebt.length,
     },
     AC_SATISFACTION: {
       status: inventory.ac_satisfaction.status,
       blocking: inventory.ac_satisfaction.status !== 'GREEN',
       summary: inventory.ac_satisfaction.debt.length > 0 ? inventory.ac_satisfaction.debt.join(', ') : 'all acceptance criteria have current execution evidence',
       debt: inventory.ac_satisfaction.debt,
+      affected_count: inventory.ac_satisfaction.required - inventory.ac_satisfaction.satisfied,
     },
     NFR_SATISFACTION: {
       status: inventory.nfr_satisfaction.status,
       blocking: inventory.nfr_satisfaction.status !== 'GREEN',
       summary: inventory.nfr_satisfaction.debt.length > 0 ? inventory.nfr_satisfaction.debt.join(', ') : 'all non-functional requirements have method-appropriate evidence',
       debt: inventory.nfr_satisfaction.debt,
+      affected_count: inventory.nfr_satisfaction.required - inventory.nfr_satisfaction.satisfied,
+    },
+    MULTILAYER: {
+      status: 'NONE',
+      blocking: false,
+      summary: 'no external remediation findings supplied',
+      debt: [],
     },
     SEMANTIC: {
       status: !semanticWanted ? 'SKIPPED' : semanticDebt.length > 0 ? 'SKIPPED' : 'GREEN',
@@ -799,6 +868,7 @@ export async function analyzeSpec(
           ? semanticDebt.join(', ')
           : `${pairsChecked} semantic pair(s) checked with no drift`,
       debt: !semanticWanted ? [] : semanticDebt,
+      affected_count: semanticDebt.length,
     },
     FILTERED_PROOF: {
       status: filteredProof.proofs.length > 0 ? 'GREEN' : 'NONE',
@@ -809,25 +879,30 @@ export async function analyzeSpec(
   };
   const externalFindings = opts.externalFindings ?? [];
   const externalErrors = externalFindings.filter((finding) => finding.severity === 'error');
-  const externalDebt = externalFindings.map((finding) => `${finding.code}: ${finding.message}`);
-  lanes.MULTILAYER = externalFindings.length > 0
+  const externalDebt = externalErrors.map((finding) => `${finding.code}: ${finding.message}`);
+  lanes.MULTILAYER = externalErrors.length > 0
     ? {
-        status: externalErrors.length > 0 ? 'RED' : 'GREEN',
-        blocking: externalErrors.length > 0,
-        summary: `${externalFindings.length} external finding(s) supplied by remediation`,
+        status: 'RED',
+        blocking: true,
+        summary: `${externalErrors.length} blocking external finding(s) supplied by remediation`,
         debt: externalDebt,
+        affected_count: externalErrors.length,
       }
     : {
         status: 'NONE',
         blocking: false,
-        summary: 'no external remediation findings supplied',
+        summary: 'no blocking external findings supplied',
         debt: [],
       };
   const canonical = computeSpecVerdict({
     inventory,
+    mandatoryLanes: strictContracts
+      ? MANDATORY_READINESS_LANES
+      : MANDATORY_READINESS_LANES.filter((name) => name !== 'CONTRACT'),
     lanes: Object.fromEntries(Object.entries(lanes).filter(([name]) => name !== 'MULTILAYER').map(([name, lane]) => [name, {
       status: lane.status,
       debt: lane.debt,
+      affected_count: lane.affected_count,
     }])),
   }, [...specFindings, ...auditBlocking]);
   if (externalErrors.length > 0) {
@@ -844,7 +919,17 @@ export async function analyzeSpec(
       })),
     ];
     canonical.readiness.overall = 'NOT_READY';
-    canonical.readiness.next_action = 'Resolve the blocking multilayer findings, then rerun the authoritative verdict.';
+    canonical.readiness.action_center = [{
+      lane: 'MULTILAYER',
+      status: 'RED',
+      count: externalDebt.length,
+      reasons: externalDebt,
+      action: {
+        code: 'RESOLVE_LANE_DEBT',
+        message: 'Resolve the blocking multilayer findings, then rerun the authoritative verdict.',
+      },
+    }, ...canonical.readiness.action_center];
+    canonical.readiness.next_action = canonical.readiness.action_center[0].action.message;
   }
   const canonicalLanes = Object.fromEntries(Object.entries(canonical.readiness.lanes).map(([name, lane]) => [name, {
     status: lane.status,
@@ -857,6 +942,7 @@ export async function analyzeSpec(
     lanes: canonicalLanes,
     overall: canonical.readiness.overall,
     nextAction: canonical.readiness.next_action,
+    action_center: canonical.readiness.action_center,
   };
 
   const documentShas: Record<string, string> = {};
@@ -924,6 +1010,39 @@ export async function runSpecVerdict(
   opts: RunCoreOptions = {},
 ): Promise<SpecVerdictResult> {
   return analyzeSpec(specPath, opts);
+}
+
+/**
+ * Analyze a caller-owned graph snapshot without rebuilding it. Callers may
+ * provide already-collected core results; otherwise the authoritative
+ * validate-spec/audit-spec prefilter runs against the requested spec. If those
+ * inputs cannot be collected, the snapshot remains explicitly structural-RED;
+ * graph reuse never authorizes absent structural or audit evidence to read GREEN.
+ */
+export async function analyzeGraphSnapshot(
+  specPath: string,
+  graphSnapshot: SpecGraph,
+  opts: Omit<RunCoreOptions, 'graphSnapshot'> = {},
+): Promise<SpecVerdictResult> {
+  const snapshotOpts: RunCoreOptions = { ...opts, graphSnapshot };
+  if (opts.coreResults) return analyzeSpec(specPath, snapshotOpts);
+  try {
+    return await analyzeSpec(specPath, snapshotOpts);
+  } catch (error) {
+    return analyzeSpec(specPath, {
+      ...snapshotOpts,
+      coreResults: {
+        validation: {
+          errors: [{
+            file: specPath,
+            message: `AUTHORITATIVE_CORE_INPUT_UNAVAILABLE: ${(error as Error).message}`,
+          }],
+          warnings: [],
+        },
+        audit: { findings: [] },
+      },
+    });
+  }
 }
 
 /**
@@ -1012,8 +1131,18 @@ export function renderVerdict(r: SpecVerdictResult): string {
       lines.push(`  … and ${r.traceabilityGate.gaps.length - 20} more (see --json for the full list)`);
     }
   }
+  lines.push('action center (FR-86):');
+  if (r.readiness.action_center.length === 0) {
+    lines.push('  no blocking readiness lanes');
+  } else {
+    for (const group of r.readiness.action_center) {
+      lines.push(`  ${group.lane} ×${group.count} [${group.action.code}] — ${group.action.message}`);
+      for (const reason of group.reasons.slice(0, 8)) lines.push(`    - ${reason}`);
+      if (group.reasons.length > 8) lines.push(`    … and ${group.reasons.length - 8} more`);
+    }
+  }
   lines.push('readiness lanes (FR-61):');
-  const laneOrder: ReadinessLaneName[] = ['STRUCTURE', 'TRACEABILITY', 'EXECUTION', 'LIVE_EVIDENCE', 'TASK_TRUTH', 'BDD_SYNC', 'AC_SATISFACTION', 'NFR_SATISFACTION', 'MULTILAYER', 'SEMANTIC', 'FILTERED_PROOF'];
+  const laneOrder: ReadinessLaneName[] = ['STRUCTURE', 'CONTRACT', 'TRACEABILITY', 'EXECUTION', 'LIVE_EVIDENCE', 'TASK_TRUTH', 'BDD_SYNC', 'AC_SATISFACTION', 'NFR_SATISFACTION', 'MULTILAYER', 'SEMANTIC', 'FILTERED_PROOF'];
   for (const name of laneOrder) {
     const lane = r.readiness.lanes[name];
     lines.push(`  ${name}: ${lane.status}${lane.blocking ? ' (blocking)' : ''} — ${lane.summary}`);

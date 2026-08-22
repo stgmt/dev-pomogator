@@ -24,7 +24,8 @@
  */
 
 import fs from 'node:fs';
-import type { ScenarioNode } from '../types.ts';
+import path from 'node:path';
+import type { ArtifactIngestionReason, ArtifactIngestionState, ScenarioNode } from '../types.ts';
 
 type TestStatus =
   | 'PASSED'
@@ -57,6 +58,18 @@ export interface TestResultPatch {
    * (ambiguous) and is never applied — name-fallback must not guess.
    */
   byName: Map<string, ScenarioResultFields | null>;
+  /** Producer result count before any graph join (not a matched-scenario count). */
+  records: number;
+  /** Invalid NDJSON envelopes encountered while parsing this artifact. */
+  malformed: number;
+}
+
+export interface NdjsonArtifact {
+  patch: TestResultPatch;
+  path: string;
+  state: ArtifactIngestionState;
+  reason: ArtifactIngestionReason | null;
+  timestamp: string | null;
 }
 
 export interface ScenarioResultFields {
@@ -148,6 +161,7 @@ export function parseNdjson(source: string): TestResultPatch {
   const byLocation = new Map<string, ScenarioResultFields>();
   /** testCaseId → tentative result accumulated during the run. */
   const testCaseResult = new Map<string, ScenarioResultFields & { startTs?: string }>();
+  let malformed = 0;
 
   for (const line of lines) {
     if (!line.trim()) continue;
@@ -155,6 +169,7 @@ export function parseNdjson(source: string): TestResultPatch {
     try {
       env = JSON.parse(line);
     } catch {
+      malformed++;
       continue;
     }
 
@@ -361,13 +376,44 @@ export function parseNdjson(source: string): TestResultPatch {
     }
   }
 
-  return { byLocation, byName };
+  return { byLocation, byName, records: byLocation.size, malformed };
 }
 
-/** Read NDJSON from disk and parse. Returns empty patch when the file is absent. */
+/** Backwards-compatible patch reader; artifact state is available below. */
 export function parseNdjsonFile(absPath: string): TestResultPatch {
-  if (!fs.existsSync(absPath)) return { byLocation: new Map(), byName: new Map() };
-  return parseNdjson(fs.readFileSync(absPath, 'utf-8'));
+  return parseNdjsonArtifactFile(absPath).patch;
+}
+
+/**
+ * Read one canonical Cucumber artifact without collapsing absence, malformed
+ * input, or a suite-only receipt into scenario execution evidence. A valid
+ * artifact with produced scenario results remains INGESTED even when it joins
+ * zero authored scenarios.
+ */
+export function parseNdjsonArtifactFile(absPath: string): NdjsonArtifact {
+  const artifactPath = absPath.replace(/\\/g, '/');
+  if (!fs.existsSync(absPath)) {
+    return {
+      patch: { byLocation: new Map(), byName: new Map(), records: 0, malformed: 0 },
+      path: artifactPath,
+      state: 'NOT_INGESTED',
+      reason: 'ARTIFACT_ABSENT',
+      timestamp: null,
+    };
+  }
+  const patch = parseNdjson(fs.readFileSync(absPath, 'utf-8'));
+  const reason = patch.malformed > 0
+    ? 'MALFORMED_ARTIFACT'
+    : patch.records === 0
+      ? 'MISSING_SCENARIO_RESULTS'
+      : null;
+  return {
+    patch,
+    path: artifactPath,
+    state: reason ? 'NOT_INGESTED' : 'INGESTED',
+    reason,
+    timestamp: fs.statSync(absPath).mtime.toISOString(),
+  };
 }
 
 /**
@@ -414,8 +460,12 @@ export function applyTestResults(
     if (!fields) continue;
     s.lastResult = fields.lastResult;
     s.lastRunAt = fields.lastRunAt;
+    s.lastResultSource = 'cucumber-messages-ndjson';
+    s.lastResultRunId = undefined;
     s.canonicalResult = fields.lastResult;
     s.canonicalRunAt = fields.lastRunAt;
+    s.canonicalRunId = undefined;
+    s.canonicalSource = 'cucumber-messages-ndjson';
     s.resultStale = false;
     s.trace = undefined;
     s.durationMs = fields.durationMs;

@@ -16,18 +16,33 @@
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import fs from 'node:fs';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import path from 'node:path';
 import { startLifecycle, type LifecycleHandle } from './lifecycle.ts';
 import { buildToolRegistry } from './tools.ts';
 import { configuredFeatureRoots } from '../specs-generator/spec-verdict.ts';
 import { resolveTargetProjectRoot, type RootResolution } from '../spec-graph/root-resolution.ts';
+import { checkDeclaredWorktree, ROOT_WORKTREE_MISMATCH } from './path-containment.ts';
 
-const PRODUCT_NAME = 'dev-pomogator-specs';
-const PRODUCT_VERSION = '0.1.0';
+export const PRODUCT_NAME = 'dev-pomogator-specs';
+export const MCP_VERSION = '0.1.0';
+
+function installedPluginVersion(): string {
+  try {
+    const packagePath = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..', 'package.json');
+    const parsed = JSON.parse(fs.readFileSync(packagePath, 'utf8')) as { version?: unknown };
+    return typeof parsed.version === 'string' ? parsed.version : 'unknown';
+  } catch {
+    return 'unknown';
+  }
+}
 
 export interface BootOptions {
   repoRoot: string;
+  /** Claimed caller worktree. A mismatch is fail-closed for every mutation. */
+  declaredWorktree?: string;
+  pluginVersion?: string;
 }
 
 /**
@@ -38,6 +53,12 @@ export async function boot(opts: BootOptions): Promise<{
   server: McpServer;
   lifecycle: LifecycleHandle;
 }> {
+  // Admission is intentionally before lifecycle startup: lifecycle creates locks
+  // and caches, which a mismatched caller must not cause in another worktree.
+  if (!checkDeclaredWorktree(opts.repoRoot, opts.declaredWorktree).ok) {
+    throw new Error(ROOT_WORKTREE_MISMATCH);
+  }
+
   // Enable the touch-test watch-mode probe (SPECGEN004_32): on a Docker-Desktop
   // bind mount where native fs events don't propagate, auto-fall-back to polling.
   // P21-1: `onLockContention: 'readonly'` — when a sibling session owns the
@@ -55,7 +76,7 @@ export async function boot(opts: BootOptions): Promise<{
         `(env ${lifecycle.lockHolder.env}); E-A — writes still proceed, serialized per-mutation by the short write-lock + CAS\n`,
     );
   }
-  const server = new McpServer({ name: PRODUCT_NAME, version: PRODUCT_VERSION });
+  const server = new McpServer({ name: PRODUCT_NAME, version: MCP_VERSION });
 
   // FR-7b: markdown navigation (definition/references/rename over wiki-links) is
   // owned by Marksman as a NATIVE Claude Code LSP plugin (`.lsp.json`), exposed
@@ -64,7 +85,15 @@ export async function boot(opts: BootOptions): Promise<{
   // conformance + the graph-edge `find_refs` the LSP has no concept of).
   for (const tool of buildToolRegistry(() => lifecycle.graph, {
     repoRoot: opts.repoRoot,
+    declaredWorktree: opts.declaredWorktree,
     refreshGraph: lifecycle.refreshGraph,
+    preflight: () => ({
+      lockMode: lifecycle.lockMode,
+      writeMode: lifecycle.writeMode,
+      dependencies: lifecycle.dependencies,
+      mcpVersion: MCP_VERSION,
+      pluginVersion: opts.pluginVersion ?? installedPluginVersion(),
+    }),
     // P21-1: in a read-only door the write tools refuse with the holder named.
     writeLockHeldBy: () =>
       lifecycle.readOnly && lifecycle.lockHolder
@@ -113,7 +142,11 @@ async function main(): Promise<void> {
     return;
   }
   const repoRoot = resolution.root;
-  const { server, lifecycle } = await boot({ repoRoot });
+  const { server, lifecycle } = await boot({
+    repoRoot,
+    declaredWorktree: process.env.CLAUDE_PROJECT_DIR,
+    pluginVersion: installedPluginVersion(),
+  });
 
   const shutdownAndExit = async (code: number): Promise<void> => {
     await lifecycle.shutdown();

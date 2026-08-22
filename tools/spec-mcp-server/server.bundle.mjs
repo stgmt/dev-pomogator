@@ -40,9 +40,9 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
 ));
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
-// node_modules/ajv/dist/compile/codegen/code.js
+// ../dev-pomogator/node_modules/ajv/dist/compile/codegen/code.js
 var require_code = __commonJS({
-  "node_modules/ajv/dist/compile/codegen/code.js"(exports) {
+  "../dev-pomogator/node_modules/ajv/dist/compile/codegen/code.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.regexpCode = exports.getEsmExportName = exports.getProperty = exports.safeStringify = exports.stringify = exports.strConcat = exports.addCodeArg = exports.str = exports._ = exports.nil = exports._Code = exports.Name = exports.IDENTIFIER = exports._CodeOrName = void 0;
@@ -194,9 +194,9 @@ var require_code = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/compile/codegen/scope.js
+// ../dev-pomogator/node_modules/ajv/dist/compile/codegen/scope.js
 var require_scope = __commonJS({
-  "node_modules/ajv/dist/compile/codegen/scope.js"(exports) {
+  "../dev-pomogator/node_modules/ajv/dist/compile/codegen/scope.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.ValueScope = exports.ValueScopeName = exports.Scope = exports.varKinds = exports.UsedValueState = void 0;
@@ -339,9 +339,9 @@ var require_scope = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/compile/codegen/index.js
+// ../dev-pomogator/node_modules/ajv/dist/compile/codegen/index.js
 var require_codegen = __commonJS({
-  "node_modules/ajv/dist/compile/codegen/index.js"(exports) {
+  "../dev-pomogator/node_modules/ajv/dist/compile/codegen/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.or = exports.and = exports.not = exports.CodeGen = exports.operators = exports.varKinds = exports.ValueScopeName = exports.ValueScope = exports.Scope = exports.Name = exports.regexpCode = exports.stringify = exports.getProperty = exports.nil = exports.strConcat = exports.str = exports._ = void 0;
@@ -1059,9 +1059,9 @@ var require_codegen = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/compile/util.js
+// ../dev-pomogator/node_modules/ajv/dist/compile/util.js
 var require_util = __commonJS({
-  "node_modules/ajv/dist/compile/util.js"(exports) {
+  "../dev-pomogator/node_modules/ajv/dist/compile/util.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.checkStrictMode = exports.getErrorPath = exports.Type = exports.useFunc = exports.setEvaluated = exports.evaluatedPropsToName = exports.mergeEvaluated = exports.eachItem = exports.unescapeJsonPointer = exports.escapeJsonPointer = exports.escapeFragment = exports.unescapeFragment = exports.schemaRefOrVal = exports.schemaHasRulesButRef = exports.schemaHasRules = exports.checkUnknownRules = exports.alwaysValidSchema = exports.toHash = void 0;
@@ -1226,9 +1226,9 @@ var require_util = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/compile/names.js
+// ../dev-pomogator/node_modules/ajv/dist/compile/names.js
 var require_names = __commonJS({
-  "node_modules/ajv/dist/compile/names.js"(exports) {
+  "../dev-pomogator/node_modules/ajv/dist/compile/names.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -1265,9 +1265,9 @@ var require_names = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/compile/errors.js
+// ../dev-pomogator/node_modules/ajv/dist/compile/errors.js
 var require_errors = __commonJS({
-  "node_modules/ajv/dist/compile/errors.js"(exports) {
+  "../dev-pomogator/node_modules/ajv/dist/compile/errors.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.extendErrors = exports.resetErrorsCount = exports.reportExtraError = exports.reportError = exports.keyword$DataError = exports.keywordError = void 0;
@@ -1387,9 +1387,9 @@ var require_errors = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/compile/validate/boolSchema.js
+// ../dev-pomogator/node_modules/ajv/dist/compile/validate/boolSchema.js
 var require_boolSchema = __commonJS({
-  "node_modules/ajv/dist/compile/validate/boolSchema.js"(exports) {
+  "../dev-pomogator/node_modules/ajv/dist/compile/validate/boolSchema.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.boolOrEmptySchema = exports.topBoolOrEmptySchema = void 0;
@@ -1438,9 +1438,9 @@ var require_boolSchema = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/compile/rules.js
+// ../dev-pomogator/node_modules/ajv/dist/compile/rules.js
 var require_rules = __commonJS({
-  "node_modules/ajv/dist/compile/rules.js"(exports) {
+  "../dev-pomogator/node_modules/ajv/dist/compile/rules.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.getRules = exports.isJSONType = void 0;
@@ -1469,9 +1469,9 @@ var require_rules = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/compile/validate/applicability.js
+// ../dev-pomogator/node_modules/ajv/dist/compile/validate/applicability.js
 var require_applicability = __commonJS({
-  "node_modules/ajv/dist/compile/validate/applicability.js"(exports) {
+  "../dev-pomogator/node_modules/ajv/dist/compile/validate/applicability.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.shouldUseRule = exports.shouldUseGroup = exports.schemaHasRulesForType = void 0;
@@ -1492,9 +1492,9 @@ var require_applicability = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/compile/validate/dataType.js
+// ../dev-pomogator/node_modules/ajv/dist/compile/validate/dataType.js
 var require_dataType = __commonJS({
-  "node_modules/ajv/dist/compile/validate/dataType.js"(exports) {
+  "../dev-pomogator/node_modules/ajv/dist/compile/validate/dataType.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.reportTypeError = exports.checkDataTypes = exports.checkDataType = exports.coerceAndCheckDataType = exports.getJSONTypes = exports.getSchemaTypes = exports.DataType = void 0;
@@ -1676,9 +1676,9 @@ var require_dataType = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/compile/validate/defaults.js
+// ../dev-pomogator/node_modules/ajv/dist/compile/validate/defaults.js
 var require_defaults = __commonJS({
-  "node_modules/ajv/dist/compile/validate/defaults.js"(exports) {
+  "../dev-pomogator/node_modules/ajv/dist/compile/validate/defaults.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.assignDefaults = void 0;
@@ -1713,9 +1713,9 @@ var require_defaults = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/code.js
+// ../dev-pomogator/node_modules/ajv/dist/vocabularies/code.js
 var require_code2 = __commonJS({
-  "node_modules/ajv/dist/vocabularies/code.js"(exports) {
+  "../dev-pomogator/node_modules/ajv/dist/vocabularies/code.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.validateUnion = exports.validateArray = exports.usePattern = exports.callValidateCode = exports.schemaProperties = exports.allSchemaProperties = exports.noPropertyInData = exports.propertyInData = exports.isOwnProperty = exports.hasPropFunc = exports.reportMissingProp = exports.checkMissingProp = exports.checkReportMissingProp = void 0;
@@ -1846,9 +1846,9 @@ var require_code2 = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/compile/validate/keyword.js
+// ../dev-pomogator/node_modules/ajv/dist/compile/validate/keyword.js
 var require_keyword = __commonJS({
-  "node_modules/ajv/dist/compile/validate/keyword.js"(exports) {
+  "../dev-pomogator/node_modules/ajv/dist/compile/validate/keyword.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.validateKeywordUsage = exports.validSchemaType = exports.funcKeywordCode = exports.macroKeywordCode = void 0;
@@ -1964,9 +1964,9 @@ var require_keyword = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/compile/validate/subschema.js
+// ../dev-pomogator/node_modules/ajv/dist/compile/validate/subschema.js
 var require_subschema = __commonJS({
-  "node_modules/ajv/dist/compile/validate/subschema.js"(exports) {
+  "../dev-pomogator/node_modules/ajv/dist/compile/validate/subschema.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.extendSubschemaMode = exports.extendSubschemaData = exports.getSubschema = void 0;
@@ -2047,9 +2047,9 @@ var require_subschema = __commonJS({
   }
 });
 
-// node_modules/fast-deep-equal/index.js
+// ../dev-pomogator/node_modules/fast-deep-equal/index.js
 var require_fast_deep_equal = __commonJS({
-  "node_modules/fast-deep-equal/index.js"(exports, module2) {
+  "../dev-pomogator/node_modules/fast-deep-equal/index.js"(exports, module2) {
     "use strict";
     module2.exports = function equal(a, b) {
       if (a === b) return true;
@@ -2082,9 +2082,9 @@ var require_fast_deep_equal = __commonJS({
   }
 });
 
-// node_modules/json-schema-traverse/index.js
+// ../dev-pomogator/node_modules/json-schema-traverse/index.js
 var require_json_schema_traverse = __commonJS({
-  "node_modules/json-schema-traverse/index.js"(exports, module2) {
+  "../dev-pomogator/node_modules/json-schema-traverse/index.js"(exports, module2) {
     "use strict";
     var traverse = module2.exports = function(schema, opts, cb) {
       if (typeof opts == "function") {
@@ -2170,9 +2170,9 @@ var require_json_schema_traverse = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/compile/resolve.js
+// ../dev-pomogator/node_modules/ajv/dist/compile/resolve.js
 var require_resolve = __commonJS({
-  "node_modules/ajv/dist/compile/resolve.js"(exports) {
+  "../dev-pomogator/node_modules/ajv/dist/compile/resolve.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.getSchemaRefs = exports.resolveUrl = exports.normalizeId = exports._getFullPath = exports.getFullPath = exports.inlineRef = void 0;
@@ -2326,9 +2326,9 @@ var require_resolve = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/compile/validate/index.js
+// ../dev-pomogator/node_modules/ajv/dist/compile/validate/index.js
 var require_validate = __commonJS({
-  "node_modules/ajv/dist/compile/validate/index.js"(exports) {
+  "../dev-pomogator/node_modules/ajv/dist/compile/validate/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.getData = exports.KeywordCxt = exports.validateFunctionCode = void 0;
@@ -2834,9 +2834,9 @@ var require_validate = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/runtime/validation_error.js
+// ../dev-pomogator/node_modules/ajv/dist/runtime/validation_error.js
 var require_validation_error = __commonJS({
-  "node_modules/ajv/dist/runtime/validation_error.js"(exports) {
+  "../dev-pomogator/node_modules/ajv/dist/runtime/validation_error.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var ValidationError = class extends Error {
@@ -2850,9 +2850,9 @@ var require_validation_error = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/compile/ref_error.js
+// ../dev-pomogator/node_modules/ajv/dist/compile/ref_error.js
 var require_ref_error = __commonJS({
-  "node_modules/ajv/dist/compile/ref_error.js"(exports) {
+  "../dev-pomogator/node_modules/ajv/dist/compile/ref_error.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var resolve_1 = require_resolve();
@@ -2867,9 +2867,9 @@ var require_ref_error = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/compile/index.js
+// ../dev-pomogator/node_modules/ajv/dist/compile/index.js
 var require_compile = __commonJS({
-  "node_modules/ajv/dist/compile/index.js"(exports) {
+  "../dev-pomogator/node_modules/ajv/dist/compile/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.resolveSchema = exports.getCompilingSchema = exports.resolveRef = exports.compileSchema = exports.SchemaEnv = void 0;
@@ -3091,9 +3091,9 @@ var require_compile = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/refs/data.json
+// ../dev-pomogator/node_modules/ajv/dist/refs/data.json
 var require_data = __commonJS({
-  "node_modules/ajv/dist/refs/data.json"(exports, module2) {
+  "../dev-pomogator/node_modules/ajv/dist/refs/data.json"(exports, module2) {
     module2.exports = {
       $id: "https://raw.githubusercontent.com/ajv-validator/ajv/master/lib/refs/data.json#",
       description: "Meta-schema for $data reference (JSON AnySchema extension proposal)",
@@ -3110,9 +3110,9 @@ var require_data = __commonJS({
   }
 });
 
-// node_modules/fast-uri/lib/utils.js
+// ../dev-pomogator/node_modules/fast-uri/lib/utils.js
 var require_utils = __commonJS({
-  "node_modules/fast-uri/lib/utils.js"(exports, module2) {
+  "../dev-pomogator/node_modules/fast-uri/lib/utils.js"(exports, module2) {
     "use strict";
     var isUUID = RegExp.prototype.test.bind(/^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/iu);
     var isIPv4 = RegExp.prototype.test.bind(/^(?:(?:25[0-5]|2[0-4]\d|1\d{2}|[1-9]\d|\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d{2}|[1-9]\d|\d)$/u);
@@ -3236,8 +3236,8 @@ var require_utils = __commonJS({
       }
       return ind;
     }
-    function removeDotSegments(path31) {
-      let input = path31;
+    function removeDotSegments(path33) {
+      let input = path33;
       const output = [];
       let nextSlash = -1;
       let len = 0;
@@ -3423,9 +3423,9 @@ var require_utils = __commonJS({
   }
 });
 
-// node_modules/fast-uri/lib/schemes.js
+// ../dev-pomogator/node_modules/fast-uri/lib/schemes.js
 var require_schemes = __commonJS({
-  "node_modules/fast-uri/lib/schemes.js"(exports, module2) {
+  "../dev-pomogator/node_modules/fast-uri/lib/schemes.js"(exports, module2) {
     "use strict";
     var { isUUID } = require_utils();
     var URN_REG = /([\da-z][\d\-a-z]{0,31}):((?:[\w!$'()*+,\-.:;=@]|%[\da-f]{2})+)/iu;
@@ -3489,8 +3489,8 @@ var require_schemes = __commonJS({
         wsComponent.secure = void 0;
       }
       if (wsComponent.resourceName) {
-        const [path31, query] = wsComponent.resourceName.split("?");
-        wsComponent.path = path31 && path31 !== "/" ? path31 : void 0;
+        const [path33, query] = wsComponent.resourceName.split("?");
+        wsComponent.path = path33 && path33 !== "/" ? path33 : void 0;
         wsComponent.query = query;
         wsComponent.resourceName = void 0;
       }
@@ -3633,9 +3633,9 @@ var require_schemes = __commonJS({
   }
 });
 
-// node_modules/fast-uri/index.js
+// ../dev-pomogator/node_modules/fast-uri/index.js
 var require_fast_uri = __commonJS({
-  "node_modules/fast-uri/index.js"(exports, module2) {
+  "../dev-pomogator/node_modules/fast-uri/index.js"(exports, module2) {
     "use strict";
     var { normalizeIPv6, removeDotSegments, recomposeAuthority, normalizePercentEncoding, normalizePathEncoding, escapePreservingEscapes, reescapeHostDelimiters, isIPv4, nonSimpleDomain } = require_utils();
     var { SCHEMES, getSchemeHandler } = require_schemes();
@@ -3919,9 +3919,9 @@ var require_fast_uri = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/runtime/uri.js
+// ../dev-pomogator/node_modules/ajv/dist/runtime/uri.js
 var require_uri = __commonJS({
-  "node_modules/ajv/dist/runtime/uri.js"(exports) {
+  "../dev-pomogator/node_modules/ajv/dist/runtime/uri.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var uri = require_fast_uri();
@@ -3930,9 +3930,9 @@ var require_uri = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/core.js
+// ../dev-pomogator/node_modules/ajv/dist/core.js
 var require_core = __commonJS({
-  "node_modules/ajv/dist/core.js"(exports) {
+  "../dev-pomogator/node_modules/ajv/dist/core.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.CodeGen = exports.Name = exports.nil = exports.stringify = exports.str = exports._ = exports.KeywordCxt = void 0;
@@ -4322,7 +4322,7 @@ var require_core = __commonJS({
       errorsText(errors = this.errors, { separator = ", ", dataVar = "data" } = {}) {
         if (!errors || errors.length === 0)
           return "No errors";
-        return errors.map((e) => `${dataVar}${e.instancePath} ${e.message}`).reduce((text, msg) => text + separator + msg);
+        return errors.map((e) => `${dataVar}${e.instancePath} ${e.message}`).reduce((text2, msg) => text2 + separator + msg);
       }
       $dataMetaSchema(metaSchema, keywordsJsonPointers) {
         const rules = this.RULES.all;
@@ -4541,9 +4541,9 @@ var require_core = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/core/id.js
+// ../dev-pomogator/node_modules/ajv/dist/vocabularies/core/id.js
 var require_id = __commonJS({
-  "node_modules/ajv/dist/vocabularies/core/id.js"(exports) {
+  "../dev-pomogator/node_modules/ajv/dist/vocabularies/core/id.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var def = {
@@ -4556,9 +4556,9 @@ var require_id = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/core/ref.js
+// ../dev-pomogator/node_modules/ajv/dist/vocabularies/core/ref.js
 var require_ref = __commonJS({
-  "node_modules/ajv/dist/vocabularies/core/ref.js"(exports) {
+  "../dev-pomogator/node_modules/ajv/dist/vocabularies/core/ref.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.callRef = exports.getValidate = void 0;
@@ -4678,9 +4678,9 @@ var require_ref = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/core/index.js
+// ../dev-pomogator/node_modules/ajv/dist/vocabularies/core/index.js
 var require_core2 = __commonJS({
-  "node_modules/ajv/dist/vocabularies/core/index.js"(exports) {
+  "../dev-pomogator/node_modules/ajv/dist/vocabularies/core/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var id_1 = require_id();
@@ -4699,9 +4699,9 @@ var require_core2 = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/validation/limitNumber.js
+// ../dev-pomogator/node_modules/ajv/dist/vocabularies/validation/limitNumber.js
 var require_limitNumber = __commonJS({
-  "node_modules/ajv/dist/vocabularies/validation/limitNumber.js"(exports) {
+  "../dev-pomogator/node_modules/ajv/dist/vocabularies/validation/limitNumber.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -4731,9 +4731,9 @@ var require_limitNumber = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/validation/multipleOf.js
+// ../dev-pomogator/node_modules/ajv/dist/vocabularies/validation/multipleOf.js
 var require_multipleOf = __commonJS({
-  "node_modules/ajv/dist/vocabularies/validation/multipleOf.js"(exports) {
+  "../dev-pomogator/node_modules/ajv/dist/vocabularies/validation/multipleOf.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -4759,9 +4759,9 @@ var require_multipleOf = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/runtime/ucs2length.js
+// ../dev-pomogator/node_modules/ajv/dist/runtime/ucs2length.js
 var require_ucs2length = __commonJS({
-  "node_modules/ajv/dist/runtime/ucs2length.js"(exports) {
+  "../dev-pomogator/node_modules/ajv/dist/runtime/ucs2length.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     function ucs2length(str) {
@@ -4785,9 +4785,9 @@ var require_ucs2length = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/validation/limitLength.js
+// ../dev-pomogator/node_modules/ajv/dist/vocabularies/validation/limitLength.js
 var require_limitLength = __commonJS({
-  "node_modules/ajv/dist/vocabularies/validation/limitLength.js"(exports) {
+  "../dev-pomogator/node_modules/ajv/dist/vocabularies/validation/limitLength.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -4817,9 +4817,9 @@ var require_limitLength = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/validation/pattern.js
+// ../dev-pomogator/node_modules/ajv/dist/vocabularies/validation/pattern.js
 var require_pattern = __commonJS({
-  "node_modules/ajv/dist/vocabularies/validation/pattern.js"(exports) {
+  "../dev-pomogator/node_modules/ajv/dist/vocabularies/validation/pattern.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var code_1 = require_code2();
@@ -4854,9 +4854,9 @@ var require_pattern = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/validation/limitProperties.js
+// ../dev-pomogator/node_modules/ajv/dist/vocabularies/validation/limitProperties.js
 var require_limitProperties = __commonJS({
-  "node_modules/ajv/dist/vocabularies/validation/limitProperties.js"(exports) {
+  "../dev-pomogator/node_modules/ajv/dist/vocabularies/validation/limitProperties.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -4883,9 +4883,9 @@ var require_limitProperties = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/validation/required.js
+// ../dev-pomogator/node_modules/ajv/dist/vocabularies/validation/required.js
 var require_required = __commonJS({
-  "node_modules/ajv/dist/vocabularies/validation/required.js"(exports) {
+  "../dev-pomogator/node_modules/ajv/dist/vocabularies/validation/required.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var code_1 = require_code2();
@@ -4965,9 +4965,9 @@ var require_required = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/validation/limitItems.js
+// ../dev-pomogator/node_modules/ajv/dist/vocabularies/validation/limitItems.js
 var require_limitItems = __commonJS({
-  "node_modules/ajv/dist/vocabularies/validation/limitItems.js"(exports) {
+  "../dev-pomogator/node_modules/ajv/dist/vocabularies/validation/limitItems.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -4994,9 +4994,9 @@ var require_limitItems = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/runtime/equal.js
+// ../dev-pomogator/node_modules/ajv/dist/runtime/equal.js
 var require_equal = __commonJS({
-  "node_modules/ajv/dist/runtime/equal.js"(exports) {
+  "../dev-pomogator/node_modules/ajv/dist/runtime/equal.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var equal = require_fast_deep_equal();
@@ -5005,9 +5005,9 @@ var require_equal = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/validation/uniqueItems.js
+// ../dev-pomogator/node_modules/ajv/dist/vocabularies/validation/uniqueItems.js
 var require_uniqueItems = __commonJS({
-  "node_modules/ajv/dist/vocabularies/validation/uniqueItems.js"(exports) {
+  "../dev-pomogator/node_modules/ajv/dist/vocabularies/validation/uniqueItems.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var dataType_1 = require_dataType();
@@ -5072,9 +5072,9 @@ var require_uniqueItems = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/validation/const.js
+// ../dev-pomogator/node_modules/ajv/dist/vocabularies/validation/const.js
 var require_const = __commonJS({
-  "node_modules/ajv/dist/vocabularies/validation/const.js"(exports) {
+  "../dev-pomogator/node_modules/ajv/dist/vocabularies/validation/const.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -5101,9 +5101,9 @@ var require_const = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/validation/enum.js
+// ../dev-pomogator/node_modules/ajv/dist/vocabularies/validation/enum.js
 var require_enum = __commonJS({
-  "node_modules/ajv/dist/vocabularies/validation/enum.js"(exports) {
+  "../dev-pomogator/node_modules/ajv/dist/vocabularies/validation/enum.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -5150,9 +5150,9 @@ var require_enum = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/validation/index.js
+// ../dev-pomogator/node_modules/ajv/dist/vocabularies/validation/index.js
 var require_validation = __commonJS({
-  "node_modules/ajv/dist/vocabularies/validation/index.js"(exports) {
+  "../dev-pomogator/node_modules/ajv/dist/vocabularies/validation/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var limitNumber_1 = require_limitNumber();
@@ -5188,9 +5188,9 @@ var require_validation = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/additionalItems.js
+// ../dev-pomogator/node_modules/ajv/dist/vocabularies/applicator/additionalItems.js
 var require_additionalItems = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/additionalItems.js"(exports) {
+  "../dev-pomogator/node_modules/ajv/dist/vocabularies/applicator/additionalItems.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.validateAdditionalItems = void 0;
@@ -5241,9 +5241,9 @@ var require_additionalItems = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/items.js
+// ../dev-pomogator/node_modules/ajv/dist/vocabularies/applicator/items.js
 var require_items = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/items.js"(exports) {
+  "../dev-pomogator/node_modules/ajv/dist/vocabularies/applicator/items.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.validateTuple = void 0;
@@ -5298,9 +5298,9 @@ var require_items = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/prefixItems.js
+// ../dev-pomogator/node_modules/ajv/dist/vocabularies/applicator/prefixItems.js
 var require_prefixItems = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/prefixItems.js"(exports) {
+  "../dev-pomogator/node_modules/ajv/dist/vocabularies/applicator/prefixItems.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var items_1 = require_items();
@@ -5315,9 +5315,9 @@ var require_prefixItems = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/items2020.js
+// ../dev-pomogator/node_modules/ajv/dist/vocabularies/applicator/items2020.js
 var require_items2020 = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/items2020.js"(exports) {
+  "../dev-pomogator/node_modules/ajv/dist/vocabularies/applicator/items2020.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -5350,9 +5350,9 @@ var require_items2020 = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/contains.js
+// ../dev-pomogator/node_modules/ajv/dist/vocabularies/applicator/contains.js
 var require_contains = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/contains.js"(exports) {
+  "../dev-pomogator/node_modules/ajv/dist/vocabularies/applicator/contains.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -5444,9 +5444,9 @@ var require_contains = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/dependencies.js
+// ../dev-pomogator/node_modules/ajv/dist/vocabularies/applicator/dependencies.js
 var require_dependencies = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/dependencies.js"(exports) {
+  "../dev-pomogator/node_modules/ajv/dist/vocabularies/applicator/dependencies.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.validateSchemaDeps = exports.validatePropertyDeps = exports.error = void 0;
@@ -5538,9 +5538,9 @@ var require_dependencies = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/propertyNames.js
+// ../dev-pomogator/node_modules/ajv/dist/vocabularies/applicator/propertyNames.js
 var require_propertyNames = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/propertyNames.js"(exports) {
+  "../dev-pomogator/node_modules/ajv/dist/vocabularies/applicator/propertyNames.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -5581,9 +5581,9 @@ var require_propertyNames = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/additionalProperties.js
+// ../dev-pomogator/node_modules/ajv/dist/vocabularies/applicator/additionalProperties.js
 var require_additionalProperties = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/additionalProperties.js"(exports) {
+  "../dev-pomogator/node_modules/ajv/dist/vocabularies/applicator/additionalProperties.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var code_1 = require_code2();
@@ -5687,9 +5687,9 @@ var require_additionalProperties = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/properties.js
+// ../dev-pomogator/node_modules/ajv/dist/vocabularies/applicator/properties.js
 var require_properties = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/properties.js"(exports) {
+  "../dev-pomogator/node_modules/ajv/dist/vocabularies/applicator/properties.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var validate_1 = require_validate();
@@ -5745,9 +5745,9 @@ var require_properties = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/patternProperties.js
+// ../dev-pomogator/node_modules/ajv/dist/vocabularies/applicator/patternProperties.js
 var require_patternProperties = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/patternProperties.js"(exports) {
+  "../dev-pomogator/node_modules/ajv/dist/vocabularies/applicator/patternProperties.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var code_1 = require_code2();
@@ -5819,9 +5819,9 @@ var require_patternProperties = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/not.js
+// ../dev-pomogator/node_modules/ajv/dist/vocabularies/applicator/not.js
 var require_not = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/not.js"(exports) {
+  "../dev-pomogator/node_modules/ajv/dist/vocabularies/applicator/not.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var util_1 = require_util();
@@ -5850,9 +5850,9 @@ var require_not = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/anyOf.js
+// ../dev-pomogator/node_modules/ajv/dist/vocabularies/applicator/anyOf.js
 var require_anyOf = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/anyOf.js"(exports) {
+  "../dev-pomogator/node_modules/ajv/dist/vocabularies/applicator/anyOf.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var code_1 = require_code2();
@@ -5867,9 +5867,9 @@ var require_anyOf = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/oneOf.js
+// ../dev-pomogator/node_modules/ajv/dist/vocabularies/applicator/oneOf.js
 var require_oneOf = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/oneOf.js"(exports) {
+  "../dev-pomogator/node_modules/ajv/dist/vocabularies/applicator/oneOf.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -5925,9 +5925,9 @@ var require_oneOf = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/allOf.js
+// ../dev-pomogator/node_modules/ajv/dist/vocabularies/applicator/allOf.js
 var require_allOf = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/allOf.js"(exports) {
+  "../dev-pomogator/node_modules/ajv/dist/vocabularies/applicator/allOf.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var util_1 = require_util();
@@ -5952,9 +5952,9 @@ var require_allOf = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/if.js
+// ../dev-pomogator/node_modules/ajv/dist/vocabularies/applicator/if.js
 var require_if = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/if.js"(exports) {
+  "../dev-pomogator/node_modules/ajv/dist/vocabularies/applicator/if.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -6021,9 +6021,9 @@ var require_if = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/thenElse.js
+// ../dev-pomogator/node_modules/ajv/dist/vocabularies/applicator/thenElse.js
 var require_thenElse = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/thenElse.js"(exports) {
+  "../dev-pomogator/node_modules/ajv/dist/vocabularies/applicator/thenElse.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var util_1 = require_util();
@@ -6039,9 +6039,9 @@ var require_thenElse = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/applicator/index.js
+// ../dev-pomogator/node_modules/ajv/dist/vocabularies/applicator/index.js
 var require_applicator = __commonJS({
-  "node_modules/ajv/dist/vocabularies/applicator/index.js"(exports) {
+  "../dev-pomogator/node_modules/ajv/dist/vocabularies/applicator/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var additionalItems_1 = require_additionalItems();
@@ -6087,9 +6087,9 @@ var require_applicator = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/format/format.js
+// ../dev-pomogator/node_modules/ajv/dist/vocabularies/format/format.js
 var require_format = __commonJS({
-  "node_modules/ajv/dist/vocabularies/format/format.js"(exports) {
+  "../dev-pomogator/node_modules/ajv/dist/vocabularies/format/format.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -6177,9 +6177,9 @@ var require_format = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/format/index.js
+// ../dev-pomogator/node_modules/ajv/dist/vocabularies/format/index.js
 var require_format2 = __commonJS({
-  "node_modules/ajv/dist/vocabularies/format/index.js"(exports) {
+  "../dev-pomogator/node_modules/ajv/dist/vocabularies/format/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var format_1 = require_format();
@@ -6188,9 +6188,9 @@ var require_format2 = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/metadata.js
+// ../dev-pomogator/node_modules/ajv/dist/vocabularies/metadata.js
 var require_metadata = __commonJS({
-  "node_modules/ajv/dist/vocabularies/metadata.js"(exports) {
+  "../dev-pomogator/node_modules/ajv/dist/vocabularies/metadata.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.contentVocabulary = exports.metadataVocabulary = void 0;
@@ -6211,9 +6211,9 @@ var require_metadata = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/draft7.js
+// ../dev-pomogator/node_modules/ajv/dist/vocabularies/draft7.js
 var require_draft7 = __commonJS({
-  "node_modules/ajv/dist/vocabularies/draft7.js"(exports) {
+  "../dev-pomogator/node_modules/ajv/dist/vocabularies/draft7.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var core_1 = require_core2();
@@ -6233,9 +6233,9 @@ var require_draft7 = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/discriminator/types.js
+// ../dev-pomogator/node_modules/ajv/dist/vocabularies/discriminator/types.js
 var require_types = __commonJS({
-  "node_modules/ajv/dist/vocabularies/discriminator/types.js"(exports) {
+  "../dev-pomogator/node_modules/ajv/dist/vocabularies/discriminator/types.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.DiscrError = void 0;
@@ -6247,9 +6247,9 @@ var require_types = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/vocabularies/discriminator/index.js
+// ../dev-pomogator/node_modules/ajv/dist/vocabularies/discriminator/index.js
 var require_discriminator = __commonJS({
-  "node_modules/ajv/dist/vocabularies/discriminator/index.js"(exports) {
+  "../dev-pomogator/node_modules/ajv/dist/vocabularies/discriminator/index.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var codegen_1 = require_codegen();
@@ -6352,9 +6352,9 @@ var require_discriminator = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/refs/json-schema-draft-07.json
+// ../dev-pomogator/node_modules/ajv/dist/refs/json-schema-draft-07.json
 var require_json_schema_draft_07 = __commonJS({
-  "node_modules/ajv/dist/refs/json-schema-draft-07.json"(exports, module2) {
+  "../dev-pomogator/node_modules/ajv/dist/refs/json-schema-draft-07.json"(exports, module2) {
     module2.exports = {
       $schema: "http://json-schema.org/draft-07/schema#",
       $id: "http://json-schema.org/draft-07/schema#",
@@ -6509,9 +6509,9 @@ var require_json_schema_draft_07 = __commonJS({
   }
 });
 
-// node_modules/ajv/dist/ajv.js
+// ../dev-pomogator/node_modules/ajv/dist/ajv.js
 var require_ajv = __commonJS({
-  "node_modules/ajv/dist/ajv.js"(exports, module2) {
+  "../dev-pomogator/node_modules/ajv/dist/ajv.js"(exports, module2) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.MissingRefError = exports.ValidationError = exports.CodeGen = exports.Name = exports.nil = exports.stringify = exports.str = exports._ = exports.KeywordCxt = exports.Ajv = void 0;
@@ -6579,9 +6579,9 @@ var require_ajv = __commonJS({
   }
 });
 
-// node_modules/ajv-formats/dist/formats.js
+// ../dev-pomogator/node_modules/ajv-formats/dist/formats.js
 var require_formats = __commonJS({
-  "node_modules/ajv-formats/dist/formats.js"(exports) {
+  "../dev-pomogator/node_modules/ajv-formats/dist/formats.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.formatNames = exports.fastFormats = exports.fullFormats = void 0;
@@ -6782,9 +6782,9 @@ var require_formats = __commonJS({
   }
 });
 
-// node_modules/ajv-formats/dist/limit.js
+// ../dev-pomogator/node_modules/ajv-formats/dist/limit.js
 var require_limit = __commonJS({
-  "node_modules/ajv-formats/dist/limit.js"(exports) {
+  "../dev-pomogator/node_modules/ajv-formats/dist/limit.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.formatLimitDefinition = void 0;
@@ -6854,9 +6854,9 @@ var require_limit = __commonJS({
   }
 });
 
-// node_modules/ajv-formats/dist/index.js
+// ../dev-pomogator/node_modules/ajv-formats/dist/index.js
 var require_dist = __commonJS({
-  "node_modules/ajv-formats/dist/index.js"(exports, module2) {
+  "../dev-pomogator/node_modules/ajv-formats/dist/index.js"(exports, module2) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var formats_1 = require_formats();
@@ -6883,12 +6883,12 @@ var require_dist = __commonJS({
         throw new Error(`Unknown format "${name}"`);
       return f;
     };
-    function addFormats(ajv, list, fs33, exportName) {
+    function addFormats(ajv, list, fs36, exportName) {
       var _a3;
       var _b;
       (_a3 = (_b = ajv.opts.code).formats) !== null && _a3 !== void 0 ? _a3 : _b.formats = (0, codegen_1._)`require("ajv-formats/dist/formats").${exportName}`;
       for (const f of list)
-        ajv.addFormat(f, fs33[f]);
+        ajv.addFormat(f, fs36[f]);
     }
     module2.exports = exports = formatsPlugin;
     Object.defineProperty(exports, "__esModule", { value: true });
@@ -6896,9 +6896,9 @@ var require_dist = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/nodes/identity.js
+// ../dev-pomogator/node_modules/yaml/dist/nodes/identity.js
 var require_identity = __commonJS({
-  "node_modules/yaml/dist/nodes/identity.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/nodes/identity.js"(exports) {
     "use strict";
     var ALIAS = /* @__PURE__ */ Symbol.for("yaml.alias");
     var DOC = /* @__PURE__ */ Symbol.for("yaml.document");
@@ -6953,9 +6953,9 @@ var require_identity = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/visit.js
+// ../dev-pomogator/node_modules/yaml/dist/visit.js
 var require_visit = __commonJS({
-  "node_modules/yaml/dist/visit.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/visit.js"(exports) {
     "use strict";
     var identity = require_identity();
     var BREAK = /* @__PURE__ */ Symbol("break visit");
@@ -6973,17 +6973,17 @@ var require_visit = __commonJS({
     visit.BREAK = BREAK;
     visit.SKIP = SKIP;
     visit.REMOVE = REMOVE;
-    function visit_(key, node, visitor, path31) {
-      const ctrl = callVisitor(key, node, visitor, path31);
+    function visit_(key, node, visitor, path33) {
+      const ctrl = callVisitor(key, node, visitor, path33);
       if (identity.isNode(ctrl) || identity.isPair(ctrl)) {
-        replaceNode(key, path31, ctrl);
-        return visit_(key, ctrl, visitor, path31);
+        replaceNode(key, path33, ctrl);
+        return visit_(key, ctrl, visitor, path33);
       }
       if (typeof ctrl !== "symbol") {
         if (identity.isCollection(node)) {
-          path31 = Object.freeze(path31.concat(node));
+          path33 = Object.freeze(path33.concat(node));
           for (let i = 0; i < node.items.length; ++i) {
-            const ci = visit_(i, node.items[i], visitor, path31);
+            const ci = visit_(i, node.items[i], visitor, path33);
             if (typeof ci === "number")
               i = ci - 1;
             else if (ci === BREAK)
@@ -6994,13 +6994,13 @@ var require_visit = __commonJS({
             }
           }
         } else if (identity.isPair(node)) {
-          path31 = Object.freeze(path31.concat(node));
-          const ck = visit_("key", node.key, visitor, path31);
+          path33 = Object.freeze(path33.concat(node));
+          const ck = visit_("key", node.key, visitor, path33);
           if (ck === BREAK)
             return BREAK;
           else if (ck === REMOVE)
             node.key = null;
-          const cv = visit_("value", node.value, visitor, path31);
+          const cv = visit_("value", node.value, visitor, path33);
           if (cv === BREAK)
             return BREAK;
           else if (cv === REMOVE)
@@ -7021,17 +7021,17 @@ var require_visit = __commonJS({
     visitAsync.BREAK = BREAK;
     visitAsync.SKIP = SKIP;
     visitAsync.REMOVE = REMOVE;
-    async function visitAsync_(key, node, visitor, path31) {
-      const ctrl = await callVisitor(key, node, visitor, path31);
+    async function visitAsync_(key, node, visitor, path33) {
+      const ctrl = await callVisitor(key, node, visitor, path33);
       if (identity.isNode(ctrl) || identity.isPair(ctrl)) {
-        replaceNode(key, path31, ctrl);
-        return visitAsync_(key, ctrl, visitor, path31);
+        replaceNode(key, path33, ctrl);
+        return visitAsync_(key, ctrl, visitor, path33);
       }
       if (typeof ctrl !== "symbol") {
         if (identity.isCollection(node)) {
-          path31 = Object.freeze(path31.concat(node));
+          path33 = Object.freeze(path33.concat(node));
           for (let i = 0; i < node.items.length; ++i) {
-            const ci = await visitAsync_(i, node.items[i], visitor, path31);
+            const ci = await visitAsync_(i, node.items[i], visitor, path33);
             if (typeof ci === "number")
               i = ci - 1;
             else if (ci === BREAK)
@@ -7042,13 +7042,13 @@ var require_visit = __commonJS({
             }
           }
         } else if (identity.isPair(node)) {
-          path31 = Object.freeze(path31.concat(node));
-          const ck = await visitAsync_("key", node.key, visitor, path31);
+          path33 = Object.freeze(path33.concat(node));
+          const ck = await visitAsync_("key", node.key, visitor, path33);
           if (ck === BREAK)
             return BREAK;
           else if (ck === REMOVE)
             node.key = null;
-          const cv = await visitAsync_("value", node.value, visitor, path31);
+          const cv = await visitAsync_("value", node.value, visitor, path33);
           if (cv === BREAK)
             return BREAK;
           else if (cv === REMOVE)
@@ -7075,23 +7075,23 @@ var require_visit = __commonJS({
       }
       return visitor;
     }
-    function callVisitor(key, node, visitor, path31) {
+    function callVisitor(key, node, visitor, path33) {
       if (typeof visitor === "function")
-        return visitor(key, node, path31);
+        return visitor(key, node, path33);
       if (identity.isMap(node))
-        return visitor.Map?.(key, node, path31);
+        return visitor.Map?.(key, node, path33);
       if (identity.isSeq(node))
-        return visitor.Seq?.(key, node, path31);
+        return visitor.Seq?.(key, node, path33);
       if (identity.isPair(node))
-        return visitor.Pair?.(key, node, path31);
+        return visitor.Pair?.(key, node, path33);
       if (identity.isScalar(node))
-        return visitor.Scalar?.(key, node, path31);
+        return visitor.Scalar?.(key, node, path33);
       if (identity.isAlias(node))
-        return visitor.Alias?.(key, node, path31);
+        return visitor.Alias?.(key, node, path33);
       return void 0;
     }
-    function replaceNode(key, path31, node) {
-      const parent = path31[path31.length - 1];
+    function replaceNode(key, path33, node) {
+      const parent = path33[path33.length - 1];
       if (identity.isCollection(parent)) {
         parent.items[key] = node;
       } else if (identity.isPair(parent)) {
@@ -7111,9 +7111,9 @@ var require_visit = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/doc/directives.js
+// ../dev-pomogator/node_modules/yaml/dist/doc/directives.js
 var require_directives = __commonJS({
-  "node_modules/yaml/dist/doc/directives.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/doc/directives.js"(exports) {
     "use strict";
     var identity = require_identity();
     var visit = require_visit();
@@ -7282,9 +7282,9 @@ var require_directives = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/doc/anchors.js
+// ../dev-pomogator/node_modules/yaml/dist/doc/anchors.js
 var require_anchors = __commonJS({
-  "node_modules/yaml/dist/doc/anchors.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/doc/anchors.js"(exports) {
     "use strict";
     var identity = require_identity();
     var visit = require_visit();
@@ -7352,9 +7352,9 @@ var require_anchors = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/doc/applyReviver.js
+// ../dev-pomogator/node_modules/yaml/dist/doc/applyReviver.js
 var require_applyReviver = __commonJS({
-  "node_modules/yaml/dist/doc/applyReviver.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/doc/applyReviver.js"(exports) {
     "use strict";
     function applyReviver(reviver, obj, key, val) {
       if (val && typeof val === "object") {
@@ -7402,9 +7402,9 @@ var require_applyReviver = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/nodes/toJS.js
+// ../dev-pomogator/node_modules/yaml/dist/nodes/toJS.js
 var require_toJS = __commonJS({
-  "node_modules/yaml/dist/nodes/toJS.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/nodes/toJS.js"(exports) {
     "use strict";
     var identity = require_identity();
     function toJS(value, arg, ctx) {
@@ -7432,9 +7432,9 @@ var require_toJS = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/nodes/Node.js
+// ../dev-pomogator/node_modules/yaml/dist/nodes/Node.js
 var require_Node = __commonJS({
-  "node_modules/yaml/dist/nodes/Node.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/nodes/Node.js"(exports) {
     "use strict";
     var applyReviver = require_applyReviver();
     var identity = require_identity();
@@ -7473,9 +7473,9 @@ var require_Node = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/nodes/Alias.js
+// ../dev-pomogator/node_modules/yaml/dist/nodes/Alias.js
 var require_Alias = __commonJS({
-  "node_modules/yaml/dist/nodes/Alias.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/nodes/Alias.js"(exports) {
     "use strict";
     var anchors = require_anchors();
     var visit = require_visit();
@@ -7587,9 +7587,9 @@ var require_Alias = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/nodes/Scalar.js
+// ../dev-pomogator/node_modules/yaml/dist/nodes/Scalar.js
 var require_Scalar = __commonJS({
-  "node_modules/yaml/dist/nodes/Scalar.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/nodes/Scalar.js"(exports) {
     "use strict";
     var identity = require_identity();
     var Node = require_Node();
@@ -7617,9 +7617,9 @@ var require_Scalar = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/doc/createNode.js
+// ../dev-pomogator/node_modules/yaml/dist/doc/createNode.js
 var require_createNode = __commonJS({
-  "node_modules/yaml/dist/doc/createNode.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/doc/createNode.js"(exports) {
     "use strict";
     var Alias = require_Alias();
     var identity = require_identity();
@@ -7692,17 +7692,17 @@ var require_createNode = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/nodes/Collection.js
+// ../dev-pomogator/node_modules/yaml/dist/nodes/Collection.js
 var require_Collection = __commonJS({
-  "node_modules/yaml/dist/nodes/Collection.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/nodes/Collection.js"(exports) {
     "use strict";
     var createNode = require_createNode();
     var identity = require_identity();
     var Node = require_Node();
-    function collectionFromPath(schema, path31, value) {
+    function collectionFromPath(schema, path33, value) {
       let v = value;
-      for (let i = path31.length - 1; i >= 0; --i) {
-        const k = path31[i];
+      for (let i = path33.length - 1; i >= 0; --i) {
+        const k = path33[i];
         if (typeof k === "number" && Number.isInteger(k) && k >= 0) {
           const a = [];
           a[k] = v;
@@ -7721,7 +7721,7 @@ var require_Collection = __commonJS({
         sourceObjects: /* @__PURE__ */ new Map()
       });
     }
-    var isEmptyPath = (path31) => path31 == null || typeof path31 === "object" && !!path31[Symbol.iterator]().next().done;
+    var isEmptyPath = (path33) => path33 == null || typeof path33 === "object" && !!path33[Symbol.iterator]().next().done;
     var Collection = class extends Node.NodeBase {
       constructor(type, schema) {
         super(type);
@@ -7751,11 +7751,11 @@ var require_Collection = __commonJS({
        * be a Pair instance or a `{ key, value }` object, which may not have a key
        * that already exists in the map.
        */
-      addIn(path31, value) {
-        if (isEmptyPath(path31))
+      addIn(path33, value) {
+        if (isEmptyPath(path33))
           this.add(value);
         else {
-          const [key, ...rest] = path31;
+          const [key, ...rest] = path33;
           const node = this.get(key, true);
           if (identity.isCollection(node))
             node.addIn(rest, value);
@@ -7769,8 +7769,8 @@ var require_Collection = __commonJS({
        * Removes a value from the collection.
        * @returns `true` if the item was found and removed.
        */
-      deleteIn(path31) {
-        const [key, ...rest] = path31;
+      deleteIn(path33) {
+        const [key, ...rest] = path33;
         if (rest.length === 0)
           return this.delete(key);
         const node = this.get(key, true);
@@ -7784,8 +7784,8 @@ var require_Collection = __commonJS({
        * scalar values from their surrounding node; to disable set `keepScalar` to
        * `true` (collections are always returned intact).
        */
-      getIn(path31, keepScalar) {
-        const [key, ...rest] = path31;
+      getIn(path33, keepScalar) {
+        const [key, ...rest] = path33;
         const node = this.get(key, true);
         if (rest.length === 0)
           return !keepScalar && identity.isScalar(node) ? node.value : node;
@@ -7803,8 +7803,8 @@ var require_Collection = __commonJS({
       /**
        * Checks if the collection includes a value with the key `key`.
        */
-      hasIn(path31) {
-        const [key, ...rest] = path31;
+      hasIn(path33) {
+        const [key, ...rest] = path33;
         if (rest.length === 0)
           return this.has(key);
         const node = this.get(key, true);
@@ -7814,8 +7814,8 @@ var require_Collection = __commonJS({
        * Sets a value in this collection. For `!!set`, `value` needs to be a
        * boolean to add/remove the item from the set.
        */
-      setIn(path31, value) {
-        const [key, ...rest] = path31;
+      setIn(path33, value) {
+        const [key, ...rest] = path33;
         if (rest.length === 0) {
           this.set(key, value);
         } else {
@@ -7835,9 +7835,9 @@ var require_Collection = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/stringify/stringifyComment.js
+// ../dev-pomogator/node_modules/yaml/dist/stringify/stringifyComment.js
 var require_stringifyComment = __commonJS({
-  "node_modules/yaml/dist/stringify/stringifyComment.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/stringify/stringifyComment.js"(exports) {
     "use strict";
     var stringifyComment = (str) => str.replace(/^(?!$)(?: $)?/gm, "#");
     function indentComment(comment, indent) {
@@ -7852,21 +7852,21 @@ var require_stringifyComment = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/stringify/foldFlowLines.js
+// ../dev-pomogator/node_modules/yaml/dist/stringify/foldFlowLines.js
 var require_foldFlowLines = __commonJS({
-  "node_modules/yaml/dist/stringify/foldFlowLines.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/stringify/foldFlowLines.js"(exports) {
     "use strict";
     var FOLD_FLOW = "flow";
     var FOLD_BLOCK = "block";
     var FOLD_QUOTED = "quoted";
-    function foldFlowLines(text, indent, mode = "flow", { indentAtStart, lineWidth = 80, minContentWidth = 20, onFold, onOverflow } = {}) {
+    function foldFlowLines(text2, indent, mode = "flow", { indentAtStart, lineWidth = 80, minContentWidth = 20, onFold, onOverflow } = {}) {
       if (!lineWidth || lineWidth < 0)
-        return text;
+        return text2;
       if (lineWidth < minContentWidth)
         minContentWidth = 0;
       const endStep = Math.max(1 + minContentWidth, 1 + lineWidth - indent.length);
-      if (text.length <= endStep)
-        return text;
+      if (text2.length <= endStep)
+        return text2;
       const folds = [];
       const escapedFolds = {};
       let end = lineWidth - indent.length;
@@ -7883,14 +7883,14 @@ var require_foldFlowLines = __commonJS({
       let escStart = -1;
       let escEnd = -1;
       if (mode === FOLD_BLOCK) {
-        i = consumeMoreIndentedLines(text, i, indent.length);
+        i = consumeMoreIndentedLines(text2, i, indent.length);
         if (i !== -1)
           end = i + endStep;
       }
-      for (let ch; ch = text[i += 1]; ) {
+      for (let ch; ch = text2[i += 1]; ) {
         if (mode === FOLD_QUOTED && ch === "\\") {
           escStart = i;
-          switch (text[i + 1]) {
+          switch (text2[i + 1]) {
             case "x":
               i += 3;
               break;
@@ -7907,12 +7907,12 @@ var require_foldFlowLines = __commonJS({
         }
         if (ch === "\n") {
           if (mode === FOLD_BLOCK)
-            i = consumeMoreIndentedLines(text, i, indent.length);
+            i = consumeMoreIndentedLines(text2, i, indent.length);
           end = i + indent.length + endStep;
           split = void 0;
         } else {
           if (ch === " " && prev && prev !== " " && prev !== "\n" && prev !== "	") {
-            const next = text[i + 1];
+            const next = text2[i + 1];
             if (next && next !== " " && next !== "\n" && next !== "	")
               split = i;
           }
@@ -7924,12 +7924,12 @@ var require_foldFlowLines = __commonJS({
             } else if (mode === FOLD_QUOTED) {
               while (prev === " " || prev === "	") {
                 prev = ch;
-                ch = text[i += 1];
+                ch = text2[i += 1];
                 overflow = true;
               }
               const j = i > escEnd + 1 ? i - 2 : escStart - 1;
               if (escapedFolds[j])
-                return text;
+                return text2;
               folds.push(j);
               escapedFolds[j] = true;
               end = j + endStep;
@@ -7944,39 +7944,39 @@ var require_foldFlowLines = __commonJS({
       if (overflow && onOverflow)
         onOverflow();
       if (folds.length === 0)
-        return text;
+        return text2;
       if (onFold)
         onFold();
-      let res = text.slice(0, folds[0]);
+      let res = text2.slice(0, folds[0]);
       for (let i2 = 0; i2 < folds.length; ++i2) {
         const fold = folds[i2];
-        const end2 = folds[i2 + 1] || text.length;
+        const end2 = folds[i2 + 1] || text2.length;
         if (fold === 0)
           res = `
-${indent}${text.slice(0, end2)}`;
+${indent}${text2.slice(0, end2)}`;
         else {
           if (mode === FOLD_QUOTED && escapedFolds[fold])
-            res += `${text[fold]}\\`;
+            res += `${text2[fold]}\\`;
           res += `
-${indent}${text.slice(fold + 1, end2)}`;
+${indent}${text2.slice(fold + 1, end2)}`;
         }
       }
       return res;
     }
-    function consumeMoreIndentedLines(text, i, indent) {
+    function consumeMoreIndentedLines(text2, i, indent) {
       let end = i;
       let start = i + 1;
-      let ch = text[start];
+      let ch = text2[start];
       while (ch === " " || ch === "	") {
         if (i < start + indent) {
-          ch = text[++i];
+          ch = text2[++i];
         } else {
           do {
-            ch = text[++i];
+            ch = text2[++i];
           } while (ch && ch !== "\n");
           end = i;
           start = i + 1;
-          ch = text[start];
+          ch = text2[start];
         }
       }
       return end;
@@ -7988,9 +7988,9 @@ ${indent}${text.slice(fold + 1, end2)}`;
   }
 });
 
-// node_modules/yaml/dist/stringify/stringifyString.js
+// ../dev-pomogator/node_modules/yaml/dist/stringify/stringifyString.js
 var require_stringifyString = __commonJS({
-  "node_modules/yaml/dist/stringify/stringifyString.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/stringify/stringifyString.js"(exports) {
     "use strict";
     var Scalar = require_Scalar();
     var foldFlowLines = require_foldFlowLines();
@@ -8271,9 +8271,9 @@ ${indent}`);
   }
 });
 
-// node_modules/yaml/dist/stringify/stringify.js
+// ../dev-pomogator/node_modules/yaml/dist/stringify/stringify.js
 var require_stringify = __commonJS({
-  "node_modules/yaml/dist/stringify/stringify.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/stringify/stringify.js"(exports) {
     "use strict";
     var anchors = require_anchors();
     var identity = require_identity();
@@ -8395,9 +8395,9 @@ ${ctx.indent}${str}`;
   }
 });
 
-// node_modules/yaml/dist/stringify/stringifyPair.js
+// ../dev-pomogator/node_modules/yaml/dist/stringify/stringifyPair.js
 var require_stringifyPair = __commonJS({
-  "node_modules/yaml/dist/stringify/stringifyPair.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/stringify/stringifyPair.js"(exports) {
     "use strict";
     var identity = require_identity();
     var Scalar = require_Scalar();
@@ -8528,9 +8528,9 @@ ${ctx.indent}`;
   }
 });
 
-// node_modules/yaml/dist/log.js
+// ../dev-pomogator/node_modules/yaml/dist/log.js
 var require_log = __commonJS({
-  "node_modules/yaml/dist/log.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/log.js"(exports) {
     "use strict";
     var node_process = __require("process");
     function debug(logLevel, ...messages) {
@@ -8550,9 +8550,9 @@ var require_log = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/schema/yaml-1.1/merge.js
+// ../dev-pomogator/node_modules/yaml/dist/schema/yaml-1.1/merge.js
 var require_merge = __commonJS({
-  "node_modules/yaml/dist/schema/yaml-1.1/merge.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/schema/yaml-1.1/merge.js"(exports) {
     "use strict";
     var identity = require_identity();
     var Scalar = require_Scalar();
@@ -8607,9 +8607,9 @@ var require_merge = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/nodes/addPairToJSMap.js
+// ../dev-pomogator/node_modules/yaml/dist/nodes/addPairToJSMap.js
 var require_addPairToJSMap = __commonJS({
-  "node_modules/yaml/dist/nodes/addPairToJSMap.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/nodes/addPairToJSMap.js"(exports) {
     "use strict";
     var log = require_log();
     var merge2 = require_merge();
@@ -8671,9 +8671,9 @@ var require_addPairToJSMap = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/nodes/Pair.js
+// ../dev-pomogator/node_modules/yaml/dist/nodes/Pair.js
 var require_Pair = __commonJS({
-  "node_modules/yaml/dist/nodes/Pair.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/nodes/Pair.js"(exports) {
     "use strict";
     var createNode = require_createNode();
     var stringifyPair = require_stringifyPair();
@@ -8711,9 +8711,9 @@ var require_Pair = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/stringify/stringifyCollection.js
+// ../dev-pomogator/node_modules/yaml/dist/stringify/stringifyCollection.js
 var require_stringifyCollection = __commonJS({
-  "node_modules/yaml/dist/stringify/stringifyCollection.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/stringify/stringifyCollection.js"(exports) {
     "use strict";
     var identity = require_identity();
     var stringify = require_stringify();
@@ -8862,9 +8862,9 @@ ${indent}${end}`;
   }
 });
 
-// node_modules/yaml/dist/nodes/YAMLMap.js
+// ../dev-pomogator/node_modules/yaml/dist/nodes/YAMLMap.js
 var require_YAMLMap = __commonJS({
-  "node_modules/yaml/dist/nodes/YAMLMap.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/nodes/YAMLMap.js"(exports) {
     "use strict";
     var stringifyCollection = require_stringifyCollection();
     var addPairToJSMap = require_addPairToJSMap();
@@ -9006,9 +9006,9 @@ var require_YAMLMap = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/schema/common/map.js
+// ../dev-pomogator/node_modules/yaml/dist/schema/common/map.js
 var require_map = __commonJS({
-  "node_modules/yaml/dist/schema/common/map.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/schema/common/map.js"(exports) {
     "use strict";
     var identity = require_identity();
     var YAMLMap = require_YAMLMap();
@@ -9028,9 +9028,9 @@ var require_map = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/nodes/YAMLSeq.js
+// ../dev-pomogator/node_modules/yaml/dist/nodes/YAMLSeq.js
 var require_YAMLSeq = __commonJS({
-  "node_modules/yaml/dist/nodes/YAMLSeq.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/nodes/YAMLSeq.js"(exports) {
     "use strict";
     var createNode = require_createNode();
     var stringifyCollection = require_stringifyCollection();
@@ -9144,9 +9144,9 @@ var require_YAMLSeq = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/schema/common/seq.js
+// ../dev-pomogator/node_modules/yaml/dist/schema/common/seq.js
 var require_seq = __commonJS({
-  "node_modules/yaml/dist/schema/common/seq.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/schema/common/seq.js"(exports) {
     "use strict";
     var identity = require_identity();
     var YAMLSeq = require_YAMLSeq();
@@ -9166,9 +9166,9 @@ var require_seq = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/schema/common/string.js
+// ../dev-pomogator/node_modules/yaml/dist/schema/common/string.js
 var require_string = __commonJS({
-  "node_modules/yaml/dist/schema/common/string.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/schema/common/string.js"(exports) {
     "use strict";
     var stringifyString = require_stringifyString();
     var string4 = {
@@ -9185,9 +9185,9 @@ var require_string = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/schema/common/null.js
+// ../dev-pomogator/node_modules/yaml/dist/schema/common/null.js
 var require_null = __commonJS({
-  "node_modules/yaml/dist/schema/common/null.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/schema/common/null.js"(exports) {
     "use strict";
     var Scalar = require_Scalar();
     var nullTag = {
@@ -9203,9 +9203,9 @@ var require_null = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/schema/core/bool.js
+// ../dev-pomogator/node_modules/yaml/dist/schema/core/bool.js
 var require_bool = __commonJS({
-  "node_modules/yaml/dist/schema/core/bool.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/schema/core/bool.js"(exports) {
     "use strict";
     var Scalar = require_Scalar();
     var boolTag = {
@@ -9227,9 +9227,9 @@ var require_bool = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/stringify/stringifyNumber.js
+// ../dev-pomogator/node_modules/yaml/dist/stringify/stringifyNumber.js
 var require_stringifyNumber = __commonJS({
-  "node_modules/yaml/dist/stringify/stringifyNumber.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/stringify/stringifyNumber.js"(exports) {
     "use strict";
     function stringifyNumber({ format, minFractionDigits, tag, value }) {
       if (typeof value === "bigint")
@@ -9254,9 +9254,9 @@ var require_stringifyNumber = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/schema/core/float.js
+// ../dev-pomogator/node_modules/yaml/dist/schema/core/float.js
 var require_float = __commonJS({
-  "node_modules/yaml/dist/schema/core/float.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/schema/core/float.js"(exports) {
     "use strict";
     var Scalar = require_Scalar();
     var stringifyNumber = require_stringifyNumber();
@@ -9300,9 +9300,9 @@ var require_float = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/schema/core/int.js
+// ../dev-pomogator/node_modules/yaml/dist/schema/core/int.js
 var require_int = __commonJS({
-  "node_modules/yaml/dist/schema/core/int.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/schema/core/int.js"(exports) {
     "use strict";
     var stringifyNumber = require_stringifyNumber();
     var intIdentify = (value) => typeof value === "bigint" || Number.isInteger(value);
@@ -9345,9 +9345,9 @@ var require_int = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/schema/core/schema.js
+// ../dev-pomogator/node_modules/yaml/dist/schema/core/schema.js
 var require_schema = __commonJS({
-  "node_modules/yaml/dist/schema/core/schema.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/schema/core/schema.js"(exports) {
     "use strict";
     var map2 = require_map();
     var _null4 = require_null();
@@ -9373,9 +9373,9 @@ var require_schema = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/schema/json/schema.js
+// ../dev-pomogator/node_modules/yaml/dist/schema/json/schema.js
 var require_schema2 = __commonJS({
-  "node_modules/yaml/dist/schema/json/schema.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/schema/json/schema.js"(exports) {
     "use strict";
     var Scalar = require_Scalar();
     var map2 = require_map();
@@ -9440,9 +9440,9 @@ var require_schema2 = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/schema/yaml-1.1/binary.js
+// ../dev-pomogator/node_modules/yaml/dist/schema/yaml-1.1/binary.js
 var require_binary = __commonJS({
-  "node_modules/yaml/dist/schema/yaml-1.1/binary.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/schema/yaml-1.1/binary.js"(exports) {
     "use strict";
     var node_buffer = __require("buffer");
     var Scalar = require_Scalar();
@@ -9506,9 +9506,9 @@ var require_binary = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/schema/yaml-1.1/pairs.js
+// ../dev-pomogator/node_modules/yaml/dist/schema/yaml-1.1/pairs.js
 var require_pairs = __commonJS({
-  "node_modules/yaml/dist/schema/yaml-1.1/pairs.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/schema/yaml-1.1/pairs.js"(exports) {
     "use strict";
     var identity = require_identity();
     var Pair = require_Pair();
@@ -9584,9 +9584,9 @@ ${cn.comment}` : item.comment;
   }
 });
 
-// node_modules/yaml/dist/schema/yaml-1.1/omap.js
+// ../dev-pomogator/node_modules/yaml/dist/schema/yaml-1.1/omap.js
 var require_omap = __commonJS({
-  "node_modules/yaml/dist/schema/yaml-1.1/omap.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/schema/yaml-1.1/omap.js"(exports) {
     "use strict";
     var identity = require_identity();
     var toJS = require_toJS();
@@ -9662,9 +9662,9 @@ var require_omap = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/schema/yaml-1.1/bool.js
+// ../dev-pomogator/node_modules/yaml/dist/schema/yaml-1.1/bool.js
 var require_bool2 = __commonJS({
-  "node_modules/yaml/dist/schema/yaml-1.1/bool.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/schema/yaml-1.1/bool.js"(exports) {
     "use strict";
     var Scalar = require_Scalar();
     function boolStringify({ value, source }, ctx) {
@@ -9694,9 +9694,9 @@ var require_bool2 = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/schema/yaml-1.1/float.js
+// ../dev-pomogator/node_modules/yaml/dist/schema/yaml-1.1/float.js
 var require_float2 = __commonJS({
-  "node_modules/yaml/dist/schema/yaml-1.1/float.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/schema/yaml-1.1/float.js"(exports) {
     "use strict";
     var Scalar = require_Scalar();
     var stringifyNumber = require_stringifyNumber();
@@ -9743,9 +9743,9 @@ var require_float2 = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/schema/yaml-1.1/int.js
+// ../dev-pomogator/node_modules/yaml/dist/schema/yaml-1.1/int.js
 var require_int2 = __commonJS({
-  "node_modules/yaml/dist/schema/yaml-1.1/int.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/schema/yaml-1.1/int.js"(exports) {
     "use strict";
     var stringifyNumber = require_stringifyNumber();
     var intIdentify = (value) => typeof value === "bigint" || Number.isInteger(value);
@@ -9822,9 +9822,9 @@ var require_int2 = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/schema/yaml-1.1/set.js
+// ../dev-pomogator/node_modules/yaml/dist/schema/yaml-1.1/set.js
 var require_set = __commonJS({
-  "node_modules/yaml/dist/schema/yaml-1.1/set.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/schema/yaml-1.1/set.js"(exports) {
     "use strict";
     var identity = require_identity();
     var Pair = require_Pair();
@@ -9911,9 +9911,9 @@ var require_set = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/schema/yaml-1.1/timestamp.js
+// ../dev-pomogator/node_modules/yaml/dist/schema/yaml-1.1/timestamp.js
 var require_timestamp = __commonJS({
-  "node_modules/yaml/dist/schema/yaml-1.1/timestamp.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/schema/yaml-1.1/timestamp.js"(exports) {
     "use strict";
     var stringifyNumber = require_stringifyNumber();
     function parseSexagesimal(str, asBigInt) {
@@ -9999,9 +9999,9 @@ var require_timestamp = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/schema/yaml-1.1/schema.js
+// ../dev-pomogator/node_modules/yaml/dist/schema/yaml-1.1/schema.js
 var require_schema3 = __commonJS({
-  "node_modules/yaml/dist/schema/yaml-1.1/schema.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/schema/yaml-1.1/schema.js"(exports) {
     "use strict";
     var map2 = require_map();
     var _null4 = require_null();
@@ -10043,9 +10043,9 @@ var require_schema3 = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/schema/tags.js
+// ../dev-pomogator/node_modules/yaml/dist/schema/tags.js
 var require_tags = __commonJS({
-  "node_modules/yaml/dist/schema/tags.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/schema/tags.js"(exports) {
     "use strict";
     var map2 = require_map();
     var _null4 = require_null();
@@ -10137,9 +10137,9 @@ var require_tags = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/schema/Schema.js
+// ../dev-pomogator/node_modules/yaml/dist/schema/Schema.js
 var require_Schema = __commonJS({
-  "node_modules/yaml/dist/schema/Schema.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/schema/Schema.js"(exports) {
     "use strict";
     var identity = require_identity();
     var map2 = require_map();
@@ -10169,9 +10169,9 @@ var require_Schema = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/stringify/stringifyDocument.js
+// ../dev-pomogator/node_modules/yaml/dist/stringify/stringifyDocument.js
 var require_stringifyDocument = __commonJS({
-  "node_modules/yaml/dist/stringify/stringifyDocument.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/stringify/stringifyDocument.js"(exports) {
     "use strict";
     var identity = require_identity();
     var stringify = require_stringify();
@@ -10249,9 +10249,9 @@ var require_stringifyDocument = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/doc/Document.js
+// ../dev-pomogator/node_modules/yaml/dist/doc/Document.js
 var require_Document = __commonJS({
-  "node_modules/yaml/dist/doc/Document.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/doc/Document.js"(exports) {
     "use strict";
     var Alias = require_Alias();
     var Collection = require_Collection();
@@ -10327,9 +10327,9 @@ var require_Document = __commonJS({
           this.contents.add(value);
       }
       /** Adds a value to the document. */
-      addIn(path31, value) {
+      addIn(path33, value) {
         if (assertCollection(this.contents))
-          this.contents.addIn(path31, value);
+          this.contents.addIn(path33, value);
       }
       /**
        * Create a new `Alias` node, ensuring that the target `node` has the required anchor.
@@ -10404,14 +10404,14 @@ var require_Document = __commonJS({
        * Removes a value from the document.
        * @returns `true` if the item was found and removed.
        */
-      deleteIn(path31) {
-        if (Collection.isEmptyPath(path31)) {
+      deleteIn(path33) {
+        if (Collection.isEmptyPath(path33)) {
           if (this.contents == null)
             return false;
           this.contents = null;
           return true;
         }
-        return assertCollection(this.contents) ? this.contents.deleteIn(path31) : false;
+        return assertCollection(this.contents) ? this.contents.deleteIn(path33) : false;
       }
       /**
        * Returns item at `key`, or `undefined` if not found. By default unwraps
@@ -10426,10 +10426,10 @@ var require_Document = __commonJS({
        * scalar values from their surrounding node; to disable set `keepScalar` to
        * `true` (collections are always returned intact).
        */
-      getIn(path31, keepScalar) {
-        if (Collection.isEmptyPath(path31))
+      getIn(path33, keepScalar) {
+        if (Collection.isEmptyPath(path33))
           return !keepScalar && identity.isScalar(this.contents) ? this.contents.value : this.contents;
-        return identity.isCollection(this.contents) ? this.contents.getIn(path31, keepScalar) : void 0;
+        return identity.isCollection(this.contents) ? this.contents.getIn(path33, keepScalar) : void 0;
       }
       /**
        * Checks if the document includes a value with the key `key`.
@@ -10440,10 +10440,10 @@ var require_Document = __commonJS({
       /**
        * Checks if the document includes a value at `path`.
        */
-      hasIn(path31) {
-        if (Collection.isEmptyPath(path31))
+      hasIn(path33) {
+        if (Collection.isEmptyPath(path33))
           return this.contents !== void 0;
-        return identity.isCollection(this.contents) ? this.contents.hasIn(path31) : false;
+        return identity.isCollection(this.contents) ? this.contents.hasIn(path33) : false;
       }
       /**
        * Sets a value in this document. For `!!set`, `value` needs to be a
@@ -10460,13 +10460,13 @@ var require_Document = __commonJS({
        * Sets a value in this document. For `!!set`, `value` needs to be a
        * boolean to add/remove the item from the set.
        */
-      setIn(path31, value) {
-        if (Collection.isEmptyPath(path31)) {
+      setIn(path33, value) {
+        if (Collection.isEmptyPath(path33)) {
           this.contents = value;
         } else if (this.contents == null) {
-          this.contents = Collection.collectionFromPath(this.schema, Array.from(path31), value);
+          this.contents = Collection.collectionFromPath(this.schema, Array.from(path33), value);
         } else if (assertCollection(this.contents)) {
-          this.contents.setIn(path31, value);
+          this.contents.setIn(path33, value);
         }
       }
       /**
@@ -10558,9 +10558,9 @@ var require_Document = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/errors.js
+// ../dev-pomogator/node_modules/yaml/dist/errors.js
 var require_errors2 = __commonJS({
-  "node_modules/yaml/dist/errors.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/errors.js"(exports) {
     "use strict";
     var YAMLError = class extends Error {
       constructor(name, pos, code, message) {
@@ -10623,9 +10623,9 @@ ${pointer}
   }
 });
 
-// node_modules/yaml/dist/compose/resolve-props.js
+// ../dev-pomogator/node_modules/yaml/dist/compose/resolve-props.js
 var require_resolve_props = __commonJS({
-  "node_modules/yaml/dist/compose/resolve-props.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/compose/resolve-props.js"(exports) {
     "use strict";
     function resolveProps(tokens, { flow, indicator, next, offset, onError, parentIndent, startOnNewline }) {
       let spaceBefore = false;
@@ -10757,9 +10757,9 @@ var require_resolve_props = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/compose/util-contains-newline.js
+// ../dev-pomogator/node_modules/yaml/dist/compose/util-contains-newline.js
 var require_util_contains_newline = __commonJS({
-  "node_modules/yaml/dist/compose/util-contains-newline.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/compose/util-contains-newline.js"(exports) {
     "use strict";
     function containsNewline(key) {
       if (!key)
@@ -10799,9 +10799,9 @@ var require_util_contains_newline = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/compose/util-flow-indent-check.js
+// ../dev-pomogator/node_modules/yaml/dist/compose/util-flow-indent-check.js
 var require_util_flow_indent_check = __commonJS({
-  "node_modules/yaml/dist/compose/util-flow-indent-check.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/compose/util-flow-indent-check.js"(exports) {
     "use strict";
     var utilContainsNewline = require_util_contains_newline();
     function flowIndentCheck(indent, fc, onError) {
@@ -10817,9 +10817,9 @@ var require_util_flow_indent_check = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/compose/util-map-includes.js
+// ../dev-pomogator/node_modules/yaml/dist/compose/util-map-includes.js
 var require_util_map_includes = __commonJS({
-  "node_modules/yaml/dist/compose/util-map-includes.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/compose/util-map-includes.js"(exports) {
     "use strict";
     var identity = require_identity();
     function mapIncludes(ctx, items, search) {
@@ -10833,9 +10833,9 @@ var require_util_map_includes = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/compose/resolve-block-map.js
+// ../dev-pomogator/node_modules/yaml/dist/compose/resolve-block-map.js
 var require_resolve_block_map = __commonJS({
-  "node_modules/yaml/dist/compose/resolve-block-map.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/compose/resolve-block-map.js"(exports) {
     "use strict";
     var Pair = require_Pair();
     var YAMLMap = require_YAMLMap();
@@ -10941,9 +10941,9 @@ var require_resolve_block_map = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/compose/resolve-block-seq.js
+// ../dev-pomogator/node_modules/yaml/dist/compose/resolve-block-seq.js
 var require_resolve_block_seq = __commonJS({
-  "node_modules/yaml/dist/compose/resolve-block-seq.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/compose/resolve-block-seq.js"(exports) {
     "use strict";
     var YAMLSeq = require_YAMLSeq();
     var resolveProps = require_resolve_props();
@@ -10992,9 +10992,9 @@ var require_resolve_block_seq = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/compose/resolve-end.js
+// ../dev-pomogator/node_modules/yaml/dist/compose/resolve-end.js
 var require_resolve_end = __commonJS({
-  "node_modules/yaml/dist/compose/resolve-end.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/compose/resolve-end.js"(exports) {
     "use strict";
     function resolveEnd(end, offset, reqSpace, onError) {
       let comment = "";
@@ -11035,9 +11035,9 @@ var require_resolve_end = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/compose/resolve-flow-collection.js
+// ../dev-pomogator/node_modules/yaml/dist/compose/resolve-flow-collection.js
 var require_resolve_flow_collection = __commonJS({
-  "node_modules/yaml/dist/compose/resolve-flow-collection.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/compose/resolve-flow-collection.js"(exports) {
     "use strict";
     var identity = require_identity();
     var Pair = require_Pair();
@@ -11229,9 +11229,9 @@ var require_resolve_flow_collection = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/compose/compose-collection.js
+// ../dev-pomogator/node_modules/yaml/dist/compose/compose-collection.js
 var require_compose_collection = __commonJS({
-  "node_modules/yaml/dist/compose/compose-collection.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/compose/compose-collection.js"(exports) {
     "use strict";
     var identity = require_identity();
     var Scalar = require_Scalar();
@@ -11294,9 +11294,9 @@ var require_compose_collection = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/compose/resolve-block-scalar.js
+// ../dev-pomogator/node_modules/yaml/dist/compose/resolve-block-scalar.js
 var require_resolve_block_scalar = __commonJS({
-  "node_modules/yaml/dist/compose/resolve-block-scalar.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/compose/resolve-block-scalar.js"(exports) {
     "use strict";
     var Scalar = require_Scalar();
     function resolveBlockScalar(ctx, scalar, onError) {
@@ -11477,9 +11477,9 @@ var require_resolve_block_scalar = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/compose/resolve-flow-scalar.js
+// ../dev-pomogator/node_modules/yaml/dist/compose/resolve-flow-scalar.js
 var require_resolve_flow_scalar = __commonJS({
-  "node_modules/yaml/dist/compose/resolve-flow-scalar.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/compose/resolve-flow-scalar.js"(exports) {
     "use strict";
     var Scalar = require_Scalar();
     var resolveEnd = require_resolve_end();
@@ -11696,9 +11696,9 @@ var require_resolve_flow_scalar = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/compose/compose-scalar.js
+// ../dev-pomogator/node_modules/yaml/dist/compose/compose-scalar.js
 var require_compose_scalar = __commonJS({
-  "node_modules/yaml/dist/compose/compose-scalar.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/compose/compose-scalar.js"(exports) {
     "use strict";
     var identity = require_identity();
     var Scalar = require_Scalar();
@@ -11777,9 +11777,9 @@ var require_compose_scalar = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/compose/util-empty-scalar-position.js
+// ../dev-pomogator/node_modules/yaml/dist/compose/util-empty-scalar-position.js
 var require_util_empty_scalar_position = __commonJS({
-  "node_modules/yaml/dist/compose/util-empty-scalar-position.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/compose/util-empty-scalar-position.js"(exports) {
     "use strict";
     function emptyScalarPosition(offset, before, pos) {
       if (before) {
@@ -11807,9 +11807,9 @@ var require_util_empty_scalar_position = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/compose/compose-node.js
+// ../dev-pomogator/node_modules/yaml/dist/compose/compose-node.js
 var require_compose_node = __commonJS({
-  "node_modules/yaml/dist/compose/compose-node.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/compose/compose-node.js"(exports) {
     "use strict";
     var Alias = require_Alias();
     var identity = require_identity();
@@ -11913,9 +11913,9 @@ var require_compose_node = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/compose/compose-doc.js
+// ../dev-pomogator/node_modules/yaml/dist/compose/compose-doc.js
 var require_compose_doc = __commonJS({
-  "node_modules/yaml/dist/compose/compose-doc.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/compose/compose-doc.js"(exports) {
     "use strict";
     var Document = require_Document();
     var composeNode = require_compose_node();
@@ -11956,9 +11956,9 @@ var require_compose_doc = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/compose/composer.js
+// ../dev-pomogator/node_modules/yaml/dist/compose/composer.js
 var require_composer = __commonJS({
-  "node_modules/yaml/dist/compose/composer.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/compose/composer.js"(exports) {
     "use strict";
     var node_process = __require("process");
     var directives = require_directives();
@@ -12162,9 +12162,9 @@ ${end.comment}` : end.comment;
   }
 });
 
-// node_modules/yaml/dist/parse/cst-scalar.js
+// ../dev-pomogator/node_modules/yaml/dist/parse/cst-scalar.js
 var require_cst_scalar = __commonJS({
-  "node_modules/yaml/dist/parse/cst-scalar.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/parse/cst-scalar.js"(exports) {
     "use strict";
     var resolveBlockScalar = require_resolve_block_scalar();
     var resolveFlowScalar = require_resolve_flow_scalar();
@@ -12347,9 +12347,9 @@ var require_cst_scalar = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/parse/cst-stringify.js
+// ../dev-pomogator/node_modules/yaml/dist/parse/cst-stringify.js
 var require_cst_stringify = __commonJS({
-  "node_modules/yaml/dist/parse/cst-stringify.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/parse/cst-stringify.js"(exports) {
     "use strict";
     var stringify = (cst) => "type" in cst ? stringifyToken(cst) : stringifyItem(cst);
     function stringifyToken(token) {
@@ -12408,9 +12408,9 @@ var require_cst_stringify = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/parse/cst-visit.js
+// ../dev-pomogator/node_modules/yaml/dist/parse/cst-visit.js
 var require_cst_visit = __commonJS({
-  "node_modules/yaml/dist/parse/cst-visit.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/parse/cst-visit.js"(exports) {
     "use strict";
     var BREAK = /* @__PURE__ */ Symbol("break visit");
     var SKIP = /* @__PURE__ */ Symbol("skip children");
@@ -12423,9 +12423,9 @@ var require_cst_visit = __commonJS({
     visit.BREAK = BREAK;
     visit.SKIP = SKIP;
     visit.REMOVE = REMOVE;
-    visit.itemAtPath = (cst, path31) => {
+    visit.itemAtPath = (cst, path33) => {
       let item = cst;
-      for (const [field, index] of path31) {
+      for (const [field, index] of path33) {
         const tok = item?.[field];
         if (tok && "items" in tok) {
           item = tok.items[index];
@@ -12434,23 +12434,23 @@ var require_cst_visit = __commonJS({
       }
       return item;
     };
-    visit.parentCollection = (cst, path31) => {
-      const parent = visit.itemAtPath(cst, path31.slice(0, -1));
-      const field = path31[path31.length - 1][0];
+    visit.parentCollection = (cst, path33) => {
+      const parent = visit.itemAtPath(cst, path33.slice(0, -1));
+      const field = path33[path33.length - 1][0];
       const coll = parent?.[field];
       if (coll && "items" in coll)
         return coll;
       throw new Error("Parent collection not found");
     };
-    function _visit(path31, item, visitor) {
-      let ctrl = visitor(item, path31);
+    function _visit(path33, item, visitor) {
+      let ctrl = visitor(item, path33);
       if (typeof ctrl === "symbol")
         return ctrl;
       for (const field of ["key", "value"]) {
         const token = item[field];
         if (token && "items" in token) {
           for (let i = 0; i < token.items.length; ++i) {
-            const ci = _visit(Object.freeze(path31.concat([[field, i]])), token.items[i], visitor);
+            const ci = _visit(Object.freeze(path33.concat([[field, i]])), token.items[i], visitor);
             if (typeof ci === "number")
               i = ci - 1;
             else if (ci === BREAK)
@@ -12461,18 +12461,18 @@ var require_cst_visit = __commonJS({
             }
           }
           if (typeof ctrl === "function" && field === "key")
-            ctrl = ctrl(item, path31);
+            ctrl = ctrl(item, path33);
         }
       }
-      return typeof ctrl === "function" ? ctrl(item, path31) : ctrl;
+      return typeof ctrl === "function" ? ctrl(item, path33) : ctrl;
     }
     exports.visit = visit;
   }
 });
 
-// node_modules/yaml/dist/parse/cst.js
+// ../dev-pomogator/node_modules/yaml/dist/parse/cst.js
 var require_cst = __commonJS({
-  "node_modules/yaml/dist/parse/cst.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/parse/cst.js"(exports) {
     "use strict";
     var cstScalar = require_cst_scalar();
     var cstStringify = require_cst_stringify();
@@ -12572,9 +12572,9 @@ var require_cst = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/parse/lexer.js
+// ../dev-pomogator/node_modules/yaml/dist/parse/lexer.js
 var require_lexer = __commonJS({
-  "node_modules/yaml/dist/parse/lexer.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/parse/lexer.js"(exports) {
     "use strict";
     var cst = require_cst();
     function isEmpty(ch) {
@@ -13151,9 +13151,9 @@ var require_lexer = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/parse/line-counter.js
+// ../dev-pomogator/node_modules/yaml/dist/parse/line-counter.js
 var require_line_counter = __commonJS({
-  "node_modules/yaml/dist/parse/line-counter.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/parse/line-counter.js"(exports) {
     "use strict";
     var LineCounter = class {
       constructor() {
@@ -13182,9 +13182,9 @@ var require_line_counter = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/parse/parser.js
+// ../dev-pomogator/node_modules/yaml/dist/parse/parser.js
 var require_parser = __commonJS({
-  "node_modules/yaml/dist/parse/parser.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/parse/parser.js"(exports) {
     "use strict";
     var node_process = __require("process");
     var cst = require_cst();
@@ -13749,14 +13749,14 @@ var require_parser = __commonJS({
             case "scalar":
             case "single-quoted-scalar":
             case "double-quoted-scalar": {
-              const fs33 = this.flowScalar(this.type);
+              const fs36 = this.flowScalar(this.type);
               if (atNextItem || it.value) {
-                map2.items.push({ start, key: fs33, sep: [] });
+                map2.items.push({ start, key: fs36, sep: [] });
                 this.onKeyLine = true;
               } else if (it.sep) {
-                this.stack.push(fs33);
+                this.stack.push(fs36);
               } else {
-                Object.assign(it, { key: fs33, sep: [] });
+                Object.assign(it, { key: fs36, sep: [] });
                 this.onKeyLine = true;
               }
               return;
@@ -13884,13 +13884,13 @@ var require_parser = __commonJS({
             case "scalar":
             case "single-quoted-scalar":
             case "double-quoted-scalar": {
-              const fs33 = this.flowScalar(this.type);
+              const fs36 = this.flowScalar(this.type);
               if (!it || it.value)
-                fc.items.push({ start: [], key: fs33, sep: [] });
+                fc.items.push({ start: [], key: fs36, sep: [] });
               else if (it.sep)
-                this.stack.push(fs33);
+                this.stack.push(fs36);
               else
-                Object.assign(it, { key: fs33, sep: [] });
+                Object.assign(it, { key: fs36, sep: [] });
               return;
             }
             case "flow-map-end":
@@ -14049,9 +14049,9 @@ var require_parser = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/public-api.js
+// ../dev-pomogator/node_modules/yaml/dist/public-api.js
 var require_public_api = __commonJS({
-  "node_modules/yaml/dist/public-api.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/public-api.js"(exports) {
     "use strict";
     var composer = require_composer();
     var Document = require_Document();
@@ -14146,9 +14146,9 @@ var require_public_api = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/index.js
+// ../dev-pomogator/node_modules/yaml/dist/index.js
 var require_dist2 = __commonJS({
-  "node_modules/yaml/dist/index.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/index.js"(exports) {
     "use strict";
     var composer = require_composer();
     var Document = require_Document();
@@ -14198,9 +14198,9 @@ var require_dist2 = __commonJS({
   }
 });
 
-// node_modules/@cucumber/gherkin/dist/src/AstNode.js
+// ../dev-pomogator/node_modules/@cucumber/gherkin/dist/src/AstNode.js
 var require_AstNode = __commonJS({
-  "node_modules/@cucumber/gherkin/dist/src/AstNode.js"(exports) {
+  "../dev-pomogator/node_modules/@cucumber/gherkin/dist/src/AstNode.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var AstNode = class {
@@ -14234,9 +14234,9 @@ var require_AstNode = __commonJS({
   }
 });
 
-// node_modules/@cucumber/gherkin/dist/src/Errors.js
+// ../dev-pomogator/node_modules/@cucumber/gherkin/dist/src/Errors.js
 var require_Errors = __commonJS({
-  "node_modules/@cucumber/gherkin/dist/src/Errors.js"(exports) {
+  "../dev-pomogator/node_modules/@cucumber/gherkin/dist/src/Errors.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.NoSuchLanguageException = exports.AstBuilderException = exports.CompositeParserException = exports.ParserException = exports.GherkinException = void 0;
@@ -14294,9 +14294,9 @@ ${errors.map((e) => e.message).join("\n")}`;
   }
 });
 
-// node_modules/@cucumber/gherkin/dist/src/TokenExceptions.js
+// ../dev-pomogator/node_modules/@cucumber/gherkin/dist/src/TokenExceptions.js
 var require_TokenExceptions = __commonJS({
-  "node_modules/@cucumber/gherkin/dist/src/TokenExceptions.js"(exports) {
+  "../dev-pomogator/node_modules/@cucumber/gherkin/dist/src/TokenExceptions.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.UnexpectedEOFException = exports.UnexpectedTokenException = void 0;
@@ -14327,9 +14327,9 @@ var require_TokenExceptions = __commonJS({
   }
 });
 
-// node_modules/@cucumber/gherkin/dist/src/TokenScanner.js
+// ../dev-pomogator/node_modules/@cucumber/gherkin/dist/src/TokenScanner.js
 var require_TokenScanner = __commonJS({
-  "node_modules/@cucumber/gherkin/dist/src/TokenScanner.js"(exports) {
+  "../dev-pomogator/node_modules/@cucumber/gherkin/dist/src/TokenScanner.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var TokenScanner = class {
@@ -14353,9 +14353,9 @@ var require_TokenScanner = __commonJS({
   }
 });
 
-// node_modules/@cucumber/gherkin/dist/src/countSymbols.js
+// ../dev-pomogator/node_modules/@cucumber/gherkin/dist/src/countSymbols.js
 var require_countSymbols = __commonJS({
-  "node_modules/@cucumber/gherkin/dist/src/countSymbols.js"(exports) {
+  "../dev-pomogator/node_modules/@cucumber/gherkin/dist/src/countSymbols.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.default = countSymbols;
@@ -14366,9 +14366,9 @@ var require_countSymbols = __commonJS({
   }
 });
 
-// node_modules/@cucumber/gherkin/dist/src/GherkinLine.js
+// ../dev-pomogator/node_modules/@cucumber/gherkin/dist/src/GherkinLine.js
 var require_GherkinLine = __commonJS({
-  "node_modules/@cucumber/gherkin/dist/src/GherkinLine.js"(exports, module2) {
+  "../dev-pomogator/node_modules/@cucumber/gherkin/dist/src/GherkinLine.js"(exports, module2) {
     "use strict";
     var __importDefault = exports && exports.__importDefault || function(mod) {
       return mod && mod.__esModule ? mod : { "default": mod };
@@ -14449,9 +14449,9 @@ var require_GherkinLine = __commonJS({
   }
 });
 
-// node_modules/@cucumber/gherkin/dist/src/Parser.js
+// ../dev-pomogator/node_modules/@cucumber/gherkin/dist/src/Parser.js
 var require_Parser = __commonJS({
-  "node_modules/@cucumber/gherkin/dist/src/Parser.js"(exports) {
+  "../dev-pomogator/node_modules/@cucumber/gherkin/dist/src/Parser.js"(exports) {
     "use strict";
     var __importDefault = exports && exports.__importDefault || function(mod) {
       return mod && mod.__esModule ? mod : { "default": mod };
@@ -17609,9 +17609,9 @@ var require_Parser = __commonJS({
   }
 });
 
-// node_modules/@cucumber/gherkin/dist/src/AstBuilder.js
+// ../dev-pomogator/node_modules/@cucumber/gherkin/dist/src/AstBuilder.js
 var require_AstBuilder = __commonJS({
-  "node_modules/@cucumber/gherkin/dist/src/AstBuilder.js"(exports) {
+  "../dev-pomogator/node_modules/@cucumber/gherkin/dist/src/AstBuilder.js"(exports) {
     "use strict";
     var __importDefault = exports && exports.__importDefault || function(mod) {
       return mod && mod.__esModule ? mod : { "default": mod };
@@ -17904,9 +17904,9 @@ var require_AstBuilder = __commonJS({
   }
 });
 
-// node_modules/@cucumber/messages/dist/cjs/src/TimeConversion.js
+// ../dev-pomogator/node_modules/@cucumber/messages/dist/cjs/src/TimeConversion.js
 var require_TimeConversion = __commonJS({
-  "node_modules/@cucumber/messages/dist/cjs/src/TimeConversion.js"(exports) {
+  "../dev-pomogator/node_modules/@cucumber/messages/dist/cjs/src/TimeConversion.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.millisecondsSinceEpochToTimestamp = millisecondsSinceEpochToTimestamp;
@@ -17953,9 +17953,9 @@ var require_TimeConversion = __commonJS({
   }
 });
 
-// node_modules/@cucumber/messages/dist/cjs/src/IdGenerator.js
+// ../dev-pomogator/node_modules/@cucumber/messages/dist/cjs/src/IdGenerator.js
 var require_IdGenerator = __commonJS({
-  "node_modules/@cucumber/messages/dist/cjs/src/IdGenerator.js"(exports) {
+  "../dev-pomogator/node_modules/@cucumber/messages/dist/cjs/src/IdGenerator.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.uuid = uuid5;
@@ -17974,9 +17974,9 @@ var require_IdGenerator = __commonJS({
   }
 });
 
-// node_modules/class-transformer/cjs/enums/transformation-type.enum.js
+// ../dev-pomogator/node_modules/class-transformer/cjs/enums/transformation-type.enum.js
 var require_transformation_type_enum = __commonJS({
-  "node_modules/class-transformer/cjs/enums/transformation-type.enum.js"(exports) {
+  "../dev-pomogator/node_modules/class-transformer/cjs/enums/transformation-type.enum.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.TransformationType = void 0;
@@ -17989,9 +17989,9 @@ var require_transformation_type_enum = __commonJS({
   }
 });
 
-// node_modules/class-transformer/cjs/enums/index.js
+// ../dev-pomogator/node_modules/class-transformer/cjs/enums/index.js
 var require_enums = __commonJS({
-  "node_modules/class-transformer/cjs/enums/index.js"(exports) {
+  "../dev-pomogator/node_modules/class-transformer/cjs/enums/index.js"(exports) {
     "use strict";
     var __createBinding = exports && exports.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -18010,9 +18010,9 @@ var require_enums = __commonJS({
   }
 });
 
-// node_modules/class-transformer/cjs/MetadataStorage.js
+// ../dev-pomogator/node_modules/class-transformer/cjs/MetadataStorage.js
 var require_MetadataStorage = __commonJS({
-  "node_modules/class-transformer/cjs/MetadataStorage.js"(exports) {
+  "../dev-pomogator/node_modules/class-transformer/cjs/MetadataStorage.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.MetadataStorage = void 0;
@@ -18210,9 +18210,9 @@ var require_MetadataStorage = __commonJS({
   }
 });
 
-// node_modules/class-transformer/cjs/storage.js
+// ../dev-pomogator/node_modules/class-transformer/cjs/storage.js
 var require_storage = __commonJS({
-  "node_modules/class-transformer/cjs/storage.js"(exports) {
+  "../dev-pomogator/node_modules/class-transformer/cjs/storage.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.defaultMetadataStorage = void 0;
@@ -18221,9 +18221,9 @@ var require_storage = __commonJS({
   }
 });
 
-// node_modules/class-transformer/cjs/utils/get-global.util.js
+// ../dev-pomogator/node_modules/class-transformer/cjs/utils/get-global.util.js
 var require_get_global_util = __commonJS({
-  "node_modules/class-transformer/cjs/utils/get-global.util.js"(exports) {
+  "../dev-pomogator/node_modules/class-transformer/cjs/utils/get-global.util.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.getGlobal = void 0;
@@ -18245,9 +18245,9 @@ var require_get_global_util = __commonJS({
   }
 });
 
-// node_modules/class-transformer/cjs/utils/is-promise.util.js
+// ../dev-pomogator/node_modules/class-transformer/cjs/utils/is-promise.util.js
 var require_is_promise_util = __commonJS({
-  "node_modules/class-transformer/cjs/utils/is-promise.util.js"(exports) {
+  "../dev-pomogator/node_modules/class-transformer/cjs/utils/is-promise.util.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.isPromise = void 0;
@@ -18258,9 +18258,9 @@ var require_is_promise_util = __commonJS({
   }
 });
 
-// node_modules/class-transformer/cjs/utils/index.js
+// ../dev-pomogator/node_modules/class-transformer/cjs/utils/index.js
 var require_utils2 = __commonJS({
-  "node_modules/class-transformer/cjs/utils/index.js"(exports) {
+  "../dev-pomogator/node_modules/class-transformer/cjs/utils/index.js"(exports) {
     "use strict";
     var __createBinding = exports && exports.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -18280,9 +18280,9 @@ var require_utils2 = __commonJS({
   }
 });
 
-// node_modules/class-transformer/cjs/TransformOperationExecutor.js
+// ../dev-pomogator/node_modules/class-transformer/cjs/TransformOperationExecutor.js
 var require_TransformOperationExecutor = __commonJS({
-  "node_modules/class-transformer/cjs/TransformOperationExecutor.js"(exports) {
+  "../dev-pomogator/node_modules/class-transformer/cjs/TransformOperationExecutor.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.TransformOperationExecutor = void 0;
@@ -18656,9 +18656,9 @@ var require_TransformOperationExecutor = __commonJS({
   }
 });
 
-// node_modules/class-transformer/cjs/constants/default-options.constant.js
+// ../dev-pomogator/node_modules/class-transformer/cjs/constants/default-options.constant.js
 var require_default_options_constant = __commonJS({
-  "node_modules/class-transformer/cjs/constants/default-options.constant.js"(exports) {
+  "../dev-pomogator/node_modules/class-transformer/cjs/constants/default-options.constant.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.defaultOptions = void 0;
@@ -18678,9 +18678,9 @@ var require_default_options_constant = __commonJS({
   }
 });
 
-// node_modules/class-transformer/cjs/ClassTransformer.js
+// ../dev-pomogator/node_modules/class-transformer/cjs/ClassTransformer.js
 var require_ClassTransformer = __commonJS({
-  "node_modules/class-transformer/cjs/ClassTransformer.js"(exports) {
+  "../dev-pomogator/node_modules/class-transformer/cjs/ClassTransformer.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.ClassTransformer = void 0;
@@ -18752,9 +18752,9 @@ var require_ClassTransformer = __commonJS({
   }
 });
 
-// node_modules/class-transformer/cjs/decorators/exclude.decorator.js
+// ../dev-pomogator/node_modules/class-transformer/cjs/decorators/exclude.decorator.js
 var require_exclude_decorator = __commonJS({
-  "node_modules/class-transformer/cjs/decorators/exclude.decorator.js"(exports) {
+  "../dev-pomogator/node_modules/class-transformer/cjs/decorators/exclude.decorator.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.Exclude = void 0;
@@ -18772,9 +18772,9 @@ var require_exclude_decorator = __commonJS({
   }
 });
 
-// node_modules/class-transformer/cjs/decorators/expose.decorator.js
+// ../dev-pomogator/node_modules/class-transformer/cjs/decorators/expose.decorator.js
 var require_expose_decorator = __commonJS({
-  "node_modules/class-transformer/cjs/decorators/expose.decorator.js"(exports) {
+  "../dev-pomogator/node_modules/class-transformer/cjs/decorators/expose.decorator.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.Expose = void 0;
@@ -18792,9 +18792,9 @@ var require_expose_decorator = __commonJS({
   }
 });
 
-// node_modules/class-transformer/cjs/decorators/transform-instance-to-instance.decorator.js
+// ../dev-pomogator/node_modules/class-transformer/cjs/decorators/transform-instance-to-instance.decorator.js
 var require_transform_instance_to_instance_decorator = __commonJS({
-  "node_modules/class-transformer/cjs/decorators/transform-instance-to-instance.decorator.js"(exports) {
+  "../dev-pomogator/node_modules/class-transformer/cjs/decorators/transform-instance-to-instance.decorator.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.TransformInstanceToInstance = void 0;
@@ -18814,9 +18814,9 @@ var require_transform_instance_to_instance_decorator = __commonJS({
   }
 });
 
-// node_modules/class-transformer/cjs/decorators/transform-instance-to-plain.decorator.js
+// ../dev-pomogator/node_modules/class-transformer/cjs/decorators/transform-instance-to-plain.decorator.js
 var require_transform_instance_to_plain_decorator = __commonJS({
-  "node_modules/class-transformer/cjs/decorators/transform-instance-to-plain.decorator.js"(exports) {
+  "../dev-pomogator/node_modules/class-transformer/cjs/decorators/transform-instance-to-plain.decorator.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.TransformInstanceToPlain = void 0;
@@ -18836,9 +18836,9 @@ var require_transform_instance_to_plain_decorator = __commonJS({
   }
 });
 
-// node_modules/class-transformer/cjs/decorators/transform-plain-to-instance.decorator.js
+// ../dev-pomogator/node_modules/class-transformer/cjs/decorators/transform-plain-to-instance.decorator.js
 var require_transform_plain_to_instance_decorator = __commonJS({
-  "node_modules/class-transformer/cjs/decorators/transform-plain-to-instance.decorator.js"(exports) {
+  "../dev-pomogator/node_modules/class-transformer/cjs/decorators/transform-plain-to-instance.decorator.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.TransformPlainToInstance = void 0;
@@ -18858,9 +18858,9 @@ var require_transform_plain_to_instance_decorator = __commonJS({
   }
 });
 
-// node_modules/class-transformer/cjs/decorators/transform.decorator.js
+// ../dev-pomogator/node_modules/class-transformer/cjs/decorators/transform.decorator.js
 var require_transform_decorator = __commonJS({
-  "node_modules/class-transformer/cjs/decorators/transform.decorator.js"(exports) {
+  "../dev-pomogator/node_modules/class-transformer/cjs/decorators/transform.decorator.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.Transform = void 0;
@@ -18879,9 +18879,9 @@ var require_transform_decorator = __commonJS({
   }
 });
 
-// node_modules/class-transformer/cjs/decorators/type.decorator.js
+// ../dev-pomogator/node_modules/class-transformer/cjs/decorators/type.decorator.js
 var require_type_decorator = __commonJS({
-  "node_modules/class-transformer/cjs/decorators/type.decorator.js"(exports) {
+  "../dev-pomogator/node_modules/class-transformer/cjs/decorators/type.decorator.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.Type = void 0;
@@ -18902,9 +18902,9 @@ var require_type_decorator = __commonJS({
   }
 });
 
-// node_modules/class-transformer/cjs/decorators/index.js
+// ../dev-pomogator/node_modules/class-transformer/cjs/decorators/index.js
 var require_decorators = __commonJS({
-  "node_modules/class-transformer/cjs/decorators/index.js"(exports) {
+  "../dev-pomogator/node_modules/class-transformer/cjs/decorators/index.js"(exports) {
     "use strict";
     var __createBinding = exports && exports.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -18929,121 +18929,121 @@ var require_decorators = __commonJS({
   }
 });
 
-// node_modules/class-transformer/cjs/interfaces/decorator-options/expose-options.interface.js
+// ../dev-pomogator/node_modules/class-transformer/cjs/interfaces/decorator-options/expose-options.interface.js
 var require_expose_options_interface = __commonJS({
-  "node_modules/class-transformer/cjs/interfaces/decorator-options/expose-options.interface.js"(exports) {
+  "../dev-pomogator/node_modules/class-transformer/cjs/interfaces/decorator-options/expose-options.interface.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
   }
 });
 
-// node_modules/class-transformer/cjs/interfaces/decorator-options/exclude-options.interface.js
+// ../dev-pomogator/node_modules/class-transformer/cjs/interfaces/decorator-options/exclude-options.interface.js
 var require_exclude_options_interface = __commonJS({
-  "node_modules/class-transformer/cjs/interfaces/decorator-options/exclude-options.interface.js"(exports) {
+  "../dev-pomogator/node_modules/class-transformer/cjs/interfaces/decorator-options/exclude-options.interface.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
   }
 });
 
-// node_modules/class-transformer/cjs/interfaces/decorator-options/transform-options.interface.js
+// ../dev-pomogator/node_modules/class-transformer/cjs/interfaces/decorator-options/transform-options.interface.js
 var require_transform_options_interface = __commonJS({
-  "node_modules/class-transformer/cjs/interfaces/decorator-options/transform-options.interface.js"(exports) {
+  "../dev-pomogator/node_modules/class-transformer/cjs/interfaces/decorator-options/transform-options.interface.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
   }
 });
 
-// node_modules/class-transformer/cjs/interfaces/decorator-options/type-discriminator-descriptor.interface.js
+// ../dev-pomogator/node_modules/class-transformer/cjs/interfaces/decorator-options/type-discriminator-descriptor.interface.js
 var require_type_discriminator_descriptor_interface = __commonJS({
-  "node_modules/class-transformer/cjs/interfaces/decorator-options/type-discriminator-descriptor.interface.js"(exports) {
+  "../dev-pomogator/node_modules/class-transformer/cjs/interfaces/decorator-options/type-discriminator-descriptor.interface.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
   }
 });
 
-// node_modules/class-transformer/cjs/interfaces/decorator-options/type-options.interface.js
+// ../dev-pomogator/node_modules/class-transformer/cjs/interfaces/decorator-options/type-options.interface.js
 var require_type_options_interface = __commonJS({
-  "node_modules/class-transformer/cjs/interfaces/decorator-options/type-options.interface.js"(exports) {
+  "../dev-pomogator/node_modules/class-transformer/cjs/interfaces/decorator-options/type-options.interface.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
   }
 });
 
-// node_modules/class-transformer/cjs/interfaces/metadata/exclude-metadata.interface.js
+// ../dev-pomogator/node_modules/class-transformer/cjs/interfaces/metadata/exclude-metadata.interface.js
 var require_exclude_metadata_interface = __commonJS({
-  "node_modules/class-transformer/cjs/interfaces/metadata/exclude-metadata.interface.js"(exports) {
+  "../dev-pomogator/node_modules/class-transformer/cjs/interfaces/metadata/exclude-metadata.interface.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
   }
 });
 
-// node_modules/class-transformer/cjs/interfaces/metadata/expose-metadata.interface.js
+// ../dev-pomogator/node_modules/class-transformer/cjs/interfaces/metadata/expose-metadata.interface.js
 var require_expose_metadata_interface = __commonJS({
-  "node_modules/class-transformer/cjs/interfaces/metadata/expose-metadata.interface.js"(exports) {
+  "../dev-pomogator/node_modules/class-transformer/cjs/interfaces/metadata/expose-metadata.interface.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
   }
 });
 
-// node_modules/class-transformer/cjs/interfaces/metadata/transform-metadata.interface.js
+// ../dev-pomogator/node_modules/class-transformer/cjs/interfaces/metadata/transform-metadata.interface.js
 var require_transform_metadata_interface = __commonJS({
-  "node_modules/class-transformer/cjs/interfaces/metadata/transform-metadata.interface.js"(exports) {
+  "../dev-pomogator/node_modules/class-transformer/cjs/interfaces/metadata/transform-metadata.interface.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
   }
 });
 
-// node_modules/class-transformer/cjs/interfaces/metadata/transform-fn-params.interface.js
+// ../dev-pomogator/node_modules/class-transformer/cjs/interfaces/metadata/transform-fn-params.interface.js
 var require_transform_fn_params_interface = __commonJS({
-  "node_modules/class-transformer/cjs/interfaces/metadata/transform-fn-params.interface.js"(exports) {
+  "../dev-pomogator/node_modules/class-transformer/cjs/interfaces/metadata/transform-fn-params.interface.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
   }
 });
 
-// node_modules/class-transformer/cjs/interfaces/metadata/type-metadata.interface.js
+// ../dev-pomogator/node_modules/class-transformer/cjs/interfaces/metadata/type-metadata.interface.js
 var require_type_metadata_interface = __commonJS({
-  "node_modules/class-transformer/cjs/interfaces/metadata/type-metadata.interface.js"(exports) {
+  "../dev-pomogator/node_modules/class-transformer/cjs/interfaces/metadata/type-metadata.interface.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
   }
 });
 
-// node_modules/class-transformer/cjs/interfaces/class-constructor.type.js
+// ../dev-pomogator/node_modules/class-transformer/cjs/interfaces/class-constructor.type.js
 var require_class_constructor_type = __commonJS({
-  "node_modules/class-transformer/cjs/interfaces/class-constructor.type.js"(exports) {
+  "../dev-pomogator/node_modules/class-transformer/cjs/interfaces/class-constructor.type.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
   }
 });
 
-// node_modules/class-transformer/cjs/interfaces/class-transformer-options.interface.js
+// ../dev-pomogator/node_modules/class-transformer/cjs/interfaces/class-transformer-options.interface.js
 var require_class_transformer_options_interface = __commonJS({
-  "node_modules/class-transformer/cjs/interfaces/class-transformer-options.interface.js"(exports) {
+  "../dev-pomogator/node_modules/class-transformer/cjs/interfaces/class-transformer-options.interface.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
   }
 });
 
-// node_modules/class-transformer/cjs/interfaces/target-map.interface.js
+// ../dev-pomogator/node_modules/class-transformer/cjs/interfaces/target-map.interface.js
 var require_target_map_interface = __commonJS({
-  "node_modules/class-transformer/cjs/interfaces/target-map.interface.js"(exports) {
+  "../dev-pomogator/node_modules/class-transformer/cjs/interfaces/target-map.interface.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
   }
 });
 
-// node_modules/class-transformer/cjs/interfaces/type-help-options.interface.js
+// ../dev-pomogator/node_modules/class-transformer/cjs/interfaces/type-help-options.interface.js
 var require_type_help_options_interface = __commonJS({
-  "node_modules/class-transformer/cjs/interfaces/type-help-options.interface.js"(exports) {
+  "../dev-pomogator/node_modules/class-transformer/cjs/interfaces/type-help-options.interface.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
   }
 });
 
-// node_modules/class-transformer/cjs/interfaces/index.js
+// ../dev-pomogator/node_modules/class-transformer/cjs/interfaces/index.js
 var require_interfaces = __commonJS({
-  "node_modules/class-transformer/cjs/interfaces/index.js"(exports) {
+  "../dev-pomogator/node_modules/class-transformer/cjs/interfaces/index.js"(exports) {
     "use strict";
     var __createBinding = exports && exports.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -19075,9 +19075,9 @@ var require_interfaces = __commonJS({
   }
 });
 
-// node_modules/class-transformer/cjs/index.js
+// ../dev-pomogator/node_modules/class-transformer/cjs/index.js
 var require_cjs = __commonJS({
-  "node_modules/class-transformer/cjs/index.js"(exports) {
+  "../dev-pomogator/node_modules/class-transformer/cjs/index.js"(exports) {
     "use strict";
     var __createBinding = exports && exports.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -19149,9 +19149,9 @@ var require_cjs = __commonJS({
   }
 });
 
-// node_modules/reflect-metadata/Reflect.js
+// ../dev-pomogator/node_modules/reflect-metadata/Reflect.js
 var require_Reflect = __commonJS({
-  "node_modules/reflect-metadata/Reflect.js"() {
+  "../dev-pomogator/node_modules/reflect-metadata/Reflect.js"() {
     var Reflect2;
     (function(Reflect3) {
       (function(factory) {
@@ -20234,9 +20234,9 @@ var require_Reflect = __commonJS({
   }
 });
 
-// node_modules/@cucumber/messages/dist/cjs/src/messages.js
+// ../dev-pomogator/node_modules/@cucumber/messages/dist/cjs/src/messages.js
 var require_messages = __commonJS({
-  "node_modules/@cucumber/messages/dist/cjs/src/messages.js"(exports) {
+  "../dev-pomogator/node_modules/@cucumber/messages/dist/cjs/src/messages.js"(exports) {
     "use strict";
     var __decorate2 = exports && exports.__decorate || function(decorators, target, key, desc) {
       var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
@@ -21489,9 +21489,9 @@ var require_messages = __commonJS({
   }
 });
 
-// node_modules/@cucumber/messages/dist/cjs/src/parseEnvelope.js
+// ../dev-pomogator/node_modules/@cucumber/messages/dist/cjs/src/parseEnvelope.js
 var require_parseEnvelope = __commonJS({
-  "node_modules/@cucumber/messages/dist/cjs/src/parseEnvelope.js"(exports) {
+  "../dev-pomogator/node_modules/@cucumber/messages/dist/cjs/src/parseEnvelope.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.parseEnvelope = parseEnvelope2;
@@ -21504,9 +21504,9 @@ var require_parseEnvelope = __commonJS({
   }
 });
 
-// node_modules/@cucumber/messages/dist/cjs/src/getWorstTestStepResult.js
+// ../dev-pomogator/node_modules/@cucumber/messages/dist/cjs/src/getWorstTestStepResult.js
 var require_getWorstTestStepResult = __commonJS({
-  "node_modules/@cucumber/messages/dist/cjs/src/getWorstTestStepResult.js"(exports) {
+  "../dev-pomogator/node_modules/@cucumber/messages/dist/cjs/src/getWorstTestStepResult.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.getWorstTestStepResult = getWorstTestStepResult2;
@@ -21534,9 +21534,9 @@ var require_getWorstTestStepResult = __commonJS({
   }
 });
 
-// node_modules/@cucumber/messages/dist/cjs/src/version.js
+// ../dev-pomogator/node_modules/@cucumber/messages/dist/cjs/src/version.js
 var require_version = __commonJS({
-  "node_modules/@cucumber/messages/dist/cjs/src/version.js"(exports) {
+  "../dev-pomogator/node_modules/@cucumber/messages/dist/cjs/src/version.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.version = void 0;
@@ -21544,9 +21544,9 @@ var require_version = __commonJS({
   }
 });
 
-// node_modules/@cucumber/messages/dist/cjs/src/index.js
+// ../dev-pomogator/node_modules/@cucumber/messages/dist/cjs/src/index.js
 var require_src = __commonJS({
-  "node_modules/@cucumber/messages/dist/cjs/src/index.js"(exports) {
+  "../dev-pomogator/node_modules/@cucumber/messages/dist/cjs/src/index.js"(exports) {
     "use strict";
     var __createBinding = exports && exports.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -21610,9 +21610,9 @@ var require_src = __commonJS({
   }
 });
 
-// node_modules/@cucumber/gherkin/dist/src/compareStepKeywords.js
+// ../dev-pomogator/node_modules/@cucumber/gherkin/dist/src/compareStepKeywords.js
 var require_compareStepKeywords = __commonJS({
-  "node_modules/@cucumber/gherkin/dist/src/compareStepKeywords.js"(exports) {
+  "../dev-pomogator/node_modules/@cucumber/gherkin/dist/src/compareStepKeywords.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.compareStepKeywords = compareStepKeywords;
@@ -21622,9 +21622,9 @@ var require_compareStepKeywords = __commonJS({
   }
 });
 
-// node_modules/@cucumber/gherkin/dist/src/gherkin-languages.json
+// ../dev-pomogator/node_modules/@cucumber/gherkin/dist/src/gherkin-languages.json
 var require_gherkin_languages = __commonJS({
-  "node_modules/@cucumber/gherkin/dist/src/gherkin-languages.json"(exports, module2) {
+  "../dev-pomogator/node_modules/@cucumber/gherkin/dist/src/gherkin-languages.json"(exports, module2) {
     module2.exports = {
       af: {
         and: [
@@ -25519,9 +25519,9 @@ var require_gherkin_languages = __commonJS({
   }
 });
 
-// node_modules/@cucumber/gherkin/dist/src/GherkinClassicTokenMatcher.js
+// ../dev-pomogator/node_modules/@cucumber/gherkin/dist/src/GherkinClassicTokenMatcher.js
 var require_GherkinClassicTokenMatcher = __commonJS({
-  "node_modules/@cucumber/gherkin/dist/src/GherkinClassicTokenMatcher.js"(exports) {
+  "../dev-pomogator/node_modules/@cucumber/gherkin/dist/src/GherkinClassicTokenMatcher.js"(exports) {
     "use strict";
     var __createBinding = exports && exports.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -25650,8 +25650,8 @@ var require_GherkinClassicTokenMatcher = __commonJS({
       }
       match_Comment(token) {
         if (token.line.startsWith("#")) {
-          const text = token.line.getLineText(0);
-          this.setTokenMatched(token, Parser_1.TokenType.Comment, text, null, 0);
+          const text2 = token.line.getLineText(0);
+          this.setTokenMatched(token, Parser_1.TokenType.Comment, text2, null, 0);
           return true;
         }
         return false;
@@ -25714,8 +25714,8 @@ var require_GherkinClassicTokenMatcher = __commonJS({
         return false;
       }
       match_Other(token) {
-        const text = token.line.getLineText(this.indentToRemove);
-        this.setTokenMatched(token, Parser_1.TokenType.Other, this.unescapeDocString(text), null, 0);
+        const text2 = token.line.getLineText(this.indentToRemove);
+        this.setTokenMatched(token, Parser_1.TokenType.Other, this.unescapeDocString(text2), null, 0);
         return true;
       }
       getTags(line) {
@@ -25747,9 +25747,9 @@ var require_GherkinClassicTokenMatcher = __commonJS({
         }
         return false;
       }
-      setTokenMatched(token, matchedType, text, keyword, indent, keywordType, items) {
+      setTokenMatched(token, matchedType, text2, keyword, indent, keywordType, items) {
         token.matchedType = matchedType;
-        token.matchedText = text;
+        token.matchedText = text2;
         token.matchedKeyword = keyword;
         token.matchedKeywordType = keywordType;
         token.matchedIndent = typeof indent === "number" ? indent : token.line == null ? 0 : token.line.indent;
@@ -25757,23 +25757,23 @@ var require_GherkinClassicTokenMatcher = __commonJS({
         token.location.column = token.matchedIndent + 1;
         token.matchedGherkinDialect = this.dialectName;
       }
-      unescapeDocString(text) {
+      unescapeDocString(text2) {
         if (this.activeDocStringSeparator === '"""') {
-          return text.replace('\\"\\"\\"', '"""');
+          return text2.replace('\\"\\"\\"', '"""');
         }
         if (this.activeDocStringSeparator === "```") {
-          return text.replace("\\`\\`\\`", "```");
+          return text2.replace("\\`\\`\\`", "```");
         }
-        return text;
+        return text2;
       }
     };
     exports.default = GherkinClassicTokenMatcher2;
   }
 });
 
-// node_modules/@cucumber/gherkin/dist/src/GherkinInMarkdownTokenMatcher.js
+// ../dev-pomogator/node_modules/@cucumber/gherkin/dist/src/GherkinInMarkdownTokenMatcher.js
 var require_GherkinInMarkdownTokenMatcher = __commonJS({
-  "node_modules/@cucumber/gherkin/dist/src/GherkinInMarkdownTokenMatcher.js"(exports) {
+  "../dev-pomogator/node_modules/@cucumber/gherkin/dist/src/GherkinInMarkdownTokenMatcher.js"(exports) {
     "use strict";
     var __createBinding = exports && exports.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -25880,9 +25880,9 @@ var require_GherkinInMarkdownTokenMatcher = __commonJS({
         return this.setTokenMatched(token, null, result);
       }
       match_Other(token) {
-        const text = token.line.getLineText(this.indentToRemove);
+        const text2 = token.line.getLineText(this.indentToRemove);
         token.matchedType = Parser_1.TokenType.Other;
-        token.matchedText = text;
+        token.matchedText = text2;
         token.matchedIndent = 0;
         return this.setTokenMatched(token, null, true);
       }
@@ -26024,15 +26024,15 @@ var require_GherkinInMarkdownTokenMatcher = __commonJS({
       KeywordPrefix2["BULLET"] = "^(\\s*[*+-]\\s*)";
       KeywordPrefix2["HEADER"] = "^(#{1,6}\\s)";
     })(KeywordPrefix || (KeywordPrefix = {}));
-    function escapeRegExp(text) {
-      return text.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&");
+    function escapeRegExp(text2) {
+      return text2.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&");
     }
   }
 });
 
-// node_modules/@cucumber/gherkin/dist/src/makeSourceEnvelope.js
+// ../dev-pomogator/node_modules/@cucumber/gherkin/dist/src/makeSourceEnvelope.js
 var require_makeSourceEnvelope = __commonJS({
-  "node_modules/@cucumber/gherkin/dist/src/makeSourceEnvelope.js"(exports) {
+  "../dev-pomogator/node_modules/@cucumber/gherkin/dist/src/makeSourceEnvelope.js"(exports) {
     "use strict";
     var __createBinding = exports && exports.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -26094,9 +26094,9 @@ var require_makeSourceEnvelope = __commonJS({
   }
 });
 
-// node_modules/@cucumber/gherkin/dist/src/pickles/compile.js
+// ../dev-pomogator/node_modules/@cucumber/gherkin/dist/src/pickles/compile.js
 var require_compile2 = __commonJS({
-  "node_modules/@cucumber/gherkin/dist/src/pickles/compile.js"(exports) {
+  "../dev-pomogator/node_modules/@cucumber/gherkin/dist/src/pickles/compile.js"(exports) {
     "use strict";
     var __createBinding = exports && exports.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -26301,9 +26301,9 @@ var require_compile2 = __commonJS({
   }
 });
 
-// node_modules/@cucumber/gherkin/dist/src/generateMessages.js
+// ../dev-pomogator/node_modules/@cucumber/gherkin/dist/src/generateMessages.js
 var require_generateMessages = __commonJS({
-  "node_modules/@cucumber/gherkin/dist/src/generateMessages.js"(exports) {
+  "../dev-pomogator/node_modules/@cucumber/gherkin/dist/src/generateMessages.js"(exports) {
     "use strict";
     var __createBinding = exports && exports.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -26415,9 +26415,9 @@ var require_generateMessages = __commonJS({
   }
 });
 
-// node_modules/@cucumber/gherkin/dist/src/index.js
+// ../dev-pomogator/node_modules/@cucumber/gherkin/dist/src/index.js
 var require_src2 = __commonJS({
-  "node_modules/@cucumber/gherkin/dist/src/index.js"(exports) {
+  "../dev-pomogator/node_modules/@cucumber/gherkin/dist/src/index.js"(exports) {
     "use strict";
     var __createBinding = exports && exports.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -26485,7 +26485,7 @@ var require_src2 = __commonJS({
   }
 });
 
-// node_modules/readdirp/esm/index.js
+// ../dev-pomogator/node_modules/readdirp/esm/index.js
 import { stat, lstat, readdir, realpath } from "node:fs/promises";
 import { Readable } from "node:stream";
 import { resolve as presolve, relative as prelative, join as pjoin, sep as psep } from "node:path";
@@ -26507,7 +26507,7 @@ function readdirp(root, options = {}) {
 }
 var EntryTypes, defaultOptions2, RECURSIVE_ERROR_CODE, NORMAL_FLOW_ERRORS, ALL_TYPES, DIR_TYPES, FILE_TYPES, isNormalFlowError, wantBigintFsStats, emptyFn, normalizeFilter, ReaddirpStream;
 var init_esm = __esm({
-  "node_modules/readdirp/esm/index.js"() {
+  "../dev-pomogator/node_modules/readdirp/esm/index.js"() {
     EntryTypes = {
       FILE_TYPE: "files",
       DIR_TYPE: "directories",
@@ -26574,7 +26574,7 @@ var init_esm = __esm({
         this._directoryFilter = normalizeFilter(opts.directoryFilter);
         const statMethod = opts.lstat ? lstat : stat;
         if (wantBigintFsStats) {
-          this._stat = (path31) => statMethod(path31, { bigint: true });
+          this._stat = (path33) => statMethod(path33, { bigint: true });
         } else {
           this._stat = statMethod;
         }
@@ -26599,8 +26599,8 @@ var init_esm = __esm({
             const par = this.parent;
             const fil = par && par.files;
             if (fil && fil.length > 0) {
-              const { path: path31, depth } = par;
-              const slice = fil.splice(0, batch).map((dirent) => this._formatEntry(dirent, path31));
+              const { path: path33, depth } = par;
+              const slice = fil.splice(0, batch).map((dirent) => this._formatEntry(dirent, path33));
               const awaited = await Promise.all(slice);
               for (const entry of awaited) {
                 if (!entry)
@@ -26640,20 +26640,20 @@ var init_esm = __esm({
           this.reading = false;
         }
       }
-      async _exploreDir(path31, depth) {
+      async _exploreDir(path33, depth) {
         let files;
         try {
-          files = await readdir(path31, this._rdOptions);
+          files = await readdir(path33, this._rdOptions);
         } catch (error51) {
           this._onError(error51);
         }
-        return { files, depth, path: path31 };
+        return { files, depth, path: path33 };
       }
-      async _formatEntry(dirent, path31) {
+      async _formatEntry(dirent, path33) {
         let entry;
         const basename3 = this._isDirent ? dirent.name : dirent;
         try {
-          const fullPath = presolve(pjoin(path31, basename3));
+          const fullPath = presolve(pjoin(path33, basename3));
           entry = { path: prelative(this._root, fullPath), fullPath, basename: basename3 };
           entry[this._statsProp] = this._isDirent ? dirent : await this._stat(fullPath);
         } catch (err) {
@@ -26709,21 +26709,21 @@ var init_esm = __esm({
   }
 });
 
-// node_modules/chokidar/esm/handler.js
+// ../dev-pomogator/node_modules/chokidar/esm/handler.js
 import { watchFile, unwatchFile, watch as fs_watch } from "fs";
 import { open, stat as stat2, lstat as lstat2, realpath as fsrealpath } from "fs/promises";
 import * as sysPath from "path";
 import { type as osType } from "os";
-function createFsWatchInstance(path31, options, listener, errHandler, emitRaw) {
+function createFsWatchInstance(path33, options, listener, errHandler, emitRaw) {
   const handleEvent = (rawEvent, evPath) => {
-    listener(path31);
-    emitRaw(rawEvent, evPath, { watchedPath: path31 });
-    if (evPath && path31 !== evPath) {
-      fsWatchBroadcast(sysPath.resolve(path31, evPath), KEY_LISTENERS, sysPath.join(path31, evPath));
+    listener(path33);
+    emitRaw(rawEvent, evPath, { watchedPath: path33 });
+    if (evPath && path33 !== evPath) {
+      fsWatchBroadcast(sysPath.resolve(path33, evPath), KEY_LISTENERS, sysPath.join(path33, evPath));
     }
   };
   try {
-    return fs_watch(path31, {
+    return fs_watch(path33, {
       persistent: options.persistent
     }, handleEvent);
   } catch (error51) {
@@ -26733,7 +26733,7 @@ function createFsWatchInstance(path31, options, listener, errHandler, emitRaw) {
 }
 var STR_DATA, STR_END, STR_CLOSE, EMPTY_FN, pl, isWindows, isMacos, isLinux, isFreeBSD, isIBMi, EVENTS, EV, THROTTLE_MODE_WATCH, statMethods, KEY_LISTENERS, KEY_ERR, KEY_RAW, HANDLER_KEYS, binaryExtensions, isBinaryPath, foreach, addAndConvert, clearItem, delFromSet, isEmptySet, FsWatchInstances, fsWatchBroadcast, setFsWatchListener, FsWatchFileInstances, setFsWatchFileListener, NodeFsHandler;
 var init_handler = __esm({
-  "node_modules/chokidar/esm/handler.js"() {
+  "../dev-pomogator/node_modules/chokidar/esm/handler.js"() {
     STR_DATA = "data";
     STR_END = "end";
     STR_CLOSE = "close";
@@ -27067,12 +27067,12 @@ var init_handler = __esm({
         listener(val1, val2, val3);
       });
     };
-    setFsWatchListener = (path31, fullPath, options, handlers) => {
+    setFsWatchListener = (path33, fullPath, options, handlers) => {
       const { listener, errHandler, rawEmitter } = handlers;
       let cont = FsWatchInstances.get(fullPath);
       let watcher;
       if (!options.persistent) {
-        watcher = createFsWatchInstance(path31, options, listener, errHandler, rawEmitter);
+        watcher = createFsWatchInstance(path33, options, listener, errHandler, rawEmitter);
         if (!watcher)
           return;
         return watcher.close.bind(watcher);
@@ -27083,7 +27083,7 @@ var init_handler = __esm({
         addAndConvert(cont, KEY_RAW, rawEmitter);
       } else {
         watcher = createFsWatchInstance(
-          path31,
+          path33,
           options,
           fsWatchBroadcast.bind(null, fullPath, KEY_LISTENERS),
           errHandler,
@@ -27098,7 +27098,7 @@ var init_handler = __esm({
             cont.watcherUnusable = true;
           if (isWindows && error51.code === "EPERM") {
             try {
-              const fd = await open(path31, "r");
+              const fd = await open(path33, "r");
               await fd.close();
               broadcastErr(error51);
             } catch (err) {
@@ -27129,7 +27129,7 @@ var init_handler = __esm({
       };
     };
     FsWatchFileInstances = /* @__PURE__ */ new Map();
-    setFsWatchFileListener = (path31, fullPath, options, handlers) => {
+    setFsWatchFileListener = (path33, fullPath, options, handlers) => {
       const { listener, rawEmitter } = handlers;
       let cont = FsWatchFileInstances.get(fullPath);
       const copts = cont && cont.options;
@@ -27151,7 +27151,7 @@ var init_handler = __esm({
             });
             const currmtime = curr.mtimeMs;
             if (curr.size !== prev.size || currmtime > prev.mtimeMs || currmtime === 0) {
-              foreach(cont.listeners, (listener2) => listener2(path31, curr));
+              foreach(cont.listeners, (listener2) => listener2(path33, curr));
             }
           })
         };
@@ -27179,13 +27179,13 @@ var init_handler = __esm({
        * @param listener on fs change
        * @returns closer for the watcher instance
        */
-      _watchWithNodeFs(path31, listener) {
+      _watchWithNodeFs(path33, listener) {
         const opts = this.fsw.options;
-        const directory = sysPath.dirname(path31);
-        const basename3 = sysPath.basename(path31);
+        const directory = sysPath.dirname(path33);
+        const basename3 = sysPath.basename(path33);
         const parent = this.fsw._getWatchedDir(directory);
         parent.add(basename3);
-        const absolutePath = sysPath.resolve(path31);
+        const absolutePath = sysPath.resolve(path33);
         const options = {
           persistent: opts.persistent
         };
@@ -27195,12 +27195,12 @@ var init_handler = __esm({
         if (opts.usePolling) {
           const enableBin = opts.interval !== opts.binaryInterval;
           options.interval = enableBin && isBinaryPath(basename3) ? opts.binaryInterval : opts.interval;
-          closer = setFsWatchFileListener(path31, absolutePath, options, {
+          closer = setFsWatchFileListener(path33, absolutePath, options, {
             listener,
             rawEmitter: this.fsw._emitRaw
           });
         } else {
-          closer = setFsWatchListener(path31, absolutePath, options, {
+          closer = setFsWatchListener(path33, absolutePath, options, {
             listener,
             errHandler: this._boundHandleError,
             rawEmitter: this.fsw._emitRaw
@@ -27222,7 +27222,7 @@ var init_handler = __esm({
         let prevStats = stats;
         if (parent.has(basename3))
           return;
-        const listener = async (path31, newStats) => {
+        const listener = async (path33, newStats) => {
           if (!this.fsw._throttle(THROTTLE_MODE_WATCH, file2, 5))
             return;
           if (!newStats || newStats.mtimeMs === 0) {
@@ -27236,11 +27236,11 @@ var init_handler = __esm({
                 this.fsw._emit(EV.CHANGE, file2, newStats2);
               }
               if ((isMacos || isLinux || isFreeBSD) && prevStats.ino !== newStats2.ino) {
-                this.fsw._closeFile(path31);
+                this.fsw._closeFile(path33);
                 prevStats = newStats2;
                 const closer2 = this._watchWithNodeFs(file2, listener);
                 if (closer2)
-                  this.fsw._addPathCloser(path31, closer2);
+                  this.fsw._addPathCloser(path33, closer2);
               } else {
                 prevStats = newStats2;
               }
@@ -27272,7 +27272,7 @@ var init_handler = __esm({
        * @param item basename of this item
        * @returns true if no more processing is needed for this entry.
        */
-      async _handleSymlink(entry, directory, path31, item) {
+      async _handleSymlink(entry, directory, path33, item) {
         if (this.fsw.closed) {
           return;
         }
@@ -27282,7 +27282,7 @@ var init_handler = __esm({
           this.fsw._incrReadyCount();
           let linkPath;
           try {
-            linkPath = await fsrealpath(path31);
+            linkPath = await fsrealpath(path33);
           } catch (e) {
             this.fsw._emitReady();
             return true;
@@ -27292,12 +27292,12 @@ var init_handler = __esm({
           if (dir.has(item)) {
             if (this.fsw._symlinkPaths.get(full) !== linkPath) {
               this.fsw._symlinkPaths.set(full, linkPath);
-              this.fsw._emit(EV.CHANGE, path31, entry.stats);
+              this.fsw._emit(EV.CHANGE, path33, entry.stats);
             }
           } else {
             dir.add(item);
             this.fsw._symlinkPaths.set(full, linkPath);
-            this.fsw._emit(EV.ADD, path31, entry.stats);
+            this.fsw._emit(EV.ADD, path33, entry.stats);
           }
           this.fsw._emitReady();
           return true;
@@ -27326,9 +27326,9 @@ var init_handler = __esm({
             return;
           }
           const item = entry.path;
-          let path31 = sysPath.join(directory, item);
+          let path33 = sysPath.join(directory, item);
           current.add(item);
-          if (entry.stats.isSymbolicLink() && await this._handleSymlink(entry, directory, path31, item)) {
+          if (entry.stats.isSymbolicLink() && await this._handleSymlink(entry, directory, path33, item)) {
             return;
           }
           if (this.fsw.closed) {
@@ -27337,8 +27337,8 @@ var init_handler = __esm({
           }
           if (item === target || !target && !previous.has(item)) {
             this.fsw._incrReadyCount();
-            path31 = sysPath.join(dir, sysPath.relative(dir, path31));
-            this._addToNodeFs(path31, initialAdd, wh, depth + 1);
+            path33 = sysPath.join(dir, sysPath.relative(dir, path33));
+            this._addToNodeFs(path33, initialAdd, wh, depth + 1);
           }
         }).on(EV.ERROR, this._boundHandleError);
         return new Promise((resolve3, reject) => {
@@ -27407,13 +27407,13 @@ var init_handler = __esm({
        * @param depth Child path actually targeted for watch
        * @param target Child path actually targeted for watch
        */
-      async _addToNodeFs(path31, initialAdd, priorWh, depth, target) {
+      async _addToNodeFs(path33, initialAdd, priorWh, depth, target) {
         const ready = this.fsw._emitReady;
-        if (this.fsw._isIgnored(path31) || this.fsw.closed) {
+        if (this.fsw._isIgnored(path33) || this.fsw.closed) {
           ready();
           return false;
         }
-        const wh = this.fsw._getWatchHelpers(path31);
+        const wh = this.fsw._getWatchHelpers(path33);
         if (priorWh) {
           wh.filterPath = (entry) => priorWh.filterPath(entry);
           wh.filterDir = (entry) => priorWh.filterDir(entry);
@@ -27429,8 +27429,8 @@ var init_handler = __esm({
           const follow = this.fsw.options.followSymlinks;
           let closer;
           if (stats.isDirectory()) {
-            const absPath = sysPath.resolve(path31);
-            const targetPath = follow ? await fsrealpath(path31) : path31;
+            const absPath = sysPath.resolve(path33);
+            const targetPath = follow ? await fsrealpath(path33) : path33;
             if (this.fsw.closed)
               return;
             closer = await this._handleDir(wh.watchPath, stats, initialAdd, depth, target, wh, targetPath);
@@ -27440,29 +27440,29 @@ var init_handler = __esm({
               this.fsw._symlinkPaths.set(absPath, targetPath);
             }
           } else if (stats.isSymbolicLink()) {
-            const targetPath = follow ? await fsrealpath(path31) : path31;
+            const targetPath = follow ? await fsrealpath(path33) : path33;
             if (this.fsw.closed)
               return;
             const parent = sysPath.dirname(wh.watchPath);
             this.fsw._getWatchedDir(parent).add(wh.watchPath);
             this.fsw._emit(EV.ADD, wh.watchPath, stats);
-            closer = await this._handleDir(parent, stats, initialAdd, depth, path31, wh, targetPath);
+            closer = await this._handleDir(parent, stats, initialAdd, depth, path33, wh, targetPath);
             if (this.fsw.closed)
               return;
             if (targetPath !== void 0) {
-              this.fsw._symlinkPaths.set(sysPath.resolve(path31), targetPath);
+              this.fsw._symlinkPaths.set(sysPath.resolve(path33), targetPath);
             }
           } else {
             closer = this._handleFile(wh.watchPath, stats, initialAdd);
           }
           ready();
           if (closer)
-            this.fsw._addPathCloser(path31, closer);
+            this.fsw._addPathCloser(path33, closer);
           return false;
         } catch (error51) {
           if (this.fsw._handleError(error51)) {
             ready();
-            return path31;
+            return path33;
           }
         }
       }
@@ -27470,7 +27470,7 @@ var init_handler = __esm({
   }
 });
 
-// node_modules/chokidar/esm/index.js
+// ../dev-pomogator/node_modules/chokidar/esm/index.js
 var esm_exports = {};
 __export(esm_exports, {
   FSWatcher: () => FSWatcher,
@@ -27508,26 +27508,26 @@ function createPattern(matcher) {
   }
   return () => false;
 }
-function normalizePath(path31) {
-  if (typeof path31 !== "string")
+function normalizePath(path33) {
+  if (typeof path33 !== "string")
     throw new Error("string expected");
-  path31 = sysPath2.normalize(path31);
-  path31 = path31.replace(/\\/g, "/");
+  path33 = sysPath2.normalize(path33);
+  path33 = path33.replace(/\\/g, "/");
   let prepend = false;
-  if (path31.startsWith("//"))
+  if (path33.startsWith("//"))
     prepend = true;
   const DOUBLE_SLASH_RE2 = /\/\//;
-  while (path31.match(DOUBLE_SLASH_RE2))
-    path31 = path31.replace(DOUBLE_SLASH_RE2, "/");
+  while (path33.match(DOUBLE_SLASH_RE2))
+    path33 = path33.replace(DOUBLE_SLASH_RE2, "/");
   if (prepend)
-    path31 = "/" + path31;
-  return path31;
+    path33 = "/" + path33;
+  return path33;
 }
 function matchPatterns(patterns, testString, stats) {
-  const path31 = normalizePath(testString);
+  const path33 = normalizePath(testString);
   for (let index = 0; index < patterns.length; index++) {
     const pattern = patterns[index];
-    if (pattern(path31, stats)) {
+    if (pattern(path33, stats)) {
       return true;
     }
   }
@@ -27553,7 +27553,7 @@ function watch(paths, options = {}) {
 }
 var SLASH, SLASH_SLASH, ONE_DOT, TWO_DOTS, STRING_TYPE, BACK_SLASH_RE, DOUBLE_SLASH_RE, DOT_RE, REPLACER_RE, isMatcherObject, unifyPaths, toUnix, normalizePathToUnix, normalizeIgnored, getAbsolutePath, EMPTY_SET, DirEntry, STAT_METHOD_F, STAT_METHOD_L, WatchHelper, FSWatcher, esm_default;
 var init_esm2 = __esm({
-  "node_modules/chokidar/esm/index.js"() {
+  "../dev-pomogator/node_modules/chokidar/esm/index.js"() {
     init_esm();
     init_handler();
     SLASH = "/";
@@ -27587,19 +27587,19 @@ var init_esm2 = __esm({
       }
       return str;
     };
-    normalizePathToUnix = (path31) => toUnix(sysPath2.normalize(toUnix(path31)));
-    normalizeIgnored = (cwd = "") => (path31) => {
-      if (typeof path31 === "string") {
-        return normalizePathToUnix(sysPath2.isAbsolute(path31) ? path31 : sysPath2.join(cwd, path31));
+    normalizePathToUnix = (path33) => toUnix(sysPath2.normalize(toUnix(path33)));
+    normalizeIgnored = (cwd = "") => (path33) => {
+      if (typeof path33 === "string") {
+        return normalizePathToUnix(sysPath2.isAbsolute(path33) ? path33 : sysPath2.join(cwd, path33));
       } else {
-        return path31;
+        return path33;
       }
     };
-    getAbsolutePath = (path31, cwd) => {
-      if (sysPath2.isAbsolute(path31)) {
-        return path31;
+    getAbsolutePath = (path33, cwd) => {
+      if (sysPath2.isAbsolute(path33)) {
+        return path33;
       }
-      return sysPath2.join(cwd, path31);
+      return sysPath2.join(cwd, path33);
     };
     EMPTY_SET = Object.freeze(/* @__PURE__ */ new Set());
     DirEntry = class {
@@ -27654,10 +27654,10 @@ var init_esm2 = __esm({
     STAT_METHOD_F = "stat";
     STAT_METHOD_L = "lstat";
     WatchHelper = class {
-      constructor(path31, follow, fsw) {
+      constructor(path33, follow, fsw) {
         this.fsw = fsw;
-        const watchPath = path31;
-        this.path = path31 = path31.replace(REPLACER_RE, "");
+        const watchPath = path33;
+        this.path = path33 = path33.replace(REPLACER_RE, "");
         this.watchPath = watchPath;
         this.fullWatchPath = sysPath2.resolve(watchPath);
         this.dirParts = [];
@@ -27779,20 +27779,20 @@ var init_esm2 = __esm({
         this._closePromise = void 0;
         let paths = unifyPaths(paths_);
         if (cwd) {
-          paths = paths.map((path31) => {
-            const absPath = getAbsolutePath(path31, cwd);
+          paths = paths.map((path33) => {
+            const absPath = getAbsolutePath(path33, cwd);
             return absPath;
           });
         }
-        paths.forEach((path31) => {
-          this._removeIgnoredPath(path31);
+        paths.forEach((path33) => {
+          this._removeIgnoredPath(path33);
         });
         this._userIgnored = void 0;
         if (!this._readyCount)
           this._readyCount = 0;
         this._readyCount += paths.length;
-        Promise.all(paths.map(async (path31) => {
-          const res = await this._nodeFsHandler._addToNodeFs(path31, !_internal, void 0, 0, _origAdd);
+        Promise.all(paths.map(async (path33) => {
+          const res = await this._nodeFsHandler._addToNodeFs(path33, !_internal, void 0, 0, _origAdd);
           if (res)
             this._emitReady();
           return res;
@@ -27814,17 +27814,17 @@ var init_esm2 = __esm({
           return this;
         const paths = unifyPaths(paths_);
         const { cwd } = this.options;
-        paths.forEach((path31) => {
-          if (!sysPath2.isAbsolute(path31) && !this._closers.has(path31)) {
+        paths.forEach((path33) => {
+          if (!sysPath2.isAbsolute(path33) && !this._closers.has(path33)) {
             if (cwd)
-              path31 = sysPath2.join(cwd, path31);
-            path31 = sysPath2.resolve(path31);
+              path33 = sysPath2.join(cwd, path33);
+            path33 = sysPath2.resolve(path33);
           }
-          this._closePath(path31);
-          this._addIgnoredPath(path31);
-          if (this._watched.has(path31)) {
+          this._closePath(path33);
+          this._addIgnoredPath(path33);
+          if (this._watched.has(path33)) {
             this._addIgnoredPath({
-              path: path31,
+              path: path33,
               recursive: true
             });
           }
@@ -27888,38 +27888,38 @@ var init_esm2 = __esm({
        * @param stats arguments to be passed with event
        * @returns the error if defined, otherwise the value of the FSWatcher instance's `closed` flag
        */
-      async _emit(event, path31, stats) {
+      async _emit(event, path33, stats) {
         if (this.closed)
           return;
         const opts = this.options;
         if (isWindows)
-          path31 = sysPath2.normalize(path31);
+          path33 = sysPath2.normalize(path33);
         if (opts.cwd)
-          path31 = sysPath2.relative(opts.cwd, path31);
-        const args = [path31];
+          path33 = sysPath2.relative(opts.cwd, path33);
+        const args = [path33];
         if (stats != null)
           args.push(stats);
         const awf = opts.awaitWriteFinish;
         let pw;
-        if (awf && (pw = this._pendingWrites.get(path31))) {
+        if (awf && (pw = this._pendingWrites.get(path33))) {
           pw.lastChange = /* @__PURE__ */ new Date();
           return this;
         }
         if (opts.atomic) {
           if (event === EVENTS.UNLINK) {
-            this._pendingUnlinks.set(path31, [event, ...args]);
+            this._pendingUnlinks.set(path33, [event, ...args]);
             setTimeout(() => {
-              this._pendingUnlinks.forEach((entry, path32) => {
+              this._pendingUnlinks.forEach((entry, path34) => {
                 this.emit(...entry);
                 this.emit(EVENTS.ALL, ...entry);
-                this._pendingUnlinks.delete(path32);
+                this._pendingUnlinks.delete(path34);
               });
             }, typeof opts.atomic === "number" ? opts.atomic : 100);
             return this;
           }
-          if (event === EVENTS.ADD && this._pendingUnlinks.has(path31)) {
+          if (event === EVENTS.ADD && this._pendingUnlinks.has(path33)) {
             event = EVENTS.CHANGE;
-            this._pendingUnlinks.delete(path31);
+            this._pendingUnlinks.delete(path33);
           }
         }
         if (awf && (event === EVENTS.ADD || event === EVENTS.CHANGE) && this._readyEmitted) {
@@ -27937,16 +27937,16 @@ var init_esm2 = __esm({
               this.emitWithAll(event, args);
             }
           };
-          this._awaitWriteFinish(path31, awf.stabilityThreshold, event, awfEmit);
+          this._awaitWriteFinish(path33, awf.stabilityThreshold, event, awfEmit);
           return this;
         }
         if (event === EVENTS.CHANGE) {
-          const isThrottled = !this._throttle(EVENTS.CHANGE, path31, 50);
+          const isThrottled = !this._throttle(EVENTS.CHANGE, path33, 50);
           if (isThrottled)
             return this;
         }
         if (opts.alwaysStat && stats === void 0 && (event === EVENTS.ADD || event === EVENTS.ADD_DIR || event === EVENTS.CHANGE)) {
-          const fullPath = opts.cwd ? sysPath2.join(opts.cwd, path31) : path31;
+          const fullPath = opts.cwd ? sysPath2.join(opts.cwd, path33) : path33;
           let stats2;
           try {
             stats2 = await stat3(fullPath);
@@ -27977,23 +27977,23 @@ var init_esm2 = __esm({
        * @param timeout duration of time to suppress duplicate actions
        * @returns tracking object or false if action should be suppressed
        */
-      _throttle(actionType, path31, timeout) {
+      _throttle(actionType, path33, timeout) {
         if (!this._throttled.has(actionType)) {
           this._throttled.set(actionType, /* @__PURE__ */ new Map());
         }
         const action = this._throttled.get(actionType);
         if (!action)
           throw new Error("invalid throttle");
-        const actionPath = action.get(path31);
+        const actionPath = action.get(path33);
         if (actionPath) {
           actionPath.count++;
           return false;
         }
         let timeoutObject;
         const clear = () => {
-          const item = action.get(path31);
+          const item = action.get(path33);
           const count = item ? item.count : 0;
-          action.delete(path31);
+          action.delete(path33);
           clearTimeout(timeoutObject);
           if (item)
             clearTimeout(item.timeoutObject);
@@ -28001,7 +28001,7 @@ var init_esm2 = __esm({
         };
         timeoutObject = setTimeout(clear, timeout);
         const thr = { timeoutObject, clear, count: 0 };
-        action.set(path31, thr);
+        action.set(path33, thr);
         return thr;
       }
       _incrReadyCount() {
@@ -28015,44 +28015,44 @@ var init_esm2 = __esm({
        * @param event
        * @param awfEmit Callback to be called when ready for event to be emitted.
        */
-      _awaitWriteFinish(path31, threshold, event, awfEmit) {
+      _awaitWriteFinish(path33, threshold, event, awfEmit) {
         const awf = this.options.awaitWriteFinish;
         if (typeof awf !== "object")
           return;
         const pollInterval = awf.pollInterval;
         let timeoutHandler;
-        let fullPath = path31;
-        if (this.options.cwd && !sysPath2.isAbsolute(path31)) {
-          fullPath = sysPath2.join(this.options.cwd, path31);
+        let fullPath = path33;
+        if (this.options.cwd && !sysPath2.isAbsolute(path33)) {
+          fullPath = sysPath2.join(this.options.cwd, path33);
         }
         const now = /* @__PURE__ */ new Date();
         const writes = this._pendingWrites;
         function awaitWriteFinishFn(prevStat) {
           statcb(fullPath, (err, curStat) => {
-            if (err || !writes.has(path31)) {
+            if (err || !writes.has(path33)) {
               if (err && err.code !== "ENOENT")
                 awfEmit(err);
               return;
             }
             const now2 = Number(/* @__PURE__ */ new Date());
             if (prevStat && curStat.size !== prevStat.size) {
-              writes.get(path31).lastChange = now2;
+              writes.get(path33).lastChange = now2;
             }
-            const pw = writes.get(path31);
+            const pw = writes.get(path33);
             const df = now2 - pw.lastChange;
             if (df >= threshold) {
-              writes.delete(path31);
+              writes.delete(path33);
               awfEmit(void 0, curStat);
             } else {
               timeoutHandler = setTimeout(awaitWriteFinishFn, pollInterval, curStat);
             }
           });
         }
-        if (!writes.has(path31)) {
-          writes.set(path31, {
+        if (!writes.has(path33)) {
+          writes.set(path33, {
             lastChange: now,
             cancelWait: () => {
-              writes.delete(path31);
+              writes.delete(path33);
               clearTimeout(timeoutHandler);
               return event;
             }
@@ -28063,8 +28063,8 @@ var init_esm2 = __esm({
       /**
        * Determines whether user has asked to ignore this path.
        */
-      _isIgnored(path31, stats) {
-        if (this.options.atomic && DOT_RE.test(path31))
+      _isIgnored(path33, stats) {
+        if (this.options.atomic && DOT_RE.test(path33))
           return true;
         if (!this._userIgnored) {
           const { cwd } = this.options;
@@ -28074,17 +28074,17 @@ var init_esm2 = __esm({
           const list = [...ignoredPaths.map(normalizeIgnored(cwd)), ...ignored];
           this._userIgnored = anymatch(list, void 0);
         }
-        return this._userIgnored(path31, stats);
+        return this._userIgnored(path33, stats);
       }
-      _isntIgnored(path31, stat4) {
-        return !this._isIgnored(path31, stat4);
+      _isntIgnored(path33, stat4) {
+        return !this._isIgnored(path33, stat4);
       }
       /**
        * Provides a set of common helpers and properties relating to symlink handling.
        * @param path file or directory pattern being watched
        */
-      _getWatchHelpers(path31) {
-        return new WatchHelper(path31, this.options.followSymlinks, this);
+      _getWatchHelpers(path33) {
+        return new WatchHelper(path33, this.options.followSymlinks, this);
       }
       // Directory helpers
       // -----------------
@@ -28116,63 +28116,63 @@ var init_esm2 = __esm({
        * @param item      base path of item/directory
        */
       _remove(directory, item, isDirectory) {
-        const path31 = sysPath2.join(directory, item);
-        const fullPath = sysPath2.resolve(path31);
-        isDirectory = isDirectory != null ? isDirectory : this._watched.has(path31) || this._watched.has(fullPath);
-        if (!this._throttle("remove", path31, 100))
+        const path33 = sysPath2.join(directory, item);
+        const fullPath = sysPath2.resolve(path33);
+        isDirectory = isDirectory != null ? isDirectory : this._watched.has(path33) || this._watched.has(fullPath);
+        if (!this._throttle("remove", path33, 100))
           return;
         if (!isDirectory && this._watched.size === 1) {
           this.add(directory, item, true);
         }
-        const wp = this._getWatchedDir(path31);
+        const wp = this._getWatchedDir(path33);
         const nestedDirectoryChildren = wp.getChildren();
-        nestedDirectoryChildren.forEach((nested) => this._remove(path31, nested));
+        nestedDirectoryChildren.forEach((nested) => this._remove(path33, nested));
         const parent = this._getWatchedDir(directory);
         const wasTracked = parent.has(item);
         parent.remove(item);
         if (this._symlinkPaths.has(fullPath)) {
           this._symlinkPaths.delete(fullPath);
         }
-        let relPath = path31;
+        let relPath = path33;
         if (this.options.cwd)
-          relPath = sysPath2.relative(this.options.cwd, path31);
+          relPath = sysPath2.relative(this.options.cwd, path33);
         if (this.options.awaitWriteFinish && this._pendingWrites.has(relPath)) {
           const event = this._pendingWrites.get(relPath).cancelWait();
           if (event === EVENTS.ADD)
             return;
         }
-        this._watched.delete(path31);
+        this._watched.delete(path33);
         this._watched.delete(fullPath);
         const eventName = isDirectory ? EVENTS.UNLINK_DIR : EVENTS.UNLINK;
-        if (wasTracked && !this._isIgnored(path31))
-          this._emit(eventName, path31);
-        this._closePath(path31);
+        if (wasTracked && !this._isIgnored(path33))
+          this._emit(eventName, path33);
+        this._closePath(path33);
       }
       /**
        * Closes all watchers for a path
        */
-      _closePath(path31) {
-        this._closeFile(path31);
-        const dir = sysPath2.dirname(path31);
-        this._getWatchedDir(dir).remove(sysPath2.basename(path31));
+      _closePath(path33) {
+        this._closeFile(path33);
+        const dir = sysPath2.dirname(path33);
+        this._getWatchedDir(dir).remove(sysPath2.basename(path33));
       }
       /**
        * Closes only file-specific watchers
        */
-      _closeFile(path31) {
-        const closers = this._closers.get(path31);
+      _closeFile(path33) {
+        const closers = this._closers.get(path33);
         if (!closers)
           return;
         closers.forEach((closer) => closer());
-        this._closers.delete(path31);
+        this._closers.delete(path33);
       }
-      _addPathCloser(path31, closer) {
+      _addPathCloser(path33, closer) {
         if (!closer)
           return;
-        let list = this._closers.get(path31);
+        let list = this._closers.get(path33);
         if (!list) {
           list = [];
-          this._closers.set(path31, list);
+          this._closers.set(path33, list);
         }
         list.push(closer);
       }
@@ -28198,7 +28198,7 @@ var init_esm2 = __esm({
   }
 });
 
-// node_modules/chalk/source/vendor/ansi-styles/index.js
+// ../dev-pomogator/node_modules/chalk/source/vendor/ansi-styles/index.js
 function assembleStyles() {
   const codes = /* @__PURE__ */ new Map();
   for (const [groupName, group] of Object.entries(styles)) {
@@ -28315,7 +28315,7 @@ function assembleStyles() {
 }
 var ANSI_BACKGROUND_OFFSET, wrapAnsi16, wrapAnsi256, wrapAnsi16m, styles, modifierNames, foregroundColorNames, backgroundColorNames, colorNames, ansiStyles, ansi_styles_default;
 var init_ansi_styles = __esm({
-  "node_modules/chalk/source/vendor/ansi-styles/index.js"() {
+  "../dev-pomogator/node_modules/chalk/source/vendor/ansi-styles/index.js"() {
     ANSI_BACKGROUND_OFFSET = 10;
     wrapAnsi16 = (offset = 0) => (code) => `\x1B[${code + offset}m`;
     wrapAnsi256 = (offset = 0) => (code) => `\x1B[${38 + offset};5;${code}m`;
@@ -28389,7 +28389,7 @@ var init_ansi_styles = __esm({
   }
 });
 
-// node_modules/chalk/source/vendor/supports-color/index.js
+// ../dev-pomogator/node_modules/chalk/source/vendor/supports-color/index.js
 import process4 from "node:process";
 import os2 from "node:os";
 import tty from "node:tty";
@@ -28510,7 +28510,7 @@ function createSupportsColor(stream, options = {}) {
 }
 var env, flagForceColor, supportsColor, supports_color_default;
 var init_supports_color = __esm({
-  "node_modules/chalk/source/vendor/supports-color/index.js"() {
+  "../dev-pomogator/node_modules/chalk/source/vendor/supports-color/index.js"() {
     ({ env } = process4);
     if (hasFlag("no-color") || hasFlag("no-colors") || hasFlag("color=false") || hasFlag("color=never")) {
       flagForceColor = 0;
@@ -28525,7 +28525,7 @@ var init_supports_color = __esm({
   }
 });
 
-// node_modules/chalk/source/utilities.js
+// ../dev-pomogator/node_modules/chalk/source/utilities.js
 function stringReplaceAll(string4, substring, replacer) {
   let index = string4.indexOf(substring);
   if (index === -1) {
@@ -28555,11 +28555,11 @@ function stringEncaseCRLFWithFirstIndex(string4, prefix, postfix, index) {
   return returnValue;
 }
 var init_utilities = __esm({
-  "node_modules/chalk/source/utilities.js"() {
+  "../dev-pomogator/node_modules/chalk/source/utilities.js"() {
   }
 });
 
-// node_modules/chalk/source/index.js
+// ../dev-pomogator/node_modules/chalk/source/index.js
 var source_exports = {};
 __export(source_exports, {
   Chalk: () => Chalk,
@@ -28581,7 +28581,7 @@ function createChalk(options) {
 }
 var stdoutColor, stderrColor, GENERATOR, STYLER, IS_EMPTY, levelMapping, styles2, applyOptions, Chalk, chalkFactory, getModelAnsi, usedModels, proto, createStyler, createBuilder, applyStyle, chalk, chalkStderr, source_default;
 var init_source = __esm({
-  "node_modules/chalk/source/index.js"() {
+  "../dev-pomogator/node_modules/chalk/source/index.js"() {
     init_ansi_styles();
     init_supports_color();
     init_utilities();
@@ -28736,7 +28736,7 @@ var init_source = __esm({
   }
 });
 
-// node_modules/zod/v3/helpers/util.js
+// ../dev-pomogator/node_modules/zod/v3/helpers/util.js
 var util;
 (function(util2) {
   util2.assertEqual = (_) => {
@@ -28870,7 +28870,7 @@ var getParsedType = (data) => {
   }
 };
 
-// node_modules/zod/v3/ZodError.js
+// ../dev-pomogator/node_modules/zod/v3/ZodError.js
 var ZodIssueCode = util.arrayToEnum([
   "invalid_type",
   "invalid_literal",
@@ -28984,7 +28984,7 @@ ZodError.create = (issues) => {
   return error51;
 };
 
-// node_modules/zod/v3/locales/en.js
+// ../dev-pomogator/node_modules/zod/v3/locales/en.js
 var errorMap = (issue2, _ctx) => {
   let message;
   switch (issue2.code) {
@@ -29087,16 +29087,16 @@ var errorMap = (issue2, _ctx) => {
 };
 var en_default = errorMap;
 
-// node_modules/zod/v3/errors.js
+// ../dev-pomogator/node_modules/zod/v3/errors.js
 var overrideErrorMap = en_default;
 function getErrorMap() {
   return overrideErrorMap;
 }
 
-// node_modules/zod/v3/helpers/parseUtil.js
+// ../dev-pomogator/node_modules/zod/v3/helpers/parseUtil.js
 var makeIssue = (params) => {
-  const { data, path: path31, errorMaps, issueData } = params;
-  const fullPath = [...path31, ...issueData.path || []];
+  const { data, path: path33, errorMaps, issueData } = params;
+  const fullPath = [...path33, ...issueData.path || []];
   const fullIssue = {
     ...issueData,
     path: fullPath
@@ -29202,20 +29202,20 @@ var isDirty = (x) => x.status === "dirty";
 var isValid = (x) => x.status === "valid";
 var isAsync = (x) => typeof Promise !== "undefined" && x instanceof Promise;
 
-// node_modules/zod/v3/helpers/errorUtil.js
+// ../dev-pomogator/node_modules/zod/v3/helpers/errorUtil.js
 var errorUtil;
 (function(errorUtil2) {
   errorUtil2.errToObj = (message) => typeof message === "string" ? { message } : message || {};
   errorUtil2.toString = (message) => typeof message === "string" ? message : message?.message;
 })(errorUtil || (errorUtil = {}));
 
-// node_modules/zod/v3/types.js
+// ../dev-pomogator/node_modules/zod/v3/types.js
 var ParseInputLazyPath = class {
-  constructor(parent, value, path31, key) {
+  constructor(parent, value, path33, key) {
     this._cachedPath = [];
     this.parent = parent;
     this.data = value;
-    this._path = path31;
+    this._path = path33;
     this._key = key;
   }
   get path() {
@@ -32612,7 +32612,7 @@ var nullableType = ZodNullable.create;
 var preprocessType = ZodEffects.createWithPreprocess;
 var pipelineType = ZodPipeline.create;
 
-// node_modules/zod/v4/core/index.js
+// ../dev-pomogator/node_modules/zod/v4/core/index.js
 var core_exports2 = {};
 __export(core_exports2, {
   $ZodAny: () => $ZodAny,
@@ -32891,7 +32891,7 @@ __export(core_exports2, {
   version: () => version
 });
 
-// node_modules/zod/v4/core/core.js
+// ../dev-pomogator/node_modules/zod/v4/core/core.js
 var _a;
 var NEVER = /* @__PURE__ */ Object.freeze({
   status: "aborted"
@@ -32968,7 +32968,7 @@ function config(newConfig) {
   return globalConfig;
 }
 
-// node_modules/zod/v4/core/util.js
+// ../dev-pomogator/node_modules/zod/v4/core/util.js
 var util_exports = {};
 __export(util_exports, {
   BIGINT_FORMAT_RANGES: () => BIGINT_FORMAT_RANGES,
@@ -33135,10 +33135,10 @@ function mergeDefs(...defs) {
 function cloneDef(schema) {
   return mergeDefs(schema._zod.def);
 }
-function getElementAtPath(obj, path31) {
-  if (!path31)
+function getElementAtPath(obj, path33) {
+  if (!path33)
     return obj;
-  return path31.reduce((acc, key) => acc?.[key], obj);
+  return path33.reduce((acc, key) => acc?.[key], obj);
 }
 function promiseAllObject(promisesObj) {
   const keys = Object.keys(promisesObj);
@@ -33547,11 +33547,11 @@ function explicitlyAborted(x, startIndex = 0) {
   }
   return false;
 }
-function prefixIssues(path31, issues) {
+function prefixIssues(path33, issues) {
   return issues.map((iss) => {
     var _a3;
     (_a3 = iss).path ?? (_a3.path = []);
-    iss.path.unshift(path31);
+    iss.path.unshift(path33);
     return iss;
   });
 }
@@ -33664,7 +33664,7 @@ var Class = class {
   }
 };
 
-// node_modules/zod/v4/core/errors.js
+// ../dev-pomogator/node_modules/zod/v4/core/errors.js
 var initializer = (inst, def) => {
   inst.name = "$ZodError";
   Object.defineProperty(inst, "_zod", {
@@ -33698,16 +33698,16 @@ function flattenError(error51, mapper = (issue2) => issue2.message) {
 }
 function formatError(error51, mapper = (issue2) => issue2.message) {
   const fieldErrors = { _errors: [] };
-  const processError = (error52, path31 = []) => {
+  const processError = (error52, path33 = []) => {
     for (const issue2 of error52.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
-        issue2.errors.map((issues) => processError({ issues }, [...path31, ...issue2.path]));
+        issue2.errors.map((issues) => processError({ issues }, [...path33, ...issue2.path]));
       } else if (issue2.code === "invalid_key") {
-        processError({ issues: issue2.issues }, [...path31, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path33, ...issue2.path]);
       } else if (issue2.code === "invalid_element") {
-        processError({ issues: issue2.issues }, [...path31, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path33, ...issue2.path]);
       } else {
-        const fullpath = [...path31, ...issue2.path];
+        const fullpath = [...path33, ...issue2.path];
         if (fullpath.length === 0) {
           fieldErrors._errors.push(mapper(issue2));
         } else {
@@ -33734,17 +33734,17 @@ function formatError(error51, mapper = (issue2) => issue2.message) {
 }
 function treeifyError(error51, mapper = (issue2) => issue2.message) {
   const result = { errors: [] };
-  const processError = (error52, path31 = []) => {
+  const processError = (error52, path33 = []) => {
     var _a3, _b;
     for (const issue2 of error52.issues) {
       if (issue2.code === "invalid_union" && issue2.errors.length) {
-        issue2.errors.map((issues) => processError({ issues }, [...path31, ...issue2.path]));
+        issue2.errors.map((issues) => processError({ issues }, [...path33, ...issue2.path]));
       } else if (issue2.code === "invalid_key") {
-        processError({ issues: issue2.issues }, [...path31, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path33, ...issue2.path]);
       } else if (issue2.code === "invalid_element") {
-        processError({ issues: issue2.issues }, [...path31, ...issue2.path]);
+        processError({ issues: issue2.issues }, [...path33, ...issue2.path]);
       } else {
-        const fullpath = [...path31, ...issue2.path];
+        const fullpath = [...path33, ...issue2.path];
         if (fullpath.length === 0) {
           result.errors.push(mapper(issue2));
           continue;
@@ -33776,8 +33776,8 @@ function treeifyError(error51, mapper = (issue2) => issue2.message) {
 }
 function toDotPath(_path) {
   const segs = [];
-  const path31 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
-  for (const seg of path31) {
+  const path33 = _path.map((seg) => typeof seg === "object" ? seg.key : seg);
+  for (const seg of path33) {
     if (typeof seg === "number")
       segs.push(`[${seg}]`);
     else if (typeof seg === "symbol")
@@ -33803,7 +33803,7 @@ function prettifyError(error51) {
   return lines.join("\n");
 }
 
-// node_modules/zod/v4/core/parse.js
+// ../dev-pomogator/node_modules/zod/v4/core/parse.js
 var _parse = (_Err) => (schema, value, _ctx, _params) => {
   const ctx = _ctx ? { ..._ctx, async: false } : { async: false };
   const result = schema._zod.run({ value, issues: [] }, ctx);
@@ -33891,7 +33891,7 @@ var _safeDecodeAsync = (_Err) => async (schema, value, _ctx) => {
 };
 var safeDecodeAsync = /* @__PURE__ */ _safeDecodeAsync($ZodRealError);
 
-// node_modules/zod/v4/core/regexes.js
+// ../dev-pomogator/node_modules/zod/v4/core/regexes.js
 var regexes_exports = {};
 __export(regexes_exports, {
   base64: () => base64,
@@ -34050,7 +34050,7 @@ var sha512_hex = /^[0-9a-fA-F]{128}$/;
 var sha512_base64 = /* @__PURE__ */ fixedBase64(86, "==");
 var sha512_base64url = /* @__PURE__ */ fixedBase64url(86);
 
-// node_modules/zod/v4/core/checks.js
+// ../dev-pomogator/node_modules/zod/v4/core/checks.js
 var $ZodCheck = /* @__PURE__ */ $constructor("$ZodCheck", (inst, def) => {
   var _a3;
   inst._zod ?? (inst._zod = {});
@@ -34598,7 +34598,7 @@ var $ZodCheckOverwrite = /* @__PURE__ */ $constructor("$ZodCheckOverwrite", (ins
   };
 });
 
-// node_modules/zod/v4/core/doc.js
+// ../dev-pomogator/node_modules/zod/v4/core/doc.js
 var Doc = class {
   constructor(args = []) {
     this.content = [];
@@ -34634,14 +34634,14 @@ var Doc = class {
   }
 };
 
-// node_modules/zod/v4/core/versions.js
+// ../dev-pomogator/node_modules/zod/v4/core/versions.js
 var version = {
   major: 4,
   minor: 4,
   patch: 3
 };
 
-// node_modules/zod/v4/core/schemas.js
+// ../dev-pomogator/node_modules/zod/v4/core/schemas.js
 var $ZodType = /* @__PURE__ */ $constructor("$ZodType", (inst, def) => {
   var _a3;
   inst ?? (inst = {});
@@ -36734,7 +36734,7 @@ function handleRefineResult(result, payload, input, inst) {
   }
 }
 
-// node_modules/zod/v4/locales/index.js
+// ../dev-pomogator/node_modules/zod/v4/locales/index.js
 var locales_exports = {};
 __export(locales_exports, {
   ar: () => ar_default,
@@ -36791,7 +36791,7 @@ __export(locales_exports, {
   zhTW: () => zh_TW_default
 });
 
-// node_modules/zod/v4/locales/ar.js
+// ../dev-pomogator/node_modules/zod/v4/locales/ar.js
 var error = () => {
   const Sizable = {
     string: { unit: "\u062D\u0631\u0641", verb: "\u0623\u0646 \u064A\u062D\u0648\u064A" },
@@ -36898,7 +36898,7 @@ function ar_default() {
   };
 }
 
-// node_modules/zod/v4/locales/az.js
+// ../dev-pomogator/node_modules/zod/v4/locales/az.js
 var error2 = () => {
   const Sizable = {
     string: { unit: "simvol", verb: "olmal\u0131d\u0131r" },
@@ -37004,7 +37004,7 @@ function az_default() {
   };
 }
 
-// node_modules/zod/v4/locales/be.js
+// ../dev-pomogator/node_modules/zod/v4/locales/be.js
 function getBelarusianPlural(count, one, few, many) {
   const absCount = Math.abs(count);
   const lastDigit = absCount % 10;
@@ -37161,7 +37161,7 @@ function be_default() {
   };
 }
 
-// node_modules/zod/v4/locales/bg.js
+// ../dev-pomogator/node_modules/zod/v4/locales/bg.js
 var error4 = () => {
   const Sizable = {
     string: { unit: "\u0441\u0438\u043C\u0432\u043E\u043B\u0430", verb: "\u0434\u0430 \u0441\u044A\u0434\u044A\u0440\u0436\u0430" },
@@ -37282,7 +37282,7 @@ function bg_default() {
   };
 }
 
-// node_modules/zod/v4/locales/ca.js
+// ../dev-pomogator/node_modules/zod/v4/locales/ca.js
 var error5 = () => {
   const Sizable = {
     string: { unit: "car\xE0cters", verb: "contenir" },
@@ -37391,7 +37391,7 @@ function ca_default() {
   };
 }
 
-// node_modules/zod/v4/locales/cs.js
+// ../dev-pomogator/node_modules/zod/v4/locales/cs.js
 var error6 = () => {
   const Sizable = {
     string: { unit: "znak\u016F", verb: "m\xEDt" },
@@ -37503,7 +37503,7 @@ function cs_default() {
   };
 }
 
-// node_modules/zod/v4/locales/da.js
+// ../dev-pomogator/node_modules/zod/v4/locales/da.js
 var error7 = () => {
   const Sizable = {
     string: { unit: "tegn", verb: "havde" },
@@ -37619,7 +37619,7 @@ function da_default() {
   };
 }
 
-// node_modules/zod/v4/locales/de.js
+// ../dev-pomogator/node_modules/zod/v4/locales/de.js
 var error8 = () => {
   const Sizable = {
     string: { unit: "Zeichen", verb: "zu haben" },
@@ -37728,7 +37728,7 @@ function de_default() {
   };
 }
 
-// node_modules/zod/v4/locales/el.js
+// ../dev-pomogator/node_modules/zod/v4/locales/el.js
 var error9 = () => {
   const Sizable = {
     string: { unit: "\u03C7\u03B1\u03C1\u03B1\u03BA\u03C4\u03AE\u03C1\u03B5\u03C2", verb: "\u03BD\u03B1 \u03AD\u03C7\u03B5\u03B9" },
@@ -37838,7 +37838,7 @@ function el_default() {
   };
 }
 
-// node_modules/zod/v4/locales/en.js
+// ../dev-pomogator/node_modules/zod/v4/locales/en.js
 var error10 = () => {
   const Sizable = {
     string: { unit: "characters", verb: "to have" },
@@ -37951,7 +37951,7 @@ function en_default2() {
   };
 }
 
-// node_modules/zod/v4/locales/eo.js
+// ../dev-pomogator/node_modules/zod/v4/locales/eo.js
 var error11 = () => {
   const Sizable = {
     string: { unit: "karaktrojn", verb: "havi" },
@@ -38061,7 +38061,7 @@ function eo_default() {
   };
 }
 
-// node_modules/zod/v4/locales/es.js
+// ../dev-pomogator/node_modules/zod/v4/locales/es.js
 var error12 = () => {
   const Sizable = {
     string: { unit: "caracteres", verb: "tener" },
@@ -38194,7 +38194,7 @@ function es_default() {
   };
 }
 
-// node_modules/zod/v4/locales/fa.js
+// ../dev-pomogator/node_modules/zod/v4/locales/fa.js
 var error13 = () => {
   const Sizable = {
     string: { unit: "\u06A9\u0627\u0631\u0627\u06A9\u062A\u0631", verb: "\u062F\u0627\u0634\u062A\u0647 \u0628\u0627\u0634\u062F" },
@@ -38309,7 +38309,7 @@ function fa_default() {
   };
 }
 
-// node_modules/zod/v4/locales/fi.js
+// ../dev-pomogator/node_modules/zod/v4/locales/fi.js
 var error14 = () => {
   const Sizable = {
     string: { unit: "merkki\xE4", subject: "merkkijonon" },
@@ -38422,7 +38422,7 @@ function fi_default() {
   };
 }
 
-// node_modules/zod/v4/locales/fr.js
+// ../dev-pomogator/node_modules/zod/v4/locales/fr.js
 var error15 = () => {
   const Sizable = {
     string: { unit: "caract\xE8res", verb: "avoir" },
@@ -38548,7 +38548,7 @@ function fr_default() {
   };
 }
 
-// node_modules/zod/v4/locales/fr-CA.js
+// ../dev-pomogator/node_modules/zod/v4/locales/fr-CA.js
 var error16 = () => {
   const Sizable = {
     string: { unit: "caract\xE8res", verb: "avoir" },
@@ -38656,7 +38656,7 @@ function fr_CA_default() {
   };
 }
 
-// node_modules/zod/v4/locales/he.js
+// ../dev-pomogator/node_modules/zod/v4/locales/he.js
 var error17 = () => {
   const TypeNames = {
     string: { label: "\u05DE\u05D7\u05E8\u05D5\u05D6\u05EA", gender: "f" },
@@ -38851,7 +38851,7 @@ function he_default() {
   };
 }
 
-// node_modules/zod/v4/locales/hr.js
+// ../dev-pomogator/node_modules/zod/v4/locales/hr.js
 var error18 = () => {
   const Sizable = {
     string: { unit: "znakova", verb: "imati" },
@@ -38974,7 +38974,7 @@ function hr_default() {
   };
 }
 
-// node_modules/zod/v4/locales/hu.js
+// ../dev-pomogator/node_modules/zod/v4/locales/hu.js
 var error19 = () => {
   const Sizable = {
     string: { unit: "karakter", verb: "legyen" },
@@ -39083,7 +39083,7 @@ function hu_default() {
   };
 }
 
-// node_modules/zod/v4/locales/hy.js
+// ../dev-pomogator/node_modules/zod/v4/locales/hy.js
 function getArmenianPlural(count, one, many) {
   return Math.abs(count) === 1 ? one : many;
 }
@@ -39231,7 +39231,7 @@ function hy_default() {
   };
 }
 
-// node_modules/zod/v4/locales/id.js
+// ../dev-pomogator/node_modules/zod/v4/locales/id.js
 var error21 = () => {
   const Sizable = {
     string: { unit: "karakter", verb: "memiliki" },
@@ -39338,7 +39338,7 @@ function id_default() {
   };
 }
 
-// node_modules/zod/v4/locales/is.js
+// ../dev-pomogator/node_modules/zod/v4/locales/is.js
 var error22 = () => {
   const Sizable = {
     string: { unit: "stafi", verb: "a\xF0 hafa" },
@@ -39448,7 +39448,7 @@ function is_default() {
   };
 }
 
-// node_modules/zod/v4/locales/it.js
+// ../dev-pomogator/node_modules/zod/v4/locales/it.js
 var error23 = () => {
   const Sizable = {
     string: { unit: "caratteri", verb: "avere" },
@@ -39557,7 +39557,7 @@ function it_default() {
   };
 }
 
-// node_modules/zod/v4/locales/ja.js
+// ../dev-pomogator/node_modules/zod/v4/locales/ja.js
 var error24 = () => {
   const Sizable = {
     string: { unit: "\u6587\u5B57", verb: "\u3067\u3042\u308B" },
@@ -39665,7 +39665,7 @@ function ja_default() {
   };
 }
 
-// node_modules/zod/v4/locales/ka.js
+// ../dev-pomogator/node_modules/zod/v4/locales/ka.js
 var error25 = () => {
   const Sizable = {
     string: { unit: "\u10E1\u10D8\u10DB\u10D1\u10DD\u10DA\u10DD", verb: "\u10E3\u10DC\u10D3\u10D0 \u10E8\u10D4\u10D8\u10EA\u10D0\u10D5\u10D3\u10D4\u10E1" },
@@ -39778,7 +39778,7 @@ function ka_default() {
   };
 }
 
-// node_modules/zod/v4/locales/km.js
+// ../dev-pomogator/node_modules/zod/v4/locales/km.js
 var error26 = () => {
   const Sizable = {
     string: { unit: "\u178F\u17BD\u17A2\u1780\u17D2\u179F\u179A", verb: "\u1782\u17BD\u179A\u1798\u17B6\u1793" },
@@ -39889,12 +39889,12 @@ function km_default() {
   };
 }
 
-// node_modules/zod/v4/locales/kh.js
+// ../dev-pomogator/node_modules/zod/v4/locales/kh.js
 function kh_default() {
   return km_default();
 }
 
-// node_modules/zod/v4/locales/ko.js
+// ../dev-pomogator/node_modules/zod/v4/locales/ko.js
 var error27 = () => {
   const Sizable = {
     string: { unit: "\uBB38\uC790", verb: "to have" },
@@ -40006,9 +40006,9 @@ function ko_default() {
   };
 }
 
-// node_modules/zod/v4/locales/lt.js
-var capitalizeFirstCharacter = (text) => {
-  return text.charAt(0).toUpperCase() + text.slice(1);
+// ../dev-pomogator/node_modules/zod/v4/locales/lt.js
+var capitalizeFirstCharacter = (text2) => {
+  return text2.charAt(0).toUpperCase() + text2.slice(1);
 };
 function getUnitTypeFromNumber(number4) {
   const abs = Math.abs(number4);
@@ -40210,7 +40210,7 @@ function lt_default() {
   };
 }
 
-// node_modules/zod/v4/locales/mk.js
+// ../dev-pomogator/node_modules/zod/v4/locales/mk.js
 var error29 = () => {
   const Sizable = {
     string: { unit: "\u0437\u043D\u0430\u0446\u0438", verb: "\u0434\u0430 \u0438\u043C\u0430\u0430\u0442" },
@@ -40320,7 +40320,7 @@ function mk_default() {
   };
 }
 
-// node_modules/zod/v4/locales/ms.js
+// ../dev-pomogator/node_modules/zod/v4/locales/ms.js
 var error30 = () => {
   const Sizable = {
     string: { unit: "aksara", verb: "mempunyai" },
@@ -40428,7 +40428,7 @@ function ms_default() {
   };
 }
 
-// node_modules/zod/v4/locales/nl.js
+// ../dev-pomogator/node_modules/zod/v4/locales/nl.js
 var error31 = () => {
   const Sizable = {
     string: { unit: "tekens", verb: "heeft" },
@@ -40539,7 +40539,7 @@ function nl_default() {
   };
 }
 
-// node_modules/zod/v4/locales/no.js
+// ../dev-pomogator/node_modules/zod/v4/locales/no.js
 var error32 = () => {
   const Sizable = {
     string: { unit: "tegn", verb: "\xE5 ha" },
@@ -40648,7 +40648,7 @@ function no_default() {
   };
 }
 
-// node_modules/zod/v4/locales/ota.js
+// ../dev-pomogator/node_modules/zod/v4/locales/ota.js
 var error33 = () => {
   const Sizable = {
     string: { unit: "harf", verb: "olmal\u0131d\u0131r" },
@@ -40758,7 +40758,7 @@ function ota_default() {
   };
 }
 
-// node_modules/zod/v4/locales/ps.js
+// ../dev-pomogator/node_modules/zod/v4/locales/ps.js
 var error34 = () => {
   const Sizable = {
     string: { unit: "\u062A\u0648\u06A9\u064A", verb: "\u0648\u0644\u0631\u064A" },
@@ -40873,7 +40873,7 @@ function ps_default() {
   };
 }
 
-// node_modules/zod/v4/locales/pl.js
+// ../dev-pomogator/node_modules/zod/v4/locales/pl.js
 var error35 = () => {
   const Sizable = {
     string: { unit: "znak\xF3w", verb: "mie\u0107" },
@@ -40983,7 +40983,7 @@ function pl_default() {
   };
 }
 
-// node_modules/zod/v4/locales/pt.js
+// ../dev-pomogator/node_modules/zod/v4/locales/pt.js
 var error36 = () => {
   const Sizable = {
     string: { unit: "caracteres", verb: "ter" },
@@ -41092,7 +41092,7 @@ function pt_default() {
   };
 }
 
-// node_modules/zod/v4/locales/ro.js
+// ../dev-pomogator/node_modules/zod/v4/locales/ro.js
 var error37 = () => {
   const Sizable = {
     string: { unit: "caractere", verb: "s\u0103 aib\u0103" },
@@ -41212,7 +41212,7 @@ function ro_default() {
   };
 }
 
-// node_modules/zod/v4/locales/ru.js
+// ../dev-pomogator/node_modules/zod/v4/locales/ru.js
 function getRussianPlural(count, one, few, many) {
   const absCount = Math.abs(count);
   const lastDigit = absCount % 10;
@@ -41369,7 +41369,7 @@ function ru_default() {
   };
 }
 
-// node_modules/zod/v4/locales/sl.js
+// ../dev-pomogator/node_modules/zod/v4/locales/sl.js
 var error39 = () => {
   const Sizable = {
     string: { unit: "znakov", verb: "imeti" },
@@ -41479,7 +41479,7 @@ function sl_default() {
   };
 }
 
-// node_modules/zod/v4/locales/sv.js
+// ../dev-pomogator/node_modules/zod/v4/locales/sv.js
 var error40 = () => {
   const Sizable = {
     string: { unit: "tecken", verb: "att ha" },
@@ -41590,7 +41590,7 @@ function sv_default() {
   };
 }
 
-// node_modules/zod/v4/locales/ta.js
+// ../dev-pomogator/node_modules/zod/v4/locales/ta.js
 var error41 = () => {
   const Sizable = {
     string: { unit: "\u0B8E\u0BB4\u0BC1\u0BA4\u0BCD\u0BA4\u0BC1\u0B95\u0BCD\u0B95\u0BB3\u0BCD", verb: "\u0B95\u0BCA\u0BA3\u0BCD\u0B9F\u0BBF\u0BB0\u0BC1\u0B95\u0BCD\u0B95 \u0BB5\u0BC7\u0BA3\u0BCD\u0B9F\u0BC1\u0BAE\u0BCD" },
@@ -41701,7 +41701,7 @@ function ta_default() {
   };
 }
 
-// node_modules/zod/v4/locales/th.js
+// ../dev-pomogator/node_modules/zod/v4/locales/th.js
 var error42 = () => {
   const Sizable = {
     string: { unit: "\u0E15\u0E31\u0E27\u0E2D\u0E31\u0E01\u0E29\u0E23", verb: "\u0E04\u0E27\u0E23\u0E21\u0E35" },
@@ -41812,7 +41812,7 @@ function th_default() {
   };
 }
 
-// node_modules/zod/v4/locales/tr.js
+// ../dev-pomogator/node_modules/zod/v4/locales/tr.js
 var error43 = () => {
   const Sizable = {
     string: { unit: "karakter", verb: "olmal\u0131" },
@@ -41918,7 +41918,7 @@ function tr_default() {
   };
 }
 
-// node_modules/zod/v4/locales/uk.js
+// ../dev-pomogator/node_modules/zod/v4/locales/uk.js
 var error44 = () => {
   const Sizable = {
     string: { unit: "\u0441\u0438\u043C\u0432\u043E\u043B\u0456\u0432", verb: "\u043C\u0430\u0442\u0438\u043C\u0435" },
@@ -42027,12 +42027,12 @@ function uk_default() {
   };
 }
 
-// node_modules/zod/v4/locales/ua.js
+// ../dev-pomogator/node_modules/zod/v4/locales/ua.js
 function ua_default() {
   return uk_default();
 }
 
-// node_modules/zod/v4/locales/ur.js
+// ../dev-pomogator/node_modules/zod/v4/locales/ur.js
 var error45 = () => {
   const Sizable = {
     string: { unit: "\u062D\u0631\u0648\u0641", verb: "\u06C1\u0648\u0646\u0627" },
@@ -42143,7 +42143,7 @@ function ur_default() {
   };
 }
 
-// node_modules/zod/v4/locales/uz.js
+// ../dev-pomogator/node_modules/zod/v4/locales/uz.js
 var error46 = () => {
   const Sizable = {
     string: { unit: "belgi", verb: "bo\u2018lishi kerak" },
@@ -42254,7 +42254,7 @@ function uz_default() {
   };
 }
 
-// node_modules/zod/v4/locales/vi.js
+// ../dev-pomogator/node_modules/zod/v4/locales/vi.js
 var error47 = () => {
   const Sizable = {
     string: { unit: "k\xFD t\u1EF1", verb: "c\xF3" },
@@ -42363,7 +42363,7 @@ function vi_default() {
   };
 }
 
-// node_modules/zod/v4/locales/zh-CN.js
+// ../dev-pomogator/node_modules/zod/v4/locales/zh-CN.js
 var error48 = () => {
   const Sizable = {
     string: { unit: "\u5B57\u7B26", verb: "\u5305\u542B" },
@@ -42473,7 +42473,7 @@ function zh_CN_default() {
   };
 }
 
-// node_modules/zod/v4/locales/zh-TW.js
+// ../dev-pomogator/node_modules/zod/v4/locales/zh-TW.js
 var error49 = () => {
   const Sizable = {
     string: { unit: "\u5B57\u5143", verb: "\u64C1\u6709" },
@@ -42581,7 +42581,7 @@ function zh_TW_default() {
   };
 }
 
-// node_modules/zod/v4/locales/yo.js
+// ../dev-pomogator/node_modules/zod/v4/locales/yo.js
 var error50 = () => {
   const Sizable = {
     string: { unit: "\xE0mi", verb: "n\xED" },
@@ -42689,7 +42689,7 @@ function yo_default() {
   };
 }
 
-// node_modules/zod/v4/core/registries.js
+// ../dev-pomogator/node_modules/zod/v4/core/registries.js
 var _a2;
 var $output = /* @__PURE__ */ Symbol("ZodOutput");
 var $input = /* @__PURE__ */ Symbol("ZodInput");
@@ -42739,7 +42739,7 @@ function registry() {
 (_a2 = globalThis).__zod_globalRegistry ?? (_a2.__zod_globalRegistry = registry());
 var globalRegistry = globalThis.__zod_globalRegistry;
 
-// node_modules/zod/v4/core/api.js
+// ../dev-pomogator/node_modules/zod/v4/core/api.js
 // @__NO_SIDE_EFFECTS__
 function _string(Class2, params) {
   return new Class2({
@@ -43778,7 +43778,7 @@ function _stringFormat(Class2, format, fnOrRegex, _params = {}) {
   return inst;
 }
 
-// node_modules/zod/v4/core/to-json-schema.js
+// ../dev-pomogator/node_modules/zod/v4/core/to-json-schema.js
 function initializeContext(params) {
   let target = params?.target ?? "draft-2020-12";
   if (target === "draft-4")
@@ -44137,7 +44137,7 @@ var createStandardJSONSchemaMethod = (schema, io, processors = {}) => (params) =
   return finalize(ctx, schema);
 };
 
-// node_modules/zod/v4/core/json-schema-processors.js
+// ../dev-pomogator/node_modules/zod/v4/core/json-schema-processors.js
 var formatMap = {
   guid: "uuid",
   url: "uri",
@@ -44681,7 +44681,7 @@ function toJSONSchema(input, params) {
   return finalize(ctx, input);
 }
 
-// node_modules/zod/v4/core/json-schema-generator.js
+// ../dev-pomogator/node_modules/zod/v4/core/json-schema-generator.js
 var JSONSchemaGenerator = class {
   /** @deprecated Access via ctx instead */
   get metadataRegistry() {
@@ -44756,10 +44756,10 @@ var JSONSchemaGenerator = class {
   }
 };
 
-// node_modules/zod/v4/core/json-schema.js
+// ../dev-pomogator/node_modules/zod/v4/core/json-schema.js
 var json_schema_exports = {};
 
-// node_modules/zod/v4/mini/schemas.js
+// ../dev-pomogator/node_modules/zod/v4/mini/schemas.js
 var ZodMiniType = /* @__PURE__ */ $constructor("ZodMiniType", (inst, def) => {
   if (!inst._zod)
     throw new Error("Uninitialized schema in ZodMiniType.");
@@ -44805,7 +44805,7 @@ function object(shape, params) {
   return new ZodMiniObject(def);
 }
 
-// node_modules/@modelcontextprotocol/sdk/dist/esm/server/zod-compat.js
+// ../dev-pomogator/node_modules/@modelcontextprotocol/sdk/dist/esm/server/zod-compat.js
 function isZ4Schema(s) {
   const schema = s;
   return !!schema._zod;
@@ -44949,7 +44949,7 @@ function getLiteralValue(schema) {
   return void 0;
 }
 
-// node_modules/zod/v4/classic/external.js
+// ../dev-pomogator/node_modules/zod/v4/classic/external.js
 var external_exports = {};
 __export(external_exports, {
   $brand: () => $brand,
@@ -45192,7 +45192,7 @@ __export(external_exports, {
   xor: () => xor
 });
 
-// node_modules/zod/v4/classic/schemas.js
+// ../dev-pomogator/node_modules/zod/v4/classic/schemas.js
 var schemas_exports2 = {};
 __export(schemas_exports2, {
   ZodAny: () => ZodAny2,
@@ -45363,7 +45363,7 @@ __export(schemas_exports2, {
   xor: () => xor
 });
 
-// node_modules/zod/v4/classic/checks.js
+// ../dev-pomogator/node_modules/zod/v4/classic/checks.js
 var checks_exports2 = {};
 __export(checks_exports2, {
   endsWith: () => _endsWith,
@@ -45397,7 +45397,7 @@ __export(checks_exports2, {
   uppercase: () => _uppercase
 });
 
-// node_modules/zod/v4/classic/iso.js
+// ../dev-pomogator/node_modules/zod/v4/classic/iso.js
 var iso_exports2 = {};
 __export(iso_exports2, {
   ZodISODate: () => ZodISODate,
@@ -45438,7 +45438,7 @@ function duration2(params) {
   return _isoDuration(ZodISODuration, params);
 }
 
-// node_modules/zod/v4/classic/errors.js
+// ../dev-pomogator/node_modules/zod/v4/classic/errors.js
 var initializer2 = (inst, issues) => {
   $ZodError.init(inst, issues);
   inst.name = "ZodError";
@@ -45478,7 +45478,7 @@ var ZodRealError = /* @__PURE__ */ $constructor("ZodError", initializer2, {
   Parent: Error
 });
 
-// node_modules/zod/v4/classic/parse.js
+// ../dev-pomogator/node_modules/zod/v4/classic/parse.js
 var parse2 = /* @__PURE__ */ _parse(ZodRealError);
 var parseAsync2 = /* @__PURE__ */ _parseAsync(ZodRealError);
 var safeParse3 = /* @__PURE__ */ _safeParse(ZodRealError);
@@ -45492,7 +45492,7 @@ var safeDecode2 = /* @__PURE__ */ _safeDecode(ZodRealError);
 var safeEncodeAsync2 = /* @__PURE__ */ _safeEncodeAsync(ZodRealError);
 var safeDecodeAsync2 = /* @__PURE__ */ _safeDecodeAsync(ZodRealError);
 
-// node_modules/zod/v4/classic/schemas.js
+// ../dev-pomogator/node_modules/zod/v4/classic/schemas.js
 var _installedGroups = /* @__PURE__ */ new WeakMap();
 function _installLazyMethods(inst, group, methods) {
   const proto2 = Object.getPrototypeOf(inst);
@@ -46782,7 +46782,7 @@ function preprocess(fn, schema) {
   });
 }
 
-// node_modules/zod/v4/classic/compat.js
+// ../dev-pomogator/node_modules/zod/v4/classic/compat.js
 var ZodIssueCode2 = {
   invalid_type: "invalid_type",
   too_big: "too_big",
@@ -46808,7 +46808,7 @@ var ZodFirstPartyTypeKind2;
 /* @__PURE__ */ (function(ZodFirstPartyTypeKind3) {
 })(ZodFirstPartyTypeKind2 || (ZodFirstPartyTypeKind2 = {}));
 
-// node_modules/zod/v4/classic/from-json-schema.js
+// ../dev-pomogator/node_modules/zod/v4/classic/from-json-schema.js
 var z = {
   ...schemas_exports2,
   ...checks_exports2,
@@ -46902,13 +46902,13 @@ function resolveRef(ref, ctx) {
   if (!ref.startsWith("#")) {
     throw new Error("External $ref is not supported, only local refs (#/...) are allowed");
   }
-  const path31 = ref.slice(1).split("/").filter(Boolean);
-  if (path31.length === 0) {
+  const path33 = ref.slice(1).split("/").filter(Boolean);
+  if (path33.length === 0) {
     return ctx.rootSchema;
   }
   const defsKey = ctx.version === "draft-2020-12" ? "$defs" : "definitions";
-  if (path31[0] === defsKey) {
-    const key = path31[1];
+  if (path33[0] === defsKey) {
+    const key = path33[1];
     if (!key || !ctx.defs[key]) {
       throw new Error(`Reference not found: ${ref}`);
     }
@@ -47288,7 +47288,7 @@ function fromJSONSchema(schema, params) {
   return convertSchema(normalized, ctx);
 }
 
-// node_modules/zod/v4/classic/coerce.js
+// ../dev-pomogator/node_modules/zod/v4/classic/coerce.js
 var coerce_exports2 = {};
 __export(coerce_exports2, {
   bigint: () => bigint3,
@@ -47313,10 +47313,10 @@ function date4(params) {
   return _coercedDate(ZodDate2, params);
 }
 
-// node_modules/zod/v4/classic/external.js
+// ../dev-pomogator/node_modules/zod/v4/classic/external.js
 config(en_default2());
 
-// node_modules/@modelcontextprotocol/sdk/dist/esm/types.js
+// ../dev-pomogator/node_modules/@modelcontextprotocol/sdk/dist/esm/types.js
 var LATEST_PROTOCOL_VERSION = "2025-11-25";
 var SUPPORTED_PROTOCOL_VERSIONS = [LATEST_PROTOCOL_VERSION, "2025-06-18", "2025-03-26", "2024-11-05", "2024-10-07"];
 var RELATED_TASK_META_KEY = "io.modelcontextprotocol/related-task";
@@ -48847,12 +48847,12 @@ var UrlElicitationRequiredError = class extends McpError {
   }
 };
 
-// node_modules/@modelcontextprotocol/sdk/dist/esm/experimental/tasks/interfaces.js
+// ../dev-pomogator/node_modules/@modelcontextprotocol/sdk/dist/esm/experimental/tasks/interfaces.js
 function isTerminal(status) {
   return status === "completed" || status === "failed" || status === "cancelled";
 }
 
-// node_modules/zod-to-json-schema/dist/esm/Options.js
+// ../dev-pomogator/node_modules/zod-to-json-schema/dist/esm/Options.js
 var ignoreOverride = /* @__PURE__ */ Symbol("Let zodToJsonSchema decide on which parser to use");
 var defaultOptions = {
   name: void 0,
@@ -48886,7 +48886,7 @@ var getDefaultOptions = (options) => typeof options === "string" ? {
   ...options
 };
 
-// node_modules/zod-to-json-schema/dist/esm/Refs.js
+// ../dev-pomogator/node_modules/zod-to-json-schema/dist/esm/Refs.js
 var getRefs = (options) => {
   const _options = getDefaultOptions(options);
   const currentPath = _options.name !== void 0 ? [..._options.basePath, _options.definitionPath, _options.name] : _options.basePath;
@@ -48907,7 +48907,7 @@ var getRefs = (options) => {
   };
 };
 
-// node_modules/zod-to-json-schema/dist/esm/errorMessages.js
+// ../dev-pomogator/node_modules/zod-to-json-schema/dist/esm/errorMessages.js
 function addErrorMessage(res, key, errorMessage, refs) {
   if (!refs?.errorMessages)
     return;
@@ -48923,7 +48923,7 @@ function setResponseValueAndErrors(res, key, value, errorMessage, refs) {
   addErrorMessage(res, key, errorMessage, refs);
 }
 
-// node_modules/zod-to-json-schema/dist/esm/getRelativePath.js
+// ../dev-pomogator/node_modules/zod-to-json-schema/dist/esm/getRelativePath.js
 var getRelativePath = (pathA, pathB) => {
   let i = 0;
   for (; i < pathA.length && i < pathB.length; i++) {
@@ -48933,7 +48933,7 @@ var getRelativePath = (pathA, pathB) => {
   return [(pathA.length - i).toString(), ...pathB.slice(i)].join("/");
 };
 
-// node_modules/zod-to-json-schema/dist/esm/parsers/any.js
+// ../dev-pomogator/node_modules/zod-to-json-schema/dist/esm/parsers/any.js
 function parseAnyDef(refs) {
   if (refs.target !== "openAi") {
     return {};
@@ -48949,7 +48949,7 @@ function parseAnyDef(refs) {
   };
 }
 
-// node_modules/zod-to-json-schema/dist/esm/parsers/array.js
+// ../dev-pomogator/node_modules/zod-to-json-schema/dist/esm/parsers/array.js
 function parseArrayDef(def, refs) {
   const res = {
     type: "array"
@@ -48973,7 +48973,7 @@ function parseArrayDef(def, refs) {
   return res;
 }
 
-// node_modules/zod-to-json-schema/dist/esm/parsers/bigint.js
+// ../dev-pomogator/node_modules/zod-to-json-schema/dist/esm/parsers/bigint.js
 function parseBigintDef(def, refs) {
   const res = {
     type: "integer",
@@ -49019,24 +49019,24 @@ function parseBigintDef(def, refs) {
   return res;
 }
 
-// node_modules/zod-to-json-schema/dist/esm/parsers/boolean.js
+// ../dev-pomogator/node_modules/zod-to-json-schema/dist/esm/parsers/boolean.js
 function parseBooleanDef() {
   return {
     type: "boolean"
   };
 }
 
-// node_modules/zod-to-json-schema/dist/esm/parsers/branded.js
+// ../dev-pomogator/node_modules/zod-to-json-schema/dist/esm/parsers/branded.js
 function parseBrandedDef(_def, refs) {
   return parseDef(_def.type._def, refs);
 }
 
-// node_modules/zod-to-json-schema/dist/esm/parsers/catch.js
+// ../dev-pomogator/node_modules/zod-to-json-schema/dist/esm/parsers/catch.js
 var parseCatchDef = (def, refs) => {
   return parseDef(def.innerType._def, refs);
 };
 
-// node_modules/zod-to-json-schema/dist/esm/parsers/date.js
+// ../dev-pomogator/node_modules/zod-to-json-schema/dist/esm/parsers/date.js
 function parseDateDef(def, refs, overrideDateStrategy) {
   const strategy = overrideDateStrategy ?? refs.dateStrategy;
   if (Array.isArray(strategy)) {
@@ -49095,7 +49095,7 @@ var integerDateParser = (def, refs) => {
   return res;
 };
 
-// node_modules/zod-to-json-schema/dist/esm/parsers/default.js
+// ../dev-pomogator/node_modules/zod-to-json-schema/dist/esm/parsers/default.js
 function parseDefaultDef(_def, refs) {
   return {
     ...parseDef(_def.innerType._def, refs),
@@ -49103,12 +49103,12 @@ function parseDefaultDef(_def, refs) {
   };
 }
 
-// node_modules/zod-to-json-schema/dist/esm/parsers/effects.js
+// ../dev-pomogator/node_modules/zod-to-json-schema/dist/esm/parsers/effects.js
 function parseEffectsDef(_def, refs) {
   return refs.effectStrategy === "input" ? parseDef(_def.schema._def, refs) : parseAnyDef(refs);
 }
 
-// node_modules/zod-to-json-schema/dist/esm/parsers/enum.js
+// ../dev-pomogator/node_modules/zod-to-json-schema/dist/esm/parsers/enum.js
 function parseEnumDef(def) {
   return {
     type: "string",
@@ -49116,7 +49116,7 @@ function parseEnumDef(def) {
   };
 }
 
-// node_modules/zod-to-json-schema/dist/esm/parsers/intersection.js
+// ../dev-pomogator/node_modules/zod-to-json-schema/dist/esm/parsers/intersection.js
 var isJsonSchema7AllOfType = (type) => {
   if ("type" in type && type.type === "string")
     return false;
@@ -49158,7 +49158,7 @@ function parseIntersectionDef(def, refs) {
   } : void 0;
 }
 
-// node_modules/zod-to-json-schema/dist/esm/parsers/literal.js
+// ../dev-pomogator/node_modules/zod-to-json-schema/dist/esm/parsers/literal.js
 function parseLiteralDef(def, refs) {
   const parsedType2 = typeof def.value;
   if (parsedType2 !== "bigint" && parsedType2 !== "number" && parsedType2 !== "boolean" && parsedType2 !== "string") {
@@ -49178,7 +49178,7 @@ function parseLiteralDef(def, refs) {
   };
 }
 
-// node_modules/zod-to-json-schema/dist/esm/parsers/string.js
+// ../dev-pomogator/node_modules/zod-to-json-schema/dist/esm/parsers/string.js
 var emojiRegex2 = void 0;
 var zodPatterns = {
   /**
@@ -49503,7 +49503,7 @@ function stringifyRegExpWithFlags(regex, refs) {
   return pattern;
 }
 
-// node_modules/zod-to-json-schema/dist/esm/parsers/record.js
+// ../dev-pomogator/node_modules/zod-to-json-schema/dist/esm/parsers/record.js
 function parseRecordDef(def, refs) {
   if (refs.target === "openAi") {
     console.warn("Warning: OpenAI may not support records in schemas! Try an array of key-value pairs instead.");
@@ -49555,7 +49555,7 @@ function parseRecordDef(def, refs) {
   return schema;
 }
 
-// node_modules/zod-to-json-schema/dist/esm/parsers/map.js
+// ../dev-pomogator/node_modules/zod-to-json-schema/dist/esm/parsers/map.js
 function parseMapDef(def, refs) {
   if (refs.mapStrategy === "record") {
     return parseRecordDef(def, refs);
@@ -49580,7 +49580,7 @@ function parseMapDef(def, refs) {
   };
 }
 
-// node_modules/zod-to-json-schema/dist/esm/parsers/nativeEnum.js
+// ../dev-pomogator/node_modules/zod-to-json-schema/dist/esm/parsers/nativeEnum.js
 function parseNativeEnumDef(def) {
   const object3 = def.values;
   const actualKeys = Object.keys(def.values).filter((key) => {
@@ -49594,7 +49594,7 @@ function parseNativeEnumDef(def) {
   };
 }
 
-// node_modules/zod-to-json-schema/dist/esm/parsers/never.js
+// ../dev-pomogator/node_modules/zod-to-json-schema/dist/esm/parsers/never.js
 function parseNeverDef(refs) {
   return refs.target === "openAi" ? void 0 : {
     not: parseAnyDef({
@@ -49604,7 +49604,7 @@ function parseNeverDef(refs) {
   };
 }
 
-// node_modules/zod-to-json-schema/dist/esm/parsers/null.js
+// ../dev-pomogator/node_modules/zod-to-json-schema/dist/esm/parsers/null.js
 function parseNullDef(refs) {
   return refs.target === "openApi3" ? {
     enum: ["null"],
@@ -49614,7 +49614,7 @@ function parseNullDef(refs) {
   };
 }
 
-// node_modules/zod-to-json-schema/dist/esm/parsers/union.js
+// ../dev-pomogator/node_modules/zod-to-json-schema/dist/esm/parsers/union.js
 var primitiveMappings = {
   ZodString: "string",
   ZodNumber: "number",
@@ -49682,7 +49682,7 @@ var asAnyOf = (def, refs) => {
   return anyOf.length ? { anyOf } : void 0;
 };
 
-// node_modules/zod-to-json-schema/dist/esm/parsers/nullable.js
+// ../dev-pomogator/node_modules/zod-to-json-schema/dist/esm/parsers/nullable.js
 function parseNullableDef(def, refs) {
   if (["ZodString", "ZodNumber", "ZodBigInt", "ZodBoolean", "ZodNull"].includes(def.innerType._def.typeName) && (!def.innerType._def.checks || !def.innerType._def.checks.length)) {
     if (refs.target === "openApi3") {
@@ -49714,7 +49714,7 @@ function parseNullableDef(def, refs) {
   return base && { anyOf: [base, { type: "null" }] };
 }
 
-// node_modules/zod-to-json-schema/dist/esm/parsers/number.js
+// ../dev-pomogator/node_modules/zod-to-json-schema/dist/esm/parsers/number.js
 function parseNumberDef(def, refs) {
   const res = {
     type: "number"
@@ -49763,7 +49763,7 @@ function parseNumberDef(def, refs) {
   return res;
 }
 
-// node_modules/zod-to-json-schema/dist/esm/parsers/object.js
+// ../dev-pomogator/node_modules/zod-to-json-schema/dist/esm/parsers/object.js
 function parseObjectDef(def, refs) {
   const forceOptionalIntoNullable = refs.target === "openAi";
   const result = {
@@ -49833,7 +49833,7 @@ function safeIsOptional(schema) {
   }
 }
 
-// node_modules/zod-to-json-schema/dist/esm/parsers/optional.js
+// ../dev-pomogator/node_modules/zod-to-json-schema/dist/esm/parsers/optional.js
 var parseOptionalDef = (def, refs) => {
   if (refs.currentPath.toString() === refs.propertyPath?.toString()) {
     return parseDef(def.innerType._def, refs);
@@ -49852,7 +49852,7 @@ var parseOptionalDef = (def, refs) => {
   } : parseAnyDef(refs);
 };
 
-// node_modules/zod-to-json-schema/dist/esm/parsers/pipeline.js
+// ../dev-pomogator/node_modules/zod-to-json-schema/dist/esm/parsers/pipeline.js
 var parsePipelineDef = (def, refs) => {
   if (refs.pipeStrategy === "input") {
     return parseDef(def.in._def, refs);
@@ -49872,12 +49872,12 @@ var parsePipelineDef = (def, refs) => {
   };
 };
 
-// node_modules/zod-to-json-schema/dist/esm/parsers/promise.js
+// ../dev-pomogator/node_modules/zod-to-json-schema/dist/esm/parsers/promise.js
 function parsePromiseDef(def, refs) {
   return parseDef(def.type._def, refs);
 }
 
-// node_modules/zod-to-json-schema/dist/esm/parsers/set.js
+// ../dev-pomogator/node_modules/zod-to-json-schema/dist/esm/parsers/set.js
 function parseSetDef(def, refs) {
   const items = parseDef(def.valueType._def, {
     ...refs,
@@ -49897,7 +49897,7 @@ function parseSetDef(def, refs) {
   return schema;
 }
 
-// node_modules/zod-to-json-schema/dist/esm/parsers/tuple.js
+// ../dev-pomogator/node_modules/zod-to-json-schema/dist/esm/parsers/tuple.js
 function parseTupleDef(def, refs) {
   if (def.rest) {
     return {
@@ -49925,24 +49925,24 @@ function parseTupleDef(def, refs) {
   }
 }
 
-// node_modules/zod-to-json-schema/dist/esm/parsers/undefined.js
+// ../dev-pomogator/node_modules/zod-to-json-schema/dist/esm/parsers/undefined.js
 function parseUndefinedDef(refs) {
   return {
     not: parseAnyDef(refs)
   };
 }
 
-// node_modules/zod-to-json-schema/dist/esm/parsers/unknown.js
+// ../dev-pomogator/node_modules/zod-to-json-schema/dist/esm/parsers/unknown.js
 function parseUnknownDef(refs) {
   return parseAnyDef(refs);
 }
 
-// node_modules/zod-to-json-schema/dist/esm/parsers/readonly.js
+// ../dev-pomogator/node_modules/zod-to-json-schema/dist/esm/parsers/readonly.js
 var parseReadonlyDef = (def, refs) => {
   return parseDef(def.innerType._def, refs);
 };
 
-// node_modules/zod-to-json-schema/dist/esm/selectParser.js
+// ../dev-pomogator/node_modules/zod-to-json-schema/dist/esm/selectParser.js
 var selectParser = (def, typeName, refs) => {
   switch (typeName) {
     case ZodFirstPartyTypeKind.ZodString:
@@ -50018,7 +50018,7 @@ var selectParser = (def, typeName, refs) => {
   }
 };
 
-// node_modules/zod-to-json-schema/dist/esm/parseDef.js
+// ../dev-pomogator/node_modules/zod-to-json-schema/dist/esm/parseDef.js
 function parseDef(def, refs, forceResolution = false) {
   const seenItem = refs.seen.get(def);
   if (refs.override) {
@@ -50074,7 +50074,7 @@ var addMeta = (def, refs, jsonSchema) => {
   return jsonSchema;
 };
 
-// node_modules/zod-to-json-schema/dist/esm/zodToJsonSchema.js
+// ../dev-pomogator/node_modules/zod-to-json-schema/dist/esm/zodToJsonSchema.js
 var zodToJsonSchema = (schema, options) => {
   const refs = getRefs(options);
   let definitions = typeof options === "object" && options.definitions ? Object.entries(options.definitions).reduce((acc, [name2, schema2]) => ({
@@ -50136,7 +50136,7 @@ var zodToJsonSchema = (schema, options) => {
   return combined;
 };
 
-// node_modules/@modelcontextprotocol/sdk/dist/esm/server/zod-json-schema-compat.js
+// ../dev-pomogator/node_modules/@modelcontextprotocol/sdk/dist/esm/server/zod-json-schema-compat.js
 function mapMiniTarget(t) {
   if (!t)
     return "draft-7";
@@ -50178,7 +50178,7 @@ function parseWithCompat(schema, data) {
   return result.data;
 }
 
-// node_modules/@modelcontextprotocol/sdk/dist/esm/shared/protocol.js
+// ../dev-pomogator/node_modules/@modelcontextprotocol/sdk/dist/esm/shared/protocol.js
 var DEFAULT_REQUEST_TIMEOUT_MSEC = 6e4;
 var Protocol = class {
   constructor(_options) {
@@ -51132,7 +51132,7 @@ function mergeCapabilities(base, additional) {
   return result;
 }
 
-// node_modules/@modelcontextprotocol/sdk/dist/esm/validation/ajv-provider.js
+// ../dev-pomogator/node_modules/@modelcontextprotocol/sdk/dist/esm/validation/ajv-provider.js
 var import_ajv = __toESM(require_ajv(), 1);
 var import_ajv_formats = __toESM(require_dist(), 1);
 function createDefaultAjvInstance() {
@@ -51200,7 +51200,7 @@ var AjvJsonSchemaValidator = class {
   }
 };
 
-// node_modules/@modelcontextprotocol/sdk/dist/esm/experimental/tasks/server.js
+// ../dev-pomogator/node_modules/@modelcontextprotocol/sdk/dist/esm/experimental/tasks/server.js
 var ExperimentalServerTasks = class {
   constructor(_server) {
     this._server = _server;
@@ -51413,7 +51413,7 @@ var ExperimentalServerTasks = class {
   }
 };
 
-// node_modules/@modelcontextprotocol/sdk/dist/esm/experimental/tasks/helpers.js
+// ../dev-pomogator/node_modules/@modelcontextprotocol/sdk/dist/esm/experimental/tasks/helpers.js
 function assertToolsCallTaskCapability(requests, method, entityName) {
   if (!requests) {
     throw new Error(`${entityName} does not support task creation (required for ${method})`);
@@ -51448,7 +51448,7 @@ function assertClientRequestTaskCapability(requests, method, entityName) {
   }
 }
 
-// node_modules/@modelcontextprotocol/sdk/dist/esm/server/index.js
+// ../dev-pomogator/node_modules/@modelcontextprotocol/sdk/dist/esm/server/index.js
 var Server = class extends Protocol {
   /**
    * Initializes this server with the given name and version information.
@@ -51828,7 +51828,7 @@ var Server = class extends Protocol {
   }
 };
 
-// node_modules/@modelcontextprotocol/sdk/dist/esm/server/completable.js
+// ../dev-pomogator/node_modules/@modelcontextprotocol/sdk/dist/esm/server/completable.js
 var COMPLETABLE_SYMBOL = /* @__PURE__ */ Symbol.for("mcp.completable");
 function isCompletable(schema) {
   return !!schema && typeof schema === "object" && COMPLETABLE_SYMBOL in schema;
@@ -51842,7 +51842,7 @@ var McpZodTypeKind;
   McpZodTypeKind2["Completable"] = "McpCompletable";
 })(McpZodTypeKind || (McpZodTypeKind = {}));
 
-// node_modules/@modelcontextprotocol/sdk/dist/esm/shared/toolNameValidation.js
+// ../dev-pomogator/node_modules/@modelcontextprotocol/sdk/dist/esm/shared/toolNameValidation.js
 var TOOL_NAME_REGEX = /^[A-Za-z0-9._-]{1,128}$/;
 function validateToolName(name) {
   const warnings = [];
@@ -51900,7 +51900,7 @@ function validateAndWarnToolName(name) {
   return result.isValid;
 }
 
-// node_modules/@modelcontextprotocol/sdk/dist/esm/experimental/tasks/mcp-server.js
+// ../dev-pomogator/node_modules/@modelcontextprotocol/sdk/dist/esm/experimental/tasks/mcp-server.js
 var ExperimentalMcpServerTasks = class {
   constructor(_mcpServer) {
     this._mcpServer = _mcpServer;
@@ -51915,7 +51915,7 @@ var ExperimentalMcpServerTasks = class {
   }
 };
 
-// node_modules/@modelcontextprotocol/sdk/dist/esm/server/mcp.js
+// ../dev-pomogator/node_modules/@modelcontextprotocol/sdk/dist/esm/server/mcp.js
 var McpServer = class {
   constructor(serverInfo, options) {
     this._registeredResources = {};
@@ -52707,10 +52707,10 @@ var EMPTY_COMPLETION_RESULT = {
   }
 };
 
-// node_modules/@modelcontextprotocol/sdk/dist/esm/server/stdio.js
+// ../dev-pomogator/node_modules/@modelcontextprotocol/sdk/dist/esm/server/stdio.js
 import process3 from "node:process";
 
-// node_modules/@modelcontextprotocol/sdk/dist/esm/shared/stdio.js
+// ../dev-pomogator/node_modules/@modelcontextprotocol/sdk/dist/esm/shared/stdio.js
 var ReadBuffer = class {
   append(chunk) {
     this._buffer = this._buffer ? Buffer.concat([this._buffer, chunk]) : chunk;
@@ -52738,7 +52738,7 @@ function serializeMessage(message) {
   return JSON.stringify(message) + "\n";
 }
 
-// node_modules/@modelcontextprotocol/sdk/dist/esm/server/stdio.js
+// ../dev-pomogator/node_modules/@modelcontextprotocol/sdk/dist/esm/server/stdio.js
 var StdioServerTransport = class {
   constructor(_stdin = process3.stdin, _stdout = process3.stdout) {
     this._stdin = _stdin;
@@ -52800,17 +52800,18 @@ var StdioServerTransport = class {
 };
 
 // tools/spec-mcp-server/server.ts
+import fs35 from "node:fs";
 import { fileURLToPath as fileURLToPath5, pathToFileURL as pathToFileURL2 } from "node:url";
-import path30 from "node:path";
+import path32 from "node:path";
 
 // tools/spec-mcp-server/lifecycle.ts
-import fs15 from "node:fs";
-import path11 from "node:path";
+import fs16 from "node:fs";
+import path12 from "node:path";
 
 // tools/spec-graph/builder.ts
-import fs9 from "node:fs";
+import fs10 from "node:fs";
 import { execFileSync } from "node:child_process";
-import path5 from "node:path";
+import path6 from "node:path";
 import { createHash } from "node:crypto";
 
 // tools/spec-graph/identity.ts
@@ -53038,14 +53039,330 @@ function computeCoverage(tasks, scenarios, testQualityByTask = {}) {
 }
 
 // tools/spec-graph/metadata-schema.ts
+var import_yaml2 = __toESM(require_dist2(), 1);
+
+// tools/spec-graph/requirement-contract.ts
 var import_yaml = __toESM(require_dist2(), 1);
+var CONTRACT_CARD_VERSION = 1;
+var CONTRACT_KINDS = [
+  "cli",
+  "api",
+  "schema",
+  "filesystem",
+  "event",
+  "state",
+  "behavior",
+  "disposition"
+];
+var CONTRACT_VERIFICATION_METHODS = [
+  "bdd",
+  "integration",
+  "manual",
+  "analysis",
+  "demonstration"
+];
+var REQUIRED_EVIDENCE_KINDS = [
+  "bdd",
+  "integration",
+  "implementation",
+  "review",
+  "analysis",
+  "demonstration",
+  "decision-record",
+  "migration",
+  "operational-proof"
+];
+var EVIDENCE_POLICY_SOURCES = ["canonical", "planned", "runtime", "external"];
+var EVIDENCE_POLICY_FRESHNESS = ["current", "pending", "stale", "unknown"];
+function objectOf(value) {
+  return value !== null && typeof value === "object" && !Array.isArray(value) ? value : null;
+}
+function isPlaceholderText(value) {
+  return /^\{[^}]+\}$/.test(value) || /^\[[^\]]+\]$/.test(value) || /^(?:TBD|TODO|FIXME|NEEDS_CLARIFICATION)$/i.test(value);
+}
+function text(value) {
+  if (typeof value !== "string") return void 0;
+  const candidate = value.trim();
+  return candidate && !isPlaceholderText(candidate) ? candidate : void 0;
+}
+function stringArray(value) {
+  if (!Array.isArray(value)) return void 0;
+  const values = value.map((item) => text(item));
+  return values.every((item) => Boolean(item)) ? values : void 0;
+}
+function enumValue(value, values) {
+  return typeof value === "string" && values.includes(value) ? value : void 0;
+}
+function addIssue(issues, code, path33, message) {
+  issues.push({ code, path: path33, message });
+}
+function requiredObject(raw, key, issues, code = "FR_CONTRACT_KIND_FIELDS_MISSING") {
+  const value = objectOf(raw[key]);
+  if (!value || Object.keys(value).length === 0) addIssue(issues, code, key, `${key} must be a non-empty object`);
+  return value && Object.keys(value).length > 0 ? value : void 0;
+}
+function requiredString(raw, key, issues, code = "FR_CONTRACT_KIND_FIELDS_MISSING") {
+  const value = text(raw[key]);
+  if (!value) addIssue(issues, code, key, `${key} must be a non-empty string`);
+  return value;
+}
+function requiredStringArray(raw, key, issues, code = "FR_CONTRACT_KIND_FIELDS_MISSING") {
+  const value = stringArray(raw[key]);
+  if (!value || value.length === 0) addIssue(issues, code, key, `${key} must be a non-empty string array`);
+  return value;
+}
+function validateObservableArray(value, path33, issues, missingCode) {
+  if (!Array.isArray(value) || value.length === 0) {
+    addIssue(issues, missingCode, path33, `${path33} must contain at least one item`);
+    return void 0;
+  }
+  const result = [];
+  for (const [index, item] of value.entries()) {
+    const object3 = objectOf(item);
+    const when = text(object3?.when);
+    const then = text(object3?.then);
+    if (!object3 || !when || !then) {
+      addIssue(issues, "FR_CONTRACT_OBSERVABLE_MISSING", `${path33}[${index}]`, "observable requires non-empty when and then");
+      continue;
+    }
+    result.push({ when, then });
+  }
+  return result;
+}
+function validateVerification(raw, issues) {
+  const value = objectOf(raw.verification);
+  if (!value) {
+    addIssue(issues, "FR_CONTRACT_VERIFICATION_INVALID", "verification", "verification must be an object");
+    return void 0;
+  }
+  const method = enumValue(value.method, CONTRACT_VERIFICATION_METHODS);
+  if (!method) addIssue(issues, "FR_CONTRACT_VERIFICATION_INVALID", "verification.method", `must be one of ${CONTRACT_VERIFICATION_METHODS.join("|")}`);
+  const requiredEvidence = stringArray(value.required_evidence);
+  if (!requiredEvidence || requiredEvidence.length === 0 || requiredEvidence.some((item) => !enumValue(item, REQUIRED_EVIDENCE_KINDS))) {
+    addIssue(issues, "FR_CONTRACT_VERIFICATION_INVALID", "verification.required_evidence", `must contain values from ${REQUIRED_EVIDENCE_KINDS.join("|")}`);
+  }
+  const scenario = objectOf(value.scenario);
+  const scenarioRefs = stringArray(scenario?.refs);
+  const scenarioPending = scenario?.pending === true;
+  const scenarioReason = text(scenario?.reason);
+  if ((scenarioRefs?.length ?? 0) > 0 && scenarioPending) {
+    addIssue(issues, "FR_CONTRACT_VERIFICATION_INVALID", "verification.scenario", "refs and pending are mutually exclusive");
+  } else if (scenarioRefs?.length) {
+  } else if (!scenarioPending || !scenarioReason) {
+    addIssue(issues, "FR_CONTRACT_VERIFICATION_INVALID", "verification.scenario", "requires non-empty refs or pending:true with reason");
+  }
+  const implementationSurface = objectOf(value.implementation_surface);
+  const surfaceRefs = stringArray(implementationSurface?.refs);
+  const surfaceUnknown = implementationSurface?.unknown === true;
+  const surfaceReason = text(implementationSurface?.reason);
+  if ((surfaceRefs?.length ?? 0) > 0 && surfaceUnknown) {
+    addIssue(issues, "FR_CONTRACT_VERIFICATION_INVALID", "verification.implementation_surface", "refs and unknown are mutually exclusive");
+  } else if (surfaceRefs?.length) {
+  } else if (!surfaceUnknown || !surfaceReason) {
+    addIssue(issues, "FR_CONTRACT_VERIFICATION_INVALID", "verification.implementation_surface", "requires non-empty refs or unknown:true with reason");
+  }
+  const policy = objectOf(value.evidence_policy);
+  const source = enumValue(policy?.source, EVIDENCE_POLICY_SOURCES);
+  const freshness = enumValue(policy?.freshness, EVIDENCE_POLICY_FRESHNESS);
+  if (!source) addIssue(issues, "FR_CONTRACT_VERIFICATION_INVALID", "verification.evidence_policy.source", `must be one of ${EVIDENCE_POLICY_SOURCES.join("|")}`);
+  if (!freshness) addIssue(issues, "FR_CONTRACT_VERIFICATION_INVALID", "verification.evidence_policy.freshness", `must be one of ${EVIDENCE_POLICY_FRESHNESS.join("|")}`);
+  if (typeof policy?.independent !== "boolean") addIssue(issues, "FR_CONTRACT_VERIFICATION_INVALID", "verification.evidence_policy.independent", "must be boolean");
+  if (issues.some((issue2) => issue2.path.startsWith("verification."))) return void 0;
+  return {
+    method,
+    required_evidence: requiredEvidence.map((item) => enumValue(item, REQUIRED_EVIDENCE_KINDS)),
+    scenario: scenarioRefs?.length ? { refs: scenarioRefs } : { pending: true, reason: scenarioReason },
+    implementation_surface: surfaceRefs?.length ? { refs: surfaceRefs } : { unknown: true, reason: surfaceReason },
+    evidence_policy: { source, freshness, independent: policy.independent }
+  };
+}
+function validateFieldArray(value, path33, issues) {
+  if (!Array.isArray(value) || value.length === 0) {
+    addIssue(issues, "FR_CONTRACT_KIND_FIELDS_MISSING", path33, `${path33} must be a non-empty field array`);
+    return;
+  }
+  for (const [index, item] of value.entries()) {
+    const fieldValue = objectOf(item);
+    if (!text(fieldValue?.name) || !text(fieldValue?.type) || typeof fieldValue?.required !== "boolean") {
+      addIssue(issues, "FR_CONTRACT_KIND_FIELDS_MISSING", `${path33}[${index}]`, "field requires name, type, and required");
+    }
+  }
+}
+function validateStringMap(value, path33, issues) {
+  const map2 = objectOf(value);
+  if (!map2 || Object.keys(map2).length === 0) {
+    addIssue(issues, "FR_CONTRACT_KIND_FIELDS_MISSING", path33, `${path33} must be a non-empty string map`);
+    return;
+  }
+  for (const [key, item] of Object.entries(map2)) {
+    if (!key.trim() || !text(item)) addIssue(issues, "FR_CONTRACT_KIND_FIELDS_MISSING", `${path33}.${key}`, "map values must be non-empty strings");
+  }
+}
+function validateErrorArray(value, path33, issues) {
+  if (!Array.isArray(value) || value.length === 0) {
+    addIssue(issues, "FR_CONTRACT_KIND_FIELDS_MISSING", path33, `${path33} must be a non-empty Error[]`);
+    return;
+  }
+  for (const [index, item] of value.entries()) {
+    const error51 = objectOf(item);
+    if (!text(error51?.code) || !text(error51?.observable)) {
+      addIssue(issues, "FR_CONTRACT_KIND_FIELDS_MISSING", `${path33}[${index}]`, "error requires code and observable");
+    }
+  }
+}
+function validateStructuredArray(value, path33, issues) {
+  if (!Array.isArray(value) || value.length === 0) {
+    addIssue(issues, "FR_CONTRACT_KIND_FIELDS_MISSING", path33, `${path33} must be a non-empty structured array`);
+    return;
+  }
+  for (const [index, item] of value.entries()) {
+    const object3 = objectOf(item);
+    if (!object3 || Object.keys(object3).length === 0) {
+      addIssue(issues, "FR_CONTRACT_KIND_FIELDS_MISSING", `${path33}[${index}]`, "entry must be a non-empty object");
+    }
+  }
+}
+function requiredConfinedPath(value, pathName, issues) {
+  const candidate = text(value);
+  const segments = candidate?.split(/[\\/]+/) ?? [];
+  const absolute = Boolean(candidate && (/^(?:[A-Za-z]:[\\/]|[\\/]{1,2}|~[\\/])/.test(candidate) || segments.includes("..")));
+  if (!candidate || absolute) addIssue(issues, "FR_CONTRACT_KIND_FIELDS_MISSING", pathName, `${pathName} must be a confined repository-relative path`);
+}
+function validateKindSpecific(raw, kind, issues) {
+  if (kind === "disposition") {
+    const disposition = requiredObject(raw, "disposition", issues, "FR_CONTRACT_DISPOSITION_INVALID");
+    if (!disposition) return;
+    requiredString(disposition, "status", issues, "FR_CONTRACT_DISPOSITION_INVALID");
+    requiredString(disposition, "rationale", issues, "FR_CONTRACT_DISPOSITION_INVALID");
+    requiredString(disposition, "owner", issues, "FR_CONTRACT_DISPOSITION_INVALID");
+    const successor = text(disposition.successor);
+    const boundary = text(disposition.boundary);
+    if ((successor ? 1 : 0) + (boundary ? 1 : 0) !== 1) addIssue(issues, "FR_CONTRACT_DISPOSITION_INVALID", "disposition.successor|boundary", "exactly one of successor or boundary is required");
+    return;
+  }
+  if (kind === "cli") {
+    const command = requiredObject(raw, "command", issues);
+    if (command) {
+      requiredString(command, "executable", issues);
+      requiredStringArray(command, "args", issues);
+    }
+    validateFieldArray(raw.input, "input", issues);
+    requiredObject(raw, "output", issues);
+    validateStringMap(raw.exit_codes, "exit_codes", issues);
+    validateErrorArray(raw.errors, "errors", issues);
+    return;
+  }
+  if (kind === "api") {
+    const request = requiredObject(raw, "request", issues);
+    if (request && !text(request.method) && !text(request.tool)) addIssue(issues, "FR_CONTRACT_KIND_FIELDS_MISSING", "request.method|tool", "request requires method or tool");
+    if (request) validateFieldArray(request.input, "request.input", issues);
+    requiredObject(raw, "response", issues);
+    requiredObject(raw, "authority", issues);
+    validateErrorArray(raw.errors, "errors", issues);
+    return;
+  }
+  if (kind === "schema") {
+    const schema = requiredObject(raw, "schema", issues);
+    if (schema) {
+      validateFieldArray(schema.fields, "schema.fields", issues);
+      requiredObject(schema, "enums", issues);
+      requiredStringArray(schema, "forbidden", issues);
+    }
+    return;
+  }
+  if (kind === "filesystem") {
+    if (!Array.isArray(raw.artifacts) || raw.artifacts.length === 0) {
+      addIssue(issues, "FR_CONTRACT_KIND_FIELDS_MISSING", "artifacts", "artifacts must be a non-empty array");
+      return;
+    }
+    for (const [index, item] of raw.artifacts.entries()) {
+      const artifact = objectOf(item);
+      if (!artifact || Object.keys(artifact).length === 0) {
+        addIssue(issues, "FR_CONTRACT_KIND_FIELDS_MISSING", `artifacts[${index}]`, "artifact must be a non-empty object");
+        continue;
+      }
+      requiredConfinedPath(artifact.path, `artifacts[${index}].path`, issues);
+      for (const key of ["action", "owner", "atomicity"]) requiredString(artifact, key, issues);
+      requiredObject(artifact, "resulting_state", issues);
+      requiredObject(artifact, "rollback", issues);
+      requiredObject(artifact, "confinement", issues);
+    }
+    return;
+  }
+  if (kind === "event") {
+    const event = requiredObject(raw, "event", issues);
+    if (event) {
+      for (const key of ["name", "producer", "ordering", "retry", "duplicate"]) requiredString(event, key, issues);
+      requiredObject(event, "payload", issues);
+      requiredStringArray(event, "consumers", issues);
+    }
+    return;
+  }
+  if (kind === "state") {
+    const state = requiredObject(raw, "state", issues);
+    if (state) {
+      requiredStringArray(state, "states", issues);
+      validateStructuredArray(state.transitions, "state.transitions", issues);
+      validateStructuredArray(state.guards, "state.guards", issues);
+      requiredStringArray(state, "terminal_outcomes", issues);
+    }
+    return;
+  }
+  const behavior = requiredObject(raw, "behavior", issues);
+  if (behavior) {
+    for (const key of ["actor", "trigger"]) requiredString(behavior, key, issues);
+    requiredStringArray(behavior, "preconditions", issues);
+    requiredStringArray(behavior, "observable_outcomes", issues);
+    requiredStringArray(behavior, "forbidden_outcomes", issues);
+  }
+}
+function validateRequirementContract(value) {
+  const issues = [];
+  const raw = objectOf(value);
+  if (!raw) return { issues: [{ code: "FR_CONTRACT_MISSING", path: "contract", message: "contract card must be an object" }] };
+  if (raw.version !== CONTRACT_CARD_VERSION) addIssue(issues, "FR_CONTRACT_VERSION_UNSUPPORTED", "version", "contract version must be 1");
+  const kind = enumValue(raw.kind, CONTRACT_KINDS);
+  if (!kind) addIssue(issues, "FR_CONTRACT_KIND_INVALID", "kind", `kind must be one of ${CONTRACT_KINDS.join("|")}`);
+  const subject = text(raw.subject);
+  if (!subject) addIssue(issues, "FR_CONTRACT_SUBJECT_MISSING", "subject", "subject must be non-empty");
+  const observables = validateObservableArray(raw.observables, "observables", issues, "FR_CONTRACT_OBSERVABLE_MISSING");
+  const negativeCases = validateObservableArray(raw.negative_cases, "negative_cases", issues, "FR_CONTRACT_NEGATIVE_CASE_MISSING");
+  const verification = validateVerification(raw, issues);
+  if (kind) validateKindSpecific(raw, kind, issues);
+  if (issues.length > 0 || !kind || !subject || !observables || !negativeCases || !verification) return { issues };
+  const contract = canonicalizeRequirementContract({
+    ...raw,
+    version: CONTRACT_CARD_VERSION,
+    kind,
+    subject,
+    observables,
+    negative_cases: negativeCases,
+    ...verification ? { verification } : {}
+  });
+  return { contract, issues: [] };
+}
+function stableClone(value) {
+  if (Array.isArray(value)) return value.map(stableClone);
+  const object3 = objectOf(value);
+  if (!object3) return value;
+  return Object.fromEntries(Object.keys(object3).sort().map((key) => [key, stableClone(object3[key])]));
+}
+function canonicalizeRequirementContract(value) {
+  const raw = value;
+  const ordered = {};
+  for (const key of ["version", "kind", "subject", "preconditions", "observables", "negative_cases", "invariants", "verification"]) if (raw[key] !== void 0) ordered[key] = stableClone(raw[key]);
+  for (const key of Object.keys(raw).filter((item) => !Object.keys(ordered).includes(item)).sort()) ordered[key] = stableClone(raw[key]);
+  return ordered;
+}
+
+// tools/spec-graph/metadata-schema.ts
 var VERIFICATION_METHODS = ["test", "analysis", "review", "inspection", "demonstration"];
 var SAFETY_CLASSES = ["critical", "major", "minor"];
 var DEMAND_TYPES = ["implementation", "integration-test", "documentation", "migration", "operational-proof"];
 var DEMAND_OBLIGATIONS = ["required", "optional", "not-applicable"];
 var DEMAND_STATES = ["PRESENT", "MISSING", "NOT_APPLICABLE", "WAIVED"];
-var enumValue = (value, values) => typeof value === "string" && values.includes(value) ? value : void 0;
-function objectOf(value) {
+var enumValue2 = (value, values) => typeof value === "string" && values.includes(value) ? value : void 0;
+function objectOf2(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value) ? value : null;
 }
 function nonEmpty(value) {
@@ -53053,19 +53370,19 @@ function nonEmpty(value) {
 }
 function validateRequirementMetadata(value) {
   const issues = [];
-  const raw = objectOf(value);
+  const raw = objectOf2(value);
   if (!raw) return { issues: [{ code: "FR_METADATA_INVALID", path: "$", message: "metadata must be an object" }] };
   if (raw.schemaVersion !== 1) issues.push({ code: "FR_METADATA_INVALID", path: "schemaVersion", message: "schemaVersion must be 1" });
-  const verificationMethod = raw.verificationMethod === void 0 ? void 0 : enumValue(raw.verificationMethod, VERIFICATION_METHODS);
+  const verificationMethod = raw.verificationMethod === void 0 ? void 0 : enumValue2(raw.verificationMethod, VERIFICATION_METHODS);
   if (raw.verificationMethod !== void 0 && !verificationMethod) issues.push({ code: "FR_METADATA_INVALID", path: "verificationMethod", message: `must be one of ${VERIFICATION_METHODS.join("|")}` });
-  const safetyClass = raw.safetyClass === void 0 ? void 0 : enumValue(raw.safetyClass, SAFETY_CLASSES);
+  const safetyClass = raw.safetyClass === void 0 ? void 0 : enumValue2(raw.safetyClass, SAFETY_CLASSES);
   if (raw.safetyClass !== void 0 && !safetyClass) issues.push({ code: "FR_METADATA_INVALID", path: "safetyClass", message: `must be one of ${SAFETY_CLASSES.join("|")}` });
   const risks = [];
   if (raw.risks !== void 0 && !Array.isArray(raw.risks)) issues.push({ code: "FR_METADATA_INVALID", path: "risks", message: "must be an array" });
   for (const [index, value2] of (Array.isArray(raw.risks) ? raw.risks : []).entries()) {
-    const risk = objectOf(value2);
-    const likelihood = enumValue(risk?.likelihood, ["low", "medium", "high"]);
-    const impact = enumValue(risk?.impact, ["low", "medium", "high"]);
+    const risk = objectOf2(value2);
+    const likelihood = enumValue2(risk?.likelihood, ["low", "medium", "high"]);
+    const impact = enumValue2(risk?.impact, ["low", "medium", "high"]);
     const id = nonEmpty(risk?.id);
     if (!risk || !id || !likelihood || !impact) {
       issues.push({ code: "FR_METADATA_INVALID", path: `risks[${index}]`, message: "risk requires id and low|medium|high likelihood/impact" });
@@ -53077,10 +53394,10 @@ function validateRequirementMetadata(value) {
   const seen = /* @__PURE__ */ new Set();
   if (raw.demands !== void 0 && !Array.isArray(raw.demands)) issues.push({ code: "FR_METADATA_INVALID", path: "demands", message: "must be an array" });
   for (const [index, value2] of (Array.isArray(raw.demands) ? raw.demands : []).entries()) {
-    const demand = objectOf(value2);
-    const type = enumValue(demand?.type, DEMAND_TYPES);
-    const obligation = enumValue(demand?.obligation, DEMAND_OBLIGATIONS);
-    const state = demand?.state === void 0 ? void 0 : enumValue(demand.state, DEMAND_STATES);
+    const demand = objectOf2(value2);
+    const type = enumValue2(demand?.type, DEMAND_TYPES);
+    const obligation = enumValue2(demand?.obligation, DEMAND_OBLIGATIONS);
+    const state = demand?.state === void 0 ? void 0 : enumValue2(demand.state, DEMAND_STATES);
     const rationale = nonEmpty(demand?.rationale);
     const actor = nonEmpty(demand?.actor);
     const auditRef = nonEmpty(demand?.auditRef);
@@ -53100,23 +53417,35 @@ function validateRequirementMetadata(value) {
     const strings = (entry) => Array.isArray(entry) ? entry.filter((v) => typeof v === "string") : void 0;
     demands.push({ type, obligation, ...state ? { state } : {}, ...rationale ? { rationale } : {}, ...actor ? { actor } : {}, ...auditRef ? { auditRef } : {}, ...strings(demand.evidenceRefs) ? { evidenceRefs: strings(demand.evidenceRefs) } : {}, ...strings(demand.forwardTo) ? { forwardTo: strings(demand.forwardTo) } : {} });
   }
-  const known = /* @__PURE__ */ new Set(["schemaVersion", "verificationMethod", "safetyClass", "rationale", "risks", "demands"]);
+  const contractResult = raw.contract === void 0 ? { contract: void 0, issues: [] } : validateRequirementContract(raw.contract);
+  for (const issue2 of contractResult.issues) {
+    issues.push({
+      code: issue2.code,
+      path: `contract.${issue2.path}`,
+      message: issue2.message
+    });
+  }
+  if (contractResult.issues.length > 0) {
+    return { issues };
+  }
+  const contract = contractResult.contract;
+  const known = /* @__PURE__ */ new Set(["schemaVersion", "verificationMethod", "safetyClass", "rationale", "risks", "demands", "contract"]);
   const unknown2 = Object.fromEntries(Object.entries(raw).filter(([key]) => !known.has(key)));
   return {
-    ...issues.length === 0 ? { metadata: { schemaVersion: 1, ...verificationMethod ? { verificationMethod } : {}, ...safetyClass ? { safetyClass } : {}, ...nonEmpty(raw.rationale) ? { rationale: nonEmpty(raw.rationale) } : {}, risks, demands, _unknown: unknown2 } } : {},
+    ...issues.length === 0 ? { metadata: { schemaVersion: 1, ...verificationMethod ? { verificationMethod } : {}, ...safetyClass ? { safetyClass } : {}, ...nonEmpty(raw.rationale) ? { rationale: nonEmpty(raw.rationale) } : {}, risks, demands, ...contract ? { contract } : {}, _unknown: unknown2 } } : {},
     issues
   };
 }
 function parseRequirementMetadataYaml(source) {
   try {
-    return validateRequirementMetadata((0, import_yaml.parse)(source));
+    return validateRequirementMetadata((0, import_yaml2.parse)(source));
   } catch (error51) {
     return { issues: [{ code: "FR_METADATA_INVALID", path: "$", message: `invalid YAML: ${error51.message}` }] };
   }
 }
 function renderRequirementMetadata(metadata) {
   const { _unknown: _unknown2, ...known } = metadata;
-  return (0, import_yaml.stringify)({ ...known, ..._unknown2 }, { lineWidth: 0 }).trim();
+  return (0, import_yaml2.stringify)({ ...known, ..._unknown2 }, { lineWidth: 0 }).trim();
 }
 
 // tools/spec-graph/parsers/md.ts
@@ -53131,11 +53460,11 @@ var SHORT_FR_RE = /^FR-(\d+)$/;
 var SHORT_NFR_RE = /^NFR(?:-([A-Za-z][A-Za-z0-9]*))?-(\d+)$/;
 var SHORT_AC_RE = /^AC-(\d+(?:\.\d+)?)$/;
 var LEGACY_FR_HEADING_RE = /^Requirement:\s*FR-(\d+)\s+(.+)$/;
-function slugify2(text) {
-  return marksmanSlug(text);
+function slugify2(text2) {
+  return marksmanSlug(text2);
 }
-function stripInlineMarkers(text) {
-  let s = text;
+function stripInlineMarkers(text2) {
+  let s = text2;
   s = s.replace(/\[([^\]]+)\]\([^)]*\)/g, "$1");
   s = s.replace(/\*\*([^*]+)\*\*/g, "$1");
   s = s.replace(/__([^_]+)__/g, "$1");
@@ -53217,10 +53546,10 @@ function parseMarkdown(mdSource, relativePath) {
     if (raw.charCodeAt(0) !== 35) continue;
     const hm = raw.match(HEADING_LINE_RE);
     if (!hm) continue;
-    const text = stripInlineMarkers(hm[2]);
+    const text2 = stripInlineMarkers(hm[2]);
     const line = i + 1;
     const location = { file: relativePath, line };
-    let m = text.match(LEGACY_FR_HEADING_RE);
+    let m = text2.match(LEGACY_FR_HEADING_RE);
     if (m) {
       const num = m[1];
       const title = m[2].trim();
@@ -53244,7 +53573,7 @@ function parseMarkdown(mdSource, relativePath) {
       );
       continue;
     }
-    m = text.match(FR_HEADING_RE);
+    m = text2.match(FR_HEADING_RE);
     if (m) {
       const num = m[1];
       const title = m[2].trim();
@@ -53266,7 +53595,7 @@ function parseMarkdown(mdSource, relativePath) {
       );
       continue;
     }
-    m = text.match(NFR_HEADING_RE);
+    m = text2.match(NFR_HEADING_RE);
     if (m) {
       const category = m[1];
       const num = m[2];
@@ -53290,7 +53619,7 @@ function parseMarkdown(mdSource, relativePath) {
       );
       continue;
     }
-    m = text.match(AC_HEADING_RE);
+    m = text2.match(AC_HEADING_RE);
     if (m) {
       const acId = `AC-${m[1]}`;
       const parentFr = `FR-${m[2]}`;
@@ -53308,7 +53637,7 @@ function parseMarkdown(mdSource, relativePath) {
       anchors.push({ alias: acId, canonicalId: acId, location });
       continue;
     }
-    m = text.match(SHORT_FR_RE);
+    m = text2.match(SHORT_FR_RE);
     if (m) {
       const num = m[1];
       const compact = `FR-${num}`;
@@ -53322,7 +53651,7 @@ function parseMarkdown(mdSource, relativePath) {
       );
       continue;
     }
-    m = text.match(SHORT_NFR_RE);
+    m = text2.match(SHORT_NFR_RE);
     if (m) {
       const category = m[1];
       const num = m[2];
@@ -53337,7 +53666,7 @@ function parseMarkdown(mdSource, relativePath) {
       );
       continue;
     }
-    m = text.match(SHORT_AC_RE);
+    m = text2.match(SHORT_AC_RE);
     if (m) {
       const acId = `AC-${m[1]}`;
       const slug = marksmanSlug(acId);
@@ -53351,13 +53680,13 @@ function parseMarkdown(mdSource, relativePath) {
       );
       continue;
     }
-    m = text.match(DECISION_HEADING_RE);
+    m = text2.match(DECISION_HEADING_RE);
     if (m) {
       const title = m[1].trim();
       const decId = `Decision-${slugify2(title)}`;
-      const slug = slugify2(text);
+      const slug = slugify2(text2);
       const parentFr = decisionRequirementAfter(lines, i);
-      const node = { id: decId, type: "Decision", title, parentFr, file: relativePath, line, body: text };
+      const node = { id: decId, type: "Decision", title, parentFr, file: relativePath, line, body: text2 };
       nodes.push(node);
       if (parentFr) {
         edges.push({ from: parentFr, to: decId, type: "covers" });
@@ -53369,14 +53698,14 @@ function parseMarkdown(mdSource, relativePath) {
       );
       continue;
     }
-    m = text.match(STORY_HEADING_RE);
+    m = text2.match(STORY_HEADING_RE);
     if (m) {
       const num = m[1];
       const title = m[2].trim();
       const storyId = `Story-${num}-${slugify2(title)}`;
-      const slug = slugify2(text);
+      const slug = slugify2(text2);
       const parentFr = decisionRequirementAfter(lines, i);
-      const node = { id: storyId, type: "Story", title, parentFr, file: relativePath, line, body: text };
+      const node = { id: storyId, type: "Story", title, parentFr, file: relativePath, line, body: text2 };
       nodes.push(node);
       if (parentFr) edges.push({ from: parentFr, to: storyId, type: "covers" });
       anchors.push(
@@ -53400,7 +53729,7 @@ var import_gherkin = __toESM(require_src2(), 1);
 import fs2 from "node:fs";
 import path2 from "node:path";
 
-// node_modules/@cucumber/messages/dist/esm/src/IdGenerator.js
+// ../dev-pomogator/node_modules/@cucumber/messages/dist/esm/src/IdGenerator.js
 var IdGenerator_exports = {};
 __export(IdGenerator_exports, {
   incrementing: () => incrementing,
@@ -53414,7 +53743,7 @@ function incrementing() {
   return () => (next++).toString();
 }
 
-// node_modules/@cucumber/messages/dist/esm/src/messages.js
+// ../dev-pomogator/node_modules/@cucumber/messages/dist/esm/src/messages.js
 var import_class_transformer = __toESM(require_cjs(), 1);
 var import_reflect_metadata = __toESM(require_Reflect(), 1);
 var __decorate = function(decorators, target, key, desc) {
@@ -54287,12 +54616,14 @@ function parseNdjson(source) {
   const testStepToPickleStep = /* @__PURE__ */ new Map();
   const byLocation = /* @__PURE__ */ new Map();
   const testCaseResult = /* @__PURE__ */ new Map();
+  let malformed = 0;
   for (const line of lines) {
     if (!line.trim()) continue;
     let env2;
     try {
       env2 = JSON.parse(line);
     } catch {
+      malformed++;
       continue;
     }
     const doc = env2.gherkinDocument;
@@ -54416,11 +54747,31 @@ function parseNdjson(source) {
       }
     }
   }
-  return { byLocation, byName };
+  return { byLocation, byName, records: byLocation.size, malformed };
 }
 function parseNdjsonFile(absPath) {
-  if (!fs3.existsSync(absPath)) return { byLocation: /* @__PURE__ */ new Map(), byName: /* @__PURE__ */ new Map() };
-  return parseNdjson(fs3.readFileSync(absPath, "utf-8"));
+  return parseNdjsonArtifactFile(absPath).patch;
+}
+function parseNdjsonArtifactFile(absPath) {
+  const artifactPath = absPath.replace(/\\/g, "/");
+  if (!fs3.existsSync(absPath)) {
+    return {
+      patch: { byLocation: /* @__PURE__ */ new Map(), byName: /* @__PURE__ */ new Map(), records: 0, malformed: 0 },
+      path: artifactPath,
+      state: "NOT_INGESTED",
+      reason: "ARTIFACT_ABSENT",
+      timestamp: null
+    };
+  }
+  const patch = parseNdjson(fs3.readFileSync(absPath, "utf-8"));
+  const reason = patch.malformed > 0 ? "MALFORMED_ARTIFACT" : patch.records === 0 ? "MISSING_SCENARIO_RESULTS" : null;
+  return {
+    patch,
+    path: artifactPath,
+    state: reason ? "NOT_INGESTED" : "INGESTED",
+    reason,
+    timestamp: fs3.statSync(absPath).mtime.toISOString()
+  };
 }
 function applyTestResults(scenarios, patch) {
   let applied = 0;
@@ -54441,8 +54792,12 @@ function applyTestResults(scenarios, patch) {
     if (!fields) continue;
     s.lastResult = fields.lastResult;
     s.lastRunAt = fields.lastRunAt;
+    s.lastResultSource = "cucumber-messages-ndjson";
+    s.lastResultRunId = void 0;
     s.canonicalResult = fields.lastResult;
     s.canonicalRunAt = fields.lastRunAt;
+    s.canonicalRunId = void 0;
+    s.canonicalSource = "cucumber-messages-ndjson";
     s.resultStale = false;
     s.trace = void 0;
     s.durationMs = fields.durationMs;
@@ -54491,6 +54846,7 @@ function keepNewest(map2, key, row) {
 function parseScenarioOverlay(source) {
   const byScenarioKey = /* @__PURE__ */ new Map();
   const byLocation = /* @__PURE__ */ new Map();
+  const byName = /* @__PURE__ */ new Map();
   for (const line of source.split(/\r?\n/)) {
     if (!line.trim()) continue;
     let raw;
@@ -54504,6 +54860,7 @@ function parseScenarioOverlay(source) {
     if (!scenarioId || timeMs === void 0) continue;
     const row = {
       scenarioId,
+      scenarioName: typeof raw.scenario_name === "string" ? raw.scenario_name : void 0,
       result: normalizeStatus2(raw.result),
       time: raw.time,
       timeMs,
@@ -54513,17 +54870,22 @@ function parseScenarioOverlay(source) {
       source: typeof raw.source === "string" ? raw.source : void 0,
       gitSha: typeof raw.git_sha === "string" ? raw.git_sha : void 0,
       failingStep: raw.failing_step && typeof raw.failing_step === "object" ? raw.failing_step : void 0,
+      durationMs: typeof raw.duration_ms === "number" && Number.isFinite(raw.duration_ms) ? raw.duration_ms : void 0,
       traceId: typeof raw.trace_id === "string" ? raw.trace_id : void 0,
       traceFile: normalizeUri(raw.trace_file),
       testCaseStartedId: typeof raw.test_case_started_id === "string" ? raw.test_case_started_id : void 0
     };
     keepNewest(byScenarioKey, scenarioKey(scenarioId) ?? scenarioId.toLowerCase(), row);
     keepNewest(byLocation, locationKey(row.uri, row.line), row);
+    if (row.scenarioName) {
+      const nameKey = row.scenarioName.trim().toLowerCase();
+      byName.set(nameKey, [...byName.get(nameKey) ?? [], row]);
+    }
   }
-  return { byScenarioKey, byLocation };
+  return { byScenarioKey, byLocation, byName };
 }
 function parseScenarioOverlayFile(absPath) {
-  if (!fs4.existsSync(absPath)) return { byScenarioKey: /* @__PURE__ */ new Map(), byLocation: /* @__PURE__ */ new Map() };
+  if (!fs4.existsSync(absPath)) return { byScenarioKey: /* @__PURE__ */ new Map(), byLocation: /* @__PURE__ */ new Map(), byName: /* @__PURE__ */ new Map() };
   return parseScenarioOverlay(fs4.readFileSync(absPath, "utf-8"));
 }
 function resolvePath(repoRoot, p) {
@@ -54593,6 +54955,8 @@ function startedId(row) {
   return m?.[1];
 }
 function applyTraceRef(scenario, row) {
+  scenario.lastResultSource = row.source;
+  scenario.lastResultRunId = row.runId;
   if (!row.traceId) {
     scenario.trace = void 0;
     return;
@@ -54631,10 +54995,13 @@ function findByLocation(patch, scenario) {
 function applyScenarioOverlayResults(scenarios, patch, opts) {
   let applied = 0;
   for (const scenario of scenarios) {
-    const key = scenarioKey(scenario.id);
-    const byId = key ? patch.byScenarioKey.get(key) : void 0;
+    const key = scenarioKey(scenario.id) ?? scenario.id.toLowerCase();
+    const byId = patch.byScenarioKey.get(key);
     const byLocation = findByLocation(patch, scenario);
-    const row = byId && byLocation ? byId.timeMs >= byLocation.timeMs ? byId : byLocation : byId ?? byLocation;
+    const nameKey = (scenario.title ?? "").trim().toLowerCase();
+    const nameRows = patch.byName.get(nameKey) ?? [];
+    const byUniqueName = !byId && !byLocation && nameRows.length === 1 ? nameRows[0] : void 0;
+    const row = byLocation ?? byId ?? byUniqueName;
     if (!row) continue;
     const currentMs = parseTimeMs(scenario.lastRunAt);
     const overlayWins = currentMs === void 0 || row.timeMs > currentMs;
@@ -54643,7 +55010,7 @@ function applyScenarioOverlayResults(scenarios, patch, opts) {
       scenario.lastResult = row.result;
       scenario.lastRunAt = row.time;
       applyTraceRef(scenario, row);
-      scenario.durationMs = void 0;
+      scenario.durationMs = row.durationMs;
       scenario.failingStep = row.failingStep ?? null;
       applied++;
     } else if (overlayEffective && row.traceId) {
@@ -54652,8 +55019,9 @@ function applyScenarioOverlayResults(scenarios, patch, opts) {
     if (overlayEffective && row.result === "PASSED") {
       const threshold = freshnessThresholdMs(opts.repoRoot, scenario, row);
       const sourceStale = threshold !== void 0 && row.timeMs < threshold;
-      const commitStale = Boolean(opts.currentGitSha) && row.gitSha !== opts.currentGitSha;
-      scenario.resultStale = sourceStale || commitStale || Boolean(opts.currentGitSha) && !row.gitSha;
+      const requiresCommitIdentity = row.source !== "pytest-bdd:cucumber-json";
+      const commitStale = requiresCommitIdentity && Boolean(opts.currentGitSha) && row.gitSha !== opts.currentGitSha;
+      scenario.resultStale = sourceStale || commitStale || requiresCommitIdentity && Boolean(opts.currentGitSha) && !row.gitSha;
     } else if (overlayEffective) {
       scenario.resultStale = false;
     }
@@ -54661,12 +55029,146 @@ function applyScenarioOverlayResults(scenarios, patch, opts) {
   return applied;
 }
 
-// tools/spec-graph/parsers/tasks.ts
-import fs6 from "node:fs";
+// tools/spec-graph/parsers/pytest-bdd.ts
+import fs5 from "node:fs";
 import path4 from "node:path";
+var DEFAULT_PYTEST_BDD_REPORT_PATH = ".dev-pomogator/pytest-bdd-report.json";
+var PYTEST_BDD_SOURCE = "pytest-bdd:cucumber-json";
+function normalizeUri2(uri, repoRoot) {
+  let normalized = uri.replace(/\\/g, "/").replace(/^\.\//, "");
+  if (path4.isAbsolute(uri) && repoRoot) {
+    normalized = path4.relative(repoRoot, uri).split(path4.sep).join("/");
+  }
+  return normalized;
+}
+function resultStatus(steps) {
+  const statuses = steps.map((step) => typeof step.result?.status === "string" ? step.result.status.toLowerCase() : "").filter(Boolean);
+  if (statuses.includes("failed")) return "FAILED";
+  if (statuses.includes("undefined")) return "UNDEFINED";
+  if (statuses.includes("ambiguous")) return "AMBIGUOUS";
+  if (statuses.includes("pending")) return "PENDING";
+  if (statuses.includes("skipped")) return "SKIPPED";
+  return statuses.length > 0 && statuses.every((status) => status === "passed") ? "PASSED" : "UNKNOWN";
+}
+function durationMs(steps) {
+  const nanoseconds = steps.reduce((total, step) => {
+    const value = step.result?.duration;
+    return total + (typeof value === "number" && Number.isFinite(value) ? value : 0);
+  }, 0);
+  return nanoseconds > 0 ? nanoseconds / 1e6 : void 0;
+}
+function failingStep(steps) {
+  const index = steps.findIndex((step2) => step2.result?.status === "failed");
+  if (index < 0) return void 0;
+  const step = steps[index];
+  return {
+    step: [step.keyword, step.name].filter((value) => typeof value === "string").join(" ").trim(),
+    errorMessage: typeof step.result?.error_message === "string" ? step.result.error_message : ""
+  };
+}
+function reportRunId(reportTime) {
+  return `pytest-bdd-${reportTime.replace(/[-:.TZ]/g, "")}`;
+}
+function parsePytestBddReport(source, opts = {}) {
+  const reportPath = normalizeUri2(opts.reportPath ?? DEFAULT_PYTEST_BDD_REPORT_PATH);
+  const reportTime = opts.reportTime ?? (/* @__PURE__ */ new Date(0)).toISOString();
+  const runId = opts.runId ?? reportRunId(reportTime);
+  let features;
+  try {
+    const parsed = JSON.parse(source);
+    if (!Array.isArray(parsed)) {
+      return {
+        patch: parseScenarioOverlay(""),
+        reportPath,
+        reportTime: null,
+        runId: null,
+        executed: 0,
+        malformed: 1,
+        state: "NOT_INGESTED",
+        reason: "MALFORMED_ARTIFACT"
+      };
+    }
+    features = parsed;
+  } catch {
+    return {
+      patch: parseScenarioOverlay(""),
+      reportPath,
+      reportTime: null,
+      runId: null,
+      executed: 0,
+      malformed: 1,
+      state: "NOT_INGESTED",
+      reason: "MALFORMED_ARTIFACT"
+    };
+  }
+  const rows = [];
+  let malformed = 0;
+  for (const feature of features) {
+    let uri = typeof feature.uri === "string" ? normalizeUri2(feature.uri, opts.repoRoot) : "";
+    const reportDir = path4.posix.dirname(reportPath);
+    if (uri && reportDir !== "." && reportDir !== ".dev-pomogator" && !uri.startsWith(`${reportDir}/`)) {
+      const reportBase = path4.posix.basename(reportDir);
+      uri = uri.startsWith(`${reportBase}/`) ? path4.posix.join(path4.posix.dirname(reportDir), uri) : path4.posix.join(reportDir, uri);
+    }
+    for (const scenario of Array.isArray(feature.elements) ? feature.elements : []) {
+      if (!uri || typeof scenario.id !== "string" || !scenario.id.trim() || typeof scenario.line !== "number" || !Number.isInteger(scenario.line) || scenario.line < 1) {
+        malformed += 1;
+        continue;
+      }
+      const steps = Array.isArray(scenario.steps) ? scenario.steps : [];
+      rows.push(JSON.stringify({
+        scenario_id: scenario.id,
+        scenario_name: typeof scenario.name === "string" ? scenario.name : void 0,
+        uri,
+        line: scenario.line,
+        result: resultStatus(steps),
+        time: reportTime,
+        run_id: runId,
+        source: PYTEST_BDD_SOURCE,
+        trace_id: `${reportPath}#${scenario.id}`,
+        trace_file: reportPath,
+        duration_ms: durationMs(steps),
+        failing_step: failingStep(steps)
+      }));
+    }
+  }
+  const reason = malformed > 0 ? "MALFORMED_ARTIFACT" : rows.length === 0 ? "MISSING_SCENARIO_RESULTS" : null;
+  return {
+    patch: parseScenarioOverlay(rows.join("\n")),
+    reportPath,
+    reportTime,
+    runId,
+    executed: rows.length,
+    malformed,
+    state: reason ? "NOT_INGESTED" : "INGESTED",
+    reason
+  };
+}
+function parsePytestBddReportFile(absPath, repoRoot) {
+  const reportPath = path4.relative(repoRoot, absPath).split(path4.sep).join("/");
+  if (!fs5.existsSync(absPath)) {
+    return {
+      patch: parseScenarioOverlay(""),
+      reportPath,
+      reportTime: null,
+      runId: null,
+      executed: 0,
+      malformed: 0,
+      state: "NOT_INGESTED",
+      reason: "ARTIFACT_ABSENT"
+    };
+  }
+  const stat4 = fs5.statSync(absPath);
+  const reportTime = stat4.mtime.toISOString();
+  return parsePytestBddReport(fs5.readFileSync(absPath, "utf-8"), { reportPath, reportTime, repoRoot });
+}
+
+// tools/spec-graph/parsers/tasks.ts
+import fs7 from "node:fs";
+import path5 from "node:path";
 
 // tools/specs-validator/spec-form-parsers.ts
-import fs5 from "fs";
+import fs6 from "fs";
 var US_HEADING = /^###\s+User Story\s+\d+\b/;
 var US_PRIORITY = /\(Priority:\s*P[123]\)/;
 function parseUserStoryBlocks(content) {
@@ -54892,7 +55394,7 @@ function runCheckCli(argv) {
   if (flag !== "--check" || !kind || !file2) return { output: usage, exitCode: 2 };
   let content;
   try {
-    content = fs5.readFileSync(file2, "utf-8");
+    content = fs6.readFileSync(file2, "utf-8");
   } catch (e) {
     return { output: `cannot read ${file2}: ${e instanceof Error ? e.message : e}`, exitCode: 2 };
   }
@@ -55022,15 +55524,15 @@ function parseTasks(content, file2) {
   return out;
 }
 function parseTasksFile(abs, repoRoot) {
-  const content = fs6.readFileSync(abs, "utf8");
-  const file2 = path4.relative(repoRoot, abs).replace(/\\/g, "/");
+  const content = fs7.readFileSync(abs, "utf8");
+  const file2 = path5.relative(repoRoot, abs).replace(/\\/g, "/");
   const slice = { nodes: parseTasks(content, file2), edges: [] };
   qualifySlice(slice, specOf(file2));
   return { nodes: slice.nodes, edges: [], anchors: [] };
 }
 
 // tools/spec-graph/parsers/file-changes.ts
-import fs7 from "node:fs";
+import fs8 from "node:fs";
 var ALLOWED_ACTIONS = /* @__PURE__ */ new Set([
   "create",
   "edit",
@@ -55124,7 +55626,7 @@ function parseFileChanges(mdSource, opts = {}) {
 function parseFileChangesFile(absPath, opts = {}) {
   let source;
   try {
-    source = fs7.readFileSync(absPath, "utf-8");
+    source = fs8.readFileSync(absPath, "utf-8");
   } catch {
     return [];
   }
@@ -55132,7 +55634,7 @@ function parseFileChangesFile(absPath, opts = {}) {
 }
 
 // tools/spec-graph/parsers/design.ts
-import fs8 from "node:fs";
+import fs9 from "node:fs";
 var SECTION_HEADING_RE = /^(?:где\s+лежит\s+реализаци[яи]|где\s+код|app[-\s]?код)\s*:?\s*$/i;
 var BULLET_LABEL_RE = /^[-*+]\s+(?:\*\*)?([^:*]+?)(?:\*\*)?:\s*(.*)$/;
 var BACKTICK_PATH_RE = /`([^`\n]+)`/g;
@@ -55187,10 +55689,10 @@ function parseDesign(mdSource, _relativePath) {
     for (const m of slice.match(FR_CITATION_RE2) ?? []) {
       frsInScope.add(m);
     }
-    const harvest = (text) => {
+    const harvest = (text2) => {
       BACKTICK_PATH_RE.lastIndex = 0;
       let m;
-      while ((m = BACKTICK_PATH_RE.exec(text)) !== null) {
+      while ((m = BACKTICK_PATH_RE.exec(text2)) !== null) {
         const candidate = m[1].trim();
         if (!looksLikePath(candidate)) continue;
         if (isGlob2(candidate)) continue;
@@ -55216,7 +55718,7 @@ function parseDesign(mdSource, _relativePath) {
 function parseDesignFile(absPath, repoRoot) {
   let source;
   try {
-    source = fs8.readFileSync(absPath, "utf-8");
+    source = fs9.readFileSync(absPath, "utf-8");
   } catch {
     return [];
   }
@@ -55313,7 +55815,7 @@ function refreshEndpointViolations(graph) {
 
 // tools/spec-graph/builder.ts
 function walkDir(absDir, suffixes) {
-  if (!fs9.existsSync(absDir)) return [];
+  if (!fs10.existsSync(absDir)) return [];
   const out = [];
   const skipDirs = /* @__PURE__ */ new Set([
     "node_modules",
@@ -55330,12 +55832,12 @@ function walkDir(absDir, suffixes) {
     const current = stack.pop();
     let entries;
     try {
-      entries = fs9.readdirSync(current, { withFileTypes: true });
+      entries = fs10.readdirSync(current, { withFileTypes: true });
     } catch {
       continue;
     }
     for (const entry of entries) {
-      const abs = path5.join(current, entry.name);
+      const abs = path6.join(current, entry.name);
       if (entry.isDirectory()) {
         if (skipDirs.has(entry.name)) continue;
         stack.push(abs);
@@ -55346,26 +55848,118 @@ function walkDir(absDir, suffixes) {
   }
   return out;
 }
+function featureAliasOwners(nodes, repoRoot, spec, alias) {
+  const owners = /* @__PURE__ */ new Set();
+  for (const node of nodes.values()) {
+    if (node.type !== "FR" || node.spec !== spec) continue;
+    const declaredAliases = (node.body ?? "").split(/\r?\n/).filter((line) => /^\s*(?:\*\*(?:Feature|BDD|Executable evidence aliases)(?::)?\*\*:?\s*|Executable evidence aliases\s*:)/i.test(line)).join("\n");
+    const source = `${node.title ?? ""}
+${declaredAliases}`;
+    const aliases = /* @__PURE__ */ new Set([
+      ...node.featureAliases ?? [],
+      ...[...source.matchAll(/@feature(\d+)([a-z]?)/gi)].map((match) => `feature${match[1]}${match[2] ?? ""}`)
+    ]);
+    if (aliases.has(alias)) owners.add(node.id);
+  }
+  const requirementsPath = path6.join(repoRoot, ".specs", spec, "REQUIREMENTS.md");
+  if (fs10.existsSync(requirementsPath)) {
+    for (const line of fs10.readFileSync(requirementsPath, "utf8").split(/\r?\n/)) {
+      if (![...line.matchAll(/@feature(\d+)([a-z]?)/gi)].some((match) => `feature${match[1]}${match[2] ?? ""}` === alias)) continue;
+      for (const match of line.matchAll(/\bFR-(\d+[a-z]?)\b/g)) {
+        const owner = nodes.get(`${spec}:FR-${match[1]}`);
+        if (owner?.type === "FR") owners.add(owner.id);
+      }
+    }
+  }
+  return [...owners];
+}
+function resolveFeatureTagEdges(nodes, edges, repoRoot) {
+  const featureOwners = /* @__PURE__ */ new Map();
+  for (const node of nodes.values()) {
+    if (node.type !== "FR" || !node.spec) continue;
+    const declaredAliases = (node.body ?? "").split(/\r?\n/).filter((line) => /^\s*(?:\*\*(?:Feature|BDD|Executable evidence aliases)(?::)?\*\*:?\s*|Executable evidence aliases\s*:)/i.test(line)).join("\n");
+    const source = `${node.title ?? ""}
+${declaredAliases}`;
+    const aliases = new Set(
+      [...source.matchAll(/@feature(\d+)([a-z]?)/gi)].map((match) => `feature${match[1]}${match[2] ?? ""}`)
+    );
+    node.featureAliases = [...aliases];
+    for (const alias of aliases) {
+      const key = `${node.spec}:${alias}`;
+      const previous = featureOwners.get(key);
+      featureOwners.set(key, previous === void 0 ? node.id : previous === node.id ? node.id : null);
+    }
+  }
+  if (repoRoot) {
+    const specs = new Set([...nodes.values()].map((node) => node.spec).filter((spec) => Boolean(spec)));
+    for (const slug of specs) {
+      const requirementsPath = path6.join(repoRoot, ".specs", slug, "REQUIREMENTS.md");
+      if (!fs10.existsSync(requirementsPath)) continue;
+      for (const line of fs10.readFileSync(requirementsPath, "utf8").split(/\r?\n/)) {
+        const featureTags = [...line.matchAll(/@feature(\d+)([a-z]?)/gi)];
+        for (const frMatch of line.matchAll(/\bFR-(\d+[a-z]?)\b/g)) {
+          const owner = nodes.get(`${slug}:FR-${frMatch[1]}`);
+          if (owner?.type !== "FR") continue;
+          for (const featureTag of featureTags) {
+            const alias = `feature${featureTag[1]}${featureTag[2] ?? ""}`;
+            owner.featureAliases = [.../* @__PURE__ */ new Set([...owner.featureAliases ?? [], alias])];
+            const key = `${slug}:${alias}`;
+            const previous = featureOwners.get(key);
+            featureOwners.set(key, previous === void 0 ? owner.id : previous === owner.id ? owner.id : null);
+          }
+        }
+      }
+    }
+  }
+  for (let i = edges.length - 1; i >= 0; i--) {
+    const target = nodes.get(edges[i].to);
+    if (edges[i].type === "tested-by" && edges[i].metadata?.producer === "gherkin-feature-tag" && target?.type === "Scenario" && target.spec) {
+      edges.splice(i, 1);
+    }
+  }
+  const emitted = /* @__PURE__ */ new Set();
+  for (const node of nodes.values()) {
+    if (node.type !== "Scenario" || !node.spec) continue;
+    for (const tag of node.tags) {
+      const feature = tag.match(/^@feature(\d+)([a-z]?)$/i);
+      if (!feature) continue;
+      const alias = `feature${feature[1]}${feature[2] ?? ""}`;
+      const direct = `${node.spec}:FR-${feature[1]}${feature[2] ?? ""}`;
+      const owner = featureOwners.get(`${node.spec}:${alias}`);
+      if (owner === null) continue;
+      const from = owner ?? (nodes.has(direct) ? direct : void 0);
+      if (!from) continue;
+      const key = `${from}|${node.id}`;
+      if (emitted.has(key)) continue;
+      emitted.add(key);
+      edges.push({ from, to: node.id, type: "tested-by", metadata: { producer: "gherkin-feature-tag", version: "1" } });
+    }
+  }
+}
 function buildGraph(opts) {
   const { repoRoot } = opts;
   let currentGitSha;
   try {
     currentGitSha = execFileSync("git", ["rev-parse", "HEAD"], { cwd: repoRoot, encoding: "utf8", timeout: 5e3 }).trim() || void 0;
   } catch {
-    const isRuntimeCorpus = path5.resolve(repoRoot) === path5.resolve(process.cwd());
+    const isRuntimeCorpus = path6.resolve(repoRoot) === path6.resolve(process.cwd());
     currentGitSha = isRuntimeCorpus ? process.env.DEV_POMOGATOR_GIT_SHA || void 0 : void 0;
   }
-  const mdRoots = (opts.mdRoots ?? [".specs"]).map((r) => path5.resolve(repoRoot, r));
+  const mdRoots = (opts.mdRoots ?? [".specs"]).map((r) => path6.resolve(repoRoot, r));
   const featureRoots = (opts.featureRoots ?? [".specs", "tests/features"]).map(
-    (r) => path5.resolve(repoRoot, r)
+    (r) => path6.resolve(repoRoot, r)
   );
-  const ndjsonPath = path5.resolve(
+  const ndjsonPath = path6.resolve(
     repoRoot,
     opts.ndjsonPath ?? ".dev-pomogator/.last-test-run.ndjson"
   );
-  const scenarioOverlayPath = path5.resolve(
+  const scenarioOverlayPath = path6.resolve(
     repoRoot,
     opts.scenarioOverlayPath ?? ".dev-pomogator/.scenario-results.ndjson"
+  );
+  const pytestBddPath = path6.resolve(
+    repoRoot,
+    opts.pytestBddPath ?? DEFAULT_PYTEST_BDD_REPORT_PATH
   );
   const nodes = /* @__PURE__ */ new Map();
   const edges = [];
@@ -55425,7 +56019,7 @@ function buildGraph(opts) {
     ingestSlice(slice);
   }
   for (const abs of mdFiles) {
-    if (path5.basename(abs) !== "TASKS.md") continue;
+    if (path6.basename(abs) !== "TASKS.md") continue;
     let taskSlice;
     try {
       taskSlice = parseTasksFile(abs, repoRoot);
@@ -55435,20 +56029,187 @@ function buildGraph(opts) {
     for (const node of taskSlice.nodes) mergeNode(node);
   }
   const featureFiles = [...new Set(featureRoots.flatMap((root) => walkDir(root, [".feature"])))];
+  const externalFeatureOwners = /* @__PURE__ */ new Map();
+  const registerExternalFeatureOwner = (featurePath, owner) => {
+    const previous = externalFeatureOwners.get(featurePath);
+    externalFeatureOwners.set(featurePath, previous === void 0 || previous === owner ? owner : null);
+  };
+  for (const changesAbs of mdFiles.filter((file2) => path6.basename(file2) === "FILE_CHANGES.md")) {
+    const relChanges = path6.relative(repoRoot, changesAbs).split(path6.sep).join("/");
+    const owner = specOf(relChanges);
+    if (!owner) continue;
+    for (const row of parseFileChangesFile(changesAbs)) {
+      if (!/\.feature$/i.test(row.file_path)) continue;
+      const rowPath = row.file_path.replace(/\\/g, "/");
+      const featurePath = rowPath.startsWith(".specs/") || rowPath.startsWith("tests/") ? path6.posix.normalize(rowPath) : path6.posix.normalize(`.specs/${owner}/${rowPath}`);
+      registerExternalFeatureOwner(featurePath, owner);
+    }
+  }
+  const canonicalScenarioKeys = /* @__PURE__ */ new Set();
+  const canonicalBodyOwners = /* @__PURE__ */ new Map();
+  const artifactMirrorTags = /* @__PURE__ */ new Map();
+  const scenarioBodyKey2 = (node) => `${node.title}\0${node.steps.map((step) => `${step.keyword}:${step.text}`).join("")}`;
+  const scenarioKeyFor = (node, owner) => `${owner ?? node.spec ?? specOf(node.file) ?? ""}${scenarioBodyKey2(node)}`;
+  for (const canonicalFile of featureFiles.filter((file2) => file2.replace(/\\/g, "/").includes("/.specs/"))) {
+    const isArtifact = canonicalFile.replace(/\\/g, "/").includes("/_artifact/features/");
+    try {
+      const canonicalSlice = parseGherkinFile(canonicalFile, repoRoot);
+      for (const node of canonicalSlice.nodes) {
+        if (node.type !== "Scenario") continue;
+        const key = scenarioKeyFor(node);
+        if (isArtifact) {
+          const tags = artifactMirrorTags.get(key) ?? /* @__PURE__ */ new Set();
+          for (const tag of node.tags) tags.add(tag);
+          artifactMirrorTags.set(key, tags);
+        } else {
+          canonicalScenarioKeys.add(key);
+          const owners = canonicalBodyOwners.get(scenarioBodyKey2(node)) ?? /* @__PURE__ */ new Set();
+          owners.add(node.spec ?? specOf(node.file) ?? "");
+          canonicalBodyOwners.set(scenarioBodyKey2(node), owners);
+        }
+      }
+    } catch {
+    }
+  }
   for (const abs of featureFiles) {
+    const mirrorHeader = !abs.replace(/\\/g, "/").includes("/.specs/") ? fs10.readFileSync(abs, "utf8").slice(0, 500).match(/^#\s*Source:\s+(\.specs\/[^\r\n]+\.feature)\s*$/m)?.[1] : void 0;
+    const mirrorSlug = mirrorHeader?.match(/^\.specs\/(.+)\/[^/]+\.feature$/)?.[1];
     let slice;
     try {
       slice = parseGherkinFile(abs, repoRoot);
     } catch {
       continue;
     }
+    const sourceText = fs10.readFileSync(abs, "utf8");
+    const explicitScenarioOwners = /* @__PURE__ */ new Map();
+    const sourceLines = sourceText.split(/\r?\n/);
+    for (let i = 0; i < sourceLines.length; i++) {
+      if (!/^\s*Scenario(?:\s+Outline)?:\s*/.test(sourceLines[i])) continue;
+      for (let j = i - 1; j >= 0; j--) {
+        if (sourceLines[j].trim() === "") continue;
+        if (/^\s*@\S/.test(sourceLines[j])) continue;
+        const owner = sourceLines[j].match(/^\s*#\s*Owner:\s*([a-z0-9][a-z0-9/-]*)\s*$/i)?.[1];
+        if (owner) explicitScenarioOwners.set(i + 1, owner);
+        break;
+      }
+    }
+    const relativeFeature = path6.relative(repoRoot, abs).split(path6.sep).join("/");
+    const hasDeclaredOwner = externalFeatureOwners.has(relativeFeature);
+    const declaredOwner = externalFeatureOwners.get(relativeFeature);
+    const featureHeader = sourceText.match(/^\s*#\s*Owner:\s*([a-z0-9][a-z0-9/-]*)\s*$/im)?.[1];
+    const fallbackOwner = hasDeclaredOwner ? declaredOwner ?? void 0 : featureHeader;
+    if (fallbackOwner || explicitScenarioOwners.size > 0) {
+      for (const edge of slice.edges) {
+        if (edge.from.includes(":")) continue;
+        const target = slice.nodes.find((node) => node.id === edge.to);
+        const owner = target?.type === "Scenario" ? explicitScenarioOwners.get(target.line) ?? fallbackOwner : fallbackOwner;
+        if (owner && nodes.has(`${owner}:${edge.from}`)) edge.from = `${owner}:${edge.from}`;
+      }
+      for (const node of slice.nodes) {
+        if (node.type !== "Scenario") continue;
+        const owner = explicitScenarioOwners.get(node.line) ?? fallbackOwner;
+        if (!owner) continue;
+        for (const tag of node.tags) {
+          const feature = tag.match(/^@feature(\d+)([a-z]?)$/i);
+          const requirement = tag.match(/^@((?:FR|NFR|AC)[A-Za-z0-9._-]+)$/i);
+          let from;
+          if (feature) {
+            const alias = `feature${feature[1]}${feature[2] ?? ""}`;
+            const aliasOwners = featureAliasOwners(nodes, repoRoot, owner, alias);
+            if (aliasOwners.length === 1) from = aliasOwners[0];
+            else if (aliasOwners.length === 0 && nodes.has(`${owner}:FR-${feature[1]}${feature[2] ?? ""}`)) from = `${owner}:FR-${feature[1]}${feature[2] ?? ""}`;
+          } else if (requirement && nodes.has(`${owner}:${requirement[1]}`)) {
+            from = `${owner}:${requirement[1]}`;
+          }
+          if (!from) continue;
+          if (!slice.edges.some((edge) => edge.from === from && edge.to === node.id && edge.type === "tested-by")) {
+            slice.edges.push({ from, to: node.id, type: "tested-by" });
+          }
+        }
+      }
+    }
+    const normalizedAbs = abs.replace(/\\/g, "/");
+    const isArtifact = normalizedAbs.includes("/_artifact/features/");
+    if (isArtifact || !normalizedAbs.includes("/.specs/")) {
+      const duplicateScenarioIds = new Set(
+        slice.nodes.filter((node) => {
+          const owner = mirrorSlug ?? fallbackOwner ?? (isArtifact ? node.spec : void 0);
+          return owner ? canonicalScenarioKeys.has(scenarioKeyFor(node, owner)) : (canonicalBodyOwners.get(scenarioBodyKey2(node))?.size ?? 0) === 1;
+        }).map((node) => node.id)
+      );
+      if (duplicateScenarioIds.size > 0) {
+        slice.nodes = slice.nodes.filter((node) => !duplicateScenarioIds.has(node.id));
+        slice.edges = slice.edges.filter((edge) => !duplicateScenarioIds.has(edge.from) && !duplicateScenarioIds.has(edge.to));
+      }
+    } else {
+      for (const node of slice.nodes) {
+        if (node.type !== "Scenario") continue;
+        const mirrorTags = artifactMirrorTags.get(scenarioKeyFor(node));
+        if (mirrorTags) node.tags = [.../* @__PURE__ */ new Set([...node.tags, ...mirrorTags])];
+      }
+    }
+    if (mirrorSlug) {
+      for (const edge of slice.edges) {
+        if (!edge.from.includes(":") && nodes.has(`${mirrorSlug}:${edge.from}`)) {
+          edge.from = `${mirrorSlug}:${edge.from}`;
+        }
+      }
+    }
     ingestSlice(slice);
   }
   const specDirs = /* @__PURE__ */ new Set();
   for (const abs of mdFiles) {
-    const base = path5.basename(abs);
+    const base = path6.basename(abs);
     if (base === "FILE_CHANGES.md" || base === "DESIGN.md") {
-      specDirs.add(path5.dirname(abs));
+      specDirs.add(path6.dirname(abs));
+    }
+  }
+  const bddOwnershipSeen = /* @__PURE__ */ new Set();
+  for (const requirementsAbs of mdFiles.filter((file2) => path6.basename(file2) === "REQUIREMENTS.md")) {
+    const relRequirements = path6.relative(repoRoot, requirementsAbs).split(path6.sep).join("/");
+    const slug = specOf(relRequirements);
+    if (!slug) continue;
+    const requirementsLines = fs10.readFileSync(requirementsAbs, "utf8").split(/\r?\n/);
+    let inBddSuiteLayout = false;
+    for (let i = 0; i < requirementsLines.length; i++) {
+      const line = requirementsLines[i];
+      if (/^##\s+/.test(line.trim())) {
+        inBddSuiteLayout = /^##\s+BDD Suite Layout\b/i.test(line.trim());
+        continue;
+      }
+      if (!inBddSuiteLayout) continue;
+      const link = line.match(/\]\(([^)]+\.feature)\)/i);
+      if (!link) continue;
+      const frs = [...line.matchAll(/\bFR-(\d+[a-z]?)\b/gi)].map((match) => `FR-${match[1]}`);
+      if (frs.length === 0) continue;
+      const linkedPath = link[1].replace(/\\/g, "/");
+      const featureRel = linkedPath.startsWith(".specs/") ? path6.posix.normalize(linkedPath) : linkedPath.startsWith("tests/") ? path6.posix.normalize(linkedPath) : path6.posix.normalize(`.specs/${slug}/${linkedPath}`);
+      const scenarios = [...nodes.values()].filter(
+        (node) => node.type === "Scenario" && node.file === featureRel
+      );
+      for (const scenario of scenarios) {
+        for (const fr of frs) {
+          const directId = `${slug}:${fr}`;
+          const owner = nodes.has(directId) ? directId : [...nodes.values()].find(
+            (node) => node.type === "FR" && node.spec === slug && localIdOf(node.id).toLowerCase() === fr.toLowerCase()
+          )?.id;
+          if (!owner) continue;
+          const key = `${owner}|${scenario.id}`;
+          if (bddOwnershipSeen.has(key)) continue;
+          bddOwnershipSeen.add(key);
+          edges.push({
+            from: owner,
+            to: scenario.id,
+            type: "tested-by",
+            metadata: {
+              producer: "requirements-bdd-layout",
+              source_file: relRequirements,
+              source_line: i + 1,
+              version: "1"
+            }
+          });
+        }
+      }
     }
   }
   const fileNodeIdByPath = /* @__PURE__ */ new Map();
@@ -55495,7 +56256,9 @@ function buildGraph(opts) {
       type: "implements",
       metadata: {
         file_path: filePath,
-        source_section: sourceSection
+        source_section: sourceSection,
+        source_file: sourceFile,
+        source_line: line
       }
     };
     if (action && ALLOWED_ACTIONS2.has(action)) {
@@ -55504,11 +56267,11 @@ function buildGraph(opts) {
     edges.push(edge);
   };
   for (const specDir of specDirs) {
-    const relDir = path5.relative(repoRoot, specDir).split(path5.sep).join("/");
+    const relDir = path6.relative(repoRoot, specDir).split(path6.sep).join("/");
     const slug = specOf(`${relDir}/FILE_CHANGES.md`);
     const qualifyFr = (fr) => slug ? `${slug}:${fr}` : fr;
-    const fcAbs = path5.join(specDir, "FILE_CHANGES.md");
-    if (fs9.existsSync(fcAbs)) {
+    const fcAbs = path6.join(specDir, "FILE_CHANGES.md");
+    if (fs10.existsSync(fcAbs)) {
       let rows = [];
       try {
         rows = parseFileChangesFile(fcAbs, { warnOnceState });
@@ -55519,12 +56282,12 @@ function buildGraph(opts) {
       for (const row of rows) {
         if (row.frs.length === 0) continue;
         for (const fr of row.frs) {
-          emitImplements(qualifyFr(fr), row.file_path, "FILE_CHANGES", relFile, 1, row.action);
+          emitImplements(qualifyFr(fr), row.file_path, "FILE_CHANGES", relFile, row.line ?? 1, row.action);
         }
       }
     }
-    const dAbs = path5.join(specDir, "DESIGN.md");
-    if (fs9.existsSync(dAbs)) {
+    const dAbs = path6.join(specDir, "DESIGN.md");
+    if (fs10.existsSync(dAbs)) {
       let refs = [];
       try {
         refs = parseDesignFile(dAbs);
@@ -55539,6 +56302,47 @@ function buildGraph(opts) {
         }
       }
     }
+  }
+  {
+    const featureOwners = /* @__PURE__ */ new Map();
+    for (const node of nodes.values()) {
+      if (node.type !== "FR" || !node.spec) continue;
+      const declaredAliases = (node.body ?? "").split(/\r?\n/).filter((line) => /^\s*(?:\*\*(?:Feature|BDD|Executable evidence aliases)(?::)?\*\*:?\s*|Executable evidence aliases\s*:)/i.test(line)).join("\n");
+      const source = `${node.title ?? ""}
+${declaredAliases}`;
+      const aliases = [...source.matchAll(/@feature(\d+)([a-z]?)/gi)].map((match) => `feature${match[1]}${match[2] ?? ""}`);
+      node.featureAliases = [.../* @__PURE__ */ new Set([...node.featureAliases ?? [], ...aliases])];
+      for (const alias of aliases) {
+        const key = `${node.spec}:${alias}`;
+        const previous = featureOwners.get(key);
+        featureOwners.set(key, previous === void 0 ? node.id : previous === node.id ? node.id : null);
+      }
+    }
+    for (const specDir of specDirs) {
+      const relDir = path6.relative(repoRoot, specDir).split(path6.sep).join("/");
+      const slug = specOf(`${relDir}/FILE_CHANGES.md`);
+      if (!slug) continue;
+      const requirementsPath = path6.join(specDir, "REQUIREMENTS.md");
+      if (!fs10.existsSync(requirementsPath)) continue;
+      for (const line of fs10.readFileSync(requirementsPath, "utf8").split(/\r?\n/)) {
+        const featureTags = [...line.matchAll(/@feature(\d+)([a-z]?)/gi)];
+        if (featureTags.length === 0) continue;
+        for (const frMatch of line.matchAll(/\bFR-(\d+[a-z]?)\b/g)) {
+          const frId = `${slug}:FR-${frMatch[1]}`;
+          if (!nodes.has(frId)) continue;
+          for (const featureTag of featureTags) {
+            const key = `${slug}:feature${featureTag[1]}${featureTag[2] ?? ""}`;
+            const ownerNode = nodes.get(frId);
+            if (ownerNode?.type === "FR") {
+              ownerNode.featureAliases = [.../* @__PURE__ */ new Set([...ownerNode.featureAliases ?? [], `feature${featureTag[1]}${featureTag[2] ?? ""}`])];
+            }
+            const previous = featureOwners.get(key);
+            featureOwners.set(key, previous === void 0 ? frId : previous === frId ? frId : null);
+          }
+        }
+      }
+    }
+    resolveFeatureTagEdges(nodes, edges, repoRoot);
   }
   {
     const byLocalId = /* @__PURE__ */ new Map();
@@ -55557,16 +56361,84 @@ function buildGraph(opts) {
       e.to = resolveBare(e.to);
     }
   }
-  if (!opts.skipNdjson) {
-    const patch = parseNdjsonFile(ndjsonPath);
+  const executionArtifacts = [];
+  if (opts.skipNdjson) {
+    for (const [kind, provenance, artifactPath] of [
+      ["cucumber-messages-ndjson", "cucumber-messages-ndjson", ndjsonPath],
+      ["pytest-bdd-cucumber-json", PYTEST_BDD_SOURCE, pytestBddPath]
+    ]) {
+      executionArtifacts.push({
+        kind,
+        canonical: true,
+        state: "SKIPPED",
+        reason: "INGESTION_SKIPPED",
+        provenance,
+        path: path6.relative(repoRoot, artifactPath).split(path6.sep).join("/"),
+        run_id: null,
+        timestamp: null,
+        counts: { parsed: 0, matched: 0, unmatched: 0, malformed: 0 }
+      });
+    }
+  } else {
+    const ndjson = parseNdjsonArtifactFile(ndjsonPath);
+    const pytestBdd = parsePytestBddReportFile(pytestBddPath, repoRoot);
     const overlay = parseScenarioOverlayFile(scenarioOverlayPath);
     const scenarioIter = [];
     for (const n of nodes.values()) {
       if (n.type === "Scenario") scenarioIter.push(n);
     }
-    const applied = applyTestResults(scenarioIter, patch);
+    const ndjsonApplied = ndjson.state === "INGESTED" ? applyTestResults(scenarioIter, ndjson.patch) : 0;
+    executionArtifacts.push({
+      kind: "cucumber-messages-ndjson",
+      canonical: true,
+      state: ndjson.state,
+      reason: ndjson.reason,
+      provenance: "cucumber-messages-ndjson",
+      path: path6.relative(repoRoot, ndjsonPath).split(path6.sep).join("/"),
+      run_id: null,
+      timestamp: ndjson.timestamp,
+      counts: {
+        parsed: ndjson.patch.records,
+        matched: ndjsonApplied,
+        unmatched: Math.max(0, ndjson.patch.records - ndjsonApplied),
+        malformed: ndjson.patch.malformed
+      }
+    });
+    for (const scenario of scenarioIter) {
+      if (scenario.lastResult) {
+        scenario.canonicalResult = scenario.lastResult;
+        scenario.canonicalRunAt = scenario.lastRunAt;
+        scenario.canonicalRunId = scenario.lastResultRunId;
+        scenario.canonicalSource = scenario.lastResultSource;
+      }
+    }
+    const pytestBddApplied = pytestBdd.state === "INGESTED" ? applyScenarioOverlayResults(scenarioIter, pytestBdd.patch, { repoRoot, currentGitSha }) : 0;
+    executionArtifacts.push({
+      kind: "pytest-bdd-cucumber-json",
+      canonical: true,
+      state: pytestBdd.state,
+      reason: pytestBdd.reason,
+      provenance: PYTEST_BDD_SOURCE,
+      path: pytestBdd.reportPath,
+      run_id: pytestBdd.runId,
+      timestamp: pytestBdd.reportTime,
+      counts: {
+        parsed: pytestBdd.executed,
+        matched: pytestBddApplied,
+        unmatched: Math.max(0, pytestBdd.executed - pytestBddApplied),
+        malformed: pytestBdd.malformed
+      }
+    });
+    for (const scenario of scenarioIter) {
+      if (scenario.lastResultSource === PYTEST_BDD_SOURCE && scenario.lastResult) {
+        scenario.canonicalResult = scenario.lastResult;
+        scenario.canonicalRunAt = scenario.lastRunAt;
+        scenario.canonicalRunId = scenario.lastResultRunId;
+        scenario.canonicalSource = scenario.lastResultSource;
+      }
+    }
     const overlayApplied = applyScenarioOverlayResults(scenarioIter, overlay, { repoRoot, currentGitSha });
-    if (applied > 0 || overlayApplied > 0) {
+    if (ndjsonApplied > 0 || pytestBddApplied > 0 || overlayApplied > 0) {
       for (const s of scenarioIter) {
         if (s.lastResult) {
           edges.push({ from: s.id, to: `RESULT-${s.id}-${s.lastResult}`, type: "last-result" });
@@ -55588,6 +56460,7 @@ function buildGraph(opts) {
     edges,
     definitions,
     backlinks,
+    executionArtifacts,
     // File nodes (2b) and ndjson patches are EXCLUDED by construction —
     // mergeNode wraps only the parser-slice population, mirroring
     // collision-probe's rawCollisionScan scope.
@@ -55646,8 +56519,52 @@ function buildGraphFromCwd(cwd = process.cwd(), opts = {}) {
 
 // tools/spec-graph/incremental.ts
 init_esm2();
-import fs10 from "node:fs";
-import path6 from "node:path";
+import fs11 from "node:fs";
+import path7 from "node:path";
+function scenarioBodyKey(node) {
+  return `${node.title ?? ""}\0${node.steps.map((step) => `${step.keyword}:${step.text}`).join("")}`;
+}
+function deduplicateExternalFeatureSlice(graph, repoRoot, relativePath) {
+  const normalized = relativePath.replace(/\\/g, "/");
+  const isSpecPath = normalized.startsWith(".specs/") || normalized.includes("/.specs/");
+  const isArtifact = normalized.includes("/_artifact/features/");
+  if (isSpecPath && !isArtifact) return { nodesRemoved: 0, edgesRemoved: 0 };
+  const source = fs11.existsSync(path7.resolve(repoRoot, relativePath)) ? fs11.readFileSync(path7.resolve(repoRoot, relativePath), "utf8") : "";
+  const mirrorOwner = source.match(/^\s*#\s*Source:\s+\.specs\/(.+)\/[^/\r\n]+\.feature\s*$/m)?.[1] ?? source.match(/^\s*#\s*Owner:\s*([a-z0-9][a-z0-9/-]*)\s*$/im)?.[1] ?? void 0;
+  const canonicalKeys = /* @__PURE__ */ new Set();
+  const canonicalBodyOwners = /* @__PURE__ */ new Map();
+  for (const node of graph.nodes.values()) {
+    if (node.type !== "Scenario") continue;
+    const file2 = node.file.replace(/\\/g, "/");
+    const nodeIsSpecPath = file2.startsWith(".specs/") || file2.includes("/.specs/");
+    if (!nodeIsSpecPath || file2.includes("/_artifact/features/")) continue;
+    const owner = node.spec;
+    if (!owner) continue;
+    const body = scenarioBodyKey(node);
+    canonicalKeys.add(`${owner}${body}`);
+    const owners = canonicalBodyOwners.get(body) ?? /* @__PURE__ */ new Set();
+    owners.add(owner);
+    canonicalBodyOwners.set(body, owners);
+  }
+  const duplicateIds = /* @__PURE__ */ new Set();
+  for (const node of graph.nodes.values()) {
+    if (node.type !== "Scenario" || node.file !== relativePath) continue;
+    const body = scenarioBodyKey(node);
+    const duplicate = mirrorOwner ? canonicalKeys.has(`${mirrorOwner}${body}`) : (canonicalBodyOwners.get(body)?.size ?? 0) === 1;
+    if (duplicate) duplicateIds.add(node.id);
+  }
+  if (duplicateIds.size === 0) return { nodesRemoved: 0, edgesRemoved: 0 };
+  const beforeEdges = graph.edges.length;
+  graph.edges = graph.edges.filter((edge) => !duplicateIds.has(edge.from) && !duplicateIds.has(edge.to));
+  const duplicateLines = new Set(
+    [...duplicateIds].map((id) => graph.nodes.get(id)?.line)
+  );
+  for (const id of duplicateIds) graph.nodes.delete(id);
+  for (const [alias, location] of graph.definitions) {
+    if (location.file === relativePath && duplicateLines.has(location.line)) graph.definitions.delete(alias);
+  }
+  return { nodesRemoved: duplicateIds.size, edgesRemoved: beforeEdges - graph.edges.length };
+}
 function dropFileSlice(graph, relativePath) {
   const removedNodeIds = /* @__PURE__ */ new Set();
   for (const [id, node] of graph.nodes) {
@@ -55691,11 +56608,12 @@ function classify(relativePath) {
   if (relativePath.endsWith(".feature")) return "feature";
   if (relativePath.endsWith(".md")) return "md";
   if (relativePath.endsWith(".scenario-results.ndjson")) return "overlay";
+  if (relativePath.endsWith("/pytest-bdd-report.json") || relativePath === "pytest-bdd-report.json") return "pytest-bdd";
   if (relativePath.endsWith(".ndjson")) return "ndjson";
   return "unknown";
 }
 function toPosixRelative(repoRoot, absPath) {
-  return path6.relative(repoRoot, absPath).split(path6.sep).join("/");
+  return path7.relative(repoRoot, absPath).split(path7.sep).join("/");
 }
 function refreshResultEdges(graph, scenarios) {
   const scenarioIds = new Set(scenarios.map((s) => s.id));
@@ -55733,9 +56651,13 @@ function collectScenarios(graph) {
 function clearResultEvidence(scenario) {
   delete scenario.lastResult;
   delete scenario.lastRunAt;
+  delete scenario.lastResultSource;
+  delete scenario.lastResultRunId;
   delete scenario.resultStale;
   delete scenario.canonicalResult;
   delete scenario.canonicalRunAt;
+  delete scenario.canonicalRunId;
+  delete scenario.canonicalSource;
   delete scenario.trace;
   delete scenario.durationMs;
   delete scenario.failingStep;
@@ -55743,47 +56665,115 @@ function clearResultEvidence(scenario) {
 function refreshResultFiles(graph, repoRoot, opts = {}) {
   const scenarios = collectScenarios(graph);
   for (const scenario of scenarios) clearResultEvidence(scenario);
-  applyTestResults(scenarios, parseNdjsonFile(path6.resolve(repoRoot, opts.ndjsonPath ?? ".dev-pomogator/.last-test-run.ndjson")));
-  applyScenarioOverlayResults(scenarios, parseScenarioOverlayFile(path6.resolve(repoRoot, opts.scenarioOverlayPath ?? ".dev-pomogator/.scenario-results.ndjson")), { repoRoot });
+  const canonicalPath = path7.resolve(repoRoot, opts.ndjsonPath ?? ".dev-pomogator/.last-test-run.ndjson");
+  const canonical = parseNdjsonArtifactFile(canonicalPath);
+  const canonicalApplied = canonical.state === "INGESTED" ? applyTestResults(scenarios, canonical.patch) : 0;
+  for (const scenario of scenarios) {
+    if (!scenario.lastResult) continue;
+    scenario.canonicalResult = scenario.lastResult;
+    scenario.canonicalRunAt = scenario.lastRunAt;
+    scenario.canonicalRunId = scenario.lastResultRunId;
+    scenario.canonicalSource = scenario.lastResultSource;
+  }
+  const pytestBddPath = path7.resolve(repoRoot, opts.pytestBddPath ?? DEFAULT_PYTEST_BDD_REPORT_PATH);
+  const pytestBdd = parsePytestBddReportFile(pytestBddPath, repoRoot);
+  const pytestBddApplied = pytestBdd.state === "INGESTED" ? applyScenarioOverlayResults(scenarios, pytestBdd.patch, { repoRoot }) : 0;
+  for (const scenario of scenarios) {
+    if (scenario.lastResultSource === PYTEST_BDD_SOURCE && scenario.lastResult) {
+      scenario.canonicalResult = scenario.lastResult;
+      scenario.canonicalRunAt = scenario.lastRunAt;
+      scenario.canonicalRunId = scenario.lastResultRunId;
+      scenario.canonicalSource = scenario.lastResultSource;
+    }
+  }
+  const overlayApplied = applyScenarioOverlayResults(
+    scenarios,
+    parseScenarioOverlayFile(path7.resolve(repoRoot, opts.scenarioOverlayPath ?? ".dev-pomogator/.scenario-results.ndjson")),
+    { repoRoot }
+  );
+  const artifacts = [
+    {
+      kind: "cucumber-messages-ndjson",
+      canonical: true,
+      state: canonical.state,
+      reason: canonical.reason,
+      provenance: "cucumber-messages-ndjson",
+      path: path7.relative(repoRoot, canonicalPath).split(path7.sep).join("/"),
+      run_id: null,
+      timestamp: canonical.timestamp,
+      counts: {
+        parsed: canonical.patch.records,
+        matched: canonicalApplied,
+        unmatched: Math.max(0, canonical.patch.records - canonicalApplied),
+        malformed: canonical.patch.malformed
+      }
+    },
+    {
+      kind: "pytest-bdd-cucumber-json",
+      canonical: true,
+      state: pytestBdd.state,
+      reason: pytestBdd.reason,
+      provenance: PYTEST_BDD_SOURCE,
+      path: pytestBdd.reportPath,
+      run_id: pytestBdd.runId,
+      timestamp: pytestBdd.reportTime,
+      counts: {
+        parsed: pytestBdd.executed,
+        matched: pytestBddApplied,
+        unmatched: Math.max(0, pytestBdd.executed - pytestBddApplied),
+        malformed: pytestBdd.malformed
+      }
+    }
+  ];
+  graph.executionArtifacts = artifacts;
   refreshResultEdges(graph, scenarios);
   refreshEndpointViolations(graph);
   rebuildBacklinks(graph);
 }
 function applyChange(graph, repoRoot, relativePath, resultPaths = {}) {
-  const absPath = path6.resolve(repoRoot, relativePath);
+  const absPath = path7.resolve(repoRoot, relativePath);
   const kind = classify(relativePath);
   dropFileSlice(graph, relativePath);
   if (kind === "md") {
-    if (!fs10.existsSync(absPath)) return { nodesDelta: 0, edgesDelta: 0 };
+    if (!fs11.existsSync(absPath)) return { nodesDelta: 0, edgesDelta: 0 };
     const slice = parseMarkdownFile(absPath, repoRoot);
     const delta = applySlice(graph, slice);
-    if (path6.basename(absPath) === "TASKS.md") {
+    if (path7.basename(absPath) === "TASKS.md") {
       const taskSlice = parseTasksFile(absPath, repoRoot);
       const taskDelta = applySlice(graph, taskSlice);
       delta.nodesDelta += taskDelta.nodesDelta;
       delta.edgesDelta += taskDelta.edgesDelta;
     }
+    resolveFeatureTagEdges(graph.nodes, graph.edges, repoRoot);
     refreshEndpointViolations(graph);
     rebuildBacklinks(graph);
     return delta;
   }
   if (kind === "feature") {
-    if (!fs10.existsSync(absPath)) return { nodesDelta: 0, edgesDelta: 0 };
+    if (!fs11.existsSync(absPath)) return { nodesDelta: 0, edgesDelta: 0 };
     const slice = parseGherkinFile(absPath, repoRoot);
     const delta = applySlice(graph, slice);
+    const mirrorDelta = deduplicateExternalFeatureSlice(graph, repoRoot, relativePath);
+    delta.nodesDelta -= mirrorDelta.nodesRemoved;
+    delta.edgesDelta -= mirrorDelta.edgesRemoved;
+    resolveFeatureTagEdges(graph.nodes, graph.edges, repoRoot);
     refreshResultFiles(graph, repoRoot, resultPaths);
     return delta;
   }
-  if (kind === "ndjson" || kind === "overlay") {
-    if (!fs10.existsSync(absPath)) return { nodesDelta: 0, edgesDelta: 0 };
+  if (kind === "ndjson" || kind === "overlay" || kind === "pytest-bdd") {
+    if (!fs11.existsSync(absPath)) return { nodesDelta: 0, edgesDelta: 0 };
     refreshResultFiles(graph, repoRoot, resultPaths);
     return { nodesDelta: 0, edgesDelta: 0 };
   }
   return { nodesDelta: 0, edgesDelta: 0 };
 }
-function applyUnlink(graph, relativePath) {
+function applyUnlink(graph, relativePath, repoRoot, resultPaths = {}) {
   const before = { n: graph.nodes.size, e: graph.edges.length };
+  const kind = classify(relativePath);
   dropFileSlice(graph, relativePath);
+  if (repoRoot && (kind === "ndjson" || kind === "overlay" || kind === "pytest-bdd")) {
+    refreshResultFiles(graph, repoRoot, resultPaths);
+  }
   refreshEndpointViolations(graph);
   rebuildBacklinks(graph);
   return {
@@ -55797,22 +56787,24 @@ function startWatching(graph, opts) {
   const featureRoots = opts.featureRoots ?? [".specs", "tests/features"];
   const ndjsonPath = opts.ndjsonPath ?? ".dev-pomogator/.last-test-run.ndjson";
   const scenarioOverlayPath = opts.scenarioOverlayPath ?? ".dev-pomogator/.scenario-results.ndjson";
+  const pytestBddPath = opts.pytestBddPath ?? DEFAULT_PYTEST_BDD_REPORT_PATH;
   const watched = [];
   for (const r of mdRoots) {
-    const abs = path6.resolve(repoRoot, r);
-    if (fs10.existsSync(abs)) watched.push(abs);
+    const abs = path7.resolve(repoRoot, r);
+    if (fs11.existsSync(abs)) watched.push(abs);
   }
   for (const r of featureRoots) {
-    const abs = path6.resolve(repoRoot, r);
-    if (fs10.existsSync(abs)) watched.push(abs);
+    const abs = path7.resolve(repoRoot, r);
+    if (fs11.existsSync(abs)) watched.push(abs);
   }
-  watched.push(path6.resolve(repoRoot, ndjsonPath));
-  watched.push(path6.resolve(repoRoot, scenarioOverlayPath));
+  watched.push(path7.resolve(repoRoot, ndjsonPath));
+  watched.push(path7.resolve(repoRoot, scenarioOverlayPath));
+  watched.push(path7.resolve(repoRoot, pytestBddPath));
   const watcher = esm_default.watch(watched, {
     ignored: (p) => /(?:^|\/)(?:node_modules|\.git|dist|\.dev-pomogator-tmp|\.stryker-tmp|__pycache__)(?:\/|$)/.test(
-      p.split(path6.sep).join("/")
+      p.split(path7.sep).join("/")
     ) && // Allow the canonical ndjson + overlay paths even though they live under .dev-pomogator/.
-    !p.endsWith(".last-test-run.ndjson") && !p.endsWith(".scenario-results.ndjson"),
+    !p.endsWith(".last-test-run.ndjson") && !p.endsWith(".scenario-results.ndjson") && !p.endsWith("pytest-bdd-report.json"),
     ignoreInitial: true,
     usePolling: opts.usePolling ?? false,
     interval: opts.interval ?? 100,
@@ -55825,9 +56817,9 @@ function startWatching(graph, opts) {
     if (classify(relativePath) === "unknown") return;
     const start = process.hrtime.bigint();
     try {
-      const { nodesDelta, edgesDelta } = applyChange(graph, repoRoot, relativePath, { ndjsonPath, scenarioOverlayPath });
-      const durationMs = Number(process.hrtime.bigint() - start) / 1e6;
-      opts.onPatch?.({ kind, file: relativePath, durationMs, nodesDelta, edgesDelta });
+      const { nodesDelta, edgesDelta } = applyChange(graph, repoRoot, relativePath, { ndjsonPath, scenarioOverlayPath, pytestBddPath });
+      const durationMs2 = Number(process.hrtime.bigint() - start) / 1e6;
+      opts.onPatch?.({ kind, file: relativePath, durationMs: durationMs2, nodesDelta, edgesDelta });
     } catch (err) {
       opts.onError?.(err instanceof Error ? err : new Error(String(err)));
     }
@@ -55837,9 +56829,14 @@ function startWatching(graph, opts) {
     if (classify(relativePath) === "unknown") return;
     const start = process.hrtime.bigint();
     try {
-      const { nodesDelta, edgesDelta } = applyUnlink(graph, relativePath);
-      const durationMs = Number(process.hrtime.bigint() - start) / 1e6;
-      opts.onPatch?.({ kind: "unlink", file: relativePath, durationMs, nodesDelta, edgesDelta });
+      const { nodesDelta, edgesDelta } = applyUnlink(
+        graph,
+        relativePath,
+        repoRoot,
+        { ndjsonPath, scenarioOverlayPath, pytestBddPath }
+      );
+      const durationMs2 = Number(process.hrtime.bigint() - start) / 1e6;
+      opts.onPatch?.({ kind: "unlink", file: relativePath, durationMs: durationMs2, nodesDelta, edgesDelta });
     } catch (err) {
       opts.onError?.(err instanceof Error ? err : new Error(String(err)));
     }
@@ -55855,8 +56852,8 @@ function startWatching(graph, opts) {
 }
 
 // tools/spec-graph/task-census.ts
-import fs11 from "node:fs";
-import path7 from "node:path";
+import fs12 from "node:fs";
+import path8 from "node:path";
 var HARD_NEGATIVE = /* @__PURE__ */ new Set(["failed", "undefined", "ambiguous"]);
 var UNCONFIRMED = /* @__PURE__ */ new Set(["not_run", "stale"]);
 function computeTaskCensus(graph, opts = {}) {
@@ -55911,34 +56908,34 @@ function computeTaskCensus(graph, opts = {}) {
   );
   return { total, specs };
 }
-var CACHE_REL = path7.join(".dev-pomogator", ".task-census.json");
-var PREV_REL = path7.join(".dev-pomogator", ".task-census.prev.json");
+var CACHE_REL = path8.join(".dev-pomogator", ".task-census.json");
+var PREV_REL = path8.join(".dev-pomogator", ".task-census.prev.json");
 function taskCensusCachePath(repoRoot) {
-  return path7.join(repoRoot, CACHE_REL);
+  return path8.join(repoRoot, CACHE_REL);
 }
 function taskCensusPrevPath(repoRoot) {
-  return path7.join(repoRoot, PREV_REL);
+  return path8.join(repoRoot, PREV_REL);
 }
 function writeTaskCensusCache(repoRoot, census, ts) {
   const file2 = taskCensusCachePath(repoRoot);
-  fs11.mkdirSync(path7.dirname(file2), { recursive: true });
+  fs12.mkdirSync(path8.dirname(file2), { recursive: true });
   try {
     const cur = readTaskCensusCache(repoRoot);
     if (cur && sumTotal(cur) !== sumTotal(census)) {
-      fs11.copyFileSync(file2, taskCensusPrevPath(repoRoot));
+      fs12.copyFileSync(file2, taskCensusPrevPath(repoRoot));
     }
   } catch {
   }
   const tmp = `${file2}.${process.pid}.${Math.random().toString(36).slice(2)}.tmp`;
-  fs11.writeFileSync(tmp, JSON.stringify({ ...census, ts }, null, 2) + "\n", "utf-8");
-  fs11.renameSync(tmp, file2);
+  fs12.writeFileSync(tmp, JSON.stringify({ ...census, ts }, null, 2) + "\n", "utf-8");
+  fs12.renameSync(tmp, file2);
 }
 function sumTotal(c) {
   return c.total.open + c.total.doneRed + c.total.doneUnrun;
 }
 function readCacheFile(p) {
   try {
-    const parsed = JSON.parse(fs11.readFileSync(p, "utf-8"));
+    const parsed = JSON.parse(fs12.readFileSync(p, "utf-8"));
     if (!parsed?.total || typeof parsed.total.open !== "number") return null;
     return parsed;
   } catch {
@@ -55950,54 +56947,54 @@ function readTaskCensusCache(repoRoot) {
 }
 
 // tools/spec-graph/spec-status-store.ts
-import fs12 from "node:fs";
-import path8 from "node:path";
+import fs13 from "node:fs";
+import path9 from "node:path";
 var SPEC_STATUSES = ["active", "backlog"];
 var SENTINEL = ".spec-status";
 function statusPath(repoRoot, slug) {
-  return path8.join(repoRoot, ".specs", slug, SENTINEL);
+  return path9.join(repoRoot, ".specs", slug, SENTINEL);
 }
 function readSpecStatus(repoRoot, slug) {
   try {
-    const raw = fs12.readFileSync(statusPath(repoRoot, slug), "utf-8").trim();
+    const raw = fs13.readFileSync(statusPath(repoRoot, slug), "utf-8").trim();
     return SPEC_STATUSES.includes(raw) ? raw : "active";
   } catch {
     return "active";
   }
 }
 function writeSpecStatus(repoRoot, slug, status) {
-  const specDir = path8.join(repoRoot, ".specs", slug);
-  if (!fs12.existsSync(specDir)) throw new Error(`spec not found: ${slug} (no ${path8.join(".specs", slug)})`);
+  const specDir = path9.join(repoRoot, ".specs", slug);
+  if (!fs13.existsSync(specDir)) throw new Error(`spec not found: ${slug} (no ${path9.join(".specs", slug)})`);
   const p = statusPath(repoRoot, slug);
   if (status === "active") {
     try {
-      fs12.unlinkSync(p);
+      fs13.unlinkSync(p);
     } catch {
     }
     return;
   }
   const tmp = `${p}.tmp.${process.pid}`;
-  fs12.writeFileSync(tmp, status + "\n");
-  fs12.renameSync(tmp, p);
+  fs13.writeFileSync(tmp, status + "\n");
+  fs13.renameSync(tmp, p);
 }
 function backlogSpecs(repoRoot) {
   const out = /* @__PURE__ */ new Set();
-  const root = path8.join(repoRoot, ".specs");
+  const root = path9.join(repoRoot, ".specs");
   const walk = (dir) => {
     let ents;
     try {
-      ents = fs12.readdirSync(dir, { withFileTypes: true });
+      ents = fs13.readdirSync(dir, { withFileTypes: true });
     } catch {
       return;
     }
     for (const e of ents) {
-      const full = path8.join(dir, e.name);
+      const full = path9.join(dir, e.name);
       if (e.isDirectory()) {
         walk(full);
       } else if (e.name === SENTINEL) {
         try {
-          if (fs12.readFileSync(full, "utf-8").trim() === "backlog") {
-            out.add(path8.relative(root, dir).split(path8.sep).join("/"));
+          if (fs13.readFileSync(full, "utf-8").trim() === "backlog") {
+            out.add(path9.relative(root, dir).split(path9.sep).join("/"));
           }
         } catch {
         }
@@ -56009,8 +57006,8 @@ function backlogSpecs(repoRoot) {
 }
 
 // tools/spec-mcp-server/lock-manager.ts
-import fs13 from "node:fs";
-import path9 from "node:path";
+import fs14 from "node:fs";
+import path10 from "node:path";
 function detectEnvironment(envVars = process.env) {
   if (envVars.CODESPACES === "true" && envVars.CODESPACE_NAME) {
     return `codespaces:${envVars.CODESPACE_NAME}`;
@@ -56036,13 +57033,13 @@ function isPidAlive(pid) {
   }
 }
 function lockPath(repoRoot) {
-  return path9.join(repoRoot, ".dev-pomogator", ".mcp-lock.json");
+  return path10.join(repoRoot, ".dev-pomogator", ".mcp-lock.json");
 }
 function readLock(repoRoot) {
   const p = lockPath(repoRoot);
-  if (!fs13.existsSync(p)) return null;
+  if (!fs14.existsSync(p)) return null;
   try {
-    const raw = fs13.readFileSync(p, "utf8");
+    const raw = fs14.readFileSync(p, "utf8");
     const parsed = JSON.parse(raw);
     if (typeof parsed.pid !== "number") return null;
     return parsed;
@@ -56052,7 +57049,7 @@ function readLock(repoRoot) {
 }
 function acquireLock(opts) {
   const lockFile = lockPath(opts.repoRoot);
-  fs13.mkdirSync(path9.dirname(lockFile), { recursive: true });
+  fs14.mkdirSync(path10.dirname(lockFile), { recursive: true });
   const record2 = {
     pid: process.pid,
     env: opts.env ?? detectEnvironment(),
@@ -56061,7 +57058,7 @@ function acquireLock(opts) {
     argv: process.argv.slice(2)
   };
   const write = () => {
-    fs13.writeFileSync(lockFile, JSON.stringify(record2, null, 2), { flag: "wx" });
+    fs14.writeFileSync(lockFile, JSON.stringify(record2, null, 2), { flag: "wx" });
   };
   try {
     write();
@@ -56078,7 +57075,7 @@ function acquireLock(opts) {
       throw e;
     }
     try {
-      fs13.unlinkSync(lockFile);
+      fs14.unlinkSync(lockFile);
     } catch {
     }
     write();
@@ -56091,7 +57088,7 @@ function acquireLock(opts) {
       if (released) return;
       record2.last_heartbeat = (/* @__PURE__ */ new Date()).toISOString();
       try {
-        fs13.writeFileSync(lockFile, JSON.stringify(record2, null, 2));
+        fs14.writeFileSync(lockFile, JSON.stringify(record2, null, 2));
       } catch {
       }
     },
@@ -56101,7 +57098,7 @@ function acquireLock(opts) {
       try {
         const current = readLock(opts.repoRoot);
         if (current?.pid === record2.pid) {
-          fs13.unlinkSync(lockFile);
+          fs14.unlinkSync(lockFile);
         }
       } catch {
       }
@@ -56138,7 +57135,7 @@ function acquireLockOrReadOnly(opts) {
 var WRITE_LOCK_FILE = ".mcp-write.lock";
 var writeLockDepth = 0;
 function writeLockPath(repoRoot) {
-  return path9.join(repoRoot, ".dev-pomogator", WRITE_LOCK_FILE);
+  return path10.join(repoRoot, ".dev-pomogator", WRITE_LOCK_FILE);
 }
 function sleepSync(ms) {
   Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, Math.max(1, ms));
@@ -56153,21 +57150,21 @@ function withWriteLock(repoRoot, fn, opts = {}) {
     }
   }
   const lockFile = writeLockPath(repoRoot);
-  fs13.mkdirSync(path9.dirname(lockFile), { recursive: true });
+  fs14.mkdirSync(path10.dirname(lockFile), { recursive: true });
   const retries = opts.retries ?? 100;
   const intervalMs = opts.intervalMs ?? 50;
   const payload = JSON.stringify({ pid: process.pid, started_at: (/* @__PURE__ */ new Date()).toISOString() });
   let acquired = false;
   for (let i = 0; i <= retries && !acquired; i++) {
     try {
-      fs13.writeFileSync(lockFile, payload, { flag: "wx" });
+      fs14.writeFileSync(lockFile, payload, { flag: "wx" });
       acquired = true;
     } catch (err) {
       if (err.code !== "EEXIST") throw err;
       try {
-        const cur = JSON.parse(fs13.readFileSync(lockFile, "utf8"));
+        const cur = JSON.parse(fs14.readFileSync(lockFile, "utf8"));
         if (typeof cur.pid === "number" && !isPidAlive(cur.pid)) {
-          fs13.unlinkSync(lockFile);
+          fs14.unlinkSync(lockFile);
           continue;
         }
       } catch {
@@ -56178,7 +57175,7 @@ function withWriteLock(repoRoot, fn, opts = {}) {
   if (!acquired) {
     let holder;
     try {
-      holder = JSON.parse(fs13.readFileSync(lockFile, "utf8"));
+      holder = JSON.parse(fs14.readFileSync(lockFile, "utf8"));
     } catch {
     }
     const e = new Error(`spec write-lock busy after ${retries} retries`);
@@ -56192,16 +57189,16 @@ function withWriteLock(repoRoot, fn, opts = {}) {
   } finally {
     writeLockDepth = 0;
     try {
-      const cur = JSON.parse(fs13.readFileSync(lockFile, "utf8"));
-      if (cur.pid === process.pid) fs13.unlinkSync(lockFile);
+      const cur = JSON.parse(fs14.readFileSync(lockFile, "utf8"));
+      if (cur.pid === process.pid) fs14.unlinkSync(lockFile);
     } catch {
     }
   }
 }
 
 // tools/spec-mcp-server/sqlite/wrapper.ts
-import fs14 from "node:fs";
-import path10 from "node:path";
+import fs15 from "node:fs";
+import path11 from "node:path";
 var SCHEMA_VERSION = 2;
 var SCHEMA_SQL = `
 PRAGMA journal_mode=WAL;
@@ -56234,7 +57231,7 @@ CREATE INDEX IF NOT EXISTS idx_edges_src ON edges(src);
 CREATE INDEX IF NOT EXISTS idx_edges_dst ON edges(dst);
 `;
 function dbPathFor(repoRoot) {
-  return path10.join(repoRoot, ".dev-pomogator", ".spec-index.sqlite");
+  return path11.join(repoRoot, ".dev-pomogator", ".spec-index.sqlite");
 }
 async function loadBetterSqlite(loader) {
   try {
@@ -56260,7 +57257,7 @@ function noopBackend(reason) {
 }
 async function openDatabase(opts) {
   const dbPath = dbPathFor(opts.repoRoot);
-  fs14.mkdirSync(path10.dirname(dbPath), { recursive: true });
+  fs15.mkdirSync(path11.dirname(dbPath), { recursive: true });
   const ctor = await loadBetterSqlite(opts.loader);
   if (typeof ctor !== "function") {
     return {
@@ -56317,17 +57314,17 @@ function integrityCheck(handle) {
   return rows[0].integrity_check;
 }
 function quarantineCorrupt(dbPath, now = /* @__PURE__ */ new Date()) {
-  if (!fs14.existsSync(dbPath)) return null;
+  if (!fs15.existsSync(dbPath)) return null;
   const suffix = now.toISOString().replace(/[:.]/g, "-");
   const target = `${dbPath}.corrupt-${suffix}`;
-  fs14.renameSync(dbPath, target);
+  fs15.renameSync(dbPath, target);
   return target;
 }
 function logSqliteWarning(repoRoot, message, now) {
   try {
-    const logDir = path10.join(repoRoot, ".dev-pomogator", "logs");
-    fs14.mkdirSync(logDir, { recursive: true });
-    fs14.appendFileSync(path10.join(logDir, "sqlite.log"), `${now.toISOString()} [WARN] ${message}
+    const logDir = path11.join(repoRoot, ".dev-pomogator", "logs");
+    fs15.mkdirSync(logDir, { recursive: true });
+    fs15.appendFileSync(path11.join(logDir, "sqlite.log"), `${now.toISOString()} [WARN] ${message}
 `);
   } catch {
   }
@@ -56445,13 +57442,13 @@ function loadGraph(handle, sourceFingerprint) {
 // tools/spec-mcp-server/lifecycle.ts
 import { createHash as createHash2 } from "node:crypto";
 async function probeNativeEvents(repoRoot, timeoutMs) {
-  const dir = path11.join(repoRoot, ".dev-pomogator");
+  const dir = path12.join(repoRoot, ".dev-pomogator");
   try {
-    fs15.mkdirSync(dir, { recursive: true });
+    fs16.mkdirSync(dir, { recursive: true });
   } catch {
     return false;
   }
-  const sentinel = path11.join(dir, `.watch-probe-${process.pid}-${Date.now()}`);
+  const sentinel = path12.join(dir, `.watch-probe-${process.pid}-${Date.now()}`);
   const chokidar = await Promise.resolve().then(() => (init_esm2(), esm_exports));
   return await new Promise((resolve3) => {
     let settled = false;
@@ -56460,7 +57457,7 @@ async function probeNativeEvents(repoRoot, timeoutMs) {
       probe.close().catch(() => {
       });
       try {
-        fs15.unlinkSync(sentinel);
+        fs16.unlinkSync(sentinel);
       } catch {
       }
     };
@@ -56478,7 +57475,7 @@ async function probeNativeEvents(repoRoot, timeoutMs) {
     probe.on("error", () => settle(false));
     probe.on("ready", () => {
       try {
-        fs15.writeFileSync(sentinel, String(Date.now()));
+        fs16.writeFileSync(sentinel, String(Date.now()));
       } catch {
         settle(false);
       }
@@ -56487,10 +57484,10 @@ async function probeNativeEvents(repoRoot, timeoutMs) {
 }
 function logWatcherDecision(repoRoot, message) {
   try {
-    const logDir = path11.join(repoRoot, ".dev-pomogator", "logs");
-    fs15.mkdirSync(logDir, { recursive: true });
-    fs15.appendFileSync(
-      path11.join(logDir, "watcher.log"),
+    const logDir = path12.join(repoRoot, ".dev-pomogator", "logs");
+    fs16.mkdirSync(logDir, { recursive: true });
+    fs16.appendFileSync(
+      path12.join(logDir, "watcher.log"),
       `${(/* @__PURE__ */ new Date()).toISOString()} [watch-mode] ${message}
 `
     );
@@ -56518,7 +57515,7 @@ async function startLifecycle(opts) {
   }
   const sqliteEnabled = (() => {
     try {
-      const config2 = JSON.parse(fs15.readFileSync(path11.join(opts.repoRoot, ".spec-config.json"), "utf8"));
+      const config2 = JSON.parse(fs16.readFileSync(path12.join(opts.repoRoot, ".spec-config.json"), "utf8"));
       return config2.storage?.sqlite_enabled === true;
     } catch {
       return false;
@@ -56530,25 +57527,26 @@ async function startLifecycle(opts) {
       ...opts.mdRoots ?? [".specs"],
       ...opts.featureRoots ?? [".specs", "tests/features"],
       opts.ndjsonPath ?? ".dev-pomogator/.last-test-run.ndjson",
-      opts.scenarioOverlayPath ?? ".dev-pomogator/.scenario-results.ndjson"
+      opts.scenarioOverlayPath ?? ".dev-pomogator/.scenario-results.ndjson",
+      opts.pytestBddPath ?? ".dev-pomogator/pytest-bdd-report.json"
     ];
     const files = [];
     const visit = (target) => {
-      if (!fs15.existsSync(target)) return;
-      const stat4 = fs15.statSync(target);
+      if (!fs16.existsSync(target)) return;
+      const stat4 = fs16.statSync(target);
       if (stat4.isFile()) {
         files.push(target);
         return;
       }
-      for (const entry of fs15.readdirSync(target, { withFileTypes: true })) {
+      for (const entry of fs16.readdirSync(target, { withFileTypes: true })) {
         if (entry.name === ".git" || entry.name === "archive") continue;
-        visit(path11.join(target, entry.name));
+        visit(path12.join(target, entry.name));
       }
     };
-    for (const root of roots) visit(path11.resolve(opts.repoRoot, root));
+    for (const root of roots) visit(path12.resolve(opts.repoRoot, root));
     for (const file2 of [...new Set(files)].sort()) {
-      const stat4 = fs15.statSync(file2);
-      hash2.update(path11.relative(opts.repoRoot, file2).replace(/\\/g, "/"));
+      const stat4 = fs16.statSync(file2);
+      hash2.update(path12.relative(opts.repoRoot, file2).replace(/\\/g, "/"));
       hash2.update(String(stat4.size));
       hash2.update(String(stat4.mtimeMs));
     }
@@ -56562,6 +57560,7 @@ async function startLifecycle(opts) {
     featureRoots: opts.featureRoots,
     ndjsonPath: opts.ndjsonPath,
     scenarioOverlayPath: opts.scenarioOverlayPath,
+    pytestBddPath: opts.pytestBddPath,
     skipNdjson: opts.skipNdjson
   });
   if (recovery && !restored) persistGraph(recovery.handle, graph, sourceFingerprint);
@@ -56576,7 +57575,8 @@ async function startLifecycle(opts) {
       try {
         refreshResultFiles(graph, opts.repoRoot, {
           ndjsonPath: opts.ndjsonPath,
-          scenarioOverlayPath: opts.scenarioOverlayPath
+          scenarioOverlayPath: opts.scenarioOverlayPath,
+          pytestBddPath: opts.pytestBddPath
         });
       } catch {
       }
@@ -56612,6 +57612,7 @@ async function startLifecycle(opts) {
     featureRoots: opts.featureRoots,
     ndjsonPath: opts.ndjsonPath,
     scenarioOverlayPath: opts.scenarioOverlayPath,
+    pytestBddPath: opts.pytestBddPath,
     usePolling,
     interval: usePolling ? pollIntervalMs : void 0,
     // P21-6: every on-disk spec change (door writes included) refreshes the
@@ -56636,6 +57637,13 @@ async function startLifecycle(opts) {
     recovery?.handle.backend.close();
     lock.release();
   };
+  const lockMode = readOnly ? "presence_reader" : "owner";
+  const dependencies = {
+    graph: "ready",
+    watcher: "ready",
+    lock: lockMode,
+    sqlite: recovery ? recovery.recovered ? "recovered" : restored ? "warm" : "cold" : "disabled"
+  };
   return {
     graph,
     ...recovery ? { cache: { handle: recovery.handle, warm: restored !== null, recovered: recovery.recovered } } : {},
@@ -56645,6 +57653,9 @@ async function startLifecycle(opts) {
     pollIntervalMs,
     readOnly,
     lockHolder,
+    dependencies,
+    lockMode,
+    writeMode: "short_lock_cas",
     refreshGraph: refreshResultsAndCensus,
     shutdown
   };
@@ -56780,10 +57791,20 @@ function forwardedDemands(graph) {
 
 // tools/spec-graph/conformance.ts
 var SPEC_TAG_RE2 = /^@((?:FR|NFR|AC)[A-Za-z0-9._-]+)$/;
-function tagResolves(graph, scenSpec, ref, specLocalIds) {
+function tagResolves(graph, scenSpec, ref) {
+  if (scenSpec && /^FR-\d+[a-z]?$/i.test(ref)) {
+    const feature = `feature${ref.slice(3)}`;
+    let matches = 0;
+    for (const node of graph.nodes.values()) {
+      if (node.type !== "FR" || node.spec !== scenSpec) continue;
+      const fr = node;
+      if (fr.featureAliases?.includes(feature)) matches += 1;
+    }
+    if (matches > 1) return false;
+    if (matches === 1) return true;
+  }
   if (scenSpec && graph.nodes.has(`${scenSpec}:${ref}`)) return true;
-  if (graph.nodes.has(ref)) return true;
-  return !scenSpec && specLocalIds.has(ref);
+  return graph.nodes.has(ref);
 }
 function levenshtein(a, b) {
   const m = a.length;
@@ -56816,6 +57837,7 @@ function checkConformance(graph, opts = {}) {
   const scenarioTests = /* @__PURE__ */ new Set();
   const scenarioVerifies = /* @__PURE__ */ new Set();
   const scenarioVerifiesAc = /* @__PURE__ */ new Set();
+  const scenarioRequirementEdges = /* @__PURE__ */ new Set();
   let resultsLoaded = false;
   for (const e of graph.edges) {
     if (e.type === "covers") {
@@ -56823,6 +57845,9 @@ function checkConformance(graph, opts = {}) {
       if (toType === "Decision") decisionCovers.add(e.from);
       else if (toType === "Story") storyCovers.add(e.from);
       else acCovers.add(e.from);
+    }
+    if (e.type === "tested-by" && graph.nodes.get(e.to)?.type === "Scenario" && ["FR", "NFR", "AC"].includes(graph.nodes.get(e.from)?.type ?? "")) {
+      scenarioRequirementEdges.add(e.to);
     }
     if (e.type === "tested-by") scenarioTests.add(e.from);
     if (e.type === "verifies") {
@@ -56835,8 +57860,14 @@ function checkConformance(graph, opts = {}) {
     }
     if (e.type === "last-result") resultsLoaded = true;
   }
+  const inactiveRequirement = (node) => {
+    const title = node.title.trim();
+    const body = node.body ?? "";
+    return /^\[TBD title\]$/i.test(title) || /\bOUT OF SCOPE\b/i.test(title) || /\bDEPRECATED\b/i.test(title) || /\bInvestigation result\b[\s\S]{0,300}\bNOT APPLICABLE\b/i.test(body);
+  };
   for (const node of graph.nodes.values()) {
     if (node.type !== "FR") continue;
+    if (inactiveRequirement(node)) continue;
     if (acCovers.has(node.id)) continue;
     if (scenarioTests.has(node.id)) continue;
     const bareTag = localIdOf(node);
@@ -56920,6 +57951,28 @@ function checkConformance(graph, opts = {}) {
       message: `${issue2.path}: ${issue2.message}`,
       suggestions: [{ action: "fix_requirement_metadata", reason: "Fix the FR-local ```yaml metadata block through the spec door.", confidence: "high" }]
     });
+    const hasContractIssue = (node.metadataIssues ?? []).some((issue2) => issue2.code.startsWith("FR_CONTRACT_"));
+    const contractScope = opts.strictContracts && node.type === "FR" && (!opts.strictContractSpec || node.spec === opts.strictContractSpec);
+    if (contractScope && !node.metadata?.contract && !hasContractIssue) findings.push({
+      code: "FR_CONTRACT_MISSING",
+      severity: "error",
+      location: { file: node.file, line: node.line },
+      nodeId: node.id,
+      message: `${node.id} has no FR-85 contract card.`,
+      suggestions: [{ action: "add_requirement_contract", reason: "Add a canonical FR-local contract card with observables, negative_cases, verification, and kind-specific fields.", confidence: "high" }]
+    });
+    if (contractScope && node.metadata?.contract) {
+      const retired = inactiveRequirement(node) || /\bSUPERSEDED\b/i.test(node.title);
+      const disposition = node.metadata.contract.kind === "disposition";
+      if (retired !== disposition) findings.push({
+        code: "FR_CONTRACT_DISPOSITION_INVALID",
+        severity: "error",
+        location: { file: node.file, line: node.line },
+        nodeId: node.id,
+        message: retired ? `${node.id} is explicitly retired/out of scope and requires a disposition contract card.` : `${node.id} is active and must not use a disposition contract card.`,
+        suggestions: [{ action: retired ? "add_disposition_contract" : "choose_active_contract_kind", reason: retired ? "Record status, rationale, owner, and exactly one successor or boundary." : "Use cli/api/schema/filesystem/event/state/behavior for an active requirement.", confidence: "high" }]
+      });
+    }
     if (node.type !== "FR" || !node.metadata || (node.metadataIssues?.length ?? 0) > 0) continue;
     const delivery = evaluateDelivery(node, graph);
     for (const issue2 of inheritedDemands.get(node.id)?.issues ?? []) findings.push({
@@ -57044,7 +58097,7 @@ function checkConformance(graph, opts = {}) {
     if (node.type !== "Task") continue;
     const task = node;
     if (task.refs.length > 0) continue;
-    if (/\bFR-\d+|SPECGEN\d+_\d+|@feature\d+/i.test(task.doneWhen ?? "")) continue;
+    if (/\bFR-\d+[a-z]?|SPECGEN\d+_\d+|@feature\d+[a-z]?/i.test(task.doneWhen ?? "")) continue;
     findings.push({
       code: "TASK_NO_REQUIREMENT",
       severity: "info",
@@ -57157,8 +58210,8 @@ function checkConformance(graph, opts = {}) {
     let hasSpecTag = false;
     const scenSpec = scen.spec ?? specOf(scen.file);
     for (const tag of scen.tags) {
-      const f = tag.match(/^@feature(\d+)$/i);
-      if (f && tagResolves(graph, scenSpec, `FR-${f[1]}`, specLocalIds)) {
+      const f = tag.match(/^@feature(\d+)([a-z]?)$/i);
+      if (f && tagResolves(graph, scenSpec, `FR-${f[1]}${f[2] ?? ""}`)) {
         hasSpecTag = true;
         continue;
       }
@@ -57166,7 +58219,7 @@ function checkConformance(graph, opts = {}) {
       if (!m) continue;
       hasSpecTag = true;
       const referenced = m[1];
-      if (!tagResolves(graph, scenSpec, referenced, specLocalIds)) {
+      if (!tagResolves(graph, scenSpec, referenced)) {
         const similar = topSimilarIds(referenced, [...specLocalIds], 3);
         findings.push({
           code: "SCENARIO_TAG_ORPHAN",
@@ -57186,7 +58239,7 @@ function checkConformance(graph, opts = {}) {
         });
       }
     }
-    if (!hasSpecTag && !scen.tags.some((tag) => tag.toLowerCase() === "@historical")) {
+    if (!hasSpecTag && !scenarioRequirementEdges.has(scen.id) && !scen.tags.some((tag) => tag.toLowerCase() === "@historical")) {
       findings.push({
         code: "UNTAGGED_SCENARIO",
         severity: "info",
@@ -57252,39 +58305,6 @@ function checkConformance(graph, opts = {}) {
   return findings;
 }
 
-// tools/spec-graph/traceability.ts
-var GAP_CLASSES = /* @__PURE__ */ new Set([
-  "UNCOVERED_FR",
-  "TASK_UNTESTED",
-  "UNTAGGED_SCENARIO"
-]);
-function gapsFromFindings(findings, opts = {}) {
-  const gaps = [];
-  for (const f of findings) {
-    if (!GAP_CLASSES.has(f.code)) continue;
-    if (opts.spec && !String(f.location.file).replace(/\\/g, "/").includes(`.specs/${opts.spec}/`)) {
-      continue;
-    }
-    gaps.push({
-      class: f.code,
-      nodeId: f.nodeId ?? "(unknown)",
-      file: f.location.file,
-      line: f.location.line,
-      message: f.message
-    });
-  }
-  return gaps;
-}
-function summariseGaps(gaps) {
-  const out = {
-    UNCOVERED_FR: 0,
-    TASK_UNTESTED: 0,
-    UNTAGGED_SCENARIO: 0
-  };
-  for (const g of gaps) out[g.class]++;
-  return out;
-}
-
 // tools/spec-graph/readiness-inventory.ts
 var SUPERSEDED_TAG_RE = /^@superseded-by-([a-z0-9][a-z0-9-]*)$/i;
 function classifyScenarioScope(tags, opts = {}) {
@@ -57325,14 +58345,14 @@ function explicitOutcome(raw) {
 }
 function classifyEvidence(s) {
   const key = scenarioKey(s.id) ?? s.id.toLowerCase();
-  const source = s.trace?.source ?? null;
-  const runId = s.trace?.runId ?? null;
+  const effectiveSource = s.lastResultSource ?? s.trace?.source ?? null;
+  const effectiveRunId = s.lastResultRunId ?? s.trace?.runId ?? null;
   const stale = s.resultStale === true;
   const scopeDisposition = classifyScenarioScope(s.tags ?? []);
   const base = {
     scenario_key: key,
     scenario_id: s.id,
-    run_id: runId,
+    run_id: effectiveRunId,
     recency: { stale, canonical: false },
     scope: scopeDisposition.scope,
     superseded_by: scopeDisposition.superseded_by,
@@ -57340,14 +58360,17 @@ function classifyEvidence(s) {
   };
   if (s.canonicalResult) {
     const canonicalResult = s.canonicalResult.toUpperCase();
+    const canonicalSource = s.canonicalSource ?? effectiveSource;
+    const canonicalRunId = s.canonicalRunId ?? effectiveRunId;
     return {
       ...base,
       outcome: canonicalResult === "PASSED" && stale ? "stale" : explicitOutcome(canonicalResult),
       result: canonicalResult,
-      source: source ?? "canonical-full-run",
+      run_id: canonicalRunId,
+      source: canonicalSource ?? "canonical-full-run",
       timestamp: s.canonicalRunAt ?? s.lastRunAt ?? null,
       recency: { stale, canonical: true },
-      provenance: "canonical-full-run"
+      provenance: canonicalSource === "pytest-bdd:cucumber-json" ? "pytest-bdd-report" : "canonical-full-run"
     };
   }
   if (!s.lastResult) {
@@ -57355,27 +58378,30 @@ function classifyEvidence(s) {
       ...base,
       outcome: "not_recorded",
       result: null,
-      source,
+      source: effectiveSource,
       timestamp: s.lastRunAt ?? null,
       recency: { stale: false, canonical: false },
-      provenance: source ? "overlay" : "none"
+      provenance: effectiveSource ? "overlay" : "none"
     };
   }
   const result = s.lastResult.toUpperCase();
   const at = s.lastRunAt ?? null;
-  if (source && /dependency[-_ ]?absent/i.test(source)) {
-    return { ...base, outcome: "UNKNOWN", result, source, timestamp: at, provenance: "dependency-absent" };
+  if (effectiveSource && /dependency[-_ ]?absent/i.test(effectiveSource)) {
+    return { ...base, outcome: "UNKNOWN", result, source: effectiveSource, timestamp: at, provenance: "dependency-absent" };
   }
-  if (source && /source[-_ ]?tree/i.test(source)) {
-    return { ...base, outcome: "UNKNOWN", result, source, timestamp: at, provenance: "source-tree" };
+  if (effectiveSource && /source[-_ ]?tree/i.test(effectiveSource)) {
+    return { ...base, outcome: "UNKNOWN", result, source: effectiveSource, timestamp: at, provenance: "source-tree" };
   }
-  if (source && /filtered/i.test(source)) {
-    return { ...base, outcome: "filtered", result, source, timestamp: at, provenance: "filtered-run" };
+  if (effectiveSource === "pytest-bdd:cucumber-json") {
+    return { ...base, outcome: explicitOutcome(result), result, source: effectiveSource, timestamp: at, provenance: "pytest-bdd-report" };
+  }
+  if (effectiveSource && /filtered/i.test(effectiveSource)) {
+    return { ...base, outcome: "filtered", result, source: effectiveSource, timestamp: at, provenance: "filtered-run" };
   }
   if (result === "PASSED" && stale) {
-    return { ...base, outcome: "stale", result, source, timestamp: at, provenance: "overlay" };
+    return { ...base, outcome: "stale", result, source: effectiveSource, timestamp: at, provenance: "overlay" };
   }
-  return { ...base, outcome: explicitOutcome(result), result, source, timestamp: at, provenance: "overlay" };
+  return { ...base, outcome: explicitOutcome(result), result, source: effectiveSource, timestamp: at, provenance: "overlay" };
 }
 var NON_PASS_OUTCOMES = /* @__PURE__ */ new Set([
   "FAILED",
@@ -57399,6 +58425,43 @@ function frExecutionScope(scopes) {
   if (only("external-live")) return "live";
   if ([...distinct].every((s) => s === "active" || s === "historical-unproven")) return "active";
   return "mixed";
+}
+function projectFrEvidence(graph, fr, keys, bundles, testQualityByTask) {
+  const records = keys.map((key) => bundles.get(key).record);
+  const canonicalArtifacts = graph.executionArtifacts?.filter((artifact) => artifact.canonical) ?? [];
+  const canonicalIngested = canonicalArtifacts.some((artifact) => artifact.state === "INGESTED");
+  const canonicalPass = records.length > 0 && records.every(
+    (record2) => record2.outcome === "PASSED" && record2.recency.canonical && !record2.recency.stale
+  );
+  const reasons = /* @__PURE__ */ new Set();
+  if (!canonicalIngested) reasons.add("CANONICAL_ARTIFACT_NOT_INGESTED");
+  if (records.some((record2) => record2.outcome === "not_recorded")) reasons.add("SCENARIO_NOT_RUN");
+  if (records.some((record2) => record2.outcome === "stale" || record2.recency.stale)) reasons.add("STALE_EVIDENCE");
+  if (records.some((record2) => record2.outcome === "filtered" || record2.provenance === "filtered-run")) reasons.add("FILTERED_ONLY");
+  if (records.some((record2) => record2.provenance === "dependency-absent" || record2.provenance === "source-tree")) {
+    reasons.add("UNTRUSTED_PROVENANCE");
+  }
+  if (records.some((record2) => record2.outcome !== "PASSED" && record2.outcome !== "not_recorded" && record2.outcome !== "stale" && record2.outcome !== "filtered")) {
+    reasons.add("NON_PASSING_EVIDENCE");
+  }
+  const relevantTasks = [...graph.nodes.values()].filter(
+    (node) => node.type === "Task" && node.spec === fr.spec && node.refs.some(
+      (ref) => ref === fr.id || ref === localIdOf(fr.id) || `${fr.spec}:${ref}` === fr.id
+    )
+  );
+  if (relevantTasks.some((task) => testQualityByTask[task.id] === "WEAK")) reasons.add("TEST_QUALITY_WEAK");
+  if (relevantTasks.some((task) => testQualityByTask[task.id] === "FAKE-POSITIVE-RISK")) {
+    reasons.add("TEST_QUALITY_FAKE_POSITIVE_RISK");
+  }
+  const qualityDemoted = reasons.has("TEST_QUALITY_WEAK") || reasons.has("TEST_QUALITY_FAKE_POSITIVE_RISK");
+  const hasImplementation = graph.edges.some((edge) => edge.type === "implements" && edge.from === fr.id);
+  const canonical_evidence_state = !canonicalIngested ? "NOT_INGESTED" : records.length === 0 || records.every((record2) => !record2.recency.canonical) ? "NOT_RUN" : canonicalPass && !qualityDemoted ? "VERIFIED" : "PARTIAL";
+  const evidence_state = keys.length === 0 ? hasImplementation ? "impl-only" : "untagged" : canonical_evidence_state === "VERIFIED" ? "verified" : "exercised";
+  return {
+    evidence_state,
+    canonical_evidence_state,
+    evidence_demotion_reasons: [...reasons].sort()
+  };
 }
 function buildReadinessInventory(graph, opts) {
   const slug = opts.spec.replace(/\\/g, "/").replace(/^\.?\/?\.specs\//, "").replace(/\/+$/, "");
@@ -57517,6 +58580,7 @@ function buildReadinessInventory(graph, opts) {
     const classification = classifyFr(outcomes, keys.length);
     const scopes = keys.map((k) => bundles.get(k).record.scope);
     return {
+      ...projectFrEvidence(graph, fr, keys, bundles, opts.testQualityByTask ?? {}),
       id: localIdOf(fr.id),
       composite_id: fr.id,
       never_run: classification === "never_run",
@@ -57549,9 +58613,9 @@ function buildReadinessInventory(graph, opts) {
       if (n.canonicalRunAt && (!canonicalTimestamp || n.canonicalRunAt > canonicalTimestamp)) {
         canonicalTimestamp = n.canonicalRunAt;
       }
-      if (n.canonicalResult) sources.add("canonical-full-run");
-      if (n.trace?.runId) runIds.add(n.trace.runId);
-      if (n.trace?.source) sources.add(n.trace.source);
+      if (n.canonicalResult && (!n.canonicalSource || n.canonicalSource !== "pytest-bdd:cucumber-json")) sources.add("canonical-full-run");
+      if (n.canonicalRunId) runIds.add(n.canonicalRunId);
+      if (n.canonicalSource) sources.add(n.canonicalSource);
     }
   }
   const scenarios = [...bundles.values()].sort((a, b) => a.key.localeCompare(b.key)).map((b) => b.record);
@@ -57562,8 +58626,10 @@ function buildReadinessInventory(graph, opts) {
     const target = graph.nodes.get(e.to);
     if (source?.type === "Scenario" && target && (target.type === "FR" || target.type === "NFR" || target.type === "AC")) {
       const scenario = source;
+      const key = scenarioKey(scenario.id) ?? scenario.id.toLowerCase();
+      const evidence = bundles.get(key)?.record ?? classifyEvidence(scenario);
       const attested = isLiveAttestedScenario(scenario.tags);
-      if (scenario.lastResult === "PASSED" && scenario.resultStale !== true || attested) passedScenarioIds.add(e.to);
+      if (evidence.outcome === "PASSED" && evidence.recency.stale !== true || attested) passedScenarioIds.add(e.to);
     }
   }
   const acRequired = acNodes.length;
@@ -57594,11 +58660,12 @@ function buildReadinessInventory(graph, opts) {
   const nfrStatus = requiredNfrs.length === 0 || nfrSatisfied === requiredNfrs.length ? "GREEN" : "RED";
   return {
     spec: slug,
+    artifacts: [...graph.executionArtifacts ?? []].sort((a, b) => a.kind.localeCompare(b.kind)),
     ac_satisfaction: { status: acStatus, required: acRequired, satisfied: acSatisfied, debt: acDebt },
     nfr_satisfaction: { status: nfrStatus, required: requiredNfrs.length, satisfied: nfrSatisfied, optional: optionalNfrs, not_applicable: notApplicableNfrs, debt: nfrDebt },
     baseline: {
       graph_built_at: graph.builtAt,
-      canonical_timestamp: canonicalTimestamp,
+      canonical_timestamp: canonicalTimestamp ?? scenarios.map((scenario) => scenario.timestamp).filter((timestamp) => Boolean(timestamp)).sort().at(-1) ?? null,
       run_ids: [...runIds].sort(),
       sources: [...sources].sort()
     },
@@ -57642,6 +58709,7 @@ function evidenceRank(n) {
 }
 var MANDATORY_READINESS_LANES = [
   "STRUCTURE",
+  "CONTRACT",
   "TRACEABILITY",
   "EXECUTION",
   "LIVE_EVIDENCE",
@@ -57664,28 +58732,46 @@ function deriveExecutionLane(inventory) {
   const neverRunFrs = inventory.frs.filter((fr) => fr.never_run && (fr.execution_scope === "active" || fr.execution_scope === "mixed" || fr.execution_scope === "none")).map((fr) => fr.id);
   const unprovenKeys = activeScenarios.filter((s) => s.scope === "historical-unproven").map((s) => s.scenario_key);
   const debt = [];
-  if (notRecorded > 0) debt.push(`SCENARIO_NOT_RUN:${notRecorded}`);
+  if (notRecorded > 0) {
+    const hasCanonicalPerScenarioEvidence = activeScenarios.some((scenario) => scenario.provenance === "canonical-full-run" || scenario.provenance === "pytest-bdd-report");
+    debt.push(hasCanonicalPerScenarioEvidence ? `SCENARIO_NOT_RUN:${notRecorded}` : `NO_CANONICAL_SCENARIO_EVIDENCE:${notRecorded}:no canonical per-scenario result evidence found`);
+  }
   if (neverRunFrs.length > 0) debt.push(`FR_NEVER_RUN:${neverRunFrs.join(",")}`);
   if (unprovenKeys.length > 0) debt.push(`HISTORICAL_UNPROVEN:${unprovenKeys.join(",")}`);
   for (const outcome of [...new Set(outcomes)]) {
     if (outcome === "not_recorded" || outcome === "PASSED") continue;
     debt.push(`${outcomes.filter((o) => o === outcome).length} ${outcome}`);
   }
-  const status = debt.length === 0 ? "GREEN" : unprovenKeys.length > 0 ? "RED" : outcomes.length > 0 && outcomes.every((o) => o === "not_recorded") ? "NOT_RUN" : "RED";
-  return { status, debt };
+  const status = debt.length === 0 ? "GREEN" : unprovenKeys.length > 0 ? "RED" : outcomes.length > 0 && outcomes.every((outcome) => outcome === "not_recorded") ? "NOT_RUN" : "RED";
+  const affectedScenarioKeys = new Set(
+    activeScenarios.filter((scenario) => scenario.outcome !== "PASSED").map((scenario) => scenario.scenario_key)
+  );
+  const unmappedNeverRunFrs = neverRunFrs.filter((frId) => !inventory.frs.some(
+    (fr) => fr.id === frId && fr.scenario_keys.length > 0
+  ));
+  return {
+    status,
+    debt,
+    affected_count: affectedScenarioKeys.size + unmappedNeverRunFrs.length
+  };
 }
 function deriveLiveEvidenceLane(inventory) {
   const live = inventory.scenarios.filter((s) => s.scope === "external-live");
   if (live.length === 0) return { status: "NONE", debt: [] };
   const debt = live.filter((s) => s.outcome !== "PASSED" && !s.live_attested).map((s) => `${s.scenario_key}:${s.outcome}`);
-  return { status: debt.length === 0 ? "GREEN" : "RED", debt };
+  return { status: debt.length === 0 ? "GREEN" : "RED", debt, affected_count: debt.length };
 }
 var LANE_NEXT_ACTION = {
   STRUCTURE: () => "Fix structural/audit/conformance errors, then rerun the readiness check.",
+  CONTRACT: () => "Add or repair every typed FR-85 contract card, then rerun the readiness check.",
   TRACEABILITY: () => "Add the missing FR/AC/task/scenario traceability links, then rerun the readiness check.",
   EXECUTION: (c) => {
     const neverRun = c.inventory.frs.filter((fr) => fr.never_run && (fr.execution_scope === "active" || fr.execution_scope === "mixed" || fr.execution_scope === "none")).map((fr) => fr.id);
-    return neverRun.length > 0 ? `Run the full Docker BDD suite so canonical coverage records the never-run FR(s) ${neverRun.join(", ")} and every scenario result.` : "Run the full Docker BDD suite so canonical coverage contains every scenario result.";
+    const noCanonicalEvidence = !c.inventory.scenarios.some((scenario) => scenario.provenance === "canonical-full-run" || scenario.provenance === "pytest-bdd-report");
+    if (noCanonicalEvidence) {
+      return "No canonical per-scenario result evidence found. Run Cucumber with the canonical message formatter or pytest-bdd with --cucumber-json .dev-pomogator/pytest-bdd-report.json, then rerun status.";
+    }
+    return neverRun.length > 0 ? `Canonical evidence exists; bind or execute the genuinely not-run FR(s) ${neverRun.join(", ")} and their scenarios.` : "Run the supported BDD suite so canonical coverage contains every scenario result.";
   },
   LIVE_EVIDENCE: (c) => {
     const live = c.inventory.scenario_scope.external_live.keys;
@@ -57694,9 +58780,32 @@ var LANE_NEXT_ACTION = {
   TASK_TRUTH: () => "Reopen/downgrade DONE-but-unverified tasks or provide canonical passed scenario evidence.",
   BDD_SYNC: () => "Fix source/executable BDD sync drift or mark intentional EXEC_ONLY/OUT_OF_SCOPE/PENDING scenarios.",
   AC_SATISFACTION: () => "Add current passing scenario evidence owned by every required acceptance criterion.",
-  NFR_SATISFACTION: () => "Add current method-appropriate evidence owned by every required non-functional requirement."
+  NFR_SATISFACTION: () => "Add current method-appropriate evidence owned by every required non-functional requirement.",
+  SEMANTIC: () => "Resolve semantic drift or restore the unavailable semantic-check dependency, then rerun the readiness check.",
+  FILTERED_PROOF: () => "Attach or inspect filtered proof; it is informational and cannot replace canonical readiness evidence."
 };
+function actionGroup(lane, evaluated, candidate) {
+  const action = evaluated.status === "NOT_EVALUATED" ? {
+    code: "EVALUATE_LANE",
+    message: `Evaluate the ${lane} lane \u2014 an unevaluated mandatory lane cannot certify readiness.`
+  } : evaluated.status === "DEPENDENCY_ABSENT" ? {
+    code: "RESTORE_DEPENDENCY",
+    message: `The ${lane} lane could not run for absent dependencies \u2014 dependency absence is not readiness proof (FR-64 scope).`
+  } : {
+    code: "RESOLVE_LANE_DEBT",
+    message: LANE_NEXT_ACTION[lane](candidate)
+  };
+  const reasons = evaluated.debt.length > 0 ? [...evaluated.debt] : [`${lane}:${evaluated.status}`];
+  return {
+    lane,
+    status: evaluated.status,
+    count: evaluated.affected_count ?? reasons.length,
+    reasons,
+    action
+  };
+}
 function evaluateReadiness(candidate) {
+  const mandatoryLanes = candidate.mandatoryLanes ?? MANDATORY_READINESS_LANES;
   const execution = deriveExecutionLane(candidate.inventory);
   const liveEvidence = deriveLiveEvidenceLane(candidate.inventory);
   const lanes = {};
@@ -57704,76 +58813,35 @@ function evaluateReadiness(candidate) {
     const supplied = name === "EXECUTION" ? execution : name === "LIVE_EVIDENCE" ? liveEvidence : name === "AC_SATISFACTION" ? candidate.inventory.ac_satisfaction : name === "NFR_SATISFACTION" ? candidate.inventory.nfr_satisfaction : candidate.lanes?.[name];
     const status = supplied?.status ?? "NOT_EVALUATED";
     const debt = supplied?.debt ?? [];
-    const blocking = MANDATORY_READINESS_LANES.includes(name) ? name === "LIVE_EVIDENCE" ? status === "RED" || status === "NOT_EVALUATED" || status === "DEPENDENCY_ABSENT" : status !== "GREEN" : name === "SEMANTIC" ? status === "RED" || status === "DEPENDENCY_ABSENT" : false;
+    const blocking = mandatoryLanes.includes(name) ? name === "LIVE_EVIDENCE" ? status === "RED" || status === "NOT_EVALUATED" || status === "DEPENDENCY_ABSENT" : status !== "GREEN" : name === "SEMANTIC" ? status === "RED" || status === "DEPENDENCY_ABSENT" : false;
     lanes[name] = { status, blocking, debt };
   }
-  const blockingLanes = MANDATORY_READINESS_LANES.filter((name) => lanes[name].blocking);
+  const blockingLanes = ALL_READINESS_LANES.filter((name) => lanes[name].blocking);
   const firstBlocking = blockingLanes.find((name) => lanes[name].status === "DEPENDENCY_ABSENT") ?? blockingLanes.find((name) => name !== "STRUCTURE") ?? blockingLanes[0];
-  const overall = firstBlocking ? "NOT_READY" : "READY";
-  const nextAction = !firstBlocking ? "No readiness blockers detected by the shared inventory." : lanes[firstBlocking].status === "NOT_EVALUATED" ? `Evaluate the ${firstBlocking} lane \u2014 an unevaluated mandatory lane cannot certify readiness.` : lanes[firstBlocking].status === "DEPENDENCY_ABSENT" ? `The ${firstBlocking} lane could not run for absent dependencies \u2014 dependency absence is not readiness proof (FR-64 scope).` : LANE_NEXT_ACTION[firstBlocking]?.(candidate) ?? `Resolve ${firstBlocking} readiness debt, then rerun the readiness check.`;
+  const orderedBlockingLanes = firstBlocking ? [firstBlocking, ...blockingLanes.filter((name) => name !== firstBlocking)] : [];
+  const actionCenter = orderedBlockingLanes.map((name) => actionGroup(name, lanes[name], candidate));
+  const overall = actionCenter.length > 0 ? "NOT_READY" : "READY";
   return {
     overall,
-    mandatory_lanes: MANDATORY_READINESS_LANES,
+    mandatory_lanes: mandatoryLanes,
     lanes,
-    next_action: nextAction
+    action_center: actionCenter,
+    next_action: actionCenter[0]?.action.message ?? "No readiness blockers detected by the shared inventory."
   };
-}
-
-// tools/spec-graph/verdict.ts
-var COMPLETION_FINDING_CODES = /* @__PURE__ */ new Set([
-  "UNVERIFIED_COMPLETION",
-  "TASK_STATUS_UNVERIFIED",
-  "TASK_UNTESTED",
-  "TASK_TEST_QUALITY"
-]);
-function unverifiedCompletions(findings) {
-  const byNode = /* @__PURE__ */ new Map();
-  const reasonFor = (finding) => {
-    if (finding.relatedId === "NO_SCENARIO" || finding.code === "TASK_UNTESTED") return "NO_SCENARIO";
-    if (finding.relatedId === "FILTERED_ONLY") return "FILTERED_ONLY";
-    if (finding.relatedId === "EVIDENCE_STALE") return "EVIDENCE_STALE";
-    if (finding.relatedId === "BODY_WEAK" || finding.code === "TASK_TEST_QUALITY") return "BODY_WEAK";
-    return "NON_PASSING_EVIDENCE";
-  };
-  for (const finding of findings) {
-    if (!COMPLETION_FINDING_CODES.has(finding.code)) continue;
-    const node = finding.nodeId ?? `${finding.location.file}:${finding.location.line}`;
-    const entry = byNode.get(node) ?? { reasons: [], sourceCodes: /* @__PURE__ */ new Set() };
-    entry.reasons.push(reasonFor(finding));
-    entry.sourceCodes.add(finding.code);
-    byNode.set(node, entry);
-  }
-  return [...byNode.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([node, entry]) => ({
-    code: "UNVERIFIED_COMPLETION",
-    severity: "error",
-    node,
-    reasons: [...new Set(entry.reasons)],
-    source_codes: [...entry.sourceCodes].sort()
-  }));
-}
-function computeSpecVerdict(candidate, findings = []) {
-  const readiness = evaluateReadiness(candidate);
-  const completionDebt = unverifiedCompletions(findings);
-  const structuralLane = candidate.lanes.STRUCTURE;
-  const structuralIsRed = structuralLane?.status === "RED";
-  const errors = structuralIsRed ? findings.filter((finding) => finding.severity === "error" && finding.code !== "UNVERIFIED_COMPLETION") : [];
-  const blocking = [...errors, ...completionDebt];
-  const verdict = errors.length > 0 ? "RED" : readiness.overall === "READY" && completionDebt.length === 0 ? "GREEN" : "NOT_READY";
-  return { schema: "spec-verdict@1", verdict, readiness, blocking };
 }
 
 // tools/spec-mcp-server/tools.ts
-import fs31 from "node:fs";
-import path28 from "node:path";
+import fs33 from "node:fs";
+import path30 from "node:path";
 
 // tools/spec-mcp-server/spec-access-log.ts
-import fs16 from "node:fs";
-import path12 from "node:path";
+import fs17 from "node:fs";
+import path13 from "node:path";
 import { createHash as createHash3 } from "node:crypto";
 var MAX_SIZE_BYTES = 10 * 1024 * 1024;
 var RETENTION_DAYS = 30;
 function specAccessLogPath(repoRoot = process.cwd()) {
-  return path12.join(repoRoot, ".dev-pomogator", "logs", "spec-access.jsonl");
+  return path13.join(repoRoot, ".dev-pomogator", "logs", "spec-access.jsonl");
 }
 function digestArgs(args) {
   try {
@@ -57785,7 +58853,7 @@ function digestArgs(args) {
 function logSpecAccess(tool, args, decision, repoRoot = process.cwd()) {
   try {
     const file2 = specAccessLogPath(repoRoot);
-    fs16.mkdirSync(path12.dirname(file2), { recursive: true });
+    fs17.mkdirSync(path13.dirname(file2), { recursive: true });
     rotateIfNeeded(file2);
     const event = {
       ts: (/* @__PURE__ */ new Date()).toISOString(),
@@ -57793,17 +58861,17 @@ function logSpecAccess(tool, args, decision, repoRoot = process.cwd()) {
       args_digest: digestArgs(args),
       decision
     };
-    fs16.appendFileSync(file2, JSON.stringify(event) + "\n", "utf-8");
+    fs17.appendFileSync(file2, JSON.stringify(event) + "\n", "utf-8");
   } catch {
   }
 }
 function rotateIfNeeded(file2) {
   try {
-    if (!fs16.existsSync(file2)) return;
-    const stat4 = fs16.statSync(file2);
+    if (!fs17.existsSync(file2)) return;
+    const stat4 = fs17.statSync(file2);
     if (stat4.size <= MAX_SIZE_BYTES) return;
     const cutoff = Date.now() - RETENTION_DAYS * 24 * 60 * 60 * 1e3;
-    const fresh = fs16.readFileSync(file2, "utf-8").split("\n").filter((l) => {
+    const fresh = fs17.readFileSync(file2, "utf-8").split("\n").filter((l) => {
       if (!l.trim()) return false;
       try {
         return new Date(JSON.parse(l).ts).getTime() >= cutoff;
@@ -57812,8 +58880,8 @@ function rotateIfNeeded(file2) {
       }
     });
     const tmp = `${file2}.${process.pid}.tmp`;
-    fs16.writeFileSync(tmp, fresh.join("\n") + "\n", "utf-8");
-    fs16.renameSync(tmp, file2);
+    fs17.writeFileSync(tmp, fresh.join("\n") + "\n", "utf-8");
+    fs17.renameSync(tmp, file2);
   } catch {
   }
 }
@@ -57823,14 +58891,14 @@ import { spawnSync as spawnSync4 } from "node:child_process";
 import { fileURLToPath as fileURLToPath4 } from "node:url";
 
 // tools/spec-mcp-server/mutations.ts
-import fs18 from "node:fs";
+import fs19 from "node:fs";
 import os from "node:os";
-import path14 from "node:path";
+import path15 from "node:path";
 import crypto2 from "node:crypto";
 
 // tools/anchor-integrity/check.mjs
-import fs17 from "node:fs";
-import path13 from "node:path";
+import fs18 from "node:fs";
+import path14 from "node:path";
 var HEADING_RE = /^(#{1,6})\s+(.+?)\s*$/;
 var FENCE_RE2 = /^(?:```|~~~)/;
 var ID_RE = /\b((?:FR|NFR|AC|UC|US)-[A-Za-z0-9.]+)\b/;
@@ -57838,8 +58906,8 @@ var LINK_RE = /\[([^\]]+)\]\(([^)]+)\)/g;
 function headingText(raw) {
   return raw.replace(/\[([^\]]+)\]\([^)]*\)/g, "$1").replace(/\*\*([^*]+)\*\*/g, "$1").replace(/__([^_]+)__/g, "$1").replace(/\*([^*]+)\*/g, "$1").replace(/_([^_]+)_/g, "$1").replace(/`([^`]+)`/g, "$1").trim();
 }
-function idFromHeading(text) {
-  const m = text.match(/^((?:FR|NFR|AC|UC|US)-[A-Za-z0-9.-]+?)(?::|\s|\(|$)/);
+function idFromHeading(text2) {
+  const m = text2.match(/^((?:FR|NFR|AC|UC|US)-[A-Za-z0-9.-]+?)(?::|\s|\(|$)/);
   return m ? m[1] : "";
 }
 function indexHeadings(content) {
@@ -57854,10 +58922,10 @@ function indexHeadings(content) {
     if (inFence || raw.charCodeAt(0) !== 35) continue;
     const hm = raw.match(HEADING_RE);
     if (!hm) continue;
-    const text = headingText(hm[2]);
-    const slug = marksmanSlug(text);
+    const text2 = headingText(hm[2]);
+    const slug = marksmanSlug(text2);
     slugs.add(slug);
-    const id = idFromHeading(text);
+    const id = idFromHeading(text2);
     if (id) idToSlug.set(id, slug);
   }
   return { slugs, idToSlug };
@@ -57884,7 +58952,7 @@ function checkLinks(files) {
   for (const f of files) index.set(f.file, indexHeadings(f.content));
   const broken = [];
   for (const f of files) {
-    const dir = path13.posix.dirname(f.file);
+    const dir = path14.posix.dirname(f.file);
     const lines = f.content.split(/\r?\n/);
     let inFence = false;
     for (let i = 0; i < lines.length; i++) {
@@ -57906,7 +58974,7 @@ function checkLinks(files) {
         const filePart = target.slice(0, hashIdx);
         const anchor = target.slice(hashIdx + 1);
         if (!anchor) continue;
-        const targetFile = filePart ? path13.posix.normalize(path13.posix.join(dir, filePart)) : f.file;
+        const targetFile = filePart ? path14.posix.normalize(path14.posix.join(dir, filePart)) : f.file;
         const targetIndex = index.get(targetFile);
         if (filePart && !filePart.endsWith(".md")) continue;
         if (!targetIndex) continue;
@@ -57922,23 +58990,23 @@ function checkLinks(files) {
 }
 function checkSpecDir(dirAbs, repoRoot) {
   const files = [];
-  for (const name of fs17.readdirSync(dirAbs)) {
+  for (const name of fs18.readdirSync(dirAbs)) {
     if (!name.endsWith(".md")) continue;
-    const abs = path13.join(dirAbs, name);
-    if (!fs17.statSync(abs).isFile()) continue;
-    const rel = path13.relative(repoRoot, abs).split(path13.sep).join("/");
-    files.push({ file: rel, content: fs17.readFileSync(abs, "utf-8") });
+    const abs = path14.join(dirAbs, name);
+    if (!fs18.statSync(abs).isFile()) continue;
+    const rel = path14.relative(repoRoot, abs).split(path14.sep).join("/");
+    files.push({ file: rel, content: fs18.readFileSync(abs, "utf-8") });
   }
   return checkLinks(files);
 }
 function checkCorpus(repoRoot) {
-  const specsRoot = path13.join(repoRoot, ".specs");
+  const specsRoot = path14.join(repoRoot, ".specs");
   const out = /* @__PURE__ */ new Map();
-  if (!fs17.existsSync(specsRoot)) return out;
-  for (const d of fs17.readdirSync(specsRoot)) {
-    const dir = path13.join(specsRoot, d);
+  if (!fs18.existsSync(specsRoot)) return out;
+  for (const d of fs18.readdirSync(specsRoot)) {
+    const dir = path14.join(specsRoot, d);
     try {
-      if (!fs17.statSync(dir).isDirectory() || !fs17.existsSync(path13.join(dir, "FR.md"))) continue;
+      if (!fs18.statSync(dir).isDirectory() || !fs18.existsSync(path14.join(dir, "FR.md"))) continue;
       const b = checkSpecDir(dir, repoRoot);
       if (b.length) out.set(d, b);
     } catch {
@@ -57968,7 +59036,7 @@ TOTAL ${total} broken anchors across ${corpus.size} specs
     process.stderr.write("usage: check.mjs --spec <dir> | --all\n");
     process.exit(2);
   }
-  const broken = checkSpecDir(path13.resolve(repoRoot, dir), repoRoot);
+  const broken = checkSpecDir(path14.resolve(repoRoot, dir), repoRoot);
   for (const b of broken) {
     process.stdout.write(`${b.file}:${b.line}  [${b.linkText}] #${b.brokenAnchor}` + (b.currentSlug ? ` \u2192 #${b.currentSlug}` : "") + "\n");
   }
@@ -57995,8 +59063,8 @@ function placeholderScenarios(featureText) {
   }
   return out;
 }
-function firstTbdLine(text) {
-  const lines = text.split(/\r?\n/);
+function firstTbdLine(text2) {
+  const lines = text2.split(/\r?\n/);
   for (let i = 0; i < lines.length; i++) if (/\[TBD\]/i.test(lines[i])) return i + 1;
   return 1;
 }
@@ -58037,11 +59105,11 @@ function resolveSpecDoc(repoRoot, slug, doc) {
   if (!isSafeSlug(slug)) return { ok: false, reason: "UNSAFE_SPEC" };
   const relRaw = String(doc).replace(/\\/g, "/").replace(/^\/+/, "");
   if (relRaw === "" || relRaw.includes("\0")) return { ok: false, reason: "BAD_DOC" };
-  const specRoot = path14.resolve(repoRoot, ".specs", slug);
-  const abs = path14.resolve(specRoot, relRaw);
-  const rootWithSep = specRoot.endsWith(path14.sep) ? specRoot : specRoot + path14.sep;
+  const specRoot = path15.resolve(repoRoot, ".specs", slug);
+  const abs = path15.resolve(specRoot, relRaw);
+  const rootWithSep = specRoot.endsWith(path15.sep) ? specRoot : specRoot + path15.sep;
   if (!abs.startsWith(rootWithSep)) return { ok: false, reason: "TRAVERSAL" };
-  return { ok: true, abs, rel: path14.relative(specRoot, abs).replace(/\\/g, "/") };
+  return { ok: true, abs, rel: path15.relative(specRoot, abs).replace(/\\/g, "/") };
 }
 function validateTarget(slug, doc) {
   if (!isSafeSlug(slug)) {
@@ -58054,7 +59122,7 @@ function validateTarget(slug, doc) {
   if (rel === null) {
     return { layer: "target", message: `doc "${doc}" escapes the spec root \u2014 no traversal/abs/drive path` };
   }
-  if (!MUTABLE_DOC_RE.test(path14.basename(rel))) {
+  if (!MUTABLE_DOC_RE.test(path15.basename(rel))) {
     return {
       layer: "target",
       message: `doc "${doc}" is not a mutable spec document \u2014 only *.md / *.feature (NOT .progress.json: single-writer via spec-status)`
@@ -58073,8 +59141,8 @@ function docSha(content) {
 }
 function casCheck(repoRoot, slug, doc, expectedSha) {
   const rel = normalizeContainedDoc(doc);
-  const abs = rel === null ? null : path14.join(repoRoot, ".specs", slug, rel);
-  const current = abs && fs18.existsSync(abs) ? fs18.readFileSync(abs, "utf-8") : null;
+  const abs = rel === null ? null : path15.join(repoRoot, ".specs", slug, rel);
+  const current = abs && fs19.existsSync(abs) ? fs19.readFileSync(abs, "utf-8") : null;
   const actualSha = current === null ? null : docSha(current);
   return actualSha === expectedSha ? { ok: true } : { ok: false, actualSha };
 }
@@ -58110,7 +59178,7 @@ var FORM_CONTRACTS = {
 };
 function formFindings(doc, content) {
   const out = [];
-  const base = path14.basename(doc);
+  const base = path15.basename(doc);
   const contract = FORM_CONTRACTS[base] ?? "";
   const lines = content.replace(/\r\n/g, "\n").split("\n");
   const push = (blocks, label) => {
@@ -58148,13 +59216,13 @@ function formDeltaFindings(doc, before, after) {
   return deltaByKey(formFindings(doc, before), formFindings(doc, after), (finding) => finding.message);
 }
 function specMdFiles(repoRoot, slug, swapDoc, swapContent) {
-  const dir = path14.join(repoRoot, ".specs", slug);
+  const dir = path15.join(repoRoot, ".specs", slug);
   const files = [];
-  for (const name of fs18.readdirSync(dir)) {
+  for (const name of fs19.readdirSync(dir)) {
     if (!name.endsWith(".md")) continue;
     files.push({
       file: `.specs/${slug}/${name}`,
-      content: name === swapDoc ? swapContent : fs18.readFileSync(path14.join(dir, name), "utf-8")
+      content: name === swapDoc ? swapContent : fs19.readFileSync(path15.join(dir, name), "utf-8")
     });
   }
   if (swapDoc && swapDoc.endsWith(".md") && !files.some((f) => f.file.endsWith(`/${swapDoc}`))) {
@@ -58185,18 +59253,55 @@ function anchorFindings(repoRoot, slug, doc, next) {
   }
   return out;
 }
-function buildMutationGraph(repoRoot, evidenceRoot, slug, doc, next) {
-  const specDir = path14.join(repoRoot, ".specs", slug);
-  if (!fs18.existsSync(specDir)) throw new Error(`spec ${slug} does not exist`);
-  fs18.mkdirSync(path14.dirname(path14.join(specDir, doc)), { recursive: true });
-  fs18.writeFileSync(path14.join(specDir, doc), next);
+function buildMutationGraph(repoRoot, slug, doc, next) {
+  const specDir = path15.join(repoRoot, ".specs", slug);
+  if (!fs19.existsSync(specDir)) throw new Error(`spec ${slug} does not exist`);
+  fs19.mkdirSync(path15.dirname(path15.join(specDir, doc)), { recursive: true });
+  fs19.writeFileSync(path15.join(specDir, doc), next);
   return buildGraph({
     repoRoot,
-    // Truth validation needs canonical execution evidence, but not filtered overlay rows:
-    // apply_spec_change must not let a filtered debug pass launder a DONE task.
-    ndjsonPath: path14.join(evidenceRoot, ".dev-pomogator", ".last-test-run.ndjson"),
-    scenarioOverlayPath: path14.join(repoRoot, ".dev-pomogator", ".scenario-results.ndjson")
+    skipNdjson: true,
+    mdRoots: [path15.join(".specs", slug)],
+    featureRoots: [path15.join(".specs", slug)]
   });
+}
+function frMetadataContractFindings(repoRoot, slug, doc, next) {
+  if (path15.basename(doc).toLowerCase() !== "fr.md") return [];
+  const tmpRoot = fs19.mkdtempSync(path15.join(os.tmpdir(), "spec-metadata-mutate-"));
+  try {
+    const srcDir = path15.join(repoRoot, ".specs", slug);
+    const dstDir = path15.join(tmpRoot, ".specs", slug);
+    fs19.cpSync(srcDir, dstDir, { recursive: true });
+    const beforeGraph = buildGraph({
+      repoRoot: tmpRoot,
+      skipNdjson: true,
+      mdRoots: [path15.join(".specs", slug)],
+      featureRoots: [path15.join(".specs", slug)]
+    });
+    const graph = buildMutationGraph(tmpRoot, slug, doc, next);
+    const targetFile = path15.posix.join(".specs", slug, doc.replace(/\\/g, "/"));
+    const issueKey = (node, issue2) => `${node.id}|${issue2.code}|${issue2.path}|${issue2.message}`;
+    const beforeIssues = new Set(
+      [...beforeGraph.nodes.values()].flatMap((node) => node.type === "FR" && node.file.replace(/\\/g, "/") === targetFile ? (node.metadataIssues ?? []).map((issue2) => issueKey(node, issue2)) : [])
+    );
+    const findings = [];
+    for (const node of graph.nodes.values()) {
+      if (node.type !== "FR" || node.file.replace(/\\/g, "/") !== targetFile) continue;
+      for (const issue2 of node.metadataIssues ?? []) {
+        if (beforeIssues.has(issueKey(node, issue2))) continue;
+        findings.push({
+          layer: "conformance",
+          line: node.line,
+          message: `${issue2.code}: ${issue2.path}: ${issue2.message}`
+        });
+      }
+    }
+    return findings;
+  } catch (error51) {
+    return [{ layer: "conformance", message: `FR metadata validation failed: ${error51 instanceof Error ? error51.message : error51}` }];
+  } finally {
+    fs19.rmSync(tmpRoot, { recursive: true, force: true });
+  }
 }
 function deltaByKey(before, after, keyOf) {
   const remaining = /* @__PURE__ */ new Map();
@@ -58253,28 +59358,57 @@ function taskTruthFindings(graph, targetSpec) {
     code: issue2.code
   }));
 }
+function applyCanonicalEvidenceForTaskTruth(graph, patch) {
+  const scenarios = [...graph.nodes.values()].filter(
+    (node) => node.type === "Scenario"
+  );
+  applyTestResults(scenarios, patch);
+  for (const scenario of scenarios) {
+    if (!scenario.lastResult) continue;
+    scenario.canonicalResult = scenario.lastResult;
+    scenario.canonicalRunAt = scenario.lastRunAt;
+  }
+}
 function conformanceFindings(repoRoot, slug, doc, next) {
-  const tmpRoot = fs18.mkdtempSync(path14.join(os.tmpdir(), "spec-mutate-"));
+  const tmpRoot = fs19.mkdtempSync(path15.join(os.tmpdir(), "spec-mutate-"));
   try {
-    const srcDir = path14.join(repoRoot, ".specs", slug);
-    const dstDir = path14.join(tmpRoot, ".specs", slug);
-    fs18.cpSync(srcDir, dstDir, { recursive: true });
+    const srcDir = path15.join(repoRoot, ".specs", slug);
+    const dstDir = path15.join(tmpRoot, ".specs", slug);
+    fs19.cpSync(srcDir, dstDir, { recursive: true });
     const beforeGraph = buildGraph({
       repoRoot: tmpRoot,
-      ndjsonPath: path14.join(repoRoot, ".dev-pomogator", ".last-test-run.ndjson"),
-      scenarioOverlayPath: path14.join(tmpRoot, ".dev-pomogator", ".scenario-results.ndjson")
+      skipNdjson: true,
+      mdRoots: [path15.join(".specs", slug)],
+      featureRoots: [path15.join(".specs", slug)]
     });
-    const graph = buildMutationGraph(tmpRoot, repoRoot, slug, doc, next);
-    const before = checkConformance(beforeGraph);
-    const after = checkConformance(graph);
+    const graph = buildMutationGraph(tmpRoot, slug, doc, next);
+    const isTaskMutation = path15.basename(doc).toLowerCase() === "tasks.md";
+    let beforeTruthGraph = beforeGraph;
+    let afterTruthGraph = graph;
+    if (isTaskMutation) {
+      const evidencePatch = parseNdjsonFile(
+        path15.join(repoRoot, ".dev-pomogator", ".last-test-run.ndjson")
+      );
+      applyCanonicalEvidenceForTaskTruth(beforeTruthGraph, evidencePatch);
+      applyCanonicalEvidenceForTaskTruth(afterTruthGraph, evidencePatch);
+    }
+    const progressPath = path15.join(repoRoot, ".specs", slug, ".progress.json");
+    let strictContracts = false;
+    try {
+      strictContracts = JSON.parse(fs19.readFileSync(progressPath, "utf8")).contractPolicy === "strict-v1";
+    } catch {
+    }
+    const conformanceOptions = strictContracts ? { strictContracts: true, strictContractSpec: slug } : {};
+    const before = checkConformance(beforeGraph, conformanceOptions);
+    const after = checkConformance(graph, conformanceOptions);
     const newErrors = deltaByKey(
       before.filter((f) => f.severity === "error"),
       after.filter((f) => f.severity === "error"),
       conformanceKey
     );
-    const newTruthFindings = path14.basename(doc).toLowerCase() === "tasks.md" ? deltaByKey(
-      taskTruthFindings(beforeGraph, slug),
-      taskTruthFindings(graph, slug),
+    const newTruthFindings = isTaskMutation ? deltaByKey(
+      taskTruthFindings(beforeTruthGraph, slug),
+      taskTruthFindings(afterTruthGraph, slug),
       (finding) => `${finding.code}|${finding.taskId}`
     ) : [];
     return [
@@ -58293,7 +59427,7 @@ function conformanceFindings(repoRoot, slug, doc, next) {
   } catch (e) {
     return [{ layer: "conformance", message: `conformance validation failed: ${e instanceof Error ? e.message : e}` }];
   } finally {
-    fs18.rmSync(tmpRoot, { recursive: true, force: true });
+    fs19.rmSync(tmpRoot, { recursive: true, force: true });
   }
 }
 function validateSpecPatch(repoRoot, inputs) {
@@ -58319,21 +59453,22 @@ function validateSpecPatch(repoRoot, inputs) {
   const grouped = /* @__PURE__ */ new Map();
   for (const input of inputs) grouped.set(input.slug, [...grouped.get(input.slug) ?? [], input]);
   for (const [slug, changes] of grouped) {
-    const tmpRoot = fs18.mkdtempSync(path14.join(os.tmpdir(), "spec-patch-"));
+    const tmpRoot = fs19.mkdtempSync(path15.join(os.tmpdir(), "spec-patch-"));
     try {
-      const srcDir = path14.join(repoRoot, ".specs", slug);
-      const dstDir = path14.join(tmpRoot, ".specs", slug);
-      fs18.cpSync(srcDir, dstDir, { recursive: true });
+      const srcDir = path15.join(repoRoot, ".specs", slug);
+      const dstDir = path15.join(tmpRoot, ".specs", slug);
+      fs19.cpSync(srcDir, dstDir, { recursive: true });
       const beforeAnchors = checkLinks(specMdFiles(tmpRoot, slug));
       const beforeGraph = buildGraph({
         repoRoot: tmpRoot,
-        ndjsonPath: path14.join(repoRoot, ".dev-pomogator", ".last-test-run.ndjson"),
-        scenarioOverlayPath: path14.join(tmpRoot, ".dev-pomogator", ".scenario-results.ndjson")
+        skipNdjson: true,
+        mdRoots: [path15.join(".specs", slug)],
+        featureRoots: [path15.join(".specs", slug)]
       });
       for (const change of changes) {
-        const abs = path14.join(dstDir, change.doc);
-        fs18.mkdirSync(path14.dirname(abs), { recursive: true });
-        fs18.writeFileSync(abs, change.next);
+        const abs = path15.join(dstDir, change.doc);
+        fs19.mkdirSync(path15.dirname(abs), { recursive: true });
+        fs19.writeFileSync(abs, change.next);
       }
       const editedKeys = new Set(changes.map((change) => keyOf(slug, change.doc)));
       const fallbackKey = keyOf(slug, changes[0].doc);
@@ -58365,8 +59500,9 @@ function validateSpecPatch(repoRoot, inputs) {
       }
       const afterGraph = buildGraph({
         repoRoot: tmpRoot,
-        ndjsonPath: path14.join(repoRoot, ".dev-pomogator", ".last-test-run.ndjson"),
-        scenarioOverlayPath: path14.join(tmpRoot, ".dev-pomogator", ".scenario-results.ndjson")
+        skipNdjson: true,
+        mdRoots: [path15.join(".specs", slug)],
+        featureRoots: [path15.join(".specs", slug)]
       });
       const before = checkConformance(beforeGraph);
       const after = checkConformance(afterGraph);
@@ -58385,13 +59521,18 @@ function validateSpecPatch(repoRoot, inputs) {
           message: `${finding.code}: ${finding.message}`
         });
       }
-      if (changes.some((change) => path14.basename(change.doc).toLowerCase() === "tasks.md")) {
+      if (changes.some((change) => path15.basename(change.doc).toLowerCase() === "tasks.md")) {
+        const evidencePatch = parseNdjsonFile(
+          path15.join(repoRoot, ".dev-pomogator", ".last-test-run.ndjson")
+        );
+        applyCanonicalEvidenceForTaskTruth(beforeGraph, evidencePatch);
+        applyCanonicalEvidenceForTaskTruth(afterGraph, evidencePatch);
         const newTruth = deltaByKey(
           taskTruthFindings(beforeGraph, slug),
           taskTruthFindings(afterGraph, slug),
           (finding) => `${finding.code}|${finding.taskId}`
         );
-        const tasks = changes.find((change) => path14.basename(change.doc).toLowerCase() === "tasks.md");
+        const tasks = changes.find((change) => path15.basename(change.doc).toLowerCase() === "tasks.md");
         for (const finding of newTruth) add(keyOf(slug, tasks.doc), finding);
       }
     } catch (error51) {
@@ -58400,7 +59541,7 @@ function validateSpecPatch(repoRoot, inputs) {
         message: `patch validation failed: ${error51 instanceof Error ? error51.message : error51}`
       });
     } finally {
-      fs18.rmSync(tmpRoot, { recursive: true, force: true });
+      fs19.rmSync(tmpRoot, { recursive: true, force: true });
     }
   }
   return { findings: [...byDocument.values()].flat(), byDocument };
@@ -58410,10 +59551,10 @@ function validateSpecChange(repoRoot, slug, doc, change) {
   if (targetBad) return { ok: false, findings: [targetBad] };
   const rel = normalizeContainedDoc(doc);
   doc = rel;
-  const specDir = path14.join(repoRoot, ".specs", slug);
-  const abs = path14.join(specDir, doc);
-  const current = fs18.existsSync(abs) ? fs18.readFileSync(abs, "utf-8") : null;
-  if (current === null && !fs18.existsSync(specDir)) {
+  const specDir = path15.join(repoRoot, ".specs", slug);
+  const abs = path15.join(specDir, doc);
+  const current = fs19.existsSync(abs) ? fs19.readFileSync(abs, "utf-8") : null;
+  if (current === null && !fs19.existsSync(specDir)) {
     return {
       ok: false,
       specMissing: true,
@@ -58424,7 +59565,7 @@ function validateSpecChange(repoRoot, slug, doc, change) {
   const isMd = ext.endsWith(".md");
   const isFeature = ext.endsWith(".feature");
   const applied = applyChange2(current, change);
-  if (!applied.ok) return { ok: false, findings: [applied.finding] };
+  if ("finding" in applied) return { ok: false, findings: [applied.finding] };
   const next = applied.next;
   if (next.trim() === "" && current !== null && current.trim() !== "") {
     return {
@@ -58432,16 +59573,16 @@ function validateSpecChange(repoRoot, slug, doc, change) {
       findings: [{ layer: "change", message: "refusing to replace a non-empty document with empty content" }]
     };
   }
-  const base = path14.basename(rel).toLowerCase();
+  const base = path15.basename(rel).toLowerCase();
   const isGraphDocName = /^(fr|nfr|acceptance_criteria|user_stories|use_cases|design|requirements|tasks|file_changes|research)\.md$/.test(base) || base.endsWith(".feature");
   if (rel.includes("/") && !isGraphDocName) {
     return { ok: true, next, findings: [] };
   }
   const findings = [
+    ...isMd && base === "fr.md" ? frMetadataContractFindings(repoRoot, slug, doc, next) : [],
     ...formDeltaFindings(doc, current ?? "", next),
     ...isMd ? anchorFindings(repoRoot, slug, doc, next) : [],
     ...isMd || isFeature ? conformanceFindings(repoRoot, slug, doc, next) : [],
-    // V2 hard-gate: refuse a .feature write that ADDS a placeholder/[TBD] skeleton
     // scenario (net-new, doc-scoped — legacy skeletons don't block unrelated edits).
     ...isFeature ? featureStrengthFindings(current, next).map((f) => ({ layer: "strength", line: f.line, message: f.message })) : []
   ];
@@ -58449,26 +59590,26 @@ function validateSpecChange(repoRoot, slug, doc, change) {
 }
 var MD_LINK_RE = /\[[^\]]*\]\(([^)\s]+?)(#[^)\s]*)?\)/g;
 function findInboundLinks(repoRoot, targetRelFile) {
-  const specsRoot = path14.resolve(repoRoot, ".specs");
-  const targetAbs = path14.resolve(repoRoot, targetRelFile);
+  const specsRoot = path15.resolve(repoRoot, ".specs");
+  const targetAbs = path15.resolve(repoRoot, targetRelFile);
   const out = [];
   const walk = (dir) => {
     let entries;
     try {
-      entries = fs18.readdirSync(dir, { withFileTypes: true });
+      entries = fs19.readdirSync(dir, { withFileTypes: true });
     } catch {
       return;
     }
     for (const e of entries) {
-      const abs = path14.join(dir, e.name);
+      const abs = path15.join(dir, e.name);
       if (e.isDirectory()) {
         if (e.name === "node_modules" || e.name === ".git") continue;
         walk(abs);
       } else if (e.isFile() && e.name.endsWith(".md")) {
-        if (path14.resolve(abs) === targetAbs) continue;
+        if (path15.resolve(abs) === targetAbs) continue;
         let content;
         try {
-          content = fs18.readFileSync(abs, "utf-8");
+          content = fs19.readFileSync(abs, "utf-8");
         } catch {
           continue;
         }
@@ -58477,10 +59618,10 @@ function findInboundLinks(repoRoot, targetRelFile) {
           for (const m of lines[i].matchAll(MD_LINK_RE)) {
             const rawPath = m[1];
             if (/^[a-z][a-z0-9+.-]*:/i.test(rawPath) || rawPath.startsWith("#")) continue;
-            const resolved = path14.resolve(path14.dirname(abs), rawPath);
+            const resolved = path15.resolve(path15.dirname(abs), rawPath);
             if (resolved !== targetAbs) continue;
             out.push({
-              file: path14.relative(repoRoot, abs).replace(/\\/g, "/"),
+              file: path15.relative(repoRoot, abs).replace(/\\/g, "/"),
               line: i + 1,
               linkPath: rawPath,
               fragment: m[2] ?? null
@@ -58494,7 +59635,7 @@ function findInboundLinks(repoRoot, targetRelFile) {
   return out;
 }
 function rewriteInboundLinks(repoRoot, inbound, newTargetRel) {
-  const newTargetAbs = path14.resolve(repoRoot, newTargetRel);
+  const newTargetAbs = path15.resolve(repoRoot, newTargetRel);
   const byFile = /* @__PURE__ */ new Map();
   for (const l of inbound) {
     const list = byFile.get(l.file);
@@ -58503,9 +59644,9 @@ function rewriteInboundLinks(repoRoot, inbound, newTargetRel) {
   }
   const edits = [];
   for (const [file2, links] of byFile) {
-    const abs = path14.resolve(repoRoot, file2);
-    let content = fs18.readFileSync(abs, "utf-8");
-    let rel = path14.relative(path14.dirname(abs), newTargetAbs).replace(/\\/g, "/");
+    const abs = path15.resolve(repoRoot, file2);
+    let content = fs19.readFileSync(abs, "utf-8");
+    let rel = path15.relative(path15.dirname(abs), newTargetAbs).replace(/\\/g, "/");
     if (!rel.startsWith(".")) rel = `./${rel}`;
     for (const l of links) {
       const oldRef = `](${l.linkPath}${l.fragment ?? ""})`;
@@ -58518,16 +59659,16 @@ function rewriteInboundLinks(repoRoot, inbound, newTargetRel) {
 }
 function writeDocAtomic(repoRoot, slug, doc, content) {
   return withWriteLock(repoRoot, () => {
-    const dir = path14.join(repoRoot, ".specs", slug);
-    const abs = path14.join(dir, doc);
-    fs18.mkdirSync(path14.dirname(abs), { recursive: true });
+    const dir = path15.join(repoRoot, ".specs", slug);
+    const abs = path15.join(dir, doc);
+    fs19.mkdirSync(path15.dirname(abs), { recursive: true });
     const tmp = `${abs}.${process.pid}.${Math.random().toString(36).slice(2)}.tmp`;
-    fs18.writeFileSync(tmp, content, "utf-8");
+    fs19.writeFileSync(tmp, content, "utf-8");
     try {
-      fs18.renameSync(tmp, abs);
+      fs19.renameSync(tmp, abs);
     } catch (e) {
       try {
-        fs18.unlinkSync(tmp);
+        fs19.unlinkSync(tmp);
       } catch {
       }
       throw e;
@@ -58536,8 +59677,40 @@ function writeDocAtomic(repoRoot, slug, doc, content) {
   });
 }
 
+// tools/spec-mcp-server/path-containment.ts
+import crypto3 from "node:crypto";
+import fs20 from "node:fs";
+import path16 from "node:path";
+var ROOT_WORKTREE_MISMATCH = "ROOT_WORKTREE_MISMATCH";
+function canonicalRoot(value) {
+  try {
+    const real = fs20.realpathSync.native(value).replace(/\\/g, "/").replace(/\/+$/, "");
+    return process.platform === "win32" ? real.toLowerCase() : real;
+  } catch {
+    return null;
+  }
+}
+function redactedRootIdentity(root) {
+  const resolved = path16.resolve(root).replace(/\\/g, "/").replace(/\/+$/, "");
+  const canonical = canonicalRoot(root) ?? (process.platform === "win32" ? resolved.toLowerCase() : resolved);
+  return { id: crypto3.createHash("sha256").update(canonical, "utf8").digest("hex").slice(0, 16) };
+}
+function checkDeclaredWorktree(repoRoot, declaredWorktree) {
+  const actual = redactedRootIdentity(repoRoot);
+  if (declaredWorktree === void 0 || declaredWorktree.trim() === "" || declaredWorktree.trim() === "${CLAUDE_PROJECT_DIR}") {
+    return { ok: true, actual, declared: null };
+  }
+  const declaredCanonical = canonicalRoot(declaredWorktree);
+  const declared = declaredCanonical ? { id: crypto3.createHash("sha256").update(declaredCanonical, "utf8").digest("hex").slice(0, 16) } : redactedRootIdentity(declaredWorktree);
+  return { ok: declaredCanonical !== null && declared.id === actual.id, actual, declared };
+}
+
+// tools/spec-mcp-server/domain-authoring.ts
+import fs22 from "node:fs";
+import path17 from "node:path";
+
 // tools/spec-mcp-server/section-ops.ts
-import fs19 from "node:fs";
+import fs21 from "node:fs";
 import { randomUUID } from "node:crypto";
 var HEADING_RE2 = /^(#{1,6})\s+(.*?)\s*#*\s*$/;
 function detectEol(content) {
@@ -58559,13 +59732,13 @@ function findHeading(lines, heading) {
   for (let i = 0; i < lines.length; i++) {
     const m = HEADING_RE2.exec(lines[i]);
     if (!m) continue;
-    const text = m[2];
-    const slug = marksmanSlug(text);
-    if (text === heading || slug === wantSlug || slug === heading) {
+    const text2 = m[2];
+    const slug = marksmanSlug(text2);
+    if (text2 === heading || slug === wantSlug || slug === heading) {
       return {
         found: true,
         headingLevel: m[1].length,
-        headingText: text,
+        headingText: text2,
         headingAnchor: slug,
         startLine: i + 1,
         endLine: i + 1
@@ -58641,10 +59814,10 @@ function readDoc(repoRoot, slug, doc) {
   if (targetBad) return { ok: false, error: "TARGET" };
   const resolved = resolveSpecDoc(repoRoot, slug, doc);
   if (!resolved.ok) return { ok: false, error: "TARGET" };
-  if (!fs19.existsSync(resolved.abs) || !fs19.statSync(resolved.abs).isFile()) {
+  if (!fs21.existsSync(resolved.abs) || !fs21.statSync(resolved.abs).isFile()) {
     return { ok: false, error: "DOC_NOT_FOUND" };
   }
-  return { ok: true, abs: resolved.abs, rel: resolved.rel, current: fs19.readFileSync(resolved.abs, "utf-8") };
+  return { ok: true, abs: resolved.abs, rel: resolved.rel, current: fs21.readFileSync(resolved.abs, "utf-8") };
 }
 function readForEdit(repoRoot, slug, doc, heading) {
   const read = readDoc(repoRoot, slug, doc);
@@ -58717,13 +59890,6 @@ function proposeSectionChange(repoRoot, slug, doc, op) {
     findings: validation.findings,
     error: validation.ok ? void 0 : "VALIDATION_FAILED"
   };
-}
-function applySectionChange(repoRoot, slug, doc, op) {
-  const proposed = proposeSectionChange(repoRoot, slug, doc, op);
-  if (!proposed.ok || proposed.preview === void 0) return proposed;
-  const abs = writeDocAtomic(repoRoot, slug, doc, proposed.preview);
-  void abs;
-  return { ...proposed, written: true, sha: docSha(proposed.preview), bytes: proposed.preview.length };
 }
 var NOT_FOUND_LOCATOR = {
   found: false,
@@ -58867,77 +60033,6 @@ function replaceInSectionContent(content, op) {
     }
   };
 }
-function applyReplaceChange(repoRoot, slug, doc, op, expectedSha) {
-  const read = readDoc(repoRoot, slug, doc);
-  if (!read.ok) {
-    return { ok: false, eol_style: "lf", resolved: false, heading_anchor: null, start_line: null, end_line: null, section_sha: null, findings: [], error: read.error };
-  }
-  const current = read.current;
-  const eol = detectEol(current);
-  const result = replaceInSectionContent(current, op);
-  const failTransform = (error51, extra = {}) => ({
-    ok: false,
-    eol_style: eol,
-    resolved: result.locator.found,
-    heading_anchor: result.locator.headingAnchor,
-    start_line: result.locator.startLine,
-    end_line: result.locator.endLine,
-    section_sha: result.section_sha,
-    diagnostic: result.diagnostic,
-    findings: [],
-    error: error51,
-    available_anchors: result.diagnostic?.kind === "missing_anchor" ? listHeadingAnchors(current) : void 0,
-    ...extra
-  });
-  const finalizeWrite = (extra = {}) => {
-    const next = result.next;
-    const validation = validateSpecChange(repoRoot, slug, doc, { content: next });
-    if (!validation.ok) {
-      return {
-        ok: false,
-        preview: next,
-        eol_style: eol,
-        resolved: true,
-        heading_anchor: result.locator.headingAnchor,
-        start_line: result.locator.startLine,
-        end_line: result.locator.endLine,
-        section_sha: result.section_sha,
-        findings: validation.findings,
-        error: "VALIDATION_FAILED"
-      };
-    }
-    writeDocAtomic(repoRoot, slug, doc, next);
-    const newLoc = locateSection(splitLogical(next), op.heading);
-    return {
-      ok: true,
-      preview: next,
-      eol_style: eol,
-      resolved: true,
-      heading_anchor: newLoc.headingAnchor ?? result.locator.headingAnchor,
-      start_line: newLoc.startLine,
-      end_line: newLoc.endLine,
-      section_sha: sectionSha(next, newLoc),
-      findings: [],
-      written: true,
-      bytes: next.length,
-      sha: docSha(next),
-      ...extra
-    };
-  };
-  if (expectedSha !== void 0) {
-    const cas = casCheck(repoRoot, slug, doc, expectedSha);
-    if (!cas.ok) {
-      if (result.ok && result.next !== void 0) {
-        return finalizeWrite({ rebased: true, normalized: result.normalized === true });
-      }
-      return failTransform("CAS_CONFLICT", { sha: cas.actualSha ?? void 0, available_anchors: listHeadingAnchors(current) });
-    }
-  }
-  if (!result.ok || result.next === void 0) {
-    return failTransform(result.error === "HEADING_REQUIRED" ? "HEADING_REQUIRED" : "REPLACE_FAILED");
-  }
-  return finalizeWrite({ normalized: result.normalized === true });
-}
 var normSlug = (s) => String(s).replace(/\\/g, "/").replace(/^\.?\/?\.specs\//, "").replace(/\/+$/, "");
 var normDoc = (d) => String(d).replace(/\\/g, "/").replace(/^\/+/, "");
 function lineDiff(current, next) {
@@ -58973,6 +60068,7 @@ function preparePatchEdit(repoRoot, edit, deferValidation = false) {
     start_line: null,
     end_line: null,
     section_sha: null,
+    base_sha: null,
     sha: null,
     diff: { added: [], removed: [] },
     findings: []
@@ -58982,6 +60078,7 @@ function preparePatchEdit(repoRoot, edit, deferValidation = false) {
   const read = readDoc(repoRoot, slug, doc);
   if (!read.ok) return { ...base, error: read.error };
   const current = read.current;
+  const baseSha = docSha(current);
   const eol = detectEol(current);
   let next;
   let anchor;
@@ -58991,7 +60088,7 @@ function preparePatchEdit(repoRoot, edit, deferValidation = false) {
   if (edit.section) {
     const t = applySectionOpToContent(current, edit.section);
     if (!t.ok || t.next === void 0) {
-      return { ...base, eol_style: eol, heading_anchor: t.locator.headingAnchor, start_line: t.locator.startLine, end_line: t.locator.endLine, error: t.error ?? "HEADING_NOT_FOUND" };
+      return { ...base, eol_style: eol, heading_anchor: t.locator.headingAnchor, start_line: t.locator.startLine, end_line: t.locator.endLine, base_sha: baseSha, error: t.error ?? "HEADING_NOT_FOUND" };
     }
     next = t.next;
     anchor = t.locator.headingAnchor;
@@ -59007,6 +60104,7 @@ function preparePatchEdit(repoRoot, edit, deferValidation = false) {
         start_line: r.locator.startLine,
         end_line: r.locator.endLine,
         section_sha: r.section_sha,
+        base_sha: baseSha,
         diagnostic: r.diagnostic,
         error: r.error === "HEADING_REQUIRED" ? "HEADING_REQUIRED" : "REPLACE_FAILED"
       };
@@ -59025,7 +60123,7 @@ function preparePatchEdit(repoRoot, edit, deferValidation = false) {
   }
   if (edit.expected_sha !== void 0) {
     const cas = casCheck(repoRoot, slug, doc, edit.expected_sha);
-    if (!cas.ok) return { ...base, eol_style: eol, heading_anchor: anchor, start_line: span.startLine, end_line: span.endLine, error: "CAS_MISMATCH" };
+    if (!cas.ok) return { ...base, eol_style: eol, heading_anchor: anchor, start_line: span.startLine, end_line: span.endLine, base_sha: baseSha, error: "CAS_MISMATCH" };
   }
   const validation = deferValidation ? { ok: true, findings: [] } : validateSpecChange(repoRoot, slug, doc, { content: next });
   const nextLines = splitLogical(next);
@@ -59040,6 +60138,7 @@ function preparePatchEdit(repoRoot, edit, deferValidation = false) {
     start_line: resultLocator.startLine,
     end_line: resultLocator.endLine,
     section_sha: sectionTargeted && resultLocator.found ? sectionSha(next, resultLocator) : null,
+    base_sha: baseSha,
     sha: docSha(next),
     append_token: tokens.appendToken,
     insert_token: tokens.insertToken,
@@ -59065,6 +60164,7 @@ function preparePatch(repoRoot, edits) {
         start_line: null,
         end_line: null,
         section_sha: null,
+        base_sha: null,
         sha: null,
         diff: { added: [], removed: [] },
         findings: [{ layer: "change", message: `duplicate transaction target: ${target}` }],
@@ -59093,23 +60193,49 @@ function preparePatch(repoRoot, edits) {
   const findings = prepared.flatMap((preview) => preview.findings);
   return { ok: prepared.length === edits.length && prepared.every((preview) => preview.ok), edits: prepared, findings };
 }
-function applySpecTransactionCore(repoRoot, edits, options = {}) {
-  const preview = preparePatch(repoRoot, edits);
-  if (!preview.ok) {
-    return { ok: false, edits: preview.edits, findings: preview.findings, error: "VALIDATION_FAILED" };
+function commitPreparedPatch(repoRoot, prepared, options = {}) {
+  if (!prepared.ok) {
+    return { ok: false, edits: prepared.edits, findings: prepared.findings, error: "VALIDATION_FAILED" };
   }
   const writeDocument = options.writeDocument ?? writeDocAtomic;
   const shas = {};
   const originals = /* @__PURE__ */ new Map();
   const written = [];
+  const stale = [];
   try {
-    for (const p of preview.edits) {
+    for (const p of prepared.edits) {
       const target = `${p.spec}/${p.doc}`;
       const before = readDoc(repoRoot, p.spec, p.doc);
-      if (!before.ok) throw new Error(`cannot snapshot ${target}: ${before.error}`);
+      if (!before.ok) {
+        return {
+          ok: false,
+          edits: prepared.edits,
+          findings: [{ layer: "change", message: `cannot read ${target} before commit: ${before.error}` }],
+          written: false,
+          error: "VALIDATION_FAILED"
+        };
+      }
+      const actualSha = docSha(before.current);
+      if (p.base_sha === null || actualSha !== p.base_sha) stale.push({ preview: p, actualSha });
       originals.set(target, before.current);
     }
-    for (const p of preview.edits) {
+    if (stale.length > 0) {
+      const staleTargets = new Set(stale.map(({ preview }) => `${preview.spec}/${preview.doc}`));
+      const edits = prepared.edits.map(
+        (p) => staleTargets.has(`${p.spec}/${p.doc}`) ? { ...p, ok: false, error: "CAS_MISMATCH" } : p
+      );
+      return {
+        ok: false,
+        edits,
+        findings: stale.map(({ preview, actualSha }) => ({
+          layer: "change",
+          message: `prepared patch is stale for ${preview.spec}/${preview.doc}: expected base sha ${preview.base_sha}, actual sha ${actualSha}`
+        })),
+        written: false,
+        error: "CAS_MISMATCH"
+      };
+    }
+    for (const p of prepared.edits) {
       writeDocument(repoRoot, p.spec, p.doc, p.next);
       written.push(p);
       shas[`${p.spec}/${p.doc}`] = p.sha;
@@ -59131,7 +60257,7 @@ function applySpecTransactionCore(repoRoot, edits, options = {}) {
     const rollbackFailed = rollbackFailures.length > 0;
     return {
       ok: false,
-      edits: preview.edits,
+      edits: prepared.edits,
       findings: [{
         layer: "change",
         message: rollbackFailed ? `transaction write failed and rollback was incomplete: ${writeError}` : `transaction write failed; all earlier writes were rolled back: ${writeError}`
@@ -59142,28 +60268,64 @@ function applySpecTransactionCore(repoRoot, edits, options = {}) {
       rollback_failures: rollbackFailures
     };
   }
-  return { ok: true, edits: preview.edits, findings: [], written: true, shas };
+  return { ok: true, edits: prepared.edits, findings: [], written: true, shas };
 }
 var proposalStore = /* @__PURE__ */ new Map();
+var MAX_STORED_PROPOSALS = 128;
+var PROPOSAL_TTL_MS = 10 * 60 * 1e3;
+function evictExpiredProposals(now) {
+  for (const [id, proposal] of proposalStore) {
+    if (proposal.expiresAt <= now) proposalStore.delete(id);
+  }
+}
+function evictOldestProposal() {
+  let oldest;
+  for (const proposal of proposalStore.values()) {
+    if (!oldest || proposal.createdAt < oldest.createdAt) oldest = proposal;
+  }
+  if (oldest) proposalStore.delete(oldest.id);
+}
 function proposePatch(repoRoot, edits) {
   const preview = preparePatch(repoRoot, edits);
   const proposal_id = randomUUID();
-  proposalStore.set(proposal_id, { id: proposal_id, edits, createdAt: (/* @__PURE__ */ new Date()).toISOString() });
+  const now = Date.now();
+  evictExpiredProposals(now);
+  while (proposalStore.size >= MAX_STORED_PROPOSALS) evictOldestProposal();
+  proposalStore.set(proposal_id, {
+    id: proposal_id,
+    edits,
+    createdAt: now,
+    expiresAt: now + PROPOSAL_TTL_MS,
+    rootId: redactedRootIdentity(repoRoot).id
+  });
   return { ...preview, proposal_id };
 }
-function applyProposedPatch(repoRoot, proposalId) {
+function prepareProposedPatch(repoRoot, proposalId) {
+  evictExpiredProposals(Date.now());
   const stored = proposalStore.get(proposalId);
-  if (!stored) {
-    return { ok: false, edits: [], findings: [], error: "PROPOSAL_NOT_FOUND", proposal_id: proposalId };
+  if (!stored) return { ok: false, edits: [], findings: [], proposal_id: proposalId, error: "PROPOSAL_NOT_FOUND" };
+  if (stored.rootId !== redactedRootIdentity(repoRoot).id) {
+    return { ok: false, edits: [], findings: [], proposal_id: proposalId, error: "ROOT_WORKTREE_MISMATCH" };
   }
-  const result = applySpecTransactionCore(repoRoot, stored.edits);
-  if (result.ok) proposalStore.delete(proposalId);
-  return { ...result, proposal_id: proposalId };
+  return { ...preparePatch(repoRoot, stored.edits), proposal_id: proposalId };
+}
+function commitProposedPatch(repoRoot, prepared, options = {}) {
+  evictExpiredProposals(Date.now());
+  if (prepared.error === "PROPOSAL_NOT_FOUND" || !proposalStore.has(prepared.proposal_id)) {
+    return { ok: false, edits: [], findings: [], error: "PROPOSAL_NOT_FOUND", proposal_id: prepared.proposal_id };
+  }
+  if (prepared.error === "ROOT_WORKTREE_MISMATCH") {
+    return { ok: false, edits: [], findings: [], error: "ROOT_WORKTREE_MISMATCH", proposal_id: prepared.proposal_id };
+  }
+  const result = commitPreparedPatch(repoRoot, prepared, options);
+  if (result.ok) proposalStore.delete(prepared.proposal_id);
+  return { ...result, proposal_id: prepared.proposal_id };
+}
+function applyProposedPatch(repoRoot, proposalId) {
+  return commitProposedPatch(repoRoot, prepareProposedPatch(repoRoot, proposalId));
 }
 
 // tools/spec-mcp-server/domain-authoring.ts
-import fs20 from "node:fs";
-import path15 from "node:path";
 var HEADING_RE3 = /^(#{1,6})\s+(.*?)\s*#*\s*$/;
 var splitLogical2 = (s) => s.split(/\r\n|\n/);
 function renderTaskBlock(d) {
@@ -59199,12 +60361,12 @@ function readContained(repoRoot, slug, doc) {
   if (validateTarget(slug, doc)) return null;
   const resolved = resolveSpecDoc(repoRoot, slug, doc);
   if (!resolved.ok) return null;
-  if (!fs20.existsSync(resolved.abs) || !fs20.statSync(resolved.abs).isFile()) return null;
-  return fs20.readFileSync(resolved.abs, "utf-8");
+  if (!fs22.existsSync(resolved.abs) || !fs22.statSync(resolved.abs).isFile()) return null;
+  return fs22.readFileSync(resolved.abs, "utf-8");
 }
 function anchorAt(content, line) {
-  const text = (splitLogical2(content)[line - 1] ?? "").replace(HEADING_RE3, "$2");
-  return marksmanSlug(text);
+  const text2 = (splitLogical2(content)[line - 1] ?? "").replace(HEADING_RE3, "$2");
+  return marksmanSlug(text2);
 }
 function loadContext(repoRoot, slug) {
   if (validateTarget(slug, "FR.md")) return { error: "TARGET" };
@@ -59275,22 +60437,22 @@ function cucumberExpressionToRegExp(expr) {
   return new RegExp(`^${out}$`);
 }
 function walkTsFiles(dir) {
-  if (!fs20.existsSync(dir) || !fs20.statSync(dir).isDirectory()) return [];
+  if (!fs22.existsSync(dir) || !fs22.statSync(dir).isDirectory()) return [];
   const out = [];
-  for (const entry of fs20.readdirSync(dir, { withFileTypes: true })) {
-    const abs = path15.join(dir, entry.name);
+  for (const entry of fs22.readdirSync(dir, { withFileTypes: true })) {
+    const abs = path17.join(dir, entry.name);
     if (entry.isDirectory()) out.push(...walkTsFiles(abs));
     else if (entry.isFile() && entry.name.endsWith(".ts")) out.push(abs);
   }
   return out;
 }
 function collectStepPatterns(repoRoot, roots) {
-  const dirs = roots ?? [path15.join(repoRoot, "tests", "step_definitions")];
+  const dirs = roots ?? [path17.join(repoRoot, "tests", "step_definitions")];
   const patterns = [];
   const callRe = /\b(?:Given|When|Then|And|But)\s*\(\s*(\/(?:\\.|[^/\n])+\/[a-z]*|'(?:\\.|[^'\\])*'|"(?:\\.|[^"\\])*')/g;
   for (const dir of dirs) {
     for (const file2 of walkTsFiles(dir)) {
-      const src = fs20.readFileSync(file2, "utf-8");
+      const src = fs22.readFileSync(file2, "utf-8");
       for (const m of src.matchAll(callRe)) {
         const raw = m[1];
         try {
@@ -59315,8 +60477,8 @@ function checkStepSafety(repoRoot, steps, roots) {
   const missing = [];
   const matched = {};
   for (const raw of steps) {
-    const text = raw.trim().replace(/^(Given|When|Then|And|But)\s+/, "");
-    const hits = patterns.filter((p) => p.re.test(text)).map((p) => p.file);
+    const text2 = raw.trim().replace(/^(Given|When|Then|And|But)\s+/, "");
+    const hits = patterns.filter((p) => p.re.test(text2)).map((p) => p.file);
     if (hits.length > 0) matched[raw] = [...new Set(hits)];
     else missing.push(raw);
   }
@@ -59340,7 +60502,8 @@ function resolveRequirements(ctx, frs) {
   return missing.length > 0 ? { missing } : { anchors };
 }
 function commit(repoRoot, edits, rendered, extra = {}) {
-  const result = applySpecTransactionCore(repoRoot, edits);
+  const prepared = preparePatch(repoRoot, edits);
+  const result = withWriteLock(repoRoot, () => commitPreparedPatch(repoRoot, prepared));
   if (!result.ok) {
     return { ok: false, error: "VALIDATION_FAILED", rendered, edits: result.edits, findings: result.findings, hint: "The rendered change failed the form/anchor/conformance gate \u2014 nothing was written. Fix the findings and retry.", ...extra };
   }
@@ -59451,16 +60614,16 @@ function addPhase(repoRoot, input) {
   }
   const date5 = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
   const heading = `## Phase ${number4} \u2014 ${input.title} (${date5})`;
-  const text = `${heading}
+  const text2 = `${heading}
 ${input.source ? `
 \u0418\u0441\u0442\u043E\u0447\u043D\u0438\u043A: ${input.source}
 ` : ""}`;
   const edits = [
     { spec: ctx.slug, doc: "TASKS.md", section: { kind: "insert_at_eof", text: `
-${text}` } },
+${text2}` } },
     ...fileChangesEdit(ctx, ctx.slug, `- TASKS.md: add Phase ${number4} \u2014 ${input.title}`)
   ];
-  return commit(repoRoot, edits, { "TASKS.md": text.trimEnd() }, { ids: [`phase-${number4}`] });
+  return commit(repoRoot, edits, { "TASKS.md": text2.trimEnd() }, { ids: [`phase-${number4}`] });
 }
 function amendRequirement(repoRoot, input) {
   const loaded = loadContext(repoRoot, input.spec);
@@ -59588,19 +60751,140 @@ ${block}` } };
   }
   return commit(repoRoot, edits, { "TASKS.md": block }, { ids: [id], downgraded: feat.downgraded });
 }
+var BASE_CONTRACT_FIELDS = ["version", "kind", "subject", "observables", "negative_cases", "verification"];
+var KIND_FIELD_PATHS = {
+  cli: ["command.executable", "command.args", "input", "output", "exit_codes", "errors"],
+  api: ["request.method|tool", "request.input", "response", "authority", "errors"],
+  schema: ["schema.fields", "schema.enums", "schema.forbidden"],
+  filesystem: ["artifacts"],
+  event: ["event.name", "event.producer", "event.ordering", "event.retry", "event.duplicate", "event.payload", "event.consumers"],
+  state: ["state.states", "state.transitions", "state.guards", "state.terminal_outcomes"],
+  behavior: ["behavior.actor", "behavior.trigger", "behavior.preconditions", "behavior.observable_outcomes", "behavior.forbidden_outcomes"],
+  disposition: ["disposition.status", "disposition.rationale", "disposition.owner", "disposition.successor|boundary"]
+};
+var KIND_SIGNALS = {
+  cli: /\b(cli|command|flag|argument|stdout|stderr|exit code)\b/gi,
+  api: /\b(api|endpoint|http|request|response|rpc|tool)\b/gi,
+  schema: /\b(schema|field|enum|payload shape|json|yaml)\b/gi,
+  filesystem: /\b(file|directory|path|atomic|write|read|filesystem)\b/gi,
+  event: /\b(event|emit|consumer|producer|retry|queue|message)\b/gi,
+  state: /\b(state|transition|lifecycle|status|guard)\b/gi,
+  behavior: /\b(when|then|user|agent|behavior|outcome)\b/gi,
+  disposition: /\b(superseded|deprecated|retired|successor|out of scope|disposition)\b/gi
+};
+function contractKindCandidates(text2) {
+  return CONTRACT_KINDS.map((kind) => {
+    const signals = [...text2.matchAll(KIND_SIGNALS[kind])].map((match) => match[0].toLowerCase());
+    return { kind, score: signals.length + (kind === "behavior" ? 1 : 0), signals: [...new Set(signals)].slice(0, 6) };
+  }).sort((a, b) => b.score - a.score || a.kind.localeCompare(b.kind));
+}
+function requirementSection(source, headingLine) {
+  const lines = splitLogical2(source);
+  const start = headingLine - 1;
+  const level = lines[start].match(/^(#{1,6})\s/)?.[1].length ?? 2;
+  let end = lines.length;
+  for (let index = start + 1; index < lines.length; index += 1) {
+    const candidate = lines[index].match(/^(#{1,6})\s/);
+    if (candidate && candidate[1].length <= level) {
+      end = index;
+      break;
+    }
+  }
+  const eol = source.includes("\r\n") ? "\r\n" : "\n";
+  const hadTerminalEol = /\r?\n$/.test(source);
+  const replace = (metadataBlock) => {
+    const body = lines.slice(start + 1, end);
+    const marker = body.findIndex((line) => /^```yaml\s+metadata\s*$/.test(line.trim()));
+    let nextBody;
+    if (marker >= 0) {
+      const close = body.findIndex((line, index) => index > marker && line.trim() === "```");
+      nextBody = close >= 0 ? [...body.slice(0, marker), metadataBlock, ...body.slice(close + 1)] : [...body, "", metadataBlock];
+    } else {
+      nextBody = [...body];
+      while (nextBody.length > 0 && nextBody[nextBody.length - 1] === "") nextBody.pop();
+      nextBody.push("", metadataBlock);
+    }
+    const rendered = [...lines.slice(0, start + 1), ...nextBody.flatMap((part) => part === metadataBlock ? part.split("\n") : [part]), ...lines.slice(end)].join(eol);
+    return hadTerminalEol && !rendered.endsWith(eol) ? `${rendered}${eol}` : rendered;
+  };
+  return { section: lines.slice(start, end).join(eol), next: replace };
+}
+function contractMetadata(existing, contract) {
+  const { _unknown: _unknown2 = {}, ...known } = existing ?? { _unknown: {} };
+  return {
+    ..._unknown2,
+    ...known,
+    schemaVersion: 1,
+    risks: existing?.risks ?? [],
+    demands: existing?.demands ?? [],
+    contract
+  };
+}
+function proposeRequirementContract(repoRoot, input) {
+  const loaded = loadContext(repoRoot, input.spec);
+  if ("error" in loaded) return { ok: false, error: "TARGET", findings: [], hint: "spec must stay within .specs/ (no traversal)." };
+  const ctx = loaded;
+  const source = ctx.docs.get("FR.md");
+  if (!source) return { ok: false, error: "DOC_NOT_FOUND", findings: [], hint: "FR.md does not exist in this spec." };
+  const parsed = parseMarkdown(source, `.specs/${ctx.slug}/FR.md`);
+  const requirement = parsed.nodes.find((node) => node.type === "FR" && unqualify(node.id) === input.requirement);
+  if (!requirement) return { ok: false, error: "FR_NOT_FOUND", findings: [], hint: `Requirement ${input.requirement} does not exist in FR.md.` };
+  const sourceSha = docSha(source);
+  if (input.expectedSha !== void 0 && input.expectedSha !== sourceSha) {
+    return { ok: false, error: "CAS_MISMATCH", findings: [], requirement: requirement.id, provenance: { resolved_root: redactedRootIdentity(repoRoot), worktree: redactedRootIdentity(repoRoot), document_sha: sourceSha }, hint: "FR.md changed since the supplied read token; re-read and re-propose. Nothing was written." };
+  }
+  const evidenceText = [requirement.title, requirement.body].join("\n");
+  const candidates = contractKindCandidates(evidenceText);
+  const checked = validateRequirementMetadata(contractMetadata(requirement.metadata, input.contract));
+  const findings = checked.issues.map((issue2) => ({ code: issue2.code, path: issue2.path, message: issue2.message }));
+  const selectedKind = typeof input.contract.kind === "string" && CONTRACT_KINDS.includes(input.contract.kind) ? input.contract.kind : void 0;
+  const required2 = [...BASE_CONTRACT_FIELDS, ...selectedKind ? KIND_FIELD_PATHS[selectedKind] : []];
+  const missing = [...new Set(findings.map((issue2) => issue2.path))];
+  const tasks = ctx.docs.has("TASKS.md") ? parseTasks(ctx.docs.get("TASKS.md"), `.specs/${ctx.slug}/TASKS.md`).filter((task) => task.refs.map(unqualify).includes(input.requirement)).map((task) => task.id) : [];
+  const scenarios = ctx.docs.has(`${ctx.slug}.feature`) ? parseGherkin(ctx.docs.get(`${ctx.slug}.feature`), `.specs/${ctx.slug}/${ctx.slug}.feature`).nodes.filter((node) => node.type === "Scenario").filter((node) => node.tags.some((tag) => tag.toLowerCase() === `@${input.requirement.toLowerCase()}` || tag.toLowerCase() === `@feature${input.requirement.replace(/^FR-/i, "")}`)).map((node) => node.id) : [];
+  const provenance = { resolved_root: redactedRootIdentity(repoRoot), worktree: redactedRootIdentity(repoRoot), document_sha: sourceSha };
+  const evidence = {
+    requirement: { title: requirement.title, line: requirement.line, has_metadata: Boolean(requirement.metadata) },
+    acceptance_criteria: ctx.acs.filter((ac) => unqualify(ac.parentFr) === input.requirement).map((ac) => ac.id),
+    tasks,
+    scenarios
+  };
+  if (!checked.metadata) {
+    return { ok: false, error: "FR_METADATA_INVALID", requirement: requirement.id, kind_candidates: candidates, required_fields: required2, missing_fields: missing, findings, evidence, provenance, hint: "Fix the field-level findings and re-propose. Invalid cards never reach the patch proposal store." };
+  }
+  const metadataYaml = renderRequirementMetadata(checked.metadata);
+  const metadataBlock = `\`\`\`yaml metadata
+${metadataYaml}
+\`\`\``;
+  const section = requirementSection(source, requirement.line);
+  const next = section.next(metadataBlock);
+  const updatedSection = requirementSection(next, requirement.line).section;
+  return {
+    ok: true,
+    requirement: requirement.id,
+    kind_candidates: candidates,
+    required_fields: required2,
+    missing_fields: [],
+    findings: [],
+    evidence,
+    provenance,
+    preview: { metadata_yaml: metadataYaml, metadata_block: metadataBlock, requirement_section: updatedSection },
+    edits: [{ spec: ctx.slug, doc: "FR.md", content: next, expected_sha: sourceSha }]
+  };
+}
 
 // tools/spec-mcp-server/set-status.ts
-import fs24 from "node:fs";
-import path20 from "node:path";
+import fs26 from "node:fs";
+import path22 from "node:path";
 import { fileURLToPath as fileURLToPath2 } from "node:url";
 import { spawnSync } from "node:child_process";
 
 // tools/spec-graph/fr-census.ts
-import path17 from "node:path";
+import path19 from "node:path";
 
 // tools/spec-graph/research-trace.ts
-import fs21 from "node:fs";
-import path16 from "node:path";
+import fs23 from "node:fs";
+import path18 from "node:path";
 import { pathToFileURL } from "node:url";
 var FR_HEADING_RE2 = /^#{2,4} (FR-\d+)\b/;
 function frSectionsWithoutResearch(slug, frText) {
@@ -59621,16 +60905,16 @@ function frSectionsWithoutResearch(slug, frText) {
   return out;
 }
 function findFrsWithoutResearch(repoRoot) {
-  const specsRoot = path16.join(repoRoot, ".specs");
-  if (!fs21.existsSync(specsRoot)) return [];
+  const specsRoot = path18.join(repoRoot, ".specs");
+  if (!fs23.existsSync(specsRoot)) return [];
   const out = [];
-  for (const e of fs21.readdirSync(specsRoot, { withFileTypes: true })) {
+  for (const e of fs23.readdirSync(specsRoot, { withFileTypes: true })) {
     if (!e.isDirectory()) continue;
     const slug = e.name;
-    const frPath = path16.join(specsRoot, slug, "FR.md");
-    if (!fs21.existsSync(frPath)) continue;
-    if (!fs21.existsSync(path16.join(specsRoot, slug, "RESEARCH.md"))) continue;
-    out.push(...frSectionsWithoutResearch(slug, fs21.readFileSync(frPath, "utf-8")));
+    const frPath = path18.join(specsRoot, slug, "FR.md");
+    if (!fs23.existsSync(frPath)) continue;
+    if (!fs23.existsSync(path18.join(specsRoot, slug, "RESEARCH.md"))) continue;
+    out.push(...frSectionsWithoutResearch(slug, fs23.readFileSync(frPath, "utf-8")));
   }
   return out;
 }
@@ -59792,7 +61076,7 @@ if (isDirectRun) {
   const specIdx = argv.indexOf("--spec");
   if (specIdx !== -1) spec = argv[specIdx + 1];
   const rootArg = argv.find((a, i) => !a.startsWith("-") && argv[i - 1] !== "--spec") ?? process.cwd();
-  const corpusRoot = path17.resolve(rootArg);
+  const corpusRoot = path19.resolve(rootArg);
   const frsWithoutResearch = new Set(findFrsWithoutResearch(corpusRoot).map((f) => f.nodeId));
   const report = computeFrCensus(buildGraphFromCwd(corpusRoot), { spec, frsWithoutResearch });
   report.corpusRoot = corpusRoot;
@@ -59802,12 +61086,12 @@ if (isDirectRun) {
 }
 
 // tools/spec-graph/phase-lifecycle.ts
-import fs23 from "node:fs";
-import path19 from "node:path";
+import fs25 from "node:fs";
+import path21 from "node:path";
 
 // tools/specs-validator/phase-constants.ts
-import fs22 from "fs";
-import path18 from "path";
+import fs24 from "fs";
+import path20 from "path";
 var PHASE_FILES = {
   Discovery: ["USER_STORIES.md", "USE_CASES.md", "RESEARCH.md"],
   Context: [],
@@ -59823,10 +61107,10 @@ var STOP_LABELS = {
   Finalization: "STOP #3"
 };
 function readProgressState(specPath) {
-  const progressPath = path18.join(specPath, ".progress.json");
-  if (!fs22.existsSync(progressPath)) return null;
+  const progressPath = path20.join(specPath, ".progress.json");
+  if (!fs24.existsSync(progressPath)) return null;
   try {
-    let content = fs22.readFileSync(progressPath, "utf-8");
+    let content = fs24.readFileSync(progressPath, "utf-8");
     if (content.charCodeAt(0) === 65279) {
       content = content.slice(1);
     }
@@ -59862,13 +61146,13 @@ function canConfirmPhaseStop(specAbsDir, phase) {
     }
   }
   const files = PHASE_FILES[phase] ?? [];
-  if (files.length > 0 && !files.some((f) => fs23.existsSync(path19.join(specAbsDir, f)))) {
+  if (files.length > 0 && !files.some((f) => fs25.existsSync(path21.join(specAbsDir, f)))) {
     missing.push(`no input file of ${phase} present (${files.join(" / ")})`);
   }
   if (phase === "Requirements") {
     let design = "";
     try {
-      design = fs23.readFileSync(path19.join(specAbsDir, "DESIGN.md"), "utf-8");
+      design = fs25.readFileSync(path21.join(specAbsDir, "DESIGN.md"), "utf-8");
     } catch {
     }
     const hasSection = /##\s+BDD Test Infrastructure/i.test(design);
@@ -59892,12 +61176,12 @@ var STATUS_TOKEN_RE = /\bStatus:\s*(?:TODO|READY|IN_PROGRESS|DONE|BLOCKED)\b/;
 function findWaivedBlock(repoRoot, id, spec) {
   const localId = id.includes(":") ? id.slice(id.indexOf(":") + 1) : id;
   const idRe = new RegExp(`\\bid:\\s*${localId.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`);
-  const specsRoot = path20.join(repoRoot, ".specs");
+  const specsRoot = path22.join(repoRoot, ".specs");
   let slugs;
   if (spec) slugs = [spec];
   else {
     try {
-      slugs = fs24.readdirSync(specsRoot, { withFileTypes: true }).filter((e) => e.isDirectory()).map((e) => e.name);
+      slugs = fs26.readdirSync(specsRoot, { withFileTypes: true }).filter((e) => e.isDirectory()).map((e) => e.name);
     } catch {
       return null;
     }
@@ -59905,7 +61189,7 @@ function findWaivedBlock(repoRoot, id, spec) {
   for (const slug of slugs) {
     let content;
     try {
-      content = fs24.readFileSync(path20.join(specsRoot, slug, "TASKS.md"), "utf-8");
+      content = fs26.readFileSync(path22.join(specsRoot, slug, "TASKS.md"), "utf-8");
     } catch {
       continue;
     }
@@ -59973,8 +61257,8 @@ function setPhaseStatus(repoRoot, ph, to) {
       reason: `phase status is binary \u2014 only "done" (confirm STOP) is settable; "${to}" is illegal-for-type (a phase has no todo/ready/in-progress/blocked).`
     };
   }
-  const specAbsDir = path20.join(repoRoot, ".specs", ph.slug);
-  if (!fs24.existsSync(specAbsDir)) {
+  const specAbsDir = path22.join(repoRoot, ".specs", ph.slug);
+  if (!fs26.existsSync(specAbsDir)) {
     return { ok: false, error: "NOT_FOUND", to, entityType: "Phase", reason: `no spec "${ph.slug}" at .specs/${ph.slug}` };
   }
   const gate = canConfirmPhaseStop(specAbsDir, ph.phase);
@@ -59988,7 +61272,7 @@ function setPhaseStatus(repoRoot, ph, to) {
       reason: `cannot confirm ${ph.phase} STOP \u2014 ${gate.missing.join("; ")}. Confirm the prior STOP / author the inputs, then retry.`
     };
   }
-  const core = path20.join(path20.dirname(fileURLToPath2(import.meta.url)), "..", "specs-generator", "specs-generator-core.mjs");
+  const core = path22.join(path22.dirname(fileURLToPath2(import.meta.url)), "..", "specs-generator", "specs-generator-core.mjs");
   const r = spawnSync(
     process.execPath,
     [core, "spec-status", "-Path", `.specs/${ph.slug}`, "-ConfirmStop", ph.phase, "-Format", "json"],
@@ -60084,12 +61368,12 @@ function setEntityStatus(graph, repoRoot, args, frsWithoutResearch) {
     }
   }
   const slug = task.spec ?? "";
-  const doc = path20.basename(task.file);
-  const abs = path20.join(repoRoot, ".specs", slug, doc);
-  if (!slug || !fs24.existsSync(abs)) {
+  const doc = path22.basename(task.file);
+  const abs = path22.join(repoRoot, ".specs", slug, doc);
+  if (!slug || !fs26.existsSync(abs)) {
     return { ok: false, error: "NOT_FOUND", from, to: args.to, reason: `TASKS.md not found for spec "${slug}"` };
   }
-  const content = fs24.readFileSync(abs, "utf-8");
+  const content = fs26.readFileSync(abs, "utf-8");
   if (args.expectedSha) {
     const cas = casCheck(repoRoot, slug, doc, args.expectedSha);
     if (!cas.ok) {
@@ -60122,104 +61406,56 @@ function setEntityStatus(graph, repoRoot, args, frsWithoutResearch) {
 }
 
 // tools/spec-graph/test-quality-gate.ts
-import fs25 from "node:fs";
-import path21 from "node:path";
+import fs27 from "node:fs";
+import path23 from "node:path";
 function readVerdicts(repoRoot) {
   try {
-    const raw = fs25.readFileSync(path21.join(repoRoot, ".dev-pomogator", ".test-quality.json"), "utf8");
+    const raw = fs27.readFileSync(path23.join(repoRoot, ".dev-pomogator", ".test-quality.json"), "utf8");
     return JSON.parse(raw);
   } catch {
     return {};
   }
 }
 
-// tools/bdd-migrator/repository-census.ts
-import { execFileSync as execFileSync2 } from "node:child_process";
-import path22 from "node:path";
-var OLD_TEST_PATTERNS = ["*.test.ts", "*_test.py", "*Tests.cs", "*_test.go"];
-var EXEMPTION_RULES = [
-  {
-    test: (file2) => file2.startsWith(".claude/worktrees/"),
-    reason: "generated worktree mirror; the canonical tracked source is counted separately"
-  },
-  {
-    test: (file2) => file2.includes("/__fixtures__/") || file2.startsWith("tests/fixtures/") || file2.includes("/fixtures/"),
-    reason: "test fixture artifact, not an executable repository-owned test suite"
-  },
-  {
-    test: (file2) => file2.startsWith(".specs/backlog/"),
-    reason: "backlog research fixture embedded in a specification, not an executable product test"
-  },
-  {
-    test: (file2) => file2.startsWith(".agents/skills/"),
-    reason: "generated agent-skill mirror; the canonical .claude skill source is counted separately"
-  }
-];
-function normalize2(file2) {
-  return file2.replace(/\\/g, "/").replace(/^\.\//, "");
-}
-function isOldTestPath(file2) {
-  const base = path22.posix.basename(normalize2(file2));
-  return base.endsWith(".test.ts") || base.endsWith("_test.py") || base.endsWith("Tests.cs") || base.endsWith("_test.go");
-}
-function classifyOldTestPath(file2) {
-  const normalized = normalize2(file2);
-  const exemption = EXEMPTION_RULES.find((rule) => rule.test(normalized));
-  return exemption ? { path: normalized, classification: "exempt", reason: exemption.reason } : { path: normalized, classification: "in_scope", reason: null };
-}
-function buildOldTestCensusFromPaths(files, available = true) {
-  const matched = files.map(normalize2).filter(isOldTestPath).sort();
-  const tracked = matched.map(classifyOldTestPath);
-  const inScope = tracked.filter((entry) => entry.classification === "in_scope");
-  const exempt = tracked.filter((entry) => entry.classification === "exempt");
-  const unique = new Set(tracked.map((entry) => entry.path)).size === tracked.length;
-  const inScopePaths = new Set(inScope.map((entry) => entry.path));
-  const disjoint = exempt.every((entry) => !inScopePaths.has(entry.path));
-  const conserved = tracked.length === inScope.length + exempt.length;
-  const reasonsComplete = exempt.every((entry) => Boolean(entry.reason?.trim()));
-  const debt = [];
-  if (!available) debt.push("OLD_TEST_CENSUS_UNAVAILABLE: git ls-files could not enumerate the repository-owned corpus");
-  if (!unique) debt.push("OLD_TEST_CENSUS_DUPLICATE: one or more matched paths were classified more than once");
-  if (!disjoint) debt.push("OLD_TEST_CENSUS_OVERLAP: one or more paths are both in_scope and exempt");
-  if (!conserved) debt.push(`OLD_TEST_CENSUS_CONSERVATION: tracked=${tracked.length} in_scope=${inScope.length} exempt=${exempt.length}`);
-  if (!reasonsComplete) debt.push("OLD_TEST_CENSUS_REASON_MISSING: every exemption requires a non-empty repository-owned reason");
-  if (inScope.length > 0) debt.push(`OLD_TEST_MIGRATION_REMAINING:${inScope.length}`);
-  return {
-    available,
-    patterns: OLD_TEST_PATTERNS,
-    tracked,
-    inScope,
-    exempt,
-    counts: { tracked: tracked.length, inScope: inScope.length, exempt: exempt.length },
-    invariants: { unique, disjoint, conserved, reasonsComplete },
-    debt
-  };
-}
-function buildRepositoryOldTestCensus(root) {
-  try {
-    const stdout = execFileSync2("git", ["ls-files", "-z"], {
-      cwd: root,
-      encoding: "utf8",
-      stdio: ["ignore", "pipe", "pipe"],
-      timeout: 5e3
-    });
-    return buildOldTestCensusFromPaths(stdout.split("\0").filter(Boolean));
-  } catch {
-    return buildOldTestCensusFromPaths([], false);
-  }
-}
-function oldTestReadinessDebt(root, spec) {
-  if (spec !== "bdd-only-migration") return { report: null, debt: [] };
-  const report = buildRepositoryOldTestCensus(root);
-  return { report, debt: report.debt };
-}
-
 // tools/specs-generator/spec-verdict.ts
 import { createHash as createHash4 } from "node:crypto";
 import { execFileSync as execFileSync3, spawnSync as spawnSync2 } from "child_process";
-import fs28 from "fs";
-import path25 from "path";
+import fs30 from "fs";
+import path27 from "path";
 import { fileURLToPath as fileURLToPath3 } from "url";
+
+// tools/spec-graph/traceability.ts
+var GAP_CLASSES = /* @__PURE__ */ new Set([
+  "UNCOVERED_FR",
+  "TASK_UNTESTED",
+  "UNTAGGED_SCENARIO"
+]);
+function gapsFromFindings(findings, opts = {}) {
+  const gaps = [];
+  for (const f of findings) {
+    if (!GAP_CLASSES.has(f.code)) continue;
+    if (opts.spec && !String(f.location.file).replace(/\\/g, "/").includes(`.specs/${opts.spec}/`)) {
+      continue;
+    }
+    gaps.push({
+      class: f.code,
+      nodeId: f.nodeId ?? "(unknown)",
+      file: f.location.file,
+      line: f.location.line,
+      message: f.message
+    });
+  }
+  return gaps;
+}
+function summariseGaps(gaps) {
+  const out = {
+    UNCOVERED_FR: 0,
+    TASK_UNTESTED: 0,
+    UNTAGGED_SCENARIO: 0
+  };
+  for (const g of gaps) out[g.class]++;
+  return out;
+}
 
 // tools/spec-llm-judge/deny-list.ts
 var DENY_PATTERNS = [
@@ -60237,9 +61473,9 @@ var DENY_PATTERNS = [
   { name: "pem-header", re: /-----BEGIN[ A-Z]*PRIVATE KEY-----/ },
   { name: "jwt-shape", re: /\beyJ[A-Za-z0-9_-]{6,}\.[A-Za-z0-9_-]{6,}\.[A-Za-z0-9_-]{6,}\b/ }
 ];
-function checkDenyList(text) {
+function checkDenyList(text2) {
   for (const p of DENY_PATTERNS) {
-    const m = text.match(p.re);
+    const m = text2.match(p.re);
     if (m) {
       return {
         denied: true,
@@ -60252,45 +61488,45 @@ function checkDenyList(text) {
 }
 
 // tools/spec-llm-judge/cache.ts
-import fs26 from "node:fs";
-import path23 from "node:path";
-import crypto3 from "node:crypto";
+import fs28 from "node:fs";
+import path24 from "node:path";
+import crypto4 from "node:crypto";
 var CACHE_DIR_REL = ".dev-pomogator/.cross-spec-cache";
 function cacheKey(frText, scenarioText) {
-  return crypto3.createHash("sha256").update(frText).update("\n::\n").update(scenarioText).digest("hex");
+  return crypto4.createHash("sha256").update(frText).update("\n::\n").update(scenarioText).digest("hex");
 }
 function entryPath(repoRoot, key) {
-  return path23.join(repoRoot, CACHE_DIR_REL, `${key}.json`);
+  return path24.join(repoRoot, CACHE_DIR_REL, `${key}.json`);
 }
 function readEntry(repoRoot, key) {
   const p = entryPath(repoRoot, key);
-  if (!fs26.existsSync(p)) return null;
+  if (!fs28.existsSync(p)) return null;
   try {
-    return JSON.parse(fs26.readFileSync(p, "utf8"));
+    return JSON.parse(fs28.readFileSync(p, "utf8"));
   } catch {
     return null;
   }
 }
 function writeEntry(repoRoot, key, entry) {
   const p = entryPath(repoRoot, key);
-  fs26.mkdirSync(path23.dirname(p), { recursive: true });
+  fs28.mkdirSync(path24.dirname(p), { recursive: true });
   const tmp = `${p}.tmp.${process.pid}`;
-  fs26.writeFileSync(tmp, JSON.stringify(entry, null, 2));
-  fs26.renameSync(tmp, p);
+  fs28.writeFileSync(tmp, JSON.stringify(entry, null, 2));
+  fs28.renameSync(tmp, p);
 }
 
 // tools/spec-check-log/writer.ts
-import fs27 from "node:fs";
-import path24 from "node:path";
+import fs29 from "node:fs";
+import path25 from "node:path";
 var ROTATION_BYTES = 10 * 1024 * 1024;
 var DIR_REL = ".dev-pomogator/.spec-check-log";
 function utcDateStamp(d) {
   return d.toISOString().slice(0, 10);
 }
 function activeShardPath(repoRoot, dateStamp) {
-  const dir = path24.join(repoRoot, DIR_REL);
-  const base = path24.join(dir, `${dateStamp}.jsonl`);
-  if (!fs27.existsSync(dir)) return base;
+  const dir = path25.join(repoRoot, DIR_REL);
+  const base = path25.join(dir, `${dateStamp}.jsonl`);
+  if (!fs29.existsSync(dir)) return base;
   const suffixOf = (name) => {
     if (name === `${dateStamp}.jsonl`) return 0;
     const m = name.match(new RegExp(`^${dateStamp}-(\\d+)\\.jsonl$`));
@@ -60298,7 +61534,7 @@ function activeShardPath(repoRoot, dateStamp) {
   };
   let bestName = null;
   let bestSuffix = -1;
-  for (const name of fs27.readdirSync(dir)) {
+  for (const name of fs29.readdirSync(dir)) {
     const s = suffixOf(name);
     if (s === null) continue;
     if (s > bestSuffix) {
@@ -60306,29 +61542,29 @@ function activeShardPath(repoRoot, dateStamp) {
       bestName = name;
     }
   }
-  return bestName ? path24.join(dir, bestName) : base;
+  return bestName ? path25.join(dir, bestName) : base;
 }
 function nextShard(current, dateStamp) {
-  const dir = path24.dirname(current);
-  const base = path24.basename(current, ".jsonl");
-  if (base === dateStamp) return path24.join(dir, `${dateStamp}-1.jsonl`);
+  const dir = path25.dirname(current);
+  const base = path25.basename(current, ".jsonl");
+  if (base === dateStamp) return path25.join(dir, `${dateStamp}-1.jsonl`);
   const m = base.match(/-(\d+)$/);
-  if (!m) return path24.join(dir, `${dateStamp}-1.jsonl`);
+  if (!m) return path25.join(dir, `${dateStamp}-1.jsonl`);
   const n = parseInt(m[1], 10) + 1;
-  return path24.join(dir, `${dateStamp}-${n}.jsonl`);
+  return path25.join(dir, `${dateStamp}-${n}.jsonl`);
 }
 function appendRawEntry(entry, opts) {
   const now = opts.now ?? /* @__PURE__ */ new Date();
   const dateStamp = utcDateStamp(now);
   const rotationAt = opts.rotationBytes ?? ROTATION_BYTES;
-  const dir = path24.join(opts.repoRoot, DIR_REL);
-  fs27.mkdirSync(dir, { recursive: true });
+  const dir = path25.join(opts.repoRoot, DIR_REL);
+  fs29.mkdirSync(dir, { recursive: true });
   let shard = activeShardPath(opts.repoRoot, dateStamp);
-  if (fs27.existsSync(shard) && fs27.statSync(shard).size >= rotationAt) {
+  if (fs29.existsSync(shard) && fs29.statSync(shard).size >= rotationAt) {
     shard = nextShard(shard, dateStamp);
   }
   const withTs = { timestamp: entry.timestamp ?? now.toISOString(), ...entry };
-  fs27.appendFileSync(shard, `${JSON.stringify(withTs)}
+  fs29.appendFileSync(shard, `${JSON.stringify(withTs)}
 `);
   return shard;
 }
@@ -60452,23 +61688,153 @@ function defaultSpawn(prompt) {
   });
 }
 
+// tools/spec-graph/verdict.ts
+var COMPLETION_FINDING_CODES = /* @__PURE__ */ new Set([
+  "UNVERIFIED_COMPLETION",
+  "TASK_STATUS_UNVERIFIED",
+  "TASK_UNTESTED",
+  "TASK_TEST_QUALITY"
+]);
+function unverifiedCompletions(findings) {
+  const byNode = /* @__PURE__ */ new Map();
+  const reasonFor = (finding) => {
+    if (finding.relatedId === "NO_SCENARIO" || finding.code === "TASK_UNTESTED") return "NO_SCENARIO";
+    if (finding.relatedId === "FILTERED_ONLY") return "FILTERED_ONLY";
+    if (finding.relatedId === "EVIDENCE_STALE") return "EVIDENCE_STALE";
+    if (finding.relatedId === "BODY_WEAK" || finding.code === "TASK_TEST_QUALITY") return "BODY_WEAK";
+    return "NON_PASSING_EVIDENCE";
+  };
+  for (const finding of findings) {
+    if (!COMPLETION_FINDING_CODES.has(finding.code)) continue;
+    const node = finding.nodeId ?? `${finding.location.file}:${finding.location.line}`;
+    const entry = byNode.get(node) ?? { reasons: [], sourceCodes: /* @__PURE__ */ new Set() };
+    entry.reasons.push(reasonFor(finding));
+    entry.sourceCodes.add(finding.code);
+    byNode.set(node, entry);
+  }
+  return [...byNode.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([node, entry]) => ({
+    code: "UNVERIFIED_COMPLETION",
+    severity: "error",
+    node,
+    reasons: [...new Set(entry.reasons)],
+    source_codes: [...entry.sourceCodes].sort()
+  }));
+}
+function computeSpecVerdict(candidate, findings = []) {
+  const readiness = evaluateReadiness(candidate);
+  const completionDebt = unverifiedCompletions(findings);
+  const structuralLane = candidate.lanes?.STRUCTURE;
+  const structuralIsRed = structuralLane?.status === "RED";
+  const errors = structuralIsRed ? findings.filter((finding) => finding.severity === "error" && finding.code !== "UNVERIFIED_COMPLETION") : [];
+  const blocking = [...errors, ...completionDebt];
+  const greenEligible = readiness.overall === "READY" && completionDebt.length === 0;
+  const verdict = errors.length > 0 ? "RED" : greenEligible ? "GREEN" : "NOT_READY";
+  return { schema: "spec-verdict@1", verdict, readiness, blocking };
+}
+
+// tools/bdd-migrator/repository-census.ts
+import { execFileSync as execFileSync2 } from "node:child_process";
+import path26 from "node:path";
+var OLD_TEST_PATTERNS = ["*.test.ts", "*_test.py", "*Tests.cs", "*_test.go"];
+var EXEMPTION_RULES = [
+  {
+    test: (file2) => file2.startsWith(".claude/worktrees/"),
+    reason: "generated worktree mirror; the canonical tracked source is counted separately"
+  },
+  {
+    test: (file2) => file2.includes("/__fixtures__/") || file2.startsWith("tests/fixtures/") || file2.includes("/fixtures/"),
+    reason: "test fixture artifact, not an executable repository-owned test suite"
+  },
+  {
+    test: (file2) => file2.startsWith(".specs/backlog/"),
+    reason: "backlog research fixture embedded in a specification, not an executable product test"
+  },
+  {
+    test: (file2) => file2.startsWith(".agents/skills/"),
+    reason: "generated agent-skill mirror; the canonical .claude skill source is counted separately"
+  }
+];
+function normalize2(file2) {
+  return file2.replace(/\\/g, "/").replace(/^\.\//, "");
+}
+function isOldTestPath(file2) {
+  const base = path26.posix.basename(normalize2(file2));
+  return base.endsWith(".test.ts") || base.endsWith("_test.py") || base.endsWith("Tests.cs") || base.endsWith("_test.go");
+}
+function classifyOldTestPath(file2) {
+  const normalized = normalize2(file2);
+  const exemption = EXEMPTION_RULES.find((rule) => rule.test(normalized));
+  return exemption ? { path: normalized, classification: "exempt", reason: exemption.reason } : { path: normalized, classification: "in_scope", reason: null };
+}
+function buildOldTestCensusFromPaths(files, available = true) {
+  const matched = files.map(normalize2).filter(isOldTestPath).sort();
+  const tracked = matched.map(classifyOldTestPath);
+  const inScope = tracked.filter((entry) => entry.classification === "in_scope");
+  const exempt = tracked.filter((entry) => entry.classification === "exempt");
+  const unique = new Set(tracked.map((entry) => entry.path)).size === tracked.length;
+  const inScopePaths = new Set(inScope.map((entry) => entry.path));
+  const disjoint = exempt.every((entry) => !inScopePaths.has(entry.path));
+  const conserved = tracked.length === inScope.length + exempt.length;
+  const reasonsComplete = exempt.every((entry) => Boolean(entry.reason?.trim()));
+  const debt = [];
+  if (!available) debt.push("OLD_TEST_CENSUS_UNAVAILABLE: git ls-files could not enumerate the repository-owned corpus");
+  if (!unique) debt.push("OLD_TEST_CENSUS_DUPLICATE: one or more matched paths were classified more than once");
+  if (!disjoint) debt.push("OLD_TEST_CENSUS_OVERLAP: one or more paths are both in_scope and exempt");
+  if (!conserved) debt.push(`OLD_TEST_CENSUS_CONSERVATION: tracked=${tracked.length} in_scope=${inScope.length} exempt=${exempt.length}`);
+  if (!reasonsComplete) debt.push("OLD_TEST_CENSUS_REASON_MISSING: every exemption requires a non-empty repository-owned reason");
+  if (inScope.length > 0) debt.push(`OLD_TEST_MIGRATION_REMAINING:${inScope.length}`);
+  return {
+    available,
+    patterns: OLD_TEST_PATTERNS,
+    tracked,
+    inScope,
+    exempt,
+    counts: { tracked: tracked.length, inScope: inScope.length, exempt: exempt.length },
+    invariants: { unique, disjoint, conserved, reasonsComplete },
+    debt
+  };
+}
+function buildRepositoryOldTestCensus(root) {
+  try {
+    const stdout = execFileSync2("git", ["ls-files", "-z"], {
+      cwd: root,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+      timeout: 5e3
+    });
+    return buildOldTestCensusFromPaths(stdout.split("\0").filter(Boolean));
+  } catch {
+    return buildOldTestCensusFromPaths([], false);
+  }
+}
+function oldTestReadinessDebt(root, spec) {
+  if (spec !== "bdd-only-migration") return { report: null, debt: [] };
+  const report = buildRepositoryOldTestCensus(root);
+  return { report, debt: report.debt };
+}
+
 // tools/specs-generator/spec-verdict.ts
-var __dirname = path25.dirname(fileURLToPath3(import.meta.url));
-var corePath = path25.join(__dirname, "specs-generator-core.mjs");
+var __dirname = path27.dirname(fileURLToPath3(import.meta.url));
+var coreCandidates = [
+  path27.join(__dirname, "specs-generator-core.mjs"),
+  path27.join(__dirname, "..", "specs-generator", "specs-generator-core.mjs"),
+  path27.join(process.cwd(), "tools", "specs-generator", "specs-generator-core.mjs")
+];
+var corePath = coreCandidates.find((candidate) => fs30.existsSync(candidate)) ?? coreCandidates[0];
 function claudeBinaryPresent() {
   const bin = process.env.CLAUDE_BIN ?? "claude";
   const probe = spawnSync2(bin, ["--version"], { stdio: "ignore", timeout: 1e4, shell: process.platform === "win32" });
   return probe.status === 0;
 }
 function specSemanticJudgeOptOut(cwd, specPath) {
-  const frPath = path25.resolve(cwd, specPath, "FR.md");
-  let text;
+  const frPath = path27.resolve(cwd, specPath, "FR.md");
+  let text2;
   try {
-    text = fs28.readFileSync(frPath, "utf8");
+    text2 = fs30.readFileSync(frPath, "utf8");
   } catch {
     return false;
   }
-  const frontmatter = text.match(/^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/)?.[1] ?? "";
+  const frontmatter = text2.match(/^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/)?.[1] ?? "";
   return /^spec_llm_judge_deny\s*:\s*true\s*$/im.test(frontmatter);
 }
 function hasMarker(s, marker) {
@@ -60476,7 +61842,7 @@ function hasMarker(s, marker) {
   const haystack = [s.id, ...s.tags, ...s.steps.map((step) => step.text)].join(" ").toUpperCase();
   return haystack.includes(needle);
 }
-function scenarioCountClaims(text) {
+function scenarioCountClaims(text2) {
   const out = [];
   const words = {
     one: 1,
@@ -60491,7 +61857,7 @@ function scenarioCountClaims(text) {
     ten: 10
   };
   const countRe = /\b(\d+|one|two|three|four|five|six|seven|eight|nine|ten)\s+scenarios?\b/gi;
-  for (const rawLine of text.split(/\r?\n/)) {
+  for (const rawLine of text2.split(/\r?\n/)) {
     const line = rawLine.replace(/`[^`]*`/g, "");
     if (/\bat least\b|\bScenario\s*=|\bFR-\d+\s+scenario\b/i.test(line)) continue;
     const claimsCount = /\b(scenario count|scenarios total|total scenarios|expected scenarios|source scenarios|executable scenarios)\b/i.test(line) || /\b(feature|spec|source|executable|file)\b.*\b(has|contains|includes|declares|covers)\b/i.test(line) || /\bthere\s+(?:are|is)\b/i.test(line);
@@ -60507,10 +61873,10 @@ function scenarioCountClaims(text) {
 function configuredCucumberPaths(cwd) {
   const out = /* @__PURE__ */ new Set();
   for (const name of ["cucumber.docker.json", "cucumber.json"]) {
-    const file2 = path25.join(cwd, name);
-    if (!fs28.existsSync(file2)) continue;
+    const file2 = path27.join(cwd, name);
+    if (!fs30.existsSync(file2)) continue;
     try {
-      const json2 = JSON.parse(fs28.readFileSync(file2, "utf-8"));
+      const json2 = JSON.parse(fs30.readFileSync(file2, "utf-8"));
       const paths = json2?.default?.paths;
       if (Array.isArray(paths)) {
         for (const p of paths) if (typeof p === "string") out.add(p.replace(/\\/g, "/"));
@@ -60527,7 +61893,7 @@ function configuredFeatureRoots(cwd) {
     const globAt = normalized.search(/[?*{}[\]]/);
     const prefix = (globAt >= 0 ? normalized.slice(0, globAt) : normalized).replace(/\/+$/, "");
     if (!prefix) continue;
-    const root = prefix.endsWith(".feature") ? path25.posix.dirname(prefix) : prefix;
+    const root = prefix.endsWith(".feature") ? path27.posix.dirname(prefix) : prefix;
     if (root && root !== ".") candidates.add(root);
   }
   const ordered = [...candidates].sort((a, b) => {
@@ -60573,10 +61939,10 @@ function compareBddSync(cwd, slug, sourceScenarios, executableScenarios) {
       debt.push(`SOURCE_ONLY ${key}: source scenario has no executable counterpart or pending marker`);
     }
   }
-  const sourceFeaturePath = path25.join(cwd, ".specs", slug, `${slug.split("/").pop()}.feature`);
-  if (fs28.existsSync(sourceFeaturePath)) {
-    const text = fs28.readFileSync(sourceFeaturePath, "utf-8");
-    for (const claim of scenarioCountClaims(text)) {
+  const sourceFeaturePath = path27.join(cwd, ".specs", slug, `${slug.split("/").pop()}.feature`);
+  if (fs30.existsSync(sourceFeaturePath)) {
+    const text2 = fs30.readFileSync(sourceFeaturePath, "utf-8");
+    for (const claim of scenarioCountClaims(text2)) {
       if (claim.count !== sourceScenarios.length) debt.push(`SCENARIO_COUNT_DRIFT ${claim.text}: actual source scenario count is ${sourceScenarios.length}`);
     }
   }
@@ -60584,10 +61950,10 @@ function compareBddSync(cwd, slug, sourceScenarios, executableScenarios) {
 }
 function latestFilteredProof(cwd, sourceScenarios) {
   const keys = new Set(sourceScenarios.map((s) => scenarioKey(s.id)).filter(Boolean));
-  const overlayPath = path25.join(cwd, ".dev-pomogator", ".scenario-results.ndjson");
-  if (!fs28.existsSync(overlayPath)) return { latest: null, proofs: [], artifacts: [] };
+  const overlayPath = path27.join(cwd, ".dev-pomogator", ".scenario-results.ndjson");
+  if (!fs30.existsSync(overlayPath)) return { latest: null, proofs: [], artifacts: [] };
   const byRun = /* @__PURE__ */ new Map();
-  for (const line of fs28.readFileSync(overlayPath, "utf-8").split(/\r?\n/)) {
+  for (const line of fs30.readFileSync(overlayPath, "utf-8").split(/\r?\n/)) {
     if (!line.trim()) continue;
     let row;
     try {
@@ -60631,7 +61997,7 @@ function latestFilteredProof(cwd, sourceScenarios) {
   };
 }
 function runCoreJson(command, specPath, opts) {
-  const absSpecPath = path25.resolve(opts.cwd ?? process.cwd(), specPath);
+  const absSpecPath = path27.resolve(opts.cwd ?? process.cwd(), specPath);
   const args = [corePath, command, "-Path", absSpecPath];
   let stdout;
   try {
@@ -60664,8 +62030,8 @@ ${String(err?.stderr ?? "").slice(0, 800)}`
   return parsed;
 }
 async function analyzeSpec(specPath, opts = {}) {
-  const validation = runCoreJson("validate-spec", specPath, opts);
-  const audit = runCoreJson("audit-spec", specPath, opts);
+  const validation = opts.coreResults?.validation ?? runCoreJson("validate-spec", specPath, opts);
+  const audit = opts.coreResults?.audit ?? runCoreJson("audit-spec", specPath, opts);
   const structuralErrors = Array.isArray(validation.errors) ? validation.errors.length : 0;
   const warnings = Array.isArray(validation.warnings) ? validation.warnings.length : 0;
   const errorFindings = (audit.findings ?? []).filter(
@@ -60682,12 +62048,19 @@ async function analyzeSpec(specPath, opts = {}) {
   for (const f of errorFindings) (byClass[f.check] ??= []).push(f);
   const cwd = opts.cwd ?? process.cwd();
   const slug = specPath.replace(/\\/g, "/").replace(/^\.?\/?\.specs\//, "").replace(/\/+$/, "");
-  const graph = buildGraphFromCwd(cwd, { featureRoots: configuredFeatureRoots(cwd) });
-  const inventory = buildReadinessInventory(graph, { spec: slug });
+  const graph = opts.graphSnapshot ?? buildGraphFromCwd(cwd, { featureRoots: configuredFeatureRoots(cwd) });
   const testQualityByTask = readVerdicts(cwd);
-  const allFindings = checkConformance(graph, { testQualityByTask });
+  const inventory = buildReadinessInventory(graph, { spec: slug, testQualityByTask });
+  const progress = readProgressState(path27.join(cwd, ".specs", slug));
+  const strictContracts = progress?.contractPolicy === "strict-v1";
+  const allFindings = checkConformance(graph, {
+    testQualityByTask,
+    strictContracts,
+    strictContractSpec: strictContracts ? slug : void 0
+  });
   const inSpec = (file2) => String(file2).replace(/\\/g, "/").includes(`.specs/${slug}/`);
   const specFindings = allFindings.filter((f) => inSpec(f.location.file));
+  const contractFindings = strictContracts ? specFindings.filter((finding) => finding.code.startsWith("FR_CONTRACT_")) : [];
   const gaps = gapsFromFindings(specFindings, {});
   const confErrors = specFindings.filter((f) => f.severity === "error");
   const confByCode = {};
@@ -60890,55 +62263,77 @@ ${fr.body ?? ""}`,
         ...structuralErrors > 0 ? [`${structuralErrors} structural error(s)`] : [],
         ...errorFindings.length > 0 ? [`${errorFindings.length} audit error(s)`] : [],
         ...confErrors.length > 0 ? [`${confErrors.length} conformance error(s)`] : []
-      ]
+      ],
+      affected_count: structuralErrors + errorFindings.length + confErrors.length
+    },
+    CONTRACT: {
+      status: !strictContracts ? "NONE" : contractFindings.length > 0 ? "RED" : "GREEN",
+      blocking: strictContracts && contractFindings.length > 0,
+      summary: !strictContracts ? "legacy contract policy; strict FR-85 rollout has not been enabled for this spec" : contractFindings.length > 0 ? `${contractFindings.length} FR contract card finding(s)` : "every FR has a valid contract card",
+      debt: contractFindings.map((finding) => `${finding.code}:${finding.nodeId ?? finding.location.file}`),
+      affected_count: contractFindings.length
     },
     TRACEABILITY: {
       status: gaps.length > 0 ? "RED" : "GREEN",
       blocking: gaps.length > 0,
       summary: gaps.length > 0 ? `${gaps.length} traceability gap(s)` : "0 traceability gaps",
-      debt: gaps.map((g) => `${g.class}: ${g.nodeId}`)
+      debt: gaps.map((g) => `${g.class}: ${g.nodeId}`),
+      affected_count: gaps.length
     },
     EXECUTION: {
       status: effectiveExecution.status,
       blocking: effectiveExecution.status !== "GREEN",
       summary: effectiveExecution.debt?.join(", ") || "all effective scenario evidence is current and passing",
-      debt: effectiveExecution.debt ?? []
+      debt: effectiveExecution.debt ?? [],
+      affected_count: effectiveExecution.affected_count
     },
     LIVE_EVIDENCE: {
       status: liveEvidenceLane.status,
       blocking: liveEvidenceLane.status === "RED",
       summary: liveEvidenceLane.status === "NONE" ? "no external live scenarios in this spec" : liveEvidenceLane.debt.length > 0 ? `${liveEvidenceLane.debt.length} live scenario(s) await real producer proof` : "all live scenarios have passing live evidence",
-      debt: liveEvidenceLane.debt ?? []
+      debt: liveEvidenceLane.debt ?? [],
+      affected_count: liveEvidenceLane.affected_count
     },
     TASK_TRUTH: {
       status: taskTruthDebt.length > 0 ? "RED" : "GREEN",
       blocking: taskTruthDebt.length > 0,
       summary: taskTruthDebt.length > 0 ? `${unverifiedDoneTasks.length} DONE-but-unverified task(s), ${uncheckedDoneWhenTasks.length} DONE task(s) with unchecked Done When item(s)` : "no DONE-but-unverified tasks",
-      debt: taskTruthDebt
+      debt: taskTruthDebt,
+      affected_count: taskTruthDebt.length
     },
     BDD_SYNC: {
       status: bddSyncDebt.length > 0 ? "RED" : "GREEN",
       blocking: bddSyncDebt.length > 0,
       summary: bddSyncDebt.length > 0 ? `${bddSyncDebt.length} BDD sync or repository migration debt item(s)` : "no source/executable BDD sync or repository migration debt reported by the current verdict inputs",
-      debt: bddSyncDebt
+      debt: bddSyncDebt,
+      affected_count: bddSyncDebt.length
     },
     AC_SATISFACTION: {
       status: inventory.ac_satisfaction.status,
       blocking: inventory.ac_satisfaction.status !== "GREEN",
       summary: inventory.ac_satisfaction.debt.length > 0 ? inventory.ac_satisfaction.debt.join(", ") : "all acceptance criteria have current execution evidence",
-      debt: inventory.ac_satisfaction.debt
+      debt: inventory.ac_satisfaction.debt,
+      affected_count: inventory.ac_satisfaction.required - inventory.ac_satisfaction.satisfied
     },
     NFR_SATISFACTION: {
       status: inventory.nfr_satisfaction.status,
       blocking: inventory.nfr_satisfaction.status !== "GREEN",
       summary: inventory.nfr_satisfaction.debt.length > 0 ? inventory.nfr_satisfaction.debt.join(", ") : "all non-functional requirements have method-appropriate evidence",
-      debt: inventory.nfr_satisfaction.debt
+      debt: inventory.nfr_satisfaction.debt,
+      affected_count: inventory.nfr_satisfaction.required - inventory.nfr_satisfaction.satisfied
+    },
+    MULTILAYER: {
+      status: "NONE",
+      blocking: false,
+      summary: "no external remediation findings supplied",
+      debt: []
     },
     SEMANTIC: {
       status: !semanticWanted ? "SKIPPED" : semanticDebt.length > 0 ? "SKIPPED" : "GREEN",
       blocking: semanticWanted && semanticDebt.length > 0,
       summary: !semanticWanted ? "semantic check explicitly disabled for this run" : semanticDebt.length > 0 ? semanticDebt.join(", ") : `${pairsChecked} semantic pair(s) checked with no drift`,
-      debt: !semanticWanted ? [] : semanticDebt
+      debt: !semanticWanted ? [] : semanticDebt,
+      affected_count: semanticDebt.length
     },
     FILTERED_PROOF: {
       status: filteredProof.proofs.length > 0 ? "GREEN" : "NONE",
@@ -60949,23 +62344,26 @@ ${fr.body ?? ""}`,
   };
   const externalFindings = opts.externalFindings ?? [];
   const externalErrors = externalFindings.filter((finding) => finding.severity === "error");
-  const externalDebt = externalFindings.map((finding) => `${finding.code}: ${finding.message}`);
-  lanes.MULTILAYER = externalFindings.length > 0 ? {
-    status: externalErrors.length > 0 ? "RED" : "GREEN",
-    blocking: externalErrors.length > 0,
-    summary: `${externalFindings.length} external finding(s) supplied by remediation`,
-    debt: externalDebt
+  const externalDebt = externalErrors.map((finding) => `${finding.code}: ${finding.message}`);
+  lanes.MULTILAYER = externalErrors.length > 0 ? {
+    status: "RED",
+    blocking: true,
+    summary: `${externalErrors.length} blocking external finding(s) supplied by remediation`,
+    debt: externalDebt,
+    affected_count: externalErrors.length
   } : {
     status: "NONE",
     blocking: false,
-    summary: "no external remediation findings supplied",
+    summary: "no blocking external findings supplied",
     debt: []
   };
   const canonical = computeSpecVerdict({
     inventory,
+    mandatoryLanes: strictContracts ? MANDATORY_READINESS_LANES : MANDATORY_READINESS_LANES.filter((name) => name !== "CONTRACT"),
     lanes: Object.fromEntries(Object.entries(lanes).filter(([name]) => name !== "MULTILAYER").map(([name, lane]) => [name, {
       status: lane.status,
-      debt: lane.debt
+      debt: lane.debt,
+      affected_count: lane.affected_count
     }]))
   }, [...specFindings, ...auditBlocking]);
   if (externalErrors.length > 0) {
@@ -60982,7 +62380,17 @@ ${fr.body ?? ""}`,
       }))
     ];
     canonical.readiness.overall = "NOT_READY";
-    canonical.readiness.next_action = "Resolve the blocking multilayer findings, then rerun the authoritative verdict.";
+    canonical.readiness.action_center = [{
+      lane: "MULTILAYER",
+      status: "RED",
+      count: externalDebt.length,
+      reasons: externalDebt,
+      action: {
+        code: "RESOLVE_LANE_DEBT",
+        message: "Resolve the blocking multilayer findings, then rerun the authoritative verdict."
+      }
+    }, ...canonical.readiness.action_center];
+    canonical.readiness.next_action = canonical.readiness.action_center[0].action.message;
   }
   const canonicalLanes = Object.fromEntries(Object.entries(canonical.readiness.lanes).map(([name, lane]) => [name, {
     status: lane.status,
@@ -60994,18 +62402,19 @@ ${fr.body ?? ""}`,
   const readiness = {
     lanes: canonicalLanes,
     overall: canonical.readiness.overall,
-    nextAction: canonical.readiness.next_action
+    nextAction: canonical.readiness.next_action,
+    action_center: canonical.readiness.action_center
   };
   const documentShas = {};
-  const specDir = path25.resolve(cwd, ".specs", slug);
-  if (fs28.existsSync(specDir)) {
+  const specDir = path27.resolve(cwd, ".specs", slug);
+  if (fs30.existsSync(specDir)) {
     const walkDocs = (dir) => {
-      for (const entry of fs28.readdirSync(dir, { withFileTypes: true })) {
-        const abs = path25.join(dir, entry.name);
+      for (const entry of fs30.readdirSync(dir, { withFileTypes: true })) {
+        const abs = path27.join(dir, entry.name);
         if (entry.isDirectory()) walkDocs(abs);
         else if (entry.isFile() && /\.(md|feature)$/i.test(entry.name)) {
-          const rel = path25.relative(specDir, abs).replace(/\\/g, "/");
-          documentShas[rel] = createHash4("sha256").update(fs28.readFileSync(abs)).digest("hex");
+          const rel = path27.relative(specDir, abs).replace(/\\/g, "/");
+          documentShas[rel] = createHash4("sha256").update(fs30.readFileSync(abs)).digest("hex");
         }
       }
     };
@@ -61049,6 +62458,27 @@ ${fr.body ?? ""}`,
 }
 async function runSpecVerdict(specPath, opts = {}) {
   return analyzeSpec(specPath, opts);
+}
+async function analyzeGraphSnapshot(specPath, graphSnapshot, opts = {}) {
+  const snapshotOpts = { ...opts, graphSnapshot };
+  if (opts.coreResults) return analyzeSpec(specPath, snapshotOpts);
+  try {
+    return await analyzeSpec(specPath, snapshotOpts);
+  } catch (error51) {
+    return analyzeSpec(specPath, {
+      ...snapshotOpts,
+      coreResults: {
+        validation: {
+          errors: [{
+            file: specPath,
+            message: `AUTHORITATIVE_CORE_INPUT_UNAVAILABLE: ${error51.message}`
+          }],
+          warnings: []
+        },
+        audit: { findings: [] }
+      }
+    });
+  }
 }
 var CONFORMANCE_REMEDIATION = {
   FR_NO_STORY: "add a `**\u0422\u0440\u0435\u0431\u043E\u0432\u0430\u043D\u0438\u0435:** [FR-N]` line INSIDE a `### User Story` block (the story\u2192FR covers edge is built only from that line)",
@@ -61113,8 +62543,18 @@ function renderVerdict(r) {
       lines.push(`  \u2026 and ${r.traceabilityGate.gaps.length - 20} more (see --json for the full list)`);
     }
   }
+  lines.push("action center (FR-86):");
+  if (r.readiness.action_center.length === 0) {
+    lines.push("  no blocking readiness lanes");
+  } else {
+    for (const group of r.readiness.action_center) {
+      lines.push(`  ${group.lane} \xD7${group.count} [${group.action.code}] \u2014 ${group.action.message}`);
+      for (const reason of group.reasons.slice(0, 8)) lines.push(`    - ${reason}`);
+      if (group.reasons.length > 8) lines.push(`    \u2026 and ${group.reasons.length - 8} more`);
+    }
+  }
   lines.push("readiness lanes (FR-61):");
-  const laneOrder = ["STRUCTURE", "TRACEABILITY", "EXECUTION", "LIVE_EVIDENCE", "TASK_TRUTH", "BDD_SYNC", "AC_SATISFACTION", "NFR_SATISFACTION", "MULTILAYER", "SEMANTIC", "FILTERED_PROOF"];
+  const laneOrder = ["STRUCTURE", "CONTRACT", "TRACEABILITY", "EXECUTION", "LIVE_EVIDENCE", "TASK_TRUTH", "BDD_SYNC", "AC_SATISFACTION", "NFR_SATISFACTION", "MULTILAYER", "SEMANTIC", "FILTERED_PROOF"];
   for (const name of laneOrder) {
     const lane = r.readiness.lanes[name];
     lines.push(`  ${name}: ${lane.status}${lane.blocking ? " (blocking)" : ""} \u2014 ${lane.summary}`);
@@ -61166,12 +62606,12 @@ if (isDirectRun2) {
 }
 
 // tools/specs-generator/spec-remediation.ts
-import fs30 from "node:fs";
-import path27 from "node:path";
+import fs32 from "node:fs";
+import path29 from "node:path";
 
 // .claude/skills/spec-reality-check/scripts/verify.ts
-import fs29 from "fs";
-import path26 from "path";
+import fs31 from "fs";
+import path28 from "path";
 import { spawnSync as spawnSync3 } from "child_process";
 var TRACKED_EXTENSIONS = /* @__PURE__ */ new Set([
   ".ts",
@@ -61200,29 +62640,29 @@ var TRACKED_EXTENSIONS = /* @__PURE__ */ new Set([
 ]);
 var NARRATIVE_FILES = ["FR.md", "DESIGN.md", "TASKS.md"];
 function resolveSpecPath(specPath) {
-  const resolved = path26.resolve(specPath);
-  if (!fs29.existsSync(resolved)) {
+  const resolved = path28.resolve(specPath);
+  if (!fs31.existsSync(resolved)) {
     throw new Error(`Spec path does not exist: ${specPath}`);
   }
-  const stat4 = fs29.statSync(resolved);
+  const stat4 = fs31.statSync(resolved);
   if (!stat4.isDirectory()) {
     throw new Error(`Spec path is not a directory: ${specPath}`);
   }
   return resolved;
 }
 function readFileOptional(specDir, filename) {
-  const p = path26.join(specDir, filename);
-  if (!fs29.existsSync(p)) return null;
-  let content = fs29.readFileSync(p, "utf-8");
+  const p = path28.join(specDir, filename);
+  if (!fs31.existsSync(p)) return null;
+  let content = fs31.readFileSync(p, "utf-8");
   if (content.charCodeAt(0) === 65279) content = content.slice(1);
   return content;
 }
 function findRepoRoot(startDir) {
-  let dir = path26.resolve(startDir);
+  let dir = path28.resolve(startDir);
   while (true) {
-    if (fs29.existsSync(path26.join(dir, ".git"))) return dir;
-    if (fs29.existsSync(path26.join(dir, "package.json"))) return dir;
-    const parent = path26.dirname(dir);
+    if (fs31.existsSync(path28.join(dir, ".git"))) return dir;
+    if (fs31.existsSync(path28.join(dir, "package.json"))) return dir;
+    const parent = path28.dirname(dir);
     if (parent === dir) return startDir;
     dir = parent;
   }
@@ -61356,9 +62796,9 @@ var V1_REMOVED_PREFIXES = ["src/", "extensions/"];
 function isRemovedV1LayoutPath(p, repoRoot) {
   const prefix = V1_REMOVED_PREFIXES.find((pre) => p.startsWith(pre));
   if (!prefix) return null;
-  const repoIsCanonicalPlugin = fs29.existsSync(path26.join(repoRoot, ".claude-plugin", "plugin.json"));
+  const repoIsCanonicalPlugin = fs31.existsSync(path28.join(repoRoot, ".claude-plugin", "plugin.json"));
   if (!repoIsCanonicalPlugin) return null;
-  const prefixDirGone = !fs29.existsSync(path26.join(repoRoot, prefix.replace(/\/+$/, "")));
+  const prefixDirGone = !fs31.existsSync(path28.join(repoRoot, prefix.replace(/\/+$/, "")));
   return prefixDirGone ? prefix : null;
 }
 function checkFcRows(rows, repoRoot) {
@@ -61375,8 +62815,8 @@ function checkFcRows(rows, repoRoot) {
       });
       continue;
     }
-    const resolved = path26.resolve(repoRoot, row.path);
-    const exists = fs29.existsSync(resolved);
+    const resolved = path28.resolve(repoRoot, row.path);
+    const exists = fs31.existsSync(resolved);
     const a = row.action;
     const STANDARD_ACTIONS = /* @__PURE__ */ new Set(["create", "edit", "delete"]);
     if (!STANDARD_ACTIONS.has(a)) {
@@ -61443,7 +62883,7 @@ function isRuntimePath(p) {
   if (p.startsWith("~")) return true;
   if (/^\$[A-Z_]+/.test(p)) return true;
   if (/^%[A-Z_]+%/.test(p)) return true;
-  if (path26.isAbsolute(p)) return true;
+  if (path28.isAbsolute(p)) return true;
   if (/^[A-Za-z]:[\\/]/.test(p)) return true;
   return false;
 }
@@ -61458,7 +62898,7 @@ function extractInlineCodePaths(content) {
     pathRegex.lastIndex = 0;
     while ((match = pathRegex.exec(line)) !== null) {
       const candidate = match[1];
-      const ext = path26.extname(candidate).toLowerCase();
+      const ext = path28.extname(candidate).toLowerCase();
       if (!TRACKED_EXTENSIONS.has(ext)) continue;
       if (candidate.includes("://")) continue;
       results.push({ value: candidate, line: i + 1 });
@@ -61481,8 +62921,8 @@ function checkNarrativePaths(specDir, repoRoot, plannedCreatePaths = /* @__PURE_
       if (isRuntimePath(ref.value)) continue;
       const normalized = ref.value.replace(/\\/g, "/");
       if (plannedNormalized.has(normalized)) continue;
-      const resolved = path26.resolve(repoRoot, ref.value);
-      if (fs29.existsSync(resolved)) continue;
+      const resolved = path28.resolve(repoRoot, ref.value);
+      if (fs31.existsSync(resolved)) continue;
       if (resolved.startsWith(specDir)) continue;
       findings.push({
         check: "NARRATIVE_PATH_MISSING",
@@ -61509,7 +62949,7 @@ function extractFrIds(content) {
 }
 function checkCodeDrift(specDir, repoRoot, fcPaths) {
   const findings = [];
-  if (!fs29.existsSync(path26.join(repoRoot, ".git"))) {
+  if (!fs31.existsSync(path28.join(repoRoot, ".git"))) {
     findings.push({
       check: "CODE_DRIFT_SKIPPED",
       category: "LOGIC_GAPS",
@@ -61576,7 +63016,7 @@ function extractTaskPaths(content) {
     inlineExtRegex.lastIndex = 0;
     while ((m = inlineExtRegex.exec(line)) !== null) {
       const candidate = m[1];
-      const ext = path26.extname(candidate).toLowerCase();
+      const ext = path28.extname(candidate).toLowerCase();
       if (!TRACKED_EXTENSIONS.has(ext)) continue;
       if (candidate.includes("://")) continue;
       if (isPlaceholderPath(candidate)) continue;
@@ -61655,11 +63095,11 @@ function formatJson(result) {
 function formatHuman(result) {
   const chalk2 = loadChalk();
   const lines = [];
-  const sevColor = (sev, text) => {
-    if (!chalk2) return text;
-    if (sev === "ERROR") return chalk2.red(text);
-    if (sev === "WARNING") return chalk2.yellow(text);
-    return chalk2.blue(text);
+  const sevColor = (sev, text2) => {
+    if (!chalk2) return text2;
+    if (sev === "ERROR") return chalk2.red(text2);
+    if (sev === "WARNING") return chalk2.yellow(text2);
+    return chalk2.blue(text2);
   };
   lines.push(`Reality check: ${result.summary.total} findings (${result.summary.by_severity.ERROR} ERROR / ${result.summary.by_severity.WARNING} WARNING / ${result.summary.by_severity.INFO} INFO)`);
   lines.push("");
@@ -61845,17 +63285,17 @@ function nonEmptyString(value) {
   return typeof value === "string" && value.trim() ? value.trim() : void 0;
 }
 function resolveTarget(repoRootInput, specInput) {
-  const repoRoot = path27.resolve(repoRootInput);
+  const repoRoot = path29.resolve(repoRootInput);
   const normalized = specInput.replace(/\\/g, "/").replace(/^\.specs\//, "").replace(/^\/+|\/+$/g, "");
   if (!normalized || normalized.split("/").some((part) => !part || part === "." || part === "..")) {
     throw new Error("UNSAFE_TARGET: spec must be a contained .specs/<slug> path");
   }
-  const specsRoot = path27.resolve(repoRoot, ".specs");
-  const specDir = path27.resolve(specsRoot, normalized);
-  if (specDir !== specsRoot && !specDir.startsWith(`${specsRoot}${path27.sep}`)) {
+  const specsRoot = path29.resolve(repoRoot, ".specs");
+  const specDir = path29.resolve(specsRoot, normalized);
+  if (specDir !== specsRoot && !specDir.startsWith(`${specsRoot}${path29.sep}`)) {
     throw new Error("UNSAFE_TARGET: spec path escapes .specs");
   }
-  if (!fs30.existsSync(specDir) || !fs30.statSync(specDir).isDirectory()) {
+  if (!fs32.existsSync(specDir) || !fs32.statSync(specDir).isDirectory()) {
     throw new Error(`SPEC_NOT_FOUND: ${normalized}`);
   }
   return { repoRoot, spec: normalized, specDir };
@@ -62146,10 +63586,10 @@ async function proposeSpecRepairs(input) {
     ...edit,
     expected_sha: edit.expected_sha ?? before.snapshot.documentShas[edit.doc.replace(/\\/g, "/")]
   }));
-  const preview = proposePatch(path27.resolve(input.repoRoot), edits);
+  const preview = proposePatch(path29.resolve(input.repoRoot), edits);
   const selectedCandidates = before.candidates.map(candidateId);
   proposalMeta.set(preview.proposal_id, {
-    repoRoot: path27.resolve(input.repoRoot),
+    repoRoot: path29.resolve(input.repoRoot),
     spec: before.spec,
     candidates: before.candidates,
     before,
@@ -62169,7 +63609,7 @@ async function proposeSpecRepairs(input) {
   };
 }
 async function applySpecRepairs(repoRootInput, proposalId) {
-  const repoRoot = path27.resolve(repoRootInput);
+  const repoRoot = path29.resolve(repoRootInput);
   const meta3 = proposalMeta.get(proposalId);
   if (!meta3 || meta3.repoRoot !== repoRoot) {
     throw new Error("PROPOSAL_NOT_FOUND: proposal was not issued by this remediation process");
@@ -62322,8 +63762,8 @@ function parseArgs2(argv) {
   if (!spec) throw new Error("Missing --spec <slug|.specs/slug>");
   if (!["check", "propose", "repair"].includes(mode ?? "")) throw new Error(`Invalid --mode: ${mode}`);
   if (!["human", "json"].includes(format)) throw new Error(`Invalid --format: ${format}`);
-  const readJson = (file2) => file2 ? JSON.parse(fs30.readFileSync(path27.resolve(file2), "utf8")) : void 0;
-  return { repoRoot: path27.resolve(repoRoot), spec, mode, format, maxRounds, semanticFindings: readJson(semanticFile), repairCandidates: readJson(repairsFile) };
+  const readJson = (file2) => file2 ? JSON.parse(fs32.readFileSync(path29.resolve(file2), "utf8")) : void 0;
+  return { repoRoot: path29.resolve(repoRoot), spec, mode, format, maxRounds, semanticFindings: readJson(semanticFile), repairCandidates: readJson(repairsFile) };
 }
 function renderRemediation(report) {
   const lines = [
@@ -62411,7 +63851,7 @@ function durationToMs(d) {
 }
 function resolveRuntimePath(repoRoot, p) {
   if (p.startsWith("file://")) return fileURLToPath4(p);
-  return path28.isAbsolute(p) ? p : path28.resolve(repoRoot, p);
+  return path30.isAbsolute(p) ? p : path30.resolve(repoRoot, p);
 }
 function traceTarget(s) {
   const ref = s.trace;
@@ -62432,7 +63872,7 @@ function readTraceFailure(repoRoot, s) {
     return { trace_status: "not_recorded", failingStep: fallback };
   }
   const abs = resolveRuntimePath(repoRoot, target.traceFile);
-  if (!fs31.existsSync(abs)) {
+  if (!fs33.existsSync(abs)) {
     return {
       trace_status: "expired",
       failingStep: fallback,
@@ -62442,7 +63882,7 @@ function readTraceFailure(repoRoot, s) {
   const pickleStepText = /* @__PURE__ */ new Map();
   const testStepToPickleStep = /* @__PURE__ */ new Map();
   const finishes = [];
-  for (const line of fs31.readFileSync(abs, "utf-8").split(/\r?\n/)) {
+  for (const line of fs33.readFileSync(abs, "utf-8").split(/\r?\n/)) {
     if (!line.trim()) continue;
     let env2;
     try {
@@ -62644,8 +64084,8 @@ function sliceSection(lines, query) {
   for (let i = 0; i < lines.length; i++) {
     const m = lines[i].match(/^(#{1,6})\s+(.*\S)\s*$/);
     if (!m) continue;
-    const text = m[2].trim();
-    if (text === q || slugifyHeading(text) === qSlug) {
+    const text2 = m[2].trim();
+    if (text2 === q || slugifyHeading(text2) === qSlug) {
       startIdx = i;
       level = m[1].length;
       break;
@@ -62674,11 +64114,11 @@ function summariseFrTrace(fr, acs, scenarios, tasks) {
   const passed = scenarios.filter((s2) => s2.lastResult === "PASSED").length;
   const failed = scenarios.filter((s2) => s2.lastResult === "FAILED").length;
   const failingScenario = scenarios.find((s2) => s2.lastResult === "FAILED");
-  const failingStep = failingScenario?.failingStep;
+  const failingStep2 = failingScenario?.failingStep;
   let s = `${fr.id} "${fr.title ?? "(no title)"}"`;
   s += ` \u2014 ${acCount} AC, ${scenCount} scenarios (${passed} PASS, ${failed} FAIL), ${taskCount} tasks.`;
-  if (failingStep) {
-    s += ` Last failure: ${failingScenario.id} at "${clamp(failingStep.step, 60)}" \u2014 ${clamp(failingStep.errorMessage, 80)}.`;
+  if (failingStep2) {
+    s += ` Last failure: ${failingScenario.id} at "${clamp(failingStep2.step, 60)}" \u2014 ${clamp(failingStep2.errorMessage, 80)}.`;
   }
   return clamp(s, 500);
 }
@@ -62852,7 +64292,7 @@ function markdownLinkLocation(graph, anchor, spec) {
   const targetSlug = decodeAnchorSlug(m.groups.slug);
   const files = /* @__PURE__ */ new Set();
   if (targetDoc.startsWith(".specs/")) files.add(targetDoc);
-  if (fs31.existsSync(path28.resolve(process.cwd(), targetDoc))) files.add(targetDoc);
+  if (fs33.existsSync(path30.resolve(process.cwd(), targetDoc))) files.add(targetDoc);
   if (spec) files.add(normalizeDocPath(`.specs/${spec}/${targetDoc}`));
   for (const node of graph.nodes.values()) {
     const file2 = normalizeDocPath(node.file);
@@ -62867,9 +64307,9 @@ function markdownLinkLocation(graph, anchor, spec) {
       if (normalizeDocPath(node.file) !== file2) continue;
       if (nodeHeadingSlugCandidates(node).includes(targetSlug)) return { file: node.file, line: node.line };
     }
-    const abs = path28.resolve(process.cwd(), file2);
-    if (!fs31.existsSync(abs) || !fs31.statSync(abs).isFile()) continue;
-    const lines = fs31.readFileSync(abs, "utf-8").split(/\r?\n/);
+    const abs = path30.resolve(process.cwd(), file2);
+    if (!fs33.existsSync(abs) || !fs33.statSync(abs).isFile()) continue;
+    const lines = fs33.readFileSync(abs, "utf-8").split(/\r?\n/);
     let inFence = false;
     for (let i = 0; i < lines.length; i += 1) {
       const raw = lines[i];
@@ -62886,8 +64326,56 @@ function markdownLinkLocation(graph, anchor, spec) {
   return null;
 }
 function buildToolRegistry(getGraph, registryOpts = {}) {
+  const repoRoot = path30.resolve(registryOpts.repoRoot ?? process.cwd());
+  const logAccess = (toolName, args, decision) => logSpecAccess(toolName, args, decision, repoRoot);
   const tools = [];
   const readOnlyRefusal = (_tool, _args) => null;
+  const mutationRootRefusal = () => {
+    const check2 = checkDeclaredWorktree(repoRoot, registryOpts.declaredWorktree);
+    if (check2.ok) return null;
+    return asJsonResult({
+      ok: false,
+      error: ROOT_WORKTREE_MISMATCH,
+      actual_worktree: check2.actual,
+      declared_worktree: check2.declared,
+      hint: "This MCP server is bound to a different resolved worktree. Reconnect from the declared project or launch a server for that worktree; no mutation was attempted."
+    });
+  };
+  tools.push({
+    name: "mcp_preflight",
+    description: "FR-86d read-only MCP admission snapshot: redacted resolved-root/worktree identities, lock and short-write mode, MCP/plugin versions, and dependency readiness. An optional declared_worktree is compared without writing.",
+    inputShape: { declared_worktree: external_exports.string().optional() },
+    handler: async ({ declared_worktree }) => {
+      const declared = typeof declared_worktree === "string" ? declared_worktree : registryOpts.declaredWorktree;
+      const root = checkDeclaredWorktree(repoRoot, declared);
+      const state = registryOpts.preflight?.() ?? {
+        lockMode: "owner",
+        writeMode: "short_lock_cas",
+        dependencies: {
+          graph: "ready",
+          watcher: "ready",
+          lock: "owner",
+          sqlite: "disabled"
+        },
+        mcpVersion: "unknown",
+        pluginVersion: "unknown"
+      };
+      return asJsonResult({
+        ok: true,
+        resolved_root: root.actual,
+        worktree: {
+          actual: root.actual,
+          declared: root.declared,
+          matches_resolved_root: root.ok
+        },
+        lock_mode: state.lockMode,
+        write_mode: state.writeMode,
+        versions: { mcp: state.mcpVersion, plugin: state.pluginVersion },
+        dependencies: state.dependencies,
+        mutation_ready: root.ok
+      });
+    }
+  });
   tools.push({
     name: "get_trace",
     description: "Get the full requirement trace for a node id: AC + Scenarios + Tasks + code_impl[] (implements edges per FR-30) + related nodes + a \u2264500-char natural-language summary for the agent.",
@@ -63013,15 +64501,19 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
   });
   tools.push({
     name: "conformance_check",
-    description: "Run the Phase-1 conformance ruleset over the in-memory graph and return Finding[] (UNCOVERED_FR / ORPHAN_TASK / SCENARIO_TAG_ORPHAN / UNTAGGED_SCENARIO).",
+    description: "Run the Phase-1 conformance ruleset over the in-memory graph and return Finding[] (traceability, task, scenario-tag, and FR-85 contract findings). Pass strict_contracts=true and spec=<slug> to make missing or invalid FR contract cards blocking for one spec.",
     inputShape: {
       scope: external_exports.array(external_exports.string()).optional(),
-      severity: external_exports.enum(["error", "warning", "info"]).optional()
+      severity: external_exports.enum(["error", "warning", "info"]).optional(),
+      strict_contracts: external_exports.boolean().optional(),
+      spec: external_exports.string().optional()
     },
     handler: async (args) => {
       const scope = args.scope;
       const severity = args.severity;
-      let findings = checkConformance(getGraph());
+      const strictContracts = Boolean(args.strict_contracts);
+      const strictContractSpec = args.spec;
+      let findings = checkConformance(getGraph(), { strictContracts, strictContractSpec });
       if (scope?.length) {
         const ids = new Set(scope);
         findings = findings.filter((f) => f.nodeId && ids.has(f.nodeId) || f.relatedId && ids.has(f.relatedId));
@@ -63126,6 +64618,57 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
       const checked = validateRequirementMetadata(metadata);
       if (!checked.metadata) return asJsonResult({ ok: false, error: "FR_METADATA_INVALID", findings: checked.issues });
       return asJsonResult({ ok: true, node_id: resolved.node.id, local_id: localIdOf(resolved.node.id), metadata: checked.metadata, yaml: renderRequirementMetadata(checked.metadata), hint: "Apply this rendered block through apply_spec_change/apply_spec_transaction with CAS." });
+    }
+  });
+  tools.push({
+    name: "propose_requirement_contract",
+    description: "FR-86e: read-only guided FR contract proposal. Scans parser-backed evidence, returns ranked kind candidates, required/missing fields and field-level schema findings, then mints an existing CAS-bound patch proposal only for a valid card. Nothing is written; apply only with apply_proposed_patch.",
+    inputShape: {
+      spec: external_exports.string(),
+      requirement: external_exports.string(),
+      contract: external_exports.record(external_exports.string(), external_exports.unknown()),
+      expected_sha: external_exports.string().optional()
+    },
+    handler: async (args) => {
+      const rootRefusal = mutationRootRefusal();
+      if (rootRefusal) return rootRefusal;
+      const draft = proposeRequirementContract(repoRoot, {
+        spec: args.spec,
+        requirement: args.requirement,
+        contract: args.contract,
+        expectedSha: typeof args.expected_sha === "string" ? args.expected_sha : void 0
+      });
+      if (!draft.ok || !draft.edits) {
+        logAccess("propose_requirement_contract", { spec: args.spec, requirement: args.requirement }, "denied");
+        return asJsonResult({ ...draft, dry_run: true, written: false });
+      }
+      const prepared = preparePatch(repoRoot, draft.edits);
+      if (!prepared.ok) {
+        logAccess("propose_requirement_contract", { spec: args.spec, requirement: args.requirement }, "denied");
+        return asJsonResult({
+          ...draft,
+          ok: false,
+          error: "VALIDATION_FAILED",
+          dry_run: true,
+          written: false,
+          transaction_findings: prepared.findings,
+          edits: prepared.edits.map(publicEditPreview),
+          hint: "The card is metadata-valid, but the full document fails the existing form/anchor/conformance gate. Nothing was written or stored; fix the findings and re-propose."
+        });
+      }
+      const proposal = proposePatch(repoRoot, draft.edits);
+      logAccess("propose_requirement_contract", { spec: args.spec, requirement: args.requirement, proposal_id: proposal.proposal_id }, "ok");
+      return asJsonResult({
+        ...draft,
+        dry_run: true,
+        written: false,
+        proposal_id: proposal.proposal_id,
+        transaction: {
+          findings: proposal.findings,
+          edits: proposal.edits.map(publicEditPreview)
+        },
+        hint: "No bytes were written. apply_proposed_patch({proposal_id, reason}) re-checks the root-bound CAS tokens and atomically writes only if the proposal remains fresh."
+      });
     }
   });
   const taskStatuses = ["todo", "ready", "in-progress", "done", "blocked"];
@@ -63310,7 +64853,7 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
   });
   tools.push({
     name: "get_spec_status",
-    description: 'How is a spec doing \u2014 ONE tool, three VIEWS (merged: was get_spec_status + get_coverage + get_coverage_summary). `view`: "status" (default, needs `spec`) \u2192 lifecycle SPEC_ONLY/TESTS_NOT_RUN/RED/PARTIAL/GREEN + last-run summary + node counts + FR-37b gaps + phases + hint (FR-38). "summary" (needs `spec`) \u2192 compact lifecycle/count/gap summary for bounded inventory; no per-task or per-scenario payload. "counts" \u2192 structural FR/AC/Scenario/Task tallies: with `spec` that one spec, without `spec` the per-spec table across the corpus. "coverage" \u2192 FR-32 honesty rollup: per-scenario buckets (passed/pending/undefined/\u2026) + per-task verified_status (DONE only when EVERY mapped scenario is green); `spec` scopes, omit for whole-corpus (every spec not in the last run shows not_run \u2014 usually pass `spec`).',
+    description: 'How is a spec doing \u2014 ONE tool, three VIEWS (merged: was get_spec_status + get_coverage + get_coverage_summary). `view`: "status" (default, needs `spec`) \u2192 legacy execution-only lifecycle (never authoritative) + canonical verdict/readiness + last-run summary + node counts + FR-37b gaps + phases + canonical `readiness.action_center` (every blocking lane with affected-node count/reasons/remediation; `next_action` remains its first-group projection) + hint (FR-38). "summary" (needs `spec`) \u2192 compact lifecycle/count/gap summary for bounded inventory; no per-task or per-scenario payload. "counts" \u2192 structural FR/AC/Scenario/Task tallies: with `spec` that one spec, without `spec` the per-spec table across the corpus. "coverage" \u2192 FR-32 honesty rollup: per-scenario buckets (passed/pending/undefined/\u2026) + per-task verified_status (DONE only when EVERY mapped scenario is green); `spec` scopes, omit for whole-corpus (every spec not in the last run shows not_run \u2014 usually pass `spec`).',
     inputShape: {
       spec: external_exports.string().optional(),
       view: external_exports.enum(["status", "summary", "counts", "coverage"]).optional()
@@ -63319,7 +64862,7 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
       const v = view ?? "status";
       if (v !== "summary") registryOpts.refreshGraph?.();
       const graph = getGraph();
-      const repoRoot = registryOpts.repoRoot ?? process.cwd();
+      const repoRoot2 = registryOpts.repoRoot ?? process.cwd();
       const executionGaps = (scopeSpec, scenarios, buckets) => {
         const scenarioBucket = /* @__PURE__ */ new Map();
         for (const [bucket, ids] of Object.entries(buckets)) {
@@ -63407,7 +64950,7 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
             tasks.push({ id: t.id, doneWhen: t.doneWhen ?? "", refs: t.refs, spec: nodeSpec, status: t.status });
           }
         }
-        const testQualityByTask = readVerdicts(repoRoot);
+        const testQualityByTask = readVerdicts(repoRoot2);
         const coverage = computeCoverage(tasks, scenarios, testQualityByTask);
         const canonicalScenarios = scenarios.map((scenario) => ({
           ...scenario,
@@ -63428,7 +64971,7 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
             task_verification: canonicalCoverage.tasks
           },
           execution_gaps: executionGaps(spec, canonicalScenarios, canonicalCoverage.buckets),
-          filtered_proof: spec ? latestFilteredProof(repoRoot, [...graph.nodes.values()].filter((node) => node.type === "Scenario" && specOf(node.file) === spec).map((node) => node)).latest : null
+          filtered_proof: spec ? latestFilteredProof(repoRoot2, [...graph.nodes.values()].filter((node) => node.type === "Scenario" && specOf(node.file) === spec).map((node) => node)).latest : null
         });
       }
       if (typeof spec !== "string" || spec.length === 0) {
@@ -63484,77 +65027,50 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
         else if (r === "SKIPPED") summary.skipped++;
         if (s.canonicalRunAt && (!lastAt || s.canonicalRunAt > lastAt)) lastAt = s.canonicalRunAt;
       }
-      const last_run = summary.touched > 0 ? { at: lastAt, source: ".dev-pomogator/.last-test-run.ndjson", summary } : null;
-      const statusCoverage = computeCoverage(statusTasks, statusScenarios, readVerdicts(repoRoot));
+      const canonicalSources = [...new Set(scens.filter((scenario) => scenario.canonicalResult && scenario.canonicalSource).map((scenario) => scenario.canonicalSource))].sort();
+      const last_run = summary.touched > 0 ? {
+        at: lastAt,
+        source: canonicalSources.length === 1 ? canonicalSources[0] : canonicalSources,
+        run_ids: [...new Set(scens.filter((scenario) => scenario.canonicalResult && scenario.canonicalRunId).map((scenario) => scenario.canonicalRunId))].sort(),
+        summary
+      } : null;
+      const statusCoverage = computeCoverage(statusTasks, statusScenarios, readVerdicts(repoRoot2));
       const canonicalStatusScenarios = statusScenarios.map((scenario) => ({
         ...scenario,
         result: scenario.canonicalResult,
         stale: false,
         source: scenario.canonicalResult ? "canonical-full-run" : void 0
       }));
-      const canonicalStatusCoverage = computeCoverage(statusTasks, canonicalStatusScenarios, readVerdicts(repoRoot));
+      const canonicalStatusCoverage = computeCoverage(statusTasks, canonicalStatusScenarios, readVerdicts(repoRoot2));
       const statusExecutionGaps = executionGaps(slug, canonicalStatusScenarios, canonicalStatusCoverage.buckets);
-      const sourceScenarios = scens.filter((scenario) => specOf(scenario.file) === slug);
-      const executableScenarios = [];
-      const slugTail = slug.split("/").pop().toLowerCase();
-      for (const node of graph.nodes.values()) {
-        if (node.type !== "Scenario") continue;
-        const scenario = node;
-        const file2 = String(scenario.file).replace(/\\/g, "/");
-        if (file2.includes("/.tmp/") || file2.includes("/archive/")) continue;
-        const outsideSpec = !file2.startsWith(".specs/");
-        if (outsideSpec && file2.toLowerCase().includes(slugTail)) executableScenarios.push(scenario);
-      }
-      const bddSync = compareBddSync(repoRoot, slug, sourceScenarios, executableScenarios);
-      const oldTestCensus = oldTestReadinessDebt(repoRoot, slug);
-      const bddSyncDebt = [...bddSync.debt, ...oldTestCensus.debt];
-      const filteredProof = latestFilteredProof(repoRoot, sourceScenarios);
-      const taskTruthDebt = Object.entries(canonicalStatusCoverage.tasks).flatMap(([taskId, task]) => (task.truth_issues ?? []).map((issue2) => `${taskId}: ${issue2.message}`));
+      const canonicalVerdict = await analyzeGraphSnapshot(`.specs/${slug}`, graph, {
+        cwd: repoRoot2,
+        semantic: false
+      });
+      const bddSyncDebt = canonicalVerdict.readiness.lanes.BDD_SYNC.debt;
+      const filteredProof = canonicalVerdict.evidence.filteredProof;
+      const taskTruthDebt = canonicalVerdict.readiness.lanes.TASK_TRUTH.debt;
       let lifecycle;
       if (counts.scenarios === 0) lifecycle = "SPEC_ONLY";
       else if (!last_run) lifecycle = "TESTS_NOT_RUN";
       else if (summary.failed > 0 || summary.ambiguous > 0) lifecycle = "RED";
       else if (summary.pending + summary.undefined + summary.skipped + summary.stale > 0 || statusExecutionGaps.SCENARIO_NOT_RUN > 0 || statusExecutionGaps.LIVE_EVIDENCE_AWAITING > 0) lifecycle = "PARTIAL";
       else lifecycle = "GREEN";
-      const specFindings = checkConformance(graph).filter((finding) => inSpec(finding.location.file));
-      const gaps = summariseGaps(gapsFromFindings(specFindings, { spec: slug }));
-      const inventory = buildReadinessInventory(graph, { spec: slug });
-      const canonicalVerdict = computeSpecVerdict({
-        inventory,
-        lanes: {
-          STRUCTURE: {
-            status: specFindings.some((finding) => finding.severity === "error") ? "RED" : "GREEN",
-            debt: specFindings.filter((finding) => finding.severity === "error").map((finding) => `${finding.code}:${finding.nodeId ?? finding.location.file}`)
-          },
-          TRACEABILITY: {
-            status: Object.values(gaps).some((count) => count > 0) ? "RED" : "GREEN",
-            debt: Object.entries(gaps).filter(([, count]) => count > 0).map(([code, count]) => `${code}:${count}`)
-          },
-          TASK_TRUTH: {
-            status: taskTruthDebt.length > 0 ? "RED" : "GREEN",
-            debt: taskTruthDebt
-          },
-          BDD_SYNC: {
-            status: bddSyncDebt.length > 0 ? "RED" : "GREEN",
-            debt: bddSyncDebt
-          },
-          FILTERED_PROOF: {
-            status: filteredProof.latest ? "GREEN" : "NONE",
-            debt: []
-          }
-        }
-      }, specFindings);
+      const progress = readProgressState(path30.join(repoRoot2, ".specs", slug));
+      const gaps = canonicalVerdict.traceabilityGate.byClass;
+      const inventory = buildReadinessInventory(graph, {
+        spec: slug,
+        testQualityByTask: readVerdicts(repoRoot2)
+      });
       const readiness = canonicalVerdict.readiness;
-      const readinessLanes = readiness.lanes;
-      const nextAction = bddSyncDebt.length > 0 ? "Fix source/executable BDD sync drift or resolve the combined BDD synchronization debt." : filteredProof.latest && taskTruthDebt.length > 0 ? `Filtered run ${filteredProof.latest.runId} is useful proof but does not update canonical coverage. Run the full Docker BDD suite or attach an accepted canonical artifact.` : readiness.next_action;
+      const nextAction = readiness.action_center[0]?.action.message ?? readiness.nextAction;
       const hints = {
         SPEC_ONLY: "Docs only \u2014 no scenarios written yet. Next: author the .feature (FR-38a).",
-        TESTS_NOT_RUN: `${counts.scenarios} scenario(s) are SCENARIO_NOT_RUN; no canonical execution has been ingested. Next: run the suite so NDJSON lands.`,
+        TESTS_NOT_RUN: `${counts.scenarios} scenario(s): no canonical per-scenario result evidence found. Next: run Cucumber so .dev-pomogator/.last-test-run.ndjson lands, or pytest-bdd with --cucumber-json .dev-pomogator/pytest-bdd-report.json.`,
         RED: `${summary.failed + summary.ambiguous} failing of ${summary.touched} touched. Next: get_test_result per scenario.`,
         PARTIAL: statusExecutionGaps.SCENARIO_NOT_RUN > 0 ? `${statusExecutionGaps.SCENARIO_NOT_RUN} ACTIVE scenario(s) are SCENARIO_NOT_RUN after the last ingested run; NOT execution-complete.` : statusExecutionGaps.LIVE_EVIDENCE_AWAITING > 0 ? `${statusExecutionGaps.LIVE_EVIDENCE_AWAITING} @live-evidence scenario(s) await real live-producer proof (manifest + trace + readback); a canonical cucumber run cannot close them.` : summary.stale > 0 ? `${summary.stale} stale passed scenario(s) need rerun after source changes; NOT execution-complete.` : `${summary.pending + summary.undefined + summary.skipped} scenario(s) undefined/pending/skipped, 0 failed \u2014 written but not implemented; NOT green.`,
         GREEN: `All ${summary.touched} touched scenario(s) passed at ${lastAt}.`
       };
-      const progress = readProgressState(path28.join(repoRoot, ".specs", slug));
       const phases = PHASE_ORDER.map((name) => ({
         id: `${slug}:phase:${name}`,
         name,
@@ -63567,8 +65083,12 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
           ok: true,
           view: "summary",
           spec: slug,
-          spec_status: readSpecStatus(repoRoot, slug),
+          spec_status: readSpecStatus(repoRoot2, slug),
           lifecycle,
+          // Compatibility-only execution projection. `verdict`/`readiness` below
+          // are the sole authoritative spec status and must be used for readiness.
+          lifecycle_scope: "execution-only",
+          lifecycle_authoritative: false,
           verdict: canonicalVerdict.verdict,
           blocking: canonicalVerdict.blocking,
           counts,
@@ -63577,7 +65097,8 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
           execution_gaps: statusExecutionGaps,
           readiness: {
             overall: readiness.overall,
-            next_action: nextAction
+            next_action: nextAction,
+            action_center: readiness.action_center
           },
           hint: hints[lifecycle]
         });
@@ -63588,8 +65109,12 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
         spec: slug,
         // Explicit SPEC-level marker (set_spec_status). `backlog` ⇒ excluded from the task-census /
         // Stop-gate open-work count — its open tasks are parked by intent, not counted as work due now.
-        spec_status: readSpecStatus(repoRoot, slug),
+        spec_status: readSpecStatus(repoRoot2, slug),
         lifecycle,
+        // Compatibility-only execution projection. `verdict`/`readiness` below
+        // are the sole authoritative spec status and must be used for readiness.
+        lifecycle_scope: "execution-only",
+        lifecycle_authoritative: false,
         verdict: canonicalVerdict.verdict,
         blocking: canonicalVerdict.blocking,
         counts,
@@ -63627,23 +65152,23 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
       const args = { spec };
       const slug = String(spec).replace(/\\/g, "/").replace(/^\.?\/?\.specs\//, "").replace(/\/+$/, "");
       if (!isSafeSlug(slug)) {
-        logSpecAccess("list_spec_docs", args, "denied");
+        logAccess("list_spec_docs", args, "denied");
         return asJsonResult({ ok: false, error: "UNSAFE_SPEC", spec: slug, hint: "slug must stay within .specs/ (no traversal)" });
       }
-      const repoRoot = registryOpts.repoRoot ?? process.cwd();
-      const dir = path28.join(repoRoot, ".specs", slug);
-      if (!fs31.existsSync(dir) || !fs31.statSync(dir).isDirectory()) {
-        logSpecAccess("list_spec_docs", args, "not_found");
+      const repoRoot2 = registryOpts.repoRoot ?? process.cwd();
+      const dir = path30.join(repoRoot2, ".specs", slug);
+      if (!fs33.existsSync(dir) || !fs33.statSync(dir).isDirectory()) {
+        logAccess("list_spec_docs", args, "not_found");
         return asJsonResult({ ok: false, error: "SPEC_NOT_FOUND", spec: slug });
       }
       const docs = [];
       const attachments = [];
       const ATTACH_RE = /\.(png|jpe?g|gif|webp|bmp|pdf|svg)$/i;
       const walk = (abs, rel) => {
-        for (const e of fs31.readdirSync(abs, { withFileTypes: true })) {
+        for (const e of fs33.readdirSync(abs, { withFileTypes: true })) {
           const childRel = rel ? `${rel}/${e.name}` : e.name;
           if (e.isDirectory()) {
-            walk(path28.join(abs, e.name), childRel);
+            walk(path30.join(abs, e.name), childRel);
           } else if (e.isFile()) {
             if (/\.(md|feature)$/.test(e.name) || e.name === ".progress.json" || e.name === ".jira-cache.json") docs.push(childRel);
             else if (ATTACH_RE.test(e.name)) attachments.push(childRel);
@@ -63653,7 +65178,7 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
       walk(dir, "");
       docs.sort();
       attachments.sort();
-      logSpecAccess("list_spec_docs", args, "ok");
+      logAccess("list_spec_docs", args, "ok");
       return asJsonResult({ ok: true, spec: slug, docs, count: docs.length, attachments });
     }
   });
@@ -63671,22 +65196,22 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
     },
     handler: async ({ spec, doc, offset, limit, section, whole_document, read_for_edit }) => {
       const args = { spec, doc, offset, limit, section, whole_document, read_for_edit };
-      const repoRoot = registryOpts.repoRoot ?? process.cwd();
+      const repoRoot2 = registryOpts.repoRoot ?? process.cwd();
       const slug = String(spec).replace(/\\/g, "/").replace(/^\.?\/?\.specs\//, "").replace(/\/+$/, "");
       if (!isSafeSlug(slug)) {
-        logSpecAccess("read_spec_doc", args, "denied");
+        logAccess("read_spec_doc", args, "denied");
         return asJsonResult({ ok: false, error: "UNSAFE_SPEC", spec: slug, hint: "slug must stay within .specs/ (no traversal)" });
       }
-      const resolved = resolveSpecDoc(repoRoot, slug, String(doc));
+      const resolved = resolveSpecDoc(repoRoot2, slug, String(doc));
       if (!resolved.ok) {
-        logSpecAccess("read_spec_doc", args, "denied");
+        logAccess("read_spec_doc", args, "denied");
         return asJsonResult({ ok: false, error: resolved.reason === "TRAVERSAL" ? "DOC_TRAVERSAL" : "UNSAFE_SPEC", spec: slug, doc: String(doc), hint: "doc must stay within .specs/<spec>/ (no traversal/abs path)" });
       }
       const rel = resolved.rel;
-      const base = path28.basename(rel);
+      const base = path30.basename(rel);
       const okName = /\.(md|feature)$/.test(base) || base === ".progress.json" || base === ".jira-cache.json";
-      if (!okName || !fs31.existsSync(resolved.abs) || !fs31.statSync(resolved.abs).isFile()) {
-        logSpecAccess("read_spec_doc", args, "not_found");
+      if (!okName || !fs33.existsSync(resolved.abs) || !fs33.statSync(resolved.abs).isFile()) {
+        logAccess("read_spec_doc", args, "not_found");
         return asJsonResult({
           ok: false,
           error: "DOC_NOT_FOUND",
@@ -63695,24 +65220,24 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
           hint: "Call list_spec_docs({spec}) for the valid inventory. Binary attachments \u2192 read_attachment."
         });
       }
-      const full = fs31.readFileSync(resolved.abs, "utf-8");
+      const full = fs33.readFileSync(resolved.abs, "utf-8");
       const lines = full.split(/\r?\n/);
       const totalLines = lines.length;
       const totalBytes = full.length;
       const sha = docSha(full);
       if (read_for_edit === true) {
-        const meta3 = readForEdit(repoRoot, slug, rel, section !== void 0 ? String(section) : void 0);
+        const meta3 = readForEdit(repoRoot2, slug, rel, section !== void 0 ? String(section) : void 0);
         if (!meta3.ok) {
-          logSpecAccess("read_spec_doc", args, "not_found");
+          logAccess("read_spec_doc", args, "not_found");
           return asJsonResult({ ok: false, error: meta3.error === "DOC_NOT_FOUND" ? "DOC_NOT_FOUND" : "UNSAFE_SPEC", spec: slug, doc: rel, hint: meta3.hint });
         }
-        logSpecAccess("read_spec_doc", args, "ok");
+        logAccess("read_spec_doc", args, "ok");
         return asJsonResult({ ok: true, spec: slug, doc: rel, mode: "read_for_edit", ...meta3 });
       }
       if (section !== void 0) {
         const sel = sliceSection(lines, String(section));
         if (!sel) {
-          logSpecAccess("read_spec_doc", args, "not_found");
+          logAccess("read_spec_doc", args, "not_found");
           return asJsonResult({
             ok: false,
             error: "SECTION_NOT_FOUND",
@@ -63726,7 +65251,7 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
           });
         }
         const content = sel.lines.join("\n");
-        logSpecAccess("read_spec_doc", args, "ok");
+        logAccess("read_spec_doc", args, "ok");
         return asJsonResult({
           ok: true,
           spec: slug,
@@ -63745,7 +65270,7 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
       if (offset !== void 0 || limit !== void 0) {
         const startIdx = (offset ?? 1) - 1;
         if (startIdx >= totalLines) {
-          logSpecAccess("read_spec_doc", args, "ok");
+          logAccess("read_spec_doc", args, "ok");
           return asJsonResult({
             ok: true,
             spec: slug,
@@ -63766,7 +65291,7 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
         const slice = lines.slice(startIdx, endIdx);
         const truncated = endIdx < totalLines;
         const content = slice.join("\n");
-        logSpecAccess("read_spec_doc", args, "ok");
+        logAccess("read_spec_doc", args, "ok");
         return asJsonResult({
           ok: true,
           spec: slug,
@@ -63786,7 +65311,7 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
       if (totalBytes > WHOLE_DOC_SAFE_BYTES && whole_document !== true) {
         const endIdx = Math.min(DEFAULT_DOC_PAGE_LINES, totalLines);
         const content = lines.slice(0, endIdx).join("\n");
-        logSpecAccess("read_spec_doc", args, "ok");
+        logAccess("read_spec_doc", args, "ok");
         return asJsonResult({
           ok: true,
           spec: slug,
@@ -63806,7 +65331,7 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
           note: "Large document safely paged. Continue with next_offset, select a section, or pass whole_document:true explicitly."
         });
       }
-      logSpecAccess("read_spec_doc", args, "ok");
+      logAccess("read_spec_doc", args, "ok");
       return asJsonResult({ ok: true, spec: slug, doc: rel, bytes: totalBytes, total_lines: totalLines, total_bytes: totalBytes, sha, content: full });
     }
   });
@@ -63819,11 +65344,11 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
       const slug = String(spec).replace(/\\/g, "/").replace(/^\.?\/?\.specs\//, "").replace(/\/+$/, "");
       const resolved = resolveSpecDoc(process.cwd(), slug, String(docPath));
       if (!resolved.ok) {
-        logSpecAccess("read_attachment", args, "denied");
+        logAccess("read_attachment", args, "denied");
         return asJsonResult({ ok: false, error: resolved.reason === "TRAVERSAL" ? "DOC_TRAVERSAL" : "UNSAFE_SPEC", spec: slug, path: String(docPath), hint: "path must stay within .specs/<spec>/ (no traversal/abs path)" });
       }
       const rel = resolved.rel;
-      const ext = path28.extname(rel).toLowerCase();
+      const ext = path30.extname(rel).toLowerCase();
       const MIME = {
         ".png": "image/png",
         ".jpg": "image/jpeg",
@@ -63835,12 +65360,12 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
         ".svg": "image/svg+xml"
       };
       const mime = MIME[ext];
-      if (!mime || !fs31.existsSync(resolved.abs) || !fs31.statSync(resolved.abs).isFile()) {
-        logSpecAccess("read_attachment", args, "not_found");
+      if (!mime || !fs33.existsSync(resolved.abs) || !fs33.statSync(resolved.abs).isFile()) {
+        logAccess("read_attachment", args, "not_found");
         return asJsonResult({ ok: false, error: "ATTACHMENT_NOT_FOUND", spec: slug, path: rel, hint: "Call list_spec_docs({spec}).attachments for the valid inventory." });
       }
-      const buf = fs31.readFileSync(resolved.abs);
-      logSpecAccess("read_attachment", args, "ok");
+      const buf = fs33.readFileSync(resolved.abs);
+      logAccess("read_attachment", args, "ok");
       return asJsonResult({ ok: true, spec: slug, path: rel, mime, bytes: buf.length, base64: buf.toString("base64") });
     }
   });
@@ -63873,19 +65398,21 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
     description: "FR-40 DRY-RUN of a spec mutation: applies the change IN MEMORY and runs the full validation (form contracts + anchors + conformance of the affected spec) WITHOUT writing. Same checks as apply_spec_change \u2014 propose first, fix the findings, then apply. change = {content} (full replace) OR {old_string, new_string, replace_all?} (Edit-tool semantics).",
     inputShape: CHANGE_SHAPE,
     handler: async (args) => {
+      const rootRefusal = mutationRootRefusal();
+      if (rootRefusal) return rootRefusal;
       const slug = slugOf(args.spec);
       const doc = docOf(args.doc);
       const change = toChange(args);
       if (change === "ambiguous") {
-        logSpecAccess("propose_spec_change", args, "error");
+        logAccess("propose_spec_change", args, "error");
         return asJsonResult({ ok: false, error: "AMBIGUOUS_CHANGE", hint: "Pass EITHER {content} OR {old_string,new_string}, not both." });
       }
       if (!change) {
-        logSpecAccess("propose_spec_change", args, "error");
+        logAccess("propose_spec_change", args, "error");
         return asJsonResult({ ok: false, error: "BAD_CHANGE", hint: "Pass {content} or {old_string,new_string}." });
       }
-      const r = validateSpecChange(process.cwd(), slug, doc, change);
-      logSpecAccess("propose_spec_change", args, r.ok ? "ok" : "denied");
+      const r = validateSpecChange(repoRoot, slug, doc, change);
+      logAccess("propose_spec_change", args, r.ok ? "ok" : "denied");
       return asJsonResult({ ok: r.ok, spec: slug, doc, dry_run: true, findings: r.findings });
     }
   });
@@ -63894,55 +65421,71 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
     description: "FR-40 \xAB\u0436\u0438\u0432\u043E\u0439 \u0433\u0435\u043D\u0435\u0440\u0430\u0442\u043E\u0440\xBB: apply a spec mutation THROUGH the server. The change is validated BEFORE touching disk (form contracts + anchors + conformance); any error-severity finding \u2192 refusal with the findings list (fix and retry). A clean change is written atomically and audited. Inside the MCP server the FR-14 watcher refreshes the graph; the next read sees the fresh state. P21-5 optimistic CAS: pass expected_sha (the sha from read_spec_doc) to make the write conditional \u2014 CAS_MISMATCH if another session changed the doc; the reply returns the new sha for chaining edits.",
     inputShape: CHANGE_SHAPE,
     handler: async (args) => {
+      const rootRefusal = mutationRootRefusal();
+      if (rootRefusal) return rootRefusal;
       const slug = slugOf(args.spec);
       const doc = docOf(args.doc);
       const change = toChange(args);
       if (change === "ambiguous") {
-        logSpecAccess("apply_spec_change", args, "error");
+        logAccess("apply_spec_change", args, "error");
         return asJsonResult({ ok: false, error: "AMBIGUOUS_CHANGE", hint: "Pass EITHER {content} OR {old_string,new_string}, not both." });
       }
       if (!change) {
-        logSpecAccess("apply_spec_change", args, "error");
+        logAccess("apply_spec_change", args, "error");
         return asJsonResult({ ok: false, error: "BAD_CHANGE", hint: "Pass {content} or {old_string,new_string}." });
       }
       const expectedSha = typeof args.expected_sha === "string" ? args.expected_sha : null;
+      const source = readForEdit(repoRoot, slug, doc);
+      const baseSha = source.sha;
+      if (expectedSha !== null && baseSha !== void 0 && baseSha !== expectedSha) {
+        logAccess("apply_spec_change", args, "denied");
+        return asJsonResult({
+          ok: false,
+          error: "CAS_MISMATCH",
+          spec: slug,
+          doc,
+          expected_sha: expectedSha,
+          actual_sha: baseSha,
+          hint: "The doc changed since you read it (another session?). Re-read with read_spec_doc for the fresh sha, rebase your change, and retry."
+        });
+      }
+      const r = validateSpecChange(repoRoot, slug, doc, change);
+      if (!r.ok) {
+        logAccess("apply_spec_change", args, "denied");
+        return asJsonResult({
+          ok: false,
+          error: "VALIDATION_FAILED",
+          spec: slug,
+          doc,
+          findings: r.findings,
+          hint: "Fix the findings and retry; propose_spec_change is the single-document dry-run. For fresh bootstrap or mutually-dependent FR/Story/Design/AC edits, use propose_patch then apply_proposed_patch, or apply_spec_transaction for one-shot all-or-nothing validation after every document is staged."
+        });
+      }
       try {
-        return withWriteLock(process.cwd(), () => {
-          if (expectedSha !== null) {
-            const cas = casCheck(process.cwd(), slug, doc, expectedSha);
+        return withWriteLock(repoRoot, () => {
+          if (baseSha !== void 0) {
+            const cas = casCheck(repoRoot, slug, doc, baseSha);
             if (!cas.ok) {
-              logSpecAccess("apply_spec_change", args, "denied");
+              logAccess("apply_spec_change", args, "denied");
               return asJsonResult({
                 ok: false,
                 error: "CAS_MISMATCH",
                 spec: slug,
                 doc,
-                expected_sha: expectedSha,
+                expected_sha: expectedSha ?? baseSha,
                 actual_sha: cas.actualSha,
-                hint: "The doc changed since you read it (another session?). Re-read with read_spec_doc for the fresh sha, rebase your change, and retry."
+                hint: "The doc changed while the mutation was being prepared. Re-read with read_spec_doc and retry."
               });
             }
           }
-          const r = validateSpecChange(process.cwd(), slug, doc, change);
-          if (!r.ok) {
-            logSpecAccess("apply_spec_change", args, "denied");
-            return asJsonResult({
-              ok: false,
-              error: "VALIDATION_FAILED",
-              spec: slug,
-              doc,
-              findings: r.findings,
-              hint: "Fix the findings and retry; propose_spec_change is the single-document dry-run. For fresh bootstrap or mutually-dependent FR/Story/Design/AC edits, use propose_patch then apply_proposed_patch, or apply_spec_transaction for one-shot all-or-nothing validation after every document is staged."
-            });
-          }
-          const abs = writeDocAtomic(process.cwd(), slug, doc, r.next);
+          const abs = writeDocAtomic(repoRoot, slug, doc, r.next);
           registryOpts.refreshGraph?.();
-          logSpecAccess("apply_spec_change", args, "ok");
+          logAccess("apply_spec_change", args, "ok");
           return asJsonResult({ ok: true, spec: slug, doc, path: abs, bytes: r.next.length, sha: docSha(r.next), findings: [] });
         });
       } catch (e) {
         if (e.code === "WRITE_LOCK_BUSY") {
-          logSpecAccess("apply_spec_change", args, "denied");
+          logAccess("apply_spec_change", args, "denied");
           const h = e.holder;
           return asJsonResult({
             ok: false,
@@ -63958,6 +65501,8 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
     }
   });
   const runSectionOp = (toolName, kind, args) => {
+    const rootRefusal = mutationRootRefusal();
+    if (rootRefusal) return rootRefusal;
     const slug = slugOf(args.spec);
     const doc = docOf(args.doc);
     const op = {
@@ -63966,40 +65511,55 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
       text: typeof args.text === "string" ? args.text : ""
     };
     const expectedSha = typeof args.expected_sha === "string" ? args.expected_sha : null;
+    const source = readForEdit(repoRoot, slug, doc);
+    const baseSha = source.sha;
+    if (expectedSha !== null && baseSha !== void 0 && baseSha !== expectedSha) {
+      logAccess(toolName, args, "denied");
+      return asJsonResult({
+        ok: false,
+        error: "CAS_MISMATCH",
+        spec: slug,
+        doc,
+        expected_sha: expectedSha,
+        actual_sha: baseSha,
+        hint: "The doc changed since you read it. Re-read (read_spec_doc read_for_edit:true) for the fresh sha/tokens and retry."
+      });
+    }
+    const r = proposeSectionChange(repoRoot, slug, doc, op);
+    if (!r.ok || r.preview === void 0) {
+      logAccess(toolName, args, "denied");
+      return asJsonResult({
+        ok: false,
+        error: r.error ?? "SECTION_OP_FAILED",
+        spec: slug,
+        doc,
+        eol_style: r.eol_style,
+        resolved: r.resolved,
+        heading_anchor: r.heading_anchor,
+        findings: r.findings,
+        hint: r.error === "HEADING_NOT_FOUND" ? "No heading matched \u2014 pass the heading text or its Marksman anchor (read_spec_doc read_for_edit:true lists anchors)." : "Fix the findings and retry; the document was left unchanged."
+      });
+    }
     try {
-      return withWriteLock(process.cwd(), () => {
-        if (expectedSha !== null) {
-          const cas = casCheck(process.cwd(), slug, doc, expectedSha);
+      return withWriteLock(repoRoot, () => {
+        if (baseSha !== void 0) {
+          const cas = casCheck(repoRoot, slug, doc, baseSha);
           if (!cas.ok) {
-            logSpecAccess(toolName, args, "denied");
+            logAccess(toolName, args, "denied");
             return asJsonResult({
               ok: false,
               error: "CAS_MISMATCH",
               spec: slug,
               doc,
-              expected_sha: expectedSha,
+              expected_sha: expectedSha ?? baseSha,
               actual_sha: cas.actualSha,
-              hint: "The doc changed since you read it. Re-read (read_spec_doc read_for_edit:true) for the fresh sha/tokens and retry."
+              hint: "The doc changed while the mutation was being prepared. Re-read and retry."
             });
           }
         }
-        const r = applySectionChange(process.cwd(), slug, doc, op);
-        if (!r.ok) {
-          logSpecAccess(toolName, args, "denied");
-          return asJsonResult({
-            ok: false,
-            error: r.error ?? "SECTION_OP_FAILED",
-            spec: slug,
-            doc,
-            eol_style: r.eol_style,
-            resolved: r.resolved,
-            heading_anchor: r.heading_anchor,
-            findings: r.findings,
-            hint: r.error === "HEADING_NOT_FOUND" ? "No heading matched \u2014 pass the heading text or its Marksman anchor (read_spec_doc read_for_edit:true lists anchors)." : "Fix the findings and retry; the document was left unchanged."
-          });
-        }
+        writeDocAtomic(repoRoot, slug, doc, r.preview);
         registryOpts.refreshGraph?.();
-        logSpecAccess(toolName, args, "ok");
+        logAccess(toolName, args, "ok");
         return asJsonResult({
           ok: true,
           spec: slug,
@@ -64011,16 +65571,16 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
           start_line: r.start_line,
           end_line: r.end_line,
           section_sha: r.section_sha,
-          sha: r.sha,
-          bytes: r.bytes,
-          written: r.written === true,
+          sha: docSha(r.preview),
+          bytes: r.preview.length,
+          written: true,
           preview: r.preview,
           findings: []
         });
       });
     } catch (e) {
       if (e.code === "WRITE_LOCK_BUSY") {
-        logSpecAccess(toolName, args, "denied");
+        logAccess(toolName, args, "denied");
         const h = e.holder;
         return asJsonResult({ ok: false, error: "WRITE_LOCK_BUSY", spec: slug, doc, held_by: h ?? null, hint: "Another session is writing a spec RIGHT NOW \u2014 retry in a moment." });
       }
@@ -64070,6 +65630,8 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
     description: 'FR-60 (P33-2): EOL-tolerant, ANCHOR-TARGETED literal replacement \u2014 address the section by its heading text or Marksman anchor, replace old_string\u2192new_string within it, preserving the document EOL style. On a miss the door diagnoses WHY (eol_only / whitespace_only / multi_match / changed_body / missing_anchor) with a safe next-operation hint, instead of a bare "not found". normalize_eol:true accepts a CRLF/LF-only mismatch while the persisted file keeps its original EOL. Runs the SAME form/anchor/conformance validation-before-write as apply_spec_change. Pass expected_sha (from read_spec_doc) to AUTO-REBASE a non-conflicting change over a concurrent edit; a real conflict refuses with CAS_CONFLICT + fresh anchor context. Pass expected_section_sha (from read_for_edit) as a precondition.',
     inputShape: REPLACE_SHAPE,
     handler: async (args) => {
+      const rootRefusal = mutationRootRefusal();
+      if (rootRefusal) return rootRefusal;
       const slug = slugOf(args.spec);
       const doc = docOf(args.doc);
       const op = {
@@ -64081,54 +65643,57 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
         expected_section_sha: typeof args.expected_section_sha === "string" ? args.expected_section_sha : void 0
       };
       const expectedSha = typeof args.expected_sha === "string" ? args.expected_sha : void 0;
+      let prepared = prepareReplaceChange(repoRoot, slug, doc, op, expectedSha);
       try {
-        return withWriteLock(process.cwd(), () => {
-          const r = applyReplaceChange(process.cwd(), slug, doc, op, expectedSha);
-          if (!r.ok) {
-            logSpecAccess("replace_in_section", args, "denied");
-            return asJsonResult({
-              ok: false,
-              error: r.error ?? "REPLACE_FAILED",
-              spec: slug,
-              doc,
-              eol_style: r.eol_style,
-              resolved: r.resolved,
-              rebased: r.rebased === true,
-              heading_anchor: r.heading_anchor,
-              start_line: r.start_line,
-              end_line: r.end_line,
-              section_sha: r.section_sha,
-              sha: r.sha,
-              diagnostic: r.diagnostic,
-              available_anchors: r.available_anchors,
-              findings: r.findings,
-              hint: r.diagnostic?.hint ?? (r.error === "CAS_CONFLICT" ? "The doc changed AND the target section conflicts. Re-read (read_spec_doc read_for_edit:true) for the fresh sha/section_sha/anchors, rebase your change, and retry." : "The replacement was not applied; the document was left unchanged. Act on the diagnostic hint and retry.")
-            });
-          }
-          registryOpts.refreshGraph?.();
-          logSpecAccess("replace_in_section", args, "ok");
+        let r = withWriteLock(repoRoot, () => commitPreparedReplaceChange(repoRoot, slug, doc, prepared));
+        if (r.error === "CAS_CONFLICT" && expectedSha !== void 0) {
+          prepared = prepareReplaceChange(repoRoot, slug, doc, op, expectedSha);
+          r = prepared.outcome.ok ? withWriteLock(repoRoot, () => commitPreparedReplaceChange(repoRoot, slug, doc, prepared)) : prepared.outcome;
+        }
+        if (!r.ok) {
+          logAccess("replace_in_section", args, "denied");
           return asJsonResult({
-            ok: true,
+            ok: false,
+            error: r.error ?? "REPLACE_FAILED",
             spec: slug,
             doc,
             eol_style: r.eol_style,
             resolved: r.resolved,
             rebased: r.rebased === true,
-            normalized: r.normalized === true,
             heading_anchor: r.heading_anchor,
             start_line: r.start_line,
             end_line: r.end_line,
             section_sha: r.section_sha,
             sha: r.sha,
-            bytes: r.bytes,
-            written: r.written === true,
-            preview: r.preview,
-            findings: []
+            diagnostic: r.diagnostic,
+            available_anchors: r.available_anchors,
+            findings: r.findings,
+            hint: r.diagnostic?.hint ?? (r.error === "CAS_CONFLICT" ? "The doc changed after preparation. Re-read (read_spec_doc read_for_edit:true) for the fresh sha/section_sha/anchors, rebase your change, and retry." : "The replacement was not applied; the document was left unchanged. Act on the diagnostic hint and retry.")
           });
+        }
+        registryOpts.refreshGraph?.();
+        logAccess("replace_in_section", args, "ok");
+        return asJsonResult({
+          ok: true,
+          spec: slug,
+          doc,
+          eol_style: r.eol_style,
+          resolved: r.resolved,
+          rebased: r.rebased === true,
+          normalized: r.normalized === true,
+          heading_anchor: r.heading_anchor,
+          start_line: r.start_line,
+          end_line: r.end_line,
+          section_sha: r.section_sha,
+          sha: r.sha,
+          bytes: r.bytes,
+          written: r.written === true,
+          preview: r.preview,
+          findings: []
         });
       } catch (e) {
         if (e.code === "WRITE_LOCK_BUSY") {
-          logSpecAccess("replace_in_section", args, "denied");
+          logAccess("replace_in_section", args, "denied");
           const h = e.holder;
           return asJsonResult({ ok: false, error: "WRITE_LOCK_BUSY", spec: slug, doc, held_by: h ?? null, hint: "Another session is writing a spec RIGHT NOW \u2014 retry in a moment." });
         }
@@ -64179,6 +65744,7 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
     start_line: p.start_line,
     end_line: p.end_line,
     section_sha: p.section_sha,
+    base_sha: p.base_sha,
     sha: p.sha,
     append_token: p.append_token,
     insert_token: p.insert_token,
@@ -64201,9 +65767,11 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
     description: "FR-60 (P33-3): DRY-RUN a MULTI-DOCUMENT spec patch \u2014 preview the graph impact of a SET of edits (each a section insert {section:{kind,heading?,text}}, an anchor-targeted replace {replace:{heading,old_string,new_string,...}}, or a whole-doc {content}) across documents (e.g. FR.md + ACCEPTANCE_CRITERIA.md + TASKS.md + the .feature + FILE_CHANGES.md) WITHOUT writing. Returns, per edit: the resolved heading anchor, a line diff, the resulting sha + append/insert section tokens, and the form/anchor/conformance findings \u2014 plus the affected graph nodes across all target docs and a `proposal_id`. Pass that id to apply_proposed_patch to apply it if still valid, or call apply_spec_transaction with the same edits for a one-shot all-or-nothing write.",
     inputShape: PATCH_SHAPE,
     handler: async (args) => {
+      const rootRefusal = mutationRootRefusal();
+      if (rootRefusal) return rootRefusal;
       const edits = toPatchEdits(args.edits);
-      const preview = proposePatch(process.cwd(), edits);
-      logSpecAccess("propose_patch", { edits: edits.length, reason: args.reason }, preview.ok ? "ok" : "denied");
+      const preview = proposePatch(repoRoot, edits);
+      logAccess("propose_patch", { edits: edits.length, reason: args.reason }, preview.ok ? "ok" : "denied");
       return asJsonResult({
         ok: preview.ok,
         dry_run: true,
@@ -64220,11 +65788,16 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
     description: "FR-60 (P33-3): apply a proposal minted by propose_patch \u2014 IF STILL VALID. Re-runs every edit against the FRESH on-disk content, re-validates (form/anchor/conformance), and writes ALL-OR-NOTHING with ONE audit event. A proposal that no longer validates (a doc changed, an anchor moved, a CAS precondition broke) is REFUSED with its findings \u2014 never applied stale. Consumed on success.",
     inputShape: { proposal_id: external_exports.string(), reason: external_exports.string() },
     handler: async (args) => {
+      const rootRefusal = mutationRootRefusal();
+      if (rootRefusal) return rootRefusal;
+      const root = repoRoot;
+      const proposalId = String(args.proposal_id);
+      const prepared = prepareProposedPatch(root, proposalId);
       try {
-        return withWriteLock(process.cwd(), () => {
-          const r = applyProposedPatch(process.cwd(), String(args.proposal_id));
+        return withWriteLock(root, () => {
+          const r = commitProposedPatch(root, prepared);
           if (!r.ok) {
-            logSpecAccess("apply_proposed_patch", { proposal_id: args.proposal_id, reason: args.reason }, "denied");
+            logAccess("apply_proposed_patch", { proposal_id: args.proposal_id, reason: args.reason }, "denied");
             return asJsonResult({
               ok: false,
               error: r.error ?? "VALIDATION_FAILED",
@@ -64237,7 +65810,7 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
             });
           }
           registryOpts.refreshGraph?.();
-          logSpecAccess("apply_proposed_patch", { proposal_id: args.proposal_id, edits: r.edits.length, reason: args.reason }, "ok");
+          logAccess("apply_proposed_patch", { proposal_id: args.proposal_id, edits: r.edits.length, reason: args.reason }, "ok");
           return asJsonResult({
             ok: true,
             written: true,
@@ -64249,7 +65822,7 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
         });
       } catch (e) {
         if (e.code === "WRITE_LOCK_BUSY") {
-          logSpecAccess("apply_proposed_patch", { proposal_id: args.proposal_id }, "denied");
+          logAccess("apply_proposed_patch", { proposal_id: args.proposal_id }, "denied");
           const h = e.holder;
           return asJsonResult({ ok: false, error: "WRITE_LOCK_BUSY", proposal_id: args.proposal_id, held_by: h ?? null, hint: "Another session is writing a spec RIGHT NOW \u2014 retry in a moment." });
         }
@@ -64262,12 +65835,15 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
     description: "FR-60 (P33-3): validate + atomically write a MULTI-DOCUMENT spec change ALL-OR-NOTHING \u2014 one conceptual mutation across FR.md / ACCEPTANCE_CRITERIA.md / TASKS.md / the .feature / FILE_CHANGES.md (any set of docs). Every edit (a section insert {section}, an anchor-targeted replace {replace}, or a whole-doc {content}) runs the SAME form/anchor/conformance validation-before-write as apply_spec_change; if ANY edit fails, NOTHING is written and every doc stays byte-identical. A clean set is written doc-by-doc atomically; a later I/O failure restores earlier docs (or reports ROLLBACK_FAILED honestly), and the transaction is logged as ONE audit event; returns the resulting sha per doc + the affected graph nodes. (propose_patch is the free dry-run.)",
     inputShape: PATCH_SHAPE,
     handler: async (args) => {
+      const rootRefusal = mutationRootRefusal();
+      if (rootRefusal) return rootRefusal;
       const edits = toPatchEdits(args.edits);
+      const prepared = preparePatch(repoRoot, edits);
       try {
-        return withWriteLock(process.cwd(), () => {
-          const r = applySpecTransactionCore(process.cwd(), edits);
+        return withWriteLock(repoRoot, () => {
+          const r = commitPreparedPatch(repoRoot, prepared);
           if (!r.ok) {
-            logSpecAccess("apply_spec_transaction", { edits: edits.length, reason: args.reason }, "denied");
+            logAccess("apply_spec_transaction", { edits: edits.length, reason: args.reason }, "denied");
             return asJsonResult({
               ok: false,
               error: r.error ?? "VALIDATION_FAILED",
@@ -64275,11 +65851,11 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
               edits: r.edits.map(publicEditPreview),
               write_error: r.write_error,
               rollback_failures: r.rollback_failures,
-              hint: r.error === "WRITE_FAILED" ? "A document write failed; every earlier write was restored. Inspect write_error and retry." : r.error === "ROLLBACK_FAILED" ? "CRITICAL: a document write failed and rollback was incomplete. Inspect rollback_failures before any retry." : "At least one edit failed validation \u2014 NOTHING was written; every document is unchanged. Fix the flagged edits (see per-edit findings) and retry."
+              hint: r.error === "CAS_MISMATCH" ? "A document changed after preparation \u2014 NOTHING was written. Re-read and retry." : r.error === "WRITE_FAILED" ? "A document write failed; every earlier write was restored. Inspect write_error and retry." : r.error === "ROLLBACK_FAILED" ? "CRITICAL: a document write failed and rollback was incomplete. Inspect rollback_failures before any retry." : "At least one edit failed validation \u2014 NOTHING was written; every document is unchanged. Fix the flagged edits (see per-edit findings) and retry."
             });
           }
           registryOpts.refreshGraph?.();
-          logSpecAccess("apply_spec_transaction", { edits: edits.length, docs: edits.map((e) => `${slugOf(e.spec)}/${docOf(e.doc)}`), reason: args.reason }, "ok");
+          logAccess("apply_spec_transaction", { edits: edits.length, docs: edits.map((e) => `${slugOf(e.spec)}/${docOf(e.doc)}`), reason: args.reason }, "ok");
           return asJsonResult({
             ok: true,
             written: true,
@@ -64291,7 +65867,7 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
         });
       } catch (e) {
         if (e.code === "WRITE_LOCK_BUSY") {
-          logSpecAccess("apply_spec_transaction", { edits: edits.length }, "denied");
+          logAccess("apply_spec_transaction", { edits: edits.length }, "denied");
           const h = e.holder;
           return asJsonResult({ ok: false, error: "WRITE_LOCK_BUSY", held_by: h ?? null, hint: "Another session is writing a spec RIGHT NOW \u2014 retry in a moment." });
         }
@@ -64305,16 +65881,18 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
     steps: external_exports.array(external_exports.string()).min(1)
   });
   const domainReply = (toolName, spec, r) => {
-    logSpecAccess(toolName, { spec }, r.ok ? "ok" : "denied");
+    logAccess(toolName, { spec }, r.ok ? "ok" : "denied");
     if (r.ok) registryOpts.refreshGraph?.();
     return asJsonResult({ ...r, spec: slugOf(spec) });
   };
   const runDomainLocked = (toolName, args, fn) => {
+    const rootRefusal = mutationRootRefusal();
+    if (rootRefusal) return rootRefusal;
     try {
-      return withWriteLock(process.cwd(), () => domainReply(toolName, String(args.spec), fn()));
+      return domainReply(toolName, String(args.spec), fn());
     } catch (e) {
       if (e.code === "WRITE_LOCK_BUSY") {
-        logSpecAccess(toolName, args, "denied");
+        logAccess(toolName, args, "denied");
         const h = e.holder;
         return asJsonResult({ ok: false, error: "WRITE_LOCK_BUSY", held_by: h ?? null, hint: "Another session is writing a spec RIGHT NOW \u2014 retry in a moment." });
       }
@@ -64345,7 +65923,7 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
     handler: async (args) => runDomainLocked(
       "add_backlog_task",
       args,
-      () => addBacklogTask(process.cwd(), {
+      () => addBacklogTask(repoRoot, {
         spec: String(args.spec),
         phase: String(args.phase),
         title: String(args.title),
@@ -64372,7 +65950,7 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
     handler: async (args) => runDomainLocked(
       "add_phase",
       args,
-      () => addPhase(process.cwd(), {
+      () => addPhase(repoRoot, {
         spec: String(args.spec),
         title: String(args.title),
         number: typeof args.number === "number" ? args.number : void 0,
@@ -64393,7 +65971,7 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
     handler: async (args) => runDomainLocked(
       "amend_requirement",
       args,
-      () => amendRequirement(process.cwd(), {
+      () => amendRequirement(repoRoot, {
         spec: String(args.spec),
         fr: String(args.fr),
         text: typeof args.text === "string" ? args.text : void 0,
@@ -64415,7 +65993,7 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
     handler: async (args) => runDomainLocked(
       "add_acceptance_criterion",
       args,
-      () => addAcceptanceCriterion(process.cwd(), {
+      () => addAcceptanceCriterion(repoRoot, {
         spec: String(args.spec),
         fr: String(args.fr),
         title: String(args.title),
@@ -64440,7 +66018,7 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
     handler: async (args) => runDomainLocked(
       "register_incident_backlog",
       args,
-      () => registerIncidentBacklog(process.cwd(), {
+      () => registerIncidentBacklog(repoRoot, {
         spec: String(args.spec),
         summary: String(args.summary),
         date: typeof args.date === "string" ? args.date : void 0,
@@ -64459,19 +66037,21 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
       status: external_exports.enum(["active", "backlog"])
     },
     handler: async (args) => {
+      const rootRefusal = mutationRootRefusal();
+      if (rootRefusal) return rootRefusal;
       const slug = slugOf(args.spec);
       if (!isSafeSlug(slug)) {
-        logSpecAccess("set_spec_status", args, "error");
+        logAccess("set_spec_status", args, "error");
         return asJsonResult({ ok: false, error: "UNSAFE_SPEC", spec: slug, hint: "slug must stay within .specs/ (no traversal)" });
       }
       try {
-        writeSpecStatus(process.cwd(), slug, args.status);
+        writeSpecStatus(repoRoot, slug, args.status);
       } catch (e) {
-        logSpecAccess("set_spec_status", args, "error");
+        logAccess("set_spec_status", args, "error");
         return asJsonResult({ ok: false, error: "SPEC_NOT_FOUND", spec: slug, hint: String(e.message) });
       }
       registryOpts.refreshGraph?.();
-      logSpecAccess("set_spec_status", args, "ok");
+      logAccess("set_spec_status", args, "ok");
       return asJsonResult({ ok: true, spec: slug, status: args.status });
     }
   });
@@ -64485,16 +66065,18 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
       expected_sha: external_exports.string().optional()
     },
     handler: async (args) => {
+      const rootRefusal = mutationRootRefusal();
+      if (rootRefusal) return rootRefusal;
       const ro = readOnlyRefusal("set_entity_status", args);
       if (ro) return ro;
-      const res = setEntityStatus(getGraph(), process.cwd(), {
+      const res = setEntityStatus(getGraph(), repoRoot, {
         id: args.id,
         spec: typeof args.spec === "string" ? args.spec : void 0,
         to: args.to,
         expectedSha: typeof args.expected_sha === "string" ? args.expected_sha : void 0
       });
       if (!res.ok) {
-        logSpecAccess("set_entity_status", args, "denied");
+        logAccess("set_entity_status", args, "denied");
         return asJsonResult({
           ok: false,
           error: res.error,
@@ -64511,7 +66093,7 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
         });
       }
       registryOpts.refreshGraph?.();
-      logSpecAccess("set_entity_status", args, "ok");
+      logAccess("set_entity_status", args, "ok");
       return asJsonResult({ ok: true, id: args.id, from: res.from, to: res.to });
     }
   });
@@ -64525,27 +66107,29 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
     },
     handler: async ({ spec, doc, reason }) => {
       const args = { spec, doc, reason };
+      const rootRefusal = mutationRootRefusal();
+      if (rootRefusal) return rootRefusal;
       const ro = readOnlyRefusal("delete_spec_doc", args);
       if (ro) return ro;
       const slug = slugOf(spec);
       if (!isSafeSlug(slug)) {
-        logSpecAccess("delete_spec_doc", args, "denied");
+        logAccess("delete_spec_doc", args, "denied");
         return asJsonResult({ ok: false, error: "UNSAFE_SPEC", spec: slug });
       }
-      const resolved = resolveSpecDoc(process.cwd(), slug, String(doc));
+      const resolved = resolveSpecDoc(repoRoot, slug, String(doc));
       if (!resolved.ok) {
-        logSpecAccess("delete_spec_doc", args, "denied");
+        logAccess("delete_spec_doc", args, "denied");
         return asJsonResult({ ok: false, error: resolved.reason === "TRAVERSAL" ? "DOC_TRAVERSAL" : "UNSAFE_SPEC", spec: slug, doc: String(doc) });
       }
       const rel = resolved.rel;
-      const base = path28.basename(rel);
+      const base = path30.basename(rel);
       const deletable = /\.(md|feature|png|jpe?g|gif|webp|bmp|pdf|svg)$/i.test(base);
       if (!deletable) {
-        logSpecAccess("delete_spec_doc", args, "denied");
+        logAccess("delete_spec_doc", args, "denied");
         return asJsonResult({ ok: false, error: "NOT_DELETABLE", spec: slug, doc: rel, hint: "Only *.md/*.feature and binary attachments are agent-deletable; .progress.json/.jira-cache.json are single-writer artifacts." });
       }
-      if (!fs31.existsSync(resolved.abs) || !fs31.statSync(resolved.abs).isFile()) {
-        logSpecAccess("delete_spec_doc", args, "not_found");
+      if (!fs33.existsSync(resolved.abs) || !fs33.statSync(resolved.abs).isFile()) {
+        logAccess("delete_spec_doc", args, "not_found");
         return asJsonResult({ ok: false, error: "DOC_NOT_FOUND", spec: slug, doc: rel });
       }
       const graph = getGraph();
@@ -64567,7 +66151,7 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
         else break;
       }
       if (blockers.length > 0) {
-        logSpecAccess("delete_spec_doc", args, "denied");
+        logAccess("delete_spec_doc", args, "denied");
         return asJsonResult({
           ok: false,
           error: "LIVE_INBOUND_EDGES",
@@ -64577,10 +66161,10 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
           hint: "Nodes in this doc are referenced from other files \u2014 retarget/remove those references first (find_refs shows them), or this deletion strands dangling edges."
         });
       }
-      const bytes = fs31.statSync(resolved.abs).size;
-      fs31.unlinkSync(resolved.abs);
+      const bytes = fs33.statSync(resolved.abs).size;
+      fs33.unlinkSync(resolved.abs);
       registryOpts.refreshGraph?.();
-      logSpecAccess("delete_spec_doc", args, "ok");
+      logAccess("delete_spec_doc", args, "ok");
       return asJsonResult({ ok: true, spec: slug, doc: rel, deleted: true, bytes });
     }
   });
@@ -64597,9 +66181,11 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
       rewrite_inbound: external_exports.boolean().optional()
     },
     handler: async (args) => {
+      const rootRefusal = mutationRootRefusal();
+      if (rootRefusal) return rootRefusal;
       const ro = readOnlyRefusal("rename_spec_doc", args);
       if (ro) return ro;
-      const cwd = process.cwd();
+      const cwd = repoRoot;
       const slug = slugOf(args.spec);
       const toSlug = args.to_spec != null ? slugOf(args.to_spec) : slug;
       const doc = docOf(args.doc);
@@ -64607,46 +66193,46 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
       const rewriteInbound = args.rewrite_inbound === true;
       const srcBad = validateTarget(slug, doc);
       if (srcBad) {
-        logSpecAccess("rename_spec_doc", args, "denied");
+        logAccess("rename_spec_doc", args, "denied");
         return asJsonResult({ ok: false, error: "INVALID_SOURCE", spec: slug, doc, finding: srcBad });
       }
       const dstBad = validateTarget(toSlug, toDoc);
       if (dstBad) {
-        logSpecAccess("rename_spec_doc", args, "denied");
+        logAccess("rename_spec_doc", args, "denied");
         return asJsonResult({ ok: false, error: "INVALID_DEST", spec: toSlug, doc: toDoc, finding: dstBad });
       }
       const src = resolveSpecDoc(cwd, slug, doc);
       const dst = resolveSpecDoc(cwd, toSlug, toDoc);
       if (!src.ok || !dst.ok) {
-        logSpecAccess("rename_spec_doc", args, "denied");
+        logAccess("rename_spec_doc", args, "denied");
         return asJsonResult({ ok: false, error: "DOC_TRAVERSAL", spec: slug, doc });
       }
       if (src.abs === dst.abs) {
-        logSpecAccess("rename_spec_doc", args, "error");
+        logAccess("rename_spec_doc", args, "error");
         return asJsonResult({ ok: false, error: "NOOP_RENAME", hint: "source and destination resolve to the same path" });
       }
-      if (!fs31.existsSync(src.abs) || !fs31.statSync(src.abs).isFile()) {
-        logSpecAccess("rename_spec_doc", args, "not_found");
+      if (!fs33.existsSync(src.abs) || !fs33.statSync(src.abs).isFile()) {
+        logAccess("rename_spec_doc", args, "not_found");
         return asJsonResult({ ok: false, error: "DOC_NOT_FOUND", spec: slug, doc: src.rel });
       }
-      if (fs31.existsSync(dst.abs)) {
-        logSpecAccess("rename_spec_doc", args, "denied");
+      if (fs33.existsSync(dst.abs)) {
+        logAccess("rename_spec_doc", args, "denied");
         return asJsonResult({ ok: false, error: "DEST_EXISTS", spec: toSlug, doc: dst.rel, hint: "destination already exists \u2014 pick a free name or delete it first (no silent clobber)" });
       }
       const expectedSha = typeof args.expected_sha === "string" ? args.expected_sha : null;
       if (expectedSha !== null) {
         const cas = casCheck(cwd, slug, src.rel, expectedSha);
         if (!cas.ok) {
-          logSpecAccess("rename_spec_doc", args, "denied");
+          logAccess("rename_spec_doc", args, "denied");
           return asJsonResult({ ok: false, error: "CAS_MISMATCH", spec: slug, doc: src.rel, expected_sha: expectedSha, actual_sha: cas.actualSha, hint: "source changed since you read it (another session?) \u2014 re-read for the fresh sha and retry" });
         }
       }
-      const content = fs31.readFileSync(src.abs, "utf-8");
+      const content = fs33.readFileSync(src.abs, "utf-8");
       const srcRelFile = `.specs/${slug}/${src.rel}`;
       const dstRelFile = `.specs/${toSlug}/${dst.rel}`;
       const inbound = findInboundLinks(cwd, srcRelFile);
       if (inbound.length > 0 && !rewriteInbound) {
-        logSpecAccess("rename_spec_doc", args, "denied");
+        logAccess("rename_spec_doc", args, "denied");
         return asJsonResult({
           ok: false,
           error: "INBOUND_LINKS_PRESENT",
@@ -64660,24 +66246,24 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
       }
       const v = validateSpecChange(cwd, toSlug, dst.rel, { content });
       if (v.specMissing) {
-        logSpecAccess("rename_spec_doc", args, "denied");
+        logAccess("rename_spec_doc", args, "denied");
         return asJsonResult({ ok: false, error: "DEST_SPEC_MISSING", spec: toSlug, hint: "destination spec does not exist \u2014 create_spec first" });
       }
       if (!v.ok) {
-        logSpecAccess("rename_spec_doc", args, "denied");
+        logAccess("rename_spec_doc", args, "denied");
         return asJsonResult({ ok: false, error: "VALIDATION_FAILED", spec: toSlug, doc: dst.rel, findings: v.findings, hint: "the doc does not validate at its new name/location \u2014 fix or pick another target" });
       }
       writeDocAtomic(cwd, toSlug, dst.rel, content);
       let rewroteFiles = 0;
       if (rewriteInbound && inbound.length > 0) {
         for (const edit of rewriteInboundLinks(cwd, inbound, dstRelFile)) {
-          fs31.writeFileSync(path28.join(cwd, edit.file), edit.content, "utf-8");
+          fs33.writeFileSync(path30.join(cwd, edit.file), edit.content, "utf-8");
           rewroteFiles++;
         }
       }
-      fs31.unlinkSync(src.abs);
+      fs33.unlinkSync(src.abs);
       registryOpts.refreshGraph?.();
-      logSpecAccess("rename_spec_doc", args, "ok");
+      logAccess("rename_spec_doc", args, "ok");
       return asJsonResult({ ok: true, spec: slug, from: src.rel, to_spec: toSlug, to: dst.rel, sha: docSha(content), inbound_count: inbound.length, rewrote_inbound_files: rewroteFiles, findings: [] });
     }
   });
@@ -64686,38 +66272,40 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
     description: "FR-40a: create a new spec THROUGH the server \u2014 wraps the engine scaffold (templates are born verdict-GREEN). kebab-case slug; refuses an existing spec.",
     inputShape: { slug: external_exports.string() },
     handler: async ({ slug }) => {
+      const rootRefusal = mutationRootRefusal();
+      if (rootRefusal) return rootRefusal;
       const ro = readOnlyRefusal("create_spec", { slug });
       if (ro) return ro;
       const name = String(slug);
       if (!/^[a-z0-9][a-z0-9-]*$/.test(name)) {
-        logSpecAccess("create_spec", { slug: name }, "error");
+        logAccess("create_spec", { slug: name }, "error");
         return asJsonResult({ ok: false, error: "BAD_SLUG", hint: "kebab-case: [a-z0-9-]" });
       }
       if (/^(con|prn|aux|nul|com[1-9]|lpt[1-9])$/i.test(name)) {
-        logSpecAccess("create_spec", { slug: name }, "error");
+        logAccess("create_spec", { slug: name }, "error");
         return asJsonResult({ ok: false, error: "RESERVED_SLUG", hint: "slug collides with a Windows reserved device name" });
       }
-      if (fs31.existsSync(path28.join(process.cwd(), ".specs", name))) {
-        logSpecAccess("create_spec", { slug: name }, "denied");
+      if (fs33.existsSync(path30.join(repoRoot, ".specs", name))) {
+        logAccess("create_spec", { slug: name }, "denied");
         return asJsonResult({ ok: false, error: "SPEC_EXISTS", spec: name });
       }
-      const core = path28.join(path28.dirname(fileURLToPath4(import.meta.url)), "..", "specs-generator", "specs-generator-core.mjs");
+      const core = path30.join(path30.dirname(fileURLToPath4(import.meta.url)), "..", "specs-generator", "specs-generator-core.mjs");
       const r = spawnSync4(process.execPath, [core, "scaffold-spec", "-Name", name], {
-        cwd: process.cwd(),
+        cwd: repoRoot,
         encoding: "utf-8",
         timeout: 6e4,
         // Without this the core resolves repoRoot from its SCRIPT location and
         // scaffolds into the ENGINE repo, not the server's corpus (caught by
         // the live probe: newborn-mcp landed in the real .specs/).
-        env: { ...process.env, SPECS_GENERATOR_ROOT: process.cwd() }
+        env: { ...process.env, SPECS_GENERATOR_ROOT: repoRoot }
       });
       if (r.status !== 0) {
-        logSpecAccess("create_spec", { slug: name }, "error");
+        logAccess("create_spec", { slug: name }, "error");
         return asJsonResult({ ok: false, error: "SCAFFOLD_FAILED", stderr: (r.stderr ?? "").slice(0, 500) });
       }
       registryOpts.refreshGraph?.();
-      logSpecAccess("create_spec", { slug: name }, "ok");
-      const docs = fs31.readdirSync(path28.join(process.cwd(), ".specs", name)).sort();
+      logAccess("create_spec", { slug: name }, "ok");
+      const docs = fs33.readdirSync(path30.join(repoRoot, ".specs", name)).sort();
       return asJsonResult({ ok: true, spec: name, docs, hint: "Born verdict-GREEN; fill via apply_spec_change." });
     }
   });
@@ -64737,13 +66325,13 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
       if (fromSpec === slug || isArchivedSlug(fromSpec)) continue;
       add(e.from, e.to, String(e.type));
     }
-    const specsDir = path28.join(process.cwd(), ".specs");
-    if (fs31.existsSync(specsDir)) {
+    const specsDir = path30.join(repoRoot, ".specs");
+    if (fs33.existsSync(specsDir)) {
       const esc2 = slug.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
       const linkRe = new RegExp(`(?:\\.specs/${esc2}/|\\.\\./${esc2}/|\\]\\([^)\\n]*${esc2}/)`);
       const walk = (dir, otherSlug) => {
-        for (const ent of fs31.readdirSync(dir, { withFileTypes: true })) {
-          const abs = path28.join(dir, ent.name);
+        for (const ent of fs33.readdirSync(dir, { withFileTypes: true })) {
+          const abs = path30.join(dir, ent.name);
           if (ent.isDirectory()) {
             walk(abs, otherSlug);
             continue;
@@ -64751,19 +66339,19 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
           if (!/\.(md|feature)$/.test(ent.name)) continue;
           let body = "";
           try {
-            body = fs31.readFileSync(abs, "utf-8");
+            body = fs33.readFileSync(abs, "utf-8");
           } catch {
             continue;
           }
           if (linkRe.test(body)) {
-            add(`.specs/${otherSlug}/${path28.relative(path28.join(specsDir, otherSlug), abs).replace(/\\/g, "/")}`, `.specs/${slug}/`, "md-link");
+            add(`.specs/${otherSlug}/${path30.relative(path30.join(specsDir, otherSlug), abs).replace(/\\/g, "/")}`, `.specs/${slug}/`, "md-link");
           }
         }
       };
-      for (const ent of fs31.readdirSync(specsDir, { withFileTypes: true })) {
+      for (const ent of fs33.readdirSync(specsDir, { withFileTypes: true })) {
         if (!ent.isDirectory() || ent.name.startsWith(".")) continue;
         if (ent.name === slug || isArchivedSlug(ent.name)) continue;
-        walk(path28.join(specsDir, ent.name), ent.name);
+        walk(path30.join(specsDir, ent.name), ent.name);
       }
     }
     return out;
@@ -64795,39 +66383,41 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
     description: "FR-45b: the sanctioned, gated whole-spec move `.specs/<slug>/` \u2192 `.specs/archive/<slug>/`. Re-checks live inbound refs \u2192 ARCHIVE_BLOCKED if any; refuses a clobber (DEST_EXISTS); appends an audit line. The builder drops archive/ from the live graph; the move is read back via git history (the archive is then SEALED against the mutation door).",
     inputShape: { slug: external_exports.string(), reason: external_exports.string() },
     handler: async ({ slug, reason }) => {
+      const rootRefusal = mutationRootRefusal();
+      if (rootRefusal) return rootRefusal;
       const ro = readOnlyRefusal("archive_spec", { slug, reason });
       if (ro) return ro;
-      const cwd = process.cwd();
+      const cwd = repoRoot;
       const s = normalizeSlug(String(slug));
       if (!isSafeSlug(s) || isArchivedSlug(s)) {
-        logSpecAccess("archive_spec", { slug: s }, "denied");
+        logAccess("archive_spec", { slug: s }, "denied");
         return asJsonResult({ ok: false, error: "INVALID_SLUG", slug: s, hint: "a safe, non-archived slug" });
       }
       const refs = liveInboundRefs(getGraph(), s);
       if (refs.length > 0) {
-        logSpecAccess("archive_spec", { slug: s }, "denied");
+        logAccess("archive_spec", { slug: s }, "denied");
         return asJsonResult({ ok: false, error: "ARCHIVE_BLOCKED", slug: s, live_inbound_count: refs.length, live_inbound_refs: refs.slice(0, 50), hint: "live specs still reference this \u2014 redirect those refs first, or it is a KEEP false positive" });
       }
-      const srcAbs = path28.join(cwd, ".specs", s);
-      const dstAbs = path28.join(cwd, ".specs", "archive", s);
-      if (!fs31.existsSync(srcAbs) || !fs31.statSync(srcAbs).isDirectory()) {
-        logSpecAccess("archive_spec", { slug: s }, "not_found");
+      const srcAbs = path30.join(cwd, ".specs", s);
+      const dstAbs = path30.join(cwd, ".specs", "archive", s);
+      if (!fs33.existsSync(srcAbs) || !fs33.statSync(srcAbs).isDirectory()) {
+        logAccess("archive_spec", { slug: s }, "not_found");
         return asJsonResult({ ok: false, error: "SPEC_NOT_FOUND", slug: s });
       }
-      if (fs31.existsSync(dstAbs)) {
-        logSpecAccess("archive_spec", { slug: s }, "denied");
+      if (fs33.existsSync(dstAbs)) {
+        logAccess("archive_spec", { slug: s }, "denied");
         return asJsonResult({ ok: false, error: "DEST_EXISTS", slug: s, hint: "already archived (no clobber)" });
       }
-      fs31.mkdirSync(path28.dirname(dstAbs), { recursive: true });
-      fs31.renameSync(srcAbs, dstAbs);
+      fs33.mkdirSync(path30.dirname(dstAbs), { recursive: true });
+      fs33.renameSync(srcAbs, dstAbs);
       try {
-        const ledger = path28.join(cwd, ".dev-pomogator", "logs", "spec-archive.jsonl");
-        fs31.mkdirSync(path28.dirname(ledger), { recursive: true });
-        fs31.appendFileSync(ledger, JSON.stringify({ ts: (/* @__PURE__ */ new Date()).toISOString(), slug: s, reason: String(reason ?? ""), from: `.specs/${s}/`, to: `.specs/archive/${s}/` }) + "\n");
+        const ledger = path30.join(cwd, ".dev-pomogator", "logs", "spec-archive.jsonl");
+        fs33.mkdirSync(path30.dirname(ledger), { recursive: true });
+        fs33.appendFileSync(ledger, JSON.stringify({ ts: (/* @__PURE__ */ new Date()).toISOString(), slug: s, reason: String(reason ?? ""), from: `.specs/${s}/`, to: `.specs/archive/${s}/` }) + "\n");
       } catch {
       }
       registryOpts.refreshGraph?.();
-      logSpecAccess("archive_spec", { slug: s }, "ok");
+      logAccess("archive_spec", { slug: s }, "ok");
       return asJsonResult({ ok: true, slug: s, from: `.specs/${s}/`, to: `.specs/archive/${s}/`, hint: "moved out of the live graph; commit the move with git" });
     }
   });
@@ -64876,7 +66466,7 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
     reason: external_exports.string().optional(),
     edits: external_exports.array(PATCH_EDIT_INPUT_SHAPE).max(50)
   });
-  const remediationRoot = () => path28.resolve(registryOpts.repoRoot ?? process.cwd());
+  const remediationRoot = () => path30.resolve(registryOpts.repoRoot ?? process.cwd());
   tools.push({
     name: "validate_spec",
     description: "FR-84: run the consolidated read-only multilayer validation for one spec and return stable findings, snapshot hashes, and the authoritative smart verdict. Writes nothing.",
@@ -64892,7 +66482,7 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
         semanticFindings: args.semantic_findings,
         semanticRequired: args.semantic_required === true
       });
-      logSpecAccess("validate_spec", { spec: result.spec, findings: result.findings.length }, "ok");
+      logAccess("validate_spec", { spec: result.spec, findings: result.findings.length }, "ok");
       return asJsonResult({ ok: true, ...result });
     }
   });
@@ -64906,6 +66496,8 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
       repair_candidates: external_exports.array(REPAIR_CANDIDATE_SHAPE).max(50)
     },
     handler: async (args) => {
+      const rootRefusal = mutationRootRefusal();
+      if (rootRefusal) return rootRefusal;
       const result = await proposeSpecRepairs({
         repoRoot: remediationRoot(),
         spec: String(args.spec),
@@ -64913,7 +66505,7 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
         semanticRequired: args.semantic_required === true,
         repairCandidates: args.repair_candidates
       });
-      logSpecAccess("propose_spec_repairs", { spec: result.spec, proposal_id: result.proposalId ?? null }, result.ok ? "ok" : "denied");
+      logAccess("propose_spec_repairs", { spec: result.spec, proposal_id: result.proposalId ?? null }, result.ok ? "ok" : "denied");
       return asJsonResult({ ...result, dry_run: true });
     }
   });
@@ -64925,13 +66517,15 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
       reason: external_exports.string().min(1)
     },
     handler: async (args) => {
+      const rootRefusal = mutationRootRefusal();
+      if (rootRefusal) return rootRefusal;
       try {
         const result = await applySpecRepairs(remediationRoot(), String(args.proposal_id));
         if (result.ok) registryOpts.refreshGraph?.();
-        logSpecAccess("apply_spec_repairs", { proposal_id: args.proposal_id, reason: args.reason }, result.ok ? "ok" : "denied");
+        logAccess("apply_spec_repairs", { proposal_id: args.proposal_id, reason: args.reason }, result.ok ? "ok" : "denied");
         return asJsonResult(result);
       } catch (error51) {
-        logSpecAccess("apply_spec_repairs", { proposal_id: args.proposal_id, reason: args.reason }, "denied");
+        logAccess("apply_spec_repairs", { proposal_id: args.proposal_id, reason: args.reason }, "denied");
         return asJsonResult({
           ok: false,
           error: error51 instanceof Error && error51.message.startsWith("PROPOSAL_NOT_FOUND") ? "PROPOSAL_NOT_FOUND" : "REMEDIATION_FAILED",
@@ -64945,8 +66539,8 @@ function buildToolRegistry(getGraph, registryOpts = {}) {
 }
 
 // tools/spec-graph/root-resolution.mjs
-import fs32 from "node:fs";
-import path29 from "node:path";
+import fs34 from "node:fs";
+import path31 from "node:path";
 function unsafeReason(value) {
   const normalized = value.trim().replace(/\\/g, "/");
   if (!normalized) return "empty";
@@ -64963,8 +66557,8 @@ function validate(source, value, rejected) {
     rejected.push({ source, observed, reason: unsafe });
     return null;
   }
-  const candidate = path29.resolve(observed);
-  if (!fs32.existsSync(path29.join(candidate, ".specs"))) {
+  const candidate = path31.resolve(observed);
+  if (!fs34.existsSync(path31.join(candidate, ".specs"))) {
     rejected.push({ source, observed, reason: "missing_specs" });
     return null;
   }
@@ -65011,8 +66605,20 @@ function resolveTargetProjectRoot2(input) {
 
 // tools/spec-mcp-server/server.ts
 var PRODUCT_NAME = "dev-pomogator-specs";
-var PRODUCT_VERSION = "0.1.0";
+var MCP_VERSION = "0.1.0";
+function installedPluginVersion() {
+  try {
+    const packagePath = path32.resolve(path32.dirname(fileURLToPath5(import.meta.url)), "..", "..", "package.json");
+    const parsed = JSON.parse(fs35.readFileSync(packagePath, "utf8"));
+    return typeof parsed.version === "string" ? parsed.version : "unknown";
+  } catch {
+    return "unknown";
+  }
+}
 async function boot(opts) {
+  if (!checkDeclaredWorktree(opts.repoRoot, opts.declaredWorktree).ok) {
+    throw new Error(ROOT_WORKTREE_MISMATCH);
+  }
   const lifecycle = await startLifecycle({
     repoRoot: opts.repoRoot,
     featureRoots: configuredFeatureRoots(opts.repoRoot),
@@ -65025,10 +66631,18 @@ async function boot(opts) {
 `
     );
   }
-  const server = new McpServer({ name: PRODUCT_NAME, version: PRODUCT_VERSION });
+  const server = new McpServer({ name: PRODUCT_NAME, version: MCP_VERSION });
   for (const tool of buildToolRegistry(() => lifecycle.graph, {
     repoRoot: opts.repoRoot,
+    declaredWorktree: opts.declaredWorktree,
     refreshGraph: lifecycle.refreshGraph,
+    preflight: () => ({
+      lockMode: lifecycle.lockMode,
+      writeMode: lifecycle.writeMode,
+      dependencies: lifecycle.dependencies,
+      mcpVersion: MCP_VERSION,
+      pluginVersion: opts.pluginVersion ?? installedPluginVersion()
+    }),
     // P21-1: in a read-only door the write tools refuse with the holder named.
     writeLockHeldBy: () => lifecycle.readOnly && lifecycle.lockHolder ? {
       pid: lifecycle.lockHolder.pid,
@@ -65044,11 +66658,11 @@ function resolveMcpRoot(env2, cwd, scriptDir) {
   return resolveTargetProjectRoot2({ envRoot: env2 ?? process.env.SPECS_GENERATOR_ROOT, cwd, scriptDir });
 }
 function resolveRepoRoot(env2, cwd) {
-  const result = resolveMcpRoot(env2, cwd, path30.dirname(fileURLToPath5(import.meta.url)));
+  const result = resolveMcpRoot(env2, cwd, path32.dirname(fileURLToPath5(import.meta.url)));
   return result.root ?? cwd;
 }
 async function main2() {
-  const resolution = resolveMcpRoot(process.env.SPECS_GENERATOR_ROOT ?? process.env.DEV_POMOGATOR_REPO_ROOT, process.cwd(), path30.dirname(fileURLToPath5(import.meta.url)));
+  const resolution = resolveMcpRoot(process.env.SPECS_GENERATOR_ROOT ?? process.env.DEV_POMOGATOR_REPO_ROOT, process.cwd(), path32.dirname(fileURLToPath5(import.meta.url)));
   if (resolution.status === "NOT_READY" || !resolution.root) {
     process.stderr.write(`[${PRODUCT_NAME}] NOT_READY ${JSON.stringify(resolution)}
 `);
@@ -65056,7 +66670,11 @@ async function main2() {
     return;
   }
   const repoRoot = resolution.root;
-  const { server, lifecycle } = await boot({ repoRoot });
+  const { server, lifecycle } = await boot({
+    repoRoot,
+    declaredWorktree: process.env.CLAUDE_PROJECT_DIR,
+    pluginVersion: installedPluginVersion()
+  });
   const shutdownAndExit = async (code) => {
     await lifecycle.shutdown();
     try {
@@ -65084,6 +66702,8 @@ if (process.argv[1] && import.meta.url === pathToFileURL2(process.argv[1]).href)
   });
 }
 export {
+  MCP_VERSION,
+  PRODUCT_NAME,
   boot,
   resolveMcpRoot,
   resolveRepoRoot

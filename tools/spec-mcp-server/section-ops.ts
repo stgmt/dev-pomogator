@@ -41,6 +41,8 @@ import {
   casCheck,
   type MutationFinding,
 } from './mutations.ts';
+import { withWriteLock } from './lock-manager.ts';
+import { redactedRootIdentity } from './path-containment.ts';
 
 /** The document's end-of-line style — detected, preserved on write. */
 export type EolStyle = 'crlf' | 'lf';
@@ -642,6 +644,92 @@ export interface ReplaceOutcome {
  * The produced content runs through the SAME `validateSpecChange` (form + anchors +
  * conformance) `apply_spec_change` runs; only a clean result is written, atomically.
  */
+export interface PreparedReplaceChange {
+  base_sha: string | null;
+  next?: string;
+  outcome: ReplaceOutcome;
+}
+
+/** Resolve and validate a replace outside the write lock. */
+export function prepareReplaceChange(
+  repoRoot: string,
+  slug: string,
+  doc: string,
+  op: ReplaceOp,
+  expectedSha?: string,
+): PreparedReplaceChange {
+  const read = readDoc(repoRoot, slug, doc);
+  if (!read.ok) {
+    return {
+      base_sha: null,
+      outcome: { ok: false, eol_style: 'lf', resolved: false, heading_anchor: null, start_line: null, end_line: null, section_sha: null, findings: [], error: read.error },
+    };
+  }
+  const current = read.current;
+  const baseSha = docSha(current);
+  const eol = detectEol(current);
+  const result = replaceInSectionContent(current, op);
+  const failTransform = (error: ReplaceOutcome['error'], extra: Partial<ReplaceOutcome> = {}): PreparedReplaceChange => ({
+    base_sha: baseSha,
+    outcome: {
+      ok: false, eol_style: eol, resolved: result.locator.found,
+      heading_anchor: result.locator.headingAnchor, start_line: result.locator.startLine, end_line: result.locator.endLine,
+      section_sha: result.section_sha, diagnostic: result.diagnostic, findings: [], error,
+      available_anchors: result.diagnostic?.kind === 'missing_anchor' ? listHeadingAnchors(current) : undefined, ...extra,
+    },
+  });
+  let extra: Partial<ReplaceOutcome> = { normalized: result.normalized === true };
+  if (expectedSha !== undefined) {
+    const cas = casCheck(repoRoot, slug, doc, expectedSha);
+    if (!cas.ok) {
+      if (result.ok && result.next !== undefined) extra = { rebased: true, normalized: result.normalized === true };
+      else return failTransform('CAS_CONFLICT', { sha: cas.actualSha ?? undefined, available_anchors: listHeadingAnchors(current) });
+    }
+  }
+  if (!result.ok || result.next === undefined) {
+    return failTransform(result.error === 'HEADING_REQUIRED' ? 'HEADING_REQUIRED' : 'REPLACE_FAILED');
+  }
+  const next = result.next;
+  const validation = validateSpecChange(repoRoot, slug, doc, { content: next });
+  if (!validation.ok) {
+    return {
+      base_sha: baseSha,
+      next,
+      outcome: {
+        ok: false, preview: next, eol_style: eol, resolved: true,
+        heading_anchor: result.locator.headingAnchor, start_line: result.locator.startLine, end_line: result.locator.endLine,
+        section_sha: result.section_sha, findings: validation.findings, error: 'VALIDATION_FAILED',
+      },
+    };
+  }
+  const newLoc = locateSection(splitLogical(next), op.heading);
+  return {
+    base_sha: baseSha,
+    next,
+    outcome: {
+      ok: true, preview: next, eol_style: eol, resolved: true,
+      heading_anchor: newLoc.headingAnchor ?? result.locator.headingAnchor,
+      start_line: newLoc.startLine, end_line: newLoc.endLine,
+      section_sha: sectionSha(next, newLoc), findings: [], bytes: next.length, sha: docSha(next), ...extra,
+    },
+  };
+}
+
+/** Commit a prepared replace under an already-held short write lock. */
+export function commitPreparedReplaceChange(repoRoot: string, slug: string, doc: string, prepared: PreparedReplaceChange): ReplaceOutcome {
+  if (!prepared.outcome.ok || prepared.next === undefined || prepared.base_sha === null) return prepared.outcome;
+  const cas = casCheck(repoRoot, slug, doc, prepared.base_sha);
+  if (!cas.ok) {
+    const fresh = readDoc(repoRoot, slug, doc);
+    return {
+      ...prepared.outcome, ok: false, written: false, error: 'CAS_CONFLICT',
+      sha: cas.actualSha ?? undefined, available_anchors: fresh.ok ? listHeadingAnchors(fresh.current) : undefined,
+    };
+  }
+  writeDocAtomic(repoRoot, slug, doc, prepared.next);
+  return { ...prepared.outcome, written: true };
+}
+
 export function applyReplaceChange(
   repoRoot: string,
   slug: string,
@@ -649,69 +737,15 @@ export function applyReplaceChange(
   op: ReplaceOp,
   expectedSha?: string,
 ): ReplaceOutcome {
-  const read = readDoc(repoRoot, slug, doc);
-  if (!read.ok) {
-    return { ok: false, eol_style: 'lf', resolved: false, heading_anchor: null, start_line: null, end_line: null, section_sha: null, findings: [], error: read.error };
+  let prepared = prepareReplaceChange(repoRoot, slug, doc, op, expectedSha);
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const result = withWriteLock(repoRoot, () => commitPreparedReplaceChange(repoRoot, slug, doc, prepared));
+    if (result.error !== 'CAS_CONFLICT' || expectedSha === undefined || attempt === 1) return result;
+    // Reprepare outside the lock once to preserve the documented non-conflicting
+    // auto-rebase without holding the lock during validation.
+    prepared = prepareReplaceChange(repoRoot, slug, doc, op, expectedSha);
   }
-  const current = read.current;
-  const eol = detectEol(current);
-  // `current` is the FRESH on-disk content — so `result` already reflects any concurrent
-  // edit, which is exactly what the auto-rebase decision needs.
-  const result = replaceInSectionContent(current, op);
-
-  const failTransform = (error: ReplaceOutcome['error'], extra: Partial<ReplaceOutcome> = {}): ReplaceOutcome => ({
-    ok: false,
-    eol_style: eol,
-    resolved: result.locator.found,
-    heading_anchor: result.locator.headingAnchor,
-    start_line: result.locator.startLine,
-    end_line: result.locator.endLine,
-    section_sha: result.section_sha,
-    diagnostic: result.diagnostic,
-    findings: [],
-    error,
-    available_anchors: result.diagnostic?.kind === 'missing_anchor' ? listHeadingAnchors(current) : undefined,
-    ...extra,
-  });
-
-  const finalizeWrite = (extra: Partial<ReplaceOutcome> = {}): ReplaceOutcome => {
-    const next = result.next as string;
-    const validation = validateSpecChange(repoRoot, slug, doc, { content: next });
-    if (!validation.ok) {
-      return {
-        ok: false, preview: next, eol_style: eol, resolved: true,
-        heading_anchor: result.locator.headingAnchor, start_line: result.locator.startLine, end_line: result.locator.endLine,
-        section_sha: result.section_sha, findings: validation.findings, error: 'VALIDATION_FAILED',
-      };
-    }
-    writeDocAtomic(repoRoot, slug, doc, next);
-    const newLoc = locateSection(splitLogical(next), op.heading);
-    return {
-      ok: true, preview: next, eol_style: eol, resolved: true,
-      heading_anchor: newLoc.headingAnchor ?? result.locator.headingAnchor,
-      start_line: newLoc.startLine, end_line: newLoc.endLine,
-      section_sha: sectionSha(next, newLoc), findings: [], written: true, bytes: next.length, sha: docSha(next),
-      ...extra,
-    };
-  };
-
-  // P21-5 optimistic CAS, reused — with the P33-2 auto-rebase on top.
-  if (expectedSha !== undefined) {
-    const cas = casCheck(repoRoot, slug, doc, expectedSha);
-    if (!cas.ok) {
-      if (result.ok && result.next !== undefined) {
-        // Non-conflicting: the target section is intact in the fresh doc → rebase + apply.
-        return finalizeWrite({ rebased: true, normalized: result.normalized === true });
-      }
-      // Real conflict: refuse with fresh anchor context for the caller.
-      return failTransform('CAS_CONFLICT', { sha: cas.actualSha ?? undefined, available_anchors: listHeadingAnchors(current) });
-    }
-  }
-
-  if (!result.ok || result.next === undefined) {
-    return failTransform(result.error === 'HEADING_REQUIRED' ? 'HEADING_REQUIRED' : 'REPLACE_FAILED');
-  }
-  return finalizeWrite({ normalized: result.normalized === true });
+  return prepared.outcome;
 }
 
 // ─── FR-60 P33-3 — multi-document proposal + atomic spec transaction ──────────
@@ -777,6 +811,8 @@ export interface PatchEditPreview {
   end_line: number | null;
   /** Section sha of the RESULTING doc at the target anchor (null when not section-targeted). */
   section_sha: string | null;
+  /** Whole-doc sha of the SOURCE doc used to prepare this edit. */
+  base_sha: string | null;
   /** Whole-doc sha of the RESULTING doc — the new CAS token for this doc. */
   sha: string | null;
   append_token?: string;
@@ -823,10 +859,9 @@ function preparePatchEdit(repoRoot: string, edit: PatchEdit, deferValidation = f
   const doc = normDoc(edit.doc);
   const base: PatchEditPreview = {
     spec: slug, doc, ok: false, eol_style: 'lf', heading_anchor: null,
-    start_line: null, end_line: null, section_sha: null, sha: null,
+    start_line: null, end_line: null, section_sha: null, base_sha: null, sha: null,
     diff: { added: [], removed: [] }, findings: [],
   };
-
   // Exactly one edit shape must be supplied (section | replace | content).
   const shapes = [edit.section !== undefined, edit.replace !== undefined, edit.content !== undefined].filter(Boolean).length;
   if (shapes !== 1) return { ...base, error: 'BAD_EDIT' };
@@ -834,6 +869,7 @@ function preparePatchEdit(repoRoot: string, edit: PatchEdit, deferValidation = f
   const read = readDoc(repoRoot, slug, doc);
   if (!read.ok) return { ...base, error: read.error };
   const current = read.current;
+  const baseSha = docSha(current);
   const eol = detectEol(current);
 
   // Compute the resulting content + the anchor the edit resolved (no disk, no validation yet).
@@ -846,7 +882,7 @@ function preparePatchEdit(repoRoot: string, edit: PatchEdit, deferValidation = f
   if (edit.section) {
     const t = applySectionOpToContent(current, edit.section);
     if (!t.ok || t.next === undefined) {
-      return { ...base, eol_style: eol, heading_anchor: t.locator.headingAnchor, start_line: t.locator.startLine, end_line: t.locator.endLine, error: t.error ?? 'HEADING_NOT_FOUND' };
+      return { ...base, eol_style: eol, heading_anchor: t.locator.headingAnchor, start_line: t.locator.startLine, end_line: t.locator.endLine, base_sha: baseSha, error: t.error ?? 'HEADING_NOT_FOUND' };
     }
     next = t.next;
     anchor = t.locator.headingAnchor;
@@ -858,6 +894,7 @@ function preparePatchEdit(repoRoot: string, edit: PatchEdit, deferValidation = f
       return {
         ...base, eol_style: eol, heading_anchor: r.locator.headingAnchor,
         start_line: r.locator.startLine, end_line: r.locator.endLine, section_sha: r.section_sha,
+        base_sha: baseSha,
         diagnostic: r.diagnostic, error: r.error === 'HEADING_REQUIRED' ? 'HEADING_REQUIRED' : 'REPLACE_FAILED',
       };
     }
@@ -878,7 +915,7 @@ function preparePatchEdit(repoRoot: string, edit: PatchEdit, deferValidation = f
   // level; the anchor-level auto-rebase stays a single-doc concern of replace_in_section, P33-2).
   if (edit.expected_sha !== undefined) {
     const cas = casCheck(repoRoot, slug, doc, edit.expected_sha);
-    if (!cas.ok) return { ...base, eol_style: eol, heading_anchor: anchor, start_line: span.startLine, end_line: span.endLine, error: 'CAS_MISMATCH' };
+    if (!cas.ok) return { ...base, eol_style: eol, heading_anchor: anchor, start_line: span.startLine, end_line: span.endLine, base_sha: baseSha, error: 'CAS_MISMATCH' };
   }
 
   // Validate the resulting content through the SAME door apply_spec_change uses — no second validator.
@@ -898,6 +935,7 @@ function preparePatchEdit(repoRoot: string, edit: PatchEdit, deferValidation = f
     heading_anchor: anchor,
     start_line: resultLocator.startLine, end_line: resultLocator.endLine,
     section_sha: sectionTargeted && resultLocator.found ? sectionSha(next, resultLocator) : null,
+    base_sha: baseSha,
     sha: docSha(next),
     append_token: tokens.appendToken, insert_token: tokens.insertToken,
     diff: lineDiff(current, next),
@@ -930,7 +968,7 @@ export function preparePatch(repoRoot: string, edits: PatchEdit[]): PatchPreview
     if (seen.has(target)) {
       prepared.push({
         spec: normSlug(edit.spec), doc: normDoc(edit.doc), ok: false, eol_style: 'lf',
-        heading_anchor: null, start_line: null, end_line: null, section_sha: null, sha: null,
+        heading_anchor: null, start_line: null, end_line: null, section_sha: null, base_sha: null, sha: null,
         diff: { added: [], removed: [] }, findings: [{ layer: 'change', message: `duplicate transaction target: ${target}` }],
         error: 'BAD_EDIT',
       });
@@ -969,7 +1007,7 @@ export interface TransactionResult {
   written?: boolean;
   /** `<spec>/<doc>` → resulting whole-doc sha, for every written doc. */
   shas?: Record<string, string>;
-  error?: 'VALIDATION_FAILED' | 'PROPOSAL_NOT_FOUND' | 'WRITE_FAILED' | 'ROLLBACK_FAILED';
+  error?: 'VALIDATION_FAILED' | 'CAS_MISMATCH' | 'PROPOSAL_NOT_FOUND' | 'ROOT_WORKTREE_MISMATCH' | 'WRITE_FAILED' | 'ROLLBACK_FAILED';
   /** Original write exception, present for WRITE_FAILED / ROLLBACK_FAILED. */
   write_error?: string;
   /** Restore failures mean the all-or-nothing invariant could not be recovered. */
@@ -982,29 +1020,53 @@ export interface TransactionOptions {
 }
 
 /**
- * Validate EVERY edit and write ALL-OR-NOTHING. `preparePatch` writes nothing (pure read +
- * validate), so a single failed edit leaves EVERY document byte-identical. Once validation is
- * clean, originals are snapshotted; a later I/O failure restores earlier writes in reverse order
- * and reports whether compensation succeeded. The caller (tools.ts) wraps this in
- * the short write-lock + ONE audit event so the whole set reads as one conceptual spec mutation.
+ * Commit an already-prepared patch. Callers must perform `preparePatch` before acquiring the
+ * short write lock; this function re-reads every target and compares its source SHA before taking
+ * snapshots or writing, so a concurrent document change is refused without partial writes.
  */
-export function applySpecTransactionCore(repoRoot: string, edits: PatchEdit[], options: TransactionOptions = {}): TransactionResult {
-  const preview = preparePatch(repoRoot, edits);
-  if (!preview.ok) {
-    return { ok: false, edits: preview.edits, findings: preview.findings, error: 'VALIDATION_FAILED' };
+export function commitPreparedPatch(repoRoot: string, prepared: PatchPreview, options: TransactionOptions = {}): TransactionResult {
+  if (!prepared.ok) {
+    return { ok: false, edits: prepared.edits, findings: prepared.findings, error: 'VALIDATION_FAILED' };
   }
   const writeDocument = options.writeDocument ?? writeDocAtomic;
   const shas: Record<string, string> = {};
   const originals = new Map<string, string>();
   const written: PatchEditPreview[] = [];
+  const stale: Array<{ preview: PatchEditPreview; actualSha: string }> = [];
   try {
-    for (const p of preview.edits) {
+    for (const p of prepared.edits) {
       const target = `${p.spec}/${p.doc}`;
       const before = readDoc(repoRoot, p.spec, p.doc);
-      if (!before.ok) throw new Error(`cannot snapshot ${target}: ${before.error}`);
+      if (!before.ok) {
+        return {
+          ok: false,
+          edits: prepared.edits,
+          findings: [{ layer: 'change', message: `cannot read ${target} before commit: ${before.error}` }],
+          written: false,
+          error: 'VALIDATION_FAILED',
+        };
+      }
+      const actualSha = docSha(before.current);
+      if (p.base_sha === null || actualSha !== p.base_sha) stale.push({ preview: p, actualSha });
       originals.set(target, before.current);
     }
-    for (const p of preview.edits) {
+    if (stale.length > 0) {
+      const staleTargets = new Set(stale.map(({ preview }) => `${preview.spec}/${preview.doc}`));
+      const edits = prepared.edits.map((p) =>
+        staleTargets.has(`${p.spec}/${p.doc}`) ? { ...p, ok: false, error: 'CAS_MISMATCH' as const } : p,
+      );
+      return {
+        ok: false,
+        edits,
+        findings: stale.map(({ preview, actualSha }) => ({
+          layer: 'change',
+          message: `prepared patch is stale for ${preview.spec}/${preview.doc}: expected base sha ${preview.base_sha}, actual sha ${actualSha}`,
+        })),
+        written: false,
+        error: 'CAS_MISMATCH',
+      };
+    }
+    for (const p of prepared.edits) {
       writeDocument(repoRoot, p.spec, p.doc, p.next as string);
       written.push(p);
       shas[`${p.spec}/${p.doc}`] = p.sha as string;
@@ -1026,7 +1088,7 @@ export function applySpecTransactionCore(repoRoot: string, edits: PatchEdit[], o
     const rollbackFailed = rollbackFailures.length > 0;
     return {
       ok: false,
-      edits: preview.edits,
+      edits: prepared.edits,
       findings: [{
         layer: 'change',
         message: rollbackFailed
@@ -1039,18 +1101,49 @@ export function applySpecTransactionCore(repoRoot: string, edits: PatchEdit[], o
       rollback_failures: rollbackFailures,
     };
   }
-  return { ok: true, edits: preview.edits, findings: [], written: true, shas };
+  return { ok: true, edits: prepared.edits, findings: [], written: true, shas };
+}
+
+/**
+ * Prepare outside the lock, then commit the prepared content. Existing direct callers retain this
+ * API; MCP handlers use the two phases explicitly so validation never runs while locked.
+ */
+export function applySpecTransactionCore(repoRoot: string, edits: PatchEdit[], options: TransactionOptions = {}): TransactionResult {
+  return commitPreparedPatch(repoRoot, preparePatch(repoRoot, edits), options);
 }
 
 /** A stored proposal — the edit set proposePatch captured, replayable by applyProposedPatch. */
 interface StoredProposal {
   id: string;
   edits: PatchEdit[];
-  createdAt: string;
+  createdAt: number;
+  expiresAt: number;
+  /** Proposal provenance is the server-resolved root, never a mutable caller path. */
+  rootId: string;
 }
 
 /** In-memory proposal registry (lives for the server process; consumed on a successful apply). */
 const proposalStore = new Map<string, StoredProposal>();
+// Proposals are process-local, but they hold caller-controlled edit payloads.
+// Retain only a small, short-lived replay window; expired/evicted IDs are
+// deliberately indistinguishable from unknown IDs to avoid a proposal oracle.
+const MAX_STORED_PROPOSALS = 128;
+const PROPOSAL_TTL_MS = 10 * 60 * 1000;
+
+function evictExpiredProposals(now: number): void {
+  for (const [id, proposal] of proposalStore) {
+    if (proposal.expiresAt <= now) proposalStore.delete(id);
+  }
+}
+
+function evictOldestProposal(): void {
+  let oldest: StoredProposal | undefined;
+  for (const proposal of proposalStore.values()) {
+    if (!oldest || proposal.createdAt < oldest.createdAt) oldest = proposal;
+  }
+  if (oldest) proposalStore.delete(oldest.id);
+}
+
 
 /**
  * DRY-RUN a multi-document patch: preview every edit's graph impact and mint a `proposal_id` the
@@ -1060,22 +1153,52 @@ const proposalStore = new Map<string, StoredProposal>();
 export function proposePatch(repoRoot: string, edits: PatchEdit[]): PatchPreview & { proposal_id: string } {
   const preview = preparePatch(repoRoot, edits);
   const proposal_id = randomUUID();
-  proposalStore.set(proposal_id, { id: proposal_id, edits, createdAt: new Date().toISOString() });
+  const now = Date.now();
+  evictExpiredProposals(now);
+  while (proposalStore.size >= MAX_STORED_PROPOSALS) evictOldestProposal();
+  proposalStore.set(proposal_id, {
+    id: proposal_id,
+    edits,
+    createdAt: now,
+    expiresAt: now + PROPOSAL_TTL_MS,
+    rootId: redactedRootIdentity(repoRoot).id,
+  });
   return { ...preview, proposal_id };
 }
 
 /**
- * Apply a stored proposal IF STILL VALID: re-run every edit against the fresh on-disk content,
- * re-validate (form/anchor/conformance), and write all-or-nothing. A proposal that no longer
- * validates (a doc changed, an anchor moved, a CAS precondition broke) is REFUSED with its
- * findings — never applied stale. Consumed (dropped from the store) on a successful apply.
+ * Prepare a stored proposal without acquiring the write lock. The returned preview is committed
+ * only after the caller re-reads its base document hashes under the lock.
  */
-export function applyProposedPatch(repoRoot: string, proposalId: string): TransactionResult & { proposal_id: string } {
+export function prepareProposedPatch(repoRoot: string, proposalId: string): PatchPreview & { proposal_id: string; error?: 'PROPOSAL_NOT_FOUND' | 'ROOT_WORKTREE_MISMATCH' } {
+  evictExpiredProposals(Date.now());
+
   const stored = proposalStore.get(proposalId);
-  if (!stored) {
-    return { ok: false, edits: [], findings: [], error: 'PROPOSAL_NOT_FOUND', proposal_id: proposalId };
+  if (!stored) return { ok: false, edits: [], findings: [], proposal_id: proposalId, error: 'PROPOSAL_NOT_FOUND' };
+  if (stored.rootId !== redactedRootIdentity(repoRoot).id) {
+    return { ok: false, edits: [], findings: [], proposal_id: proposalId, error: 'ROOT_WORKTREE_MISMATCH' };
   }
-  const result = applySpecTransactionCore(repoRoot, stored.edits);
-  if (result.ok) proposalStore.delete(proposalId);
-  return { ...result, proposal_id: proposalId };
+  return { ...preparePatch(repoRoot, stored.edits), proposal_id: proposalId };
+}
+
+export function commitProposedPatch(
+  repoRoot: string,
+  prepared: PatchPreview & { proposal_id: string; error?: 'PROPOSAL_NOT_FOUND' | 'ROOT_WORKTREE_MISMATCH' },
+  options: TransactionOptions = {},
+): TransactionResult & { proposal_id: string } {
+  evictExpiredProposals(Date.now());
+
+  if (prepared.error === 'PROPOSAL_NOT_FOUND' || !proposalStore.has(prepared.proposal_id)) {
+    return { ok: false, edits: [], findings: [], error: 'PROPOSAL_NOT_FOUND', proposal_id: prepared.proposal_id };
+  }
+  if (prepared.error === 'ROOT_WORKTREE_MISMATCH') {
+    return { ok: false, edits: [], findings: [], error: 'ROOT_WORKTREE_MISMATCH', proposal_id: prepared.proposal_id };
+  }
+  const result = commitPreparedPatch(repoRoot, prepared, options);
+  if (result.ok) proposalStore.delete(prepared.proposal_id);
+  return { ...result, proposal_id: prepared.proposal_id };
+}
+
+export function applyProposedPatch(repoRoot: string, proposalId: string): TransactionResult & { proposal_id: string } {
+  return commitProposedPatch(repoRoot, prepareProposedPatch(repoRoot, proposalId));
 }

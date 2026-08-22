@@ -1407,3 +1407,125 @@ dynamic-workflow-engineering owns all bounded workflow runtime, retry, partial-r
 **User Story:** [User Story 64](USER_STORIES.md#user-story-64-multilayer-validator-keeps-repairs-bounded-and-honest-priority-p1)
 
 ---
+
+
+## FR-85
+**Feature:** @feature85
+
+**Strict per-requirement contract cards (all FRs)**
+
+**Delivery status:** Requirements and execution plan only. This FR defines the authoring, graph, validation, migration, and evidence contract; it does not claim implementation, runtime proof, or a migrated corpus.
+
+Every non-superseded functional requirement SHALL carry exactly one typed, observable contract card. The card SHALL make the requirement implementable and independently verifiable without relying on exact prose wording. A superseded or explicitly OUT OF SCOPE FR SHALL carry a disposition contract that records its status, rationale, owner, and successor or boundary instead of silently omitting the card.
+
+- **FR-85a (universal card):** Each FR card SHALL contain `version: 1`, one closed `kind`, a non-empty `subject`, at least one `observables[]` entry, at least one `negative_cases[]` entry, and a `verification` block with method, required evidence, scenario/pending state, implementation-surface/unknown decision, and evidence policy. Free-form prose alone SHALL NOT satisfy the contract. The `disposition` kind inherits all common card fields; its lifecycle fields are additional, not replacements. A disposition card for a superseded or OUT OF SCOPE FR SHALL additionally declare `status`, `rationale`, `owner`, and exactly one of `successor` or `boundary`.
+- **FR-85b (closed kinds):** The supported kinds SHALL be exactly `cli`, `api`, `schema`, `filesystem`, `event`, `state`, `behavior`, and `disposition`. `behavior` SHALL cover policy, UX, semantic, ownership, and other requirements that do not expose a narrower technical boundary; it SHALL NOT be a bypass or `not-applicable` escape.
+- **FR-85c (kind-specific boundary):** `cli` SHALL declare `command.executable:string`, `command.args:string[]`, `input`, `output`, `exit_codes`, and `errors`; `api` SHALL declare `request.method:string` or `request.tool:string`, `request.input`, `response`, `authority`, and `errors`; `schema` SHALL declare `schema.fields`, required/optional status, types, enums, and forbidden fields; `filesystem` SHALL declare `artifacts[].path`, action, owner, resulting state, atomicity, rollback, and confinement; `event` SHALL declare `event.name`, producer, payload, `consumers[]`, ordering, retry, and duplicate semantics; `state` SHALL declare `state.states[]`, `state.transitions[]`, `state.guards[]`, and `state.terminal_outcomes[]`; `behavior` SHALL declare `behavior.actor`, trigger, preconditions, observable outcomes, and forbidden outcomes; `disposition` SHALL declare `disposition.status`, rationale, owner, and exactly one of successor or boundary.
+- **FR-85d (invariants and failure):** Every card SHALL declare machine-checkable invariants where applicable and SHALL describe at least one adversarial or negative outcome. A happy-path sentence without a failure boundary SHALL be rejected as incomplete.
+- **FR-85e (metadata and graph):** The card SHALL be authored in the canonical FR-local YAML metadata block, parsed by the shared requirement metadata parser, retained on the canonical `FrNode`, persisted through cold/warm graph paths, and rendered without loss of unknown forward-compatible fields.
+- **FR-85f (authoring door):** `create-spec`, form-filling skills, and MCP mutation tools SHALL create or update cards through the existing spec door. Direct filesystem writes, a second contract parser, and a second contract schema SHALL be forbidden. A mutation with an invalid card SHALL be rejected before disk write with field-level findings.
+- **FR-85g (conformance):** Missing, malformed, incomplete, unsupported-kind, missing-negative-case, and unlinked-card conditions SHALL have stable finding codes, source locations, severity, and actionable suggestions. Findings SHALL distinguish authoring incompleteness from implementation/evidence absence.
+- **FR-85h (verdict and evidence):** The authoritative verdict SHALL expose a `CONTRACT` readiness lane. A missing or invalid card SHALL block readiness; a valid card with absent required implementation, BDD, or evidence SHALL remain not-ready in the corresponding lane. Structural validity SHALL never launder a contract gap into GREEN.
+- **FR-85i (migration):** The migration report SHALL enumerate every FR, suggest a kind only from inspected FR/AC/DESIGN/SCHEMA/FILE_CHANGES evidence, and emit `[NEEDS_CLARIFICATION]` for missing facts. It SHALL never invent commands, fields, paths, states, or outcomes. `--suggest-only` SHALL be read-only; apply SHALL use the MCP door with CAS and atomicity.
+- **FR-85j (strictness rollout):** New specs SHALL be scaffolded in strict contract mode. Existing specs SHALL remain readable while a report identifies missing cards; a spec becomes strict only through an engine-owned migration/policy transition. No agent-authored escape hatch may downgrade strict mode.
+- **FR-85k (traceability):** Each card SHALL be traceable to its FR, at least one AC, one verification scenario or explicit pending scenario, the implementation surface or an honest not-yet-known decision, and the evidence policy. A contract ID SHALL be derived from the qualified FR identity; hand-authored duplicate IDs SHALL be rejected.
+- **FR-85l (round-trip and mutation resistance):** Parse → canonicalize → render → parse SHALL preserve card semantics and canonical ordering. The real contract BDD/engine harness and its mutation cases SHALL fail when any required field, negative case, kind-specific field, FR link, or verdict lane is removed.
+
+```yaml metadata
+schemaVersion: 1
+verificationMethod: test
+contract:
+  version: 1
+  kind: behavior
+  subject: strict-per-requirement-contract-cards
+  behavior:
+    actor: spec-author
+    trigger: non-superseded FR is parsed
+    preconditions: [FR heading exists]
+    observable_outcomes: [qualified FR exposes one contract card]
+    forbidden_outcomes: [FR passes CONTRACT without a card]
+  observables:
+    - when: a non-superseded FR is parsed
+      then: exactly one typed contract card is available on the qualified FR node
+  negative_cases:
+    - when: a required card field is removed
+      then: conformance emits a blocking contract finding before readiness
+  verification:
+    method: bdd
+    required_evidence: [bdd]
+    scenario:
+      pending: true
+      reason: implementation not started
+    implementation_surface:
+      unknown: true
+      reason: implementation not started
+    evidence_policy:
+      source: canonical
+      freshness: current
+      independent: true
+```
+
+**Зависит от:** [FR-36](FR.md#fr-36), [FR-37](FR.md#fr-37), [FR-39](FR.md#fr-39), [FR-40](FR.md#fr-40), [FR-42](FR.md#fr-42), [FR-61](FR.md#fr-61), [FR-66](FR.md#fr-66), [FR-84](FR.md#fr-84).
+**Связанные AC:** [AC-85.1](ACCEPTANCE_CRITERIA.md#ac-851), [AC-85.2](ACCEPTANCE_CRITERIA.md#ac-852), [AC-85.3](ACCEPTANCE_CRITERIA.md#ac-853), [AC-85.4](ACCEPTANCE_CRITERIA.md#ac-854), [AC-85.5](ACCEPTANCE_CRITERIA.md#ac-855), [AC-85.6](ACCEPTANCE_CRITERIA.md#ac-856), [AC-85.7](ACCEPTANCE_CRITERIA.md#ac-857), [AC-85.8](ACCEPTANCE_CRITERIA.md#ac-858), [AC-85.9](ACCEPTANCE_CRITERIA.md#ac-859), [AC-85.10](ACCEPTANCE_CRITERIA.md#ac-8510), [AC-85.11](ACCEPTANCE_CRITERIA.md#ac-8511), [AC-85.12](ACCEPTANCE_CRITERIA.md#ac-8512)
+**Use Case:** [UC-36](USE_CASES.md#uc-36)
+**User Story:** [User Story 65](USER_STORIES.md#user-story-65-every-fr-is-implementable-and-verifiable-priority-p1)
+
+
+
+
+
+
+
+## FR-86: Core agent UX @feature86
+
+The spec-generator SHALL provide one coherent non-dashboard agent-facing UX contract across status, evidence, authoring, and remediation.
+
+**Delivery status:** Requirements and execution plan only. This FR defines the canonical result, evidence, preflight, authoring, and action-center contract; it does not claim implementation, runtime proof, BDD execution, dashboard UI, or Plane vendor code.
+
+- **FR-86a (canonical verdict):** CLI, MCP, spec-verdict, and statusline views SHALL consume one top-level serializable `SpecVerdictResult` contract containing verdict, blocking, and `readiness.overall`; compatibility views SHALL be projections only. A `GREEN` verdict with `NOT_READY` readiness is impossible.
+- **FR-86b (per-FR evidence state):** Every FR SHALL expose exactly one derived `evidence_state` from `untagged|exercised|impl-only|verified`, with its graph, implementation, result, freshness, and quality inputs recorded. Stale or weak evidence SHALL carry a demotion reason and SHALL NOT remain `verified`.
+- **FR-86c (ingestion and provenance):** The production graph path SHALL distinguish `NOT_INGESTED` from `NOT_RUN`; supported producer receipts SHALL preserve producer, run ID, source, timestamp, URI/line identity, and canonical-versus-filtered provenance. Public projections SHALL redact repository-local absolute paths while retaining safe relative or opaque source identity.
+- **FR-86d (read-only preflight):** Before mutation, the MCP door SHALL expose resolved repository root, worktree, lock/write mode, plugin/MCP version, and dependency readiness. When a required dependency is unavailable, preflight SHALL return the explicit `DEPENDENCY_ABSENT` state, reason, and ordered remediation without crashing or inferring readiness. A declared or requested root mismatch SHALL refuse with a stable code before disk access or file mutation.
+- **FR-86e (guided contract authoring):** The existing MCP door SHALL provide evidence-backed contract-kind suggestions, required and missing fields, an exact preview, and field-level findings; accepted cards SHALL use existing validation, CAS, and atomic apply without a second parser or store.
+- **FR-86f (grouped action center):** Readiness SHALL return every blocking lane grouped by lane/code/reason with affected-node counts and deterministic ordered remediation actions; it SHALL NOT collapse the result to a first blocker only.
+
+```yaml metadata
+schemaVersion: 1
+verificationMethod: test
+contract:
+  version: 1
+  kind: behavior
+  subject: core-agent-ux-contract
+  behavior:
+    actor: coding-agent
+    trigger: status query, evidence ingestion, or spec authoring request
+    preconditions: [canonical graph and MCP door are available]
+    observable_outcomes: [one non-contradictory verdict, explicit evidence state and provenance, safe CAS authoring, grouped remediation]
+    forbidden_outcomes: [GREEN with NOT_READY, NOT_INGESTED reported as NOT_RUN, root-mismatch write, dashboard or Plane UI scope]
+  observables:
+    - when: an agent queries status or prepares a mutation
+      then: canonical verdict, evidence, preflight, and remediation data remain compatible projections of one graph contract
+  negative_cases:
+    - when: evidence is stale, weak, or lacks location-addressed scenario identity
+      then: the result records a non-success state and an actionable reason instead of fabricated verification
+    - when: the declared worktree differs from the resolved root
+      then: the mutation is refused before disk access
+  verification:
+    method: bdd
+    required_evidence: [bdd, operational-proof]
+    scenario:
+      pending: true
+      reason: Production @feature86 bindings do not exist yet; tasks pin real-path BDD work.
+    implementation_surface:
+      unknown: true
+      reason: Implementation is intentionally unstarted; planned surfaces are owned by the FR-86 task graph.
+    evidence_policy:
+      source: canonical
+      freshness: current
+      independent: true
+```
+
+**Зависит от:** [FR-39](FR.md#fr-39), [FR-40](FR.md#fr-40), [FR-61](FR.md#fr-61), [FR-62](FR.md#fr-62), [FR-63](FR.md#fr-63), [FR-64](FR.md#fr-64), [FR-85](FR.md#fr-85).
+**Use Case:** [UC-37](USE_CASES.md#uc-37)
+**User Story:** [User Story 86](USER_STORIES.md#user-story-86-one-honest-agent-facing-ux-priority-p1)
+**Связанные AC:** [AC-86.1](ACCEPTANCE_CRITERIA.md#ac-861), [AC-86.2](ACCEPTANCE_CRITERIA.md#ac-862), [AC-86.3](ACCEPTANCE_CRITERIA.md#ac-863), [AC-86.4](ACCEPTANCE_CRITERIA.md#ac-864), [AC-86.5](ACCEPTANCE_CRITERIA.md#ac-865), [AC-86.6](ACCEPTANCE_CRITERIA.md#ac-866), [AC-86.7](ACCEPTANCE_CRITERIA.md#ac-867), [AC-86.8](ACCEPTANCE_CRITERIA.md#ac-868), [AC-86.9](ACCEPTANCE_CRITERIA.md#ac-869), [AC-86.10](ACCEPTANCE_CRITERIA.md#ac-8610), [AC-86.11](ACCEPTANCE_CRITERIA.md#ac-8611), [AC-86.12](ACCEPTANCE_CRITERIA.md#ac-8612)

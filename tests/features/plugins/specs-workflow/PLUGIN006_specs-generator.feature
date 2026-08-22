@@ -523,3 +523,27 @@ Feature: PLUGIN006 Specs Generator Scripts
     Then the remediation apply boundary reports proposal not found and writes nothing
     And the real MCP registry exposes the bounded remediation surfaces
     And the canonical spec-dashboard directory remains byte-identical
+
+  @feature86 @FR-86 @AC-86.1 @AC-86.2 @AC-86.11
+  Scenario: SPECGEN004_864 Canonical readiness action groups retain their legacy compatibility projection
+    Given an isolated readiness fixture has a real graph and unrun canonical scenario
+    When the canonical verdict and MCP status are evaluated from that graph
+    Then the canonical action groups completely and deterministically represent every blocking readiness lane
+
+  @feature86 @FR-86 @AC-86.3 @AC-86.4 @AC-86.5 @AC-86.6 @AC-86.7
+  Scenario: SPECGEN004_865 Evidence derives untagged and implementation-only state while preserving producer receipt provenance
+    Given an isolated evidence fixture contains untagged and implemented requirements
+    When the real inventory classifies absent, suite-only, and producer-generated evidence before a stale weak-evidence projection
+    Then per-FR evidence states, ingestion diagnostics, and producer provenance remain honest
+
+  @feature86 @FR-86 @AC-86.8
+  Scenario: SPECGEN004_866 Root admission redacts preflight facts and refuses a cross-worktree write before side effects
+    Given a valid spec document is rooted outside its declared worktree
+    When the real MCP preflight and mutation boundary receive that mismatch
+    Then preflight redacts identities and the mismatch refuses before any document lock or audit write
+
+  @feature86 @FR-86 @AC-86.9 @AC-86.10 @AC-86.12
+  Scenario: SPECGEN004_867 Guided contract authoring refuses invalid cards then atomically applies a valid card
+    Given a guided contract fixture exposes the real proposal and atomic apply doors
+    When an invalid card and then a valid CLI card are proposed and applied through the real MCP registry
+    Then guided proposal payloads are exact, invalid or stale proposals write zero target spec document bytes and create no proposal or state mutation, while the required append-only spec-access audit entry remains permitted

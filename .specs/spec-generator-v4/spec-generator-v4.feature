@@ -4631,3 +4631,125 @@ Scenario: SPECGEN004_715 canonical remediation discovers once repairs only throu
   And one mandatory final smart spec-verdict pass distinguishes structural pass from READY and reports repaired blocking deferred decision-required unavailable-provider stale and NO_PROGRESS states with next actions
   And a second run against the repaired temporary fixture performs zero writes
 
+
+  @FR-56 @AC-56.5 @feature56
+  Scenario: SPECGEN004_756 pytest-bdd execution reaches the scenario evidence overlay
+    Given a real pytest-bdd project with passing, failing, and unselected scenarios
+    When pytest-bdd runs through the centralized runner overlay environment
+    Then SpecGraph classifies only the unselected pytest-bdd scenario as not run
+
+
+
+# Source contract; executable mirror: tests/features/plugins/specs-workflow/PLUGIN006_specs-generator.feature.
+# Tagged @wip until the FR-85 implementation and real step definitions land.
+@wip @FR-85 @AC-85.1 @feature85
+Scenario: SPECGEN004_850 every active FR owns exactly one typed contract card
+  Given a spec snapshot contains active and disposition FR nodes
+  When the canonical requirement contract parser runs
+  Then every active FR has one contract card and every superseded or out-of-scope FR has a disposition card that inherits observables negative_cases and verification and adds status rationale owner and exactly one successor-or-boundary field
+  And removing any inherited observable negative_case or verification child from the disposition card fails validation
+
+@wip @FR-85 @AC-85.2 @feature85
+Scenario: SPECGEN004_851 common card fields and closed kinds are enforced
+  Given a contract card corpus contains valid and invalid common fields
+  When the shared contract validator runs
+  Then missing common fields, unknown versions, prose-only cards, and unknown kinds produce located blocking findings
+  And the verification block requires method, required_evidence, scenario.refs-or-pending, implementation_surface.refs-or-unknown, evidence_policy.source/freshness/independent, and a mutation removing each child independently fails
+
+@wip @FR-85 @AC-85.3 @feature85
+Scenario: SPECGEN004_852 interface kinds expose concrete boundary fields
+  Given the corpus contains CLI API schema and filesystem cards
+  When kind-specific validation runs
+  Then CLI cards declare executable args input output exit_codes and errors, API cards declare method-or-tool request response authority and errors, schema cards declare typed required-optional enum and forbidden fields, and filesystem cards declare confined artifact path action owner resulting state atomicity and rollback
+  And removing any named kind-specific field fails that kind while leaving other kinds valid
+
+@wip @FR-85 @AC-85.4 @feature85
+Scenario: SPECGEN004_853 event state and behavior kinds remain typed
+  Given the corpus contains event state policy behavior and disposition cards
+  When kind-specific validation runs
+  Then event cards declare name producer payload consumers ordering and retry-duplicate semantics, state cards declare states transitions guards and terminal outcomes, behavior cards declare actor trigger preconditions observable and forbidden outcomes, and disposition cards inherit observable negative and verification fields while declaring status rationale owner and successor-or-boundary
+  And removing any named event state behavior or disposition field fails the corresponding kind
+
+@wip @FR-85 @AC-85.5 @feature85
+Scenario: SPECGEN004_854 negative cases block happy-path-only cards
+  Given a valid card is copied into a mutation corpus
+  When the negative_cases entry is removed
+  Then validation returns FR_CONTRACT_NEGATIVE_CASE_MISSING and the contract lane is not ready
+
+@wip @FR-85 @AC-85.6 @feature85
+Scenario: SPECGEN004_855 contract metadata survives graph and MCP round-trip
+  Given a valid card is stored in the cold graph and warm store
+  When the node is read and rendered through MCP
+  Then all card fields and unknown forward-compatible keys are semantically equal after round-trip, and canonical rendering preserves stable field ordering
+
+@wip @FR-85 @AC-85.7 @feature85
+Scenario: SPECGEN004_856 contract findings identify their owner and repair
+  Given a missing, malformed, unsupported-kind, incomplete, duplicate, and unresolved card corpus exists
+  When conformance evaluates the corpus
+  Then each finding has a stable code, qualified node, source line, severity, and actionable suggestion
+
+@wip @FR-85 @AC-85.8 @feature85
+Scenario: SPECGEN004_857 CONTRACT lane blocks structural-only green
+  Given a spec has zero structural errors but one missing contract card
+  When the authoritative smart verdict runs
+  Then CONTRACT and OVERALL are NOT_READY and the result does not claim GREEN
+
+@wip @FR-85 @AC-85.8 @feature85
+Scenario: SPECGEN004_862 valid contract card keeps other readiness lanes honest
+  Given a valid contract card has no implementation BDD or evidence
+  When the authoritative smart verdict runs
+  Then the CONTRACT lane is GREEN while implementation execution and evidence lanes remain NOT_READY
+
+@wip @FR-85 @AC-85.9 @feature85
+Scenario: SPECGEN004_858 MCP authoring is validated before write
+  Given an agent proposes a valid and an invalid contract mutation through the spec door
+  When the mutation transaction runs under CAS
+  Then the invalid change is refused before disk access and the valid change is atomic and audited
+
+@wip @FR-85 @AC-85.10 @feature85
+Scenario: SPECGEN004_859 suggest-only migration does not invent values
+  Given a legacy corpus has prose-only FRs and partially evidenced boundaries
+  When the migration report runs with --suggest-only
+  Then the report inventories every FR with suggested kind, missing fields, source locations, and NEEDS_CLARIFICATION markers while documents remain byte-identical and no values are invented
+
+@wip @FR-85 @AC-85.11 @feature85
+Scenario: SPECGEN004_860 strictness is engine-owned across new and legacy specs
+  Given a new scaffold and a legacy spec are evaluated under their respective policy states
+  When the strictness resolver runs
+  Then new specs require cards, legacy debt is visible, and no FR or environment flag can downgrade strict mode
+
+@wip @FR-85 @AC-85.12 @feature85
+Scenario: SPECGEN004_861 contract traceability and mutation gates are complete
+  Given the full FR-85 corpus has cards, AC links, scenarios, tasks, and evidence policies
+  When the final contract verification runs
+  Then removing a common field, negative case, kind-specific field, FR-AC-scenario edge, task-own-scenario edge, verification evidence/implementation-surface trace, or CONTRACT verdict lane fails the relevant contract/readiness lane, and restoring each mutation passes it independently
+
+@feature44
+Scenario: SPECGEN004_863 recursive reverse trace preserves nested spec slugs
+  Given a nested spec corpus with unlinked research and upstream artifacts
+  When the recursive reverse trace scanners run
+  Then the reverse trace findings preserve the nested spec slug
+
+@feature86 @FR-86 @AC-86.1 @AC-86.2 @AC-86.11
+Scenario: SPECGEN004_864 Canonical readiness action groups retain their legacy compatibility projection
+  Given an isolated readiness fixture has a real graph and unrun canonical scenario
+  When the canonical verdict and MCP status are evaluated from that graph
+  Then the canonical action groups completely and deterministically represent every blocking readiness lane
+
+@feature86 @FR-86 @AC-86.3 @AC-86.4 @AC-86.5 @AC-86.6 @AC-86.7
+Scenario: SPECGEN004_865 Evidence derives untagged and implementation-only state while preserving producer receipt provenance
+  Given an isolated evidence fixture contains untagged and implemented requirements
+  When the real inventory classifies absent, suite-only, and producer-generated evidence before a stale weak-evidence projection
+  Then per-FR evidence states, ingestion diagnostics, and producer provenance remain honest
+
+@feature86 @FR-86 @AC-86.8
+Scenario: SPECGEN004_866 Root admission redacts preflight facts and refuses a cross-worktree write before side effects
+  Given a valid spec document is rooted outside its declared worktree
+  When the real MCP preflight and mutation boundary receive that mismatch
+  Then preflight redacts identities and the mismatch refuses before any document lock or audit write
+
+@feature86 @FR-86 @AC-86.9 @AC-86.10 @AC-86.12
+Scenario: SPECGEN004_867 Guided contract authoring refuses invalid cards then atomically applies a valid card
+  Given a guided contract fixture exposes the real proposal and atomic apply doors
+  When an invalid card and then a valid CLI card are proposed and applied through the real MCP registry
+  Then guided proposal payloads are exact, invalid or stale proposals write zero target spec document bytes and create no proposal or state mutation, while the required append-only spec-access audit entry remains permitted

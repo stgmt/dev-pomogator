@@ -48,17 +48,23 @@ import path from 'node:path';
 import { marksmanSlug } from '../anchor-integrity/marksman-slug.mjs';
 import { parseMarkdown } from '../spec-graph/parsers/md.ts';
 import { parseTasks } from '../spec-graph/parsers/tasks.ts';
-import type { AcNode, FrNode } from '../spec-graph/types.ts';
-import { resolveSpecDoc, validateTarget, type MutationFinding } from './mutations.ts';
+import { parseGherkin } from '../spec-graph/parsers/gherkin.ts';
+import { CONTRACT_KINDS, type ContractKind } from '../spec-graph/requirement-contract.ts';
+import { renderRequirementMetadata, validateRequirementMetadata, type RequirementMetadata } from '../spec-graph/metadata-schema.ts';
+import type { AcNode, FrNode, ScenarioNode } from '../spec-graph/types.ts';
+import { docSha, resolveSpecDoc, validateTarget, type MutationFinding } from './mutations.ts';
 import {
   applySectionOpToContent,
-  applySpecTransactionCore,
+  preparePatch,
+  commitPreparedPatch,
   detectEol,
   findHeading,
   locateSection,
   type PatchEdit,
   type PatchEditPreview,
 } from './section-ops.ts';
+import { redactedRootIdentity } from './path-containment.ts';
+import { withWriteLock } from './lock-manager.ts';
 
 // ─── canonical renderers (pure; the form contracts they satisfy are the REAL ones) ───
 
@@ -354,9 +360,10 @@ function resolveRequirements(ctx: SpecContext, frs: string[]): { anchors: Array<
   return missing.length > 0 ? { missing } : { anchors };
 }
 
-/** Run the composed edit set through the P33-3 transaction core (validate + all-or-nothing write). */
+/** Prepare/render outside the lock, then commit the validated edit set under a short lock. */
 function commit(repoRoot: string, edits: PatchEdit[], rendered: Record<string, string>, extra: Partial<DomainAuthoringResult> = {}): DomainAuthoringResult {
-  const result = applySpecTransactionCore(repoRoot, edits);
+  const prepared = preparePatch(repoRoot, edits);
+  const result = withWriteLock(repoRoot, () => commitPreparedPatch(repoRoot, prepared));
   if (!result.ok) {
     return { ok: false, error: 'VALIDATION_FAILED', rendered, edits: result.edits, findings: result.findings, hint: 'The rendered change failed the form/anchor/conformance gate — nothing was written. Fix the findings and retry.', ...extra };
   }
@@ -696,4 +703,180 @@ export function registerIncidentBacklog(repoRoot: string, input: RegisterInciden
     edits.push({ spec: ctx.slug, doc: `${ctx.slug}.feature`, section: { kind: 'insert_at_eof', text: feat.scenarioBlock } });
   }
   return commit(repoRoot, edits, { 'TASKS.md': block }, { ids: [id], downgraded: feat.downgraded });
+}
+
+// ─── FR-86e guided requirement-contract proposal ───────────────────────────
+
+export interface RequirementContractProposalInput {
+  spec: string;
+  requirement: string;
+  /** Partial cards are accepted so the caller receives schema findings rather than a guessed card. */
+  contract: Record<string, unknown>;
+  /** Optional caller read token; the generated edit always carries the live token. */
+  expectedSha?: string;
+}
+
+export interface RequirementContractProposal {
+  ok: boolean;
+  error?: 'TARGET' | 'SPEC_NOT_FOUND' | 'DOC_NOT_FOUND' | 'FR_NOT_FOUND' | 'CAS_MISMATCH' | 'FR_METADATA_INVALID';
+  hint?: string;
+  requirement?: string;
+  kind_candidates?: Array<{ kind: ContractKind; score: number; signals: string[] }>;
+  required_fields?: string[];
+  missing_fields?: string[];
+  findings: Array<{ code: string; path: string; message: string }>;
+  evidence?: {
+    requirement: { title: string; line: number; has_metadata: boolean };
+    acceptance_criteria: string[];
+    tasks: string[];
+    scenarios: string[];
+  };
+  provenance?: { resolved_root: { id: string }; worktree: { id: string }; document_sha: string };
+  /** Exact rendered card and requirement section; neither is written by this helper. */
+  preview?: { metadata_yaml: string; metadata_block: string; requirement_section: string };
+  /** Feed these unchanged to the existing `propose_patch` / CAS transaction door. */
+  edits?: PatchEdit[];
+}
+
+const BASE_CONTRACT_FIELDS = ['version', 'kind', 'subject', 'observables', 'negative_cases', 'verification'];
+
+const KIND_FIELD_PATHS: Record<ContractKind, string[]> = {
+  cli: ['command.executable', 'command.args', 'input', 'output', 'exit_codes', 'errors'],
+  api: ['request.method|tool', 'request.input', 'response', 'authority', 'errors'],
+  schema: ['schema.fields', 'schema.enums', 'schema.forbidden'],
+  filesystem: ['artifacts'],
+  event: ['event.name', 'event.producer', 'event.ordering', 'event.retry', 'event.duplicate', 'event.payload', 'event.consumers'],
+  state: ['state.states', 'state.transitions', 'state.guards', 'state.terminal_outcomes'],
+  behavior: ['behavior.actor', 'behavior.trigger', 'behavior.preconditions', 'behavior.observable_outcomes', 'behavior.forbidden_outcomes'],
+  disposition: ['disposition.status', 'disposition.rationale', 'disposition.owner', 'disposition.successor|boundary'],
+};
+
+const KIND_SIGNALS: Record<ContractKind, RegExp> = {
+  cli: /\b(cli|command|flag|argument|stdout|stderr|exit code)\b/gi,
+  api: /\b(api|endpoint|http|request|response|rpc|tool)\b/gi,
+  schema: /\b(schema|field|enum|payload shape|json|yaml)\b/gi,
+  filesystem: /\b(file|directory|path|atomic|write|read|filesystem)\b/gi,
+  event: /\b(event|emit|consumer|producer|retry|queue|message)\b/gi,
+  state: /\b(state|transition|lifecycle|status|guard)\b/gi,
+  behavior: /\b(when|then|user|agent|behavior|outcome)\b/gi,
+  disposition: /\b(superseded|deprecated|retired|successor|out of scope|disposition)\b/gi,
+};
+
+function contractKindCandidates(text: string): Array<{ kind: ContractKind; score: number; signals: string[] }> {
+  return CONTRACT_KINDS.map((kind) => {
+    const signals = [...text.matchAll(KIND_SIGNALS[kind])].map((match) => match[0].toLowerCase());
+    return { kind, score: signals.length + (kind === 'behavior' ? 1 : 0), signals: [...new Set(signals)].slice(0, 6) };
+  }).sort((a, b) => b.score - a.score || a.kind.localeCompare(b.kind));
+}
+
+function requirementSection(source: string, headingLine: number): { section: string; next: (metadataBlock: string) => string } {
+  const lines = splitLogical(source);
+  const start = headingLine - 1;
+  const level = lines[start].match(/^(#{1,6})\s/)?.[1].length ?? 2;
+  let end = lines.length;
+  for (let index = start + 1; index < lines.length; index += 1) {
+    const candidate = lines[index].match(/^(#{1,6})\s/);
+    if (candidate && candidate[1].length <= level) {
+      end = index;
+      break;
+    }
+  }
+  const eol = source.includes('\r\n') ? '\r\n' : '\n';
+  const hadTerminalEol = /\r?\n$/.test(source);
+  const replace = (metadataBlock: string): string => {
+    const body = lines.slice(start + 1, end);
+    const marker = body.findIndex((line) => /^```yaml\s+metadata\s*$/.test(line.trim()));
+    let nextBody: string[];
+    if (marker >= 0) {
+      const close = body.findIndex((line, index) => index > marker && line.trim() === '```');
+      nextBody = close >= 0 ? [...body.slice(0, marker), metadataBlock, ...body.slice(close + 1)] : [...body, '', metadataBlock];
+    } else {
+      nextBody = [...body];
+      while (nextBody.length > 0 && nextBody[nextBody.length - 1] === '') nextBody.pop();
+      nextBody.push('', metadataBlock);
+    }
+    const rendered = [...lines.slice(0, start + 1), ...nextBody.flatMap((part) => part === metadataBlock ? part.split('\n') : [part]), ...lines.slice(end)].join(eol);
+    return hadTerminalEol && !rendered.endsWith(eol) ? `${rendered}${eol}` : rendered;
+  };
+  return { section: lines.slice(start, end).join(eol), next: replace };
+}
+
+function contractMetadata(existing: RequirementMetadata | undefined, contract: Record<string, unknown>): Record<string, unknown> {
+  const { _unknown = {}, ...known } = existing ?? { _unknown: {} };
+  return {
+    ..._unknown,
+    ...known,
+    schemaVersion: 1,
+    risks: existing?.risks ?? [],
+    demands: existing?.demands ?? [],
+    contract,
+  };
+}
+
+/**
+ * FR-86e: scan real graph-parser evidence and render a card proposal. This is deliberately
+ * read-only: tools.ts admits only a metadata-valid result to the existing proposal/CAS door.
+ */
+export function proposeRequirementContract(repoRoot: string, input: RequirementContractProposalInput): RequirementContractProposal {
+  const loaded = loadContext(repoRoot, input.spec);
+  if ('error' in loaded) return { ok: false, error: 'TARGET', findings: [], hint: 'spec must stay within .specs/ (no traversal).' };
+  const ctx = loaded;
+  const source = ctx.docs.get('FR.md');
+  if (!source) return { ok: false, error: 'DOC_NOT_FOUND', findings: [], hint: 'FR.md does not exist in this spec.' };
+  const parsed = parseMarkdown(source, `.specs/${ctx.slug}/FR.md`);
+  const requirement = parsed.nodes.find((node): node is FrNode => node.type === 'FR' && unqualify(node.id) === input.requirement);
+  if (!requirement) return { ok: false, error: 'FR_NOT_FOUND', findings: [], hint: `Requirement ${input.requirement} does not exist in FR.md.` };
+
+  const sourceSha = docSha(source);
+  if (input.expectedSha !== undefined && input.expectedSha !== sourceSha) {
+    return { ok: false, error: 'CAS_MISMATCH', findings: [], requirement: requirement.id, provenance: { resolved_root: redactedRootIdentity(repoRoot), worktree: redactedRootIdentity(repoRoot), document_sha: sourceSha }, hint: 'FR.md changed since the supplied read token; re-read and re-propose. Nothing was written.' };
+  }
+
+  const evidenceText = [requirement.title, requirement.body].join('\n');
+  const candidates = contractKindCandidates(evidenceText);
+  const checked = validateRequirementMetadata(contractMetadata(requirement.metadata, input.contract));
+  const findings = checked.issues.map((issue) => ({ code: issue.code, path: issue.path, message: issue.message }));
+  const selectedKind = typeof input.contract.kind === 'string' && (CONTRACT_KINDS as readonly string[]).includes(input.contract.kind)
+    ? input.contract.kind as ContractKind
+    : undefined;
+  const required = [...BASE_CONTRACT_FIELDS, ...(selectedKind ? KIND_FIELD_PATHS[selectedKind] : [])];
+  const missing = [...new Set(findings.map((issue) => issue.path))];
+
+  const tasks = ctx.docs.has('TASKS.md')
+    ? parseTasks(ctx.docs.get('TASKS.md')!, `.specs/${ctx.slug}/TASKS.md`).filter((task) => task.refs.map(unqualify).includes(input.requirement)).map((task) => task.id)
+    : [];
+  const scenarios = ctx.docs.has(`${ctx.slug}.feature`)
+    ? parseGherkin(ctx.docs.get(`${ctx.slug}.feature`)!, `.specs/${ctx.slug}/${ctx.slug}.feature`).nodes
+      .filter((node): node is ScenarioNode => node.type === 'Scenario')
+      .filter((node) => node.tags.some((tag) => tag.toLowerCase() === `@${input.requirement.toLowerCase()}` || tag.toLowerCase() === `@feature${input.requirement.replace(/^FR-/i, '')}`))
+      .map((node) => node.id)
+    : [];
+  const provenance = { resolved_root: redactedRootIdentity(repoRoot), worktree: redactedRootIdentity(repoRoot), document_sha: sourceSha };
+  const evidence = {
+    requirement: { title: requirement.title, line: requirement.line, has_metadata: Boolean(requirement.metadata) },
+    acceptance_criteria: ctx.acs.filter((ac) => unqualify(ac.parentFr) === input.requirement).map((ac) => ac.id),
+    tasks,
+    scenarios,
+  };
+  if (!checked.metadata) {
+    return { ok: false, error: 'FR_METADATA_INVALID', requirement: requirement.id, kind_candidates: candidates, required_fields: required, missing_fields: missing, findings, evidence, provenance, hint: 'Fix the field-level findings and re-propose. Invalid cards never reach the patch proposal store.' };
+  }
+
+  const metadataYaml = renderRequirementMetadata(checked.metadata);
+  const metadataBlock = `\`\`\`yaml metadata\n${metadataYaml}\n\`\`\``;
+  const section = requirementSection(source, requirement.line);
+  const next = section.next(metadataBlock);
+  const updatedSection = requirementSection(next, requirement.line).section;
+  return {
+    ok: true,
+    requirement: requirement.id,
+    kind_candidates: candidates,
+    required_fields: required,
+    missing_fields: [],
+    findings: [],
+    evidence,
+    provenance,
+    preview: { metadata_yaml: metadataYaml, metadata_block: metadataBlock, requirement_section: updatedSection },
+    edits: [{ spec: ctx.slug, doc: 'FR.md', content: next, expected_sha: sourceSha }],
+  };
 }

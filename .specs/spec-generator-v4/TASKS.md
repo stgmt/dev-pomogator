@@ -3018,3 +3018,157 @@ Phase 45 contains 10 planned TODO slices. All headers use the strict graph-nativ
   - [ ] The final smart `spec-verdict` result reports every missing, blocked, deferred, decision-required, unavailable-provider, stale, and `NO_PROGRESS` lane explicitly and never claims implementation or tests complete from structural validation alone.
   - [ ] Final scope verification proves no direct spec writer, `.progress.json` mutation, mutable canonical dashboard fixture, second parser/graph/verdict, or undocumented implementation surface was added; all Phase 51 tasks remain TODO until their evidence exists.
   - [ ] Mutation and rerun proof demonstrates the gate fails when any required AC-84 lane or scenario ownership is removed, and passes only with the full MCP-only evidence set.
+## Phase 52 — FR-85 strict per-requirement contract cards (2026-08-20)
+**Planned FILE_CHANGES surface:** `tools/spec-graph/requirement-contract.ts`, `tools/spec-graph/metadata-schema.ts`, `tools/spec-graph/parsers/md.ts`, `tools/spec-graph/types.ts`, `tools/spec-graph/conformance.ts`, `tools/spec-graph/corpus-health.ts`, `tools/specs-generator/spec-verdict.ts`, `tools/specs-generator/requirement-contract-migration.ts`, `tools/specs-generator/templates/FR.md.template`, `tools/spec-mcp-server/tools.ts`, `tools/spec-mcp-server/server.bundle.mjs`, `.claude/skills/create-spec/references/phase2_requirements-and-design.md`, `.claude/skills/requirements-chk-matrix/SKILL.md`, `.claude/skills/spec-status/SKILL.md`, `tests/fixtures/specgen004-contract-cards/*` and planned directory `tests/fixtures/specgen004-contract-cards/`, `tests/step_definitions/feature85_requirement_contracts.ts`, `tests/features/plugins/specs-workflow/PLUGIN006_specs-generator.feature`.
+
+> Spec-only execution plan. All tasks are TODO and SPECGEN004_850–861 evidence is pending. This phase defines a universal per-FR contract invariant; it does not claim implementation, migration, runtime proof, or a strict-corpus verdict. The existing root `metadata.verificationMethod` vocabulary remains unchanged.
+
+- [ ] Define the canonical requirement contract model and schema -- @feature85 — id: p52-requirement-contract-model — Status: TODO | Est: 240m
+  _depends: none_
+  _Requirements: [FR-85](FR.md#fr-85)
+  _Acceptance: [AC-85.1](ACCEPTANCE_CRITERIA.md#ac-851), [AC-85.2](ACCEPTANCE_CRITERIA.md#ac-852), [AC-85.3](ACCEPTANCE_CRITERIA.md#ac-853), [AC-85.4](ACCEPTANCE_CRITERIA.md#ac-854), [AC-85.5](ACCEPTANCE_CRITERIA.md#ac-855), [AC-85.6](ACCEPTANCE_CRITERIA.md#ac-856)
+  _Own scenario: SPECGEN004_850, SPECGEN004_851, SPECGEN004_852, SPECGEN004_853, SPECGEN004_854, SPECGEN004_855 (@feature85, contract model lane pending)_
+  **Done When:**
+  - [ ] RED removes each common and kind-specific field and proves the real validator identifies the exact field and qualified FR.
+  - [ ] GREEN creates the versioned contract model, closed kind registry, canonical renderer, unknown-field preservation, and root-metadata vocabulary compatibility.
+  - [ ] Round-trip and mutation BDD/engine checks prove semantic equality across parse/render/cold/warm representations.
+
+- [ ] Wire contract parsing, conformance findings, and the CONTRACT verdict lane -- @feature85 — id: p52-contract-conformance-verdict — Status: TODO | Est: 300m
+  _depends: hard:p52-requirement-contract-model_
+  _Requirements: [FR-85](FR.md#fr-85)
+  _Acceptance: [AC-85.1](ACCEPTANCE_CRITERIA.md#ac-851), [AC-85.5](ACCEPTANCE_CRITERIA.md#ac-855), [AC-85.7](ACCEPTANCE_CRITERIA.md#ac-857), [AC-85.8](ACCEPTANCE_CRITERIA.md#ac-858), [AC-85.12](ACCEPTANCE_CRITERIA.md#ac-8512)
+  _Own scenario: SPECGEN004_854, SPECGEN004_856, SPECGEN004_857, SPECGEN004_861, SPECGEN004_862 (@feature85, conformance/verdict lane pending)_
+  **Done When:**
+  - [ ] RED proves missing, invalid, unsupported, happy-path-only, duplicate, and unresolved cards produce stable located findings.
+  - [ ] GREEN adds the CONTRACT lane to the authoritative verdict and keeps structural-only pass NOT_READY.
+  - [ ] Mutation proof kills the lane, removes a finding field, and removes the negative-case requirement.
+
+- [ ] Extend MCP authoring and persistence for contract cards -- @feature85 — id: p52-contract-mcp-authoring — Status: TODO | Est: 240m
+  _depends: hard:p52-requirement-contract-model, hard:p52-contract-conformance-verdict_
+  _Requirements: [FR-85](FR.md#fr-85)
+  _Acceptance: [AC-85.6](ACCEPTANCE_CRITERIA.md#ac-856), [AC-85.9](ACCEPTANCE_CRITERIA.md#ac-859)
+  _Own scenario: SPECGEN004_855, SPECGEN004_858 (@feature85, MCP/CAS round-trip pending)_
+  **Done When:**
+  - [ ] RED proves invalid contract changes are refused before disk write and raw `.specs/**` writes remain denied under enforce.
+  - [ ] GREEN extends existing MCP metadata validation/set and cold/warm persistence without a second writer or parser.
+  - [ ] CAS, atomicity, audit, and dependency-absent bundle proof use the real installed bundle.
+
+- [ ] Build evidence-backed legacy contract migration -- @feature85 — id: p52-contract-migration — Status: TODO | Est: 240m
+  _depends: hard:p52-requirement-contract-model_
+  _Requirements: [FR-85](FR.md#fr-85)
+  _Acceptance: [AC-85.10](ACCEPTANCE_CRITERIA.md#ac-8510), [AC-85.11](ACCEPTANCE_CRITERIA.md#ac-8511)
+  _Own scenario: SPECGEN004_859, SPECGEN004_860 (@feature85, legacy migration pending)_
+  **Done When:**
+  - [ ] RED runs suggest-only migration against real legacy FRs and proves byte-identical docs plus explicit clarification markers.
+  - [ ] GREEN creates the migration report with evidence-backed kind suggestions and MCP-only apply path.
+  - [ ] No command, field, path, state, or success outcome is invented; strictness changes only through engine-owned state.
+
+- [ ] Integrate contract cards into authoring forms and templates -- @feature85 — id: p52-contract-authoring-workflow — Status: TODO | Est: 240m
+  _depends: hard:p52-requirement-contract-model, hard:p52-contract-conformance-verdict_
+  _Requirements: [FR-85](FR.md#fr-85)
+  _Acceptance: [AC-85.1](ACCEPTANCE_CRITERIA.md#ac-851), [AC-85.2](ACCEPTANCE_CRITERIA.md#ac-852), [AC-85.9](ACCEPTANCE_CRITERIA.md#ac-859), [AC-85.11](ACCEPTANCE_CRITERIA.md#ac-8511)
+  _Own scenario: SPECGEN004_850, SPECGEN004_851, SPECGEN004_860 (@feature85, authoring gate pending)_
+  **Done When:**
+  - [ ] RED proves a new scaffolded FR cannot pass the authoring gate with prose-only content.
+  - [ ] GREEN updates the FR template and Phase 2 sanctioned form workflow without duplicating MCP/graph logic.
+  - [ ] Existing Jira lines, anchors, CHK rows, decisions, and unknown metadata fields survive reruns byte-for-byte outside the owned card block.
+
+- [ ] Add real contract-card fixtures and BDD coverage -- @feature85 — id: p52-contract-bdd-fixtures — Status: TODO | Est: 420m
+  _depends: hard:p52-contract-conformance-verdict, hard:p52-contract-mcp-authoring, hard:p52-contract-migration, hard:p52-contract-authoring-workflow_
+  _Requirements: [FR-85](FR.md#fr-85)
+  _Acceptance: [AC-85.3](ACCEPTANCE_CRITERIA.md#ac-853), [AC-85.4](ACCEPTANCE_CRITERIA.md#ac-854), [AC-85.5](ACCEPTANCE_CRITERIA.md#ac-855), [AC-85.6](ACCEPTANCE_CRITERIA.md#ac-856), [AC-85.7](ACCEPTANCE_CRITERIA.md#ac-857), [AC-85.8](ACCEPTANCE_CRITERIA.md#ac-858), [AC-85.9](ACCEPTANCE_CRITERIA.md#ac-859), [AC-85.10](ACCEPTANCE_CRITERIA.md#ac-8510), [AC-85.12](ACCEPTANCE_CRITERIA.md#ac-8512)
+  **files:** `tests/fixtures/specgen004-contract-cards/`
+  _Own scenario: SPECGEN004_852, SPECGEN004_853, SPECGEN004_854, SPECGEN004_855, SPECGEN004_861 (@feature85, real corpus dogfood pending)_
+  **Done When:**
+  - [ ] RED drives valid and invalid cards through real parser, graph, conformance, MCP, migration, and verdict handlers against committed fixtures.
+  - [ ] The committed `tests/fixtures/specgen004-contract-cards/` corpus contains every valid kind, disposition inheritance, missing-field, migration, round-trip, and verdict-lane case.
+  - [ ] GREEN adds step definitions for SPECGEN004_850–861 and executable mirror coverage without synthetic producer responses.
+  - [ ] Mutation proof kills missing fields, wrong kind, absent negative case, broken trace, structural laundering, and side-channel success.
+
+- [ ] Run final Docker verification and honest FR-85 verdict -- @feature85 — id: p52-contract-final-verification — Status: TODO | Est: 240m
+  _depends: hard:p52-contract-bdd-fixtures_
+  _Requirements: [FR-85](FR.md#fr-85)
+  _Acceptance: [AC-85.1](ACCEPTANCE_CRITERIA.md#ac-851), [AC-85.2](ACCEPTANCE_CRITERIA.md#ac-852), [AC-85.3](ACCEPTANCE_CRITERIA.md#ac-853), [AC-85.4](ACCEPTANCE_CRITERIA.md#ac-854), [AC-85.5](ACCEPTANCE_CRITERIA.md#ac-855), [AC-85.6](ACCEPTANCE_CRITERIA.md#ac-856), [AC-85.7](ACCEPTANCE_CRITERIA.md#ac-857), [AC-85.8](ACCEPTANCE_CRITERIA.md#ac-858), [AC-85.9](ACCEPTANCE_CRITERIA.md#ac-859), [AC-85.10](ACCEPTANCE_CRITERIA.md#ac-8510), [AC-85.11](ACCEPTANCE_CRITERIA.md#ac-8511), [AC-85.12](ACCEPTANCE_CRITERIA.md#ac-8512)
+  _Own scenario: SPECGEN004_861 (@feature85, final verification pending)_
+  **Done When:**
+  - [ ] Docker BDD, contract mutation corpus, MCP dependency-absent startup, CAS/atomicity, migration conservation, and verdict-lane evidence are independently attributable.
+  - [ ] The final smart verdict reports contract, implementation, execution, evidence, and semantic states separately and remains NOT_READY when any required lane is missing.
+  - [ ] Full corpus migration inventory, no-silent-drop proof, task-own-scenario/evidence-policy mutation proof, and no agent downgrade path are recorded; all Phase 52 tasks remain TODO until evidence exists.
+
+
+## Phase 53 — FR-86 core non-dashboard agent UX (2026-08-22)
+**Planned FILE_CHANGES surface:** `tools/spec-graph/verdict.ts`, `tools/spec-graph/evidence.ts`, `tools/spec-graph/readiness-inventory.ts`, `tools/spec-graph/parsers/scenario-overlay.ts`, `tools/spec-graph/parsers/pytest-bdd.ts`, `tools/spec-graph/builder.ts`, `tools/spec-mcp-server/tools.ts`, `tools/spec-mcp-server/server.ts`, `tools/spec-mcp-server/lifecycle.ts`, `tools/spec-mcp-server/domain-authoring.ts`, `tools/specs-generator/spec-verdict.ts`, `tools/specs-generator/specs-generator-core.mjs`, `tools/specs-generator/requirement-contract-migration.ts`, and exact generated bundles named in FILE_CHANGES.md.
+
+> Execution plan. All tasks remain TODO pending independent implementation verification. Real `@feature86` scenarios SPECGEN004_864–SPECGEN004_867 exercise the production graph, evidence, root-admission, verdict, and authoring boundaries; this phase excludes dashboard and Plane vendor UI.
+
+- [ ] Add traceable FR-86 contract forms and real-path BDD pins -- @feature86 — id: p53-ux-spec-forms — Status: TODO | Est: 180m
+  _depends: none_
+  _Requirements: [FR-86](FR.md#fr-86-core-agent-ux-feature86)_
+  _Acceptance: [AC-86.1](ACCEPTANCE_CRITERIA.md#ac-861), [AC-86.2](ACCEPTANCE_CRITERIA.md#ac-862), [AC-86.3](ACCEPTANCE_CRITERIA.md#ac-863), [AC-86.4](ACCEPTANCE_CRITERIA.md#ac-864), [AC-86.5](ACCEPTANCE_CRITERIA.md#ac-865), [AC-86.6](ACCEPTANCE_CRITERIA.md#ac-866), [AC-86.7](ACCEPTANCE_CRITERIA.md#ac-867), [AC-86.8](ACCEPTANCE_CRITERIA.md#ac-868), [AC-86.9](ACCEPTANCE_CRITERIA.md#ac-869), [AC-86.10](ACCEPTANCE_CRITERIA.md#ac-8610), [AC-86.11](ACCEPTANCE_CRITERIA.md#ac-8611), [AC-86.12](ACCEPTANCE_CRITERIA.md#ac-8612)_
+  _BDD pin: SPECGEN004_864, SPECGEN004_865, SPECGEN004_866, SPECGEN004_867 (real production-path bindings; task status remains TODO)._
+  **Done When:**
+  - [ ] FR/AC/CHK/UC/task and file-change traces remain valid without adding dashboard scope.
+  - [ ] Real production-path BDD scenarios and matching step definitions are added only after their bindings exist.
+
+- [ ] Establish the canonical non-dashboard verdict contract -- @feature86 — id: p53-ux-verdict-contract — Status: IN_PROGRESS | Est: 240m
+  _depends: hard:p53-ux-spec-forms_
+  _Requirements: [FR-86](FR.md#fr-86-core-agent-ux-feature86)_
+  _Acceptance: [AC-86.1](ACCEPTANCE_CRITERIA.md#ac-861), [AC-86.2](ACCEPTANCE_CRITERIA.md#ac-862)_
+  _BDD pin: SPECGEN004_864 (canonical verdict/action-center and MCP compatibility projection)._
+  **Done When:**
+  - [ ] CLI, MCP, spec-verdict, and statusline consume one SpecVerdictResult without GREEN plus NOT_READY.
+  - [ ] Grouped blockers, ordered next actions, and human summary are projections rather than duplicate rollups.
+
+- [ ] Derive one evidence state for every FR -- @feature86 — id: p53-ux-evidence-state — Status: TODO | Est: 240m
+  _depends: hard:p53-ux-spec-forms, hard:p53-ux-verdict-contract_
+  _Requirements: [FR-86](FR.md#fr-86-core-agent-ux-feature86)_
+  _Acceptance: [AC-86.3](ACCEPTANCE_CRITERIA.md#ac-863), [AC-86.4](ACCEPTANCE_CRITERIA.md#ac-864), [AC-86.5](ACCEPTANCE_CRITERIA.md#ac-865)_
+  _BDD pin: SPECGEN004_865 (real readiness inventory evidence-state derivation)._
+  **Done When:**
+  - [ ] Graph, implementation, canonical evidence, freshness, and quality inputs derive untagged, exercised, impl-only, or verified.
+  - [ ] Stale or weak evidence carries its demotion reason and cannot remain verified.
+
+- [ ] Preserve ingestion provenance and distinguish NOT_INGESTED -- @feature86 — id: p53-ux-evidence-ingestion — Status: TODO | Est: 240m
+  _depends: hard:p53-ux-spec-forms, hard:p53-ux-evidence-state_
+  _Requirements: [FR-86](FR.md#fr-86-core-agent-ux-feature86)_
+  _Acceptance: [AC-86.6](ACCEPTANCE_CRITERIA.md#ac-866), [AC-86.7](ACCEPTANCE_CRITERIA.md#ac-867)_
+  _BDD pin: SPECGEN004_865 (real pytest-bdd producer fixture ingestion and NOT_INGESTED/NOT_RUN distinction)._
+  **Done When:**
+  - [ ] Suite-only receipts return NOT_INGESTED while genuinely unexecuted or unbound rows retain their correct non-success state.
+  - [ ] Supported executed rows retain producer, run, source, timestamp, URI/line, and canonical-versus-filtered provenance.
+
+- [ ] Enforce root-safe MCP authoring preflight -- @feature86 — id: p53-ux-root-preflight — Status: TODO | Est: 180m
+  _depends: hard:p53-ux-spec-forms, hard:p53-ux-verdict-contract_
+  _Requirements: [FR-86](FR.md#fr-86-core-agent-ux-feature86)_
+  _Acceptance: [AC-86.8](ACCEPTANCE_CRITERIA.md#ac-868)_
+  _BDD pin: SPECGEN004_866 (real mcp_preflight and ROOT_WORKTREE_MISMATCH boundary)._
+  **Done When:**
+  - [ ] Read-only preflight reports resolved root, worktree, lock/write mode, plugin/MCP version, and dependency readiness.
+  - [ ] A stable root mismatch refuses before disk access while CAS and atomicity remain intact.
+
+- [ ] Add guided contract-card proposal and atomic apply -- @feature86 — id: p53-ux-contract-assistant — Status: TODO | Est: 240m
+  _depends: hard:p52-contract-mcp-authoring, hard:p53-ux-spec-forms, hard:p53-ux-evidence-state, hard:p53-ux-root-preflight_
+  _Requirements: [FR-86](FR.md#fr-86-core-agent-ux-feature86)_
+  _Acceptance: [AC-86.9](ACCEPTANCE_CRITERIA.md#ac-869), [AC-86.10](ACCEPTANCE_CRITERIA.md#ac-8610)_
+  _BDD pin: SPECGEN004_867 (real guided contract proposal and atomic apply routes)._
+  **Done When:**
+  - [ ] Proposal returns evidence, candidate kind, required and missing fields, exact preview, and field-level findings.
+  - [ ] Apply reuses the canonical parser, validation, CAS, atomic transaction, audit, and readback path without a second store.
+
+- [ ] Return the grouped readiness action center -- @feature86 — id: p53-ux-action-center — Status: TODO | Est: 180m
+  _depends: hard:p53-ux-spec-forms, hard:p53-ux-verdict-contract, hard:p53-ux-evidence-ingestion_
+  _Requirements: [FR-86](FR.md#fr-86-core-agent-ux-feature86)_
+  _Acceptance: [AC-86.11](ACCEPTANCE_CRITERIA.md#ac-8611)_
+  _BDD pin: SPECGEN004_864 (real canonical action-center and legacy next-action projection)._
+  **Done When:**
+  - [ ] Every blocking lane is grouped deterministically by lane, code, reason, and affected-node count.
+  - [ ] Human summary remains concise while JSON retains all remediation actions and technical evidence.
+
+- [ ] Verify distributed non-dashboard UX artifacts -- @feature86 — id: p53-ux-distribution-verification — Status: TODO | Est: 180m
+  _depends: hard:p53-ux-spec-forms, hard:p53-ux-verdict-contract, hard:p53-ux-evidence-state, hard:p53-ux-evidence-ingestion, hard:p53-ux-root-preflight, hard:p53-ux-contract-assistant, hard:p53-ux-action-center_
+  _Requirements: [FR-86](FR.md#fr-86-core-agent-ux-feature86)_
+  _Acceptance: [AC-86.12](ACCEPTANCE_CRITERIA.md#ac-8612)_
+  _BDD pin: SPECGEN004_867 (real non-dashboard MCP authoring boundary; task status remains TODO and AC-86.12 is not claimed as execution proof)._
+  **Done When:**
+  - [ ] Shipped MCP and affected hook/gate bundles are rebuilt and smoke-tested after implemented source changes.
+  - [ ] Canonical BDD evidence is refreshed only by real bound scenarios, and no dashboard or Plane vendor path is introduced.

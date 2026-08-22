@@ -30,8 +30,16 @@
  */
 
 import { localIdOf } from './identity.ts';
-import { scenarioKey, isLiveAttestedScenario } from './coverage.ts';
-import type { AcNode, FrNode, NfrNode, ScenarioNode, SpecGraph } from './types.ts';
+import { scenarioKey, isLiveAttestedScenario, type TestQualityVerdict } from './coverage.ts';
+import type {
+  AcNode,
+  ExecutionArtifactIngestion,
+  FrNode,
+  NfrNode,
+  ScenarioNode,
+  SpecGraph,
+  TaskNode,
+} from './types.ts';
 
 // ── Evidence taxonomy (AC-63.2) ───────────────────────────────────────────
 
@@ -59,6 +67,7 @@ export type EvidenceOutcome =
 /** Where the evidence came from — provenance the AND gate can reason about. */
 export type EvidenceProvenance =
   | 'canonical-full-run'
+  | 'pytest-bdd-report'
   | 'filtered-run'
   | 'overlay'
   | 'source-tree'
@@ -159,9 +168,13 @@ export interface ScenarioEvidenceInput {
   id: string;
   lastResult?: string;
   lastRunAt?: string;
+  lastResultSource?: string;
+  lastResultRunId?: string;
   resultStale?: boolean;
   canonicalResult?: string;
   canonicalRunAt?: string;
+  canonicalRunId?: string;
+  canonicalSource?: string;
   trace?: { runId?: string; source?: string };
   /** Gherkin tags — drive the execution-ownership scope classification. */
   tags?: readonly string[];
@@ -196,14 +209,14 @@ function explicitOutcome(raw: string): EvidenceOutcome {
  */
 export function classifyEvidence(s: ScenarioEvidenceInput): EvidenceRecord {
   const key = scenarioKey(s.id) ?? s.id.toLowerCase();
-  const source = s.trace?.source ?? null;
-  const runId = s.trace?.runId ?? null;
+  const effectiveSource = s.lastResultSource ?? s.trace?.source ?? null;
+  const effectiveRunId = s.lastResultRunId ?? s.trace?.runId ?? null;
   const stale = s.resultStale === true;
   const scopeDisposition = classifyScenarioScope(s.tags ?? []);
   const base = {
     scenario_key: key,
     scenario_id: s.id,
-    run_id: runId,
+    run_id: effectiveRunId,
     recency: { stale, canonical: false },
     scope: scopeDisposition.scope,
     superseded_by: scopeDisposition.superseded_by,
@@ -215,14 +228,17 @@ export function classifyEvidence(s: ScenarioEvidenceInput): EvidenceRecord {
   // execution debt — authority does not make evidence current again.
   if (s.canonicalResult) {
     const canonicalResult = s.canonicalResult.toUpperCase();
+    const canonicalSource = s.canonicalSource ?? effectiveSource;
+    const canonicalRunId = s.canonicalRunId ?? effectiveRunId;
     return {
       ...base,
       outcome: canonicalResult === 'PASSED' && stale ? 'stale' : explicitOutcome(canonicalResult),
       result: canonicalResult,
-      source: source ?? 'canonical-full-run',
+      run_id: canonicalRunId,
+      source: canonicalSource ?? 'canonical-full-run',
       timestamp: s.canonicalRunAt ?? s.lastRunAt ?? null,
       recency: { stale, canonical: true },
-      provenance: 'canonical-full-run',
+      provenance: canonicalSource === 'pytest-bdd:cucumber-json' ? 'pytest-bdd-report' : 'canonical-full-run',
     };
   }
 
@@ -232,10 +248,10 @@ export function classifyEvidence(s: ScenarioEvidenceInput): EvidenceRecord {
       ...base,
       outcome: 'not_recorded',
       result: null,
-      source: source,
+      source: effectiveSource,
       timestamp: s.lastRunAt ?? null,
       recency: { stale: false, canonical: false },
-      provenance: source ? 'overlay' : 'none',
+      provenance: effectiveSource ? 'overlay' : 'none',
     };
   }
 
@@ -243,32 +259,59 @@ export function classifyEvidence(s: ScenarioEvidenceInput): EvidenceRecord {
   const at = s.lastRunAt ?? null;
 
   // 2) Untrusted provenance may not pass as execution success.
-  if (source && /dependency[-_ ]?absent/i.test(source)) {
-    return { ...base, outcome: 'UNKNOWN', result, source, timestamp: at, provenance: 'dependency-absent' };
+  if (effectiveSource && /dependency[-_ ]?absent/i.test(effectiveSource)) {
+    return { ...base, outcome: 'UNKNOWN', result, source: effectiveSource, timestamp: at, provenance: 'dependency-absent' };
   }
-  if (source && /source[-_ ]?tree/i.test(source)) {
-    return { ...base, outcome: 'UNKNOWN', result, source, timestamp: at, provenance: 'source-tree' };
-  }
-
-  // 3) Filtered-only proof — explicit, never a canonical pass.
-  if (source && /filtered/i.test(source)) {
-    return { ...base, outcome: 'filtered', result, source, timestamp: at, provenance: 'filtered-run' };
+  if (effectiveSource && /source[-_ ]?tree/i.test(effectiveSource)) {
+    return { ...base, outcome: 'UNKNOWN', result, source: effectiveSource, timestamp: at, provenance: 'source-tree' };
   }
 
-  // 4) A pass older than the scenario/step-def source.
+  // 3) pytest-bdd's supported Cucumber JSON report is canonical per-scenario evidence.
+  if (effectiveSource === 'pytest-bdd:cucumber-json') {
+    return { ...base, outcome: explicitOutcome(result), result, source: effectiveSource, timestamp: at, provenance: 'pytest-bdd-report' };
+  }
+
+  // 4) Filtered-only proof — explicit, never a canonical pass.
+  if (effectiveSource && /filtered/i.test(effectiveSource)) {
+    return { ...base, outcome: 'filtered', result, source: effectiveSource, timestamp: at, provenance: 'filtered-run' };
+  }
+
+  // 5) A pass older than the scenario/step-def source.
   if (result === 'PASSED' && stale) {
-    return { ...base, outcome: 'stale', result, source, timestamp: at, provenance: 'overlay' };
+    return { ...base, outcome: 'stale', result, source: effectiveSource, timestamp: at, provenance: 'overlay' };
   }
 
-  return { ...base, outcome: explicitOutcome(result), result, source, timestamp: at, provenance: 'overlay' };
+  return { ...base, outcome: explicitOutcome(result), result, source: effectiveSource, timestamp: at, provenance: 'overlay' };
 }
 
 // ── Inventory (AC-63.1) ───────────────────────────────────────────────────
 
+/** Agent-facing requirement evidence state, derived only from this inventory. */
+export type FrEvidenceState = 'untagged' | 'impl-only' | 'exercised' | 'verified';
+
+/** Canonical execution status; unlike coverage `not_run`, this distinguishes input absence. */
+export type FrCanonicalEvidenceState = 'NOT_INGESTED' | 'NOT_RUN' | 'PARTIAL' | 'VERIFIED';
+
+export type FrEvidenceDemotionReason =
+  | 'CANONICAL_ARTIFACT_NOT_INGESTED'
+  | 'SCENARIO_NOT_RUN'
+  | 'STALE_EVIDENCE'
+  | 'NON_PASSING_EVIDENCE'
+  | 'FILTERED_ONLY'
+  | 'UNTRUSTED_PROVENANCE'
+  | 'TEST_QUALITY_WEAK'
+  | 'TEST_QUALITY_FAKE_POSITIVE_RISK';
+
+export interface FrEvidenceProjection {
+  evidence_state: FrEvidenceState;
+  canonical_evidence_state: FrCanonicalEvidenceState;
+  evidence_demotion_reasons: FrEvidenceDemotionReason[];
+}
+
 /** FR-level execution classification — the granularity buckets never had. */
 export type FrExecutionClassification = 'never_run' | 'passed' | 'not_passed' | 'partial';
 
-export interface FrInventoryEntry {
+export interface FrInventoryEntry extends FrEvidenceProjection {
   /** Local id (`FR-1`). */
   id: string;
   /** Composite graph id (`<slug>:FR-1`). */
@@ -315,6 +358,8 @@ export interface InventoryDuplicate {
 
 export interface ReadinessInventory {
   spec: string;
+  /** Canonical artifact truth, never synthesized from scenario coverage buckets. */
+  artifacts: ExecutionArtifactIngestion[];
   /** Requirement-owned AC/NFR satisfaction, never inherited from parent context. */
   ac_satisfaction: { status: SurfaceLaneStatus; required: number; satisfied: number; debt: string[] };
   nfr_satisfaction: { status: SurfaceLaneStatus; required: number; satisfied: number; optional: string[]; not_applicable: string[]; debt: string[] };
@@ -381,13 +426,73 @@ function frExecutionScope(scopes: readonly ScenarioScope[]): FrExecutionScope {
   return 'mixed';
 }
 
+function projectFrEvidence(
+  graph: SpecGraph,
+  fr: FrNode,
+  keys: readonly string[],
+  bundles: ReadonlyMap<string, ScenarioBundle>,
+  testQualityByTask: Readonly<Record<string, TestQualityVerdict>>,
+): FrEvidenceProjection {
+  const records = keys.map((key) => bundles.get(key)!.record);
+  const canonicalArtifacts = graph.executionArtifacts?.filter((artifact) => artifact.canonical) ?? [];
+  const canonicalIngested = canonicalArtifacts.some((artifact) => artifact.state === 'INGESTED');
+  const canonicalPass = records.length > 0 && records.every(
+    (record) => record.outcome === 'PASSED' && record.recency.canonical && !record.recency.stale,
+  );
+  const reasons = new Set<FrEvidenceDemotionReason>();
+  if (!canonicalIngested) reasons.add('CANONICAL_ARTIFACT_NOT_INGESTED');
+  if (records.some((record) => record.outcome === 'not_recorded')) reasons.add('SCENARIO_NOT_RUN');
+  if (records.some((record) => record.outcome === 'stale' || record.recency.stale)) reasons.add('STALE_EVIDENCE');
+  if (records.some((record) => record.outcome === 'filtered' || record.provenance === 'filtered-run')) reasons.add('FILTERED_ONLY');
+  if (records.some((record) => record.provenance === 'dependency-absent' || record.provenance === 'source-tree')) {
+    reasons.add('UNTRUSTED_PROVENANCE');
+  }
+  if (records.some((record) => record.outcome !== 'PASSED' && record.outcome !== 'not_recorded' && record.outcome !== 'stale' && record.outcome !== 'filtered')) {
+    reasons.add('NON_PASSING_EVIDENCE');
+  }
+  // A task can use a bare local FR reference only inside its own spec. Without
+  // this scope guard, a weak task in another spec with the same `FR-N` quietly
+  // demotes this FR's evidence.
+  const relevantTasks = [...graph.nodes.values()].filter(
+    (node): node is TaskNode => node.type === 'Task' && node.spec === fr.spec && node.refs.some(
+      (ref) => ref === fr.id || ref === localIdOf(fr.id) || `${fr.spec}:${ref}` === fr.id,
+    ),
+  );
+  if (relevantTasks.some((task) => testQualityByTask[task.id] === 'WEAK')) reasons.add('TEST_QUALITY_WEAK');
+  if (relevantTasks.some((task) => testQualityByTask[task.id] === 'FAKE-POSITIVE-RISK')) {
+    reasons.add('TEST_QUALITY_FAKE_POSITIVE_RISK');
+  }
+  const qualityDemoted = reasons.has('TEST_QUALITY_WEAK') || reasons.has('TEST_QUALITY_FAKE_POSITIVE_RISK');
+  const hasImplementation = graph.edges.some((edge) => edge.type === 'implements' && edge.from === fr.id);
+  const canonical_evidence_state: FrCanonicalEvidenceState = !canonicalIngested
+    ? 'NOT_INGESTED'
+    : records.length === 0 || records.every((record) => !record.recency.canonical)
+      ? 'NOT_RUN'
+      : canonicalPass && !qualityDemoted
+        ? 'VERIFIED'
+        : 'PARTIAL';
+  const evidence_state: FrEvidenceState = keys.length === 0
+    ? hasImplementation ? 'impl-only' : 'untagged'
+    : canonical_evidence_state === 'VERIFIED'
+      ? 'verified'
+      : 'exercised';
+  return {
+    evidence_state,
+    canonical_evidence_state,
+    evidence_demotion_reasons: [...reasons].sort(),
+  };
+}
+
 /**
  * Build the deduplicated FR/AC/scenario readiness inventory for ONE spec
  * from the shared graph snapshot. Deterministic (every list sorted) so all
  * four surfaces produce byte-identical projections (AC-63.1 «all three
  * surfaces SHALL report the same inventory»).
  */
-export function buildReadinessInventory(graph: SpecGraph, opts: { spec: string }): ReadinessInventory {
+export function buildReadinessInventory(
+  graph: SpecGraph,
+  opts: { spec: string; testQualityByTask?: Readonly<Record<string, TestQualityVerdict>> },
+): ReadinessInventory {
   const slug = opts.spec.replace(/\\/g, '/').replace(/^\.?\/?\.specs\//, '').replace(/\/+$/, '');
   const slugTail = slug.split('/').pop()!.toLowerCase();
 
@@ -533,6 +638,7 @@ export function buildReadinessInventory(graph: SpecGraph, opts: { spec: string }
     const classification = classifyFr(outcomes, keys.length);
     const scopes = keys.map((k) => bundles.get(k)!.record.scope);
     return {
+      ...projectFrEvidence(graph, fr, keys, bundles, opts.testQualityByTask ?? {}),
       id: localIdOf(fr.id),
       composite_id: fr.id,
       never_run: classification === 'never_run',
@@ -569,9 +675,9 @@ export function buildReadinessInventory(graph: SpecGraph, opts: { spec: string }
       if (n.canonicalRunAt && (!canonicalTimestamp || n.canonicalRunAt > canonicalTimestamp)) {
         canonicalTimestamp = n.canonicalRunAt;
       }
-      if (n.canonicalResult) sources.add('canonical-full-run');
-      if (n.trace?.runId) runIds.add(n.trace.runId);
-      if (n.trace?.source) sources.add(n.trace.source);
+      if (n.canonicalResult && (!n.canonicalSource || n.canonicalSource !== 'pytest-bdd:cucumber-json')) sources.add('canonical-full-run');
+      if (n.canonicalRunId) runIds.add(n.canonicalRunId);
+      if (n.canonicalSource) sources.add(n.canonicalSource);
     }
   }
 
@@ -586,11 +692,13 @@ export function buildReadinessInventory(graph: SpecGraph, opts: { spec: string }
     const target = graph.nodes.get(e.to);
     if (source?.type === 'Scenario' && target && (target.type === 'FR' || target.type === 'NFR' || target.type === 'AC')) {
       const scenario = source as ScenarioNode;
+      const key = scenarioKey(scenario.id) ?? scenario.id.toLowerCase();
+      const evidence = bundles.get(key)?.record ?? classifyEvidence(scenario);
       // Owner-attested live scenarios (@live-evidence @live-attested) count as
       // passing proof for AC/NFR/FR satisfaction exactly like a PASSED result —
       // the attestation is explicit and auditable, never an implicit waiver.
       const attested = isLiveAttestedScenario(scenario.tags);
-      if ((scenario.lastResult === 'PASSED' && scenario.resultStale !== true) || attested) passedScenarioIds.add(e.to);
+      if ((evidence.outcome === 'PASSED' && evidence.recency.stale !== true) || attested) passedScenarioIds.add(e.to);
     }
   }
   const acRequired = acNodes.length;
@@ -628,11 +736,16 @@ export function buildReadinessInventory(graph: SpecGraph, opts: { spec: string }
 
   return {
     spec: slug,
+    artifacts: [...(graph.executionArtifacts ?? [])].sort((a, b) => a.kind.localeCompare(b.kind)),
     ac_satisfaction: { status: acStatus, required: acRequired, satisfied: acSatisfied, debt: acDebt },
     nfr_satisfaction: { status: nfrStatus, required: requiredNfrs.length, satisfied: nfrSatisfied, optional: optionalNfrs, not_applicable: notApplicableNfrs, debt: nfrDebt },
     baseline: {
       graph_built_at: graph.builtAt,
-      canonical_timestamp: canonicalTimestamp,
+      canonical_timestamp: canonicalTimestamp ?? scenarios
+        .map((scenario) => scenario.timestamp)
+        .filter((timestamp): timestamp is string => Boolean(timestamp))
+        .sort()
+        .at(-1) ?? null,
       run_ids: [...runIds].sort(),
       sources: [...sources].sort(),
     },
@@ -683,6 +796,7 @@ function evidenceRank(n: ScenarioNode): number {
 
 export type ReadinessLaneName =
   | 'STRUCTURE'
+  | 'CONTRACT'
   | 'TRACEABILITY'
   | 'EXECUTION'
   | 'LIVE_EVIDENCE'
@@ -702,6 +816,7 @@ export type ReadinessLaneName =
  */
 export const MANDATORY_READINESS_LANES: readonly ReadinessLaneName[] = [
   'STRUCTURE',
+  'CONTRACT',
   'TRACEABILITY',
   'EXECUTION',
   'LIVE_EVIDENCE',
@@ -736,6 +851,12 @@ export type SurfaceLaneStatus =
 export interface SurfaceLane {
   status: SurfaceLaneStatus;
   debt?: string[];
+  /** Number of affected graph atoms, distinct from the number of reason strings. */
+  affected_count?: number;
+}
+
+export interface EvaluatedLane extends SurfaceLane {
+  blocking: boolean;
 }
 
 export interface ReadinessCandidate {
@@ -746,18 +867,35 @@ export interface ReadinessCandidate {
    * it (no surface may invent execution proof).
    */
   lanes?: Partial<Record<ReadinessLaneName, SurfaceLane>>;
+  /** Optional engine-owned mandatory-lane projection for legacy rollout policies. */
+  mandatoryLanes?: readonly ReadinessLaneName[];
 }
 
-export interface EvaluatedLane {
+/**
+ * One deterministic remediation group. `action_center` contains every lane
+ * blocking readiness; callers can render the whole queue while legacy callers
+ * retain `next_action` as this ordered list's first `action.message`.
+ */
+export interface ReadinessActionGroup {
+  lane: ReadinessLaneName | 'MULTILAYER';
   status: SurfaceLaneStatus;
-  blocking: boolean;
-  debt: string[];
+  /** Positive count even when the blocker is an absent evaluation/dependency. */
+  count: number;
+  /** Stable, serializable blocking reasons — never an omitted empty array. */
+  reasons: string[];
+  action: {
+    code: 'EVALUATE_LANE' | 'RESTORE_DEPENDENCY' | 'RESOLVE_LANE_DEBT';
+    message: string;
+  };
 }
 
 export interface ReadinessEvaluation {
   overall: 'READY' | 'NOT_READY';
   mandatory_lanes: readonly ReadinessLaneName[];
   lanes: Record<ReadinessLaneName, EvaluatedLane>;
+  /** Complete deterministic queue of every blocking readiness lane. */
+  action_center: ReadinessActionGroup[];
+  /** Compatibility projection of `action_center[0].action.message`. */
   next_action: string;
 }
 
@@ -780,7 +918,13 @@ export function deriveExecutionLane(inventory: ReadinessInventory): SurfaceLane 
     .filter((s) => s.scope === 'historical-unproven')
     .map((s) => s.scenario_key);
   const debt: string[] = [];
-  if (notRecorded > 0) debt.push(`SCENARIO_NOT_RUN:${notRecorded}`);
+  if (notRecorded > 0) {
+    const hasCanonicalPerScenarioEvidence = activeScenarios.some((scenario) =>
+      scenario.provenance === 'canonical-full-run' || scenario.provenance === 'pytest-bdd-report');
+    debt.push(hasCanonicalPerScenarioEvidence
+      ? `SCENARIO_NOT_RUN:${notRecorded}`
+      : `NO_CANONICAL_SCENARIO_EVIDENCE:${notRecorded}:no canonical per-scenario result evidence found`);
+  }
   if (neverRunFrs.length > 0) debt.push(`FR_NEVER_RUN:${neverRunFrs.join(',')}`);
   if (unprovenKeys.length > 0) debt.push(`HISTORICAL_UNPROVEN:${unprovenKeys.join(',')}`);
   for (const outcome of [...new Set(outcomes)]) {
@@ -790,14 +934,24 @@ export function deriveExecutionLane(inventory: ReadinessInventory): SurfaceLane 
   const status: SurfaceLaneStatus =
     debt.length === 0
       ? 'GREEN'
-      // An unproven retirement claim is POSITIVE debt (a falsifiable marker),
-      // not mere absence of evidence — it escalates past the never-run state.
       : unprovenKeys.length > 0
         ? 'RED'
-        : outcomes.length > 0 && outcomes.every((o) => o === 'not_recorded')
+        : outcomes.length > 0 && outcomes.every((outcome) => outcome === 'not_recorded')
           ? 'NOT_RUN'
           : 'RED';
-  return { status, debt };
+  const affectedScenarioKeys = new Set(
+    activeScenarios
+      .filter((scenario) => scenario.outcome !== 'PASSED')
+      .map((scenario) => scenario.scenario_key),
+  );
+  const unmappedNeverRunFrs = neverRunFrs.filter((frId) => !inventory.frs.some(
+    (fr) => fr.id === frId && fr.scenario_keys.length > 0,
+  ));
+  return {
+    status,
+    debt,
+    affected_count: affectedScenarioKeys.size + unmappedNeverRunFrs.length,
+  };
 }
 
 /**
@@ -815,20 +969,26 @@ export function deriveLiveEvidenceLane(inventory: ReadinessInventory): SurfaceLa
   const debt = live
     .filter((s) => s.outcome !== 'PASSED' && !s.live_attested)
     .map((s) => `${s.scenario_key}:${s.outcome}`);
-  return { status: debt.length === 0 ? 'GREEN' : 'RED', debt };
+  return { status: debt.length === 0 ? 'GREEN' : 'RED', debt, affected_count: debt.length };
 }
 
-const LANE_NEXT_ACTION: Record<string, (e: ReadinessCandidate) => string> = {
+const LANE_NEXT_ACTION: Record<ReadinessLaneName, (e: ReadinessCandidate) => string> = {
   STRUCTURE: () => 'Fix structural/audit/conformance errors, then rerun the readiness check.',
+  CONTRACT: () => 'Add or repair every typed FR-85 contract card, then rerun the readiness check.',
   TRACEABILITY: () => 'Add the missing FR/AC/task/scenario traceability links, then rerun the readiness check.',
   EXECUTION: (c) => {
     const neverRun = c.inventory.frs
       .filter((fr) => fr.never_run
         && (fr.execution_scope === 'active' || fr.execution_scope === 'mixed' || fr.execution_scope === 'none'))
       .map((fr) => fr.id);
+    const noCanonicalEvidence = !c.inventory.scenarios.some((scenario) =>
+      scenario.provenance === 'canonical-full-run' || scenario.provenance === 'pytest-bdd-report');
+    if (noCanonicalEvidence) {
+      return 'No canonical per-scenario result evidence found. Run Cucumber with the canonical message formatter or pytest-bdd with --cucumber-json .dev-pomogator/pytest-bdd-report.json, then rerun status.';
+    }
     return neverRun.length > 0
-      ? `Run the full Docker BDD suite so canonical coverage records the never-run FR(s) ${neverRun.join(', ')} and every scenario result.`
-      : 'Run the full Docker BDD suite so canonical coverage contains every scenario result.';
+      ? `Canonical evidence exists; bind or execute the genuinely not-run FR(s) ${neverRun.join(', ')} and their scenarios.`
+      : 'Run the supported BDD suite so canonical coverage contains every scenario result.';
   },
   LIVE_EVIDENCE: (c) => {
     const live = c.inventory.scenario_scope.external_live.keys;
@@ -840,7 +1000,40 @@ const LANE_NEXT_ACTION: Record<string, (e: ReadinessCandidate) => string> = {
   BDD_SYNC: () => 'Fix source/executable BDD sync drift or mark intentional EXEC_ONLY/OUT_OF_SCOPE/PENDING scenarios.',
   AC_SATISFACTION: () => 'Add current passing scenario evidence owned by every required acceptance criterion.',
   NFR_SATISFACTION: () => 'Add current method-appropriate evidence owned by every required non-functional requirement.',
+  SEMANTIC: () => 'Resolve semantic drift or restore the unavailable semantic-check dependency, then rerun the readiness check.',
+  FILTERED_PROOF: () => 'Attach or inspect filtered proof; it is informational and cannot replace canonical readiness evidence.',
 };
+
+function actionGroup(
+  lane: ReadinessLaneName,
+  evaluated: EvaluatedLane,
+  candidate: ReadinessCandidate,
+): ReadinessActionGroup {
+  const action = evaluated.status === 'NOT_EVALUATED'
+    ? {
+        code: 'EVALUATE_LANE' as const,
+        message: `Evaluate the ${lane} lane — an unevaluated mandatory lane cannot certify readiness.`,
+      }
+    : evaluated.status === 'DEPENDENCY_ABSENT'
+      ? {
+          code: 'RESTORE_DEPENDENCY' as const,
+          message: `The ${lane} lane could not run for absent dependencies — dependency absence is not readiness proof (FR-64 scope).`,
+        }
+      : {
+          code: 'RESOLVE_LANE_DEBT' as const,
+          message: LANE_NEXT_ACTION[lane](candidate),
+        };
+  const reasons = evaluated.debt.length > 0
+    ? [...evaluated.debt]
+    : [`${lane}:${evaluated.status}`];
+  return {
+    lane,
+    status: evaluated.status,
+    count: evaluated.affected_count ?? reasons.length,
+    reasons,
+    action,
+  };
+}
 
 /**
  * AND-compose readiness over the mandatory lanes. Structural-only or
@@ -849,6 +1042,7 @@ const LANE_NEXT_ACTION: Record<string, (e: ReadinessCandidate) => string> = {
  * green lane may override absent evidence (FR-63).
  */
 export function evaluateReadiness(candidate: ReadinessCandidate): ReadinessEvaluation {
+  const mandatoryLanes = candidate.mandatoryLanes ?? MANDATORY_READINESS_LANES;
   const execution = deriveExecutionLane(candidate.inventory);
   const liveEvidence = deriveLiveEvidenceLane(candidate.inventory);
   const lanes = {} as Record<ReadinessLaneName, EvaluatedLane>;
@@ -864,10 +1058,8 @@ export function evaluateReadiness(candidate: ReadinessCandidate): ReadinessEvalu
             : candidate.lanes?.[name];
     const status: SurfaceLaneStatus = supplied?.status ?? 'NOT_EVALUATED';
     const debt = supplied?.debt ?? [];
-    const blocking = MANDATORY_READINESS_LANES.includes(name)
+    const blocking = mandatoryLanes.includes(name)
       ? name === 'LIVE_EVIDENCE'
-        // A spec WITHOUT live scenarios reports NONE — the lane is honest but
-        // must not block; existing live scenarios without proof DO block.
         ? status === 'RED' || status === 'NOT_EVALUATED' || status === 'DEPENDENCY_ABSENT'
         : status !== 'GREEN'
       : name === 'SEMANTIC'
@@ -875,22 +1067,22 @@ export function evaluateReadiness(candidate: ReadinessCandidate): ReadinessEvalu
         : false;
     lanes[name] = { status, blocking, debt };
   }
-  const blockingLanes = MANDATORY_READINESS_LANES.filter((name) => lanes[name].blocking);
+  const blockingLanes = ALL_READINESS_LANES.filter((name) => lanes[name].blocking);
+  // Preserve the legacy first-action priority while making the whole blocker
+  // queue deterministic and serializable for richer consumers.
   const firstBlocking = blockingLanes.find((name) => lanes[name].status === 'DEPENDENCY_ABSENT')
     ?? blockingLanes.find((name) => name !== 'STRUCTURE')
     ?? blockingLanes[0];
-  const overall: ReadinessEvaluation['overall'] = firstBlocking ? 'NOT_READY' : 'READY';
-  const nextAction = !firstBlocking
-    ? 'No readiness blockers detected by the shared inventory.'
-    : lanes[firstBlocking].status === 'NOT_EVALUATED'
-      ? `Evaluate the ${firstBlocking} lane — an unevaluated mandatory lane cannot certify readiness.`
-      : lanes[firstBlocking].status === 'DEPENDENCY_ABSENT'
-        ? `The ${firstBlocking} lane could not run for absent dependencies — dependency absence is not readiness proof (FR-64 scope).`
-        : (LANE_NEXT_ACTION[firstBlocking]?.(candidate) ?? `Resolve ${firstBlocking} readiness debt, then rerun the readiness check.`);
+  const orderedBlockingLanes = firstBlocking
+    ? [firstBlocking, ...blockingLanes.filter((name) => name !== firstBlocking)]
+    : [];
+  const actionCenter = orderedBlockingLanes.map((name) => actionGroup(name, lanes[name], candidate));
+  const overall: ReadinessEvaluation['overall'] = actionCenter.length > 0 ? 'NOT_READY' : 'READY';
   return {
     overall,
-    mandatory_lanes: MANDATORY_READINESS_LANES,
+    mandatory_lanes: mandatoryLanes,
     lanes,
-    next_action: nextAction,
+    action_center: actionCenter,
+    next_action: actionCenter[0]?.action.message ?? 'No readiness blockers detected by the shared inventory.',
   };
 }

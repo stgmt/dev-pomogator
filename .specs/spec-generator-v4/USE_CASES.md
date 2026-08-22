@@ -581,3 +581,54 @@ A feature request claims a public catalog/policy surface and an authenticated pa
 **Outcome:** The developer gets one canonical spec system through a Codex host adapter; repository and installed modes differ only at the distribution/root boundary.
 
 **Linked stories:** [User Story 63](USER_STORIES.md#user-story-63-codex-desktop-runs-the-full-spec-workflow-priority-p1)
+## UC-36
+**Feature:** @feature85
+
+**Author and verify every FR through a typed contract card**
+
+**Goal:** Make each functional requirement independently implementable and verifiable without forcing every requirement into a CLI-shaped template.
+
+**Trigger:** A maintainer creates a new FR, reviews an existing FR, or migrates a legacy spec into strict contract mode.
+
+**Main flow:**
+
+1. The authoring workflow reads the FR, linked AC/UC/story, DESIGN, SCHEMA, FILE_CHANGES, and available repository reality.
+2. It selects exactly one contract kind from the closed registry: CLI, API, schema, filesystem, event, state, behavior, or disposition. Disposition inherits the common observable/negative/verification card and adds lifecycle fields.
+3. It fills the common card fields and the kind-specific boundary fields.
+4. It adds at least one observable result, one negative/adversarial outcome, and a verification policy.
+5. The MCP door validates the card before writing and the graph stores it on the qualified FR node.
+6. Conformance checks the card and traceability edges; spec-verdict evaluates the CONTRACT lane alongside structure, execution, evidence, and semantic lanes.
+7. The migration report handles legacy FRs in suggest-only mode until an owner resolves every clarification marker.
+
+**Failure paths:** The FR has no observable boundary; the selected kind lacks required fields; the negative case is absent; the card references an unresolved AC/scenario or implementation surface; the metadata version is unsupported; or an agent attempts to disable strict mode. Each outcome remains an actionable NOT_READY finding.
+
+**Outcome:** Every in-scope FR has a typed contract that can be rendered, parsed, traced, tested, and checked against implementation/evidence without a second spec format or a prose-only escape.
+
+**Requirement:** [FR-85](FR.md#fr-85)
+**Linked stories:** [User Story 65](USER_STORIES.md#user-story-65-every-fr-is-implementable-and-verifiable-priority-p1)
+
+
+## UC-37
+**Feature:** @feature86
+
+**Inspect and author through the core agent UX contract**
+
+**Goal:** Give a coding agent one truthful, actionable non-dashboard contract for readiness, evidence, safe authoring, and remediation.
+
+**Trigger:** The agent queries a spec, ingests supported execution evidence, prepares a requirement card, or requests a spec mutation from a worktree.
+
+**Main flow:**
+
+1. The agent requests the canonical SpecVerdictResult and receives one overall readiness state, grouped blockers, affected-node counts, and deterministic next actions.
+2. The agent inspects an FR and receives its derived evidence_state with the inputs, producer/run/source/timestamp/URI-line provenance, and any stale or quality demotion reason.
+3. When scenario-level evidence is absent from a supported producer receipt, the agent receives NOT_INGESTED; genuinely unexecuted scenarios remain NOT_RUN.
+4. Before any mutation, the door reports its resolved root, worktree, lock/write mode, plugin/MCP version, and dependency readiness; a root mismatch refuses before disk access.
+5. The agent selects a contract kind and receives evidence-backed required and missing fields, field-level findings, and an exact preview before CAS/atomic apply through the existing door.
+6. The agent follows the ordered remediation actions until the canonical result changes; no dashboard or Plane surface is introduced.
+
+**Failure paths:** A status surface tries to project an incompatible top-level verdict; evidence is weak, stale, unbound, or lacks location identity; a producer or dependency is absent; the declared worktree differs from the resolved root; or a card proposal is invalid or stale under CAS. Each path returns a stable, actionable non-success result and performs no unsafe write.
+
+**Outcome:** CLI, MCP, spec-verdict, and statusline views remain compatible projections of one canonical result, while agents can author and remediate safely without a second parser, store, dashboard, or vendor UI.
+
+**Requirement:** [FR-86](FR.md#fr-86-core-agent-ux-feature86)
+**Linked stories:** [User Story 86](USER_STORIES.md#user-story-86-one-honest-agent-facing-ux-priority-p1)

@@ -670,3 +670,200 @@ CLI, MCP, and `spec-verdict` serialize identical graph snapshot semantics for FR
 ```
 
 Tracked-file comparison is path-by-path, cardinality-conserving, current pre/post snapshot based, and all-unit AND-gated. An untracked, unclassified, or silent-junk path prevents release-ready until removed or explicitly dispositioned. Dependency-absent launcher/status/MCP evidence uses the same explicit outcome taxonomy. Each single PR/tag/GitHub release candidate records owner, monitoring signal, rollback action, follow-up verification, release notes, and integration-first run identity.
+## Requirement Contract Card v1 (FR-85)
+
+A contract card is stored inside the canonical FR-local block:
+
+````markdown
+```yaml metadata
+schemaVersion: 1
+verificationMethod: test
+contract:
+  version: 1
+  kind: behavior
+  subject: stable-identifier
+  actor: spec-author
+  trigger: requirement is parsed
+  preconditions: []
+  observables:
+    - when: condition
+      then: observable result
+  negative_cases:
+    - when: adversarial condition
+      then: explicit failure or forbidden result
+  invariants: []
+  verification:
+    method: bdd
+    required_evidence: [bdd]
+    scenario:
+      pending: true
+      reason: implementation not started
+    implementation_surface:
+      unknown: true
+      reason: implementation not started
+    evidence_policy:
+      source: canonical
+      freshness: current
+      independent: true
+```
+````
+
+The root `metadata.verificationMethod` keeps the existing closed vocabulary `test | analysis | review | inspection | demonstration`. The nested `contract.verification.method` is the FR-85 contract-card vocabulary and MAY use `bdd`, `integration`, `manual`, `analysis`, or `demonstration`; the two fields are intentionally distinct.
+
+### Common fields
+
+| Field | Type | Required | Meaning |
+|---|---|---:|---|
+| `version` | integer | yes | Contract-card schema version; current value `1`. |
+| `kind` | enum | yes | `cli`, `api`, `schema`, `filesystem`, `event`, `state`, `behavior`, or `disposition`. `disposition` is reserved for superseded/OUT OF SCOPE FRs. |
+| `subject` | non-empty string | yes | Boundary or behavior being specified. |
+| `preconditions` | string[] | no | Conditions that must hold before the observable. |
+| `observables` | Observable[] | yes | At least one `when` → `then` behavior. |
+| `negative_cases` | NegativeCase[] | yes | At least one adversarial, forbidden, or failure outcome. |
+| `invariants` | string[] | no | Conservation, uniqueness, cardinality, or safety rules. |
+| `verification` | object | yes | Required child fields: `method`, non-empty `required_evidence[]`, `scenario.refs[]` OR `scenario.pending:true` + reason, `implementation_surface.refs[]` OR `implementation_surface.unknown:true` + reason, and `evidence_policy`. |
+
+### Kind-specific fields
+
+| Kind | Required canonical paths and types |
+|---|---|
+| `cli` | `command.executable:string`, `command.args:string[]`, `input:Field[]`, `output:Shape`, `exit_codes:map<string,string>`, `errors:Error[]` |
+| `api` | `request.method:string` OR `request.tool:string`, `request.input:Field[]`, `response:Shape`, `authority:Authority`, `errors:Error[]` |
+| `schema` | `schema.fields:Field[]`, each field required/optional + type, `schema.enums:map`, `schema.forbidden:string[]` |
+| `filesystem` | `artifacts[].path:confined-path`, `action:string`, `owner:string`, `resulting_state:Shape`, `atomicity:enum`, `rollback:Policy`, `confinement:Policy` |
+| `event` | `event.name:string`, `producer:string`, `payload:Shape`, `consumers:string[]`, `ordering:Policy`, `retry:Policy`, `duplicate:Policy` |
+| `state` | `state.states:string[]`, `state.transitions:Transition[]`, `state.guards:Guard[]`, `state.terminal_outcomes:string[]` |
+| `behavior` | `behavior.actor:string`, `trigger:string`, `preconditions:string[]`, `observable_outcomes:string[]`, `forbidden_outcomes:string[]` |
+| `disposition` | `disposition.status:enum`, `disposition.rationale:string`, `disposition.owner:string`, exactly one of `disposition.successor:string` or `disposition.boundary:string` |
+
+### Value shapes
+
+`Observable` and `NegativeCase` objects SHALL contain non-empty `when` and `then` strings. `verification` SHALL contain `method`, a non-empty `required_evidence[]`, a `scenario` object with either `refs:string[]` or `pending:true` plus non-empty `reason`, an `implementation_surface` object with either `refs:string[]` or `unknown:true` plus non-empty `reason`, and an `evidence_policy` object with `source:enum`, `freshness:enum`, and `independent:boolean`. `kind: disposition` inherits `observables`, `negative_cases`, and `verification` unchanged; it adds `disposition.status`, `disposition.rationale`, `disposition.owner`, and exactly one of `disposition.successor` or `disposition.boundary`.
+
+### Value types and vocabularies
+
+`required_evidence[]` items SHALL use one of `bdd`, `integration`, `implementation`, `review`, `analysis`, `demonstration`, `decision-record`, `migration`, or `operational-proof`. `evidence_policy.source` SHALL be one of `canonical`, `planned`, `runtime`, or `external`; `freshness` SHALL be one of `current`, `pending`, `stale`, or `unknown`; `independent` SHALL be boolean. `Field` objects require `name`, `type`, and `required`; `Error` objects require `code` and `observable`; `Shape`, `Policy`, `Authority`, `Transition`, and `Guard` are structured objects, not prose aliases.
+
+### Verification branch examples
+
+Implemented branch:
+
+````yaml
+verification:
+  method: bdd
+  required_evidence: [bdd, implementation]
+  scenario:
+    refs: [SPECGEN004_900]
+  implementation_surface:
+    refs: [tools/example.ts]
+  evidence_policy:
+    source: canonical
+    freshness: current
+    independent: true
+````
+
+Planned branch:
+
+````yaml
+verification:
+  method: bdd
+  required_evidence: [bdd]
+  scenario:
+    pending: true
+    reason: implementation not started
+  implementation_surface:
+    unknown: true
+    reason: implementation not started
+  evidence_policy:
+    source: planned
+    freshness: pending
+    independent: false
+````
+
+### Canonical validation rules
+
+1. `kind` is closed; unknown kinds fail with `FR_CONTRACT_KIND_INVALID`.
+2. `observables` and `negative_cases` are non-empty and retain stable order after canonicalization.
+3. A card cannot claim readiness from prose, a file-exists check, or a declaration alone when its kind requires runtime evidence.
+4. Contract IDs are derived as `<qualified-fr-id>:contract-v1`; authors do not supply a second identity.
+5. Unknown future keys are preserved in `_unknown` during parse/render, but an unknown `version` is NOT_READY until a compatible reader exists.
+6. Contract references to FR/AC/UC/scenario/task/evidence resolve through the canonical graph; unresolved references are findings, not silently dropped.
+7. Strictness is engine-owned. `not-applicable`, environment variables, frontmatter escape flags, and prompt prose cannot disable the CONTRACT lane.
+
+### Example: CLI card
+
+````yaml
+contract:
+  version: 1
+  kind: cli
+  subject: spec-verdict
+  command:
+    executable: npx tsx tools/specs-generator/spec-verdict.ts
+    args: ["-Path", "<spec>"]
+  input:
+    - name: Path
+      type: directory
+      required: true
+  output:
+    format: text
+    required_fields: [OVERALL, blocking_findings]
+  exit_codes:
+    "0": ready
+    "1": not_ready
+  errors:
+    - code: SPEC_NOT_FOUND
+      observable: non-zero exit and diagnostic
+  observables:
+    - when: the command evaluates a spec
+      then: it prints an overall verdict and actionable lanes
+  negative_cases:
+    - when: a required contract card is missing
+      then: OVERALL is NOT_READY and the process does not exit successfully
+  verification:
+    method: bdd
+    required_evidence: [bdd]
+    scenario:
+      pending: true
+      reason: implementation not started
+    implementation_surface:
+      unknown: true
+      reason: implementation not started
+    evidence_policy:
+      source: canonical
+      freshness: current
+      independent: true
+````
+
+
+### Example: disposition card
+
+````yaml
+contract:
+  version: 1
+  kind: disposition
+  subject: retired-requirement
+  observables:
+    - when: the FR is evaluated by the lifecycle engine
+      then: the FR is excluded from active readiness and points to its successor
+  negative_cases:
+    - when: rationale, owner, or successor/boundary is absent
+      then: disposition validation blocks the card
+  verification:
+    method: review
+    required_evidence: [decision-record]
+    scenario:
+      pending: true
+      reason: lifecycle implementation not started
+    implementation_surface:
+      unknown: true
+      reason: lifecycle implementation not started
+    evidence_policy:
+      source: canonical
+      freshness: current
+      independent: true
+  disposition:
+    status: superseded
+    rationale: replaced by a newer qualified requirement
+    owner: spec-maintainer
+    successor: spec-generator-v4:FR-86
+````

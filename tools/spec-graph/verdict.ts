@@ -67,7 +67,9 @@ export function unverifiedCompletions(findings: Finding[]): UnverifiedCompletion
 /**
  * Canonical AND-composed verdict. A graph can be structurally RED, or clean but
  * NOT_READY; GREEN is reserved for a graph whose mandatory readiness lanes all
- * have positive evidence.
+ * have positive evidence. The explicit `greenEligible` guard makes a
+ * readiness-NOT_READY → GREEN transition impossible even if callers supply no
+ * structural findings.
  */
 export function computeSpecVerdict(
   candidate: ReadinessCandidate,
@@ -75,15 +77,16 @@ export function computeSpecVerdict(
 ): CanonicalSpecVerdict {
   const readiness = evaluateReadiness(candidate);
   const completionDebt = unverifiedCompletions(findings);
-  const structuralLane = candidate.lanes.STRUCTURE;
+  const structuralLane = candidate.lanes?.STRUCTURE;
   const structuralIsRed = structuralLane?.status === 'RED';
   const errors = structuralIsRed
     ? findings.filter((finding) => finding.severity === 'error' && finding.code !== 'UNVERIFIED_COMPLETION')
     : [];
   const blocking: Array<Finding | UnverifiedCompletion> = [...errors, ...completionDebt];
+  const greenEligible = readiness.overall === 'READY' && completionDebt.length === 0;
   const verdict: SpecVerdict = errors.length > 0
     ? 'RED'
-    : readiness.overall === 'READY' && completionDebt.length === 0
+    : greenEligible
       ? 'GREEN'
       : 'NOT_READY';
   return { schema: 'spec-verdict@1', verdict, readiness, blocking };

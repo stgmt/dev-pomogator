@@ -1709,3 +1709,64 @@ The implementation increment SHALL keep one SpecGraph/MCP engine, preserve Claud
 | Plugin schema cannot carry custom agents | Installed phase orchestration disappears outside this checkout | Package skills that invoke native built-in roles; treat `.codex/agents` as generated repo/user optimization, never required plugin state |
 | CLI smoke is mistaken for Desktop delivery | A green PATH shim or manifest test hides broken Desktop discovery/reload | Separate mandatory live Desktop evidence lane in a fresh task after reload; deterministic tests cannot satisfy it |
 | Feature scope expands into app APIs/connectors | Large unrelated blast radius and duplicate control plane | Explicitly exclude task/thread APIs, automations, connectors, and `app://`; only native subagent execution inside the spec workflow is in scope |
+## Prior art: strict per-requirement interface contracts (2026-08-20)
+
+### Hypotheses formulated before comparison
+
+| H# | Hypothesis | Expected proof | Status |
+|---|---|---|---|
+| H1 | A Spec-Driven Development framework for OMP can require every FR to expose an observable boundary | Direct generator skill/source | [SINGLE_SOURCE] |
+| H2 | The useful part of that mandate is portable to v4 without replacing the graph/MCP/evidence engine | Source comparison plus local contract seams | [VERIFIED for v4 design fit] |
+| H3 | A three-kind-only mandate is sufficient for every v4 FR | FR corpus inspection | [UNVERIFIED — disproved by policy/state/event requirements] |
+
+### Evidence and verified local seams
+
+- **[SINGLE_SOURCE: omp-agent generator skill]** `bparlan/omp-agent`'s `skills/generate-spec/SKILL.md` states that every functional requirement must define an observable boundary and must use one of a CLI Executable Contract, Structured Schema Contract, or Filesystem State Contract. The same skill requires concrete inputs/outputs, strict frontmatter, existing-binary inspection, a strict file-scope allowlist, physical write verification, and placeholder deletion. Source: https://github.com/bparlan/omp-agent/blob/main/skills/generate-spec/SKILL.md.
+
+> “Every functional requirement must define an observable boundary. Specify either: a) A CLI Executable Contract, b) a Structured Schema Contract, or c) a Filesystem State Contract.”
+- **[SINGLE_SOURCE: omp-agent framework README]** The repository README describes deterministic outputs, artifact persistence, a strict stage handoff, an uncertainty marker, and raw evidence in completion/evaluation artifacts. This corroborates the authoring philosophy but is not an independent vendor/user angle because it is the same repository. Source: https://github.com/bparlan/omp-agent/blob/main/README.md.
+- **[VERIFIED — repository]** v4 already has the correct extension seam: `tools/spec-graph/metadata-schema.ts` parses typed FR/NFR metadata; `tools/spec-graph/parsers/md.ts` extracts the FR-local metadata block; `tools/spec-graph/conformance.ts` turns metadata issues into findings; `tools/spec-mcp-server/tools.ts` exposes metadata validation/set operations; and `tools/spec-graph/task-contract.ts` provides a versioned canonical contract/diagnostic pattern.
+- **[VERIFIED — repository]** v4 already treats stable public output, graph identity, MCP mutations, evidence, and readiness as contracts in FR-21, FR-36, FR-40, FR-66, FR-70, and FR-61. FR-85 composes these existing owners rather than introducing a second graph or verdict.
+
+### Decision from the comparison
+
+Adopt the universal per-FR invariant from `omp-agent`, but use a v4-specific closed registry: `cli`, `api`, `schema`, `filesystem`, `event`, `state`, `behavior`, and `disposition`. The `behavior` kind is required for policy/UX/semantic FRs, while `disposition` is reserved for superseded/OUT OF SCOPE FRs; neither is a fake CLI contract. Strengthen the prior art with negative cases, graph identity, MCP/CAS authoring, evidence ownership, and a dedicated verdict lane.
+
+### Misconception flush
+
+- **Not every FR is an API.** Policy and state-machine requirements need typed behavior/state contracts.
+- **A YAML block is not proof.** Contract shape, kind-specific fields, negative cases, traceability, implementation, and evidence are separate lanes.
+- **`omp-agent` documentation is not proof of runtime adoption in every OMP installation.** That compatibility claim remains [NEEDS_CONFIRMATION] and is not used as a v4 implementation dependency.
+- **Legacy migration cannot infer missing semantics safely.** The migrator reports a suggested kind and `[NEEDS_CLARIFICATION]`; an owner supplies the boundary through the MCP door.
+
+### Re-research triggers
+
+Re-run the prior-art check before implementation if `omp-agent` changes its generator contract, OMP changes its plugin/skill loading format, or a second independent OMP framework exposes a machine-readable FR contract schema. Re-run the v4 design check if shared-contract reuse requires a cross-FR ledger rather than FR-local cards.
+
+
+## Risk Assessment — FR-85 contract cards (2026-08-20)
+
+| Risk | Likelihood | Impact | Mitigation |
+|---|---|---|---|
+| Existing FR corpus has no reliable boundary facts for automatic migration | High | High | Suggest-only report with source locations and `[NEEDS_CLARIFICATION]`; never fabricate commands, fields, paths, or states. |
+| Authors satisfy the gate with vague prose inside typed fields | Medium | High | Require kind-specific fields, negative cases, invariants, real AC/BDD/evidence edges, and mutation-resistant fixtures. |
+| New metadata parser drifts from MCP, SQLite, or verdict consumers | Medium | High | One `requirement-contract.ts` producer, cold/warm round-trip tests, MCP bundle smoke, and one CONTRACT lane owner. |
+| Mandatory card authoring makes policy/UX FRs artificial | Medium | Medium | Keep `behavior` and `state` kinds with explicit actor/trigger/outcome semantics; reject only unobservable prose, not non-CLI requirements. |
+
+
+
+
+
+
+
+
+
+
+## Risk Assessment — FR-86 core UX
+
+| Risk | Likelihood | Impact | Mitigation |
+|------|------------|--------|------------|
+| Canonical status migration leaves CLI and MCP with different labels or blockers | High | High | Add cross-surface JSON equality BDD and keep compatibility fields as projections of one result |
+| Producer evidence is present in a suite receipt but cannot be bound to ScenarioNode | High | High | Preserve URI/line/run provenance, emit NOT_INGESTED explicitly, and test real-shaped producer artifacts |
+| A mutation is applied to the wrong worktree or root | Medium | High | Require preflight root/worktree confirmation and refuse root mismatch before disk access |
+| Guided contract authoring invents boundary fields from weak prose | Medium | High | Show evidence and confidence, allow pending/unknown branches, and route all writes through CAS validation |

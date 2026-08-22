@@ -145,10 +145,19 @@ export interface LifecycleOptions {
   onLockContention?: 'throw' | 'readonly';
   /** Append-only scenario overlay file. Default: `.dev-pomogator/.scenario-results.ndjson`. */
   scenarioOverlayPath?: string;
+  /** pytest-bdd `--cucumber-json` report. Default: `.dev-pomogator/pytest-bdd-report.json`. */
+  pytestBddPath?: string;
   /** Optional sink for watcher patch events — telemetry / logs. */
   onPatch?: (e: PatchEvent) => void;
   /** Optional sink for watcher errors. Default: log to stderr. */
   onError?: (err: Error) => void;
+}
+
+export interface DependencyReadiness {
+  graph: 'ready';
+  watcher: 'ready';
+  lock: 'owner' | 'presence_reader';
+  sqlite: 'disabled' | 'warm' | 'cold' | 'recovered';
 }
 
 export interface LifecycleHandle {
@@ -171,6 +180,12 @@ export interface LifecycleHandle {
   readOnly: boolean;
   /** P21-1: the owning session's lock record — present only when {@link readOnly}. */
   lockHolder?: LockRecord;
+  /** Read-only boot facts for the MCP preflight route. */
+  dependencies: DependencyReadiness;
+  /** Lock ownership is independent from writes: every door uses short lock + CAS writes. */
+  lockMode: 'owner' | 'presence_reader';
+  writeMode: 'short_lock_cas';
+
   /** Re-apply result files and refresh derived census state on demand. */
   refreshGraph(): void;
   /** Release watcher + heartbeat + lock. Idempotent. */
@@ -216,6 +231,7 @@ export async function startLifecycle(opts: LifecycleOptions): Promise<LifecycleH
       ...(opts.featureRoots ?? ['.specs', 'tests/features']),
       opts.ndjsonPath ?? '.dev-pomogator/.last-test-run.ndjson',
       opts.scenarioOverlayPath ?? '.dev-pomogator/.scenario-results.ndjson',
+      opts.pytestBddPath ?? '.dev-pomogator/pytest-bdd-report.json',
     ];
     const files: string[] = [];
     const visit = (target: string): void => {
@@ -244,6 +260,7 @@ export async function startLifecycle(opts: LifecycleOptions): Promise<LifecycleH
     featureRoots: opts.featureRoots,
     ndjsonPath: opts.ndjsonPath,
     scenarioOverlayPath: opts.scenarioOverlayPath,
+    pytestBddPath: opts.pytestBddPath,
     skipNdjson: opts.skipNdjson,
   });
   if (recovery && !restored) persistGraph(recovery.handle, graph, sourceFingerprint);
@@ -267,6 +284,7 @@ export async function startLifecycle(opts: LifecycleOptions): Promise<LifecycleH
         refreshResultFiles(graph, opts.repoRoot, {
           ndjsonPath: opts.ndjsonPath,
           scenarioOverlayPath: opts.scenarioOverlayPath,
+          pytestBddPath: opts.pytestBddPath,
         });
       } catch {
         // Result evidence is advisory for reads; never break the door if a result file is mid-write.
@@ -318,6 +336,7 @@ export async function startLifecycle(opts: LifecycleOptions): Promise<LifecycleH
     featureRoots: opts.featureRoots,
     ndjsonPath: opts.ndjsonPath,
     scenarioOverlayPath: opts.scenarioOverlayPath,
+    pytestBddPath: opts.pytestBddPath,
     usePolling,
     interval: usePolling ? pollIntervalMs : undefined,
     // P21-6: every on-disk spec change (door writes included) refreshes the
@@ -346,6 +365,16 @@ export async function startLifecycle(opts: LifecycleOptions): Promise<LifecycleH
     lock.release();
   };
 
+  const lockMode = readOnly ? 'presence_reader' : 'owner';
+  const dependencies: DependencyReadiness = {
+    graph: 'ready',
+    watcher: 'ready',
+    lock: lockMode,
+    sqlite: recovery
+      ? (recovery.recovered ? 'recovered' : restored ? 'warm' : 'cold')
+      : 'disabled',
+  };
+
   return {
     graph,
     ...(recovery ? { cache: { handle: recovery.handle, warm: restored !== null, recovered: recovery.recovered } } : {}),
@@ -355,6 +384,9 @@ export async function startLifecycle(opts: LifecycleOptions): Promise<LifecycleH
     pollIntervalMs,
     readOnly,
     lockHolder,
+    dependencies,
+    lockMode,
+    writeMode: 'short_lock_cas',
     refreshGraph: refreshResultsAndCensus,
     shutdown,
   };

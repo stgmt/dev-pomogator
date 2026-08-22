@@ -1447,3 +1447,46 @@ Then only MCP-authorized writes occur, no more than three rounds run, and struct
 Given the repaired temporary fixture is evaluated a second time
 When the workflow collects and normalizes findings again
 Then it performs zero writes and retains any unavailable, blocking, deferred, decision-required, stale, or no-progress state honestly
+### User Story 65: Every FR is implementable and verifiable (Priority: P1)
+**Feature:** @feature85
+
+**Требование:** [FR-85](FR.md#fr-85)
+
+As a spec author and AI coding agent, I want every functional requirement to carry one typed, observable contract card, so that implementation, tests, evidence, and failure behavior are explicit instead of being inferred from prose.
+
+**Why:** The current v4 graph already has typed delivery, task, evidence, and MCP contracts, but product FRs can still remain prose-only. A universal card closes the gap while preserving behavior/state contracts for requirements that are not CLI or API surfaces.
+
+**Independent Test:** Run the FR-85 contract corpus through the canonical parser, conformance, MCP metadata round-trip, migration report, and smart verdict; remove one required card field at a time and verify the contract lane blocks readiness.
+
+**Acceptance Scenarios:**
+
+Given an active FR declares a CLI, API, schema, filesystem, event, state, behavior, or disposition boundary
+When the canonical requirement parser runs
+Then exactly one typed contract card is attached to the qualified FR node with observables, a negative case, and verification policy
+
+Given a card is missing, malformed, or only describes a happy path
+When conformance and spec-verdict run
+Then the result names the FR and missing field, keeps the CONTRACT lane NOT_READY, and does not report GREEN
+
+Given a legacy spec has no cards
+When the migration report runs in suggest-only mode
+Then it produces evidence-backed suggestions and clarification markers without inventing values or mutating the spec
+
+
+
+### User Story 86: One honest agent-facing UX (Priority: P1)
+**Feature:** @feature86
+
+**Требование:** [FR-86](FR.md#fr-86-core-agent-ux-feature86)
+
+As a coding agent, I want one clear readiness answer, so that I can act without reconciling contradictory tools.
+
+**Why:** Split status vocabularies hide the real blocker.
+
+**Independent Test:** Pending implementation: no executable `@feature86` scenario or binding exists. After real production bindings and matching scenarios are authored, independently run the bound contract scenarios and verify the canonical verdict, provenance, preflight, authoring, and grouped remediation outputs.
+
+**Acceptance Scenarios:**
+
+Given multiple readiness blockers exist
+When status is requested
+Then one verdict and ordered next actions are returned.

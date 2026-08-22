@@ -170,9 +170,15 @@ function mapTasksToScenarios(tasks, scenarios) {
   }
   return out;
 }
-function verifiedStatus(scenarioIds, bucketById, verdict) {
+function isLiveAttestedScenario(tags) {
+  if (!tags) return false;
+  const lower = tags.map((t) => t.toLowerCase());
+  return lower.includes("@live-evidence") && lower.includes("@live-attested");
+}
+function verifiedStatus(scenarioIds, bucketById, verdict, isLiveAttested) {
   if (scenarioIds.length === 0) return "unverified";
-  if (!scenarioIds.every((id) => bucketById.get(id) === "passed")) return "IN_PROGRESS";
+  const satisfied2 = (id) => bucketById.get(id) === "passed" || Boolean(isLiveAttested?.(id));
+  if (!scenarioIds.every(satisfied2)) return "IN_PROGRESS";
   if (verdict === "WEAK" || verdict === "FAKE-POSITIVE-RISK") return "IN_PROGRESS";
   return "DONE";
 }
@@ -224,7 +230,12 @@ function computeCoverage(tasks, scenarios, testQualityByTask = {}) {
   const tasksOut = {};
   for (const [taskId, scenarioIds] of taskMap) {
     const verdict = testQualityByTask[taskId];
-    const verified = verifiedStatus(scenarioIds, bucketById, verdict);
+    const verified = verifiedStatus(
+      scenarioIds,
+      bucketById,
+      verdict,
+      (id) => isLiveAttestedScenario(scenarioById.get(id)?.tags)
+    );
     const task = taskById.get(taskId);
     const issues = task ? taskTruthIssues(task, scenarioIds, bucketById, scenarioById, verified) : [];
     tasksOut[taskId] = {
@@ -358,9 +369,9 @@ var init_marksman_slug = __esm({
   }
 });
 
-// node_modules/yaml/dist/nodes/identity.js
+// ../dev-pomogator/node_modules/yaml/dist/nodes/identity.js
 var require_identity = __commonJS({
-  "node_modules/yaml/dist/nodes/identity.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/nodes/identity.js"(exports) {
     "use strict";
     var ALIAS = /* @__PURE__ */ Symbol.for("yaml.alias");
     var DOC = /* @__PURE__ */ Symbol.for("yaml.document");
@@ -415,9 +426,9 @@ var require_identity = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/visit.js
+// ../dev-pomogator/node_modules/yaml/dist/visit.js
 var require_visit = __commonJS({
-  "node_modules/yaml/dist/visit.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/visit.js"(exports) {
     "use strict";
     var identity = require_identity();
     var BREAK = /* @__PURE__ */ Symbol("break visit");
@@ -435,17 +446,17 @@ var require_visit = __commonJS({
     visit.BREAK = BREAK;
     visit.SKIP = SKIP;
     visit.REMOVE = REMOVE;
-    function visit_(key, node, visitor, path7) {
-      const ctrl = callVisitor(key, node, visitor, path7);
+    function visit_(key, node, visitor, path8) {
+      const ctrl = callVisitor(key, node, visitor, path8);
       if (identity.isNode(ctrl) || identity.isPair(ctrl)) {
-        replaceNode(key, path7, ctrl);
-        return visit_(key, ctrl, visitor, path7);
+        replaceNode(key, path8, ctrl);
+        return visit_(key, ctrl, visitor, path8);
       }
       if (typeof ctrl !== "symbol") {
         if (identity.isCollection(node)) {
-          path7 = Object.freeze(path7.concat(node));
+          path8 = Object.freeze(path8.concat(node));
           for (let i = 0; i < node.items.length; ++i) {
-            const ci = visit_(i, node.items[i], visitor, path7);
+            const ci = visit_(i, node.items[i], visitor, path8);
             if (typeof ci === "number")
               i = ci - 1;
             else if (ci === BREAK)
@@ -456,13 +467,13 @@ var require_visit = __commonJS({
             }
           }
         } else if (identity.isPair(node)) {
-          path7 = Object.freeze(path7.concat(node));
-          const ck = visit_("key", node.key, visitor, path7);
+          path8 = Object.freeze(path8.concat(node));
+          const ck = visit_("key", node.key, visitor, path8);
           if (ck === BREAK)
             return BREAK;
           else if (ck === REMOVE)
             node.key = null;
-          const cv = visit_("value", node.value, visitor, path7);
+          const cv = visit_("value", node.value, visitor, path8);
           if (cv === BREAK)
             return BREAK;
           else if (cv === REMOVE)
@@ -483,17 +494,17 @@ var require_visit = __commonJS({
     visitAsync.BREAK = BREAK;
     visitAsync.SKIP = SKIP;
     visitAsync.REMOVE = REMOVE;
-    async function visitAsync_(key, node, visitor, path7) {
-      const ctrl = await callVisitor(key, node, visitor, path7);
+    async function visitAsync_(key, node, visitor, path8) {
+      const ctrl = await callVisitor(key, node, visitor, path8);
       if (identity.isNode(ctrl) || identity.isPair(ctrl)) {
-        replaceNode(key, path7, ctrl);
-        return visitAsync_(key, ctrl, visitor, path7);
+        replaceNode(key, path8, ctrl);
+        return visitAsync_(key, ctrl, visitor, path8);
       }
       if (typeof ctrl !== "symbol") {
         if (identity.isCollection(node)) {
-          path7 = Object.freeze(path7.concat(node));
+          path8 = Object.freeze(path8.concat(node));
           for (let i = 0; i < node.items.length; ++i) {
-            const ci = await visitAsync_(i, node.items[i], visitor, path7);
+            const ci = await visitAsync_(i, node.items[i], visitor, path8);
             if (typeof ci === "number")
               i = ci - 1;
             else if (ci === BREAK)
@@ -504,13 +515,13 @@ var require_visit = __commonJS({
             }
           }
         } else if (identity.isPair(node)) {
-          path7 = Object.freeze(path7.concat(node));
-          const ck = await visitAsync_("key", node.key, visitor, path7);
+          path8 = Object.freeze(path8.concat(node));
+          const ck = await visitAsync_("key", node.key, visitor, path8);
           if (ck === BREAK)
             return BREAK;
           else if (ck === REMOVE)
             node.key = null;
-          const cv = await visitAsync_("value", node.value, visitor, path7);
+          const cv = await visitAsync_("value", node.value, visitor, path8);
           if (cv === BREAK)
             return BREAK;
           else if (cv === REMOVE)
@@ -537,23 +548,23 @@ var require_visit = __commonJS({
       }
       return visitor;
     }
-    function callVisitor(key, node, visitor, path7) {
+    function callVisitor(key, node, visitor, path8) {
       if (typeof visitor === "function")
-        return visitor(key, node, path7);
+        return visitor(key, node, path8);
       if (identity.isMap(node))
-        return visitor.Map?.(key, node, path7);
+        return visitor.Map?.(key, node, path8);
       if (identity.isSeq(node))
-        return visitor.Seq?.(key, node, path7);
+        return visitor.Seq?.(key, node, path8);
       if (identity.isPair(node))
-        return visitor.Pair?.(key, node, path7);
+        return visitor.Pair?.(key, node, path8);
       if (identity.isScalar(node))
-        return visitor.Scalar?.(key, node, path7);
+        return visitor.Scalar?.(key, node, path8);
       if (identity.isAlias(node))
-        return visitor.Alias?.(key, node, path7);
+        return visitor.Alias?.(key, node, path8);
       return void 0;
     }
-    function replaceNode(key, path7, node) {
-      const parent = path7[path7.length - 1];
+    function replaceNode(key, path8, node) {
+      const parent = path8[path8.length - 1];
       if (identity.isCollection(parent)) {
         parent.items[key] = node;
       } else if (identity.isPair(parent)) {
@@ -573,9 +584,9 @@ var require_visit = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/doc/directives.js
+// ../dev-pomogator/node_modules/yaml/dist/doc/directives.js
 var require_directives = __commonJS({
-  "node_modules/yaml/dist/doc/directives.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/doc/directives.js"(exports) {
     "use strict";
     var identity = require_identity();
     var visit = require_visit();
@@ -744,9 +755,9 @@ var require_directives = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/doc/anchors.js
+// ../dev-pomogator/node_modules/yaml/dist/doc/anchors.js
 var require_anchors = __commonJS({
-  "node_modules/yaml/dist/doc/anchors.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/doc/anchors.js"(exports) {
     "use strict";
     var identity = require_identity();
     var visit = require_visit();
@@ -814,9 +825,9 @@ var require_anchors = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/doc/applyReviver.js
+// ../dev-pomogator/node_modules/yaml/dist/doc/applyReviver.js
 var require_applyReviver = __commonJS({
-  "node_modules/yaml/dist/doc/applyReviver.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/doc/applyReviver.js"(exports) {
     "use strict";
     function applyReviver(reviver, obj, key, val) {
       if (val && typeof val === "object") {
@@ -864,9 +875,9 @@ var require_applyReviver = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/nodes/toJS.js
+// ../dev-pomogator/node_modules/yaml/dist/nodes/toJS.js
 var require_toJS = __commonJS({
-  "node_modules/yaml/dist/nodes/toJS.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/nodes/toJS.js"(exports) {
     "use strict";
     var identity = require_identity();
     function toJS(value, arg, ctx) {
@@ -894,9 +905,9 @@ var require_toJS = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/nodes/Node.js
+// ../dev-pomogator/node_modules/yaml/dist/nodes/Node.js
 var require_Node = __commonJS({
-  "node_modules/yaml/dist/nodes/Node.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/nodes/Node.js"(exports) {
     "use strict";
     var applyReviver = require_applyReviver();
     var identity = require_identity();
@@ -935,9 +946,9 @@ var require_Node = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/nodes/Alias.js
+// ../dev-pomogator/node_modules/yaml/dist/nodes/Alias.js
 var require_Alias = __commonJS({
-  "node_modules/yaml/dist/nodes/Alias.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/nodes/Alias.js"(exports) {
     "use strict";
     var anchors = require_anchors();
     var visit = require_visit();
@@ -1049,9 +1060,9 @@ var require_Alias = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/nodes/Scalar.js
+// ../dev-pomogator/node_modules/yaml/dist/nodes/Scalar.js
 var require_Scalar = __commonJS({
-  "node_modules/yaml/dist/nodes/Scalar.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/nodes/Scalar.js"(exports) {
     "use strict";
     var identity = require_identity();
     var Node = require_Node();
@@ -1079,9 +1090,9 @@ var require_Scalar = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/doc/createNode.js
+// ../dev-pomogator/node_modules/yaml/dist/doc/createNode.js
 var require_createNode = __commonJS({
-  "node_modules/yaml/dist/doc/createNode.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/doc/createNode.js"(exports) {
     "use strict";
     var Alias = require_Alias();
     var identity = require_identity();
@@ -1154,17 +1165,17 @@ var require_createNode = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/nodes/Collection.js
+// ../dev-pomogator/node_modules/yaml/dist/nodes/Collection.js
 var require_Collection = __commonJS({
-  "node_modules/yaml/dist/nodes/Collection.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/nodes/Collection.js"(exports) {
     "use strict";
     var createNode = require_createNode();
     var identity = require_identity();
     var Node = require_Node();
-    function collectionFromPath(schema, path7, value) {
+    function collectionFromPath(schema, path8, value) {
       let v = value;
-      for (let i = path7.length - 1; i >= 0; --i) {
-        const k = path7[i];
+      for (let i = path8.length - 1; i >= 0; --i) {
+        const k = path8[i];
         if (typeof k === "number" && Number.isInteger(k) && k >= 0) {
           const a = [];
           a[k] = v;
@@ -1183,7 +1194,7 @@ var require_Collection = __commonJS({
         sourceObjects: /* @__PURE__ */ new Map()
       });
     }
-    var isEmptyPath = (path7) => path7 == null || typeof path7 === "object" && !!path7[Symbol.iterator]().next().done;
+    var isEmptyPath = (path8) => path8 == null || typeof path8 === "object" && !!path8[Symbol.iterator]().next().done;
     var Collection = class extends Node.NodeBase {
       constructor(type, schema) {
         super(type);
@@ -1213,11 +1224,11 @@ var require_Collection = __commonJS({
        * be a Pair instance or a `{ key, value }` object, which may not have a key
        * that already exists in the map.
        */
-      addIn(path7, value) {
-        if (isEmptyPath(path7))
+      addIn(path8, value) {
+        if (isEmptyPath(path8))
           this.add(value);
         else {
-          const [key, ...rest] = path7;
+          const [key, ...rest] = path8;
           const node = this.get(key, true);
           if (identity.isCollection(node))
             node.addIn(rest, value);
@@ -1231,8 +1242,8 @@ var require_Collection = __commonJS({
        * Removes a value from the collection.
        * @returns `true` if the item was found and removed.
        */
-      deleteIn(path7) {
-        const [key, ...rest] = path7;
+      deleteIn(path8) {
+        const [key, ...rest] = path8;
         if (rest.length === 0)
           return this.delete(key);
         const node = this.get(key, true);
@@ -1246,8 +1257,8 @@ var require_Collection = __commonJS({
        * scalar values from their surrounding node; to disable set `keepScalar` to
        * `true` (collections are always returned intact).
        */
-      getIn(path7, keepScalar) {
-        const [key, ...rest] = path7;
+      getIn(path8, keepScalar) {
+        const [key, ...rest] = path8;
         const node = this.get(key, true);
         if (rest.length === 0)
           return !keepScalar && identity.isScalar(node) ? node.value : node;
@@ -1265,8 +1276,8 @@ var require_Collection = __commonJS({
       /**
        * Checks if the collection includes a value with the key `key`.
        */
-      hasIn(path7) {
-        const [key, ...rest] = path7;
+      hasIn(path8) {
+        const [key, ...rest] = path8;
         if (rest.length === 0)
           return this.has(key);
         const node = this.get(key, true);
@@ -1276,8 +1287,8 @@ var require_Collection = __commonJS({
        * Sets a value in this collection. For `!!set`, `value` needs to be a
        * boolean to add/remove the item from the set.
        */
-      setIn(path7, value) {
-        const [key, ...rest] = path7;
+      setIn(path8, value) {
+        const [key, ...rest] = path8;
         if (rest.length === 0) {
           this.set(key, value);
         } else {
@@ -1297,9 +1308,9 @@ var require_Collection = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/stringify/stringifyComment.js
+// ../dev-pomogator/node_modules/yaml/dist/stringify/stringifyComment.js
 var require_stringifyComment = __commonJS({
-  "node_modules/yaml/dist/stringify/stringifyComment.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/stringify/stringifyComment.js"(exports) {
     "use strict";
     var stringifyComment = (str) => str.replace(/^(?!$)(?: $)?/gm, "#");
     function indentComment(comment, indent) {
@@ -1314,21 +1325,21 @@ var require_stringifyComment = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/stringify/foldFlowLines.js
+// ../dev-pomogator/node_modules/yaml/dist/stringify/foldFlowLines.js
 var require_foldFlowLines = __commonJS({
-  "node_modules/yaml/dist/stringify/foldFlowLines.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/stringify/foldFlowLines.js"(exports) {
     "use strict";
     var FOLD_FLOW = "flow";
     var FOLD_BLOCK = "block";
     var FOLD_QUOTED = "quoted";
-    function foldFlowLines(text, indent, mode = "flow", { indentAtStart, lineWidth = 80, minContentWidth = 20, onFold, onOverflow } = {}) {
+    function foldFlowLines(text2, indent, mode = "flow", { indentAtStart, lineWidth = 80, minContentWidth = 20, onFold, onOverflow } = {}) {
       if (!lineWidth || lineWidth < 0)
-        return text;
+        return text2;
       if (lineWidth < minContentWidth)
         minContentWidth = 0;
       const endStep = Math.max(1 + minContentWidth, 1 + lineWidth - indent.length);
-      if (text.length <= endStep)
-        return text;
+      if (text2.length <= endStep)
+        return text2;
       const folds = [];
       const escapedFolds = {};
       let end = lineWidth - indent.length;
@@ -1345,14 +1356,14 @@ var require_foldFlowLines = __commonJS({
       let escStart = -1;
       let escEnd = -1;
       if (mode === FOLD_BLOCK) {
-        i = consumeMoreIndentedLines(text, i, indent.length);
+        i = consumeMoreIndentedLines(text2, i, indent.length);
         if (i !== -1)
           end = i + endStep;
       }
-      for (let ch; ch = text[i += 1]; ) {
+      for (let ch; ch = text2[i += 1]; ) {
         if (mode === FOLD_QUOTED && ch === "\\") {
           escStart = i;
-          switch (text[i + 1]) {
+          switch (text2[i + 1]) {
             case "x":
               i += 3;
               break;
@@ -1369,12 +1380,12 @@ var require_foldFlowLines = __commonJS({
         }
         if (ch === "\n") {
           if (mode === FOLD_BLOCK)
-            i = consumeMoreIndentedLines(text, i, indent.length);
+            i = consumeMoreIndentedLines(text2, i, indent.length);
           end = i + indent.length + endStep;
           split = void 0;
         } else {
           if (ch === " " && prev && prev !== " " && prev !== "\n" && prev !== "	") {
-            const next = text[i + 1];
+            const next = text2[i + 1];
             if (next && next !== " " && next !== "\n" && next !== "	")
               split = i;
           }
@@ -1386,12 +1397,12 @@ var require_foldFlowLines = __commonJS({
             } else if (mode === FOLD_QUOTED) {
               while (prev === " " || prev === "	") {
                 prev = ch;
-                ch = text[i += 1];
+                ch = text2[i += 1];
                 overflow = true;
               }
               const j = i > escEnd + 1 ? i - 2 : escStart - 1;
               if (escapedFolds[j])
-                return text;
+                return text2;
               folds.push(j);
               escapedFolds[j] = true;
               end = j + endStep;
@@ -1406,39 +1417,39 @@ var require_foldFlowLines = __commonJS({
       if (overflow && onOverflow)
         onOverflow();
       if (folds.length === 0)
-        return text;
+        return text2;
       if (onFold)
         onFold();
-      let res = text.slice(0, folds[0]);
+      let res = text2.slice(0, folds[0]);
       for (let i2 = 0; i2 < folds.length; ++i2) {
         const fold = folds[i2];
-        const end2 = folds[i2 + 1] || text.length;
+        const end2 = folds[i2 + 1] || text2.length;
         if (fold === 0)
           res = `
-${indent}${text.slice(0, end2)}`;
+${indent}${text2.slice(0, end2)}`;
         else {
           if (mode === FOLD_QUOTED && escapedFolds[fold])
-            res += `${text[fold]}\\`;
+            res += `${text2[fold]}\\`;
           res += `
-${indent}${text.slice(fold + 1, end2)}`;
+${indent}${text2.slice(fold + 1, end2)}`;
         }
       }
       return res;
     }
-    function consumeMoreIndentedLines(text, i, indent) {
+    function consumeMoreIndentedLines(text2, i, indent) {
       let end = i;
       let start = i + 1;
-      let ch = text[start];
+      let ch = text2[start];
       while (ch === " " || ch === "	") {
         if (i < start + indent) {
-          ch = text[++i];
+          ch = text2[++i];
         } else {
           do {
-            ch = text[++i];
+            ch = text2[++i];
           } while (ch && ch !== "\n");
           end = i;
           start = i + 1;
-          ch = text[start];
+          ch = text2[start];
         }
       }
       return end;
@@ -1450,9 +1461,9 @@ ${indent}${text.slice(fold + 1, end2)}`;
   }
 });
 
-// node_modules/yaml/dist/stringify/stringifyString.js
+// ../dev-pomogator/node_modules/yaml/dist/stringify/stringifyString.js
 var require_stringifyString = __commonJS({
-  "node_modules/yaml/dist/stringify/stringifyString.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/stringify/stringifyString.js"(exports) {
     "use strict";
     var Scalar = require_Scalar();
     var foldFlowLines = require_foldFlowLines();
@@ -1733,9 +1744,9 @@ ${indent}`);
   }
 });
 
-// node_modules/yaml/dist/stringify/stringify.js
+// ../dev-pomogator/node_modules/yaml/dist/stringify/stringify.js
 var require_stringify = __commonJS({
-  "node_modules/yaml/dist/stringify/stringify.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/stringify/stringify.js"(exports) {
     "use strict";
     var anchors = require_anchors();
     var identity = require_identity();
@@ -1857,9 +1868,9 @@ ${ctx.indent}${str}`;
   }
 });
 
-// node_modules/yaml/dist/stringify/stringifyPair.js
+// ../dev-pomogator/node_modules/yaml/dist/stringify/stringifyPair.js
 var require_stringifyPair = __commonJS({
-  "node_modules/yaml/dist/stringify/stringifyPair.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/stringify/stringifyPair.js"(exports) {
     "use strict";
     var identity = require_identity();
     var Scalar = require_Scalar();
@@ -1990,9 +2001,9 @@ ${ctx.indent}`;
   }
 });
 
-// node_modules/yaml/dist/log.js
+// ../dev-pomogator/node_modules/yaml/dist/log.js
 var require_log = __commonJS({
-  "node_modules/yaml/dist/log.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/log.js"(exports) {
     "use strict";
     var node_process = __require("process");
     function debug(logLevel, ...messages) {
@@ -2012,9 +2023,9 @@ var require_log = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/schema/yaml-1.1/merge.js
+// ../dev-pomogator/node_modules/yaml/dist/schema/yaml-1.1/merge.js
 var require_merge = __commonJS({
-  "node_modules/yaml/dist/schema/yaml-1.1/merge.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/schema/yaml-1.1/merge.js"(exports) {
     "use strict";
     var identity = require_identity();
     var Scalar = require_Scalar();
@@ -2069,9 +2080,9 @@ var require_merge = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/nodes/addPairToJSMap.js
+// ../dev-pomogator/node_modules/yaml/dist/nodes/addPairToJSMap.js
 var require_addPairToJSMap = __commonJS({
-  "node_modules/yaml/dist/nodes/addPairToJSMap.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/nodes/addPairToJSMap.js"(exports) {
     "use strict";
     var log = require_log();
     var merge = require_merge();
@@ -2133,9 +2144,9 @@ var require_addPairToJSMap = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/nodes/Pair.js
+// ../dev-pomogator/node_modules/yaml/dist/nodes/Pair.js
 var require_Pair = __commonJS({
-  "node_modules/yaml/dist/nodes/Pair.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/nodes/Pair.js"(exports) {
     "use strict";
     var createNode = require_createNode();
     var stringifyPair = require_stringifyPair();
@@ -2173,9 +2184,9 @@ var require_Pair = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/stringify/stringifyCollection.js
+// ../dev-pomogator/node_modules/yaml/dist/stringify/stringifyCollection.js
 var require_stringifyCollection = __commonJS({
-  "node_modules/yaml/dist/stringify/stringifyCollection.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/stringify/stringifyCollection.js"(exports) {
     "use strict";
     var identity = require_identity();
     var stringify = require_stringify();
@@ -2324,9 +2335,9 @@ ${indent}${end}`;
   }
 });
 
-// node_modules/yaml/dist/nodes/YAMLMap.js
+// ../dev-pomogator/node_modules/yaml/dist/nodes/YAMLMap.js
 var require_YAMLMap = __commonJS({
-  "node_modules/yaml/dist/nodes/YAMLMap.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/nodes/YAMLMap.js"(exports) {
     "use strict";
     var stringifyCollection = require_stringifyCollection();
     var addPairToJSMap = require_addPairToJSMap();
@@ -2468,9 +2479,9 @@ var require_YAMLMap = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/schema/common/map.js
+// ../dev-pomogator/node_modules/yaml/dist/schema/common/map.js
 var require_map = __commonJS({
-  "node_modules/yaml/dist/schema/common/map.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/schema/common/map.js"(exports) {
     "use strict";
     var identity = require_identity();
     var YAMLMap = require_YAMLMap();
@@ -2490,9 +2501,9 @@ var require_map = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/nodes/YAMLSeq.js
+// ../dev-pomogator/node_modules/yaml/dist/nodes/YAMLSeq.js
 var require_YAMLSeq = __commonJS({
-  "node_modules/yaml/dist/nodes/YAMLSeq.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/nodes/YAMLSeq.js"(exports) {
     "use strict";
     var createNode = require_createNode();
     var stringifyCollection = require_stringifyCollection();
@@ -2606,9 +2617,9 @@ var require_YAMLSeq = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/schema/common/seq.js
+// ../dev-pomogator/node_modules/yaml/dist/schema/common/seq.js
 var require_seq = __commonJS({
-  "node_modules/yaml/dist/schema/common/seq.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/schema/common/seq.js"(exports) {
     "use strict";
     var identity = require_identity();
     var YAMLSeq = require_YAMLSeq();
@@ -2628,9 +2639,9 @@ var require_seq = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/schema/common/string.js
+// ../dev-pomogator/node_modules/yaml/dist/schema/common/string.js
 var require_string = __commonJS({
-  "node_modules/yaml/dist/schema/common/string.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/schema/common/string.js"(exports) {
     "use strict";
     var stringifyString = require_stringifyString();
     var string = {
@@ -2647,9 +2658,9 @@ var require_string = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/schema/common/null.js
+// ../dev-pomogator/node_modules/yaml/dist/schema/common/null.js
 var require_null = __commonJS({
-  "node_modules/yaml/dist/schema/common/null.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/schema/common/null.js"(exports) {
     "use strict";
     var Scalar = require_Scalar();
     var nullTag = {
@@ -2665,9 +2676,9 @@ var require_null = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/schema/core/bool.js
+// ../dev-pomogator/node_modules/yaml/dist/schema/core/bool.js
 var require_bool = __commonJS({
-  "node_modules/yaml/dist/schema/core/bool.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/schema/core/bool.js"(exports) {
     "use strict";
     var Scalar = require_Scalar();
     var boolTag = {
@@ -2689,9 +2700,9 @@ var require_bool = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/stringify/stringifyNumber.js
+// ../dev-pomogator/node_modules/yaml/dist/stringify/stringifyNumber.js
 var require_stringifyNumber = __commonJS({
-  "node_modules/yaml/dist/stringify/stringifyNumber.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/stringify/stringifyNumber.js"(exports) {
     "use strict";
     function stringifyNumber({ format, minFractionDigits, tag, value }) {
       if (typeof value === "bigint")
@@ -2716,9 +2727,9 @@ var require_stringifyNumber = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/schema/core/float.js
+// ../dev-pomogator/node_modules/yaml/dist/schema/core/float.js
 var require_float = __commonJS({
-  "node_modules/yaml/dist/schema/core/float.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/schema/core/float.js"(exports) {
     "use strict";
     var Scalar = require_Scalar();
     var stringifyNumber = require_stringifyNumber();
@@ -2762,9 +2773,9 @@ var require_float = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/schema/core/int.js
+// ../dev-pomogator/node_modules/yaml/dist/schema/core/int.js
 var require_int = __commonJS({
-  "node_modules/yaml/dist/schema/core/int.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/schema/core/int.js"(exports) {
     "use strict";
     var stringifyNumber = require_stringifyNumber();
     var intIdentify = (value) => typeof value === "bigint" || Number.isInteger(value);
@@ -2807,9 +2818,9 @@ var require_int = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/schema/core/schema.js
+// ../dev-pomogator/node_modules/yaml/dist/schema/core/schema.js
 var require_schema = __commonJS({
-  "node_modules/yaml/dist/schema/core/schema.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/schema/core/schema.js"(exports) {
     "use strict";
     var map = require_map();
     var _null = require_null();
@@ -2835,9 +2846,9 @@ var require_schema = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/schema/json/schema.js
+// ../dev-pomogator/node_modules/yaml/dist/schema/json/schema.js
 var require_schema2 = __commonJS({
-  "node_modules/yaml/dist/schema/json/schema.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/schema/json/schema.js"(exports) {
     "use strict";
     var Scalar = require_Scalar();
     var map = require_map();
@@ -2902,9 +2913,9 @@ var require_schema2 = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/schema/yaml-1.1/binary.js
+// ../dev-pomogator/node_modules/yaml/dist/schema/yaml-1.1/binary.js
 var require_binary = __commonJS({
-  "node_modules/yaml/dist/schema/yaml-1.1/binary.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/schema/yaml-1.1/binary.js"(exports) {
     "use strict";
     var node_buffer = __require("buffer");
     var Scalar = require_Scalar();
@@ -2968,9 +2979,9 @@ var require_binary = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/schema/yaml-1.1/pairs.js
+// ../dev-pomogator/node_modules/yaml/dist/schema/yaml-1.1/pairs.js
 var require_pairs = __commonJS({
-  "node_modules/yaml/dist/schema/yaml-1.1/pairs.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/schema/yaml-1.1/pairs.js"(exports) {
     "use strict";
     var identity = require_identity();
     var Pair = require_Pair();
@@ -3046,9 +3057,9 @@ ${cn.comment}` : item.comment;
   }
 });
 
-// node_modules/yaml/dist/schema/yaml-1.1/omap.js
+// ../dev-pomogator/node_modules/yaml/dist/schema/yaml-1.1/omap.js
 var require_omap = __commonJS({
-  "node_modules/yaml/dist/schema/yaml-1.1/omap.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/schema/yaml-1.1/omap.js"(exports) {
     "use strict";
     var identity = require_identity();
     var toJS = require_toJS();
@@ -3124,9 +3135,9 @@ var require_omap = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/schema/yaml-1.1/bool.js
+// ../dev-pomogator/node_modules/yaml/dist/schema/yaml-1.1/bool.js
 var require_bool2 = __commonJS({
-  "node_modules/yaml/dist/schema/yaml-1.1/bool.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/schema/yaml-1.1/bool.js"(exports) {
     "use strict";
     var Scalar = require_Scalar();
     function boolStringify({ value, source }, ctx) {
@@ -3156,9 +3167,9 @@ var require_bool2 = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/schema/yaml-1.1/float.js
+// ../dev-pomogator/node_modules/yaml/dist/schema/yaml-1.1/float.js
 var require_float2 = __commonJS({
-  "node_modules/yaml/dist/schema/yaml-1.1/float.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/schema/yaml-1.1/float.js"(exports) {
     "use strict";
     var Scalar = require_Scalar();
     var stringifyNumber = require_stringifyNumber();
@@ -3205,9 +3216,9 @@ var require_float2 = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/schema/yaml-1.1/int.js
+// ../dev-pomogator/node_modules/yaml/dist/schema/yaml-1.1/int.js
 var require_int2 = __commonJS({
-  "node_modules/yaml/dist/schema/yaml-1.1/int.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/schema/yaml-1.1/int.js"(exports) {
     "use strict";
     var stringifyNumber = require_stringifyNumber();
     var intIdentify = (value) => typeof value === "bigint" || Number.isInteger(value);
@@ -3284,9 +3295,9 @@ var require_int2 = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/schema/yaml-1.1/set.js
+// ../dev-pomogator/node_modules/yaml/dist/schema/yaml-1.1/set.js
 var require_set = __commonJS({
-  "node_modules/yaml/dist/schema/yaml-1.1/set.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/schema/yaml-1.1/set.js"(exports) {
     "use strict";
     var identity = require_identity();
     var Pair = require_Pair();
@@ -3373,9 +3384,9 @@ var require_set = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/schema/yaml-1.1/timestamp.js
+// ../dev-pomogator/node_modules/yaml/dist/schema/yaml-1.1/timestamp.js
 var require_timestamp = __commonJS({
-  "node_modules/yaml/dist/schema/yaml-1.1/timestamp.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/schema/yaml-1.1/timestamp.js"(exports) {
     "use strict";
     var stringifyNumber = require_stringifyNumber();
     function parseSexagesimal(str, asBigInt) {
@@ -3461,9 +3472,9 @@ var require_timestamp = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/schema/yaml-1.1/schema.js
+// ../dev-pomogator/node_modules/yaml/dist/schema/yaml-1.1/schema.js
 var require_schema3 = __commonJS({
-  "node_modules/yaml/dist/schema/yaml-1.1/schema.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/schema/yaml-1.1/schema.js"(exports) {
     "use strict";
     var map = require_map();
     var _null = require_null();
@@ -3505,9 +3516,9 @@ var require_schema3 = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/schema/tags.js
+// ../dev-pomogator/node_modules/yaml/dist/schema/tags.js
 var require_tags = __commonJS({
-  "node_modules/yaml/dist/schema/tags.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/schema/tags.js"(exports) {
     "use strict";
     var map = require_map();
     var _null = require_null();
@@ -3599,9 +3610,9 @@ var require_tags = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/schema/Schema.js
+// ../dev-pomogator/node_modules/yaml/dist/schema/Schema.js
 var require_Schema = __commonJS({
-  "node_modules/yaml/dist/schema/Schema.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/schema/Schema.js"(exports) {
     "use strict";
     var identity = require_identity();
     var map = require_map();
@@ -3631,9 +3642,9 @@ var require_Schema = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/stringify/stringifyDocument.js
+// ../dev-pomogator/node_modules/yaml/dist/stringify/stringifyDocument.js
 var require_stringifyDocument = __commonJS({
-  "node_modules/yaml/dist/stringify/stringifyDocument.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/stringify/stringifyDocument.js"(exports) {
     "use strict";
     var identity = require_identity();
     var stringify = require_stringify();
@@ -3711,9 +3722,9 @@ var require_stringifyDocument = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/doc/Document.js
+// ../dev-pomogator/node_modules/yaml/dist/doc/Document.js
 var require_Document = __commonJS({
-  "node_modules/yaml/dist/doc/Document.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/doc/Document.js"(exports) {
     "use strict";
     var Alias = require_Alias();
     var Collection = require_Collection();
@@ -3789,9 +3800,9 @@ var require_Document = __commonJS({
           this.contents.add(value);
       }
       /** Adds a value to the document. */
-      addIn(path7, value) {
+      addIn(path8, value) {
         if (assertCollection(this.contents))
-          this.contents.addIn(path7, value);
+          this.contents.addIn(path8, value);
       }
       /**
        * Create a new `Alias` node, ensuring that the target `node` has the required anchor.
@@ -3866,14 +3877,14 @@ var require_Document = __commonJS({
        * Removes a value from the document.
        * @returns `true` if the item was found and removed.
        */
-      deleteIn(path7) {
-        if (Collection.isEmptyPath(path7)) {
+      deleteIn(path8) {
+        if (Collection.isEmptyPath(path8)) {
           if (this.contents == null)
             return false;
           this.contents = null;
           return true;
         }
-        return assertCollection(this.contents) ? this.contents.deleteIn(path7) : false;
+        return assertCollection(this.contents) ? this.contents.deleteIn(path8) : false;
       }
       /**
        * Returns item at `key`, or `undefined` if not found. By default unwraps
@@ -3888,10 +3899,10 @@ var require_Document = __commonJS({
        * scalar values from their surrounding node; to disable set `keepScalar` to
        * `true` (collections are always returned intact).
        */
-      getIn(path7, keepScalar) {
-        if (Collection.isEmptyPath(path7))
+      getIn(path8, keepScalar) {
+        if (Collection.isEmptyPath(path8))
           return !keepScalar && identity.isScalar(this.contents) ? this.contents.value : this.contents;
-        return identity.isCollection(this.contents) ? this.contents.getIn(path7, keepScalar) : void 0;
+        return identity.isCollection(this.contents) ? this.contents.getIn(path8, keepScalar) : void 0;
       }
       /**
        * Checks if the document includes a value with the key `key`.
@@ -3902,10 +3913,10 @@ var require_Document = __commonJS({
       /**
        * Checks if the document includes a value at `path`.
        */
-      hasIn(path7) {
-        if (Collection.isEmptyPath(path7))
+      hasIn(path8) {
+        if (Collection.isEmptyPath(path8))
           return this.contents !== void 0;
-        return identity.isCollection(this.contents) ? this.contents.hasIn(path7) : false;
+        return identity.isCollection(this.contents) ? this.contents.hasIn(path8) : false;
       }
       /**
        * Sets a value in this document. For `!!set`, `value` needs to be a
@@ -3922,13 +3933,13 @@ var require_Document = __commonJS({
        * Sets a value in this document. For `!!set`, `value` needs to be a
        * boolean to add/remove the item from the set.
        */
-      setIn(path7, value) {
-        if (Collection.isEmptyPath(path7)) {
+      setIn(path8, value) {
+        if (Collection.isEmptyPath(path8)) {
           this.contents = value;
         } else if (this.contents == null) {
-          this.contents = Collection.collectionFromPath(this.schema, Array.from(path7), value);
+          this.contents = Collection.collectionFromPath(this.schema, Array.from(path8), value);
         } else if (assertCollection(this.contents)) {
-          this.contents.setIn(path7, value);
+          this.contents.setIn(path8, value);
         }
       }
       /**
@@ -4020,9 +4031,9 @@ var require_Document = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/errors.js
+// ../dev-pomogator/node_modules/yaml/dist/errors.js
 var require_errors = __commonJS({
-  "node_modules/yaml/dist/errors.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/errors.js"(exports) {
     "use strict";
     var YAMLError = class extends Error {
       constructor(name, pos, code, message) {
@@ -4085,9 +4096,9 @@ ${pointer}
   }
 });
 
-// node_modules/yaml/dist/compose/resolve-props.js
+// ../dev-pomogator/node_modules/yaml/dist/compose/resolve-props.js
 var require_resolve_props = __commonJS({
-  "node_modules/yaml/dist/compose/resolve-props.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/compose/resolve-props.js"(exports) {
     "use strict";
     function resolveProps(tokens, { flow, indicator, next, offset, onError, parentIndent, startOnNewline }) {
       let spaceBefore = false;
@@ -4219,9 +4230,9 @@ var require_resolve_props = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/compose/util-contains-newline.js
+// ../dev-pomogator/node_modules/yaml/dist/compose/util-contains-newline.js
 var require_util_contains_newline = __commonJS({
-  "node_modules/yaml/dist/compose/util-contains-newline.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/compose/util-contains-newline.js"(exports) {
     "use strict";
     function containsNewline(key) {
       if (!key)
@@ -4261,9 +4272,9 @@ var require_util_contains_newline = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/compose/util-flow-indent-check.js
+// ../dev-pomogator/node_modules/yaml/dist/compose/util-flow-indent-check.js
 var require_util_flow_indent_check = __commonJS({
-  "node_modules/yaml/dist/compose/util-flow-indent-check.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/compose/util-flow-indent-check.js"(exports) {
     "use strict";
     var utilContainsNewline = require_util_contains_newline();
     function flowIndentCheck(indent, fc, onError) {
@@ -4279,9 +4290,9 @@ var require_util_flow_indent_check = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/compose/util-map-includes.js
+// ../dev-pomogator/node_modules/yaml/dist/compose/util-map-includes.js
 var require_util_map_includes = __commonJS({
-  "node_modules/yaml/dist/compose/util-map-includes.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/compose/util-map-includes.js"(exports) {
     "use strict";
     var identity = require_identity();
     function mapIncludes(ctx, items, search) {
@@ -4295,9 +4306,9 @@ var require_util_map_includes = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/compose/resolve-block-map.js
+// ../dev-pomogator/node_modules/yaml/dist/compose/resolve-block-map.js
 var require_resolve_block_map = __commonJS({
-  "node_modules/yaml/dist/compose/resolve-block-map.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/compose/resolve-block-map.js"(exports) {
     "use strict";
     var Pair = require_Pair();
     var YAMLMap = require_YAMLMap();
@@ -4403,9 +4414,9 @@ var require_resolve_block_map = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/compose/resolve-block-seq.js
+// ../dev-pomogator/node_modules/yaml/dist/compose/resolve-block-seq.js
 var require_resolve_block_seq = __commonJS({
-  "node_modules/yaml/dist/compose/resolve-block-seq.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/compose/resolve-block-seq.js"(exports) {
     "use strict";
     var YAMLSeq = require_YAMLSeq();
     var resolveProps = require_resolve_props();
@@ -4454,9 +4465,9 @@ var require_resolve_block_seq = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/compose/resolve-end.js
+// ../dev-pomogator/node_modules/yaml/dist/compose/resolve-end.js
 var require_resolve_end = __commonJS({
-  "node_modules/yaml/dist/compose/resolve-end.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/compose/resolve-end.js"(exports) {
     "use strict";
     function resolveEnd(end, offset, reqSpace, onError) {
       let comment = "";
@@ -4497,9 +4508,9 @@ var require_resolve_end = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/compose/resolve-flow-collection.js
+// ../dev-pomogator/node_modules/yaml/dist/compose/resolve-flow-collection.js
 var require_resolve_flow_collection = __commonJS({
-  "node_modules/yaml/dist/compose/resolve-flow-collection.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/compose/resolve-flow-collection.js"(exports) {
     "use strict";
     var identity = require_identity();
     var Pair = require_Pair();
@@ -4691,9 +4702,9 @@ var require_resolve_flow_collection = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/compose/compose-collection.js
+// ../dev-pomogator/node_modules/yaml/dist/compose/compose-collection.js
 var require_compose_collection = __commonJS({
-  "node_modules/yaml/dist/compose/compose-collection.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/compose/compose-collection.js"(exports) {
     "use strict";
     var identity = require_identity();
     var Scalar = require_Scalar();
@@ -4756,9 +4767,9 @@ var require_compose_collection = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/compose/resolve-block-scalar.js
+// ../dev-pomogator/node_modules/yaml/dist/compose/resolve-block-scalar.js
 var require_resolve_block_scalar = __commonJS({
-  "node_modules/yaml/dist/compose/resolve-block-scalar.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/compose/resolve-block-scalar.js"(exports) {
     "use strict";
     var Scalar = require_Scalar();
     function resolveBlockScalar(ctx, scalar, onError) {
@@ -4939,9 +4950,9 @@ var require_resolve_block_scalar = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/compose/resolve-flow-scalar.js
+// ../dev-pomogator/node_modules/yaml/dist/compose/resolve-flow-scalar.js
 var require_resolve_flow_scalar = __commonJS({
-  "node_modules/yaml/dist/compose/resolve-flow-scalar.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/compose/resolve-flow-scalar.js"(exports) {
     "use strict";
     var Scalar = require_Scalar();
     var resolveEnd = require_resolve_end();
@@ -5158,9 +5169,9 @@ var require_resolve_flow_scalar = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/compose/compose-scalar.js
+// ../dev-pomogator/node_modules/yaml/dist/compose/compose-scalar.js
 var require_compose_scalar = __commonJS({
-  "node_modules/yaml/dist/compose/compose-scalar.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/compose/compose-scalar.js"(exports) {
     "use strict";
     var identity = require_identity();
     var Scalar = require_Scalar();
@@ -5239,9 +5250,9 @@ var require_compose_scalar = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/compose/util-empty-scalar-position.js
+// ../dev-pomogator/node_modules/yaml/dist/compose/util-empty-scalar-position.js
 var require_util_empty_scalar_position = __commonJS({
-  "node_modules/yaml/dist/compose/util-empty-scalar-position.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/compose/util-empty-scalar-position.js"(exports) {
     "use strict";
     function emptyScalarPosition(offset, before, pos) {
       if (before) {
@@ -5269,9 +5280,9 @@ var require_util_empty_scalar_position = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/compose/compose-node.js
+// ../dev-pomogator/node_modules/yaml/dist/compose/compose-node.js
 var require_compose_node = __commonJS({
-  "node_modules/yaml/dist/compose/compose-node.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/compose/compose-node.js"(exports) {
     "use strict";
     var Alias = require_Alias();
     var identity = require_identity();
@@ -5375,9 +5386,9 @@ var require_compose_node = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/compose/compose-doc.js
+// ../dev-pomogator/node_modules/yaml/dist/compose/compose-doc.js
 var require_compose_doc = __commonJS({
-  "node_modules/yaml/dist/compose/compose-doc.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/compose/compose-doc.js"(exports) {
     "use strict";
     var Document = require_Document();
     var composeNode = require_compose_node();
@@ -5418,9 +5429,9 @@ var require_compose_doc = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/compose/composer.js
+// ../dev-pomogator/node_modules/yaml/dist/compose/composer.js
 var require_composer = __commonJS({
-  "node_modules/yaml/dist/compose/composer.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/compose/composer.js"(exports) {
     "use strict";
     var node_process = __require("process");
     var directives = require_directives();
@@ -5624,9 +5635,9 @@ ${end.comment}` : end.comment;
   }
 });
 
-// node_modules/yaml/dist/parse/cst-scalar.js
+// ../dev-pomogator/node_modules/yaml/dist/parse/cst-scalar.js
 var require_cst_scalar = __commonJS({
-  "node_modules/yaml/dist/parse/cst-scalar.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/parse/cst-scalar.js"(exports) {
     "use strict";
     var resolveBlockScalar = require_resolve_block_scalar();
     var resolveFlowScalar = require_resolve_flow_scalar();
@@ -5809,9 +5820,9 @@ var require_cst_scalar = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/parse/cst-stringify.js
+// ../dev-pomogator/node_modules/yaml/dist/parse/cst-stringify.js
 var require_cst_stringify = __commonJS({
-  "node_modules/yaml/dist/parse/cst-stringify.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/parse/cst-stringify.js"(exports) {
     "use strict";
     var stringify = (cst) => "type" in cst ? stringifyToken(cst) : stringifyItem(cst);
     function stringifyToken(token) {
@@ -5870,9 +5881,9 @@ var require_cst_stringify = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/parse/cst-visit.js
+// ../dev-pomogator/node_modules/yaml/dist/parse/cst-visit.js
 var require_cst_visit = __commonJS({
-  "node_modules/yaml/dist/parse/cst-visit.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/parse/cst-visit.js"(exports) {
     "use strict";
     var BREAK = /* @__PURE__ */ Symbol("break visit");
     var SKIP = /* @__PURE__ */ Symbol("skip children");
@@ -5885,9 +5896,9 @@ var require_cst_visit = __commonJS({
     visit.BREAK = BREAK;
     visit.SKIP = SKIP;
     visit.REMOVE = REMOVE;
-    visit.itemAtPath = (cst, path7) => {
+    visit.itemAtPath = (cst, path8) => {
       let item = cst;
-      for (const [field, index] of path7) {
+      for (const [field, index] of path8) {
         const tok = item?.[field];
         if (tok && "items" in tok) {
           item = tok.items[index];
@@ -5896,23 +5907,23 @@ var require_cst_visit = __commonJS({
       }
       return item;
     };
-    visit.parentCollection = (cst, path7) => {
-      const parent = visit.itemAtPath(cst, path7.slice(0, -1));
-      const field = path7[path7.length - 1][0];
+    visit.parentCollection = (cst, path8) => {
+      const parent = visit.itemAtPath(cst, path8.slice(0, -1));
+      const field = path8[path8.length - 1][0];
       const coll = parent?.[field];
       if (coll && "items" in coll)
         return coll;
       throw new Error("Parent collection not found");
     };
-    function _visit(path7, item, visitor) {
-      let ctrl = visitor(item, path7);
+    function _visit(path8, item, visitor) {
+      let ctrl = visitor(item, path8);
       if (typeof ctrl === "symbol")
         return ctrl;
       for (const field of ["key", "value"]) {
         const token = item[field];
         if (token && "items" in token) {
           for (let i = 0; i < token.items.length; ++i) {
-            const ci = _visit(Object.freeze(path7.concat([[field, i]])), token.items[i], visitor);
+            const ci = _visit(Object.freeze(path8.concat([[field, i]])), token.items[i], visitor);
             if (typeof ci === "number")
               i = ci - 1;
             else if (ci === BREAK)
@@ -5923,18 +5934,18 @@ var require_cst_visit = __commonJS({
             }
           }
           if (typeof ctrl === "function" && field === "key")
-            ctrl = ctrl(item, path7);
+            ctrl = ctrl(item, path8);
         }
       }
-      return typeof ctrl === "function" ? ctrl(item, path7) : ctrl;
+      return typeof ctrl === "function" ? ctrl(item, path8) : ctrl;
     }
     exports.visit = visit;
   }
 });
 
-// node_modules/yaml/dist/parse/cst.js
+// ../dev-pomogator/node_modules/yaml/dist/parse/cst.js
 var require_cst = __commonJS({
-  "node_modules/yaml/dist/parse/cst.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/parse/cst.js"(exports) {
     "use strict";
     var cstScalar = require_cst_scalar();
     var cstStringify = require_cst_stringify();
@@ -6034,9 +6045,9 @@ var require_cst = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/parse/lexer.js
+// ../dev-pomogator/node_modules/yaml/dist/parse/lexer.js
 var require_lexer = __commonJS({
-  "node_modules/yaml/dist/parse/lexer.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/parse/lexer.js"(exports) {
     "use strict";
     var cst = require_cst();
     function isEmpty(ch) {
@@ -6613,9 +6624,9 @@ var require_lexer = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/parse/line-counter.js
+// ../dev-pomogator/node_modules/yaml/dist/parse/line-counter.js
 var require_line_counter = __commonJS({
-  "node_modules/yaml/dist/parse/line-counter.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/parse/line-counter.js"(exports) {
     "use strict";
     var LineCounter = class {
       constructor() {
@@ -6644,9 +6655,9 @@ var require_line_counter = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/parse/parser.js
+// ../dev-pomogator/node_modules/yaml/dist/parse/parser.js
 var require_parser = __commonJS({
-  "node_modules/yaml/dist/parse/parser.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/parse/parser.js"(exports) {
     "use strict";
     var node_process = __require("process");
     var cst = require_cst();
@@ -7211,14 +7222,14 @@ var require_parser = __commonJS({
             case "scalar":
             case "single-quoted-scalar":
             case "double-quoted-scalar": {
-              const fs11 = this.flowScalar(this.type);
+              const fs12 = this.flowScalar(this.type);
               if (atNextItem || it.value) {
-                map.items.push({ start, key: fs11, sep: [] });
+                map.items.push({ start, key: fs12, sep: [] });
                 this.onKeyLine = true;
               } else if (it.sep) {
-                this.stack.push(fs11);
+                this.stack.push(fs12);
               } else {
-                Object.assign(it, { key: fs11, sep: [] });
+                Object.assign(it, { key: fs12, sep: [] });
                 this.onKeyLine = true;
               }
               return;
@@ -7346,13 +7357,13 @@ var require_parser = __commonJS({
             case "scalar":
             case "single-quoted-scalar":
             case "double-quoted-scalar": {
-              const fs11 = this.flowScalar(this.type);
+              const fs12 = this.flowScalar(this.type);
               if (!it || it.value)
-                fc.items.push({ start: [], key: fs11, sep: [] });
+                fc.items.push({ start: [], key: fs12, sep: [] });
               else if (it.sep)
-                this.stack.push(fs11);
+                this.stack.push(fs12);
               else
-                Object.assign(it, { key: fs11, sep: [] });
+                Object.assign(it, { key: fs12, sep: [] });
               return;
             }
             case "flow-map-end":
@@ -7511,9 +7522,9 @@ var require_parser = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/public-api.js
+// ../dev-pomogator/node_modules/yaml/dist/public-api.js
 var require_public_api = __commonJS({
-  "node_modules/yaml/dist/public-api.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/public-api.js"(exports) {
     "use strict";
     var composer = require_composer();
     var Document = require_Document();
@@ -7608,9 +7619,9 @@ var require_public_api = __commonJS({
   }
 });
 
-// node_modules/yaml/dist/index.js
+// ../dev-pomogator/node_modules/yaml/dist/index.js
 var require_dist = __commonJS({
-  "node_modules/yaml/dist/index.js"(exports) {
+  "../dev-pomogator/node_modules/yaml/dist/index.js"(exports) {
     "use strict";
     var composer = require_composer();
     var Document = require_Document();
@@ -7660,8 +7671,328 @@ var require_dist = __commonJS({
   }
 });
 
-// tools/spec-graph/metadata-schema.ts
+// tools/spec-graph/requirement-contract.ts
 function objectOf(value) {
+  return value !== null && typeof value === "object" && !Array.isArray(value) ? value : null;
+}
+function isPlaceholderText(value) {
+  return /^\{[^}]+\}$/.test(value) || /^\[[^\]]+\]$/.test(value) || /^(?:TBD|TODO|FIXME|NEEDS_CLARIFICATION)$/i.test(value);
+}
+function text(value) {
+  if (typeof value !== "string") return void 0;
+  const candidate = value.trim();
+  return candidate && !isPlaceholderText(candidate) ? candidate : void 0;
+}
+function stringArray(value) {
+  if (!Array.isArray(value)) return void 0;
+  const values = value.map((item) => text(item));
+  return values.every((item) => Boolean(item)) ? values : void 0;
+}
+function enumValue(value, values) {
+  return typeof value === "string" && values.includes(value) ? value : void 0;
+}
+function addIssue(issues, code, path8, message) {
+  issues.push({ code, path: path8, message });
+}
+function requiredObject(raw, key, issues, code = "FR_CONTRACT_KIND_FIELDS_MISSING") {
+  const value = objectOf(raw[key]);
+  if (!value || Object.keys(value).length === 0) addIssue(issues, code, key, `${key} must be a non-empty object`);
+  return value && Object.keys(value).length > 0 ? value : void 0;
+}
+function requiredString(raw, key, issues, code = "FR_CONTRACT_KIND_FIELDS_MISSING") {
+  const value = text(raw[key]);
+  if (!value) addIssue(issues, code, key, `${key} must be a non-empty string`);
+  return value;
+}
+function requiredStringArray(raw, key, issues, code = "FR_CONTRACT_KIND_FIELDS_MISSING") {
+  const value = stringArray(raw[key]);
+  if (!value || value.length === 0) addIssue(issues, code, key, `${key} must be a non-empty string array`);
+  return value;
+}
+function validateObservableArray(value, path8, issues, missingCode) {
+  if (!Array.isArray(value) || value.length === 0) {
+    addIssue(issues, missingCode, path8, `${path8} must contain at least one item`);
+    return void 0;
+  }
+  const result = [];
+  for (const [index, item] of value.entries()) {
+    const object = objectOf(item);
+    const when = text(object?.when);
+    const then = text(object?.then);
+    if (!object || !when || !then) {
+      addIssue(issues, "FR_CONTRACT_OBSERVABLE_MISSING", `${path8}[${index}]`, "observable requires non-empty when and then");
+      continue;
+    }
+    result.push({ when, then });
+  }
+  return result;
+}
+function validateVerification(raw, issues) {
+  const value = objectOf(raw.verification);
+  if (!value) {
+    addIssue(issues, "FR_CONTRACT_VERIFICATION_INVALID", "verification", "verification must be an object");
+    return void 0;
+  }
+  const method = enumValue(value.method, CONTRACT_VERIFICATION_METHODS);
+  if (!method) addIssue(issues, "FR_CONTRACT_VERIFICATION_INVALID", "verification.method", `must be one of ${CONTRACT_VERIFICATION_METHODS.join("|")}`);
+  const requiredEvidence = stringArray(value.required_evidence);
+  if (!requiredEvidence || requiredEvidence.length === 0 || requiredEvidence.some((item) => !enumValue(item, REQUIRED_EVIDENCE_KINDS))) {
+    addIssue(issues, "FR_CONTRACT_VERIFICATION_INVALID", "verification.required_evidence", `must contain values from ${REQUIRED_EVIDENCE_KINDS.join("|")}`);
+  }
+  const scenario = objectOf(value.scenario);
+  const scenarioRefs = stringArray(scenario?.refs);
+  const scenarioPending = scenario?.pending === true;
+  const scenarioReason = text(scenario?.reason);
+  if ((scenarioRefs?.length ?? 0) > 0 && scenarioPending) {
+    addIssue(issues, "FR_CONTRACT_VERIFICATION_INVALID", "verification.scenario", "refs and pending are mutually exclusive");
+  } else if (scenarioRefs?.length) {
+  } else if (!scenarioPending || !scenarioReason) {
+    addIssue(issues, "FR_CONTRACT_VERIFICATION_INVALID", "verification.scenario", "requires non-empty refs or pending:true with reason");
+  }
+  const implementationSurface = objectOf(value.implementation_surface);
+  const surfaceRefs = stringArray(implementationSurface?.refs);
+  const surfaceUnknown = implementationSurface?.unknown === true;
+  const surfaceReason = text(implementationSurface?.reason);
+  if ((surfaceRefs?.length ?? 0) > 0 && surfaceUnknown) {
+    addIssue(issues, "FR_CONTRACT_VERIFICATION_INVALID", "verification.implementation_surface", "refs and unknown are mutually exclusive");
+  } else if (surfaceRefs?.length) {
+  } else if (!surfaceUnknown || !surfaceReason) {
+    addIssue(issues, "FR_CONTRACT_VERIFICATION_INVALID", "verification.implementation_surface", "requires non-empty refs or unknown:true with reason");
+  }
+  const policy = objectOf(value.evidence_policy);
+  const source = enumValue(policy?.source, EVIDENCE_POLICY_SOURCES);
+  const freshness = enumValue(policy?.freshness, EVIDENCE_POLICY_FRESHNESS);
+  if (!source) addIssue(issues, "FR_CONTRACT_VERIFICATION_INVALID", "verification.evidence_policy.source", `must be one of ${EVIDENCE_POLICY_SOURCES.join("|")}`);
+  if (!freshness) addIssue(issues, "FR_CONTRACT_VERIFICATION_INVALID", "verification.evidence_policy.freshness", `must be one of ${EVIDENCE_POLICY_FRESHNESS.join("|")}`);
+  if (typeof policy?.independent !== "boolean") addIssue(issues, "FR_CONTRACT_VERIFICATION_INVALID", "verification.evidence_policy.independent", "must be boolean");
+  if (issues.some((issue) => issue.path.startsWith("verification."))) return void 0;
+  return {
+    method,
+    required_evidence: requiredEvidence.map((item) => enumValue(item, REQUIRED_EVIDENCE_KINDS)),
+    scenario: scenarioRefs?.length ? { refs: scenarioRefs } : { pending: true, reason: scenarioReason },
+    implementation_surface: surfaceRefs?.length ? { refs: surfaceRefs } : { unknown: true, reason: surfaceReason },
+    evidence_policy: { source, freshness, independent: policy.independent }
+  };
+}
+function validateFieldArray(value, path8, issues) {
+  if (!Array.isArray(value) || value.length === 0) {
+    addIssue(issues, "FR_CONTRACT_KIND_FIELDS_MISSING", path8, `${path8} must be a non-empty field array`);
+    return;
+  }
+  for (const [index, item] of value.entries()) {
+    const fieldValue = objectOf(item);
+    if (!text(fieldValue?.name) || !text(fieldValue?.type) || typeof fieldValue?.required !== "boolean") {
+      addIssue(issues, "FR_CONTRACT_KIND_FIELDS_MISSING", `${path8}[${index}]`, "field requires name, type, and required");
+    }
+  }
+}
+function validateStringMap(value, path8, issues) {
+  const map = objectOf(value);
+  if (!map || Object.keys(map).length === 0) {
+    addIssue(issues, "FR_CONTRACT_KIND_FIELDS_MISSING", path8, `${path8} must be a non-empty string map`);
+    return;
+  }
+  for (const [key, item] of Object.entries(map)) {
+    if (!key.trim() || !text(item)) addIssue(issues, "FR_CONTRACT_KIND_FIELDS_MISSING", `${path8}.${key}`, "map values must be non-empty strings");
+  }
+}
+function validateErrorArray(value, path8, issues) {
+  if (!Array.isArray(value) || value.length === 0) {
+    addIssue(issues, "FR_CONTRACT_KIND_FIELDS_MISSING", path8, `${path8} must be a non-empty Error[]`);
+    return;
+  }
+  for (const [index, item] of value.entries()) {
+    const error = objectOf(item);
+    if (!text(error?.code) || !text(error?.observable)) {
+      addIssue(issues, "FR_CONTRACT_KIND_FIELDS_MISSING", `${path8}[${index}]`, "error requires code and observable");
+    }
+  }
+}
+function validateStructuredArray(value, path8, issues) {
+  if (!Array.isArray(value) || value.length === 0) {
+    addIssue(issues, "FR_CONTRACT_KIND_FIELDS_MISSING", path8, `${path8} must be a non-empty structured array`);
+    return;
+  }
+  for (const [index, item] of value.entries()) {
+    const object = objectOf(item);
+    if (!object || Object.keys(object).length === 0) {
+      addIssue(issues, "FR_CONTRACT_KIND_FIELDS_MISSING", `${path8}[${index}]`, "entry must be a non-empty object");
+    }
+  }
+}
+function requiredConfinedPath(value, pathName, issues) {
+  const candidate = text(value);
+  const segments = candidate?.split(/[\\/]+/) ?? [];
+  const absolute = Boolean(candidate && (/^(?:[A-Za-z]:[\\/]|[\\/]{1,2}|~[\\/])/.test(candidate) || segments.includes("..")));
+  if (!candidate || absolute) addIssue(issues, "FR_CONTRACT_KIND_FIELDS_MISSING", pathName, `${pathName} must be a confined repository-relative path`);
+}
+function validateKindSpecific(raw, kind, issues) {
+  if (kind === "disposition") {
+    const disposition = requiredObject(raw, "disposition", issues, "FR_CONTRACT_DISPOSITION_INVALID");
+    if (!disposition) return;
+    requiredString(disposition, "status", issues, "FR_CONTRACT_DISPOSITION_INVALID");
+    requiredString(disposition, "rationale", issues, "FR_CONTRACT_DISPOSITION_INVALID");
+    requiredString(disposition, "owner", issues, "FR_CONTRACT_DISPOSITION_INVALID");
+    const successor = text(disposition.successor);
+    const boundary = text(disposition.boundary);
+    if ((successor ? 1 : 0) + (boundary ? 1 : 0) !== 1) addIssue(issues, "FR_CONTRACT_DISPOSITION_INVALID", "disposition.successor|boundary", "exactly one of successor or boundary is required");
+    return;
+  }
+  if (kind === "cli") {
+    const command = requiredObject(raw, "command", issues);
+    if (command) {
+      requiredString(command, "executable", issues);
+      requiredStringArray(command, "args", issues);
+    }
+    validateFieldArray(raw.input, "input", issues);
+    requiredObject(raw, "output", issues);
+    validateStringMap(raw.exit_codes, "exit_codes", issues);
+    validateErrorArray(raw.errors, "errors", issues);
+    return;
+  }
+  if (kind === "api") {
+    const request = requiredObject(raw, "request", issues);
+    if (request && !text(request.method) && !text(request.tool)) addIssue(issues, "FR_CONTRACT_KIND_FIELDS_MISSING", "request.method|tool", "request requires method or tool");
+    if (request) validateFieldArray(request.input, "request.input", issues);
+    requiredObject(raw, "response", issues);
+    requiredObject(raw, "authority", issues);
+    validateErrorArray(raw.errors, "errors", issues);
+    return;
+  }
+  if (kind === "schema") {
+    const schema = requiredObject(raw, "schema", issues);
+    if (schema) {
+      validateFieldArray(schema.fields, "schema.fields", issues);
+      requiredObject(schema, "enums", issues);
+      requiredStringArray(schema, "forbidden", issues);
+    }
+    return;
+  }
+  if (kind === "filesystem") {
+    if (!Array.isArray(raw.artifacts) || raw.artifacts.length === 0) {
+      addIssue(issues, "FR_CONTRACT_KIND_FIELDS_MISSING", "artifacts", "artifacts must be a non-empty array");
+      return;
+    }
+    for (const [index, item] of raw.artifacts.entries()) {
+      const artifact = objectOf(item);
+      if (!artifact || Object.keys(artifact).length === 0) {
+        addIssue(issues, "FR_CONTRACT_KIND_FIELDS_MISSING", `artifacts[${index}]`, "artifact must be a non-empty object");
+        continue;
+      }
+      requiredConfinedPath(artifact.path, `artifacts[${index}].path`, issues);
+      for (const key of ["action", "owner", "atomicity"]) requiredString(artifact, key, issues);
+      requiredObject(artifact, "resulting_state", issues);
+      requiredObject(artifact, "rollback", issues);
+      requiredObject(artifact, "confinement", issues);
+    }
+    return;
+  }
+  if (kind === "event") {
+    const event = requiredObject(raw, "event", issues);
+    if (event) {
+      for (const key of ["name", "producer", "ordering", "retry", "duplicate"]) requiredString(event, key, issues);
+      requiredObject(event, "payload", issues);
+      requiredStringArray(event, "consumers", issues);
+    }
+    return;
+  }
+  if (kind === "state") {
+    const state = requiredObject(raw, "state", issues);
+    if (state) {
+      requiredStringArray(state, "states", issues);
+      validateStructuredArray(state.transitions, "state.transitions", issues);
+      validateStructuredArray(state.guards, "state.guards", issues);
+      requiredStringArray(state, "terminal_outcomes", issues);
+    }
+    return;
+  }
+  const behavior = requiredObject(raw, "behavior", issues);
+  if (behavior) {
+    for (const key of ["actor", "trigger"]) requiredString(behavior, key, issues);
+    requiredStringArray(behavior, "preconditions", issues);
+    requiredStringArray(behavior, "observable_outcomes", issues);
+    requiredStringArray(behavior, "forbidden_outcomes", issues);
+  }
+}
+function validateRequirementContract(value) {
+  const issues = [];
+  const raw = objectOf(value);
+  if (!raw) return { issues: [{ code: "FR_CONTRACT_MISSING", path: "contract", message: "contract card must be an object" }] };
+  if (raw.version !== CONTRACT_CARD_VERSION) addIssue(issues, "FR_CONTRACT_VERSION_UNSUPPORTED", "version", "contract version must be 1");
+  const kind = enumValue(raw.kind, CONTRACT_KINDS);
+  if (!kind) addIssue(issues, "FR_CONTRACT_KIND_INVALID", "kind", `kind must be one of ${CONTRACT_KINDS.join("|")}`);
+  const subject = text(raw.subject);
+  if (!subject) addIssue(issues, "FR_CONTRACT_SUBJECT_MISSING", "subject", "subject must be non-empty");
+  const observables = validateObservableArray(raw.observables, "observables", issues, "FR_CONTRACT_OBSERVABLE_MISSING");
+  const negativeCases = validateObservableArray(raw.negative_cases, "negative_cases", issues, "FR_CONTRACT_NEGATIVE_CASE_MISSING");
+  const verification = validateVerification(raw, issues);
+  if (kind) validateKindSpecific(raw, kind, issues);
+  if (issues.length > 0 || !kind || !subject || !observables || !negativeCases || !verification) return { issues };
+  const contract = canonicalizeRequirementContract({
+    ...raw,
+    version: CONTRACT_CARD_VERSION,
+    kind,
+    subject,
+    observables,
+    negative_cases: negativeCases,
+    ...verification ? { verification } : {}
+  });
+  return { contract, issues: [] };
+}
+function stableClone(value) {
+  if (Array.isArray(value)) return value.map(stableClone);
+  const object = objectOf(value);
+  if (!object) return value;
+  return Object.fromEntries(Object.keys(object).sort().map((key) => [key, stableClone(object[key])]));
+}
+function canonicalizeRequirementContract(value) {
+  const raw = value;
+  const ordered = {};
+  for (const key of ["version", "kind", "subject", "preconditions", "observables", "negative_cases", "invariants", "verification"]) if (raw[key] !== void 0) ordered[key] = stableClone(raw[key]);
+  for (const key of Object.keys(raw).filter((item) => !Object.keys(ordered).includes(item)).sort()) ordered[key] = stableClone(raw[key]);
+  return ordered;
+}
+var import_yaml, CONTRACT_CARD_VERSION, CONTRACT_KINDS, CONTRACT_VERIFICATION_METHODS, REQUIRED_EVIDENCE_KINDS, EVIDENCE_POLICY_SOURCES, EVIDENCE_POLICY_FRESHNESS;
+var init_requirement_contract = __esm({
+  "tools/spec-graph/requirement-contract.ts"() {
+    "use strict";
+    import_yaml = __toESM(require_dist(), 1);
+    CONTRACT_CARD_VERSION = 1;
+    CONTRACT_KINDS = [
+      "cli",
+      "api",
+      "schema",
+      "filesystem",
+      "event",
+      "state",
+      "behavior",
+      "disposition"
+    ];
+    CONTRACT_VERIFICATION_METHODS = [
+      "bdd",
+      "integration",
+      "manual",
+      "analysis",
+      "demonstration"
+    ];
+    REQUIRED_EVIDENCE_KINDS = [
+      "bdd",
+      "integration",
+      "implementation",
+      "review",
+      "analysis",
+      "demonstration",
+      "decision-record",
+      "migration",
+      "operational-proof"
+    ];
+    EVIDENCE_POLICY_SOURCES = ["canonical", "planned", "runtime", "external"];
+    EVIDENCE_POLICY_FRESHNESS = ["current", "pending", "stale", "unknown"];
+  }
+});
+
+// tools/spec-graph/metadata-schema.ts
+function objectOf2(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value) ? value : null;
 }
 function nonEmpty(value) {
@@ -7669,19 +8000,19 @@ function nonEmpty(value) {
 }
 function validateRequirementMetadata(value) {
   const issues = [];
-  const raw = objectOf(value);
+  const raw = objectOf2(value);
   if (!raw) return { issues: [{ code: "FR_METADATA_INVALID", path: "$", message: "metadata must be an object" }] };
   if (raw.schemaVersion !== 1) issues.push({ code: "FR_METADATA_INVALID", path: "schemaVersion", message: "schemaVersion must be 1" });
-  const verificationMethod = raw.verificationMethod === void 0 ? void 0 : enumValue(raw.verificationMethod, VERIFICATION_METHODS);
+  const verificationMethod = raw.verificationMethod === void 0 ? void 0 : enumValue2(raw.verificationMethod, VERIFICATION_METHODS);
   if (raw.verificationMethod !== void 0 && !verificationMethod) issues.push({ code: "FR_METADATA_INVALID", path: "verificationMethod", message: `must be one of ${VERIFICATION_METHODS.join("|")}` });
-  const safetyClass = raw.safetyClass === void 0 ? void 0 : enumValue(raw.safetyClass, SAFETY_CLASSES);
+  const safetyClass = raw.safetyClass === void 0 ? void 0 : enumValue2(raw.safetyClass, SAFETY_CLASSES);
   if (raw.safetyClass !== void 0 && !safetyClass) issues.push({ code: "FR_METADATA_INVALID", path: "safetyClass", message: `must be one of ${SAFETY_CLASSES.join("|")}` });
   const risks = [];
   if (raw.risks !== void 0 && !Array.isArray(raw.risks)) issues.push({ code: "FR_METADATA_INVALID", path: "risks", message: "must be an array" });
   for (const [index, value2] of (Array.isArray(raw.risks) ? raw.risks : []).entries()) {
-    const risk = objectOf(value2);
-    const likelihood = enumValue(risk?.likelihood, ["low", "medium", "high"]);
-    const impact = enumValue(risk?.impact, ["low", "medium", "high"]);
+    const risk = objectOf2(value2);
+    const likelihood = enumValue2(risk?.likelihood, ["low", "medium", "high"]);
+    const impact = enumValue2(risk?.impact, ["low", "medium", "high"]);
     const id = nonEmpty(risk?.id);
     if (!risk || !id || !likelihood || !impact) {
       issues.push({ code: "FR_METADATA_INVALID", path: `risks[${index}]`, message: "risk requires id and low|medium|high likelihood/impact" });
@@ -7693,10 +8024,10 @@ function validateRequirementMetadata(value) {
   const seen = /* @__PURE__ */ new Set();
   if (raw.demands !== void 0 && !Array.isArray(raw.demands)) issues.push({ code: "FR_METADATA_INVALID", path: "demands", message: "must be an array" });
   for (const [index, value2] of (Array.isArray(raw.demands) ? raw.demands : []).entries()) {
-    const demand = objectOf(value2);
-    const type = enumValue(demand?.type, DEMAND_TYPES);
-    const obligation = enumValue(demand?.obligation, DEMAND_OBLIGATIONS);
-    const state = demand?.state === void 0 ? void 0 : enumValue(demand.state, DEMAND_STATES);
+    const demand = objectOf2(value2);
+    const type = enumValue2(demand?.type, DEMAND_TYPES);
+    const obligation = enumValue2(demand?.obligation, DEMAND_OBLIGATIONS);
+    const state = demand?.state === void 0 ? void 0 : enumValue2(demand.state, DEMAND_STATES);
     const rationale = nonEmpty(demand?.rationale);
     const actor = nonEmpty(demand?.actor);
     const auditRef = nonEmpty(demand?.auditRef);
@@ -7716,42 +8047,55 @@ function validateRequirementMetadata(value) {
     const strings = (entry) => Array.isArray(entry) ? entry.filter((v) => typeof v === "string") : void 0;
     demands.push({ type, obligation, ...state ? { state } : {}, ...rationale ? { rationale } : {}, ...actor ? { actor } : {}, ...auditRef ? { auditRef } : {}, ...strings(demand.evidenceRefs) ? { evidenceRefs: strings(demand.evidenceRefs) } : {}, ...strings(demand.forwardTo) ? { forwardTo: strings(demand.forwardTo) } : {} });
   }
-  const known = /* @__PURE__ */ new Set(["schemaVersion", "verificationMethod", "safetyClass", "rationale", "risks", "demands"]);
+  const contractResult = raw.contract === void 0 ? { contract: void 0, issues: [] } : validateRequirementContract(raw.contract);
+  for (const issue of contractResult.issues) {
+    issues.push({
+      code: issue.code,
+      path: `contract.${issue.path}`,
+      message: issue.message
+    });
+  }
+  if (contractResult.issues.length > 0) {
+    return { issues };
+  }
+  const contract = contractResult.contract;
+  const known = /* @__PURE__ */ new Set(["schemaVersion", "verificationMethod", "safetyClass", "rationale", "risks", "demands", "contract"]);
   const unknown = Object.fromEntries(Object.entries(raw).filter(([key]) => !known.has(key)));
   return {
-    ...issues.length === 0 ? { metadata: { schemaVersion: 1, ...verificationMethod ? { verificationMethod } : {}, ...safetyClass ? { safetyClass } : {}, ...nonEmpty(raw.rationale) ? { rationale: nonEmpty(raw.rationale) } : {}, risks, demands, _unknown: unknown } } : {},
+    ...issues.length === 0 ? { metadata: { schemaVersion: 1, ...verificationMethod ? { verificationMethod } : {}, ...safetyClass ? { safetyClass } : {}, ...nonEmpty(raw.rationale) ? { rationale: nonEmpty(raw.rationale) } : {}, risks, demands, ...contract ? { contract } : {}, _unknown: unknown } } : {},
     issues
   };
 }
 function parseRequirementMetadataYaml(source) {
   try {
-    return validateRequirementMetadata((0, import_yaml.parse)(source));
+    return validateRequirementMetadata((0, import_yaml2.parse)(source));
   } catch (error) {
     return { issues: [{ code: "FR_METADATA_INVALID", path: "$", message: `invalid YAML: ${error.message}` }] };
   }
 }
-var import_yaml, VERIFICATION_METHODS, SAFETY_CLASSES, DEMAND_TYPES, DEMAND_OBLIGATIONS, DEMAND_STATES, enumValue;
+var import_yaml2, VERIFICATION_METHODS, SAFETY_CLASSES, DEMAND_TYPES, DEMAND_OBLIGATIONS, DEMAND_STATES, enumValue2;
 var init_metadata_schema = __esm({
   "tools/spec-graph/metadata-schema.ts"() {
     "use strict";
-    import_yaml = __toESM(require_dist(), 1);
+    import_yaml2 = __toESM(require_dist(), 1);
+    init_requirement_contract();
     VERIFICATION_METHODS = ["test", "analysis", "review", "inspection", "demonstration"];
     SAFETY_CLASSES = ["critical", "major", "minor"];
     DEMAND_TYPES = ["implementation", "integration-test", "documentation", "migration", "operational-proof"];
     DEMAND_OBLIGATIONS = ["required", "optional", "not-applicable"];
     DEMAND_STATES = ["PRESENT", "MISSING", "NOT_APPLICABLE", "WAIVED"];
-    enumValue = (value, values) => typeof value === "string" && values.includes(value) ? value : void 0;
+    enumValue2 = (value, values) => typeof value === "string" && values.includes(value) ? value : void 0;
   }
 });
 
 // tools/spec-graph/parsers/md.ts
 import fs2 from "node:fs";
 import path2 from "node:path";
-function slugify(text) {
-  return marksmanSlug(text);
+function slugify(text2) {
+  return marksmanSlug(text2);
 }
-function stripInlineMarkers(text) {
-  let s = text;
+function stripInlineMarkers(text2) {
+  let s = text2;
   s = s.replace(/\[([^\]]+)\]\([^)]*\)/g, "$1");
   s = s.replace(/\*\*([^*]+)\*\*/g, "$1");
   s = s.replace(/__([^_]+)__/g, "$1");
@@ -7833,10 +8177,10 @@ function parseMarkdown(mdSource, relativePath) {
     if (raw.charCodeAt(0) !== 35) continue;
     const hm = raw.match(HEADING_LINE_RE);
     if (!hm) continue;
-    const text = stripInlineMarkers(hm[2]);
+    const text2 = stripInlineMarkers(hm[2]);
     const line = i + 1;
     const location = { file: relativePath, line };
-    let m = text.match(LEGACY_FR_HEADING_RE);
+    let m = text2.match(LEGACY_FR_HEADING_RE);
     if (m) {
       const num = m[1];
       const title = m[2].trim();
@@ -7860,7 +8204,7 @@ function parseMarkdown(mdSource, relativePath) {
       );
       continue;
     }
-    m = text.match(FR_HEADING_RE);
+    m = text2.match(FR_HEADING_RE);
     if (m) {
       const num = m[1];
       const title = m[2].trim();
@@ -7882,7 +8226,7 @@ function parseMarkdown(mdSource, relativePath) {
       );
       continue;
     }
-    m = text.match(NFR_HEADING_RE);
+    m = text2.match(NFR_HEADING_RE);
     if (m) {
       const category = m[1];
       const num = m[2];
@@ -7906,7 +8250,7 @@ function parseMarkdown(mdSource, relativePath) {
       );
       continue;
     }
-    m = text.match(AC_HEADING_RE);
+    m = text2.match(AC_HEADING_RE);
     if (m) {
       const acId = `AC-${m[1]}`;
       const parentFr = `FR-${m[2]}`;
@@ -7924,7 +8268,7 @@ function parseMarkdown(mdSource, relativePath) {
       anchors.push({ alias: acId, canonicalId: acId, location });
       continue;
     }
-    m = text.match(SHORT_FR_RE);
+    m = text2.match(SHORT_FR_RE);
     if (m) {
       const num = m[1];
       const compact = `FR-${num}`;
@@ -7938,7 +8282,7 @@ function parseMarkdown(mdSource, relativePath) {
       );
       continue;
     }
-    m = text.match(SHORT_NFR_RE);
+    m = text2.match(SHORT_NFR_RE);
     if (m) {
       const category = m[1];
       const num = m[2];
@@ -7953,7 +8297,7 @@ function parseMarkdown(mdSource, relativePath) {
       );
       continue;
     }
-    m = text.match(SHORT_AC_RE);
+    m = text2.match(SHORT_AC_RE);
     if (m) {
       const acId = `AC-${m[1]}`;
       const slug = marksmanSlug(acId);
@@ -7967,13 +8311,13 @@ function parseMarkdown(mdSource, relativePath) {
       );
       continue;
     }
-    m = text.match(DECISION_HEADING_RE);
+    m = text2.match(DECISION_HEADING_RE);
     if (m) {
       const title = m[1].trim();
       const decId = `Decision-${slugify(title)}`;
-      const slug = slugify(text);
+      const slug = slugify(text2);
       const parentFr = decisionRequirementAfter(lines, i);
-      const node = { id: decId, type: "Decision", title, parentFr, file: relativePath, line, body: text };
+      const node = { id: decId, type: "Decision", title, parentFr, file: relativePath, line, body: text2 };
       nodes.push(node);
       if (parentFr) {
         edges.push({ from: parentFr, to: decId, type: "covers" });
@@ -7985,14 +8329,14 @@ function parseMarkdown(mdSource, relativePath) {
       );
       continue;
     }
-    m = text.match(STORY_HEADING_RE);
+    m = text2.match(STORY_HEADING_RE);
     if (m) {
       const num = m[1];
       const title = m[2].trim();
       const storyId = `Story-${num}-${slugify(title)}`;
-      const slug = slugify(text);
+      const slug = slugify(text2);
       const parentFr = decisionRequirementAfter(lines, i);
-      const node = { id: storyId, type: "Story", title, parentFr, file: relativePath, line, body: text };
+      const node = { id: storyId, type: "Story", title, parentFr, file: relativePath, line, body: text2 };
       nodes.push(node);
       if (parentFr) edges.push({ from: parentFr, to: storyId, type: "covers" });
       anchors.push(
@@ -8031,9 +8375,9 @@ var init_md = __esm({
   }
 });
 
-// node_modules/@cucumber/gherkin/dist/src/AstNode.js
+// ../dev-pomogator/node_modules/@cucumber/gherkin/dist/src/AstNode.js
 var require_AstNode = __commonJS({
-  "node_modules/@cucumber/gherkin/dist/src/AstNode.js"(exports) {
+  "../dev-pomogator/node_modules/@cucumber/gherkin/dist/src/AstNode.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var AstNode = class {
@@ -8067,9 +8411,9 @@ var require_AstNode = __commonJS({
   }
 });
 
-// node_modules/@cucumber/gherkin/dist/src/Errors.js
+// ../dev-pomogator/node_modules/@cucumber/gherkin/dist/src/Errors.js
 var require_Errors = __commonJS({
-  "node_modules/@cucumber/gherkin/dist/src/Errors.js"(exports) {
+  "../dev-pomogator/node_modules/@cucumber/gherkin/dist/src/Errors.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.NoSuchLanguageException = exports.AstBuilderException = exports.CompositeParserException = exports.ParserException = exports.GherkinException = void 0;
@@ -8127,9 +8471,9 @@ ${errors.map((e) => e.message).join("\n")}`;
   }
 });
 
-// node_modules/@cucumber/gherkin/dist/src/TokenExceptions.js
+// ../dev-pomogator/node_modules/@cucumber/gherkin/dist/src/TokenExceptions.js
 var require_TokenExceptions = __commonJS({
-  "node_modules/@cucumber/gherkin/dist/src/TokenExceptions.js"(exports) {
+  "../dev-pomogator/node_modules/@cucumber/gherkin/dist/src/TokenExceptions.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.UnexpectedEOFException = exports.UnexpectedTokenException = void 0;
@@ -8160,9 +8504,9 @@ var require_TokenExceptions = __commonJS({
   }
 });
 
-// node_modules/@cucumber/gherkin/dist/src/TokenScanner.js
+// ../dev-pomogator/node_modules/@cucumber/gherkin/dist/src/TokenScanner.js
 var require_TokenScanner = __commonJS({
-  "node_modules/@cucumber/gherkin/dist/src/TokenScanner.js"(exports) {
+  "../dev-pomogator/node_modules/@cucumber/gherkin/dist/src/TokenScanner.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var TokenScanner = class {
@@ -8186,9 +8530,9 @@ var require_TokenScanner = __commonJS({
   }
 });
 
-// node_modules/@cucumber/gherkin/dist/src/countSymbols.js
+// ../dev-pomogator/node_modules/@cucumber/gherkin/dist/src/countSymbols.js
 var require_countSymbols = __commonJS({
-  "node_modules/@cucumber/gherkin/dist/src/countSymbols.js"(exports) {
+  "../dev-pomogator/node_modules/@cucumber/gherkin/dist/src/countSymbols.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.default = countSymbols;
@@ -8199,9 +8543,9 @@ var require_countSymbols = __commonJS({
   }
 });
 
-// node_modules/@cucumber/gherkin/dist/src/GherkinLine.js
+// ../dev-pomogator/node_modules/@cucumber/gherkin/dist/src/GherkinLine.js
 var require_GherkinLine = __commonJS({
-  "node_modules/@cucumber/gherkin/dist/src/GherkinLine.js"(exports, module) {
+  "../dev-pomogator/node_modules/@cucumber/gherkin/dist/src/GherkinLine.js"(exports, module) {
     "use strict";
     var __importDefault = exports && exports.__importDefault || function(mod) {
       return mod && mod.__esModule ? mod : { "default": mod };
@@ -8282,9 +8626,9 @@ var require_GherkinLine = __commonJS({
   }
 });
 
-// node_modules/@cucumber/gherkin/dist/src/Parser.js
+// ../dev-pomogator/node_modules/@cucumber/gherkin/dist/src/Parser.js
 var require_Parser = __commonJS({
-  "node_modules/@cucumber/gherkin/dist/src/Parser.js"(exports) {
+  "../dev-pomogator/node_modules/@cucumber/gherkin/dist/src/Parser.js"(exports) {
     "use strict";
     var __importDefault = exports && exports.__importDefault || function(mod) {
       return mod && mod.__esModule ? mod : { "default": mod };
@@ -11442,9 +11786,9 @@ var require_Parser = __commonJS({
   }
 });
 
-// node_modules/@cucumber/gherkin/dist/src/AstBuilder.js
+// ../dev-pomogator/node_modules/@cucumber/gherkin/dist/src/AstBuilder.js
 var require_AstBuilder = __commonJS({
-  "node_modules/@cucumber/gherkin/dist/src/AstBuilder.js"(exports) {
+  "../dev-pomogator/node_modules/@cucumber/gherkin/dist/src/AstBuilder.js"(exports) {
     "use strict";
     var __importDefault = exports && exports.__importDefault || function(mod) {
       return mod && mod.__esModule ? mod : { "default": mod };
@@ -11737,9 +12081,9 @@ var require_AstBuilder = __commonJS({
   }
 });
 
-// node_modules/@cucumber/messages/dist/cjs/src/TimeConversion.js
+// ../dev-pomogator/node_modules/@cucumber/messages/dist/cjs/src/TimeConversion.js
 var require_TimeConversion = __commonJS({
-  "node_modules/@cucumber/messages/dist/cjs/src/TimeConversion.js"(exports) {
+  "../dev-pomogator/node_modules/@cucumber/messages/dist/cjs/src/TimeConversion.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.millisecondsSinceEpochToTimestamp = millisecondsSinceEpochToTimestamp;
@@ -11786,9 +12130,9 @@ var require_TimeConversion = __commonJS({
   }
 });
 
-// node_modules/@cucumber/messages/dist/cjs/src/IdGenerator.js
+// ../dev-pomogator/node_modules/@cucumber/messages/dist/cjs/src/IdGenerator.js
 var require_IdGenerator = __commonJS({
-  "node_modules/@cucumber/messages/dist/cjs/src/IdGenerator.js"(exports) {
+  "../dev-pomogator/node_modules/@cucumber/messages/dist/cjs/src/IdGenerator.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.uuid = uuid2;
@@ -11807,9 +12151,9 @@ var require_IdGenerator = __commonJS({
   }
 });
 
-// node_modules/class-transformer/cjs/enums/transformation-type.enum.js
+// ../dev-pomogator/node_modules/class-transformer/cjs/enums/transformation-type.enum.js
 var require_transformation_type_enum = __commonJS({
-  "node_modules/class-transformer/cjs/enums/transformation-type.enum.js"(exports) {
+  "../dev-pomogator/node_modules/class-transformer/cjs/enums/transformation-type.enum.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.TransformationType = void 0;
@@ -11822,9 +12166,9 @@ var require_transformation_type_enum = __commonJS({
   }
 });
 
-// node_modules/class-transformer/cjs/enums/index.js
+// ../dev-pomogator/node_modules/class-transformer/cjs/enums/index.js
 var require_enums = __commonJS({
-  "node_modules/class-transformer/cjs/enums/index.js"(exports) {
+  "../dev-pomogator/node_modules/class-transformer/cjs/enums/index.js"(exports) {
     "use strict";
     var __createBinding = exports && exports.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -11843,9 +12187,9 @@ var require_enums = __commonJS({
   }
 });
 
-// node_modules/class-transformer/cjs/MetadataStorage.js
+// ../dev-pomogator/node_modules/class-transformer/cjs/MetadataStorage.js
 var require_MetadataStorage = __commonJS({
-  "node_modules/class-transformer/cjs/MetadataStorage.js"(exports) {
+  "../dev-pomogator/node_modules/class-transformer/cjs/MetadataStorage.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.MetadataStorage = void 0;
@@ -12043,9 +12387,9 @@ var require_MetadataStorage = __commonJS({
   }
 });
 
-// node_modules/class-transformer/cjs/storage.js
+// ../dev-pomogator/node_modules/class-transformer/cjs/storage.js
 var require_storage = __commonJS({
-  "node_modules/class-transformer/cjs/storage.js"(exports) {
+  "../dev-pomogator/node_modules/class-transformer/cjs/storage.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.defaultMetadataStorage = void 0;
@@ -12054,9 +12398,9 @@ var require_storage = __commonJS({
   }
 });
 
-// node_modules/class-transformer/cjs/utils/get-global.util.js
+// ../dev-pomogator/node_modules/class-transformer/cjs/utils/get-global.util.js
 var require_get_global_util = __commonJS({
-  "node_modules/class-transformer/cjs/utils/get-global.util.js"(exports) {
+  "../dev-pomogator/node_modules/class-transformer/cjs/utils/get-global.util.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.getGlobal = void 0;
@@ -12078,9 +12422,9 @@ var require_get_global_util = __commonJS({
   }
 });
 
-// node_modules/class-transformer/cjs/utils/is-promise.util.js
+// ../dev-pomogator/node_modules/class-transformer/cjs/utils/is-promise.util.js
 var require_is_promise_util = __commonJS({
-  "node_modules/class-transformer/cjs/utils/is-promise.util.js"(exports) {
+  "../dev-pomogator/node_modules/class-transformer/cjs/utils/is-promise.util.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.isPromise = void 0;
@@ -12091,9 +12435,9 @@ var require_is_promise_util = __commonJS({
   }
 });
 
-// node_modules/class-transformer/cjs/utils/index.js
+// ../dev-pomogator/node_modules/class-transformer/cjs/utils/index.js
 var require_utils = __commonJS({
-  "node_modules/class-transformer/cjs/utils/index.js"(exports) {
+  "../dev-pomogator/node_modules/class-transformer/cjs/utils/index.js"(exports) {
     "use strict";
     var __createBinding = exports && exports.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -12113,9 +12457,9 @@ var require_utils = __commonJS({
   }
 });
 
-// node_modules/class-transformer/cjs/TransformOperationExecutor.js
+// ../dev-pomogator/node_modules/class-transformer/cjs/TransformOperationExecutor.js
 var require_TransformOperationExecutor = __commonJS({
-  "node_modules/class-transformer/cjs/TransformOperationExecutor.js"(exports) {
+  "../dev-pomogator/node_modules/class-transformer/cjs/TransformOperationExecutor.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.TransformOperationExecutor = void 0;
@@ -12489,9 +12833,9 @@ var require_TransformOperationExecutor = __commonJS({
   }
 });
 
-// node_modules/class-transformer/cjs/constants/default-options.constant.js
+// ../dev-pomogator/node_modules/class-transformer/cjs/constants/default-options.constant.js
 var require_default_options_constant = __commonJS({
-  "node_modules/class-transformer/cjs/constants/default-options.constant.js"(exports) {
+  "../dev-pomogator/node_modules/class-transformer/cjs/constants/default-options.constant.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.defaultOptions = void 0;
@@ -12511,9 +12855,9 @@ var require_default_options_constant = __commonJS({
   }
 });
 
-// node_modules/class-transformer/cjs/ClassTransformer.js
+// ../dev-pomogator/node_modules/class-transformer/cjs/ClassTransformer.js
 var require_ClassTransformer = __commonJS({
-  "node_modules/class-transformer/cjs/ClassTransformer.js"(exports) {
+  "../dev-pomogator/node_modules/class-transformer/cjs/ClassTransformer.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.ClassTransformer = void 0;
@@ -12585,9 +12929,9 @@ var require_ClassTransformer = __commonJS({
   }
 });
 
-// node_modules/class-transformer/cjs/decorators/exclude.decorator.js
+// ../dev-pomogator/node_modules/class-transformer/cjs/decorators/exclude.decorator.js
 var require_exclude_decorator = __commonJS({
-  "node_modules/class-transformer/cjs/decorators/exclude.decorator.js"(exports) {
+  "../dev-pomogator/node_modules/class-transformer/cjs/decorators/exclude.decorator.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.Exclude = void 0;
@@ -12605,9 +12949,9 @@ var require_exclude_decorator = __commonJS({
   }
 });
 
-// node_modules/class-transformer/cjs/decorators/expose.decorator.js
+// ../dev-pomogator/node_modules/class-transformer/cjs/decorators/expose.decorator.js
 var require_expose_decorator = __commonJS({
-  "node_modules/class-transformer/cjs/decorators/expose.decorator.js"(exports) {
+  "../dev-pomogator/node_modules/class-transformer/cjs/decorators/expose.decorator.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.Expose = void 0;
@@ -12625,9 +12969,9 @@ var require_expose_decorator = __commonJS({
   }
 });
 
-// node_modules/class-transformer/cjs/decorators/transform-instance-to-instance.decorator.js
+// ../dev-pomogator/node_modules/class-transformer/cjs/decorators/transform-instance-to-instance.decorator.js
 var require_transform_instance_to_instance_decorator = __commonJS({
-  "node_modules/class-transformer/cjs/decorators/transform-instance-to-instance.decorator.js"(exports) {
+  "../dev-pomogator/node_modules/class-transformer/cjs/decorators/transform-instance-to-instance.decorator.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.TransformInstanceToInstance = void 0;
@@ -12647,9 +12991,9 @@ var require_transform_instance_to_instance_decorator = __commonJS({
   }
 });
 
-// node_modules/class-transformer/cjs/decorators/transform-instance-to-plain.decorator.js
+// ../dev-pomogator/node_modules/class-transformer/cjs/decorators/transform-instance-to-plain.decorator.js
 var require_transform_instance_to_plain_decorator = __commonJS({
-  "node_modules/class-transformer/cjs/decorators/transform-instance-to-plain.decorator.js"(exports) {
+  "../dev-pomogator/node_modules/class-transformer/cjs/decorators/transform-instance-to-plain.decorator.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.TransformInstanceToPlain = void 0;
@@ -12669,9 +13013,9 @@ var require_transform_instance_to_plain_decorator = __commonJS({
   }
 });
 
-// node_modules/class-transformer/cjs/decorators/transform-plain-to-instance.decorator.js
+// ../dev-pomogator/node_modules/class-transformer/cjs/decorators/transform-plain-to-instance.decorator.js
 var require_transform_plain_to_instance_decorator = __commonJS({
-  "node_modules/class-transformer/cjs/decorators/transform-plain-to-instance.decorator.js"(exports) {
+  "../dev-pomogator/node_modules/class-transformer/cjs/decorators/transform-plain-to-instance.decorator.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.TransformPlainToInstance = void 0;
@@ -12691,9 +13035,9 @@ var require_transform_plain_to_instance_decorator = __commonJS({
   }
 });
 
-// node_modules/class-transformer/cjs/decorators/transform.decorator.js
+// ../dev-pomogator/node_modules/class-transformer/cjs/decorators/transform.decorator.js
 var require_transform_decorator = __commonJS({
-  "node_modules/class-transformer/cjs/decorators/transform.decorator.js"(exports) {
+  "../dev-pomogator/node_modules/class-transformer/cjs/decorators/transform.decorator.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.Transform = void 0;
@@ -12712,9 +13056,9 @@ var require_transform_decorator = __commonJS({
   }
 });
 
-// node_modules/class-transformer/cjs/decorators/type.decorator.js
+// ../dev-pomogator/node_modules/class-transformer/cjs/decorators/type.decorator.js
 var require_type_decorator = __commonJS({
-  "node_modules/class-transformer/cjs/decorators/type.decorator.js"(exports) {
+  "../dev-pomogator/node_modules/class-transformer/cjs/decorators/type.decorator.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.Type = void 0;
@@ -12735,9 +13079,9 @@ var require_type_decorator = __commonJS({
   }
 });
 
-// node_modules/class-transformer/cjs/decorators/index.js
+// ../dev-pomogator/node_modules/class-transformer/cjs/decorators/index.js
 var require_decorators = __commonJS({
-  "node_modules/class-transformer/cjs/decorators/index.js"(exports) {
+  "../dev-pomogator/node_modules/class-transformer/cjs/decorators/index.js"(exports) {
     "use strict";
     var __createBinding = exports && exports.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -12762,121 +13106,121 @@ var require_decorators = __commonJS({
   }
 });
 
-// node_modules/class-transformer/cjs/interfaces/decorator-options/expose-options.interface.js
+// ../dev-pomogator/node_modules/class-transformer/cjs/interfaces/decorator-options/expose-options.interface.js
 var require_expose_options_interface = __commonJS({
-  "node_modules/class-transformer/cjs/interfaces/decorator-options/expose-options.interface.js"(exports) {
+  "../dev-pomogator/node_modules/class-transformer/cjs/interfaces/decorator-options/expose-options.interface.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
   }
 });
 
-// node_modules/class-transformer/cjs/interfaces/decorator-options/exclude-options.interface.js
+// ../dev-pomogator/node_modules/class-transformer/cjs/interfaces/decorator-options/exclude-options.interface.js
 var require_exclude_options_interface = __commonJS({
-  "node_modules/class-transformer/cjs/interfaces/decorator-options/exclude-options.interface.js"(exports) {
+  "../dev-pomogator/node_modules/class-transformer/cjs/interfaces/decorator-options/exclude-options.interface.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
   }
 });
 
-// node_modules/class-transformer/cjs/interfaces/decorator-options/transform-options.interface.js
+// ../dev-pomogator/node_modules/class-transformer/cjs/interfaces/decorator-options/transform-options.interface.js
 var require_transform_options_interface = __commonJS({
-  "node_modules/class-transformer/cjs/interfaces/decorator-options/transform-options.interface.js"(exports) {
+  "../dev-pomogator/node_modules/class-transformer/cjs/interfaces/decorator-options/transform-options.interface.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
   }
 });
 
-// node_modules/class-transformer/cjs/interfaces/decorator-options/type-discriminator-descriptor.interface.js
+// ../dev-pomogator/node_modules/class-transformer/cjs/interfaces/decorator-options/type-discriminator-descriptor.interface.js
 var require_type_discriminator_descriptor_interface = __commonJS({
-  "node_modules/class-transformer/cjs/interfaces/decorator-options/type-discriminator-descriptor.interface.js"(exports) {
+  "../dev-pomogator/node_modules/class-transformer/cjs/interfaces/decorator-options/type-discriminator-descriptor.interface.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
   }
 });
 
-// node_modules/class-transformer/cjs/interfaces/decorator-options/type-options.interface.js
+// ../dev-pomogator/node_modules/class-transformer/cjs/interfaces/decorator-options/type-options.interface.js
 var require_type_options_interface = __commonJS({
-  "node_modules/class-transformer/cjs/interfaces/decorator-options/type-options.interface.js"(exports) {
+  "../dev-pomogator/node_modules/class-transformer/cjs/interfaces/decorator-options/type-options.interface.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
   }
 });
 
-// node_modules/class-transformer/cjs/interfaces/metadata/exclude-metadata.interface.js
+// ../dev-pomogator/node_modules/class-transformer/cjs/interfaces/metadata/exclude-metadata.interface.js
 var require_exclude_metadata_interface = __commonJS({
-  "node_modules/class-transformer/cjs/interfaces/metadata/exclude-metadata.interface.js"(exports) {
+  "../dev-pomogator/node_modules/class-transformer/cjs/interfaces/metadata/exclude-metadata.interface.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
   }
 });
 
-// node_modules/class-transformer/cjs/interfaces/metadata/expose-metadata.interface.js
+// ../dev-pomogator/node_modules/class-transformer/cjs/interfaces/metadata/expose-metadata.interface.js
 var require_expose_metadata_interface = __commonJS({
-  "node_modules/class-transformer/cjs/interfaces/metadata/expose-metadata.interface.js"(exports) {
+  "../dev-pomogator/node_modules/class-transformer/cjs/interfaces/metadata/expose-metadata.interface.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
   }
 });
 
-// node_modules/class-transformer/cjs/interfaces/metadata/transform-metadata.interface.js
+// ../dev-pomogator/node_modules/class-transformer/cjs/interfaces/metadata/transform-metadata.interface.js
 var require_transform_metadata_interface = __commonJS({
-  "node_modules/class-transformer/cjs/interfaces/metadata/transform-metadata.interface.js"(exports) {
+  "../dev-pomogator/node_modules/class-transformer/cjs/interfaces/metadata/transform-metadata.interface.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
   }
 });
 
-// node_modules/class-transformer/cjs/interfaces/metadata/transform-fn-params.interface.js
+// ../dev-pomogator/node_modules/class-transformer/cjs/interfaces/metadata/transform-fn-params.interface.js
 var require_transform_fn_params_interface = __commonJS({
-  "node_modules/class-transformer/cjs/interfaces/metadata/transform-fn-params.interface.js"(exports) {
+  "../dev-pomogator/node_modules/class-transformer/cjs/interfaces/metadata/transform-fn-params.interface.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
   }
 });
 
-// node_modules/class-transformer/cjs/interfaces/metadata/type-metadata.interface.js
+// ../dev-pomogator/node_modules/class-transformer/cjs/interfaces/metadata/type-metadata.interface.js
 var require_type_metadata_interface = __commonJS({
-  "node_modules/class-transformer/cjs/interfaces/metadata/type-metadata.interface.js"(exports) {
+  "../dev-pomogator/node_modules/class-transformer/cjs/interfaces/metadata/type-metadata.interface.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
   }
 });
 
-// node_modules/class-transformer/cjs/interfaces/class-constructor.type.js
+// ../dev-pomogator/node_modules/class-transformer/cjs/interfaces/class-constructor.type.js
 var require_class_constructor_type = __commonJS({
-  "node_modules/class-transformer/cjs/interfaces/class-constructor.type.js"(exports) {
+  "../dev-pomogator/node_modules/class-transformer/cjs/interfaces/class-constructor.type.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
   }
 });
 
-// node_modules/class-transformer/cjs/interfaces/class-transformer-options.interface.js
+// ../dev-pomogator/node_modules/class-transformer/cjs/interfaces/class-transformer-options.interface.js
 var require_class_transformer_options_interface = __commonJS({
-  "node_modules/class-transformer/cjs/interfaces/class-transformer-options.interface.js"(exports) {
+  "../dev-pomogator/node_modules/class-transformer/cjs/interfaces/class-transformer-options.interface.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
   }
 });
 
-// node_modules/class-transformer/cjs/interfaces/target-map.interface.js
+// ../dev-pomogator/node_modules/class-transformer/cjs/interfaces/target-map.interface.js
 var require_target_map_interface = __commonJS({
-  "node_modules/class-transformer/cjs/interfaces/target-map.interface.js"(exports) {
+  "../dev-pomogator/node_modules/class-transformer/cjs/interfaces/target-map.interface.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
   }
 });
 
-// node_modules/class-transformer/cjs/interfaces/type-help-options.interface.js
+// ../dev-pomogator/node_modules/class-transformer/cjs/interfaces/type-help-options.interface.js
 var require_type_help_options_interface = __commonJS({
-  "node_modules/class-transformer/cjs/interfaces/type-help-options.interface.js"(exports) {
+  "../dev-pomogator/node_modules/class-transformer/cjs/interfaces/type-help-options.interface.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
   }
 });
 
-// node_modules/class-transformer/cjs/interfaces/index.js
+// ../dev-pomogator/node_modules/class-transformer/cjs/interfaces/index.js
 var require_interfaces = __commonJS({
-  "node_modules/class-transformer/cjs/interfaces/index.js"(exports) {
+  "../dev-pomogator/node_modules/class-transformer/cjs/interfaces/index.js"(exports) {
     "use strict";
     var __createBinding = exports && exports.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -12908,9 +13252,9 @@ var require_interfaces = __commonJS({
   }
 });
 
-// node_modules/class-transformer/cjs/index.js
+// ../dev-pomogator/node_modules/class-transformer/cjs/index.js
 var require_cjs = __commonJS({
-  "node_modules/class-transformer/cjs/index.js"(exports) {
+  "../dev-pomogator/node_modules/class-transformer/cjs/index.js"(exports) {
     "use strict";
     var __createBinding = exports && exports.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -12982,9 +13326,9 @@ var require_cjs = __commonJS({
   }
 });
 
-// node_modules/reflect-metadata/Reflect.js
+// ../dev-pomogator/node_modules/reflect-metadata/Reflect.js
 var require_Reflect = __commonJS({
-  "node_modules/reflect-metadata/Reflect.js"() {
+  "../dev-pomogator/node_modules/reflect-metadata/Reflect.js"() {
     var Reflect2;
     (function(Reflect3) {
       (function(factory) {
@@ -14067,9 +14411,9 @@ var require_Reflect = __commonJS({
   }
 });
 
-// node_modules/@cucumber/messages/dist/cjs/src/messages.js
+// ../dev-pomogator/node_modules/@cucumber/messages/dist/cjs/src/messages.js
 var require_messages = __commonJS({
-  "node_modules/@cucumber/messages/dist/cjs/src/messages.js"(exports) {
+  "../dev-pomogator/node_modules/@cucumber/messages/dist/cjs/src/messages.js"(exports) {
     "use strict";
     var __decorate2 = exports && exports.__decorate || function(decorators, target, key, desc) {
       var c = arguments.length, r = c < 3 ? target : desc === null ? desc = Object.getOwnPropertyDescriptor(target, key) : desc, d;
@@ -15322,9 +15666,9 @@ var require_messages = __commonJS({
   }
 });
 
-// node_modules/@cucumber/messages/dist/cjs/src/parseEnvelope.js
+// ../dev-pomogator/node_modules/@cucumber/messages/dist/cjs/src/parseEnvelope.js
 var require_parseEnvelope = __commonJS({
-  "node_modules/@cucumber/messages/dist/cjs/src/parseEnvelope.js"(exports) {
+  "../dev-pomogator/node_modules/@cucumber/messages/dist/cjs/src/parseEnvelope.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.parseEnvelope = parseEnvelope2;
@@ -15337,9 +15681,9 @@ var require_parseEnvelope = __commonJS({
   }
 });
 
-// node_modules/@cucumber/messages/dist/cjs/src/getWorstTestStepResult.js
+// ../dev-pomogator/node_modules/@cucumber/messages/dist/cjs/src/getWorstTestStepResult.js
 var require_getWorstTestStepResult = __commonJS({
-  "node_modules/@cucumber/messages/dist/cjs/src/getWorstTestStepResult.js"(exports) {
+  "../dev-pomogator/node_modules/@cucumber/messages/dist/cjs/src/getWorstTestStepResult.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.getWorstTestStepResult = getWorstTestStepResult2;
@@ -15367,9 +15711,9 @@ var require_getWorstTestStepResult = __commonJS({
   }
 });
 
-// node_modules/@cucumber/messages/dist/cjs/src/version.js
+// ../dev-pomogator/node_modules/@cucumber/messages/dist/cjs/src/version.js
 var require_version = __commonJS({
-  "node_modules/@cucumber/messages/dist/cjs/src/version.js"(exports) {
+  "../dev-pomogator/node_modules/@cucumber/messages/dist/cjs/src/version.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.version = void 0;
@@ -15377,9 +15721,9 @@ var require_version = __commonJS({
   }
 });
 
-// node_modules/@cucumber/messages/dist/cjs/src/index.js
+// ../dev-pomogator/node_modules/@cucumber/messages/dist/cjs/src/index.js
 var require_src = __commonJS({
-  "node_modules/@cucumber/messages/dist/cjs/src/index.js"(exports) {
+  "../dev-pomogator/node_modules/@cucumber/messages/dist/cjs/src/index.js"(exports) {
     "use strict";
     var __createBinding = exports && exports.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -15443,9 +15787,9 @@ var require_src = __commonJS({
   }
 });
 
-// node_modules/@cucumber/gherkin/dist/src/compareStepKeywords.js
+// ../dev-pomogator/node_modules/@cucumber/gherkin/dist/src/compareStepKeywords.js
 var require_compareStepKeywords = __commonJS({
-  "node_modules/@cucumber/gherkin/dist/src/compareStepKeywords.js"(exports) {
+  "../dev-pomogator/node_modules/@cucumber/gherkin/dist/src/compareStepKeywords.js"(exports) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.compareStepKeywords = compareStepKeywords;
@@ -15455,9 +15799,9 @@ var require_compareStepKeywords = __commonJS({
   }
 });
 
-// node_modules/@cucumber/gherkin/dist/src/gherkin-languages.json
+// ../dev-pomogator/node_modules/@cucumber/gherkin/dist/src/gherkin-languages.json
 var require_gherkin_languages = __commonJS({
-  "node_modules/@cucumber/gherkin/dist/src/gherkin-languages.json"(exports, module) {
+  "../dev-pomogator/node_modules/@cucumber/gherkin/dist/src/gherkin-languages.json"(exports, module) {
     module.exports = {
       af: {
         and: [
@@ -19352,9 +19696,9 @@ var require_gherkin_languages = __commonJS({
   }
 });
 
-// node_modules/@cucumber/gherkin/dist/src/GherkinClassicTokenMatcher.js
+// ../dev-pomogator/node_modules/@cucumber/gherkin/dist/src/GherkinClassicTokenMatcher.js
 var require_GherkinClassicTokenMatcher = __commonJS({
-  "node_modules/@cucumber/gherkin/dist/src/GherkinClassicTokenMatcher.js"(exports) {
+  "../dev-pomogator/node_modules/@cucumber/gherkin/dist/src/GherkinClassicTokenMatcher.js"(exports) {
     "use strict";
     var __createBinding = exports && exports.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -19483,8 +19827,8 @@ var require_GherkinClassicTokenMatcher = __commonJS({
       }
       match_Comment(token) {
         if (token.line.startsWith("#")) {
-          const text = token.line.getLineText(0);
-          this.setTokenMatched(token, Parser_1.TokenType.Comment, text, null, 0);
+          const text2 = token.line.getLineText(0);
+          this.setTokenMatched(token, Parser_1.TokenType.Comment, text2, null, 0);
           return true;
         }
         return false;
@@ -19547,8 +19891,8 @@ var require_GherkinClassicTokenMatcher = __commonJS({
         return false;
       }
       match_Other(token) {
-        const text = token.line.getLineText(this.indentToRemove);
-        this.setTokenMatched(token, Parser_1.TokenType.Other, this.unescapeDocString(text), null, 0);
+        const text2 = token.line.getLineText(this.indentToRemove);
+        this.setTokenMatched(token, Parser_1.TokenType.Other, this.unescapeDocString(text2), null, 0);
         return true;
       }
       getTags(line) {
@@ -19580,9 +19924,9 @@ var require_GherkinClassicTokenMatcher = __commonJS({
         }
         return false;
       }
-      setTokenMatched(token, matchedType, text, keyword, indent, keywordType, items) {
+      setTokenMatched(token, matchedType, text2, keyword, indent, keywordType, items) {
         token.matchedType = matchedType;
-        token.matchedText = text;
+        token.matchedText = text2;
         token.matchedKeyword = keyword;
         token.matchedKeywordType = keywordType;
         token.matchedIndent = typeof indent === "number" ? indent : token.line == null ? 0 : token.line.indent;
@@ -19590,23 +19934,23 @@ var require_GherkinClassicTokenMatcher = __commonJS({
         token.location.column = token.matchedIndent + 1;
         token.matchedGherkinDialect = this.dialectName;
       }
-      unescapeDocString(text) {
+      unescapeDocString(text2) {
         if (this.activeDocStringSeparator === '"""') {
-          return text.replace('\\"\\"\\"', '"""');
+          return text2.replace('\\"\\"\\"', '"""');
         }
         if (this.activeDocStringSeparator === "```") {
-          return text.replace("\\`\\`\\`", "```");
+          return text2.replace("\\`\\`\\`", "```");
         }
-        return text;
+        return text2;
       }
     };
     exports.default = GherkinClassicTokenMatcher2;
   }
 });
 
-// node_modules/@cucumber/gherkin/dist/src/GherkinInMarkdownTokenMatcher.js
+// ../dev-pomogator/node_modules/@cucumber/gherkin/dist/src/GherkinInMarkdownTokenMatcher.js
 var require_GherkinInMarkdownTokenMatcher = __commonJS({
-  "node_modules/@cucumber/gherkin/dist/src/GherkinInMarkdownTokenMatcher.js"(exports) {
+  "../dev-pomogator/node_modules/@cucumber/gherkin/dist/src/GherkinInMarkdownTokenMatcher.js"(exports) {
     "use strict";
     var __createBinding = exports && exports.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -19713,9 +20057,9 @@ var require_GherkinInMarkdownTokenMatcher = __commonJS({
         return this.setTokenMatched(token, null, result);
       }
       match_Other(token) {
-        const text = token.line.getLineText(this.indentToRemove);
+        const text2 = token.line.getLineText(this.indentToRemove);
         token.matchedType = Parser_1.TokenType.Other;
-        token.matchedText = text;
+        token.matchedText = text2;
         token.matchedIndent = 0;
         return this.setTokenMatched(token, null, true);
       }
@@ -19857,15 +20201,15 @@ var require_GherkinInMarkdownTokenMatcher = __commonJS({
       KeywordPrefix2["BULLET"] = "^(\\s*[*+-]\\s*)";
       KeywordPrefix2["HEADER"] = "^(#{1,6}\\s)";
     })(KeywordPrefix || (KeywordPrefix = {}));
-    function escapeRegExp(text) {
-      return text.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&");
+    function escapeRegExp(text2) {
+      return text2.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&");
     }
   }
 });
 
-// node_modules/@cucumber/gherkin/dist/src/makeSourceEnvelope.js
+// ../dev-pomogator/node_modules/@cucumber/gherkin/dist/src/makeSourceEnvelope.js
 var require_makeSourceEnvelope = __commonJS({
-  "node_modules/@cucumber/gherkin/dist/src/makeSourceEnvelope.js"(exports) {
+  "../dev-pomogator/node_modules/@cucumber/gherkin/dist/src/makeSourceEnvelope.js"(exports) {
     "use strict";
     var __createBinding = exports && exports.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -19927,9 +20271,9 @@ var require_makeSourceEnvelope = __commonJS({
   }
 });
 
-// node_modules/@cucumber/gherkin/dist/src/pickles/compile.js
+// ../dev-pomogator/node_modules/@cucumber/gherkin/dist/src/pickles/compile.js
 var require_compile = __commonJS({
-  "node_modules/@cucumber/gherkin/dist/src/pickles/compile.js"(exports) {
+  "../dev-pomogator/node_modules/@cucumber/gherkin/dist/src/pickles/compile.js"(exports) {
     "use strict";
     var __createBinding = exports && exports.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -20134,9 +20478,9 @@ var require_compile = __commonJS({
   }
 });
 
-// node_modules/@cucumber/gherkin/dist/src/generateMessages.js
+// ../dev-pomogator/node_modules/@cucumber/gherkin/dist/src/generateMessages.js
 var require_generateMessages = __commonJS({
-  "node_modules/@cucumber/gherkin/dist/src/generateMessages.js"(exports) {
+  "../dev-pomogator/node_modules/@cucumber/gherkin/dist/src/generateMessages.js"(exports) {
     "use strict";
     var __createBinding = exports && exports.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -20248,9 +20592,9 @@ var require_generateMessages = __commonJS({
   }
 });
 
-// node_modules/@cucumber/gherkin/dist/src/index.js
+// ../dev-pomogator/node_modules/@cucumber/gherkin/dist/src/index.js
 var require_src2 = __commonJS({
-  "node_modules/@cucumber/gherkin/dist/src/index.js"(exports) {
+  "../dev-pomogator/node_modules/@cucumber/gherkin/dist/src/index.js"(exports) {
     "use strict";
     var __createBinding = exports && exports.__createBinding || (Object.create ? (function(o, m, k, k2) {
       if (k2 === void 0) k2 = k;
@@ -20318,13 +20662,13 @@ var require_src2 = __commonJS({
   }
 });
 
-// node_modules/@cucumber/messages/dist/esm/src/TimeConversion.js
+// ../dev-pomogator/node_modules/@cucumber/messages/dist/esm/src/TimeConversion.js
 var init_TimeConversion = __esm({
-  "node_modules/@cucumber/messages/dist/esm/src/TimeConversion.js"() {
+  "../dev-pomogator/node_modules/@cucumber/messages/dist/esm/src/TimeConversion.js"() {
   }
 });
 
-// node_modules/@cucumber/messages/dist/esm/src/IdGenerator.js
+// ../dev-pomogator/node_modules/@cucumber/messages/dist/esm/src/IdGenerator.js
 var IdGenerator_exports = {};
 __export(IdGenerator_exports, {
   incrementing: () => incrementing,
@@ -20338,14 +20682,14 @@ function incrementing() {
   return () => (next++).toString();
 }
 var init_IdGenerator = __esm({
-  "node_modules/@cucumber/messages/dist/esm/src/IdGenerator.js"() {
+  "../dev-pomogator/node_modules/@cucumber/messages/dist/esm/src/IdGenerator.js"() {
   }
 });
 
-// node_modules/@cucumber/messages/dist/esm/src/messages.js
+// ../dev-pomogator/node_modules/@cucumber/messages/dist/esm/src/messages.js
 var import_class_transformer, import_reflect_metadata, __decorate, Attachment, Duration, Envelope, Exception, ExternalAttachment, GherkinDocument, Background, Comment, DataTable, DocString, Examples, Feature, FeatureChild, Rule, RuleChild, Scenario, Step, TableCell, TableRow, Tag, Hook, Location, Meta, Ci, Git, Product, ParameterType, ParseError, Pickle, PickleDocString, PickleStep, PickleStepArgument, PickleTable, PickleTableCell, PickleTableRow, PickleTag, Source, SourceReference, JavaMethod, JavaStackTraceElement, StepDefinition, StepDefinitionPattern, Suggestion, Snippet, TestCase, Group, StepMatchArgument, StepMatchArgumentsList, TestStep, TestCaseFinished, TestCaseStarted, TestRunFinished, TestRunHookFinished, TestRunHookStarted, TestRunStarted, TestStepFinished, TestStepResult, TestStepStarted, Timestamp, UndefinedParameterType, AttachmentContentEncoding, HookType, PickleStepType, SourceMediaType, StepDefinitionPatternType, StepKeywordType, TestStepResultStatus;
 var init_messages = __esm({
-  "node_modules/@cucumber/messages/dist/esm/src/messages.js"() {
+  "../dev-pomogator/node_modules/@cucumber/messages/dist/esm/src/messages.js"() {
     import_class_transformer = __toESM(require_cjs(), 1);
     import_reflect_metadata = __toESM(require_Reflect(), 1);
     __decorate = function(decorators, target, key, desc) {
@@ -21077,30 +21421,30 @@ var init_messages = __esm({
   }
 });
 
-// node_modules/@cucumber/messages/dist/esm/src/parseEnvelope.js
+// ../dev-pomogator/node_modules/@cucumber/messages/dist/esm/src/parseEnvelope.js
 var init_parseEnvelope = __esm({
-  "node_modules/@cucumber/messages/dist/esm/src/parseEnvelope.js"() {
+  "../dev-pomogator/node_modules/@cucumber/messages/dist/esm/src/parseEnvelope.js"() {
     init_messages();
   }
 });
 
-// node_modules/@cucumber/messages/dist/esm/src/getWorstTestStepResult.js
+// ../dev-pomogator/node_modules/@cucumber/messages/dist/esm/src/getWorstTestStepResult.js
 var init_getWorstTestStepResult = __esm({
-  "node_modules/@cucumber/messages/dist/esm/src/getWorstTestStepResult.js"() {
+  "../dev-pomogator/node_modules/@cucumber/messages/dist/esm/src/getWorstTestStepResult.js"() {
     init_messages();
     init_TimeConversion();
   }
 });
 
-// node_modules/@cucumber/messages/dist/esm/src/version.js
+// ../dev-pomogator/node_modules/@cucumber/messages/dist/esm/src/version.js
 var init_version = __esm({
-  "node_modules/@cucumber/messages/dist/esm/src/version.js"() {
+  "../dev-pomogator/node_modules/@cucumber/messages/dist/esm/src/version.js"() {
   }
 });
 
-// node_modules/@cucumber/messages/dist/esm/src/index.js
+// ../dev-pomogator/node_modules/@cucumber/messages/dist/esm/src/index.js
 var init_src = __esm({
-  "node_modules/@cucumber/messages/dist/esm/src/index.js"() {
+  "../dev-pomogator/node_modules/@cucumber/messages/dist/esm/src/index.js"() {
     init_TimeConversion();
     init_IdGenerator();
     init_parseEnvelope();
@@ -21257,12 +21601,14 @@ function parseNdjson(source) {
   const testStepToPickleStep = /* @__PURE__ */ new Map();
   const byLocation = /* @__PURE__ */ new Map();
   const testCaseResult = /* @__PURE__ */ new Map();
+  let malformed = 0;
   for (const line of lines) {
     if (!line.trim()) continue;
     let env;
     try {
       env = JSON.parse(line);
     } catch {
+      malformed++;
       continue;
     }
     const doc = env.gherkinDocument;
@@ -21386,11 +21732,28 @@ function parseNdjson(source) {
       }
     }
   }
-  return { byLocation, byName };
+  return { byLocation, byName, records: byLocation.size, malformed };
 }
-function parseNdjsonFile(absPath) {
-  if (!fs4.existsSync(absPath)) return { byLocation: /* @__PURE__ */ new Map(), byName: /* @__PURE__ */ new Map() };
-  return parseNdjson(fs4.readFileSync(absPath, "utf-8"));
+function parseNdjsonArtifactFile(absPath) {
+  const artifactPath = absPath.replace(/\\/g, "/");
+  if (!fs4.existsSync(absPath)) {
+    return {
+      patch: { byLocation: /* @__PURE__ */ new Map(), byName: /* @__PURE__ */ new Map(), records: 0, malformed: 0 },
+      path: artifactPath,
+      state: "NOT_INGESTED",
+      reason: "ARTIFACT_ABSENT",
+      timestamp: null
+    };
+  }
+  const patch = parseNdjson(fs4.readFileSync(absPath, "utf-8"));
+  const reason = patch.malformed > 0 ? "MALFORMED_ARTIFACT" : patch.records === 0 ? "MISSING_SCENARIO_RESULTS" : null;
+  return {
+    patch,
+    path: artifactPath,
+    state: reason ? "NOT_INGESTED" : "INGESTED",
+    reason,
+    timestamp: fs4.statSync(absPath).mtime.toISOString()
+  };
 }
 function applyTestResults(scenarios, patch) {
   let applied = 0;
@@ -21411,8 +21774,12 @@ function applyTestResults(scenarios, patch) {
     if (!fields) continue;
     s.lastResult = fields.lastResult;
     s.lastRunAt = fields.lastRunAt;
+    s.lastResultSource = "cucumber-messages-ndjson";
+    s.lastResultRunId = void 0;
     s.canonicalResult = fields.lastResult;
     s.canonicalRunAt = fields.lastRunAt;
+    s.canonicalRunId = void 0;
+    s.canonicalSource = "cucumber-messages-ndjson";
     s.resultStale = false;
     s.trace = void 0;
     s.durationMs = fields.durationMs;
@@ -21457,6 +21824,7 @@ function keepNewest(map, key, row) {
 function parseScenarioOverlay(source) {
   const byScenarioKey = /* @__PURE__ */ new Map();
   const byLocation = /* @__PURE__ */ new Map();
+  const byName = /* @__PURE__ */ new Map();
   for (const line of source.split(/\r?\n/)) {
     if (!line.trim()) continue;
     let raw;
@@ -21470,6 +21838,7 @@ function parseScenarioOverlay(source) {
     if (!scenarioId || timeMs === void 0) continue;
     const row = {
       scenarioId,
+      scenarioName: typeof raw.scenario_name === "string" ? raw.scenario_name : void 0,
       result: normalizeStatus2(raw.result),
       time: raw.time,
       timeMs,
@@ -21479,17 +21848,22 @@ function parseScenarioOverlay(source) {
       source: typeof raw.source === "string" ? raw.source : void 0,
       gitSha: typeof raw.git_sha === "string" ? raw.git_sha : void 0,
       failingStep: raw.failing_step && typeof raw.failing_step === "object" ? raw.failing_step : void 0,
+      durationMs: typeof raw.duration_ms === "number" && Number.isFinite(raw.duration_ms) ? raw.duration_ms : void 0,
       traceId: typeof raw.trace_id === "string" ? raw.trace_id : void 0,
       traceFile: normalizeUri(raw.trace_file),
       testCaseStartedId: typeof raw.test_case_started_id === "string" ? raw.test_case_started_id : void 0
     };
     keepNewest(byScenarioKey, scenarioKey(scenarioId) ?? scenarioId.toLowerCase(), row);
     keepNewest(byLocation, locationKey(row.uri, row.line), row);
+    if (row.scenarioName) {
+      const nameKey = row.scenarioName.trim().toLowerCase();
+      byName.set(nameKey, [...byName.get(nameKey) ?? [], row]);
+    }
   }
-  return { byScenarioKey, byLocation };
+  return { byScenarioKey, byLocation, byName };
 }
 function parseScenarioOverlayFile(absPath) {
-  if (!fs5.existsSync(absPath)) return { byScenarioKey: /* @__PURE__ */ new Map(), byLocation: /* @__PURE__ */ new Map() };
+  if (!fs5.existsSync(absPath)) return { byScenarioKey: /* @__PURE__ */ new Map(), byLocation: /* @__PURE__ */ new Map(), byName: /* @__PURE__ */ new Map() };
   return parseScenarioOverlay(fs5.readFileSync(absPath, "utf-8"));
 }
 function resolvePath(repoRoot, p) {
@@ -21558,6 +21932,8 @@ function startedId(row) {
   return m?.[1];
 }
 function applyTraceRef(scenario, row) {
+  scenario.lastResultSource = row.source;
+  scenario.lastResultRunId = row.runId;
   if (!row.traceId) {
     scenario.trace = void 0;
     return;
@@ -21596,10 +21972,13 @@ function findByLocation(patch, scenario) {
 function applyScenarioOverlayResults(scenarios, patch, opts) {
   let applied = 0;
   for (const scenario of scenarios) {
-    const key = scenarioKey(scenario.id);
-    const byId = key ? patch.byScenarioKey.get(key) : void 0;
+    const key = scenarioKey(scenario.id) ?? scenario.id.toLowerCase();
+    const byId = patch.byScenarioKey.get(key);
     const byLocation = findByLocation(patch, scenario);
-    const row = byId && byLocation ? byId.timeMs >= byLocation.timeMs ? byId : byLocation : byId ?? byLocation;
+    const nameKey = (scenario.title ?? "").trim().toLowerCase();
+    const nameRows = patch.byName.get(nameKey) ?? [];
+    const byUniqueName = !byId && !byLocation && nameRows.length === 1 ? nameRows[0] : void 0;
+    const row = byLocation ?? byId ?? byUniqueName;
     if (!row) continue;
     const currentMs = parseTimeMs(scenario.lastRunAt);
     const overlayWins = currentMs === void 0 || row.timeMs > currentMs;
@@ -21608,7 +21987,7 @@ function applyScenarioOverlayResults(scenarios, patch, opts) {
       scenario.lastResult = row.result;
       scenario.lastRunAt = row.time;
       applyTraceRef(scenario, row);
-      scenario.durationMs = void 0;
+      scenario.durationMs = row.durationMs;
       scenario.failingStep = row.failingStep ?? null;
       applied++;
     } else if (overlayEffective && row.traceId) {
@@ -21617,8 +21996,9 @@ function applyScenarioOverlayResults(scenarios, patch, opts) {
     if (overlayEffective && row.result === "PASSED") {
       const threshold = freshnessThresholdMs(opts.repoRoot, scenario, row);
       const sourceStale = threshold !== void 0 && row.timeMs < threshold;
-      const commitStale = Boolean(opts.currentGitSha) && row.gitSha !== opts.currentGitSha;
-      scenario.resultStale = sourceStale || commitStale || Boolean(opts.currentGitSha) && !row.gitSha;
+      const requiresCommitIdentity = row.source !== "pytest-bdd:cucumber-json";
+      const commitStale = requiresCommitIdentity && Boolean(opts.currentGitSha) && row.gitSha !== opts.currentGitSha;
+      scenario.resultStale = sourceStale || commitStale || requiresCommitIdentity && Boolean(opts.currentGitSha) && !row.gitSha;
     } else if (overlayEffective) {
       scenario.resultStale = false;
     }
@@ -21643,8 +22023,149 @@ var init_scenario_overlay = __esm({
   }
 });
 
+// tools/spec-graph/parsers/pytest-bdd.ts
+import fs6 from "node:fs";
+import path5 from "node:path";
+function normalizeUri2(uri, repoRoot) {
+  let normalized = uri.replace(/\\/g, "/").replace(/^\.\//, "");
+  if (path5.isAbsolute(uri) && repoRoot) {
+    normalized = path5.relative(repoRoot, uri).split(path5.sep).join("/");
+  }
+  return normalized;
+}
+function resultStatus(steps) {
+  const statuses = steps.map((step) => typeof step.result?.status === "string" ? step.result.status.toLowerCase() : "").filter(Boolean);
+  if (statuses.includes("failed")) return "FAILED";
+  if (statuses.includes("undefined")) return "UNDEFINED";
+  if (statuses.includes("ambiguous")) return "AMBIGUOUS";
+  if (statuses.includes("pending")) return "PENDING";
+  if (statuses.includes("skipped")) return "SKIPPED";
+  return statuses.length > 0 && statuses.every((status) => status === "passed") ? "PASSED" : "UNKNOWN";
+}
+function durationMs(steps) {
+  const nanoseconds = steps.reduce((total, step) => {
+    const value = step.result?.duration;
+    return total + (typeof value === "number" && Number.isFinite(value) ? value : 0);
+  }, 0);
+  return nanoseconds > 0 ? nanoseconds / 1e6 : void 0;
+}
+function failingStep(steps) {
+  const index = steps.findIndex((step2) => step2.result?.status === "failed");
+  if (index < 0) return void 0;
+  const step = steps[index];
+  return {
+    step: [step.keyword, step.name].filter((value) => typeof value === "string").join(" ").trim(),
+    errorMessage: typeof step.result?.error_message === "string" ? step.result.error_message : ""
+  };
+}
+function reportRunId(reportTime) {
+  return `pytest-bdd-${reportTime.replace(/[-:.TZ]/g, "")}`;
+}
+function parsePytestBddReport(source, opts = {}) {
+  const reportPath = normalizeUri2(opts.reportPath ?? DEFAULT_PYTEST_BDD_REPORT_PATH);
+  const reportTime = opts.reportTime ?? (/* @__PURE__ */ new Date(0)).toISOString();
+  const runId = opts.runId ?? reportRunId(reportTime);
+  let features;
+  try {
+    const parsed = JSON.parse(source);
+    if (!Array.isArray(parsed)) {
+      return {
+        patch: parseScenarioOverlay(""),
+        reportPath,
+        reportTime: null,
+        runId: null,
+        executed: 0,
+        malformed: 1,
+        state: "NOT_INGESTED",
+        reason: "MALFORMED_ARTIFACT"
+      };
+    }
+    features = parsed;
+  } catch {
+    return {
+      patch: parseScenarioOverlay(""),
+      reportPath,
+      reportTime: null,
+      runId: null,
+      executed: 0,
+      malformed: 1,
+      state: "NOT_INGESTED",
+      reason: "MALFORMED_ARTIFACT"
+    };
+  }
+  const rows = [];
+  let malformed = 0;
+  for (const feature of features) {
+    let uri = typeof feature.uri === "string" ? normalizeUri2(feature.uri, opts.repoRoot) : "";
+    const reportDir = path5.posix.dirname(reportPath);
+    if (uri && reportDir !== "." && reportDir !== ".dev-pomogator" && !uri.startsWith(`${reportDir}/`)) {
+      const reportBase = path5.posix.basename(reportDir);
+      uri = uri.startsWith(`${reportBase}/`) ? path5.posix.join(path5.posix.dirname(reportDir), uri) : path5.posix.join(reportDir, uri);
+    }
+    for (const scenario of Array.isArray(feature.elements) ? feature.elements : []) {
+      if (!uri || typeof scenario.id !== "string" || !scenario.id.trim() || typeof scenario.line !== "number" || !Number.isInteger(scenario.line) || scenario.line < 1) {
+        malformed += 1;
+        continue;
+      }
+      const steps = Array.isArray(scenario.steps) ? scenario.steps : [];
+      rows.push(JSON.stringify({
+        scenario_id: scenario.id,
+        scenario_name: typeof scenario.name === "string" ? scenario.name : void 0,
+        uri,
+        line: scenario.line,
+        result: resultStatus(steps),
+        time: reportTime,
+        run_id: runId,
+        source: PYTEST_BDD_SOURCE,
+        trace_id: `${reportPath}#${scenario.id}`,
+        trace_file: reportPath,
+        duration_ms: durationMs(steps),
+        failing_step: failingStep(steps)
+      }));
+    }
+  }
+  const reason = malformed > 0 ? "MALFORMED_ARTIFACT" : rows.length === 0 ? "MISSING_SCENARIO_RESULTS" : null;
+  return {
+    patch: parseScenarioOverlay(rows.join("\n")),
+    reportPath,
+    reportTime,
+    runId,
+    executed: rows.length,
+    malformed,
+    state: reason ? "NOT_INGESTED" : "INGESTED",
+    reason
+  };
+}
+function parsePytestBddReportFile(absPath, repoRoot) {
+  const reportPath = path5.relative(repoRoot, absPath).split(path5.sep).join("/");
+  if (!fs6.existsSync(absPath)) {
+    return {
+      patch: parseScenarioOverlay(""),
+      reportPath,
+      reportTime: null,
+      runId: null,
+      executed: 0,
+      malformed: 0,
+      state: "NOT_INGESTED",
+      reason: "ARTIFACT_ABSENT"
+    };
+  }
+  const stat = fs6.statSync(absPath);
+  const reportTime = stat.mtime.toISOString();
+  return parsePytestBddReport(fs6.readFileSync(absPath, "utf-8"), { reportPath, reportTime, repoRoot });
+}
+var DEFAULT_PYTEST_BDD_REPORT_PATH, PYTEST_BDD_SOURCE;
+var init_pytest_bdd = __esm({
+  "tools/spec-graph/parsers/pytest-bdd.ts"() {
+    "use strict";
+    init_scenario_overlay();
+    DEFAULT_PYTEST_BDD_REPORT_PATH = ".dev-pomogator/pytest-bdd-report.json";
+    PYTEST_BDD_SOURCE = "pytest-bdd:cucumber-json";
+  }
+});
+
 // tools/specs-validator/spec-form-parsers.ts
-import fs6 from "fs";
+import fs7 from "fs";
 function parseUserStoryBlocks(content) {
   const lines = content.replace(/\r\n/g, "\n").split("\n");
   const blocks = [];
@@ -21848,7 +22369,7 @@ function runCheckCli(argv) {
   if (flag !== "--check" || !kind || !file) return { output: usage, exitCode: 2 };
   let content;
   try {
-    content = fs6.readFileSync(file, "utf-8");
+    content = fs7.readFileSync(file, "utf-8");
   } catch (e) {
     return { output: `cannot read ${file}: ${e instanceof Error ? e.message : e}`, exitCode: 2 };
   }
@@ -21926,8 +22447,8 @@ var init_spec_form_parsers = __esm({
 });
 
 // tools/spec-graph/parsers/tasks.ts
-import fs7 from "node:fs";
-import path5 from "node:path";
+import fs8 from "node:fs";
+import path6 from "node:path";
 function headerOf(line) {
   if (!/^\s*-\s*\[[ xX~]\]/.test(line)) return null;
   const id = line.match(/\bid:\s*([\w.\-]+)/);
@@ -22001,8 +22522,8 @@ function parseTasks(content, file) {
   return out;
 }
 function parseTasksFile(abs, repoRoot) {
-  const content = fs7.readFileSync(abs, "utf8");
-  const file = path5.relative(repoRoot, abs).replace(/\\/g, "/");
+  const content = fs8.readFileSync(abs, "utf8");
+  const file = path6.relative(repoRoot, abs).replace(/\\/g, "/");
   const slice = { nodes: parseTasks(content, file), edges: [] };
   qualifySlice(slice, specOf(file));
   return { nodes: slice.nodes, edges: [], anchors: [] };
@@ -22024,7 +22545,7 @@ var init_tasks = __esm({
 });
 
 // tools/spec-graph/parsers/file-changes.ts
-import fs8 from "node:fs";
+import fs9 from "node:fs";
 function isGlob(p) {
   return /[*?\[]/.test(p);
 }
@@ -22109,7 +22630,7 @@ function parseFileChanges(mdSource, opts = {}) {
 function parseFileChangesFile(absPath, opts = {}) {
   let source;
   try {
-    source = fs8.readFileSync(absPath, "utf-8");
+    source = fs9.readFileSync(absPath, "utf-8");
   } catch {
     return [];
   }
@@ -22132,7 +22653,7 @@ var init_file_changes = __esm({
 });
 
 // tools/spec-graph/parsers/design.ts
-import fs9 from "node:fs";
+import fs10 from "node:fs";
 function looksLikePath(s) {
   if (!s || s.length > 256) return false;
   if (/\s/.test(s)) return false;
@@ -22183,10 +22704,10 @@ function parseDesign(mdSource, _relativePath) {
     for (const m of slice.match(FR_CITATION_RE2) ?? []) {
       frsInScope.add(m);
     }
-    const harvest = (text) => {
+    const harvest = (text2) => {
       BACKTICK_PATH_RE.lastIndex = 0;
       let m;
-      while ((m = BACKTICK_PATH_RE.exec(text)) !== null) {
+      while ((m = BACKTICK_PATH_RE.exec(text2)) !== null) {
         const candidate = m[1].trim();
         if (!looksLikePath(candidate)) continue;
         if (isGlob2(candidate)) continue;
@@ -22212,7 +22733,7 @@ function parseDesign(mdSource, _relativePath) {
 function parseDesignFile(absPath, repoRoot) {
   let source;
   try {
-    source = fs9.readFileSync(absPath, "utf-8");
+    source = fs10.readFileSync(absPath, "utf-8");
   } catch {
     return [];
   }
@@ -22235,15 +22756,16 @@ __export(builder_exports, {
   buildGraph: () => buildGraph,
   buildGraphFromCwd: () => buildGraphFromCwd,
   rebuildBacklinks: () => rebuildBacklinks,
+  resolveFeatureTagEdges: () => resolveFeatureTagEdges,
   testedBySourceMap: () => testedBySourceMap,
   verifiesEdgesFor: () => verifiesEdgesFor
 });
-import fs10 from "node:fs";
+import fs11 from "node:fs";
 import { execFileSync } from "node:child_process";
-import path6 from "node:path";
+import path7 from "node:path";
 import { createHash } from "node:crypto";
 function walkDir(absDir, suffixes) {
-  if (!fs10.existsSync(absDir)) return [];
+  if (!fs11.existsSync(absDir)) return [];
   const out = [];
   const skipDirs = /* @__PURE__ */ new Set([
     "node_modules",
@@ -22260,12 +22782,12 @@ function walkDir(absDir, suffixes) {
     const current = stack.pop();
     let entries;
     try {
-      entries = fs10.readdirSync(current, { withFileTypes: true });
+      entries = fs11.readdirSync(current, { withFileTypes: true });
     } catch {
       continue;
     }
     for (const entry of entries) {
-      const abs = path6.join(current, entry.name);
+      const abs = path7.join(current, entry.name);
       if (entry.isDirectory()) {
         if (skipDirs.has(entry.name)) continue;
         stack.push(abs);
@@ -22276,26 +22798,118 @@ function walkDir(absDir, suffixes) {
   }
   return out;
 }
+function featureAliasOwners(nodes, repoRoot, spec, alias) {
+  const owners = /* @__PURE__ */ new Set();
+  for (const node of nodes.values()) {
+    if (node.type !== "FR" || node.spec !== spec) continue;
+    const declaredAliases = (node.body ?? "").split(/\r?\n/).filter((line) => /^\s*(?:\*\*(?:Feature|BDD|Executable evidence aliases)(?::)?\*\*:?\s*|Executable evidence aliases\s*:)/i.test(line)).join("\n");
+    const source = `${node.title ?? ""}
+${declaredAliases}`;
+    const aliases = /* @__PURE__ */ new Set([
+      ...node.featureAliases ?? [],
+      ...[...source.matchAll(/@feature(\d+)([a-z]?)/gi)].map((match) => `feature${match[1]}${match[2] ?? ""}`)
+    ]);
+    if (aliases.has(alias)) owners.add(node.id);
+  }
+  const requirementsPath = path7.join(repoRoot, ".specs", spec, "REQUIREMENTS.md");
+  if (fs11.existsSync(requirementsPath)) {
+    for (const line of fs11.readFileSync(requirementsPath, "utf8").split(/\r?\n/)) {
+      if (![...line.matchAll(/@feature(\d+)([a-z]?)/gi)].some((match) => `feature${match[1]}${match[2] ?? ""}` === alias)) continue;
+      for (const match of line.matchAll(/\bFR-(\d+[a-z]?)\b/g)) {
+        const owner = nodes.get(`${spec}:FR-${match[1]}`);
+        if (owner?.type === "FR") owners.add(owner.id);
+      }
+    }
+  }
+  return [...owners];
+}
+function resolveFeatureTagEdges(nodes, edges, repoRoot) {
+  const featureOwners = /* @__PURE__ */ new Map();
+  for (const node of nodes.values()) {
+    if (node.type !== "FR" || !node.spec) continue;
+    const declaredAliases = (node.body ?? "").split(/\r?\n/).filter((line) => /^\s*(?:\*\*(?:Feature|BDD|Executable evidence aliases)(?::)?\*\*:?\s*|Executable evidence aliases\s*:)/i.test(line)).join("\n");
+    const source = `${node.title ?? ""}
+${declaredAliases}`;
+    const aliases = new Set(
+      [...source.matchAll(/@feature(\d+)([a-z]?)/gi)].map((match) => `feature${match[1]}${match[2] ?? ""}`)
+    );
+    node.featureAliases = [...aliases];
+    for (const alias of aliases) {
+      const key = `${node.spec}:${alias}`;
+      const previous = featureOwners.get(key);
+      featureOwners.set(key, previous === void 0 ? node.id : previous === node.id ? node.id : null);
+    }
+  }
+  if (repoRoot) {
+    const specs = new Set([...nodes.values()].map((node) => node.spec).filter((spec) => Boolean(spec)));
+    for (const slug of specs) {
+      const requirementsPath = path7.join(repoRoot, ".specs", slug, "REQUIREMENTS.md");
+      if (!fs11.existsSync(requirementsPath)) continue;
+      for (const line of fs11.readFileSync(requirementsPath, "utf8").split(/\r?\n/)) {
+        const featureTags = [...line.matchAll(/@feature(\d+)([a-z]?)/gi)];
+        for (const frMatch of line.matchAll(/\bFR-(\d+[a-z]?)\b/g)) {
+          const owner = nodes.get(`${slug}:FR-${frMatch[1]}`);
+          if (owner?.type !== "FR") continue;
+          for (const featureTag of featureTags) {
+            const alias = `feature${featureTag[1]}${featureTag[2] ?? ""}`;
+            owner.featureAliases = [.../* @__PURE__ */ new Set([...owner.featureAliases ?? [], alias])];
+            const key = `${slug}:${alias}`;
+            const previous = featureOwners.get(key);
+            featureOwners.set(key, previous === void 0 ? owner.id : previous === owner.id ? owner.id : null);
+          }
+        }
+      }
+    }
+  }
+  for (let i = edges.length - 1; i >= 0; i--) {
+    const target = nodes.get(edges[i].to);
+    if (edges[i].type === "tested-by" && edges[i].metadata?.producer === "gherkin-feature-tag" && target?.type === "Scenario" && target.spec) {
+      edges.splice(i, 1);
+    }
+  }
+  const emitted = /* @__PURE__ */ new Set();
+  for (const node of nodes.values()) {
+    if (node.type !== "Scenario" || !node.spec) continue;
+    for (const tag of node.tags) {
+      const feature = tag.match(/^@feature(\d+)([a-z]?)$/i);
+      if (!feature) continue;
+      const alias = `feature${feature[1]}${feature[2] ?? ""}`;
+      const direct = `${node.spec}:FR-${feature[1]}${feature[2] ?? ""}`;
+      const owner = featureOwners.get(`${node.spec}:${alias}`);
+      if (owner === null) continue;
+      const from = owner ?? (nodes.has(direct) ? direct : void 0);
+      if (!from) continue;
+      const key = `${from}|${node.id}`;
+      if (emitted.has(key)) continue;
+      emitted.add(key);
+      edges.push({ from, to: node.id, type: "tested-by", metadata: { producer: "gherkin-feature-tag", version: "1" } });
+    }
+  }
+}
 function buildGraph(opts) {
   const { repoRoot } = opts;
   let currentGitSha;
   try {
     currentGitSha = execFileSync("git", ["rev-parse", "HEAD"], { cwd: repoRoot, encoding: "utf8", timeout: 5e3 }).trim() || void 0;
   } catch {
-    const isRuntimeCorpus = path6.resolve(repoRoot) === path6.resolve(process.cwd());
+    const isRuntimeCorpus = path7.resolve(repoRoot) === path7.resolve(process.cwd());
     currentGitSha = isRuntimeCorpus ? process.env.DEV_POMOGATOR_GIT_SHA || void 0 : void 0;
   }
-  const mdRoots = (opts.mdRoots ?? [".specs"]).map((r) => path6.resolve(repoRoot, r));
+  const mdRoots = (opts.mdRoots ?? [".specs"]).map((r) => path7.resolve(repoRoot, r));
   const featureRoots = (opts.featureRoots ?? [".specs", "tests/features"]).map(
-    (r) => path6.resolve(repoRoot, r)
+    (r) => path7.resolve(repoRoot, r)
   );
-  const ndjsonPath = path6.resolve(
+  const ndjsonPath = path7.resolve(
     repoRoot,
     opts.ndjsonPath ?? ".dev-pomogator/.last-test-run.ndjson"
   );
-  const scenarioOverlayPath = path6.resolve(
+  const scenarioOverlayPath = path7.resolve(
     repoRoot,
     opts.scenarioOverlayPath ?? ".dev-pomogator/.scenario-results.ndjson"
+  );
+  const pytestBddPath = path7.resolve(
+    repoRoot,
+    opts.pytestBddPath ?? DEFAULT_PYTEST_BDD_REPORT_PATH
   );
   const nodes = /* @__PURE__ */ new Map();
   const edges = [];
@@ -22355,7 +22969,7 @@ function buildGraph(opts) {
     ingestSlice(slice);
   }
   for (const abs of mdFiles) {
-    if (path6.basename(abs) !== "TASKS.md") continue;
+    if (path7.basename(abs) !== "TASKS.md") continue;
     let taskSlice;
     try {
       taskSlice = parseTasksFile(abs, repoRoot);
@@ -22365,20 +22979,187 @@ function buildGraph(opts) {
     for (const node of taskSlice.nodes) mergeNode(node);
   }
   const featureFiles = [...new Set(featureRoots.flatMap((root) => walkDir(root, [".feature"])))];
+  const externalFeatureOwners = /* @__PURE__ */ new Map();
+  const registerExternalFeatureOwner = (featurePath, owner) => {
+    const previous = externalFeatureOwners.get(featurePath);
+    externalFeatureOwners.set(featurePath, previous === void 0 || previous === owner ? owner : null);
+  };
+  for (const changesAbs of mdFiles.filter((file) => path7.basename(file) === "FILE_CHANGES.md")) {
+    const relChanges = path7.relative(repoRoot, changesAbs).split(path7.sep).join("/");
+    const owner = specOf(relChanges);
+    if (!owner) continue;
+    for (const row of parseFileChangesFile(changesAbs)) {
+      if (!/\.feature$/i.test(row.file_path)) continue;
+      const rowPath = row.file_path.replace(/\\/g, "/");
+      const featurePath = rowPath.startsWith(".specs/") || rowPath.startsWith("tests/") ? path7.posix.normalize(rowPath) : path7.posix.normalize(`.specs/${owner}/${rowPath}`);
+      registerExternalFeatureOwner(featurePath, owner);
+    }
+  }
+  const canonicalScenarioKeys = /* @__PURE__ */ new Set();
+  const canonicalBodyOwners = /* @__PURE__ */ new Map();
+  const artifactMirrorTags = /* @__PURE__ */ new Map();
+  const scenarioBodyKey = (node) => `${node.title}\0${node.steps.map((step) => `${step.keyword}:${step.text}`).join("")}`;
+  const scenarioKeyFor = (node, owner) => `${owner ?? node.spec ?? specOf(node.file) ?? ""}${scenarioBodyKey(node)}`;
+  for (const canonicalFile of featureFiles.filter((file) => file.replace(/\\/g, "/").includes("/.specs/"))) {
+    const isArtifact = canonicalFile.replace(/\\/g, "/").includes("/_artifact/features/");
+    try {
+      const canonicalSlice = parseGherkinFile(canonicalFile, repoRoot);
+      for (const node of canonicalSlice.nodes) {
+        if (node.type !== "Scenario") continue;
+        const key = scenarioKeyFor(node);
+        if (isArtifact) {
+          const tags = artifactMirrorTags.get(key) ?? /* @__PURE__ */ new Set();
+          for (const tag of node.tags) tags.add(tag);
+          artifactMirrorTags.set(key, tags);
+        } else {
+          canonicalScenarioKeys.add(key);
+          const owners = canonicalBodyOwners.get(scenarioBodyKey(node)) ?? /* @__PURE__ */ new Set();
+          owners.add(node.spec ?? specOf(node.file) ?? "");
+          canonicalBodyOwners.set(scenarioBodyKey(node), owners);
+        }
+      }
+    } catch {
+    }
+  }
   for (const abs of featureFiles) {
+    const mirrorHeader = !abs.replace(/\\/g, "/").includes("/.specs/") ? fs11.readFileSync(abs, "utf8").slice(0, 500).match(/^#\s*Source:\s+(\.specs\/[^\r\n]+\.feature)\s*$/m)?.[1] : void 0;
+    const mirrorSlug = mirrorHeader?.match(/^\.specs\/(.+)\/[^/]+\.feature$/)?.[1];
     let slice;
     try {
       slice = parseGherkinFile(abs, repoRoot);
     } catch {
       continue;
     }
+    const sourceText = fs11.readFileSync(abs, "utf8");
+    const explicitScenarioOwners = /* @__PURE__ */ new Map();
+    const sourceLines = sourceText.split(/\r?\n/);
+    for (let i = 0; i < sourceLines.length; i++) {
+      if (!/^\s*Scenario(?:\s+Outline)?:\s*/.test(sourceLines[i])) continue;
+      for (let j = i - 1; j >= 0; j--) {
+        if (sourceLines[j].trim() === "") continue;
+        if (/^\s*@\S/.test(sourceLines[j])) continue;
+        const owner = sourceLines[j].match(/^\s*#\s*Owner:\s*([a-z0-9][a-z0-9/-]*)\s*$/i)?.[1];
+        if (owner) explicitScenarioOwners.set(i + 1, owner);
+        break;
+      }
+    }
+    const relativeFeature = path7.relative(repoRoot, abs).split(path7.sep).join("/");
+    const hasDeclaredOwner = externalFeatureOwners.has(relativeFeature);
+    const declaredOwner = externalFeatureOwners.get(relativeFeature);
+    const featureHeader = sourceText.match(/^\s*#\s*Owner:\s*([a-z0-9][a-z0-9/-]*)\s*$/im)?.[1];
+    const fallbackOwner = hasDeclaredOwner ? declaredOwner ?? void 0 : featureHeader;
+    if (fallbackOwner || explicitScenarioOwners.size > 0) {
+      for (const edge of slice.edges) {
+        if (edge.from.includes(":")) continue;
+        const target = slice.nodes.find((node) => node.id === edge.to);
+        const owner = target?.type === "Scenario" ? explicitScenarioOwners.get(target.line) ?? fallbackOwner : fallbackOwner;
+        if (owner && nodes.has(`${owner}:${edge.from}`)) edge.from = `${owner}:${edge.from}`;
+      }
+      for (const node of slice.nodes) {
+        if (node.type !== "Scenario") continue;
+        const owner = explicitScenarioOwners.get(node.line) ?? fallbackOwner;
+        if (!owner) continue;
+        for (const tag of node.tags) {
+          const feature = tag.match(/^@feature(\d+)([a-z]?)$/i);
+          const requirement = tag.match(/^@((?:FR|NFR|AC)[A-Za-z0-9._-]+)$/i);
+          let from;
+          if (feature) {
+            const alias = `feature${feature[1]}${feature[2] ?? ""}`;
+            const aliasOwners = featureAliasOwners(nodes, repoRoot, owner, alias);
+            if (aliasOwners.length === 1) from = aliasOwners[0];
+            else if (aliasOwners.length === 0 && nodes.has(`${owner}:FR-${feature[1]}${feature[2] ?? ""}`)) from = `${owner}:FR-${feature[1]}${feature[2] ?? ""}`;
+          } else if (requirement && nodes.has(`${owner}:${requirement[1]}`)) {
+            from = `${owner}:${requirement[1]}`;
+          }
+          if (!from) continue;
+          if (!slice.edges.some((edge) => edge.from === from && edge.to === node.id && edge.type === "tested-by")) {
+            slice.edges.push({ from, to: node.id, type: "tested-by" });
+          }
+        }
+      }
+    }
+    const normalizedAbs = abs.replace(/\\/g, "/");
+    const isArtifact = normalizedAbs.includes("/_artifact/features/");
+    if (isArtifact || !normalizedAbs.includes("/.specs/")) {
+      const duplicateScenarioIds = new Set(
+        slice.nodes.filter((node) => {
+          const owner = mirrorSlug ?? fallbackOwner ?? (isArtifact ? node.spec : void 0);
+          return owner ? canonicalScenarioKeys.has(scenarioKeyFor(node, owner)) : (canonicalBodyOwners.get(scenarioBodyKey(node))?.size ?? 0) === 1;
+        }).map((node) => node.id)
+      );
+      if (duplicateScenarioIds.size > 0) {
+        slice.nodes = slice.nodes.filter((node) => !duplicateScenarioIds.has(node.id));
+        slice.edges = slice.edges.filter((edge) => !duplicateScenarioIds.has(edge.from) && !duplicateScenarioIds.has(edge.to));
+      }
+    } else {
+      for (const node of slice.nodes) {
+        if (node.type !== "Scenario") continue;
+        const mirrorTags = artifactMirrorTags.get(scenarioKeyFor(node));
+        if (mirrorTags) node.tags = [.../* @__PURE__ */ new Set([...node.tags, ...mirrorTags])];
+      }
+    }
+    if (mirrorSlug) {
+      for (const edge of slice.edges) {
+        if (!edge.from.includes(":") && nodes.has(`${mirrorSlug}:${edge.from}`)) {
+          edge.from = `${mirrorSlug}:${edge.from}`;
+        }
+      }
+    }
     ingestSlice(slice);
   }
   const specDirs = /* @__PURE__ */ new Set();
   for (const abs of mdFiles) {
-    const base = path6.basename(abs);
+    const base = path7.basename(abs);
     if (base === "FILE_CHANGES.md" || base === "DESIGN.md") {
-      specDirs.add(path6.dirname(abs));
+      specDirs.add(path7.dirname(abs));
+    }
+  }
+  const bddOwnershipSeen = /* @__PURE__ */ new Set();
+  for (const requirementsAbs of mdFiles.filter((file) => path7.basename(file) === "REQUIREMENTS.md")) {
+    const relRequirements = path7.relative(repoRoot, requirementsAbs).split(path7.sep).join("/");
+    const slug = specOf(relRequirements);
+    if (!slug) continue;
+    const requirementsLines = fs11.readFileSync(requirementsAbs, "utf8").split(/\r?\n/);
+    let inBddSuiteLayout = false;
+    for (let i = 0; i < requirementsLines.length; i++) {
+      const line = requirementsLines[i];
+      if (/^##\s+/.test(line.trim())) {
+        inBddSuiteLayout = /^##\s+BDD Suite Layout\b/i.test(line.trim());
+        continue;
+      }
+      if (!inBddSuiteLayout) continue;
+      const link = line.match(/\]\(([^)]+\.feature)\)/i);
+      if (!link) continue;
+      const frs = [...line.matchAll(/\bFR-(\d+[a-z]?)\b/gi)].map((match) => `FR-${match[1]}`);
+      if (frs.length === 0) continue;
+      const linkedPath = link[1].replace(/\\/g, "/");
+      const featureRel = linkedPath.startsWith(".specs/") ? path7.posix.normalize(linkedPath) : linkedPath.startsWith("tests/") ? path7.posix.normalize(linkedPath) : path7.posix.normalize(`.specs/${slug}/${linkedPath}`);
+      const scenarios = [...nodes.values()].filter(
+        (node) => node.type === "Scenario" && node.file === featureRel
+      );
+      for (const scenario of scenarios) {
+        for (const fr of frs) {
+          const directId = `${slug}:${fr}`;
+          const owner = nodes.has(directId) ? directId : [...nodes.values()].find(
+            (node) => node.type === "FR" && node.spec === slug && localIdOf(node.id).toLowerCase() === fr.toLowerCase()
+          )?.id;
+          if (!owner) continue;
+          const key = `${owner}|${scenario.id}`;
+          if (bddOwnershipSeen.has(key)) continue;
+          bddOwnershipSeen.add(key);
+          edges.push({
+            from: owner,
+            to: scenario.id,
+            type: "tested-by",
+            metadata: {
+              producer: "requirements-bdd-layout",
+              source_file: relRequirements,
+              source_line: i + 1,
+              version: "1"
+            }
+          });
+        }
+      }
     }
   }
   const fileNodeIdByPath = /* @__PURE__ */ new Map();
@@ -22425,7 +23206,9 @@ function buildGraph(opts) {
       type: "implements",
       metadata: {
         file_path: filePath,
-        source_section: sourceSection
+        source_section: sourceSection,
+        source_file: sourceFile,
+        source_line: line
       }
     };
     if (action && ALLOWED_ACTIONS2.has(action)) {
@@ -22434,11 +23217,11 @@ function buildGraph(opts) {
     edges.push(edge);
   };
   for (const specDir of specDirs) {
-    const relDir = path6.relative(repoRoot, specDir).split(path6.sep).join("/");
+    const relDir = path7.relative(repoRoot, specDir).split(path7.sep).join("/");
     const slug = specOf(`${relDir}/FILE_CHANGES.md`);
     const qualifyFr = (fr) => slug ? `${slug}:${fr}` : fr;
-    const fcAbs = path6.join(specDir, "FILE_CHANGES.md");
-    if (fs10.existsSync(fcAbs)) {
+    const fcAbs = path7.join(specDir, "FILE_CHANGES.md");
+    if (fs11.existsSync(fcAbs)) {
       let rows = [];
       try {
         rows = parseFileChangesFile(fcAbs, { warnOnceState });
@@ -22449,12 +23232,12 @@ function buildGraph(opts) {
       for (const row of rows) {
         if (row.frs.length === 0) continue;
         for (const fr of row.frs) {
-          emitImplements(qualifyFr(fr), row.file_path, "FILE_CHANGES", relFile, 1, row.action);
+          emitImplements(qualifyFr(fr), row.file_path, "FILE_CHANGES", relFile, row.line ?? 1, row.action);
         }
       }
     }
-    const dAbs = path6.join(specDir, "DESIGN.md");
-    if (fs10.existsSync(dAbs)) {
+    const dAbs = path7.join(specDir, "DESIGN.md");
+    if (fs11.existsSync(dAbs)) {
       let refs = [];
       try {
         refs = parseDesignFile(dAbs);
@@ -22469,6 +23252,47 @@ function buildGraph(opts) {
         }
       }
     }
+  }
+  {
+    const featureOwners = /* @__PURE__ */ new Map();
+    for (const node of nodes.values()) {
+      if (node.type !== "FR" || !node.spec) continue;
+      const declaredAliases = (node.body ?? "").split(/\r?\n/).filter((line) => /^\s*(?:\*\*(?:Feature|BDD|Executable evidence aliases)(?::)?\*\*:?\s*|Executable evidence aliases\s*:)/i.test(line)).join("\n");
+      const source = `${node.title ?? ""}
+${declaredAliases}`;
+      const aliases = [...source.matchAll(/@feature(\d+)([a-z]?)/gi)].map((match) => `feature${match[1]}${match[2] ?? ""}`);
+      node.featureAliases = [.../* @__PURE__ */ new Set([...node.featureAliases ?? [], ...aliases])];
+      for (const alias of aliases) {
+        const key = `${node.spec}:${alias}`;
+        const previous = featureOwners.get(key);
+        featureOwners.set(key, previous === void 0 ? node.id : previous === node.id ? node.id : null);
+      }
+    }
+    for (const specDir of specDirs) {
+      const relDir = path7.relative(repoRoot, specDir).split(path7.sep).join("/");
+      const slug = specOf(`${relDir}/FILE_CHANGES.md`);
+      if (!slug) continue;
+      const requirementsPath = path7.join(specDir, "REQUIREMENTS.md");
+      if (!fs11.existsSync(requirementsPath)) continue;
+      for (const line of fs11.readFileSync(requirementsPath, "utf8").split(/\r?\n/)) {
+        const featureTags = [...line.matchAll(/@feature(\d+)([a-z]?)/gi)];
+        if (featureTags.length === 0) continue;
+        for (const frMatch of line.matchAll(/\bFR-(\d+[a-z]?)\b/g)) {
+          const frId = `${slug}:FR-${frMatch[1]}`;
+          if (!nodes.has(frId)) continue;
+          for (const featureTag of featureTags) {
+            const key = `${slug}:feature${featureTag[1]}${featureTag[2] ?? ""}`;
+            const ownerNode = nodes.get(frId);
+            if (ownerNode?.type === "FR") {
+              ownerNode.featureAliases = [.../* @__PURE__ */ new Set([...ownerNode.featureAliases ?? [], `feature${featureTag[1]}${featureTag[2] ?? ""}`])];
+            }
+            const previous = featureOwners.get(key);
+            featureOwners.set(key, previous === void 0 ? frId : previous === frId ? frId : null);
+          }
+        }
+      }
+    }
+    resolveFeatureTagEdges(nodes, edges, repoRoot);
   }
   {
     const byLocalId = /* @__PURE__ */ new Map();
@@ -22487,16 +23311,84 @@ function buildGraph(opts) {
       e.to = resolveBare(e.to);
     }
   }
-  if (!opts.skipNdjson) {
-    const patch = parseNdjsonFile(ndjsonPath);
+  const executionArtifacts = [];
+  if (opts.skipNdjson) {
+    for (const [kind, provenance, artifactPath] of [
+      ["cucumber-messages-ndjson", "cucumber-messages-ndjson", ndjsonPath],
+      ["pytest-bdd-cucumber-json", PYTEST_BDD_SOURCE, pytestBddPath]
+    ]) {
+      executionArtifacts.push({
+        kind,
+        canonical: true,
+        state: "SKIPPED",
+        reason: "INGESTION_SKIPPED",
+        provenance,
+        path: path7.relative(repoRoot, artifactPath).split(path7.sep).join("/"),
+        run_id: null,
+        timestamp: null,
+        counts: { parsed: 0, matched: 0, unmatched: 0, malformed: 0 }
+      });
+    }
+  } else {
+    const ndjson = parseNdjsonArtifactFile(ndjsonPath);
+    const pytestBdd = parsePytestBddReportFile(pytestBddPath, repoRoot);
     const overlay = parseScenarioOverlayFile(scenarioOverlayPath);
     const scenarioIter = [];
     for (const n of nodes.values()) {
       if (n.type === "Scenario") scenarioIter.push(n);
     }
-    const applied = applyTestResults(scenarioIter, patch);
+    const ndjsonApplied = ndjson.state === "INGESTED" ? applyTestResults(scenarioIter, ndjson.patch) : 0;
+    executionArtifacts.push({
+      kind: "cucumber-messages-ndjson",
+      canonical: true,
+      state: ndjson.state,
+      reason: ndjson.reason,
+      provenance: "cucumber-messages-ndjson",
+      path: path7.relative(repoRoot, ndjsonPath).split(path7.sep).join("/"),
+      run_id: null,
+      timestamp: ndjson.timestamp,
+      counts: {
+        parsed: ndjson.patch.records,
+        matched: ndjsonApplied,
+        unmatched: Math.max(0, ndjson.patch.records - ndjsonApplied),
+        malformed: ndjson.patch.malformed
+      }
+    });
+    for (const scenario of scenarioIter) {
+      if (scenario.lastResult) {
+        scenario.canonicalResult = scenario.lastResult;
+        scenario.canonicalRunAt = scenario.lastRunAt;
+        scenario.canonicalRunId = scenario.lastResultRunId;
+        scenario.canonicalSource = scenario.lastResultSource;
+      }
+    }
+    const pytestBddApplied = pytestBdd.state === "INGESTED" ? applyScenarioOverlayResults(scenarioIter, pytestBdd.patch, { repoRoot, currentGitSha }) : 0;
+    executionArtifacts.push({
+      kind: "pytest-bdd-cucumber-json",
+      canonical: true,
+      state: pytestBdd.state,
+      reason: pytestBdd.reason,
+      provenance: PYTEST_BDD_SOURCE,
+      path: pytestBdd.reportPath,
+      run_id: pytestBdd.runId,
+      timestamp: pytestBdd.reportTime,
+      counts: {
+        parsed: pytestBdd.executed,
+        matched: pytestBddApplied,
+        unmatched: Math.max(0, pytestBdd.executed - pytestBddApplied),
+        malformed: pytestBdd.malformed
+      }
+    });
+    for (const scenario of scenarioIter) {
+      if (scenario.lastResultSource === PYTEST_BDD_SOURCE && scenario.lastResult) {
+        scenario.canonicalResult = scenario.lastResult;
+        scenario.canonicalRunAt = scenario.lastRunAt;
+        scenario.canonicalRunId = scenario.lastResultRunId;
+        scenario.canonicalSource = scenario.lastResultSource;
+      }
+    }
     const overlayApplied = applyScenarioOverlayResults(scenarioIter, overlay, { repoRoot, currentGitSha });
-    if (applied > 0 || overlayApplied > 0) {
+    if (ndjsonApplied > 0 || pytestBddApplied > 0 || overlayApplied > 0) {
       for (const s of scenarioIter) {
         if (s.lastResult) {
           edges.push({ from: s.id, to: `RESULT-${s.id}-${s.lastResult}`, type: "last-result" });
@@ -22518,6 +23410,7 @@ function buildGraph(opts) {
     edges,
     definitions,
     backlinks,
+    executionArtifacts,
     // File nodes (2b) and ndjson patches are EXCLUDED by construction —
     // mergeNode wraps only the parser-slice population, mirroring
     // collision-probe's rawCollisionScan scope.
@@ -22581,6 +23474,7 @@ var init_builder = __esm({
     init_gherkin();
     init_ndjson();
     init_scenario_overlay();
+    init_pytest_bdd();
     init_tasks();
     init_file_changes();
     init_design();
@@ -22736,10 +23630,20 @@ function forwardedDemands(graph) {
 // tools/spec-graph/conformance.ts
 init_edge_schema();
 var SPEC_TAG_RE = /^@((?:FR|NFR|AC)[A-Za-z0-9._-]+)$/;
-function tagResolves(graph, scenSpec, ref, specLocalIds) {
+function tagResolves(graph, scenSpec, ref) {
+  if (scenSpec && /^FR-\d+[a-z]?$/i.test(ref)) {
+    const feature = `feature${ref.slice(3)}`;
+    let matches = 0;
+    for (const node of graph.nodes.values()) {
+      if (node.type !== "FR" || node.spec !== scenSpec) continue;
+      const fr = node;
+      if (fr.featureAliases?.includes(feature)) matches += 1;
+    }
+    if (matches > 1) return false;
+    if (matches === 1) return true;
+  }
   if (scenSpec && graph.nodes.has(`${scenSpec}:${ref}`)) return true;
-  if (graph.nodes.has(ref)) return true;
-  return !scenSpec && specLocalIds.has(ref);
+  return graph.nodes.has(ref);
 }
 function levenshtein(a, b) {
   const m = a.length;
@@ -22772,6 +23676,7 @@ function checkConformance(graph, opts = {}) {
   const scenarioTests = /* @__PURE__ */ new Set();
   const scenarioVerifies = /* @__PURE__ */ new Set();
   const scenarioVerifiesAc = /* @__PURE__ */ new Set();
+  const scenarioRequirementEdges = /* @__PURE__ */ new Set();
   let resultsLoaded = false;
   for (const e of graph.edges) {
     if (e.type === "covers") {
@@ -22779,6 +23684,9 @@ function checkConformance(graph, opts = {}) {
       if (toType === "Decision") decisionCovers.add(e.from);
       else if (toType === "Story") storyCovers.add(e.from);
       else acCovers.add(e.from);
+    }
+    if (e.type === "tested-by" && graph.nodes.get(e.to)?.type === "Scenario" && ["FR", "NFR", "AC"].includes(graph.nodes.get(e.from)?.type ?? "")) {
+      scenarioRequirementEdges.add(e.to);
     }
     if (e.type === "tested-by") scenarioTests.add(e.from);
     if (e.type === "verifies") {
@@ -22791,8 +23699,14 @@ function checkConformance(graph, opts = {}) {
     }
     if (e.type === "last-result") resultsLoaded = true;
   }
+  const inactiveRequirement = (node) => {
+    const title = node.title.trim();
+    const body = node.body ?? "";
+    return /^\[TBD title\]$/i.test(title) || /\bOUT OF SCOPE\b/i.test(title) || /\bDEPRECATED\b/i.test(title) || /\bInvestigation result\b[\s\S]{0,300}\bNOT APPLICABLE\b/i.test(body);
+  };
   for (const node of graph.nodes.values()) {
     if (node.type !== "FR") continue;
+    if (inactiveRequirement(node)) continue;
     if (acCovers.has(node.id)) continue;
     if (scenarioTests.has(node.id)) continue;
     const bareTag = localIdOf(node);
@@ -22876,6 +23790,28 @@ function checkConformance(graph, opts = {}) {
       message: `${issue.path}: ${issue.message}`,
       suggestions: [{ action: "fix_requirement_metadata", reason: "Fix the FR-local ```yaml metadata block through the spec door.", confidence: "high" }]
     });
+    const hasContractIssue = (node.metadataIssues ?? []).some((issue) => issue.code.startsWith("FR_CONTRACT_"));
+    const contractScope = opts.strictContracts && node.type === "FR" && (!opts.strictContractSpec || node.spec === opts.strictContractSpec);
+    if (contractScope && !node.metadata?.contract && !hasContractIssue) findings.push({
+      code: "FR_CONTRACT_MISSING",
+      severity: "error",
+      location: { file: node.file, line: node.line },
+      nodeId: node.id,
+      message: `${node.id} has no FR-85 contract card.`,
+      suggestions: [{ action: "add_requirement_contract", reason: "Add a canonical FR-local contract card with observables, negative_cases, verification, and kind-specific fields.", confidence: "high" }]
+    });
+    if (contractScope && node.metadata?.contract) {
+      const retired = inactiveRequirement(node) || /\bSUPERSEDED\b/i.test(node.title);
+      const disposition = node.metadata.contract.kind === "disposition";
+      if (retired !== disposition) findings.push({
+        code: "FR_CONTRACT_DISPOSITION_INVALID",
+        severity: "error",
+        location: { file: node.file, line: node.line },
+        nodeId: node.id,
+        message: retired ? `${node.id} is explicitly retired/out of scope and requires a disposition contract card.` : `${node.id} is active and must not use a disposition contract card.`,
+        suggestions: [{ action: retired ? "add_disposition_contract" : "choose_active_contract_kind", reason: retired ? "Record status, rationale, owner, and exactly one successor or boundary." : "Use cli/api/schema/filesystem/event/state/behavior for an active requirement.", confidence: "high" }]
+      });
+    }
     if (node.type !== "FR" || !node.metadata || (node.metadataIssues?.length ?? 0) > 0) continue;
     const delivery = evaluateDelivery(node, graph);
     for (const issue of inheritedDemands.get(node.id)?.issues ?? []) findings.push({
@@ -23000,7 +23936,7 @@ function checkConformance(graph, opts = {}) {
     if (node.type !== "Task") continue;
     const task = node;
     if (task.refs.length > 0) continue;
-    if (/\bFR-\d+|SPECGEN\d+_\d+|@feature\d+/i.test(task.doneWhen ?? "")) continue;
+    if (/\bFR-\d+[a-z]?|SPECGEN\d+_\d+|@feature\d+[a-z]?/i.test(task.doneWhen ?? "")) continue;
     findings.push({
       code: "TASK_NO_REQUIREMENT",
       severity: "info",
@@ -23113,8 +24049,8 @@ function checkConformance(graph, opts = {}) {
     let hasSpecTag = false;
     const scenSpec = scen.spec ?? specOf(scen.file);
     for (const tag of scen.tags) {
-      const f = tag.match(/^@feature(\d+)$/i);
-      if (f && tagResolves(graph, scenSpec, `FR-${f[1]}`, specLocalIds)) {
+      const f = tag.match(/^@feature(\d+)([a-z]?)$/i);
+      if (f && tagResolves(graph, scenSpec, `FR-${f[1]}${f[2] ?? ""}`)) {
         hasSpecTag = true;
         continue;
       }
@@ -23122,7 +24058,7 @@ function checkConformance(graph, opts = {}) {
       if (!m) continue;
       hasSpecTag = true;
       const referenced = m[1];
-      if (!tagResolves(graph, scenSpec, referenced, specLocalIds)) {
+      if (!tagResolves(graph, scenSpec, referenced)) {
         const similar = topSimilarIds(referenced, [...specLocalIds], 3);
         findings.push({
           code: "SCENARIO_TAG_ORPHAN",
@@ -23142,7 +24078,7 @@ function checkConformance(graph, opts = {}) {
         });
       }
     }
-    if (!hasSpecTag && !scen.tags.some((tag) => tag.toLowerCase() === "@historical")) {
+    if (!hasSpecTag && !scenarioRequirementEdges.has(scen.id) && !scen.tags.some((tag) => tag.toLowerCase() === "@historical")) {
       findings.push({
         code: "UNTAGGED_SCENARIO",
         severity: "info",
@@ -23220,8 +24156,8 @@ function readVerdicts(repoRoot) {
   }
 }
 var BLOCKING_CODES = /* @__PURE__ */ new Set(["UNVERIFIED_COMPLETION", "TASK_TEST_QUALITY", "TASK_UNTESTED"]);
-function escapeReason(text) {
-  const m = text.match(/\[skip-test-quality:\s*([^\]]+)\]/i);
+function escapeReason(text2) {
+  const m = text2.match(/\[skip-test-quality:\s*([^\]]+)\]/i);
   return m ? m[1].trim() : null;
 }
 function escapeHonoured(reason) {

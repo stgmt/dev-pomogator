@@ -331,6 +331,20 @@
 - Validate only after rebuilding the graph — rejected because invalid source would already be written.
 - Duplicate schemas in MCP and parser layers — rejected because enum and rationale rules would drift.
 
+
+
+### Decision: Core agent UX uses one graph contract
+
+**Требование:** [FR-86](FR.md#fr-86-core-agent-ux-feature86)
+
+**Rationale:** Existing graph, door, and readiness primitives should feed every agent-facing surface.
+
+**Trade-off:** Compatibility projections remain during migration.
+
+**Alternatives considered:**
+- A dashboard-only rollup — rejected because dashboard is out of scope.
+- Independent surface rollups — rejected because they drift.
+
 ## BDD Test Infrastructure (ОБЯЗАТЕЛЬНО)
 
 **Classification:** TEST_DATA_ACTIVE
@@ -1759,3 +1773,58 @@ The planned contract is a serializable, versioned record with stable `fingerprin
 
 The committed damaged dashboard fixture is copied into a temporary workspace before the real workflow runs. The canonical `.specs/spec-dashboard/` is immutable for the test. The fixture deliberately exercises task cards and `list_tasks`, `find_refs` versus `get_trace`, unavailable history, a real browser journey/proof, performance, accessibility, security, and dependency-absent delivery evidence. The regression checks one-snapshot collection, safe non-guessing repair, stale CAS refusal, transaction rollback, three-round convergence/no-progress, and a second invocation with zero writes. It does not claim that the runtime or implementation already satisfies those lanes.
 
+### Decision: Every FR has one typed observable contract card
+
+**Требование:** [FR-85](FR.md#fr-85)
+
+**Rationale:** `omp-agent` exposes a useful authoring rule: every FR must define an observable boundary rather than remain prose. v4 already has stronger typed contracts for tasks, metadata, MCP mutations, graph identity, evidence, and readiness, but product FRs are not uniformly required to declare their own boundary. A mandatory FR-local card closes that gap using the existing metadata/SpecGraph substrate instead of adding a parallel spec format.
+
+The card is universal, but the boundary is polymorphic. CLI/API/schema/filesystem/event/state requirements use typed interface fields; policy, UX, semantic, ownership, and scope requirements use a typed behavior/state card; superseded and OUT OF SCOPE FRs use a typed disposition card. Every card has an observable and a negative case, so "every FR" does not mean inventing a CLI for a non-CLI requirement.
+
+**Trade-off:** Strict cards add authoring and migration work to every active FR. A card can still be underspecified if its fields are filled with vague prose, so the contract validator must enforce kind-specific fields, negative cases, and evidence/traceability rather than only checking that a YAML block exists. Legacy specs need a staged migration and will temporarily show contract debt.
+
+**Alternatives considered:**
+- Copy `omp-agent`'s three-way CLI/schema/filesystem mandate verbatim — rejected because it misrepresents policy, UX, event, and state-machine requirements and would encourage artificial contracts.
+- Put all contracts in a separate `CONTRACTS.md` ledger first — rejected for the first increment because it creates a second identity/index/authoring surface before the per-FR invariant is proven; a later ledger can project shared cards without changing FR syntax.
+- Require only AC/BDD input-output examples — rejected because contracts would remain distributed prose, could not be reused by graph/MCP consumers, and would be difficult to compare for drift.
+
+#### Contract architecture
+
+1. `RequirementMetadata.contract` is the canonical authored representation.
+2. `tools/spec-graph/requirement-contract.ts` is the single typed parser/canonicalizer/diagnostic producer, modeled after `task-contract.ts`.
+3. `FrNode.metadata.contract` survives parse, incremental rebuild, SQLite persistence, and MCP readback.
+4. `conformance.ts` produces contract findings; `spec-verdict` exposes a separate `CONTRACT` lane and composes it with existing readiness lanes.
+5. Existing MCP metadata validation/set tools are extended; no second direct spec writer is introduced.
+6. `requirement-contract-migration.ts --suggest-only` scans one spec, reports evidence-backed suggestions, and never fabricates missing values. Apply mode is MCP/CAS-only.
+
+#### Authoring and rollout
+
+- The FR template and `create-spec` Phase 2 require the card for every new non-superseded FR.
+- The sanctioned requirements form automation renders cards from verified FR/AC/DESIGN/SCHEMA inputs; it does not invent commands, fields, paths, or states.
+- Existing specs remain readable in legacy mode while migration reports enumerate missing cards. Strict mode is set only by scaffold/migration engine state and cannot be disabled by an FR or environment variable.
+- The final contract lane requires both a valid card and the later FR→AC→scenario/task/evidence chain; authoring completeness is not implementation proof.
+
+
+### Decision: Canonical verdict derives evidence state and grouped actions
+
+**Требование:** [FR-86](FR.md#fr-86-core-agent-ux-feature86)
+
+**Rationale:** One serializable SpecVerdictResult lets every agent-facing projection share readiness, per-FR evidence-state demotion, provenance, blockers, and ordered remediation without reconciling separately computed status vocabularies.
+
+**Trade-off:** Consumers must migrate from local lifecycle rollups and preserve compatibility projections during the cutover.
+
+**Alternatives considered:**
+- Per-surface verdict and evidence dictionaries — rejected because independent rollups can again report incompatible readiness.
+- A dashboard-owned aggregation layer — rejected because dashboard and Plane work are explicitly outside this scope and would delay safe CLI/MCP use.
+
+### Decision: Preflight and contract proposals stay inside the existing MCP transaction boundary
+
+**Требование:** [FR-86](FR.md#fr-86-core-agent-ux-feature86)
+
+**Rationale:** Root/worktree validation, contract-kind suggestions, field findings, previews, CAS, and atomic apply must share the existing door's validated parser and writer so the proposal is safe to act on.
+
+**Trade-off:** Guided authoring depends on MCP availability and cannot offer a separate offline writer.
+
+**Alternatives considered:**
+- A new client-side contract parser and file writer — rejected because duplicate validation and storage would drift from the authoritative graph.
+- Best-effort writes followed by post-write root or card validation — rejected because a wrong-worktree or invalid-card mutation must be refused before disk access.

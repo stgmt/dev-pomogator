@@ -28,10 +28,12 @@ const STATUSES = new Set<TestStatus>([
 export interface ScenarioOverlayPatch {
   byScenarioKey: Map<string, ScenarioOverlayResult>;
   byLocation: Map<string, ScenarioOverlayResult>;
+  byName: Map<string, ScenarioOverlayResult[]>;
 }
 
 export interface ScenarioOverlayResult {
   scenarioId: string;
+  scenarioName?: string;
   result: TestStatus;
   time: string;
   timeMs: number;
@@ -41,6 +43,7 @@ export interface ScenarioOverlayResult {
   source?: string;
   gitSha?: string;
   failingStep?: ScenarioNode['failingStep'];
+  durationMs?: number;
   traceId?: string;
   traceFile?: string;
   testCaseStartedId?: string;
@@ -83,6 +86,7 @@ function keepNewest(map: Map<string, ScenarioOverlayResult>, key: string | undef
 export function parseScenarioOverlay(source: string): ScenarioOverlayPatch {
   const byScenarioKey = new Map<string, ScenarioOverlayResult>();
   const byLocation = new Map<string, ScenarioOverlayResult>();
+  const byName = new Map<string, ScenarioOverlayResult[]>();
 
   for (const line of source.split(/\r?\n/)) {
     if (!line.trim()) continue;
@@ -97,6 +101,7 @@ export function parseScenarioOverlay(source: string): ScenarioOverlayPatch {
     if (!scenarioId || timeMs === undefined) continue;
     const row: ScenarioOverlayResult = {
       scenarioId,
+      scenarioName: typeof raw.scenario_name === 'string' ? raw.scenario_name : undefined,
       result: normalizeStatus(raw.result),
       time: raw.time as string,
       timeMs,
@@ -108,19 +113,26 @@ export function parseScenarioOverlay(source: string): ScenarioOverlayPatch {
       failingStep: raw.failing_step && typeof raw.failing_step === 'object'
         ? raw.failing_step as ScenarioNode['failingStep']
         : undefined,
+      durationMs: typeof raw.duration_ms === 'number' && Number.isFinite(raw.duration_ms)
+        ? raw.duration_ms
+        : undefined,
       traceId: typeof raw.trace_id === 'string' ? raw.trace_id : undefined,
       traceFile: normalizeUri(raw.trace_file),
       testCaseStartedId: typeof raw.test_case_started_id === 'string' ? raw.test_case_started_id : undefined,
     };
     keepNewest(byScenarioKey, scenarioKey(scenarioId) ?? scenarioId.toLowerCase(), row);
     keepNewest(byLocation, locationKey(row.uri, row.line), row);
+    if (row.scenarioName) {
+      const nameKey = row.scenarioName.trim().toLowerCase();
+      byName.set(nameKey, [...(byName.get(nameKey) ?? []), row]);
+    }
   }
 
-  return { byScenarioKey, byLocation };
+  return { byScenarioKey, byLocation, byName };
 }
 
 export function parseScenarioOverlayFile(absPath: string): ScenarioOverlayPatch {
-  if (!fs.existsSync(absPath)) return { byScenarioKey: new Map(), byLocation: new Map() };
+  if (!fs.existsSync(absPath)) return { byScenarioKey: new Map(), byLocation: new Map(), byName: new Map() };
   return parseScenarioOverlay(fs.readFileSync(absPath, 'utf-8'));
 }
 
@@ -209,6 +221,8 @@ function startedId(row: ScenarioOverlayResult): string | undefined {
 }
 
 function applyTraceRef(scenario: ScenarioNode, row: ScenarioOverlayResult): void {
+  scenario.lastResultSource = row.source;
+  scenario.lastResultRunId = row.runId;
   if (!row.traceId) {
     scenario.trace = undefined;
     return;
@@ -256,12 +270,16 @@ export function applyScenarioOverlayResults(
 ): number {
   let applied = 0;
   for (const scenario of scenarios) {
-    const key = scenarioKey(scenario.id);
-    const byId = key ? patch.byScenarioKey.get(key) : undefined;
+    const key = scenarioKey(scenario.id) ?? scenario.id.toLowerCase();
+    const byId = patch.byScenarioKey.get(key);
     const byLocation = findByLocation(patch, scenario);
-    const row = byId && byLocation
-      ? (byId.timeMs >= byLocation.timeMs ? byId : byLocation)
-      : byId ?? byLocation;
+    const nameKey = (scenario.title ?? '').trim().toLowerCase();
+    const nameRows = patch.byName.get(nameKey) ?? [];
+    const byUniqueName = !byId && !byLocation && nameRows.length === 1 ? nameRows[0] : undefined;
+    // `uri + line` is the canonical producer/consumer join. Scenario id is a
+    // secondary fallback only; it must never redirect evidence away from an
+    // exact location when producer and graph ids disagree.
+    const row = byLocation ?? byId ?? byUniqueName;
     if (!row) continue;
 
     const currentMs = parseTimeMs(scenario.lastRunAt);
@@ -274,8 +292,7 @@ export function applyScenarioOverlayResults(
       scenario.lastResult = row.result;
       scenario.lastRunAt = row.time;
       applyTraceRef(scenario, row);
-      // Overlay rows are compact; failure detail stays a P29-3/P29-4 trace lookup concern.
-      scenario.durationMs = undefined;
+      scenario.durationMs = row.durationMs;
       scenario.failingStep = row.failingStep ?? null;
       applied++;
     } else if (overlayEffective && row.traceId) {
@@ -285,8 +302,9 @@ export function applyScenarioOverlayResults(
     if (overlayEffective && row.result === 'PASSED') {
       const threshold = freshnessThresholdMs(opts.repoRoot, scenario, row);
       const sourceStale = threshold !== undefined && row.timeMs < threshold;
-      const commitStale = Boolean(opts.currentGitSha) && row.gitSha !== opts.currentGitSha;
-      scenario.resultStale = sourceStale || commitStale || (Boolean(opts.currentGitSha) && !row.gitSha);
+      const requiresCommitIdentity = row.source !== 'pytest-bdd:cucumber-json';
+      const commitStale = requiresCommitIdentity && Boolean(opts.currentGitSha) && row.gitSha !== opts.currentGitSha;
+      scenario.resultStale = sourceStale || commitStale || (requiresCommitIdentity && Boolean(opts.currentGitSha) && !row.gitSha);
     } else if (overlayEffective) {
       scenario.resultStale = false;
     }

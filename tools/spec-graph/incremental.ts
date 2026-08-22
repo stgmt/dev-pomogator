@@ -40,11 +40,12 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { parseMarkdownFile } from './parsers/md.ts';
 import { parseGherkinFile } from './parsers/gherkin.ts';
-import { parseNdjsonFile, applyTestResults } from './parsers/ndjson.ts';
+import { parseNdjsonArtifactFile, applyTestResults } from './parsers/ndjson.ts';
 import { parseScenarioOverlayFile, applyScenarioOverlayResults } from './parsers/scenario-overlay.ts';
+import { DEFAULT_PYTEST_BDD_REPORT_PATH, parsePytestBddReportFile, PYTEST_BDD_SOURCE } from './parsers/pytest-bdd.ts';
 import { parseTasksFile } from './parsers/tasks.ts';
-import { rebuildBacklinks, testedBySourceMap, verifiesEdgesFor } from './builder.ts';
-import type { Edge, SpecGraph, ScenarioNode, ParserOutput } from './types.ts';
+import { rebuildBacklinks, resolveFeatureTagEdges, testedBySourceMap, verifiesEdgesFor } from './builder.ts';
+import type { Edge, ExecutionArtifactIngestion, SpecGraph, ScenarioNode, ParserOutput } from './types.ts';
 import { refreshEndpointViolations } from './edge-schema.ts';
 
 export interface WatchOptions {
@@ -58,6 +59,8 @@ export interface WatchOptions {
   ndjsonPath?: string;
   /** Path to the append-only scenario overlay. Default `.dev-pomogator/.scenario-results.ndjson`. */
   scenarioOverlayPath?: string;
+  /** pytest-bdd `--cucumber-json` report. Default `.dev-pomogator/pytest-bdd-report.json`. */
+  pytestBddPath?: string;
   /**
    * Force chokidar's polling backend (NFR-Reliability-4). Auto-detected on
    * Windows + WSL bind mounts; explicit `true` is for tests + Docker.
@@ -94,6 +97,62 @@ export interface PatchEvent {
  * new slice in — that's how «replace this file's contribution» is spelled
  * in mutation terms over a `SpecGraph`.
  */
+function scenarioBodyKey(node: ScenarioNode): string {
+  return `${node.title ?? ''}\u0000${node.steps.map((step) => `${step.keyword}:${step.text}`).join('\u0001')}`;
+}
+
+function deduplicateExternalFeatureSlice(
+  graph: SpecGraph,
+  repoRoot: string,
+  relativePath: string,
+): { nodesRemoved: number; edgesRemoved: number } {
+  const normalized = relativePath.replace(/\\/g, '/');
+  const isSpecPath = normalized.startsWith('.specs/') || normalized.includes('/.specs/');
+  const isArtifact = normalized.includes('/_artifact/features/');
+  if (isSpecPath && !isArtifact) return { nodesRemoved: 0, edgesRemoved: 0 };
+  const source = fs.existsSync(path.resolve(repoRoot, relativePath))
+    ? fs.readFileSync(path.resolve(repoRoot, relativePath), 'utf8')
+    : '';
+  const mirrorOwner = source.match(/^\s*#\s*Source:\s+\.specs\/(.+)\/[^/\r\n]+\.feature\s*$/m)?.[1]
+    ?? source.match(/^\s*#\s*Owner:\s*([a-z0-9][a-z0-9/-]*)\s*$/im)?.[1]
+    ?? undefined;
+  const canonicalKeys = new Set<string>();
+  const canonicalBodyOwners = new Map<string, Set<string>>();
+  for (const node of graph.nodes.values()) {
+    if (node.type !== 'Scenario') continue;
+    const file = node.file.replace(/\\/g, '/');
+    const nodeIsSpecPath = file.startsWith('.specs/') || file.includes('/.specs/');
+    if (!nodeIsSpecPath || file.includes('/_artifact/features/')) continue;
+    const owner = node.spec;
+    if (!owner) continue;
+    const body = scenarioBodyKey(node);
+    canonicalKeys.add(`${owner}\u0002${body}`);
+    const owners = canonicalBodyOwners.get(body) ?? new Set<string>();
+    owners.add(owner);
+    canonicalBodyOwners.set(body, owners);
+  }
+  const duplicateIds = new Set<string>();
+  for (const node of graph.nodes.values()) {
+    if (node.type !== 'Scenario' || node.file !== relativePath) continue;
+    const body = scenarioBodyKey(node);
+    const duplicate = mirrorOwner
+      ? canonicalKeys.has(`${mirrorOwner}\u0002${body}`)
+      : (canonicalBodyOwners.get(body)?.size ?? 0) === 1;
+    if (duplicate) duplicateIds.add(node.id);
+  }
+  if (duplicateIds.size === 0) return { nodesRemoved: 0, edgesRemoved: 0 };
+  const beforeEdges = graph.edges.length;
+  graph.edges = graph.edges.filter((edge) => !duplicateIds.has(edge.from) && !duplicateIds.has(edge.to));
+  const duplicateLines = new Set(
+    [...duplicateIds].map((id) => graph.nodes.get(id)?.line),
+  );
+  for (const id of duplicateIds) graph.nodes.delete(id);
+  for (const [alias, location] of graph.definitions) {
+    if (location.file === relativePath && duplicateLines.has(location.line)) graph.definitions.delete(alias);
+  }
+  return { nodesRemoved: duplicateIds.size, edgesRemoved: beforeEdges - graph.edges.length };
+}
+
 export function dropFileSlice(graph: SpecGraph, relativePath: string): {
   removedNodeIds: Set<string>;
 } {
@@ -150,10 +209,11 @@ function applySlice(
   };
 }
 
-function classify(relativePath: string): 'md' | 'feature' | 'ndjson' | 'overlay' | 'unknown' {
+function classify(relativePath: string): 'md' | 'feature' | 'ndjson' | 'overlay' | 'pytest-bdd' | 'unknown' {
   if (relativePath.endsWith('.feature')) return 'feature';
   if (relativePath.endsWith('.md')) return 'md';
   if (relativePath.endsWith('.scenario-results.ndjson')) return 'overlay';
+  if (relativePath.endsWith('/pytest-bdd-report.json') || relativePath === 'pytest-bdd-report.json') return 'pytest-bdd';
   if (relativePath.endsWith('.ndjson')) return 'ndjson';
   return 'unknown';
 }
@@ -197,6 +257,7 @@ function refreshResultEdges(graph: SpecGraph, scenarios: ScenarioNode[]): void {
 interface ResultPathOptions {
   ndjsonPath?: string;
   scenarioOverlayPath?: string;
+  pytestBddPath?: string;
 }
 
 function collectScenarios(graph: SpecGraph): ScenarioNode[] {
@@ -210,9 +271,13 @@ function collectScenarios(graph: SpecGraph): ScenarioNode[] {
 function clearResultEvidence(scenario: ScenarioNode): void {
   delete scenario.lastResult;
   delete scenario.lastRunAt;
+  delete scenario.lastResultSource;
+  delete scenario.lastResultRunId;
   delete scenario.resultStale;
   delete scenario.canonicalResult;
   delete scenario.canonicalRunAt;
+  delete scenario.canonicalRunId;
+  delete scenario.canonicalSource;
   delete scenario.trace;
   delete scenario.durationMs;
   delete scenario.failingStep;
@@ -226,8 +291,72 @@ function clearResultEvidence(scenario: ScenarioNode): void {
 export function refreshResultFiles(graph: SpecGraph, repoRoot: string, opts: ResultPathOptions = {}): void {
   const scenarios = collectScenarios(graph);
   for (const scenario of scenarios) clearResultEvidence(scenario);
-  applyTestResults(scenarios, parseNdjsonFile(path.resolve(repoRoot, opts.ndjsonPath ?? '.dev-pomogator/.last-test-run.ndjson')));
-  applyScenarioOverlayResults(scenarios, parseScenarioOverlayFile(path.resolve(repoRoot, opts.scenarioOverlayPath ?? '.dev-pomogator/.scenario-results.ndjson')), { repoRoot });
+  const canonicalPath = path.resolve(repoRoot, opts.ndjsonPath ?? '.dev-pomogator/.last-test-run.ndjson');
+  const canonical = parseNdjsonArtifactFile(canonicalPath);
+  const canonicalApplied = canonical.state === 'INGESTED' ? applyTestResults(scenarios, canonical.patch) : 0;
+  // Keep canonical evidence separate from the newest filtered overlay. The
+  // readiness gate must be able to distinguish a focused green run from a
+  // full-suite green run even when the overlay is newer.
+  for (const scenario of scenarios) {
+    if (!scenario.lastResult) continue;
+    scenario.canonicalResult = scenario.lastResult;
+    scenario.canonicalRunAt = scenario.lastRunAt;
+    scenario.canonicalRunId = scenario.lastResultRunId;
+    scenario.canonicalSource = scenario.lastResultSource;
+  }
+  const pytestBddPath = path.resolve(repoRoot, opts.pytestBddPath ?? DEFAULT_PYTEST_BDD_REPORT_PATH);
+  const pytestBdd = parsePytestBddReportFile(pytestBddPath, repoRoot);
+  const pytestBddApplied = pytestBdd.state === 'INGESTED'
+    ? applyScenarioOverlayResults(scenarios, pytestBdd.patch, { repoRoot })
+    : 0;
+  for (const scenario of scenarios) {
+    if (scenario.lastResultSource === PYTEST_BDD_SOURCE && scenario.lastResult) {
+      scenario.canonicalResult = scenario.lastResult;
+      scenario.canonicalRunAt = scenario.lastRunAt;
+      scenario.canonicalRunId = scenario.lastResultRunId;
+      scenario.canonicalSource = scenario.lastResultSource;
+    }
+  }
+  const overlayApplied = applyScenarioOverlayResults(
+    scenarios,
+    parseScenarioOverlayFile(path.resolve(repoRoot, opts.scenarioOverlayPath ?? '.dev-pomogator/.scenario-results.ndjson')),
+    { repoRoot },
+  );
+  const artifacts: ExecutionArtifactIngestion[] = [
+    {
+      kind: 'cucumber-messages-ndjson',
+      canonical: true,
+      state: canonical.state,
+      reason: canonical.reason,
+      provenance: 'cucumber-messages-ndjson',
+      path: path.relative(repoRoot, canonicalPath).split(path.sep).join('/'),
+      run_id: null,
+      timestamp: canonical.timestamp,
+      counts: {
+        parsed: canonical.patch.records,
+        matched: canonicalApplied,
+        unmatched: Math.max(0, canonical.patch.records - canonicalApplied),
+        malformed: canonical.patch.malformed,
+      },
+    },
+    {
+      kind: 'pytest-bdd-cucumber-json',
+      canonical: true,
+      state: pytestBdd.state,
+      reason: pytestBdd.reason,
+      provenance: PYTEST_BDD_SOURCE,
+      path: pytestBdd.reportPath,
+      run_id: pytestBdd.runId,
+      timestamp: pytestBdd.reportTime,
+      counts: {
+        parsed: pytestBdd.executed,
+        matched: pytestBddApplied,
+        unmatched: Math.max(0, pytestBdd.executed - pytestBddApplied),
+        malformed: pytestBdd.malformed,
+      },
+    },
+  ];
+  graph.executionArtifacts = artifacts;
   refreshResultEdges(graph, scenarios);
   refreshEndpointViolations(graph);
   rebuildBacklinks(graph);
@@ -269,6 +398,7 @@ export function applyChange(
       delta.nodesDelta += taskDelta.nodesDelta;
       delta.edgesDelta += taskDelta.edgesDelta;
     }
+    resolveFeatureTagEdges(graph.nodes, graph.edges, repoRoot);
     refreshEndpointViolations(graph);
     rebuildBacklinks(graph);
     return delta;
@@ -277,13 +407,17 @@ export function applyChange(
     if (!fs.existsSync(absPath)) return { nodesDelta: 0, edgesDelta: 0 };
     const slice = parseGherkinFile(absPath, repoRoot);
     const delta = applySlice(graph, slice);
+    const mirrorDelta = deduplicateExternalFeatureSlice(graph, repoRoot, relativePath);
+    delta.nodesDelta -= mirrorDelta.nodesRemoved;
+    delta.edgesDelta -= mirrorDelta.edgesRemoved;
     // A feature edit replaces Scenario nodes; re-apply the persisted result
     // files so the live graph keeps the same effective evidence as a cold build
     // (and can mark once-passing overlay rows stale after the source mtime bump).
+    resolveFeatureTagEdges(graph.nodes, graph.edges, repoRoot);
     refreshResultFiles(graph, repoRoot, resultPaths);
     return delta;
   }
-  if (kind === 'ndjson' || kind === 'overlay') {
+  if (kind === 'ndjson' || kind === 'overlay' || kind === 'pytest-bdd') {
     if (!fs.existsSync(absPath)) return { nodesDelta: 0, edgesDelta: 0 };
     // Result files are replace-current-state inputs. Rebuild their effective view
     // from scratch so removed/filtered-away scenarios become not_run just like a
@@ -300,9 +434,15 @@ export function applyChange(
 export function applyUnlink(
   graph: SpecGraph,
   relativePath: string,
+  repoRoot?: string,
+  resultPaths: ResultPathOptions = {},
 ): { nodesDelta: number; edgesDelta: number } {
   const before = { n: graph.nodes.size, e: graph.edges.length };
+  const kind = classify(relativePath);
   dropFileSlice(graph, relativePath);
+  if (repoRoot && (kind === 'ndjson' || kind === 'overlay' || kind === 'pytest-bdd')) {
+    refreshResultFiles(graph, repoRoot, resultPaths);
+  }
   refreshEndpointViolations(graph);
   rebuildBacklinks(graph);
   return {
@@ -324,6 +464,7 @@ export function startWatching(graph: SpecGraph, opts: WatchOptions): FSWatcher {
   const featureRoots = opts.featureRoots ?? ['.specs', 'tests/features'];
   const ndjsonPath = opts.ndjsonPath ?? '.dev-pomogator/.last-test-run.ndjson';
   const scenarioOverlayPath = opts.scenarioOverlayPath ?? '.dev-pomogator/.scenario-results.ndjson';
+  const pytestBddPath = opts.pytestBddPath ?? DEFAULT_PYTEST_BDD_REPORT_PATH;
 
   const watched: string[] = [];
   for (const r of mdRoots) {
@@ -336,6 +477,7 @@ export function startWatching(graph: SpecGraph, opts: WatchOptions): FSWatcher {
   }
   watched.push(path.resolve(repoRoot, ndjsonPath));
   watched.push(path.resolve(repoRoot, scenarioOverlayPath));
+  watched.push(path.resolve(repoRoot, pytestBddPath));
 
   const watcher = chokidar.watch(watched, {
     ignored: (p: string) =>
@@ -344,7 +486,8 @@ export function startWatching(graph: SpecGraph, opts: WatchOptions): FSWatcher {
       ) &&
       // Allow the canonical ndjson + overlay paths even though they live under .dev-pomogator/.
       !p.endsWith('.last-test-run.ndjson') &&
-      !p.endsWith('.scenario-results.ndjson'),
+      !p.endsWith('.scenario-results.ndjson') &&
+      !p.endsWith('pytest-bdd-report.json'),
     ignoreInitial: true,
     usePolling: opts.usePolling ?? false,
     interval: opts.interval ?? 100,
@@ -358,7 +501,7 @@ export function startWatching(graph: SpecGraph, opts: WatchOptions): FSWatcher {
     if (classify(relativePath) === 'unknown') return;
     const start = process.hrtime.bigint();
     try {
-      const { nodesDelta, edgesDelta } = applyChange(graph, repoRoot, relativePath, { ndjsonPath, scenarioOverlayPath });
+      const { nodesDelta, edgesDelta } = applyChange(graph, repoRoot, relativePath, { ndjsonPath, scenarioOverlayPath, pytestBddPath });
       const durationMs = Number(process.hrtime.bigint() - start) / 1_000_000;
       opts.onPatch?.({ kind, file: relativePath, durationMs, nodesDelta, edgesDelta });
     } catch (err) {
@@ -371,7 +514,12 @@ export function startWatching(graph: SpecGraph, opts: WatchOptions): FSWatcher {
     if (classify(relativePath) === 'unknown') return;
     const start = process.hrtime.bigint();
     try {
-      const { nodesDelta, edgesDelta } = applyUnlink(graph, relativePath);
+      const { nodesDelta, edgesDelta } = applyUnlink(
+        graph,
+        relativePath,
+        repoRoot,
+        { ndjsonPath, scenarioOverlayPath, pytestBddPath },
+      );
       const durationMs = Number(process.hrtime.bigint() - start) / 1_000_000;
       opts.onPatch?.({ kind: 'unlink', file: relativePath, durationMs, nodesDelta, edgesDelta });
     } catch (err) {
